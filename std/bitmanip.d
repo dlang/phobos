@@ -1069,7 +1069,7 @@ struct BitArray
     /***************************************
      * Support for unary operator ~ for $(D BitArray).
      */
-    BitArray opCom()
+    BitArray opUnary(string op : "~")()
     {
         auto dim = this.dim;
 
@@ -1103,7 +1103,7 @@ struct BitArray
     /***************************************
      * Support for binary operator & for $(D BitArray).
      */
-    BitArray opAnd(BitArray e2)
+    BitArray opBinary(string op : "&")(BitArray e2)
     in
     {
         assert(len == e2.length);
@@ -1143,7 +1143,7 @@ struct BitArray
     /***************************************
      * Support for binary operator | for $(D BitArray).
      */
-    BitArray opOr(BitArray e2) const
+    BitArray opBinary(string op : "|")(BitArray e2) const
     in
     {
         assert(len == e2.length);
@@ -1183,7 +1183,7 @@ struct BitArray
     /***************************************
      * Support for binary operator ^ for $(D BitArray).
      */
-    BitArray opXor(BitArray e2) const
+    BitArray opBinary(string op : "^")(BitArray e2) const
     in
     {
         assert(len == e2.length);
@@ -1225,7 +1225,7 @@ struct BitArray
      *
      * $(D a - b) for $(D BitArray) means the same thing as $(D a &amp; ~b).
      */
-    BitArray opSub(BitArray e2) const
+    BitArray opBinary(string op : "-")(BitArray e2) const
     in
     {
         assert(len == e2.length);
@@ -1265,7 +1265,7 @@ struct BitArray
     /***************************************
      * Support for operator &= for $(D BitArray).
      */
-    BitArray opAndAssign(BitArray e2)
+    BitArray opOpAssign(string op : "&")(BitArray e2)
     in
     {
         assert(len == e2.length);
@@ -1301,7 +1301,7 @@ struct BitArray
     /***************************************
      * Support for operator |= for $(D BitArray).
      */
-    BitArray opOrAssign(BitArray e2)
+    BitArray opOpAssign(string op : "|")(BitArray e2)
     in
     {
         assert(len == e2.length);
@@ -1336,7 +1336,7 @@ struct BitArray
     /***************************************
      * Support for operator ^= for $(D BitArray).
      */
-    BitArray opXorAssign(BitArray e2)
+    BitArray opOpAssign(string op : "^")(BitArray e2)
     in
     {
         assert(len == e2.length);
@@ -1373,7 +1373,7 @@ struct BitArray
      *
      * $(D a -= b) for $(D BitArray) means the same thing as $(D a &amp;= ~b).
      */
-    BitArray opSubAssign(BitArray e2)
+    BitArray opOpAssign(string op : "-")(BitArray e2)
     in
     {
         assert(len == e2.length);
@@ -1408,8 +1408,7 @@ struct BitArray
     /***************************************
      * Support for operator ~= for $(D BitArray).
      */
-
-    BitArray opCatAssign(bool b)
+    BitArray opOpAssign(string op : "~")(bool b)
     {
         length = len + 1;
         this[len - 1] = b;
@@ -1439,8 +1438,7 @@ struct BitArray
     /***************************************
      * ditto
      */
-
-    BitArray opCatAssign(BitArray b)
+    BitArray opOpAssign(string op : "~")(BitArray b)
     {
         auto istart = len;
         length = len + b.length;
@@ -1474,7 +1472,7 @@ struct BitArray
     /***************************************
      * Support for binary operator ~ for $(D BitArray).
      */
-    BitArray opCat(bool b) const
+    BitArray opBinary(string op : "~")(bool b) const
     {
         BitArray r;
 
@@ -1485,7 +1483,7 @@ struct BitArray
     }
 
     /** ditto */
-    BitArray opCat_r(bool b) const
+    BitArray opBinaryRight(string op : "~")(bool b) const
     {
         BitArray r;
 
@@ -1497,7 +1495,7 @@ struct BitArray
     }
 
     /** ditto */
-    BitArray opCat(BitArray b) const
+    BitArray opBinary(string op : "~")(BitArray b) const
     {
         BitArray r;
 
