@@ -2748,7 +2748,22 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
         }
         else
         {
-            formatValue(w, cast(Object)val, f);
+            version (Windows)
+            {
+                import std.c.windows.com : IUnknown;
+                static if (is(T : IUnknown))
+                {
+                    formatValue(w, *cast(void**)&val, f);
+                }
+                else
+                {
+                    formatValue(w, cast(Object)val, f);
+                }
+            }
+            else
+            {
+                formatValue(w, cast(Object)val, f);
+            }
         }
     }
 }
@@ -2770,6 +2785,26 @@ unittest
     }
     Whatever val = new C;
     formatTest( val, "ab" );
+
+    // Issue 11175
+    version (Windows)
+    {
+        import core.sys.windows.windows : HRESULT;
+        import std.c.windows.com : IUnknown, IID;
+
+        interface IUnknown2 : IUnknown { }
+
+        class D : IUnknown2
+        {
+            extern(Windows) HRESULT QueryInterface(const(IID)* riid, void** pvObject) { return typeof(return).init; }
+            extern(Windows) uint AddRef() { return 0; }
+            extern(Windows) uint Release() { return 0; }
+        }
+
+        IUnknown2 d = new D;
+        string expected = format("%X", cast(void*)d);
+        formatTest(d, expected);
+    }
 }
 
 /// ditto
