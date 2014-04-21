@@ -3863,7 +3863,7 @@ package template emplaceRef(T)
     {
         static assert (is(typeof({static T i;})),
             format("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
-    
+
         return emplaceInitializer(chunk);
     }
 
@@ -3872,14 +3872,14 @@ package template emplaceRef(T)
     {
         static assert(is(typeof({T t = arg;})),
             format("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
-    
+
         static if (isStaticArray!T)
         {
             alias UArg = Unqual!Arg;
             alias E = ElementEncodingType!(typeof(T.init[]));
             alias UE = Unqual!E;
             enum N = T.length;
-    
+
             static if (is(Arg : T))
             {
                 //Matching static array
@@ -3940,7 +3940,7 @@ package template emplaceRef(T)
             }
             else
                 static assert(0, format("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
-    
+
             return chunk;
         }
         else
@@ -4005,12 +4005,12 @@ package template emplaceRef(T)
             //We can't emplace. Try to diagnose a disabled postblit.
             static assert(!(Args.length == 1 && is(Args[0] : T)),
                 format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
-    
+
             //We can't emplace.
             static assert(false,
                 format("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
         }
-    
+
         return chunk;
     }
 }
@@ -4879,13 +4879,13 @@ unittest //Constness
     }
     alias IS = immutable(S);
     S s = void;
-    emplaceRef!IS(s, IS()); 
+    emplaceRef!IS(s, IS());
     S[2] ss = void;
-    emplaceRef!(IS[2])(ss, IS()); 
+    emplaceRef!(IS[2])(ss, IS());
 
     IS[2] iss = IS.init;
-    emplaceRef!(IS[2])(ss, iss); 
-    emplaceRef!(IS[2])(ss, iss[]); 
+    emplaceRef!(IS[2])(ss, iss);
+    emplaceRef!(IS[2])(ss, iss[]);
 }
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
