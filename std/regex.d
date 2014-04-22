@@ -7456,7 +7456,7 @@ unittest
 // bugzilla 12076
 unittest
 {
-    auto RE = ctRegex!(r"(?<!x\w+)\s(\w+)");
+    auto RE = ctRegex!(r"(?<!x[a-z]+)\s([a-z]+)");
     string s = "one two";
     auto m = match(s, RE);
 }
