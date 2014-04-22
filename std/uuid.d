@@ -1538,12 +1538,20 @@ public class UUIDParsingException : Exception
     private this(string input, size_t pos, Reason why = Reason.unknown, string msg = "",
         Throwable next = null, string file = __FILE__, size_t line = __LINE__) pure @trusted
     {
-        input = input;
-        position = pos;
-        reason = why;
+        this.input = input;
+        this.position = pos;
+        this.reason = why;
         string message = format("An error occured in the UUID parser: %s\n" ~
           " * Input:\t'%s'\n * Position:\t%s", msg, replace(replace(input,
           "\r", "\\r"), "\n", "\\n"), pos);
         super(message, file, line, next);
     }
+}
+
+unittest
+{
+    auto ex = new UUIDParsingException("foo", 10, UUIDParsingException.Reason.tooMuch);
+    assert(ex.input == "foo");
+    assert(ex.position == 10);
+    assert(ex.reason == UUIDParsingException.Reason.tooMuch);
 }
