@@ -6598,7 +6598,7 @@ unittest
 /**
 The first version counts the number of elements $(D x) in $(D r) for
 which $(D pred(x, value)) is $(D true). $(D pred) defaults to
-equality. Performs $(BIGOH r.length) evaluations of $(D pred).
+equality. Performs $(BIGOH haystack.length) evaluations of $(D pred).
 
 The second version returns the number of times $(D needle) occurs in
 $(D haystack). Throws an exception if $(D needle.empty), as the _count
@@ -6607,7 +6607,7 @@ are not considered, for example $(D count("aaa", "aa")) is $(D 1), not
 $(D 2).
 
 The third version counts the elements for which $(D pred(x)) is $(D
-true). Performs $(BIGOH r.length) evaluations of $(D pred).
+true). Performs $(BIGOH haystack.length) evaluations of $(D pred).
 
 Note: Regardless of the overload, $(D count) will not accept
 infinite ranges for $(D haystack).
@@ -11209,7 +11209,7 @@ template canFind(alias pred="a == b")
     /++
     Returns $(D true) if and only if any value $(D v) found in the
     input range $(D range) satisfies the predicate $(D pred).
-    Performs (at most) $(BIGOH r.length) evaluations of $(D pred).
+    Performs (at most) $(BIGOH haystack.length) evaluations of $(D pred).
      +/
     bool canFind(Range)(Range haystack)
     if (is(typeof(find!pred(haystack))))
@@ -11218,8 +11218,8 @@ template canFind(alias pred="a == b")
     }
 
     /++
-    Returns $(D true) if and only if $(D value) can be found in $(D
-    range). Performs $(BIGOH needle.length) evaluations of $(D pred).
+    Returns $(D true) if and only if $(D needle) can be found in $(D
+    range). Performs $(BIGOH haystack.length) evaluations of $(D pred).
      +/
     bool canFind(Range, Element)(Range haystack, Element needle)
     if (is(typeof(find!pred(haystack, needle))))
@@ -11288,7 +11288,7 @@ template any(alias pred = "a")
     /++
     Returns $(D true) if and only if $(I _any) value $(D v) found in the
     input range $(D range) satisfies the predicate $(D pred).
-    Performs (at most) $(BIGOH r.length) evaluations of $(D pred).
+    Performs (at most) $(BIGOH range.length) evaluations of $(D pred).
      +/
     bool any(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
@@ -11341,7 +11341,7 @@ template all(alias pred = "a")
     /++
     Returns $(D true) if and only if $(I _all) values $(D v) found in the
     input range $(D range) satisfy the predicate $(D pred).
-    Performs (at most) $(BIGOH r.length) evaluations of $(D pred).
+    Performs (at most) $(BIGOH range.length) evaluations of $(D pred).
      +/
     bool all(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
