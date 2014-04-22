@@ -4220,12 +4220,53 @@ unittest
 }
 
 /**
-Library typedef.
- */
-alias Typedef(T) = .Typedef!(T, T.init);
+$(B Typedef) allows the creation of a unique type which is
+based on an existing type. Unlike the $(D alias) feature,
+$(B Typedef) ensures the two types are not considered as equals.
 
-/// ditto
-struct Typedef(T, T init, string cookie=null)
+Example:
+----
+alias MyInt = Typedef!int;
+static void takeInt(int) { }
+static void takeMyInt(MyInt) { }
+
+int i;
+takeInt(i);    // ok
+takeMyInt(i);  // fails
+
+MyInt myInt;
+takeInt(myInt);    // fails
+takeMyInt(myInt);  // ok
+----
+
+Params:
+
+init = Optional initial value for the new type. For example:
+
+----
+alias MyInt = Typedef!(int, 10);
+MyInt myInt;
+assert(myInt == 10);  // default-initialized to 10
+----
+
+cookie = Optional, used to create multiple unique types which are
+based on the same origin type $(D T). For example:
+
+----
+alias TypeInt1 = Typedef!int;
+alias TypeInt2 = Typedef!int;
+
+// The two Typedefs are the same type.
+static assert(is(TypeInt1 == TypeInt2));
+
+alias TypeFloat1 = Typedef!(float, float.init, "a");
+alias TypeFloat2 = Typedef!(float, float.init, "b");
+
+// The two Typedefs are _not_ the same type.
+static assert(!is(TypeFloat1 == TypeFloat2));
+----
+ */
+struct Typedef(T, T init = T.init, string cookie=null)
 {
     private T Typedef_payload = init;
 
