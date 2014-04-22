@@ -2410,7 +2410,7 @@ struct Appender(A : T[], T)
 
             // didn't work, must reallocate
             auto bi = ()@trusted{ return
-                GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                GC.qalloc(newlen * T.sizeof, blockAttribute!T);
             }();
             _data.capacity = bi.size / T.sizeof;
             if (len)
