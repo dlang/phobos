@@ -252,10 +252,9 @@ Macros:
 
 module std.regex;
 
-import std.internal.uni, std.internal.uni_tab;//Unicode property tables
 import std.array, std.algorithm, std.range,
        std.conv, std.exception, std.traits, std.typetuple,
-       std.utf, std.format, std.typecons, std.bitmanip,
+       std.uni, std.utf, std.format, std.typecons, std.bitmanip,
        std.functional, std.exception;
 
 import core.bitop, core.stdc.string, core.stdc.stdlib;
@@ -271,7 +270,15 @@ debug(std_regex_test) import std.stdio; //trace test suite progress
 
 private:
 
-import std.uni : isAlpha, isWhite;
+
+//TODO: remove this hack due to CTFE not able to run insertInPlace
+@trusted void insertInPlaceAlt(T)(ref T[] arr, size_t idx, T[] items...)
+{
+    if(__ctfe)
+        arr = arr[0..idx] ~ items ~ arr[idx..$];
+    else
+        insertInPlace(arr, idx, items);
+}
 
 
 // IR bit pattern: 0b1_xxxxx_yy
@@ -754,15 +761,16 @@ enum maxCharsetUsed = 6;
 
 enum maxCachedTries = 8;
 
-alias Trie = CodepointTrie!8;
+alias CodepointSetTrie!(13, 8) Trie;
+alias codepointSetTrie!(13, 8) makeTrie;
 
-Trie[const(CodepointSet)] trieCache;
+Trie[CodepointSet] trieCache;
 
 //accessor with caching
-@trusted Trie getTrie(in CodepointSet set)
+@trusted Trie getTrie(CodepointSet set)
 {// @@@BUG@@@ 6357 almost all properties of AA are not @safe
     if(__ctfe || maxCachedTries == 0)
-        return Trie(set);
+        return makeTrie(set);
     else
     {
         auto p = set in trieCache;
@@ -773,23 +781,23 @@ Trie[const(CodepointSet)] trieCache;
             // flush entries in trieCache
             trieCache = null;
         }
-        return (trieCache[set] = Trie(set));
+        return (trieCache[set] = makeTrie(set));
     }
 }
 
 //property for \w character class
 @property CodepointSet wordCharacter()
 {
-    return memoizeExpr!("CodepointSet.init.add(unicodeAlphabetic).add(unicodeMn).add(unicodeMc)
-        .add(unicodeMe).add(unicodeNd).add(unicodePc)")();
+    return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
+        | unicode.Me | unicode.Nd | unicode.Pc")();
 }
 
 @property Trie wordTrie()
 {
-    return memoizeExpr!("Trie(wordCharacter)")();
+    return memoizeExpr!("makeTrie(wordCharacter)")();
 }
 
-auto memoizeExpr(string expr)()
+@trusted auto memoizeExpr(string expr)()
 {
     if(__ctfe)
         return mixin(expr);
@@ -804,66 +812,29 @@ auto memoizeExpr(string expr)()
     return slot;
 }
 
+auto caseEnclose(CodepointSet set)
+{
+    auto cased = set & unicode.LC;
+    foreach (dchar ch; cased.byCodepoint)
+    {
+        foreach(c; simpleCaseFoldings(ch))
+            set |= c;
+    }
+    return set;
+}
+
 /+
     fetch codepoint set corresponding to a name (InBlock or binary property)
 +/
-@trusted const(CodepointSet) getUnicodeSet(in char[] name, bool negated,  bool casefold)
+@trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold)
 {
-    alias ucmp = comparePropertyName;
-    CodepointSet s;
-
-    //unicode property
-    //helper: direct access with a sanity check
-    if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
-    {
-        s.add(unicodeLu).add(unicodeLl).add(unicodeLt)
-            .add(unicodeLo).add(unicodeLm);
-    }
-    else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter") == 0)
-    {
-        s.add(unicodeLl).add(unicodeLu).add(unicodeLt);//Title case
-    }
-    else if(ucmp(name, "M") == 0 || ucmp(name, "Mark") == 0)
-    {
-        s.add(unicodeMn).add(unicodeMc).add(unicodeMe);
-    }
-    else if(ucmp(name, "P") == 0 || ucmp(name, "Punctuation") == 0)
-    {
-        s.add(unicodePc).add(unicodePd).add(unicodePs).add(unicodePe)
-            .add(unicodePi).add(unicodePf).add(unicodePo);
-    }
-    else if(ucmp(name, "S") == 0 || ucmp(name, "Symbol") == 0)
-    {
-        s.add(unicodeSm).add(unicodeSc).add(unicodeSk).add(unicodeSo);
-    }
-    else if(ucmp(name, "Z") == 0 || ucmp(name, "Separator") == 0)
-    {
-        s.add(unicodeZs).add(unicodeZl).add(unicodeZp);
-    }
-    else if(ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
-    {
-        s.add(unicodeCo).add(unicodeLo).add(unicodeNo)
-            .add(unicodeSo).add(unicodePo);
-    }
-    else if(ucmp(name, "any") == 0)
-        s.add(Interval(0,0x10FFFF));
-    else if(ucmp(name, "ascii") == 0)
-        s.add(Interval(0,0x7f));
-    else
-    {
-        auto range = assumeSorted!((x,y) => ucmp(x.name, y.name) < 0)(unicodeProperties);
-        //creating empty Codepointset is a workaround
-        auto eq = range.lowerBound(UnicodeProperty(cast(string)name,CodepointSet.init)).length;
-        enforce(eq != range.length && ucmp(name,range[eq].name) == 0,
-            "invalid property name");
-        s = range[eq].set.dup;
-    }
-
+    CodepointSet s = unicode(name);
+    //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
     if(casefold)
-        s = caseEnclose(s);
+       s = caseEnclose(s);
     if(negated)
-        s.negate();
-    return cast(const CodepointSet)s;
+        s = s.inverted;
+    return s;
 }
 
 //basic stack, just in case it gets used anywhere else then Parser
@@ -919,7 +890,7 @@ struct Parser(R)
     uint nesting = 0;
     uint lookaroundNest = 0;
     uint counterDepth = 0; //current depth of nested counted repetitions
-    const(CodepointSet)[] charsets;  //
+    CodepointSet[] charsets;  //
     const(Trie)[] tries; //
     uint[] backrefed; //bitarray for groups
 
@@ -1282,7 +1253,7 @@ struct Parser(R)
         default:
             if(replace)
             {
-                copyForwardAlt(ir[offset + 1 .. $],ir[offset .. $ - 1]);
+                copy(ir[offset + 1 .. $], ir[offset .. $ - 1]);
                 ir.length -= 1;
             }
             return;
@@ -1331,7 +1302,7 @@ struct Parser(R)
             }
             else if(replace)
             {
-                copyForwardAlt(ir[offset+1 .. $],ir[offset .. $-1]);
+                copy(ir[offset+1 .. $], ir[offset .. $-1]);
                 ir.length -= 1;
             }
             put(Bytecode(greedy ? IR.InfiniteStart : IR.InfiniteQStart, len));
@@ -1385,13 +1356,13 @@ struct Parser(R)
             next();
             break;
         default:
+            //FIXME: getCommonCasing in new std uni
             if(re_flags & RegexOption.casefold)
             {
-                dchar[5] data;
-                auto range = getCommonCasing(current, data);
+                auto range = simpleCaseFoldings(current);
                 assert(range.length <= 5);
                 if(range.length == 1)
-                    put(Bytecode(IR.Char, range[0]));
+                    put(Bytecode(IR.Char, range.front));
                 else
                     foreach(v; range)
                         put(Bytecode(IR.OrChar, v, cast(uint)range.length));
@@ -1452,13 +1423,12 @@ struct Parser(R)
         {
             if(re_flags & RegexOption.casefold)
             {
-                dchar[5] chars;
-                auto range = getCommonCasing(ch, chars);
+                auto range = simpleCaseFoldings(ch);
                 foreach(v; range)
-                    set.add(v);
+                    set |= v;
             }
             else
-                set.add(ch);
+                set |= ch;
         }
 
         static Operator twinSymbolOperator(dchar symbol)
@@ -1522,14 +1492,14 @@ struct Parser(R)
                     state = State.CharDash;
                     break;
                 case '\\':
-                    set.add(last);
+                    set |= last;
                     state = State.Escape;
                     break;
                 case '[':
                     op = Operator.Union;
                     goto case;
                 case ']':
-                    set.add(last);
+                    set |= last;
                     break L_CharTermLoop;
                 default:
                     addWithFlags(set, last, re_flags);
@@ -1545,7 +1515,38 @@ struct Parser(R)
                     next();//skip second twin char
                     break L_CharTermLoop;
                 }
-                goto case State.Char;// it's not a twin lets re-run normal logic
+                //~~~WORKAROUND~~~
+                //It's a copy of State.Char, should be goto case but see @@@BUG12603
+                switch(current)
+                {
+                case '|':
+                case '~':
+                case '&':
+                    // then last is treated as normal char and added as implicit union
+                    state = State.PotentialTwinSymbolOperator;
+                    addWithFlags(set, last, re_flags);
+                    last = current;
+                    break;
+                case '-': // still need more info
+                    state = State.CharDash;
+                    break;
+                case '\\':
+                    set |= last;
+                    state = State.Escape;
+                    break;
+                case '[':
+                    op = Operator.Union;
+                    goto case;
+                case ']':
+                    set |= last;
+                    break L_CharTermLoop;
+                default:
+                    addWithFlags(set, last, re_flags);
+                    last = current;
+                }
+                break;
+                //~~~END OF WORKAROUND~~~
+                //goto case State.Char;// it's not a twin lets re-run normal logic
             case State.Escape:
                 // xxx \ current xxx
                 switch(current)
@@ -1602,19 +1603,19 @@ struct Parser(R)
                     state = State.Char;
                     break;
                 case 'd':
-                    set.add(unicodeNd);
+                    set.add(unicode.Nd);
                     state = State.Start;
                     break;
                 case 'D':
-                    set.add(unicodeNd.dup.negate());
+                    set.add(unicode.Nd.inverted);
                     state = State.Start;
                     break;
                 case 's':
-                    set.add(unicodeWhite_Space);
+                    set.add(unicode.White_Space);
                     state = State.Start;
                     break;
                 case 'S':
-                    set.add(unicodeWhite_Space.dup.negate());
+                    set.add(unicode.White_Space.inverted);
                     state = State.Start;
                     break;
                 case 'w':
@@ -1622,7 +1623,7 @@ struct Parser(R)
                     state = State.Start;
                     break;
                 case 'W':
-                    set.add(wordCharacter.dup.negate());
+                    set.add(wordCharacter.inverted);
                     state = State.Start;
                     break;
                 default:
@@ -1657,7 +1658,7 @@ struct Parser(R)
                             addWithFlags(set, ch, re_flags);
                     }
                     else
-                        set.add(Interval(last, current));
+                        set.add(last, current + 1);
                     state = State.Start;
                 }
                 break;
@@ -1703,7 +1704,7 @@ struct Parser(R)
                     error("invalid escape sequence");
                 }
                 enforce(last <= end,"inverted range");
-                set.add(Interval(last,end));
+                set.add(last, end + 1);
                 state = State.Start;
                 break;
             }
@@ -1726,7 +1727,7 @@ struct Parser(R)
             switch(op)
             {
             case Operator.Negate:
-                stack.top.negate();
+                stack.top = stack.top.inverted;
                 break;
             case Operator.Union:
                 auto s = stack.pop();//2nd operand
@@ -1741,7 +1742,7 @@ struct Parser(R)
             case Operator.SymDifference:
                 auto s = stack.pop();//2nd operand
                 enforce(!stack.empty, "no operand for '~~'");
-                stack.top.symmetricSub(s);
+                stack.top ~= s;
                 break;
             case Operator.Intersection:
                 auto s = stack.pop();//2nd operand
@@ -1820,27 +1821,28 @@ struct Parser(R)
         charsetToIr(vstack.top);
     }
     //try to generate optimal IR code for this CodepointSet
-    @trusted void charsetToIr(in CodepointSet set)
+    @trusted void charsetToIr(CodepointSet set)
     {//@@@BUG@@@ writeln is @system
-        uint chars = set.chars;
+        uint chars = cast(uint)set.length;
         if(chars < Bytecode.maxSequence)
         {
             switch(chars)
             {
                 case 1:
-                    put(Bytecode(IR.Char, set.ivals[0]));
+                    put(Bytecode(IR.Char, set.byCodepoint.front));
                     break;
                 case 0:
                     error("empty CodepointSet not allowed");
                     break;
                 default:
-                    foreach(ch; set[])
+                    foreach(ch; set.byCodepoint)
                         put(Bytecode(IR.OrChar, ch, chars));
             }
         }
         else
         {
-            if(set.ivals.length > maxCharsetUsed)
+            auto ivals = set.byInterval;
+            if(ivals.length*2 > maxCharsetUsed)
             {
                 auto t  = getTrie(set);
                 put(Bytecode(IR.Trie, cast(uint)tries.length));
@@ -1871,21 +1873,21 @@ struct Parser(R)
 
         case 'd':
             next();
-            charsetToIr(unicodeNd);
+            charsetToIr(unicode.Nd);
             break;
         case 'D':
             next();
-            charsetToIr(unicodeNd.dup.negate());
+            charsetToIr(unicode.Nd.inverted);
             break;
         case 'b':   next(); put(Bytecode(IR.Wordboundary, 0)); break;
         case 'B':   next(); put(Bytecode(IR.Notwordboundary, 0)); break;
         case 's':
             next();
-            charsetToIr(unicodeWhite_Space);
+            charsetToIr(unicode.White_Space);
             break;
         case 'S':
             next();
-            charsetToIr(unicodeWhite_Space.dup.negate());
+            charsetToIr(unicode.White_Space.inverted);
             break;
         case 'w':
             next();
@@ -1893,7 +1895,7 @@ struct Parser(R)
             break;
         case 'W':
             next();
-            charsetToIr(wordCharacter.dup.negate());
+            charsetToIr(wordCharacter.inverted);
             break;
         case 'p': case 'P':
             auto CodepointSet = parseUnicodePropertySpec(current == 'P');
@@ -1952,9 +1954,8 @@ struct Parser(R)
 
     //parse and return a CodepointSet for \p{...Property...} and \P{...Property..},
     //\ - assumed to be processed, p - is current
-    const(CodepointSet) parseUnicodePropertySpec(bool negated)
+    CodepointSet parseUnicodePropertySpec(bool negated)
     {
-        alias ucmp = comparePropertyName;
         enum MAX_PROPERTY = 128;
         char[MAX_PROPERTY] result;
         uint k = 0;
@@ -2007,7 +2008,7 @@ struct Parser(R)
 public struct Regex(Char)
 {
     //temporary workaround for identifier lookup
-    const(CodepointSet)[] charsets; //
+    CodepointSet[] charsets; //
     Bytecode[] ir;      //compiled bytecode of pattern
 
     /++
@@ -2091,7 +2092,7 @@ private:
     uint hotspotTableSize; //number of entries in merge table
     uint threadCount;
     uint flags;         //global regex flags
-    const(Trie)[]  tries; //
+    public const(Trie)[]  tries; //
     uint[] backrefed; //bit array of backreferenced submatches
     Kickstart!Char kickstart;
 
@@ -2355,13 +2356,13 @@ int quickTestFwd(RegEx)(uint pc, dchar front, const ref RegEx re)
 @trusted public struct SampleGenerator(Char)
 {
     import std.random;
-    const(Regex!Char) re;
+    Regex!Char re;
     Appender!(char[]) app;
     uint limit, seed;
     Xorshift gen;
     //generator for pattern r, with soft maximum of threshold elements
     //and a given random seed
-    this(in Regex!Char r, uint threshold, uint randomSeed)
+    this(ref Regex!Char r, uint threshold, uint randomSeed)
     {
         re = r;
         limit = threshold;
@@ -2656,7 +2657,7 @@ private:
     }
 
 public:
-    @trusted this(const ref Regex!Char re, uint[] memory)
+    @trusted this(ref Regex!Char re, uint[] memory)
     {
         assert(memory.length == 256);
         fChar = uint.max;
@@ -2747,11 +2748,19 @@ public:
                     }
                     else
                     {
+                        
                         static if(charSize == 1)
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
                             static immutable codeBounds = [0x0, 0xFFFF, 0x10000, 0x10FFFF];
-                        auto srange = assumeSorted!"a <= b"(set.ivals);
+                        uint[] arr = new uint[set.byInterval.length * 2];
+                        size_t ofs = 0;
+                        foreach(ival; set.byInterval)
+                        {
+                            arr[ofs++] = ival.a;
+                            arr[ofs++] = ival.b;
+                        }
+                        auto srange = assumeSorted!"a <= b"(arr);
                         for(uint i = 0; i < codeBounds.length/2; i++)
                         {
                             auto start = srange.lowerBound(codeBounds[2*i]).length;
@@ -2762,10 +2771,10 @@ public:
                     }
                     if(numS == 0 || t.idx + s[numS-1] > n_length)
                         goto L_StopThread;
-                    auto  chars = set.chars;
+                    auto  chars = set.length;
                     if(chars > charsetThreshold)
                         goto L_StopThread;
-                    foreach(ch; set[])
+                    foreach(ch; set.byCodepoint)
                     {
                         //avoid surrogate pairs
                         if(0xD800 <= ch && ch <= 0xDFFF)
@@ -6985,16 +6994,22 @@ unittest
         else version(std_regex_ct2)
         {
             pragma(msg, "Testing 2nd part of ctRegex");
-            alias Tests = Sequence!(90, 165);
+            alias Tests = Sequence!(90, 155);
         }
         else version(std_regex_ct3)
         {
             pragma(msg, "Testing 3rd part of ctRegex");
-            alias Tests = Sequence!(185, 220);
+            alias Tests = Sequence!(155, 174);
         }
+        //FIXME: #174-178 contains CTFE parser bug
         else version(std_regex_ct4)
         {
             pragma(msg, "Testing 4th part of ctRegex");
+            alias Tests = Sequence!(178, 220);
+        }
+        else version(std_regex_ct5)
+        {
+            pragma(msg, "Testing 5th part of ctRegex");
             alias Tests = Sequence!(220, tv.length);
         }
         else
@@ -7011,7 +7026,7 @@ unittest
             else
             {
                 //BUG: tv[v] is fine but tvd is not known at compile time?!
-                enum r = ctRegex!(tv[v].pattern, tv[v].flags);
+                auto r = ctRegex!(tv[v].pattern, tv[v].flags);
                 auto nr = regex(tvd.pattern, tvd.flags);
                 assert(equal(r.ir, nr.ir),
                     text("!C-T regex! failed to compile pattern #", a ,": ", tvd.pattern));
@@ -7086,6 +7101,7 @@ unittest
     assert(equal(mx.captures, [ "B", "B"]));
     enum cx2 = ctRegex!"(A|B)*";
     assert(match("BAAA",cx2));
+    
     enum cx3 = ctRegex!("a{3,4}","i");
     auto mx3 = match("AaA",cx3);
     assert(mx3);
@@ -7409,6 +7425,15 @@ unittest
     assert(match("aaaa", re).hit == "aaaa");
 }
 
+//bugzilla 10798
+unittest
+{
+    auto cr = ctRegex!("[abcd--c]*");
+    auto m  = "abc".match(cr);
+    assert(m);
+    assert(m.hit == "ab");
+}
+
 // bugzilla 10913
 unittest
 {
@@ -7468,6 +7493,13 @@ unittest
     assert("aaab".matchFirst(r).hit == "aaa");
     auto r2 = ctRegex!`.*(?!a)`;
     assert("aaab".matchFirst(r2).hit == "aaab");
+}
+
+//bugzilla 11784
+unittest
+{
+    assert("abcdefghijklmnopqrstuvwxyz"
+        .matchFirst("[a-z&&[^aeiuo]]").hit == "b");
 }
 
 // bugzilla 12582

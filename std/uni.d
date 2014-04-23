@@ -670,14 +670,14 @@ else
     import std.internal.unicode_tables; // generated file
 }
 
-void copyBackwards(T)(T[] src, T[] dest)
+void copyBackwards(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
     for(size_t i=src.length; i-- > 0; )
         dest[i] = src[i];
 }
 
-void copyForward(T)(T[] src, T[] dest)
+void copyForward(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
     for(size_t i=0; i<src.length; i++)
@@ -1673,10 +1673,9 @@ unittest
             dest.length = dest.length+delta;//@@@BUG lame @property
         else
             dest = Policy.realloc(dest, dest.length+delta);
-        auto rem = copy(retro(dest[to..dest.length-delta])
-             , retro(dest[to+delta..dest.length]));
-        assert(rem.empty);
-        copy(stuff, dest[from..stuff_end]);
+        copyBackwards(dest[to..dest.length-delta],
+            dest[to+delta..dest.length]);
+        copyForward(stuff, dest[from..stuff_end]);
     }
     else if(stuff.length == delta)
     {
@@ -1686,13 +1685,12 @@ unittest
     {// replace decreases length by delta
         delta = delta - stuff.length;
         copy(stuff, dest[from..stuff_end]);
-        auto rem =  copy(dest[to..dest.length]
-             , dest[stuff_end..dest.length-delta]);
+        copyForward(dest[to..dest.length],
+            dest[stuff_end..dest.length-delta]);
         static if(is(Policy == void))
             dest.length = dest.length - delta;//@@@BUG lame @property
         else
             dest = Policy.realloc(dest, dest.length-delta);
-        assert(rem.empty);
     }
     return stuff_end;
 }
@@ -1737,14 +1735,11 @@ unittest
     static void destroy(T)(ref T arr)
         if(isDynamicArray!T && is(Unqual!T == T))
     {
-        version(bug10929) //@@@BUG@@@
+        debug
         {
-            debug
-            {
-                arr[] = cast(typeof(T.init[0]))(0xdead_beef);
-            }
-            arr = null;
+            arr[] = cast(typeof(T.init[0]))(0xdead_beef);
         }
+        arr = null;
     }
 
     static void destroy(T)(ref T arr)
@@ -1994,7 +1989,7 @@ public:
             arr ~= v.a;
             arr ~= v.b;
         }
-        data = CowArray!(SP)(arr);
+        data = CowArray!(SP).reuse(arr);
     }
 
     /**
@@ -2003,9 +1998,13 @@ public:
     this(Range)(Range intervals) pure
         if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
     {
-        auto flattened = roundRobin(intervals.save.map!"a[0]"(),
-            intervals.save.map!"a[1]"());
-        data = CowArray!(SP)(flattened);
+        uint[] arr;
+        foreach(v; intervals)
+        {
+            SP.append(arr, v.a);
+            SP.append(arr, v.b);
+        }
+        data = CowArray!(SP).reuse(arr);
         sanitize(); //enforce invariant: sort intervals etc.
     }
 
@@ -2101,6 +2100,19 @@ public:
         // the <= ensures that searching in  interval of [a, b) for 'a' you get .length == 1
         // return assumeSorted!((a,b) => a<=b)(data[]).lowerBound(val).length & 1;
         return sharSwitchLowerBound!"a<=b"(data[], val) & 1;
+    }
+
+    // Linear scan for $(D ch). Useful only for small sets.
+    // TODO: 
+    // used internally in std.regex
+    // should be properly exposed in a public API ?
+    package auto scanFor()(dchar ch) const
+    {
+        immutable len = data.length;
+        for(size_t i = 0; i < len; i++)
+            if(ch < data[i])
+                return i & 1;
+        return 0;
     }
 
     /// Number of $(CODEPOINTS) in this set
@@ -2737,22 +2749,23 @@ private:
     Marker addInterval(int a, int b, Marker hint=Marker.init)
     in
     {
-        assert(a <= b, text(a, " > ", b));
+        assert(a <= b);
     }
     body
     {
         auto range = assumeSorted(data[]);
         size_t pos;
-        size_t a_idx = range.lowerBound(a).length;
+        size_t a_idx = hint + range[hint..$].lowerBound!(SearchPolicy.gallop)(a).length;
         if(a_idx == range.length)
         {
             //  [---+++----++++----++++++]
             //  [                         a  b]
-            data.append([a, b]);
+            data.append(a, b);
             return data.length-1;
         }
-        size_t b_idx = range[a_idx..range.length].lowerBound(b).length+a_idx;
-        uint[] to_insert;
+        size_t b_idx = range[a_idx..range.length].lowerBound!(SearchPolicy.gallop)(b).length+a_idx;
+        uint[3] buf = void;
+        uint to_insert;
         debug(std_uni)
         {
             writefln("a_idx=%d; b_idx=%d;", a_idx, b_idx);
@@ -2763,14 +2776,17 @@ private:
             //  [      s     a                 b]
             if(a_idx & 1)// a in positive
             {
-                to_insert = [ b ];
+                buf[0] = b;
+                to_insert = 1;
             }
             else// a in negative
             {
-                to_insert = [a, b];
+                buf[0] = a;
+                buf[1] = b;
+                to_insert = 2;
             }
-            genericReplace(data, a_idx, b_idx, to_insert);
-            return a_idx+to_insert.length-1;
+            pos = genericReplace(data, a_idx, b_idx, buf[0..to_insert]);
+            return pos - 1;
         }
 
         uint top = data[b_idx];
@@ -2786,7 +2802,8 @@ private:
             {
                 //  [-------++++++++----++++++-]
                 //  [       s    a        b    ]
-                to_insert = [top];
+                buf[0] = top;
+                to_insert = 1;
             }
             else // b in negative
             {
@@ -2795,10 +2812,13 @@ private:
                 if(top == b)
                 {
                     assert(b_idx+1 < data.length);
-                    pos = genericReplace(data, a_idx, b_idx+2, [data[b_idx+1]]);
-                    return pos;
+                    buf[0] = data[b_idx+1];
+                    pos = genericReplace(data, a_idx, b_idx+2, buf[0..1]);
+                    return pos - 1;
                 }
-                to_insert = [b, top ];
+                buf[0] = b;
+                buf[1] = top;
+                to_insert = 2;
             }
         }
         else
@@ -2807,7 +2827,9 @@ private:
             {
                 //  [----------+++++----++++++-]
                 //  [     a     b              ]
-                to_insert = [a, top];
+                buf[0] = a;
+                buf[1] = top;
+                to_insert = 2;
             }
             else// b in negative
             {
@@ -2816,19 +2838,24 @@ private:
                 if(top == b)
                 {
                     assert(b_idx+1 < data.length);
-                    pos = genericReplace(data, a_idx, b_idx+2, [a, data[b_idx+1] ]);
-                    return pos;
+                    buf[0] = a;
+                    buf[1] = data[b_idx+1];
+                    pos = genericReplace(data, a_idx, b_idx+2, buf[0..2]);
+                    return pos - 1;
                 }
-                to_insert = [a, b, top];
+                buf[0] = a;
+                buf[1] = b;
+                buf[2] = top;
+                to_insert = 3;
             }
         }
-        pos = genericReplace(data, a_idx, b_idx+1, to_insert);
+        pos = genericReplace(data, a_idx, b_idx+1, buf[0..to_insert]);
         debug(std_uni)
         {
             writefln("marker idx: %d; length=%d", pos, data[pos], data.length);
-            writeln("inserting ", to_insert);
+            writeln("inserting ", buf[0..to_insert]);
         }
-        return pos;
+        return pos - 1;
     }
 
     //
@@ -3031,11 +3058,21 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
 }
 @trusted struct CowArray(SP=GcPolicy)
 {
+    static auto reuse(uint[] arr)
+    {
+        CowArray cow;
+        cow.data = arr;
+        SP.append(cow.data, 1);
+        assert(cow.refCount == 1);
+        assert(cow.length == arr.length);
+        return cow;
+    }
+
     this(Range)(Range range)
         if(isInputRange!Range && hasLength!Range)
     {
         length = range.length;
-        copy(range, this[]);
+        copy(range, data[0..$-1]);
     }
 
     this(Range)(Range range)
@@ -3043,7 +3080,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     {
         auto len = walkLength(range.save);
         length = len;
-        copy(range, this[]);
+        copy(range, data[0..$-1]);
     }
 
     this(this)
@@ -3128,13 +3165,20 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     //
     auto opSlice(size_t from, size_t to)
     {
-        return sliceOverIndexed(from, to, &this);
+        if(!empty)
+        {
+            auto cnt = refCount;
+            if(cnt != 1)
+                dupThisReference(cnt);
+        }
+        return data[from .. to];
+        
     }
 
     //
     auto opSlice(size_t from, size_t to) const
     {
-        return sliceOverIndexed(from, to, &this);
+        return data[from .. to];
     }
 
     // length slices before the ref count
@@ -3157,10 +3201,10 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
         copy(range, this[nl-range.length..nl]);
     }
 
-    void append()(uint val)
+    void append()(uint[] val...)
     {
-        length = length + 1;
-        this[$-1] = val;
+        length = length + val.length;
+        data[$-val.length-1 .. $-1] = val[];
     }
 
     bool opEquals()(auto const ref CowArray rhs)const
@@ -3193,10 +3237,7 @@ private:
         }
         else
             SP.destroy(data);
-        version(bug10929)
-            assert(!data.ptr);
-        else
-            data = null;
+        assert(!data.ptr);
     }
 
     void dupThisReference(uint count)
@@ -5741,7 +5782,7 @@ else
     // conjure cumulative properties by hand
     if(ucmp(name, "L") == 0 || ucmp(name, "Letter") == 0)
     {
-        target |= asSet(uniProps.Lu);
+        target = asSet(uniProps.Lu);
         target |= asSet(uniProps.Ll);
         target |= asSet(uniProps.Lt);
         target |= asSet(uniProps.Lo);
@@ -5749,25 +5790,25 @@ else
     }
     else if(ucmp(name,"LC") == 0 || ucmp(name,"Cased Letter")==0)
     {
-        target |= asSet(uniProps.Ll);
+        target = asSet(uniProps.Ll);
         target |= asSet(uniProps.Lu);
         target |= asSet(uniProps.Lt);// Title case
     }
     else if(ucmp(name, "M") == 0 || ucmp(name, "Mark") == 0)
     {
-        target |= asSet(uniProps.Mn);
+        target = asSet(uniProps.Mn);
         target |= asSet(uniProps.Mc);
         target |= asSet(uniProps.Me);
     }
     else if(ucmp(name, "N") == 0 || ucmp(name, "Number") == 0)
     {
-        target |= asSet(uniProps.Nd);
+        target = asSet(uniProps.Nd);
         target |= asSet(uniProps.Nl);
         target |= asSet(uniProps.No);
     }
     else if(ucmp(name, "P") == 0 || ucmp(name, "Punctuation") == 0)
     {
-        target |= asSet(uniProps.Pc);
+        target = asSet(uniProps.Pc);
         target |= asSet(uniProps.Pd);
         target |= asSet(uniProps.Ps);
         target |= asSet(uniProps.Pe);
@@ -5777,27 +5818,27 @@ else
     }
     else if(ucmp(name, "S") == 0 || ucmp(name, "Symbol") == 0)
     {
-        target |= asSet(uniProps.Sm);
+        target = asSet(uniProps.Sm);
         target |= asSet(uniProps.Sc);
         target |= asSet(uniProps.Sk);
         target |= asSet(uniProps.So);
     }
     else if(ucmp(name, "Z") == 0 || ucmp(name, "Separator") == 0)
     {
-        target |= asSet(uniProps.Zs);
+        target = asSet(uniProps.Zs);
         target |= asSet(uniProps.Zl);
         target |= asSet(uniProps.Zp);
     }
     else if(ucmp(name, "C") == 0 || ucmp(name, "Other") == 0)
     {
-        target |= asSet(uniProps.Co);
+        target = asSet(uniProps.Co);
         target |= asSet(uniProps.Lo);
         target |= asSet(uniProps.No);
         target |= asSet(uniProps.So);
         target |= asSet(uniProps.Po);
     }
     else if(ucmp(name, "graphical") == 0){
-        target |= asSet(uniProps.Alphabetic);
+        target = asSet(uniProps.Alphabetic);
 
         target |= asSet(uniProps.Mn);
         target |= asSet(uniProps.Mc);
@@ -6039,7 +6080,7 @@ private:
     {
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
-            || (ucmp(name[0..2],"In") == 0
+            || (name.length > 2 && ucmp(name[0..2],"In") == 0
                 && loadUnicodeSet!(blocks.tab)(name[2..$], set));
         if(loaded)
             return set;
@@ -6069,6 +6110,7 @@ unittest
     import std.exception;
     // R-T look up throws if no such set is found
     assert(collectException(unicode("InCyrilliac")));
+    assert(collectException(unicode("X")));
 
     assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
 
@@ -7037,6 +7079,101 @@ unittest
     assert(sicmp("ΐ", "\u03B9\u0308\u0301") != 0);
     //bugzilla 11057
     assert( icmp("K", "L") < 0 );
+    });
+}
+
+// This is package for the moment to be used as a support tool for std.regex
+// It needs a better API
+/*
+    Return a range of all $(CODEPOINTS) that casefold to
+    and from this $(D ch).
+*/
+package auto simpleCaseFoldings(dchar ch)
+{
+    alias sTable = simpleCaseTable;
+    static struct Range
+    {
+    pure nothrow:
+        uint idx; //if == uint.max, then read c.
+        union
+        {
+            dchar c; // == 0 - empty range
+            uint len;
+        }
+        @property bool isSmall() const { return idx == uint.max; }
+
+        this(dchar ch)
+        {
+            idx = uint.max;
+            c = ch;
+        }
+
+        this(uint start, uint size)
+        {
+            idx = start;
+            len = size;
+        }
+
+        @property dchar front() const
+        {
+            assert(!empty);
+            if(isSmall)
+            {
+                return c;
+            }
+            auto ch = sTable[idx].ch;
+            return ch;
+        }
+
+        @property bool empty() const
+        {
+            if(isSmall)
+            {
+                return c == 0;
+            }
+            return len == 0;
+        }
+
+        @property uint length() const
+        {
+            if(isSmall)
+            {
+                return c == 0 ? 0 : 1;
+            }
+            return len;
+        }
+
+        void popFront()
+        {
+            if(isSmall)
+                c = 0;
+            else
+            {
+                idx++;
+                len--;
+            }
+        }
+    }
+    immutable idx = simpleCaseTrie[ch];
+    if (idx == EMPTY_CASE_TRIE)
+        return Range(ch);
+    auto entry = sTable[idx];
+    immutable start = idx - entry.n;
+    return Range(start, entry.size);
+}
+
+unittest
+{
+    assertCTFEable!((){
+        auto r = simpleCaseFoldings('Э').array;
+        assert(r.length == 2);
+        assert(r.canFind('э') && r.canFind('Э'));
+        auto sr = simpleCaseFoldings('~');
+        assert(sr.equalS("~"));
+        //A with ring above - casefolds to the same bucket as Angstrom sign
+        sr = simpleCaseFoldings('Å');
+        assert(sr.length == 3);
+        assert(sr.canFind('å') && sr.canFind('Å') && sr.canFind('\u212B'));
     });
 }
 
