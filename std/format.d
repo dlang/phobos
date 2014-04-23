@@ -4858,12 +4858,12 @@ $(I FormatChar):
 Example:
 
 -------------------------
-import std.c.stdio;
+import core.stdc.stdio;
 import std.format;
 
 void myPrint(...)
 {
-    void putc(char c)
+    void putc(dchar c)
     {
         fputc(c, stdout);
     }
@@ -4871,11 +4871,13 @@ void myPrint(...)
     std.format.doFormat(&putc, _arguments, _argptr);
 }
 
-...
+void main()
+{
+    int x = 27;
 
-int x = 27;
-// prints 'The answer is 27:6'
-myPrint("The answer is %s:", x, 6);
+    // prints 'The answer is 27:6'
+    myPrint("The answer is %s:", x, 6);
+}
 ------------------------
  */
 void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
