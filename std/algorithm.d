@@ -8744,8 +8744,20 @@ if (isBidirectionalRange!Range)
 ///
 unittest
 {
-    int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
-    assert(remove!("a == 2")(a) == [ 1, 3, 3, 4, 5, 5, 6 ]);
+    static immutable base = [1, 2, 3, 2, 4, 2, 5, 2];
+
+    int[] arr = base[].dup;
+
+    // using a string-based predicate
+    assert(remove!("a == 2")(arr) == [ 1, 3, 4, 5 ]);
+
+    // The original array contents have been modified,
+    // so we need to reset it to its original state.
+    // The length is unmodified however.
+    arr[] = base[];
+
+    // using a lambda predicate
+    assert(remove!(a => a == 2)(arr) == [ 1, 3, 4, 5 ]);
 }
 
 unittest
