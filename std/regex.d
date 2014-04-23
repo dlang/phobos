@@ -2281,7 +2281,8 @@ unittest
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
-    enforce(equal(dict[fnd].name, name), text("no submatch named ", name));
+    enforce(fnd < dict.length && equal(dict[fnd].name, name), 
+        text("no submatch named ", name));
     return dict[fnd].group;
 }
 
@@ -7467,6 +7468,13 @@ unittest
     assert("aaab".matchFirst(r).hit == "aaa");
     auto r2 = ctRegex!`.*(?!a)`;
     assert("aaab".matchFirst(r2).hit == "aaab");
+}
+
+// bugzilla 12582
+unittest
+{
+    auto r = regex(`(?P<a>abc)`);
+    assert(collectException("abc".matchFirst(r)["b"]));
 }
 
 }//version(unittest)
