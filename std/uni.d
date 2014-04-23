@@ -66,6 +66,17 @@
         but for user-defined data sets.
     )
     $(LI
+        A useful technique for Unicode-aware parsers that perform
+        character classification of encoded $(CODEPOINTS)
+        is to avoid unnecassary decoding at all costs.
+        $(LREF utfMatcher) provides an improvement over the usual workflow
+        of decode-classify-process, combining the decoding and classification
+        steps. By extracting necessary bits directly from encoded
+        $(S_LINK Code unit, code units) matchers achieve 
+        significant performance improvements. See $(LREF MatcherConcept) for
+        the common interface of UTF matchers.
+    )
+    $(LI
         Generally useful building blocks for customized normalization:
         $(LREF combiningClass) for querying combining class
         and $(LREF allowedIn) for testing the Quick_Check
@@ -1380,7 +1391,6 @@ private struct SliceOverIndexed(T)
 {
     enum assignableIndex = is(typeof((){ T.init[0] = Item.init; }));
     enum assignableSlice = is(typeof((){ T.init[0..0] = Item.init; }));
-
     auto opIndex(size_t idx)const
     in
     {
@@ -1878,6 +1888,7 @@ public alias CodepointSet = InversionList!GcPolicy;
 */
 public struct CodepointInterval
 {
+pure:
     uint[2] _tuple;
     alias _tuple this;
     this(uint low, uint high)
@@ -1889,8 +1900,8 @@ public struct CodepointInterval
     {
         return this[0] == val[0] && this[1] == val[1];
     }
-    @property ref uint a(){ return _tuple[0]; }
-    @property ref uint b(){ return _tuple[1]; }
+    @property ref inout(uint) a() inout { return _tuple[0]; }
+    @property ref inout(uint) b() inout { return _tuple[1]; }
 }
 
 //@@@BUG another forward reference workaround
@@ -1970,10 +1981,11 @@ public struct CodepointInterval
 @trusted public struct InversionList(SP=GcPolicy)
 {
 public:
+
     /**
         Construct from another code point set of any type.
     */
-    this(Set)(Set set)
+    this(Set)(Set set) pure
         if(isCodepointSet!Set)
     {
         uint[] arr;
@@ -1988,13 +2000,40 @@ public:
     /**
         Construct a set from a forward range of code point intervals.
     */
-    this(Range)(Range intervals)
+    this(Range)(Range intervals) pure
         if(isForwardRange!Range && isIntegralPair!(ElementType!Range))
     {
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
         data = CowArray!(SP)(flattened);
         sanitize(); //enforce invariant: sort intervals etc.
+    }
+
+    //helper function that avoids sanity check to be CTFE-friendly
+    private static fromIntervals(Range)(Range intervals) pure
+    {
+        auto flattened = roundRobin(intervals.save.map!"a[0]"(),
+            intervals.save.map!"a[1]"());
+        InversionList set;
+        set.data = CowArray!(SP)(flattened);
+        return set;
+    }
+    //ditto untill sort is CTFE-able
+    private static fromIntervals()(uint[] intervals...) pure
+    in
+    {
+        assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
+        for (uint i = 0; i < intervals.length; i += 2)
+        {
+            auto a = intervals[i], b = intervals[i+1];
+            assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
+        }
+    }
+    body
+    {
+        InversionList set;
+        set.data = CowArray!(SP)(intervals);
+        return set;
     }
 
     /**
@@ -2018,9 +2057,9 @@ public:
     in
     {
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
-        for(uint i=0; i<intervals.length/2; i++)
+        for (uint i = 0; i < intervals.length; i += 2)
         {
-            auto a = intervals[2*i], b = intervals[2*i+1];
+            auto a = intervals[i], b = intervals[i+1];
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
         }
     }
@@ -2415,7 +2454,7 @@ public:
         ---
         import std.stdio;
 
-        // construct set directly from [a, b) intervals
+        // construct set directly from [a, b$RPAREN intervals
         auto set = CodepointSet(10, 12, 45, 65, 100, 200);
         writeln(set);
         writeln(set.toSourceCode("func"));
@@ -2645,7 +2684,8 @@ private:
         alias Ival = CodepointInterval;
         //intervals wrapper for a _range_ over packed array
         auto ivals = Intervals!(typeof(data[]))(data[]);
-        sort!("a.a < b.a", SwapStrategy.stable)(ivals);
+        //@@@BUG@@@ can't use "a.a < b.a" see issue 12265 
+        sort!((a,b) => a.a < b.a, SwapStrategy.stable)(ivals);
         // what follows is a variation on stable remove
         // differences:
         // - predicate is binary, and is tested against
@@ -3809,8 +3849,8 @@ public:
             v = ConstructState(size_t.max, size_t.max);
         table = typeof(table)(indices);
         // one page per level is a bootstrap minimum
-        foreach(i; Sequence!(0, Prefix.length))
-            table.length!i = (1<<Prefix[i].bitSize);
+        foreach(i, Pred; Prefix)
+            table.length!i = (1<<Pred.bitSize);
     }
 
     /**
@@ -4347,6 +4387,857 @@ public template buildTrie(Value, Key, Args...)
     }
 }
 
+// helper in place of assumeSize to
+//reduce mangled name & help DMD inline Trie functors
+struct clamp(size_t bits)
+{
+    static size_t opCall(T)(T arg){ return arg; }
+    enum bitSize = bits;
+}
+
+struct clampIdx(size_t idx, size_t bits)
+{
+    static size_t opCall(T)(T arg){ return arg[idx]; }
+    enum bitSize = bits;
+}
+
+/**
+    Conceptual type that outlines the common properties of all UTF Matchers.
+
+    Note: For illustration purposes only, every method
+    call results in assertion failure. 
+    Use $(LREF utfMatcher) to obtain a concrete matcher
+    for UTF-8 or UTF-16 encodings.
+*/
+public struct MatcherConcept
+{
+    /**
+        $(P Perform a semantic equivalent 2 operations:
+        decoding a $(CODEPOINT) at front of $(D inp) and testing if  
+        it belongs to the set of $(CODEPOINTS) of this matcher. )
+
+        $(P The effect on $(D inp) depends on the kind of function called:)
+
+        $(P Match. If the codepoint is found in the set then range $(D inp)
+        is advanced by its size in $(S_LINK Code unit, code units), 
+        otherwise the range is not modifed.)
+
+        $(P Skip. The range is always advanced by the size
+        of the tested $(CODEPOINT) regardless of the result of test.)
+
+        $(P Test. The range is left unaffected regardless 
+        of the result of test.)
+    */
+    public bool match(Range)(ref Range inp)
+        if(isRandomAccessRange!Range && is(ElementType!Range : char))
+    {
+       assert(false);
+    }
+
+    ///ditto
+    public bool skip(Range)(ref Range inp)
+        if(isRandomAccessRange!Range && is(ElementType!Range : char))
+    {
+        assert(false);
+    }
+
+    ///ditto
+    public bool test(Range)(ref Range inp)
+        if(isRandomAccessRange!Range && is(ElementType!Range : char))
+    {
+        assert(false);
+    }
+    ///
+    @safe unittest
+    {
+        string truth = "2² = 4";
+        auto m = utfMatcher!char(unicode.Number);    
+        assert(m.match(truth)); // '2' is a number all right
+        assert(truth == "² = 4"); // skips on match
+        assert(m.match(truth)); // so is the superscript '2'
+        assert(!m.match(truth)); // space is not a number
+        assert(truth == " = 4"); // unaffected on no match
+        assert(!m.skip(truth)); // same test ...
+        assert(truth == "= 4"); // but skips a codepoint regardless
+        assert(!m.test(truth)); // '=' is not a number
+        assert(truth == "= 4"); // test never affects argument
+    }
+
+    /*
+        Advanced feature - provide direct access to a subset of matcher based a
+        set of known encoding lengths. Lengths are provided in 
+        $(S_LINK Code unit, code units). The sub-matcher then may do less 
+        operations per any $(D test)/$(D match).
+
+        Use with care as the sub-matcher won't match 
+        any $(CODEPOINTS) that have encoded length that doesn't belong 
+        to the selected set of lengths. Also the sub-matcher object references 
+        the parent matcher and must not be used past the liftetime 
+        of the latter.
+
+        Another caveat of using sub-matcher is that skip is not available 
+        preciesly because sub-matcher doesn't detect all lengths.
+    */
+    @property auto subMatcher(Lengths...)()
+    {
+        assert(0);
+        return this;
+    }
+
+    ///
+    @safe unittest
+    {
+        auto m = utfMatcher!char(unicode.Number);
+        string square = "2²";        
+        // about sub-matchers
+        assert(!m.subMatcher!(2,3,4).test(square)); // ASCII no covered
+        assert(m.subMatcher!1.match(square)); // ASCII-only, works
+        assert(!m.subMatcher!1.test(square)); // unicode '²'
+        assert(m.subMatcher!(2,3,4).match(square));  //
+        assert(square == "");
+        wstring wsquare = "2²";
+        auto m16 = utfMatcher!wchar(unicode.Number);
+        // may keep ref, but the orignal (m16) must be kept alive
+        auto bmp = m16.subMatcher!1;
+        assert(bmp.match(wsquare)); // Okay, in basic multilingual plan
+        assert(bmp.match(wsquare)); // And '²' too
+    }
+}
+
+/**
+    Test if $(D M) is an UTF Matcher for ranges of $(D Char).
+*/
+public enum isUtfMatcher(M, C) = __traits(compiles, (){
+    C[] s;
+    auto d = s.decoder;
+    M m;
+    assert(is(typeof(m.match(d)) == bool));
+    assert(is(typeof(m.test(d)) == bool));
+    static if(is(typeof(m.skip(d))))
+    {
+        assert(is(typeof(m.skip(d)) == bool));
+        assert(is(typeof(m.skip(s)) == bool));
+    }
+    assert(is(typeof(m.match(s)) == bool));
+    assert(is(typeof(m.test(s)) == bool));
+});
+
+unittest
+{
+    alias CharMatcher = typeof(utfMatcher!char(CodepointSet.init));
+    alias WcharMatcher = typeof(utfMatcher!wchar(CodepointSet.init));
+    static assert(isUtfMatcher!(CharMatcher, char));
+    static assert(isUtfMatcher!(CharMatcher, immutable(char)));
+    static assert(isUtfMatcher!(WcharMatcher, wchar));
+    static assert(isUtfMatcher!(WcharMatcher, immutable(wchar)));
+}
+
+enum Mode {
+    alwaysSkip,
+    neverSkip,
+    skipOnMatch
+};
+
+mixin template ForwardStrings()
+{ 
+    private bool fwdStr(string fn, C)(ref C[] str) const pure
+    {
+        alias type = typeof(units(str));
+        return mixin(fn~"(*cast(type*)&str)");
+    }
+}
+
+template Utf8Matcher()
+{
+    enum validSize(int sz) = sz >= 1 && sz <=4;
+
+    void badEncoding() pure @safe
+    {
+        import std.utf;
+        throw new UTFException("Invalid UTF-8 sequence");
+    }
+
+    //for 1-stage ASCII
+    alias AsciiSpec = TypeTuple!(bool, char, clamp!7);
+    //for 2-stage lookup of 2 byte UTF-8 sequences
+    alias Utf8Spec2 = TypeTuple!(bool, char[2], 
+        clampIdx!(0, 5), clampIdx!(1, 6));
+    //ditto for 3 byte
+    alias Utf8Spec3 = TypeTuple!(bool, char[3], 
+        clampIdx!(0, 4),
+        clampIdx!(1, 6),
+        clampIdx!(2, 6)
+    );
+    //ditto for 4 byte
+    alias Utf8Spec4 = TypeTuple!(bool, char[4],
+        clampIdx!(0, 3), clampIdx!(1, 6),
+        clampIdx!(2, 6), clampIdx!(3, 6)
+    );
+    alias Tables = TypeTuple!(
+        typeof(TrieBuilder!(AsciiSpec)(false).build()),
+        typeof(TrieBuilder!(Utf8Spec2)(false).build()),
+        typeof(TrieBuilder!(Utf8Spec3)(false).build()),
+        typeof(TrieBuilder!(Utf8Spec4)(false).build())
+    );
+    alias Table(int size) = Tables[size-1];
+
+    enum leadMask(size_t size) = (cast(size_t)1<<(7 - size))-1;
+    enum encMask(size_t size) = ((1<<size)-1)<<(8-size);
+    
+    char truncate()(char ch) pure @safe
+    {
+        ch -= 0x80;
+        return ch < 0x40 ? ch : (badEncoding(), cast(char)0);
+    }
+
+    static auto encode(size_t sz)(dchar ch)
+        if(sz > 1)
+    {
+        import std.utf : encode;
+        char[4] buf;
+        std.utf.encode(buf, ch);
+        char[sz] ret;
+        buf[0] &= leadMask!sz;        
+        foreach(n; 1..sz)
+            buf[n] = buf[n] & 0x3f; //keep 6 lower bits
+        ret[] = buf[0..sz];
+        return ret;
+    }
+
+    auto build(Set)(Set set)
+    {
+        auto ascii = set & unicode.ASCII;
+        auto utf8_2 = set & CodepointSet(0x80, 0x800);
+        auto utf8_3 = set & CodepointSet(0x800, 0x1_0000);
+        auto utf8_4 = set & CodepointSet(0x1_0000, lastDchar+1);
+        auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
+        auto utf8_2T = utf8_2.byCodepoint.map!(x=>encode!2(x)).buildTrie!(Utf8Spec2);
+        auto utf8_3T = utf8_3.byCodepoint.map!(x=>encode!3(x)).buildTrie!(Utf8Spec3);
+        auto utf8_4T = utf8_4.byCodepoint.map!(x=>encode!4(x)).buildTrie!(Utf8Spec4);
+        alias Ret = Impl!(1,2,3,4);
+        return Ret(asciiT, utf8_2T, utf8_3T, utf8_4T);
+    }
+
+    // Bootstrap UTF-8 static matcher interface
+    // from 3 primitives: tab!(size), lookup and Sizes
+    mixin template DefMatcher()
+    {
+        import std.string : format;
+        enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
+        alias UniSizes = Erase!(1, Sizes);
+        
+        //generate dispatch code sequence for unicode parts
+        static auto genDispatch()
+        {
+            string code;
+            foreach(size; UniSizes)
+                code ~= format(q{
+                    if ((ch & ~leadMask!%d) == encMask!(%d))
+                        return lookup!(%d, mode)(inp);
+                    else 
+                }, size, size, size);
+            static if (Sizes.length == 4) //covers all code unit cases
+                code ~= "{ badEncoding(); return false; }";
+            else
+                code ~= "return false;"; //may be just fine but not covered
+            return code;
+        }
+        enum dispatch = genDispatch();
+
+        public bool match(Range)(ref Range inp) const pure @trusted
+            if(isRandomAccessRange!Range && is(ElementType!Range : char))
+        {
+            enum mode = Mode.skipOnMatch;
+            assert(!inp.empty);
+            auto ch = inp[0];
+            static if(hasASCII)
+            {
+                if (ch < 0x80)
+                {
+                    bool r = tab!1[ch];
+                    if(r)
+                        inp.popFront();
+                    return r;
+                }
+                else
+                    mixin(dispatch);
+            }
+            else
+                mixin(dispatch);
+        }
+
+        static if(Sizes.length == 4) // can skip iff can detect all encodings
+        {
+            public bool skip(Range)(ref Range inp) const pure @trusted
+                if(isRandomAccessRange!Range && is(ElementType!Range : char))
+            {
+                enum mode = Mode.alwaysSkip;
+                assert(!inp.empty);
+                auto ch = inp[0];
+                static if(hasASCII)
+                {
+                    if (ch < 0x80)
+                    {
+                        inp.popFront();
+                        return tab!1[ch];
+                    }
+                    else
+                        mixin(dispatch);
+                }
+                else
+                    mixin(dispatch);
+            }
+        }
+
+        public bool test(Range)(ref Range inp) const pure @trusted
+            if(isRandomAccessRange!Range && is(ElementType!Range : char))
+        {
+            enum mode = Mode.neverSkip;
+            assert(!inp.empty);
+            auto ch = inp[0];
+            static if(hasASCII)
+            {
+                if (ch < 0x80)
+                    return tab!1[ch];
+                else
+                    mixin(dispatch);
+            }
+            else
+                mixin(dispatch);
+        }
+
+        bool match(C)(ref C[] str) const pure @trusted
+            if(isSomeChar!C)
+        {
+            return fwdStr!"match"(str);
+        }
+
+        bool skip(C)(ref C[] str) const pure @trusted
+            if(isSomeChar!C)
+        {
+            return fwdStr!"skip"(str);
+        }
+
+        bool test(C)(ref C[] str) const pure @trusted
+            if(isSomeChar!C)
+        {
+            return fwdStr!"test"(str);
+        }
+
+        mixin ForwardStrings;
+    }
+
+    struct Impl(Sizes...)
+    {
+        static assert(allSatisfy!(validSize, Sizes), 
+            "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
+    private:        
+        //pick tables for chosen sizes
+        alias OurTabs = staticMap!(Table, Sizes);
+        OurTabs tables;
+        mixin DefMatcher;
+        //static disptach helper UTF size ==> table
+        alias tab(int i) = tables[i - 1];
+
+        package @property auto subMatcher(SizesToPick...)() @trusted
+        {
+            return CherryPick!(Impl, SizesToPick)(&this);
+        }
+
+        bool lookup(int size, Mode mode, Range)(ref Range inp) const pure @trusted
+        {
+            import std.typecons;
+            if(inp.length < size)
+                return badEncoding(), false;        
+            char[size] needle = void;
+            needle[0] = leadMask!size & inp[0];
+            foreach(i; staticIota!(1, size))
+            {
+                needle[i] = truncate(inp[i]);
+            }
+            //overlong encoding checks
+            static if(size == 2)
+            {
+                //0x80-0x7FF
+                //got 6 bits in needle[1], must use at least 8 bits
+                //must use at least 2 bits in needle[1]
+                if(needle[0] < 2) badEncoding();
+            }
+            else static if(size == 3)
+            {
+                //0x800-0xFFFF
+                //got 6 bits in needle[2], must use at least 12bits
+                //must use 6 bits in needle[1] or anything in needle[0]
+                if(needle[0] == 0 && needle[1] < 0x20) badEncoding();
+            }
+            else static if(size == 4)
+            {
+                //0x800-0xFFFF
+                //got 2x6=12 bits in needle[2..3] must use at least 17bits
+                //must use 5 bits (or above) in needle[1] or anything in needle[0]
+                if(needle[0] == 0 && needle[1] < 0x10) badEncoding();
+            }
+            static if(mode == Mode.alwaysSkip)
+            {
+                inp.popFrontN(size);
+                return tab!size[needle];
+            }
+            else static if(mode == Mode.neverSkip)
+            {
+                return tab!size[needle];
+            }
+            else
+            {
+                static assert(mode == Mode.skipOnMatch);
+                return tab!size[needle] && (inp.popFrontN(size), true);
+            }
+        }
+    }
+
+    struct CherryPick(I, Sizes...)
+    {
+        static assert(allSatisfy!(validSize, Sizes), 
+            "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
+    private:
+        I* m;
+        @property ref tab(int i)() const pure { return m.tables[i - 1]; }
+        bool lookup(int size, Mode mode, Range)(ref Range inp) const pure
+        {
+            return m.lookup!(size, mode)(inp);
+        }
+        mixin DefMatcher;
+    }
+}
+
+template Utf16Matcher()
+{
+    enum validSize(int sz) = sz >= 1 && sz <=2;
+
+    void badEncoding() pure
+    {
+        import std.utf;
+        throw new UTFException("Invalid UTF-16 sequence");
+    }
+
+    alias Seq = TypeTuple;
+    // 1-stage ASCII
+    alias AsciiSpec = Seq!(bool, wchar, clamp!7);
+    //2-stage BMP
+    alias BmpSpec = Seq!(bool, wchar, sliceBits!(7, 16), sliceBits!(0, 7));
+    //4-stage - full Unicode
+    //assume that 0xD800 & 0xDC00 bits are cleared
+    //thus leaving 10 bit per wchar to worry about
+    alias UniSpec = Seq!(bool, wchar[2], 
+        assumeSize!(x=>x[0]>>4, 6), assumeSize!(x=>x[0]&0xf, 4),
+        assumeSize!(x=>x[1]>>6, 4), assumeSize!(x=>x[1]&0x3f, 6), 
+    );    
+    alias Ascii = typeof(TrieBuilder!(AsciiSpec)(false).build());
+    alias Bmp = typeof(TrieBuilder!(BmpSpec)(false).build());
+    alias Uni = typeof(TrieBuilder!(UniSpec)(false).build());
+
+    auto encode2(dchar ch)
+    {
+        ch -= 0x1_0000;
+        assert(ch <= 0xF_FFFF);
+        wchar[2] ret;
+        //do not put surrogate bits, they are sliced off
+        ret[0] = (ch>>10);
+        ret[1] = (ch & 0xFFF);
+        return ret;
+    }
+
+    auto build(Set)(Set set)
+    {
+        auto ascii = set & unicode.ASCII;
+        auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
+            - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
+        auto other = set - (bmp | ascii);
+        auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
+        auto bmpT = bmp.byCodepoint.map!(x=>cast(wchar)x).buildTrie!(BmpSpec);
+        auto otherT = other.byCodepoint.map!(x=>encode2(x)).buildTrie!(UniSpec);
+        alias Ret = Impl!(1,2);
+        return Ret(asciiT, bmpT, otherT);
+    }
+
+    //bootstrap full UTF-16 matcher interace from
+    //sizeFlags, lookupUni and ascii
+    mixin template DefMatcher()
+    {
+        public bool match(Range)(ref Range inp) const pure @trusted
+            if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
+        {
+            enum mode = Mode.skipOnMatch;
+            assert(!inp.empty);
+            auto ch = inp[0];
+            static if(sizeFlags & 1)
+                return ch < 0x80 ? ascii[ch] && (inp.popFront(), true)
+                    : lookupUni!mode(inp);
+            else
+                return lookupUni!mode(inp);
+        }
+
+        static if(Sizes.length == 2)
+        {
+            public bool skip(Range)(ref Range inp) const pure @trusted
+                if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
+            {
+                enum mode = Mode.alwaysSkip;
+                assert(!inp.empty);
+                auto ch = inp[0];
+                static if(sizeFlags & 1)
+                    return ch < 0x80 ? (inp.popFront(), ascii[ch]) 
+                        : lookupUni!mode(inp);
+                else
+                    return lookupUni!mode(inp);
+            }
+        }
+
+        public bool test(Range)(ref Range inp) const pure @trusted
+            if(isRandomAccessRange!Range && is(ElementType!Range : wchar))
+        {
+            enum mode = Mode.neverSkip;
+            assert(!inp.empty);
+            auto ch = inp[0];
+            static if(sizeFlags & 1)
+                return ch < 0x80 ? ascii[ch] : lookupUni!mode(inp);
+            else
+                return lookupUni!mode(inp);
+        }
+
+        bool match(C)(ref C[] str) const pure @trusted
+            if(isSomeChar!C)
+        {
+            return fwdStr!"match"(str);
+        }
+
+        bool skip(C)(ref C[] str) const pure @trusted
+            if(isSomeChar!C)
+        {
+            return fwdStr!"skip"(str);
+        }
+
+        bool test(C)(ref C[] str) const pure @trusted
+            if(isSomeChar!C)
+        {
+            return fwdStr!"test"(str);
+        }
+        
+        mixin ForwardStrings; //dispatch strings to range versions
+    }
+
+    struct Impl(Sizes...)
+        if(Sizes.length >= 1 && Sizes.length <= 2)
+    {
+    private:
+        static assert(allSatisfy!(validSize, Sizes), 
+            "Only lengths of 1 and 2 code units are possible in UTF-16");
+        static if(Sizes.length > 1)
+            enum sizeFlags = Sizes[0] | Sizes[1];
+        else
+            enum sizeFlags = Sizes[0];
+
+        static if(sizeFlags & 1)
+        {
+            Ascii ascii;
+            Bmp bmp;            
+        }
+        static if(sizeFlags & 2)
+        {
+            Uni uni;
+        }
+        mixin DefMatcher;
+
+        package @property auto subMatcher(SizesToPick...)() @trusted
+        {
+            return CherryPick!(Impl, SizesToPick)(&this);
+        }
+
+        bool lookupUni(Mode mode, Range)(ref Range inp) const pure
+        {            
+            wchar x = cast(wchar)(inp[0] - 0xD800);
+            //not a high surrogate
+            if(x > 0x3FF)
+            {
+                //low surrogate
+                if(x <= 0x7FF) badEncoding();
+                static if(sizeFlags & 1)
+                {
+                    auto ch = inp[0];
+                    static if(mode == Mode.alwaysSkip)                       
+                        inp.popFront();
+                    static if(mode == Mode.skipOnMatch)
+                        return bmp[ch] && (inp.popFront(), true);
+                    else
+                        return bmp[ch];
+                }
+                else //skip is not available for sub-matchers, so just false
+                    return false;
+            }
+            else
+            {
+                static if(sizeFlags & 2)
+                {                    
+                    if(inp.length < 2)
+                        badEncoding();                    
+                    wchar y = cast(wchar)(inp[1] - 0xDC00);
+                    //not a low surrogate
+                    if(y > 0x3FF)
+                        badEncoding();
+                    wchar[2] needle = [inp[0] & 0x3ff, inp[1] & 0x3ff];
+                    static if(mode == Mode.alwaysSkip)
+                        inp.popFrontN(2);
+                    static if(mode == Mode.skipOnMatch)
+                        return uni[needle] && (inp.popFrontN(2), true);
+                    else
+                        return uni[needle];
+                }
+                else //ditto
+                    return false;
+            }
+        }
+    }
+
+    struct CherryPick(I, Sizes...)
+        if(Sizes.length >= 1 && Sizes.length <= 2)
+    {
+    private:
+        I* m;
+        enum sizeFlags = I.sizeFlags;
+
+        static if(sizeFlags & 1)
+        {
+            @property ref ascii()() const pure{ return m.ascii; }
+        }
+
+        bool lookupUni(Mode mode, Range)(ref Range inp) const pure
+        {
+            return m.lookupUni!mode(inp);
+        }
+        mixin DefMatcher;
+        static assert(allSatisfy!(validSize, Sizes), 
+            "Only lengths of 1 and 2 code units are possible in UTF-16");
+    }
+}
+
+private auto utf8Matcher(Set)(Set set) @trusted
+{    
+    return Utf8Matcher!().build(set);    
+}
+
+private auto utf16Matcher(Set)(Set set) @trusted
+{
+    return Utf16Matcher!().build(set);  
+}
+
+/**
+    Constructs a matcher object
+    to classify $(CODEPOINTS) from the $(D set) for encoding 
+    that has $(D Char) as code unit.
+
+    See $(LREF MatcherConcept) for API outline.
+*/
+public auto utfMatcher(Char, Set)(Set set) @trusted
+    if(isCodepointSet!Set)
+{
+    static if(is(Char : char))
+        return utf8Matcher(set);
+    else static if(is(Char : wchar))
+        return utf16Matcher(set);
+    else static if(is(Char : dchar))
+        static assert(false, "UTF-32 needs no decoding, 
+            and thus not supported by utfMatcher");
+    else
+        static assert(false, "Only character types 'char' and 'wchar' are allowed"); 
+}
+
+
+//a range of code units, packed with index to speed up forward iteration
+package auto decoder(C)(C[] s, size_t offset=0) @trusted
+    if(is(C : wchar) || is(C : char))
+{
+    static struct Decoder
+    {
+    pure nothrow:
+        C[] str;
+        size_t idx;
+        @property C front(){ return str[idx]; }
+        @property C back(){ return str[$-1]; }        
+        void popFront(){ idx++; }
+        void popBack(){ str = str[0..$-1]; }
+        void popFrontN(size_t n){ idx += n; }
+        @property bool empty(){ return idx == str.length; }
+        @property auto save(){ return this; }
+        auto opIndex(size_t i){ return str[idx+i]; }
+        @property size_t length(){ return str.length - idx; }
+        alias opDollar = length;
+        auto opSlice(size_t a, size_t b){ return Decoder(str[0..idx+b], idx+a); }
+    }
+    static assert(isRandomAccessRange!Decoder);
+    static assert(is(ElementType!Decoder : C));
+    return Decoder(s, offset);
+}
+
+/*
+    Expose UTF string $(D s) as a random-access 
+    range of $(S_LINK Code unit, code units).
+*/
+package auto units(C)(C[] s)
+    if(is(C : wchar) || is(C : char))
+{
+    static struct Units
+    {
+    pure nothrow:
+        C[] str;
+        @property C front(){ return str[0]; }
+        @property C back(){ return str[$-1]; }        
+        void popFront(){ str = str[1..$]; }
+        void popBack(){ str = str[0..$-1]; }
+        void popFrontN(size_t n){ str = str[n..$]; }
+        @property bool empty(){ return 0 == str.length; }
+        @property auto save(){ return this; }
+        auto opIndex(size_t i){ return str[i]; }
+        @property size_t length(){ return str.length; }
+        alias opDollar = length;
+        auto opSlice(size_t a, size_t b){ return Units(str[a..b]); }
+    }
+    static assert(isRandomAccessRange!Units);
+    static assert(is(ElementType!Units : C));
+    return Units(s);
+}
+
+@safe unittest
+{
+    import std.range;
+    string rs = "hi! ﾈемног砀 текста";
+    auto codec = rs.decoder;
+    auto utf8 =  utf8Matcher(unicode.Letter);
+    auto asc = utf8.subMatcher!(1);
+    auto uni = utf8.subMatcher!(2,3,4);
+    assert(asc.test(codec));
+    assert(!uni.match(codec));
+    assert(utf8.skip(codec));
+    assert(codec.idx == 1);
+
+    assert(!uni.match(codec));
+    assert(asc.test(codec));
+    assert(utf8.skip(codec));
+    assert(codec.idx == 2);
+    assert(!asc.match(codec));
+
+    assert(!utf8.test(codec));
+    assert(!utf8.skip(codec));
+
+    assert(!asc.test(codec));
+    assert(!utf8.test(codec));
+    assert(!utf8.skip(codec));
+    assert(utf8.test(codec));
+    foreach(i; 0..7)
+    {
+        assert(!asc.test(codec));
+        assert(uni.test(codec));
+        assert(utf8.skip(codec));
+    }
+    assert(!utf8.test(codec));
+    assert(!utf8.skip(codec));
+    //the same with match where applicable
+    codec = rs.decoder;
+    assert(utf8.match(codec));
+    assert(codec.idx == 1);
+    assert(utf8.match(codec));
+    assert(codec.idx == 2);
+    assert(!utf8.match(codec));
+    assert(codec.idx == 2);
+    assert(!utf8.skip(codec));
+    assert(!utf8.skip(codec));
+    
+    foreach(i; 0..7)
+    {
+        assert(!asc.test(codec));
+        assert(utf8.test(codec));
+        assert(utf8.match(codec));
+    }
+    auto i = codec.idx;
+    assert(!utf8.match(codec));
+    assert(codec.idx == i);
+}
+
+@safe unittest
+{
+    static bool testAll(Matcher, Range)(ref Matcher m, ref Range r)
+    {
+        bool t = m.test(r);
+        auto save = r.idx;
+        assert(t == m.match(r));
+        assert(r.idx == save || t); //ether no change or was match
+        r.idx = save;
+        static if(is(typeof(m.skip(r))))
+        {
+            assert(t == m.skip(r));
+            assert(r.idx != save); //always changed
+            r.idx = save;
+        }
+        return t;
+    }
+    auto utf16 = utfMatcher!wchar(unicode.L);
+    auto bmp = utf16.subMatcher!1;
+    auto nonBmp = utf16.subMatcher!1;
+    auto utf8 = utfMatcher!char(unicode.L);
+    auto ascii = utf8.subMatcher!1;
+    auto uni2 = utf8.subMatcher!2;
+    auto uni3 = utf8.subMatcher!3;
+    auto uni24 = utf8.subMatcher!(2,4);
+    foreach(ch; unicode.L.byCodepoint.stride(3))
+    {
+        import std.utf : encode;
+        char[4] buf;
+        wchar[2] buf16;
+        auto len = std.utf.encode(buf, ch);
+        auto len16 = std.utf.encode(buf16, ch);
+        auto c8 = buf[0..len].decoder;
+        auto c16 = buf16[0..len16].decoder;
+        assert(testAll(utf16, c16));
+        assert(testAll(bmp, c16) || len16 != 1);
+        assert(testAll(nonBmp, c16) || len16 != 2);
+        
+        assert(testAll(utf8, c8));
+        
+        //submatchers return false on out of their domain
+        assert(testAll(ascii, c8) || len != 1);
+        assert(testAll(uni2, c8) || len != 2);
+        assert(testAll(uni3, c8) || len != 3);
+        assert(testAll(uni24, c8) || (len != 2 && len !=4));
+    }
+}
+
+// cover decode fail cases of Matcher
+unittest
+{
+    import std.string : format;
+    auto utf16 = utfMatcher!wchar(unicode.L);
+    auto utf8 = utfMatcher!char(unicode.L);
+    //decode failure cases UTF-8
+    alias fails8 = TypeTuple!("\xC1", "\x80\x00","\xC0\x00", "\xCF\x79",
+        "\xFF\x00\0x00\0x00\x00", "\xC0\0x80\0x80\x80", "\x80\0x00\0x00\x00",
+        "\xCF\x00\0x00\0x00\x00");
+    foreach(msg; fails8){
+        assert(collectException((){
+            auto s = msg;
+            import std.utf;
+            size_t idx = 0;
+            //decode(s, idx);
+            utf8.test(s);
+        }()), format("%( %2x %)", cast(ubyte[])msg));
+    }
+    //decode failure cases UTF-16
+    alias fails16 = TypeTuple!([0xD811], [0xDC02]);
+    foreach(msg; fails16){
+        assert(collectException((){
+            auto s = msg.map!(x => cast(wchar)x);
+            utf16.test(s);
+        }()));
+    }
+}
+
 /++
     Convenience function to construct optimal configurations for
     packed Trie from any $(D set) of $(CODEPOINTS).
@@ -4501,6 +5392,9 @@ struct sliceBits(size_t from, size_t to)
     body
     {
         static assert(from < to);
+        static if(from == 0)
+            return x & ((1<<to)-1);
+        else
         return (x >> from) & ((1<<(to-from))-1);
     }
 }
@@ -4531,7 +5425,7 @@ unittest
         {
             import std.stdio;
             writeln("---TRIE FOOTPRINT STATS---");
-            foreach(i; Sequence!(0, t.table.dim) )
+            foreach(i; staticIota!(0, t.table.dim) )
             {
                 writefln("lvl%s = %s bytes;  %s pages"
                          , i, t.bytes!i, t.pages!i);
@@ -4540,7 +5434,7 @@ unittest
             version(none)
             {
                 writeln("INDEX (excluding value level):");
-                foreach(i; Sequence!(0, t.table.dim-1) )
+                foreach(i; staticIota!(0, t.table.dim-1) )
                     writeln(t.table.slice!(i)[0..t.table.length!i]);
             }
             writeln("---------------------------");
@@ -4759,13 +5653,14 @@ unittest
 }
 
 // Creates a range of $(D CodepointInterval) that lazily decodes compressed data.
-@safe package auto decompressIntervals(const(ubyte)[] data)
+@safe package auto decompressIntervals(const(ubyte)[] data) pure
 {
     return DecompressedIntervals(data);
 }
 
 @trusted struct DecompressedIntervals
 {
+pure:
     const(ubyte)[] _stream;
     size_t _idx;
     CodepointInterval _front;
@@ -4817,7 +5712,7 @@ else
 {
 
 // helper for looking up code point sets
-@trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name)
+@trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name) pure
 {
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
         (table.map!"a.name"());
@@ -4828,7 +5723,7 @@ else
 }
 
 // another one that loads it
-@trusted bool loadUnicodeSet(alias table, Set, C)(in C[] name, ref Set dest)
+@trusted bool loadUnicodeSet(alias table, Set, C)(in C[] name, ref Set dest) pure
 {
     auto idx = findUnicodeSet!table(name);
     if(idx >= 0)
@@ -4840,7 +5735,7 @@ else
 }
 
 @trusted bool loadProperty(Set=CodepointSet, C)
-    (in C[] name, ref Set target)
+    (in C[] name, ref Set target) pure
 {
     alias ucmp = comparePropertyName;
     // conjure cumulative properties by hand
@@ -4928,9 +5823,9 @@ else
         target |= asSet(uniProps.So);
     }
     else if(ucmp(name, "any") == 0)
-        target = Set(0,0x110000);
+        target = Set.fromIntervals(0, 0x110000);
     else if(ucmp(name, "ascii") == 0)
-        target = Set(0,0x80);
+        target = Set.fromIntervals(0, 0x80);
     else
         return loadUnicodeSet!(uniProps.tab)(name, target);
     return true;
@@ -4940,7 +5835,7 @@ else
 @safe bool isPrettyPropertyName(C)(in C[] name)
 {
     auto names = [
-        "L", "Letters",
+        "L", "Letter",
         "LC", "Cased Letter",
         "M", "Mark",
         "N", "Number",
@@ -5034,7 +5929,7 @@ template SetSearcher(alias table, string kind)
         ---
     */
 
-    static @property auto opDispatch(string name)()
+    static @property auto opDispatch(string name)() pure
     {
         static if(findAny(name))
             return loadAny(name);
@@ -5140,7 +6035,7 @@ private:
             || (ucmp(name[0..2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
     }
 
-    static auto loadAny(Set=CodepointSet, C)(in C[] name)
+    static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
     {
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
@@ -7793,9 +8688,9 @@ private:
 // load static data from pre-generated tables into usable datastructures
 
 
-@safe auto asSet(const (ubyte)[] compressed)
+@safe auto asSet(const (ubyte)[] compressed) pure
 {
-    return CodepointSet(decompressIntervals(compressed));
+    return CodepointSet.fromIntervals(decompressIntervals(compressed));
 }
 
 @safe pure nothrow auto asTrie(T...)(in TrieEntry!T e)
