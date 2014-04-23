@@ -5083,7 +5083,7 @@ unittest
             auto zSame = zip(StoppingPolicy.requireSameLength, arr1, arr2);
             foreach(elem; zSame) {}
             assert(0);
-        } catch { /* It's supposed to throw.*/ }
+        } catch (Throwable) { /* It's supposed to throw.*/ }
 
         auto zLongest = zip(StoppingPolicy.longest, arr1, arr2);
         assert(!zLongest.ranges[0].empty);
@@ -5377,7 +5377,7 @@ unittest
     try {
         foreach(a, b; ls) {}
         assert(0);
-    } catch {}
+    } catch (Exception) {}
 
     // Just make sure 1-range case instantiates.  This hangs the compiler
     // when no explicit stopping policy is specified due to Bug 4652.
