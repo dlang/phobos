@@ -58,11 +58,12 @@ private void freeAdvapi32()
 {
     if (hAdvapi32)
     {
+        if (!FreeLibrary(hAdvapi32))
+            throw new Exception(`FreeLibrary("Advapi32.dll")`);
+        hAdvapi32 = null;
+
         pRegDeleteKeyExA = null;
         pRegDeleteKeyExW = null;
-        hAdvapi32 = null;
-        if (!FreeLibrary(hAdvapi32))
-            throw new Exception(`FreeLibrary(hAdvapi32)`);
     }
 }
 
