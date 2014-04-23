@@ -720,7 +720,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   char[] result = new char['z' - 'a' + 1];
  *   foreach (i, ref e; result)
  *   {
- *     e = 'a' + i;
+ *     e = cast(char)('a' + i);
  *   }
  *   return assumeUnique(result);
  * }
@@ -742,7 +742,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   sneaky.length = last - first + 1;
  *   foreach (i, ref e; sneaky)
  *   {
- *     e = 'a' + i;
+ *     e = cast(char)('a' + i);
  *   }
  *   return assumeUnique(sneaky); // BAD
  * }
@@ -758,14 +758,33 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * The call will duplicate the array appropriately.
  *
- * Checking for uniqueness during compilation is possible in certain
- * cases (see the $(D unique) and $(D lent) keywords in
- * the $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
- * language), but complicates the language considerably. The downside
- * of $(D assumeUnique)'s convention-based usage is that at this
- * time there is no formal checking of the correctness of the
- * assumption; on the upside, the idiomatic use of $(D
- * assumeUnique) is simple and rare enough to be tolerable.
+ * Note that checking for uniqueness during compilation is
+ * possible in certain cases, especially when a function is
+ * marked as a pure function. The following example does not
+ * need to call assumeUnique because the compiler can infer the
+ * uniqueness of the array in the pure function:
+ * ----
+ * string letters() pure
+ * {
+ *   char[] result = new char['z' - 'a' + 1];
+ *   foreach (i, ref e; result)
+ *   {
+ *     e = cast(char)('a' + i);
+ *   }
+ *   return result;
+ * }
+ * ----
+ *
+ * For more on infering uniqueness see the $(B unique) and
+ * $(B lent) keywords in the
+ * $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
+ * language.
+ *
+ * The downside of using $(D assumeUnique)'s
+ * convention-based usage is that at this time there is no
+ * formal checking of the correctness of the assumption;
+ * on the upside, the idiomatic use of $(D assumeUnique) is
+ * simple and rare enough to be tolerable.
  *
  */
 immutable(T)[] assumeUnique(T)(T[] array) pure nothrow
