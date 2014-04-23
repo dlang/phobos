@@ -3156,7 +3156,7 @@ unittest
  *
  * [in] bool bAllowSep
  * False by default, but when set to true it will accept the
- * separator characters "," and "_" within the string, but these
+ * separator characters $(D ',') and $(D '__') within the string, but these
  * characters should be stripped from the string before using any
  * of the conversion functions like toInt(), toFloat(), and etc
  * else an error will occur.
