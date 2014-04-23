@@ -113,8 +113,8 @@ private template createAccessors(
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
                 ~"@property @safe void "~name~"("~T.stringof~" v) pure nothrow { "
-                ~"assert(v >= "~name~"_min); "
-                ~"assert(v <= "~name~"_max); "
+                ~"assert(v >= "~name~`_min, "Value is smaller than the minimum value of bitfield '`~name~`'"); `
+                ~"assert(v <= "~name~`_max, "Value is greater than the maximum value of bitfield '`~name~`'"); `
                 ~store~" = cast(typeof("~store~"))"
                 ~" (("~store~" & ~cast(typeof("~store~"))"~myToString(maskAllElse)~")"
                 ~" | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
@@ -414,6 +414,30 @@ unittest
     assert(f.checkExpectations(false));
     f.b = true;
     assert(f.checkExpectations(true));
+}
+
+// Issue 12477
+unittest
+{
+    import std.bitmanip : bitfields;
+    import core.exception : AssertError;
+
+    static struct S
+    {
+        mixin(bitfields!(
+            uint, "a", 6,
+            int, "b", 2));
+    }
+
+    S s;
+
+    try { s.a = uint.max; assert(0); }
+    catch (AssertError ae)
+    { assert(ae.msg == "Value is greater than the maximum value of bitfield 'a'", ae.msg); }
+
+    try { s.b = int.min;  assert(0); }
+    catch (AssertError ae)
+    { assert(ae.msg == "Value is smaller than the minimum value of bitfield 'b'", ae.msg); }
 }
 
 /**
