@@ -7425,6 +7425,15 @@ unittest
     assert(match("aaaa", re).hit == "aaaa");
 }
 
+//bugzilla 10798
+unittest
+{
+    auto cr = ctRegex!("[abcd--c]*");
+    auto m  = "abc".match(cr);
+    assert(m);
+    assert(m.hit == "ab");
+}
+
 // bugzilla 10913
 unittest
 {
