@@ -1589,7 +1589,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         else if (isInfinity(tval))
             s = val >= 0 ? "inf" : "-inf"; // snprintf writes 1.#INF
 
-        if (s.length > 0) 
+        if (s.length > 0)
         {
           version(none)
           {
