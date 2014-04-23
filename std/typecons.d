@@ -4275,6 +4275,11 @@ struct Typedef(T, T init = T.init, string cookie=null)
         Typedef_payload = init;
     }
 
+    this(Typedef tdef)
+    {
+        this(tdef.Typedef_payload);
+    }
+
     mixin Proxy!Typedef_payload;
 }
 
@@ -4358,6 +4363,14 @@ unittest
     }
 }
 
+unittest // Issue 12596
+{
+    import std.typecons;
+    alias TD = Typedef!int;
+    TD x = TD(1);
+    TD y = TD(x);
+    assert(x == y);
+}
 
 /**
 Allocates a $(D class) object right inside the current scope,
