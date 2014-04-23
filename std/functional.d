@@ -386,7 +386,7 @@ $(XREF typecons, Tuple) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
 
-Note: In the special case where where only a single function is provided 
+Note: In the special case where where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
@@ -666,11 +666,12 @@ alias fastTransmogrify = memoize!(transmogrify, 128);
 */
 template memoize(alias fun, uint maxSize = uint.max)
 {
-    ReturnType!fun memoize(ParameterTypeTuple!fun args)
+    private alias Args = ParameterTypeTuple!fun;
+    ReturnType!fun memoize(Args args)
     {
         import std.typecons : Tuple, tuple;
-        static ReturnType!fun[Tuple!(typeof(args))] memo;
-        auto t = tuple(args);
+        static ReturnType!fun[Tuple!Args] memo;
+        auto t = Tuple!Args(args);
         auto p = t in memo;
         if (p) return *p;
         static if (maxSize != uint.max)
@@ -714,12 +715,21 @@ unittest
         return n < 2 ? 1 : n * mfact(n - 1);
     }
     assert(fact(10) == 3628800);
+
+    // Issue 12568
+    static uint len2(const string s) { // Error
+    alias mLen2 = memoize!len2;
+    if (s.length == 0)
+        return 0;
+    else
+        return 1 + mLen2(s[1 .. $]);
+    }
 }
 
 private struct DelegateFaker(F)
 {
     import std.typecons;
-    
+
     // for @safe
     static F castToF(THIS)(THIS x) @trusted
     {
