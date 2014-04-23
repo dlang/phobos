@@ -220,15 +220,28 @@ $(I FormatChar):
             <dd>The result is the string converted to UTF-8.
             A $(I Precision) specifies the maximum number of characters
             to use in the result.
+            <dt>structs
+            <dd>If the struct defines a $(B toString()) method the result is the
+            string returned from this function. Otherwise the result is
+            StructName(field<sub>0</sub>, field<sub>1</sub>, ...) where field<sub>n</sub>
+            is the nth element formatted with the default format.
             <dt>classes derived from $(B Object)
             <dd>The result is the string returned from the class instance's
             $(B .toString()) method.
             A $(I Precision) specifies the maximum number of characters
             to use in the result.
+            <dt>unions
+            <dd>If the union defines a $(B toString()) method the result is the
+            string returned from this function. Otherwise the result is
+            the name of the union, without its contents.
             <dt>non-string static and dynamic arrays
             <dd>The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
-            where s<sub>k</sub> is the kth element
+            where s<sub>n</sub> is the nth element
             formatted with the default format.
+            <dt>associative arrays
+            <dd>The result is the equivalent of what the initializer
+            would look like for the contents of the associative array,
+            e.g.: ["red" : 10, "blue" : 20].
         </dl>
 
         <dt>$(B 'c')
