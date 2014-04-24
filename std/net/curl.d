@@ -3562,9 +3562,9 @@ struct Curl
                 copy.clear(option);
         }
 
-        // The options are only supported by libcurl when it has been built 
-        // against certain versions of OpenSSL - if your libcurl uses an old 
-        // OpenSSL, or uses an entirely different SSL engine, attempting to 
+        // The options are only supported by libcurl when it has been built
+        // against certain versions of OpenSSL - if your libcurl uses an old
+        // OpenSSL, or uses an entirely different SSL engine, attempting to
         // clear these normally will raise an exception
         copy.clearIfSupported(CurlOption.ssl_ctx_function);
         copy.clearIfSupported(CurlOption.ssh_keydata);
