@@ -206,7 +206,8 @@ private
             'c': FunctionAttribute.ref_,
             'd': FunctionAttribute.property,
             'e': FunctionAttribute.trusted,
-            'f': FunctionAttribute.safe
+            'f': FunctionAttribute.safe,
+            'i': FunctionAttribute.nogc
         ];
         uint atts = 0;
 
@@ -1234,6 +1235,7 @@ enum FunctionAttribute : uint
     property = 0b00001000, /// ditto
     trusted  = 0b00010000, /// ditto
     safe     = 0b00100000, /// ditto
+    nogc     = 0b01000000, /// ditto
 }
 
 /// ditto
@@ -1283,16 +1285,16 @@ unittest
     static assert(functionAttributes!(Test2.pure_const) == FA.pure_);
     static assert(functionAttributes!(Test2.pure_sharedconst) == FA.pure_);
 
-    static assert(functionAttributes!((int a) {}) == (FA.safe | FA.pure_ | FA.nothrow_));
+    static assert(functionAttributes!((int a) {}) == (FA.safe | FA.pure_ | FA.nothrow_ | FA.nogc));
 
     auto safeDel = delegate() @safe {};
-    static assert(functionAttributes!safeDel == (FA.safe | FA.pure_ | FA.nothrow_));
+    static assert(functionAttributes!safeDel == (FA.safe | FA.pure_ | FA.nothrow_ | FA.nogc));
 
     auto trustedDel = delegate() @trusted {};
-    static assert(functionAttributes!trustedDel == (FA.trusted | FA.pure_ | FA.nothrow_));
+    static assert(functionAttributes!trustedDel == (FA.trusted | FA.pure_ | FA.nothrow_ | FA.nogc));
 
     auto systemDel = delegate() @system {};
-    static assert(functionAttributes!systemDel == (FA.pure_ | FA.nothrow_));
+    static assert(functionAttributes!systemDel == (FA.pure_ | FA.nothrow_ | FA.nogc));
 }
 
 
@@ -1817,6 +1819,8 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
             result ~= " pure";
         static if (attrs & FunctionAttribute.nothrow_)
             result ~= " nothrow";
+        static if (attrs & FunctionAttribute.nogc)
+            result ~= " @nogc";
         static if (attrs & FunctionAttribute.property)
             result ~= " @property";
         static if (attrs & FunctionAttribute.trusted)
@@ -6168,7 +6172,7 @@ unittest
     static assert(mangledName!removeDummyEnvelope ==
             "_D3std6traits19removeDummyEnvelopeFAyaZAya");
     int x;
-    static assert(mangledName!((int a) { return a+x; }) == "DFNbNfiZi");    // nothrow safe
+    static assert(mangledName!((int a) { return a+x; }) == "DFNbNiNfiZi");  // nothrow @safe @nnogc
 }
 
 unittest
