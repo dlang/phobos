@@ -3683,13 +3683,17 @@ Constructor that tracks the reference count appropriately. If $(D
         ++_refCounted._store._count;
     }
 
+    // Issue 9998 workaround
+    private pragma(mangle, "free")
+    static extern(C) pure void _free(void* ptr);
+
 /**
 Destructor that tracks the reference count appropriately. If $(D
 !refCountedStore.isInitialized), does nothing. When the reference count goes
 down to zero, calls $(D destroy) agaist the payload and calls $(D free)
 to deallocate the corresponding resource.
  */
-    ~this()
+    ~this() pure
     {
         if (!_refCounted.isInitialized) return;
         assert(_refCounted._store._count > 0);
@@ -3702,8 +3706,7 @@ to deallocate the corresponding resource.
             import core.memory : GC;
             GC.removeRange(&_refCounted._store._payload);
         }
-        import core.stdc.stdlib : free;
-        free(_refCounted._store);
+        _free(_refCounted._store);
         _refCounted._store = null;
     }
 
@@ -3868,6 +3871,12 @@ unittest
     RefCounted!int b;
     b = a; //This should not assert either
     assert(b == 5);
+}
+
+// Issue 9998
+pure unittest
+{
+    RefCounted!int i;
 }
 
 /**
