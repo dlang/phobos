@@ -696,9 +696,10 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 /**
 Takes a tree of JSON values and returns the serialized string.
 
+Any Object types will be serialized in a key-sorted order.
+
 If $(D pretty) is false no whitespaces are generated.
 If $(D pretty) is true serialized string is formatted to be human-readable.
-No exact formatting layout is guaranteed in the latter case.
 */
 string toJSON(in JSONValue* root, in bool pretty = false)
 {
@@ -759,18 +760,29 @@ string toJSON(in JSONValue* root, in bool pretty = false)
                 {
                     putCharAndEOL('{');
                     bool first = true;
-                    foreach(name, member; value.store.object)
+
+                    void emit(R)(R names)
                     {
-                        if(!first)
-                            putCharAndEOL(',');
-                        first = false;
-                        putTabs(1);
-                        toString(name);
-                        json.put(':');
-                        if(pretty)
-                            json.put(' ');
-                        toValue(&member, indentLevel + 1);
+                        foreach (name; names)
+                        {
+                            auto member = value.store.object[name];
+                            if(!first)
+                                putCharAndEOL(',');
+                            first = false;
+                            putTabs(1);
+                            toString(name);
+                            json.put(':');
+                            if(pretty)
+                                json.put(' ');
+                            toValue(&member, indentLevel + 1);
+                        }
                     }
+
+                    import std.algorithm : sort;
+                    auto names = value.store.object.keys;
+                    sort(names);
+                    emit(names);
+
                     putEOL();
                     putTabs();
                     json.put('}');
@@ -1007,8 +1019,7 @@ unittest
         `[12,"foo",true,false]`,
         `{}`,
         `{"a":1,"b":null}`,
-        // Currently broken
-        // `{"hello":{"json":"is great","array":[12,null,{}]},"goodbye":[true,"or",false,["test",42,{"nested":{"a":23.54,"b":0.0012}}]]}`
+        `{"goodbye":[true,"or",false,["test",42,{"nested":{"a":23.54,"b":0.0012}}]],"hello":{"array":[12,null,{}],"json":"is great"}}`,
     ];
 
     version (MinGW)
@@ -1018,17 +1029,18 @@ unittest
 
     JSONValue val;
     string result;
-    foreach(json; jsons)
+    foreach (json; jsons)
     {
         try
         {
             val = parseJSON(json);
-            result = toJSON(&val);
+            enum pretty = false;
+            result = toJSON(&val, pretty);
             assert(result == json, text(result, " should be ", json));
         }
-        catch(JSONException e)
+        catch (JSONException e)
         {
-            import std.stdio;
+            import std.stdio : writefln;
             writefln(text(json, "\n", e.toString()));
         }
     }
