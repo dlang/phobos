@@ -4467,6 +4467,10 @@ alias TypeFloat2 = Typedef!(float, float.init, "b");
 // The two Typedefs are _not_ the same type.
 static assert(!is(TypeFloat1 == TypeFloat2));
 ----
+
+Note: If a library routine cannot handle the Typedef type,
+you can use the $(D TypedefType) template to extract the
+type which the Typedef wraps.
  */
 struct Typedef(T, T init = T.init, string cookie=null)
 {
@@ -4483,6 +4487,44 @@ struct Typedef(T, T init = T.init, string cookie=null)
     }
 
     mixin Proxy!Typedef_payload;
+}
+
+/**
+Get the underlying type which a $(D Typedef) wraps.
+If $(D T) is not a $(D Typedef) it will alias itself to $(D T).
+*/
+template TypedefType(T)
+{
+    static if (is(T : Typedef!Arg, Arg))
+        alias TypedefType = Arg;
+    else
+        alias TypedefType = T;
+}
+
+///
+unittest
+{
+    import std.typecons: Typedef, TypedefType;
+    import std.conv: to;
+
+    alias MyInt = Typedef!int;
+    static assert(is(TypedefType!MyInt == int));
+
+    /// Instantiating with a non-Typedef will return that type
+    static assert(is(TypedefType!int == int));
+
+    string num = "5";
+
+    // extract the needed type
+    MyInt myInt = MyInt( num.to!(TypedefType!MyInt) );
+    assert(myInt == 5);
+
+    // cast to the underlying type to get the value that's being wrapped
+    int x = cast(TypedefType!MyInt)myInt;
+
+    alias MyIntInit = Typedef!(int, 42);
+    static assert(is(TypedefType!MyIntInit == int));
+    static assert(MyIntInit() == 42);
 }
 
 unittest
