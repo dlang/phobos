@@ -1981,6 +1981,11 @@ unittest
         inout(Object) foo() inout;
     }
     BlackHole!Foo o;
+
+    // Bugzilla 12464
+    import std.stream;
+    import std.typecons;
+    BlackHole!OutputStream dout;
 }
 
 
@@ -2343,9 +2348,9 @@ private static:
 }
 
 //debug = SHOW_GENERATED_CODE;
-version(unittest) import core.vararg;
 unittest
 {
+    import core.vararg;
     // no function to implement
     {
         interface I_1 {}
@@ -2610,6 +2615,9 @@ private static:
 
         string code; // the result
 
+        auto paramsRes = generateParameters!(myFuncInfo, func)();
+        code ~= paramsRes.imports;
+
         /*** Function Declarator ***/
         {
             alias Func = FunctionTypeOf!(func);
@@ -2667,7 +2675,7 @@ private static:
                     functionLinkage!(func),
                     returnType,
                     realName,
-                    generateParameters!(myFuncInfo, func)(),
+                    paramsRes.params,
                     postAtts, storageClass );
         }
 
@@ -2703,16 +2711,19 @@ private static:
     }
 
     /*
-     * Returns D code which declares function parameters.
+     * Returns D code which declares function parameters,
+     * and optionally any imports (e.g. core.vararg)
      * "ref int a0, real a1, ..."
      */
-    private string generateParameters(string myFuncInfo, func...)()
+    static struct GenParams { string imports, params; }
+    private GenParams generateParameters(string myFuncInfo, func...)()
     {
         alias STC = ParameterStorageClass;
         alias stcs = ParameterStorageClassTuple!(func);
         enum nparams = stcs.length;
 
-        string params = ""; // the result
+        string imports = ""; // any imports required
+        string params = ""; // parameters
 
         foreach (i, stc; stcs)
         {
@@ -2732,12 +2743,14 @@ private static:
         }
 
         // Add some ellipsis part if needed.
-        final switch (variadicFunctionStyle!(func))
+        auto style = variadicFunctionStyle!(func);
+        final switch (style)
         {
             case Variadic.no:
                 break;
 
             case Variadic.c, Variadic.d:
+                imports ~= "import core.vararg;\n";
                 // (...) or (a, b, ...)
                 params ~= (nparams == 0) ? "..." : ", ...";
                 break;
@@ -2747,7 +2760,7 @@ private static:
                 break;
         }
 
-        return params;
+        return typeof(return)(imports, params);
     }
 
     // Returns D code which enumerates n parameter variables using comma as the
