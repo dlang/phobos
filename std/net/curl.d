@@ -20,6 +20,10 @@ Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
+Windows x86 note:
+A DMD compatible libcurl static library can be downloaded from the dlang.org
+$(LINK2 http://dlang.org/download.html, download page).
+
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
 of the language. Futhermore it provides <a href="std_range.html">$(D range)</a>
