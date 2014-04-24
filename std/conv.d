@@ -1414,13 +1414,23 @@ T toImpl(T, S)(S value)
 {
     alias E = typeof(T.init[0]);
 
-    auto w = appender!(E[])();
-    w.reserve(value.length);
-    foreach (i, ref e; value)
+    static if (isStaticArray!T)
     {
-        w.put(to!E(e));
+        auto res = to!(E[])(value);
+        enforceEx!ConvException(T.length == res.length,
+            format("Length mismatch when converting to static array: %s vs %s", T.length, res.length));
+        return res[0 .. T.length];
     }
-    return w.data;
+    else
+    {
+        auto w = appender!(E[])();
+        w.reserve(value.length);
+        foreach (i, ref e; value)
+        {
+            w.put(to!E(e));
+        }
+        return w.data;
+    }
 }
 
 @safe pure unittest
@@ -1450,6 +1460,22 @@ T toImpl(T, S)(S value)
         alias wrap this;
     }
     Wrap[] warr = to!(Wrap[])(["foo", "bar"]);  // should work
+
+    // Issue 12633
+    import std.conv : to;
+    const s2 = ["10", "20"];
+
+    immutable int[2] a3 = s2.to!(int[2]);
+    assert(a3 == [10, 20]);
+
+    // verify length mismatches are caught
+    immutable s4 = [1, 2, 3, 4];
+    foreach (i; [1, 4])
+    {
+        auto ex = collectException(s4[0 .. i].to!(int[2]));
+            assert(ex && ex.msg == "Length mismatch when converting to static array: 2 vs " ~ [cast(char)(i + '0')],
+                ex ? ex.msg : "Exception was not thrown!");
+    }
 }
 /*@safe pure */unittest
 {
