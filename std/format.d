@@ -2132,7 +2132,9 @@ if (isInputRange!T)
     // Formatting character ranges like string
     if (f.spec == 's')
     {
-        static if (is(CharTypeOf!(ElementType!T)))
+        alias E = ElementType!T;
+
+        static if (!is(E == enum) && is(CharTypeOf!E))
         {
             static if (is(StringTypeOf!T))
             {
@@ -2509,6 +2511,15 @@ unittest
     formatTest( S2(['c':1, 'd':2]), "S" );
 }
 
+unittest  // Issue 8921
+{
+    enum E : char { A = 'a', B = 'b', C = 'c' }
+    E[3] e = [E.A, E.B, E.C];
+    formatTest(e, "[A, B, C]");
+
+    E[] e2 = [E.A, E.B, E.C];
+    formatTest(e2, "[A, B, C]");
+}
 
 template hasToString(T, Char)
 {
