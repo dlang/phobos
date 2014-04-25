@@ -1373,13 +1373,23 @@ T toImpl(T, S)(S value)
 {
     alias E = typeof(T.init[0]);
 
-    auto w = appender!(E[])();
-    w.reserve(value.length);
-    foreach (i, ref e; value)
+    static if (isStaticArray!T)
     {
-        w.put(to!E(e));
+        auto res = to!(E[])(value);
+        enforceEx!ConvException(T.length == res.length,
+            format("Length mismatch when converting to static array: %s vs %s", T.length, res.length));
+        return res[0 .. T.length];
     }
-    return w.data;
+    else
+    {
+        auto w = appender!(E[])();
+        w.reserve(value.length);
+        foreach (i, ref e; value)
+        {
+            w.put(to!E(e));
+        }
+        return w.data;
+    }
 }
 
 @safe pure unittest
@@ -1407,6 +1417,22 @@ T toImpl(T, S)(S value)
         alias wrap this;
     }
     Wrap[] warr = to!(Wrap[])(["foo", "bar"]);  // should work
+
+    // Issue 12633
+    import std.conv : to;
+    const s2 = ["10", "20"];
+
+    immutable int[2] a3 = s2.to!(int[2]);
+    assert(a3 == [10, 20]);
+
+    // verify length mismatches are caught
+    immutable s4 = [1, 2, 3, 4];
+    foreach (i; [1, 4])
+    {
+        auto ex = collectException(s4[0 .. i].to!(int[2]));
+            assert(ex && ex.msg == "Length mismatch when converting to static array: 2 vs " ~ [cast(char)(i + '0')],
+                ex ? ex.msg : "Exception was not thrown!");
+    }
 }
 /*@safe pure */unittest
 {
@@ -3791,7 +3817,7 @@ package template emplaceRef(T)
     {
         static assert (is(typeof({static T i;})),
             format("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
-    
+
         return emplaceInitializer(chunk);
     }
 
@@ -3800,14 +3826,14 @@ package template emplaceRef(T)
     {
         static assert(is(typeof({T t = arg;})),
             format("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
-    
+
         static if (isStaticArray!T)
         {
             alias UArg = Unqual!Arg;
             alias E = ElementEncodingType!(typeof(T.init[]));
             alias UE = Unqual!E;
             enum N = T.length;
-    
+
             static if (is(Arg : T))
             {
                 //Matching static array
@@ -3868,7 +3894,7 @@ package template emplaceRef(T)
             }
             else
                 static assert(0, format("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
-    
+
             return chunk;
         }
         else
@@ -3933,12 +3959,12 @@ package template emplaceRef(T)
             //We can't emplace. Try to diagnose a disabled postblit.
             static assert(!(Args.length == 1 && is(Args[0] : T)),
                 format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
-    
+
             //We can't emplace.
             static assert(false,
                 format("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
         }
-    
+
         return chunk;
     }
 }
@@ -4805,13 +4831,13 @@ unittest //Constness
     }
     alias IS = immutable(S);
     S s = void;
-    emplaceRef!IS(s, IS()); 
+    emplaceRef!IS(s, IS());
     S[2] ss = void;
-    emplaceRef!(IS[2])(ss, IS()); 
+    emplaceRef!(IS[2])(ss, IS());
 
     IS[2] iss = IS.init;
-    emplaceRef!(IS[2])(ss, iss); 
-    emplaceRef!(IS[2])(ss, iss[]); 
+    emplaceRef!(IS[2])(ss, iss);
+    emplaceRef!(IS[2])(ss, iss[]);
 }
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
