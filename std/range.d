@@ -4676,6 +4676,16 @@ struct Zip(Ranges...)
         stoppingPolicy = s;
     }
 
+    // workaround for missing 'msg' parameter in RangeError's ctor.
+    private static void enforceRangeError(T)(T value, string msg = "", string file = __FILE__, size_t line = __LINE__) nothrow
+    {
+        import core.exception : RangeError;
+        if (value) return;
+        auto re = new RangeError(file, line);
+        re.msg = msg;
+        throw re;
+    }
+
 /**
    Returns $(D true) if the range is at end. The test depends on the
    stopping policy.
@@ -4689,10 +4699,8 @@ struct Zip(Ranges...)
     }
     else
     {
-        @property bool empty()
+        @property bool empty() nothrow
         {
-            import std.exception : enforce;
-
             final switch (stoppingPolicy)
             {
             case StoppingPolicy.shortest:
@@ -4710,7 +4718,7 @@ struct Zip(Ranges...)
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R[1 .. $])
                 {
-                    enforce(ranges[0].empty ==
+                    enforceRangeError(ranges[0].empty ==
                             ranges[i + 1].empty,
                             "Inequal-length ranges passed to Zip");
                 }
@@ -4729,11 +4737,14 @@ struct Zip(Ranges...)
         }
     }
 
-    private .ElementType!(R[i]) tryGetInit(size_t i)()
+    private .ElementType!(R[i]) tryGetInit(size_t i)() nothrow
     {
         alias E = .ElementType!(R[i]);
         static if (!is(typeof({static E i;})))
-            throw new Exception("Range with non-default constructable elements exhausted.");
+        {
+            enforceRangeError(false, "Range with non-default constructable elements exhausted.");
+            assert(0);  // note: workaround for missing 'return', above will throw but the compiler doesn't know it.
+        }
         else
             return E.init;
     }
@@ -4833,8 +4844,6 @@ struct Zip(Ranges...)
 */
     void popFront()
     {
-        import std.exception : enforce;
-
         final switch (stoppingPolicy)
         {
         case StoppingPolicy.shortest:
@@ -4853,7 +4862,7 @@ struct Zip(Ranges...)
         case StoppingPolicy.requireSameLength:
             foreach (i, Unused; R)
             {
-                enforce(!ranges[i].empty, "Invalid Zip object");
+                enforceRangeError(!ranges[i].empty, "Invalid Zip object");
                 ranges[i].popFront();
             }
             break;
@@ -4865,7 +4874,7 @@ struct Zip(Ranges...)
 */
     static if (allSatisfy!(isBidirectionalRange, R))
     {
-        void popBack()
+        void popBack() nothrow
         {
             //TODO: Fixme! In case of jaggedness, this is wrong.
             import std.exception : enforce;
@@ -4888,7 +4897,7 @@ struct Zip(Ranges...)
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R)
                 {
-                    enforce(!ranges[i].empty, "Invalid Zip object");
+                    enforceRangeError(!ranges[i].empty, "Invalid Zip object");
                     ranges[i].popBack();
                 }
                 break;
@@ -4996,11 +5005,12 @@ auto zip(Ranges...)(Ranges ranges)
 }
 
 ///
-unittest
+nothrow unittest
 {
+    import std.exception : assumeWontThrow;
 	int[] a = [ 1, 2, 3 ];
 	string[] b = [ "a", "b", "c" ];
-	sort!("a[0] > b[0]")(zip(a, b));
+	assumeWontThrow(sort!("a[0] > b[0]")(zip(a, b)));
 	assert(a == [ 3, 2, 1 ]);
 	assert(b == [ "c", "b", "a" ]);
 }
@@ -5026,9 +5036,10 @@ enum StoppingPolicy
     requireSameLength,
 }
 
-unittest
+nothrow unittest
 {
-    import std.exception : assertThrown, assertNotThrown;
+    import core.exception : RangeError;
+    import std.exception : assertThrown, assertNotThrown, assumeWontThrow;
 
     int[] a = [ 1, 2, 3 ];
     float[] b = [ 1.0, 2.0, 3.0 ];
@@ -5040,7 +5051,7 @@ unittest
     swap(a[0], a[1]);
     auto z = zip(a, b);
     //swap(z.front(), z.back());
-    sort!("a[0] < b[0]")(zip(a, b));
+    assumeWontThrow(sort!("a[0] < b[0]")(zip(a, b)));
     assert(a == [1, 2, 3]);
     assert(b == [2.0, 1.0, 3.0]);
 
@@ -5049,11 +5060,13 @@ unittest
     assertNotThrown(z.popBack());
     assertNotThrown(z.popBack());
     assert(z.empty);
-    assertThrown(z.popBack());
+
+    // Issue 12645: assertThrown with an Error should be marked nothrow
+    assumeWontThrow(assertThrown!RangeError(z.popBack()));
 
     a = [ 1, 2, 3 ];
     b = [ 1.0, 2.0, 3.0 ];
-    sort!("a[0] > b[0]")(zip(StoppingPolicy.requireSameLength, a, b));
+    assumeWontThrow(sort!("a[0] > b[0]")(zip(StoppingPolicy.requireSameLength, a, b)));
     assert(a == [3, 2, 1]);
     assert(b == [3.0, 2.0, 1.0]);
 
@@ -5138,19 +5151,21 @@ unittest
     +/
 }
 
-unittest
+nothrow unittest
 {
+    import std.exception : assumeWontThrow;
+
     auto a = [5,4,3,2,1];
     auto b = [3,1,2,5,6];
     auto z = zip(a, b);
 
-    sort!"a[0] < b[0]"(z);
+    assumeWontThrow(sort!"a[0] < b[0]"(z));
 
     assert(a == [1, 2, 3, 4, 5]);
     assert(b == [6, 5, 2, 1, 3]);
 }
 
-@safe pure unittest
+@safe pure nothrow unittest
 {
     auto LL = iota(1L, 1000L);
     auto z = zip(LL, [4]);
@@ -5162,15 +5177,26 @@ unittest
     assert(equal(z2, [tuple(7, 0L)]));
 }
 
-// Text for Issue 11196
-@safe pure unittest
+// Test for Issue 11196
+@safe pure nothrow unittest
 {
-    import std.exception : assertThrown;
+    import core.exception : RangeError;
 
     static struct S { @disable this(); }
     static assert(__traits(compiles, zip((S[5]).init[])));
-    auto z = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]);
-    assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
+
+    // note: safe function can't catch Errors
+    ()@trusted{
+        try
+        {
+            auto x = zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front;
+            assert(0);
+        }
+        catch (RangeError re)
+        {
+            assert(re.msg == "Range with non-default constructable elements exhausted.", re.msg);
+        }
+    }();
 }
 
 @safe pure unittest //12007
@@ -5186,6 +5212,48 @@ unittest
     R r;
     auto z = zip(r, r);
     auto zz = z.save;
+}
+
+// Issue 11319 - zip is not nothrow
+nothrow unittest
+{
+    import core.exception : RangeError;
+    import std.exception : assertThrown;
+    import std.range : StoppingPolicy, zip;
+    auto x = zip([1], [2]);
+
+    try
+    {
+        foreach (a; zip(StoppingPolicy.requireSameLength, [1, 2], [1])) { }
+        assert(0);
+    }
+    catch (RangeError re)
+    {
+        assert(re.msg == "Inequal-length ranges passed to Zip", re.msg);
+    }
+
+    static class R
+    {
+        this(int[] x) nothrow { this.x = x; }
+        int[] x;
+        alias x this;
+    }
+
+    auto r1 = new R([1, 2]);
+    auto r2 = new R([1, 2]);
+
+    try
+    {
+        auto r = zip(StoppingPolicy.requireSameLength, r1, r2);
+        r.popFront();
+        r1.x = [];  // modify range in-flight
+        r.popFront();
+        assert(0);
+    }
+    catch (RangeError re)
+    {
+        assert(re.msg == "Invalid Zip object", re.msg);
+    }
 }
 
 /*
