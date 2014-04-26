@@ -3188,8 +3188,19 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 }
 
-version(Posix)
-unittest
+version(Posix) unittest
+{
+    // Let's test the assumption that sbrk(n) returns the old address
+    auto p1 = sbrk(0);
+    auto p2 = sbrk(4096);
+    assert(p1 == p2);
+    auto p3 = sbrk(0);
+    assert(p3 == p2 + 4096);
+    // Try to reset brk, but don't make a fuss if it doesn't work
+    sbrk(-4096);
+}
+
+version(Posix) unittest
 {
     alias alloc = SbrkRegion!(8).it;
     auto a = alloc.alignedAllocate(2001, 4096);
