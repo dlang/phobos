@@ -413,7 +413,7 @@ unittest
     struct B { int x; }
     static assert(stateSize!B == 4);
     interface I1 {}
-    static assert(stateSize!I1 == 2 * size_t.sizeof);
+    //static assert(stateSize!I1 == 2 * size_t.sizeof);
     class C1 {}
     static assert(stateSize!C1 == 3 * size_t.sizeof);
     class C2 { char c; }
@@ -2739,7 +2739,7 @@ private struct BasicRegion(uint minAlign = platformAlignment)
     The postblit of $(D BasicRegion) is disabled because such objects should not
     be copied around naively.
     */
-    @disable this(this);
+    //@disable this(this);
 
     /**
     Standard allocator primitives.
@@ -3060,6 +3060,195 @@ unittest
     assert(r2.available <= 65536);
     a = r2.allocate(2001);
     assert(a.length == 2001);
+}
+
+private extern(C) void* sbrk(long);
+private extern(C) int brk(shared void*);
+
+private void *sbrk_safe(Signed!size_t increment, void *expected_top)
+{
+    import core.atomic;
+
+    static shared uint _locked;
+    while (atomicOp!"+="(_locked, 1) != 1)
+    {
+        atomicOp!"-="(_locked, 1);
+        // sleep a bit before retrying
+        import core.sys.posix.unistd;
+        usleep(_locked);
+    }
+    // Acquired lock, proceeed
+    scope(exit) atomicOp!"-="(_locked, 1);
+
+    //auto actual_top = sbrk(0);
+    //if (increment == 0) return actual_top;
+    //if (actual_top != expected_top) return null;
+    //// All good, proceed to the actual reallocation
+    //return sbrk(increment);
+
+    auto actual_top = sbrk(increment);
+    if (increment == 0)
+    {
+        // It was just a query
+        assert(actual_top != cast(void*) -1);
+        return actual_top;
+    }
+    if (actual_top == expected_top)
+    {
+        // Happy case
+        assert(actual_top != cast(void*) -1);
+        return actual_top + increment;
+    }
+    // Must undo the allocation
+    if (actual_top != cast(void*) -1)
+    {
+        // Reallocation had succeeded, so undo it
+        actual_top = sbrk(-increment);
+        return null;
+    }
+    // Expectation not satisfied, allocation failed anyway
+    return null;
+}
+
+/** Allocator backed by $(D $(LUCKY sbrk)) for Posix systems. Due to the fact
+that $(D sbrk) is not thread-safe
+$(WEB http://lifecs.likai.org/2010/02/sbrk-is-not-thread-safe.html by design),
+$(D SbrkRegion) uses a mutex internally. This implies that uncontrolled calls to
+$(D brk) and $(D sbrk) may affect the workings of $(D SbrkRegion) adversely.
+
+The $(D deallocateAll) method only works (and returns $(D true)) on systems
+that support reducing the  break address (i.e. accept calls to $(D sbrk) with
+negative offsets). OSX does not accept such.
+
+The $(D deallocate) method only works (and returns $(D true)) under the same
+conditions as $(D deallocateAll), PLUS the argument must be the one returned
+from the last allocation.
+*/
+version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
+{
+    import core.sys.posix.pthread;
+    static shared pthread_mutex_t sbrkMutex;
+
+    static assert(minAlign.isGoodStaticAlignment);
+    static assert(size_t.sizeof == (void*).sizeof);
+    private shared void* _brkInitial, _brkCurrent;
+
+    /**
+    Instance shared by all callers.
+    */
+    static shared SbrkRegion it;
+
+    /**
+    Standard allocator primitives.
+    */
+    enum uint alignment = minAlign;
+
+    /// Ditto
+    void[] allocate(size_t bytes) shared
+    {
+        static if (minAlign > 1)
+            const rounded = bytes.roundUpToMultipleOf(alignment);
+        else
+            alias rounded = bytes;
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+            || assert(0);
+        // Assume sbrk returns the old break. Most online documentation confirms
+        // that, except for http://www.inf.udec.cl/~leo/Malloc_tutorial.pdf,
+        // which claims the returned value is not portable.
+        auto p = sbrk(rounded);
+        if (p == cast(void*) -1)
+        {
+            return null;
+        }
+        if (!_brkInitial)
+        {
+            _brkInitial = cast(shared) p;
+        }
+        _brkCurrent = cast(shared) (p + rounded);
+        return p[0 .. bytes];
+    }
+
+    /// Ditto
+    void[] alignedAllocate(size_t bytes, uint a) shared
+    {
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+            || assert(0);
+        if (!_brkInitial)
+        {
+            // This is one extra call, but it'll happen only once.
+            _brkInitial = cast(shared) sbrk(0);
+            (_brkInitial != cast(void*) -1) || assert(0);
+            _brkCurrent = _brkInitial;
+        }
+        immutable size_t delta = cast(shared void*) roundUpToMultipleOf(
+            cast(ulong) _brkCurrent, a) - _brkCurrent;
+        // Still must make sure the total size is aligned to the allocator's
+        // alignment.
+        immutable rounded = (bytes + delta).roundUpToMultipleOf(alignment);
+
+        auto p = sbrk(rounded);
+        if (p == cast(void*) -1)
+        {
+            return null;
+        }
+        _brkCurrent = cast(shared) (p + rounded);
+        return p[delta .. delta + bytes];
+    }
+
+    /// Ditto
+    bool deallocate(void[] b) shared
+    {
+        static if (minAlign > 1)
+            const rounded = b.length.roundUpToMultipleOf(alignment);
+        else
+            const rounded = b.length;
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+            || assert(0);
+        if (_brkCurrent != b.ptr + b.length) return false;
+        assert(b.ptr >= _brkInitial);
+        if (sbrk(-rounded) == cast(void*) -1)
+            return false;
+        _brkCurrent = cast(shared) b.ptr;
+        return true;
+    }
+
+    /// Ditto
+    bool deallocateAll() shared
+    {
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+            || assert(0);
+        return !_brkInitial || brk(_brkInitial) == 0;
+    }
+
+    /// Ditto
+    bool owns(void[] b) shared
+    {
+        // No need to lock here.
+        assert(!_brkCurrent || b.ptr + b.length <= _brkCurrent);
+        return _brkInitial && b.ptr >= _brkInitial;
+    }
+}
+
+version(Posix)
+unittest
+{
+    alias alloc = SbrkRegion!(8).it;
+    auto a = alloc.alignedAllocate(2001, 4096);
+    assert(a.length == 2001);
+    auto b = alloc.allocate(2001);
+    assert(b.length == 2001);
+    assert(alloc.owns(a));
+    assert(alloc.owns(b));
+    // reducing the brk does not work on OSX
+    version(OSX) {} else
+    {
+        assert(alloc.deallocate(b));
+        assert(alloc.deallocateAll);
+    }
 }
 
 /**
@@ -3696,7 +3885,7 @@ struct CascadingAllocator(alias make)
 {
     /// Alias for $(D typeof(make)).
     alias typeof(make()) Allocator;
-    private struct Node
+    static struct Node
     {
         Allocator a;
         Node* next;
@@ -3741,7 +3930,8 @@ struct CascadingAllocator(alias make)
             // Resources truly exhausted, not much to do
             return null;
         }
-        emplace(n.next, Node(make()));
+        static assert(is(typeof(Node(make(), null, false)) == Node));
+        emplace(n.next, make(), cast(Node*) null, false);
         n.nextIsInitialized = true;
         // Reserve room for the next next allocator
         n.next.next = cast(Node*) allocateNoGrow(Node.sizeof).ptr;
@@ -4400,7 +4590,7 @@ class CAllocatorImpl(Allocator) : CAllocator
     else alias impl = Allocator.it;
 
     /// Returns $(D impl.alignment).
-    @property uint alignment()
+    override @property uint alignment()
     {
         return impl.alignment;
     }
@@ -4409,7 +4599,7 @@ class CAllocatorImpl(Allocator) : CAllocator
     If $(D Allocator) supports alignment setting, performs it and returns $(D
     true). Otherwise, returns $(D false).
     */
-    @property bool alignment(uint a)
+    override @property bool alignment(uint a)
     {
         static if (is(typeof(impl.alignment = a)))
         {
@@ -4425,7 +4615,7 @@ class CAllocatorImpl(Allocator) : CAllocator
     /**
     Returns $(D impl.goodAllocSize(s)).
     */
-    size_t goodAllocSize(size_t s)
+    override size_t goodAllocSize(size_t s)
     {
         return impl.goodAllocSize(s);
     }
@@ -4433,7 +4623,7 @@ class CAllocatorImpl(Allocator) : CAllocator
     /**
     Returns $(D impl.allocate(s)).
     */
-    void[] allocate(size_t s)
+    override void[] allocate(size_t s)
     {
         return impl.allocate(s);
     }
@@ -4441,7 +4631,7 @@ class CAllocatorImpl(Allocator) : CAllocator
     /**
     Returns $(D true) if $(D Allocator) supports $(D owns).
     */
-    bool supportsOwns()
+    override bool supportsOwns()
     {
         return hasMember!(Allocator, "owns");
     }
@@ -4457,7 +4647,7 @@ class CAllocatorImpl(Allocator) : CAllocator
     }
 
     /// Returns $(D impl.expand(b, s)) if defined, $(D false) otherwise.
-    bool expand(ref void[] b, size_t s)
+    override bool expand(ref void[] b, size_t s)
     {
         static if (hasMember!(Allocator, "expand"))
             return impl.expand(b, s);
@@ -4466,14 +4656,14 @@ class CAllocatorImpl(Allocator) : CAllocator
     }
 
     /// Returns $(D impl.reallocate(b, s)).
-    bool reallocate(ref void[] b, size_t s)
+    override bool reallocate(ref void[] b, size_t s)
     {
         return impl.reallocate(b, s);
     }
 
     /// Calls $(D impl.deallocate(b)) and returns $(D true) if defined,
     /// otherwise returns $(D false).
-    bool deallocate(void[] b)
+    override bool deallocate(void[] b)
     {
         static if (hasMember!(Allocator, "deallocate"))
         {
@@ -4488,7 +4678,7 @@ class CAllocatorImpl(Allocator) : CAllocator
 
     /// Calls $(D impl.deallocateAll()) and returns $(D true) if defined,
     /// otherwise returns $(D false).
-    bool deallocateAll()
+    override bool deallocateAll()
     {
         static if (hasMember!(Allocator, "deallocateAll"))
         {
@@ -4503,7 +4693,7 @@ class CAllocatorImpl(Allocator) : CAllocator
 
     /// Returns $(D true) if allocator supports $(D allocateAll). By default
     /// returns $(D false).
-    bool supportsAllocateAll()
+    override bool supportsAllocateAll()
     {
         return hasMember!(Allocator, "allocateAll");
     }
