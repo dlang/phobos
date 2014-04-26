@@ -3065,54 +3065,9 @@ unittest
 private extern(C) void* sbrk(long);
 private extern(C) int brk(shared void*);
 
-private void *sbrk_safe(Signed!size_t increment, void *expected_top)
-{
-    import core.atomic;
-
-    static shared uint _locked;
-    while (atomicOp!"+="(_locked, 1) != 1)
-    {
-        atomicOp!"-="(_locked, 1);
-        // sleep a bit before retrying
-        import core.sys.posix.unistd;
-        usleep(_locked);
-    }
-    // Acquired lock, proceeed
-    scope(exit) atomicOp!"-="(_locked, 1);
-
-    //auto actual_top = sbrk(0);
-    //if (increment == 0) return actual_top;
-    //if (actual_top != expected_top) return null;
-    //// All good, proceed to the actual reallocation
-    //return sbrk(increment);
-
-    auto actual_top = sbrk(increment);
-    if (increment == 0)
-    {
-        // It was just a query
-        assert(actual_top != cast(void*) -1);
-        return actual_top;
-    }
-    if (actual_top == expected_top)
-    {
-        // Happy case
-        assert(actual_top != cast(void*) -1);
-        return actual_top + increment;
-    }
-    // Must undo the allocation
-    if (actual_top != cast(void*) -1)
-    {
-        // Reallocation had succeeded, so undo it
-        actual_top = sbrk(-increment);
-        return null;
-    }
-    // Expectation not satisfied, allocation failed anyway
-    return null;
-}
-
 /** Allocator backed by $(D $(LUCKY sbrk)) for Posix systems. Due to the fact
 that $(D sbrk) is not thread-safe
-$(WEB http://lifecs.likai.org/2010/02/sbrk-is-not-thread-safe.html by design),
+$(WEB lifecs.likai.org/2010/02/sbrk-is-not-thread-safe.html, by design),
 $(D SbrkRegion) uses a mutex internally. This implies that uncontrolled calls to
 $(D brk) and $(D sbrk) may affect the workings of $(D SbrkRegion) adversely.
 
@@ -4495,8 +4450,9 @@ TODO: add support for $(D shared).
 */
 class CAllocator
 {
-    /// Returns the alignment offered. By default this method returns $(D
-    /// platformAlignment).
+    /**
+    Returns the alignment offered. By default this method returns $(D platformAlignment).
+    */
     @property uint alignment()
     {
         return platformAlignment;
