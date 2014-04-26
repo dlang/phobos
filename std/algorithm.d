@@ -6674,9 +6674,8 @@ size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
-    import std.exception : enforce;
+    assert(!needle.empty, "Cannot count occurrences of an empty range");
 
-    enforce(!needle.empty, "Cannot count occurrences of an empty range");
     static if (isInfinite!R2)
     {
         //Note: This is the special case of looking for an infinite inside a finite...
@@ -6712,6 +6711,12 @@ unittest
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
     assert(count!("a == 3")(a) == 2);
     assert(count("日本語") == 3);
+}
+
+// Issue 11253
+nothrow unittest
+{
+    assert([1, 2, 3].count([2, 3]) == 1);
 }
 
 // balancedParens
