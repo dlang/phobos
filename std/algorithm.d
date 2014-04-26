@@ -9771,7 +9771,7 @@ private template HeapSortImpl(alias less, Range)
     alias lessFun = binaryFun!less;
 
     //template because of @@@12410@@@
-    void heapSort()(Range r) 
+    void heapSort()(Range r)
     {
         // If true, there is nothing to do
         if(r.length < 2) return;
