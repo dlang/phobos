@@ -3022,11 +3022,11 @@ struct Blocklist
     }
 
     /// Ditto
-    alias owns = Parent.owns;
+    auto owns(void[] b) { return parent.owns(b); }
     //alias allocateAll = Parent.allocateAll;
 
     /// Ditto
-    alias deallocateAll = Parent.deallocateAll;
+    auto deallocateAll() { return parent.deallocateAll; }
 }
 
 unittest
