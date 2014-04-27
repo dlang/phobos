@@ -2974,18 +2974,21 @@ struct Blocklist
         return cast(Node*) ((cast(void*) n) - lSize);
     }
 
-    alias alignment = SimpleBlocklist.alignment;
-
     version(unittest) void dump()
     {
         return parent.parent.dump;
     }
 
+    /// Constructs an allocator given a block of memory.
     this(void[] b)
     {
         parent = Parent(SimpleBlocklist(b));
     }
 
+    /// Standard allocator primitives
+    alias alignment = SimpleBlocklist.alignment;
+
+    /// Ditto
     void[] allocate(size_t bytes)
     {
         auto r = parent.allocate(bytes);
@@ -2997,6 +3000,7 @@ struct Blocklist
         return r;
     }
 
+    /// Ditto
     void deallocate(void[] b)
     {
         // This is the moment to do left coalescing
@@ -3017,8 +3021,11 @@ struct Blocklist
         parent.parent.searchStart = n;
     }
 
+    /// Ditto
     alias owns = Parent.owns;
     //alias allocateAll = Parent.allocateAll;
+
+    /// Ditto
     alias deallocateAll = Parent.deallocateAll;
 }
 
