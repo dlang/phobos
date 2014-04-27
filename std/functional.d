@@ -228,7 +228,7 @@ template not(alias pred)
         else static if (T.length == 2)
             return !binaryFun!pred(args);
         else
-            static assert(false, "not unimplemented for multiple arguments");
+            static assert(false, "not implemented for multiple arguments");
     }
 }
 
