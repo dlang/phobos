@@ -93,18 +93,26 @@ $(D reallocate) if it can derive some advantage from doing so; otherwise, this
 module defines a $(D reallocate) free function implemented in terms of $(D
 expand), $(D allocate), and $(D deallocate).))
 
-$(TR $(TDC bool alignedReallocate(ref void[] b, size_t s, uint a);, !$(RES) ||
-b.length == s) $(TD Similar to $(D reallocate), but guarantees the reallocated
-memory is aligned at $(D a) bytes. The buffer must have been originated with a
-call to $(D alignedAllocate). $(D a) must be a power of 2 greater than $(D
-(void*).sizeof).))
+$(TR $(TDC bool alignedReallocate(ref void[] b,$(BR) size_t s, uint a);, !$(RES)
+|| b.length == s) $(TD Similar to $(D reallocate), but guarantees the
+reallocated memory is aligned at $(D a) bytes. The buffer must have been
+originated with a call to $(D alignedAllocate). $(D a) must be a power of 2
+greater than $(D (void*).sizeof). An allocator should implement $(D
+alignedReallocate) if it can derive some advantage from doing so; otherwise,
+this module defines a $(D alignedReallocate) free function implemented in terms
+of $(D expand), $(D alignedAllocate), and $(D deallocate).))
 
 $(TR $(TDC bool owns(void[] b);, n/a) $(TD Returns $(D true) if $(D b) has been
 allocated with this allocator. An allocator should define this
 method only if it can decide on ownership precisely and fast (in constant time,
 logarithmic time, or linear time with a low multiplication factor). Traditional
 allocators such as the C heap do not define such functionality. If $(D b is
-null), the allocator should return $(D true) if it may return $(D null) as result of an allocation with $(D size == 0).))
+null), the allocator should return $(D true) if it may return $(D null) as
+result of an allocation with $(D size == 0).))
+
+$(TR $(TDC void[] resolveInternalPointer(void* p);, n/a) $(TD If $(D p) is a
+pointer somewhere inside (or right after) a block allocated with this allocator,
+returns the entire block. Otherwise, returns $(D null).))
 
 $(TR $(TDC void deallocate(void[] b);, n/a) $(TD If $(D b is null), does
 nothing. Otherwise, deallocates memory previously allocated with this
@@ -113,6 +121,14 @@ allocator.))
 $(TR $(TDC void deallocateAll();, n/a) $(TD Deallocates all memory allocated
 with this allocator. If an allocator implements this method, it must specify
 whether its destructor calls it, too.))
+
+$(TR $(TDC bool empty();, n/a) $(TD Returns $(D true) if and only if the
+allocator holds no memory (i.e. no allocation has occurred, or all allocations
+have been deallocated).))
+
+$(TR $(TDC bool zeroesAllocations;, n/a) $(TD Enumerated value indicating
+whether the allocator zeroes newly allocated memory automatically. If not
+defined, it is assumed the allocator does not zero allocated memory.))
 
 $(TR $(TDC static Allocator it;, it $(I is a valid) Allocator $(I object)) $(TD
 Some allocators are $(I monostate), i.e. have only an instance and hold only
@@ -276,7 +292,7 @@ unittest
 
 import std.algorithm, std.conv, std.exception, std.range, std.traits,
     std.typecons, std.typetuple;
-version(unittest) import std.stdio;
+version(unittest) import std.random, std.stdio;
 
 /*
 Ternary by Timon Gehr and Andrei Alexandrescu.
@@ -477,6 +493,36 @@ bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
         if (b.length <= s && a.expand(b, s - b.length)) return true;
     }
     auto newB = a.allocate(s);
+    if (newB.length <= b.length) newB[] = b[0 .. newB.length];
+    else newB[0 .. b.length] = b[];
+    static if (hasMember!(Allocator, "deallocate"))
+        a.deallocate(b);
+    b = newB;
+    return true;
+}
+
+/**
+
+The default $(D alignedReallocate) function first attempts to use $(D expand).
+If $(D Allocator.expand) is not defined or returns $(D false),  $(D
+alignedReallocate) allocates a new block of memory of appropriate size and
+copies data from the old block to the new block. Finally, if $(D Allocator)
+defines $(D deallocate), $(D alignedReallocate) uses it to free the old memory
+block.
+
+$(D alignedReallocate) does not attempt to use $(D Allocator.reallocate) even if
+defined. This is deliberate so allocators may use it internally within their own
+implementation of $(D reallocate).
+
+*/
+bool alignedReallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
+{
+    if (b.length == s) return true;
+    static if (hasMember!(Allocator, "expand"))
+    {
+        if (b.length <= s && a.expand(b, s - b.length)) return true;
+    }
+    auto newB = a.alignedAllocate(s);
     if (newB.length <= b.length) newB[] = b[0 .. newB.length];
     else newB[0 .. b.length] = b[];
     static if (hasMember!(Allocator, "deallocate"))
@@ -3419,19 +3465,14 @@ unittest
 private extern(C) void* sbrk(long);
 private extern(C) int brk(shared void*);
 
-/** Allocator backed by $(D $(LUCKY sbrk)) for Posix systems. Due to the fact
-that $(D sbrk) is not thread-safe
-$(WEB lifecs.likai.org/2010/02/sbrk-is-not-thread-safe.html, by design),
-$(D SbrkRegion) uses a mutex internally. This implies that uncontrolled calls to
-$(D brk) and $(D sbrk) may affect the workings of $(D SbrkRegion) adversely.
+/**
 
-The $(D deallocateAll) method only works (and returns $(D true)) on systems
-that support reducing the  break address (i.e. accept calls to $(D sbrk) with
-negative offsets). OSX does not accept such.
+Allocator backed by $(D $(LUCKY sbrk)) for Posix systems. Due to the fact that
+$(D sbrk) is not thread-safe $(WEB lifecs.likai.org/2010/02/sbrk-is-not-thread-
+safe.html, by design), $(D SbrkRegion) uses a mutex internally. This implies
+that uncontrolled calls to $(D brk) and $(D sbrk) may affect the workings of $(D
+SbrkRegion) adversely.
 
-The $(D deallocate) method only works (and returns $(D true)) under the same
-conditions as $(D deallocateAll), PLUS the argument must be the one returned
-from the last allocation.
 */
 version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 {
@@ -3473,6 +3514,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         if (!_brkInitial)
         {
             _brkInitial = cast(shared) p;
+            assert(cast(size_t) _brkInitial % minAlign == 0,
+                "Too large alignment chosen for " ~ typeof(this).stringof);
         }
         _brkCurrent = cast(shared) (p + rounded);
         return p[0 .. bytes];
@@ -3488,6 +3531,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         {
             // This is one extra call, but it'll happen only once.
             _brkInitial = cast(shared) sbrk(0);
+            assert(cast(size_t) _brkInitial % minAlign == 0,
+                "Too large alignment chosen for " ~ typeof(this).stringof);
             (_brkInitial != cast(void*) -1) || assert(0);
             _brkCurrent = _brkInitial;
         }
@@ -3506,7 +3551,52 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         return p[delta .. delta + bytes];
     }
 
+    /**
+
+    The $(D expand) method may only succeed if the argument is the last block
+    allocated. In that case, $(D expand) attempts to push the break pointer to
+    the right.
+
+    */
+    bool expand(ref void[] b, size_t delta) shared
+    {
+        if (b is null) return (b = allocate(delta)) !is null;
+        assert(_brkInitial && _brkCurrent); // otherwise where did b come from?
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+            || assert(0);
+        if (_brkCurrent != b.ptr + b.length) return false;
+        // Great, can expand the last block
+        static if (minAlign > 1)
+            const rounded = delta.roundUpToMultipleOf(alignment);
+        else
+            alias rounded = bytes;
+        auto p = sbrk(rounded);
+        if (p == cast(void*) -1)
+        {
+            return false;
+        }
+        _brkCurrent = cast(shared) (p + rounded);
+        b = b.ptr[0 .. b.length + delta];
+        return true;
+    }
+
     /// Ditto
+    bool owns(void[] b) shared
+    {
+        // No need to lock here.
+        assert(!_brkCurrent || b.ptr + b.length <= _brkCurrent);
+        return _brkInitial && b.ptr >= _brkInitial;
+    }
+
+    /**
+
+    The $(D deallocate) method only works (and returns $(D true))  on systems
+    that support reducing the  break address (i.e. accept calls to $(D sbrk)
+    with negative offsets). OSX does not accept such. In addition the argument
+    must be the last block allocated.
+
+    */
     bool deallocate(void[] b) shared
     {
         static if (minAlign > 1)
@@ -3524,7 +3614,11 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         return true;
     }
 
-    /// Ditto
+    /**
+    The $(D deallocateAll) method only works (and returns $(D true)) on systems
+    that support reducing the  break address (i.e. accept calls to $(D sbrk)
+    with negative offsets). OSX does not accept such.
+    */
     bool deallocateAll() shared
     {
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
@@ -3533,13 +3627,15 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         return !_brkInitial || brk(_brkInitial) == 0;
     }
 
-    /// Ditto
-    bool owns(void[] b) shared
+    /// Standard allocator API.
+    bool empty()
     {
-        // No need to lock here.
-        assert(!_brkCurrent || b.ptr + b.length <= _brkCurrent);
-        return _brkInitial && b.ptr >= _brkInitial;
+        // Also works when they're both null.
+        return _brkCurrent == _brkInitial;
     }
+
+    /// Ditto
+    enum bool zeroesAllocations = true;
 }
 
 version(Posix) unittest
@@ -3608,6 +3704,9 @@ version(Posix) struct MmapAllocator
     {
         munmap(b.ptr, b.length) == 0 || assert(0);
     }
+
+    /// Ditto
+    enum zeroesAllocations = true;
 }
 
 version(Posix) unittest
@@ -5120,6 +5219,357 @@ private bool isGoodStaticAlignment(uint x)
 private bool isGoodDynamicAlignment(uint x)
 {
     return x.isPowerOf2 && x >= (void*).sizeof;
+}
+
+/*
+(Not public.)
+
+A binary search tree that uses no allocation of its own. Instead, it relies on
+user code to allocate nodes externally. Then $(D EmbeddedTree)'s primitives wire
+the nodes appropriately.
+
+Warning: currently $(D EmbeddedTree) is not using rebalancing, so it may
+degenerate. A red-black tree implementation storing the color with one of the
+pointers is planned for the future.
+*/
+private struct EmbeddedTree(T, alias less)
+{
+    static struct Node
+    {
+        T payload;
+        Node* left, right;
+    }
+
+    private Node* root;
+
+    private Node* insert(Node* n, ref Node* backref)
+    {
+        backref = n;
+        n.left = n.right = null;
+        return n;
+    }
+
+    Node* find(Node* data)
+    {
+        for (auto n = root; n; )
+        {
+            if (less(data, n))
+            {
+                n = n.left;
+            }
+            else if (less(n, data))
+            {
+                n = n.right;
+            }
+            else
+            {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    Node* insert(Node* data)
+    {
+        if (!root)
+        {
+            root = data;
+            data.left = data.right = null;
+            return root;
+        }
+        auto n = root;
+        for (;;)
+        {
+            if (less(data, n))
+            {
+                if (!n.left)
+                {
+                    // Found insertion point
+                    return insert(data, n.left);
+                }
+                n = n.left;
+            }
+            else if (less(n, data))
+            {
+                if (!n.right)
+                {
+                    // Found insertion point
+                    return insert(data, n.right);
+                }
+                n = n.right;
+            }
+            else
+            {
+                // Found
+                return n;
+            }
+            if (!n) return null;
+        }
+    }
+
+    Node* remove(Node* data)
+    {
+        auto n = root;
+        Node* parent = null;
+        for (;;)
+        {
+            if (!n) return null;
+            if (less(data, n))
+            {
+                parent = n;
+                n = n.left;
+            }
+            else if (less(n, data))
+            {
+                parent = n;
+                n = n.right;
+            }
+            else
+            {
+                // Found
+                remove(n, parent);
+                return n;
+            }
+        }
+    }
+
+    private void remove(Node* n, Node* parent)
+    {
+        assert(n);
+        assert(!parent || parent.left == n || parent.right == n);
+        Node** referrer = parent
+            ? (parent.left == n ? &parent.left : &parent.right)
+            : &root;
+        if (!n.left)
+        {
+            *referrer = n.right;
+        }
+        else if (!n.right)
+        {
+            *referrer = n.left;
+        }
+        else
+        {
+            // Find the leftmost child in the right subtree
+            auto leftmost = n.right;
+            Node** leftmostReferrer = &n.right;
+            while (leftmost.left)
+            {
+                leftmostReferrer = &leftmost.left;
+                leftmost = leftmost.left;
+            }
+            // Unlink leftmost from there
+            *leftmostReferrer = leftmost.right;
+            // Link leftmost in lieu of n
+            leftmost.left = n.left;
+            leftmost.right = n.right;
+            *referrer = leftmost;
+        }
+    }
+
+    bool empty() const
+    {
+        return !root;
+    }
+
+    void dump()
+    {
+        writeln(typeid(this), " @ ", cast(void*) &this);
+        dump(root, 3);
+    }
+
+    void dump(Node* r, uint indent)
+    {
+        write(repeat(' ', indent).array);
+        if (!r)
+        {
+            writeln("(null)");
+            return;
+        }
+        writeln(r.payload, " @ ", cast(void*) r);
+        dump(r.left, indent + 3);
+        dump(r.right, indent + 3);
+    }
+
+    void assertSane()
+    {
+        static bool isBST(Node* r, Node* lb, Node* ub)
+        {
+            if (!r) return true;
+            if (lb && !less(lb, r)) return false;
+            if (ub && !less(r, ub)) return false;
+            return isBST(r.left, lb, r) &&
+                isBST(r.right, r, ub);
+        }
+        if (isBST(root, null, null)) return;
+        dump;
+        assert(0);
+    }
+}
+
+unittest
+{
+    alias a = GCAllocator.it;
+    alias Tree = EmbeddedTree!(int, (a, b) => a.payload < b.payload);
+    Tree t;
+    assert(t.empty);
+    int[] vals = [ 6, 3, 9, 1, 0, 2, 8, 11 ];
+    foreach (v; vals)
+    {
+        auto n = new Tree.Node(v, null, null);
+        assert(t.insert(n));
+        assert(n);
+        t.assertSane;
+    }
+    assert(!t.empty);
+    foreach (v; vals)
+    {
+        Tree.Node n = { v };
+        assert(t.remove(&n));
+        t.assertSane;
+    }
+    assert(t.empty);
+}
+
+/**
+
+$(D WithInternalPointers) adds a primitive on top of another allocator: calling
+$(D resolveInternalPointer(p)) returns the block within which the internal
+pointer $(D p) lies. Pointers right after the end of allocated blocks are also
+considered internal.
+
+The implementation stores three additional words with each allocation (one for
+the block size and two for search management).
+
+*/
+struct WithInternalPointers(Allocator)
+{
+    alias Tree = EmbeddedTree!(size_t,
+        (a, b) => cast(void*) a + a.payload < cast(void*) b);
+    alias Parent = AffixAllocator!(Allocator, Tree.Node);
+
+    // Own state
+    private Tree blockMap;
+
+    alias alignment = Parent.alignment;
+
+    /**
+    The implementation is available as a public member.
+    */
+    static if (stateSize!Parent) Parent parent;
+    else alias parent = Parent.it;
+
+    /// Allocator API.
+    void[] allocate(size_t bytes)
+    {
+        auto r = parent.allocate(bytes);
+        if (!r) return r;
+        Tree.Node* n = &parent.prefix(r);
+        n.payload = bytes;
+        blockMap.insert(n) || assert(0);
+        return r;
+    }
+
+    /// Ditto
+    void deallocate(void[] b)
+    {
+        if (!b) return;
+        Tree.Node* n = &parent.prefix(b);
+        blockMap.remove(n) || assert(false);
+        parent.deallocate(b);
+    }
+
+    /// Ditto
+    static if (hasMember!(Allocator, "reallocate"))
+        bool reallocate(ref void[] b, size_t s)
+    {
+        auto n = &parent.prefix(b);
+        assert(n.payload == b.length);
+        blockMap.remove(n) || assert(0);
+        if (!parent.reallocate(b, s))
+        {
+            // Failed, must reinsert the same node in the tree
+            assert(n.payload == b.length);
+            blockMap.insert(n) || assert(0);
+            return false;
+        }
+        // Insert the new node
+        n = &parent.prefix(b);
+        n.payload = s;
+        blockMap.insert(n) || assert(0);
+        return true;
+    }
+
+    /// Ditto
+    bool owns(void[] b)
+    {
+        return resolveInternalPointer(b.ptr) !is null;
+    }
+
+    /// Ditto
+    bool empty()
+    {
+        return blockMap.empty;
+    }
+
+    /** Returns the block inside which $(D p) resides, or $(D null) if the
+    pointer does not belong.
+    */
+    void[] resolveInternalPointer(void* p)
+    {
+        // Must define a custom find
+        Tree.Node* find()
+        {
+            for (auto n = blockMap.root; n; )
+            {
+                if (p < n)
+                {
+                    n = n.left;
+                }
+                else if (p > (cast(void*) (n + 1)) + n.payload)
+                {
+                    n = n.right;
+                }
+                else
+                {
+                    return n;
+                }
+            }
+            return null;
+        }
+
+        auto n = find();
+        if (!n) return null;
+        return (cast(void*) (n + 1))[0 .. n.payload];
+    }
+}
+
+unittest
+{
+    WithInternalPointers!(Mallocator) a;
+    int[] vals = [ 6, 3, 9, 1, 2, 8, 11 ];
+    void[][] allox;
+    foreach (v; vals)
+    {
+        allox ~= a.allocate(v);
+    }
+    a.blockMap.assertSane;
+
+    foreach (b; allox)
+    {
+        assert(a.resolveInternalPointer(b.ptr) is b);
+        assert(a.resolveInternalPointer(b.ptr + b.length) is b);
+        assert(a.resolveInternalPointer(b.ptr + b.length / 2) is b);
+        auto bogus = new void[b.length];
+        assert(a.resolveInternalPointer(bogus.ptr) is null);
+    }
+
+    foreach (b; allox.randomCover)
+    {
+        a.deallocate(b);
+    }
+
+    assert(a.empty);
 }
 
 __EOF__
