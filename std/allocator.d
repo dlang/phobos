@@ -2985,7 +2985,7 @@ struct Blocklist
         parent = Parent(SimpleBlocklist(b));
     }
 
-    /// Standard allocator primitives
+    /// Standard allocator primitives.
     alias alignment = SimpleBlocklist.alignment;
 
     /// Ditto
@@ -3037,6 +3037,7 @@ unittest
     {
         array ~= alloc.allocate(i);
         assert(array[$ - 1].length == i);
+        assert(alloc.owns(array[$ - 1]));
     }
     array ~= alloc.allocate(103);
     //alloc.dump();
