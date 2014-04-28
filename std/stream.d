@@ -1882,12 +1882,12 @@ class OpenException: StreamFileException {
   this(string msg) { super(msg); }
 }
 
-// access modes; may be or'ed
+/// Specifies the $(LREF File) access mode used when opening the file.
 enum FileMode {
-  In = 1,
-  Out = 2,
-  OutNew = 6, // includes FileMode.Out
-  Append = 10 // includes FileMode.Out
+  In = 1,     /// Opens the file for reading.
+  Out = 2,    /// Opens the file for writing.
+  OutNew = 6, /// Opens the file for writing, creates a new file if it doesn't exist.
+  Append = 10 /// Opens the file for writing, appending new data to the end of the file.
 }
 
 version (Windows) {
