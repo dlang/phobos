@@ -67,7 +67,7 @@ allocated block, or $(D null) if the request could not be satisfied.))
 $(TR $(TDC void[] alignedAllocate(size_t s, uint a);, $(RES) is null ||
 $(RES).length == s) $(TD Similar to $(D allocate), with the additional guarantee
 that the memory returned is aligned to at least $(D a) bytes. $(D a) must be a
-power of 2 greater than $(D (void*).sizeof).))
+power of 2.))
 
 $(TR $(TDC void[] allocateAll();, n/a) $(TD This is a special function
 indicating to wrapping allocators that $(D this) is a simple,
@@ -239,11 +239,28 @@ run time.))
 $(TR $(TDC2 SharedFreelist) $(TD Same features as $(D Freelist), but packaged as
 a $(D shared) structure that is accessible to several threads.))
 
+$(TR $(TDC2 SimpleBlocklist) $(TD A simple structure on top of a contiguous
+block of storage, organizing it as a singly-linked list of blocks. Each block
+has a word-sized header consisting of its length massaged with a bit indicating
+whether the block is occupied.))
+
+$(TR $(TDC2 Blocklist) $(TD An enhanced block-list style of allocator building
+on top of $(D SimpleBlocklist). Each block in the list stores the block size at
+the end of the block as well (similarly to the way
+$(WEB http://g.oswego.edu/dl/html/malloc.html, dlmalloc) does), which makes it
+possible to iterate the block list backward as well as forward. This makes for
+better coalescing properties.))
+
 $(TR $(TDC2 Region) $(TD Region allocator organizes a chunk of memory as a
 simple bump-the-pointer allocator.))
 
 $(TR $(TDC2 InSituRegion) $(TD Region holding its own allocation, most often on
 the stack. Has statically-determined size.))
+
+$(TR $(TDC2 SbrkRegion) $(TD Region using $(D $(LUCKY sbrk)) for allocating
+memory.))
+
+$(TR $(TDC2 MmapAllocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
 
 $(TR $(TDC2 AllocatorWithStats) $(TD Collect statistics about any other
 allocator.))
@@ -258,6 +275,9 @@ dispatches them to distinct allocators.))
 
 $(TR $(TDC2 Bucketizer) $(TD Divides allocation sizes in discrete buckets and
 uses an array of allocators, one per bucket, to satisfy requests.))
+
+$(TR $(TDC2 WithInternalPointers) $(TD Adds support for resolving internal
+pointers on top of another allocator.))
 
 )
  */
@@ -2774,7 +2794,7 @@ struct SimpleBlocklist
 
     private static struct Node
     {
-        size_t _size;
+        size_t _size; // that's all the state
 
         size_t size()
         {
