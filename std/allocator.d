@@ -297,7 +297,7 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, CascadingAllocator!(
-            () => HeapBlock!(GCAllocator, 4096)(4072 * 1024)),
+            () => HeapBlock!(4096)(GCAllocator.it.allocate(4072 * 1024))),
         GCAllocator
     );
     A tuMalloc;
@@ -990,6 +990,13 @@ unittest
 }
 
 /**
+*/
+bool alignedAt(void* ptr, uint alignment)
+{
+    return cast(size_t) ptr % alignment == 0;
+}
+
+/**
 
 Allocator that adds some extra data before (of type $(D Prefix)) and/or after
 (of type $(D Suffix)) any allocation made with its parent allocator. This is
@@ -1340,17 +1347,9 @@ block size to the constructor.
 TODO: implement $(D alignedAllocate) and $(D alignedReallocate).
 
 */
-struct HeapBlock(Allocator, size_t theBlockSize,
-    size_t theAlignment = platformAlignment)
+struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
 {
     static assert(theBlockSize > 0 && theAlignment.isGoodStaticAlignment);
-
-    /**
-    Parent allocator. If it has no state, $(D parent) is an alias for $(D
-    Allocator.it).
-    */
-    static if (stateSize!Allocator) Allocator parent;
-    else alias parent = Allocator.it;
 
     /**
     If $(D blockSize == chooseAtRuntime), $(D HeapBlock) offers a read/write
@@ -1385,82 +1384,37 @@ struct HeapBlock(Allocator, size_t theBlockSize,
     private size_t _startIdx;
 
     /**
-    Constructs a block allocator given the total number of blocks. Only one $(D
-    parent.allocate) call will be made, and the layout puts the bitmap at the
-    front followed immediately by the payload. The constructor does not perform the allocation, however; allocation is done lazily upon the first call to
-    $(D allocate).
+    Constructs a block allocator given a hunk of memory. The layout puts the
+    bitmap at the front followed immediately by the payload.
     */
-    this(uint blocks)
+    this(void[] data)
     {
-        _blocks = blocks;
-    }
+        assert(data.ptr.alignedAt(alignment), "Data must be aligned properly");
 
-    private void initialize()
-    {
-        assert(_blocks);
-        const controlBytes = ((_blocks + 63) / 64) * 8;
-        const controlBytesRounded = controlBytes.roundUpToMultipleOf(
-            alignment);
-        const payloadBytes = _blocks * blockSize;
-        auto allocatedByUs = parent.allocate(
-            controlBytesRounded // control bits
-            + payloadBytes // payload
-        );
-        auto m = cast(ulong[]) allocatedByUs;
-        _control = m[0 .. controlBytes / 8];
-        _control[] = 0;
-        _payload = m[controlBytesRounded / 8 .. $];
-        assert(_payload.length == _blocks * blockSize,
-            text(_payload.length, " != ", _blocks * blockSize));
-    }
+        immutable ulong totalBits = data.length * 8;
+        immutable ulong bitsPerBlock = blockSize * 8 + 1;
+        // Get a first estimate
+        _blocks = to!uint(totalBits / bitsPerBlock);
 
-    private void initialize(void[] store)
-    {
-        assert(store.length);
-        // Round store to be ulong-aligned
-        store = store.roundStartToMultipleOf(ulong.alignof);
-        assert(store.length);
-        /* Divide data between control and payload. The equation is (in real
-        numbers, not integers): bs * x + x / 8 = store.length, where x is
-        the number of blocks.
-        */
-        double approxBlocks = (8.0 * store.length) / (8 * blockSize + 1);
-        import std.math;
-        auto blocks = cast(size_t) (approxBlocks + nextDown(1.0));
-        assert(blocks > 0);
-        assert(blockSize);
-        assert(blocks * blockSize + ((blocks + 63) / 64) * 8 >= store.length,
-            text(approxBlocks, " ", blocks, " ", blockSize, " ",
-                store.length));
-        while (blocks * blockSize + ((blocks + 63) / 64) * 8 > store.length)
+        // Reality is a bit more complicated, iterate until a good number of
+        // blocks found.
+        for (; _blocks; --_blocks)
         {
-            --blocks;
-            assert(blocks > 0);
+            immutable size_t controlWords = (_blocks + 63) / 64;
+            immutable controlBytesRounded =
+                roundUpToMultipleOf(controlWords * 8, alignment);
+            immutable payloadBytes = _blocks * blockSize;
+            if (data.length >= controlBytesRounded + payloadBytes)
+            {
+                // Enough room, yay. Initialize everything.
+                _control = (cast(ulong*)data.ptr)[0 .. controlWords];
+                _control[] = 0;
+                _payload = data[controlBytesRounded .. $];
+                assert(payloadBytes <= _payload.length);
+                _payload = _payload[0 .. payloadBytes];
+                break;
+            }
         }
-        auto control = cast(ulong[]) store[0 .. ((blocks + 63) / 64) * 8];
-        store = store[control.length * 8 .. $];
-        // Take into account data alignment necessities
-        store = store.roundStartToMultipleOf(alignment);
-        assert(store.length);
-        while (blocks * blockSize > store.length)
-        {
-            --blocks;
-        }
-        auto payload = store[0 .. blocks * blockSize];
-        initialize(control, payload, blockSize);
-    }
-
-    private void initialize(ulong[] control, void[] payload, size_t blockSize)
-    {
-        enforce(payload.length % blockSize == 0,
-            text(payload.length, " % ", blockSize, " != 0"));
-        assert(payload.length / blockSize <= uint.max);
-        _blocks = cast(uint) (payload.length / blockSize);
-        const controlWords = (_blocks + 63) / 64;
-        enforce(controlWords == control.length);
-        _control = control;
-        assert(control.equal(repeat(0, control.length)));
-        _payload = payload;
     }
 
     /*
@@ -1502,18 +1456,6 @@ struct HeapBlock(Allocator, size_t theBlockSize,
     */
     @trusted void[] allocate(const size_t s)
     {
-        if (!_control)
-        {
-            // Lazy initialize
-            if (!_blocks)
-                static if (hasMember!(Allocator, "allocateAll"))
-                    initialize(parent.allocateAll);
-                else
-                    return null;
-            else
-                initialize();
-        }
-        assert(_blocks && _control && _payload);
         const blocks = (s + blockSize - 1) / blockSize;
         void[] result = void;
 
@@ -1824,7 +1766,8 @@ struct HeapBlock(Allocator, size_t theBlockSize,
 unittest
 {
     // Create a block allocator on top of a 10KB stack region.
-    HeapBlock!(InSituRegion!(10240, 64), 64, 64) a;
+    InSituRegion!(10240, 64) r;
+    auto a = HeapBlock!(64, 64)(r.allocateAll());
     static assert(hasMember!(InSituRegion!(10240, 64), "allocateAll"));
     auto b = a.allocate(100);
     assert(b.length == 100);
@@ -1835,15 +1778,19 @@ unittest
     static void testAllocateAll(size_t bs)(uint blocks, uint blocksAtATime)
     {
         assert(bs);
-        auto a = HeapBlock!(GCAllocator, bs)(blocks);
-        assert(a._blocks || !blocks);
+        auto a = HeapBlock!(bs)(
+            GCAllocator.it.allocate((blocks * bs * 8 + blocks) / 8)
+        );
+        assert(blocks >= a._blocks, text(blocks, " < ", a._blocks));
+        blocks = a._blocks;
 
         // test allocation of 0 bytes
         auto x = a.allocate(0);
         assert(x is null);
         // test allocation of 1 byte
         x = a.allocate(1);
-        assert(x.length == 1 || blocks == 0, text(x.ptr, " ", x.length, " ", a));
+        assert(x.length == 1 || blocks == 0,
+            text(x.ptr, " ", x.length, " ", a));
         a.deallocateAll();
 
         //writeln("Control words: ", a._control.length);
@@ -3436,7 +3383,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 }
 
 ///
-unittest
+version(none) unittest
 {
     // 128KB region, allocated to x86's cache line
     InSituRegion!(128 * 1024, 64) r1;
@@ -3450,21 +3397,22 @@ unittest
 
     // Reap with GC fallback.
     InSituRegion!(128 * 1024) tmp3;
-    FallbackAllocator!(HeapBlock!(InSituRegion!(128 * 1024), 64, 64),
-        GCAllocator) r3;
+    FallbackAllocator!(HeapBlock!(64, 64), GCAllocator) r3;
+    r3.primary = HeapBlock!(64, 64)(tmp3.allocateAll());
     auto a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
     InSituRegion!(128 * 1024) tmp4;
-    Freelist!(FallbackAllocator!(
-        HeapBlock!(InSituRegion!(128 * 1024), 64, 64), GCAllocator), 0, 16) r4;
+    Freelist!(FallbackAllocator!(HeapBlock!(64, 64), GCAllocator), 0, 16) r4;
+    r4.parent.primary = HeapBlock!(64, 64)(tmp4.allocateAll());
     auto a4 = r4.allocate(104);
     assert(a4.length == 104);
 
     // Same as above, except the freelist only applies to the reap.
     InSituRegion!(128 * 1024) tmp5;
-    FallbackAllocator!(Freelist!(HeapBlock!(InSituRegion!(128 * 1024), 64, 64), 0, 16), GCAllocator) r5;
+    FallbackAllocator!(Freelist!(HeapBlock!(64, 64), 0, 16), GCAllocator) r5;
+    r5.primary.parent = HeapBlock!(64, 64)(tmp5.allocateAll());
     auto a5 = r5.allocate(105);
     assert(a5.length == 105);
 }
@@ -5217,7 +5165,7 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, CascadingAllocator!(
-            () => HeapBlock!(GCAllocator, 4096)(4072 * 1024)),
+            () => HeapBlock!(4096)(GCAllocator.it.allocate(4072 * 1024))),
         GCAllocator
     );
 

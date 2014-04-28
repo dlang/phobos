@@ -87,9 +87,10 @@ unittest
     {
         int a;
         int* b;
+        double[] c;
     }
 
     TypedAllocator!GCAllocator allok;
-    A obj = { 42, new int(43) };
+    A obj = { 42, new int(43), new double[100] };
     scanImpl!A(&allok, cast(void*) &obj);
 }
