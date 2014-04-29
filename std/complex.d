@@ -156,25 +156,9 @@ struct Complex(T)  if (isFloatingPoint!T)
         sink("i");
     }
 
-    /**
-     * $(RED Deprecated.  This function will be removed in March 2014.
-     * Please use $(XREF string,format) instead.)
-     *
-     * Converts the complex number to a string representation.
-     *
-     * If a $(D sink) delegate is specified, the string is passed to it
-     * and this function returns $(D null).  Otherwise, this function
-     * returns the string representation directly.
-
-     * The output format is controlled via $(D formatSpec), which should consist
-     * of a single POSIX format specifier, including the percent (%) character.
-     * Note that complex numbers are floating point numbers, so the only
-     * valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
-     * gives the default behaviour. Positional parameters are not valid
-     * in this context.
-     *
-     * See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
-     * documentation for more information.
+    /*
+     * Explicitly undocumented. It will be removed in October 2014.
+     * Please use $(XREF string,format) instead.
      */
     deprecated("Please use std.string.format instead.")
     string toString(scope void delegate(const(char)[]) sink,
