@@ -5,6 +5,10 @@
    I/O. It's comparable to C99's $(D vsprintf()) and uses a similar
    format encoding scheme.
 
+   For an introductory look at $(B std.format)'s capabilities and how to use
+   this module see the dedicated
+   $(LINK2 http://wiki.dlang.org/Defining_custom_print_format_specifiers, DWiki article).
+
    Macros: WIKI = Phobos/StdFormat
 
    Copyright: Copyright Digital Mars 2000-2013.
