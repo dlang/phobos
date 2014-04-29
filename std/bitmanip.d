@@ -2277,7 +2277,7 @@ unittest
     $(D T). The value returned is converted from the given endianness to the
     native endianness. The range is not consumed.
 
-    Parems:
+    Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
@@ -2606,7 +2606,7 @@ unittest
     native endianness. The $(D T.sizeof) bytes which are read are consumed from
     the range.
 
-    Parems:
+    Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
@@ -2863,7 +2863,7 @@ unittest
     to the given range of $(D ubyte)s as a sequence of $(D T.sizeof) $(D ubyte)s
     starting at index. $(D hasSlicing!R) must be $(D true).
 
-    Parems:
+    Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness to write the bytes in.
         range = The range to write to.
@@ -3251,7 +3251,7 @@ unittest
     $(D T.sizeof) $(D ubyte)s starting at index. $(D hasSlicing!R) must be
     $(D true).
 
-    Parems:
+    Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness to write the bytes in.
         range = The range to append to.
