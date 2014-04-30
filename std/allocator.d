@@ -1015,11 +1015,19 @@ unittest
     assert(((size_t.max >> 1) + 1).roundUpToPowerOf2 == (size_t.max >> 1) + 1);
 }
 
-/**
+/*
 */
 bool alignedAt(void* ptr, uint alignment)
 {
     return cast(size_t) ptr % alignment == 0;
+}
+
+/*
+*/
+void* alignDownTo(void* ptr, uint alignment)
+{
+    assert(alignment.isPowerOf2);
+    return cast(void*) (cast(size_t) ptr & ~(alignment - 1));
 }
 
 /**
@@ -1076,9 +1084,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             }
             else
             {
-                return roundUpToMultipleOf(
-                    s + stateSize!Prefix,
-                    Suffix.alignof) + stateSize!Suffix;
+                return
+                    roundUpToMultipleOf(s + stateSize!Prefix, Suffix.alignof)
+                    + stateSize!Suffix;
             }
         }
 
@@ -1099,6 +1107,29 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 emplace!Suffix(
                     cast(Suffix*)(result.ptr + result.length - Suffix.sizeof));
             return result[stateSize!Prefix .. stateSize!Prefix + bytes];
+        }
+
+        static if (hasMember!(Allocator, "allocateAll"))
+        void[] allocateAll()
+        {
+            auto result = parent.allocateAll();
+            if (result is null) return null;
+            static if (stateSize!Prefix)
+            {
+                if (result.length <= stateSize!Prefix) return null;
+                emplace!Prefix(cast(Prefix*)result.ptr);
+                result = result[stateSize!Prefix .. $];
+            }
+            static if (stateSize!Suffix)
+            {
+                // Ehm, find a properly aligned place for the suffix
+                auto p = (result.ptr + result.length - stateSize!Suffix)
+                    .alignDownTo(Suffix.alignof);
+                if (p <= result.ptr) return null;
+                emplace!Suffix(cast(Suffix*) p);
+                result = result[0 .. p - result.ptr];
+            }
+            return result;
         }
 
         static if (hasMember!(Allocator, "owns"))
@@ -2286,6 +2317,11 @@ up by the $(D GCAllocator).
 */
 struct FallbackAllocator(Primary, Fallback)
 {
+    unittest
+    {
+        testAllocator!(() => FallbackAllocator());
+    }
+
     /// The primary allocator.
     static if (stateSize!Primary) Primary primary;
     else alias primary = Primary.it;
@@ -2319,6 +2355,25 @@ struct FallbackAllocator(Primary, Fallback)
     }
 
     /**
+    $(D FallbackAllocator) offers $(D alignedAllocate) iff at least one of the
+    allocators also offers it. It attempts to allocate using either or both.
+    */
+    static if (hasMember!(Primary, "alignedAllocate")
+        || hasMember!(Fallback, "alignedAllocate"))
+    void[] alignedAllocate(size_t s, uint a)
+    {
+        static if (hasMember!(Primary, "alignedAllocate"))
+        {
+            if (auto result = primary.alignedAllocate(s, a)) return result;
+        }
+        static if (hasMember!(Fallback, "alignedAllocate"))
+        {
+            if (auto result = fallback.alignedAllocate(s, a)) return result;
+        }
+        return null;
+    }
+
+    /**
 
     $(D expand) is defined if and only if at least one of the allocators
     defines $(D expand). It works as follows. If $(D primary.owns(b)), then the
@@ -2331,6 +2386,12 @@ struct FallbackAllocator(Primary, Fallback)
     static if (hasMember!(Primary, "expand") || hasMember!(Fallback, "expand"))
     bool expand(ref void[] b, size_t delta)
     {
+        if (!delta) return true;
+        if (!b)
+        {
+            b = allocate(delta);
+            return b !is null;
+        }
         if (primary.owns(b))
         {
             static if (hasMember!(Primary, "expand"))
@@ -2357,6 +2418,18 @@ struct FallbackAllocator(Primary, Fallback)
     */
     bool reallocate(ref void[] b, size_t newSize)
     {
+        if (newSize == 0)
+        {
+            static if (hasMember!(typeof(this), "deallocate"))
+                deallocate(b);
+            return true;
+        }
+        if (b is null)
+        {
+            b = allocate(newSize);
+            return b !is null;
+        }
+
         bool crossAllocatorMove(From, To)(ref From from, ref To to)
         {
             auto b1 = to.allocate(newSize);
@@ -2369,7 +2442,7 @@ struct FallbackAllocator(Primary, Fallback)
             return true;
         }
 
-        if (primary.owns(b))
+        if (b is null || primary.owns(b))
         {
             if (primary.reallocate(b, newSize)) return true;
             // Move from primary to fallback
@@ -2380,6 +2453,48 @@ struct FallbackAllocator(Primary, Fallback)
         return crossAllocatorMove(fallback, primary);
     }
 
+    static if (hasMember!(Primary, "alignedAllocate")
+        || hasMember!(Fallback, "alignedAllocate"))
+    bool alignedReallocate(ref void[] b, size_t newSize, uint a)
+    {
+        bool crossAllocatorMove(From, To)(ref From from, ref To to)
+        {
+            static if (!hasMember!(To, "alignedAllocate"))
+            {
+                return false;
+            }
+            else
+            {
+                auto b1 = to.alignedAllocate(newSize, a);
+                if (!b1) return false;
+                if (b.length < newSize) b1[0 .. b.length] = b[];
+                else b1[] = b[0 .. newSize];
+                static if (hasMember!(From, "deallocate"))
+                    from.deallocate(b);
+                b = b1;
+                return true;
+            }
+        }
+
+        static if (hasMember!(Primary, "alignedAllocate"))
+        {
+            if (b is null || primary.owns(b))
+            {
+                return primary.alignedReallocate(b, newSize, a)
+                    || crossAllocatorMove(primary, fallback);
+            }
+        }
+        static if (hasMember!(Fallback, "alignedAllocate"))
+        {
+            return fallback.alignedReallocate(b, newSize, a)
+                || crossAllocatorMove(fallback, primary);
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     /**
     $(D owns) is defined if and only if both allocators define $(D owns).
     Returns $(D primary.owns(b) || fallback.owns(b)).
@@ -2388,6 +2503,19 @@ struct FallbackAllocator(Primary, Fallback)
     bool owns(void[] p)
     {
         return primary.owns(b) || fallback.owns(p);
+    }
+
+    /**
+    $(D resolveInternalPointer) is defined if and only if both allocators
+    define it.
+    */
+    static if (hasMember!(Primary, "resolveInternalPointer")
+        && hasMember!(Fallback, "resolveInternalPointer"))
+    void* resolveInternalPointer(void* p)
+    {
+        if (auto r = primary.resolveInternalPointer(p)) return r;
+        if (auto r = fallback.resolveInternalPointer(p)) return r;
+        return null;
     }
 
     /**
@@ -2413,6 +2541,23 @@ struct FallbackAllocator(Primary, Fallback)
                 return fallback.deallocate(b);
         }
     }
+
+    /**
+    $(D empty) is defined if both allocators also define it.
+    */
+    static if (hasMember!(Primary, "empty") && hasMember!(Fallback, "empty"))
+    bool empty()
+    {
+        return primary.empty && fallback.empty;
+    }
+
+    /**
+    $(D zeroesAllocations) is defined if both allocators also define it.
+    */
+    static if (hasMember!(Primary, "zeroesAllocations")
+        && hasMember!(Fallback, "zeroesAllocations"))
+    enum bool zeroesAllocations = Primary.zeroesAllocations
+        && Fallback.zeroesAllocations;
 }
 
 ///
@@ -5994,7 +6139,7 @@ void testAllocator(alias make)()
     assert(a.reallocate(b6, 0));
     assert(b6.length == 0);
     assert(a.reallocate(b6, 1));
-    assert(b6.length == 1);
+    assert(b6.length == 1, text(b6.length));
 
     // Test owns
     static if (hasMember!(A, "owns"))
