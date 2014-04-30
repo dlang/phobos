@@ -8850,64 +8850,61 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
+        assert(Date(1, 1, 1) == Date.init);
+
+        static void testDate(in Date date, int year, int month, int day)
         {
-            assert(Date(1, 1, 1) == Date.init);
+            assert(date._year == year);
+            assert(date._month == month);
+            assert(date._day == day);
+        }
 
-            static void testDate(in Date date, int year, int month, int day)
-            {
-                assert(date._year == year);
-                assert(date._month == month);
-                assert(date._day == day);
-            }
+        testDate(Date(1999, 1 , 1), 1999, Month.jan, 1);
+        testDate(Date(1999, 7 , 1), 1999, Month.jul, 1);
+        testDate(Date(1999, 7 , 6), 1999, Month.jul, 6);
 
-            testDate(Date(1999, 1 , 1), 1999, Month.jan, 1);
-            testDate(Date(1999, 7 , 1), 1999, Month.jul, 1);
-            testDate(Date(1999, 7 , 6), 1999, Month.jul, 6);
+        //Test A.D.
+        assertThrown!DateTimeException(Date(1, 0, 1));
+        assertThrown!DateTimeException(Date(1, 1, 0));
+        assertThrown!DateTimeException(Date(1999, 13, 1));
+        assertThrown!DateTimeException(Date(1999, 1, 32));
+        assertThrown!DateTimeException(Date(1999, 2, 29));
+        assertThrown!DateTimeException(Date(2000, 2, 30));
+        assertThrown!DateTimeException(Date(1999, 3, 32));
+        assertThrown!DateTimeException(Date(1999, 4, 31));
+        assertThrown!DateTimeException(Date(1999, 5, 32));
+        assertThrown!DateTimeException(Date(1999, 6, 31));
+        assertThrown!DateTimeException(Date(1999, 7, 32));
+        assertThrown!DateTimeException(Date(1999, 8, 32));
+        assertThrown!DateTimeException(Date(1999, 9, 31));
+        assertThrown!DateTimeException(Date(1999, 10, 32));
+        assertThrown!DateTimeException(Date(1999, 11, 31));
+        assertThrown!DateTimeException(Date(1999, 12, 32));
 
-            //Test A.D.
-            assertThrown!DateTimeException(Date(1, 0, 1));
-            assertThrown!DateTimeException(Date(1, 1, 0));
-            assertThrown!DateTimeException(Date(1999, 13, 1));
-            assertThrown!DateTimeException(Date(1999, 1, 32));
-            assertThrown!DateTimeException(Date(1999, 2, 29));
-            assertThrown!DateTimeException(Date(2000, 2, 30));
-            assertThrown!DateTimeException(Date(1999, 3, 32));
-            assertThrown!DateTimeException(Date(1999, 4, 31));
-            assertThrown!DateTimeException(Date(1999, 5, 32));
-            assertThrown!DateTimeException(Date(1999, 6, 31));
-            assertThrown!DateTimeException(Date(1999, 7, 32));
-            assertThrown!DateTimeException(Date(1999, 8, 32));
-            assertThrown!DateTimeException(Date(1999, 9, 31));
-            assertThrown!DateTimeException(Date(1999, 10, 32));
-            assertThrown!DateTimeException(Date(1999, 11, 31));
-            assertThrown!DateTimeException(Date(1999, 12, 32));
+        assertNotThrown!DateTimeException(Date(1999, 1, 31));
+        assertNotThrown!DateTimeException(Date(1999, 2, 28));
+        assertNotThrown!DateTimeException(Date(2000, 2, 29));
+        assertNotThrown!DateTimeException(Date(1999, 3, 31));
+        assertNotThrown!DateTimeException(Date(1999, 4, 30));
+        assertNotThrown!DateTimeException(Date(1999, 5, 31));
+        assertNotThrown!DateTimeException(Date(1999, 6, 30));
+        assertNotThrown!DateTimeException(Date(1999, 7, 31));
+        assertNotThrown!DateTimeException(Date(1999, 8, 31));
+        assertNotThrown!DateTimeException(Date(1999, 9, 30));
+        assertNotThrown!DateTimeException(Date(1999, 10, 31));
+        assertNotThrown!DateTimeException(Date(1999, 11, 30));
+        assertNotThrown!DateTimeException(Date(1999, 12, 31));
 
-            assertNotThrown!DateTimeException(Date(1999, 1, 31));
-            assertNotThrown!DateTimeException(Date(1999, 2, 28));
-            assertNotThrown!DateTimeException(Date(2000, 2, 29));
-            assertNotThrown!DateTimeException(Date(1999, 3, 31));
-            assertNotThrown!DateTimeException(Date(1999, 4, 30));
-            assertNotThrown!DateTimeException(Date(1999, 5, 31));
-            assertNotThrown!DateTimeException(Date(1999, 6, 30));
-            assertNotThrown!DateTimeException(Date(1999, 7, 31));
-            assertNotThrown!DateTimeException(Date(1999, 8, 31));
-            assertNotThrown!DateTimeException(Date(1999, 9, 30));
-            assertNotThrown!DateTimeException(Date(1999, 10, 31));
-            assertNotThrown!DateTimeException(Date(1999, 11, 30));
-            assertNotThrown!DateTimeException(Date(1999, 12, 31));
+        //Test B.C.
+        assertNotThrown!DateTimeException(Date(0, 1, 1));
+        assertNotThrown!DateTimeException(Date(-1, 1, 1));
+        assertNotThrown!DateTimeException(Date(-1, 12, 31));
+        assertNotThrown!DateTimeException(Date(-1, 2, 28));
+        assertNotThrown!DateTimeException(Date(-4, 2, 29));
 
-            //Test B.C.
-            assertNotThrown!DateTimeException(Date(0, 1, 1));
-            assertNotThrown!DateTimeException(Date(-1, 1, 1));
-            assertNotThrown!DateTimeException(Date(-1, 12, 31));
-            assertNotThrown!DateTimeException(Date(-1, 2, 28));
-            assertNotThrown!DateTimeException(Date(-4, 2, 29));
-
-            assertThrown!DateTimeException(Date(-1, 2, 29));
-            assertThrown!DateTimeException(Date(-2, 2, 29));
-            assertThrown!DateTimeException(Date(-3, 2, 29));
-            }
+        assertThrown!DateTimeException(Date(-1, 2, 29));
+        assertThrown!DateTimeException(Date(-2, 2, 29));
+        assertThrown!DateTimeException(Date(-3, 2, 29));
     }
 
 
@@ -9039,7 +9036,7 @@ public:
         }
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         //Test A.D.
         foreach(gd; chain(testGregDaysBC, testGregDaysAD))
@@ -9079,88 +9076,85 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assert(Date(1, 1, 1).opCmp(Date.init) == 0);
+        //Test A.D.
+        assert(Date(1, 1, 1).opCmp(Date.init) == 0);
 
-            assert(Date(1999, 1, 1).opCmp(Date(1999, 1, 1)) == 0);
-            assert(Date(1, 7, 1).opCmp(Date(1, 7, 1)) == 0);
-            assert(Date(1, 1, 6).opCmp(Date(1, 1, 6)) == 0);
+        assert(Date(1999, 1, 1).opCmp(Date(1999, 1, 1)) == 0);
+        assert(Date(1, 7, 1).opCmp(Date(1, 7, 1)) == 0);
+        assert(Date(1, 1, 6).opCmp(Date(1, 1, 6)) == 0);
 
-            assert(Date(1999, 7, 1).opCmp(Date(1999, 7, 1)) == 0);
-            assert(Date(1999, 7, 6).opCmp(Date(1999, 7, 6)) == 0);
+        assert(Date(1999, 7, 1).opCmp(Date(1999, 7, 1)) == 0);
+        assert(Date(1999, 7, 6).opCmp(Date(1999, 7, 6)) == 0);
 
-            assert(Date(1, 7, 6).opCmp(Date(1, 7, 6)) == 0);
+        assert(Date(1, 7, 6).opCmp(Date(1, 7, 6)) == 0);
 
-            assert(Date(1999, 7, 6).opCmp(Date(2000, 7, 6)) < 0);
-            assert(Date(2000, 7, 6).opCmp(Date(1999, 7, 6)) > 0);
-            assert(Date(1999, 7, 6).opCmp(Date(1999, 8, 6)) < 0);
-            assert(Date(1999, 8, 6).opCmp(Date(1999, 7, 6)) > 0);
-            assert(Date(1999, 7, 6).opCmp(Date(1999, 7, 7)) < 0);
-            assert(Date(1999, 7, 7).opCmp(Date(1999, 7, 6)) > 0);
+        assert(Date(1999, 7, 6).opCmp(Date(2000, 7, 6)) < 0);
+        assert(Date(2000, 7, 6).opCmp(Date(1999, 7, 6)) > 0);
+        assert(Date(1999, 7, 6).opCmp(Date(1999, 8, 6)) < 0);
+        assert(Date(1999, 8, 6).opCmp(Date(1999, 7, 6)) > 0);
+        assert(Date(1999, 7, 6).opCmp(Date(1999, 7, 7)) < 0);
+        assert(Date(1999, 7, 7).opCmp(Date(1999, 7, 6)) > 0);
 
-            assert(Date(1999, 8, 7).opCmp(Date(2000, 7, 6)) < 0);
-            assert(Date(2000, 8, 6).opCmp(Date(1999, 7, 7)) > 0);
-            assert(Date(1999, 7, 7).opCmp(Date(2000, 7, 6)) < 0);
-            assert(Date(2000, 7, 6).opCmp(Date(1999, 7, 7)) > 0);
-            assert(Date(1999, 7, 7).opCmp(Date(1999, 8, 6)) < 0);
-            assert(Date(1999, 8, 6).opCmp(Date(1999, 7, 7)) > 0);
+        assert(Date(1999, 8, 7).opCmp(Date(2000, 7, 6)) < 0);
+        assert(Date(2000, 8, 6).opCmp(Date(1999, 7, 7)) > 0);
+        assert(Date(1999, 7, 7).opCmp(Date(2000, 7, 6)) < 0);
+        assert(Date(2000, 7, 6).opCmp(Date(1999, 7, 7)) > 0);
+        assert(Date(1999, 7, 7).opCmp(Date(1999, 8, 6)) < 0);
+        assert(Date(1999, 8, 6).opCmp(Date(1999, 7, 7)) > 0);
 
-            //Test B.C.
-            assert(Date(0, 1, 1).opCmp(Date(0, 1, 1)) == 0);
-            assert(Date(-1, 1, 1).opCmp(Date(-1, 1, 1)) == 0);
-            assert(Date(-1, 7, 1).opCmp(Date(-1, 7, 1)) == 0);
-            assert(Date(-1, 1, 6).opCmp(Date(-1, 1, 6)) == 0);
+        //Test B.C.
+        assert(Date(0, 1, 1).opCmp(Date(0, 1, 1)) == 0);
+        assert(Date(-1, 1, 1).opCmp(Date(-1, 1, 1)) == 0);
+        assert(Date(-1, 7, 1).opCmp(Date(-1, 7, 1)) == 0);
+        assert(Date(-1, 1, 6).opCmp(Date(-1, 1, 6)) == 0);
 
-            assert(Date(-1999, 7, 1).opCmp(Date(-1999, 7, 1)) == 0);
-            assert(Date(-1999, 7, 6).opCmp(Date(-1999, 7, 6)) == 0);
+        assert(Date(-1999, 7, 1).opCmp(Date(-1999, 7, 1)) == 0);
+        assert(Date(-1999, 7, 6).opCmp(Date(-1999, 7, 6)) == 0);
 
-            assert(Date(-1, 7, 6).opCmp(Date(-1, 7, 6)) == 0);
+        assert(Date(-1, 7, 6).opCmp(Date(-1, 7, 6)) == 0);
 
-            assert(Date(-2000, 7, 6).opCmp(Date(-1999, 7, 6)) < 0);
-            assert(Date(-1999, 7, 6).opCmp(Date(-2000, 7, 6)) > 0);
-            assert(Date(-1999, 7, 6).opCmp(Date(-1999, 8, 6)) < 0);
-            assert(Date(-1999, 8, 6).opCmp(Date(-1999, 7, 6)) > 0);
-            assert(Date(-1999, 7, 6).opCmp(Date(-1999, 7, 7)) < 0);
-            assert(Date(-1999, 7, 7).opCmp(Date(-1999, 7, 6)) > 0);
+        assert(Date(-2000, 7, 6).opCmp(Date(-1999, 7, 6)) < 0);
+        assert(Date(-1999, 7, 6).opCmp(Date(-2000, 7, 6)) > 0);
+        assert(Date(-1999, 7, 6).opCmp(Date(-1999, 8, 6)) < 0);
+        assert(Date(-1999, 8, 6).opCmp(Date(-1999, 7, 6)) > 0);
+        assert(Date(-1999, 7, 6).opCmp(Date(-1999, 7, 7)) < 0);
+        assert(Date(-1999, 7, 7).opCmp(Date(-1999, 7, 6)) > 0);
 
-            assert(Date(-2000, 8, 6).opCmp(Date(-1999, 7, 7)) < 0);
-            assert(Date(-1999, 8, 7).opCmp(Date(-2000, 7, 6)) > 0);
-            assert(Date(-2000, 7, 6).opCmp(Date(-1999, 7, 7)) < 0);
-            assert(Date(-1999, 7, 7).opCmp(Date(-2000, 7, 6)) > 0);
-            assert(Date(-1999, 7, 7).opCmp(Date(-1999, 8, 6)) < 0);
-            assert(Date(-1999, 8, 6).opCmp(Date(-1999, 7, 7)) > 0);
+        assert(Date(-2000, 8, 6).opCmp(Date(-1999, 7, 7)) < 0);
+        assert(Date(-1999, 8, 7).opCmp(Date(-2000, 7, 6)) > 0);
+        assert(Date(-2000, 7, 6).opCmp(Date(-1999, 7, 7)) < 0);
+        assert(Date(-1999, 7, 7).opCmp(Date(-2000, 7, 6)) > 0);
+        assert(Date(-1999, 7, 7).opCmp(Date(-1999, 8, 6)) < 0);
+        assert(Date(-1999, 8, 6).opCmp(Date(-1999, 7, 7)) > 0);
 
-            //Test Both
-            assert(Date(-1999, 7, 6).opCmp(Date(1999, 7, 6)) < 0);
-            assert(Date(1999, 7, 6).opCmp(Date(-1999, 7, 6)) > 0);
+        //Test Both
+        assert(Date(-1999, 7, 6).opCmp(Date(1999, 7, 6)) < 0);
+        assert(Date(1999, 7, 6).opCmp(Date(-1999, 7, 6)) > 0);
 
-            assert(Date(-1999, 8, 6).opCmp(Date(1999, 7, 6)) < 0);
-            assert(Date(1999, 7, 6).opCmp(Date(-1999, 8, 6)) > 0);
+        assert(Date(-1999, 8, 6).opCmp(Date(1999, 7, 6)) < 0);
+        assert(Date(1999, 7, 6).opCmp(Date(-1999, 8, 6)) > 0);
 
-            assert(Date(-1999, 7, 7).opCmp(Date(1999, 7, 6)) < 0);
-            assert(Date(1999, 7, 6).opCmp(Date(-1999, 7, 7)) > 0);
+        assert(Date(-1999, 7, 7).opCmp(Date(1999, 7, 6)) < 0);
+        assert(Date(1999, 7, 6).opCmp(Date(-1999, 7, 7)) > 0);
 
-            assert(Date(-1999, 8, 7).opCmp(Date(1999, 7, 6)) < 0);
-            assert(Date(1999, 7, 6).opCmp(Date(-1999, 8, 7)) > 0);
+        assert(Date(-1999, 8, 7).opCmp(Date(1999, 7, 6)) < 0);
+        assert(Date(1999, 7, 6).opCmp(Date(-1999, 8, 7)) > 0);
 
-            assert(Date(-1999, 8, 6).opCmp(Date(1999, 6, 6)) < 0);
-            assert(Date(1999, 6, 8).opCmp(Date(-1999, 7, 6)) > 0);
+        assert(Date(-1999, 8, 6).opCmp(Date(1999, 6, 6)) < 0);
+        assert(Date(1999, 6, 8).opCmp(Date(-1999, 7, 6)) > 0);
 
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.opCmp(date)));
-            static assert(__traits(compiles, date.opCmp(cdate)));
-            static assert(__traits(compiles, date.opCmp(idate)));
-            static assert(__traits(compiles, cdate.opCmp(date)));
-            static assert(__traits(compiles, cdate.opCmp(cdate)));
-            static assert(__traits(compiles, cdate.opCmp(idate)));
-            static assert(__traits(compiles, idate.opCmp(date)));
-            static assert(__traits(compiles, idate.opCmp(cdate)));
-            static assert(__traits(compiles, idate.opCmp(idate)));
-        }
+        auto date = Date(1999, 7, 6);
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, date.opCmp(date)));
+        static assert(__traits(compiles, date.opCmp(cdate)));
+        static assert(__traits(compiles, date.opCmp(idate)));
+        static assert(__traits(compiles, cdate.opCmp(date)));
+        static assert(__traits(compiles, cdate.opCmp(cdate)));
+        static assert(__traits(compiles, cdate.opCmp(idate)));
+        static assert(__traits(compiles, idate.opCmp(date)));
+        static assert(__traits(compiles, idate.opCmp(cdate)));
+        static assert(__traits(compiles, idate.opCmp(idate)));
     }
 
 
@@ -9182,22 +9176,19 @@ assert(Date(-7, 4, 5).year == -7);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(Date.init.year == 1);
-            assert(Date(1999, 7, 6).year == 1999);
-            assert(Date(-1999, 7, 6).year == -1999);
+        assert(Date.init.year == 1);
+        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date(-1999, 7, 6).year == -1999);
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.year == 1999));
-            static assert(__traits(compiles, idate.year == 1999));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.year == 1999));
+        static assert(__traits(compiles, idate.year == 1999));
 
-            //Verify Examples.
-            assert(Date(1999, 7, 6).year == 1999);
-            assert(Date(2010, 10, 4).year == 2010);
-            assert(Date(-7, 4, 5).year == -7);
-        }
+        //Verify Examples.
+        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date(2010, 10, 4).year == 2010);
+        assert(Date(-7, 4, 5).year == -7);
     }
 
     /++
@@ -9219,35 +9210,32 @@ assert(Date(-7, 4, 5).year == -7);
 
     unittest
     {
-        version(testStdDateTime)
+        static void testDateInvalid(Date date, int year)
         {
-            static void testDateInvalid(Date date, int year)
-            {
-                date.year = year;
-            }
-
-            static void testDate(Date date, int year, in Date expected)
-            {
-                date.year = year;
-                assert(date == expected);
-            }
-
-            assertThrown!DateTimeException(testDateInvalid(Date(4, 2, 29), 1));
-
-            testDate(Date(1, 1, 1), 1999, Date(1999, 1, 1));
-            testDate(Date(1, 1, 1), 0, Date(0, 1, 1));
-            testDate(Date(1, 1, 1), -1999, Date(-1999, 1, 1));
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.year = 1999));
-            static assert(!__traits(compiles, idate.year = 1999));
-
-            //Verify Examples.
-            assert(Date(1999, 7, 6).year == 1999);
-            assert(Date(2010, 10, 4).year == 2010);
-            assert(Date(-7, 4, 5).year == -7);
+            date.year = year;
         }
+
+        static void testDate(Date date, int year, in Date expected)
+        {
+            date.year = year;
+            assert(date == expected);
+        }
+
+        assertThrown!DateTimeException(testDateInvalid(Date(4, 2, 29), 1));
+
+        testDate(Date(1, 1, 1), 1999, Date(1999, 1, 1));
+        testDate(Date(1, 1, 1), 0, Date(0, 1, 1));
+        testDate(Date(1, 1, 1), -1999, Date(-1999, 1, 1));
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.year = 1999));
+        static assert(!__traits(compiles, idate.year = 1999));
+
+        //Verify Examples.
+        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date(2010, 10, 4).year == 2010);
+        assert(Date(-7, 4, 5).year == -7);
     }
 
 
@@ -9276,22 +9264,19 @@ assert(Date(-100, 1, 1).yearBC == 101);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
+        assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
 
-            auto date = Date(0, 7, 6);
-            const cdate = Date(0, 7, 6);
-            immutable idate = Date(0, 7, 6);
-            static assert(__traits(compiles, date.yearBC));
-            static assert(__traits(compiles, cdate.yearBC));
-            static assert(__traits(compiles, idate.yearBC));
+        auto date = Date(0, 7, 6);
+        const cdate = Date(0, 7, 6);
+        immutable idate = Date(0, 7, 6);
+        static assert(__traits(compiles, date.yearBC));
+        static assert(__traits(compiles, cdate.yearBC));
+        static assert(__traits(compiles, idate.yearBC));
 
-            //Verify Examples.
-            assert(Date(0, 1, 1).yearBC == 1);
-            assert(Date(-1, 1, 1).yearBC == 2);
-            assert(Date(-100, 1, 1).yearBC == 101);
-        }
+        //Verify Examples.
+        assert(Date(0, 1, 1).yearBC == 1);
+        assert(Date(-1, 1, 1).yearBC == 2);
+        assert(Date(-100, 1, 1).yearBC == 101);
     }
 
 
@@ -9324,28 +9309,25 @@ assert(date == Date(-9, 1, 1));
 
     unittest
     {
-        version(testStdDateTime)
+        assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
+
         {
-            assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
+            auto date = Date(0, 7, 6);
+            const cdate = Date(0, 7, 6);
+            immutable idate = Date(0, 7, 6);
+            static assert(__traits(compiles, date.yearBC = 7));
+            static assert(!__traits(compiles, cdate.yearBC = 7));
+            static assert(!__traits(compiles, idate.yearBC = 7));
+        }
 
-            {
-                auto date = Date(0, 7, 6);
-                const cdate = Date(0, 7, 6);
-                immutable idate = Date(0, 7, 6);
-                static assert(__traits(compiles, date.yearBC = 7));
-                static assert(!__traits(compiles, cdate.yearBC = 7));
-                static assert(!__traits(compiles, idate.yearBC = 7));
-            }
+        //Verify Examples.
+        {
+            auto date = Date(2010, 1, 1);
+            date.yearBC = 1;
+            assert(date == Date(0, 1, 1));
 
-            //Verify Examples.
-            {
-                auto date = Date(2010, 1, 1);
-                date.yearBC = 1;
-                assert(date == Date(0, 1, 1));
-
-                date.yearBC = 10;
-                assert(date == Date(-9, 1, 1));
-            }
+            date.yearBC = 10;
+            assert(date == Date(-9, 1, 1));
         }
     }
 
@@ -9367,22 +9349,19 @@ assert(Date(-7, 4, 5).month == 4);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(Date.init.month == 1);
-            assert(Date(1999, 7, 6).month == 7);
-            assert(Date(-1999, 7, 6).month == 7);
+        assert(Date.init.month == 1);
+        assert(Date(1999, 7, 6).month == 7);
+        assert(Date(-1999, 7, 6).month == 7);
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.month == 7));
-            static assert(__traits(compiles, idate.month == 7));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.month == 7));
+        static assert(__traits(compiles, idate.month == 7));
 
-            //Verify Examples.
-            assert(Date(1999, 7, 6).month == 7);
-            assert(Date(2010, 10, 4).month == 10);
-            assert(Date(-7, 4, 5).month == 4);
-        }
+        //Verify Examples.
+        assert(Date(1999, 7, 6).month == 7);
+        assert(Date(2010, 10, 4).month == 10);
+        assert(Date(-7, 4, 5).month == 4);
     }
 
     /++
@@ -9404,28 +9383,25 @@ assert(Date(-7, 4, 5).month == 4);
 
     unittest
     {
-        version(testStdDateTime)
+        static void testDate(Date date, Month month, in Date expected = Date.init)
         {
-            static void testDate(Date date, Month month, in Date expected = Date.init)
-            {
-                date.month = month;
-                assert(expected != Date.init);
-                assert(date == expected);
-            }
-
-            assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)0));
-            assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)13));
-            assertThrown!DateTimeException(testDate(Date(1, 1, 29), cast(Month)2));
-            assertThrown!DateTimeException(testDate(Date(0, 1, 30), cast(Month)2));
-
-            testDate(Date(1, 1, 1), cast(Month)7, Date(1, 7, 1));
-            testDate(Date(-1, 1, 1), cast(Month)7, Date(-1, 7, 1));
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.month = 7));
-            static assert(!__traits(compiles, idate.month = 7));
+            date.month = month;
+            assert(expected != Date.init);
+            assert(date == expected);
         }
+
+        assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)0));
+        assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)13));
+        assertThrown!DateTimeException(testDate(Date(1, 1, 29), cast(Month)2));
+        assertThrown!DateTimeException(testDate(Date(0, 1, 30), cast(Month)2));
+
+        testDate(Date(1, 1, 1), cast(Month)7, Date(1, 7, 1));
+        testDate(Date(-1, 1, 1), cast(Month)7, Date(-1, 7, 1));
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.month = 7));
+        static assert(!__traits(compiles, idate.month = 7));
     }
 
 
@@ -9445,14 +9421,14 @@ assert(Date(-7, 4, 5).day == 5);
     }
 
     //Verify Examples.
-    version(testStdDateTime) unittest
+    unittest
     {
         assert(Date(1999, 7, 6).day == 6);
         assert(Date(2010, 10, 4).day == 4);
         assert(Date(-7, 4, 5).day == 5);
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         static void test(Date date, int expected)
         {
@@ -9490,90 +9466,87 @@ assert(Date(-7, 4, 5).day == 5);
 
     unittest
     {
-        version(testStdDateTime)
+        static void testDate(Date date, int day)
         {
-            static void testDate(Date date, int day)
-            {
-                date.day = day;
-            }
-
-            //Test A.D.
-            assertThrown!DateTimeException(testDate(Date(1, 1, 1), 0));
-            assertThrown!DateTimeException(testDate(Date(1, 1, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 2, 1), 29));
-            assertThrown!DateTimeException(testDate(Date(4, 2, 1), 30));
-            assertThrown!DateTimeException(testDate(Date(1, 3, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 4, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(1, 5, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 6, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(1, 7, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 8, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 9, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(1, 10, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 11, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(1, 12, 1), 32));
-
-            assertNotThrown!DateTimeException(testDate(Date(1, 1, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 2, 1), 28));
-            assertNotThrown!DateTimeException(testDate(Date(4, 2, 1), 29));
-            assertNotThrown!DateTimeException(testDate(Date(1, 3, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 4, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(1, 5, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 6, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(1, 7, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 8, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 9, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(1, 10, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 11, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(1, 12, 1), 31));
-
-            {
-                auto date = Date(1, 1, 1);
-                date.day = 6;
-                assert(date == Date(1, 1, 6));
-            }
-
-            //Test B.C.
-            assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 0));
-            assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 2, 1), 29));
-            assertThrown!DateTimeException(testDate(Date(0, 2, 1), 30));
-            assertThrown!DateTimeException(testDate(Date(-1, 3, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 4, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(-1, 5, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 6, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(-1, 7, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 8, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 9, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(-1, 10, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 11, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(-1, 12, 1), 32));
-
-            assertNotThrown!DateTimeException(testDate(Date(-1, 1, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 2, 1), 28));
-            assertNotThrown!DateTimeException(testDate(Date(0, 2, 1), 29));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 3, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 4, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 5, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 6, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 7, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 8, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 9, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 10, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 11, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 12, 1), 31));
-
-            {
-                auto date = Date(-1, 1, 1);
-                date.day = 6;
-                assert(date == Date(-1, 1, 6));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.day = 6));
-            static assert(!__traits(compiles, idate.day = 6));
+            date.day = day;
         }
+
+        //Test A.D.
+        assertThrown!DateTimeException(testDate(Date(1, 1, 1), 0));
+        assertThrown!DateTimeException(testDate(Date(1, 1, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1, 2, 1), 29));
+        assertThrown!DateTimeException(testDate(Date(4, 2, 1), 30));
+        assertThrown!DateTimeException(testDate(Date(1, 3, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1, 4, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(1, 5, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1, 6, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(1, 7, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1, 8, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1, 9, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(1, 10, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1, 11, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(1, 12, 1), 32));
+
+        assertNotThrown!DateTimeException(testDate(Date(1, 1, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1, 2, 1), 28));
+        assertNotThrown!DateTimeException(testDate(Date(4, 2, 1), 29));
+        assertNotThrown!DateTimeException(testDate(Date(1, 3, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1, 4, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(1, 5, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1, 6, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(1, 7, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1, 8, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1, 9, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(1, 10, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1, 11, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(1, 12, 1), 31));
+
+        {
+            auto date = Date(1, 1, 1);
+            date.day = 6;
+            assert(date == Date(1, 1, 6));
+        }
+
+        //Test B.C.
+        assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 0));
+        assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1, 2, 1), 29));
+        assertThrown!DateTimeException(testDate(Date(0, 2, 1), 30));
+        assertThrown!DateTimeException(testDate(Date(-1, 3, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1, 4, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(-1, 5, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1, 6, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(-1, 7, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1, 8, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1, 9, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(-1, 10, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1, 11, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(-1, 12, 1), 32));
+
+        assertNotThrown!DateTimeException(testDate(Date(-1, 1, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 2, 1), 28));
+        assertNotThrown!DateTimeException(testDate(Date(0, 2, 1), 29));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 3, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 4, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 5, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 6, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 7, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 8, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 9, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 10, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 11, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(-1, 12, 1), 31));
+
+        {
+            auto date = Date(-1, 1, 1);
+            date.day = 6;
+            assert(date == Date(-1, 1, 6));
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.day = 6));
+        static assert(!__traits(compiles, idate.day = 6));
     }
 
 
@@ -9637,216 +9610,207 @@ assert(d4 == Date(2001, 2, 28));
     //Verify Examples.
     unittest
     {
-        version(stdStdDateTime)
-        {
-            auto d1 = Date(2010, 1, 1);
-            d1.add!"months"(11);
-            assert(d1 == Date(2010, 12, 1));
+        auto d1 = Date(2010, 1, 1);
+        d1.add!"months"(11);
+        assert(d1 == Date(2010, 12, 1));
 
-            auto d2 = Date(2010, 1, 1);
-            d2.add!"months"(-11);
-            assert(d2 == Date(2009, 2, 1));
+        auto d2 = Date(2010, 1, 1);
+        d2.add!"months"(-11);
+        assert(d2 == Date(2009, 2, 1));
 
-            auto d3 = Date(2000, 2, 29);
-            d3.add!"years"(1);
-            assert(d3 == Date(2001, 3, 1));
+        auto d3 = Date(2000, 2, 29);
+        d3.add!"years"(1);
+        assert(d3 == Date(2001, 3, 1));
 
-            auto d4 = Date(2000, 2, 29);
-            d4.add!"years"(1, AllowDayOverflow.no);
-            assert(d4 == Date(2001, 2, 28));
-        }
+        auto d4 = Date(2000, 2, 29);
+        d4.add!"years"(1, AllowDayOverflow.no);
+        assert(d4 == Date(2001, 2, 28));
     }
 
     //Test add!"years"() with AllowDayOverlow.yes
     unittest
     {
-        version(testStdDateTime)
+        //Test A.D.
         {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"years"(7);
-                assert(date == Date(2006, 7, 6));
-                date.add!"years"(-9);
-                assert(date == Date(1997, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.add!"years"(1);
-                assert(date == Date(2000, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.add!"years"(-1);
-                assert(date == Date(1999, 3, 1));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"years"(-7);
-                assert(date == Date(-2006, 7, 6));
-                date.add!"years"(9);
-                assert(date == Date(-1997, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.add!"years"(-1);
-                assert(date == Date(-2000, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.add!"years"(1);
-                assert(date == Date(-1999, 3, 1));
-            }
-
-            //Test Both
-            {
-                auto date = Date(4, 7, 6);
-                date.add!"years"(-5);
-                assert(date == Date(-1, 7, 6));
-                date.add!"years"(5);
-                assert(date == Date(4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 7, 6);
-                date.add!"years"(5);
-                assert(date == Date(1, 7, 6));
-                date.add!"years"(-5);
-                assert(date == Date(-4, 7, 6));
-            }
-
-            {
-                auto date = Date(4, 7, 6);
-                date.add!"years"(-8);
-                assert(date == Date(-4, 7, 6));
-                date.add!"years"(8);
-                assert(date == Date(4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 7, 6);
-                date.add!"years"(8);
-                assert(date == Date(4, 7, 6));
-                date.add!"years"(-8);
-                assert(date == Date(-4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 2, 29);
-                date.add!"years"(5);
-                assert(date == Date(1, 3, 1));
-            }
-
-            {
-                auto date = Date(4, 2, 29);
-                date.add!"years"(-5);
-                assert(date == Date(-1, 3, 1));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.add!"years"(7)));
-            static assert(!__traits(compiles, idate.add!"years"(7)));
+            auto date = Date(1999, 7, 6);
+            date.add!"years"(7);
+            assert(date == Date(2006, 7, 6));
+            date.add!"years"(-9);
+            assert(date == Date(1997, 7, 6));
         }
+
+        {
+            auto date = Date(1999, 2, 28);
+            date.add!"years"(1);
+            assert(date == Date(2000, 2, 28));
+        }
+
+        {
+            auto date = Date(2000, 2, 29);
+            date.add!"years"(-1);
+            assert(date == Date(1999, 3, 1));
+        }
+
+        //Test B.C.
+        {
+            auto date = Date(-1999, 7, 6);
+            date.add!"years"(-7);
+            assert(date == Date(-2006, 7, 6));
+            date.add!"years"(9);
+            assert(date == Date(-1997, 7, 6));
+        }
+
+        {
+            auto date = Date(-1999, 2, 28);
+            date.add!"years"(-1);
+            assert(date == Date(-2000, 2, 28));
+        }
+
+        {
+            auto date = Date(-2000, 2, 29);
+            date.add!"years"(1);
+            assert(date == Date(-1999, 3, 1));
+        }
+
+        //Test Both
+        {
+            auto date = Date(4, 7, 6);
+            date.add!"years"(-5);
+            assert(date == Date(-1, 7, 6));
+            date.add!"years"(5);
+            assert(date == Date(4, 7, 6));
+        }
+
+        {
+            auto date = Date(-4, 7, 6);
+            date.add!"years"(5);
+            assert(date == Date(1, 7, 6));
+            date.add!"years"(-5);
+            assert(date == Date(-4, 7, 6));
+        }
+
+        {
+            auto date = Date(4, 7, 6);
+            date.add!"years"(-8);
+            assert(date == Date(-4, 7, 6));
+            date.add!"years"(8);
+            assert(date == Date(4, 7, 6));
+        }
+
+        {
+            auto date = Date(-4, 7, 6);
+            date.add!"years"(8);
+            assert(date == Date(4, 7, 6));
+            date.add!"years"(-8);
+            assert(date == Date(-4, 7, 6));
+        }
+
+        {
+            auto date = Date(-4, 2, 29);
+            date.add!"years"(5);
+            assert(date == Date(1, 3, 1));
+        }
+
+        {
+            auto date = Date(4, 2, 29);
+            date.add!"years"(-5);
+            assert(date == Date(-1, 3, 1));
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.add!"years"(7)));
+        static assert(!__traits(compiles, idate.add!"years"(7)));
     }
 
     //Test add!"years"() with AllowDayOverlow.no
     unittest
     {
-        version(testStdDateTime)
+        //Test A.D.
         {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"years"(7, AllowDayOverflow.no);
-                assert(date == Date(2006, 7, 6));
-                date.add!"years"(-9, AllowDayOverflow.no);
-                assert(date == Date(1997, 7, 6));
-            }
+            auto date = Date(1999, 7, 6);
+            date.add!"years"(7, AllowDayOverflow.no);
+            assert(date == Date(2006, 7, 6));
+            date.add!"years"(-9, AllowDayOverflow.no);
+            assert(date == Date(1997, 7, 6));
+        }
 
-            {
-                auto date = Date(1999, 2, 28);
-                date.add!"years"(1, AllowDayOverflow.no);
-                assert(date == Date(2000, 2, 28));
-            }
+        {
+            auto date = Date(1999, 2, 28);
+            date.add!"years"(1, AllowDayOverflow.no);
+            assert(date == Date(2000, 2, 28));
+        }
 
-            {
-                auto date = Date(2000, 2, 29);
-                date.add!"years"(-1, AllowDayOverflow.no);
-                assert(date == Date(1999, 2, 28));
-            }
+        {
+            auto date = Date(2000, 2, 29);
+            date.add!"years"(-1, AllowDayOverflow.no);
+            assert(date == Date(1999, 2, 28));
+        }
 
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"years"(-7, AllowDayOverflow.no);
-                assert(date == Date(-2006, 7, 6));
-                date.add!"years"(9, AllowDayOverflow.no);
-                assert(date == Date(-1997, 7, 6));
-            }
+        //Test B.C.
+        {
+            auto date = Date(-1999, 7, 6);
+            date.add!"years"(-7, AllowDayOverflow.no);
+            assert(date == Date(-2006, 7, 6));
+            date.add!"years"(9, AllowDayOverflow.no);
+            assert(date == Date(-1997, 7, 6));
+        }
 
-            {
-                auto date = Date(-1999, 2, 28);
-                date.add!"years"(-1, AllowDayOverflow.no);
-                assert(date == Date(-2000, 2, 28));
-            }
+        {
+            auto date = Date(-1999, 2, 28);
+            date.add!"years"(-1, AllowDayOverflow.no);
+            assert(date == Date(-2000, 2, 28));
+        }
 
-            {
-                auto date = Date(-2000, 2, 29);
-                date.add!"years"(1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 2, 28));
-            }
+        {
+            auto date = Date(-2000, 2, 29);
+            date.add!"years"(1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 2, 28));
+        }
 
-            //Test Both
-            {
-                auto date = Date(4, 7, 6);
-                date.add!"years"(-5, AllowDayOverflow.no);
-                assert(date == Date(-1, 7, 6));
-                date.add!"years"(5, AllowDayOverflow.no);
-                assert(date == Date(4, 7, 6));
-            }
+        //Test Both
+        {
+            auto date = Date(4, 7, 6);
+            date.add!"years"(-5, AllowDayOverflow.no);
+            assert(date == Date(-1, 7, 6));
+            date.add!"years"(5, AllowDayOverflow.no);
+            assert(date == Date(4, 7, 6));
+        }
 
-            {
-                auto date = Date(-4, 7, 6);
-                date.add!"years"(5, AllowDayOverflow.no);
-                assert(date == Date(1, 7, 6));
-                date.add!"years"(-5, AllowDayOverflow.no);
-                assert(date == Date(-4, 7, 6));
-            }
+        {
+            auto date = Date(-4, 7, 6);
+            date.add!"years"(5, AllowDayOverflow.no);
+            assert(date == Date(1, 7, 6));
+            date.add!"years"(-5, AllowDayOverflow.no);
+            assert(date == Date(-4, 7, 6));
+        }
 
-            {
-                auto date = Date(4, 7, 6);
-                date.add!"years"(-8, AllowDayOverflow.no);
-                assert(date == Date(-4, 7, 6));
-                date.add!"years"(8, AllowDayOverflow.no);
-                assert(date == Date(4, 7, 6));
-            }
+        {
+            auto date = Date(4, 7, 6);
+            date.add!"years"(-8, AllowDayOverflow.no);
+            assert(date == Date(-4, 7, 6));
+            date.add!"years"(8, AllowDayOverflow.no);
+            assert(date == Date(4, 7, 6));
+        }
 
-            {
-                auto date = Date(-4, 7, 6);
-                date.add!"years"(8, AllowDayOverflow.no);
-                assert(date == Date(4, 7, 6));
-                date.add!"years"(-8, AllowDayOverflow.no);
-                assert(date == Date(-4, 7, 6));
-            }
+        {
+            auto date = Date(-4, 7, 6);
+            date.add!"years"(8, AllowDayOverflow.no);
+            assert(date == Date(4, 7, 6));
+            date.add!"years"(-8, AllowDayOverflow.no);
+            assert(date == Date(-4, 7, 6));
+        }
 
-            {
-                auto date = Date(-4, 2, 29);
-                date.add!"years"(5, AllowDayOverflow.no);
-                assert(date == Date(1, 2, 28));
-            }
+        {
+            auto date = Date(-4, 2, 29);
+            date.add!"years"(5, AllowDayOverflow.no);
+            assert(date == Date(1, 2, 28));
+        }
 
-            {
-                auto date = Date(4, 2, 29);
-                date.add!"years"(-5, AllowDayOverflow.no);
-                assert(date == Date(-1, 2, 28));
-            }
+        {
+            auto date = Date(4, 2, 29);
+            date.add!"years"(-5, AllowDayOverflow.no);
+            assert(date == Date(-1, 2, 28));
         }
     }
 
@@ -9894,473 +9858,467 @@ assert(d4 == Date(2001, 2, 28));
     //Test add!"months"() with AllowDayOverlow.yes
     unittest
     {
-        version(testStdDateTime)
+        //Test A.D.
         {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(3);
-                assert(date == Date(1999, 10, 6));
-                date.add!"months"(-4);
-                assert(date == Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(6);
-                assert(date == Date(2000, 1, 6));
-                date.add!"months"(-6);
-                assert(date == Date(1999, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(27);
-                assert(date == Date(2001, 10, 6));
-                date.add!"months"(-28);
-                assert(date == Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.add!"months"(1);
-                assert(date == Date(1999, 7, 1));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.add!"months"(-1);
-                assert(date == Date(1999, 5, 1));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.add!"months"(12);
-                assert(date == Date(2000, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.add!"months"(12);
-                assert(date == Date(2001, 3, 1));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.add!"months"(1);
-                assert(date == Date(1999, 8, 31));
-                date.add!"months"(1);
-                assert(date == Date(1999, 10, 1));
-            }
-
-            {
-                auto date = Date(1998, 8, 31);
-                date.add!"months"(13);
-                assert(date == Date(1999, 10, 1));
-                date.add!"months"(-13);
-                assert(date == Date(1998, 9, 1));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.add!"months"(13);
-                assert(date == Date(1999, 1, 31));
-                date.add!"months"(-13);
-                assert(date == Date(1997, 12, 31));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.add!"months"(14);
-                assert(date == Date(1999, 3, 3));
-                date.add!"months"(-14);
-                assert(date == Date(1998, 1, 3));
-            }
-
-            {
-                auto date = Date(1998, 12, 31);
-                date.add!"months"(14);
-                assert(date == Date(2000, 3, 2));
-                date.add!"months"(-14);
-                assert(date == Date(1999, 1, 2));
-            }
-
-            {
-                auto date = Date(1999, 12, 31);
-                date.add!"months"(14);
-                assert(date == Date(2001, 3, 3));
-                date.add!"months"(-14);
-                assert(date == Date(2000, 1, 3));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(3);
-                assert(date == Date(-1999, 10, 6));
-                date.add!"months"(-4);
-                assert(date == Date(-1999, 6, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(6);
-                assert(date == Date(-1998, 1, 6));
-                date.add!"months"(-6);
-                assert(date == Date(-1999, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(-27);
-                assert(date == Date(-2001, 4, 6));
-                date.add!"months"(28);
-                assert(date == Date(-1999, 8, 6));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.add!"months"(1);
-                assert(date == Date(-1999, 7, 1));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.add!"months"(-1);
-                assert(date == Date(-1999, 5, 1));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.add!"months"(-12);
-                assert(date == Date(-2000, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.add!"months"(-12);
-                assert(date == Date(-2001, 3, 1));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.add!"months"(1);
-                assert(date == Date(-1999, 8, 31));
-                date.add!"months"(1);
-                assert(date == Date(-1999, 10, 1));
-            }
-
-            {
-                auto date = Date(-1998, 8, 31);
-                date.add!"months"(13);
-                assert(date == Date(-1997, 10, 1));
-                date.add!"months"(-13);
-                assert(date == Date(-1998, 9, 1));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.add!"months"(13);
-                assert(date == Date(-1995, 1, 31));
-                date.add!"months"(-13);
-                assert(date == Date(-1997, 12, 31));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.add!"months"(14);
-                assert(date == Date(-1995, 3, 3));
-                date.add!"months"(-14);
-                assert(date == Date(-1996, 1, 3));
-            }
-
-            {
-                auto date = Date(-2002, 12, 31);
-                date.add!"months"(14);
-                assert(date == Date(-2000, 3, 2));
-                date.add!"months"(-14);
-                assert(date == Date(-2001, 1, 2));
-            }
-
-            {
-                auto date = Date(-2001, 12, 31);
-                date.add!"months"(14);
-                assert(date == Date(-1999, 3, 3));
-                date.add!"months"(-14);
-                assert(date == Date(-2000, 1, 3));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 1, 1);
-                date.add!"months"(-1);
-                assert(date == Date(0, 12, 1));
-                date.add!"months"(1);
-                assert(date == Date(1, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 1, 1);
-                date.add!"months"(-48);
-                assert(date == Date(0, 1, 1));
-                date.add!"months"(48);
-                assert(date == Date(4, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.add!"months"(-49);
-                assert(date == Date(0, 3, 2));
-                date.add!"months"(49);
-                assert(date == Date(4, 4, 2));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.add!"months"(-85);
-                assert(date == Date(-3, 3, 3));
-                date.add!"months"(85);
-                assert(date == Date(4, 4, 3));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.add!"months"(3)));
-            static assert(!__traits(compiles, idate.add!"months"(3)));
+            auto date = Date(1999, 7, 6);
+            date.add!"months"(3);
+            assert(date == Date(1999, 10, 6));
+            date.add!"months"(-4);
+            assert(date == Date(1999, 6, 6));
         }
+
+        {
+            auto date = Date(1999, 7, 6);
+            date.add!"months"(6);
+            assert(date == Date(2000, 1, 6));
+            date.add!"months"(-6);
+            assert(date == Date(1999, 7, 6));
+        }
+
+        {
+            auto date = Date(1999, 7, 6);
+            date.add!"months"(27);
+            assert(date == Date(2001, 10, 6));
+            date.add!"months"(-28);
+            assert(date == Date(1999, 6, 6));
+        }
+
+        {
+            auto date = Date(1999, 5, 31);
+            date.add!"months"(1);
+            assert(date == Date(1999, 7, 1));
+        }
+
+        {
+            auto date = Date(1999, 5, 31);
+            date.add!"months"(-1);
+            assert(date == Date(1999, 5, 1));
+        }
+
+        {
+            auto date = Date(1999, 2, 28);
+            date.add!"months"(12);
+            assert(date == Date(2000, 2, 28));
+        }
+
+        {
+            auto date = Date(2000, 2, 29);
+            date.add!"months"(12);
+            assert(date == Date(2001, 3, 1));
+        }
+
+        {
+            auto date = Date(1999, 7, 31);
+            date.add!"months"(1);
+            assert(date == Date(1999, 8, 31));
+            date.add!"months"(1);
+            assert(date == Date(1999, 10, 1));
+        }
+
+        {
+            auto date = Date(1998, 8, 31);
+            date.add!"months"(13);
+            assert(date == Date(1999, 10, 1));
+            date.add!"months"(-13);
+            assert(date == Date(1998, 9, 1));
+        }
+
+        {
+            auto date = Date(1997, 12, 31);
+            date.add!"months"(13);
+            assert(date == Date(1999, 1, 31));
+            date.add!"months"(-13);
+            assert(date == Date(1997, 12, 31));
+        }
+
+        {
+            auto date = Date(1997, 12, 31);
+            date.add!"months"(14);
+            assert(date == Date(1999, 3, 3));
+            date.add!"months"(-14);
+            assert(date == Date(1998, 1, 3));
+        }
+
+        {
+            auto date = Date(1998, 12, 31);
+            date.add!"months"(14);
+            assert(date == Date(2000, 3, 2));
+            date.add!"months"(-14);
+            assert(date == Date(1999, 1, 2));
+        }
+
+        {
+            auto date = Date(1999, 12, 31);
+            date.add!"months"(14);
+            assert(date == Date(2001, 3, 3));
+            date.add!"months"(-14);
+            assert(date == Date(2000, 1, 3));
+        }
+
+        //Test B.C.
+        {
+            auto date = Date(-1999, 7, 6);
+            date.add!"months"(3);
+            assert(date == Date(-1999, 10, 6));
+            date.add!"months"(-4);
+            assert(date == Date(-1999, 6, 6));
+        }
+
+        {
+            auto date = Date(-1999, 7, 6);
+            date.add!"months"(6);
+            assert(date == Date(-1998, 1, 6));
+            date.add!"months"(-6);
+            assert(date == Date(-1999, 7, 6));
+        }
+
+        {
+            auto date = Date(-1999, 7, 6);
+            date.add!"months"(-27);
+            assert(date == Date(-2001, 4, 6));
+            date.add!"months"(28);
+            assert(date == Date(-1999, 8, 6));
+        }
+
+        {
+            auto date = Date(-1999, 5, 31);
+            date.add!"months"(1);
+            assert(date == Date(-1999, 7, 1));
+        }
+
+        {
+            auto date = Date(-1999, 5, 31);
+            date.add!"months"(-1);
+            assert(date == Date(-1999, 5, 1));
+        }
+
+        {
+            auto date = Date(-1999, 2, 28);
+            date.add!"months"(-12);
+            assert(date == Date(-2000, 2, 28));
+        }
+
+        {
+            auto date = Date(-2000, 2, 29);
+            date.add!"months"(-12);
+            assert(date == Date(-2001, 3, 1));
+        }
+
+        {
+            auto date = Date(-1999, 7, 31);
+            date.add!"months"(1);
+            assert(date == Date(-1999, 8, 31));
+            date.add!"months"(1);
+            assert(date == Date(-1999, 10, 1));
+        }
+
+        {
+            auto date = Date(-1998, 8, 31);
+            date.add!"months"(13);
+            assert(date == Date(-1997, 10, 1));
+            date.add!"months"(-13);
+            assert(date == Date(-1998, 9, 1));
+        }
+
+        {
+            auto date = Date(-1997, 12, 31);
+            date.add!"months"(13);
+            assert(date == Date(-1995, 1, 31));
+            date.add!"months"(-13);
+            assert(date == Date(-1997, 12, 31));
+        }
+
+        {
+            auto date = Date(-1997, 12, 31);
+            date.add!"months"(14);
+            assert(date == Date(-1995, 3, 3));
+            date.add!"months"(-14);
+            assert(date == Date(-1996, 1, 3));
+        }
+
+        {
+            auto date = Date(-2002, 12, 31);
+            date.add!"months"(14);
+            assert(date == Date(-2000, 3, 2));
+            date.add!"months"(-14);
+            assert(date == Date(-2001, 1, 2));
+        }
+
+        {
+            auto date = Date(-2001, 12, 31);
+            date.add!"months"(14);
+            assert(date == Date(-1999, 3, 3));
+            date.add!"months"(-14);
+            assert(date == Date(-2000, 1, 3));
+        }
+
+        //Test Both
+        {
+            auto date = Date(1, 1, 1);
+            date.add!"months"(-1);
+            assert(date == Date(0, 12, 1));
+            date.add!"months"(1);
+            assert(date == Date(1, 1, 1));
+        }
+
+        {
+            auto date = Date(4, 1, 1);
+            date.add!"months"(-48);
+            assert(date == Date(0, 1, 1));
+            date.add!"months"(48);
+            assert(date == Date(4, 1, 1));
+        }
+
+        {
+            auto date = Date(4, 3, 31);
+            date.add!"months"(-49);
+            assert(date == Date(0, 3, 2));
+            date.add!"months"(49);
+            assert(date == Date(4, 4, 2));
+        }
+
+        {
+            auto date = Date(4, 3, 31);
+            date.add!"months"(-85);
+            assert(date == Date(-3, 3, 3));
+            date.add!"months"(85);
+            assert(date == Date(4, 4, 3));
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.add!"months"(3)));
+        static assert(!__traits(compiles, idate.add!"months"(3)));
     }
 
     //Test add!"months"() with AllowDayOverlow.no
     unittest
     {
-        version(testStdDateTime)
+        //Test A.D.
         {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(3, AllowDayOverflow.no);
-                assert(date == Date(1999, 10, 6));
-                date.add!"months"(-4, AllowDayOverflow.no);
-                assert(date == Date(1999, 6, 6));
-            }
+            auto date = Date(1999, 7, 6);
+            date.add!"months"(3, AllowDayOverflow.no);
+            assert(date == Date(1999, 10, 6));
+            date.add!"months"(-4, AllowDayOverflow.no);
+            assert(date == Date(1999, 6, 6));
+        }
 
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(6, AllowDayOverflow.no);
-                assert(date == Date(2000, 1, 6));
-                date.add!"months"(-6, AllowDayOverflow.no);
-                assert(date == Date(1999, 7, 6));
-            }
+        {
+            auto date = Date(1999, 7, 6);
+            date.add!"months"(6, AllowDayOverflow.no);
+            assert(date == Date(2000, 1, 6));
+            date.add!"months"(-6, AllowDayOverflow.no);
+            assert(date == Date(1999, 7, 6));
+        }
 
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(27, AllowDayOverflow.no);
-                assert(date == Date(2001, 10, 6));
-                date.add!"months"(-28, AllowDayOverflow.no);
-                assert(date == Date(1999, 6, 6));
-            }
+        {
+            auto date = Date(1999, 7, 6);
+            date.add!"months"(27, AllowDayOverflow.no);
+            assert(date == Date(2001, 10, 6));
+            date.add!"months"(-28, AllowDayOverflow.no);
+            assert(date == Date(1999, 6, 6));
+        }
 
-            {
-                auto date = Date(1999, 5, 31);
-                date.add!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(1999, 6, 30));
-            }
+        {
+            auto date = Date(1999, 5, 31);
+            date.add!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(1999, 6, 30));
+        }
 
-            {
-                auto date = Date(1999, 5, 31);
-                date.add!"months"(-1, AllowDayOverflow.no);
-                assert(date == Date(1999, 4, 30));
-            }
+        {
+            auto date = Date(1999, 5, 31);
+            date.add!"months"(-1, AllowDayOverflow.no);
+            assert(date == Date(1999, 4, 30));
+        }
 
-            {
-                auto date = Date(1999, 2, 28);
-                date.add!"months"(12, AllowDayOverflow.no);
-                assert(date == Date(2000, 2, 28));
-            }
+        {
+            auto date = Date(1999, 2, 28);
+            date.add!"months"(12, AllowDayOverflow.no);
+            assert(date == Date(2000, 2, 28));
+        }
 
-            {
-                auto date = Date(2000, 2, 29);
-                date.add!"months"(12, AllowDayOverflow.no);
-                assert(date == Date(2001, 2, 28));
-            }
+        {
+            auto date = Date(2000, 2, 29);
+            date.add!"months"(12, AllowDayOverflow.no);
+            assert(date == Date(2001, 2, 28));
+        }
 
-            {
-                auto date = Date(1999, 7, 31);
-                date.add!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(1999, 8, 31));
-                date.add!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(1999, 9, 30));
-            }
+        {
+            auto date = Date(1999, 7, 31);
+            date.add!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(1999, 8, 31));
+            date.add!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(1999, 9, 30));
+        }
 
-            {
-                auto date = Date(1998, 8, 31);
-                date.add!"months"(13, AllowDayOverflow.no);
-                assert(date == Date(1999, 9, 30));
-                date.add!"months"(-13, AllowDayOverflow.no);
-                assert(date == Date(1998, 8, 30));
-            }
+        {
+            auto date = Date(1998, 8, 31);
+            date.add!"months"(13, AllowDayOverflow.no);
+            assert(date == Date(1999, 9, 30));
+            date.add!"months"(-13, AllowDayOverflow.no);
+            assert(date == Date(1998, 8, 30));
+        }
 
-            {
-                auto date = Date(1997, 12, 31);
-                date.add!"months"(13, AllowDayOverflow.no);
-                assert(date == Date(1999, 1, 31));
-                date.add!"months"(-13, AllowDayOverflow.no);
-                assert(date == Date(1997, 12, 31));
-            }
+        {
+            auto date = Date(1997, 12, 31);
+            date.add!"months"(13, AllowDayOverflow.no);
+            assert(date == Date(1999, 1, 31));
+            date.add!"months"(-13, AllowDayOverflow.no);
+            assert(date == Date(1997, 12, 31));
+        }
 
-            {
-                auto date = Date(1997, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(1999, 2, 28));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(1997, 12, 28));
-            }
+        {
+            auto date = Date(1997, 12, 31);
+            date.add!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(1999, 2, 28));
+            date.add!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(1997, 12, 28));
+        }
 
-            {
-                auto date = Date(1998, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(2000, 2, 29));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(1998, 12, 29));
-            }
+        {
+            auto date = Date(1998, 12, 31);
+            date.add!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(2000, 2, 29));
+            date.add!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(1998, 12, 29));
+        }
 
-            {
-                auto date = Date(1999, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(2001, 2, 28));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(1999, 12, 28));
-            }
+        {
+            auto date = Date(1999, 12, 31);
+            date.add!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(2001, 2, 28));
+            date.add!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(1999, 12, 28));
+        }
 
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(3, AllowDayOverflow.no);
-                assert(date == Date(-1999, 10, 6));
-                date.add!"months"(-4, AllowDayOverflow.no);
-                assert(date == Date(-1999, 6, 6));
-            }
+        //Test B.C.
+        {
+            auto date = Date(-1999, 7, 6);
+            date.add!"months"(3, AllowDayOverflow.no);
+            assert(date == Date(-1999, 10, 6));
+            date.add!"months"(-4, AllowDayOverflow.no);
+            assert(date == Date(-1999, 6, 6));
+        }
 
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(6, AllowDayOverflow.no);
-                assert(date == Date(-1998, 1, 6));
-                date.add!"months"(-6, AllowDayOverflow.no);
-                assert(date == Date(-1999, 7, 6));
-            }
+        {
+            auto date = Date(-1999, 7, 6);
+            date.add!"months"(6, AllowDayOverflow.no);
+            assert(date == Date(-1998, 1, 6));
+            date.add!"months"(-6, AllowDayOverflow.no);
+            assert(date == Date(-1999, 7, 6));
+        }
 
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(-27, AllowDayOverflow.no);
-                assert(date == Date(-2001, 4, 6));
-                date.add!"months"(28, AllowDayOverflow.no);
-                assert(date == Date(-1999, 8, 6));
-            }
+        {
+            auto date = Date(-1999, 7, 6);
+            date.add!"months"(-27, AllowDayOverflow.no);
+            assert(date == Date(-2001, 4, 6));
+            date.add!"months"(28, AllowDayOverflow.no);
+            assert(date == Date(-1999, 8, 6));
+        }
 
-            {
-                auto date = Date(-1999, 5, 31);
-                date.add!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 6, 30));
-            }
+        {
+            auto date = Date(-1999, 5, 31);
+            date.add!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 6, 30));
+        }
 
-            {
-                auto date = Date(-1999, 5, 31);
-                date.add!"months"(-1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 4, 30));
-            }
+        {
+            auto date = Date(-1999, 5, 31);
+            date.add!"months"(-1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 4, 30));
+        }
 
-            {
-                auto date = Date(-1999, 2, 28);
-                date.add!"months"(-12, AllowDayOverflow.no);
-                assert(date == Date(-2000, 2, 28));
-            }
+        {
+            auto date = Date(-1999, 2, 28);
+            date.add!"months"(-12, AllowDayOverflow.no);
+            assert(date == Date(-2000, 2, 28));
+        }
 
-            {
-                auto date = Date(-2000, 2, 29);
-                date.add!"months"(-12, AllowDayOverflow.no);
-                assert(date == Date(-2001, 2, 28));
-            }
+        {
+            auto date = Date(-2000, 2, 29);
+            date.add!"months"(-12, AllowDayOverflow.no);
+            assert(date == Date(-2001, 2, 28));
+        }
 
-            {
-                auto date = Date(-1999, 7, 31);
-                date.add!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 8, 31));
-                date.add!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 9, 30));
-            }
+        {
+            auto date = Date(-1999, 7, 31);
+            date.add!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 8, 31));
+            date.add!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 9, 30));
+        }
 
-            {
-                auto date = Date(-1998, 8, 31);
-                date.add!"months"(13, AllowDayOverflow.no);
-                assert(date == Date(-1997, 9, 30));
-                date.add!"months"(-13, AllowDayOverflow.no);
-                assert(date == Date(-1998, 8, 30));
-            }
+        {
+            auto date = Date(-1998, 8, 31);
+            date.add!"months"(13, AllowDayOverflow.no);
+            assert(date == Date(-1997, 9, 30));
+            date.add!"months"(-13, AllowDayOverflow.no);
+            assert(date == Date(-1998, 8, 30));
+        }
 
-            {
-                auto date = Date(-1997, 12, 31);
-                date.add!"months"(13, AllowDayOverflow.no);
-                assert(date == Date(-1995, 1, 31));
-                date.add!"months"(-13, AllowDayOverflow.no);
-                assert(date == Date(-1997, 12, 31));
-            }
+        {
+            auto date = Date(-1997, 12, 31);
+            date.add!"months"(13, AllowDayOverflow.no);
+            assert(date == Date(-1995, 1, 31));
+            date.add!"months"(-13, AllowDayOverflow.no);
+            assert(date == Date(-1997, 12, 31));
+        }
 
-            {
-                auto date = Date(-1997, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(-1995, 2, 28));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(-1997, 12, 28));
-            }
+        {
+            auto date = Date(-1997, 12, 31);
+            date.add!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(-1995, 2, 28));
+            date.add!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(-1997, 12, 28));
+        }
 
-            {
-                auto date = Date(-2002, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(-2000, 2, 29));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(-2002, 12, 29));
-            }
+        {
+            auto date = Date(-2002, 12, 31);
+            date.add!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(-2000, 2, 29));
+            date.add!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(-2002, 12, 29));
+        }
 
-            {
-                auto date = Date(-2001, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(-1999, 2, 28));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(-2001, 12, 28));
-            }
+        {
+            auto date = Date(-2001, 12, 31);
+            date.add!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(-1999, 2, 28));
+            date.add!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(-2001, 12, 28));
+        }
 
-            //Test Both
-            {
-                auto date = Date(1, 1, 1);
-                date.add!"months"(-1, AllowDayOverflow.no);
-                assert(date == Date(0, 12, 1));
-                date.add!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(1, 1, 1));
-            }
+        //Test Both
+        {
+            auto date = Date(1, 1, 1);
+            date.add!"months"(-1, AllowDayOverflow.no);
+            assert(date == Date(0, 12, 1));
+            date.add!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(1, 1, 1));
+        }
 
-            {
-                auto date = Date(4, 1, 1);
-                date.add!"months"(-48, AllowDayOverflow.no);
-                assert(date == Date(0, 1, 1));
-                date.add!"months"(48, AllowDayOverflow.no);
-                assert(date == Date(4, 1, 1));
-            }
+        {
+            auto date = Date(4, 1, 1);
+            date.add!"months"(-48, AllowDayOverflow.no);
+            assert(date == Date(0, 1, 1));
+            date.add!"months"(48, AllowDayOverflow.no);
+            assert(date == Date(4, 1, 1));
+        }
 
-            {
-                auto date = Date(4, 3, 31);
-                date.add!"months"(-49, AllowDayOverflow.no);
-                assert(date == Date(0, 2, 29));
-                date.add!"months"(49, AllowDayOverflow.no);
-                assert(date == Date(4, 3, 29));
-            }
+        {
+            auto date = Date(4, 3, 31);
+            date.add!"months"(-49, AllowDayOverflow.no);
+            assert(date == Date(0, 2, 29));
+            date.add!"months"(49, AllowDayOverflow.no);
+            assert(date == Date(4, 3, 29));
+        }
 
-            {
-                auto date = Date(4, 3, 31);
-                date.add!"months"(-85, AllowDayOverflow.no);
-                assert(date == Date(-3, 2, 28));
-                date.add!"months"(85, AllowDayOverflow.no);
-                assert(date == Date(4, 3, 28));
-            }
+        {
+            auto date = Date(4, 3, 31);
+            date.add!"months"(-85, AllowDayOverflow.no);
+            assert(date == Date(-3, 2, 28));
+            date.add!"months"(85, AllowDayOverflow.no);
+            assert(date == Date(4, 3, 28));
         }
     }
 
@@ -10420,43 +10378,37 @@ assert(d6 == Date(2001, 2, 28));
     //Verify Examples.
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto d1 = Date(2010, 1, 1);
-            d1.roll!"months"(1);
-            assert(d1 == Date(2010, 2, 1));
+        auto d1 = Date(2010, 1, 1);
+        d1.roll!"months"(1);
+        assert(d1 == Date(2010, 2, 1));
 
-            auto d2 = Date(2010, 1, 1);
-            d2.roll!"months"(-1);
-            assert(d2 == Date(2010, 12, 1));
+        auto d2 = Date(2010, 1, 1);
+        d2.roll!"months"(-1);
+        assert(d2 == Date(2010, 12, 1));
 
-            auto d3 = Date(1999, 1, 29);
-            d3.roll!"months"(1);
-            assert(d3 == Date(1999, 3, 1));
+        auto d3 = Date(1999, 1, 29);
+        d3.roll!"months"(1);
+        assert(d3 == Date(1999, 3, 1));
 
-            auto d4 = Date(1999, 1, 29);
-            d4.roll!"months"(1, AllowDayOverflow.no);
-            assert(d4 == Date(1999, 2, 28));
+        auto d4 = Date(1999, 1, 29);
+        d4.roll!"months"(1, AllowDayOverflow.no);
+        assert(d4 == Date(1999, 2, 28));
 
-            auto d5 = Date(2000, 2, 29);
-            d5.roll!"years"(1);
-            assert(d5 == Date(2001, 3, 1));
+        auto d5 = Date(2000, 2, 29);
+        d5.roll!"years"(1);
+        assert(d5 == Date(2001, 3, 1));
 
-            auto d6 = Date(2000, 2, 29);
-            d6.roll!"years"(1, AllowDayOverflow.no);
-            assert(d6 == Date(2001, 2, 28));
-        }
+        auto d6 = Date(2000, 2, 29);
+        d6.roll!"years"(1, AllowDayOverflow.no);
+        assert(d6 == Date(2001, 2, 28));
     }
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.roll!"years"(3)));
-            static assert(!__traits(compiles, idate.rolYears(3)));
-        }
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.roll!"years"(3)));
+        static assert(!__traits(compiles, idate.rolYears(3)));
     }
 
 
@@ -10498,554 +10450,548 @@ assert(d6 == Date(2001, 2, 28));
     //Test roll!"months"() with AllowDayOverlow.yes
     unittest
     {
-        version(testStdDateTime)
+        //Test A.D.
         {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(3);
-                assert(date == Date(1999, 10, 6));
-                date.roll!"months"(-4);
-                assert(date == Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(6);
-                assert(date == Date(1999, 1, 6));
-                date.roll!"months"(-6);
-                assert(date == Date(1999, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(27);
-                assert(date == Date(1999, 10, 6));
-                date.roll!"months"(-28);
-                assert(date == Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.roll!"months"(1);
-                assert(date == Date(1999, 7, 1));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.roll!"months"(-1);
-                assert(date == Date(1999, 5, 1));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.roll!"months"(12);
-                assert(date == Date(1999, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.roll!"months"(12);
-                assert(date == Date(2000, 2, 29));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.roll!"months"(1);
-                assert(date == Date(1999, 8, 31));
-                date.roll!"months"(1);
-                assert(date == Date(1999, 10, 1));
-            }
-
-            {
-                auto date = Date(1998, 8, 31);
-                date.roll!"months"(13);
-                assert(date == Date(1998, 10, 1));
-                date.roll!"months"(-13);
-                assert(date == Date(1998, 9, 1));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.roll!"months"(13);
-                assert(date == Date(1997, 1, 31));
-                date.roll!"months"(-13);
-                assert(date == Date(1997, 12, 31));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.roll!"months"(14);
-                assert(date == Date(1997, 3, 3));
-                date.roll!"months"(-14);
-                assert(date == Date(1997, 1, 3));
-            }
-
-            {
-                auto date = Date(1998, 12, 31);
-                date.roll!"months"(14);
-                assert(date == Date(1998, 3, 3));
-                date.roll!"months"(-14);
-                assert(date == Date(1998, 1, 3));
-            }
-
-            {
-                auto date = Date(1999, 12, 31);
-                date.roll!"months"(14);
-                assert(date == Date(1999, 3, 3));
-                date.roll!"months"(-14);
-                assert(date == Date(1999, 1, 3));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(3);
-                assert(date == Date(-1999, 10, 6));
-                date.roll!"months"(-4);
-                assert(date == Date(-1999, 6, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(6);
-                assert(date == Date(-1999, 1, 6));
-                date.roll!"months"(-6);
-                assert(date == Date(-1999, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(-27);
-                assert(date == Date(-1999, 4, 6));
-                date.roll!"months"(28);
-                assert(date == Date(-1999, 8, 6));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.roll!"months"(1);
-                assert(date == Date(-1999, 7, 1));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.roll!"months"(-1);
-                assert(date == Date(-1999, 5, 1));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.roll!"months"(-12);
-                assert(date == Date(-1999, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.roll!"months"(-12);
-                assert(date == Date(-2000, 2, 29));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.roll!"months"(1);
-                assert(date == Date(-1999, 8, 31));
-                date.roll!"months"(1);
-                assert(date == Date(-1999, 10, 1));
-            }
-
-            {
-                auto date = Date(-1998, 8, 31);
-                date.roll!"months"(13);
-                assert(date == Date(-1998, 10, 1));
-                date.roll!"months"(-13);
-                assert(date == Date(-1998, 9, 1));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.roll!"months"(13);
-                assert(date == Date(-1997, 1, 31));
-                date.roll!"months"(-13);
-                assert(date == Date(-1997, 12, 31));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.roll!"months"(14);
-                assert(date == Date(-1997, 3, 3));
-                date.roll!"months"(-14);
-                assert(date == Date(-1997, 1, 3));
-            }
-
-            {
-                auto date = Date(-2002, 12, 31);
-                date.roll!"months"(14);
-                assert(date == Date(-2002, 3, 3));
-                date.roll!"months"(-14);
-                assert(date == Date(-2002, 1, 3));
-            }
-
-            {
-                auto date = Date(-2001, 12, 31);
-                date.roll!"months"(14);
-                assert(date == Date(-2001, 3, 3));
-                date.roll!"months"(-14);
-                assert(date == Date(-2001, 1, 3));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 1, 1);
-                date.roll!"months"(-1);
-                assert(date == Date(1, 12, 1));
-                date.roll!"months"(1);
-                assert(date == Date(1, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 1, 1);
-                date.roll!"months"(-48);
-                assert(date == Date(4, 1, 1));
-                date.roll!"months"(48);
-                assert(date == Date(4, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.roll!"months"(-49);
-                assert(date == Date(4, 3, 2));
-                date.roll!"months"(49);
-                assert(date == Date(4, 4, 2));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.roll!"months"(-85);
-                assert(date == Date(4, 3, 2));
-                date.roll!"months"(85);
-                assert(date == Date(4, 4, 2));
-            }
-
-            {
-                auto date = Date(-1, 1, 1);
-                date.roll!"months"(-1);
-                assert(date == Date(-1, 12, 1));
-                date.roll!"months"(1);
-                assert(date == Date(-1, 1, 1));
-            }
-
-            {
-                auto date = Date(-4, 1, 1);
-                date.roll!"months"(-48);
-                assert(date == Date(-4, 1, 1));
-                date.roll!"months"(48);
-                assert(date == Date(-4, 1, 1));
-            }
-
-            {
-                auto date = Date(-4, 3, 31);
-                date.roll!"months"(-49);
-                assert(date == Date(-4, 3, 2));
-                date.roll!"months"(49);
-                assert(date == Date(-4, 4, 2));
-            }
-
-            {
-                auto date = Date(-4, 3, 31);
-                date.roll!"months"(-85);
-                assert(date == Date(-4, 3, 2));
-                date.roll!"months"(85);
-                assert(date == Date(-4, 4, 2));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.roll!"months"(3)));
-            static assert(!__traits(compiles, idate.roll!"months"(3)));
-
-            //Verify Examples.
-            auto date1 = Date(2010, 1, 1);
-            date1.roll!"months"(1);
-            assert(date1 == Date(2010, 2, 1));
-
-            auto date2 = Date(2010, 1, 1);
-            date2.roll!"months"(-1);
-            assert(date2 == Date(2010, 12, 1));
-
-            auto date3 = Date(1999, 1, 29);
-            date3.roll!"months"(1);
-            assert(date3 == Date(1999, 3, 1));
-
-            auto date4 = Date(1999, 1, 29);
-            date4.roll!"months"(1, AllowDayOverflow.no);
-            assert(date4 == Date(1999, 2, 28));
+            auto date = Date(1999, 7, 6);
+            date.roll!"months"(3);
+            assert(date == Date(1999, 10, 6));
+            date.roll!"months"(-4);
+            assert(date == Date(1999, 6, 6));
         }
+
+        {
+            auto date = Date(1999, 7, 6);
+            date.roll!"months"(6);
+            assert(date == Date(1999, 1, 6));
+            date.roll!"months"(-6);
+            assert(date == Date(1999, 7, 6));
+        }
+
+        {
+            auto date = Date(1999, 7, 6);
+            date.roll!"months"(27);
+            assert(date == Date(1999, 10, 6));
+            date.roll!"months"(-28);
+            assert(date == Date(1999, 6, 6));
+        }
+
+        {
+            auto date = Date(1999, 5, 31);
+            date.roll!"months"(1);
+            assert(date == Date(1999, 7, 1));
+        }
+
+        {
+            auto date = Date(1999, 5, 31);
+            date.roll!"months"(-1);
+            assert(date == Date(1999, 5, 1));
+        }
+
+        {
+            auto date = Date(1999, 2, 28);
+            date.roll!"months"(12);
+            assert(date == Date(1999, 2, 28));
+        }
+
+        {
+            auto date = Date(2000, 2, 29);
+            date.roll!"months"(12);
+            assert(date == Date(2000, 2, 29));
+        }
+
+        {
+            auto date = Date(1999, 7, 31);
+            date.roll!"months"(1);
+            assert(date == Date(1999, 8, 31));
+            date.roll!"months"(1);
+            assert(date == Date(1999, 10, 1));
+        }
+
+        {
+            auto date = Date(1998, 8, 31);
+            date.roll!"months"(13);
+            assert(date == Date(1998, 10, 1));
+            date.roll!"months"(-13);
+            assert(date == Date(1998, 9, 1));
+        }
+
+        {
+            auto date = Date(1997, 12, 31);
+            date.roll!"months"(13);
+            assert(date == Date(1997, 1, 31));
+            date.roll!"months"(-13);
+            assert(date == Date(1997, 12, 31));
+        }
+
+        {
+            auto date = Date(1997, 12, 31);
+            date.roll!"months"(14);
+            assert(date == Date(1997, 3, 3));
+            date.roll!"months"(-14);
+            assert(date == Date(1997, 1, 3));
+        }
+
+        {
+            auto date = Date(1998, 12, 31);
+            date.roll!"months"(14);
+            assert(date == Date(1998, 3, 3));
+            date.roll!"months"(-14);
+            assert(date == Date(1998, 1, 3));
+        }
+
+        {
+            auto date = Date(1999, 12, 31);
+            date.roll!"months"(14);
+            assert(date == Date(1999, 3, 3));
+            date.roll!"months"(-14);
+            assert(date == Date(1999, 1, 3));
+        }
+
+        //Test B.C.
+        {
+            auto date = Date(-1999, 7, 6);
+            date.roll!"months"(3);
+            assert(date == Date(-1999, 10, 6));
+            date.roll!"months"(-4);
+            assert(date == Date(-1999, 6, 6));
+        }
+
+        {
+            auto date = Date(-1999, 7, 6);
+            date.roll!"months"(6);
+            assert(date == Date(-1999, 1, 6));
+            date.roll!"months"(-6);
+            assert(date == Date(-1999, 7, 6));
+        }
+
+        {
+            auto date = Date(-1999, 7, 6);
+            date.roll!"months"(-27);
+            assert(date == Date(-1999, 4, 6));
+            date.roll!"months"(28);
+            assert(date == Date(-1999, 8, 6));
+        }
+
+        {
+            auto date = Date(-1999, 5, 31);
+            date.roll!"months"(1);
+            assert(date == Date(-1999, 7, 1));
+        }
+
+        {
+            auto date = Date(-1999, 5, 31);
+            date.roll!"months"(-1);
+            assert(date == Date(-1999, 5, 1));
+        }
+
+        {
+            auto date = Date(-1999, 2, 28);
+            date.roll!"months"(-12);
+            assert(date == Date(-1999, 2, 28));
+        }
+
+        {
+            auto date = Date(-2000, 2, 29);
+            date.roll!"months"(-12);
+            assert(date == Date(-2000, 2, 29));
+        }
+
+        {
+            auto date = Date(-1999, 7, 31);
+            date.roll!"months"(1);
+            assert(date == Date(-1999, 8, 31));
+            date.roll!"months"(1);
+            assert(date == Date(-1999, 10, 1));
+        }
+
+        {
+            auto date = Date(-1998, 8, 31);
+            date.roll!"months"(13);
+            assert(date == Date(-1998, 10, 1));
+            date.roll!"months"(-13);
+            assert(date == Date(-1998, 9, 1));
+        }
+
+        {
+            auto date = Date(-1997, 12, 31);
+            date.roll!"months"(13);
+            assert(date == Date(-1997, 1, 31));
+            date.roll!"months"(-13);
+            assert(date == Date(-1997, 12, 31));
+        }
+
+        {
+            auto date = Date(-1997, 12, 31);
+            date.roll!"months"(14);
+            assert(date == Date(-1997, 3, 3));
+            date.roll!"months"(-14);
+            assert(date == Date(-1997, 1, 3));
+        }
+
+        {
+            auto date = Date(-2002, 12, 31);
+            date.roll!"months"(14);
+            assert(date == Date(-2002, 3, 3));
+            date.roll!"months"(-14);
+            assert(date == Date(-2002, 1, 3));
+        }
+
+        {
+            auto date = Date(-2001, 12, 31);
+            date.roll!"months"(14);
+            assert(date == Date(-2001, 3, 3));
+            date.roll!"months"(-14);
+            assert(date == Date(-2001, 1, 3));
+        }
+
+        //Test Both
+        {
+            auto date = Date(1, 1, 1);
+            date.roll!"months"(-1);
+            assert(date == Date(1, 12, 1));
+            date.roll!"months"(1);
+            assert(date == Date(1, 1, 1));
+        }
+
+        {
+            auto date = Date(4, 1, 1);
+            date.roll!"months"(-48);
+            assert(date == Date(4, 1, 1));
+            date.roll!"months"(48);
+            assert(date == Date(4, 1, 1));
+        }
+
+        {
+            auto date = Date(4, 3, 31);
+            date.roll!"months"(-49);
+            assert(date == Date(4, 3, 2));
+            date.roll!"months"(49);
+            assert(date == Date(4, 4, 2));
+        }
+
+        {
+            auto date = Date(4, 3, 31);
+            date.roll!"months"(-85);
+            assert(date == Date(4, 3, 2));
+            date.roll!"months"(85);
+            assert(date == Date(4, 4, 2));
+        }
+
+        {
+            auto date = Date(-1, 1, 1);
+            date.roll!"months"(-1);
+            assert(date == Date(-1, 12, 1));
+            date.roll!"months"(1);
+            assert(date == Date(-1, 1, 1));
+        }
+
+        {
+            auto date = Date(-4, 1, 1);
+            date.roll!"months"(-48);
+            assert(date == Date(-4, 1, 1));
+            date.roll!"months"(48);
+            assert(date == Date(-4, 1, 1));
+        }
+
+        {
+            auto date = Date(-4, 3, 31);
+            date.roll!"months"(-49);
+            assert(date == Date(-4, 3, 2));
+            date.roll!"months"(49);
+            assert(date == Date(-4, 4, 2));
+        }
+
+        {
+            auto date = Date(-4, 3, 31);
+            date.roll!"months"(-85);
+            assert(date == Date(-4, 3, 2));
+            date.roll!"months"(85);
+            assert(date == Date(-4, 4, 2));
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.roll!"months"(3)));
+        static assert(!__traits(compiles, idate.roll!"months"(3)));
+
+        //Verify Examples.
+        auto date1 = Date(2010, 1, 1);
+        date1.roll!"months"(1);
+        assert(date1 == Date(2010, 2, 1));
+
+        auto date2 = Date(2010, 1, 1);
+        date2.roll!"months"(-1);
+        assert(date2 == Date(2010, 12, 1));
+
+        auto date3 = Date(1999, 1, 29);
+        date3.roll!"months"(1);
+        assert(date3 == Date(1999, 3, 1));
+
+        auto date4 = Date(1999, 1, 29);
+        date4.roll!"months"(1, AllowDayOverflow.no);
+        assert(date4 == Date(1999, 2, 28));
     }
 
     //Test roll!"months"() with AllowDayOverlow.no
     unittest
     {
-        version(testStdDateTime)
+        //Test A.D.
         {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(3, AllowDayOverflow.no);
-                assert(date == Date(1999, 10, 6));
-                date.roll!"months"(-4, AllowDayOverflow.no);
-                assert(date == Date(1999, 6, 6));
-            }
+            auto date = Date(1999, 7, 6);
+            date.roll!"months"(3, AllowDayOverflow.no);
+            assert(date == Date(1999, 10, 6));
+            date.roll!"months"(-4, AllowDayOverflow.no);
+            assert(date == Date(1999, 6, 6));
+        }
 
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(6, AllowDayOverflow.no);
-                assert(date == Date(1999, 1, 6));
-                date.roll!"months"(-6, AllowDayOverflow.no);
-                assert(date == Date(1999, 7, 6));
-            }
+        {
+            auto date = Date(1999, 7, 6);
+            date.roll!"months"(6, AllowDayOverflow.no);
+            assert(date == Date(1999, 1, 6));
+            date.roll!"months"(-6, AllowDayOverflow.no);
+            assert(date == Date(1999, 7, 6));
+        }
 
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(27, AllowDayOverflow.no);
-                assert(date == Date(1999, 10, 6));
-                date.roll!"months"(-28, AllowDayOverflow.no);
-                assert(date == Date(1999, 6, 6));
-            }
+        {
+            auto date = Date(1999, 7, 6);
+            date.roll!"months"(27, AllowDayOverflow.no);
+            assert(date == Date(1999, 10, 6));
+            date.roll!"months"(-28, AllowDayOverflow.no);
+            assert(date == Date(1999, 6, 6));
+        }
 
-            {
-                auto date = Date(1999, 5, 31);
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(1999, 6, 30));
-            }
+        {
+            auto date = Date(1999, 5, 31);
+            date.roll!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(1999, 6, 30));
+        }
 
-            {
-                auto date = Date(1999, 5, 31);
-                date.roll!"months"(-1, AllowDayOverflow.no);
-                assert(date == Date(1999, 4, 30));
-            }
+        {
+            auto date = Date(1999, 5, 31);
+            date.roll!"months"(-1, AllowDayOverflow.no);
+            assert(date == Date(1999, 4, 30));
+        }
 
-            {
-                auto date = Date(1999, 2, 28);
-                date.roll!"months"(12, AllowDayOverflow.no);
-                assert(date == Date(1999, 2, 28));
-            }
+        {
+            auto date = Date(1999, 2, 28);
+            date.roll!"months"(12, AllowDayOverflow.no);
+            assert(date == Date(1999, 2, 28));
+        }
 
-            {
-                auto date = Date(2000, 2, 29);
-                date.roll!"months"(12, AllowDayOverflow.no);
-                assert(date == Date(2000, 2, 29));
-            }
+        {
+            auto date = Date(2000, 2, 29);
+            date.roll!"months"(12, AllowDayOverflow.no);
+            assert(date == Date(2000, 2, 29));
+        }
 
-            {
-                auto date = Date(1999, 7, 31);
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(1999, 8, 31));
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(1999, 9, 30));
-            }
+        {
+            auto date = Date(1999, 7, 31);
+            date.roll!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(1999, 8, 31));
+            date.roll!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(1999, 9, 30));
+        }
 
-            {
-                auto date = Date(1998, 8, 31);
-                date.roll!"months"(13, AllowDayOverflow.no);
-                assert(date == Date(1998, 9, 30));
-                date.roll!"months"(-13, AllowDayOverflow.no);
-                assert(date == Date(1998, 8, 30));
-            }
+        {
+            auto date = Date(1998, 8, 31);
+            date.roll!"months"(13, AllowDayOverflow.no);
+            assert(date == Date(1998, 9, 30));
+            date.roll!"months"(-13, AllowDayOverflow.no);
+            assert(date == Date(1998, 8, 30));
+        }
 
-            {
-                auto date = Date(1997, 12, 31);
-                date.roll!"months"(13, AllowDayOverflow.no);
-                assert(date == Date(1997, 1, 31));
-                date.roll!"months"(-13, AllowDayOverflow.no);
-                assert(date == Date(1997, 12, 31));
-            }
+        {
+            auto date = Date(1997, 12, 31);
+            date.roll!"months"(13, AllowDayOverflow.no);
+            assert(date == Date(1997, 1, 31));
+            date.roll!"months"(-13, AllowDayOverflow.no);
+            assert(date == Date(1997, 12, 31));
+        }
 
-            {
-                auto date = Date(1997, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(1997, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(1997, 12, 28));
-            }
+        {
+            auto date = Date(1997, 12, 31);
+            date.roll!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(1997, 2, 28));
+            date.roll!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(1997, 12, 28));
+        }
 
-            {
-                auto date = Date(1998, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(1998, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(1998, 12, 28));
-            }
+        {
+            auto date = Date(1998, 12, 31);
+            date.roll!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(1998, 2, 28));
+            date.roll!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(1998, 12, 28));
+        }
 
-            {
-                auto date = Date(1999, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(1999, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(1999, 12, 28));
-            }
+        {
+            auto date = Date(1999, 12, 31);
+            date.roll!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(1999, 2, 28));
+            date.roll!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(1999, 12, 28));
+        }
 
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(3, AllowDayOverflow.no);
-                assert(date == Date(-1999, 10, 6));
-                date.roll!"months"(-4, AllowDayOverflow.no);
-                assert(date == Date(-1999, 6, 6));
-            }
+        //Test B.C.
+        {
+            auto date = Date(-1999, 7, 6);
+            date.roll!"months"(3, AllowDayOverflow.no);
+            assert(date == Date(-1999, 10, 6));
+            date.roll!"months"(-4, AllowDayOverflow.no);
+            assert(date == Date(-1999, 6, 6));
+        }
 
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(6, AllowDayOverflow.no);
-                assert(date == Date(-1999, 1, 6));
-                date.roll!"months"(-6, AllowDayOverflow.no);
-                assert(date == Date(-1999, 7, 6));
-            }
+        {
+            auto date = Date(-1999, 7, 6);
+            date.roll!"months"(6, AllowDayOverflow.no);
+            assert(date == Date(-1999, 1, 6));
+            date.roll!"months"(-6, AllowDayOverflow.no);
+            assert(date == Date(-1999, 7, 6));
+        }
 
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(-27, AllowDayOverflow.no);
-                assert(date == Date(-1999, 4, 6));
-                date.roll!"months"(28, AllowDayOverflow.no);
-                assert(date == Date(-1999, 8, 6));
-            }
+        {
+            auto date = Date(-1999, 7, 6);
+            date.roll!"months"(-27, AllowDayOverflow.no);
+            assert(date == Date(-1999, 4, 6));
+            date.roll!"months"(28, AllowDayOverflow.no);
+            assert(date == Date(-1999, 8, 6));
+        }
 
-            {
-                auto date = Date(-1999, 5, 31);
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 6, 30));
-            }
+        {
+            auto date = Date(-1999, 5, 31);
+            date.roll!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 6, 30));
+        }
 
-            {
-                auto date = Date(-1999, 5, 31);
-                date.roll!"months"(-1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 4, 30));
-            }
+        {
+            auto date = Date(-1999, 5, 31);
+            date.roll!"months"(-1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 4, 30));
+        }
 
-            {
-                auto date = Date(-1999, 2, 28);
-                date.roll!"months"(-12, AllowDayOverflow.no);
-                assert(date == Date(-1999, 2, 28));
-            }
+        {
+            auto date = Date(-1999, 2, 28);
+            date.roll!"months"(-12, AllowDayOverflow.no);
+            assert(date == Date(-1999, 2, 28));
+        }
 
-            {
-                auto date = Date(-2000, 2, 29);
-                date.roll!"months"(-12, AllowDayOverflow.no);
-                assert(date == Date(-2000, 2, 29));
-            }
+        {
+            auto date = Date(-2000, 2, 29);
+            date.roll!"months"(-12, AllowDayOverflow.no);
+            assert(date == Date(-2000, 2, 29));
+        }
 
-            {
-                auto date = Date(-1999, 7, 31);
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 8, 31));
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(-1999, 9, 30));
-            }
+        {
+            auto date = Date(-1999, 7, 31);
+            date.roll!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 8, 31));
+            date.roll!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(-1999, 9, 30));
+        }
 
-            {
-                auto date = Date(-1998, 8, 31);
-                date.roll!"months"(13, AllowDayOverflow.no);
-                assert(date == Date(-1998, 9, 30));
-                date.roll!"months"(-13, AllowDayOverflow.no);
-                assert(date == Date(-1998, 8, 30));
-            }
+        {
+            auto date = Date(-1998, 8, 31);
+            date.roll!"months"(13, AllowDayOverflow.no);
+            assert(date == Date(-1998, 9, 30));
+            date.roll!"months"(-13, AllowDayOverflow.no);
+            assert(date == Date(-1998, 8, 30));
+        }
 
-            {
-                auto date = Date(-1997, 12, 31);
-                date.roll!"months"(13, AllowDayOverflow.no);
-                assert(date == Date(-1997, 1, 31));
-                date.roll!"months"(-13, AllowDayOverflow.no);
-                assert(date == Date(-1997, 12, 31));
-            }
+        {
+            auto date = Date(-1997, 12, 31);
+            date.roll!"months"(13, AllowDayOverflow.no);
+            assert(date == Date(-1997, 1, 31));
+            date.roll!"months"(-13, AllowDayOverflow.no);
+            assert(date == Date(-1997, 12, 31));
+        }
 
-            {
-                auto date = Date(-1997, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(-1997, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(-1997, 12, 28));
-            }
+        {
+            auto date = Date(-1997, 12, 31);
+            date.roll!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(-1997, 2, 28));
+            date.roll!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(-1997, 12, 28));
+        }
 
-            {
-                auto date = Date(-2002, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(-2002, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(-2002, 12, 28));
-            }
+        {
+            auto date = Date(-2002, 12, 31);
+            date.roll!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(-2002, 2, 28));
+            date.roll!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(-2002, 12, 28));
+        }
 
-            {
-                auto date = Date(-2001, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assert(date == Date(-2001, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assert(date == Date(-2001, 12, 28));
-            }
+        {
+            auto date = Date(-2001, 12, 31);
+            date.roll!"months"(14, AllowDayOverflow.no);
+            assert(date == Date(-2001, 2, 28));
+            date.roll!"months"(-14, AllowDayOverflow.no);
+            assert(date == Date(-2001, 12, 28));
+        }
 
-            //Test Both
-            {
-                auto date = Date(1, 1, 1);
-                date.roll!"months"(-1, AllowDayOverflow.no);
-                assert(date == Date(1, 12, 1));
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(1, 1, 1));
-            }
+        //Test Both
+        {
+            auto date = Date(1, 1, 1);
+            date.roll!"months"(-1, AllowDayOverflow.no);
+            assert(date == Date(1, 12, 1));
+            date.roll!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(1, 1, 1));
+        }
 
-            {
-                auto date = Date(4, 1, 1);
-                date.roll!"months"(-48, AllowDayOverflow.no);
-                assert(date == Date(4, 1, 1));
-                date.roll!"months"(48, AllowDayOverflow.no);
-                assert(date == Date(4, 1, 1));
-            }
+        {
+            auto date = Date(4, 1, 1);
+            date.roll!"months"(-48, AllowDayOverflow.no);
+            assert(date == Date(4, 1, 1));
+            date.roll!"months"(48, AllowDayOverflow.no);
+            assert(date == Date(4, 1, 1));
+        }
 
-            {
-                auto date = Date(4, 3, 31);
-                date.roll!"months"(-49, AllowDayOverflow.no);
-                assert(date == Date(4, 2, 29));
-                date.roll!"months"(49, AllowDayOverflow.no);
-                assert(date == Date(4, 3, 29));
-            }
+        {
+            auto date = Date(4, 3, 31);
+            date.roll!"months"(-49, AllowDayOverflow.no);
+            assert(date == Date(4, 2, 29));
+            date.roll!"months"(49, AllowDayOverflow.no);
+            assert(date == Date(4, 3, 29));
+        }
 
-            {
-                auto date = Date(4, 3, 31);
-                date.roll!"months"(-85, AllowDayOverflow.no);
-                assert(date == Date(4, 2, 29));
-                date.roll!"months"(85, AllowDayOverflow.no);
-                assert(date == Date(4, 3, 29));
-            }
+        {
+            auto date = Date(4, 3, 31);
+            date.roll!"months"(-85, AllowDayOverflow.no);
+            assert(date == Date(4, 2, 29));
+            date.roll!"months"(85, AllowDayOverflow.no);
+            assert(date == Date(4, 3, 29));
+        }
 
-            {
-                auto date = Date(-1, 1, 1);
-                date.roll!"months"(-1, AllowDayOverflow.no);
-                assert(date == Date(-1, 12, 1));
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assert(date == Date(-1, 1, 1));
-            }
+        {
+            auto date = Date(-1, 1, 1);
+            date.roll!"months"(-1, AllowDayOverflow.no);
+            assert(date == Date(-1, 12, 1));
+            date.roll!"months"(1, AllowDayOverflow.no);
+            assert(date == Date(-1, 1, 1));
+        }
 
-            {
-                auto date = Date(-4, 1, 1);
-                date.roll!"months"(-48, AllowDayOverflow.no);
-                assert(date == Date(-4, 1, 1));
-                date.roll!"months"(48, AllowDayOverflow.no);
-                assert(date == Date(-4, 1, 1));
-            }
+        {
+            auto date = Date(-4, 1, 1);
+            date.roll!"months"(-48, AllowDayOverflow.no);
+            assert(date == Date(-4, 1, 1));
+            date.roll!"months"(48, AllowDayOverflow.no);
+            assert(date == Date(-4, 1, 1));
+        }
 
-            {
-                auto date = Date(-4, 3, 31);
-                date.roll!"months"(-49, AllowDayOverflow.no);
-                assert(date == Date(-4, 2, 29));
-                date.roll!"months"(49, AllowDayOverflow.no);
-                assert(date == Date(-4, 3, 29));
-            }
+        {
+            auto date = Date(-4, 3, 31);
+            date.roll!"months"(-49, AllowDayOverflow.no);
+            assert(date == Date(-4, 2, 29));
+            date.roll!"months"(49, AllowDayOverflow.no);
+            assert(date == Date(-4, 3, 29));
+        }
 
-            {
-                auto date = Date(-4, 3, 31);
-                date.roll!"months"(-85, AllowDayOverflow.no);
-                assert(date == Date(-4, 2, 29));
-                date.roll!"months"(85, AllowDayOverflow.no);
-                assert(date == Date(-4, 3, 29));
-            }
+        {
+            auto date = Date(-4, 3, 31);
+            date.roll!"months"(-85, AllowDayOverflow.no);
+            assert(date == Date(-4, 2, 29));
+            date.roll!"months"(85, AllowDayOverflow.no);
+            assert(date == Date(-4, 3, 29));
         }
     }
 
@@ -11096,213 +11042,207 @@ assert(d == Date(2010, 1, 25));
     //Verify Examples.
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto d = Date(2010, 1, 1);
-            d.roll!"days"(1);
-            assert(d == Date(2010, 1, 2));
-            d.roll!"days"(365);
-            assert(d == Date(2010, 1, 26));
-            d.roll!"days"(-32);
-            assert(d == Date(2010, 1, 25));
-        }
+        auto d = Date(2010, 1, 1);
+        d.roll!"days"(1);
+        assert(d == Date(2010, 1, 2));
+        d.roll!"days"(365);
+        assert(d == Date(2010, 1, 26));
+        d.roll!"days"(-32);
+        assert(d == Date(2010, 1, 25));
     }
 
     unittest
     {
-        version(testStdDateTime)
+        //Test A.D.
         {
-            //Test A.D.
-            {
-                auto date = Date(1999, 2, 28);
-                date.roll!"days"(1);
-                assert(date == Date(1999, 2, 1));
-                date.roll!"days"(-1);
-                assert(date == Date(1999, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 28);
-                date.roll!"days"(1);
-                assert(date == Date(2000, 2, 29));
-                date.roll!"days"(1);
-                assert(date == Date(2000, 2, 1));
-                date.roll!"days"(-1);
-                assert(date == Date(2000, 2, 29));
-            }
-
-            {
-                auto date = Date(1999, 6, 30);
-                date.roll!"days"(1);
-                assert(date == Date(1999, 6, 1));
-                date.roll!"days"(-1);
-                assert(date == Date(1999, 6, 30));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.roll!"days"(1);
-                assert(date == Date(1999, 7, 1));
-                date.roll!"days"(-1);
-                assert(date == Date(1999, 7, 31));
-            }
-
-            {
-                auto date = Date(1999, 1, 1);
-                date.roll!"days"(-1);
-                assert(date == Date(1999, 1, 31));
-                date.roll!"days"(1);
-                assert(date == Date(1999, 1, 1));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"days"(9);
-                assert(date == Date(1999, 7, 15));
-                date.roll!"days"(-11);
-                assert(date == Date(1999, 7, 4));
-                date.roll!"days"(30);
-                assert(date == Date(1999, 7, 3));
-                date.roll!"days"(-3);
-                assert(date == Date(1999, 7, 31));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"days"(365);
-                assert(date == Date(1999, 7, 30));
-                date.roll!"days"(-365);
-                assert(date == Date(1999, 7, 6));
-                date.roll!"days"(366);
-                assert(date == Date(1999, 7, 31));
-                date.roll!"days"(730);
-                assert(date == Date(1999, 7, 17));
-                date.roll!"days"(-1096);
-                assert(date == Date(1999, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 2, 6);
-                date.roll!"days"(365);
-                assert(date == Date(1999, 2, 7));
-                date.roll!"days"(-365);
-                assert(date == Date(1999, 2, 6));
-                date.roll!"days"(366);
-                assert(date == Date(1999, 2, 8));
-                date.roll!"days"(730);
-                assert(date == Date(1999, 2, 10));
-                date.roll!"days"(-1096);
-                assert(date == Date(1999, 2, 6));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 2, 28);
-                date.roll!"days"(1);
-                assert(date == Date(-1999, 2, 1));
-                date.roll!"days"(-1);
-                assert(date == Date(-1999, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 28);
-                date.roll!"days"(1);
-                assert(date == Date(-2000, 2, 29));
-                date.roll!"days"(1);
-                assert(date == Date(-2000, 2, 1));
-                date.roll!"days"(-1);
-                assert(date == Date(-2000, 2, 29));
-            }
-
-            {
-                auto date = Date(-1999, 6, 30);
-                date.roll!"days"(1);
-                assert(date == Date(-1999, 6, 1));
-                date.roll!"days"(-1);
-                assert(date == Date(-1999, 6, 30));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.roll!"days"(1);
-                assert(date == Date(-1999, 7, 1));
-                date.roll!"days"(-1);
-                assert(date == Date(-1999, 7, 31));
-            }
-
-            {
-                auto date = Date(-1999, 1, 1);
-                date.roll!"days"(-1);
-                assert(date == Date(-1999, 1, 31));
-                date.roll!"days"(1);
-                assert(date == Date(-1999, 1, 1));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"days"(9);
-                assert(date == Date(-1999, 7, 15));
-                date.roll!"days"(-11);
-                assert(date == Date(-1999, 7, 4));
-                date.roll!"days"(30);
-                assert(date == Date(-1999, 7, 3));
-                date.roll!"days"(-3);
-                assert(date == Date(-1999, 7, 31));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"days"(365);
-                assert(date == Date(-1999, 7, 30));
-                date.roll!"days"(-365);
-                assert(date == Date(-1999, 7, 6));
-                date.roll!"days"(366);
-                assert(date == Date(-1999, 7, 31));
-                date.roll!"days"(730);
-                assert(date == Date(-1999, 7, 17));
-                date.roll!"days"(-1096);
-                assert(date == Date(-1999, 7, 6));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 7, 6);
-                date.roll!"days"(-365);
-                assert(date == Date(1, 7, 13));
-                date.roll!"days"(365);
-                assert(date == Date(1, 7, 6));
-                date.roll!"days"(-731);
-                assert(date == Date(1, 7, 19));
-                date.roll!"days"(730);
-                assert(date == Date(1, 7, 5));
-            }
-
-            {
-                auto date = Date(0, 7, 6);
-                date.roll!"days"(-365);
-                assert(date == Date(0, 7, 13));
-                date.roll!"days"(365);
-                assert(date == Date(0, 7, 6));
-                date.roll!"days"(-731);
-                assert(date == Date(0, 7, 19));
-                date.roll!"days"(730);
-                assert(date == Date(0, 7, 5));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.roll!"days"(12)));
-            static assert(!__traits(compiles, idate.roll!"days"(12)));
-
-            //Verify Examples.
-            auto date = Date(2010, 1, 1);
+            auto date = Date(1999, 2, 28);
             date.roll!"days"(1);
-            assert(date == Date(2010, 1, 2));
-            date.roll!"days"(365);
-            assert(date == Date(2010, 1, 26));
-            date.roll!"days"(-32);
-            assert(date == Date(2010, 1, 25));
+            assert(date == Date(1999, 2, 1));
+            date.roll!"days"(-1);
+            assert(date == Date(1999, 2, 28));
         }
+
+        {
+            auto date = Date(2000, 2, 28);
+            date.roll!"days"(1);
+            assert(date == Date(2000, 2, 29));
+            date.roll!"days"(1);
+            assert(date == Date(2000, 2, 1));
+            date.roll!"days"(-1);
+            assert(date == Date(2000, 2, 29));
+        }
+
+        {
+            auto date = Date(1999, 6, 30);
+            date.roll!"days"(1);
+            assert(date == Date(1999, 6, 1));
+            date.roll!"days"(-1);
+            assert(date == Date(1999, 6, 30));
+        }
+
+        {
+            auto date = Date(1999, 7, 31);
+            date.roll!"days"(1);
+            assert(date == Date(1999, 7, 1));
+            date.roll!"days"(-1);
+            assert(date == Date(1999, 7, 31));
+        }
+
+        {
+            auto date = Date(1999, 1, 1);
+            date.roll!"days"(-1);
+            assert(date == Date(1999, 1, 31));
+            date.roll!"days"(1);
+            assert(date == Date(1999, 1, 1));
+        }
+
+        {
+            auto date = Date(1999, 7, 6);
+            date.roll!"days"(9);
+            assert(date == Date(1999, 7, 15));
+            date.roll!"days"(-11);
+            assert(date == Date(1999, 7, 4));
+            date.roll!"days"(30);
+            assert(date == Date(1999, 7, 3));
+            date.roll!"days"(-3);
+            assert(date == Date(1999, 7, 31));
+        }
+
+        {
+            auto date = Date(1999, 7, 6);
+            date.roll!"days"(365);
+            assert(date == Date(1999, 7, 30));
+            date.roll!"days"(-365);
+            assert(date == Date(1999, 7, 6));
+            date.roll!"days"(366);
+            assert(date == Date(1999, 7, 31));
+            date.roll!"days"(730);
+            assert(date == Date(1999, 7, 17));
+            date.roll!"days"(-1096);
+            assert(date == Date(1999, 7, 6));
+        }
+
+        {
+            auto date = Date(1999, 2, 6);
+            date.roll!"days"(365);
+            assert(date == Date(1999, 2, 7));
+            date.roll!"days"(-365);
+            assert(date == Date(1999, 2, 6));
+            date.roll!"days"(366);
+            assert(date == Date(1999, 2, 8));
+            date.roll!"days"(730);
+            assert(date == Date(1999, 2, 10));
+            date.roll!"days"(-1096);
+            assert(date == Date(1999, 2, 6));
+        }
+
+        //Test B.C.
+        {
+            auto date = Date(-1999, 2, 28);
+            date.roll!"days"(1);
+            assert(date == Date(-1999, 2, 1));
+            date.roll!"days"(-1);
+            assert(date == Date(-1999, 2, 28));
+        }
+
+        {
+            auto date = Date(-2000, 2, 28);
+            date.roll!"days"(1);
+            assert(date == Date(-2000, 2, 29));
+            date.roll!"days"(1);
+            assert(date == Date(-2000, 2, 1));
+            date.roll!"days"(-1);
+            assert(date == Date(-2000, 2, 29));
+        }
+
+        {
+            auto date = Date(-1999, 6, 30);
+            date.roll!"days"(1);
+            assert(date == Date(-1999, 6, 1));
+            date.roll!"days"(-1);
+            assert(date == Date(-1999, 6, 30));
+        }
+
+        {
+            auto date = Date(-1999, 7, 31);
+            date.roll!"days"(1);
+            assert(date == Date(-1999, 7, 1));
+            date.roll!"days"(-1);
+            assert(date == Date(-1999, 7, 31));
+        }
+
+        {
+            auto date = Date(-1999, 1, 1);
+            date.roll!"days"(-1);
+            assert(date == Date(-1999, 1, 31));
+            date.roll!"days"(1);
+            assert(date == Date(-1999, 1, 1));
+        }
+
+        {
+            auto date = Date(-1999, 7, 6);
+            date.roll!"days"(9);
+            assert(date == Date(-1999, 7, 15));
+            date.roll!"days"(-11);
+            assert(date == Date(-1999, 7, 4));
+            date.roll!"days"(30);
+            assert(date == Date(-1999, 7, 3));
+            date.roll!"days"(-3);
+            assert(date == Date(-1999, 7, 31));
+        }
+
+        {
+            auto date = Date(-1999, 7, 6);
+            date.roll!"days"(365);
+            assert(date == Date(-1999, 7, 30));
+            date.roll!"days"(-365);
+            assert(date == Date(-1999, 7, 6));
+            date.roll!"days"(366);
+            assert(date == Date(-1999, 7, 31));
+            date.roll!"days"(730);
+            assert(date == Date(-1999, 7, 17));
+            date.roll!"days"(-1096);
+            assert(date == Date(-1999, 7, 6));
+        }
+
+        //Test Both
+        {
+            auto date = Date(1, 7, 6);
+            date.roll!"days"(-365);
+            assert(date == Date(1, 7, 13));
+            date.roll!"days"(365);
+            assert(date == Date(1, 7, 6));
+            date.roll!"days"(-731);
+            assert(date == Date(1, 7, 19));
+            date.roll!"days"(730);
+            assert(date == Date(1, 7, 5));
+        }
+
+        {
+            auto date = Date(0, 7, 6);
+            date.roll!"days"(-365);
+            assert(date == Date(0, 7, 13));
+            date.roll!"days"(365);
+            assert(date == Date(0, 7, 6));
+            date.roll!"days"(-731);
+            assert(date == Date(0, 7, 19));
+            date.roll!"days"(730);
+            assert(date == Date(0, 7, 5));
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.roll!"days"(12)));
+        static assert(!__traits(compiles, idate.roll!"days"(12)));
+
+        //Verify Examples.
+        auto date = Date(2010, 1, 1);
+        date.roll!"days"(1);
+        assert(date == Date(2010, 1, 2));
+        date.roll!"days"(365);
+        assert(date == Date(2010, 1, 26));
+        date.roll!"days"(-32);
+        assert(date == Date(2010, 1, 25));
     }
 
 
@@ -11348,73 +11288,70 @@ assert(d == Date(2010, 1, 25));
 
     unittest
     {
-        version(testStdDateTime)
+        auto date = Date(1999, 7, 6);
+
+        assert(date + dur!"weeks"(7) == Date(1999, 8, 24));
+        assert(date + dur!"weeks"(-7) == Date(1999, 5, 18));
+        assert(date + dur!"days"(7) == Date(1999, 7, 13));
+        assert(date + dur!"days"(-7) == Date(1999, 6, 29));
+
+        assert(date + dur!"hours"(24) == Date(1999, 7, 7));
+        assert(date + dur!"hours"(-24) == Date(1999, 7, 5));
+        assert(date + dur!"minutes"(1440) == Date(1999, 7, 7));
+        assert(date + dur!"minutes"(-1440) == Date(1999, 7, 5));
+        assert(date + dur!"seconds"(86_400) == Date(1999, 7, 7));
+        assert(date + dur!"seconds"(-86_400) == Date(1999, 7, 5));
+        assert(date + dur!"msecs"(86_400_000) == Date(1999, 7, 7));
+        assert(date + dur!"msecs"(-86_400_000) == Date(1999, 7, 5));
+        assert(date + dur!"usecs"(86_400_000_000) == Date(1999, 7, 7));
+        assert(date + dur!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
+        assert(date + dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 7));
+        assert(date + dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 5));
+
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
         {
-            auto date = Date(1999, 7, 6);
-
-            assert(date + dur!"weeks"(7) == Date(1999, 8, 24));
-            assert(date + dur!"weeks"(-7) == Date(1999, 5, 18));
-            assert(date + dur!"days"(7) == Date(1999, 7, 13));
-            assert(date + dur!"days"(-7) == Date(1999, 6, 29));
-
-            assert(date + dur!"hours"(24) == Date(1999, 7, 7));
-            assert(date + dur!"hours"(-24) == Date(1999, 7, 5));
-            assert(date + dur!"minutes"(1440) == Date(1999, 7, 7));
-            assert(date + dur!"minutes"(-1440) == Date(1999, 7, 5));
-            assert(date + dur!"seconds"(86_400) == Date(1999, 7, 7));
-            assert(date + dur!"seconds"(-86_400) == Date(1999, 7, 5));
-            assert(date + dur!"msecs"(86_400_000) == Date(1999, 7, 7));
-            assert(date + dur!"msecs"(-86_400_000) == Date(1999, 7, 5));
-            assert(date + dur!"usecs"(86_400_000_000) == Date(1999, 7, 7));
-            assert(date + dur!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
-            assert(date + dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 7));
-            assert(date + dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 5));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assert(date + TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 7));
-                assert(date + TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
-            }
-
-            assert(date - dur!"weeks"(-7) == Date(1999, 8, 24));
-            assert(date - dur!"weeks"(7) == Date(1999, 5, 18));
-            assert(date - dur!"days"(-7) == Date(1999, 7, 13));
-            assert(date - dur!"days"(7) == Date(1999, 6, 29));
-
-            assert(date - dur!"hours"(-24) == Date(1999, 7, 7));
-            assert(date - dur!"hours"(24) == Date(1999, 7, 5));
-            assert(date - dur!"minutes"(-1440) == Date(1999, 7, 7));
-            assert(date - dur!"minutes"(1440) == Date(1999, 7, 5));
-            assert(date - dur!"seconds"(-86_400) == Date(1999, 7, 7));
-            assert(date - dur!"seconds"(86_400) == Date(1999, 7, 5));
-            assert(date - dur!"msecs"(-86_400_000) == Date(1999, 7, 7));
-            assert(date - dur!"msecs"(86_400_000) == Date(1999, 7, 5));
-            assert(date - dur!"usecs"(-86_400_000_000) == Date(1999, 7, 7));
-            assert(date - dur!"usecs"(86_400_000_000) == Date(1999, 7, 5));
-            assert(date - dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 7));
-            assert(date - dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 5));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assert(date - TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 7));
-                assert(date - TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 5));
-            }
-
-            auto duration = dur!"days"(12);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date + duration));
-            static assert(__traits(compiles, cdate + duration));
-            static assert(__traits(compiles, idate + duration));
-
-            static assert(__traits(compiles, date - duration));
-            static assert(__traits(compiles, cdate - duration));
-            static assert(__traits(compiles, idate - duration));
+            assert(date + TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 7));
+            assert(date + TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
         }
+
+        assert(date - dur!"weeks"(-7) == Date(1999, 8, 24));
+        assert(date - dur!"weeks"(7) == Date(1999, 5, 18));
+        assert(date - dur!"days"(-7) == Date(1999, 7, 13));
+        assert(date - dur!"days"(7) == Date(1999, 6, 29));
+
+        assert(date - dur!"hours"(-24) == Date(1999, 7, 7));
+        assert(date - dur!"hours"(24) == Date(1999, 7, 5));
+        assert(date - dur!"minutes"(-1440) == Date(1999, 7, 7));
+        assert(date - dur!"minutes"(1440) == Date(1999, 7, 5));
+        assert(date - dur!"seconds"(-86_400) == Date(1999, 7, 7));
+        assert(date - dur!"seconds"(86_400) == Date(1999, 7, 5));
+        assert(date - dur!"msecs"(-86_400_000) == Date(1999, 7, 7));
+        assert(date - dur!"msecs"(86_400_000) == Date(1999, 7, 5));
+        assert(date - dur!"usecs"(-86_400_000_000) == Date(1999, 7, 7));
+        assert(date - dur!"usecs"(86_400_000_000) == Date(1999, 7, 5));
+        assert(date - dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 7));
+        assert(date - dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 5));
+
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            assert(date - TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 7));
+            assert(date - TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 5));
+        }
+
+        auto duration = dur!"days"(12);
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, date + duration));
+        static assert(__traits(compiles, cdate + duration));
+        static assert(__traits(compiles, idate + duration));
+
+        static assert(__traits(compiles, date - duration));
+        static assert(__traits(compiles, cdate - duration));
+        static assert(__traits(compiles, idate - duration));
     }
 
 
@@ -11458,56 +11395,53 @@ assert(d == Date(2010, 1, 25));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(Date(1999, 7, 6) + dur!"weeks"(7) == Date(1999, 8, 24));
-            assert(Date(1999, 7, 6) + dur!"weeks"(-7) == Date(1999, 5, 18));
-            assert(Date(1999, 7, 6) + dur!"days"(7) == Date(1999, 7, 13));
-            assert(Date(1999, 7, 6) + dur!"days"(-7) == Date(1999, 6, 29));
+        assert(Date(1999, 7, 6) + dur!"weeks"(7) == Date(1999, 8, 24));
+        assert(Date(1999, 7, 6) + dur!"weeks"(-7) == Date(1999, 5, 18));
+        assert(Date(1999, 7, 6) + dur!"days"(7) == Date(1999, 7, 13));
+        assert(Date(1999, 7, 6) + dur!"days"(-7) == Date(1999, 6, 29));
 
-            assert(Date(1999, 7, 6) + dur!"hours"(24) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) + dur!"hours"(-24) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) + dur!"minutes"(1440) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) + dur!"minutes"(-1440) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) + dur!"seconds"(86_400) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) + dur!"seconds"(-86_400) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) + dur!"msecs"(86_400_000) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) + dur!"msecs"(-86_400_000) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) + dur!"usecs"(86_400_000_000) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) + dur!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) + dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) + dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) + dur!"hours"(24) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) + dur!"hours"(-24) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) + dur!"minutes"(1440) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) + dur!"minutes"(-1440) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) + dur!"seconds"(86_400) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) + dur!"seconds"(-86_400) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) + dur!"msecs"(86_400_000) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) + dur!"msecs"(-86_400_000) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) + dur!"usecs"(86_400_000_000) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) + dur!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) + dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) + dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 5));
 
-            assert(Date(1999, 7, 6) - dur!"weeks"(-7) == Date(1999, 8, 24));
-            assert(Date(1999, 7, 6) - dur!"weeks"(7) == Date(1999, 5, 18));
-            assert(Date(1999, 7, 6) - dur!"days"(-7) == Date(1999, 7, 13));
-            assert(Date(1999, 7, 6) - dur!"days"(7) == Date(1999, 6, 29));
+        assert(Date(1999, 7, 6) - dur!"weeks"(-7) == Date(1999, 8, 24));
+        assert(Date(1999, 7, 6) - dur!"weeks"(7) == Date(1999, 5, 18));
+        assert(Date(1999, 7, 6) - dur!"days"(-7) == Date(1999, 7, 13));
+        assert(Date(1999, 7, 6) - dur!"days"(7) == Date(1999, 6, 29));
 
-            assert(Date(1999, 7, 6) - dur!"hours"(-24) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) - dur!"hours"(24) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) - dur!"minutes"(-1440) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) - dur!"minutes"(1440) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) - dur!"seconds"(-86_400) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) - dur!"seconds"(86_400) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) - dur!"msecs"(-86_400_000) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) - dur!"msecs"(86_400_000) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) - dur!"usecs"(-86_400_000_000) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) - dur!"usecs"(86_400_000_000) == Date(1999, 7, 5));
-            assert(Date(1999, 7, 6) - dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 7));
-            assert(Date(1999, 7, 6) - dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) - dur!"hours"(-24) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) - dur!"hours"(24) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) - dur!"minutes"(-1440) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) - dur!"minutes"(1440) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) - dur!"seconds"(-86_400) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) - dur!"seconds"(86_400) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) - dur!"msecs"(-86_400_000) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) - dur!"msecs"(86_400_000) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) - dur!"usecs"(-86_400_000_000) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) - dur!"usecs"(86_400_000_000) == Date(1999, 7, 5));
+        assert(Date(1999, 7, 6) - dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 7));
+        assert(Date(1999, 7, 6) - dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 5));
 
-            auto duration = dur!"days"(12);
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date += duration));
-            static assert(!__traits(compiles, cdate += duration));
-            static assert(!__traits(compiles, idate += duration));
+        auto duration = dur!"days"(12);
+        auto date = Date(1999, 7, 6);
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, date += duration));
+        static assert(!__traits(compiles, cdate += duration));
+        static assert(!__traits(compiles, idate += duration));
 
-            static assert(__traits(compiles, date -= duration));
-            static assert(!__traits(compiles, cdate -= duration));
-            static assert(!__traits(compiles, idate -= duration));
-        }
+        static assert(__traits(compiles, date -= duration));
+        static assert(!__traits(compiles, cdate -= duration));
+        static assert(!__traits(compiles, idate -= duration));
     }
 
 
@@ -11528,31 +11462,28 @@ assert(d == Date(2010, 1, 25));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
+        auto date = Date(1999, 7, 6);
 
-            assert(Date(1999, 7, 6) - Date(1998, 7, 6) == dur!"days"(365));
-            assert(Date(1998, 7, 6) - Date(1999, 7, 6) == dur!"days"(-365));
-            assert(Date(1999, 6, 6) - Date(1999, 5, 6) == dur!"days"(31));
-            assert(Date(1999, 5, 6) - Date(1999, 6, 6) == dur!"days"(-31));
-            assert(Date(1999, 1, 1) - Date(1998, 12, 31) == dur!"days"(1));
-            assert(Date(1998, 12, 31) - Date(1999, 1, 1) == dur!"days"(-1));
+        assert(Date(1999, 7, 6) - Date(1998, 7, 6) == dur!"days"(365));
+        assert(Date(1998, 7, 6) - Date(1999, 7, 6) == dur!"days"(-365));
+        assert(Date(1999, 6, 6) - Date(1999, 5, 6) == dur!"days"(31));
+        assert(Date(1999, 5, 6) - Date(1999, 6, 6) == dur!"days"(-31));
+        assert(Date(1999, 1, 1) - Date(1998, 12, 31) == dur!"days"(1));
+        assert(Date(1998, 12, 31) - Date(1999, 1, 1) == dur!"days"(-1));
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date - date));
-            static assert(__traits(compiles, cdate - date));
-            static assert(__traits(compiles, idate - date));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, date - date));
+        static assert(__traits(compiles, cdate - date));
+        static assert(__traits(compiles, idate - date));
 
-            static assert(__traits(compiles, date - cdate));
-            static assert(__traits(compiles, cdate - cdate));
-            static assert(__traits(compiles, idate - cdate));
+        static assert(__traits(compiles, date - cdate));
+        static assert(__traits(compiles, cdate - cdate));
+        static assert(__traits(compiles, idate - cdate));
 
-            static assert(__traits(compiles, date - idate));
-            static assert(__traits(compiles, cdate - idate));
-            static assert(__traits(compiles, idate - idate));
-        }
+        static assert(__traits(compiles, date - idate));
+        static assert(__traits(compiles, cdate - idate));
+        static assert(__traits(compiles, idate - idate));
     }
 
 
@@ -11595,228 +11526,225 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
+        auto date = Date(1999, 7, 6);
 
-            //Test A.D.
-            assert(date.diffMonths(Date(1998, 6, 5)) == 13);
-            assert(date.diffMonths(Date(1998, 7, 5)) == 12);
-            assert(date.diffMonths(Date(1998, 8, 5)) == 11);
-            assert(date.diffMonths(Date(1998, 9, 5)) == 10);
-            assert(date.diffMonths(Date(1998, 10, 5)) == 9);
-            assert(date.diffMonths(Date(1998, 11, 5)) == 8);
-            assert(date.diffMonths(Date(1998, 12, 5)) == 7);
-            assert(date.diffMonths(Date(1999, 1, 5)) == 6);
-            assert(date.diffMonths(Date(1999, 2, 6)) == 5);
-            assert(date.diffMonths(Date(1999, 3, 6)) == 4);
-            assert(date.diffMonths(Date(1999, 4, 6)) == 3);
-            assert(date.diffMonths(Date(1999, 5, 6)) == 2);
-            assert(date.diffMonths(Date(1999, 6, 6)) == 1);
-            assert(date.diffMonths(date) == 0);
-            assert(date.diffMonths(Date(1999, 8, 6)) == -1);
-            assert(date.diffMonths(Date(1999, 9, 6)) == -2);
-            assert(date.diffMonths(Date(1999, 10, 6)) == -3);
-            assert(date.diffMonths(Date(1999, 11, 6)) == -4);
-            assert(date.diffMonths(Date(1999, 12, 6)) == -5);
-            assert(date.diffMonths(Date(2000, 1, 6)) == -6);
-            assert(date.diffMonths(Date(2000, 2, 6)) == -7);
-            assert(date.diffMonths(Date(2000, 3, 6)) == -8);
-            assert(date.diffMonths(Date(2000, 4, 6)) == -9);
-            assert(date.diffMonths(Date(2000, 5, 6)) == -10);
-            assert(date.diffMonths(Date(2000, 6, 6)) == -11);
-            assert(date.diffMonths(Date(2000, 7, 6)) == -12);
-            assert(date.diffMonths(Date(2000, 8, 6)) == -13);
+        //Test A.D.
+        assert(date.diffMonths(Date(1998, 6, 5)) == 13);
+        assert(date.diffMonths(Date(1998, 7, 5)) == 12);
+        assert(date.diffMonths(Date(1998, 8, 5)) == 11);
+        assert(date.diffMonths(Date(1998, 9, 5)) == 10);
+        assert(date.diffMonths(Date(1998, 10, 5)) == 9);
+        assert(date.diffMonths(Date(1998, 11, 5)) == 8);
+        assert(date.diffMonths(Date(1998, 12, 5)) == 7);
+        assert(date.diffMonths(Date(1999, 1, 5)) == 6);
+        assert(date.diffMonths(Date(1999, 2, 6)) == 5);
+        assert(date.diffMonths(Date(1999, 3, 6)) == 4);
+        assert(date.diffMonths(Date(1999, 4, 6)) == 3);
+        assert(date.diffMonths(Date(1999, 5, 6)) == 2);
+        assert(date.diffMonths(Date(1999, 6, 6)) == 1);
+        assert(date.diffMonths(date) == 0);
+        assert(date.diffMonths(Date(1999, 8, 6)) == -1);
+        assert(date.diffMonths(Date(1999, 9, 6)) == -2);
+        assert(date.diffMonths(Date(1999, 10, 6)) == -3);
+        assert(date.diffMonths(Date(1999, 11, 6)) == -4);
+        assert(date.diffMonths(Date(1999, 12, 6)) == -5);
+        assert(date.diffMonths(Date(2000, 1, 6)) == -6);
+        assert(date.diffMonths(Date(2000, 2, 6)) == -7);
+        assert(date.diffMonths(Date(2000, 3, 6)) == -8);
+        assert(date.diffMonths(Date(2000, 4, 6)) == -9);
+        assert(date.diffMonths(Date(2000, 5, 6)) == -10);
+        assert(date.diffMonths(Date(2000, 6, 6)) == -11);
+        assert(date.diffMonths(Date(2000, 7, 6)) == -12);
+        assert(date.diffMonths(Date(2000, 8, 6)) == -13);
 
-            assert(Date(1998, 6, 5).diffMonths(date) == -13);
-            assert(Date(1998, 7, 5).diffMonths(date) == -12);
-            assert(Date(1998, 8, 5).diffMonths(date) == -11);
-            assert(Date(1998, 9, 5).diffMonths(date) == -10);
-            assert(Date(1998, 10, 5).diffMonths(date) == -9);
-            assert(Date(1998, 11, 5).diffMonths(date) == -8);
-            assert(Date(1998, 12, 5).diffMonths(date) == -7);
-            assert(Date(1999, 1, 5).diffMonths(date) == -6);
-            assert(Date(1999, 2, 6).diffMonths(date) == -5);
-            assert(Date(1999, 3, 6).diffMonths(date) == -4);
-            assert(Date(1999, 4, 6).diffMonths(date) == -3);
-            assert(Date(1999, 5, 6).diffMonths(date) == -2);
-            assert(Date(1999, 6, 6).diffMonths(date) == -1);
-            assert(Date(1999, 8, 6).diffMonths(date) == 1);
-            assert(Date(1999, 9, 6).diffMonths(date) == 2);
-            assert(Date(1999, 10, 6).diffMonths(date) == 3);
-            assert(Date(1999, 11, 6).diffMonths(date) == 4);
-            assert(Date(1999, 12, 6).diffMonths(date) == 5);
-            assert(Date(2000, 1, 6).diffMonths(date) == 6);
-            assert(Date(2000, 2, 6).diffMonths(date) == 7);
-            assert(Date(2000, 3, 6).diffMonths(date) == 8);
-            assert(Date(2000, 4, 6).diffMonths(date) == 9);
-            assert(Date(2000, 5, 6).diffMonths(date) == 10);
-            assert(Date(2000, 6, 6).diffMonths(date) == 11);
-            assert(Date(2000, 7, 6).diffMonths(date) == 12);
-            assert(Date(2000, 8, 6).diffMonths(date) == 13);
+        assert(Date(1998, 6, 5).diffMonths(date) == -13);
+        assert(Date(1998, 7, 5).diffMonths(date) == -12);
+        assert(Date(1998, 8, 5).diffMonths(date) == -11);
+        assert(Date(1998, 9, 5).diffMonths(date) == -10);
+        assert(Date(1998, 10, 5).diffMonths(date) == -9);
+        assert(Date(1998, 11, 5).diffMonths(date) == -8);
+        assert(Date(1998, 12, 5).diffMonths(date) == -7);
+        assert(Date(1999, 1, 5).diffMonths(date) == -6);
+        assert(Date(1999, 2, 6).diffMonths(date) == -5);
+        assert(Date(1999, 3, 6).diffMonths(date) == -4);
+        assert(Date(1999, 4, 6).diffMonths(date) == -3);
+        assert(Date(1999, 5, 6).diffMonths(date) == -2);
+        assert(Date(1999, 6, 6).diffMonths(date) == -1);
+        assert(Date(1999, 8, 6).diffMonths(date) == 1);
+        assert(Date(1999, 9, 6).diffMonths(date) == 2);
+        assert(Date(1999, 10, 6).diffMonths(date) == 3);
+        assert(Date(1999, 11, 6).diffMonths(date) == 4);
+        assert(Date(1999, 12, 6).diffMonths(date) == 5);
+        assert(Date(2000, 1, 6).diffMonths(date) == 6);
+        assert(Date(2000, 2, 6).diffMonths(date) == 7);
+        assert(Date(2000, 3, 6).diffMonths(date) == 8);
+        assert(Date(2000, 4, 6).diffMonths(date) == 9);
+        assert(Date(2000, 5, 6).diffMonths(date) == 10);
+        assert(Date(2000, 6, 6).diffMonths(date) == 11);
+        assert(Date(2000, 7, 6).diffMonths(date) == 12);
+        assert(Date(2000, 8, 6).diffMonths(date) == 13);
 
-            assert(date.diffMonths(Date(1999, 6, 30)) == 1);
-            assert(date.diffMonths(Date(1999, 7, 1)) == 0);
-            assert(date.diffMonths(Date(1999, 7, 6)) == 0);
-            assert(date.diffMonths(Date(1999, 7, 11)) == 0);
-            assert(date.diffMonths(Date(1999, 7, 16)) == 0);
-            assert(date.diffMonths(Date(1999, 7, 21)) == 0);
-            assert(date.diffMonths(Date(1999, 7, 26)) == 0);
-            assert(date.diffMonths(Date(1999, 7, 31)) == 0);
-            assert(date.diffMonths(Date(1999, 8, 1)) == -1);
+        assert(date.diffMonths(Date(1999, 6, 30)) == 1);
+        assert(date.diffMonths(Date(1999, 7, 1)) == 0);
+        assert(date.diffMonths(Date(1999, 7, 6)) == 0);
+        assert(date.diffMonths(Date(1999, 7, 11)) == 0);
+        assert(date.diffMonths(Date(1999, 7, 16)) == 0);
+        assert(date.diffMonths(Date(1999, 7, 21)) == 0);
+        assert(date.diffMonths(Date(1999, 7, 26)) == 0);
+        assert(date.diffMonths(Date(1999, 7, 31)) == 0);
+        assert(date.diffMonths(Date(1999, 8, 1)) == -1);
 
-            assert(date.diffMonths(Date(1990, 6, 30)) == 109);
-            assert(date.diffMonths(Date(1990, 7, 1)) == 108);
-            assert(date.diffMonths(Date(1990, 7, 6)) == 108);
-            assert(date.diffMonths(Date(1990, 7, 11)) == 108);
-            assert(date.diffMonths(Date(1990, 7, 16)) == 108);
-            assert(date.diffMonths(Date(1990, 7, 21)) == 108);
-            assert(date.diffMonths(Date(1990, 7, 26)) == 108);
-            assert(date.diffMonths(Date(1990, 7, 31)) == 108);
-            assert(date.diffMonths(Date(1990, 8, 1)) == 107);
+        assert(date.diffMonths(Date(1990, 6, 30)) == 109);
+        assert(date.diffMonths(Date(1990, 7, 1)) == 108);
+        assert(date.diffMonths(Date(1990, 7, 6)) == 108);
+        assert(date.diffMonths(Date(1990, 7, 11)) == 108);
+        assert(date.diffMonths(Date(1990, 7, 16)) == 108);
+        assert(date.diffMonths(Date(1990, 7, 21)) == 108);
+        assert(date.diffMonths(Date(1990, 7, 26)) == 108);
+        assert(date.diffMonths(Date(1990, 7, 31)) == 108);
+        assert(date.diffMonths(Date(1990, 8, 1)) == 107);
 
-            assert(Date(1999, 6, 30).diffMonths(date) == -1);
-            assert(Date(1999, 7, 1).diffMonths(date) == 0);
-            assert(Date(1999, 7, 6).diffMonths(date) == 0);
-            assert(Date(1999, 7, 11).diffMonths(date) == 0);
-            assert(Date(1999, 7, 16).diffMonths(date) == 0);
-            assert(Date(1999, 7, 21).diffMonths(date) == 0);
-            assert(Date(1999, 7, 26).diffMonths(date) == 0);
-            assert(Date(1999, 7, 31).diffMonths(date) == 0);
-            assert(Date(1999, 8, 1).diffMonths(date) == 1);
+        assert(Date(1999, 6, 30).diffMonths(date) == -1);
+        assert(Date(1999, 7, 1).diffMonths(date) == 0);
+        assert(Date(1999, 7, 6).diffMonths(date) == 0);
+        assert(Date(1999, 7, 11).diffMonths(date) == 0);
+        assert(Date(1999, 7, 16).diffMonths(date) == 0);
+        assert(Date(1999, 7, 21).diffMonths(date) == 0);
+        assert(Date(1999, 7, 26).diffMonths(date) == 0);
+        assert(Date(1999, 7, 31).diffMonths(date) == 0);
+        assert(Date(1999, 8, 1).diffMonths(date) == 1);
 
-            assert(Date(1990, 6, 30).diffMonths(date) == -109);
-            assert(Date(1990, 7, 1).diffMonths(date) == -108);
-            assert(Date(1990, 7, 6).diffMonths(date) == -108);
-            assert(Date(1990, 7, 11).diffMonths(date) == -108);
-            assert(Date(1990, 7, 16).diffMonths(date) == -108);
-            assert(Date(1990, 7, 21).diffMonths(date) == -108);
-            assert(Date(1990, 7, 26).diffMonths(date) == -108);
-            assert(Date(1990, 7, 31).diffMonths(date) == -108);
-            assert(Date(1990, 8, 1).diffMonths(date) == -107);
+        assert(Date(1990, 6, 30).diffMonths(date) == -109);
+        assert(Date(1990, 7, 1).diffMonths(date) == -108);
+        assert(Date(1990, 7, 6).diffMonths(date) == -108);
+        assert(Date(1990, 7, 11).diffMonths(date) == -108);
+        assert(Date(1990, 7, 16).diffMonths(date) == -108);
+        assert(Date(1990, 7, 21).diffMonths(date) == -108);
+        assert(Date(1990, 7, 26).diffMonths(date) == -108);
+        assert(Date(1990, 7, 31).diffMonths(date) == -108);
+        assert(Date(1990, 8, 1).diffMonths(date) == -107);
 
-            //Test B.C.
-            auto dateBC = Date(-1999, 7, 6);
+        //Test B.C.
+        auto dateBC = Date(-1999, 7, 6);
 
-            assert(dateBC.diffMonths(Date(-2000, 6, 5)) == 13);
-            assert(dateBC.diffMonths(Date(-2000, 7, 5)) == 12);
-            assert(dateBC.diffMonths(Date(-2000, 8, 5)) == 11);
-            assert(dateBC.diffMonths(Date(-2000, 9, 5)) == 10);
-            assert(dateBC.diffMonths(Date(-2000, 10, 5)) == 9);
-            assert(dateBC.diffMonths(Date(-2000, 11, 5)) == 8);
-            assert(dateBC.diffMonths(Date(-2000, 12, 5)) == 7);
-            assert(dateBC.diffMonths(Date(-1999, 1, 5)) == 6);
-            assert(dateBC.diffMonths(Date(-1999, 2, 6)) == 5);
-            assert(dateBC.diffMonths(Date(-1999, 3, 6)) == 4);
-            assert(dateBC.diffMonths(Date(-1999, 4, 6)) == 3);
-            assert(dateBC.diffMonths(Date(-1999, 5, 6)) == 2);
-            assert(dateBC.diffMonths(Date(-1999, 6, 6)) == 1);
-            assert(dateBC.diffMonths(dateBC) == 0);
-            assert(dateBC.diffMonths(Date(-1999, 8, 6)) == -1);
-            assert(dateBC.diffMonths(Date(-1999, 9, 6)) == -2);
-            assert(dateBC.diffMonths(Date(-1999, 10, 6)) == -3);
-            assert(dateBC.diffMonths(Date(-1999, 11, 6)) == -4);
-            assert(dateBC.diffMonths(Date(-1999, 12, 6)) == -5);
-            assert(dateBC.diffMonths(Date(-1998, 1, 6)) == -6);
-            assert(dateBC.diffMonths(Date(-1998, 2, 6)) == -7);
-            assert(dateBC.diffMonths(Date(-1998, 3, 6)) == -8);
-            assert(dateBC.diffMonths(Date(-1998, 4, 6)) == -9);
-            assert(dateBC.diffMonths(Date(-1998, 5, 6)) == -10);
-            assert(dateBC.diffMonths(Date(-1998, 6, 6)) == -11);
-            assert(dateBC.diffMonths(Date(-1998, 7, 6)) == -12);
-            assert(dateBC.diffMonths(Date(-1998, 8, 6)) == -13);
+        assert(dateBC.diffMonths(Date(-2000, 6, 5)) == 13);
+        assert(dateBC.diffMonths(Date(-2000, 7, 5)) == 12);
+        assert(dateBC.diffMonths(Date(-2000, 8, 5)) == 11);
+        assert(dateBC.diffMonths(Date(-2000, 9, 5)) == 10);
+        assert(dateBC.diffMonths(Date(-2000, 10, 5)) == 9);
+        assert(dateBC.diffMonths(Date(-2000, 11, 5)) == 8);
+        assert(dateBC.diffMonths(Date(-2000, 12, 5)) == 7);
+        assert(dateBC.diffMonths(Date(-1999, 1, 5)) == 6);
+        assert(dateBC.diffMonths(Date(-1999, 2, 6)) == 5);
+        assert(dateBC.diffMonths(Date(-1999, 3, 6)) == 4);
+        assert(dateBC.diffMonths(Date(-1999, 4, 6)) == 3);
+        assert(dateBC.diffMonths(Date(-1999, 5, 6)) == 2);
+        assert(dateBC.diffMonths(Date(-1999, 6, 6)) == 1);
+        assert(dateBC.diffMonths(dateBC) == 0);
+        assert(dateBC.diffMonths(Date(-1999, 8, 6)) == -1);
+        assert(dateBC.diffMonths(Date(-1999, 9, 6)) == -2);
+        assert(dateBC.diffMonths(Date(-1999, 10, 6)) == -3);
+        assert(dateBC.diffMonths(Date(-1999, 11, 6)) == -4);
+        assert(dateBC.diffMonths(Date(-1999, 12, 6)) == -5);
+        assert(dateBC.diffMonths(Date(-1998, 1, 6)) == -6);
+        assert(dateBC.diffMonths(Date(-1998, 2, 6)) == -7);
+        assert(dateBC.diffMonths(Date(-1998, 3, 6)) == -8);
+        assert(dateBC.diffMonths(Date(-1998, 4, 6)) == -9);
+        assert(dateBC.diffMonths(Date(-1998, 5, 6)) == -10);
+        assert(dateBC.diffMonths(Date(-1998, 6, 6)) == -11);
+        assert(dateBC.diffMonths(Date(-1998, 7, 6)) == -12);
+        assert(dateBC.diffMonths(Date(-1998, 8, 6)) == -13);
 
-            assert(Date(-2000, 6, 5).diffMonths(dateBC) == -13);
-            assert(Date(-2000, 7, 5).diffMonths(dateBC) == -12);
-            assert(Date(-2000, 8, 5).diffMonths(dateBC) == -11);
-            assert(Date(-2000, 9, 5).diffMonths(dateBC) == -10);
-            assert(Date(-2000, 10, 5).diffMonths(dateBC) == -9);
-            assert(Date(-2000, 11, 5).diffMonths(dateBC) == -8);
-            assert(Date(-2000, 12, 5).diffMonths(dateBC) == -7);
-            assert(Date(-1999, 1, 5).diffMonths(dateBC) == -6);
-            assert(Date(-1999, 2, 6).diffMonths(dateBC) == -5);
-            assert(Date(-1999, 3, 6).diffMonths(dateBC) == -4);
-            assert(Date(-1999, 4, 6).diffMonths(dateBC) == -3);
-            assert(Date(-1999, 5, 6).diffMonths(dateBC) == -2);
-            assert(Date(-1999, 6, 6).diffMonths(dateBC) == -1);
-            assert(Date(-1999, 8, 6).diffMonths(dateBC) == 1);
-            assert(Date(-1999, 9, 6).diffMonths(dateBC) == 2);
-            assert(Date(-1999, 10, 6).diffMonths(dateBC) == 3);
-            assert(Date(-1999, 11, 6).diffMonths(dateBC) == 4);
-            assert(Date(-1999, 12, 6).diffMonths(dateBC) == 5);
-            assert(Date(-1998, 1, 6).diffMonths(dateBC) == 6);
-            assert(Date(-1998, 2, 6).diffMonths(dateBC) == 7);
-            assert(Date(-1998, 3, 6).diffMonths(dateBC) == 8);
-            assert(Date(-1998, 4, 6).diffMonths(dateBC) == 9);
-            assert(Date(-1998, 5, 6).diffMonths(dateBC) == 10);
-            assert(Date(-1998, 6, 6).diffMonths(dateBC) == 11);
-            assert(Date(-1998, 7, 6).diffMonths(dateBC) == 12);
-            assert(Date(-1998, 8, 6).diffMonths(dateBC) == 13);
+        assert(Date(-2000, 6, 5).diffMonths(dateBC) == -13);
+        assert(Date(-2000, 7, 5).diffMonths(dateBC) == -12);
+        assert(Date(-2000, 8, 5).diffMonths(dateBC) == -11);
+        assert(Date(-2000, 9, 5).diffMonths(dateBC) == -10);
+        assert(Date(-2000, 10, 5).diffMonths(dateBC) == -9);
+        assert(Date(-2000, 11, 5).diffMonths(dateBC) == -8);
+        assert(Date(-2000, 12, 5).diffMonths(dateBC) == -7);
+        assert(Date(-1999, 1, 5).diffMonths(dateBC) == -6);
+        assert(Date(-1999, 2, 6).diffMonths(dateBC) == -5);
+        assert(Date(-1999, 3, 6).diffMonths(dateBC) == -4);
+        assert(Date(-1999, 4, 6).diffMonths(dateBC) == -3);
+        assert(Date(-1999, 5, 6).diffMonths(dateBC) == -2);
+        assert(Date(-1999, 6, 6).diffMonths(dateBC) == -1);
+        assert(Date(-1999, 8, 6).diffMonths(dateBC) == 1);
+        assert(Date(-1999, 9, 6).diffMonths(dateBC) == 2);
+        assert(Date(-1999, 10, 6).diffMonths(dateBC) == 3);
+        assert(Date(-1999, 11, 6).diffMonths(dateBC) == 4);
+        assert(Date(-1999, 12, 6).diffMonths(dateBC) == 5);
+        assert(Date(-1998, 1, 6).diffMonths(dateBC) == 6);
+        assert(Date(-1998, 2, 6).diffMonths(dateBC) == 7);
+        assert(Date(-1998, 3, 6).diffMonths(dateBC) == 8);
+        assert(Date(-1998, 4, 6).diffMonths(dateBC) == 9);
+        assert(Date(-1998, 5, 6).diffMonths(dateBC) == 10);
+        assert(Date(-1998, 6, 6).diffMonths(dateBC) == 11);
+        assert(Date(-1998, 7, 6).diffMonths(dateBC) == 12);
+        assert(Date(-1998, 8, 6).diffMonths(dateBC) == 13);
 
-            assert(dateBC.diffMonths(Date(-1999, 6, 30)) == 1);
-            assert(dateBC.diffMonths(Date(-1999, 7, 1)) == 0);
-            assert(dateBC.diffMonths(Date(-1999, 7, 6)) == 0);
-            assert(dateBC.diffMonths(Date(-1999, 7, 11)) == 0);
-            assert(dateBC.diffMonths(Date(-1999, 7, 16)) == 0);
-            assert(dateBC.diffMonths(Date(-1999, 7, 21)) == 0);
-            assert(dateBC.diffMonths(Date(-1999, 7, 26)) == 0);
-            assert(dateBC.diffMonths(Date(-1999, 7, 31)) == 0);
-            assert(dateBC.diffMonths(Date(-1999, 8, 1)) == -1);
+        assert(dateBC.diffMonths(Date(-1999, 6, 30)) == 1);
+        assert(dateBC.diffMonths(Date(-1999, 7, 1)) == 0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 6)) == 0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 11)) == 0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 16)) == 0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 21)) == 0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 26)) == 0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 31)) == 0);
+        assert(dateBC.diffMonths(Date(-1999, 8, 1)) == -1);
 
-            assert(dateBC.diffMonths(Date(-2008, 6, 30)) == 109);
-            assert(dateBC.diffMonths(Date(-2008, 7, 1)) == 108);
-            assert(dateBC.diffMonths(Date(-2008, 7, 6)) == 108);
-            assert(dateBC.diffMonths(Date(-2008, 7, 11)) == 108);
-            assert(dateBC.diffMonths(Date(-2008, 7, 16)) == 108);
-            assert(dateBC.diffMonths(Date(-2008, 7, 21)) == 108);
-            assert(dateBC.diffMonths(Date(-2008, 7, 26)) == 108);
-            assert(dateBC.diffMonths(Date(-2008, 7, 31)) == 108);
-            assert(dateBC.diffMonths(Date(-2008, 8, 1)) == 107);
+        assert(dateBC.diffMonths(Date(-2008, 6, 30)) == 109);
+        assert(dateBC.diffMonths(Date(-2008, 7, 1)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 7, 6)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 7, 11)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 7, 16)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 7, 21)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 7, 26)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 7, 31)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 8, 1)) == 107);
 
-            assert(Date(-1999, 6, 30).diffMonths(dateBC) == -1);
-            assert(Date(-1999, 7, 1).diffMonths(dateBC) == 0);
-            assert(Date(-1999, 7, 6).diffMonths(dateBC) == 0);
-            assert(Date(-1999, 7, 11).diffMonths(dateBC) == 0);
-            assert(Date(-1999, 7, 16).diffMonths(dateBC) == 0);
-            assert(Date(-1999, 7, 21).diffMonths(dateBC) == 0);
-            assert(Date(-1999, 7, 26).diffMonths(dateBC) == 0);
-            assert(Date(-1999, 7, 31).diffMonths(dateBC) == 0);
-            assert(Date(-1999, 8, 1).diffMonths(dateBC) == 1);
+        assert(Date(-1999, 6, 30).diffMonths(dateBC) == -1);
+        assert(Date(-1999, 7, 1).diffMonths(dateBC) == 0);
+        assert(Date(-1999, 7, 6).diffMonths(dateBC) == 0);
+        assert(Date(-1999, 7, 11).diffMonths(dateBC) == 0);
+        assert(Date(-1999, 7, 16).diffMonths(dateBC) == 0);
+        assert(Date(-1999, 7, 21).diffMonths(dateBC) == 0);
+        assert(Date(-1999, 7, 26).diffMonths(dateBC) == 0);
+        assert(Date(-1999, 7, 31).diffMonths(dateBC) == 0);
+        assert(Date(-1999, 8, 1).diffMonths(dateBC) == 1);
 
-            assert(Date(-2008, 6, 30).diffMonths(dateBC) == -109);
-            assert(Date(-2008, 7, 1).diffMonths(dateBC) == -108);
-            assert(Date(-2008, 7, 6).diffMonths(dateBC) == -108);
-            assert(Date(-2008, 7, 11).diffMonths(dateBC) == -108);
-            assert(Date(-2008, 7, 16).diffMonths(dateBC) == -108);
-            assert(Date(-2008, 7, 21).diffMonths(dateBC) == -108);
-            assert(Date(-2008, 7, 26).diffMonths(dateBC) == -108);
-            assert(Date(-2008, 7, 31).diffMonths(dateBC) == -108);
-            assert(Date(-2008, 8, 1).diffMonths(dateBC) == -107);
+        assert(Date(-2008, 6, 30).diffMonths(dateBC) == -109);
+        assert(Date(-2008, 7, 1).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 7, 6).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 7, 11).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 7, 16).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 7, 21).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 7, 26).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 7, 31).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 8, 1).diffMonths(dateBC) == -107);
 
-            //Test Both
-            assert(Date(3, 3, 3).diffMonths(Date(-5, 5, 5)) == 94);
-            assert(Date(-5, 5, 5).diffMonths(Date(3, 3, 3)) == -94);
+        //Test Both
+        assert(Date(3, 3, 3).diffMonths(Date(-5, 5, 5)) == 94);
+        assert(Date(-5, 5, 5).diffMonths(Date(3, 3, 3)) == -94);
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.diffMonths(date)));
-            static assert(__traits(compiles, cdate.diffMonths(date)));
-            static assert(__traits(compiles, idate.diffMonths(date)));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, date.diffMonths(date)));
+        static assert(__traits(compiles, cdate.diffMonths(date)));
+        static assert(__traits(compiles, idate.diffMonths(date)));
 
-            static assert(__traits(compiles, date.diffMonths(cdate)));
-            static assert(__traits(compiles, cdate.diffMonths(cdate)));
-            static assert(__traits(compiles, idate.diffMonths(cdate)));
+        static assert(__traits(compiles, date.diffMonths(cdate)));
+        static assert(__traits(compiles, cdate.diffMonths(cdate)));
+        static assert(__traits(compiles, idate.diffMonths(cdate)));
 
-            static assert(__traits(compiles, date.diffMonths(idate)));
-            static assert(__traits(compiles, cdate.diffMonths(idate)));
-            static assert(__traits(compiles, idate.diffMonths(idate)));
+        static assert(__traits(compiles, date.diffMonths(idate)));
+        static assert(__traits(compiles, cdate.diffMonths(idate)));
+        static assert(__traits(compiles, idate.diffMonths(idate)));
 
-            //Verify Examples.
-            assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
-            assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
-            assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
-            assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
-        }
+        //Verify Examples.
+        assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
+        assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
+        assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
+        assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
     }
 
 
@@ -11830,15 +11758,12 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, date.isLeapYear = true));
-            static assert(!__traits(compiles, cdate.isLeapYear = true));
-            static assert(!__traits(compiles, idate.isLeapYear = true));
-        }
+        auto date = Date(1999, 7, 6);
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, date.isLeapYear = true));
+        static assert(!__traits(compiles, cdate.isLeapYear = true));
+        static assert(!__traits(compiles, idate.isLeapYear = true));
     }
 
 
@@ -11852,15 +11777,12 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.dayOfWeek == DayOfWeek.sun));
-            static assert(!__traits(compiles, cdate.dayOfWeek = DayOfWeek.sun));
-            static assert(__traits(compiles, idate.dayOfWeek == DayOfWeek.sun));
-            static assert(!__traits(compiles, idate.dayOfWeek = DayOfWeek.sun));
-        }
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.dayOfWeek == DayOfWeek.sun));
+        static assert(!__traits(compiles, cdate.dayOfWeek = DayOfWeek.sun));
+        static assert(__traits(compiles, idate.dayOfWeek == DayOfWeek.sun));
+        static assert(!__traits(compiles, idate.dayOfWeek = DayOfWeek.sun));
     }
 
 
@@ -11887,14 +11809,14 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
     }
 
     //Verify Examples.
-    version(testStdDateTime) unittest
+    unittest
     {
         assert(Date(1999, 1, 1).dayOfYear == 1);
         assert(Date(1999, 12, 31).dayOfYear == 365);
         assert(Date(2000, 12, 31).dayOfYear == 366);
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         foreach(year; filter!((a){return !yearIsLeapYear(a);})
                              (chain(testYearsBC, testYearsAD)))
@@ -11952,7 +11874,7 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
         assert(0, "Invalid day of the year.");
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         static void test(Date date, int day, MonthDay expected, size_t line = __LINE__)
         {
@@ -12051,7 +11973,7 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
     //Verify Examples.
-    version(testStdDateTime) unittest
+    unittest
     {
         assert(Date(1, 1, 1).dayOfGregorianCal == 1);
         assert(Date(1, 12, 31).dayOfGregorianCal == 365);
@@ -12065,7 +11987,7 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
         assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         foreach(gd; chain(testGregDaysBC, testGregDaysAD))
             assert(gd.date.dayOfGregorianCal == gd.day);
@@ -12119,44 +12041,41 @@ assert(date == Date(2010, 12, 31));
 
     unittest
     {
-        version(testStdDateTime)
         {
-            {
-                auto date = Date(1999, 7, 6);
-                const cdate = Date(1999, 7, 6);
-                immutable idate = Date(1999, 7, 6);
-                static assert(__traits(compiles, date.dayOfGregorianCal = 187));
-                static assert(!__traits(compiles, cdate.dayOfGregorianCal = 187));
-                static assert(!__traits(compiles, idate.dayOfGregorianCal = 187));
-            }
+            auto date = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, date.dayOfGregorianCal = 187));
+            static assert(!__traits(compiles, cdate.dayOfGregorianCal = 187));
+            static assert(!__traits(compiles, idate.dayOfGregorianCal = 187));
+        }
 
-            //Verify Examples.
-            {
-                auto date = Date.init;
-                date.dayOfGregorianCal = 1;
-                assert(date == Date(1, 1, 1));
+        //Verify Examples.
+        {
+            auto date = Date.init;
+            date.dayOfGregorianCal = 1;
+            assert(date == Date(1, 1, 1));
 
-                date.dayOfGregorianCal = 365;
-                assert(date == Date(1, 12, 31));
+            date.dayOfGregorianCal = 365;
+            assert(date == Date(1, 12, 31));
 
-                date.dayOfGregorianCal = 366;
-                assert(date == Date(2, 1, 1));
+            date.dayOfGregorianCal = 366;
+            assert(date == Date(2, 1, 1));
 
-                date.dayOfGregorianCal = 0;
-                assert(date == Date(0, 12, 31));
+            date.dayOfGregorianCal = 0;
+            assert(date == Date(0, 12, 31));
 
-                date.dayOfGregorianCal = -365;
-                assert(date == Date(-0, 1, 1));
+            date.dayOfGregorianCal = -365;
+            assert(date == Date(-0, 1, 1));
 
-                date.dayOfGregorianCal = -366;
-                assert(date == Date(-1, 12, 31));
+            date.dayOfGregorianCal = -366;
+            assert(date == Date(-1, 12, 31));
 
-                date.dayOfGregorianCal = 730_120;
-                assert(date == Date(2000, 1, 1));
+            date.dayOfGregorianCal = 730_120;
+            assert(date == Date(2000, 1, 1));
 
-                date.dayOfGregorianCal = 734_137;
-                assert(date == Date(2010, 12, 31));
-            }
+            date.dayOfGregorianCal = 734_137;
+            assert(date == Date(2010, 12, 31));
         }
     }
 
@@ -12203,66 +12122,63 @@ assert(date == Date(2010, 12, 31));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assert(Date(2009, 12, 28).isoWeek == 53);
-            assert(Date(2009, 12, 29).isoWeek == 53);
-            assert(Date(2009, 12, 30).isoWeek == 53);
-            assert(Date(2009, 12, 31).isoWeek == 53);
-            assert(Date(2010, 1, 1).isoWeek == 53);
-            assert(Date(2010, 1, 2).isoWeek == 53);
-            assert(Date(2010, 1, 3).isoWeek == 53);
-            assert(Date(2010, 1, 4).isoWeek == 1);
-            assert(Date(2010, 1, 5).isoWeek == 1);
-            assert(Date(2010, 1, 6).isoWeek == 1);
-            assert(Date(2010, 1, 7).isoWeek == 1);
-            assert(Date(2010, 1, 8).isoWeek == 1);
-            assert(Date(2010, 1, 9).isoWeek == 1);
-            assert(Date(2010, 1, 10).isoWeek == 1);
-            assert(Date(2010, 1, 11).isoWeek == 2);
-            assert(Date(2010, 12, 31).isoWeek == 52);
+        //Test A.D.
+        assert(Date(2009, 12, 28).isoWeek == 53);
+        assert(Date(2009, 12, 29).isoWeek == 53);
+        assert(Date(2009, 12, 30).isoWeek == 53);
+        assert(Date(2009, 12, 31).isoWeek == 53);
+        assert(Date(2010, 1, 1).isoWeek == 53);
+        assert(Date(2010, 1, 2).isoWeek == 53);
+        assert(Date(2010, 1, 3).isoWeek == 53);
+        assert(Date(2010, 1, 4).isoWeek == 1);
+        assert(Date(2010, 1, 5).isoWeek == 1);
+        assert(Date(2010, 1, 6).isoWeek == 1);
+        assert(Date(2010, 1, 7).isoWeek == 1);
+        assert(Date(2010, 1, 8).isoWeek == 1);
+        assert(Date(2010, 1, 9).isoWeek == 1);
+        assert(Date(2010, 1, 10).isoWeek == 1);
+        assert(Date(2010, 1, 11).isoWeek == 2);
+        assert(Date(2010, 12, 31).isoWeek == 52);
 
-            assert(Date(2004, 12, 26).isoWeek == 52);
-            assert(Date(2004, 12, 27).isoWeek == 53);
-            assert(Date(2004, 12, 28).isoWeek == 53);
-            assert(Date(2004, 12, 29).isoWeek == 53);
-            assert(Date(2004, 12, 30).isoWeek == 53);
-            assert(Date(2004, 12, 31).isoWeek == 53);
-            assert(Date(2005, 1, 1).isoWeek == 53);
-            assert(Date(2005, 1, 2).isoWeek == 53);
+        assert(Date(2004, 12, 26).isoWeek == 52);
+        assert(Date(2004, 12, 27).isoWeek == 53);
+        assert(Date(2004, 12, 28).isoWeek == 53);
+        assert(Date(2004, 12, 29).isoWeek == 53);
+        assert(Date(2004, 12, 30).isoWeek == 53);
+        assert(Date(2004, 12, 31).isoWeek == 53);
+        assert(Date(2005, 1, 1).isoWeek == 53);
+        assert(Date(2005, 1, 2).isoWeek == 53);
 
-            assert(Date(2005, 12, 31).isoWeek == 52);
-            assert(Date(2007, 1, 1).isoWeek == 1);
+        assert(Date(2005, 12, 31).isoWeek == 52);
+        assert(Date(2007, 1, 1).isoWeek == 1);
 
-            assert(Date(2007, 12, 30).isoWeek == 52);
-            assert(Date(2007, 12, 31).isoWeek == 1);
-            assert(Date(2008, 1, 1).isoWeek == 1);
+        assert(Date(2007, 12, 30).isoWeek == 52);
+        assert(Date(2007, 12, 31).isoWeek == 1);
+        assert(Date(2008, 1, 1).isoWeek == 1);
 
-            assert(Date(2008, 12, 28).isoWeek == 52);
-            assert(Date(2008, 12, 29).isoWeek == 1);
-            assert(Date(2008, 12, 30).isoWeek == 1);
-            assert(Date(2008, 12, 31).isoWeek == 1);
-            assert(Date(2009, 1, 1).isoWeek == 1);
-            assert(Date(2009, 1, 2).isoWeek == 1);
-            assert(Date(2009, 1, 3).isoWeek == 1);
-            assert(Date(2009, 1, 4).isoWeek == 1);
+        assert(Date(2008, 12, 28).isoWeek == 52);
+        assert(Date(2008, 12, 29).isoWeek == 1);
+        assert(Date(2008, 12, 30).isoWeek == 1);
+        assert(Date(2008, 12, 31).isoWeek == 1);
+        assert(Date(2009, 1, 1).isoWeek == 1);
+        assert(Date(2009, 1, 2).isoWeek == 1);
+        assert(Date(2009, 1, 3).isoWeek == 1);
+        assert(Date(2009, 1, 4).isoWeek == 1);
 
-            //Test B.C.
-            //The algorithm should work identically for both A.D. and B.C. since
-            //it doesn't really take the year into account, so B.C. testing
-            //probably isn't really needed.
-            assert(Date(0, 12, 31).isoWeek == 52);
-            assert(Date(0, 1, 4).isoWeek == 1);
-            assert(Date(0, 1, 1).isoWeek == 52);
+        //Test B.C.
+        //The algorithm should work identically for both A.D. and B.C. since
+        //it doesn't really take the year into account, so B.C. testing
+        //probably isn't really needed.
+        assert(Date(0, 12, 31).isoWeek == 52);
+        assert(Date(0, 1, 4).isoWeek == 1);
+        assert(Date(0, 1, 1).isoWeek == 52);
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.isoWeek == 3));
-            static assert(!__traits(compiles, cdate.isoWeek = 3));
-            static assert(__traits(compiles, idate.isoWeek == 3));
-            static assert(!__traits(compiles, idate.isoWeek = 3));
-        }
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.isoWeek == 3));
+        static assert(!__traits(compiles, cdate.isoWeek = 3));
+        static assert(__traits(compiles, idate.isoWeek == 3));
+        static assert(!__traits(compiles, idate.isoWeek = 3));
     }
 
 
@@ -12287,49 +12203,46 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assert(Date(1999, 1, 1).endOfMonth == Date(1999, 1, 31));
-            assert(Date(1999, 2, 1).endOfMonth == Date(1999, 2, 28));
-            assert(Date(2000, 2, 1).endOfMonth == Date(2000, 2, 29));
-            assert(Date(1999, 3, 1).endOfMonth == Date(1999, 3, 31));
-            assert(Date(1999, 4, 1).endOfMonth == Date(1999, 4, 30));
-            assert(Date(1999, 5, 1).endOfMonth == Date(1999, 5, 31));
-            assert(Date(1999, 6, 1).endOfMonth == Date(1999, 6, 30));
-            assert(Date(1999, 7, 1).endOfMonth == Date(1999, 7, 31));
-            assert(Date(1999, 8, 1).endOfMonth == Date(1999, 8, 31));
-            assert(Date(1999, 9, 1).endOfMonth == Date(1999, 9, 30));
-            assert(Date(1999, 10, 1).endOfMonth == Date(1999, 10, 31));
-            assert(Date(1999, 11, 1).endOfMonth == Date(1999, 11, 30));
-            assert(Date(1999, 12, 1).endOfMonth == Date(1999, 12, 31));
+        //Test A.D.
+        assert(Date(1999, 1, 1).endOfMonth == Date(1999, 1, 31));
+        assert(Date(1999, 2, 1).endOfMonth == Date(1999, 2, 28));
+        assert(Date(2000, 2, 1).endOfMonth == Date(2000, 2, 29));
+        assert(Date(1999, 3, 1).endOfMonth == Date(1999, 3, 31));
+        assert(Date(1999, 4, 1).endOfMonth == Date(1999, 4, 30));
+        assert(Date(1999, 5, 1).endOfMonth == Date(1999, 5, 31));
+        assert(Date(1999, 6, 1).endOfMonth == Date(1999, 6, 30));
+        assert(Date(1999, 7, 1).endOfMonth == Date(1999, 7, 31));
+        assert(Date(1999, 8, 1).endOfMonth == Date(1999, 8, 31));
+        assert(Date(1999, 9, 1).endOfMonth == Date(1999, 9, 30));
+        assert(Date(1999, 10, 1).endOfMonth == Date(1999, 10, 31));
+        assert(Date(1999, 11, 1).endOfMonth == Date(1999, 11, 30));
+        assert(Date(1999, 12, 1).endOfMonth == Date(1999, 12, 31));
 
-            //Test B.C.
-            assert(Date(-1999, 1, 1).endOfMonth == Date(-1999, 1, 31));
-            assert(Date(-1999, 2, 1).endOfMonth == Date(-1999, 2, 28));
-            assert(Date(-2000, 2, 1).endOfMonth == Date(-2000, 2, 29));
-            assert(Date(-1999, 3, 1).endOfMonth == Date(-1999, 3, 31));
-            assert(Date(-1999, 4, 1).endOfMonth == Date(-1999, 4, 30));
-            assert(Date(-1999, 5, 1).endOfMonth == Date(-1999, 5, 31));
-            assert(Date(-1999, 6, 1).endOfMonth == Date(-1999, 6, 30));
-            assert(Date(-1999, 7, 1).endOfMonth == Date(-1999, 7, 31));
-            assert(Date(-1999, 8, 1).endOfMonth == Date(-1999, 8, 31));
-            assert(Date(-1999, 9, 1).endOfMonth == Date(-1999, 9, 30));
-            assert(Date(-1999, 10, 1).endOfMonth == Date(-1999, 10, 31));
-            assert(Date(-1999, 11, 1).endOfMonth == Date(-1999, 11, 30));
-            assert(Date(-1999, 12, 1).endOfMonth == Date(-1999, 12, 31));
+        //Test B.C.
+        assert(Date(-1999, 1, 1).endOfMonth == Date(-1999, 1, 31));
+        assert(Date(-1999, 2, 1).endOfMonth == Date(-1999, 2, 28));
+        assert(Date(-2000, 2, 1).endOfMonth == Date(-2000, 2, 29));
+        assert(Date(-1999, 3, 1).endOfMonth == Date(-1999, 3, 31));
+        assert(Date(-1999, 4, 1).endOfMonth == Date(-1999, 4, 30));
+        assert(Date(-1999, 5, 1).endOfMonth == Date(-1999, 5, 31));
+        assert(Date(-1999, 6, 1).endOfMonth == Date(-1999, 6, 30));
+        assert(Date(-1999, 7, 1).endOfMonth == Date(-1999, 7, 31));
+        assert(Date(-1999, 8, 1).endOfMonth == Date(-1999, 8, 31));
+        assert(Date(-1999, 9, 1).endOfMonth == Date(-1999, 9, 30));
+        assert(Date(-1999, 10, 1).endOfMonth == Date(-1999, 10, 31));
+        assert(Date(-1999, 11, 1).endOfMonth == Date(-1999, 11, 30));
+        assert(Date(-1999, 12, 1).endOfMonth == Date(-1999, 12, 31));
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.endOfMonth = Date(1999, 7, 30)));
-            static assert(!__traits(compiles, idate.endOfMonth = Date(1999, 7, 30)));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.endOfMonth = Date(1999, 7, 30)));
+        static assert(!__traits(compiles, idate.endOfMonth = Date(1999, 7, 30)));
 
-            //Verify Examples.
-            assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
-            assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
-            assert(Date(2000, 2, 7).endOfMonth == Date(2000, 2, 29));
-            assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
-        }
+        //Verify Examples.
+        assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
+        assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
+        assert(Date(2000, 2, 7).endOfMonth == Date(2000, 2, 29));
+        assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
     }
 
 
@@ -12351,49 +12264,46 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assert(Date(1999, 1, 1).daysInMonth == 31);
-            assert(Date(1999, 2, 1).daysInMonth == 28);
-            assert(Date(2000, 2, 1).daysInMonth == 29);
-            assert(Date(1999, 3, 1).daysInMonth == 31);
-            assert(Date(1999, 4, 1).daysInMonth == 30);
-            assert(Date(1999, 5, 1).daysInMonth == 31);
-            assert(Date(1999, 6, 1).daysInMonth == 30);
-            assert(Date(1999, 7, 1).daysInMonth == 31);
-            assert(Date(1999, 8, 1).daysInMonth == 31);
-            assert(Date(1999, 9, 1).daysInMonth == 30);
-            assert(Date(1999, 10, 1).daysInMonth == 31);
-            assert(Date(1999, 11, 1).daysInMonth == 30);
-            assert(Date(1999, 12, 1).daysInMonth == 31);
+        //Test A.D.
+        assert(Date(1999, 1, 1).daysInMonth == 31);
+        assert(Date(1999, 2, 1).daysInMonth == 28);
+        assert(Date(2000, 2, 1).daysInMonth == 29);
+        assert(Date(1999, 3, 1).daysInMonth == 31);
+        assert(Date(1999, 4, 1).daysInMonth == 30);
+        assert(Date(1999, 5, 1).daysInMonth == 31);
+        assert(Date(1999, 6, 1).daysInMonth == 30);
+        assert(Date(1999, 7, 1).daysInMonth == 31);
+        assert(Date(1999, 8, 1).daysInMonth == 31);
+        assert(Date(1999, 9, 1).daysInMonth == 30);
+        assert(Date(1999, 10, 1).daysInMonth == 31);
+        assert(Date(1999, 11, 1).daysInMonth == 30);
+        assert(Date(1999, 12, 1).daysInMonth == 31);
 
-            //Test B.C.
-            assert(Date(-1999, 1, 1).daysInMonth == 31);
-            assert(Date(-1999, 2, 1).daysInMonth == 28);
-            assert(Date(-2000, 2, 1).daysInMonth == 29);
-            assert(Date(-1999, 3, 1).daysInMonth == 31);
-            assert(Date(-1999, 4, 1).daysInMonth == 30);
-            assert(Date(-1999, 5, 1).daysInMonth == 31);
-            assert(Date(-1999, 6, 1).daysInMonth == 30);
-            assert(Date(-1999, 7, 1).daysInMonth == 31);
-            assert(Date(-1999, 8, 1).daysInMonth == 31);
-            assert(Date(-1999, 9, 1).daysInMonth == 30);
-            assert(Date(-1999, 10, 1).daysInMonth == 31);
-            assert(Date(-1999, 11, 1).daysInMonth == 30);
-            assert(Date(-1999, 12, 1).daysInMonth == 31);
+        //Test B.C.
+        assert(Date(-1999, 1, 1).daysInMonth == 31);
+        assert(Date(-1999, 2, 1).daysInMonth == 28);
+        assert(Date(-2000, 2, 1).daysInMonth == 29);
+        assert(Date(-1999, 3, 1).daysInMonth == 31);
+        assert(Date(-1999, 4, 1).daysInMonth == 30);
+        assert(Date(-1999, 5, 1).daysInMonth == 31);
+        assert(Date(-1999, 6, 1).daysInMonth == 30);
+        assert(Date(-1999, 7, 1).daysInMonth == 31);
+        assert(Date(-1999, 8, 1).daysInMonth == 31);
+        assert(Date(-1999, 9, 1).daysInMonth == 30);
+        assert(Date(-1999, 10, 1).daysInMonth == 31);
+        assert(Date(-1999, 11, 1).daysInMonth == 30);
+        assert(Date(-1999, 12, 1).daysInMonth == 31);
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.daysInMonth = 30));
-            static assert(!__traits(compiles, idate.daysInMonth = 30));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.daysInMonth = 30));
+        static assert(!__traits(compiles, idate.daysInMonth = 30));
 
-            //Verify Examples.
-            assert(Date(1999, 1, 6).daysInMonth == 31);
-            assert(Date(1999, 2, 7).daysInMonth == 28);
-            assert(Date(2000, 2, 7).daysInMonth == 29);
-            assert(Date(2000, 6, 4).daysInMonth == 30);
-        }
+        //Verify Examples.
+        assert(Date(1999, 1, 6).daysInMonth == 31);
+        assert(Date(1999, 2, 7).daysInMonth == 28);
+        assert(Date(2000, 2, 7).daysInMonth == 29);
+        assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
 
@@ -12415,25 +12325,22 @@ assert(!Date(-2010, 1, 1).isAD);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(Date(2010, 7, 4).isAD);
-            assert(Date(1, 1, 1).isAD);
-            assert(!Date(0, 1, 1).isAD);
-            assert(!Date(-1, 1, 1).isAD);
-            assert(!Date(-2010, 7, 4).isAD);
+        assert(Date(2010, 7, 4).isAD);
+        assert(Date(1, 1, 1).isAD);
+        assert(!Date(0, 1, 1).isAD);
+        assert(!Date(-1, 1, 1).isAD);
+        assert(!Date(-2010, 7, 4).isAD);
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.isAD));
-            static assert(__traits(compiles, idate.isAD));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.isAD));
+        static assert(__traits(compiles, idate.isAD));
 
-            //Verify Examples.
-            assert(Date(1, 1, 1).isAD);
-            assert(Date(2010, 12, 31).isAD);
-            assert(!Date(0, 12, 31).isAD);
-            assert(!Date(-2010, 1, 1).isAD);
-        }
+        //Verify Examples.
+        assert(Date(1, 1, 1).isAD);
+        assert(Date(2010, 12, 31).isAD);
+        assert(!Date(0, 12, 31).isAD);
+        assert(!Date(-2010, 1, 1).isAD);
     }
 
 
@@ -12448,22 +12355,19 @@ assert(!Date(-2010, 1, 1).isAD);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(Date(-4713, 11, 24).julianDay == 0);
-            assert(Date(0, 12, 31).julianDay == 1_721_425);
-            assert(Date(1, 1, 1).julianDay == 1_721_426);
-            assert(Date(1582, 10, 15).julianDay == 2_299_161);
-            assert(Date(1858, 11, 17).julianDay == 2_400_001);
-            assert(Date(1982, 1, 4).julianDay == 2_444_974);
-            assert(Date(1996, 3, 31).julianDay == 2_450_174);
-            assert(Date(2010, 8, 24).julianDay == 2_455_433);
+        assert(Date(-4713, 11, 24).julianDay == 0);
+        assert(Date(0, 12, 31).julianDay == 1_721_425);
+        assert(Date(1, 1, 1).julianDay == 1_721_426);
+        assert(Date(1582, 10, 15).julianDay == 2_299_161);
+        assert(Date(1858, 11, 17).julianDay == 2_400_001);
+        assert(Date(1982, 1, 4).julianDay == 2_444_974);
+        assert(Date(1996, 3, 31).julianDay == 2_450_174);
+        assert(Date(2010, 8, 24).julianDay == 2_455_433);
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.julianDay));
-            static assert(__traits(compiles, idate.julianDay));
-        }
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.julianDay));
+        static assert(__traits(compiles, idate.julianDay));
     }
 
 
@@ -12478,16 +12382,13 @@ assert(!Date(-2010, 1, 1).isAD);
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(Date(1858, 11, 17).modJulianDay == 0);
-            assert(Date(2010, 8, 24).modJulianDay == 55_432);
+        assert(Date(1858, 11, 17).modJulianDay == 0);
+        assert(Date(2010, 8, 24).modJulianDay == 55_432);
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.modJulianDay));
-            static assert(__traits(compiles, idate.modJulianDay));
-        }
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.modJulianDay));
+        static assert(__traits(compiles, idate.modJulianDay));
     }
 
 
@@ -12524,34 +12425,31 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assert(Date(9, 12, 4).toISOString() == "00091204");
-            assert(Date(99, 12, 4).toISOString() == "00991204");
-            assert(Date(999, 12, 4).toISOString() == "09991204");
-            assert(Date(9999, 7, 4).toISOString() == "99990704");
-            assert(Date(10000, 10, 20).toISOString() == "+100001020");
+        //Test A.D.
+        assert(Date(9, 12, 4).toISOString() == "00091204");
+        assert(Date(99, 12, 4).toISOString() == "00991204");
+        assert(Date(999, 12, 4).toISOString() == "09991204");
+        assert(Date(9999, 7, 4).toISOString() == "99990704");
+        assert(Date(10000, 10, 20).toISOString() == "+100001020");
 
-            //Test B.C.
-            assert(Date(0, 12, 4).toISOString() == "00001204");
-            assert(Date(-9, 12, 4).toISOString() == "-00091204");
-            assert(Date(-99, 12, 4).toISOString() == "-00991204");
-            assert(Date(-999, 12, 4).toISOString() == "-09991204");
-            assert(Date(-9999, 7, 4).toISOString() == "-99990704");
-            assert(Date(-10000, 10, 20).toISOString() == "-100001020");
+        //Test B.C.
+        assert(Date(0, 12, 4).toISOString() == "00001204");
+        assert(Date(-9, 12, 4).toISOString() == "-00091204");
+        assert(Date(-99, 12, 4).toISOString() == "-00991204");
+        assert(Date(-999, 12, 4).toISOString() == "-09991204");
+        assert(Date(-9999, 7, 4).toISOString() == "-99990704");
+        assert(Date(-10000, 10, 20).toISOString() == "-100001020");
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.toISOString()));
-            static assert(__traits(compiles, idate.toISOString()));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.toISOString()));
+        static assert(__traits(compiles, idate.toISOString()));
 
-            //Verify Examples.
-            assert(Date(2010, 7, 4).toISOString() == "20100704");
-            assert(Date(1998, 12, 25).toISOString() == "19981225");
-            assert(Date(0, 1, 5).toISOString() == "00000105");
-            assert(Date(-4, 1, 5).toISOString() == "-00040105");
-        }
+        //Verify Examples.
+        assert(Date(2010, 7, 4).toISOString() == "20100704");
+        assert(Date(1998, 12, 25).toISOString() == "19981225");
+        assert(Date(0, 1, 5).toISOString() == "00000105");
+        assert(Date(-4, 1, 5).toISOString() == "-00040105");
     }
 
     /++
@@ -12587,34 +12485,31 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assert(Date(9, 12, 4).toISOExtString() == "0009-12-04");
-            assert(Date(99, 12, 4).toISOExtString() == "0099-12-04");
-            assert(Date(999, 12, 4).toISOExtString() == "0999-12-04");
-            assert(Date(9999, 7, 4).toISOExtString() == "9999-07-04");
-            assert(Date(10000, 10, 20).toISOExtString() == "+10000-10-20");
+        //Test A.D.
+        assert(Date(9, 12, 4).toISOExtString() == "0009-12-04");
+        assert(Date(99, 12, 4).toISOExtString() == "0099-12-04");
+        assert(Date(999, 12, 4).toISOExtString() == "0999-12-04");
+        assert(Date(9999, 7, 4).toISOExtString() == "9999-07-04");
+        assert(Date(10000, 10, 20).toISOExtString() == "+10000-10-20");
 
-            //Test B.C.
-            assert(Date(0, 12, 4).toISOExtString() == "0000-12-04");
-            assert(Date(-9, 12, 4).toISOExtString() == "-0009-12-04");
-            assert(Date(-99, 12, 4).toISOExtString() == "-0099-12-04");
-            assert(Date(-999, 12, 4).toISOExtString() == "-0999-12-04");
-            assert(Date(-9999, 7, 4).toISOExtString() == "-9999-07-04");
-            assert(Date(-10000, 10, 20).toISOExtString() == "-10000-10-20");
+        //Test B.C.
+        assert(Date(0, 12, 4).toISOExtString() == "0000-12-04");
+        assert(Date(-9, 12, 4).toISOExtString() == "-0009-12-04");
+        assert(Date(-99, 12, 4).toISOExtString() == "-0099-12-04");
+        assert(Date(-999, 12, 4).toISOExtString() == "-0999-12-04");
+        assert(Date(-9999, 7, 4).toISOExtString() == "-9999-07-04");
+        assert(Date(-10000, 10, 20).toISOExtString() == "-10000-10-20");
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.toISOExtString()));
-            static assert(__traits(compiles, idate.toISOExtString()));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.toISOExtString()));
+        static assert(__traits(compiles, idate.toISOExtString()));
 
-            //Verify Examples.
-            assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
-            assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
-            assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
-            assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
-        }
+        //Verify Examples.
+        assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
+        assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
+        assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
+        assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     /++
@@ -12650,34 +12545,31 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assert(Date(9, 12, 4).toSimpleString() == "0009-Dec-04");
-            assert(Date(99, 12, 4).toSimpleString() == "0099-Dec-04");
-            assert(Date(999, 12, 4).toSimpleString() == "0999-Dec-04");
-            assert(Date(9999, 7, 4).toSimpleString() == "9999-Jul-04");
-            assert(Date(10000, 10, 20).toSimpleString() == "+10000-Oct-20");
+        //Test A.D.
+        assert(Date(9, 12, 4).toSimpleString() == "0009-Dec-04");
+        assert(Date(99, 12, 4).toSimpleString() == "0099-Dec-04");
+        assert(Date(999, 12, 4).toSimpleString() == "0999-Dec-04");
+        assert(Date(9999, 7, 4).toSimpleString() == "9999-Jul-04");
+        assert(Date(10000, 10, 20).toSimpleString() == "+10000-Oct-20");
 
-            //Test B.C.
-            assert(Date(0, 12, 4).toSimpleString() == "0000-Dec-04");
-            assert(Date(-9, 12, 4).toSimpleString() == "-0009-Dec-04");
-            assert(Date(-99, 12, 4).toSimpleString() == "-0099-Dec-04");
-            assert(Date(-999, 12, 4).toSimpleString() == "-0999-Dec-04");
-            assert(Date(-9999, 7, 4).toSimpleString() == "-9999-Jul-04");
-            assert(Date(-10000, 10, 20).toSimpleString() == "-10000-Oct-20");
+        //Test B.C.
+        assert(Date(0, 12, 4).toSimpleString() == "0000-Dec-04");
+        assert(Date(-9, 12, 4).toSimpleString() == "-0009-Dec-04");
+        assert(Date(-99, 12, 4).toSimpleString() == "-0099-Dec-04");
+        assert(Date(-999, 12, 4).toSimpleString() == "-0999-Dec-04");
+        assert(Date(-9999, 7, 4).toSimpleString() == "-9999-Jul-04");
+        assert(Date(-10000, 10, 20).toSimpleString() == "-10000-Oct-20");
 
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.toSimpleString()));
-            static assert(__traits(compiles, idate.toSimpleString()));
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, cdate.toSimpleString()));
+        static assert(__traits(compiles, idate.toSimpleString()));
 
-            //Verify Examples.
-            assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
-            assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
-            assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
-            assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
-        }
+        //Verify Examples.
+        assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
+        assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
+        assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
+        assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
     }
 
     //TODO Add a function which returns a string in a user-specified format.
@@ -12707,15 +12599,12 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.toString()));
-            static assert(__traits(compiles, cdate.toString()));
-            static assert(__traits(compiles, idate.toString()));
-        }
+        auto date = Date(1999, 7, 6);
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, date.toString()));
+        static assert(__traits(compiles, cdate.toString()));
+        static assert(__traits(compiles, idate.toString()));
     }
 
 
@@ -12768,78 +12657,75 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(Date.fromISOString(""));
-            assertThrown!DateTimeException(Date.fromISOString("990704"));
-            assertThrown!DateTimeException(Date.fromISOString("0100704"));
-            assertThrown!DateTimeException(Date.fromISOString("2010070"));
-            assertThrown!DateTimeException(Date.fromISOString("2010070 "));
-            assertThrown!DateTimeException(Date.fromISOString("120100704"));
-            assertThrown!DateTimeException(Date.fromISOString("-0100704"));
-            assertThrown!DateTimeException(Date.fromISOString("+0100704"));
-            assertThrown!DateTimeException(Date.fromISOString("2010070a"));
-            assertThrown!DateTimeException(Date.fromISOString("20100a04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010a704"));
+        assertThrown!DateTimeException(Date.fromISOString(""));
+        assertThrown!DateTimeException(Date.fromISOString("990704"));
+        assertThrown!DateTimeException(Date.fromISOString("0100704"));
+        assertThrown!DateTimeException(Date.fromISOString("2010070"));
+        assertThrown!DateTimeException(Date.fromISOString("2010070 "));
+        assertThrown!DateTimeException(Date.fromISOString("120100704"));
+        assertThrown!DateTimeException(Date.fromISOString("-0100704"));
+        assertThrown!DateTimeException(Date.fromISOString("+0100704"));
+        assertThrown!DateTimeException(Date.fromISOString("2010070a"));
+        assertThrown!DateTimeException(Date.fromISOString("20100a04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010a704"));
 
-            assertThrown!DateTimeException(Date.fromISOString("99-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-0"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-0 "));
-            assertThrown!DateTimeException(Date.fromISOString("12010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("-010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("+010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-0a"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-0a-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-a7-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010/07/04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010/7/04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010/7/4"));
-            assertThrown!DateTimeException(Date.fromISOString("2010/07/4"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-7-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-7-4"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-4"));
+        assertThrown!DateTimeException(Date.fromISOString("99-07-04"));
+        assertThrown!DateTimeException(Date.fromISOString("010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-07-0"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-07-0 "));
+        assertThrown!DateTimeException(Date.fromISOString("12010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOString("-010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOString("+010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-07-0a"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-0a-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-a7-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010/07/04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010/7/04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010/7/4"));
+        assertThrown!DateTimeException(Date.fromISOString("2010/07/4"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-7-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-7-4"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-07-4"));
 
-            assertThrown!DateTimeException(Date.fromISOString("99Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010Jul0"));
-            assertThrown!DateTimeException(Date.fromISOString("2010Jul0 "));
-            assertThrown!DateTimeException(Date.fromISOString("12010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("-010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("+010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010Jul0a"));
-            assertThrown!DateTimeException(Date.fromISOString("2010Jua04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010aul04"));
+        assertThrown!DateTimeException(Date.fromISOString("99Jul04"));
+        assertThrown!DateTimeException(Date.fromISOString("010Jul04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010Jul0"));
+        assertThrown!DateTimeException(Date.fromISOString("2010Jul0 "));
+        assertThrown!DateTimeException(Date.fromISOString("12010Jul04"));
+        assertThrown!DateTimeException(Date.fromISOString("-010Jul04"));
+        assertThrown!DateTimeException(Date.fromISOString("+010Jul04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010Jul0a"));
+        assertThrown!DateTimeException(Date.fromISOString("2010Jua04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010aul04"));
 
-            assertThrown!DateTimeException(Date.fromISOString("99-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0 "));
-            assertThrown!DateTimeException(Date.fromISOString("12010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("-010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("+010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0a"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jua-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jal-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-aul-04"));
+        assertThrown!DateTimeException(Date.fromISOString("99-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOString("010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0 "));
+        assertThrown!DateTimeException(Date.fromISOString("12010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOString("-010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOString("+010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0a"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-Jua-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-Jal-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-aul-04"));
 
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOString("2010-Jul-04"));
 
-            assert(Date.fromISOString("19990706") == Date(1999, 7, 6));
-            assert(Date.fromISOString("-19990706") == Date(-1999, 7, 6));
-            assert(Date.fromISOString("+019990706") == Date(1999, 7, 6));
-            assert(Date.fromISOString("19990706 ") == Date(1999, 7, 6));
-            assert(Date.fromISOString(" 19990706") == Date(1999, 7, 6));
-            assert(Date.fromISOString(" 19990706 ") == Date(1999, 7, 6));
+        assert(Date.fromISOString("19990706") == Date(1999, 7, 6));
+        assert(Date.fromISOString("-19990706") == Date(-1999, 7, 6));
+        assert(Date.fromISOString("+019990706") == Date(1999, 7, 6));
+        assert(Date.fromISOString("19990706 ") == Date(1999, 7, 6));
+        assert(Date.fromISOString(" 19990706") == Date(1999, 7, 6));
+        assert(Date.fromISOString(" 19990706 ") == Date(1999, 7, 6));
 
-            //Verify Examples.
-            assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
-            assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
-            assert(Date.fromISOString("00000105") == Date(0, 1, 5));
-            assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
-            assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
-        }
+        //Verify Examples.
+        assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
+        assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
+        assert(Date.fromISOString("00000105") == Date(0, 1, 5));
+        assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
+        assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
     }
 
 
@@ -12898,78 +12784,75 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(Date.fromISOExtString(""));
-            assertThrown!DateTimeException(Date.fromISOExtString("990704"));
-            assertThrown!DateTimeException(Date.fromISOExtString("0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010070"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010070 "));
-            assertThrown!DateTimeException(Date.fromISOExtString("120100704"));
-            assertThrown!DateTimeException(Date.fromISOExtString("-0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtString("+0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010070a"));
-            assertThrown!DateTimeException(Date.fromISOExtString("20100a04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010a704"));
+        assertThrown!DateTimeException(Date.fromISOExtString(""));
+        assertThrown!DateTimeException(Date.fromISOExtString("990704"));
+        assertThrown!DateTimeException(Date.fromISOExtString("0100704"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010070"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010070 "));
+        assertThrown!DateTimeException(Date.fromISOExtString("120100704"));
+        assertThrown!DateTimeException(Date.fromISOExtString("-0100704"));
+        assertThrown!DateTimeException(Date.fromISOExtString("+0100704"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010070a"));
+        assertThrown!DateTimeException(Date.fromISOExtString("20100a04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010a704"));
 
-            assertThrown!DateTimeException(Date.fromISOExtString("99-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0 "));
-            assertThrown!DateTimeException(Date.fromISOExtString("12010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("-010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("+010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0a"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-0a-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-a7-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010/07/04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010/7/04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010/7/4"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010/07/4"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-7-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-7-4"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-07-4"));
+        assertThrown!DateTimeException(Date.fromISOExtString("99-07-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0 "));
+        assertThrown!DateTimeException(Date.fromISOExtString("12010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("-010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("+010-07-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-07-0a"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-0a-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-a7-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010/07/04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010/7/04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010/7/4"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010/07/4"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-7-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-7-4"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-07-4"));
 
-            assertThrown!DateTimeException(Date.fromISOExtString("99Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0 "));
-            assertThrown!DateTimeException(Date.fromISOExtString("12010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("-010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("+010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0a"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010Jua04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010aul04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("99Jul04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("010Jul04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0 "));
+        assertThrown!DateTimeException(Date.fromISOExtString("12010Jul04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("-010Jul04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("+010Jul04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0a"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010Jua04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010aul04"));
 
-            assertThrown!DateTimeException(Date.fromISOExtString("99-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0 "));
-            assertThrown!DateTimeException(Date.fromISOExtString("12010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("-010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("+010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0a"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jua-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jal-04"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-aul-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("99-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010Jul0 "));
+        assertThrown!DateTimeException(Date.fromISOExtString("12010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("-010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("+010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-0a"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-Jua-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-Jal-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-aul-04"));
 
-            assertThrown!DateTimeException(Date.fromISOExtString("20100704"));
-            assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromISOExtString("20100704"));
+        assertThrown!DateTimeException(Date.fromISOExtString("2010-Jul-04"));
 
-            assert(Date.fromISOExtString("1999-07-06") == Date(1999, 7, 6));
-            assert(Date.fromISOExtString("-1999-07-06") == Date(-1999, 7, 6));
-            assert(Date.fromISOExtString("+01999-07-06") == Date(1999, 7, 6));
-            assert(Date.fromISOExtString("1999-07-06 ") == Date(1999, 7, 6));
-            assert(Date.fromISOExtString(" 1999-07-06") == Date(1999, 7, 6));
-            assert(Date.fromISOExtString(" 1999-07-06 ") == Date(1999, 7, 6));
+        assert(Date.fromISOExtString("1999-07-06") == Date(1999, 7, 6));
+        assert(Date.fromISOExtString("-1999-07-06") == Date(-1999, 7, 6));
+        assert(Date.fromISOExtString("+01999-07-06") == Date(1999, 7, 6));
+        assert(Date.fromISOExtString("1999-07-06 ") == Date(1999, 7, 6));
+        assert(Date.fromISOExtString(" 1999-07-06") == Date(1999, 7, 6));
+        assert(Date.fromISOExtString(" 1999-07-06 ") == Date(1999, 7, 6));
 
-            //Verify Examples.
-            assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
-            assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
-            assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
-            assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
-            assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
-        }
+        //Verify Examples.
+        assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
+        assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
+        assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
+        assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
+        assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
 
@@ -13025,78 +12908,75 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(Date.fromSimpleString(""));
-            assertThrown!DateTimeException(Date.fromSimpleString("990704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("0100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010070"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010070 "));
-            assertThrown!DateTimeException(Date.fromSimpleString("120100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("-0100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("+0100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010070a"));
-            assertThrown!DateTimeException(Date.fromSimpleString("20100a04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010a704"));
+        assertThrown!DateTimeException(Date.fromSimpleString(""));
+        assertThrown!DateTimeException(Date.fromSimpleString("990704"));
+        assertThrown!DateTimeException(Date.fromSimpleString("0100704"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010070"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010070 "));
+        assertThrown!DateTimeException(Date.fromSimpleString("120100704"));
+        assertThrown!DateTimeException(Date.fromSimpleString("-0100704"));
+        assertThrown!DateTimeException(Date.fromSimpleString("+0100704"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010070a"));
+        assertThrown!DateTimeException(Date.fromSimpleString("20100a04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010a704"));
 
-            assertThrown!DateTimeException(Date.fromSimpleString("99-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("010-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0 "));
-            assertThrown!DateTimeException(Date.fromSimpleString("12010-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("-010-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("+010-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0a"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-0a-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-a7-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010/07/04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010/7/04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010/7/4"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010/07/4"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-7-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-7-4"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-4"));
+        assertThrown!DateTimeException(Date.fromSimpleString("99-07-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("010-07-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0 "));
+        assertThrown!DateTimeException(Date.fromSimpleString("12010-07-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("-010-07-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("+010-07-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0a"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-0a-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-a7-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010/07/04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010/7/04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010/7/4"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010/07/4"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-7-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-7-4"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-07-4"));
 
-            assertThrown!DateTimeException(Date.fromSimpleString("99Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("010Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0 "));
-            assertThrown!DateTimeException(Date.fromSimpleString("12010Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("-010Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("+010Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0a"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010Jua04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010aul04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("99Jul04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("010Jul04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0 "));
+        assertThrown!DateTimeException(Date.fromSimpleString("12010Jul04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("-010Jul04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("+010Jul04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0a"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010Jua04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010aul04"));
 
-            assertThrown!DateTimeException(Date.fromSimpleString("99-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0 "));
-            assertThrown!DateTimeException(Date.fromSimpleString("12010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("-010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("+010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0a"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jua-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jal-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-aul-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("99-Jul-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0 "));
+        assertThrown!DateTimeException(Date.fromSimpleString("12010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("-010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("+010-Jul-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0a"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-Jua-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-Jal-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-aul-04"));
 
-            assertThrown!DateTimeException(Date.fromSimpleString("20100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-04"));
+        assertThrown!DateTimeException(Date.fromSimpleString("20100704"));
+        assertThrown!DateTimeException(Date.fromSimpleString("2010-07-04"));
 
-            assert(Date.fromSimpleString("1999-Jul-06") == Date(1999, 7, 6));
-            assert(Date.fromSimpleString("-1999-Jul-06") == Date(-1999, 7, 6));
-            assert(Date.fromSimpleString("+01999-Jul-06") == Date(1999, 7, 6));
-            assert(Date.fromSimpleString("1999-Jul-06 ") == Date(1999, 7, 6));
-            assert(Date.fromSimpleString(" 1999-Jul-06") == Date(1999, 7, 6));
-            assert(Date.fromSimpleString(" 1999-Jul-06 ") == Date(1999, 7, 6));
+        assert(Date.fromSimpleString("1999-Jul-06") == Date(1999, 7, 6));
+        assert(Date.fromSimpleString("-1999-Jul-06") == Date(-1999, 7, 6));
+        assert(Date.fromSimpleString("+01999-Jul-06") == Date(1999, 7, 6));
+        assert(Date.fromSimpleString("1999-Jul-06 ") == Date(1999, 7, 6));
+        assert(Date.fromSimpleString(" 1999-Jul-06") == Date(1999, 7, 6));
+        assert(Date.fromSimpleString(" 1999-Jul-06 ") == Date(1999, 7, 6));
 
-            //Verify Examples.
-            assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
-            assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
-            assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
-            assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
-            assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
-        }
+        //Verify Examples.
+        assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
+        assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
+        assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
+        assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
+        assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
     }
 
 
@@ -13123,11 +13003,8 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(Date.min.year < 0);
-            assert(Date.min < Date.max);
-        }
+        assert(Date.min.year < 0);
+        assert(Date.min < Date.max);
     }
 
 
@@ -13147,11 +13024,8 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(Date.max.year > 0);
-            assert(Date.max > Date.min);
-        }
+        assert(Date.max.year > 0);
+        assert(Date.max > Date.min);
     }
 
 
@@ -13198,163 +13072,160 @@ private:
 
     unittest
     {
-        version(testStdDateTime)
+        //Test A.D.
         {
-            //Test A.D.
-            {
-                auto date = Date(1999, 2, 28);
-                date.addDays(1);
-                assert(date == Date(1999, 3, 1));
-                date.addDays(-1);
-                assert(date == Date(1999, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 28);
-                date.addDays(1);
-                assert(date == Date(2000, 2, 29));
-                date.addDays(1);
-                assert(date == Date(2000, 3, 1));
-                date.addDays(-1);
-                assert(date == Date(2000, 2, 29));
-            }
-
-            {
-                auto date = Date(1999, 6, 30);
-                date.addDays(1);
-                assert(date == Date(1999, 7, 1));
-                date.addDays(-1);
-                assert(date == Date(1999, 6, 30));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.addDays(1);
-                assert(date == Date(1999, 8, 1));
-                date.addDays(-1);
-                assert(date == Date(1999, 7, 31));
-            }
-
-            {
-                auto date = Date(1999, 1, 1);
-                date.addDays(-1);
-                assert(date == Date(1998, 12, 31));
-                date.addDays(1);
-                assert(date == Date(1999, 1, 1));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.addDays(9);
-                assert(date == Date(1999, 7, 15));
-                date.addDays(-11);
-                assert(date == Date(1999, 7, 4));
-                date.addDays(30);
-                assert(date == Date(1999, 8, 3));
-                date.addDays(-3);
-                assert(date == Date(1999, 7, 31));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.addDays(365);
-                assert(date == Date(2000, 7, 5));
-                date.addDays(-365);
-                assert(date == Date(1999, 7, 6));
-                date.addDays(366);
-                assert(date == Date(2000, 7, 6));
-                date.addDays(730);
-                assert(date == Date(2002, 7, 6));
-                date.addDays(-1096);
-                assert(date == Date(1999, 7, 6));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 2, 28);
-                date.addDays(1);
-                assert(date == Date(-1999, 3, 1));
-                date.addDays(-1);
-                assert(date == Date(-1999, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 28);
-                date.addDays(1);
-                assert(date == Date(-2000, 2, 29));
-                date.addDays(1);
-                assert(date == Date(-2000, 3, 1));
-                date.addDays(-1);
-                assert(date == Date(-2000, 2, 29));
-            }
-
-            {
-                auto date = Date(-1999, 6, 30);
-                date.addDays(1);
-                assert(date == Date(-1999, 7, 1));
-                date.addDays(-1);
-                assert(date == Date(-1999, 6, 30));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.addDays(1);
-                assert(date == Date(-1999, 8, 1));
-                date.addDays(-1);
-                assert(date == Date(-1999, 7, 31));
-            }
-
-            {
-                auto date = Date(-1999, 1, 1);
-                date.addDays(-1);
-                assert(date == Date(-2000, 12, 31));
-                date.addDays(1);
-                assert(date == Date(-1999, 1, 1));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.addDays(9);
-                assert(date == Date(-1999, 7, 15));
-                date.addDays(-11);
-                assert(date == Date(-1999, 7, 4));
-                date.addDays(30);
-                assert(date == Date(-1999, 8, 3));
-                date.addDays(-3);
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.addDays(365);
-                assert(date == Date(-1998, 7, 6));
-                date.addDays(-365);
-                assert(date == Date(-1999, 7, 6));
-                date.addDays(366);
-                assert(date == Date(-1998, 7, 7));
-                date.addDays(730);
-                assert(date == Date(-1996, 7, 6));
-                date.addDays(-1096);
-                assert(date == Date(-1999, 7, 6));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 7, 6);
-                date.addDays(-365);
-                assert(date == Date(0, 7, 6));
-                date.addDays(365);
-                assert(date == Date(1, 7, 6));
-                date.addDays(-731);
-                assert(date == Date(-1, 7, 6));
-                date.addDays(730);
-                assert(date == Date(1, 7, 5));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.addDays(12)));
-            static assert(!__traits(compiles, idate.addDays(12)));
+            auto date = Date(1999, 2, 28);
+            date.addDays(1);
+            assert(date == Date(1999, 3, 1));
+            date.addDays(-1);
+            assert(date == Date(1999, 2, 28));
         }
+
+        {
+            auto date = Date(2000, 2, 28);
+            date.addDays(1);
+            assert(date == Date(2000, 2, 29));
+            date.addDays(1);
+            assert(date == Date(2000, 3, 1));
+            date.addDays(-1);
+            assert(date == Date(2000, 2, 29));
+        }
+
+        {
+            auto date = Date(1999, 6, 30);
+            date.addDays(1);
+            assert(date == Date(1999, 7, 1));
+            date.addDays(-1);
+            assert(date == Date(1999, 6, 30));
+        }
+
+        {
+            auto date = Date(1999, 7, 31);
+            date.addDays(1);
+            assert(date == Date(1999, 8, 1));
+            date.addDays(-1);
+            assert(date == Date(1999, 7, 31));
+        }
+
+        {
+            auto date = Date(1999, 1, 1);
+            date.addDays(-1);
+            assert(date == Date(1998, 12, 31));
+            date.addDays(1);
+            assert(date == Date(1999, 1, 1));
+        }
+
+        {
+            auto date = Date(1999, 7, 6);
+            date.addDays(9);
+            assert(date == Date(1999, 7, 15));
+            date.addDays(-11);
+            assert(date == Date(1999, 7, 4));
+            date.addDays(30);
+            assert(date == Date(1999, 8, 3));
+            date.addDays(-3);
+            assert(date == Date(1999, 7, 31));
+        }
+
+        {
+            auto date = Date(1999, 7, 6);
+            date.addDays(365);
+            assert(date == Date(2000, 7, 5));
+            date.addDays(-365);
+            assert(date == Date(1999, 7, 6));
+            date.addDays(366);
+            assert(date == Date(2000, 7, 6));
+            date.addDays(730);
+            assert(date == Date(2002, 7, 6));
+            date.addDays(-1096);
+            assert(date == Date(1999, 7, 6));
+        }
+
+        //Test B.C.
+        {
+            auto date = Date(-1999, 2, 28);
+            date.addDays(1);
+            assert(date == Date(-1999, 3, 1));
+            date.addDays(-1);
+            assert(date == Date(-1999, 2, 28));
+        }
+
+        {
+            auto date = Date(-2000, 2, 28);
+            date.addDays(1);
+            assert(date == Date(-2000, 2, 29));
+            date.addDays(1);
+            assert(date == Date(-2000, 3, 1));
+            date.addDays(-1);
+            assert(date == Date(-2000, 2, 29));
+        }
+
+        {
+            auto date = Date(-1999, 6, 30);
+            date.addDays(1);
+            assert(date == Date(-1999, 7, 1));
+            date.addDays(-1);
+            assert(date == Date(-1999, 6, 30));
+        }
+
+        {
+            auto date = Date(-1999, 7, 31);
+            date.addDays(1);
+            assert(date == Date(-1999, 8, 1));
+            date.addDays(-1);
+            assert(date == Date(-1999, 7, 31));
+        }
+
+        {
+            auto date = Date(-1999, 1, 1);
+            date.addDays(-1);
+            assert(date == Date(-2000, 12, 31));
+            date.addDays(1);
+            assert(date == Date(-1999, 1, 1));
+        }
+
+        {
+            auto date = Date(-1999, 7, 6);
+            date.addDays(9);
+            assert(date == Date(-1999, 7, 15));
+            date.addDays(-11);
+            assert(date == Date(-1999, 7, 4));
+            date.addDays(30);
+            assert(date == Date(-1999, 8, 3));
+            date.addDays(-3);
+        }
+
+        {
+            auto date = Date(-1999, 7, 6);
+            date.addDays(365);
+            assert(date == Date(-1998, 7, 6));
+            date.addDays(-365);
+            assert(date == Date(-1999, 7, 6));
+            date.addDays(366);
+            assert(date == Date(-1998, 7, 7));
+            date.addDays(730);
+            assert(date == Date(-1996, 7, 6));
+            date.addDays(-1096);
+            assert(date == Date(-1999, 7, 6));
+        }
+
+        //Test Both
+        {
+            auto date = Date(1, 7, 6);
+            date.addDays(-365);
+            assert(date == Date(0, 7, 6));
+            date.addDays(365);
+            assert(date == Date(1, 7, 6));
+            date.addDays(-731);
+            assert(date == Date(-1, 7, 6));
+            date.addDays(730);
+            assert(date == Date(1, 7, 5));
+        }
+
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(!__traits(compiles, cdate.addDays(12)));
+        static assert(!__traits(compiles, idate.addDays(12)));
     }
 
 
