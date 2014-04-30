@@ -283,7 +283,7 @@ dispatches them to distinct allocators.))
 $(TR $(TDC2 Bucketizer) $(TD Divides allocation sizes in discrete buckets and
 uses an array of allocators, one per bucket, to satisfy requests.))
 
-$(TR $(TDC2 WithInternalPointers) $(TD Adds support for resolving internal
+$(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving internal
 pointers on top of another allocator.))
 
 )
@@ -2103,6 +2103,15 @@ unittest
 
 // HeapBlockWithInternalPointers
 /**
+
+A $(D HeapBlock) with additional structure for supporting $(D
+resolveInternalPointer). To that end, $(D HeapBlockWithInternalPointers) adds a
+bitmap (one bit per block) that marks object starts. The bitmap itself has
+variable size and is allocated together with regular allocations.
+
+The time complexity of $(D resolveInternalPointer) is $(BIGOH k), where $(D k)
+is the size of the object within which the internal pointer is looked up.
+
 */
 struct HeapBlockWithInternalPointers(
     size_t theBlockSize, uint theAlignment = platformAlignment)
@@ -2118,7 +2127,7 @@ struct HeapBlockWithInternalPointers(
     this(void[] b) { _heap = HeapBlock!(theBlockSize, theAlignment)(b); }
 
     // Makes sure there's enough room for _allocStart
-    bool ensureRoomForAllocStart(size_t len)
+    private bool ensureRoomForAllocStart(size_t len)
     {
         if (_allocStart.length >= len) return true;
         // Must ensure there's room
@@ -2134,7 +2143,7 @@ struct HeapBlockWithInternalPointers(
     }
 
     /**
-    Allocator primitives
+    Allocator primitives.
     */
     alias alignment = theAlignment;
 
@@ -2209,7 +2218,6 @@ struct HeapBlockWithInternalPointers(
     /// Ditto
     void deallocate(void[] b)
     {
-
         // No need to touch _allocStart here - it's meaningless in freed memory.
         _heap.deallocate(b);
         // TODO: one smart thing to do is reduce memory occupied by
@@ -3758,7 +3766,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 }
 
 ///
-version(none) unittest
+unittest
 {
     // 128KB region, allocated to x86's cache line
     InSituRegion!(128 * 1024, 64) r1;
@@ -3772,8 +3780,8 @@ version(none) unittest
 
     // Reap with GC fallback.
     InSituRegion!(128 * 1024) tmp3;
-    FallbackAllocator!(HeapBlock!(64, 64), GCAllocator) r3;
-    r3.primary = HeapBlock!(64, 64)(tmp3.allocateAll());
+    FallbackAllocator!(HeapBlock!(64, 8), GCAllocator) r3;
+    r3.primary = HeapBlock!(64, 8)(tmp3.allocateAll());
     auto a3 = r3.allocate(103);
     assert(a3.length == 103);
 
@@ -3783,13 +3791,6 @@ version(none) unittest
     r4.parent.primary = HeapBlock!(64, 64)(tmp4.allocateAll());
     auto a4 = r4.allocate(104);
     assert(a4.length == 104);
-
-    // Same as above, except the freelist only applies to the reap.
-    InSituRegion!(128 * 1024) tmp5;
-    FallbackAllocator!(Freelist!(HeapBlock!(64, 64), 0, 16), GCAllocator) r5;
-    r5.primary.parent = HeapBlock!(64, 64)(tmp5.allocateAll());
-    auto a5 = r5.allocate(105);
-    assert(a5.length == 105);
 }
 
 unittest
@@ -5776,7 +5777,7 @@ unittest
 
 /**
 
-$(D WithInternalPointers) adds a primitive on top of another allocator: calling
+$(D InternalPointersTree) adds a primitive on top of another allocator: calling
 $(D resolveInternalPointer(p)) returns the block within which the internal
 pointer $(D p) lies. Pointers right after the end of allocated blocks are also
 considered internal.
@@ -5785,7 +5786,7 @@ The implementation stores three additional words with each allocation (one for
 the block size and two for search management).
 
 */
-struct WithInternalPointers(Allocator)
+struct InternalPointersTree(Allocator)
 {
     alias Tree = EmbeddedTree!(size_t,
         (a, b) => cast(void*) a + a.payload < cast(void*) b);
@@ -5889,7 +5890,7 @@ struct WithInternalPointers(Allocator)
 
 unittest
 {
-    WithInternalPointers!(Mallocator) a;
+    InternalPointersTree!(Mallocator) a;
     int[] vals = [ 6, 3, 9, 1, 2, 8, 11 ];
     void[][] allox;
     foreach (v; vals)
