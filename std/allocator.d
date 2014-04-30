@@ -1269,6 +1269,11 @@ unittest
 
 unittest
 {
+    testAllocator!(return AffixAllocator!(Mallocator, size_t, size_t));
+}
+
+unittest
+{
     alias A = AffixAllocator!(Mallocator, size_t);
     auto b = A.it.allocate(10);
     A.it.prefix(b) = 10;
