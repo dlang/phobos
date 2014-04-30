@@ -141,9 +141,6 @@ else version(Posix)
     import core.sys.posix.sys.time;
 }
 
-//Comment this out to disable std.datetime's unit tests.
-version = testStdDateTime;
-
 version(unittest)
 {
     import std.c.string;
@@ -156,13 +153,13 @@ version(unittest)
 //highly unlikely to conflict with anything that anyone else is doing.
 private alias std.string.indexOf stds_indexOf;
 
-version(testStdDateTime) unittest
+unittest
 {
     initializeTests();
 }
 
 //Verify module example.
-version(testStdDateTime) unittest
+unittest
 {
     auto currentTime = Clock.currTime();
     auto timeString = currentTime.toISOExtString();
@@ -170,7 +167,7 @@ version(testStdDateTime) unittest
 }
 
 //Verify Examples for core.time.Duration which couldn't be in core.time.
-version(testStdDateTime) unittest
+unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
            std.datetime.Date(2010, 9, 12));
@@ -398,7 +395,7 @@ public:
         return SysTime(currStdTime, tz);
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         assert(currTime(UTC()).timezone is UTC());
 
@@ -490,7 +487,7 @@ public:
         return TickDuration.currSystemTick;
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         assert(Clock.currSystemTick.length > 0);
     }
@@ -516,7 +513,7 @@ public:
         return currSystemTick - TickDuration.appOrigin;
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         auto a = Clock.currSystemTick;
         auto b = Clock.currAppTick;
@@ -25854,310 +25851,283 @@ private:
 //Test that IntervalRange satisfies the range predicates that it's supposed to satisfy.
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(isInputRange!(IntervalRange!(Date, Direction.fwd)));
-        static assert(isForwardRange!(IntervalRange!(Date, Direction.fwd)));
+    static assert(isInputRange!(IntervalRange!(Date, Direction.fwd)));
+    static assert(isForwardRange!(IntervalRange!(Date, Direction.fwd)));
 
-        //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=4895
-        //static assert(!isOutputRange!(IntervalRange!(Date, Direction.fwd), Date));
+    //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=4895
+    //static assert(!isOutputRange!(IntervalRange!(Date, Direction.fwd), Date));
 
-        static assert(!isBidirectionalRange!(IntervalRange!(Date, Direction.fwd)));
-        static assert(!isRandomAccessRange!(IntervalRange!(Date, Direction.fwd)));
-        static assert(!hasSwappableElements!(IntervalRange!(Date, Direction.fwd)));
-        static assert(!hasAssignableElements!(IntervalRange!(Date, Direction.fwd)));
-        static assert(!hasLength!(IntervalRange!(Date, Direction.fwd)));
-        static assert(!isInfinite!(IntervalRange!(Date, Direction.fwd)));
-        static assert(!hasSlicing!(IntervalRange!(Date, Direction.fwd)));
+    static assert(!isBidirectionalRange!(IntervalRange!(Date, Direction.fwd)));
+    static assert(!isRandomAccessRange!(IntervalRange!(Date, Direction.fwd)));
+    static assert(!hasSwappableElements!(IntervalRange!(Date, Direction.fwd)));
+    static assert(!hasAssignableElements!(IntervalRange!(Date, Direction.fwd)));
+    static assert(!hasLength!(IntervalRange!(Date, Direction.fwd)));
+    static assert(!isInfinite!(IntervalRange!(Date, Direction.fwd)));
+    static assert(!hasSlicing!(IntervalRange!(Date, Direction.fwd)));
 
-        static assert(is(ElementType!(IntervalRange!(Date, Direction.fwd)) == Date));
-        static assert(is(ElementType!(IntervalRange!(TimeOfDay, Direction.fwd)) == TimeOfDay));
-        static assert(is(ElementType!(IntervalRange!(DateTime, Direction.fwd)) == DateTime));
-        static assert(is(ElementType!(IntervalRange!(SysTime, Direction.fwd)) == SysTime));
-    }
+    static assert(is(ElementType!(IntervalRange!(Date, Direction.fwd)) == Date));
+    static assert(is(ElementType!(IntervalRange!(TimeOfDay, Direction.fwd)) == TimeOfDay));
+    static assert(is(ElementType!(IntervalRange!(DateTime, Direction.fwd)) == DateTime));
+    static assert(is(ElementType!(IntervalRange!(SysTime, Direction.fwd)) == SysTime));
 }
 
 //Test construction of IntervalRange.
 unittest
 {
-    version(testStdDateTime)
     {
+        Date dateFunc(in Date date)
         {
-            Date dateFunc(in Date date)
-            {
-                return date;
-            }
-
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-
-            auto ir = IntervalRange!(Date, Direction.fwd)(interval, &dateFunc);
+            return date;
         }
 
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+
+        auto ir = IntervalRange!(Date, Direction.fwd)(interval, &dateFunc);
+    }
+
+    {
+        TimeOfDay todFunc(in TimeOfDay tod)
         {
-            TimeOfDay todFunc(in TimeOfDay tod)
-            {
-                return tod;
-            }
-
-            auto interval = Interval!TimeOfDay(TimeOfDay(12, 1, 7), TimeOfDay(14, 0, 0));
-
-            auto ir = IntervalRange!(TimeOfDay, Direction.fwd)(interval, &todFunc);
+            return tod;
         }
 
+        auto interval = Interval!TimeOfDay(TimeOfDay(12, 1, 7), TimeOfDay(14, 0, 0));
+
+        auto ir = IntervalRange!(TimeOfDay, Direction.fwd)(interval, &todFunc);
+    }
+
+    {
+        DateTime dtFunc(in DateTime dt)
         {
-            DateTime dtFunc(in DateTime dt)
-            {
-                return dt;
-            }
-
-            auto interval = Interval!DateTime(DateTime(2010, 7, 4, 12, 1, 7), DateTime(2012, 1, 7, 14, 0, 0));
-
-            auto ir = IntervalRange!(DateTime, Direction.fwd)(interval, &dtFunc);
+            return dt;
         }
 
+        auto interval = Interval!DateTime(DateTime(2010, 7, 4, 12, 1, 7), DateTime(2012, 1, 7, 14, 0, 0));
+
+        auto ir = IntervalRange!(DateTime, Direction.fwd)(interval, &dtFunc);
+    }
+
+    {
+        SysTime stFunc(in SysTime st)
         {
-            SysTime stFunc(in SysTime st)
-            {
-                return cast(SysTime)st;
-            }
-
-            auto interval = Interval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)), SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
-
-            auto ir = IntervalRange!(SysTime, Direction.fwd)(interval, &stFunc);
+            return cast(SysTime)st;
         }
+
+        auto interval = Interval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)), SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
+
+        auto ir = IntervalRange!(SysTime, Direction.fwd)(interval, &stFunc);
     }
 }
 
 //Test IntervalRange's empty().
 unittest
 {
-    version(testStdDateTime)
+    //fwd
     {
-        //fwd
-        {
-            auto range = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
+        auto range = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
 
-            assert(!range.empty);
-            range.popFront();
-            assert(range.empty);
+        assert(!range.empty);
+        range.popFront();
+        assert(range.empty);
 
-            const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-            static assert(__traits(compiles, cRange.empty));
+        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
+        static assert(__traits(compiles, cRange.empty));
 
-            //Apparently, creating an immutable IntervalRange!Date doesn't work, so we can't test if
-            //empty works with it. However, since an immutable range is pretty useless, it's no great loss.
-        }
+        //Apparently, creating an immutable IntervalRange!Date doesn't work, so we can't test if
+        //empty works with it. However, since an immutable range is pretty useless, it's no great loss.
+    }
 
-        //bwd
-        {
-            auto range = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+    //bwd
+    {
+        auto range = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
 
-            assert(!range.empty);
-            range.popFront();
-            assert(range.empty);
+        assert(!range.empty);
+        range.popFront();
+        assert(range.empty);
 
-            const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
-            static assert(__traits(compiles, cRange.empty));
+        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+        static assert(__traits(compiles, cRange.empty));
 
-            //Apparently, creating an immutable IntervalRange!Date doesn't work, so we can't test if
-            //empty works with it. However, since an immutable range is pretty useless, it's no great loss.
-        }
+        //Apparently, creating an immutable IntervalRange!Date doesn't work, so we can't test if
+        //empty works with it. However, since an immutable range is pretty useless, it's no great loss.
     }
 }
 
 //Test IntervalRange's front.
 unittest
 {
-    version(testStdDateTime)
+    //fwd
     {
-        //fwd
-        {
-            auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
-            assertThrown!DateTimeException((in IntervalRange!(Date, Direction.fwd) range){range.front;}(emptyRange));
+        auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        assertThrown!DateTimeException((in IntervalRange!(Date, Direction.fwd) range){range.front;}(emptyRange));
 
-            auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
-            assert(range.front == Date(2010, 7, 4));
+        auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
+        assert(range.front == Date(2010, 7, 4));
 
-            auto poppedRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
-            assert(poppedRange.front == Date(2010, 7, 7));
+        auto poppedRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        assert(poppedRange.front == Date(2010, 7, 7));
 
-            const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-            static assert(__traits(compiles, cRange.front));
-        }
+        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
+        static assert(__traits(compiles, cRange.front));
+    }
 
-        //bwd
-        {
-            auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
-            assertThrown!DateTimeException((in IntervalRange!(Date, Direction.bwd) range){range.front;}(emptyRange));
+    //bwd
+    {
+        auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        assertThrown!DateTimeException((in IntervalRange!(Date, Direction.bwd) range){range.front;}(emptyRange));
 
-            auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
-            assert(range.front == Date(2012, 1, 7));
+        auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
+        assert(range.front == Date(2012, 1, 7));
 
-            auto poppedRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
-            assert(poppedRange.front == Date(2012, 1, 4));
+        auto poppedRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        assert(poppedRange.front == Date(2012, 1, 4));
 
-            const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
-            static assert(__traits(compiles, cRange.front));
-        }
+        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+        static assert(__traits(compiles, cRange.front));
     }
 }
 
 //Test IntervalRange's popFront().
 unittest
 {
-    version(testStdDateTime)
+    //fwd
     {
-        //fwd
+        auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        assertThrown!DateTimeException((IntervalRange!(Date, Direction.fwd) range){range.popFront();}(emptyRange));
+
+        auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        auto expected = range.front;
+
+        foreach(date; range)
         {
-            auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
-            assertThrown!DateTimeException((IntervalRange!(Date, Direction.fwd) range){range.popFront();}(emptyRange));
-
-            auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
-            auto expected = range.front;
-
-            foreach(date; range)
-            {
-                assert(date == expected);
-                expected += dur!"days"(7);
-            }
-
-            assert(walkLength(range) == 79);
-
-            const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-            static assert(__traits(compiles, cRange.front));
+            assert(date == expected);
+            expected += dur!"days"(7);
         }
 
-        //bwd
+        assert(walkLength(range) == 79);
+
+        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
+        static assert(__traits(compiles, cRange.front));
+    }
+
+    //bwd
+    {
+        auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        assertThrown!DateTimeException((IntervalRange!(Date, Direction.bwd) range){range.popFront();}(emptyRange));
+
+        auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        auto expected = range.front;
+
+        foreach(date; range)
         {
-            auto emptyRange = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 20)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
-            assertThrown!DateTimeException((IntervalRange!(Date, Direction.bwd) range){range.popFront();}(emptyRange));
-
-            auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
-            auto expected = range.front;
-
-            foreach(date; range)
-            {
-                assert(date == expected);
-                expected += dur!"days"(-7);
-            }
-
-            assert(walkLength(range) == 79);
-
-            const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
-            static assert(!__traits(compiles, cRange.popFront()));
+            assert(date == expected);
+            expected += dur!"days"(-7);
         }
+
+        assert(walkLength(range) == 79);
+
+        const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+        static assert(!__traits(compiles, cRange.popFront()));
     }
 }
 
 //Test IntervalRange's save.
 unittest
 {
-    version(testStdDateTime)
+    //fwd
     {
-        //fwd
-        {
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-            auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-            auto range = interval.fwdRange(func);
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+        auto func = everyDayOfWeek!Date(DayOfWeek.fri);
+        auto range = interval.fwdRange(func);
 
-            assert(range.save == range);
-        }
+        assert(range.save == range);
+    }
 
-        //bwd
-        {
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-            auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-            auto range = interval.bwdRange(func);
+    //bwd
+    {
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+        auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+        auto range = interval.bwdRange(func);
 
-            assert(range.save == range);
-        }
+        assert(range.save == range);
     }
 }
 
 //Test IntervalRange's interval.
 unittest
 {
-    version(testStdDateTime)
+    //fwd
     {
-        //fwd
-        {
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-            auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-            auto range = interval.fwdRange(func);
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+        auto func = everyDayOfWeek!Date(DayOfWeek.fri);
+        auto range = interval.fwdRange(func);
 
-            assert(range.interval == interval);
+        assert(range.interval == interval);
 
-            const cRange = range;
-            static assert(__traits(compiles, cRange.interval));
-        }
+        const cRange = range;
+        static assert(__traits(compiles, cRange.interval));
+    }
 
-        //bwd
-        {
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-            auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-            auto range = interval.bwdRange(func);
+    //bwd
+    {
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+        auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+        auto range = interval.bwdRange(func);
 
-            assert(range.interval == interval);
+        assert(range.interval == interval);
 
-            const cRange = range;
-            static assert(__traits(compiles, cRange.interval));
-        }
+        const cRange = range;
+        static assert(__traits(compiles, cRange.interval));
     }
 }
 
 //Test IntervalRange's func.
 unittest
 {
-    version(testStdDateTime)
+    //fwd
     {
-        //fwd
-        {
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-            auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-            auto range = interval.fwdRange(func);
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+        auto func = everyDayOfWeek!Date(DayOfWeek.fri);
+        auto range = interval.fwdRange(func);
 
-            assert(range.func == func);
-        }
+        assert(range.func == func);
+    }
 
-        //bwd
-        {
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-            auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-            auto range = interval.bwdRange(func);
+    //bwd
+    {
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+        auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+        auto range = interval.bwdRange(func);
 
-            assert(range.func == func);
-        }
+        assert(range.func == func);
     }
 }
 
 //Test IntervalRange's direction.
 unittest
 {
-    version(testStdDateTime)
+    //fwd
     {
-        //fwd
-        {
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-            auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-            auto range = interval.fwdRange(func);
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+        auto func = everyDayOfWeek!Date(DayOfWeek.fri);
+        auto range = interval.fwdRange(func);
 
-            assert(range.direction == Direction.fwd);
+        assert(range.direction == Direction.fwd);
 
-            const cRange = range;
-            static assert(__traits(compiles, cRange.direction));
-        }
+        const cRange = range;
+        static assert(__traits(compiles, cRange.direction));
+    }
 
-        //bwd
-        {
-            auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-            auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-            auto range = interval.bwdRange(func);
+    //bwd
+    {
+        auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+        auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+        auto range = interval.bwdRange(func);
 
-            assert(range.direction == Direction.bwd);
+        assert(range.direction == Direction.bwd);
 
-            const cRange = range;
-            static assert(__traits(compiles, cRange.direction));
-        }
+        const cRange = range;
+        static assert(__traits(compiles, cRange.direction));
     }
 }
 
@@ -26308,154 +26278,133 @@ private:
 //Test that PosInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(isInputRange!(PosInfIntervalRange!Date));
-        static assert(isForwardRange!(PosInfIntervalRange!Date));
-        static assert(isInfinite!(PosInfIntervalRange!Date));
+    static assert(isInputRange!(PosInfIntervalRange!Date));
+    static assert(isForwardRange!(PosInfIntervalRange!Date));
+    static assert(isInfinite!(PosInfIntervalRange!Date));
 
-        //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=4895
-        //static assert(!isOutputRange!(PosInfIntervalRange!Date, Date));
-        static assert(!isBidirectionalRange!(PosInfIntervalRange!Date));
-        static assert(!isRandomAccessRange!(PosInfIntervalRange!Date));
-        static assert(!hasSwappableElements!(PosInfIntervalRange!Date));
-        static assert(!hasAssignableElements!(PosInfIntervalRange!Date));
-        static assert(!hasLength!(PosInfIntervalRange!Date));
-        static assert(!hasSlicing!(PosInfIntervalRange!Date));
+    //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=4895
+    //static assert(!isOutputRange!(PosInfIntervalRange!Date, Date));
+    static assert(!isBidirectionalRange!(PosInfIntervalRange!Date));
+    static assert(!isRandomAccessRange!(PosInfIntervalRange!Date));
+    static assert(!hasSwappableElements!(PosInfIntervalRange!Date));
+    static assert(!hasAssignableElements!(PosInfIntervalRange!Date));
+    static assert(!hasLength!(PosInfIntervalRange!Date));
+    static assert(!hasSlicing!(PosInfIntervalRange!Date));
 
-        static assert(is(ElementType!(PosInfIntervalRange!Date) == Date));
-        static assert(is(ElementType!(PosInfIntervalRange!TimeOfDay) == TimeOfDay));
-        static assert(is(ElementType!(PosInfIntervalRange!DateTime) == DateTime));
-        static assert(is(ElementType!(PosInfIntervalRange!SysTime) == SysTime));
-    }
+    static assert(is(ElementType!(PosInfIntervalRange!Date) == Date));
+    static assert(is(ElementType!(PosInfIntervalRange!TimeOfDay) == TimeOfDay));
+    static assert(is(ElementType!(PosInfIntervalRange!DateTime) == DateTime));
+    static assert(is(ElementType!(PosInfIntervalRange!SysTime) == SysTime));
 }
 
 //Test construction of PosInfIntervalRange.
 unittest
 {
-    version(testStdDateTime)
     {
+        Date dateFunc(in Date date)
         {
-            Date dateFunc(in Date date)
-            {
-                return date;
-            }
-
-            auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-
-            auto ir = PosInfIntervalRange!Date(posInfInterval, &dateFunc);
+            return date;
         }
 
+        auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+
+        auto ir = PosInfIntervalRange!Date(posInfInterval, &dateFunc);
+    }
+
+    {
+        TimeOfDay todFunc(in TimeOfDay tod)
         {
-            TimeOfDay todFunc(in TimeOfDay tod)
-            {
-                return tod;
-            }
-
-            auto posInfInterval = PosInfInterval!TimeOfDay(TimeOfDay(12, 1, 7));
-
-            auto ir = PosInfIntervalRange!(TimeOfDay)(posInfInterval, &todFunc);
+            return tod;
         }
 
+        auto posInfInterval = PosInfInterval!TimeOfDay(TimeOfDay(12, 1, 7));
+
+        auto ir = PosInfIntervalRange!(TimeOfDay)(posInfInterval, &todFunc);
+    }
+
+    {
+        DateTime dtFunc(in DateTime dt)
         {
-            DateTime dtFunc(in DateTime dt)
-            {
-                return dt;
-            }
-
-            auto posInfInterval = PosInfInterval!DateTime(DateTime(2010, 7, 4, 12, 1, 7));
-
-            auto ir = PosInfIntervalRange!(DateTime)(posInfInterval, &dtFunc);
+            return dt;
         }
 
+        auto posInfInterval = PosInfInterval!DateTime(DateTime(2010, 7, 4, 12, 1, 7));
+
+        auto ir = PosInfIntervalRange!(DateTime)(posInfInterval, &dtFunc);
+    }
+
+    {
+        SysTime stFunc(in SysTime st)
         {
-            SysTime stFunc(in SysTime st)
-            {
-                return cast(SysTime)st;
-            }
-
-            auto posInfInterval = PosInfInterval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)));
-
-            auto ir = PosInfIntervalRange!(SysTime)(posInfInterval, &stFunc);
+            return cast(SysTime)st;
         }
+
+        auto posInfInterval = PosInfInterval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)));
+
+        auto ir = PosInfIntervalRange!(SysTime)(posInfInterval, &stFunc);
     }
 }
 
 //Test PosInfIntervalRange's front.
 unittest
 {
-    version(testStdDateTime)
-    {
-        auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
-        assert(range.front == Date(2010, 7, 4));
+    auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
+    assert(range.front == Date(2010, 7, 4));
 
-        auto poppedRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
-        assert(poppedRange.front == Date(2010, 7, 7));
+    auto poppedRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+    assert(poppedRange.front == Date(2010, 7, 7));
 
-        const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-        static assert(__traits(compiles, cRange.front));
-    }
+    const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
+    static assert(__traits(compiles, cRange.front));
 }
 
 //Test PosInfIntervalRange's popFront().
 unittest
 {
-    version(testStdDateTime)
+    auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+    auto expected = range.front;
+
+    foreach(date; take(range, 79))
     {
-        auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
-        auto expected = range.front;
-
-        foreach(date; take(range, 79))
-        {
-            assert(date == expected);
-            expected += dur!"days"(7);
-        }
-
-        const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
-        static assert(!__traits(compiles, cRange.popFront()));
+        assert(date == expected);
+        expected += dur!"days"(7);
     }
+
+    const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
+    static assert(!__traits(compiles, cRange.popFront()));
 }
 
 //Test PosInfIntervalRange's save.
 unittest
 {
-    version(testStdDateTime)
-    {
-        auto interval = PosInfInterval!Date(Date(2010, 7, 4));
-        auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-        auto range = interval.fwdRange(func);
+    auto interval = PosInfInterval!Date(Date(2010, 7, 4));
+    auto func = everyDayOfWeek!Date(DayOfWeek.fri);
+    auto range = interval.fwdRange(func);
 
-        assert(range.save == range);
-    }
+    assert(range.save == range);
 }
 
 //Test PosInfIntervalRange's interval.
 unittest
 {
-    version(testStdDateTime)
-    {
-        auto interval = PosInfInterval!Date(Date(2010, 7, 4));
-        auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-        auto range = interval.fwdRange(func);
+    auto interval = PosInfInterval!Date(Date(2010, 7, 4));
+    auto func = everyDayOfWeek!Date(DayOfWeek.fri);
+    auto range = interval.fwdRange(func);
 
-        assert(range.interval == interval);
+    assert(range.interval == interval);
 
-        const cRange = range;
-        static assert(__traits(compiles, cRange.interval));
-    }
+    const cRange = range;
+    static assert(__traits(compiles, cRange.interval));
 }
 
 //Test PosInfIntervalRange's func.
 unittest
 {
-    version(testStdDateTime)
-    {
-        auto interval = PosInfInterval!Date(Date(2010, 7, 4));
-        auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-        auto range = interval.fwdRange(func);
+    auto interval = PosInfInterval!Date(Date(2010, 7, 4));
+    auto func = everyDayOfWeek!Date(DayOfWeek.fri);
+    auto range = interval.fwdRange(func);
 
-        assert(range.func == func);
-    }
+    assert(range.func == func);
 }
 
 
@@ -26614,153 +26563,132 @@ private:
 //Test that NegInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(isInputRange!(NegInfIntervalRange!Date));
-        static assert(isForwardRange!(NegInfIntervalRange!Date));
-        static assert(isInfinite!(NegInfIntervalRange!Date));
+    static assert(isInputRange!(NegInfIntervalRange!Date));
+    static assert(isForwardRange!(NegInfIntervalRange!Date));
+    static assert(isInfinite!(NegInfIntervalRange!Date));
 
-        //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=4895
-        //static assert(!isOutputRange!(NegInfIntervalRange!Date, Date));
-        static assert(!isBidirectionalRange!(NegInfIntervalRange!Date));
-        static assert(!isRandomAccessRange!(NegInfIntervalRange!Date));
-        static assert(!hasSwappableElements!(NegInfIntervalRange!Date));
-        static assert(!hasAssignableElements!(NegInfIntervalRange!Date));
-        static assert(!hasLength!(NegInfIntervalRange!Date));
-        static assert(!hasSlicing!(NegInfIntervalRange!Date));
+    //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=4895
+    //static assert(!isOutputRange!(NegInfIntervalRange!Date, Date));
+    static assert(!isBidirectionalRange!(NegInfIntervalRange!Date));
+    static assert(!isRandomAccessRange!(NegInfIntervalRange!Date));
+    static assert(!hasSwappableElements!(NegInfIntervalRange!Date));
+    static assert(!hasAssignableElements!(NegInfIntervalRange!Date));
+    static assert(!hasLength!(NegInfIntervalRange!Date));
+    static assert(!hasSlicing!(NegInfIntervalRange!Date));
 
-        static assert(is(ElementType!(NegInfIntervalRange!Date) == Date));
-        static assert(is(ElementType!(NegInfIntervalRange!TimeOfDay) == TimeOfDay));
-        static assert(is(ElementType!(NegInfIntervalRange!DateTime) == DateTime));
-    }
+    static assert(is(ElementType!(NegInfIntervalRange!Date) == Date));
+    static assert(is(ElementType!(NegInfIntervalRange!TimeOfDay) == TimeOfDay));
+    static assert(is(ElementType!(NegInfIntervalRange!DateTime) == DateTime));
 }
 
 //Test construction of NegInfIntervalRange.
 unittest
 {
-    version(testStdDateTime)
     {
+        Date dateFunc(in Date date)
         {
-            Date dateFunc(in Date date)
-            {
-                return date;
-            }
-
-            auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
-
-            auto ir = NegInfIntervalRange!Date(negInfInterval, &dateFunc);
+            return date;
         }
 
+        auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+        auto ir = NegInfIntervalRange!Date(negInfInterval, &dateFunc);
+    }
+
+    {
+        TimeOfDay todFunc(in TimeOfDay tod)
         {
-            TimeOfDay todFunc(in TimeOfDay tod)
-            {
-                return tod;
-            }
-
-            auto negInfInterval = NegInfInterval!TimeOfDay(TimeOfDay(14, 0, 0));
-
-            auto ir = NegInfIntervalRange!(TimeOfDay)(negInfInterval, &todFunc);
+            return tod;
         }
 
+        auto negInfInterval = NegInfInterval!TimeOfDay(TimeOfDay(14, 0, 0));
+
+        auto ir = NegInfIntervalRange!(TimeOfDay)(negInfInterval, &todFunc);
+    }
+
+    {
+        DateTime dtFunc(in DateTime dt)
         {
-            DateTime dtFunc(in DateTime dt)
-            {
-                return dt;
-            }
-
-            auto negInfInterval = NegInfInterval!DateTime(DateTime(2012, 1, 7, 14, 0, 0));
-
-            auto ir = NegInfIntervalRange!(DateTime)(negInfInterval, &dtFunc);
+            return dt;
         }
 
+        auto negInfInterval = NegInfInterval!DateTime(DateTime(2012, 1, 7, 14, 0, 0));
+
+        auto ir = NegInfIntervalRange!(DateTime)(negInfInterval, &dtFunc);
+    }
+
+    {
+        SysTime stFunc(in SysTime st)
         {
-            SysTime stFunc(in SysTime st)
-            {
-                return cast(SysTime)(st);
-            }
-
-            auto negInfInterval = NegInfInterval!SysTime(SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
-
-            auto ir = NegInfIntervalRange!(SysTime)(negInfInterval, &stFunc);
+            return cast(SysTime)(st);
         }
+
+        auto negInfInterval = NegInfInterval!SysTime(SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
+
+        auto ir = NegInfIntervalRange!(SysTime)(negInfInterval, &stFunc);
     }
 }
 
 //Test NegInfIntervalRange's front.
 unittest
 {
-    version(testStdDateTime)
-    {
-        auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
-        assert(range.front == Date(2012, 1, 7));
+    auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
+    assert(range.front == Date(2012, 1, 7));
 
-        auto poppedRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
-        assert(poppedRange.front == Date(2012, 1, 4));
+    auto poppedRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+    assert(poppedRange.front == Date(2012, 1, 4));
 
-        const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
-        static assert(__traits(compiles, cRange.front));
-    }
+    const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+    static assert(__traits(compiles, cRange.front));
 }
 
 //Test NegInfIntervalRange's popFront().
 unittest
 {
-    version(testStdDateTime)
+    auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+    auto expected = range.front;
+
+    foreach(date; take(range, 79))
     {
-        auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
-        auto expected = range.front;
-
-        foreach(date; take(range, 79))
-        {
-            assert(date == expected);
-            expected += dur!"days"(-7);
-        }
-
-        const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
-        static assert(!__traits(compiles, cRange.popFront()));
+        assert(date == expected);
+        expected += dur!"days"(-7);
     }
+
+    const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+    static assert(!__traits(compiles, cRange.popFront()));
 }
 
 //Test NegInfIntervalRange's save.
 unittest
 {
-    version(testStdDateTime)
-    {
-        auto interval = NegInfInterval!Date(Date(2012, 1, 7));
-        auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-        auto range = interval.bwdRange(func);
+    auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+    auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+    auto range = interval.bwdRange(func);
 
-        assert(range.save == range);
-    }
+    assert(range.save == range);
 }
 
 //Test NegInfIntervalRange's interval.
 unittest
 {
-    version(testStdDateTime)
-    {
-        auto interval = NegInfInterval!Date(Date(2012, 1, 7));
-        auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-        auto range = interval.bwdRange(func);
+    auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+    auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+    auto range = interval.bwdRange(func);
 
-        assert(range.interval == interval);
+    assert(range.interval == interval);
 
-        const cRange = range;
-        static assert(__traits(compiles, cRange.interval));
-    }
+    const cRange = range;
+    static assert(__traits(compiles, cRange.interval));
 }
 
 //Test NegInfIntervalRange's func.
 unittest
 {
-    version(testStdDateTime)
-    {
-        auto interval = NegInfInterval!Date(Date(2012, 1, 7));
-        auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-        auto range = interval.bwdRange(func);
+    auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+    auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+    auto range = interval.bwdRange(func);
 
-        assert(range.func == func);
-    }
+    assert(range.func == func);
 }
 
 
@@ -26919,7 +26847,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     //Since reading in the time zone files could be expensive, most unit tests
     //are consolidated into this one unittest block which minimizes how often it
     //reads a time zone file.
-    version(testStdDateTime) unittest
+    unittest
     {
         version(Posix) scope(exit) clearTZEnvVar();
 
@@ -27238,22 +27166,19 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
 
     unittest
-    {
-        version(testStdDateTime)
+{
+        static void testPZSuccess(string tzName)
         {
-            static void testPZSuccess(string tzName)
-            {
-                scope(failure) writefln("TZName which threw: %s", tzName);
+            scope(failure) writefln("TZName which threw: %s", tzName);
 
-                TimeZone.getTimeZone(tzName);
-            }
-
-            auto tzNames = getInstalledTZNames();
-
-            foreach(tzName; tzNames)
-                assertNotThrown!DateTimeException(testPZSuccess(tzName));
+            TimeZone.getTimeZone(tzName);
         }
-    }
+
+        auto tzNames = getInstalledTZNames();
+
+        foreach(tzName; tzNames)
+            assertNotThrown!DateTimeException(testPZSuccess(tzName));
+}
 
 
 private:
@@ -27379,21 +27304,18 @@ public:
     }
 
     unittest
-    {
-        version(testStdDateTime)
+{
+        assert(LocalTime().stdName !is null);
+
+        version(Posix)
         {
-            assert(LocalTime().stdName !is null);
+            scope(exit) clearTZEnvVar();
 
-            version(Posix)
-            {
-                scope(exit) clearTZEnvVar();
+            setTZEnvVar("America/Los_Angeles");
+            assert(LocalTime().stdName == "PST");
 
-                setTZEnvVar("America/Los_Angeles");
-                assert(LocalTime().stdName == "PST");
-
-                setTZEnvVar("America/New_York");
-                assert(LocalTime().stdName == "EST");
-            }
+            setTZEnvVar("America/New_York");
+            assert(LocalTime().stdName == "EST");
         }
     }
 
@@ -27452,21 +27374,18 @@ public:
     }
 
     unittest
-    {
-        version(testStdDateTime)
+{
+        assert(LocalTime().dstName !is null);
+
+        version(Posix)
         {
-            assert(LocalTime().dstName !is null);
+            scope(exit) clearTZEnvVar();
 
-            version(Posix)
-            {
-                scope(exit) clearTZEnvVar();
+            setTZEnvVar("America/Los_Angeles");
+            assert(LocalTime().dstName == "PDT");
 
-                setTZEnvVar("America/Los_Angeles");
-                assert(LocalTime().dstName == "PDT");
-
-                setTZEnvVar("America/New_York");
-                assert(LocalTime().dstName == "EDT");
-            }
+            setTZEnvVar("America/New_York");
+            assert(LocalTime().dstName == "EDT");
         }
     }
 
@@ -27514,24 +27433,21 @@ public:
     }
 
     unittest
-    {
-        version(testStdDateTime)
+{
+        LocalTime().hasDST;
+
+        version(Posix)
         {
-            LocalTime().hasDST;
+            scope(exit) clearTZEnvVar();
 
-            version(Posix)
-            {
-                scope(exit) clearTZEnvVar();
+            setTZEnvVar("America/Los_Angeles");
+            assert(LocalTime().hasDST);
 
-                setTZEnvVar("America/Los_Angeles");
-                assert(LocalTime().hasDST);
+            setTZEnvVar("America/New_York");
+            assert(LocalTime().hasDST);
 
-                setTZEnvVar("America/New_York");
-                assert(LocalTime().hasDST);
-
-                setTZEnvVar("UTC");
-                assert(!LocalTime().hasDST);
-            }
+            setTZEnvVar("UTC");
+            assert(!LocalTime().hasDST);
         }
     }
 
@@ -27579,11 +27495,8 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto currTime = Clock.currStdTime;
-            LocalTime().dstInEffect(currTime);
-        }
+        auto currTime = Clock.currStdTime;
+        LocalTime().dstInEffect(currTime);
     }
 
 
@@ -27623,10 +27536,7 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            LocalTime().utcToTZ(0);
-        }
+        LocalTime().utcToTZ(0);
     }
 
 
@@ -27682,142 +27592,139 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
+        assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
+        assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
+
+        assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
+        assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
+
+        version(Posix)
         {
-            assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
-            assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
+            scope(exit) clearTZEnvVar();
 
-            assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
-            assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
+            auto tzInfos = [tuple("America/Los_Angeles", DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
+                            tuple("America/New_York",    DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
+                            //tuple("America/Santiago",    DateTime(2011, 8, 21), DateTime(2011, 5, 8), 0, 0),
+                            tuple("Atlantic/Azores",     DateTime(2011, 3, 27), DateTime(2011, 10, 30), 0, 1),
+                            tuple("Europe/London",       DateTime(2012, 3, 25), DateTime(2012, 10, 28), 1, 2),
+                            tuple("Europe/Paris",        DateTime(2012, 3, 25), DateTime(2012, 10, 28), 2, 3),
+                            tuple("Australia/Adelaide",  DateTime(2012, 10, 7), DateTime(2012, 4, 1), 2, 3)];
 
-            version(Posix)
+            foreach(i; 0 .. tzInfos.length)
             {
-                scope(exit) clearTZEnvVar();
+                auto tzName = tzInfos[i][0];
+                setTZEnvVar(tzName);
+                immutable spring = tzInfos[i][3];
+                immutable fall = tzInfos[i][4];
+                auto stdOffset = SysTime(tzInfos[i][1] + dur!"hours"(-12)).utcOffset;
+                auto dstOffset = stdOffset + dur!"hours"(1);
 
-                auto tzInfos = [tuple("America/Los_Angeles", DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
-                                tuple("America/New_York",    DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
-                                //tuple("America/Santiago",    DateTime(2011, 8, 21), DateTime(2011, 5, 8), 0, 0),
-                                tuple("Atlantic/Azores",     DateTime(2011, 3, 27), DateTime(2011, 10, 30), 0, 1),
-                                tuple("Europe/London",       DateTime(2012, 3, 25), DateTime(2012, 10, 28), 1, 2),
-                                tuple("Europe/Paris",        DateTime(2012, 3, 25), DateTime(2012, 10, 28), 2, 3),
-                                tuple("Australia/Adelaide",  DateTime(2012, 10, 7), DateTime(2012, 4, 1), 2, 3)];
-
-                foreach(i; 0 .. tzInfos.length)
+                //Verify that creating a SysTime in the given time zone results
+                //in a SysTime with the correct std time during and surrounding
+                //a DST switch.
+                foreach(hour; -12 .. 13)
                 {
-                    auto tzName = tzInfos[i][0];
-                    setTZEnvVar(tzName);
-                    immutable spring = tzInfos[i][3];
-                    immutable fall = tzInfos[i][4];
-                    auto stdOffset = SysTime(tzInfos[i][1] + dur!"hours"(-12)).utcOffset;
-                    auto dstOffset = stdOffset + dur!"hours"(1);
+                    auto st = SysTime(tzInfos[i][1] + dur!"hours"(hour));
+                    immutable targetHour = hour < 0 ? hour + 24 : hour;
 
-                    //Verify that creating a SysTime in the given time zone results
-                    //in a SysTime with the correct std time during and surrounding
-                    //a DST switch.
-                    foreach(hour; -12 .. 13)
+                    static void testHour(SysTime st, int hour, string tzName, size_t line = __LINE__)
                     {
-                        auto st = SysTime(tzInfos[i][1] + dur!"hours"(hour));
-                        immutable targetHour = hour < 0 ? hour + 24 : hour;
+                        enforce(st.hour == hour,
+                                new AssertError(format("[%s] [%s]: [%s] [%s]", st, tzName, st.hour, hour),
+                                                __FILE__, line));
+                    }
 
-                        static void testHour(SysTime st, int hour, string tzName, size_t line = __LINE__)
+                    void testOffset1(Duration offset, bool dstInEffect, size_t line = __LINE__)
+                    {
+                        AssertError msg(string tag)
                         {
-                            enforce(st.hour == hour,
-                                    new AssertError(format("[%s] [%s]: [%s] [%s]", st, tzName, st.hour, hour),
-                                                    __FILE__, line));
+                            return new AssertError(format("%s [%s] [%s]: [%s] [%s] [%s]",
+                                                          tag, st, tzName, st.utcOffset, stdOffset, dstOffset),
+                                                   __FILE__, line);
                         }
 
-                        void testOffset1(Duration offset, bool dstInEffect, size_t line = __LINE__)
-                        {
-                            AssertError msg(string tag)
-                            {
-                                return new AssertError(format("%s [%s] [%s]: [%s] [%s] [%s]",
-                                                              tag, st, tzName, st.utcOffset, stdOffset, dstOffset),
-                                                       __FILE__, line);
-                            }
+                        enforce(st.dstInEffect == dstInEffect, msg("1"));
+                        enforce(st.utcOffset == offset, msg("2"));
+                        enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
+                    }
 
-                            enforce(st.dstInEffect == dstInEffect, msg("1"));
-                            enforce(st.utcOffset == offset, msg("2"));
-                            enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
-                        }
-
-                        if(hour == spring)
-                        {
-                            testHour(st, spring + 1, tzName);
-                            testHour(st + dur!"minutes"(1), spring + 1, tzName);
-                        }
-                        else
-                        {
-                            testHour(st, targetHour, tzName);
-                            testHour(st + dur!"minutes"(1), targetHour, tzName);
-                        }
-
-                        if(hour < spring)
-                            testOffset1(stdOffset, false);
-                        else
-                            testOffset1(dstOffset, true);
-
-                        st = SysTime(tzInfos[i][2] + dur!"hours"(hour));
+                    if(hour == spring)
+                    {
+                        testHour(st, spring + 1, tzName);
+                        testHour(st + dur!"minutes"(1), spring + 1, tzName);
+                    }
+                    else
+                    {
                         testHour(st, targetHour, tzName);
-
-                        //Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
-                        if(hour == fall - 1)
-                            testHour(st + dur!"hours"(1), targetHour, tzName);
-
-                        if(hour < fall)
-                            testOffset1(dstOffset, true);
-                        else
-                            testOffset1(stdOffset, false);
+                        testHour(st + dur!"minutes"(1), targetHour, tzName);
                     }
 
-                    //Verify that converting a time in UTC to a time in another
-                    //time zone results in the correct time during and surrounding
-                    //a DST switch.
-                    bool first = true;
-                    auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
-                    auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
-                    //@@@BUG@@@ 3659 makes this necessary.
-                    auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+                    if(hour < spring)
+                        testOffset1(stdOffset, false);
+                    else
+                        testOffset1(dstOffset, true);
 
-                    foreach(hour; -24 .. 25)
+                    st = SysTime(tzInfos[i][2] + dur!"hours"(hour));
+                    testHour(st, targetHour, tzName);
+
+                    //Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
+                    if(hour == fall - 1)
+                        testHour(st + dur!"hours"(1), targetHour, tzName);
+
+                    if(hour < fall)
+                        testOffset1(dstOffset, true);
+                    else
+                        testOffset1(stdOffset, false);
+                }
+
+                //Verify that converting a time in UTC to a time in another
+                //time zone results in the correct time during and surrounding
+                //a DST switch.
+                bool first = true;
+                auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
+                auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
+                //@@@BUG@@@ 3659 makes this necessary.
+                auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+
+                foreach(hour; -24 .. 25)
+                {
+                    auto utc = SysTime(tzInfos[i][1] + dur!"hours"(hour), UTC());
+                    auto local = utc.toLocalTime();
+
+                    void testOffset2(Duration offset, size_t line = __LINE__)
                     {
-                        auto utc = SysTime(tzInfos[i][1] + dur!"hours"(hour), UTC());
-                        auto local = utc.toLocalTime();
-
-                        void testOffset2(Duration offset, size_t line = __LINE__)
+                        AssertError msg(string tag)
                         {
-                            AssertError msg(string tag)
-                            {
-                                return new AssertError(format("%s [%s] [%s]: [%s] [%s]", tag, hour, tzName, utc, local),
-                                                       __FILE__, line);
-                            }
-
-                            enforce((utc + offset).hour == local.hour, msg("1"));
-                            enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
+                            return new AssertError(format("%s [%s] [%s]: [%s] [%s]", tag, hour, tzName, utc, local),
+                                                   __FILE__, line);
                         }
 
-                        if(utc < springSwitch)
-                            testOffset2(stdOffset);
-                        else
-                            testOffset2(dstOffset);
-
-                        utc = SysTime(tzInfos[i][2] + dur!"hours"(hour), UTC());
-                        local = utc.toLocalTime();
-
-                        if(utc == fallSwitch || utc == fallSwitchMinus1)
-                        {
-                            if(first)
-                            {
-                                testOffset2(dstOffset);
-                                first = false;
-                            }
-                            else
-                                testOffset2(stdOffset);
-                        }
-                        else if(utc > fallSwitch)
-                            testOffset2(stdOffset);
-                        else
-                            testOffset2(dstOffset);
+                        enforce((utc + offset).hour == local.hour, msg("1"));
+                        enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
                     }
+
+                    if(utc < springSwitch)
+                        testOffset2(stdOffset);
+                    else
+                        testOffset2(dstOffset);
+
+                    utc = SysTime(tzInfos[i][2] + dur!"hours"(hour), UTC());
+                    local = utc.toLocalTime();
+
+                    if(utc == fallSwitch || utc == fallSwitchMinus1)
+                    {
+                        if(first)
+                        {
+                            testOffset2(dstOffset);
+                            first = false;
+                        }
+                        else
+                            testOffset2(stdOffset);
+                    }
+                    else if(utc > fallSwitch)
+                        testOffset2(stdOffset);
+                    else
+                        testOffset2(dstOffset);
                 }
             }
         }
@@ -27912,20 +27819,17 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
+        assert(UTC().utcToTZ(0) == 0);
+
+        version(Posix)
         {
-            assert(UTC().utcToTZ(0) == 0);
+            scope(exit) clearTZEnvVar();
 
-            version(Posix)
-            {
-                scope(exit) clearTZEnvVar();
-
-                setTZEnvVar("UTC");
-                auto std = SysTime(Date(2010, 1, 1));
-                auto dst = SysTime(Date(2010, 7, 1));
-                assert(UTC().utcToTZ(std.stdTime) == std.stdTime);
-                assert(UTC().utcToTZ(dst.stdTime) == dst.stdTime);
-            }
+            setTZEnvVar("UTC");
+            auto std = SysTime(Date(2010, 1, 1));
+            auto dst = SysTime(Date(2010, 7, 1));
+            assert(UTC().utcToTZ(std.stdTime) == std.stdTime);
+            assert(UTC().utcToTZ(dst.stdTime) == dst.stdTime);
         }
     }
 
@@ -27947,20 +27851,17 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
+        assert(UTC().tzToUTC(0) == 0);
+
+        version(Posix)
         {
-            assert(UTC().tzToUTC(0) == 0);
+            scope(exit) clearTZEnvVar();
 
-            version(Posix)
-            {
-                scope(exit) clearTZEnvVar();
-
-                setTZEnvVar("UTC");
-                auto std = SysTime(Date(2010, 1, 1));
-                auto dst = SysTime(Date(2010, 7, 1));
-                assert(UTC().tzToUTC(std.stdTime) == std.stdTime);
-                assert(UTC().tzToUTC(dst.stdTime) == dst.stdTime);
-            }
+            setTZEnvVar("UTC");
+            auto std = SysTime(Date(2010, 1, 1));
+            auto dst = SysTime(Date(2010, 7, 1));
+            assert(UTC().tzToUTC(std.stdTime) == std.stdTime);
+            assert(UTC().tzToUTC(dst.stdTime) == dst.stdTime);
         }
     }
 
@@ -28037,7 +27938,7 @@ public:
         return stdTime + _utcOffset.total!"hnsecs";
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -28065,7 +27966,7 @@ public:
         return adjTime - _utcOffset.total!"hnsecs";
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -28116,7 +28017,7 @@ public:
         this(dur!"minutes"(utcOffset), stdName);
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         foreach(stz; [new immutable SimpleTimeZone(dur!"hours"(-8), "PST"),
                       new immutable SimpleTimeZone(-8 * 60, "PST")])
@@ -28163,7 +28064,7 @@ private:
         return format("+%02d:%02d", absOffset.hours, absOffset.minutes);
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -28239,7 +28140,7 @@ private:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    version(testStdDateTime) unittest
+    unittest
     {
         assertThrown!DateTimeException(SimpleTimeZone.fromISOString(""));
         assertThrown!DateTimeException(SimpleTimeZone.fromISOString("Z"));
@@ -28329,7 +28230,7 @@ private:
     }
 
     //Test that converting from an ISO string to a SimpleTimeZone to an ISO String works properly.
-    version(testStdDateTime) unittest
+    unittest
     {
         static void testSTZ(in string isoString, int expectedOffset, size_t line = __LINE__)
         {
@@ -28929,41 +28830,35 @@ assert(tz.dstName == "PDT");
         return timezones.data;
     }
 
-    unittest
+    version(Posix) unittest
     {
-        version(testStdDateTime)
+        static void testPTZSuccess(string tzName)
         {
-            version(Posix)
+            scope(failure) writefln("TZName which threw: %s", tzName);
+
+            PosixTimeZone.getTimeZone(tzName);
+        }
+
+        static void testPTZFailure(string tzName)
+        {
+            scope(success) writefln("TZName which was supposed to throw: %s", tzName);
+
+            PosixTimeZone.getTimeZone(tzName);
+        }
+
+        auto tzNames = getInstalledTZNames();
+
+        foreach(tzName; tzNames)
+            assertNotThrown!DateTimeException(testPTZSuccess(tzName));
+
+        foreach(DirEntry dentry; dirEntries(defaultTZDatabaseDir, SpanMode.depth))
+        {
+            if(dentry.isFile)
             {
-                static void testPTZSuccess(string tzName)
-                {
-                    scope(failure) writefln("TZName which threw: %s", tzName);
+                auto tzName = dentry.name[defaultTZDatabaseDir.length .. $];
 
-                    PosixTimeZone.getTimeZone(tzName);
-                }
-
-                static void testPTZFailure(string tzName)
-                {
-                    scope(success) writefln("TZName which was supposed to throw: %s", tzName);
-
-                    PosixTimeZone.getTimeZone(tzName);
-                }
-
-                auto tzNames = getInstalledTZNames();
-
-                foreach(tzName; tzNames)
-                    assertNotThrown!DateTimeException(testPTZSuccess(tzName));
-
-                foreach(DirEntry dentry; dirEntries(defaultTZDatabaseDir, SpanMode.depth))
-                {
-                    if(dentry.isFile)
-                    {
-                        auto tzName = dentry.name[defaultTZDatabaseDir.length .. $];
-
-                        if(!canFind(tzNames, tzName))
-                            assertThrown!DateTimeException(testPTZFailure(tzName));
-                    }
-                }
+                if(!canFind(tzNames, tzName))
+                    assertThrown!DateTimeException(testPTZFailure(tzName));
             }
         }
     }
@@ -29422,20 +29317,17 @@ else version(Windows)
 
         unittest
         {
-            version(testStdDateTime)
+            static void testWTZSuccess(string tzName)
             {
-                static void testWTZSuccess(string tzName)
-                {
-                    scope(failure) writefln("TZName which threw: %s", tzName);
+                scope(failure) writefln("TZName which threw: %s", tzName);
 
-                    WindowsTimeZone.getTimeZone(tzName);
-                }
-
-                auto tzNames = getInstalledTZNames();
-
-                foreach(tzName; tzNames)
-                    assertNotThrown!DateTimeException(testWTZSuccess(tzName));
+                WindowsTimeZone.getTimeZone(tzName);
             }
+
+            auto tzNames = getInstalledTZNames();
+
+            foreach(tzName; tzNames)
+                assertNotThrown!DateTimeException(testWTZSuccess(tzName));
         }
 
 
@@ -29514,7 +29406,7 @@ else version(Windows)
                 assert(0, "DateTime's constructor threw.");
         }
 
-        version(testStdDateTime) unittest
+        unittest
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -29853,25 +29745,19 @@ string tzDatabaseNameToWindowsTZName(string tzName)
     }
 }
 
-unittest
+version(Windows) unittest
 {
-    version(testStdDateTime)
+    static void testTZSuccess(string tzName)
     {
-        version(Windows)
-        {
-            static void testTZSuccess(string tzName)
-            {
-                scope(failure) writefln("TZName which threw: %s", tzName);
+        scope(failure) writefln("TZName which threw: %s", tzName);
 
-                tzDatabaseNameToWindowsTZName(tzName);
-            }
-
-            auto timeZones = TimeZone.getInstalledTZNames();
-
-            foreach(tzname; timeZones)
-                assertNotThrown!DateTimeException(testTZSuccess(tzname));
-        }
+        tzDatabaseNameToWindowsTZName(tzName);
     }
+
+    auto timeZones = TimeZone.getInstalledTZNames();
+
+    foreach(tzname; timeZones)
+        assertNotThrown!DateTimeException(testTZSuccess(tzname));
 }
 
 
@@ -30006,25 +29892,19 @@ string windowsTZNameToTZDatabaseName(string tzName)
     }
 }
 
-unittest
+version(Windows) unittest
 {
-    version(testStdDateTime)
-    {
-        version(Windows)
+        static void testTZSuccess(string tzName)
         {
-            static void testTZSuccess(string tzName)
-            {
-                scope(failure) writefln("TZName which threw: %s", tzName);
+            scope(failure) writefln("TZName which threw: %s", tzName);
 
-                windowsTZNameToTZDatabaseName(tzName);
-            }
-
-            auto timeZones = WindowsTimeZone.getInstalledTZNames();
-
-            foreach(tzname; timeZones)
-                assertNotThrown!DateTimeException(testTZSuccess(tzname));
+            windowsTZNameToTZDatabaseName(tzName);
         }
-    }
+
+        auto timeZones = WindowsTimeZone.getInstalledTZNames();
+
+        foreach(tzname; timeZones)
+            assertNotThrown!DateTimeException(testTZSuccess(tzname));
 }
 
 
@@ -30118,7 +29998,7 @@ public:
             start();
     }
 
-    version(testStdDateTime) @safe unittest
+    @safe unittest
     {
         auto sw = StopWatch(AutoStart.yes);
         sw.stop();
@@ -30158,7 +30038,7 @@ public:
         _timeMeasured.length = 0;
     }
 
-    version(testStdDateTime) @safe unittest
+    @safe unittest
     {
         StopWatch sw;
         sw.start();
@@ -30178,7 +30058,7 @@ public:
         _timeStart = Clock.currSystemTick;
     }
 
-    version(testStdDateTime) @trusted unittest
+    @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -30204,7 +30084,7 @@ public:
         _timeMeasured += Clock.currSystemTick - _timeStart;
     }
 
-    version(testStdDateTime) @trusted unittest
+    @trusted unittest
     {
         StopWatch sw;
         sw.start();
@@ -30232,7 +30112,7 @@ public:
         return _timeMeasured;
     }
 
-    version(testStdDateTime) @safe unittest
+    @safe unittest
     {
         StopWatch sw;
         sw.start();
@@ -30255,7 +30135,7 @@ public:
         _timeMeasured = d;
     }
 
-    version(testStdDateTime) @safe unittest
+     @safe unittest
     {
         StopWatch sw;
         TickDuration t0;
@@ -30274,7 +30154,7 @@ public:
         return _flagStarted;
     }
 
-    version(testStdDateTime) @safe unittest
+    @safe unittest
     {
         StopWatch sw1;
         assert(!sw1.running);
@@ -30364,7 +30244,7 @@ unittest
     auto f2Result = to!Duration(r[2]); // time f2 took to run 10,000 times
 }
 
-version(testStdDateTime) @safe unittest
+@safe unittest
 {
     int a;
     void f0() {}
@@ -30453,7 +30333,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     return ComparingBenchmarkResult(t[0], t[1]);
 }
 
-version(testStdDateTime) @safe unittest
+@safe unittest
 {
     void f1x() {}
     void f2x() {}
@@ -30463,7 +30343,7 @@ version(testStdDateTime) @safe unittest
     //static auto b2 = comparingBenchmark!(f1x, f2x, 1); // NG
 }
 
-version(testStdDateTime) unittest
+unittest
 {
     void f1x() {}
     void f2x() {}
@@ -30474,7 +30354,7 @@ version(testStdDateTime) unittest
 }
 
 //Bug# 8450
-version(testStdDateTime) unittest
+unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -30508,21 +30388,18 @@ template isTimePoint(T)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(isTimePoint!(Date));
-        static assert(isTimePoint!(DateTime));
-        static assert(isTimePoint!(TimeOfDay));
-        static assert(isTimePoint!(SysTime));
-        static assert(isTimePoint!(const Date));
-        static assert(isTimePoint!(const DateTime));
-        static assert(isTimePoint!(const TimeOfDay));
-        static assert(isTimePoint!(const SysTime));
-        static assert(isTimePoint!(immutable Date));
-        static assert(isTimePoint!(immutable DateTime));
-        static assert(isTimePoint!(immutable TimeOfDay));
-        static assert(isTimePoint!(immutable SysTime));
-    }
+    static assert(isTimePoint!(Date));
+    static assert(isTimePoint!(DateTime));
+    static assert(isTimePoint!(TimeOfDay));
+    static assert(isTimePoint!(SysTime));
+    static assert(isTimePoint!(const Date));
+    static assert(isTimePoint!(const DateTime));
+    static assert(isTimePoint!(const TimeOfDay));
+    static assert(isTimePoint!(const SysTime));
+    static assert(isTimePoint!(immutable Date));
+    static assert(isTimePoint!(immutable DateTime));
+    static assert(isTimePoint!(immutable TimeOfDay));
+    static assert(isTimePoint!(immutable SysTime));
 }
 
 /++
@@ -30542,7 +30419,7 @@ static bool yearIsLeapYear(int year) pure nothrow
     return year % 4 == 0;
 }
 
-version(testStdDateTime) unittest
+unittest
 {
     foreach(year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
                    2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
@@ -30574,15 +30451,12 @@ long unixTimeToStdTime(time_t unixTime) pure nothrow
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(unixTimeToStdTime(0) == 621_355_968_000_000_000L);  //Midnight, January 1st, 1970
-        assert(unixTimeToStdTime(86_400) == 621_355_968_000_000_000L + 864_000_000_000L);  //Midnight, January 2nd, 1970
-        assert(unixTimeToStdTime(-86_400) == 621_355_968_000_000_000L - 864_000_000_000L);  //Midnight, December 31st, 1969
+    assert(unixTimeToStdTime(0) == 621_355_968_000_000_000L);  //Midnight, January 1st, 1970
+    assert(unixTimeToStdTime(86_400) == 621_355_968_000_000_000L + 864_000_000_000L);  //Midnight, January 2nd, 1970
+    assert(unixTimeToStdTime(-86_400) == 621_355_968_000_000_000L - 864_000_000_000L);  //Midnight, December 31st, 1969
 
-        assert(unixTimeToStdTime(0) == (Date(1970, 1, 1) - Date(1, 1, 1)).total!"hnsecs");
-        assert(unixTimeToStdTime(0) == (DateTime(1970, 1, 1) - DateTime(1, 1, 1)).total!"hnsecs");
-    }
+    assert(unixTimeToStdTime(0) == (Date(1970, 1, 1) - Date(1, 1, 1)).total!"hnsecs");
+    assert(unixTimeToStdTime(0) == (DateTime(1970, 1, 1) - DateTime(1, 1, 1)).total!"hnsecs");
 }
 
 
@@ -30630,15 +30504,12 @@ time_t stdTimeToUnixTime(long stdTime) pure nothrow
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(stdTimeToUnixTime(621_355_968_000_000_000L) == 0);  //Midnight, January 1st, 1970
-        assert(stdTimeToUnixTime(621_355_968_000_000_000L + 864_000_000_000L) == 86_400);  //Midnight, January 2nd, 1970
-        assert(stdTimeToUnixTime(621_355_968_000_000_000L - 864_000_000_000L) == -86_400);  //Midnight, December 31st, 1969
+    assert(stdTimeToUnixTime(621_355_968_000_000_000L) == 0);  //Midnight, January 1st, 1970
+    assert(stdTimeToUnixTime(621_355_968_000_000_000L + 864_000_000_000L) == 86_400);  //Midnight, January 2nd, 1970
+    assert(stdTimeToUnixTime(621_355_968_000_000_000L - 864_000_000_000L) == -86_400);  //Midnight, December 31st, 1969
 
-        assert(stdTimeToUnixTime((Date(1970, 1, 1) - Date(1, 1, 1)).total!"hnsecs") == 0);
-        assert(stdTimeToUnixTime((DateTime(1970, 1, 1) - DateTime(1, 1, 1)).total!"hnsecs") == 0);
-    }
+    assert(stdTimeToUnixTime((Date(1970, 1, 1) - Date(1, 1, 1)).total!"hnsecs") == 0);
+    assert(stdTimeToUnixTime((DateTime(1970, 1, 1) - DateTime(1, 1, 1)).total!"hnsecs") == 0);
 }
 
 
@@ -30809,15 +30680,12 @@ else version(Windows)
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto sysTime = Clock.currTime(UTC());
-            SYSTEMTIME st = void;
-            GetSystemTime(&st);
-            auto converted = SYSTEMTIMEToSysTime(&st, UTC());
+        auto sysTime = Clock.currTime(UTC());
+        SYSTEMTIME st = void;
+        GetSystemTime(&st);
+        auto converted = SYSTEMTIMEToSysTime(&st, UTC());
 
-            assert(abs((converted - sysTime)) <= dur!"seconds"(2));
-        }
+        assert(abs((converted - sysTime)) <= dur!"seconds"(2));
     }
 
 
@@ -30844,23 +30712,20 @@ else version(Windows)
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            SYSTEMTIME st = void;
-            GetSystemTime(&st);
-            auto sysTime = SYSTEMTIMEToSysTime(&st, UTC());
+        SYSTEMTIME st = void;
+        GetSystemTime(&st);
+        auto sysTime = SYSTEMTIMEToSysTime(&st, UTC());
 
-            SYSTEMTIME result = SysTimeToSYSTEMTIME(sysTime);
+        SYSTEMTIME result = SysTimeToSYSTEMTIME(sysTime);
 
-            assert(st.wYear == result.wYear);
-            assert(st.wMonth == result.wMonth);
-            assert(st.wDayOfWeek == result.wDayOfWeek);
-            assert(st.wDay == result.wDay);
-            assert(st.wHour == result.wHour);
-            assert(st.wMinute == result.wMinute);
-            assert(st.wSecond == result.wSecond);
-            assert(st.wMilliseconds == result.wMilliseconds);
-        }
+        assert(st.wYear == result.wYear);
+        assert(st.wMonth == result.wMonth);
+        assert(st.wDayOfWeek == result.wDayOfWeek);
+        assert(st.wDay == result.wDay);
+        assert(st.wHour == result.wHour);
+        assert(st.wMinute == result.wMinute);
+        assert(st.wSecond == result.wSecond);
+        assert(st.wMilliseconds == result.wMilliseconds);
     }
 
     private enum hnsecsFrom1601 = 504_911_232_000_000_000L;
@@ -30888,19 +30753,16 @@ else version(Windows)
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto sysTime = Clock.currTime(UTC());
-            SYSTEMTIME st = void;
-            GetSystemTime(&st);
+        auto sysTime = Clock.currTime(UTC());
+        SYSTEMTIME st = void;
+        GetSystemTime(&st);
 
-            FILETIME ft = void;
-            SystemTimeToFileTime(&st, &ft);
+        FILETIME ft = void;
+        SystemTimeToFileTime(&st, &ft);
 
-            auto converted = FILETIMEToSysTime(&ft);
+        auto converted = FILETIMEToSysTime(&ft);
 
-            assert(abs((converted - sysTime)) <= dur!"seconds"(2));
-        }
+        assert(abs((converted - sysTime)) <= dur!"seconds"(2));
     }
 
 
@@ -30926,20 +30788,17 @@ else version(Windows)
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            SYSTEMTIME st = void;
-            GetSystemTime(&st);
+        SYSTEMTIME st = void;
+        GetSystemTime(&st);
 
-            FILETIME ft = void;
-            SystemTimeToFileTime(&st, &ft);
-            auto sysTime = FILETIMEToSysTime(&ft, UTC());
+        FILETIME ft = void;
+        SystemTimeToFileTime(&st, &ft);
+        auto sysTime = FILETIMEToSysTime(&ft, UTC());
 
-            FILETIME result = SysTimeToFILETIME(sysTime);
+        FILETIME result = SysTimeToFILETIME(sysTime);
 
-            assert(ft.dwLowDateTime == result.dwLowDateTime);
-            assert(ft.dwHighDateTime == result.dwHighDateTime);
-        }
+        assert(ft.dwLowDateTime == result.dwLowDateTime);
+        assert(ft.dwHighDateTime == result.dwHighDateTime);
     }
 }
 
@@ -30983,17 +30842,14 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(DosFileTimeToSysTime(0b00000000001000010000000000000000) ==
-                        SysTime(DateTime(1980, 1, 1, 0, 0, 0)));
+    assert(DosFileTimeToSysTime(0b00000000001000010000000000000000) ==
+                    SysTime(DateTime(1980, 1, 1, 0, 0, 0)));
 
-        assert(DosFileTimeToSysTime(0b11111111100111111011111101111101) ==
-                        SysTime(DateTime(2107, 12, 31, 23, 59, 58)));
+    assert(DosFileTimeToSysTime(0b11111111100111111011111101111101) ==
+                    SysTime(DateTime(2107, 12, 31, 23, 59, 58)));
 
-        assert(DosFileTimeToSysTime(0x3E3F8456) ==
-                        SysTime(DateTime(2011, 1, 31, 16, 34, 44)));
-    }
+    assert(DosFileTimeToSysTime(0x3E3F8456) ==
+                    SysTime(DateTime(2011, 1, 31, 16, 34, 44)));
 }
 
 
@@ -31030,17 +30886,14 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))) ==
-                        0b00000000001000010000000000000000);
+    assert(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))) ==
+                    0b00000000001000010000000000000000);
 
-        assert(SysTimeToDosFileTime(SysTime(DateTime(2107, 12, 31, 23, 59, 58))) ==
-                        0b11111111100111111011111101111101);
+    assert(SysTimeToDosFileTime(SysTime(DateTime(2107, 12, 31, 23, 59, 58))) ==
+                    0b11111111100111111011111101111101);
 
-        assert(SysTimeToDosFileTime(SysTime(DateTime(2011, 1, 31, 16, 34, 44))) ==
-                        0x3E3F8456);
-    }
+    assert(SysTimeToDosFileTime(SysTime(DateTime(2011, 1, 31, 16, 34, 44))) ==
+                    0x3E3F8456);
 }
 
 
@@ -31098,22 +30951,19 @@ int cmpTimeUnits(string lhs, string rhs)
 
 unittest
 {
-    version(testStdDateTime)
+    foreach(i, outerUnits; timeStrings)
     {
-        foreach(i, outerUnits; timeStrings)
-        {
-            assert(cmpTimeUnits(outerUnits, outerUnits) == 0);
+        assert(cmpTimeUnits(outerUnits, outerUnits) == 0);
 
-            //For some reason, $ won't compile.
-            foreach(innerUnits; timeStrings[i+1 .. timeStrings.length])
-                assert(cmpTimeUnits(outerUnits, innerUnits) == -1);
-        }
+        //For some reason, $ won't compile.
+        foreach(innerUnits; timeStrings[i+1 .. timeStrings.length])
+            assert(cmpTimeUnits(outerUnits, innerUnits) == -1);
+    }
 
-        foreach(i, outerUnits; timeStrings)
-        {
-            foreach(innerUnits; timeStrings[0 .. i])
-                assert(cmpTimeUnits(outerUnits, innerUnits) == 1);
-        }
+    foreach(i, outerUnits; timeStrings)
+    {
+        foreach(innerUnits; timeStrings[0 .. i])
+            assert(cmpTimeUnits(outerUnits, innerUnits) == 1);
     }
 }
 
@@ -31160,34 +31010,31 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs)
 
 unittest
 {
-    version(testStdDateTime)
+    static string genTest(size_t index)
     {
-        static string genTest(size_t index)
-        {
-            auto currUnits = timeStrings[index];
-            auto test = `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ currUnits ~ `") == 0); `;
+        auto currUnits = timeStrings[index];
+        auto test = `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ currUnits ~ `") == 0); `;
 
-            //For some reason, $ won't compile.
-            foreach(units; timeStrings[index + 1 .. timeStrings.length])
-                test ~= `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ units ~ `") == -1); `;
+        //For some reason, $ won't compile.
+        foreach(units; timeStrings[index + 1 .. timeStrings.length])
+            test ~= `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ units ~ `") == -1); `;
 
-            foreach(units; timeStrings[0 .. index])
-                test ~= `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ units ~ `") == 1); `;
+        foreach(units; timeStrings[0 .. index])
+            test ~= `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ units ~ `") == 1); `;
 
-            return test;
-        }
-
-        mixin(genTest(0));
-        mixin(genTest(1));
-        mixin(genTest(2));
-        mixin(genTest(3));
-        mixin(genTest(4));
-        mixin(genTest(5));
-        mixin(genTest(6));
-        mixin(genTest(7));
-        mixin(genTest(8));
-        mixin(genTest(9));
+        return test;
     }
+
+    mixin(genTest(0));
+    mixin(genTest(1));
+    mixin(genTest(2));
+    mixin(genTest(3));
+    mixin(genTest(4));
+    mixin(genTest(5));
+    mixin(genTest(6));
+    mixin(genTest(7));
+    mixin(genTest(8));
+    mixin(genTest(9));
 }
 
 
@@ -31227,14 +31074,11 @@ bool valid(string units)(int value) pure nothrow
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        //Verify Examples.
-        assert(valid!"hours"(12));
-        assert(!valid!"hours"(32));
-        assert(valid!"months"(12));
-        assert(!valid!"months"(13));
-    }
+    //Verify Examples.
+    assert(valid!"hours"(12));
+    assert(!valid!"hours"(32));
+    assert(valid!"months"(12));
+    assert(!valid!"months"(13));
 }
 
 
@@ -31345,60 +31189,57 @@ static int monthsToMonth(int currMonth, int month) pure
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(monthsToMonth(Month.jan, Month.jan) == 0);
-        assert(monthsToMonth(Month.jan, Month.feb) == 1);
-        assert(monthsToMonth(Month.jan, Month.mar) == 2);
-        assert(monthsToMonth(Month.jan, Month.apr) == 3);
-        assert(monthsToMonth(Month.jan, Month.may) == 4);
-        assert(monthsToMonth(Month.jan, Month.jun) == 5);
-        assert(monthsToMonth(Month.jan, Month.jul) == 6);
-        assert(monthsToMonth(Month.jan, Month.aug) == 7);
-        assert(monthsToMonth(Month.jan, Month.sep) == 8);
-        assert(monthsToMonth(Month.jan, Month.oct) == 9);
-        assert(monthsToMonth(Month.jan, Month.nov) == 10);
-        assert(monthsToMonth(Month.jan, Month.dec) == 11);
+    assert(monthsToMonth(Month.jan, Month.jan) == 0);
+    assert(monthsToMonth(Month.jan, Month.feb) == 1);
+    assert(monthsToMonth(Month.jan, Month.mar) == 2);
+    assert(monthsToMonth(Month.jan, Month.apr) == 3);
+    assert(monthsToMonth(Month.jan, Month.may) == 4);
+    assert(monthsToMonth(Month.jan, Month.jun) == 5);
+    assert(monthsToMonth(Month.jan, Month.jul) == 6);
+    assert(monthsToMonth(Month.jan, Month.aug) == 7);
+    assert(monthsToMonth(Month.jan, Month.sep) == 8);
+    assert(monthsToMonth(Month.jan, Month.oct) == 9);
+    assert(monthsToMonth(Month.jan, Month.nov) == 10);
+    assert(monthsToMonth(Month.jan, Month.dec) == 11);
 
-        assert(monthsToMonth(Month.may, Month.jan) == 8);
-        assert(monthsToMonth(Month.may, Month.feb) == 9);
-        assert(monthsToMonth(Month.may, Month.mar) == 10);
-        assert(monthsToMonth(Month.may, Month.apr) == 11);
-        assert(monthsToMonth(Month.may, Month.may) == 0);
-        assert(monthsToMonth(Month.may, Month.jun) == 1);
-        assert(monthsToMonth(Month.may, Month.jul) == 2);
-        assert(monthsToMonth(Month.may, Month.aug) == 3);
-        assert(monthsToMonth(Month.may, Month.sep) == 4);
-        assert(monthsToMonth(Month.may, Month.oct) == 5);
-        assert(monthsToMonth(Month.may, Month.nov) == 6);
-        assert(monthsToMonth(Month.may, Month.dec) == 7);
+    assert(monthsToMonth(Month.may, Month.jan) == 8);
+    assert(monthsToMonth(Month.may, Month.feb) == 9);
+    assert(monthsToMonth(Month.may, Month.mar) == 10);
+    assert(monthsToMonth(Month.may, Month.apr) == 11);
+    assert(monthsToMonth(Month.may, Month.may) == 0);
+    assert(monthsToMonth(Month.may, Month.jun) == 1);
+    assert(monthsToMonth(Month.may, Month.jul) == 2);
+    assert(monthsToMonth(Month.may, Month.aug) == 3);
+    assert(monthsToMonth(Month.may, Month.sep) == 4);
+    assert(monthsToMonth(Month.may, Month.oct) == 5);
+    assert(monthsToMonth(Month.may, Month.nov) == 6);
+    assert(monthsToMonth(Month.may, Month.dec) == 7);
 
-        assert(monthsToMonth(Month.oct, Month.jan) == 3);
-        assert(monthsToMonth(Month.oct, Month.feb) == 4);
-        assert(monthsToMonth(Month.oct, Month.mar) == 5);
-        assert(monthsToMonth(Month.oct, Month.apr) == 6);
-        assert(monthsToMonth(Month.oct, Month.may) == 7);
-        assert(monthsToMonth(Month.oct, Month.jun) == 8);
-        assert(monthsToMonth(Month.oct, Month.jul) == 9);
-        assert(monthsToMonth(Month.oct, Month.aug) == 10);
-        assert(monthsToMonth(Month.oct, Month.sep) == 11);
-        assert(monthsToMonth(Month.oct, Month.oct) == 0);
-        assert(monthsToMonth(Month.oct, Month.nov) == 1);
-        assert(monthsToMonth(Month.oct, Month.dec) == 2);
+    assert(monthsToMonth(Month.oct, Month.jan) == 3);
+    assert(monthsToMonth(Month.oct, Month.feb) == 4);
+    assert(monthsToMonth(Month.oct, Month.mar) == 5);
+    assert(monthsToMonth(Month.oct, Month.apr) == 6);
+    assert(monthsToMonth(Month.oct, Month.may) == 7);
+    assert(monthsToMonth(Month.oct, Month.jun) == 8);
+    assert(monthsToMonth(Month.oct, Month.jul) == 9);
+    assert(monthsToMonth(Month.oct, Month.aug) == 10);
+    assert(monthsToMonth(Month.oct, Month.sep) == 11);
+    assert(monthsToMonth(Month.oct, Month.oct) == 0);
+    assert(monthsToMonth(Month.oct, Month.nov) == 1);
+    assert(monthsToMonth(Month.oct, Month.dec) == 2);
 
-        assert(monthsToMonth(Month.dec, Month.jan) == 1);
-        assert(monthsToMonth(Month.dec, Month.feb) == 2);
-        assert(monthsToMonth(Month.dec, Month.mar) == 3);
-        assert(monthsToMonth(Month.dec, Month.apr) == 4);
-        assert(monthsToMonth(Month.dec, Month.may) == 5);
-        assert(monthsToMonth(Month.dec, Month.jun) == 6);
-        assert(monthsToMonth(Month.dec, Month.jul) == 7);
-        assert(monthsToMonth(Month.dec, Month.aug) == 8);
-        assert(monthsToMonth(Month.dec, Month.sep) == 9);
-        assert(monthsToMonth(Month.dec, Month.oct) == 10);
-        assert(monthsToMonth(Month.dec, Month.nov) == 11);
-        assert(monthsToMonth(Month.dec, Month.dec) == 0);
-    }
+    assert(monthsToMonth(Month.dec, Month.jan) == 1);
+    assert(monthsToMonth(Month.dec, Month.feb) == 2);
+    assert(monthsToMonth(Month.dec, Month.mar) == 3);
+    assert(monthsToMonth(Month.dec, Month.apr) == 4);
+    assert(monthsToMonth(Month.dec, Month.may) == 5);
+    assert(monthsToMonth(Month.dec, Month.jun) == 6);
+    assert(monthsToMonth(Month.dec, Month.jul) == 7);
+    assert(monthsToMonth(Month.dec, Month.aug) == 8);
+    assert(monthsToMonth(Month.dec, Month.sep) == 9);
+    assert(monthsToMonth(Month.dec, Month.oct) == 10);
+    assert(monthsToMonth(Month.dec, Month.nov) == 11);
+    assert(monthsToMonth(Month.dec, Month.dec) == 0);
 }
 
 
@@ -31423,64 +31264,61 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) pure nothrow
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.sun) == 0);
-        assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.mon) == 1);
-        assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.tue) == 2);
-        assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.wed) == 3);
-        assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.thu) == 4);
-        assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.fri) == 5);
-        assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.sat) == 6);
+    assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.sun) == 0);
+    assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.mon) == 1);
+    assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.tue) == 2);
+    assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.wed) == 3);
+    assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.thu) == 4);
+    assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.fri) == 5);
+    assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.sat) == 6);
 
-        assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.sun) == 6);
-        assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.mon) == 0);
-        assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.tue) == 1);
-        assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.wed) == 2);
-        assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.thu) == 3);
-        assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.fri) == 4);
-        assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.sat) == 5);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.sun) == 6);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.mon) == 0);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.tue) == 1);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.wed) == 2);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.thu) == 3);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.fri) == 4);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.sat) == 5);
 
-        assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.sun) == 5);
-        assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.mon) == 6);
-        assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.tue) == 0);
-        assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.wed) == 1);
-        assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.thu) == 2);
-        assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.fri) == 3);
-        assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.sat) == 4);
+    assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.sun) == 5);
+    assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.mon) == 6);
+    assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.tue) == 0);
+    assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.wed) == 1);
+    assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.thu) == 2);
+    assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.fri) == 3);
+    assert(daysToDayOfWeek(DayOfWeek.tue, DayOfWeek.sat) == 4);
 
-        assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.sun) == 4);
-        assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.mon) == 5);
-        assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.tue) == 6);
-        assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.wed) == 0);
-        assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.thu) == 1);
-        assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.fri) == 2);
-        assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.sat) == 3);
+    assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.sun) == 4);
+    assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.mon) == 5);
+    assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.tue) == 6);
+    assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.wed) == 0);
+    assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.thu) == 1);
+    assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.fri) == 2);
+    assert(daysToDayOfWeek(DayOfWeek.wed, DayOfWeek.sat) == 3);
 
-        assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.sun) == 3);
-        assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.mon) == 4);
-        assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.tue) == 5);
-        assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.wed) == 6);
-        assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.thu) == 0);
-        assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.fri) == 1);
-        assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.sat) == 2);
+    assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.sun) == 3);
+    assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.mon) == 4);
+    assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.tue) == 5);
+    assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.wed) == 6);
+    assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.thu) == 0);
+    assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.fri) == 1);
+    assert(daysToDayOfWeek(DayOfWeek.thu, DayOfWeek.sat) == 2);
 
-        assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.sun) == 2);
-        assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.mon) == 3);
-        assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.tue) == 4);
-        assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.wed) == 5);
-        assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.thu) == 6);
-        assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.fri) == 0);
-        assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.sat) == 1);
+    assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.sun) == 2);
+    assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.mon) == 3);
+    assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.tue) == 4);
+    assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.wed) == 5);
+    assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.thu) == 6);
+    assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.fri) == 0);
+    assert(daysToDayOfWeek(DayOfWeek.fri, DayOfWeek.sat) == 1);
 
-        assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.sun) == 1);
-        assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.mon) == 2);
-        assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.tue) == 3);
-        assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.wed) == 4);
-        assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.thu) == 5);
-        assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.fri) == 6);
-        assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.sat) == 0);
-    }
+    assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.sun) == 1);
+    assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.mon) == 2);
+    assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.tue) == 3);
+    assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.wed) == 4);
+    assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.thu) == 5);
+    assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.fri) == 6);
+    assert(daysToDayOfWeek(DayOfWeek.sat, DayOfWeek.sat) == 0);
 }
 
 
@@ -31581,7 +31419,7 @@ unittest
     }
 }
 
-version(testStdDateTime) @safe unittest
+@safe unittest
 {
     @safe static void func(TickDuration td)
     {
@@ -31599,7 +31437,7 @@ version(testStdDateTime) @safe unittest
     +/
 }
 
-version(testStdDateTime) unittest
+unittest
 {
     static void func(TickDuration td)
     {
@@ -31618,7 +31456,7 @@ version(testStdDateTime) unittest
 }
 
 //Bug# 8450
-version(testStdDateTime) unittest
+unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -31710,18 +31548,15 @@ long splitUnitsFromHNSecs(string units)(ref long hnsecs) pure nothrow
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        //Verify Example.
-        auto hnsecs = 2595000000007L;
-        immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
-        assert(days == 3);
-        assert(hnsecs == 3000000007);
+    //Verify Example.
+    auto hnsecs = 2595000000007L;
+    immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
+    assert(days == 3);
+    assert(hnsecs == 3000000007);
 
-        immutable minutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
-        assert(minutes == 5);
-        assert(hnsecs == 7);
-    }
+    immutable minutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
+    assert(minutes == 5);
+    assert(hnsecs == 7);
 }
 
 
@@ -31756,14 +31591,11 @@ long getUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        //Verify Example.
-        auto hnsecs = 2595000000007L;
-        immutable days = getUnitsFromHNSecs!"days"(hnsecs);
-        assert(days == 3);
-        assert(hnsecs == 2595000000007L);
-    }
+    //Verify Example.
+    auto hnsecs = 2595000000007L;
+    immutable days = getUnitsFromHNSecs!"days"(hnsecs);
+    assert(days == 3);
+    assert(hnsecs == 2595000000007L);
 }
 
 
@@ -31800,14 +31632,11 @@ long removeUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        //Verify Example.
-        auto hnsecs = 2595000000007L;
-        auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
-        assert(returned == 3000000007);
-        assert(hnsecs == 2595000000007L);
-    }
+    //Verify Example.
+    auto hnsecs = 2595000000007L;
+    auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
+    assert(returned == 3000000007);
+    assert(hnsecs == 2595000000007L);
 }
 
 
@@ -31840,62 +31669,59 @@ body
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        //Test A.D.
-        assert(maxDay(1999, 1) == 31);
-        assert(maxDay(1999, 2) == 28);
-        assert(maxDay(1999, 3) == 31);
-        assert(maxDay(1999, 4) == 30);
-        assert(maxDay(1999, 5) == 31);
-        assert(maxDay(1999, 6) == 30);
-        assert(maxDay(1999, 7) == 31);
-        assert(maxDay(1999, 8) == 31);
-        assert(maxDay(1999, 9) == 30);
-        assert(maxDay(1999, 10) == 31);
-        assert(maxDay(1999, 11) == 30);
-        assert(maxDay(1999, 12) == 31);
+    //Test A.D.
+    assert(maxDay(1999, 1) == 31);
+    assert(maxDay(1999, 2) == 28);
+    assert(maxDay(1999, 3) == 31);
+    assert(maxDay(1999, 4) == 30);
+    assert(maxDay(1999, 5) == 31);
+    assert(maxDay(1999, 6) == 30);
+    assert(maxDay(1999, 7) == 31);
+    assert(maxDay(1999, 8) == 31);
+    assert(maxDay(1999, 9) == 30);
+    assert(maxDay(1999, 10) == 31);
+    assert(maxDay(1999, 11) == 30);
+    assert(maxDay(1999, 12) == 31);
 
-        assert(maxDay(2000, 1) == 31);
-        assert(maxDay(2000, 2) == 29);
-        assert(maxDay(2000, 3) == 31);
-        assert(maxDay(2000, 4) == 30);
-        assert(maxDay(2000, 5) == 31);
-        assert(maxDay(2000, 6) == 30);
-        assert(maxDay(2000, 7) == 31);
-        assert(maxDay(2000, 8) == 31);
-        assert(maxDay(2000, 9) == 30);
-        assert(maxDay(2000, 10) == 31);
-        assert(maxDay(2000, 11) == 30);
-        assert(maxDay(2000, 12) == 31);
+    assert(maxDay(2000, 1) == 31);
+    assert(maxDay(2000, 2) == 29);
+    assert(maxDay(2000, 3) == 31);
+    assert(maxDay(2000, 4) == 30);
+    assert(maxDay(2000, 5) == 31);
+    assert(maxDay(2000, 6) == 30);
+    assert(maxDay(2000, 7) == 31);
+    assert(maxDay(2000, 8) == 31);
+    assert(maxDay(2000, 9) == 30);
+    assert(maxDay(2000, 10) == 31);
+    assert(maxDay(2000, 11) == 30);
+    assert(maxDay(2000, 12) == 31);
 
-        //Test B.C.
-        assert(maxDay(-1999, 1) == 31);
-        assert(maxDay(-1999, 2) == 28);
-        assert(maxDay(-1999, 3) == 31);
-        assert(maxDay(-1999, 4) == 30);
-        assert(maxDay(-1999, 5) == 31);
-        assert(maxDay(-1999, 6) == 30);
-        assert(maxDay(-1999, 7) == 31);
-        assert(maxDay(-1999, 8) == 31);
-        assert(maxDay(-1999, 9) == 30);
-        assert(maxDay(-1999, 10) == 31);
-        assert(maxDay(-1999, 11) == 30);
-        assert(maxDay(-1999, 12) == 31);
+    //Test B.C.
+    assert(maxDay(-1999, 1) == 31);
+    assert(maxDay(-1999, 2) == 28);
+    assert(maxDay(-1999, 3) == 31);
+    assert(maxDay(-1999, 4) == 30);
+    assert(maxDay(-1999, 5) == 31);
+    assert(maxDay(-1999, 6) == 30);
+    assert(maxDay(-1999, 7) == 31);
+    assert(maxDay(-1999, 8) == 31);
+    assert(maxDay(-1999, 9) == 30);
+    assert(maxDay(-1999, 10) == 31);
+    assert(maxDay(-1999, 11) == 30);
+    assert(maxDay(-1999, 12) == 31);
 
-        assert(maxDay(-2000, 1) == 31);
-        assert(maxDay(-2000, 2) == 29);
-        assert(maxDay(-2000, 3) == 31);
-        assert(maxDay(-2000, 4) == 30);
-        assert(maxDay(-2000, 5) == 31);
-        assert(maxDay(-2000, 6) == 30);
-        assert(maxDay(-2000, 7) == 31);
-        assert(maxDay(-2000, 8) == 31);
-        assert(maxDay(-2000, 9) == 30);
-        assert(maxDay(-2000, 10) == 31);
-        assert(maxDay(-2000, 11) == 30);
-        assert(maxDay(-2000, 12) == 31);
-    }
+    assert(maxDay(-2000, 1) == 31);
+    assert(maxDay(-2000, 2) == 29);
+    assert(maxDay(-2000, 3) == 31);
+    assert(maxDay(-2000, 4) == 30);
+    assert(maxDay(-2000, 5) == 31);
+    assert(maxDay(-2000, 6) == 30);
+    assert(maxDay(-2000, 7) == 31);
+    assert(maxDay(-2000, 8) == 31);
+    assert(maxDay(-2000, 9) == 30);
+    assert(maxDay(-2000, 10) == 31);
+    assert(maxDay(-2000, 11) == 30);
+    assert(maxDay(-2000, 12) == 31);
 }
 
 
@@ -31924,43 +31750,40 @@ DayOfWeek getDayOfWeek(int day) pure nothrow
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        //Test A.D.
-        assert(getDayOfWeek(SysTime(Date(1, 1, 1)).dayOfGregorianCal) == DayOfWeek.mon);
-        assert(getDayOfWeek(SysTime(Date(1, 1, 2)).dayOfGregorianCal) == DayOfWeek.tue);
-        assert(getDayOfWeek(SysTime(Date(1, 1, 3)).dayOfGregorianCal) == DayOfWeek.wed);
-        assert(getDayOfWeek(SysTime(Date(1, 1, 4)).dayOfGregorianCal) == DayOfWeek.thu);
-        assert(getDayOfWeek(SysTime(Date(1, 1, 5)).dayOfGregorianCal) == DayOfWeek.fri);
-        assert(getDayOfWeek(SysTime(Date(1, 1, 6)).dayOfGregorianCal) == DayOfWeek.sat);
-        assert(getDayOfWeek(SysTime(Date(1, 1, 7)).dayOfGregorianCal) == DayOfWeek.sun);
-        assert(getDayOfWeek(SysTime(Date(1, 1, 8)).dayOfGregorianCal) == DayOfWeek.mon);
-        assert(getDayOfWeek(SysTime(Date(1, 1, 9)).dayOfGregorianCal) == DayOfWeek.tue);
-        assert(getDayOfWeek(SysTime(Date(2, 1, 1)).dayOfGregorianCal) == DayOfWeek.tue);
-        assert(getDayOfWeek(SysTime(Date(3, 1, 1)).dayOfGregorianCal) == DayOfWeek.wed);
-        assert(getDayOfWeek(SysTime(Date(4, 1, 1)).dayOfGregorianCal) == DayOfWeek.thu);
-        assert(getDayOfWeek(SysTime(Date(5, 1, 1)).dayOfGregorianCal) == DayOfWeek.sat);
-        assert(getDayOfWeek(SysTime(Date(2000, 1, 1)).dayOfGregorianCal) == DayOfWeek.sat);
-        assert(getDayOfWeek(SysTime(Date(2010, 8, 22)).dayOfGregorianCal) == DayOfWeek.sun);
-        assert(getDayOfWeek(SysTime(Date(2010, 8, 23)).dayOfGregorianCal) == DayOfWeek.mon);
-        assert(getDayOfWeek(SysTime(Date(2010, 8, 24)).dayOfGregorianCal) == DayOfWeek.tue);
-        assert(getDayOfWeek(SysTime(Date(2010, 8, 25)).dayOfGregorianCal) == DayOfWeek.wed);
-        assert(getDayOfWeek(SysTime(Date(2010, 8, 26)).dayOfGregorianCal) == DayOfWeek.thu);
-        assert(getDayOfWeek(SysTime(Date(2010, 8, 27)).dayOfGregorianCal) == DayOfWeek.fri);
-        assert(getDayOfWeek(SysTime(Date(2010, 8, 28)).dayOfGregorianCal) == DayOfWeek.sat);
-        assert(getDayOfWeek(SysTime(Date(2010, 8, 29)).dayOfGregorianCal) == DayOfWeek.sun);
+    //Test A.D.
+    assert(getDayOfWeek(SysTime(Date(1, 1, 1)).dayOfGregorianCal) == DayOfWeek.mon);
+    assert(getDayOfWeek(SysTime(Date(1, 1, 2)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(1, 1, 3)).dayOfGregorianCal) == DayOfWeek.wed);
+    assert(getDayOfWeek(SysTime(Date(1, 1, 4)).dayOfGregorianCal) == DayOfWeek.thu);
+    assert(getDayOfWeek(SysTime(Date(1, 1, 5)).dayOfGregorianCal) == DayOfWeek.fri);
+    assert(getDayOfWeek(SysTime(Date(1, 1, 6)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(1, 1, 7)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(1, 1, 8)).dayOfGregorianCal) == DayOfWeek.mon);
+    assert(getDayOfWeek(SysTime(Date(1, 1, 9)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(2, 1, 1)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(3, 1, 1)).dayOfGregorianCal) == DayOfWeek.wed);
+    assert(getDayOfWeek(SysTime(Date(4, 1, 1)).dayOfGregorianCal) == DayOfWeek.thu);
+    assert(getDayOfWeek(SysTime(Date(5, 1, 1)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(2000, 1, 1)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(2010, 8, 22)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(2010, 8, 23)).dayOfGregorianCal) == DayOfWeek.mon);
+    assert(getDayOfWeek(SysTime(Date(2010, 8, 24)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(2010, 8, 25)).dayOfGregorianCal) == DayOfWeek.wed);
+    assert(getDayOfWeek(SysTime(Date(2010, 8, 26)).dayOfGregorianCal) == DayOfWeek.thu);
+    assert(getDayOfWeek(SysTime(Date(2010, 8, 27)).dayOfGregorianCal) == DayOfWeek.fri);
+    assert(getDayOfWeek(SysTime(Date(2010, 8, 28)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(2010, 8, 29)).dayOfGregorianCal) == DayOfWeek.sun);
 
-        //Test B.C.
-        assert(getDayOfWeek(SysTime(Date(0, 12, 31)).dayOfGregorianCal) == DayOfWeek.sun);
-        assert(getDayOfWeek(SysTime(Date(0, 12, 30)).dayOfGregorianCal) == DayOfWeek.sat);
-        assert(getDayOfWeek(SysTime(Date(0, 12, 29)).dayOfGregorianCal) == DayOfWeek.fri);
-        assert(getDayOfWeek(SysTime(Date(0, 12, 28)).dayOfGregorianCal) == DayOfWeek.thu);
-        assert(getDayOfWeek(SysTime(Date(0, 12, 27)).dayOfGregorianCal) == DayOfWeek.wed);
-        assert(getDayOfWeek(SysTime(Date(0, 12, 26)).dayOfGregorianCal) == DayOfWeek.tue);
-        assert(getDayOfWeek(SysTime(Date(0, 12, 25)).dayOfGregorianCal) == DayOfWeek.mon);
-        assert(getDayOfWeek(SysTime(Date(0, 12, 24)).dayOfGregorianCal) == DayOfWeek.sun);
-        assert(getDayOfWeek(SysTime(Date(0, 12, 23)).dayOfGregorianCal) == DayOfWeek.sat);
-    }
+    //Test B.C.
+    assert(getDayOfWeek(SysTime(Date(0, 12, 31)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(0, 12, 30)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(0, 12, 29)).dayOfGregorianCal) == DayOfWeek.fri);
+    assert(getDayOfWeek(SysTime(Date(0, 12, 28)).dayOfGregorianCal) == DayOfWeek.thu);
+    assert(getDayOfWeek(SysTime(Date(0, 12, 27)).dayOfGregorianCal) == DayOfWeek.wed);
+    assert(getDayOfWeek(SysTime(Date(0, 12, 26)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(0, 12, 25)).dayOfGregorianCal) == DayOfWeek.mon);
+    assert(getDayOfWeek(SysTime(Date(0, 12, 24)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(0, 12, 23)).dayOfGregorianCal) == DayOfWeek.sat);
 }
 
 
@@ -31994,44 +31817,41 @@ string monthToString(Month month, bool useLongName = true) pure
 
 unittest
 {
-    version(testStdDateTime)
+    static void testMTSInvalid(Month month, bool useLongName)
     {
-        static void testMTSInvalid(Month month, bool useLongName)
-        {
-            monthToString(month, useLongName);
-        }
-
-        assertThrown!DateTimeException(testMTSInvalid(cast(Month)0, true));
-        assertThrown!DateTimeException(testMTSInvalid(cast(Month)0, false));
-        assertThrown!DateTimeException(testMTSInvalid(cast(Month)13, true));
-        assertThrown!DateTimeException(testMTSInvalid(cast(Month)13, false));
-
-        assert(monthToString(Month.jan) == "January");
-        assert(monthToString(Month.feb) == "February");
-        assert(monthToString(Month.mar) == "March");
-        assert(monthToString(Month.apr) == "April");
-        assert(monthToString(Month.may) == "May");
-        assert(monthToString(Month.jun) == "June");
-        assert(monthToString(Month.jul) == "July");
-        assert(monthToString(Month.aug) == "August");
-        assert(monthToString(Month.sep) == "September");
-        assert(monthToString(Month.oct) == "October");
-        assert(monthToString(Month.nov) == "November");
-        assert(monthToString(Month.dec) == "December");
-
-        assert(monthToString(Month.jan, false) == "Jan");
-        assert(monthToString(Month.feb, false) == "Feb");
-        assert(monthToString(Month.mar, false) == "Mar");
-        assert(monthToString(Month.apr, false) == "Apr");
-        assert(monthToString(Month.may, false) == "May");
-        assert(monthToString(Month.jun, false) == "Jun");
-        assert(monthToString(Month.jul, false) == "Jul");
-        assert(monthToString(Month.aug, false) == "Aug");
-        assert(monthToString(Month.sep, false) == "Sep");
-        assert(monthToString(Month.oct, false) == "Oct");
-        assert(monthToString(Month.nov, false) == "Nov");
-        assert(monthToString(Month.dec, false) == "Dec");
+        monthToString(month, useLongName);
     }
+
+    assertThrown!DateTimeException(testMTSInvalid(cast(Month)0, true));
+    assertThrown!DateTimeException(testMTSInvalid(cast(Month)0, false));
+    assertThrown!DateTimeException(testMTSInvalid(cast(Month)13, true));
+    assertThrown!DateTimeException(testMTSInvalid(cast(Month)13, false));
+
+    assert(monthToString(Month.jan) == "January");
+    assert(monthToString(Month.feb) == "February");
+    assert(monthToString(Month.mar) == "March");
+    assert(monthToString(Month.apr) == "April");
+    assert(monthToString(Month.may) == "May");
+    assert(monthToString(Month.jun) == "June");
+    assert(monthToString(Month.jul) == "July");
+    assert(monthToString(Month.aug) == "August");
+    assert(monthToString(Month.sep) == "September");
+    assert(monthToString(Month.oct) == "October");
+    assert(monthToString(Month.nov) == "November");
+    assert(monthToString(Month.dec) == "December");
+
+    assert(monthToString(Month.jan, false) == "Jan");
+    assert(monthToString(Month.feb, false) == "Feb");
+    assert(monthToString(Month.mar, false) == "Mar");
+    assert(monthToString(Month.apr, false) == "Apr");
+    assert(monthToString(Month.may, false) == "May");
+    assert(monthToString(Month.jun, false) == "Jun");
+    assert(monthToString(Month.jul, false) == "Jul");
+    assert(monthToString(Month.aug, false) == "Aug");
+    assert(monthToString(Month.sep, false) == "Sep");
+    assert(monthToString(Month.oct, false) == "Oct");
+    assert(monthToString(Month.nov, false) == "Nov");
+    assert(monthToString(Month.dec, false) == "Dec");
 }
 
 
@@ -32090,54 +31910,51 @@ Month monthFromString(string monthStr)
 
 unittest
 {
-    version(testStdDateTime)
+    static void testMFSInvalid(string monthStr)
     {
-        static void testMFSInvalid(string monthStr)
-        {
-            monthFromString(monthStr);
-        }
-
-        assertThrown!DateTimeException(testMFSInvalid("Ja"));
-        assertThrown!DateTimeException(testMFSInvalid("Janu"));
-        assertThrown!DateTimeException(testMFSInvalid("Januar"));
-        assertThrown!DateTimeException(testMFSInvalid("Januarys"));
-        assertThrown!DateTimeException(testMFSInvalid("JJanuary"));
-
-        assert(monthFromString(monthToString(Month.jan)) == Month.jan);
-        assert(monthFromString(monthToString(Month.feb)) == Month.feb);
-        assert(monthFromString(monthToString(Month.mar)) == Month.mar);
-        assert(monthFromString(monthToString(Month.apr)) == Month.apr);
-        assert(monthFromString(monthToString(Month.may)) == Month.may);
-        assert(monthFromString(monthToString(Month.jun)) == Month.jun);
-        assert(monthFromString(monthToString(Month.jul)) == Month.jul);
-        assert(monthFromString(monthToString(Month.aug)) == Month.aug);
-        assert(monthFromString(monthToString(Month.sep)) == Month.sep);
-        assert(monthFromString(monthToString(Month.oct)) == Month.oct);
-        assert(monthFromString(monthToString(Month.nov)) == Month.nov);
-        assert(monthFromString(monthToString(Month.dec)) == Month.dec);
-
-        assert(monthFromString(monthToString(Month.jan, false)) == Month.jan);
-        assert(monthFromString(monthToString(Month.feb, false)) == Month.feb);
-        assert(monthFromString(monthToString(Month.mar, false)) == Month.mar);
-        assert(monthFromString(monthToString(Month.apr, false)) == Month.apr);
-        assert(monthFromString(monthToString(Month.may, false)) == Month.may);
-        assert(monthFromString(monthToString(Month.jun, false)) == Month.jun);
-        assert(monthFromString(monthToString(Month.jul, false)) == Month.jul);
-        assert(monthFromString(monthToString(Month.aug, false)) == Month.aug);
-        assert(monthFromString(monthToString(Month.sep, false)) == Month.sep);
-        assert(monthFromString(monthToString(Month.oct, false)) == Month.oct);
-        assert(monthFromString(monthToString(Month.nov, false)) == Month.nov);
-        assert(monthFromString(monthToString(Month.dec, false)) == Month.dec);
-
-        assert(monthFromString("JANUARY") == Month.jan);
-        assert(monthFromString("JAN") == Month.jan);
-        assert(monthFromString("january") == Month.jan);
-        assert(monthFromString("jan") == Month.jan);
-        assert(monthFromString("jaNuary") == Month.jan);
-        assert(monthFromString("jaN") == Month.jan);
-        assert(monthFromString("jaNuaRy") == Month.jan);
-        assert(monthFromString("jAn") == Month.jan);
+        monthFromString(monthStr);
     }
+
+    assertThrown!DateTimeException(testMFSInvalid("Ja"));
+    assertThrown!DateTimeException(testMFSInvalid("Janu"));
+    assertThrown!DateTimeException(testMFSInvalid("Januar"));
+    assertThrown!DateTimeException(testMFSInvalid("Januarys"));
+    assertThrown!DateTimeException(testMFSInvalid("JJanuary"));
+
+    assert(monthFromString(monthToString(Month.jan)) == Month.jan);
+    assert(monthFromString(monthToString(Month.feb)) == Month.feb);
+    assert(monthFromString(monthToString(Month.mar)) == Month.mar);
+    assert(monthFromString(monthToString(Month.apr)) == Month.apr);
+    assert(monthFromString(monthToString(Month.may)) == Month.may);
+    assert(monthFromString(monthToString(Month.jun)) == Month.jun);
+    assert(monthFromString(monthToString(Month.jul)) == Month.jul);
+    assert(monthFromString(monthToString(Month.aug)) == Month.aug);
+    assert(monthFromString(monthToString(Month.sep)) == Month.sep);
+    assert(monthFromString(monthToString(Month.oct)) == Month.oct);
+    assert(monthFromString(monthToString(Month.nov)) == Month.nov);
+    assert(monthFromString(monthToString(Month.dec)) == Month.dec);
+
+    assert(monthFromString(monthToString(Month.jan, false)) == Month.jan);
+    assert(monthFromString(monthToString(Month.feb, false)) == Month.feb);
+    assert(monthFromString(monthToString(Month.mar, false)) == Month.mar);
+    assert(monthFromString(monthToString(Month.apr, false)) == Month.apr);
+    assert(monthFromString(monthToString(Month.may, false)) == Month.may);
+    assert(monthFromString(monthToString(Month.jun, false)) == Month.jun);
+    assert(monthFromString(monthToString(Month.jul, false)) == Month.jul);
+    assert(monthFromString(monthToString(Month.aug, false)) == Month.aug);
+    assert(monthFromString(monthToString(Month.sep, false)) == Month.sep);
+    assert(monthFromString(monthToString(Month.oct, false)) == Month.oct);
+    assert(monthFromString(monthToString(Month.nov, false)) == Month.nov);
+    assert(monthFromString(monthToString(Month.dec, false)) == Month.dec);
+
+    assert(monthFromString("JANUARY") == Month.jan);
+    assert(monthFromString("JAN") == Month.jan);
+    assert(monthFromString("january") == Month.jan);
+    assert(monthFromString("jan") == Month.jan);
+    assert(monthFromString("jaNuary") == Month.jan);
+    assert(monthFromString("jaN") == Month.jan);
+    assert(monthFromString("jaNuaRy") == Month.jan);
+    assert(monthFromString("jAn") == Month.jan);
 }
 
 
@@ -32159,22 +31976,19 @@ template nextSmallerTimeUnits(string units)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(nextSmallerTimeUnits!"months" == "weeks");
-        assert(nextSmallerTimeUnits!"weeks" == "days");
-        assert(nextSmallerTimeUnits!"days" == "hours");
-        assert(nextSmallerTimeUnits!"hours" == "minutes");
-        assert(nextSmallerTimeUnits!"minutes" == "seconds");
-        assert(nextSmallerTimeUnits!"seconds" == "msecs");
-        assert(nextSmallerTimeUnits!"msecs" == "usecs");
+    assert(nextSmallerTimeUnits!"months" == "weeks");
+    assert(nextSmallerTimeUnits!"weeks" == "days");
+    assert(nextSmallerTimeUnits!"days" == "hours");
+    assert(nextSmallerTimeUnits!"hours" == "minutes");
+    assert(nextSmallerTimeUnits!"minutes" == "seconds");
+    assert(nextSmallerTimeUnits!"seconds" == "msecs");
+    assert(nextSmallerTimeUnits!"msecs" == "usecs");
 
-        static assert(!__traits(compiles, nextSmallerTimeUnits!"hnsecs"));
+    static assert(!__traits(compiles, nextSmallerTimeUnits!"hnsecs"));
 
-        //Verify Examples.
-        assert(nextSmallerTimeUnits!"years" == "months");
-        assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
-    }
+    //Verify Examples.
+    assert(nextSmallerTimeUnits!"years" == "months");
+    assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
 }
 
 
@@ -32196,22 +32010,19 @@ template nextLargerTimeUnits(string units)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(nextLargerTimeUnits!"usecs" == "msecs");
-        assert(nextLargerTimeUnits!"msecs" == "seconds");
-        assert(nextLargerTimeUnits!"seconds" == "minutes");
-        assert(nextLargerTimeUnits!"minutes" == "hours");
-        assert(nextLargerTimeUnits!"hours" == "days");
-        assert(nextLargerTimeUnits!"days" == "weeks");
-        assert(nextLargerTimeUnits!"weeks" == "months");
+    assert(nextLargerTimeUnits!"usecs" == "msecs");
+    assert(nextLargerTimeUnits!"msecs" == "seconds");
+    assert(nextLargerTimeUnits!"seconds" == "minutes");
+    assert(nextLargerTimeUnits!"minutes" == "hours");
+    assert(nextLargerTimeUnits!"hours" == "days");
+    assert(nextLargerTimeUnits!"days" == "weeks");
+    assert(nextLargerTimeUnits!"weeks" == "months");
 
-        static assert(!__traits(compiles, nextLargerTimeUnits!"years"));
+    static assert(!__traits(compiles, nextLargerTimeUnits!"years"));
 
-        //Verify Examples.
-        assert(nextLargerTimeUnits!"months" == "years");
-        assert(nextLargerTimeUnits!"hnsecs" == "usecs");
-    }
+    //Verify Examples.
+    assert(nextLargerTimeUnits!"months" == "years");
+    assert(nextLargerTimeUnits!"hnsecs" == "usecs");
 }
 
 
@@ -32243,32 +32054,29 @@ body
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        assert(fracSecToISOString(0) == "");
-        assert(fracSecToISOString(1) == ".0000001");
-        assert(fracSecToISOString(10) == ".000001");
-        assert(fracSecToISOString(100) == ".00001");
-        assert(fracSecToISOString(1000) == ".0001");
-        assert(fracSecToISOString(10_000) == ".001");
-        assert(fracSecToISOString(100_000) == ".01");
-        assert(fracSecToISOString(1_000_000) == ".1");
-        assert(fracSecToISOString(1_000_001) == ".1000001");
-        assert(fracSecToISOString(1_001_001) == ".1001001");
-        assert(fracSecToISOString(1_071_601) == ".1071601");
-        assert(fracSecToISOString(1_271_641) == ".1271641");
-        assert(fracSecToISOString(9_999_999) == ".9999999");
-        assert(fracSecToISOString(9_999_990) == ".999999");
-        assert(fracSecToISOString(9_999_900) == ".99999");
-        assert(fracSecToISOString(9_999_000) == ".9999");
-        assert(fracSecToISOString(9_990_000) == ".999");
-        assert(fracSecToISOString(9_900_000) == ".99");
-        assert(fracSecToISOString(9_000_000) == ".9");
-        assert(fracSecToISOString(999) == ".0000999");
-        assert(fracSecToISOString(9990) == ".000999");
-        assert(fracSecToISOString(99_900) == ".00999");
-        assert(fracSecToISOString(999_000) == ".0999");
-    }
+    assert(fracSecToISOString(0) == "");
+    assert(fracSecToISOString(1) == ".0000001");
+    assert(fracSecToISOString(10) == ".000001");
+    assert(fracSecToISOString(100) == ".00001");
+    assert(fracSecToISOString(1000) == ".0001");
+    assert(fracSecToISOString(10_000) == ".001");
+    assert(fracSecToISOString(100_000) == ".01");
+    assert(fracSecToISOString(1_000_000) == ".1");
+    assert(fracSecToISOString(1_000_001) == ".1000001");
+    assert(fracSecToISOString(1_001_001) == ".1001001");
+    assert(fracSecToISOString(1_071_601) == ".1071601");
+    assert(fracSecToISOString(1_271_641) == ".1271641");
+    assert(fracSecToISOString(9_999_999) == ".9999999");
+    assert(fracSecToISOString(9_999_990) == ".999999");
+    assert(fracSecToISOString(9_999_900) == ".99999");
+    assert(fracSecToISOString(9_999_000) == ".9999");
+    assert(fracSecToISOString(9_990_000) == ".999");
+    assert(fracSecToISOString(9_900_000) == ".99");
+    assert(fracSecToISOString(9_000_000) == ".9");
+    assert(fracSecToISOString(999) == ".0000999");
+    assert(fracSecToISOString(9990) == ".000999");
+    assert(fracSecToISOString(99_900) == ".00999");
+    assert(fracSecToISOString(999_000) == ".0999");
 }
 
 
@@ -32305,57 +32113,54 @@ static FracSec fracSecFromISOString(S)(in S isoString)
 
 unittest
 {
-    version(testStdDateTime)
+    static void testFSInvalid(string isoString)
     {
-        static void testFSInvalid(string isoString)
-        {
-            fracSecFromISOString(isoString);
-        }
-
-        assertThrown!DateTimeException(testFSInvalid("."));
-        assertThrown!DateTimeException(testFSInvalid("0."));
-        assertThrown!DateTimeException(testFSInvalid("0"));
-        assertThrown!DateTimeException(testFSInvalid("0000000"));
-        assertThrown!DateTimeException(testFSInvalid(".00000000"));
-        assertThrown!DateTimeException(testFSInvalid(".00000001"));
-        assertThrown!DateTimeException(testFSInvalid("T"));
-        assertThrown!DateTimeException(testFSInvalid("T."));
-        assertThrown!DateTimeException(testFSInvalid(".T"));
-
-        assert(fracSecFromISOString("") == FracSec.from!"hnsecs"(0));
-        assert(fracSecFromISOString(".0000001") == FracSec.from!"hnsecs"(1));
-        assert(fracSecFromISOString(".000001") == FracSec.from!"hnsecs"(10));
-        assert(fracSecFromISOString(".00001") == FracSec.from!"hnsecs"(100));
-        assert(fracSecFromISOString(".0001") == FracSec.from!"hnsecs"(1000));
-        assert(fracSecFromISOString(".001") == FracSec.from!"hnsecs"(10_000));
-        assert(fracSecFromISOString(".01") == FracSec.from!"hnsecs"(100_000));
-        assert(fracSecFromISOString(".1") == FracSec.from!"hnsecs"(1_000_000));
-        assert(fracSecFromISOString(".1000001") == FracSec.from!"hnsecs"(1_000_001));
-        assert(fracSecFromISOString(".1001001") == FracSec.from!"hnsecs"(1_001_001));
-        assert(fracSecFromISOString(".1071601") == FracSec.from!"hnsecs"(1_071_601));
-        assert(fracSecFromISOString(".1271641") == FracSec.from!"hnsecs"(1_271_641));
-        assert(fracSecFromISOString(".9999999") == FracSec.from!"hnsecs"(9_999_999));
-        assert(fracSecFromISOString(".9999990") == FracSec.from!"hnsecs"(9_999_990));
-        assert(fracSecFromISOString(".999999") == FracSec.from!"hnsecs"(9_999_990));
-        assert(fracSecFromISOString(".9999900") == FracSec.from!"hnsecs"(9_999_900));
-        assert(fracSecFromISOString(".99999") == FracSec.from!"hnsecs"(9_999_900));
-        assert(fracSecFromISOString(".9999000") == FracSec.from!"hnsecs"(9_999_000));
-        assert(fracSecFromISOString(".9999") == FracSec.from!"hnsecs"(9_999_000));
-        assert(fracSecFromISOString(".9990000") == FracSec.from!"hnsecs"(9_990_000));
-        assert(fracSecFromISOString(".999") == FracSec.from!"hnsecs"(9_990_000));
-        assert(fracSecFromISOString(".9900000") == FracSec.from!"hnsecs"(9_900_000));
-        assert(fracSecFromISOString(".9900") == FracSec.from!"hnsecs"(9_900_000));
-        assert(fracSecFromISOString(".99") == FracSec.from!"hnsecs"(9_900_000));
-        assert(fracSecFromISOString(".9000000") == FracSec.from!"hnsecs"(9_000_000));
-        assert(fracSecFromISOString(".9") == FracSec.from!"hnsecs"(9_000_000));
-        assert(fracSecFromISOString(".0000999") == FracSec.from!"hnsecs"(999));
-        assert(fracSecFromISOString(".0009990") == FracSec.from!"hnsecs"(9990));
-        assert(fracSecFromISOString(".000999") == FracSec.from!"hnsecs"(9990));
-        assert(fracSecFromISOString(".0099900") == FracSec.from!"hnsecs"(99_900));
-        assert(fracSecFromISOString(".00999") == FracSec.from!"hnsecs"(99_900));
-        assert(fracSecFromISOString(".0999000") == FracSec.from!"hnsecs"(999_000));
-        assert(fracSecFromISOString(".0999") == FracSec.from!"hnsecs"(999_000));
+        fracSecFromISOString(isoString);
     }
+
+    assertThrown!DateTimeException(testFSInvalid("."));
+    assertThrown!DateTimeException(testFSInvalid("0."));
+    assertThrown!DateTimeException(testFSInvalid("0"));
+    assertThrown!DateTimeException(testFSInvalid("0000000"));
+    assertThrown!DateTimeException(testFSInvalid(".00000000"));
+    assertThrown!DateTimeException(testFSInvalid(".00000001"));
+    assertThrown!DateTimeException(testFSInvalid("T"));
+    assertThrown!DateTimeException(testFSInvalid("T."));
+    assertThrown!DateTimeException(testFSInvalid(".T"));
+
+    assert(fracSecFromISOString("") == FracSec.from!"hnsecs"(0));
+    assert(fracSecFromISOString(".0000001") == FracSec.from!"hnsecs"(1));
+    assert(fracSecFromISOString(".000001") == FracSec.from!"hnsecs"(10));
+    assert(fracSecFromISOString(".00001") == FracSec.from!"hnsecs"(100));
+    assert(fracSecFromISOString(".0001") == FracSec.from!"hnsecs"(1000));
+    assert(fracSecFromISOString(".001") == FracSec.from!"hnsecs"(10_000));
+    assert(fracSecFromISOString(".01") == FracSec.from!"hnsecs"(100_000));
+    assert(fracSecFromISOString(".1") == FracSec.from!"hnsecs"(1_000_000));
+    assert(fracSecFromISOString(".1000001") == FracSec.from!"hnsecs"(1_000_001));
+    assert(fracSecFromISOString(".1001001") == FracSec.from!"hnsecs"(1_001_001));
+    assert(fracSecFromISOString(".1071601") == FracSec.from!"hnsecs"(1_071_601));
+    assert(fracSecFromISOString(".1271641") == FracSec.from!"hnsecs"(1_271_641));
+    assert(fracSecFromISOString(".9999999") == FracSec.from!"hnsecs"(9_999_999));
+    assert(fracSecFromISOString(".9999990") == FracSec.from!"hnsecs"(9_999_990));
+    assert(fracSecFromISOString(".999999") == FracSec.from!"hnsecs"(9_999_990));
+    assert(fracSecFromISOString(".9999900") == FracSec.from!"hnsecs"(9_999_900));
+    assert(fracSecFromISOString(".99999") == FracSec.from!"hnsecs"(9_999_900));
+    assert(fracSecFromISOString(".9999000") == FracSec.from!"hnsecs"(9_999_000));
+    assert(fracSecFromISOString(".9999") == FracSec.from!"hnsecs"(9_999_000));
+    assert(fracSecFromISOString(".9990000") == FracSec.from!"hnsecs"(9_990_000));
+    assert(fracSecFromISOString(".999") == FracSec.from!"hnsecs"(9_990_000));
+    assert(fracSecFromISOString(".9900000") == FracSec.from!"hnsecs"(9_900_000));
+    assert(fracSecFromISOString(".9900") == FracSec.from!"hnsecs"(9_900_000));
+    assert(fracSecFromISOString(".99") == FracSec.from!"hnsecs"(9_900_000));
+    assert(fracSecFromISOString(".9000000") == FracSec.from!"hnsecs"(9_000_000));
+    assert(fracSecFromISOString(".9") == FracSec.from!"hnsecs"(9_000_000));
+    assert(fracSecFromISOString(".0000999") == FracSec.from!"hnsecs"(999));
+    assert(fracSecFromISOString(".0009990") == FracSec.from!"hnsecs"(9990));
+    assert(fracSecFromISOString(".000999") == FracSec.from!"hnsecs"(9990));
+    assert(fracSecFromISOString(".0099900") == FracSec.from!"hnsecs"(99_900));
+    assert(fracSecFromISOString(".00999") == FracSec.from!"hnsecs"(99_900));
+    assert(fracSecFromISOString(".0999000") == FracSec.from!"hnsecs"(999_000));
+    assert(fracSecFromISOString(".0999") == FracSec.from!"hnsecs"(999_000));
 }
 
 
@@ -32372,20 +32177,17 @@ template hasMin(T)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(hasMin!(Date));
-        static assert(hasMin!(TimeOfDay));
-        static assert(hasMin!(DateTime));
-        static assert(hasMin!(SysTime));
-        static assert(hasMin!(const Date));
-        static assert(hasMin!(const TimeOfDay));
-        static assert(hasMin!(const DateTime));
-        static assert(hasMin!(const SysTime));
-        static assert(hasMin!(immutable Date));
-        static assert(hasMin!(immutable TimeOfDay));
-        static assert(hasMin!(immutable SysTime));
-    }
+    static assert(hasMin!(Date));
+    static assert(hasMin!(TimeOfDay));
+    static assert(hasMin!(DateTime));
+    static assert(hasMin!(SysTime));
+    static assert(hasMin!(const Date));
+    static assert(hasMin!(const TimeOfDay));
+    static assert(hasMin!(const DateTime));
+    static assert(hasMin!(const SysTime));
+    static assert(hasMin!(immutable Date));
+    static assert(hasMin!(immutable TimeOfDay));
+    static assert(hasMin!(immutable SysTime));
 }
 
 
@@ -32402,21 +32204,18 @@ template hasMax(T)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(hasMax!(Date));
-        static assert(hasMax!(TimeOfDay));
-        static assert(hasMax!(DateTime));
-        static assert(hasMax!(SysTime));
-        static assert(hasMax!(const Date));
-        static assert(hasMax!(const TimeOfDay));
-        static assert(hasMax!(const DateTime));
-        static assert(hasMax!(const SysTime));
-        static assert(hasMax!(immutable Date));
-        static assert(hasMax!(immutable TimeOfDay));
-        static assert(hasMax!(immutable DateTime));
-        static assert(hasMax!(immutable SysTime));
-    }
+    static assert(hasMax!(Date));
+    static assert(hasMax!(TimeOfDay));
+    static assert(hasMax!(DateTime));
+    static assert(hasMax!(SysTime));
+    static assert(hasMax!(const Date));
+    static assert(hasMax!(const TimeOfDay));
+    static assert(hasMax!(const DateTime));
+    static assert(hasMax!(const SysTime));
+    static assert(hasMax!(immutable Date));
+    static assert(hasMax!(immutable TimeOfDay));
+    static assert(hasMax!(immutable DateTime));
+    static assert(hasMax!(immutable SysTime));
 }
 
 
@@ -32443,21 +32242,18 @@ template hasOverloadedOpBinaryWithDuration(T)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(hasOverloadedOpBinaryWithDuration!(Date));
-        static assert(hasOverloadedOpBinaryWithDuration!(TimeOfDay));
-        static assert(hasOverloadedOpBinaryWithDuration!(DateTime));
-        static assert(hasOverloadedOpBinaryWithDuration!(SysTime));
-        static assert(hasOverloadedOpBinaryWithDuration!(const Date));
-        static assert(hasOverloadedOpBinaryWithDuration!(const TimeOfDay));
-        static assert(hasOverloadedOpBinaryWithDuration!(const DateTime));
-        static assert(hasOverloadedOpBinaryWithDuration!(const SysTime));
-        static assert(hasOverloadedOpBinaryWithDuration!(immutable Date));
-        static assert(hasOverloadedOpBinaryWithDuration!(immutable TimeOfDay));
-        static assert(hasOverloadedOpBinaryWithDuration!(immutable DateTime));
-        static assert(hasOverloadedOpBinaryWithDuration!(immutable SysTime));
-    }
+    static assert(hasOverloadedOpBinaryWithDuration!(Date));
+    static assert(hasOverloadedOpBinaryWithDuration!(TimeOfDay));
+    static assert(hasOverloadedOpBinaryWithDuration!(DateTime));
+    static assert(hasOverloadedOpBinaryWithDuration!(SysTime));
+    static assert(hasOverloadedOpBinaryWithDuration!(const Date));
+    static assert(hasOverloadedOpBinaryWithDuration!(const TimeOfDay));
+    static assert(hasOverloadedOpBinaryWithDuration!(const DateTime));
+    static assert(hasOverloadedOpBinaryWithDuration!(const SysTime));
+    static assert(hasOverloadedOpBinaryWithDuration!(immutable Date));
+    static assert(hasOverloadedOpBinaryWithDuration!(immutable TimeOfDay));
+    static assert(hasOverloadedOpBinaryWithDuration!(immutable DateTime));
+    static assert(hasOverloadedOpBinaryWithDuration!(immutable SysTime));
 }
 
 
@@ -32486,21 +32282,18 @@ template hasOverloadedOpAssignWithDuration(T)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(hasOverloadedOpAssignWithDuration!(Date));
-        static assert(hasOverloadedOpAssignWithDuration!(TimeOfDay));
-        static assert(hasOverloadedOpAssignWithDuration!(DateTime));
-        static assert(hasOverloadedOpAssignWithDuration!(SysTime));
-        static assert(hasOverloadedOpAssignWithDuration!(const Date));
-        static assert(hasOverloadedOpAssignWithDuration!(const TimeOfDay));
-        static assert(hasOverloadedOpAssignWithDuration!(const DateTime));
-        static assert(hasOverloadedOpAssignWithDuration!(const SysTime));
-        static assert(hasOverloadedOpAssignWithDuration!(immutable Date));
-        static assert(hasOverloadedOpAssignWithDuration!(immutable TimeOfDay));
-        static assert(hasOverloadedOpAssignWithDuration!(immutable DateTime));
-        static assert(hasOverloadedOpAssignWithDuration!(immutable SysTime));
-    }
+    static assert(hasOverloadedOpAssignWithDuration!(Date));
+    static assert(hasOverloadedOpAssignWithDuration!(TimeOfDay));
+    static assert(hasOverloadedOpAssignWithDuration!(DateTime));
+    static assert(hasOverloadedOpAssignWithDuration!(SysTime));
+    static assert(hasOverloadedOpAssignWithDuration!(const Date));
+    static assert(hasOverloadedOpAssignWithDuration!(const TimeOfDay));
+    static assert(hasOverloadedOpAssignWithDuration!(const DateTime));
+    static assert(hasOverloadedOpAssignWithDuration!(const SysTime));
+    static assert(hasOverloadedOpAssignWithDuration!(immutable Date));
+    static assert(hasOverloadedOpAssignWithDuration!(immutable TimeOfDay));
+    static assert(hasOverloadedOpAssignWithDuration!(immutable DateTime));
+    static assert(hasOverloadedOpAssignWithDuration!(immutable SysTime));
 }
 
 
@@ -32520,21 +32313,18 @@ template hasOverloadedOpBinaryWithSelf(T)
 
 unittest
 {
-    version(testStdDateTime)
-    {
-        static assert(hasOverloadedOpBinaryWithSelf!(Date));
-        static assert(hasOverloadedOpBinaryWithSelf!(TimeOfDay));
-        static assert(hasOverloadedOpBinaryWithSelf!(DateTime));
-        static assert(hasOverloadedOpBinaryWithSelf!(SysTime));
-        static assert(hasOverloadedOpBinaryWithSelf!(const Date));
-        static assert(hasOverloadedOpBinaryWithSelf!(const TimeOfDay));
-        static assert(hasOverloadedOpBinaryWithSelf!(const DateTime));
-        static assert(hasOverloadedOpBinaryWithSelf!(const SysTime));
-        static assert(hasOverloadedOpBinaryWithSelf!(immutable Date));
-        static assert(hasOverloadedOpBinaryWithSelf!(immutable TimeOfDay));
-        static assert(hasOverloadedOpBinaryWithSelf!(immutable DateTime));
-        static assert(hasOverloadedOpBinaryWithSelf!(immutable SysTime));
-    }
+    static assert(hasOverloadedOpBinaryWithSelf!(Date));
+    static assert(hasOverloadedOpBinaryWithSelf!(TimeOfDay));
+    static assert(hasOverloadedOpBinaryWithSelf!(DateTime));
+    static assert(hasOverloadedOpBinaryWithSelf!(SysTime));
+    static assert(hasOverloadedOpBinaryWithSelf!(const Date));
+    static assert(hasOverloadedOpBinaryWithSelf!(const TimeOfDay));
+    static assert(hasOverloadedOpBinaryWithSelf!(const DateTime));
+    static assert(hasOverloadedOpBinaryWithSelf!(const SysTime));
+    static assert(hasOverloadedOpBinaryWithSelf!(immutable Date));
+    static assert(hasOverloadedOpBinaryWithSelf!(immutable TimeOfDay));
+    static assert(hasOverloadedOpBinaryWithSelf!(immutable DateTime));
+    static assert(hasOverloadedOpBinaryWithSelf!(immutable SysTime));
 }
 
 /+
