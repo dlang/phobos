@@ -1027,7 +1027,7 @@ bool alignedAt(void* ptr, uint alignment)
 void* alignDownTo(void* ptr, uint alignment)
 {
     assert(alignment.isPowerOf2);
-    return cast(void*) (cast(size_t) ptr & ~(alignment - 1));
+    return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
 }
 
 /**
@@ -1116,6 +1116,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (result is null) return null;
             static if (stateSize!Prefix)
             {
+                assert(result.length > stateSize!Prefix);
                 if (result.length <= stateSize!Prefix) return null;
                 emplace!Prefix(cast(Prefix*)result.ptr);
                 result = result[stateSize!Prefix .. $];
@@ -1125,6 +1126,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 // Ehm, find a properly aligned place for the suffix
                 auto p = (result.ptr + result.length - stateSize!Suffix)
                     .alignDownTo(Suffix.alignof);
+                assert(p > result.ptr);
                 if (p <= result.ptr) return null;
                 emplace!Suffix(cast(Suffix*) p);
                 result = result[0 .. p - result.ptr];
@@ -1135,7 +1137,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         static if (hasMember!(Allocator, "owns"))
         bool owns(void[] b)
         {
-            return b is null ? true : parent.owns(actualAllocation(b));
+            return b !is null && parent.owns(actualAllocation(b));
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
@@ -1159,6 +1161,11 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         static if (hasMember!(Allocator, "reallocate"))
         bool reallocate(ref void[] b, size_t s)
         {
+            if (b is null)
+            {
+                b = allocate(s);
+                return b !is null || s == 0;
+            }
             auto t = actualAllocation(b);
             auto result = parent.reallocate(t, actualAllocationSize(s));
             if (!result) return false; // no harm done
@@ -1269,7 +1276,13 @@ unittest
 
 unittest
 {
-    testAllocator!(return AffixAllocator!(Mallocator, size_t, size_t));
+    testAllocator!(() => AffixAllocator!(Mallocator, size_t, size_t).it);
+    testAllocator!({
+        auto hb = HeapBlock!128(new void[128 * 4096]);
+        AffixAllocator!(HeapBlock!128, size_t, size_t) a;
+        a.parent = hb;
+        return a;
+    });
 }
 
 unittest
@@ -6075,7 +6088,7 @@ void testAllocator(alias make)()
     static assert(A.alignment.isPowerOf2);
 
     // Test goodAllocSize
-    assert(a.goodAllocSize(1) == A.alignment);
+    assert(a.goodAllocSize(1) >= A.alignment);
     assert(a.goodAllocSize(11) >= 11.roundUpToMultipleOf(A.alignment));
     assert(a.goodAllocSize(111) >= 111.roundUpToMultipleOf(A.alignment));
 
