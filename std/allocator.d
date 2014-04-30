@@ -5,9 +5,10 @@ Macros:
 WIKI = Phobos/StdAllocator
 MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco,
 "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
-TDC = <td nowrap>$(D $1)$(BR)$(SMALL $(I Post:) $(BLUE $(D $+)))</td>
+TDC = <td nowrap>$(D $1)$+</td>
 TDC2 = <td nowrap>$(D $(LREF $0))</td>
 RES = $(I result)
+POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))
 
 Copyright: Andrei Alexandrescu 2013-.
 
@@ -44,13 +45,13 @@ manual deallocation of memory).)
 $(BOOKTABLE ,
 $(TR $(TH Method name) $(TH Semantics))
 
-$(TR $(TDC uint alignment;, $(RES) > 0) $(TD Returns the minimum alignment of
-all data returned by the allocator. An allocator may implement $(D alignment) as
-a statically-known $(D enum) value only. Applications that need
+$(TR $(TDC uint alignment;, $(POST $(RES) > 0)) $(TD Returns the minimum
+alignment of all data returned by the allocator. An allocator may implement $(D
+alignment) as a statically-known $(D enum) value only. Applications that need
 dynamically-chosen alignment values should use the $(D alignedAllocate) and $(D
 alignedReallocate) APIs.))
 
-$(TR $(TDC size_t goodAllocSize(size_t n);, $(RES) >= n) $(TD Allocators
+$(TR $(TDC size_t goodAllocSize(size_t n);, $(POST $(RES) >= n)) $(TD Allocators
 customarily allocate memory in discretely-sized chunks. Therefore, a request for
 $(D n) bytes may result in a larger allocation. The extra memory allocated goes
 unused and adds to the so-called $(WEB goo.gl/YoKffF,internal fragmentation).
@@ -59,42 +60,47 @@ be allocated upon a request for $(D n) bytes. This module defines a default
 implementation that returns $(D n) rounded up to a multiple of the allocator's
 alignment.))
 
-$(TR $(TDC void[] allocate(size_t s);, $(RES) is null || $(RES).length == s)
-$(TD If $(D s == 0), the call may return any empty slice (including $(D
+$(TR $(TDC void[] allocate(size_t s);, $(POST $(RES) is null || $(RES).length ==
+s)) $(TD If $(D s == 0), the call may return any empty slice (including $(D
 null)). Otherwise, the call allocates $(D s) bytes of memory and returns the
 allocated block, or $(D null) if the request could not be satisfied.))
 
-$(TR $(TDC void[] alignedAllocate(size_t s, uint a);, $(RES) is null ||
-$(RES).length == s) $(TD Similar to $(D allocate), with the additional guarantee
-that the memory returned is aligned to at least $(D a) bytes. $(D a) must be a
-power of 2.))
+$(TR $(TDC void[] alignedAllocate(size_t s, uint a);, $(POST $(RES) is null ||
+$(RES).length == s)) $(TD Similar to $(D allocate), with the additional
+guarantee that the memory returned is aligned to at least $(D a) bytes. $(D a)
+must be a power of 2.))
 
-$(TR $(TDC void[] allocateAll();, n/a) $(TD This is a special function
-indicating to wrapping allocators that $(D this) is a simple,
-limited-capabilities allocator that invites customization. Fixed-size regions
-fit this characterization. If called, the function allocates all memory
-available to the allocator and returns it.))
+$(TR $(TDC void[] allocateAll();) $(TD Offers all of allocator's memory to the
+caller, so it's usually defined by fixed-size allocators. If the allocator is
+currently NOT managing any memory, then $(D allocateAll()) shall allocate and
+return all memory available to the allocator, and subsequent calls to all
+allocation primitives should not succeed (e..g $(D allocate) shall return $(D
+null) etc). Otherwise, $(D allocateAll) only works on a best-effort basis, and
+the allocator is allowed to return $(D null) even if does have available memory.
+Memory allocated with $(D allocateAll) is not otherwise special (e.g. can be
+reallocated or deallocated with the usual primitives, if defined).))
 
-$(TR $(TDC bool expand(ref void[] b, size_t delta);, !$(RES) || b.length == $(I
-old)(b).length + delta) $(TD Expands $(D b) by $(D delta) bytes. If $(D b is
-null), the call evaluates $(D b = allocate(delta)) and returns $(D b !is null).
-Otherwise, $(D b) must be a buffer previously allocated with the same allocator.
-If expansion was successful, $(D expand) changes $(D b)'s length to $(D b.length
-+ delta) and returns $(D true). Upon failure, the call effects no change upon
-the allocator object, leaves $(D b) unchanged, and returns $(D false).))
+$(TR $(TDC bool expand(ref void[] b, size_t delta);, $(POST !$(RES) || b.length
+== $(I old)(b).length + delta)) $(TD Expands $(D b) by $(D delta) bytes. If $(D
+delta == 0), succeeds without changing $(D b). If $(D b is null), the call
+evaluates $(D b = allocate(delta)) and returns $(D b !is null). Otherwise, $(D
+b) must be a buffer previously allocated with the same allocator. If expansion
+was successful, $(D expand) changes $(D b)'s length to $(D b.length + delta) and
+returns $(D true). Upon failure, the call effects no change upon the allocator
+object, leaves $(D b) unchanged, and returns $(D false).))
 
-$(TR $(TDC bool reallocate(ref void[] b, size_t s);, !$(RES) || b.length == s)
-$(TD Reallocates $(D b) to size $(D s), possibly moving memory around. $(D b)
-must be $(D null) or a buffer allocated with the same allocator. If reallocation
-was successful, $(D reallocate) changes $(D b) appropriately and returns $(D
-true). Upon failure, the call effects no change upon the allocator object,
-leaves $(D b) unchanged, and returns $(D false). An allocator should implement
-$(D reallocate) if it can derive some advantage from doing so; otherwise, this
-module defines a $(D reallocate) free function implemented in terms of $(D
-expand), $(D allocate), and $(D deallocate).))
+$(TR $(TDC bool reallocate(ref void[] b, size_t s);, $(POST !$(RES) || b.length
+== s)) $(TD Reallocates $(D b) to size $(D s), possibly moving memory around.
+$(D b) must be $(D null) or a buffer allocated with the same allocator. If
+reallocation was successful, $(D reallocate) changes $(D b) appropriately and
+returns $(D true). Upon failure, the call effects no change upon the allocator
+object, leaves $(D b) unchanged, and returns $(D false). An allocator should
+implement $(D reallocate) if it can derive some advantage from doing so;
+otherwise, this module defines a $(D reallocate) free function implemented in
+terms of $(D expand), $(D allocate), and $(D deallocate).))
 
-$(TR $(TDC bool alignedReallocate(ref void[] b,$(BR) size_t s, uint a);, !$(RES)
-|| b.length == s) $(TD Similar to $(D reallocate), but guarantees the
+$(TR $(TDC bool alignedReallocate(ref void[] b,$(BR) size_t s, uint a);, $(POST
+!$(RES) || b.length == s)) $(TD Similar to $(D reallocate), but guarantees the
 reallocated memory is aligned at $(D a) bytes. The buffer must have been
 originated with a call to $(D alignedAllocate). $(D a) must be a power of 2
 greater than $(D (void*).sizeof). An allocator should implement $(D
@@ -102,42 +108,43 @@ alignedReallocate) if it can derive some advantage from doing so; otherwise,
 this module defines a $(D alignedReallocate) free function implemented in terms
 of $(D expand), $(D alignedAllocate), and $(D deallocate).))
 
-$(TR $(TDC bool owns(void[] b);, n/a) $(TD Returns $(D true) if $(D b) has been
-allocated with this allocator. An allocator should define this
-method only if it can decide on ownership precisely and fast (in constant time,
-logarithmic time, or linear time with a low multiplication factor). Traditional
-allocators such as the C heap do not define such functionality. If $(D b is
-null), the allocator should return $(D true) if it may return $(D null) as
-result of an allocation with $(D size == 0).))
+$(TR $(TDC bool owns(void[] b);) $(TD Returns $(D true) if $(D b) has been
+allocated with this allocator. An allocator should define this method only if it
+can decide on ownership precisely and fast (in constant time, logarithmic time,
+or linear time with a low multiplication factor). Traditional allocators such as
+the C heap do not define such functionality. If $(D b is null), the allocator
+shall return $(D false), i.e. no allocator owns the $(D null) slice.))
 
-$(TR $(TDC void[] resolveInternalPointer(void* p);, n/a) $(TD If $(D p) is a
-pointer somewhere inside (or right after) a block allocated with this allocator,
-returns the entire block. Otherwise, returns $(D null).))
+$(TR $(TDC void* resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
+somewhere inside a block allocated with this allocator, returns a pointer to the
+beginning of the allocated block. Otherwise, returns $(D null). If the pointer
+points immediately after an allocated block, the result is implementation
+defined.))
 
-$(TR $(TDC void deallocate(void[] b);, n/a) $(TD If $(D b is null), does
+$(TR $(TDC void deallocate(void[] b);) $(TD If $(D b is null), does
 nothing. Otherwise, deallocates memory previously allocated with this
 allocator.))
 
-$(TR $(TDC void deallocateAll();, n/a) $(TD Deallocates all memory allocated
-with this allocator. If an allocator implements this method, it must specify
-whether its destructor calls it, too.))
+$(TR $(TDC void deallocateAll();, $(POST empty)) $(TD Deallocates all memory
+allocated with this allocator. If an allocator implements this method, it must
+specify whether its destructor calls it, too.))
 
-$(TR $(TDC bool empty();, n/a) $(TD Returns $(D true) if and only if the
-allocator holds no memory (i.e. no allocation has occurred, or all allocations
-have been deallocated).))
+$(TR $(TDC bool empty();) $(TD Returns $(D true) if and only if the allocator
+holds no memory (i.e. no allocation has occurred, or all allocations have been
+deallocated).))
 
-$(TR $(TDC bool zeroesAllocations;, n/a) $(TD Enumerated value indicating
-whether the allocator zeroes newly allocated memory automatically. If not
-defined, it is assumed the allocator does not zero allocated memory.))
+$(TR $(TDC bool zeroesAllocations;) $(TD Enumerated value indicating whether the
+allocator zeroes newly allocated memory automatically. If not defined, it is
+assumed the allocator does not zero allocated memory.))
 
-$(TR $(TDC static Allocator it;, it $(I is a valid) Allocator $(I object)) $(TD
-Some allocators are $(I monostate), i.e. have only an instance and hold only
-global state. (Notable examples are C's own $(D malloc)-based allocator and D's
-garbage-collected heap.) Such allocators must define a static $(D it) instance
-that serves as the symbolic placeholder for the global instance of the
-allocator. An allocator should not hold state and define $(D it) simultaneously.
-Depending on whether the allocator is thread-safe or not, this instance may be
-$(D shared).))
+$(TR $(TDC static Allocator it;, $(POST it $(I is a valid) Allocator $(I
+object))) $(TD Some allocators are $(I monostate), i.e. have only an instance
+and hold only global state. (Notable examples are C's own $(D malloc)-based
+allocator and D's garbage-collected heap.) Such allocators must define a static
+$(D it) instance that serves as the symbolic placeholder for the global instance
+of the allocator. An allocator should not hold state and define $(D it)
+simultaneously. Depending on whether the allocator is thread-safe or not, this
+instance may be $(D shared).))
 
 )
 
@@ -535,18 +542,23 @@ defined. This is deliberate so allocators may use it internally within their own
 implementation of $(D reallocate).
 
 */
-bool alignedReallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
+bool alignedReallocate(Allocator)(ref Allocator alloc,
+        ref void[] b, size_t s, uint a)
 {
-    if (b.length == s) return true;
     static if (hasMember!(Allocator, "expand"))
     {
-        if (b.length <= s && a.expand(b, s - b.length)) return true;
+        if (b.length <= s && b.ptr.alignedAt(a)
+            && alloc.expand(b, s - b.length)) return true;
     }
-    auto newB = a.alignedAllocate(s);
+    else
+    {
+        if (b.length == s) return true;
+    }
+    auto newB = alloc.alignedAllocate(s, a);
     if (newB.length <= b.length) newB[] = b[0 .. newB.length];
     else newB[0 .. b.length] = b[];
     static if (hasMember!(Allocator, "deallocate"))
-        a.deallocate(b);
+        alloc.deallocate(b);
     b = newB;
     return true;
 }
@@ -573,8 +585,10 @@ struct NullAllocator
     enum uint alignment = 64 * 1024;
     /// Always returns $(D null).
     void[] allocate(size_t) shared { return null; }
-    /// Returns $(D b is null).
-    bool owns(void[] b) shared { return b is null; }
+    /// Always returns $(D null).
+    void[] alignedAllocate(size_t, uint) shared { return null; }
+    /// Always returns $(D null).
+    void[] allocateAll() shared { return null; }
     /**
     These methods return $(D false).
     Precondition: $(D b is null). This is because there is no other possible
@@ -585,6 +599,15 @@ struct NullAllocator
     /// Ditto
     bool reallocate(ref void[] b, size_t) shared
     { assert(b is null); return false; }
+    /// Ditto
+    bool alignedReallocate(ref void[] b, size_t, uint) shared
+    { assert(b is null); return false; }
+    /// Returns $(D b is null).
+    bool owns(void[] b) shared { return false; }
+    /**
+    Returns $(D null).
+    */
+    void* resolveInternalPointer(void*) shared { return null; }
     /**
     No-op.
     Precondition: $(D b is null)
@@ -594,6 +617,10 @@ struct NullAllocator
     No-op.
     */
     void deallocateAll() shared { }
+    /**
+    Returns $(D true).
+    */
+    bool empty() shared { return true; }
     /**
     Returns the $(D shared) global instance of the $(D NullAllocator).
     */
@@ -606,7 +633,7 @@ unittest
     assert(b is null);
     NullAllocator.it.deallocate(b);
     NullAllocator.it.deallocateAll();
-    assert(NullAllocator.it.owns(null));
+    assert(!NullAllocator.it.owns(null));
 }
 
 /**
@@ -614,6 +641,7 @@ D's built-in garbage-collected allocator.
  */
 struct GCAllocator
 {
+    unittest { testAllocator!(() => GCAllocator.it); }
     private import core.memory;
 
     /**
@@ -634,6 +662,12 @@ struct GCAllocator
     /// Ditto
     @trusted bool expand(ref void[] b, size_t delta) shared
     {
+        if (delta == 0) return true;
+        if (b is null)
+        {
+            b = allocate(delta);
+            return b !is null;
+        }
         auto newSize = GC.extend(b.ptr, b.length + delta,
             b.length + delta);
         if (newSize == 0)
@@ -661,6 +695,12 @@ struct GCAllocator
             return false;
         }
         return true;
+    }
+
+    /// Ditto
+    void* resolveInternalPointer(void* p) shared
+    {
+        return GC.addrOf(p);
     }
 
     /// Ditto
@@ -700,6 +740,7 @@ unittest
  */
 struct Mallocator
 {
+    unittest { testAllocator!(() => Mallocator.it); }
     private import core.stdc.stdlib;
 
     /**
@@ -793,6 +834,8 @@ version (Windows)
  */
 struct AlignedMallocator
 {
+    unittest { testAllocator!(() => typeof(this).it); }
+
     private import core.stdc.stdlib;
 
     /**
@@ -871,24 +914,7 @@ struct AlignedMallocator
     $(WEB msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
     $(D __aligned_realloc(b.ptr, newSize, a))).
     */
-    version (Posix) @system
-    bool alignedReallocate(ref void[] b, size_t s, uint a) shared
-    {
-        if (!s)
-        {
-            deallocate(b);
-            b = null;
-            return true;
-        }
-        auto result = alignedAllocate(s, a);
-        if (!result) return false;
-        if (s < b.length) result[] = b[0 .. s];
-        else result[0 .. b.length] = b[];
-        deallocate(b);
-        b = result;
-        return true;
-    }
-    else version (Windows) @system
+    version (Windows) @system
     bool alignedReallocate(ref void[] b, size_t s, uint a) shared
     {
         if (!s)
@@ -1032,7 +1058,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     In either case, the name $(D _parent) is uniformly used for accessing the
     parent allocator.
     */
-   static if (stateSize!Allocator) Allocator parent;
+    static if (stateSize!Allocator) Allocator parent;
     else alias parent = Allocator.it;
 
     template Impl()
@@ -1081,38 +1107,55 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             return b is null ? true : parent.owns(actualAllocation(b));
         }
 
+        static if (hasMember!(Allocator, "resolveInternalPointer"))
+        void* resolveInternalPointer(void* p)
+        {
+            auto p1 = parent.resolveInternalPointer(p);
+            if (p1 is null) return p1;
+            return p1 + stateSize!Prefix;
+        }
+
         static if (!stateSize!Suffix && hasMember!(Allocator, "expand"))
-            bool expand(ref void[] b, size_t delta)
-            {
-                auto t = actualAllocation(b);
-                auto result = parent.expand(t, delta);
-                if (!result) return false;
-                b = b.ptr[0 .. b.length + delta];
-                return true;
-            }
+        bool expand(ref void[] b, size_t delta)
+        {
+            auto t = actualAllocation(b);
+            auto result = parent.expand(t, delta);
+            if (!result) return false;
+            b = b.ptr[0 .. b.length + delta];
+            return true;
+        }
 
         static if (hasMember!(Allocator, "reallocate"))
-            bool reallocate(ref void[] b, size_t s)
-            {
-                auto t = actualAllocation(b);
-                auto result = parent.reallocate(t, actualAllocationSize(s));
-                if (!result) return false; // no harm done
-                b = t.ptr[stateSize!Prefix .. stateSize!Prefix + s];
-                return true;
-            }
+        bool reallocate(ref void[] b, size_t s)
+        {
+            auto t = actualAllocation(b);
+            auto result = parent.reallocate(t, actualAllocationSize(s));
+            if (!result) return false; // no harm done
+            b = t.ptr[stateSize!Prefix .. stateSize!Prefix + s];
+            return true;
+        }
 
         static if (hasMember!(Allocator, "deallocate"))
-            void deallocate(void[] b)
-            {
-                auto p = b.ptr - stateSize!Prefix;
-                parent.deallocate(p[0 .. actualAllocationSize(b.length)]);
-            }
+        void deallocate(void[] b)
+        {
+            auto p = b.ptr - stateSize!Prefix;
+            parent.deallocate(p[0 .. actualAllocationSize(b.length)]);
+        }
 
         static if (hasMember!(Allocator, "deallocateAll"))
-            void deallocateAll()
-            {
-                parent.deallocateAll();
-            }
+        void deallocateAll()
+        {
+            parent.deallocateAll();
+        }
+
+        static if (hasMember!(Allocator, "empty"))
+        bool empty()
+        {
+            return parent.empty();
+        }
+
+        static if (hasMember!(Allocator, "zeroesAllocations"))
+        alias zeroesAllocations = Allocator.zeroesAllocations;
 
         // Extra functions
         static if (stateSize!Prefix)
@@ -1150,6 +1193,10 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         void deallocate(void[] b);
         /// Ditto
         void deallocateAll();
+        /// Ditto
+        bool empty();
+        /// Ditto
+        enum bool zeroesAllocations = false;
 
         /**
         The $(D it) singleton is defined if and only if the parent allocator has no state and defines its own $(D it) object.
@@ -1315,6 +1362,155 @@ private void resetBits(ref ulong w, uint lsb, uint msb)
     w &= ~mask;
 }
 
+/*
+Bit disposition is MSB=0 (leftmost, big endian).
+*/
+private struct BitVector
+{
+    ulong[] _rep;
+
+    auto rep() { return _rep; }
+
+    this(ulong[] data) { _rep = data; }
+
+    void opSliceAssign(bool b) { _rep[] = b ? ulong.max : 0; }
+
+    void opSliceAssign(bool b, ulong x, ulong y)
+    {
+        assert(x <= y && y <= _rep.length * 64);
+        if (x == y) return;
+        --y;
+        immutable size_t i1 = x / 64;
+        immutable uint b1 = 63 - x % 64;
+        immutable size_t i2 = y / 64;
+        immutable uint b2 = 63 - y % 64;
+        assert(i1 <= i2 && i2 < _rep.length);
+        if (i1 == i2)
+        {
+            // Inside the same word
+            assert(b1 >= b2);
+            if (b) setBits(_rep[i1], b2, b1);
+            else resetBits(_rep[i1], b2, b1);
+        }
+        else
+        {
+            // Spans multiple words
+            assert(i1 < i2);
+            if (b) setBits(_rep[i1], 0, b1);
+            else resetBits(_rep[i1], 0, b1);
+            _rep[i1 + 1 .. i2] = b;
+            if (b) setBits(_rep[i2], b2, 63);
+            else resetBits(_rep[i2], b2, 63);
+        }
+    }
+
+    bool opIndex(ulong x)
+    {
+        return (_rep[x / 64] & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
+    }
+
+    void opIndexAssign(bool b, ulong x)
+    {
+        auto i = x / 64, j = 0x8000_0000_0000_0000UL >> (x % 64);
+        if (b) _rep[i] |= j;
+        else _rep[i] &= ~j;
+    }
+
+    ulong length() const
+    {
+        return _rep.length * 64;
+    }
+
+    /** Returns the index of the first 1 to the left of i (including i itself),
+    or ulong.max if not found.
+    */
+    ulong find1Backward(ulong i)
+    {
+        assert(i < length);
+        auto w = i / 64;
+        auto b = 63 - (i % 64); // 0 through 63, 63 when i == 0
+        auto mask = ~((1UL << b) - 1);
+        assert(mask != 0);
+        // First, let's see if the current word has a bit larger than ours.
+        if (auto currentWord = _rep[w] & mask)
+        {
+            // Great, this word contains the result.
+            return w * 64 + 63 - currentWord.trailingZeros;
+        }
+        // The current word doesn't have the solution, find the rightmost 1
+        // going to the left.
+        while (w >= 1)
+        {
+            --w;
+            if (auto currentWord = _rep[w])
+                return w * 64 + (63 - currentWord.trailingZeros);
+        }
+        return ulong.max;
+    }
+
+    /// Are all bits zero?
+    bool allAreZero() const
+    {
+        foreach (w; _rep) if (w) return false;
+        return true;
+    }
+
+    /// Are all bits [x .. y] zero?
+    bool allAreZero(ulong x, ulong y) const
+    {
+        foreach (w; _rep[x .. y]) if (w) return false;
+        return true;
+    }
+}
+
+unittest
+{
+    auto v = BitVector(new ulong[10]);
+    assert(v.length == 640);
+
+    v[] = 0;
+    v[53] = 1;
+    assert(v[52] == 0);
+    assert(v[53] == 1);
+    assert(v[54] == 0);
+
+    v[] = 0;
+    v[53 .. 55] = 1;
+    assert(v[52] == 0);
+    assert(v[53] == 1);
+    assert(v[54] == 1);
+    assert(v[55] == 0);
+
+    v[] = 0;
+    v[2 .. 65] = 1;
+    assert(v.rep[0] == 0x3FFF_FFFF_FFFF_FFFF);
+    assert(v.rep[1] == 0x8000_0000_0000_0000);
+    assert(v.rep[2] == 0);
+
+    v[] = 0;
+    assert(v.find1Backward(0) == ulong.max);
+    assert(v.find1Backward(43) == ulong.max);
+    assert(v.find1Backward(83) == ulong.max);
+
+    v[0] = 1;
+    assert(v.find1Backward(0) == 0);
+    assert(v.find1Backward(43) == 0);
+    assert(v.find1Backward(83) == 0, text(v.find1Backward(83)));
+
+    v[0] = 0;
+    v[101] = 1;
+    assert(v.find1Backward(0) == ulong.max);
+    assert(v.find1Backward(43) == ulong.max);
+    assert(v.find1Backward(83) == ulong.max);
+    assert(v.find1Backward(100) == ulong.max);
+    assert(v.find1Backward(101) == 101);
+    assert(v.find1Backward(553) == 101);
+
+    v[0 .. v.length] = 0;
+    v[v.length .. v.length] = 0;
+    v[0 .. 0] = 0;
+}
+
 /**
 
 $(D HeapBlock) implements a simple heap consisting of one contiguous area
@@ -1349,6 +1545,11 @@ TODO: implement $(D alignedAllocate) and $(D alignedReallocate).
 */
 struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
 {
+    unittest
+    {
+        auto m = AlignedMallocator.it.alignedAllocate(1024 * 64, theAlignment);
+        testAllocator!(() => HeapBlock(m));
+    }
     static assert(theBlockSize > 0 && theAlignment.isGoodStaticAlignment);
 
     /**
@@ -1379,7 +1580,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     alias alignment = theAlignment;
 
     private uint _blocks;
-    private ulong[] _control;
+    private BitVector _control;
     private void[] _payload;
     private size_t _startIdx;
 
@@ -1407,7 +1608,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
             if (data.length >= controlBytesRounded + payloadBytes)
             {
                 // Enough room, yay. Initialize everything.
-                _control = (cast(ulong*)data.ptr)[0 .. controlWords];
+                _control = BitVector((cast(ulong*)data.ptr)[0 .. controlWords]);
                 _control[] = 0;
                 _payload = data[controlBytesRounded .. $];
                 assert(payloadBytes <= _payload.length);
@@ -1424,7 +1625,8 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     */
     private void adjustStartIdx()
     {
-        while (_startIdx < _control.length && _control[_startIdx] == ulong.max)
+        while (_startIdx < _control.rep.length
+            && _control.rep[_startIdx] == ulong.max)
         {
             ++_startIdx;
         }
@@ -1465,14 +1667,14 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
         case 1:
             // inline code here for speed
             // find the next available block
-            foreach (i; _startIdx .. _control.length)
+            foreach (i; _startIdx .. _control.rep.length)
             {
-                const w = _control[i];
+                const w = _control.rep[i];
                 if (w == ulong.max) continue;
                 uint j = leadingOnes(w);
                 assert(j < 64);
-                assert((_control[i] & ((1UL << 63) >> j)) == 0);
-                _control[i] |= (1UL << 63) >> j;
+                assert((_control.rep[i] & ((1UL << 63) >> j)) == 0);
+                _control.rep[i] |= (1UL << 63) >> j;
                 if (i == _startIdx)
                 {
                     adjustStartIdx();
@@ -1494,11 +1696,19 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     }
 
     /// Ditto
+    void[] allocateAll()
+    {
+        if (!empty) return null;
+        _control[] = 1;
+        return _payload;
+    }
+
+    /// Ditto
     bool owns(void[] b) const
     {
+        assert(b.ptr !is null || b.length == 0, "Corrupt block.");
         return b.ptr >= _payload.ptr
-            && b.ptr + b.length <= _payload.ptr + _payload.length
-            || b is null;
+            && b.ptr + b.length <= _payload.ptr + _payload.length;
     }
 
     /*
@@ -1511,12 +1721,12 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
             size_t blocks, ref void[] result)
     {
         assert(blocks > 0);
-        assert(wordIdx < _control.length);
+        assert(wordIdx < _control.rep.length);
         assert(msbIdx <= 63);
         if (msbIdx + blocks <= 64)
         {
             // Allocation should fit this control word
-            if (setBitsIfZero(_control[wordIdx],
+            if (setBitsIfZero(_control.rep[wordIdx],
                     cast(uint) (64 - msbIdx - blocks), 63 - msbIdx))
             {
                 // Success
@@ -1530,7 +1740,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
         }
         // Allocation spans two control words or more
         auto mask = ulong.max >> msbIdx;
-        if (_control[wordIdx] & mask)
+        if (_control.rep[wordIdx] & mask)
         {
             // We can't allocate the rest of this control word,
             // return a suggestion.
@@ -1538,16 +1748,16 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
         }
         // We can allocate the rest of this control word, but we first need to
         // make sure we can allocate the tail.
-        if (wordIdx + 1 == _control.length)
+        if (wordIdx + 1 == _control.rep.length)
         {
             // No more memory
-            return tuple(_control.length, 0u);
+            return tuple(_control.rep.length, 0u);
         }
         auto hint = allocateAt(wordIdx + 1, 0, blocks - 64 + msbIdx, result);
         if (hint[0] == size_t.max)
         {
             // We did it!
-            _control[wordIdx] |= mask;
+            _control.rep[wordIdx] |= mask;
             result = blocksFor(wordIdx, msbIdx, blocks);
             return tuple(size_t.max, 0u);
         }
@@ -1559,38 +1769,38 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     by wordIdx. Returns the number of blocks allocated. */
     private uint allocateAtTail(size_t wordIdx)
     {
-        assert(wordIdx < _control.length);
-        const available = trailingZeros(_control[wordIdx]);
-        _control[wordIdx] |= ulong.max >> available;
+        assert(wordIdx < _control.rep.length);
+        const available = trailingZeros(_control.rep[wordIdx]);
+        _control.rep[wordIdx] |= ulong.max >> available;
         return available;
     }
 
     private void[] smallAlloc(uint blocks)
     {
         assert(blocks >= 2 && blocks <= 64, text(blocks));
-        foreach (i; _startIdx .. _control.length)
+        foreach (i; _startIdx .. _control.rep.length)
         {
             // Test within the current 64-bit word
-            const v = _control[i];
+            const v = _control.rep[i];
             if (v == ulong.max) continue;
             auto j = findContigOnes(~v, blocks);
             if (j < 64)
             {
                 // yay, found stuff
-                setBits(_control[i], 64 - j - blocks, 63 - j);
+                setBits(_control.rep[i], 64 - j - blocks, 63 - j);
                 return blocksFor(i, j, blocks);
             }
             // Next, try allocations that cross a word
             auto available = trailingZeros(v);
             if (available == 0) continue;
-            if (i + 1 >= _control.length) break;
+            if (i + 1 >= _control.rep.length) break;
             assert(available < blocks); // otherwise we should have found it
             auto needed = blocks - available;
             assert(needed > 0 && needed < 64);
             if (allocateAtFront(i + 1, needed))
             {
                 // yay, found a block crossing two words
-                _control[i] |= (1UL << available) - 1;
+                _control.rep[i] |= (1UL << available) - 1;
                 return blocksFor(i, 64 - available, blocks);
             }
         }
@@ -1604,7 +1814,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
         auto pos = tuple(_startIdx, 0);
         for (;;)
         {
-            if (pos[0] >= _control.length)
+            if (pos[0] >= _control.rep.length)
             {
                 // No more memory
                 return null;
@@ -1628,18 +1838,18 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     Returns true if allocation was possible, false otherwise. */
     private bool allocateAtFront(size_t wordIdx, uint blocks)
     {
-        assert(wordIdx < _control.length && blocks >= 1 && blocks <= 64);
+        assert(wordIdx < _control.rep.length && blocks >= 1 && blocks <= 64);
         const mask = (1UL << (64 - blocks)) - 1;
-        if (_control[wordIdx] > mask) return false;
+        if (_control.rep[wordIdx] > mask) return false;
         // yay, works
-        _control[wordIdx] |= ~mask;
+        _control.rep[wordIdx] |= ~mask;
         return true;
     }
 
     /// Ditto
-    @trusted bool expand(ref void[] b, size_t delta)
+    @trusted bool expand(ref void[] b, immutable size_t delta)
     {
-        //debug writefln("expand(%s, %s, %s)", b, minDelta, desiredDelta);
+        if (delta == 0) return true;
         if (b is null)
         {
             b = allocate(delta);
@@ -1705,6 +1915,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     /// Ditto
     void deallocate(void[] b)
     {
+        if (b is null) return;
         // Round up size to multiple of block size
         auto blocks = (b.length + blockSize - 1) / blockSize;
         // Locate position
@@ -1719,13 +1930,14 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
         {
             if (blocks + msbIdx <= 64)
             {
-                resetBits(_control[wordIdx], cast(uint) (64 - msbIdx - blocks),
+                resetBits(_control.rep[wordIdx],
+                    cast(uint) (64 - msbIdx - blocks),
                     63 - msbIdx);
                 return;
             }
             else
             {
-                _control[wordIdx] &= ulong.max << 64 - msbIdx;
+                _control.rep[wordIdx] &= ulong.max << 64 - msbIdx;
                 blocks -= 64 - msbIdx;
                 ++wordIdx;
                 msbIdx = 0;
@@ -1735,30 +1947,28 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
         // Stage 2: reset one word at a time
         for (; blocks >= 64; blocks -= 64)
         {
-            _control[wordIdx++] = 0;
+            _control.rep[wordIdx++] = 0;
         }
 
         // Stage 3: deal with leftover bits, if any
-        assert(wordIdx <= _control.length);
+        assert(wordIdx <= _control.rep.length);
         if (blocks)
         {
-            _control[wordIdx] &= ulong.max >> blocks;
+            _control.rep[wordIdx] &= ulong.max >> blocks;
         }
     }
 
     /// Ditto
     void deallocateAll()
     {
-        static if (false && hasMember!(Allocator, "deallocate"))
-        {
-            parent.deallocate(_allocatedByUs);
-            this = this.init;
-        }
-        else
-        {
-            _control[] = 0;
-            _startIdx = 0;
-        }
+        _control[] = 0;
+        _startIdx = 0;
+    }
+
+    /// Ditto
+    bool empty()
+    {
+        return _control.allAreZero();
     }
 }
 
@@ -1771,6 +1981,11 @@ unittest
     static assert(hasMember!(InSituRegion!(10240, 64), "allocateAll"));
     auto b = a.allocate(100);
     assert(b.length == 100);
+}
+
+unittest
+{
+    testAllocator!(() => HeapBlock!(64)(new void[1024 * 64]));
 }
 
 unittest
@@ -1884,6 +2099,166 @@ unittest
     testAllocateAll!(1)(0, 128);
     testAllocateAll!(1)(128 * 1, 128);
     testAllocateAll!(128 * 20)(13 * 128, 128);
+}
+
+// HeapBlockWithInternalPointers
+/**
+*/
+struct HeapBlockWithInternalPointers(
+    size_t theBlockSize, uint theAlignment = platformAlignment)
+{
+    unittest
+    {
+        auto m = AlignedMallocator.it.alignedAllocate(1024 * 64, theAlignment);
+        testAllocator!(() => HeapBlockWithInternalPointers(m));
+    }
+    private HeapBlock!(theBlockSize, theAlignment) _heap;
+    private BitVector _allocStart;
+
+    this(void[] b) { _heap = HeapBlock!(theBlockSize, theAlignment)(b); }
+
+    // Makes sure there's enough room for _allocStart
+    bool ensureRoomForAllocStart(size_t len)
+    {
+        if (_allocStart.length >= len) return true;
+        // Must ensure there's room
+        immutable oldLength = _allocStart.rep.length;
+        immutable bits = len.roundUpToMultipleOf(64);
+        void[] b = _allocStart.rep;
+        if (!_heap.reallocate(b, bits / 8)) return false;
+        assert(b.length * 8 == bits, text(b.length * 8, " != ", bits));
+        _allocStart = BitVector(cast(ulong[]) b);
+        assert(_allocStart.rep.length * 64 == bits);
+        _allocStart.rep[oldLength .. $] = 0;
+        return true;
+    }
+
+    /**
+    Allocator primitives
+    */
+    alias alignment = theAlignment;
+
+    /// Ditto
+    void[] allocate(size_t bytes)
+    {
+        auto r = _heap.allocate(bytes);
+        if (!r) return r;
+        immutable block = (r.ptr - _heap._payload.ptr) / _heap.blockSize;
+        immutable blocks =
+            (r.length + _heap.blockSize - 1) / _heap.blockSize;
+        if (!ensureRoomForAllocStart(block + blocks))
+        {
+            // Failed, free r and bailout
+            _heap.deallocate(r);
+            return null;
+        }
+        assert(block < _allocStart.length);
+        assert(block + blocks <= _allocStart.length);
+        // Mark the _allocStart bits
+        assert(blocks > 0);
+        _allocStart[block] = 1;
+        _allocStart[block + 1 .. block + blocks] = 0;
+        return r;
+    }
+
+    /// Ditto
+    void[] allocateAll()
+    {
+        if (!empty) return null; // TODO: improve this?
+        // Allocate exactly one word for _allocStart
+        _allocStart = BitVector(cast(ulong[]) _heap.allocate(8));
+        assert(_allocStart.rep.length == 1);
+        _allocStart.rep[0] = 0;
+        auto r = _heap.allocate(_heap._blocks * _heap.blockSize
+            - max(_heap.blockSize, 8));
+        assert(r !is null);
+        immutable block = (r.ptr - _heap._payload.ptr) / _heap.blockSize;
+        assert(block < _allocStart.length);
+        _allocStart[block] = 1;
+        return r;
+    }
+
+    /// Ditto
+    bool expand(ref void[] b, size_t bytes)
+    {
+        if (!bytes) return true;
+        if (b is null)
+        {
+            b = allocate(bytes);
+            return b !is null;
+        }
+        immutable oldBlocks =
+            (b.length + _heap.blockSize - 1) / _heap.blockSize;
+        assert(oldBlocks);
+        immutable newBlocks =
+            (b.length + bytes + _heap.blockSize - 1) / _heap.blockSize;
+        assert(newBlocks >= oldBlocks);
+        immutable block = (b.ptr - _heap._payload.ptr) / _heap.blockSize;
+        assert(_allocStart[block]);
+        if (!ensureRoomForAllocStart(block + newBlocks)
+                || !_heap.expand(b, bytes))
+        {
+            return false;
+        }
+        // Zero only the expanded bits
+        _allocStart[block + oldBlocks .. block + newBlocks] = 0;
+        assert(_allocStart[block]);
+        return true;
+    }
+
+    /// Ditto
+    void deallocate(void[] b)
+    {
+
+        // No need to touch _allocStart here - it's meaningless in freed memory.
+        _heap.deallocate(b);
+        // TODO: one smart thing to do is reduce memory occupied by
+        // _allocStart if we're freeing the rightmost block.
+    }
+
+    /// Ditto
+    void* resolveInternalPointer(void* p)
+    {
+        if (p < _heap._payload.ptr
+            || p >= _heap._payload.ptr + _heap._payload.length)
+        {
+            return null;
+        }
+        // Find block start
+        auto block = (p - _heap._payload.ptr) / _heap.blockSize;
+        if (block >= _allocStart.length) return null;
+        if (!_heap._control[block])
+        {
+            // This is weird... pointer in unallocated memory!
+            return null;
+        }
+        // Within an allocation, must find the 1 just to the left of it
+        auto i = _allocStart.find1Backward(block);
+        if (i == ulong.max) return null;
+        return _heap._payload.ptr + _heap.blockSize * i;
+    }
+
+    /// Ditto
+    bool empty()
+    {
+        return _heap.empty;
+    }
+}
+
+unittest
+{
+    auto h = HeapBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
+    auto b = h.allocate(123);
+    assert(b.length == 123);
+    assert(h.resolveInternalPointer(b.ptr + 17) is b.ptr);
+    b = h.allocate(4096);
+    assert(h.resolveInternalPointer(b.ptr) is b.ptr);
+    assert(h.resolveInternalPointer(b.ptr + 11) is b.ptr);
+    assert(h.resolveInternalPointer(b.ptr + 4096) is null);
+
+    assert(h.expand(b, 1));
+    assert(b.length == 4097);
+    assert(h.resolveInternalPointer(b.ptr + 4096) is b.ptr);
 }
 
 /**
@@ -5483,7 +5858,7 @@ struct WithInternalPointers(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    void[] resolveInternalPointer(void* p)
+    void* resolveInternalPointer(void* p)
     {
         // Must define a custom find
         Tree.Node* find()
@@ -5508,7 +5883,7 @@ struct WithInternalPointers(Allocator)
 
         auto n = find();
         if (!n) return null;
-        return (cast(void*) (n + 1))[0 .. n.payload];
+        return n + 1;
     }
 }
 
@@ -5525,9 +5900,9 @@ unittest
 
     foreach (b; allox)
     {
-        assert(a.resolveInternalPointer(b.ptr) is b);
-        assert(a.resolveInternalPointer(b.ptr + b.length) is b);
-        assert(a.resolveInternalPointer(b.ptr + b.length / 2) is b);
+        assert(a.resolveInternalPointer(b.ptr) is b.ptr);
+        assert(a.resolveInternalPointer(b.ptr + b.length) is b.ptr);
+        assert(a.resolveInternalPointer(b.ptr + b.length / 2) is b.ptr);
         auto bogus = new void[b.length];
         assert(a.resolveInternalPointer(bogus.ptr) is null);
     }
@@ -5538,6 +5913,116 @@ unittest
     }
 
     assert(a.empty);
+}
+
+void testAllocator(alias make)()
+{
+    alias A = typeof(make());
+    auto a = make();
+
+    // Test alignment
+    static assert(A.alignment.isPowerOf2);
+
+    // Test goodAllocSize
+    assert(a.goodAllocSize(1) == A.alignment);
+    assert(a.goodAllocSize(11) >= 11.roundUpToMultipleOf(A.alignment));
+    assert(a.goodAllocSize(111) >= 111.roundUpToMultipleOf(A.alignment));
+
+    // Test allocate
+    auto b1 = a.allocate(1);
+    assert(b1.length == 1);
+    static if (hasMember!(A, "zeroesAllocations"))
+    {
+        assert((cast(byte*) b1.ptr) == 0);
+    }
+    auto b2 = a.allocate(2);
+    assert(b2.length == 2);
+    assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
+
+    // Test alignedAllocate
+    static if (hasMember!(A, "alignedAllocate"))
+    {{
+        auto b3 = a.alignedAllocate(1, 256);
+        assert(b3.length == 1);
+        assert(b3.ptr.alignedAt(256));
+        assert(a.alignedReallocate(b3, 2, 512));
+        assert(b3.ptr.alignedAt(512));
+        static if (hasMember!(A, "alignedDeallocate"))
+        {
+            a.alignedDeallocate(b3);
+        }
+    }}
+    else
+    {
+        static assert(!hasMember!(A, "alignedDeallocate"));
+        static assert(!hasMember!(A, "alignedReallocate"));
+    }
+
+    static if (hasMember!(A, "allocateAll"))
+    {{
+        auto aa = make();
+        if (aa.allocateAll())
+        {
+            // Can't get any more memory
+            assert(!aa.allocate(1));
+        }
+        auto ab = make();
+        auto b4 = ab.allocateAll();
+        assert(b4.length);
+        // Can't get any more memory
+        assert(!ab.allocate(1));
+    }}
+
+    static if (hasMember!(A, "expand"))
+    {{
+        assert(a.expand(b1, 0));
+        auto len = b1.length;
+        if (a.expand(b1, 102))
+        {
+            assert(b1.length == len + 102, text(b1.length, " != ", len + 102));
+        }
+        auto aa = make();
+        void[] b5 = null;
+        assert(aa.expand(b5, 0));
+        assert(b5 is null);
+        assert(aa.expand(b5, 1));
+        assert(b5.length == 1);
+    }}
+
+    void[] b6 = null;
+    assert(a.reallocate(b6, 0));
+    assert(b6.length == 0);
+    assert(a.reallocate(b6, 1));
+    assert(b6.length == 1);
+
+    // Test owns
+    static if (hasMember!(A, "owns"))
+    {{
+        assert(!a.owns(null));
+        assert(a.owns(b1));
+        assert(a.owns(b2));
+        assert(a.owns(b6));
+    }}
+
+    static if (hasMember!(A, "resolveInternalPointer"))
+    {{
+        assert(a.resolveInternalPointer(null) is null);
+        assert(a.resolveInternalPointer(b1.ptr) is b1.ptr);
+        assert(a.resolveInternalPointer(b1.ptr + b1.length / 2) is b1.ptr);
+        assert(a.resolveInternalPointer(b2.ptr) is b2.ptr);
+        assert(a.resolveInternalPointer(b2.ptr + b2.length / 2) is b2.ptr);
+        assert(a.resolveInternalPointer(b6.ptr) is b6.ptr);
+        assert(a.resolveInternalPointer(b6.ptr + b6.length / 2) is b6.ptr);
+        static int[10] b7 = [ 1, 2, 3 ];
+        assert(a.resolveInternalPointer(b7.ptr) is null);
+        assert(a.resolveInternalPointer(b7.ptr + b7.length / 2) is null);
+        assert(a.resolveInternalPointer(b7.ptr + b7.length) is null);
+        int[3] b8 = [ 1, 2, 3 ];
+        assert(a.resolveInternalPointer(b8.ptr) is null);
+        assert(a.resolveInternalPointer(b8.ptr + b8.length / 2) is null);
+        assert(a.resolveInternalPointer(b8.ptr + b8.length) is null);
+    }}
+
 }
 
 __EOF__
