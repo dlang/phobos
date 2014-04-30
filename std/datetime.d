@@ -13286,35 +13286,32 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
+        assert(TimeOfDay(0, 0) == TimeOfDay.init);
+
         {
-            assert(TimeOfDay(0, 0) == TimeOfDay.init);
-
-            {
-                auto tod = TimeOfDay(0, 0);
-                assert(tod._hour == 0);
-                assert(tod._minute == 0);
-                assert(tod._second == 0);
-            }
-
-            {
-                auto tod = TimeOfDay(12, 30, 33);
-                assert(tod._hour == 12);
-                assert(tod._minute == 30);
-                assert(tod._second == 33);
-            }
-
-            {
-                auto tod = TimeOfDay(23, 59, 59);
-                assert(tod._hour == 23);
-                assert(tod._minute == 59);
-                assert(tod._second == 59);
-            }
-
-            assertThrown!DateTimeException(TimeOfDay(24, 0, 0));
-            assertThrown!DateTimeException(TimeOfDay(0, 60, 0));
-            assertThrown!DateTimeException(TimeOfDay(0, 0, 60));
+            auto tod = TimeOfDay(0, 0);
+            assert(tod._hour == 0);
+            assert(tod._minute == 0);
+            assert(tod._second == 0);
         }
+
+        {
+            auto tod = TimeOfDay(12, 30, 33);
+            assert(tod._hour == 12);
+            assert(tod._minute == 30);
+            assert(tod._second == 33);
+        }
+
+        {
+            auto tod = TimeOfDay(23, 59, 59);
+            assert(tod._hour == 23);
+            assert(tod._minute == 59);
+            assert(tod._second == 59);
+        }
+
+        assertThrown!DateTimeException(TimeOfDay(24, 0, 0));
+        assertThrown!DateTimeException(TimeOfDay(0, 60, 0));
+        assertThrown!DateTimeException(TimeOfDay(0, 0, 60));
     }
 
 
@@ -13350,41 +13347,38 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay(0, 0, 0).opCmp(TimeOfDay.init) == 0);
+        assert(TimeOfDay(0, 0, 0).opCmp(TimeOfDay.init) == 0);
 
-            assert(TimeOfDay(0, 0, 0).opCmp(TimeOfDay(0, 0, 0)) == 0);
-            assert(TimeOfDay(12, 0, 0).opCmp(TimeOfDay(12, 0, 0)) == 0);
-            assert(TimeOfDay(0, 30, 0).opCmp(TimeOfDay(0, 30, 0)) == 0);
-            assert(TimeOfDay(0, 0, 33).opCmp(TimeOfDay(0, 0, 33)) == 0);
+        assert(TimeOfDay(0, 0, 0).opCmp(TimeOfDay(0, 0, 0)) == 0);
+        assert(TimeOfDay(12, 0, 0).opCmp(TimeOfDay(12, 0, 0)) == 0);
+        assert(TimeOfDay(0, 30, 0).opCmp(TimeOfDay(0, 30, 0)) == 0);
+        assert(TimeOfDay(0, 0, 33).opCmp(TimeOfDay(0, 0, 33)) == 0);
 
-            assert(TimeOfDay(12, 30, 0).opCmp(TimeOfDay(12, 30, 0)) == 0);
-            assert(TimeOfDay(12, 30, 33).opCmp(TimeOfDay(12, 30, 33)) == 0);
+        assert(TimeOfDay(12, 30, 0).opCmp(TimeOfDay(12, 30, 0)) == 0);
+        assert(TimeOfDay(12, 30, 33).opCmp(TimeOfDay(12, 30, 33)) == 0);
 
-            assert(TimeOfDay(0, 30, 33).opCmp(TimeOfDay(0, 30, 33)) == 0);
-            assert(TimeOfDay(0, 0, 33).opCmp(TimeOfDay(0, 0, 33)) == 0);
+        assert(TimeOfDay(0, 30, 33).opCmp(TimeOfDay(0, 30, 33)) == 0);
+        assert(TimeOfDay(0, 0, 33).opCmp(TimeOfDay(0, 0, 33)) == 0);
 
-            assert(TimeOfDay(12, 30, 33).opCmp(TimeOfDay(13, 30, 33)) < 0);
-            assert(TimeOfDay(13, 30, 33).opCmp(TimeOfDay(12, 30, 33)) > 0);
-            assert(TimeOfDay(12, 30, 33).opCmp(TimeOfDay(12, 31, 33)) < 0);
-            assert(TimeOfDay(12, 31, 33).opCmp(TimeOfDay(12, 30, 33)) > 0);
-            assert(TimeOfDay(12, 30, 33).opCmp(TimeOfDay(12, 30, 34)) < 0);
-            assert(TimeOfDay(12, 30, 34).opCmp(TimeOfDay(12, 30, 33)) > 0);
+        assert(TimeOfDay(12, 30, 33).opCmp(TimeOfDay(13, 30, 33)) < 0);
+        assert(TimeOfDay(13, 30, 33).opCmp(TimeOfDay(12, 30, 33)) > 0);
+        assert(TimeOfDay(12, 30, 33).opCmp(TimeOfDay(12, 31, 33)) < 0);
+        assert(TimeOfDay(12, 31, 33).opCmp(TimeOfDay(12, 30, 33)) > 0);
+        assert(TimeOfDay(12, 30, 33).opCmp(TimeOfDay(12, 30, 34)) < 0);
+        assert(TimeOfDay(12, 30, 34).opCmp(TimeOfDay(12, 30, 33)) > 0);
 
-            assert(TimeOfDay(13, 30, 33).opCmp(TimeOfDay(12, 30, 34)) > 0);
-            assert(TimeOfDay(12, 30, 34).opCmp(TimeOfDay(13, 30, 33)) < 0);
-            assert(TimeOfDay(13, 30, 33).opCmp(TimeOfDay(12, 31, 33)) > 0);
-            assert(TimeOfDay(12, 31, 33).opCmp(TimeOfDay(13, 30, 33)) < 0);
+        assert(TimeOfDay(13, 30, 33).opCmp(TimeOfDay(12, 30, 34)) > 0);
+        assert(TimeOfDay(12, 30, 34).opCmp(TimeOfDay(13, 30, 33)) < 0);
+        assert(TimeOfDay(13, 30, 33).opCmp(TimeOfDay(12, 31, 33)) > 0);
+        assert(TimeOfDay(12, 31, 33).opCmp(TimeOfDay(13, 30, 33)) < 0);
 
-            assert(TimeOfDay(12, 31, 33).opCmp(TimeOfDay(12, 30, 34)) > 0);
-            assert(TimeOfDay(12, 30, 34).opCmp(TimeOfDay(12, 31, 33)) < 0);
+        assert(TimeOfDay(12, 31, 33).opCmp(TimeOfDay(12, 30, 34)) > 0);
+        assert(TimeOfDay(12, 30, 34).opCmp(TimeOfDay(12, 31, 33)) < 0);
 
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, ctod.opCmp(itod)));
-            static assert(__traits(compiles, itod.opCmp(ctod)));
-        }
+        const ctod = TimeOfDay(12, 30, 33);
+        immutable itod = TimeOfDay(12, 30, 33);
+        static assert(__traits(compiles, ctod.opCmp(itod)));
+        static assert(__traits(compiles, itod.opCmp(ctod)));
     }
 
 
@@ -13398,16 +13392,13 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay.init.hour == 0);
-            assert(TimeOfDay(12, 0, 0).hour == 12);
+        assert(TimeOfDay.init.hour == 0);
+        assert(TimeOfDay(12, 0, 0).hour == 12);
 
-            const ctod = TimeOfDay(12, 0, 0);
-            immutable itod = TimeOfDay(12, 0, 0);
-            static assert(__traits(compiles, ctod.hour == 12));
-            static assert(__traits(compiles, itod.hour == 12));
-        }
+        const ctod = TimeOfDay(12, 0, 0);
+        immutable itod = TimeOfDay(12, 0, 0);
+        static assert(__traits(compiles, ctod.hour == 12));
+        static assert(__traits(compiles, itod.hour == 12));
     }
 
 
@@ -13429,19 +13420,16 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).hour = 24;}());
+        assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).hour = 24;}());
 
-            auto tod = TimeOfDay(0, 0, 0);
-            tod.hour = 12;
-            assert(tod == TimeOfDay(12, 0, 0));
+        auto tod = TimeOfDay(0, 0, 0);
+        tod.hour = 12;
+        assert(tod == TimeOfDay(12, 0, 0));
 
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.hour = 12));
-            static assert(!__traits(compiles, itod.hour = 12));
-        }
+        const ctod = TimeOfDay(0, 0, 0);
+        immutable itod = TimeOfDay(0, 0, 0);
+        static assert(!__traits(compiles, ctod.hour = 12));
+        static assert(!__traits(compiles, itod.hour = 12));
     }
 
 
@@ -13455,16 +13443,13 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay.init.minute == 0);
-            assert(TimeOfDay(0, 30, 0).minute == 30);
+        assert(TimeOfDay.init.minute == 0);
+        assert(TimeOfDay(0, 30, 0).minute == 30);
 
-            const ctod = TimeOfDay(0, 30, 0);
-            immutable itod = TimeOfDay(0, 30, 0);
-            static assert(__traits(compiles, ctod.minute == 30));
-            static assert(__traits(compiles, itod.minute == 30));
-        }
+        const ctod = TimeOfDay(0, 30, 0);
+        immutable itod = TimeOfDay(0, 30, 0);
+        static assert(__traits(compiles, ctod.minute == 30));
+        static assert(__traits(compiles, itod.minute == 30));
     }
 
 
@@ -13486,19 +13471,16 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).minute = 60;}());
+        assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).minute = 60;}());
 
-            auto tod = TimeOfDay(0, 0, 0);
-            tod.minute = 30;
-            assert(tod == TimeOfDay(0, 30, 0));
+        auto tod = TimeOfDay(0, 0, 0);
+        tod.minute = 30;
+        assert(tod == TimeOfDay(0, 30, 0));
 
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.minute = 30));
-            static assert(!__traits(compiles, itod.minute = 30));
-        }
+        const ctod = TimeOfDay(0, 0, 0);
+        immutable itod = TimeOfDay(0, 0, 0);
+        static assert(!__traits(compiles, ctod.minute = 30));
+        static assert(!__traits(compiles, itod.minute = 30));
     }
 
 
@@ -13512,16 +13494,13 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay.init.second == 0);
-            assert(TimeOfDay(0, 0, 33).second == 33);
+        assert(TimeOfDay.init.second == 0);
+        assert(TimeOfDay(0, 0, 33).second == 33);
 
-            const ctod = TimeOfDay(0, 0, 33);
-            immutable itod = TimeOfDay(0, 0, 33);
-            static assert(__traits(compiles, ctod.second == 33));
-            static assert(__traits(compiles, itod.second == 33));
-        }
+        const ctod = TimeOfDay(0, 0, 33);
+        immutable itod = TimeOfDay(0, 0, 33);
+        static assert(__traits(compiles, ctod.second == 33));
+        static assert(__traits(compiles, itod.second == 33));
     }
 
 
@@ -13543,19 +13522,16 @@ public:
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).second = 60;}());
+        assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).second = 60;}());
 
-            auto tod = TimeOfDay(0, 0, 0);
-            tod.second = 33;
-            assert(tod == TimeOfDay(0, 0, 33));
+        auto tod = TimeOfDay(0, 0, 0);
+        tod.second = 33;
+        assert(tod == TimeOfDay(0, 0, 33));
 
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.second = 33));
-            static assert(!__traits(compiles, itod.second = 33));
-        }
+        const ctod = TimeOfDay(0, 0, 0);
+        immutable itod = TimeOfDay(0, 0, 0);
+        static assert(!__traits(compiles, ctod.second = 33));
+        static assert(!__traits(compiles, itod.second = 33));
     }
 
 
@@ -13611,43 +13587,37 @@ assert(tod6 == TimeOfDay(0, 0, 59));
     //Verify Examples.
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto tod1 = TimeOfDay(7, 12, 0);
-            tod1.roll!"hours"(1);
-            assert(tod1 == TimeOfDay(8, 12, 0));
+        auto tod1 = TimeOfDay(7, 12, 0);
+        tod1.roll!"hours"(1);
+        assert(tod1 == TimeOfDay(8, 12, 0));
 
-            auto tod2 = TimeOfDay(7, 12, 0);
-            tod2.roll!"hours"(-1);
-            assert(tod2 == TimeOfDay(6, 12, 0));
+        auto tod2 = TimeOfDay(7, 12, 0);
+        tod2.roll!"hours"(-1);
+        assert(tod2 == TimeOfDay(6, 12, 0));
 
-            auto tod3 = TimeOfDay(23, 59, 0);
-            tod3.roll!"minutes"(1);
-            assert(tod3 == TimeOfDay(23, 0, 0));
+        auto tod3 = TimeOfDay(23, 59, 0);
+        tod3.roll!"minutes"(1);
+        assert(tod3 == TimeOfDay(23, 0, 0));
 
-            auto tod4 = TimeOfDay(0, 0, 0);
-            tod4.roll!"minutes"(-1);
-            assert(tod4 == TimeOfDay(0, 59, 0));
+        auto tod4 = TimeOfDay(0, 0, 0);
+        tod4.roll!"minutes"(-1);
+        assert(tod4 == TimeOfDay(0, 59, 0));
 
-            auto tod5 = TimeOfDay(23, 59, 59);
-            tod5.roll!"seconds"(1);
-            assert(tod5 == TimeOfDay(23, 59, 0));
+        auto tod5 = TimeOfDay(23, 59, 59);
+        tod5.roll!"seconds"(1);
+        assert(tod5 == TimeOfDay(23, 59, 0));
 
-            auto tod6 = TimeOfDay(0, 0, 0);
-            tod6.roll!"seconds"(-1);
-            assert(tod6 == TimeOfDay(0, 0, 59));
-        }
+        auto tod6 = TimeOfDay(0, 0, 0);
+        tod6.roll!"seconds"(-1);
+        assert(tod6 == TimeOfDay(0, 0, 59));
     }
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.roll!"hours"(53)));
-            static assert(!__traits(compiles, itod.roll!"hours"(53)));
-        }
+        const ctod = TimeOfDay(0, 0, 0);
+        immutable itod = TimeOfDay(0, 0, 0);
+        static assert(!__traits(compiles, ctod.roll!"hours"(53)));
+        static assert(!__traits(compiles, itod.roll!"hours"(53)));
     }
 
 
@@ -13680,189 +13650,183 @@ assert(tod6 == TimeOfDay(0, 0, 59));
     //Test roll!"minutes"().
     unittest
     {
-        version(testStdDateTime)
+        static void testTOD(TimeOfDay orig, int minutes, in TimeOfDay expected, size_t line = __LINE__)
         {
-            static void testTOD(TimeOfDay orig, int minutes, in TimeOfDay expected, size_t line = __LINE__)
-            {
-                orig.roll!"minutes"(minutes);
-                assert(orig == expected);
-            }
-
-            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 31, 33));
-            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 32, 33));
-            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 33, 33));
-            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 34, 33));
-            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 35, 33));
-            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 40, 33));
-            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 45, 33));
-            testTOD(TimeOfDay(12, 30, 33), 29, TimeOfDay(12, 59, 33));
-            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), 45, TimeOfDay(12, 15, 33));
-            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 75, TimeOfDay(12, 45, 33));
-            testTOD(TimeOfDay(12, 30, 33), 90, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), 100, TimeOfDay(12, 10, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), 689, TimeOfDay(12, 59, 33));
-            testTOD(TimeOfDay(12, 30, 33), 690, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), 691, TimeOfDay(12, 1, 33));
-            testTOD(TimeOfDay(12, 30, 33), 960, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1439, TimeOfDay(12, 29, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1440, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1441, TimeOfDay(12, 31, 33));
-            testTOD(TimeOfDay(12, 30, 33), 2880, TimeOfDay(12, 30, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 29, 33));
-            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 28, 33));
-            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 27, 33));
-            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 26, 33));
-            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 25, 33));
-            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 20, 33));
-            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 15, 33));
-            testTOD(TimeOfDay(12, 30, 33), -29, TimeOfDay(12, 1, 33));
-            testTOD(TimeOfDay(12, 30, 33), -30, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), -45, TimeOfDay(12, 45, 33));
-            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -75, TimeOfDay(12, 15, 33));
-            testTOD(TimeOfDay(12, 30, 33), -90, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), -100, TimeOfDay(12, 50, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), -749, TimeOfDay(12, 1, 33));
-            testTOD(TimeOfDay(12, 30, 33), -750, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), -751, TimeOfDay(12, 59, 33));
-            testTOD(TimeOfDay(12, 30, 33), -960, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -1439, TimeOfDay(12, 31, 33));
-            testTOD(TimeOfDay(12, 30, 33), -1440, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -1441, TimeOfDay(12, 29, 33));
-            testTOD(TimeOfDay(12, 30, 33), -2880, TimeOfDay(12, 30, 33));
-
-            testTOD(TimeOfDay(12, 0, 33), 1, TimeOfDay(12, 1, 33));
-            testTOD(TimeOfDay(12, 0, 33), 0, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 0, 33), -1, TimeOfDay(12, 59, 33));
-
-            testTOD(TimeOfDay(11, 59, 33), 1, TimeOfDay(11, 0, 33));
-            testTOD(TimeOfDay(11, 59, 33), 0, TimeOfDay(11, 59, 33));
-            testTOD(TimeOfDay(11, 59, 33), -1, TimeOfDay(11, 58, 33));
-
-            testTOD(TimeOfDay(0, 0, 33), 1, TimeOfDay(0, 1, 33));
-            testTOD(TimeOfDay(0, 0, 33), 0, TimeOfDay(0, 0, 33));
-            testTOD(TimeOfDay(0, 0, 33), -1, TimeOfDay(0, 59, 33));
-
-            testTOD(TimeOfDay(23, 59, 33), 1, TimeOfDay(23, 0, 33));
-            testTOD(TimeOfDay(23, 59, 33), 0, TimeOfDay(23, 59, 33));
-            testTOD(TimeOfDay(23, 59, 33), -1, TimeOfDay(23, 58, 33));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.roll!"minutes"(7)));
-            static assert(!__traits(compiles, itod.roll!"minutes"(7)));
-
-            //Verify Examples.
-            auto tod1 = TimeOfDay(7, 12, 0);
-            tod1.roll!"minutes"(1);
-            assert(tod1 == TimeOfDay(7, 13, 0));
-
-            auto tod2 = TimeOfDay(7, 12, 0);
-            tod2.roll!"minutes"(-1);
-            assert(tod2 == TimeOfDay(7, 11, 0));
-
-            auto tod3 = TimeOfDay(23, 59, 0);
-            tod3.roll!"minutes"(1);
-            assert(tod3 == TimeOfDay(23, 0, 0));
-
-            auto tod4 = TimeOfDay(0, 0, 0);
-            tod4.roll!"minutes"(-1);
-            assert(tod4 == TimeOfDay(0, 59, 0));
-
-            auto tod5 = TimeOfDay(7, 32, 12);
-            tod5.roll!"seconds"(1);
-            assert(tod5 == TimeOfDay(7, 32, 13));
-
-            auto tod6 = TimeOfDay(7, 32, 12);
-            tod6.roll!"seconds"(-1);
-            assert(tod6 == TimeOfDay(7, 32, 11));
-
-            auto tod7 = TimeOfDay(23, 59, 59);
-            tod7.roll!"seconds"(1);
-            assert(tod7 == TimeOfDay(23, 59, 0));
-
-            auto tod8 = TimeOfDay(0, 0, 0);
-            tod8.roll!"seconds"(-1);
-            assert(tod8 == TimeOfDay(0, 0, 59));
+            orig.roll!"minutes"(minutes);
+            assert(orig == expected);
         }
+
+        testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 31, 33));
+        testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 32, 33));
+        testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 33, 33));
+        testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 34, 33));
+        testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 35, 33));
+        testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 40, 33));
+        testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 45, 33));
+        testTOD(TimeOfDay(12, 30, 33), 29, TimeOfDay(12, 59, 33));
+        testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 0, 33));
+        testTOD(TimeOfDay(12, 30, 33), 45, TimeOfDay(12, 15, 33));
+        testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 75, TimeOfDay(12, 45, 33));
+        testTOD(TimeOfDay(12, 30, 33), 90, TimeOfDay(12, 0, 33));
+        testTOD(TimeOfDay(12, 30, 33), 100, TimeOfDay(12, 10, 33));
+
+        testTOD(TimeOfDay(12, 30, 33), 689, TimeOfDay(12, 59, 33));
+        testTOD(TimeOfDay(12, 30, 33), 690, TimeOfDay(12, 0, 33));
+        testTOD(TimeOfDay(12, 30, 33), 691, TimeOfDay(12, 1, 33));
+        testTOD(TimeOfDay(12, 30, 33), 960, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 1439, TimeOfDay(12, 29, 33));
+        testTOD(TimeOfDay(12, 30, 33), 1440, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 1441, TimeOfDay(12, 31, 33));
+        testTOD(TimeOfDay(12, 30, 33), 2880, TimeOfDay(12, 30, 33));
+
+        testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 29, 33));
+        testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 28, 33));
+        testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 27, 33));
+        testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 26, 33));
+        testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 25, 33));
+        testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 20, 33));
+        testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 15, 33));
+        testTOD(TimeOfDay(12, 30, 33), -29, TimeOfDay(12, 1, 33));
+        testTOD(TimeOfDay(12, 30, 33), -30, TimeOfDay(12, 0, 33));
+        testTOD(TimeOfDay(12, 30, 33), -45, TimeOfDay(12, 45, 33));
+        testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), -75, TimeOfDay(12, 15, 33));
+        testTOD(TimeOfDay(12, 30, 33), -90, TimeOfDay(12, 0, 33));
+        testTOD(TimeOfDay(12, 30, 33), -100, TimeOfDay(12, 50, 33));
+
+        testTOD(TimeOfDay(12, 30, 33), -749, TimeOfDay(12, 1, 33));
+        testTOD(TimeOfDay(12, 30, 33), -750, TimeOfDay(12, 0, 33));
+        testTOD(TimeOfDay(12, 30, 33), -751, TimeOfDay(12, 59, 33));
+        testTOD(TimeOfDay(12, 30, 33), -960, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), -1439, TimeOfDay(12, 31, 33));
+        testTOD(TimeOfDay(12, 30, 33), -1440, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), -1441, TimeOfDay(12, 29, 33));
+        testTOD(TimeOfDay(12, 30, 33), -2880, TimeOfDay(12, 30, 33));
+
+        testTOD(TimeOfDay(12, 0, 33), 1, TimeOfDay(12, 1, 33));
+        testTOD(TimeOfDay(12, 0, 33), 0, TimeOfDay(12, 0, 33));
+        testTOD(TimeOfDay(12, 0, 33), -1, TimeOfDay(12, 59, 33));
+
+        testTOD(TimeOfDay(11, 59, 33), 1, TimeOfDay(11, 0, 33));
+        testTOD(TimeOfDay(11, 59, 33), 0, TimeOfDay(11, 59, 33));
+        testTOD(TimeOfDay(11, 59, 33), -1, TimeOfDay(11, 58, 33));
+
+        testTOD(TimeOfDay(0, 0, 33), 1, TimeOfDay(0, 1, 33));
+        testTOD(TimeOfDay(0, 0, 33), 0, TimeOfDay(0, 0, 33));
+        testTOD(TimeOfDay(0, 0, 33), -1, TimeOfDay(0, 59, 33));
+
+        testTOD(TimeOfDay(23, 59, 33), 1, TimeOfDay(23, 0, 33));
+        testTOD(TimeOfDay(23, 59, 33), 0, TimeOfDay(23, 59, 33));
+        testTOD(TimeOfDay(23, 59, 33), -1, TimeOfDay(23, 58, 33));
+
+        const ctod = TimeOfDay(0, 0, 0);
+        immutable itod = TimeOfDay(0, 0, 0);
+        static assert(!__traits(compiles, ctod.roll!"minutes"(7)));
+        static assert(!__traits(compiles, itod.roll!"minutes"(7)));
+
+        //Verify Examples.
+        auto tod1 = TimeOfDay(7, 12, 0);
+        tod1.roll!"minutes"(1);
+        assert(tod1 == TimeOfDay(7, 13, 0));
+
+        auto tod2 = TimeOfDay(7, 12, 0);
+        tod2.roll!"minutes"(-1);
+        assert(tod2 == TimeOfDay(7, 11, 0));
+
+        auto tod3 = TimeOfDay(23, 59, 0);
+        tod3.roll!"minutes"(1);
+        assert(tod3 == TimeOfDay(23, 0, 0));
+
+        auto tod4 = TimeOfDay(0, 0, 0);
+        tod4.roll!"minutes"(-1);
+        assert(tod4 == TimeOfDay(0, 59, 0));
+
+        auto tod5 = TimeOfDay(7, 32, 12);
+        tod5.roll!"seconds"(1);
+        assert(tod5 == TimeOfDay(7, 32, 13));
+
+        auto tod6 = TimeOfDay(7, 32, 12);
+        tod6.roll!"seconds"(-1);
+        assert(tod6 == TimeOfDay(7, 32, 11));
+
+        auto tod7 = TimeOfDay(23, 59, 59);
+        tod7.roll!"seconds"(1);
+        assert(tod7 == TimeOfDay(23, 59, 0));
+
+        auto tod8 = TimeOfDay(0, 0, 0);
+        tod8.roll!"seconds"(-1);
+        assert(tod8 == TimeOfDay(0, 0, 59));
     }
 
     //Test roll!"seconds"().
     unittest
     {
-        version(testStdDateTime)
+        static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
-            static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
-            {
-                orig.roll!"seconds"(seconds);
-                assert(orig == expected);
-            }
-
-            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 30, 35));
-            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 30, 36));
-            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 30, 37));
-            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 30, 38));
-            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 30, 43));
-            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 30, 48));
-            testTOD(TimeOfDay(12, 30, 33), 26, TimeOfDay(12, 30, 59));
-            testTOD(TimeOfDay(12, 30, 33), 27, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 30, 3));
-            testTOD(TimeOfDay(12, 30, 33), 59, TimeOfDay(12, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 61, TimeOfDay(12, 30, 34));
-
-            testTOD(TimeOfDay(12, 30, 33), 1766, TimeOfDay(12, 30, 59));
-            testTOD(TimeOfDay(12, 30, 33), 1767, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), 1768, TimeOfDay(12, 30, 1));
-            testTOD(TimeOfDay(12, 30, 33), 2007, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), 3599, TimeOfDay(12, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), 3600, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 3601, TimeOfDay(12, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), 7200, TimeOfDay(12, 30, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 30, 31));
-            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 30, 30));
-            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 30, 29));
-            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 30, 28));
-            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 30, 23));
-            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 30, 18));
-            testTOD(TimeOfDay(12, 30, 33), -33, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), -34, TimeOfDay(12, 30, 59));
-            testTOD(TimeOfDay(12, 30, 33), -35, TimeOfDay(12, 30, 58));
-            testTOD(TimeOfDay(12, 30, 33), -59, TimeOfDay(12, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -61, TimeOfDay(12, 30, 32));
-
-            testTOD(TimeOfDay(12, 30, 0), 1, TimeOfDay(12, 30, 1));
-            testTOD(TimeOfDay(12, 30, 0), 0, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 0), -1, TimeOfDay(12, 30, 59));
-
-            testTOD(TimeOfDay(12, 0, 0), 1, TimeOfDay(12, 0, 1));
-            testTOD(TimeOfDay(12, 0, 0), 0, TimeOfDay(12, 0, 0));
-            testTOD(TimeOfDay(12, 0, 0), -1, TimeOfDay(12, 0, 59));
-
-            testTOD(TimeOfDay(0, 0, 0), 1, TimeOfDay(0, 0, 1));
-            testTOD(TimeOfDay(0, 0, 0), 0, TimeOfDay(0, 0, 0));
-            testTOD(TimeOfDay(0, 0, 0), -1, TimeOfDay(0, 0, 59));
-
-            testTOD(TimeOfDay(23, 59, 59), 1, TimeOfDay(23, 59, 0));
-            testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
-            testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.roll!"seconds"(7)));
-            static assert(!__traits(compiles, itod.roll!"seconds"(7)));
+            orig.roll!"seconds"(seconds);
+            assert(orig == expected);
         }
+
+        testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 30, 34));
+        testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 30, 35));
+        testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 30, 36));
+        testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 30, 37));
+        testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 30, 38));
+        testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 30, 43));
+        testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 30, 48));
+        testTOD(TimeOfDay(12, 30, 33), 26, TimeOfDay(12, 30, 59));
+        testTOD(TimeOfDay(12, 30, 33), 27, TimeOfDay(12, 30, 0));
+        testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 30, 3));
+        testTOD(TimeOfDay(12, 30, 33), 59, TimeOfDay(12, 30, 32));
+        testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 61, TimeOfDay(12, 30, 34));
+
+        testTOD(TimeOfDay(12, 30, 33), 1766, TimeOfDay(12, 30, 59));
+        testTOD(TimeOfDay(12, 30, 33), 1767, TimeOfDay(12, 30, 0));
+        testTOD(TimeOfDay(12, 30, 33), 1768, TimeOfDay(12, 30, 1));
+        testTOD(TimeOfDay(12, 30, 33), 2007, TimeOfDay(12, 30, 0));
+        testTOD(TimeOfDay(12, 30, 33), 3599, TimeOfDay(12, 30, 32));
+        testTOD(TimeOfDay(12, 30, 33), 3600, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 3601, TimeOfDay(12, 30, 34));
+        testTOD(TimeOfDay(12, 30, 33), 7200, TimeOfDay(12, 30, 33));
+
+        testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 30, 32));
+        testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 30, 31));
+        testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 30, 30));
+        testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 30, 29));
+        testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 30, 28));
+        testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 30, 23));
+        testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 30, 18));
+        testTOD(TimeOfDay(12, 30, 33), -33, TimeOfDay(12, 30, 0));
+        testTOD(TimeOfDay(12, 30, 33), -34, TimeOfDay(12, 30, 59));
+        testTOD(TimeOfDay(12, 30, 33), -35, TimeOfDay(12, 30, 58));
+        testTOD(TimeOfDay(12, 30, 33), -59, TimeOfDay(12, 30, 34));
+        testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), -61, TimeOfDay(12, 30, 32));
+
+        testTOD(TimeOfDay(12, 30, 0), 1, TimeOfDay(12, 30, 1));
+        testTOD(TimeOfDay(12, 30, 0), 0, TimeOfDay(12, 30, 0));
+        testTOD(TimeOfDay(12, 30, 0), -1, TimeOfDay(12, 30, 59));
+
+        testTOD(TimeOfDay(12, 0, 0), 1, TimeOfDay(12, 0, 1));
+        testTOD(TimeOfDay(12, 0, 0), 0, TimeOfDay(12, 0, 0));
+        testTOD(TimeOfDay(12, 0, 0), -1, TimeOfDay(12, 0, 59));
+
+        testTOD(TimeOfDay(0, 0, 0), 1, TimeOfDay(0, 0, 1));
+        testTOD(TimeOfDay(0, 0, 0), 0, TimeOfDay(0, 0, 0));
+        testTOD(TimeOfDay(0, 0, 0), -1, TimeOfDay(0, 0, 59));
+
+        testTOD(TimeOfDay(23, 59, 59), 1, TimeOfDay(23, 59, 0));
+        testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
+        testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
+
+        const ctod = TimeOfDay(0, 0, 0);
+        immutable itod = TimeOfDay(0, 0, 0);
+        static assert(!__traits(compiles, ctod.roll!"seconds"(7)));
+        static assert(!__traits(compiles, itod.roll!"seconds"(7)));
     }
 
 
@@ -13909,65 +13873,62 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
     unittest
     {
-        version(testStdDateTime)
+        auto tod = TimeOfDay(12, 30, 33);
+
+        assert(tod + dur!"hours"(7) == TimeOfDay(19, 30, 33));
+        assert(tod + dur!"hours"(-7) == TimeOfDay(5, 30, 33));
+        assert(tod + dur!"minutes"(7) == TimeOfDay(12, 37, 33));
+        assert(tod + dur!"minutes"(-7) == TimeOfDay(12, 23, 33));
+        assert(tod + dur!"seconds"(7) == TimeOfDay(12, 30, 40));
+        assert(tod + dur!"seconds"(-7) == TimeOfDay(12, 30, 26));
+
+        assert(tod + dur!"msecs"(7000) == TimeOfDay(12, 30, 40));
+        assert(tod + dur!"msecs"(-7000) == TimeOfDay(12, 30, 26));
+        assert(tod + dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
+        assert(tod + dur!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
+        assert(tod + dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 40));
+        assert(tod + dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 26));
+
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
         {
-            auto tod = TimeOfDay(12, 30, 33);
-
-            assert(tod + dur!"hours"(7) == TimeOfDay(19, 30, 33));
-            assert(tod + dur!"hours"(-7) == TimeOfDay(5, 30, 33));
-            assert(tod + dur!"minutes"(7) == TimeOfDay(12, 37, 33));
-            assert(tod + dur!"minutes"(-7) == TimeOfDay(12, 23, 33));
-            assert(tod + dur!"seconds"(7) == TimeOfDay(12, 30, 40));
-            assert(tod + dur!"seconds"(-7) == TimeOfDay(12, 30, 26));
-
-            assert(tod + dur!"msecs"(7000) == TimeOfDay(12, 30, 40));
-            assert(tod + dur!"msecs"(-7000) == TimeOfDay(12, 30, 26));
-            assert(tod + dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
-            assert(tod + dur!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
-            assert(tod + dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 40));
-            assert(tod + dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 26));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assert(tod + TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
-                assert(tod + TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
-            }
-
-            assert(tod - dur!"hours"(-7) == TimeOfDay(19, 30, 33));
-            assert(tod - dur!"hours"(7) == TimeOfDay(5, 30, 33));
-            assert(tod - dur!"minutes"(-7) == TimeOfDay(12, 37, 33));
-            assert(tod - dur!"minutes"(7) == TimeOfDay(12, 23, 33));
-            assert(tod - dur!"seconds"(-7) == TimeOfDay(12, 30, 40));
-            assert(tod - dur!"seconds"(7) == TimeOfDay(12, 30, 26));
-
-            assert(tod - dur!"msecs"(-7000) == TimeOfDay(12, 30, 40));
-            assert(tod - dur!"msecs"(7000) == TimeOfDay(12, 30, 26));
-            assert(tod - dur!"usecs"(-7_000_000) == TimeOfDay(12, 30, 40));
-            assert(tod - dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
-            assert(tod - dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 40));
-            assert(tod - dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 26));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assert(tod - TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 40));
-                assert(tod - TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
-            }
-
-            auto duration = dur!"hours"(11);
-            const ctod = TimeOfDay(12, 33, 30);
-            immutable itod = TimeOfDay(12, 33, 30);
-            static assert(__traits(compiles, tod + duration));
-            static assert(__traits(compiles, ctod + duration));
-            static assert(__traits(compiles, itod + duration));
-
-            static assert(__traits(compiles, tod - duration));
-            static assert(__traits(compiles, ctod - duration));
-            static assert(__traits(compiles, itod - duration));
+            assert(tod + TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
+            assert(tod + TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
         }
+
+        assert(tod - dur!"hours"(-7) == TimeOfDay(19, 30, 33));
+        assert(tod - dur!"hours"(7) == TimeOfDay(5, 30, 33));
+        assert(tod - dur!"minutes"(-7) == TimeOfDay(12, 37, 33));
+        assert(tod - dur!"minutes"(7) == TimeOfDay(12, 23, 33));
+        assert(tod - dur!"seconds"(-7) == TimeOfDay(12, 30, 40));
+        assert(tod - dur!"seconds"(7) == TimeOfDay(12, 30, 26));
+
+        assert(tod - dur!"msecs"(-7000) == TimeOfDay(12, 30, 40));
+        assert(tod - dur!"msecs"(7000) == TimeOfDay(12, 30, 26));
+        assert(tod - dur!"usecs"(-7_000_000) == TimeOfDay(12, 30, 40));
+        assert(tod - dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
+        assert(tod - dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 40));
+        assert(tod - dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 26));
+
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
+        {
+            assert(tod - TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 40));
+            assert(tod - TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
+        }
+
+        auto duration = dur!"hours"(11);
+        const ctod = TimeOfDay(12, 33, 30);
+        immutable itod = TimeOfDay(12, 33, 30);
+        static assert(__traits(compiles, tod + duration));
+        static assert(__traits(compiles, ctod + duration));
+        static assert(__traits(compiles, itod + duration));
+
+        static assert(__traits(compiles, tod - duration));
+        static assert(__traits(compiles, ctod - duration));
+        static assert(__traits(compiles, itod - duration));
     }
 
 
@@ -14013,45 +13974,42 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto duration = dur!"hours"(12);
+        auto duration = dur!"hours"(12);
 
-            assert(TimeOfDay(12, 30, 33) + dur!"hours"(7) == TimeOfDay(19, 30, 33));
-            assert(TimeOfDay(12, 30, 33) + dur!"hours"(-7) == TimeOfDay(5, 30, 33));
-            assert(TimeOfDay(12, 30, 33) + dur!"minutes"(7) == TimeOfDay(12, 37, 33));
-            assert(TimeOfDay(12, 30, 33) + dur!"minutes"(-7) == TimeOfDay(12, 23, 33));
-            assert(TimeOfDay(12, 30, 33) + dur!"seconds"(7) == TimeOfDay(12, 30, 40));
-            assert(TimeOfDay(12, 30, 33) + dur!"seconds"(-7) == TimeOfDay(12, 30, 26));
+        assert(TimeOfDay(12, 30, 33) + dur!"hours"(7) == TimeOfDay(19, 30, 33));
+        assert(TimeOfDay(12, 30, 33) + dur!"hours"(-7) == TimeOfDay(5, 30, 33));
+        assert(TimeOfDay(12, 30, 33) + dur!"minutes"(7) == TimeOfDay(12, 37, 33));
+        assert(TimeOfDay(12, 30, 33) + dur!"minutes"(-7) == TimeOfDay(12, 23, 33));
+        assert(TimeOfDay(12, 30, 33) + dur!"seconds"(7) == TimeOfDay(12, 30, 40));
+        assert(TimeOfDay(12, 30, 33) + dur!"seconds"(-7) == TimeOfDay(12, 30, 26));
 
-            assert(TimeOfDay(12, 30, 33) + dur!"msecs"(7000) == TimeOfDay(12, 30, 40));
-            assert(TimeOfDay(12, 30, 33) + dur!"msecs"(-7000) == TimeOfDay(12, 30, 26));
-            assert(TimeOfDay(12, 30, 33) + dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
-            assert(TimeOfDay(12, 30, 33) + dur!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
-            assert(TimeOfDay(12, 30, 33) + dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 40));
-            assert(TimeOfDay(12, 30, 33) + dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 26));
+        assert(TimeOfDay(12, 30, 33) + dur!"msecs"(7000) == TimeOfDay(12, 30, 40));
+        assert(TimeOfDay(12, 30, 33) + dur!"msecs"(-7000) == TimeOfDay(12, 30, 26));
+        assert(TimeOfDay(12, 30, 33) + dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
+        assert(TimeOfDay(12, 30, 33) + dur!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
+        assert(TimeOfDay(12, 30, 33) + dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 40));
+        assert(TimeOfDay(12, 30, 33) + dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 26));
 
-            assert(TimeOfDay(12, 30, 33) - dur!"hours"(-7) == TimeOfDay(19, 30, 33));
-            assert(TimeOfDay(12, 30, 33) - dur!"hours"(7) == TimeOfDay(5, 30, 33));
-            assert(TimeOfDay(12, 30, 33) - dur!"minutes"(-7) == TimeOfDay(12, 37, 33));
-            assert(TimeOfDay(12, 30, 33) - dur!"minutes"(7) == TimeOfDay(12, 23, 33));
-            assert(TimeOfDay(12, 30, 33) - dur!"seconds"(-7) == TimeOfDay(12, 30, 40));
-            assert(TimeOfDay(12, 30, 33) - dur!"seconds"(7) == TimeOfDay(12, 30, 26));
+        assert(TimeOfDay(12, 30, 33) - dur!"hours"(-7) == TimeOfDay(19, 30, 33));
+        assert(TimeOfDay(12, 30, 33) - dur!"hours"(7) == TimeOfDay(5, 30, 33));
+        assert(TimeOfDay(12, 30, 33) - dur!"minutes"(-7) == TimeOfDay(12, 37, 33));
+        assert(TimeOfDay(12, 30, 33) - dur!"minutes"(7) == TimeOfDay(12, 23, 33));
+        assert(TimeOfDay(12, 30, 33) - dur!"seconds"(-7) == TimeOfDay(12, 30, 40));
+        assert(TimeOfDay(12, 30, 33) - dur!"seconds"(7) == TimeOfDay(12, 30, 26));
 
-            assert(TimeOfDay(12, 30, 33) - dur!"msecs"(-7000) == TimeOfDay(12, 30, 40));
-            assert(TimeOfDay(12, 30, 33) - dur!"msecs"(7000) == TimeOfDay(12, 30, 26));
-            assert(TimeOfDay(12, 30, 33) - dur!"usecs"(-7_000_000) == TimeOfDay(12, 30, 40));
-            assert(TimeOfDay(12, 30, 33) - dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
-            assert(TimeOfDay(12, 30, 33) - dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 40));
-            assert(TimeOfDay(12, 30, 33) - dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 26));
+        assert(TimeOfDay(12, 30, 33) - dur!"msecs"(-7000) == TimeOfDay(12, 30, 40));
+        assert(TimeOfDay(12, 30, 33) - dur!"msecs"(7000) == TimeOfDay(12, 30, 26));
+        assert(TimeOfDay(12, 30, 33) - dur!"usecs"(-7_000_000) == TimeOfDay(12, 30, 40));
+        assert(TimeOfDay(12, 30, 33) - dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
+        assert(TimeOfDay(12, 30, 33) - dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 40));
+        assert(TimeOfDay(12, 30, 33) - dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 26));
 
-            const ctod = TimeOfDay(12, 33, 30);
-            immutable itod = TimeOfDay(12, 33, 30);
-            static assert(!__traits(compiles, ctod += duration));
-            static assert(!__traits(compiles, itod += duration));
-            static assert(!__traits(compiles, ctod -= duration));
-            static assert(!__traits(compiles, itod -= duration));
-        }
+        const ctod = TimeOfDay(12, 33, 30);
+        immutable itod = TimeOfDay(12, 33, 30);
+        static assert(!__traits(compiles, ctod += duration));
+        static assert(!__traits(compiles, itod += duration));
+        static assert(!__traits(compiles, ctod -= duration));
+        static assert(!__traits(compiles, itod -= duration));
     }
 
 
@@ -14078,33 +14036,30 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
+        auto tod = TimeOfDay(12, 30, 33);
 
-            assert(TimeOfDay(7, 12, 52) - TimeOfDay(12, 30, 33) == dur!"seconds"(-19_061));
-            assert(TimeOfDay(12, 30, 33) - TimeOfDay(7, 12, 52) == dur!"seconds"(19_061));
-            assert(TimeOfDay(12, 30, 33) - TimeOfDay(14, 30, 33) == dur!"seconds"(-7200));
-            assert(TimeOfDay(14, 30, 33) - TimeOfDay(12, 30, 33) == dur!"seconds"(7200));
-            assert(TimeOfDay(12, 30, 33) - TimeOfDay(12, 34, 33) == dur!"seconds"(-240));
-            assert(TimeOfDay(12, 34, 33) - TimeOfDay(12, 30, 33) == dur!"seconds"(240));
-            assert(TimeOfDay(12, 30, 33) - TimeOfDay(12, 30, 34) == dur!"seconds"(-1));
-            assert(TimeOfDay(12, 30, 34) - TimeOfDay(12, 30, 33) == dur!"seconds"(1));
+        assert(TimeOfDay(7, 12, 52) - TimeOfDay(12, 30, 33) == dur!"seconds"(-19_061));
+        assert(TimeOfDay(12, 30, 33) - TimeOfDay(7, 12, 52) == dur!"seconds"(19_061));
+        assert(TimeOfDay(12, 30, 33) - TimeOfDay(14, 30, 33) == dur!"seconds"(-7200));
+        assert(TimeOfDay(14, 30, 33) - TimeOfDay(12, 30, 33) == dur!"seconds"(7200));
+        assert(TimeOfDay(12, 30, 33) - TimeOfDay(12, 34, 33) == dur!"seconds"(-240));
+        assert(TimeOfDay(12, 34, 33) - TimeOfDay(12, 30, 33) == dur!"seconds"(240));
+        assert(TimeOfDay(12, 30, 33) - TimeOfDay(12, 30, 34) == dur!"seconds"(-1));
+        assert(TimeOfDay(12, 30, 34) - TimeOfDay(12, 30, 33) == dur!"seconds"(1));
 
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod - tod));
-            static assert(__traits(compiles, ctod - tod));
-            static assert(__traits(compiles, itod - tod));
+        const ctod = TimeOfDay(12, 30, 33);
+        immutable itod = TimeOfDay(12, 30, 33);
+        static assert(__traits(compiles, tod - tod));
+        static assert(__traits(compiles, ctod - tod));
+        static assert(__traits(compiles, itod - tod));
 
-            static assert(__traits(compiles, tod - ctod));
-            static assert(__traits(compiles, ctod - ctod));
-            static assert(__traits(compiles, itod - ctod));
+        static assert(__traits(compiles, tod - ctod));
+        static assert(__traits(compiles, ctod - ctod));
+        static assert(__traits(compiles, itod - ctod));
 
-            static assert(__traits(compiles, tod - itod));
-            static assert(__traits(compiles, ctod - itod));
-            static assert(__traits(compiles, itod - itod));
-        }
+        static assert(__traits(compiles, tod - itod));
+        static assert(__traits(compiles, ctod - itod));
+        static assert(__traits(compiles, itod - itod));
     }
 
 
@@ -14127,19 +14082,16 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod.toISOString()));
-            static assert(__traits(compiles, ctod.toISOString()));
-            static assert(__traits(compiles, itod.toISOString()));
+        auto tod = TimeOfDay(12, 30, 33);
+        const ctod = TimeOfDay(12, 30, 33);
+        immutable itod = TimeOfDay(12, 30, 33);
+        static assert(__traits(compiles, tod.toISOString()));
+        static assert(__traits(compiles, ctod.toISOString()));
+        static assert(__traits(compiles, itod.toISOString()));
 
-            //Verify Examples.
-            assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
-            assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
-        }
+        //Verify Examples.
+        assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
+        assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
     }
 
 
@@ -14162,19 +14114,16 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod.toISOExtString()));
-            static assert(__traits(compiles, ctod.toISOExtString()));
-            static assert(__traits(compiles, itod.toISOExtString()));
+        auto tod = TimeOfDay(12, 30, 33);
+        const ctod = TimeOfDay(12, 30, 33);
+        immutable itod = TimeOfDay(12, 30, 33);
+        static assert(__traits(compiles, tod.toISOExtString()));
+        static assert(__traits(compiles, ctod.toISOExtString()));
+        static assert(__traits(compiles, itod.toISOExtString()));
 
-            //Verify Examples.
-            assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
-            assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
-        }
+        //Verify Examples.
+        assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
+        assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
     }
 
 
@@ -14203,15 +14152,12 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod.toString()));
-            static assert(__traits(compiles, ctod.toString()));
-            static assert(__traits(compiles, itod.toString()));
-        }
+        auto tod = TimeOfDay(12, 30, 33);
+        const ctod = TimeOfDay(12, 30, 33);
+        immutable itod = TimeOfDay(12, 30, 33);
+        static assert(__traits(compiles, tod.toString()));
+        static assert(__traits(compiles, ctod.toString()));
+        static assert(__traits(compiles, itod.toString()));
     }
 
     //TODO Add a function which returns a string in a user-specified format.
@@ -14256,73 +14202,70 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(TimeOfDay.fromISOString(""));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("13033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1277"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12707"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12070"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12303a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1230a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("123a33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12a033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1a0033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("a20033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1200330"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("-120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("+120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("120033am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("120033pm"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString(""));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("00"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("000"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("0000"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("00000"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("13033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("1277"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12707"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12070"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12303a"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("1230a3"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("123a33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12a033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("1a0033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("a20033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("1200330"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("0120033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("-120033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("+120033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("120033am"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("120033pm"));
 
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0::"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString(":0:"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("::0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("13:0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:7"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:07"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:07:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:3a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:3a:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:a0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1a:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("a2:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:003:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("120:03:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("012:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("01:200:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("-12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("+12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33pm"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("0::"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString(":0:"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("::0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:00"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("0:00:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("00:00:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:00"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("13:0:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:7"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:07"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:07:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:3a"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:a3"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:3a:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:a0:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("1a:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("a2:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:003:30"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("120:03:30"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("012:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("01:200:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("-12:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("+12:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33am"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33pm"));
 
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33"));
 
-            assert(TimeOfDay.fromISOString("011217") == TimeOfDay(1, 12, 17));
-            assert(TimeOfDay.fromISOString("001412") == TimeOfDay(0, 14, 12));
-            assert(TimeOfDay.fromISOString("000007") == TimeOfDay(0, 0, 7));
-            assert(TimeOfDay.fromISOString("011217 ") == TimeOfDay(1, 12, 17));
-            assert(TimeOfDay.fromISOString(" 011217") == TimeOfDay(1, 12, 17));
-            assert(TimeOfDay.fromISOString(" 011217 ") == TimeOfDay(1, 12, 17));
+        assert(TimeOfDay.fromISOString("011217") == TimeOfDay(1, 12, 17));
+        assert(TimeOfDay.fromISOString("001412") == TimeOfDay(0, 14, 12));
+        assert(TimeOfDay.fromISOString("000007") == TimeOfDay(0, 0, 7));
+        assert(TimeOfDay.fromISOString("011217 ") == TimeOfDay(1, 12, 17));
+        assert(TimeOfDay.fromISOString(" 011217") == TimeOfDay(1, 12, 17));
+        assert(TimeOfDay.fromISOString(" 011217 ") == TimeOfDay(1, 12, 17));
 
-            //Verify Examples.
-            assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
-            assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
-            assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
-        }
+        //Verify Examples.
+        assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
+        assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
+        assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
     }
 
 
@@ -14370,73 +14313,70 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString(""));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("13033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1277"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12707"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12070"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12303a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1230a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("123a33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12a033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1a0033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("a20033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1200330"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("-120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("+120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033pm"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString(""));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("000"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0000"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00000"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("13033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1277"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12707"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12070"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12303a"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1230a3"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("123a33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12a033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1a0033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("a20033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1200330"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0120033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("-120033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("+120033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033am"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033pm"));
 
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0::"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString(":0:"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("::0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("13:0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:7:7"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:7:07"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:07:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:3a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:3a:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:a0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1a:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("a2:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:003:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120:03:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("012:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("01:200:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("-12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("+12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:00:33am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:00:33pm"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0::"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString(":0:"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("::0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:0:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:0:00"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0:00:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:0:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:00:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("00:0:00"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("13:0:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:7:7"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:7:07"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:07:0"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:3a"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:30:a3"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:3a:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:a0:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("1a:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("a2:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:003:30"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120:03:30"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("012:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("01:200:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("-12:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("+12:00:33"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:00:33am"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("12:00:33pm"));
 
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033"));
+        assertThrown!DateTimeException(TimeOfDay.fromISOExtString("120033"));
 
-            assert(TimeOfDay.fromISOExtString("01:12:17") == TimeOfDay(1, 12, 17));
-            assert(TimeOfDay.fromISOExtString("00:14:12") == TimeOfDay(0, 14, 12));
-            assert(TimeOfDay.fromISOExtString("00:00:07") == TimeOfDay(0, 0, 7));
-            assert(TimeOfDay.fromISOExtString("01:12:17 ") == TimeOfDay(1, 12, 17));
-            assert(TimeOfDay.fromISOExtString(" 01:12:17") == TimeOfDay(1, 12, 17));
-            assert(TimeOfDay.fromISOExtString(" 01:12:17 ") == TimeOfDay(1, 12, 17));
+        assert(TimeOfDay.fromISOExtString("01:12:17") == TimeOfDay(1, 12, 17));
+        assert(TimeOfDay.fromISOExtString("00:14:12") == TimeOfDay(0, 14, 12));
+        assert(TimeOfDay.fromISOExtString("00:00:07") == TimeOfDay(0, 0, 7));
+        assert(TimeOfDay.fromISOExtString("01:12:17 ") == TimeOfDay(1, 12, 17));
+        assert(TimeOfDay.fromISOExtString(" 01:12:17") == TimeOfDay(1, 12, 17));
+        assert(TimeOfDay.fromISOExtString(" 01:12:17 ") == TimeOfDay(1, 12, 17));
 
-            //Verify Examples.
-            assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
-            assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
-            assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
-        }
+        //Verify Examples.
+        assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
+        assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
+        assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
 
@@ -14457,13 +14397,10 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay.min.hour == 0);
-            assert(TimeOfDay.min.minute == 0);
-            assert(TimeOfDay.min.second == 0);
-            assert(TimeOfDay.min < TimeOfDay.max);
-        }
+        assert(TimeOfDay.min.hour == 0);
+        assert(TimeOfDay.min.minute == 0);
+        assert(TimeOfDay.min.second == 0);
+        assert(TimeOfDay.min < TimeOfDay.max);
     }
 
 
@@ -14482,13 +14419,10 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
 
     unittest
     {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay.max.hour == 23);
-            assert(TimeOfDay.max.minute == 59);
-            assert(TimeOfDay.max.second == 59);
-            assert(TimeOfDay.max > TimeOfDay.min);
-        }
+        assert(TimeOfDay.max.hour == 23);
+        assert(TimeOfDay.max.minute == 59);
+        assert(TimeOfDay.max.second == 59);
+        assert(TimeOfDay.max > TimeOfDay.min);
     }
 
 
@@ -14530,80 +14464,77 @@ private:
 
     unittest
     {
-        version(testStdDateTime)
+        static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
-            static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
-            {
-                orig.addSeconds(seconds);
-                assert(orig == expected);
-            }
-
-            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 30, 35));
-            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 30, 36));
-            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 30, 37));
-            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 30, 38));
-            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 30, 43));
-            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 30, 48));
-            testTOD(TimeOfDay(12, 30, 33), 26, TimeOfDay(12, 30, 59));
-            testTOD(TimeOfDay(12, 30, 33), 27, TimeOfDay(12, 31, 0));
-            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 31, 3));
-            testTOD(TimeOfDay(12, 30, 33), 59, TimeOfDay(12, 31, 32));
-            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 31, 33));
-            testTOD(TimeOfDay(12, 30, 33), 61, TimeOfDay(12, 31, 34));
-
-            testTOD(TimeOfDay(12, 30, 33), 1766, TimeOfDay(12, 59, 59));
-            testTOD(TimeOfDay(12, 30, 33), 1767, TimeOfDay(13, 0, 0));
-            testTOD(TimeOfDay(12, 30, 33), 1768, TimeOfDay(13, 0, 1));
-            testTOD(TimeOfDay(12, 30, 33), 2007, TimeOfDay(13, 4, 0));
-            testTOD(TimeOfDay(12, 30, 33), 3599, TimeOfDay(13, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), 3600, TimeOfDay(13, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 3601, TimeOfDay(13, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), 7200, TimeOfDay(14, 30, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 30, 31));
-            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 30, 30));
-            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 30, 29));
-            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 30, 28));
-            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 30, 23));
-            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 30, 18));
-            testTOD(TimeOfDay(12, 30, 33), -33, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), -34, TimeOfDay(12, 29, 59));
-            testTOD(TimeOfDay(12, 30, 33), -35, TimeOfDay(12, 29, 58));
-            testTOD(TimeOfDay(12, 30, 33), -59, TimeOfDay(12, 29, 34));
-            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 29, 33));
-            testTOD(TimeOfDay(12, 30, 33), -61, TimeOfDay(12, 29, 32));
-
-            testTOD(TimeOfDay(12, 30, 33), -1833, TimeOfDay(12, 0, 0));
-            testTOD(TimeOfDay(12, 30, 33), -1834, TimeOfDay(11, 59, 59));
-            testTOD(TimeOfDay(12, 30, 33), -3600, TimeOfDay(11, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -3601, TimeOfDay(11, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), -5134, TimeOfDay(11, 4, 59));
-            testTOD(TimeOfDay(12, 30, 33), -7200, TimeOfDay(10, 30, 33));
-
-            testTOD(TimeOfDay(12, 30, 0), 1, TimeOfDay(12, 30, 1));
-            testTOD(TimeOfDay(12, 30, 0), 0, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 0), -1, TimeOfDay(12, 29, 59));
-
-            testTOD(TimeOfDay(12, 0, 0), 1, TimeOfDay(12, 0, 1));
-            testTOD(TimeOfDay(12, 0, 0), 0, TimeOfDay(12, 0, 0));
-            testTOD(TimeOfDay(12, 0, 0), -1, TimeOfDay(11, 59, 59));
-
-            testTOD(TimeOfDay(0, 0, 0), 1, TimeOfDay(0, 0, 1));
-            testTOD(TimeOfDay(0, 0, 0), 0, TimeOfDay(0, 0, 0));
-            testTOD(TimeOfDay(0, 0, 0), -1, TimeOfDay(23, 59, 59));
-
-            testTOD(TimeOfDay(23, 59, 59), 1, TimeOfDay(0, 0, 0));
-            testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
-            testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.addSeconds(7)));
-            static assert(!__traits(compiles, itod.addSeconds(7)));
+            orig.addSeconds(seconds);
+            assert(orig == expected);
         }
+
+        testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 30, 34));
+        testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 30, 35));
+        testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 30, 36));
+        testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 30, 37));
+        testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 30, 38));
+        testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 30, 43));
+        testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 30, 48));
+        testTOD(TimeOfDay(12, 30, 33), 26, TimeOfDay(12, 30, 59));
+        testTOD(TimeOfDay(12, 30, 33), 27, TimeOfDay(12, 31, 0));
+        testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 31, 3));
+        testTOD(TimeOfDay(12, 30, 33), 59, TimeOfDay(12, 31, 32));
+        testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 31, 33));
+        testTOD(TimeOfDay(12, 30, 33), 61, TimeOfDay(12, 31, 34));
+
+        testTOD(TimeOfDay(12, 30, 33), 1766, TimeOfDay(12, 59, 59));
+        testTOD(TimeOfDay(12, 30, 33), 1767, TimeOfDay(13, 0, 0));
+        testTOD(TimeOfDay(12, 30, 33), 1768, TimeOfDay(13, 0, 1));
+        testTOD(TimeOfDay(12, 30, 33), 2007, TimeOfDay(13, 4, 0));
+        testTOD(TimeOfDay(12, 30, 33), 3599, TimeOfDay(13, 30, 32));
+        testTOD(TimeOfDay(12, 30, 33), 3600, TimeOfDay(13, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), 3601, TimeOfDay(13, 30, 34));
+        testTOD(TimeOfDay(12, 30, 33), 7200, TimeOfDay(14, 30, 33));
+
+        testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 30, 32));
+        testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 30, 31));
+        testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 30, 30));
+        testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 30, 29));
+        testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 30, 28));
+        testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 30, 23));
+        testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 30, 18));
+        testTOD(TimeOfDay(12, 30, 33), -33, TimeOfDay(12, 30, 0));
+        testTOD(TimeOfDay(12, 30, 33), -34, TimeOfDay(12, 29, 59));
+        testTOD(TimeOfDay(12, 30, 33), -35, TimeOfDay(12, 29, 58));
+        testTOD(TimeOfDay(12, 30, 33), -59, TimeOfDay(12, 29, 34));
+        testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 29, 33));
+        testTOD(TimeOfDay(12, 30, 33), -61, TimeOfDay(12, 29, 32));
+
+        testTOD(TimeOfDay(12, 30, 33), -1833, TimeOfDay(12, 0, 0));
+        testTOD(TimeOfDay(12, 30, 33), -1834, TimeOfDay(11, 59, 59));
+        testTOD(TimeOfDay(12, 30, 33), -3600, TimeOfDay(11, 30, 33));
+        testTOD(TimeOfDay(12, 30, 33), -3601, TimeOfDay(11, 30, 32));
+        testTOD(TimeOfDay(12, 30, 33), -5134, TimeOfDay(11, 4, 59));
+        testTOD(TimeOfDay(12, 30, 33), -7200, TimeOfDay(10, 30, 33));
+
+        testTOD(TimeOfDay(12, 30, 0), 1, TimeOfDay(12, 30, 1));
+        testTOD(TimeOfDay(12, 30, 0), 0, TimeOfDay(12, 30, 0));
+        testTOD(TimeOfDay(12, 30, 0), -1, TimeOfDay(12, 29, 59));
+
+        testTOD(TimeOfDay(12, 0, 0), 1, TimeOfDay(12, 0, 1));
+        testTOD(TimeOfDay(12, 0, 0), 0, TimeOfDay(12, 0, 0));
+        testTOD(TimeOfDay(12, 0, 0), -1, TimeOfDay(11, 59, 59));
+
+        testTOD(TimeOfDay(0, 0, 0), 1, TimeOfDay(0, 0, 1));
+        testTOD(TimeOfDay(0, 0, 0), 0, TimeOfDay(0, 0, 0));
+        testTOD(TimeOfDay(0, 0, 0), -1, TimeOfDay(23, 59, 59));
+
+        testTOD(TimeOfDay(23, 59, 59), 1, TimeOfDay(0, 0, 0));
+        testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
+        testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
+
+        const ctod = TimeOfDay(0, 0, 0);
+        immutable itod = TimeOfDay(0, 0, 0);
+        static assert(!__traits(compiles, ctod.addSeconds(7)));
+        static assert(!__traits(compiles, itod.addSeconds(7)));
     }
 
 
