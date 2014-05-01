@@ -619,8 +619,9 @@ are attempted in order, and the first to compile "wins" and gets
 evaluated.
 
 In this table "doPut" is a method that places $(D e) into $(D r), using the
-correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e) if $(D r) is an input
-range (followed by $(D r.popFront())), or $(D r(e)) otherwise.
+correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e)
+if $(D r) is an input range (followed by $(D r.popFront())), or $(D r(e))
+otherwise.
 
 $(BOOKTABLE ,
     $(TR
@@ -646,7 +647,7 @@ $(BOOKTABLE ,
     )
 )
 
-Tip: $(D put) should $(I not) be used "UFCS-style", eg $(D r.put(e)).
+Tip: $(D put) should $(I not) be used "UFCS-style", e.g. $(D r.put(e)).
 Doing this may call $(D R.put) directly, by-passing any transformation
 feature provided by $(D Range.put). $(D put(r, e)) is prefered.
  +/
@@ -8256,6 +8257,11 @@ template isTwoWayCompatible(alias fn, T1, T2)
 enum SearchPolicy
 {
     /**
+       Searches in a linear fashion.
+    */
+    linear,
+
+    /**
        Searches with a step that is grows linearly (1, 2, 3,...)
        leading to a quadratic search schedule (indexes tried are 0, 1,
        3, 6, 10, 15, 21, 28,...) Once the search overshoots its target,
@@ -8301,47 +8307,17 @@ enum SearchPolicy
         }
 
 /**
-   Represents a sorted random-access range. In addition to the regular
-   range primitives, supports fast operations using binary search. To
-   obtain a $(D SortedRange) from an unsorted range $(D r), use
-   $(XREF algorithm, sort) which sorts $(D r) in place and returns the
-   corresponding $(D SortedRange). To construct a $(D SortedRange)
-   from a range $(D r) that is known to be already sorted, use
-   $(LREF assumeSorted) described below.
-
-   Example:
-
-   ----
-   auto a = [ 1, 2, 3, 42, 52, 64 ];
-   auto r = assumeSorted(a);
-   assert(r.contains(3));
-   assert(!r.contains(32));
-   auto r1 = sort!"a > b"(a);
-   assert(r1.contains(3));
-   assert(!r1.contains(32));
-   assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
-   ----
-
-   $(D SortedRange) could accept ranges weaker than random-access, but it
-   is unable to provide interesting functionality for them. Therefore,
-   $(D SortedRange) is currently restricted to random-access ranges.
-
-   No copy of the original range is ever made. If the underlying range is
-   changed concurrently with its corresponding $(D SortedRange) in ways
-   that break its sortedness, $(D SortedRange) will work erratically.
-
-   Example:
-
-   ----
-   auto a = [ 1, 2, 3, 42, 52, 64 ];
-   auto r = assumeSorted(a);
-   assert(r.contains(42));
-   swap(a[3], a[5]);                      // illegal to break sortedness of original range
-   assert(!r.contains(42));                // passes although it shouldn't
-   ----
+Represents a sorted range. In addition to the regular range
+primitives, supports additional operations that take advantage of the
+ordering, such as merge and binary search. To obtain a $(D
+SortedRange) from an unsorted range $(D r), use $(XREF algorithm,
+sort) which sorts $(D r) in place and returns the corresponding $(D
+SortedRange). To construct a $(D SortedRange) from a range $(D r) that
+is known to be already sorted, use $(LREF assumeSorted) described
+below.
 */
 struct SortedRange(Range, alias pred = "a < b")
-if (isRandomAccessRange!Range && hasLength!Range)
+if (isInputRange!Range)
 {
     private import std.functional : binaryFun;
 
@@ -8368,21 +8344,24 @@ if (isRandomAccessRange!Range && hasLength!Range)
             import std.conv : text;
             import std.random : MinstdRand, uniform;
 
-            // Check the sortedness of the input
-            if (this._input.length < 2) return;
-            immutable size_t msb = bsr(this._input.length) + 1;
-            assert(msb > 0 && msb <= this._input.length);
-            immutable step = this._input.length / msb;
-            static MinstdRand gen;
-            immutable start = uniform(0, step, gen);
-            auto st = stride(this._input, step);
-            static if (is(typeof(text(st))))
+            static if (isRandomAccessRange!Range)
             {
-                assert(isSorted!pred(st), text(st));
-            }
-            else
-            {
-                assert(isSorted!pred(st));
+                // Check the sortedness of the input
+                if (this._input.length < 2) return;
+                immutable size_t msb = bsr(this._input.length) + 1;
+                assert(msb > 0 && msb <= this._input.length);
+                immutable step = this._input.length / msb;
+                static MinstdRand gen;
+                immutable start = uniform(0, step, gen);
+                auto st = stride(this._input, step);
+                static if (is(typeof(text(st))))
+                {
+                    assert(isSorted!pred(st), text(st));
+                }
+                else
+                {
+                    assert(isSorted!pred(st));
+                }
             }
         }
     }
@@ -8394,6 +8373,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     }
 
     /// Ditto
+    static if (isForwardRange!Range)
     @property auto save()
     {
         // Avoid the constructor
@@ -8403,7 +8383,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     }
 
     /// Ditto
-    @property auto front()
+    @property auto ref front()
     {
         return _input.front;
     }
@@ -8415,22 +8395,26 @@ if (isRandomAccessRange!Range && hasLength!Range)
     }
 
     /// Ditto
-    @property auto back()
+    static if (isBidirectionalRange!Range)
     {
-        return _input.back;
+        @property auto ref back()
+        {
+            return _input.back;
+        }
+
+        /// Ditto
+        void popBack()
+        {
+            _input.popBack();
+        }
     }
 
     /// Ditto
-    void popBack()
-    {
-        _input.popBack();
-    }
-
-    /// Ditto
-    auto opIndex(size_t i)
-    {
-        return _input[i];
-    }
+    static if (isRandomAccessRange!Range)
+        auto ref opIndex(size_t i)
+        {
+            return _input[i];
+        }
 
     /// Ditto
     static if (hasSlicing!Range)
@@ -8443,12 +8427,14 @@ if (isRandomAccessRange!Range && hasLength!Range)
         }
 
     /// Ditto
-    @property size_t length()          //const
+    static if (hasLength!Range)
     {
-        return _input.length;
+        @property size_t length()          //const
+        {
+            return _input.length;
+        }
+        alias opDollar = length;
     }
-
-    alias opDollar = length;
 
 /**
    Releases the controlled range and returns it.
@@ -8462,7 +8448,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     // of the range and then 1 for the rest, returns the index at
     // which the first 1 appears. Used internally by the search routines.
     private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
-    if (sp == SearchPolicy.binarySearch)
+    if (sp == SearchPolicy.binarySearch && isRandomAccessRange!Range)
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
@@ -8483,7 +8469,8 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
     // Specialization for trot and gallop
     private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
-    if (sp == SearchPolicy.trot || sp == SearchPolicy.gallop)
+    if ((sp == SearchPolicy.trot || sp == SearchPolicy.gallop)
+        && isRandomAccessRange!Range)
     {
         if (empty || test(front, v)) return 0;
         immutable count = length;
@@ -8515,7 +8502,8 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
     // Specialization for trotBackwards and gallopBackwards
     private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
-    if (sp == SearchPolicy.trotBackwards || sp == SearchPolicy.gallopBackwards)
+    if ((sp == SearchPolicy.trotBackwards || sp == SearchPolicy.gallopBackwards)
+        && isRandomAccessRange!Range)
     {
         immutable count = length;
         if (empty || !test(back, v)) return count;
@@ -8546,7 +8534,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
 // lowerBound
 /**
-   This function uses binary search with policy $(D sp) to find the
+   This function uses a search with policy $(D sp) to find the
    largest left subrange on which $(D pred(x, value)) is $(D true) for
    all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
    the range with elements strictly smaller than $(D value)). The search
@@ -8562,32 +8550,52 @@ if (isRandomAccessRange!Range && hasLength!Range)
    ----
 */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
-    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V)
+         && hasSlicing!Range)
     {
         return this[0 .. getTransitionIndex!(sp, geq)(value)];
     }
 
 // upperBound
 /**
-   This function uses binary search with policy $(D sp) to find the
-   largest right subrange on which $(D pred(value, x)) is $(D true)
-   for all $(D x) (e.g., if $(D pred) is "less than", returns the
-   portion of the range with elements strictly greater than $(D
-   value)). The search schedule and its complexity are documented in
-   $(LREF SearchPolicy).  See also STL's
-   $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
+This function searches with policy $(D sp) to find the largest right
+subrange on which $(D pred(value, x)) is $(D true) for all $(D x)
+(e.g., if $(D pred) is "less than", returns the portion of the range
+with elements strictly greater than $(D value)). The search schedule
+and its complexity are documented in $(LREF SearchPolicy).
 
-   Example:
-   ----
-   auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
-   auto p = a.upperBound(3);
-   assert(equal(p, [4, 4, 5, 6]));
-   ----
+For ranges that do not offer random access, $(D SearchPolicy.linear)
+is the only policy allowed (and it must be specified explicitly lest it exposes
+user code to unexpected inefficiencies). For random-access searches, all
+policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
+
+See_Also: STL's $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
+
+Example:
+----
+auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
+auto p = a.upperBound(3);
+assert(equal(p, [4, 4, 5, 6]));
+----
 */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
-        return this[getTransitionIndex!(sp, gt)(value) .. length];
+        static assert(hasSlicing!Range || sp == SearchPolicy.linear,
+            "Specify SearchPolicy.linear explicitly for "
+            ~ typeof(this).stringof);
+        static if (sp == SearchPolicy.linear)
+        {
+            for (; !_input.empty && !predFun(value, _input.front);
+                 _input.popFront())
+            {
+            }
+            return this;
+        }
+        else
+        {
+            return this[getTransitionIndex!(sp, gt)(value) .. length];
+        }
     }
 
 // equalRange
@@ -8612,7 +8620,8 @@ if (isRandomAccessRange!Range && hasLength!Range)
    ----
 */
     auto equalRange(V)(V value)
-    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V)
+        && isRandomAccessRange!Range)
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
@@ -8668,7 +8677,8 @@ assert(equal(r[2], [ 4, 4, 5, 6 ]));
 ----
 */
     auto trisect(V)(V value)
-    if (isTwoWayCompatible!(predFun, ElementType!Range, V))
+    if (isTwoWayCompatible!(predFun, ElementType!Range, V)
+        && isRandomAccessRange!Range)
     {
         import std.typecons : tuple;
         size_t first = 0, count = _input.length;
@@ -8717,6 +8727,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
  */
 
     bool contains(V)(V value)
+    if (isRandomAccessRange!Range)
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
@@ -8743,7 +8754,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
     }
 }
 
-// Doc examples
+///
 unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -8754,6 +8765,24 @@ unittest
     assert(r1.contains(3));
     assert(!r1.contains(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+}
+
+/**
+$(D SortedRange) could accept ranges weaker than random-access, but it
+is unable to provide interesting functionality for them. Therefore,
+$(D SortedRange) is currently restricted to random-access ranges.
+
+No copy of the original range is ever made. If the underlying range is
+changed concurrently with its corresponding $(D SortedRange) in ways
+that break its sortedness, $(D SortedRange) will work erratically.
+*/
+unittest
+{
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    auto r = assumeSorted(a);
+    assert(r.contains(42));
+    swap(a[3], a[5]);         // illegal to break sortedness of original range
+    assert(!r.contains(42));  // passes although it shouldn't
 }
 
 unittest
@@ -8845,6 +8874,21 @@ unittest
     auto s = assumeSorted(arr);
 }
 
+// Test on an input range
+unittest
+{
+    import std.stdio, std.file, std.path, std.conv;
+    auto name = buildPath(tempDir(), "test.std.range." ~ text(__LINE__));
+    auto f = File(name, "w");
+    // write a sorted range of lines to the file
+    f.write("abc\ndef\nghi\njkl");
+    f.close();
+    f.open(name);
+    auto r = assumeSorted(f.byLine());
+    auto r1 = r.upperBound!(SearchPolicy.linear)("def");
+    assert(r1.front == "ghi", r1.front);
+}
+
 /**
 Assumes $(D r) is sorted by predicate $(D pred) and returns the
 corresponding $(D SortedRange!(pred, R)) having $(D r) as support. To
@@ -8859,7 +8903,7 @@ almost-sorted range is likely to pass it). To check for sortedness at
 cost $(BIGOH n), use $(XREF algorithm,isSorted).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
-if (isRandomAccessRange!(Unqual!R))
+if (isInputRange!(Unqual!R))
 {
     return SortedRange!(Unqual!R, pred)(r);
 }
