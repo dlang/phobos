@@ -8894,7 +8894,7 @@ unittest
     // write a sorted range of lines to the file
     f.write("abc\ndef\nghi\njkl");
     f.close();
-    f.open(name);
+    f.open(name, "r");
     auto r = assumeSorted(f.byLine());
     auto r1 = r.upperBound!(SearchPolicy.linear)("def");
     assert(r1.front == "ghi", r1.front);
