@@ -3039,6 +3039,25 @@ struct Freelist(ParentAllocator,
         }
         _root = null;
     }
+
+    /// GC helper primitives.
+    static if (hasMember!(ParentAllocator, "markAllAsUnused"))
+    {
+        void markAllAsUnused()
+        {
+            // Time to come clean about the stashed data.
+            static if (hasMember!(ParentAllocator, "deallocate"))
+            for (auto n = _root; n; n = n.next)
+            {
+                parent.deallocate((cast(ubyte*)n)[0 .. max]);
+            }
+            _root = null;
+        }
+        //
+        bool markAsUsed(void[] b) { return parent.markAsUsed(b); }
+        //
+        void doneMarking() { parent.doneMarking(); }
+    }
 }
 
 unittest
