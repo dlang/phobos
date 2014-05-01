@@ -2402,10 +2402,12 @@ struct HeapBlockWithInternalPointers(
     {
         // Mark all deallocated memory with 1 so we minimize damage created by
         // false pointers. TODO: improve speed.
-        foreach (i; 0 .. _allocStart.length)
+        foreach (i, ref e; _allocStart.rep)
         {
-            if (_heap._control[i]) continue;
-            _allocStart[i] = 1;
+            // Set to 1 all bits in _allocStart[i] that were 0 in control, and
+            // leave the others unchanged.
+            // (0, 0) => 1; (0, 1) => 0; (1, 0) => 1; (1, 1) => 1
+            e |= ~_heap._control.rep[i];
         }
         // Now zero all control bits
         _heap._control[] = 0;
