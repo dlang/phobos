@@ -115,7 +115,7 @@ or linear time with a low multiplication factor). Traditional allocators such as
 the C heap do not define such functionality. If $(D b is null), the allocator
 shall return $(D false), i.e. no allocator owns the $(D null) slice.))
 
-$(TR $(TDC void* resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
+$(TR $(TDC void[] resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
 somewhere inside a block allocated with this allocator, returns a pointer to the
 beginning of the allocated block. Otherwise, returns $(D null). If the pointer
 points immediately after an allocated block, the result is implementation
@@ -607,7 +607,7 @@ struct NullAllocator
     /**
     Returns $(D null).
     */
-    void* resolveInternalPointer(void*) shared { return null; }
+    void[] resolveInternalPointer(void*) shared { return null; }
     /**
     No-op.
     Precondition: $(D b is null)
@@ -698,9 +698,11 @@ struct GCAllocator
     }
 
     /// Ditto
-    void* resolveInternalPointer(void* p) shared
+    void[] resolveInternalPointer(void* p) shared
     {
-        return GC.addrOf(p);
+        auto r = GC.addrOf(p);
+        if (!r) return null;
+        return r[0 .. GC.sizeOf(r)];
     }
 
     /// Ditto
@@ -1141,11 +1143,14 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
-        void* resolveInternalPointer(void* p)
+        void[] resolveInternalPointer(void* p)
         {
             auto p1 = parent.resolveInternalPointer(p);
             if (p1 is null) return p1;
-            return p1 + stateSize!Prefix;
+            p1 = p1[stateSize!Prefix .. $];
+            auto p2 = (p1.ptr + p1.length - stateSize!Suffix)
+                    .alignDownTo(Suffix.alignof);
+            return p1[0 .. p2 - p1.ptr];
         }
 
         static if (!stateSize!Suffix && hasMember!(Allocator, "expand"))
@@ -1470,7 +1475,33 @@ private struct BitVector
         return _rep.length * 64;
     }
 
-    /** Returns the index of the first 1 to the left of i (including i itself),
+    /* Returns the index of the first 1 to the right of i (including i itself),
+    or length if not found.
+    */
+    ulong find1(ulong i)
+    {
+        assert(i < length);
+        auto w = i / 64;
+        auto b = i % 64; // 0 through 63, 0 when i == 0
+        auto mask = ulong.max >> b;
+        if (auto current = _rep[w] & mask)
+        {
+            // Great, found
+            return w * 64 + leadingOnes(~current);
+        }
+        // The current word doesn't have the solution, find the leftmost 1
+        // going to the right.
+        for (++w; w < _rep.length; ++w)
+        {
+            if (auto current = _rep[w])
+            {
+                return w * 64 + leadingOnes(~current);
+            }
+        }
+        return length;
+    }
+
+    /* Returns the index of the first 1 to the left of i (including i itself),
     or ulong.max if not found.
     */
     ulong find1Backward(ulong i)
@@ -1558,6 +1589,15 @@ unittest
     v[0 .. v.length] = 0;
     v[v.length .. v.length] = 0;
     v[0 .. 0] = 0;
+
+    v[] = 0;
+    assert(v.find1(0) == v.length);
+    v[139] = 1;
+    assert(v.find1(0) == 139);
+    assert(v.find1(100) == 139);
+    assert(v.find1(138) == 139);
+    assert(v.find1(139) == 139);
+    assert(v.find1(140) == v.length);
 }
 
 /**
@@ -2187,7 +2227,7 @@ struct HeapBlockWithInternalPointers(
         assert(b.length * 8 == bits, text(b.length * 8, " != ", bits));
         _allocStart = BitVector(cast(ulong[]) b);
         assert(_allocStart.rep.length * 64 == bits);
-        _allocStart.rep[oldLength .. $] = 0;
+        _allocStart.rep[oldLength .. $] = ulong.max;
         return true;
     }
 
@@ -2216,6 +2256,8 @@ struct HeapBlockWithInternalPointers(
         assert(blocks > 0);
         _allocStart[block] = 1;
         _allocStart[block + 1 .. block + blocks] = 0;
+        assert(block + blocks == _allocStart.length
+            || _allocStart[block + blocks] == 1);
         return r;
     }
 
@@ -2267,14 +2309,15 @@ struct HeapBlockWithInternalPointers(
     /// Ditto
     void deallocate(void[] b)
     {
-        // No need to touch _allocStart here - it's meaningless in freed memory.
+        // No need to touch _allocStart here - except for the first bit, it's
+        // meaningless in freed memory. The first bit is already 1.
         _heap.deallocate(b);
         // TODO: one smart thing to do is reduce memory occupied by
         // _allocStart if we're freeing the rightmost block.
     }
 
     /// Ditto
-    void* resolveInternalPointer(void* p)
+    void[] resolveInternalPointer(void* p)
     {
         if (p < _heap._payload.ptr
             || p >= _heap._payload.ptr + _heap._payload.length)
@@ -2292,7 +2335,8 @@ struct HeapBlockWithInternalPointers(
         // Within an allocation, must find the 1 just to the left of it
         auto i = _allocStart.find1Backward(block);
         if (i == ulong.max) return null;
-        return _heap._payload.ptr + _heap.blockSize * i;
+        auto j = _allocStart.find1(i + 1);
+        return _heap._payload.ptr[_heap.blockSize * i .. _heap.blockSize * j];
     }
 
     /// Ditto
@@ -2307,15 +2351,17 @@ unittest
     auto h = HeapBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
     auto b = h.allocate(123);
     assert(b.length == 123);
-    assert(h.resolveInternalPointer(b.ptr + 17) is b.ptr);
+    auto p = h.resolveInternalPointer(b.ptr + 17);
+    assert(p.ptr is b.ptr);
+    assert(p.length >= b.length);
     b = h.allocate(4096);
-    assert(h.resolveInternalPointer(b.ptr) is b.ptr);
-    assert(h.resolveInternalPointer(b.ptr + 11) is b.ptr);
+    assert(h.resolveInternalPointer(b.ptr) is b);
+    assert(h.resolveInternalPointer(b.ptr + 11) is b);
     assert(h.resolveInternalPointer(b.ptr + 4096) is null);
 
     assert(h.expand(b, 1));
     assert(b.length == 4097);
-    assert(h.resolveInternalPointer(b.ptr + 4096) is b.ptr);
+    assert(h.resolveInternalPointer(b.ptr + 4096).ptr is b.ptr);
 }
 
 /**
@@ -2529,7 +2575,7 @@ struct FallbackAllocator(Primary, Fallback)
     */
     static if (hasMember!(Primary, "resolveInternalPointer")
         && hasMember!(Fallback, "resolveInternalPointer"))
-    void* resolveInternalPointer(void* p)
+    void[] resolveInternalPointer(void* p)
     {
         if (auto r = primary.resolveInternalPointer(p)) return r;
         if (auto r = fallback.resolveInternalPointer(p)) return r;
@@ -6022,7 +6068,7 @@ struct InternalPointersTree(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    void* resolveInternalPointer(void* p)
+    void[] resolveInternalPointer(void* p)
     {
         // Must define a custom find
         Tree.Node* find()
@@ -6047,7 +6093,7 @@ struct InternalPointersTree(Allocator)
 
         auto n = find();
         if (!n) return null;
-        return n + 1;
+        return (cast(void*) (n + 1))[0 .. n.payload];
     }
 }
 
@@ -6064,9 +6110,12 @@ unittest
 
     foreach (b; allox)
     {
-        assert(a.resolveInternalPointer(b.ptr) is b.ptr);
-        assert(a.resolveInternalPointer(b.ptr + b.length) is b.ptr);
-        assert(a.resolveInternalPointer(b.ptr + b.length / 2) is b.ptr);
+        auto p = a.resolveInternalPointer(b.ptr);
+        assert(p.ptr is b.ptr && p.length >= b.length);
+        p = a.resolveInternalPointer(b.ptr + b.length);
+        assert(p.ptr is b.ptr && p.length >= b.length);
+        p = a.resolveInternalPointer(b.ptr + b.length / 2);
+        assert(p.ptr is b.ptr && p.length >= b.length);
         auto bogus = new void[b.length];
         assert(a.resolveInternalPointer(bogus.ptr) is null);
     }
@@ -6171,18 +6220,24 @@ void testAllocator(alias make)()
     static if (hasMember!(A, "resolveInternalPointer"))
     {{
         assert(a.resolveInternalPointer(null) is null);
-        assert(a.resolveInternalPointer(b1.ptr) is b1.ptr);
-        assert(a.resolveInternalPointer(b1.ptr + b1.length / 2) is b1.ptr);
-        assert(a.resolveInternalPointer(b2.ptr) is b2.ptr);
-        assert(a.resolveInternalPointer(b2.ptr + b2.length / 2) is b2.ptr);
-        assert(a.resolveInternalPointer(b6.ptr) is b6.ptr);
-        assert(a.resolveInternalPointer(b6.ptr + b6.length / 2) is b6.ptr);
+        auto p = a.resolveInternalPointer(b1.ptr);
+        assert(p.ptr is b1.ptr && p.length >= b1.length);
+        p = a.resolveInternalPointer(b1.ptr + b1.length / 2);
+        assert(p.ptr is b1.ptr && p.length >= b1.length);
+        p = a.resolveInternalPointer(b2.ptr);
+        assert(p.ptr is b2.ptr && p.length >= b2.length);
+        p = a.resolveInternalPointer(b2.ptr + b2.length / 2);
+        assert(p.ptr is b2.ptr && p.length >= b2.length);
+        p = a.resolveInternalPointer(b6.ptr);
+        assert(p.ptr is b6.ptr && p.length >= b6.length);
+        p = a.resolveInternalPointer(b6.ptr + b6.length / 2);
+        assert(p.ptr is b6.ptr && p.length >= b6.length);
         static int[10] b7 = [ 1, 2, 3 ];
         assert(a.resolveInternalPointer(b7.ptr) is null);
         assert(a.resolveInternalPointer(b7.ptr + b7.length / 2) is null);
         assert(a.resolveInternalPointer(b7.ptr + b7.length) is null);
         int[3] b8 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b8.ptr) is null);
+        assert(a.resolveInternalPointer(b8.ptr).ptr is null);
         assert(a.resolveInternalPointer(b8.ptr + b8.length / 2) is null);
         assert(a.resolveInternalPointer(b8.ptr + b8.length) is null);
     }}
