@@ -146,6 +146,30 @@ of the allocator. An allocator should not hold state and define $(D it)
 simultaneously. Depending on whether the allocator is thread-safe or not, this
 instance may be $(D shared).))
 
+$(TR $(TDC void markAllAsUnused();, $(POST empty)) $(TD This routine is meant as
+an aid for garbage collectors. It is similar to $(D deallocateAll), with an
+important distinction: if there's no intervening call to $(D allocate), a
+subsequent call $(D markAsUsed(b)) (see below) for any block $(D b) that had
+been allocated prior to calling $(D markAllAsUnused) is guaranteed to restore
+the allocation status of $(D b). $(D markAllAsUnused) must not affect memory
+managed by the allocator at all. This is unlike $(D deallocateAll), which is
+allowed to alter managed memory in any way. The primitive $(D
+resolveInternalPointer) must continue working unaffected following a call to $(D
+markAllAsUnused).))
+
+$(TR $(TDC bool markAsUsed(void[] b);) $(TD This routine is meant as
+an aid for garbage collectors. Following a call to $(D
+markAllAsUnused), calling $(D markAsUsed(b)) restores $(D b)'s status as an
+allocated block. Just like $(D markAllAsUnused), $(D markAsUsed(b)) is not
+supposed to affect $(D b) or any other memory managed by the allocator. The
+function returns $(D false) if the block had already been marked by a previous
+call to $(D markAsUsed), $(D true) otherwise.))
+
+$(TR $(TDC void doneMarking();) $(TD This routine is meant as
+an aid for garbage collectors. This call allows the allocator to clear
+state following a call to $(D markAllAsUnused) and a series of calls to $(D
+markAsUsed).))
+
 )
 
 The example below features an allocator modeled after $(WEB goo.gl/m7329l,
@@ -625,6 +649,12 @@ struct NullAllocator
     Returns the $(D shared) global instance of the $(D NullAllocator).
     */
     static shared NullAllocator it;
+    /// No-op
+    void markAllAsUnused() shared {}
+    /// Returns $(D false).
+    bool markAsUsed(void[]) shared { return false; }
+    /// No-op
+    void doneMarking() shared {}
 }
 
 unittest
@@ -963,6 +993,12 @@ unittest
     assert(118.roundUpToMultipleOf(11) == 121);
 }
 
+private size_t divideRoundUp(size_t a, size_t b)
+{
+    assert(b);
+    return (a + b - 1) / b;
+}
+
 /**
 Returns s rounded up to a multiple of base.
 */
@@ -1213,6 +1249,19 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                     + actualAllocationSize(b.length);
                 return (cast(Suffix*) p)[-1];
             }
+
+        //
+        static if (hasMember!(Allocator, "markAllAsUnused"))
+        {
+            void markAllAsUnused() { parent.markAllAsUnused(); }
+            //
+            bool markAsUsed(void[] b)
+            {
+                return parent.markAsUsed(actualAllocation(b));
+            }
+            //
+            void doneMarking() { parent.doneMarking(); }
+        }
     }
 
     version (StdDdoc)
@@ -1240,6 +1289,12 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         bool empty();
         /// Ditto
         enum bool zeroesAllocations = false;
+        /// Ditto
+        void markAllAsUnused();
+        /// Ditto
+        bool markAsUsed(void[] b);
+        /// Ditto
+        void doneMarking();
 
         /**
         The $(D it) singleton is defined if and only if the parent allocator has no state and defines its own $(D it) object.
@@ -1747,7 +1802,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     */
     @trusted void[] allocate(const size_t s)
     {
-        const blocks = (s + blockSize - 1) / blockSize;
+        const blocks = s.divideRoundUp(blockSize);
         void[] result = void;
 
     switcharoo:
@@ -2327,11 +2382,8 @@ struct HeapBlockWithInternalPointers(
         // Find block start
         auto block = (p - _heap._payload.ptr) / _heap.blockSize;
         if (block >= _allocStart.length) return null;
-        if (!_heap._control[block])
-        {
-            // This is weird... pointer in unallocated memory!
-            return null;
-        }
+        // This may happen during marking, so comment it out.
+        // if (!_heap._control[block]) return null;
         // Within an allocation, must find the 1 just to the left of it
         auto i = _allocStart.find1Backward(block);
         if (i == ulong.max) return null;
@@ -2343,6 +2395,31 @@ struct HeapBlockWithInternalPointers(
     bool empty()
     {
         return _heap.empty;
+    }
+
+    /// Ditto
+    void markAllAsUnused()
+    {
+        // Just zero all control bits
+        _heap._control[] = 0;
+    }
+    /// Ditto
+    bool markAsUsed(void[] b)
+    {
+        // Locate position
+        auto pos = b.ptr - _heap._payload.ptr;
+        assert(pos % _heap.blockSize == 0);
+        auto blockIdx = pos / _heap.blockSize;
+        if (_heap._control[blockIdx]) return false;
+        // Round up size to multiple of block size
+        auto blocks = b.length.divideRoundUp(_heap.blockSize);
+        _heap._control[blockIdx .. blockIdx + blocks] = 1;
+        return true;
+    }
+    /// Ditto
+    void doneMarking()
+    {
+        // Nothing to do, what's free stays free.
     }
 }
 
@@ -2357,7 +2434,7 @@ unittest
     b = h.allocate(4096);
     assert(h.resolveInternalPointer(b.ptr) is b);
     assert(h.resolveInternalPointer(b.ptr + 11) is b);
-    assert(h.resolveInternalPointer(b.ptr + 4096) is null);
+    assert(h.resolveInternalPointer(b.ptr - 40970) is null);
 
     assert(h.expand(b, 1));
     assert(b.length == 4097);
@@ -2622,6 +2699,28 @@ struct FallbackAllocator(Primary, Fallback)
         && hasMember!(Fallback, "zeroesAllocations"))
     enum bool zeroesAllocations = Primary.zeroesAllocations
         && Fallback.zeroesAllocations;
+
+    static if (hasMember!(Primary, "markAllAsUnused")
+        && hasMember!(Fallback, "markAllAsUnused"))
+    {
+        void markAllAsUnused()
+        {
+            primary.markAllAsUnused();
+            fallback.markAllAsUnused();
+        }
+        //
+        bool markAsUsed(void[] b)
+        {
+            if (primary.owns(b)) primary.markAsUsed(b);
+            else fallback.markAsUsed(b);
+        }
+        //
+        void doneMarking()
+        {
+            primary.doneMarking();
+            falback.doneMarking();
+        }
+    }
 }
 
 ///
@@ -2876,19 +2975,12 @@ struct Freelist(ParentAllocator,
     }
 
     /**
-    If $(D b.length) is in the interval $(D [min, max]), returns $(D true).
-    Otherwise, if $(D Parent.owns) is defined, forwards to it. Otherwise,
-    returns $(D false). This semantics is intended to have $(D
-    Freelist) handle deallocations of objects of the appropriate size,
-    even for allocators that don't support $(D owns) (such as $(D Mallocator)).
+    Forwards to $(parent.owns) if implemented.
     */
+    static if (hasMember!(ParentAllocator, "owns"))
     bool owns(void[] b)
     {
-        if (inRange(b.length)) return true;
-        static if (hasMember!(ParentAllocator, "owns"))
-            return parent.owns(b);
-        else
-            return false;
+        return parent.owns(b);
     }
 
     /**
@@ -3523,6 +3615,29 @@ struct SimpleBlocklist
     {
         return b.ptr >= root && b.ptr + b.length <= cast(void*) root + size;
     }
+
+    void markAllAsUnused()
+    {
+        // Walk WITHOUT coalescing and mark as free.
+        foreach (ref n; byNode(root))
+        {
+            n.deoccupy();
+        }
+    }
+    //
+    bool markAsUsed(void[] b)
+    {
+        // Occupy again
+        auto n = cast(Node*) (b.ptr - Node.sizeof);
+        if (n.occupied) return false;
+        n.occupy();
+        return true;
+    }
+    //
+    void doneMarking()
+    {
+        // Maybe do a coalescing here?
+    }
 }
 
 unittest
@@ -3632,6 +3747,15 @@ struct Blocklist
 
     /// Ditto
     auto deallocateAll() { return parent.deallocateAll; }
+
+    /// Ditto
+    void markAllAsUnused() { parent.markAllAsUnused(); }
+
+    /// Ditto
+    bool markAsUsed(void[] b) { return parent.markAsUsed(b); }
+
+    /// Ditto
+    void doneMarking() { parent.doneMarking(); }
 }
 
 unittest
