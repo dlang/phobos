@@ -2400,8 +2400,17 @@ struct HeapBlockWithInternalPointers(
     /// Ditto
     void markAllAsUnused()
     {
-        // Just zero all control bits
+        // Mark all deallocated memory with 1 so we minimize damage created by
+        // false pointers. TODO: improve speed.
+        foreach (i; 0 .. _allocStart.length)
+        {
+            if (_heap._control[i]) continue;
+            _allocStart[i] = 1;
+        }
+        // Now zero all control bits
         _heap._control[] = 0;
+        // EXCEPT for the _allocStart block itself
+        markAsUsed(_allocStart.rep);
     }
     /// Ditto
     bool markAsUsed(void[] b)
