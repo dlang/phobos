@@ -5132,7 +5132,7 @@ struct CascadingAllocator(alias make)
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
     {
-        if (!_root) return b is null;
+        if (!_root || !b) return false;
         for (auto n = _root; ; n = n.next)
         {
             if (n.a.owns(b)) return true;
@@ -5141,11 +5141,24 @@ struct CascadingAllocator(alias make)
         return false;
     }
 
+    /// Defined only if $(D Allocator.resolveInternalPointer) is defined.
+    static if (hasMember!(Allocator, "resolveInternalPointer"))
+    void[] resolveInternalPointer(void* p)
+    {
+        if (!_root) return null;
+        for (auto n = _root; ; n = n.next)
+        {
+            if (auto r = n.a.resolveInternalPointer(p)) return p;
+            if (!n.nextIsInitialized) break;
+        }
+        return null;
+    }
+
     /// Defined only if $(D Allocator.expand) is defined.
     static if (hasMember!(Allocator, "expand"))
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b) return (b = allocate(delta)) !is null;
+        if (!b) return delta == 0 || (b = allocate(delta)) !is null;
         if (!_root) return false;
         for (auto n = _root; ; n = n.next)
         {
@@ -5180,9 +5193,8 @@ struct CascadingAllocator(alias make)
     static if (hasMember!(Allocator, "deallocate"))
     void deallocate(void[] b)
     {
-        if (!_root)
+        if (!b || !_root)
         {
-            assert(b is null);
             return;
         }
         for (auto n = _root; ; n = n.next)
@@ -5220,6 +5232,49 @@ struct CascadingAllocator(alias make)
         foreach (n; nodes)
         {
             n.a.deallocateAll();
+        }
+    }
+
+    static if (hasMember!(Allocator, "markAllAsUnused"))
+    {
+        void markAllAsUnused()
+        {
+            if (!_root) return;
+            for (auto n = _root; ; n = n.next)
+            {
+                n.a.markAllAsUnused();
+                if (!n.nextIsInitialized) break;
+            }
+            // Mark the list's memory as used
+            for (auto n = _root; ; n = n.next)
+            {
+                markAsUsed(n[0 .. 1]);
+                if (!n.nextIsInitialized) break;
+            }
+        }
+        //
+        bool markAsUsed(void[] b)
+        {
+            if (!_root) return;
+            for (auto n = _root; ; n = n.next)
+            {
+                if (n.a.owns(b))
+                {
+                    n.a.markAsUsed(b);
+                    break;
+                }
+                if (!n.nextIsInitialized) break;
+            }
+        }
+        //
+        void doneMarking()
+        {
+            if (!_root) return;
+            for (auto n = _root; ; n = n.next)
+            {
+                n.a.doneMarking();
+                if (!n.nextIsInitialized) break;
+            }
         }
     }
 }
@@ -5434,6 +5489,37 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
             _small.deallocateAll();
             _large.deallocateAll();
         }
+
+        static if (hasMember!(SmallAllocator, "resolveInternalPointer")
+                && hasMember!(LargeAllocator, "resolveInternalPointer"))
+        void[] resolveInternalPointer(void* p)
+        {
+            if (auto r = _small.resolveInternalPointer(p)) return r;
+            return _large.resolveInternalPointer(p);
+        }
+
+        static if (hasMember!(SmallAllocator, "markAllAsUnused")
+                && hasMember!(LargeAllocator, "markAllAsUnused"))
+        {
+            void markAllAsUnused()
+            {
+                _small.markAllAsUnused();
+                _large.markAllAsUnused();
+            }
+
+            bool markAsUsed(void[] b)
+            {
+                return b.length <= threshold
+                    ? _small.markAsUsed(b)
+                    : _large.markAsUsed(b);
+            }
+
+            void doneMarking()
+            {
+                _small.doneMarking();
+                _large.doneMarking();
+            }
+        }
     }
 
     enum sharedMethods =
@@ -5646,6 +5732,47 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         foreach (ref a; buckets)
         {
             a.deallocateAll();
+        }
+    }
+
+    /**
+    This method is only defined if all allocators involved define $(D
+    resolveInternalPointer), and tries it for each bucket in turn.
+    */
+    static if (hasMember!(Allocator, "resolveInternalPointer"))
+    void[] resolveInternalPointer(void* p)
+    {
+        foreach (ref a; buckets)
+        {
+            if (auto r = a.resolveInternalPointer(p)) return r;
+        }
+        return null;
+    }
+
+    static if (hasMember!(Allocator, "markAllAsUnused"))
+    {
+        void markAllAsUnused()
+        {
+            foreach (ref a; buckets)
+            {
+                a.markAllAsUnused();
+            }
+        }
+        //
+        bool markAsUsed(void[] b)
+        {
+            const i = (b.length - min) / step;
+            assert(i < buckets.length);
+            const actual = goodAllocSize(b.length);
+            return buckets.ptr[i].markAsUsed(b.ptr[0 .. actual]);
+        }
+        //
+        void doneMarking()
+        {
+            foreach (ref a; buckets)
+            {
+                a.doneMarking();
+            }
         }
     }
 }
@@ -6188,7 +6315,7 @@ struct InternalPointersTree(Allocator)
 
     /// Ditto
     static if (hasMember!(Allocator, "reallocate"))
-        bool reallocate(ref void[] b, size_t s)
+    bool reallocate(ref void[] b, size_t s)
     {
         auto n = &parent.prefix(b);
         assert(n.payload == b.length);
@@ -6248,6 +6375,18 @@ struct InternalPointersTree(Allocator)
         auto n = find();
         if (!n) return null;
         return (cast(void*) (n + 1))[0 .. n.payload];
+    }
+
+    static if (hasMember!(Parent, "markAllAsUnused"))
+    {
+        void markAllAsUnused() { parent.markAllAsUnused(); }
+        //
+        bool markAsUsed(void[] b)
+        {
+            return parent.markAsUsed(actualAllocation(b));
+        }
+        //
+        void doneMarking() { parent.doneMarking(); }
     }
 }
 
