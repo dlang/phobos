@@ -2560,24 +2560,26 @@ struct Appender(A : T[], T)
         put(items);
     }
 
+    /**
+     * Clears the managed array.  This allows the elements of the array to be reused
+     * for appending.
+     *
+     * Note that clear is disabled for immutable or const element types, due to the
+     * possibility that $(D Appender) might overwrite immutable data.
+     */
+    void clear()() @safe pure nothrow
+    {
+        static assert(isMutable!T,
+            "Appender.clear is disabled for immutable or const element types");
+        if (_data)
+        {
+            _data.arr = ()@trusted{ return _data.arr.ptr[0 .. 0]; }();
+        }
+    }
+
     // only allow overwriting data on non-immutable and non-const data
     static if (isMutable!T)
     {
-        /**
-         * Clears the managed array.  This allows the elements of the array to be reused
-         * for appending.
-         *
-         * Note that clear is disabled for immutable or const element types, due to the
-         * possibility that $(D Appender) might overwrite immutable data.
-         */
-        void clear() @safe pure nothrow
-        {
-            if (_data)
-            {
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. 0]; }();
-            }
-        }
-
         /**
          * Shrinks the managed array to the given length.
          *
