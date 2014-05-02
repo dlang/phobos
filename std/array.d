@@ -2970,7 +2970,7 @@ unittest
     {auto app = Appender!conARR(con);} //Didn't work.   Now works.   Should not create a warning.
     {auto app = Appender!conARR(imm);} //Didn't work.   Now works.   Should not create a warning.
 
-    //{auto app = Appender!immARR(mut);}                //Worked. Will cease to work. Creates warning. 
+    //{auto app = Appender!immARR(mut);}                //Worked. Will cease to work. Creates warning.
     //static assert(!is(typeof(Appender!immARR(mut)))); //Worked. Will cease to work. Uncomment me after full deprecation.
     static assert(!is(typeof(Appender!immARR(con))));   //Never worked. Should not work.
     {auto app = Appender!immARR(imm);}                  //Didn't work.  Now works. Should not create a warning.
