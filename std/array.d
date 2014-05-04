@@ -2594,6 +2594,11 @@ struct Appender(A : T[], T)
                 enforce(newlength == 0);
         }
     }
+    else
+    {
+        /// Clear is not available for const/immutable data.
+        @disable void clear();
+    }
 }
 
 //Calculates an efficient growth scheme based on the old capacity
@@ -2970,7 +2975,7 @@ unittest
     {auto app = Appender!conARR(con);} //Didn't work.   Now works.   Should not create a warning.
     {auto app = Appender!conARR(imm);} //Didn't work.   Now works.   Should not create a warning.
 
-    //{auto app = Appender!immARR(mut);}                //Worked. Will cease to work. Creates warning. 
+    //{auto app = Appender!immARR(mut);}                //Worked. Will cease to work. Creates warning.
     //static assert(!is(typeof(Appender!immARR(mut)))); //Worked. Will cease to work. Uncomment me after full deprecation.
     static assert(!is(typeof(Appender!immARR(con))));   //Never worked. Should not work.
     {auto app = Appender!immARR(imm);}                  //Didn't work.  Now works. Should not create a warning.
@@ -3002,6 +3007,14 @@ unittest
     app.reserve(1); //This should not trigger a call to extend
     app.put(ubyte(1)); //Don't clobber arr
     assert(reference[] == arr[]);
+}
+
+unittest // check against .clear UFCS hijacking
+{
+    Appender!string app;
+    static assert(!__traits(compiles, app.clear()));
+    static assert(__traits(compiles, clear(app)),
+        "Remove me when object.clear is removed!");
 }
 
 /++
