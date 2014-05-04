@@ -72,7 +72,7 @@
         $(LREF utfMatcher) provides an improvement over the usual workflow
         of decode-classify-process, combining the decoding and classification
         steps. By extracting necessary bits directly from encoded
-        $(S_LINK Code unit, code units) matchers achieve 
+        $(S_LINK Code unit, code units) matchers achieve
         significant performance improvements. See $(LREF MatcherConcept) for
         the common interface of UTF matchers.
     )
@@ -2103,7 +2103,7 @@ public:
     }
 
     // Linear scan for $(D ch). Useful only for small sets.
-    // TODO: 
+    // TODO:
     // used internally in std.regex
     // should be properly exposed in a public API ?
     package auto scanFor()(dchar ch) const
@@ -2318,18 +2318,68 @@ public:
         assert(unicode.ASCII.to!string == "[0..128$(RPAREN)");
         ---
     */
-    void toString(scope void delegate (const(char)[]) sink)
+
+    private import std.format : FormatException, FormatSpec;
+
+    /***************************************
+     * Obtain a textual representation of this InversionList
+     * in form of open-right intervals.
+     *
+     * The formatting flag is applied individually to each value, for example:
+     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high) range of integrals)
+     * $(LI $(B %x) formats the intervals as a [low..high) range of lowercase hex characters)
+     * $(LI $(B %X) formats the intervals as a [low..high) range of uppercase hex characters)
+     */
+    void toString(scope void delegate(const(char)[]) sink,
+                  FormatSpec!char fmt) /* const */
     {
         import std.format;
         auto range = byInterval;
         if(range.empty)
             return;
-        auto val = range.front;
-        formattedWrite(sink, "[%d..%d)", val.a, val.b);
-        range.popFront();
-        foreach(i; range)
-            formattedWrite(sink, " [%d..%d)", i.a, i.b);
+
+        while (1)
+        {
+            auto i = range.front;
+            range.popFront();
+
+            put(sink, "[");
+            formatValue(sink, i.a, fmt);
+            put(sink, "..");
+            formatValue(sink, i.b, fmt);
+            put(sink, ")");
+            if (range.empty) return;
+            put(sink, " ");
+        }
     }
+
+    ///
+    unittest
+    {
+        import std.conv : to;
+        import std.string : format;
+        import std.uni : unicode;
+
+        assert(unicode.Cyrillic.to!string ==
+            "[1024..1157) [1159..1320) [7467..7468) [7544..7545) [11744..11776) [42560..42648) [42655..42656)");
+
+        // The specs '%s' and '%d' are equivalent to the to!string call above.
+        assert(format("%d", unicode.Cyrillic) == unicode.Cyrillic.to!string);
+
+        assert(format("%#x", unicode.Cyrillic) ==
+            "[0x400..0x485) [0x487..0x528) [0x1d2b..0x1d2c) [0x1d78..0x1d79) [0x2de0..0x2e00) [0xa640..0xa698) [0xa69f..0xa6a0)");
+
+        assert(format("%#X", unicode.Cyrillic) ==
+            "[0X400..0X485) [0X487..0X528) [0X1D2B..0X1D2C) [0X1D78..0X1D79) [0X2DE0..0X2E00) [0XA640..0XA698) [0XA69F..0XA6A0)");
+    }
+
+    unittest
+    {
+        import std.string : format;
+        assertThrown!FormatException(format("%a", unicode.ASCII));
+    }
+
+
     /**
         Add an interval [a, b$(RPAREN) to this set.
 
@@ -2696,7 +2746,7 @@ private:
         alias Ival = CodepointInterval;
         //intervals wrapper for a _range_ over packed array
         auto ivals = Intervals!(typeof(data[]))(data[]);
-        //@@@BUG@@@ can't use "a.a < b.a" see issue 12265 
+        //@@@BUG@@@ can't use "a.a < b.a" see issue 12265
         sort!((a,b) => a.a < b.a, SwapStrategy.stable)(ivals);
         // what follows is a variation on stable remove
         // differences:
@@ -3172,7 +3222,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
                 dupThisReference(cnt);
         }
         return data[from .. to];
-        
+
     }
 
     //
@@ -4446,7 +4496,7 @@ struct clampIdx(size_t idx, size_t bits)
     Conceptual type that outlines the common properties of all UTF Matchers.
 
     Note: For illustration purposes only, every method
-    call results in assertion failure. 
+    call results in assertion failure.
     Use $(LREF utfMatcher) to obtain a concrete matcher
     for UTF-8 or UTF-16 encodings.
 */
@@ -4454,19 +4504,19 @@ public struct MatcherConcept
 {
     /**
         $(P Perform a semantic equivalent 2 operations:
-        decoding a $(CODEPOINT) at front of $(D inp) and testing if  
+        decoding a $(CODEPOINT) at front of $(D inp) and testing if
         it belongs to the set of $(CODEPOINTS) of this matcher. )
 
         $(P The effect on $(D inp) depends on the kind of function called:)
 
         $(P Match. If the codepoint is found in the set then range $(D inp)
-        is advanced by its size in $(S_LINK Code unit, code units), 
+        is advanced by its size in $(S_LINK Code unit, code units),
         otherwise the range is not modifed.)
 
         $(P Skip. The range is always advanced by the size
         of the tested $(CODEPOINT) regardless of the result of test.)
 
-        $(P Test. The range is left unaffected regardless 
+        $(P Test. The range is left unaffected regardless
         of the result of test.)
     */
     public bool match(Range)(ref Range inp)
@@ -4492,7 +4542,7 @@ public struct MatcherConcept
     @safe unittest
     {
         string truth = "2² = 4";
-        auto m = utfMatcher!char(unicode.Number);    
+        auto m = utfMatcher!char(unicode.Number);
         assert(m.match(truth)); // '2' is a number all right
         assert(truth == "² = 4"); // skips on match
         assert(m.match(truth)); // so is the superscript '2'
@@ -4506,17 +4556,17 @@ public struct MatcherConcept
 
     /*
         Advanced feature - provide direct access to a subset of matcher based a
-        set of known encoding lengths. Lengths are provided in 
-        $(S_LINK Code unit, code units). The sub-matcher then may do less 
+        set of known encoding lengths. Lengths are provided in
+        $(S_LINK Code unit, code units). The sub-matcher then may do less
         operations per any $(D test)/$(D match).
 
-        Use with care as the sub-matcher won't match 
-        any $(CODEPOINTS) that have encoded length that doesn't belong 
-        to the selected set of lengths. Also the sub-matcher object references 
-        the parent matcher and must not be used past the liftetime 
+        Use with care as the sub-matcher won't match
+        any $(CODEPOINTS) that have encoded length that doesn't belong
+        to the selected set of lengths. Also the sub-matcher object references
+        the parent matcher and must not be used past the liftetime
         of the latter.
 
-        Another caveat of using sub-matcher is that skip is not available 
+        Another caveat of using sub-matcher is that skip is not available
         preciesly because sub-matcher doesn't detect all lengths.
     */
     @property auto subMatcher(Lengths...)()
@@ -4529,7 +4579,7 @@ public struct MatcherConcept
     @safe unittest
     {
         auto m = utfMatcher!char(unicode.Number);
-        string square = "2²";        
+        string square = "2²";
         // about sub-matchers
         assert(!m.subMatcher!(2,3,4).test(square)); // ASCII no covered
         assert(m.subMatcher!1.match(square)); // ASCII-only, works
@@ -4580,7 +4630,7 @@ enum Mode {
 };
 
 mixin template ForwardStrings()
-{ 
+{
     private bool fwdStr(string fn, C)(ref C[] str) const pure
     {
         alias type = typeof(units(str));
@@ -4601,10 +4651,10 @@ template Utf8Matcher()
     //for 1-stage ASCII
     alias AsciiSpec = TypeTuple!(bool, char, clamp!7);
     //for 2-stage lookup of 2 byte UTF-8 sequences
-    alias Utf8Spec2 = TypeTuple!(bool, char[2], 
+    alias Utf8Spec2 = TypeTuple!(bool, char[2],
         clampIdx!(0, 5), clampIdx!(1, 6));
     //ditto for 3 byte
-    alias Utf8Spec3 = TypeTuple!(bool, char[3], 
+    alias Utf8Spec3 = TypeTuple!(bool, char[3],
         clampIdx!(0, 4),
         clampIdx!(1, 6),
         clampIdx!(2, 6)
@@ -4624,7 +4674,7 @@ template Utf8Matcher()
 
     enum leadMask(size_t size) = (cast(size_t)1<<(7 - size))-1;
     enum encMask(size_t size) = ((1<<size)-1)<<(8-size);
-    
+
     char truncate()(char ch) pure @safe
     {
         ch -= 0x80;
@@ -4638,7 +4688,7 @@ template Utf8Matcher()
         char[4] buf;
         std.utf.encode(buf, ch);
         char[sz] ret;
-        buf[0] &= leadMask!sz;        
+        buf[0] &= leadMask!sz;
         foreach(n; 1..sz)
             buf[n] = buf[n] & 0x3f; //keep 6 lower bits
         ret[] = buf[0..sz];
@@ -4666,7 +4716,7 @@ template Utf8Matcher()
         import std.string : format;
         enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
         alias UniSizes = Erase!(1, Sizes);
-        
+
         //generate dispatch code sequence for unicode parts
         static auto genDispatch()
         {
@@ -4675,7 +4725,7 @@ template Utf8Matcher()
                 code ~= format(q{
                     if ((ch & ~leadMask!%d) == encMask!(%d))
                         return lookup!(%d, mode)(inp);
-                    else 
+                    else
                 }, size, size, size);
             static if (Sizes.length == 4) //covers all code unit cases
                 code ~= "{ badEncoding(); return false; }";
@@ -4770,9 +4820,9 @@ template Utf8Matcher()
 
     struct Impl(Sizes...)
     {
-        static assert(allSatisfy!(validSize, Sizes), 
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
-    private:        
+    private:
         //pick tables for chosen sizes
         alias OurTabs = staticMap!(Table, Sizes);
         OurTabs tables;
@@ -4789,7 +4839,7 @@ template Utf8Matcher()
         {
             import std.typecons;
             if(inp.length < size)
-                return badEncoding(), false;        
+                return badEncoding(), false;
             char[size] needle = void;
             needle[0] = leadMask!size & inp[0];
             foreach(i; staticIota!(1, size))
@@ -4837,7 +4887,7 @@ template Utf8Matcher()
 
     struct CherryPick(I, Sizes...)
     {
-        static assert(allSatisfy!(validSize, Sizes), 
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         I* m;
@@ -4868,10 +4918,10 @@ template Utf16Matcher()
     //4-stage - full Unicode
     //assume that 0xD800 & 0xDC00 bits are cleared
     //thus leaving 10 bit per wchar to worry about
-    alias UniSpec = Seq!(bool, wchar[2], 
+    alias UniSpec = Seq!(bool, wchar[2],
         assumeSize!(x=>x[0]>>4, 6), assumeSize!(x=>x[0]&0xf, 4),
-        assumeSize!(x=>x[1]>>6, 4), assumeSize!(x=>x[1]&0x3f, 6), 
-    );    
+        assumeSize!(x=>x[1]>>6, 4), assumeSize!(x=>x[1]&0x3f, 6),
+    );
     alias Ascii = typeof(TrieBuilder!(AsciiSpec)(false).build());
     alias Bmp = typeof(TrieBuilder!(BmpSpec)(false).build());
     alias Uni = typeof(TrieBuilder!(UniSpec)(false).build());
@@ -4926,7 +4976,7 @@ template Utf16Matcher()
                 assert(!inp.empty);
                 auto ch = inp[0];
                 static if(sizeFlags & 1)
-                    return ch < 0x80 ? (inp.popFront(), ascii[ch]) 
+                    return ch < 0x80 ? (inp.popFront(), ascii[ch])
                         : lookupUni!mode(inp);
                 else
                     return lookupUni!mode(inp);
@@ -4962,7 +5012,7 @@ template Utf16Matcher()
         {
             return fwdStr!"test"(str);
         }
-        
+
         mixin ForwardStrings; //dispatch strings to range versions
     }
 
@@ -4970,7 +5020,7 @@ template Utf16Matcher()
         if(Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
-        static assert(allSatisfy!(validSize, Sizes), 
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
         static if(Sizes.length > 1)
             enum sizeFlags = Sizes[0] | Sizes[1];
@@ -4980,7 +5030,7 @@ template Utf16Matcher()
         static if(sizeFlags & 1)
         {
             Ascii ascii;
-            Bmp bmp;            
+            Bmp bmp;
         }
         static if(sizeFlags & 2)
         {
@@ -4994,7 +5044,7 @@ template Utf16Matcher()
         }
 
         bool lookupUni(Mode mode, Range)(ref Range inp) const pure
-        {            
+        {
             wchar x = cast(wchar)(inp[0] - 0xD800);
             //not a high surrogate
             if(x > 0x3FF)
@@ -5004,7 +5054,7 @@ template Utf16Matcher()
                 static if(sizeFlags & 1)
                 {
                     auto ch = inp[0];
-                    static if(mode == Mode.alwaysSkip)                       
+                    static if(mode == Mode.alwaysSkip)
                         inp.popFront();
                     static if(mode == Mode.skipOnMatch)
                         return bmp[ch] && (inp.popFront(), true);
@@ -5017,9 +5067,9 @@ template Utf16Matcher()
             else
             {
                 static if(sizeFlags & 2)
-                {                    
+                {
                     if(inp.length < 2)
-                        badEncoding();                    
+                        badEncoding();
                     wchar y = cast(wchar)(inp[1] - 0xDC00);
                     //not a low surrogate
                     if(y > 0x3FF)
@@ -5055,24 +5105,24 @@ template Utf16Matcher()
             return m.lookupUni!mode(inp);
         }
         mixin DefMatcher;
-        static assert(allSatisfy!(validSize, Sizes), 
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
     }
 }
 
 private auto utf8Matcher(Set)(Set set) @trusted
-{    
-    return Utf8Matcher!().build(set);    
+{
+    return Utf8Matcher!().build(set);
 }
 
 private auto utf16Matcher(Set)(Set set) @trusted
 {
-    return Utf16Matcher!().build(set);  
+    return Utf16Matcher!().build(set);
 }
 
 /**
     Constructs a matcher object
-    to classify $(CODEPOINTS) from the $(D set) for encoding 
+    to classify $(CODEPOINTS) from the $(D set) for encoding
     that has $(D Char) as code unit.
 
     See $(LREF MatcherConcept) for API outline.
@@ -5085,10 +5135,10 @@ public auto utfMatcher(Char, Set)(Set set) @trusted
     else static if(is(Char : wchar))
         return utf16Matcher(set);
     else static if(is(Char : dchar))
-        static assert(false, "UTF-32 needs no decoding, 
+        static assert(false, "UTF-32 needs no decoding,
             and thus not supported by utfMatcher");
     else
-        static assert(false, "Only character types 'char' and 'wchar' are allowed"); 
+        static assert(false, "Only character types 'char' and 'wchar' are allowed");
 }
 
 
@@ -5102,7 +5152,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @trusted
         C[] str;
         size_t idx;
         @property C front(){ return str[idx]; }
-        @property C back(){ return str[$-1]; }        
+        @property C back(){ return str[$-1]; }
         void popFront(){ idx++; }
         void popBack(){ str = str[0..$-1]; }
         void popFrontN(size_t n){ idx += n; }
@@ -5119,7 +5169,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @trusted
 }
 
 /*
-    Expose UTF string $(D s) as a random-access 
+    Expose UTF string $(D s) as a random-access
     range of $(S_LINK Code unit, code units).
 */
 package auto units(C)(C[] s)
@@ -5130,7 +5180,7 @@ package auto units(C)(C[] s)
     pure nothrow:
         C[] str;
         @property C front(){ return str[0]; }
-        @property C back(){ return str[$-1]; }        
+        @property C back(){ return str[$-1]; }
         void popFront(){ str = str[1..$]; }
         void popBack(){ str = str[0..$-1]; }
         void popFrontN(size_t n){ str = str[n..$]; }
@@ -5190,7 +5240,7 @@ package auto units(C)(C[] s)
     assert(codec.idx == 2);
     assert(!utf8.skip(codec));
     assert(!utf8.skip(codec));
-    
+
     foreach(i; 0..7)
     {
         assert(!asc.test(codec));
@@ -5239,9 +5289,9 @@ package auto units(C)(C[] s)
         assert(testAll(utf16, c16));
         assert(testAll(bmp, c16) || len16 != 1);
         assert(testAll(nonBmp, c16) || len16 != 2);
-        
+
         assert(testAll(utf8, c8));
-        
+
         //submatchers return false on out of their domain
         assert(testAll(ascii, c8) || len != 1);
         assert(testAll(uni2, c8) || len != 2);
