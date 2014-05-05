@@ -460,7 +460,7 @@ Returns the size in bytes of the state that needs to be allocated to hold an
 object of type $(D T). $(D stateSize!T) is zero for $(D struct)s that are not
 nested and have no nonstatic member variables.
  */
-private template stateSize(T)
+template stateSize(T)
 {
     static if (is(T == class) || is(T == interface))
         enum stateSize = __traits(classInstanceSize, T);
@@ -1230,7 +1230,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         static if (hasMember!(Allocator, "empty"))
         bool empty()
         {
-            return parent.empty();
+            return parent.empty;
         }
 
         static if (hasMember!(Allocator, "zeroesAllocations"))
@@ -1257,6 +1257,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             //
             bool markAsUsed(void[] b)
             {
+                assert(b);
                 return parent.markAsUsed(actualAllocation(b));
             }
             //
@@ -1515,6 +1516,7 @@ private struct BitVector
 
     bool opIndex(ulong x)
     {
+        assert(x < length);
         return (_rep[x / 64] & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
     }
 
@@ -1584,17 +1586,52 @@ private struct BitVector
     }
 
     /// Are all bits zero?
-    bool allAreZero() const
+    bool allAre0() const
     {
         foreach (w; _rep) if (w) return false;
         return true;
     }
 
-    /// Are all bits [x .. y] zero?
-    bool allAreZero(ulong x, ulong y) const
+    /// Are all bits one?
+    bool allAre1() const
     {
-        foreach (w; _rep[x .. y]) if (w) return false;
+        foreach (w; _rep) if (w != ulong.max) return false;
         return true;
+    }
+
+    ulong findZeros(immutable size_t howMany, ulong start)
+    {
+        assert(start < length);
+        assert(howMany > 64);
+        auto i = start / 64;
+        while (_rep[i] & 1)
+        {
+            // No trailing zeros in this word, try the next one
+            if (++i == _rep.length) return ulong.max;
+            start = i * 64;
+        }
+        // Adjust start to have only trailing zeros after it
+        auto prefixLength = 64;
+        while (_rep[i] & (ulong.max >> (64 - prefixLength)))
+        {
+            assert(prefixLength > 0);
+            --prefixLength;
+            ++start;
+        }
+
+        assert(howMany > prefixLength, text(prefixLength));
+        auto needed = howMany - prefixLength;
+        for (++i; needed >= 64; needed -= 64, ++i)
+        {
+            if (i >= _rep.length) return ulong.max;
+            if (_rep[i] != 0) return findZeros(howMany, i * 64);
+        }
+        // Leftover < 64 bits
+        assert(needed < 64);
+        if (!needed) return start;
+        if (i >= _rep.length) return ulong.max;
+        if (leadingOnes(~_rep[i]) >= needed) return start;
+        return findZeros(howMany, i * 64);
     }
 }
 
@@ -1653,6 +1690,17 @@ unittest
     assert(v.find1(138) == 139);
     assert(v.find1(139) == 139);
     assert(v.find1(140) == v.length);
+
+    v[] = 0;
+    assert(v.findZeros(100, 0) == 0);
+    foreach (i; 0 .. 500)
+        assert(v.findZeros(100, i) == i, text(v.findZeros(100, i), " != ", i));
+    assert(v.findZeros(540, 99) == 99);
+    assert(v.findZeros(99, 540) == 540);
+    assert(v.findZeros(540, 100) == 100);
+    assert(v.findZeros(640, 0) == 0);
+    assert(v.findZeros(641, 1) == ulong.max);
+    assert(v.findZeros(641, 100) == ulong.max);
 }
 
 /**
@@ -1803,6 +1851,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     @trusted void[] allocate(const size_t s)
     {
         const blocks = s.divideRoundUp(blockSize);
+        //writefln("Allocating %s blocks each of size %s", blocks, blockSize);
         void[] result = void;
 
     switcharoo:
@@ -1954,22 +2003,32 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     private void[] hugeAlloc(size_t blocks)
     {
         assert(blocks > 64);
-        void[] result;
-        auto pos = tuple(_startIdx, 0);
-        for (;;)
+        if (_startIdx == _control._rep.length)
         {
-            if (pos[0] >= _control.rep.length)
-            {
-                // No more memory
-                return null;
-            }
-            pos = allocateAt(pos[0], pos[1], blocks, result);
-            if (pos[0] == size_t.max)
-            {
-                // Found and allocated
-                return result;
-            }
+            assert(_control.allAre1);
+            return null;
         }
+        auto i = _control.findZeros(blocks, _startIdx * 64);
+        if (i == ulong.max) return null;
+        // Allocate those bits
+        _control[i .. i + blocks] = 1;
+        return _payload[i * blockSize .. (i + blocks) * blockSize];
+        //void[] result;
+        //auto pos = tuple(_startIdx, 0);
+        //for (;;)
+        //{
+        //    if (pos[0] >= _control.rep.length)
+        //    {
+        //        // No more memory
+        //        return null;
+        //    }
+        //    pos = allocateAt(pos[0], pos[1], blocks, result);
+        //    if (pos[0] == size_t.max)
+        //    {
+        //        // Found and allocated
+        //        return result;
+        //    }
+        //}
     }
 
     // Rounds sizeInBytes to a multiple of blockSize.
@@ -2061,7 +2120,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     {
         if (b is null) return;
         // Round up size to multiple of block size
-        auto blocks = (b.length + blockSize - 1) / blockSize;
+        auto blocks = b.length.divideRoundUp(blockSize);
         // Locate position
         auto pos = b.ptr - _payload.ptr;
         assert(pos % blockSize == 0);
@@ -2112,7 +2171,41 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     /// Ditto
     bool empty()
     {
-        return _control.allAreZero();
+        return _control.allAre0();
+    }
+
+    void dump()
+    {
+        writefln("%s @ %s {", typeid(this), cast(void*) _control._rep.ptr);
+        scope(exit) writeln("}");
+        assert(_payload.length == blockSize * _blocks);
+        assert(_control.length >= _blocks);
+        writefln("  _startIdx=%s; blockSize=%s; blocks=%s",
+            _startIdx, blockSize, _blocks);
+        if (!_control.length) return;
+        uint blockCount = 1;
+        bool inAllocatedStore = _control[0];
+        void* start = _payload.ptr;
+        for (size_t i = 1;; ++i)
+        {
+            if (i >= _blocks || _control[i] != inAllocatedStore)
+            {
+                writefln("  %s block at 0x%s, length: %s (%s*%s)",
+                    inAllocatedStore ? "Busy" : "Free",
+                    cast(void*) start,
+                    blockCount * blockSize,
+                    blockCount, blockSize);
+                if (i >= _blocks) break;
+                assert(i < _control.length);
+                inAllocatedStore = _control[i];
+                start = _payload.ptr + blockCount * blockSize;
+                blockCount = 1;
+            }
+            else
+            {
+                ++blockCount;
+            }
+        }
     }
 }
 
@@ -2319,14 +2412,14 @@ struct HeapBlockWithInternalPointers(
     /// Ditto
     void[] allocateAll()
     {
-        if (!empty) return null; // TODO: improve this?
-        // Allocate exactly one word for _allocStart
-        _allocStart = BitVector(cast(ulong[]) _heap.allocate(8));
-        assert(_allocStart.rep.length == 1);
-        _allocStart.rep[0] = 0;
-        auto r = _heap.allocate(_heap._blocks * _heap.blockSize
-            - max(_heap.blockSize, 8));
-        assert(r !is null);
+        auto r = _heap.allocateAll();
+        if (!r) return r;
+        // Carve space at the end for _allocStart
+        auto p = alignDownTo(r.ptr + r.length - 8, ulong.alignof);
+        r = r[0 .. p - r.ptr];
+        // Initialize _allocStart
+        _allocStart = BitVector(cast(ulong[]) p[0 .. 8]);
+        _allocStart[] = 0;
         immutable block = (r.ptr - _heap._payload.ptr) / _heap.blockSize;
         assert(block < _allocStart.length);
         _allocStart[block] = 1;
@@ -4142,14 +4235,14 @@ unittest
     assert(a2.length == 102);
 
     // Reap with GC fallback.
-    InSituRegion!(128 * 1024) tmp3;
+    InSituRegion!(128 * 1024, 8) tmp3;
     FallbackAllocator!(HeapBlock!(64, 8), GCAllocator) r3;
     r3.primary = HeapBlock!(64, 8)(tmp3.allocateAll());
     auto a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
-    InSituRegion!(128 * 1024) tmp4;
+    InSituRegion!(128 * 1024, 64) tmp4;
     Freelist!(FallbackAllocator!(HeapBlock!(64, 64), GCAllocator), 0, 16) r4;
     r4.parent.primary = HeapBlock!(64, 64)(tmp4.allocateAll());
     auto a4 = r4.allocate(104);
@@ -4907,6 +5000,35 @@ public:
         parent.deallocateAll();
         static if (hasPerAllocationState) _root = null;
     }
+}
+
+string forward(string p, string[] names...)
+{
+    string r;
+    foreach (n; names)
+    {
+        r ~= "static if (hasMember!(typeof("~p~"), `"~n~"`)"
+            ~ ") auto ref "~n~"(T_...)(T_ t_) { return "~p~"."~n~"(t_); }\n";
+    }
+    return r;
+}
+
+unittest
+{
+    struct A
+    {
+        static int fun(int, string) { return 42; }
+        static int gun(int, string, double) { return 43; }
+    }
+    struct B
+    {
+        A a;
+        //pragma(msg, forward("a", "fun", "gun"));
+        mixin(forward("a", "fun", "gun"));
+    }
+    B b;
+    assert(b.fun(1, "a") == 42);
+    assert(b.gun(1, "a", 3) == 43);
 }
 
 unittest
