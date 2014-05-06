@@ -5958,7 +5958,7 @@ unittest
     assert(fabs(r - 2.18504f) < .00001);
 }
 
-pure @safe nothrow unittest
+@safe pure nothrow unittest
 {
     // issue 6381: floor/ceil should be usable in pure function.
     auto x = floor(1.2);

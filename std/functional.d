@@ -914,7 +914,7 @@ unittest {
         static assert(is(typeof(dg_trusted) == int delegate() @trusted));
         static assert(is(typeof(dg_system) == int delegate() @system));
         static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
-        //static assert(is(typeof(dg_pure_nothrow_safe) == int delegate() pure nothrow @safe));
+        //static assert(is(typeof(dg_pure_nothrow_safe) == int delegate() @safe pure nothrow));
 
         assert(dg_ref() == refvar);
         assert(dg_pure() == 1);

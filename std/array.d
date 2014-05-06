@@ -385,7 +385,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     return arrayAllocImpl!(true, T, ST)(sizes);
 }
 
-@safe nothrow pure unittest
+@safe pure nothrow unittest
 {
     cast(void)minimallyInitializedArray!(int[][][][][])();
     double[] arr = minimallyInitializedArray!(double[])(100);

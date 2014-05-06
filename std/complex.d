@@ -119,7 +119,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
     documentation for more information.
     */
-    string toString() const /* TODO: pure @safe nothrow */
+    string toString() const /* TODO: @safe pure nothrow */
     {
         import std.exception : assumeUnique;
         char[] buf;

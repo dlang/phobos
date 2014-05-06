@@ -3998,7 +3998,7 @@ address.
 Returns: A pointer to the newly constructed object (which is the same
 as $(D chunk)).
  */
-T* emplace(T)(T* chunk) @safe nothrow pure
+T* emplace(T)(T* chunk) @safe pure nothrow
 {
     emplaceRef!T(*chunk);
     return chunk;
