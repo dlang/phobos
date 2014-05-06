@@ -187,7 +187,7 @@ private:
     // the "handler" function below.
     enum OpID { getTypeInfo, get, compare, equals, testConversion, toString,
             index, indexAssign, catAssign, copyOut, length,
-            apply }
+            apply, destruct }
 
     // state
     ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
@@ -223,6 +223,8 @@ private:
         case OpID.toString:
             string * target = cast(string*) parm;
             *target = "<Uninitialized VariantN>";
+            break;
+        case OpID.destruct:
             break;
         case OpID.get:
         case OpID.testConversion:
@@ -544,6 +546,13 @@ private:
             }
             break;
 
+        case OpID.destruct:
+            static if (hasElaborateDestructor!A)
+            {
+                typeid(A).destroy(zis);
+            }
+            break;
+
         default: assert(false);
         }
         return 0;
@@ -561,6 +570,11 @@ public:
         opAssign(value);
     }
 
+    ~this()
+    {
+        fptr(OpID.destruct, &store, null);
+    }
+
     /** Assigns a $(D_PARAM VariantN) from a generic
      * argument. Statically rejects disallowed types. */
 
@@ -570,6 +584,9 @@ public:
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof ~ ". Valid types are "
                 ~ AllowedTypes.stringof);
+        // Assignment should destruct previous value
+        fptr(OpID.destruct, &store, null);
+
         static if (is(T : VariantN))
         {
             rhs.fptr(OpID.copyOut, &rhs.store, &this);
@@ -2237,5 +2254,34 @@ unittest
         {
             Alias12540 entity;
         }
+    }
+}
+
+unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=10194
+    static struct S
+    {
+        ~this()
+        {
+            ++cnt;
+        }
+        static size_t cnt;
+    }
+
+    Variant v;
+    // assigning a new value should destroy the existing one
+    {
+        v = S();
+        immutable n = S.cnt;
+        v = 0;
+        assert(S.cnt == n + 1);
+    }
+    // destroying the variant should destroy it's current value
+    {
+        v = S();
+        immutable n = S.cnt;
+        destroy(v);
+        assert(S.cnt == n + 1);
     }
 }
