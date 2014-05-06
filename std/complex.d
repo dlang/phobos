@@ -42,7 +42,7 @@ import std.format, std.math, std.numeric, std.traits;
     assert (z.im == 3.14L);
     ---
 */
-auto complex(T)(T re)  @safe pure nothrow  if (is(T : double))
+auto complex(T)(T re)  @safe pure nothrow @nogc  if (is(T : double))
 {
     static if (isFloatingPoint!T)
         return Complex!T(re, 0);
@@ -51,7 +51,7 @@ auto complex(T)(T re)  @safe pure nothrow  if (is(T : double))
 }
 
 /// ditto
-auto complex(R, I)(R re, I im)  @safe pure nothrow
+auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
     if (is(R : double) && is(I : double))
 {
     static if (isFloatingPoint!R || isFloatingPoint!I)
@@ -156,25 +156,9 @@ struct Complex(T)  if (isFloatingPoint!T)
         sink("i");
     }
 
-    /**
-     * $(RED Deprecated.  This function will be removed in March 2014.
-     * Please use $(XREF string,format) instead.)
-     *
-     * Converts the complex number to a string representation.
-     *
-     * If a $(D sink) delegate is specified, the string is passed to it
-     * and this function returns $(D null).  Otherwise, this function
-     * returns the string representation directly.
-
-     * The output format is controlled via $(D formatSpec), which should consist
-     * of a single POSIX format specifier, including the percent (%) character.
-     * Note that complex numbers are floating point numbers, so the only
-     * valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
-     * gives the default behaviour. Positional parameters are not valid
-     * in this context.
-     *
-     * See the $(LINK2 std_format.html, std.format) and $(XREF string, format)
-     * documentation for more information.
+    /*
+     * Explicitly undocumented. It will be removed in October 2014.
+     * Please use $(XREF string,format) instead.
      */
     deprecated("Please use std.string.format instead.")
     string toString(scope void delegate(const(char)[]) sink,
@@ -194,7 +178,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         return null;
     }
 
-@safe pure nothrow:
+@safe pure nothrow @nogc:
 
     this(R : T)(Complex!R z)
     {
@@ -706,7 +690,7 @@ unittest
 
 
 /** Calculates the absolute value (or modulus) of a complex number. */
-T abs(T)(Complex!T z) @safe pure nothrow
+T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
     return hypot(z.re, z.im);
 }
@@ -720,7 +704,7 @@ unittest
 
 
 /** Calculates the argument (or phase) of a complex number. */
-T arg(T)(Complex!T z) @safe pure nothrow
+T arg(T)(Complex!T z) @safe pure nothrow @nogc
 {
     return atan2(z.im, z.re);
 }
@@ -734,7 +718,7 @@ unittest
 
 
 /** Returns the complex conjugate of a complex number. */
-Complex!T conj(T)(Complex!T z) @safe pure nothrow
+Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 {
     return Complex!T(z.re, -z.im);
 }
@@ -748,7 +732,7 @@ unittest
 
 /** Constructs a complex number given its absolute value and argument. */
 Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
-    @safe pure nothrow
+    @safe pure nothrow @nogc
 {
     return Complex!(CommonType!(T,U))
         (modulus*std.math.cos(argument), modulus*std.math.sin(argument));
@@ -763,7 +747,7 @@ unittest
 
 
 /** Trigonometric functions. */
-Complex!T sin(T)(Complex!T z)  @safe pure nothrow
+Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
@@ -778,7 +762,7 @@ unittest
 
 
 /// ditto
-Complex!T cos(T)(Complex!T z)  @safe pure nothrow
+Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
@@ -800,7 +784,7 @@ unittest{
     x87 $(I fsincos) instruction when possible, this function is no faster
     than calculating cos(y) and sin(y) separately.
 */
-Complex!real expi(real y)  @trusted pure nothrow
+Complex!real expi(real y)  @trusted pure nothrow @nogc
 {
     return Complex!real(std.math.cos(y), std.math.sin(y));
 }
@@ -816,7 +800,7 @@ unittest
 
 
 /** Square root. */
-Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow
+Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     typeof(return) c;
     real x,y,w,r;
