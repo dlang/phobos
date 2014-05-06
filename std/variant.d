@@ -187,7 +187,7 @@ private:
     // the "handler" function below.
     enum OpID { getTypeInfo, get, compare, equals, testConversion, toString,
             index, indexAssign, catAssign, copyOut, length,
-            apply, destruct }
+            apply, postblit, destruct }
 
     // state
     ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
@@ -224,6 +224,7 @@ private:
             string * target = cast(string*) parm;
             *target = "<Uninitialized VariantN>";
             break;
+        case OpID.postblit:
         case OpID.destruct:
             break;
         case OpID.get:
@@ -546,6 +547,13 @@ private:
             }
             break;
 
+        case OpID.postblit:
+            static if (hasElaborateAssign!A)
+            {
+                typeid(A).postblit(zis);
+            }
+            break;
+
         case OpID.destruct:
             static if (hasElaborateDestructor!A)
             {
@@ -568,6 +576,11 @@ public:
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof);
         opAssign(value);
+    }
+
+    this(this)
+    {
+        fptr(OpID.postblit, &store, null);
     }
 
     ~this()
@@ -611,6 +624,10 @@ public:
                     memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
                 else
                     memcpy(&store, &rhs, rhs.sizeof);
+                static if (hasElaborateAssign!T)
+                {
+                    typeid(T).postblit(&store);
+                }
             }
             else
             {
@@ -2260,28 +2277,45 @@ unittest
 unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=10194
+    // Also test for elaborate copying
     static struct S
     {
-        ~this()
+        @disable this();
+        this(int dummy)
         {
             ++cnt;
         }
-        static size_t cnt;
+
+        this(this)
+        {
+            ++cnt;
+        }
+
+        @disable S opAssign();
+
+        ~this()
+        {
+            --cnt;
+            assert(cnt >= 0);
+        }
+        static int cnt = 0;
     }
 
-    Variant v;
-    // assigning a new value should destroy the existing one
     {
-        v = S();
-        immutable n = S.cnt;
+        Variant v;
+        {
+            v = S(0);
+            assert(S.cnt == 1);
+        }
+        assert(S.cnt == 1);
+
+        // assigning a new value should destroy the existing one
         v = 0;
-        assert(S.cnt == n + 1);
+        assert(S.cnt == 0);
+
+        // destroying the variant should destroy it's current value
+        v = S(0);
+        assert(S.cnt == 1);
     }
-    // destroying the variant should destroy it's current value
-    {
-        v = S();
-        immutable n = S.cnt;
-        destroy(v);
-        assert(S.cnt == n + 1);
-    }
+    assert(S.cnt == 0);
 }
