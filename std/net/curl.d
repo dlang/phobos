@@ -20,6 +20,10 @@ Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
+Windows x86 note:
+A DMD compatible libcurl static library can be downloaded from the dlang.org
+$(LINK2 http://dlang.org/download.html, download page).
+
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
 of the language. Futhermore it provides <a href="std_range.html">$(D range)</a>
@@ -3562,9 +3566,9 @@ struct Curl
                 copy.clear(option);
         }
 
-        // The options are only supported by libcurl when it has been built 
-        // against certain versions of OpenSSL - if your libcurl uses an old 
-        // OpenSSL, or uses an entirely different SSL engine, attempting to 
+        // The options are only supported by libcurl when it has been built
+        // against certain versions of OpenSSL - if your libcurl uses an old
+        // OpenSSL, or uses an entirely different SSL engine, attempting to
         // clear these normally will raise an exception
         copy.clearIfSupported(CurlOption.ssl_ctx_function);
         copy.clearIfSupported(CurlOption.ssh_keydata);
