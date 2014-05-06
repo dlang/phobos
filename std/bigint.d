@@ -524,7 +524,7 @@ private:
     }
 +/
 private:
-    void negate() pure nothrow @safe
+    void negate() @safe pure nothrow
     {
         if (!data.isZero())
             sign = !sign;

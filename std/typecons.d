@@ -1305,7 +1305,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const pure nothrow @safe
+    @property bool isNull() const @safe pure nothrow
     {
         return _isNull;
     }
@@ -1333,7 +1333,7 @@ succeeds, $(D this) becomes non-null.
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
  */
-    @property ref inout(T) get() inout pure nothrow @safe
+    @property ref inout(T) get() inout @safe pure nothrow
     {
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
         assert(!isNull, message);
@@ -1408,7 +1408,7 @@ unittest
 unittest
 {
     // Ensure Nullable can be used in pure/nothrow/@safe environment.
-    function() pure nothrow @safe
+    function() @safe pure nothrow
     {
         Nullable!int n;
         assert(n.isNull);
@@ -1680,7 +1680,7 @@ unittest
 unittest
 {
     // Ensure Nullable can be used in pure/nothrow/@safe environment.
-    function() pure nothrow @safe
+    function() @safe pure nothrow
     {
         Nullable!(int, int.min) n;
         assert(n.isNull);
@@ -1749,7 +1749,7 @@ struct NullableRef(T)
 /**
 Constructor binding $(D this) with $(D value).
  */
-    this(T* value) pure nothrow @safe
+    this(T* value) @safe pure nothrow
     {
         _value = value;
     }
@@ -1757,7 +1757,7 @@ Constructor binding $(D this) with $(D value).
 /**
 Binds the internal state to $(D value).
  */
-    void bind(T* value) pure nothrow @safe
+    void bind(T* value) @safe pure nothrow
     {
         _value = value;
     }
@@ -1765,7 +1765,7 @@ Binds the internal state to $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const pure nothrow @safe
+    @property bool isNull() const @safe pure nothrow
     {
         return _value is null;
     }
@@ -1773,7 +1773,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Forces $(D this) to the null state.
  */
-    void nullify() pure nothrow @safe
+    void nullify() @safe pure nothrow
     {
         _value = null;
     }
@@ -1793,7 +1793,7 @@ Assigns $(D value) to the internally-held state.
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
  */
-    @property ref inout(T) get() inout pure nothrow @safe
+    @property ref inout(T) get() inout @safe pure nothrow
     {
         enum message = "Called `get' on null NullableRef!" ~ T.stringof ~ ".";
         assert(!isNull, message);
@@ -1844,7 +1844,7 @@ unittest
 unittest
 {
     // Ensure NullableRef can be used in pure/nothrow/@safe environment.
-    function() pure nothrow @safe
+    function() @safe pure nothrow
     {
         auto storage = new int;
         *storage = 19902;
@@ -3474,7 +3474,7 @@ unittest
     alias int F2() pure nothrow;
     static assert(is(DerivedFunctionType!(F1, F2) == F2));
     alias int F3() @safe;
-    alias int F23() pure nothrow @safe;
+    alias int F23() @safe pure nothrow;
     static assert(is(DerivedFunctionType!(F2, F3) == F23));
 
     // return type covariance

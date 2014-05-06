@@ -1214,7 +1214,7 @@ Example:
 --------------------
 alias FA = FunctionAttribute; // shorten the enum name
 
-real func(real x) pure nothrow @safe
+real func(real x) @safe pure nothrow
 {
     return x;
 }

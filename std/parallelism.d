@@ -1392,7 +1392,7 @@ private:
 public:
     // This is used in parallel_algorithm but is too unstable to document
     // as public API.
-    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe
+    size_t defaultWorkUnitSize(size_t rangeLen) const @safe pure nothrow
     {
         if(this.size == 0)
         {
@@ -1922,7 +1922,7 @@ public:
             {
                 size_t _length;
 
-                public @property size_t length() const pure nothrow @safe
+                public @property size_t length() const @safe pure nothrow
                 {
                     return _length;
                 }
@@ -2138,7 +2138,7 @@ public:
                 size_t _length;
 
                 // Available if hasLength!S.
-                public @property size_t length() const pure nothrow @safe
+                public @property size_t length() const @safe pure nothrow
                 {
                     return _length;
                 }
@@ -3883,7 +3883,7 @@ private struct RoundRobinBuffer(C1, C2)
         primed = false;
     }
 
-    bool empty() @property const pure nothrow @safe
+    bool empty() @property const @safe pure nothrow
     {
         return _empty;
     }

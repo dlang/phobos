@@ -3255,12 +3255,12 @@ if (isSomeChar!C)
             getFirst();
         }
 
-        @property bool empty() const pure nothrow @safe
+        @property bool empty() const @safe pure nothrow
         {
             return _s.empty;
         }
 
-        @property inout(Result) save() inout pure nothrow @safe
+        @property inout(Result) save() inout @safe pure nothrow
         {
             return this;
         }
@@ -4418,7 +4418,7 @@ unittest
 {
     import std.exception : assertCTFEable;
 
-    void dg() pure @safe nothrow
+    void dg() @safe pure nothrow
     {
         byte[]  sarr = [1, 2, 3, 4];
         ubyte[] uarr = [1, 2, 3, 4];
