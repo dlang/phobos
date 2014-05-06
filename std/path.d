@@ -95,7 +95,7 @@ else static assert (0, "unsupported platform");
     On Windows, this includes both $(D `\`) and $(D `/`).
     On POSIX, it's just $(D `/`).
 */
-bool isDirSeparator(dchar c)  @safe pure nothrow
+bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
 {
     if (c == '/') return true;
     version(Windows) if (c == '\\') return true;
@@ -109,7 +109,7 @@ bool isDirSeparator(dchar c)  @safe pure nothrow
     the drive letter from the rest of the path.  On POSIX, this always
     returns false.
 */
-private bool isDriveSeparator(dchar c)  @safe pure nothrow
+private bool isDriveSeparator(dchar c)  @safe pure nothrow @nogc
 {
     version(Windows) return c == ':';
     else return false;
@@ -117,7 +117,7 @@ private bool isDriveSeparator(dchar c)  @safe pure nothrow
 
 
 /*  Combines the isDirSeparator and isDriveSeparator tests. */
-version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow
+version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow @nogc
 {
     return isDirSeparator(c) || isDriveSeparator(c);
 }
@@ -128,7 +128,7 @@ version(Posix) private alias isSeparator = isDirSeparator;
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ptrdiff_t lastSeparator(C)(in C[] path)  @safe pure nothrow
+private ptrdiff_t lastSeparator(C)(in C[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
@@ -139,13 +139,13 @@ private ptrdiff_t lastSeparator(C)(in C[] path)  @safe pure nothrow
 
 version (Windows)
 {
-    private bool isUNC(C)(in C[] path) @safe pure nothrow  if (isSomeChar!C)
+    private bool isUNC(C)(in C[] path) @safe pure nothrow @nogc  if (isSomeChar!C)
     {
         return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
             && !isDirSeparator(path[2]);
     }
 
-    private ptrdiff_t uncRootLength(C)(in C[] path) @safe pure nothrow  if (isSomeChar!C)
+    private ptrdiff_t uncRootLength(C)(in C[] path) @safe pure nothrow @nogc  if (isSomeChar!C)
         in { assert (isUNC(path)); }
         body
     {
@@ -164,12 +164,12 @@ version (Windows)
         return i;
     }
 
-    private bool hasDrive(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+    private bool hasDrive(C)(in C[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
     {
         return path.length >= 2 && isDriveSeparator(path[1]);
     }
 
-    private bool isDriveRoot(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+    private bool isDriveRoot(C)(in C[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
     {
         return path.length >= 3 && isDriveSeparator(path[1])
             && isDirSeparator(path[2]);
@@ -180,7 +180,7 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private inout(C)[] ltrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
+private inout(C)[] ltrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     int i = 0;
@@ -188,7 +188,7 @@ private inout(C)[] ltrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     return path[i .. $];
 }
 
-private inout(C)[] rtrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
+private inout(C)[] rtrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
@@ -196,7 +196,7 @@ private inout(C)[] rtrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
     return path[0 .. i+1];
 }
 
-private inout(C)[] trimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
+private inout(C)[] trimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
@@ -479,7 +479,7 @@ unittest
     }
     ---
 */
-inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
 {
     if (path.empty) return null;
 
@@ -542,7 +542,7 @@ unittest
     }
     ---
 */
-inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow
+inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     version (Windows)
@@ -588,7 +588,7 @@ unittest
     }
     ---
 */
-inout(C)[] stripDrive(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] stripDrive(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
 {
     version(Windows)
     {
@@ -619,7 +619,7 @@ unittest
 /*  Helper function that returns the position of the filename/extension
     separator dot in path.  If not found, returns -1.
 */
-private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
+private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
@@ -648,7 +648,7 @@ private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
     assert (extension(".file.ext")      == ".ext");
     ---
 */
-inout(C)[] extension(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] extension(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
 {
     auto i = extSeparatorPos(path);
     if (i == -1) return null;
@@ -696,7 +696,7 @@ unittest
 
 
 
-/** Returns the path with the extension stripped off.
+/** Returns slice of path[] with the extension stripped off.
 
     Examples:
     ---
@@ -709,7 +709,7 @@ unittest
     assert (stripExtension("dir/file.ext")   == "dir/file");
     ---
 */
-inout(C)[] stripExtension(C)(inout(C)[] path)  @safe pure nothrow
+inout(C)[] stripExtension(C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     auto i = extSeparatorPos(path);
@@ -1543,7 +1543,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
 {
     static struct PathSplitter
     {
-    @safe pure nothrow:
+    @safe pure nothrow @nogc:
         @property bool empty() const { return _empty; }
 
         @property const(C)[] front() const
@@ -1768,7 +1768,7 @@ unittest
     }
     ---
 */
-bool isRooted(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+bool isRooted(C)(in C[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
     version (Posix)         return false;
@@ -1831,10 +1831,10 @@ unittest
     }
     ---
 */
-version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow
+version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow @nogc
     if (isSomeChar!C);
 
-else version (Windows) bool isAbsolute(C)(in C[] path)  @safe pure nothrow
+else version (Windows) bool isAbsolute(C)(in C[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     return isDriveRoot(path) || isUNC(path);
@@ -2489,7 +2489,7 @@ unittest
     On POSIX, $(D filename) may not contain a forward slash ($(D '/')) or
     the null character ($(D '\0')).
 */
-bool isValidFilename(C)(in C[] filename)  @safe pure nothrow  if (isSomeChar!C)
+bool isValidFilename(C)(in C[] filename)  @safe pure nothrow @nogc  if (isSomeChar!C)
 {
     import core.stdc.stdio;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
