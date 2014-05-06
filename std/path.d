@@ -901,6 +901,139 @@ unittest
     assert (setExtension("file.ext", "") == "file");
 }
 
+/** Algorithm that returns an InputRange that produces a string containing the _path given
+    by $(D path), but where
+    the extension has been set to $(D ext).
+
+    If the filename already has an extension, it is replaced.   If not, the
+    extension is simply appended to the filename.  Including a leading dot
+    in $(D ext) is optional.
+
+    If the extension is empty, this function produces the equivalent of
+    $(LREF stripExtension) applied to path.
+
+    The algorithm is lazy and does not allocate.
+
+    Examples:
+    ---
+    import std.path;
+    import std.array;
+    import std.algorithm;
+
+    void main()
+    {
+        auto buf = appender!(C1[])();
+
+        "file".setExt("ext").copy(&buf);
+        assert(buf.data == "file.ext");
+    }
+    ---
+*/
+auto setExt(C1, C2)(C1[] path, C2 ext)
+    if (isSomeChar!C1 &&
+        isInputRange!C2 &&
+        is(Unqual!C1 == Unqual!(ElementEncodingType!C2))
+       )
+{
+    struct ExtImpl
+    {
+        C1[] path;
+        C2 ext;
+        bool dot;
+
+        @property bool empty()
+        {
+            return path.length == 0 && ext.empty;
+        }
+
+        @property C1 front()
+        {
+            if (path.length)
+                return path[0];
+            if (!dot)
+                return '.';
+            static if (isArray!C2)
+                return ext[0];
+            else
+                return ext.front;
+        }
+
+        void popFront()
+        {
+            if (path.length)
+                path = path[1 .. $];
+            else if (!dot)
+                dot = true;
+            else
+            {
+                static if (isArray!C2)
+                    ext = ext[1 .. $];
+                else
+                    ext.popFront();
+            }
+        }
+    }
+
+    // Removing any leading '.' from ext
+    static if (isArray!C2)
+    {
+        // Avoid auto-decode behavior of std.array.front
+        if (ext.length && ext[0] == '.')
+            ext = ext[1 .. $];
+    }
+    else
+    {
+        if (!ext.empty && ext.front == '.')
+            ext.popFront();
+    }
+
+    return ExtImpl(stripExtension(path), ext);
+}
+
+unittest
+{
+    import std.internal.scopebuffer;
+    import std.stdio;
+    import std.path;
+    import std.array;
+    import std.algorithm;
+
+    char[10] tmpbuf = void;
+    auto buf = ScopeBuffer!char(tmpbuf);
+    scope(exit) buf.free();
+
+    buf.length = 0;
+    "file".setExt("ext").copy(&buf);
+    assert(buf[] == "file.ext");
+
+    buf.length = 0;
+    "file".setExt(".ext").copy(&buf);
+    assert(buf[] == "file.ext");
+
+    buf.length = 0;
+    "file.".setExt(".ext").copy(&buf);
+    assert(buf[] == "file.ext");
+
+    buf.length = 0;
+    "file.".setExt("ext").copy(&buf);
+    assert(buf[] == "file.ext");
+
+    buf.length = 0;
+    "file.old".setExt("new").copy(&buf);
+    assert(buf[] == "file.new");
+
+    buf.length = 0;
+    "file".setExt("").copy(&buf);
+    assert(buf[] == "file");
+
+    buf.length = 0;
+    "file.exe".setExt("").copy(&buf);
+    assert(buf[] == "file");
+
+    auto abuf = appender!(char[])();
+    "file".setExt("ext").copy(&abuf);
+    assert(abuf.data == "file.ext");
+}
 
 
 /** Returns the _path given by $(D path), with the extension given by
