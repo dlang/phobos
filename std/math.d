@@ -315,7 +315,7 @@ Num abs(Num)(Num x) @safe pure nothrow
         return x>=0 ? x : -x;
 }
 
-auto abs(Num)(Num z) @safe pure nothrow
+auto abs(Num)(Num z) @safe pure nothrow @nogc
     if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
             || is(Num* : const(creal*)))
 {
@@ -323,7 +323,7 @@ auto abs(Num)(Num z) @safe pure nothrow
 }
 
 /** ditto */
-real abs(Num)(Num y) @safe pure nothrow
+real abs(Num)(Num y) @safe pure nothrow @nogc
     if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
             || is(Num* : const(ireal*)))
 {
@@ -351,13 +351,13 @@ unittest
  * Note that z * conj(z) = $(POWER z.re, 2) - $(POWER z.im, 2)
  * is always a real number
  */
-creal conj(creal z) @safe pure nothrow
+creal conj(creal z) @safe pure nothrow @nogc
 {
     return z.re - z.im*1i;
 }
 
 /** ditto */
-ireal conj(ireal y) @safe pure nothrow
+ireal conj(ireal y) @safe pure nothrow @nogc
 {
     return -y;
 }
@@ -382,7 +382,7 @@ unittest
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real cos(real x) @nogc @safe pure nothrow;       /* intrinsic */
+real cos(real x) @nogc @safe pure nothrow @nogc;       /* intrinsic */
 
 /***********************************
  * Returns sine of x. x is in radians.
@@ -397,7 +397,7 @@ real cos(real x) @nogc @safe pure nothrow;       /* intrinsic */
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real sin(real x) @nogc @safe pure nothrow;       /* intrinsic */
+real sin(real x) @nogc @safe pure nothrow @nogc;       /* intrinsic */
 
 
 /***********************************
@@ -408,7 +408,7 @@ real sin(real x) @nogc @safe pure nothrow;       /* intrinsic */
  * If both sin($(THETA)) and cos($(THETA)) are required,
  * it is most efficient to use expi($(THETA)).
  */
-creal sin(creal z) @safe pure nothrow
+creal sin(creal z) @safe pure nothrow @nogc
 {
     creal cs = expi(z.re);
     creal csh = coshisinh(z.im);
@@ -416,7 +416,7 @@ creal sin(creal z) @safe pure nothrow
 }
 
 /** ditto */
-ireal sin(ireal y) @safe pure nothrow
+ireal sin(ireal y) @safe pure nothrow @nogc
 {
     return cosh(y.im)*1i;
 }
@@ -432,7 +432,7 @@ unittest
  *
  *  cos(z) = cos(z.re)*cosh(z.im) - sin(z.re)*sinh(z.im)i
  */
-creal cos(creal z) @safe pure nothrow
+creal cos(creal z) @safe pure nothrow @nogc
 {
     creal cs = expi(z.re);
     creal csh = coshisinh(z.im);
@@ -440,7 +440,7 @@ creal cos(creal z) @safe pure nothrow
 }
 
 /** ditto */
-real cos(ireal y) @safe pure nothrow
+real cos(ireal y) @safe pure nothrow @nogc
 {
     return cosh(y.im);
 }
@@ -463,7 +463,7 @@ unittest
  *      )
  */
 
-real tan(real x) @nogc @trusted pure nothrow
+real tan(real x) @nogc @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
@@ -684,16 +684,16 @@ unittest
  *      $(TR $(TD $(NAN))    $(TD $(NAN))  $(TD yes))
  *  )
  */
-real acos(real x) @safe pure nothrow
+real acos(real x) @safe pure nothrow @nogc
 {
     return atan2(sqrt(1-x*x), x);
 }
 
 /// ditto
-double acos(double x) @safe pure nothrow { return acos(cast(real)x); }
+double acos(double x) @safe pure nothrow @nogc { return acos(cast(real)x); }
 
 /// ditto
-float acos(float x) @safe pure nothrow  { return acos(cast(real)x); }
+float acos(float x) @safe pure nothrow @nogc  { return acos(cast(real)x); }
 
 unittest
 {
@@ -711,16 +711,16 @@ unittest
  *      $(TR $(TD $(LT)-1.0)    $(TD $(NAN))       $(TD yes))
  *  )
  */
-real asin(real x) @safe pure nothrow
+real asin(real x) @safe pure nothrow @nogc
 {
     return atan2(x, sqrt(1-x*x));
 }
 
 /// ditto
-double asin(double x) @safe pure nothrow { return asin(cast(real)x); }
+double asin(double x) @safe pure nothrow @nogc { return asin(cast(real)x); }
 
 /// ditto
-float asin(float x) @safe pure nothrow  { return asin(cast(real)x); }
+float asin(float x) @safe pure nothrow @nogc  { return asin(cast(real)x); }
 
 unittest
 {
@@ -737,7 +737,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
  *  )
  */
-real atan(real x) @safe pure nothrow
+real atan(real x) @safe pure nothrow @nogc
 {
     version(InlineAsm_X86_Any)
     {
@@ -805,10 +805,10 @@ real atan(real x) @safe pure nothrow
 }
 
 /// ditto
-double atan(double x) @safe pure nothrow { return atan(cast(real)x); }
+double atan(double x) @safe pure nothrow @nogc { return atan(cast(real)x); }
 
 /// ditto
-float atan(float x)  @safe pure nothrow { return atan(cast(real)x); }
+float atan(float x)  @safe pure nothrow @nogc { return atan(cast(real)x); }
 
 unittest
 {
@@ -836,7 +836,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD -$(INFIN))    $(TD $(PLUSMN)3$(PI)/4))
  *      )
  */
-real atan2(real y, real x) @trusted pure nothrow
+real atan2(real y, real x) @trusted pure nothrow @nogc
 {
     version(InlineAsm_X86_Any)
     {
@@ -912,13 +912,13 @@ real atan2(real y, real x) @trusted pure nothrow
 }
 
 /// ditto
-double atan2(double y, double x) @safe pure nothrow
+double atan2(double y, double x) @safe pure nothrow @nogc
 {
     return atan2(cast(real)y, cast(real)x);
 }
 
 /// ditto
-float atan2(float y, float x) @safe pure nothrow
+float atan2(float y, float x) @safe pure nothrow @nogc
 {
     return atan2(cast(real)y, cast(real)x);
 }
@@ -936,7 +936,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)0.0) $(TD no) )
  *      )
  */
-real cosh(real x) @safe pure nothrow
+real cosh(real x) @safe pure nothrow @nogc
 {
     //  cosh = (exp(x)+exp(-x))/2.
     // The naive implementation works correctly.
@@ -945,10 +945,10 @@ real cosh(real x) @safe pure nothrow
 }
 
 /// ditto
-double cosh(double x) @safe pure nothrow { return cosh(cast(real)x); }
+double cosh(double x) @safe pure nothrow @nogc { return cosh(cast(real)x); }
 
 /// ditto
-float cosh(float x) @safe pure nothrow  { return cosh(cast(real)x); }
+float cosh(float x) @safe pure nothrow @nogc  { return cosh(cast(real)x); }
 
 unittest
 {
@@ -964,7 +964,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no))
  *      )
  */
-real sinh(real x) @safe pure nothrow
+real sinh(real x) @safe pure nothrow @nogc
 {
     //  sinh(x) =  (exp(x)-exp(-x))/2;
     // Very large arguments could cause an overflow, but
@@ -980,10 +980,10 @@ real sinh(real x) @safe pure nothrow
 }
 
 /// ditto
-double sinh(double x) @safe pure nothrow { return sinh(cast(real)x); }
+double sinh(double x) @safe pure nothrow @nogc { return sinh(cast(real)x); }
 
 /// ditto
-float sinh(float x) @safe pure nothrow  { return sinh(cast(real)x); }
+float sinh(float x) @safe pure nothrow @nogc  { return sinh(cast(real)x); }
 
 unittest
 {
@@ -999,7 +999,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)1.0) $(TD no))
  *      )
  */
-real tanh(real x) @safe pure nothrow
+real tanh(real x) @safe pure nothrow @nogc
 {
     //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
     if (fabs(x) > real.mant_dig * LN2)
@@ -1012,10 +1012,10 @@ real tanh(real x) @safe pure nothrow
 }
 
 /// ditto
-double tanh(double x) @safe pure nothrow { return tanh(cast(real)x); }
+double tanh(double x) @safe pure nothrow @nogc { return tanh(cast(real)x); }
 
 /// ditto
-float tanh(float x) @safe pure nothrow { return tanh(cast(real)x); }
+float tanh(float x) @safe pure nothrow @nogc { return tanh(cast(real)x); }
 
 unittest
 {
@@ -1027,7 +1027,7 @@ package:
 /* Returns cosh(x) + I * sinh(x)
  * Only one call to exp() is performed.
  */
-creal coshisinh(real x) @safe pure nothrow
+creal coshisinh(real x) @safe pure nothrow @nogc
 {
     // See comments for cosh, sinh.
     if (fabs(x) > real.mant_dig * LN2)
@@ -1067,7 +1067,7 @@ public:
  *    $(SV  +$(INFIN),+$(INFIN))
  *  )
  */
-real acosh(real x) @safe pure nothrow
+real acosh(real x) @safe pure nothrow @nogc
 {
     if (x > 1/real.epsilon)
         return LN2 + log(x);
@@ -1076,10 +1076,10 @@ real acosh(real x) @safe pure nothrow
 }
 
 /// ditto
-double acosh(double x) @safe pure nothrow { return acosh(cast(real)x); }
+double acosh(double x) @safe pure nothrow @nogc { return acosh(cast(real)x); }
 
 /// ditto
-float acosh(float x) @safe pure nothrow  { return acosh(cast(real)x); }
+float acosh(float x) @safe pure nothrow @nogc  { return acosh(cast(real)x); }
 
 
 unittest
@@ -1108,7 +1108,7 @@ unittest
  *    $(SV  $(PLUSMN)$(INFIN),$(PLUSMN)$(INFIN))
  *    )
  */
-real asinh(real x) @safe pure nothrow
+real asinh(real x) @safe pure nothrow @nogc
 {
     return (fabs(x) > 1 / real.epsilon)
        // beyond this point, x*x + 1 == x*x
@@ -1118,10 +1118,10 @@ real asinh(real x) @safe pure nothrow
 }
 
 /// ditto
-double asinh(double x) @safe pure nothrow { return asinh(cast(real)x); }
+double asinh(double x) @safe pure nothrow @nogc { return asinh(cast(real)x); }
 
 /// ditto
-float asinh(float x) @safe pure nothrow { return asinh(cast(real)x); }
+float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real)x); }
 
 unittest
 {
@@ -1150,17 +1150,17 @@ unittest
  *    $(SV  -$(INFIN), -0)
  * )
  */
-real atanh(real x) @safe pure nothrow
+real atanh(real x) @safe pure nothrow @nogc
 {
     // log( (1+x)/(1-x) ) == log ( 1 + (2*x)/(1-x) )
     return  0.5 * log1p( 2 * x / (1 - x) );
 }
 
 /// ditto
-double atanh(double x) @safe pure nothrow { return atanh(cast(real)x); }
+double atanh(double x) @safe pure nothrow @nogc { return atanh(cast(real)x); }
 
 /// ditto
-float atanh(float x) @safe pure nothrow { return atanh(cast(real)x); }
+float atanh(float x) @safe pure nothrow @nogc { return atanh(cast(real)x); }
 
 
 unittest
@@ -1267,7 +1267,7 @@ creal sqrt(creal z) @nogc @safe pure nothrow
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
-real exp(real x) @trusted pure nothrow
+real exp(real x) @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
@@ -1336,10 +1336,10 @@ real exp(real x) @trusted pure nothrow
 }
 
 /// ditto
-double exp(double x) @safe pure nothrow  { return exp(cast(real)x); }
+double exp(double x) @safe pure nothrow @nogc  { return exp(cast(real)x); }
 
 /// ditto
-float exp(float x)  @safe pure nothrow   { return exp(cast(real)x); }
+float exp(float x)  @safe pure nothrow @nogc   { return exp(cast(real)x); }
 
 unittest
 {
@@ -1361,7 +1361,7 @@ unittest
  *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
-real expm1(real x) @trusted pure nothrow
+real expm1(real x) @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
@@ -1913,7 +1913,7 @@ unittest
  * almost twice as fast as calculating sin(y) and cos(y) separately,
  * and is the preferred method when both are required.
  */
-creal expi(real y) @trusted pure nothrow
+creal expi(real y) @trusted pure nothrow @nogc
 {
     version(InlineAsm_X86_Any)
     {
@@ -1968,7 +1968,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(NAN)) $(TD $(PLUSMN)$(NAN)) $(TD int.min))
  *      )
  */
-real frexp(real value, out int exp) @trusted pure nothrow
+real frexp(real value, out int exp) @trusted pure nothrow @nogc
 {
     ushort* vu = cast(ushort*)&value;
     long* vl = cast(long*)&value;
@@ -2185,7 +2185,7 @@ unittest
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(real x)  @trusted nothrow
+int ilogb(real x)  @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -2312,7 +2312,7 @@ unittest
  *    )
  */
 
-real log(real x) @safe pure nothrow
+real log(real x) @safe pure nothrow @nogc
 {
     version (INLINE_YL2X)
         return yl2x(x, LN2);
@@ -2439,7 +2439,7 @@ unittest
  *      )
  */
 
-real log10(real x) @safe pure nothrow
+real log10(real x) @safe pure nothrow @nogc
 {
     version (INLINE_YL2X)
         return yl2x(x, LOG2);
@@ -2575,7 +2575,7 @@ unittest
  *  )
  */
 
-real log1p(real x) @safe pure nothrow
+real log1p(real x) @safe pure nothrow @nogc
 {
     version(INLINE_YL2X)
     {
@@ -2610,7 +2610,7 @@ real log1p(real x) @safe pure nothrow
  *  $(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no) )
  *  )
  */
-real log2(real x) @safe pure nothrow
+real log2(real x) @safe pure nothrow @nogc
 {
     version (INLINE_YL2X)
         return yl2x(x, 1);
@@ -2735,7 +2735,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *      )
  */
-real logb(real x) @trusted nothrow
+real logb(real x) @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -2766,7 +2766,7 @@ real logb(real x) @trusted nothrow
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real fmod(real x, real y) @trusted nothrow
+real fmod(real x, real y) @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -2787,7 +2787,7 @@ real fmod(real x, real y) @trusted nothrow
  *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMNINF)))
  * )
  */
-real modf(real x, ref real i) @trusted nothrow
+real modf(real x, ref real i) @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -2810,7 +2810,7 @@ real modf(real x, ref real i) @trusted nothrow
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *      )
  */
-real scalbn(real x, int n) @trusted nothrow
+real scalbn(real x, int n) @trusted nothrow @nogc
 {
     version(InlineAsm_X86_Any) {
         // scalbnl is not supported on DMD-Windows, so use asm.
@@ -2857,7 +2857,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *      )
  */
-real cbrt(real x) @trusted nothrow
+real cbrt(real x) @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -2877,7 +2877,7 @@ real cbrt(real x) @trusted nothrow
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
  */
-real fabs(real x) @nogc @safe pure nothrow;      /* intrinsic */
+real fabs(real x) @nogc @safe pure nothrow @nogc;      /* intrinsic */
 
 
 /***********************************************************************
@@ -2899,7 +2899,7 @@ real fabs(real x) @nogc @safe pure nothrow;      /* intrinsic */
  *  )
  */
 
-real hypot(real x, real y) @safe pure nothrow
+real hypot(real x, real y) @safe pure nothrow @nogc
 {
     // Scale x and y to avoid underflow and overflow.
     // If one is huge and the other tiny, return the larger.
@@ -2989,7 +2989,7 @@ unittest
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted pure nothrow
+real ceil(real x)  @trusted pure nothrow @nogc
 {
     version (Win64)
     {
@@ -3042,7 +3042,7 @@ unittest
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x) @trusted pure nothrow
+real floor(real x) @trusted pure nothrow @nogc
 {
     version (Win64)
     {
@@ -3166,7 +3166,7 @@ unittest
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
  */
-real nearbyint(real x) @trusted nothrow
+real nearbyint(real x) @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -3184,7 +3184,7 @@ real nearbyint(real x) @trusted nothrow
  * $(B nearbyint) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
-real rint(real x) @nogc @safe pure nothrow;      /* intrinsic */
+real rint(real x) @nogc @safe pure nothrow @nogc;      /* intrinsic */
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -3196,7 +3196,7 @@ real rint(real x) @nogc @safe pure nothrow;      /* intrinsic */
  * If using the default rounding mode (ties round to even integers)
  * lrint(4.5) == 4, lrint(5.5)==6.
  */
-long lrint(real x) @trusted pure nothrow
+long lrint(real x) @trusted pure nothrow @nogc
 {
     version(InlineAsm_X86_Any)
     {
@@ -3349,7 +3349,7 @@ unittest
  * If the fractional part of x is exactly 0.5, the return value is rounded to
  * the even integer.
  */
-real round(real x) @trusted nothrow
+real round(real x) @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -3369,7 +3369,7 @@ real round(real x) @trusted nothrow
  * If the fractional part of x is exactly 0.5, the return value is rounded
  * away from zero.
  */
-long lround(real x) @trusted nothrow
+long lround(real x) @trusted nothrow @nogc
 {
     version (Posix)
         return core.stdc.math.llroundl(x);
@@ -3392,7 +3392,7 @@ version(Posix)
  *
  * This is also known as "chop" rounding.
  */
-real trunc(real x) @trusted nothrow
+real trunc(real x) @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -3439,7 +3439,7 @@ real trunc(real x) @trusted nothrow
  *
  * Note: remquo not supported on windows
  */
-real remainder(real x, real y) @trusted nothrow
+real remainder(real x, real y) @trusted nothrow @nogc
 {
     version (Win64)
     {
@@ -3450,7 +3450,7 @@ real remainder(real x, real y) @trusted nothrow
         return core.stdc.math.remainderl(x, y);
 }
 
-real remquo(real x, real y, out int n) @trusted nothrow  /// ditto
+real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
 {
     version (Posix)
         return core.stdc.math.remquol(x, y, &n);
@@ -3788,7 +3788,7 @@ private:
 
 public:
     /// Returns true if the current FPU supports exception trapping
-    @property static bool hasExceptionTraps() @safe nothrow
+    @property static bool hasExceptionTraps() @safe nothrow @nogc
     {
         version(X86)
             return true;
@@ -3809,7 +3809,7 @@ public:
     }
 
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void enableExceptions(uint exceptions)
+    void enableExceptions(uint exceptions) @nogc
     {
         assert(hasExceptionTraps);
         initialize();
@@ -3820,7 +3820,7 @@ public:
     }
 
     /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void disableExceptions(uint exceptions)
+    void disableExceptions(uint exceptions) @nogc
     {
         assert(hasExceptionTraps);
         initialize();
@@ -3831,14 +3831,14 @@ public:
     }
 
     //// Change the floating-point hardware rounding mode
-    @property void rounding(RoundingMode newMode)
+    @property void rounding(RoundingMode newMode) @nogc
     {
         initialize();
         setControlState((getControlState() & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
     }
 
     /// Return the exceptions which are currently enabled (unmasked)
-    @property static uint enabledExceptions()
+    @property static uint enabledExceptions() @nogc
     {
         assert(hasExceptionTraps);
         version(ARM)
@@ -3848,13 +3848,13 @@ public:
     }
 
     /// Return the currently active rounding mode
-    @property static RoundingMode rounding()
+    @property static RoundingMode rounding() @nogc
     {
         return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
     }
 
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
-    ~this()
+    ~this() @nogc
     {
         clearExceptions();
         if (initialized)
@@ -3875,7 +3875,7 @@ private:
         alias ControlState = ushort;
     }
 
-    void initialize()
+    void initialize() @nogc
     {
         // BUG: This works around the absence of this() constructors.
         if (initialized) return;
@@ -3885,7 +3885,7 @@ private:
     }
 
     // Clear all pending exceptions
-    static void clearExceptions()
+    static void clearExceptions() @nogc
     {
         version (InlineAsm_X86_Any)
         {
@@ -3899,7 +3899,7 @@ private:
     }
 
     // Read from the control register
-    static ushort getControlState() @trusted nothrow
+    static ushort getControlState() @trusted nothrow @nogc
     {
         version (D_InlineAsm_X86)
         {
@@ -3927,7 +3927,7 @@ private:
     }
 
     // Set the control register
-    static void setControlState(ushort newState) @trusted nothrow
+    static void setControlState(ushort newState) @trusted nothrow @nogc
     {
         version (InlineAsm_X86_Any)
         {
@@ -4042,7 +4042,7 @@ unittest
  * Returns !=0 if e is finite (not infinite or $(NAN)).
  */
 
-int isFinite(real e) @trusted pure nothrow
+int isFinite(real e) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
     ushort* pe = cast(ushort *)&e;
@@ -4065,7 +4065,7 @@ unittest
  * be converted to normal reals.
  */
 
-int isNormal(X)(X x) @trusted pure nothrow
+int isNormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
 
@@ -4110,7 +4110,7 @@ unittest
  * be converted to normal reals.
  */
 
-int isSubnormal(float f) @trusted pure nothrow
+int isSubnormal(float f) @trusted pure nothrow @nogc
 {
     uint *p = cast(uint *)&f;
     return (*p & 0x7F80_0000) == 0 && *p & 0x007F_FFFF;
@@ -4126,7 +4126,7 @@ unittest
 
 /// ditto
 
-int isSubnormal(double d) @trusted pure nothrow
+int isSubnormal(double d) @trusted pure nothrow @nogc
 {
     uint *p = cast(uint *)&d;
     return (p[MANTISSA_MSB] & 0x7FF0_0000) == 0
@@ -4143,7 +4143,7 @@ unittest
 
 /// ditto
 
-int isSubnormal(real x) @trusted pure nothrow
+int isSubnormal(real x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
     static if (real.mant_dig == 53)
@@ -4236,7 +4236,7 @@ unittest
  * and two $(NAN)s are identical if they have the same 'payload'.
  */
 
-bool isIdentical(real x, real y) @trusted pure nothrow
+bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 {
     // We're doing a bitwise comparison so the endianness is irrelevant.
     long*   pxs = cast(long *)&x;
@@ -4286,7 +4286,7 @@ unittest
  * Return a value composed of to with from's sign bit.
  */
 
-real copysign(real to, real from) @trusted pure nothrow
+real copysign(real to, real from) @trusted pure nothrow @nogc
 {
     ubyte* pto   = cast(ubyte *)&to;
     const ubyte* pfrom = cast(ubyte *)&from;
@@ -4321,7 +4321,7 @@ unittest
 Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
-F sgn(F)(F x) @safe pure nothrow
+F sgn(F)(F x) @safe pure nothrow @nogc
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
@@ -4350,7 +4350,7 @@ unittest
  * For doubles, it is 0x3_FFFF_FFFF_FFFF.
  * For 80-bit or 128-bit reals, it is 0x3FFF_FFFF_FFFF_FFFF.
  */
-real NaN(ulong payload) @trusted pure nothrow
+real NaN(ulong payload) @trusted pure nothrow @nogc
 {
     static if (real.mant_dig == 64)
     {
@@ -4444,7 +4444,7 @@ unittest
  * For doubles, it is 0x3_FFFF_FFFF_FFFF.
  * For 80-bit or 128-bit reals, it is 0x3FFF_FFFF_FFFF_FFFF.
  */
-ulong getNaNPayload(real x) @trusted pure nothrow
+ulong getNaNPayload(real x) @trusted pure nothrow @nogc
 {
     //  assert(isNaN(x));
     static if (real.mant_dig == 53)
@@ -4525,7 +4525,7 @@ debug(UnitTest)
  *    $(SV  $(NAN),       $(NAN)   )
  * )
  */
-real nextUp(real x) @trusted pure nothrow
+real nextUp(real x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
     static if (real.mant_dig == 53)
@@ -4629,7 +4629,7 @@ real nextUp(real x) @trusted pure nothrow
 }
 
 /** ditto */
-double nextUp(double x) @trusted pure nothrow
+double nextUp(double x) @trusted pure nothrow @nogc
 {
     ulong *ps = cast(ulong *)&x;
 
@@ -4656,7 +4656,7 @@ double nextUp(double x) @trusted pure nothrow
 }
 
 /** ditto */
-float nextUp(float x) @trusted pure nothrow
+float nextUp(float x) @trusted pure nothrow @nogc
 {
     uint *ps = cast(uint *)&x;
 
@@ -4700,19 +4700,19 @@ float nextUp(float x) @trusted pure nothrow
  *    $(SV  $(NAN),       $(NAN)    )
  * )
  */
-real nextDown(real x) @safe pure nothrow
+real nextDown(real x) @safe pure nothrow @nogc
 {
     return -nextUp(-x);
 }
 
 /** ditto */
-double nextDown(double x) @safe pure nothrow
+double nextDown(double x) @safe pure nothrow @nogc
 {
     return -nextUp(-x);
 }
 
 /** ditto */
-float nextDown(float x) @safe pure nothrow
+float nextDown(float x) @safe pure nothrow @nogc
 {
     return -nextUp(-x);
 }
@@ -4805,7 +4805,7 @@ unittest
  * exceptions will be raised if the function value is subnormal, and x is
  * not equal to y.
  */
-T nextafter(T)(T x, T y) @safe pure nothrow
+T nextafter(T)(T x, T y) @safe pure nothrow @nogc
 {
     if (x==y) return y;
     return ((y>x) ? nextUp(x) :  nextDown(x));
@@ -4837,17 +4837,17 @@ unittest
  *      $(TR $(TD x $(LT)= y) $(TD +0.0))
  *      )
  */
-real fdim(real x, real y) @safe pure nothrow { return (x > y) ? x - y : +0.0; }
+real fdim(real x, real y) @safe pure nothrow @nogc { return (x > y) ? x - y : +0.0; }
 
 /****************************************
  * Returns the larger of x and y.
  */
-real fmax(real x, real y) @safe pure nothrow { return x > y ? x : y; }
+real fmax(real x, real y) @safe pure nothrow @nogc { return x > y ? x : y; }
 
 /****************************************
  * Returns the smaller of x and y.
  */
-real fmin(real x, real y) @safe pure nothrow { return x < y ? x : y; }
+real fmin(real x, real y) @safe pure nothrow @nogc { return x < y ? x : y; }
 
 /**************************************
  * Returns (x * y) + z, rounding only once according to the
@@ -4855,7 +4855,7 @@ real fmin(real x, real y) @safe pure nothrow { return x < y ? x : y; }
  *
  * BUGS: Not currently implemented - rounds twice.
  */
-real fma(real x, real y, real z) @safe pure nothrow { return (x * y) + z; }
+real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; }
 
 /*******************************************************************
  * Compute the value of x $(SUP n), where n is an integer
@@ -5323,7 +5323,7 @@ unittest
  *      $(TR $(TD any)    $(TD $(NAN))     $(TD 0))
  *      )
  */
-int feqrel(X)(X x, X y) @trusted pure nothrow
+int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
     if (isFloatingPoint!(X))
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
@@ -5486,7 +5486,7 @@ package: // Not public yet
  *   ieeeMean(x, y) = sqrt(x * y).
  *
  */
-T ieeeMean(T)(T x, T y)  @trusted pure nothrow
+T ieeeMean(T)(T x, T y)  @trusted pure nothrow @nogc
 in
 {
     // both x and y must have the same sign, and must not be NaN.
@@ -5628,7 +5628,7 @@ public:
  *      x =     the value to evaluate.
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */
-real poly(real x, const real[] A) @trusted pure nothrow
+real poly(real x, const real[] A) @trusted pure nothrow @nogc
 in
 {
     assert(A.length > 0);
