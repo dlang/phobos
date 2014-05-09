@@ -39,14 +39,10 @@ import std.exception : assumeUnique;
 
 class URIException : Exception
 {
-    @safe pure nothrow this()
+    @safe pure nothrow
+    this(string msg, string file = __FILE__, size_t ln = __LINE__)
     {
-        super("URI Exception");
-    }
-
-    @safe pure nothrow this(string msg)
-    {
-        super("URI Exception: " ~ msg);
+        super("URI Exception: " ~ msg, file, ln);
     }
 }
 
