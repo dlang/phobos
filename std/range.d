@@ -8335,35 +8335,37 @@ if (isInputRange!Range)
     // Undocummented because a clearer way to invoke is by calling
     // assumeSorted.
     this(Range input)
+    in
     {
-        this._input = input;
-        if(!__ctfe)
-        debug
-        {
+        static if (isRandomAccessRange!Range)
+        debug if (!__ctfe)
+        {{
             import core.bitop : bsr;
             import std.conv : text;
             import std.random : MinstdRand, uniform;
+            import std.stdio;
 
-            static if (isRandomAccessRange!Range)
+            // Check the sortedness of the input
+            if (input.length < 2) goto end; //12724
+            immutable size_t msb = bsr(input.length) + 1;
+            assert(msb > 0 && msb <= input.length);
+            immutable step = input.length / msb;
+            static MinstdRand gen;
+            immutable start = uniform(0, step, gen);
+            auto st = stride(this._input, step);
+            static if (is(typeof(text(st))))
             {
-                // Check the sortedness of the input
-                if (this._input.length < 2) return;
-                immutable size_t msb = bsr(this._input.length) + 1;
-                assert(msb > 0 && msb <= this._input.length);
-                immutable step = this._input.length / msb;
-                static MinstdRand gen;
-                immutable start = uniform(0, step, gen);
-                auto st = stride(this._input, step);
-                static if (is(typeof(text(st))))
-                {
-                    assert(isSorted!pred(st), text(st));
-                }
-                else
-                {
-                    assert(isSorted!pred(st));
-                }
+                assert(isSorted!pred(st), text(st));
             }
-        }
+            else
+            {
+                assert(isSorted!pred(st));
+            }
+        }end:}
+    }
+    body
+    {
+        this._input = input;
     }
 
     /// Range primitives.
