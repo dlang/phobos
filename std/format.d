@@ -1952,7 +1952,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 // alias this, input range I/F, and toString()
 unittest
 {
-    struct S(uint flags)
+    struct S(int flags)
     {
         int[] arr;
       static if (flags & 1)
