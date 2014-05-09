@@ -3871,7 +3871,7 @@ unittest
     static assert(is(TemplateArgsOf!(Foo1!(int)) == TypeTuple!(int)));
     static assert(is(TemplateArgsOf!(Foo2!(int, int)) == TypeTuple!(int, int)));
     static assert(__traits(isSame, TemplateArgsOf!(Foo3!(x)), TypeTuple!(x)));
-    static assert(__traits(isSame, TemplateArgsOf!(Foo4!(y)), TypeTuple!(y)));
+    static assert(TemplateArgsOf!(Foo4!(y)) == TypeTuple!(y));
     static assert(is(TemplateArgsOf!(Foo5!(int)) == TypeTuple!(int)));
     static assert(is(TemplateArgsOf!(Foo6!(int, int)) == TypeTuple!(int, int)));
     static assert(__traits(isSame, TemplateArgsOf!(Foo7!(x)), TypeTuple!(x)));
