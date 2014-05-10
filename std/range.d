@@ -8335,8 +8335,19 @@ if (isInputRange!Range)
     // Undocummented because a clearer way to invoke is by calling
     // assumeSorted.
     this(Range input)
+    out
+    {
+        // moved out of the body as a workaround for Issue 12661
+        dbgVerifySorted();
+    }
+    body
     {
         this._input = input;
+    }
+
+    // Assertion only.
+    private void dbgVerifySorted()
+    {
         if(!__ctfe)
         debug
         {
