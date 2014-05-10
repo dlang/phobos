@@ -5938,9 +5938,12 @@ class CAllocator
     }
 
     /**
-    Allocates memory.
+    Allocates memory. The default returns $(D null).
     */
-    abstract void[] allocate(size_t);
+    void[] allocate(size_t)
+    {
+        return null;
+    }
 
     /**
     Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
@@ -5959,13 +5962,16 @@ class CAllocator
     Ternary.yes) if expansion succeeded, $(D Ternary.no) otherwise.
 
     */
-    abstract Ternary expand(ref void[], size_t)
+    Ternary expand(ref void[], size_t)
     {
         return Ternary.unknown;
     }
 
-    /// Reallocates a memory block.
-    abstract bool reallocate(ref void[] b, size_t);
+    /// Reallocates a memory block. By default returns $(D false).
+    bool reallocate(ref void[], size_t)
+    {
+        return false;
+    }
 
     /**
 
@@ -5974,7 +5980,7 @@ class CAllocator
     deallocation is to call $(D deallocate(null)).
 
     */
-    abstract Ternary deallocate(void[])
+    Ternary deallocate(void[])
     {
         return Ternary.unknown;
     }
@@ -5983,15 +5989,18 @@ class CAllocator
     Deallocates all memory. Returns $(D Ternary.unknown) if deallocation is
     not supported (default).
     */
-    abstract bool deallocateAll();
+    Ternary deallocateAll()
+    {
+        return Ternary.unknown;
+    }
 
     /**
     Allocates and returns all memory available to this allocator. By default
-    issues $(D assert(false)).
+    returns $(D null).
     */
     void[] allocateAll()
     {
-        assert(false);
+        return null;
     }
 }
 
@@ -6150,16 +6159,16 @@ class CAllocatorImpl(Allocator) : CAllocator
 
     /// Calls $(D impl.deallocateAll()) and returns $(D true) if defined,
     /// otherwise returns $(D false).
-    override bool deallocateAll()
+    override Ternary deallocateAll()
     {
         static if (hasMember!(Allocator, "deallocateAll"))
         {
             impl.deallocateAll();
-            return true;
+            return Ternary.yes;
         }
         else
         {
-            return false;
+            return Ternary.unknown;
         }
     }
 
