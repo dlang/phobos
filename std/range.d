@@ -3755,30 +3755,28 @@ unittest
 
     import std.string : format;
 
-    foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
-                              `"hello world"`,
-                              `"hello world"w`,
-                              `"hello world"d`,
-                              `SliceStruct([1, 2, 3])`,
+    foreach(range; TypeTuple!([1, 2, 3, 4, 5],
+                              "hello world",
+                              "hello world"w,
+                              "hello world"d,
+                              SliceStruct([1, 2, 3]),
                               //@@@BUG@@@ 8339 forces this to be takeExactly
-                              //`InitStruct([1, 2, 3])`,
-                              `TakeNoneStruct([1, 2, 3])`))
+                              //`InitStruct([1, 2, 3]),
+                              TakeNoneStruct([1, 2, 3])))
     {
-        mixin(format("enum a = takeNone(%s).empty;", range));
+        enum a = takeNone(range).empty;
         assert(a, typeof(range).stringof);
-        mixin(format("assert(takeNone(%s).empty);", range));
-        mixin(format("static assert(is(typeof(%s) == typeof(takeNone(%s))), typeof(%s).stringof);",
-                     range, range, range));
+        assert(takeNone(range).empty);
+        static assert(is(typeof(range) == typeof(takeNone(range))), typeof(range).stringof);
     }
 
-    foreach(range; TypeTuple!(`NormalStruct([1, 2, 3])`,
-                              `InitStruct([1, 2, 3])`))
+    foreach(range; TypeTuple!(NormalStruct([1, 2, 3]),
+                              InitStruct([1, 2, 3])))
     {
-        mixin(format("enum a = takeNone(%s).empty;", range));
+        enum a = takeNone(range).empty;
         assert(a, typeof(range).stringof);
-        mixin(format("assert(takeNone(%s).empty);", range));
-        mixin(format("static assert(is(typeof(takeExactly(%s, 0)) == typeof(takeNone(%s))), typeof(%s).stringof);",
-                     range, range, range));
+        assert(takeNone(range).empty);
+        static assert(is(typeof(takeExactly(range, 0)) == typeof(takeNone(range))), typeof(range).stringof);
     }
 
     //Don't work in CTFE.
