@@ -5912,6 +5912,54 @@ unittest
 }
 
 /**
+
+Stores an allocator object in thread-local storage (i.e. non-$(D shared) D
+global). $(D ThreadLocal!A) is a subtype of $(D A) so it appears to implement
+$(D A)'s allocator primitives.
+
+$(D A) must hold state, otherwise D ThreadLocal!A) refuses instantiation. This
+$(means e.g. $(D ThreadLocal!Mallocator) does not work because $(D Mallocator)'s
+state is not stored as members of $(D Mallocator), but instead is hidden in the
+C library implementation.
+
+*/
+struct ThreadLocal(A)
+{
+    static assert(stateSize!A,
+        typeof(A).stringof
+        ~ " does not have state so it cannot be used with ThreadLocal");
+
+    /**
+    The allocator instance.
+    */
+    static A it;
+
+    /**
+    $(D ThreadLocal!A) is a subtype of $(D A) so it appears to implement
+    $(D A)'s allocator primitives.
+    */
+    alias it this;
+
+    /**
+    $(D ThreadLocal) disables all constructors. The intended usage is
+    $(D ThreadLocal!A.it).
+    */
+    @disable this();
+    /// Ditto
+    @disable this(this);
+}
+
+///
+unittest
+{
+    static assert(!is(ThreadLocal!Mallocator));
+    static assert(!is(ThreadLocal!GCAllocator));
+    alias ThreadLocal!(Freelist!(GCAllocator, 0, 8, 1)) Allocator;
+    auto b = Allocator.it.allocate(5);
+    static assert(hasMember!(Allocator, "allocate"));
+}
+
+/**
 Dynamic version of an allocator. This should be used wherever a uniform type is
 required for encapsulating various allocator implementations.
 
