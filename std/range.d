@@ -3768,8 +3768,7 @@ unittest
                               //`InitStruct([1, 2, 3]),
                               TakeNoneStruct([1, 2, 3])))
     {
-        enum a = takeNone(range).empty;
-        assert(a, typeof(range).stringof);
+        static assert(takeNone(range).empty, typeof(range).stringof);
         assert(takeNone(range).empty);
         static assert(is(typeof(range) == typeof(takeNone(range))), typeof(range).stringof);
     }
@@ -3777,8 +3776,7 @@ unittest
     foreach(range; TypeTuple!(NormalStruct([1, 2, 3]),
                               InitStruct([1, 2, 3])))
     {
-        enum a = takeNone(range).empty;
-        assert(a, typeof(range).stringof);
+        static assert(takeNone(range).empty, typeof(range).stringof);
         assert(takeNone(range).empty);
         static assert(is(typeof(takeExactly(range, 0)) == typeof(takeNone(range))), typeof(range).stringof);
     }
