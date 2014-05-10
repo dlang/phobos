@@ -6005,6 +6005,69 @@ class CAllocator
 }
 
 /**
+Shared version of $(D CAllocator).
+*/
+class CSharedAllocator
+{
+    /**
+    These method prescribe similar semantics to their $(D CAllocator)
+    counterparts.
+    */
+    @property uint alignment() shared
+    {
+        return platformAlignment;
+    }
+
+    /// Ditto
+    size_t goodAllocSize(size_t s) shared
+    {
+        return s.roundUpToMultipleOf(alignment);
+    }
+
+    /// Ditto
+    void[] allocate(size_t) shared
+    {
+        return null;
+    }
+
+    /// Ditto
+    Ternary owns(void[] b) shared
+    {
+        return Ternary.unknown;
+    }
+
+    /// Ditto
+    Ternary expand(ref void[], size_t) shared
+    {
+        return Ternary.unknown;
+    }
+
+    /// Ditto
+    bool reallocate(ref void[], size_t) shared
+    {
+        return false;
+    }
+
+    /// Ditto
+    Ternary deallocate(void[]) shared
+    {
+        return Ternary.unknown;
+    }
+
+    /// Ditto
+    Ternary deallocateAll() shared
+    {
+        return Ternary.unknown;
+    }
+
+    /// Ditto
+    void[] allocateAll() shared
+    {
+        return null;
+    }
+}
+
+/**
 
 Returns a dynamically-typed $(D CAllocator) built around a given
 statically-typed allocator $(D a) of type $(D A), as follows.
