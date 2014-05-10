@@ -3685,20 +3685,24 @@ unittest
 
 unittest
 {
-    string genInput()
+    struct Dummy
     {
-        return "@property bool empty() { return _arr.empty; }" ~
-                "@property auto front() { return _arr.front; }" ~
-                "void popFront() { _arr.popFront(); }" ~
-                "static assert(isInputRange!(typeof(this)));";
+        mixin template genInput()
+        {
+            @property bool empty() { return _arr.empty; }
+            @property auto front() { return _arr.front; }
+            void popFront() { _arr.popFront(); }
+            static assert(isInputRange!(typeof(this)));
+        }
     }
+    alias genInput = Dummy.genInput;
 
     static struct NormalStruct
     {
         //Disabled to make sure that the takeExactly version is used.
         @disable this();
         this(int[] arr) { _arr = arr; }
-        mixin(genInput());
+        mixin genInput;
         int[] _arr;
     }
 
@@ -3706,7 +3710,7 @@ unittest
     {
         @disable this();
         this(int[] arr) { _arr = arr; }
-        mixin(genInput());
+        mixin genInput;
         @property auto save() { return this; }
         auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[i .. j]); }
         @property size_t length() { return _arr.length; }
@@ -3715,7 +3719,7 @@ unittest
 
     static struct InitStruct
     {
-        mixin(genInput());
+        mixin genInput;
         int[] _arr;
     }
 
@@ -3723,7 +3727,7 @@ unittest
     {
         this(int[] arr) { _arr = arr; }
         @disable this();
-        mixin(genInput());
+        mixin genInput;
         auto takeNone() { return typeof(this)(null); }
         int[] _arr;
     }
@@ -3731,14 +3735,14 @@ unittest
     static class NormalClass
     {
         this(int[] arr) {_arr = arr;}
-        mixin(genInput());
+        mixin genInput;
         int[] _arr;
     }
 
     static class SliceClass
     {
         this(int[] arr) { _arr = arr; }
-        mixin(genInput());
+        mixin genInput;
         @property auto save() { return new typeof(this)(_arr); }
         auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[i .. j]); }
         @property size_t length() { return _arr.length; }
@@ -3748,7 +3752,7 @@ unittest
     static class TakeNoneClass
     {
         this(int[] arr) { _arr = arr; }
-        mixin(genInput());
+        mixin genInput;
         auto takeNone() { return new typeof(this)(null); }
         int[] _arr;
     }
