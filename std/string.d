@@ -3178,7 +3178,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
             ("nan", "nani", "nan+nani", "inf", "-inf"))
         return true;
 
-    immutable j = s[0].among!('-', '+') != 0;
+    immutable j = s[0].among!('-', '+')() != 0;
     bool bDecimalPoint, bExponent, bComplex, sawDigits;
 
     for (size_t i = j; i < iLen; i++)
@@ -3207,14 +3207,14 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
         }
 
         // Allow only one exponent per number
-        if (c.among!('e', 'E'))
+        if (c.among!('e', 'E')())
         {
             // A 2nd exponent found, return not a number
             if (bExponent || i + 1 >= iLen)
                 return false;
             // Look forward for the sign, and if
             // missing then this is not a number.
-            if (!s[i + 1].among!('-', '+'))
+            if (!s[i + 1].among!('-', '+')())
                 return false;
             bExponent = true;
             i++;
@@ -3256,18 +3256,18 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
             if (!sawDigits)
                 return false;
             // Integer Whole Number
-            if (c.among!('u', 'l', 'U', 'L') &&
+            if (c.among!('u', 'l', 'U', 'L')() &&
                    (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
             // Check to see if the last character in the string
             // is the required 'i' character
             if (bComplex)
-                return c.among!('i', 'I') != 0;
+                return c.among!('i', 'I')() != 0;
             // Floating-Point Number
-            return c.among!('l', 'L', 'f', 'F', 'i', 'I') != 0;
+            return c.among!('l', 'L', 'f', 'F', 'i', 'I')() != 0;
         }
         // Check if separators are allowed to be in the numeric string
-        if (!bAllowSep || !c.among!('_', ','))
+        if (!bAllowSep || !c.among!('_', ',')())
             return false;
     }
 
