@@ -4853,6 +4853,15 @@ unittest //Constness
     emplaceRef!(IS[2])(ss, iss[]);
 }
 
+unittest
+{
+    int i;
+    emplaceRef(i);
+    emplaceRef!int(i);
+    emplaceRef(i, 5);
+    emplaceRef!int(i, 5);
+}
+
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
     enforceEx!ConvException(chunk.length >= typeSize,
