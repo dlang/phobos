@@ -1562,7 +1562,11 @@ public:
         preferred where the memory requirements of eagerness are acceptable.
         $(D functions) are the functions to be evaluated, passed as template alias
         parameters in a style similar to $(XREF algorithm, map).  The first
-        argument must be a random access range.
+        argument must be a random access range. For performance reasons, amap
+        will assume the range elements have not yet been initialized. Elements will
+        be overwritten without calling a destructor nor doing an assignment. As such,
+        the range must not contain meaningful data: either un-initialized objects, or
+        objects in their $(D .init) state.
 
         ---
         auto numbers = iota(100_000_000.0);
@@ -1691,7 +1695,7 @@ public:
                 size_t index = 0;
                 foreach(elem; range)
                 {
-                    buf[index++] = fun(elem);
+                    emplaceRef(buf[index++], fun(elem));
                 }
                 return buf;
             }
@@ -1725,7 +1729,7 @@ public:
                         auto subrange = range[start..end];
                         foreach(i; start..end)
                         {
-                            buf[i] = fun(subrange.front);
+                            emplaceRef(buf[i], fun(subrange.front));
                             subrange.popFront();
                         }
                     }
@@ -1733,7 +1737,7 @@ public:
                     {
                         foreach(i; start..end)
                         {
-                            buf[i] = fun(range[i]);
+                            emplaceRef(buf[i], fun(range[i]));
                         }
                     }
                 }
@@ -2447,9 +2451,7 @@ public:
                     typeof(adjoin!(staticMap!(binaryFun, functions))(e, e)) seed = void;
                     foreach (i, T; seed.Types)
                     {
-                        auto p = (cast(void*) &seed.expand[i])
-                        [0 .. seed.expand[i].sizeof];
-                        emplace!T(p, e);
+                        emplaceRef(seed.expand[i], e);
                     }
 
                     return seed;
@@ -4552,4 +4554,25 @@ version(parallelismStressTest)
             poolInstance.stop();
         }
     }
+}
+
+version(unittest)
+{
+    struct __S_12733
+    {
+        invariant() { assert(checksum == 1234567890); }    
+        this(ulong u){n = u;}
+        void opAssign(__S_12733 s){this.n = s.n;}
+        ulong n;
+        ulong checksum = 1234567890;
+    }
+
+    static auto __genPair_12733(ulong n) { return __S_12733(n); }
+}
+
+unittest
+{
+    immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
+ 
+    auto result = taskPool.amap!__genPair_12733(data);
 }
