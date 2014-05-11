@@ -6131,18 +6131,21 @@ statically-typed allocator.)
 )
 
 */
-CAllocator allocatorObject(A)(auto ref A a)
+auto allocatorObject(A)(auto ref A a)
 {
+    alias Result = Select!(is(A == shared),
+        shared CSharedAllocator, CAllocator);
     static if (stateSize!A == 0)
     {
         enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
         static __gshared ulong[s] state;
-        static __gshared CAllocatorImpl!A result;
+        static __gshared Result result;
         if (!result)
         {
             // Don't care about a few races
-            result = emplace!(CAllocatorImpl!A)(state[]);
+            result = cast(Result) emplace!(CAllocatorImpl!A)(state[]);
         }
+        assert(result);
         return result;
     }
     else static if (is(typeof({ A b = a; A c = b; }))) // copyable
@@ -6152,7 +6155,7 @@ CAllocator allocatorObject(A)(auto ref A a)
         {
             scope(failure) a.deallocate(state);
         }
-        return emplace!(CAllocatorImpl!A)(state);
+        return cast(Result) emplace!(CAllocatorImpl!A)(state);
     }
     else // the allocator object is not copyable
     {
@@ -6170,12 +6173,12 @@ CAllocator allocatorObject(A)(auto ref A a)
 unittest
 {
     auto a = allocatorObject(Mallocator.it);
-    assert(a);
-    auto b = a.allocate(100);
-    assert(b.length == 100);
+    auto b =            a.allocate(100);
+    assert(b.length == 100, text(b.length));
 
     Freelist!(GCAllocator, 0, 8, 1) fl;
-    a = allocatorObject(fl);
+    auto sa = allocatorObject(fl);
+    writeln(typeof(sa).stringof);
     b = a.allocate(101);
     assert(b.length == 101);
 
@@ -6190,8 +6193,12 @@ unittest
 Implementation of $(D CAllocator) using $(D Allocator). This adapts a
 statically-built allocator type to a uniform dynamic interface that is directly
 usable by non-templated code.
+
+Usually $(D CAllocatorImpl) is used indirectly by calling
+$(LREF allocatorObject).
 */
-class CAllocatorImpl(Allocator) : CAllocator
+class CAllocatorImpl(Allocator)
+    : Select!(is(typeof(Allocator.it) == shared), CSharedAllocator, CAllocator)
 {
     /**
     The implementation is available as a public member.
@@ -6199,106 +6206,114 @@ class CAllocatorImpl(Allocator) : CAllocator
     static if (stateSize!Allocator) Allocator impl;
     else alias impl = Allocator.it;
 
-    /// Returns $(D impl.alignment).
-    override @property uint alignment()
+    template Impl()
     {
-        return impl.alignment;
-    }
-
-    /**
-    Returns $(D impl.goodAllocSize(s)).
-    */
-    override size_t goodAllocSize(size_t s)
-    {
-        return impl.goodAllocSize(s);
-    }
-
-    /**
-    Returns $(D impl.allocate(s)).
-    */
-    override void[] allocate(size_t s)
-    {
-        return impl.allocate(s);
-    }
-
-    /**
-    Overridden only if $(D Allocator) implements $(D owns). In that case,
-    returns $(D impl.owns(b)).
-    */
-    static if (hasMember!(Allocator, "owns"))
-    override Ternary owns(void[] b)
-    {
-        return impl.owns(b);
-    }
-
-    /// Returns $(D impl.expand(b, s)) if defined, $(D false) otherwise.
-    override Ternary expand(ref void[] b, size_t s)
-    {
-        static if (hasMember!(Allocator, "expand"))
-            return Ternary(impl.expand(b, s));
-        else
-            return Ternary.unknown;
-    }
-
-    /// Returns $(D impl.reallocate(b, s)).
-    override bool reallocate(ref void[] b, size_t s)
-    {
-        return impl.reallocate(b, s);
-    }
-
-    /// Calls $(D impl.deallocate(b)) and returns $(D true) if defined,
-    /// otherwise returns $(D false).
-    override Ternary deallocate(void[] b)
-    {
-        static if (hasMember!(Allocator, "deallocate"))
+        /// Returns $(D impl.alignment).
+        override @property uint alignment()
         {
-            static if (is(typeof(impl.deallocate(b)) == bool))
+            return impl.alignment;
+        }
+
+        /**
+        Returns $(D impl.goodAllocSize(s)).
+        */
+        override size_t goodAllocSize(size_t s)
+        {
+            return impl.goodAllocSize(s);
+        }
+
+        /**
+        Returns $(D impl.allocate(s)).
+        */
+        override void[] allocate(size_t s)
+        {
+            return impl.allocate(s);
+        }
+
+        /**
+        Overridden only if $(D Allocator) implements $(D owns). In that case,
+        returns $(D impl.owns(b)).
+        */
+        static if (hasMember!(Allocator, "owns"))
+        override Ternary owns(void[] b)
+        {
+            return impl.owns(b);
+        }
+
+        /// Returns $(D impl.expand(b, s)) if defined, $(D false) otherwise.
+        override Ternary expand(ref void[] b, size_t s)
+        {
+            static if (hasMember!(Allocator, "expand"))
+                return Ternary(impl.expand(b, s));
+            else
+                return Ternary.unknown;
+        }
+
+        /// Returns $(D impl.reallocate(b, s)).
+        override bool reallocate(ref void[] b, size_t s)
+        {
+            return impl.reallocate(b, s);
+        }
+
+        /// Calls $(D impl.deallocate(b)) and returns $(D true) if defined,
+        /// otherwise returns $(D false).
+        override Ternary deallocate(void[] b)
+        {
+            static if (hasMember!(Allocator, "deallocate"))
             {
-                return impl.deallocate(b);
+                static if (is(typeof(impl.deallocate(b)) == bool))
+                {
+                    return impl.deallocate(b);
+                }
+                else
+                {
+                    impl.deallocate(b);
+                    return Ternary.yes;
+                }
             }
             else
             {
-                impl.deallocate(b);
-                return Ternary.yes;
+                return Ternary.unknown;
             }
         }
-        else
+
+        /// Calls $(D impl.deallocateAll()) and returns $(D true) if defined,
+        /// otherwise returns $(D false).
+        override Ternary deallocateAll()
         {
-            return Ternary.unknown;
+            static if (hasMember!(Allocator, "deallocateAll"))
+            {
+                impl.deallocateAll();
+                return Ternary.yes;
+            }
+            else
+            {
+                return Ternary.unknown;
+            }
+        }
+
+        /**
+        Overridden only if $(D Allocator) implements $(D allocateAll). In that case,
+        returns $(D impl.allocateAll()).
+        */
+        static if (hasMember!(Allocator, "allocateAll"))
+        void[] allocateAll()
+        {
+            return impl.allocateAll();
         }
     }
 
-    /// Calls $(D impl.deallocateAll()) and returns $(D true) if defined,
-    /// otherwise returns $(D false).
-    override Ternary deallocateAll()
-    {
-        static if (hasMember!(Allocator, "deallocateAll"))
-        {
-            impl.deallocateAll();
-            return Ternary.yes;
-        }
-        else
-        {
-            return Ternary.unknown;
-        }
-    }
-
-    /**
-    Overridden only if $(D Allocator) implements $(D allocateAll). In that case,
-    returns $(D impl.allocateAll()).
-    */
-    static if (hasMember!(Allocator, "allocateAll"))
-    void[] allocateAll()
-    {
-        return impl.allocateAll();
-    }
+    static if (is(typeof(Allocator.it) == shared))
+        shared { mixin Impl!(); }
+    else
+        mixin Impl!();
 }
 
 ///
 unittest
 {
     /// Define an allocator bound to the built-in GC.
-    CAllocator alloc = new CAllocatorImpl!GCAllocator;
+    shared CSharedAllocator alloc = new CAllocatorImpl!GCAllocator;
     auto b = alloc.allocate(42);
     assert(b.length == 42);
     assert(alloc.deallocate(b) == Ternary.yes);
@@ -6319,7 +6334,7 @@ unittest
         GCAllocator
     );
 
-    alloc = new CAllocatorImpl!A;
+    auto alloc2 = new CAllocatorImpl!A;
     b = alloc.allocate(101);
     assert(alloc.deallocate(b) == Ternary.yes);
 }
@@ -6818,7 +6833,54 @@ void testAllocator(alias make)()
         assert(a.resolveInternalPointer(b8.ptr + b8.length / 2) is null);
         assert(a.resolveInternalPointer(b8.ptr + b8.length) is null);
     }}
+}
 
+version (std_allocator_benchmark)
+unittest
+{
+    alias A = Freelist!(GCAllocator, 1, 64); A a;
+    //alias ThreadLocal!(Freelist!(GCAllocator, 64)) A; alias a = A.it;
+    //alias GCAllocator A;
+    //alias a = A.it;
+
+    static void testSpeed(A)()
+    {
+        static if (stateSize!A) A a;
+        else alias a = A.it;
+        //writeln("Using ", A.stringof);
+
+        void[][] bufs = cast(void[][]) a.allocate(1024 * 64 * (void[][]).sizeof);
+        bufs[] = null;
+
+        import std.random;
+        foreach (i; 0 .. 1_000_000)
+        {
+            auto j = uniform(0, bufs.length);
+            switch (uniform(0, 2))
+            {
+            case 0:
+                a.deallocate(bufs[j]);
+                bufs[j] = a.allocate(uniform(0, 64));
+                break;
+            case 1:
+                a.deallocate(bufs[j]);
+                bufs[j] = null;
+                break;
+            default:
+                assert(0);
+            }
+        }
+        a.deallocate(bufs);
+    }
+
+    import std.datetime;
+    writeln(benchmark!(
+        testSpeed!GCAllocator,
+        testSpeed!(Freelist!(GCAllocator, 1, 64)),
+        testSpeed!(Freelist!(Mallocator, 1, 64)),
+        testSpeed!(ThreadLocal!(Freelist!(GCAllocator, 1, 64))),
+        testSpeed!(ThreadLocal!(Freelist!(Mallocator, 1, 64))),
+    )(20)[].map!(t => t.to!("seconds", double)));
 }
 
 __EOF__
