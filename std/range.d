@@ -3175,6 +3175,17 @@ if (isInputRange!(Unqual!Range) &&
         }
 
         alias opDollar = length;
+
+        //Note: Due to Take/hasSlicing circular dependency,
+        //This needs to be a restrained template.
+        auto opSlice()(size_t i, size_t j)
+        if (hasSlicing!R)
+        {
+            assert(i <= j, "Invalid slice bounds");
+            assert(j - i <= length, "Attempting to slice past the end of a "
+                ~ Take.stringof);
+            return source[i .. j - i];
+        }
     }
     else static if (hasLength!R)
     {
@@ -3385,6 +3396,13 @@ unittest
     alias TR2 = Take!R2;
     static assert(isBidirectionalRange!TR1);
     static assert(isBidirectionalRange!TR2);
+}
+
+unittest //12731
+{
+    auto a = repeat(1);
+    auto s = a[1 .. 5];
+    s = s[1 .. 3];
 }
 
 /**
