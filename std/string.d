@@ -8,6 +8,11 @@ $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *_string) types
 are preferable because they don't exhibit undesired aliasing, thus
 making code more robust.
 
+A number of common operations on strings are also found in the 
+Unicode $(B std.uni), and array $(B std.array) libraries. If a
+function you are looking for does not appear here, try looking
+in those libraries.
+
 Macros: WIKI = Phobos/StdString
 
 Copyright: Copyright Digital Mars 2007-.
