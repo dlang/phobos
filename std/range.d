@@ -3703,20 +3703,24 @@ unittest
 
 unittest
 {
-    string genInput()
+    struct Dummy
     {
-        return "@property bool empty() { return _arr.empty; }" ~
-                "@property auto front() { return _arr.front; }" ~
-                "void popFront() { _arr.popFront(); }" ~
-                "static assert(isInputRange!(typeof(this)));";
+        mixin template genInput()
+        {
+            @property bool empty() { return _arr.empty; }
+            @property auto front() { return _arr.front; }
+            void popFront() { _arr.popFront(); }
+            static assert(isInputRange!(typeof(this)));
+        }
     }
+    alias genInput = Dummy.genInput;
 
     static struct NormalStruct
     {
         //Disabled to make sure that the takeExactly version is used.
         @disable this();
         this(int[] arr) { _arr = arr; }
-        mixin(genInput());
+        mixin genInput;
         int[] _arr;
     }
 
@@ -3724,7 +3728,7 @@ unittest
     {
         @disable this();
         this(int[] arr) { _arr = arr; }
-        mixin(genInput());
+        mixin genInput;
         @property auto save() { return this; }
         auto opSlice(size_t i, size_t j) { return typeof(this)(_arr[i .. j]); }
         @property size_t length() { return _arr.length; }
@@ -3733,7 +3737,7 @@ unittest
 
     static struct InitStruct
     {
-        mixin(genInput());
+        mixin genInput;
         int[] _arr;
     }
 
@@ -3741,7 +3745,7 @@ unittest
     {
         this(int[] arr) { _arr = arr; }
         @disable this();
-        mixin(genInput());
+        mixin genInput;
         auto takeNone() { return typeof(this)(null); }
         int[] _arr;
     }
@@ -3749,14 +3753,14 @@ unittest
     static class NormalClass
     {
         this(int[] arr) {_arr = arr;}
-        mixin(genInput());
+        mixin genInput;
         int[] _arr;
     }
 
     static class SliceClass
     {
         this(int[] arr) { _arr = arr; }
-        mixin(genInput());
+        mixin genInput;
         @property auto save() { return new typeof(this)(_arr); }
         auto opSlice(size_t i, size_t j) { return new typeof(this)(_arr[i .. j]); }
         @property size_t length() { return _arr.length; }
@@ -3766,37 +3770,33 @@ unittest
     static class TakeNoneClass
     {
         this(int[] arr) { _arr = arr; }
-        mixin(genInput());
+        mixin genInput;
         auto takeNone() { return new typeof(this)(null); }
         int[] _arr;
     }
 
     import std.string : format;
 
-    foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
-                              `"hello world"`,
-                              `"hello world"w`,
-                              `"hello world"d`,
-                              `SliceStruct([1, 2, 3])`,
+    foreach(range; TypeTuple!([1, 2, 3, 4, 5],
+                              "hello world",
+                              "hello world"w,
+                              "hello world"d,
+                              SliceStruct([1, 2, 3]),
                               //@@@BUG@@@ 8339 forces this to be takeExactly
-                              //`InitStruct([1, 2, 3])`,
-                              `TakeNoneStruct([1, 2, 3])`))
+                              //`InitStruct([1, 2, 3]),
+                              TakeNoneStruct([1, 2, 3])))
     {
-        mixin(format("enum a = takeNone(%s).empty;", range));
-        assert(a, typeof(range).stringof);
-        mixin(format("assert(takeNone(%s).empty);", range));
-        mixin(format("static assert(is(typeof(%s) == typeof(takeNone(%s))), typeof(%s).stringof);",
-                     range, range, range));
+        static assert(takeNone(range).empty, typeof(range).stringof);
+        assert(takeNone(range).empty);
+        static assert(is(typeof(range) == typeof(takeNone(range))), typeof(range).stringof);
     }
 
-    foreach(range; TypeTuple!(`NormalStruct([1, 2, 3])`,
-                              `InitStruct([1, 2, 3])`))
+    foreach(range; TypeTuple!(NormalStruct([1, 2, 3]),
+                              InitStruct([1, 2, 3])))
     {
-        mixin(format("enum a = takeNone(%s).empty;", range));
-        assert(a, typeof(range).stringof);
-        mixin(format("assert(takeNone(%s).empty);", range));
-        mixin(format("static assert(is(typeof(takeExactly(%s, 0)) == typeof(takeNone(%s))), typeof(%s).stringof);",
-                     range, range, range));
+        static assert(takeNone(range).empty, typeof(range).stringof);
+        assert(takeNone(range).empty);
+        static assert(is(typeof(takeExactly(range, 0)) == typeof(takeNone(range))), typeof(range).stringof);
     }
 
     //Don't work in CTFE.
