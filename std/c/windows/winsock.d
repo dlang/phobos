@@ -8,7 +8,6 @@ module std.c.windows.winsock;
 version (Windows):
 
 private import std.stdint;
-private import std.c.windows.windows;
 
 
 extern(Windows):
@@ -20,17 +19,17 @@ alias socklen_t = int;
 const SOCKET INVALID_SOCKET = cast(SOCKET)~0;
 const int SOCKET_ERROR = -1;
 
-const int WSADESCRIPTION_LEN = 256;
-const int WSASYS_STATUS_LEN = 128;
+enum WSADESCRIPTION_LEN = 256;
+enum WSASYS_STATUS_LEN = 128;
 
 struct WSADATA
 {
-    WORD wVersion;
-    WORD wHighVersion;
+    uint16_t wVersion;
+    uint16_t wHighVersion;
     char[WSADESCRIPTION_LEN + 1] szDescription;
     char[WSASYS_STATUS_LEN + 1] szSystemStatus;
-    USHORT iMaxSockets;
-    USHORT iMaxUdpDg;
+    uint16_t iMaxSockets;
+    uint16_t iMaxUdpDg;
     char* lpVendorInfo;
 }
 alias LPWSADATA = WSADATA*;
@@ -38,12 +37,12 @@ alias LPWSADATA = WSADATA*;
 
 const int IOCPARM_MASK =  0x7F;
 const int IOC_IN =        cast(int)0x80000000;
-const int FIONBIO =       cast(int)(IOC_IN | ((UINT.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126);
+const int FIONBIO =       cast(int)(IOC_IN | ((uint.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126);
 
 enum NI_MAXHOST = 1025;
 enum NI_MAXSERV = 32;
 
-int WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData);
+int WSAStartup(uint16_t wVersionRequested, LPWSADATA lpWSAData);
 int WSACleanup();
 SOCKET socket(int af, int type, int protocol);
 int ioctlsocket(SOCKET s, int cmd, uint* argp);
@@ -83,7 +82,7 @@ enum: int
 int gethostname(const char* name, int namelen);
 int getaddrinfo(const(char)* nodename, const(char)* servname, const(addrinfo)* hints, addrinfo** res);
 void freeaddrinfo(addrinfo* ai);
-int getnameinfo(const(sockaddr)* sa, socklen_t salen, char* host, DWORD hostlen, char* serv, DWORD servlen, int flags);
+int getnameinfo(const(sockaddr)* sa, socklen_t salen, char* host, uint hostlen, char* serv, uint servlen, int flags);
 
 enum: int
 {
@@ -218,12 +217,12 @@ enum: int
 /// In C/C++, it is redefinable by #define-ing the macro before #include-ing
 /// winsock.h. In D, use the $(D FD_CREATE) function to allocate a $(D fd_set)
 /// of an arbitrary size.
-const uint FD_SETSIZE = 64;
+enum FD_SETSIZE = 64;
 
 
 struct fd_set_custom(uint SETSIZE)
 {
-    UINT fd_count;
+    uint fd_count;
     SOCKET[SETSIZE] fd_array;
 }
 
@@ -297,8 +296,8 @@ fd_set* FD_CREATE(uint capacity)
 
 struct linger
 {
-    USHORT l_onoff;
-    USHORT l_linger;
+    uint16_t l_onoff;
+    uint16_t l_linger;
 }
 
 
@@ -306,7 +305,7 @@ struct protoent
 {
     char* p_name;
     char** p_aliases;
-    SHORT p_proto;
+    int16_t p_proto;
 }
 
 
@@ -318,11 +317,11 @@ struct servent
     version (Win64)
     {
         char* s_proto;
-        SHORT s_port;
+        int16_t s_port;
     }
     else
     {
-        SHORT s_port;
+        int16_t s_port;
         char* s_proto;
     }
 }
@@ -333,8 +332,8 @@ union in6_addr
 {
     private union _u_t
     {
-        BYTE[16] Byte;
-        WORD[8] Word;
+        uint8_t[16] Byte;
+        uint16_t[8] Word;
     }
     _u_t u;
 }
@@ -342,7 +341,7 @@ union in6_addr
 
 struct in_addr6
 {
-    BYTE[16] s6_addr;
+    uint8_t[16] s6_addr;
 }
 +/
 
@@ -529,8 +528,8 @@ const in6_addr IN6ADDR_LOOPBACK = { s6_addr8: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 //alias IN6ADDR_ANY_INIT = IN6ADDR_ANY;
 //alias IN6ADDR_LOOPBACK_INIT = IN6ADDR_LOOPBACK;
 
-const uint INET_ADDRSTRLEN = 16;
-const uint INET6_ADDRSTRLEN = 46;
+enum uint INET_ADDRSTRLEN = 16;
+enum uint INET6_ADDRSTRLEN = 46;
 
 
 struct sockaddr
@@ -587,18 +586,19 @@ struct hostent
     }
 }
 
+// Note: These are Winsock2!!
 struct WSAOVERLAPPED;
 alias LPWSAOVERLAPPED = WSAOVERLAPPED*;
-alias LPWSAOVERLAPPED_COMPLETION_ROUTINE = void function(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
-int WSAIoctl(SOCKET s, DWORD dwIoControlCode,
-    LPVOID lpvInBuffer, DWORD cbInBuffer,
-    LPVOID lpvOutBuffer, DWORD cbOutBuffer,
-    LPDWORD lpcbBytesReturned,
+alias LPWSAOVERLAPPED_COMPLETION_ROUTINE = void function(uint, uint, LPWSAOVERLAPPED, uint);
+int WSAIoctl(SOCKET s, uint dwIoControlCode,
+    void* lpvInBuffer, uint cbInBuffer,
+    void* lpvOutBuffer, uint cbOutBuffer,
+    uint* lpcbBytesReturned,
     LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
 
 
-const int IOC_VENDOR = 0x18000000;
-const int SIO_KEEPALIVE_VALS = IOC_IN | IOC_VENDOR | 4;
+enum IOC_VENDOR = 0x18000000;
+enum SIO_KEEPALIVE_VALS = IOC_IN | IOC_VENDOR | 4;
 
 /* Argument structure for SIO_KEEPALIVE_VALS */
 struct tcp_keepalive
