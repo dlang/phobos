@@ -3819,7 +3819,7 @@ template BacktrackingMatcher(bool CTregex)
             //helper function, saves engine state
             void pushState(uint pc, uint counter)
             {
-                if(stateSize + matches.length > stackAvail)
+                if(stateSize + trackers.length + matches.length > stackAvail)
                 {
                     newStack();
                     lastState = 0;
@@ -3829,6 +3829,11 @@ template BacktrackingMatcher(bool CTregex)
                 lastState += stateSize;
                 memory[lastState .. lastState + 2 * matches.length] = (cast(size_t[])matches)[];
                 lastState += 2*matches.length;
+                if(trackers.length)
+                {
+                    memory[lastState .. lastState + trackers.length] = trackers[];
+                    lastState += trackers.length;
+                }
                 debug(std_regex_matcher)
                     writefln("Saved(pc=%s) front: %s src: %s",
                         pc, front, s[index..s.lastIndex]);
@@ -3839,9 +3844,14 @@ template BacktrackingMatcher(bool CTregex)
             {
                 if(!lastState)
                     return prevStack();
+                if (trackers.length)
+                {
+                    lastState -= trackers.length;
+                    trackers[] = memory[lastState .. lastState + trackers.length];
+                }
                 lastState -= 2*matches.length;
                 auto pm = cast(size_t[])matches;
-                pm[] = memory[lastState .. lastState+2*matches.length];
+                pm[] = memory[lastState .. lastState + 2 * matches.length];
                 lastState -= stateSize;
                 State* state = cast(State*)&memory[lastState];
                 index = state.index;
@@ -3956,6 +3966,12 @@ struct CtContext
                     stackPop(counter);"
             : "
                     counter = 0;";
+        if(infNesting)
+        {
+            text ~= ctSub(`
+                    stackPop(trackers[0..$$]);
+                    `, curInfLoop + 1);
+        }
         if(match < total_matches)
         {
             text ~= ctSub("
@@ -3973,7 +3989,7 @@ struct CtContext
     string saveCode(uint pc, string count_expr="counter")
     {
         string text = ctSub("
-                    if(stackAvail < $$*(Group!(DataIndex)).sizeof/size_t.sizeof + $$)
+                    if(stackAvail < $$*(Group!(DataIndex)).sizeof/size_t.sizeof + trackers.length + $$)
                     {
                         newStack();
                         lastState = 0;
@@ -3984,6 +4000,12 @@ struct CtContext
         else
             text ~= ctSub("
                     stackPush(matches[$$..$]);", reserved);
+        if(infNesting)
+        {
+            text ~= ctSub(`
+                    stackPush(trackers[0..$$]);
+                    `, curInfLoop + 1);
+        }
         text ~= counter ? ctSub("
                     stackPush($$);", count_expr) : "";
         text ~= ctSub("
@@ -4168,18 +4190,18 @@ struct CtContext
         {
         case IR.InfiniteStart, IR.InfiniteQStart:
             r ~= ctSub( `
-                    tracker_$$ = DataIndex.max;
+                    trackers[$$] = DataIndex.max;
                     goto case $$;`, curInfLoop, fixup);
             ir = ir[ir[0].length..$];
             break;
         case IR.InfiniteEnd:
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
             r ~= ctSub( `
-                    if(tracker_$$ == index)
+                    if(trackers[$$] == index)
                     {//source not consumed
                         goto case $$;
                     }
-                    tracker_$$ = index;
+                    trackers[$$] = index;
 
                     $$
                     {
@@ -4197,11 +4219,11 @@ struct CtContext
             testCode = ctQuickTest(ir[IRL!(IR.InfiniteEnd) .. $],addr + 1);
             auto altCode = testCode.length ? ctSub("else goto case $$;", fixup) : "";
             r ~= ctSub( `
-                    if(tracker_$$ == index)
+                    if(trackers[$$] == index)
                     {//source not consumed
                         goto case $$;
                     }
-                    tracker_$$ = index;
+                    trackers[$$] = index;
 
                     $$
                     {
@@ -4513,9 +4535,6 @@ struct CtContext
             counter = 0;
             lastState = 0;
             auto start = s._index;`;
-        for(int i = 0; i < nInfLoops; i++)
-            r ~= ctSub(`
-            size_t tracker_$$;`, i);
         r ~= `
             goto StartLoop;
             debug(std_regex_matcher) writeln("Try CT matching  starting at ",s[index..s.lastIndex]);
@@ -7507,6 +7526,13 @@ unittest
 {
     auto r = regex(`(?P<a>abc)`);
     assert(collectException("abc".matchFirst(r)["b"]));
+}
+
+// bugzilla 12691
+unittest
+{
+    assert(bmatch("e@", "^([a-z]|)*$").empty);
+    assert(bmatch("e@", ctRegex!`^([a-z]|)*$`).empty);
 }
 
 }//version(unittest)
