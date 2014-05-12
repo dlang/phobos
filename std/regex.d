@@ -1542,6 +1542,7 @@ struct Parser(R)
                     break L_CharTermLoop;
                 default:
                     addWithFlags(set, last, re_flags);
+                    state = State.Char;
                     last = current;
                 }
                 break;
@@ -7533,6 +7534,12 @@ unittest
 {
     assert(bmatch("e@", "^([a-z]|)*$").empty);
     assert(bmatch("e@", ctRegex!`^([a-z]|)*$`).empty);
+}
+
+//bugzilla  12713
+unittest
+{
+    assertThrown(regex("[[a-z]([a-z]|(([[a-z])))"));
 }
 
 }//version(unittest)
