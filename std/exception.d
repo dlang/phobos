@@ -945,10 +945,47 @@ bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @t
         return false;
     }
 }
+
+bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
+    if (__traits(isRef, source) || isDynamicArray!S ||
+        isPointer!S || is(S == class))
+{
+    static if (isPointer!S || is(S == class))
+    {
+        const m = cast(void*) source,
+              b = cast(void*) &target, e = b + target.sizeof;
+        return b <= m && m < e;
+    }
+    else static if (is(S == struct) || is(S == union))
+    {
+        foreach (i, Subobj; typeof(source.tupleof))
+            if (mayPointTo(source.tupleof[i], target)) return true;
+        return false;
+    }
+    else static if (isStaticArray!S)
+    {
+        foreach (size_t i; 0 .. S.length)
+            if (mayPointTo(source[i], target)) return true;
+        return false;
+    }
+    else static if (isDynamicArray!S)
+    {
+        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 // for shared objects
 bool pointsTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
     return pointsTo!(shared S, shared T, void)(source, target);
+}
+bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
+{
+    return mayPointTo!(shared S, shared T, void)(source, target);
 }
 
 /// Pointers
