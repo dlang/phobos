@@ -987,6 +987,59 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 {
     return mayPointTo!(shared S, shared T, void)(source, target);
 }
+/+
+Returns true if the field at index $(D i) in ($D T) shares its address with another field.
+
+Note: This does not merelly check if the field is a member of an union, but also that
+it is not a single child.
++/
+package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
+private bool isUnionAliasedImpl(T)(size_t offset)
+{
+    int count = 0;
+    foreach (i, U; typeof(T.tupleof))
+        if (T.tupleof[i].offsetof == offset)
+            ++count;
+    return count >= 2;
+}
+//
+unittest
+{
+    static struct S
+    {
+        int a0; //Not aliased
+        union
+        {
+            int a1; //Not aliased
+        }
+        union
+        {
+            int a2; //Aliased
+            int a3; //Aliased
+        }
+        union A4
+        {
+            int b0; //Not aliased
+        };
+        A4 a4;
+        union A5
+        {
+            int b0; //Aliased
+            int b1; //Aliased
+        };
+        A5 a5;
+    }
+
+    static assert(!isUnionAliased!(S, 0)); //a0;
+    static assert(!isUnionAliased!(S, 1)); //a1;
+    static assert( isUnionAliased!(S, 2)); //a2;
+    static assert( isUnionAliased!(S, 3)); //a3;
+    static assert(!isUnionAliased!(S, 4)); //a4;
+        static assert(!isUnionAliased!(S.A4, 0)); //a4.b0;
+    static assert(!isUnionAliased!(S, 5)); //a5;
+        static assert( isUnionAliased!(S.A5, 0)); //a5.b0;
+        static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
+}
 
 /// Pointers
 unittest
