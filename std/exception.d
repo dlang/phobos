@@ -914,7 +914,7 @@ internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
-bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
+bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
     if (__traits(isRef, source) || isDynamicArray!S ||
         isPointer!S || is(S == class))
 {
@@ -928,13 +928,13 @@ bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @t
     {
         foreach (i, Subobj; typeof(source.tupleof))
             static if (!isUnionAliased!(S, i))
-                if (pointsTo(source.tupleof[i], target)) return true;
+                if (doesPointTo(source.tupleof[i], target)) return true;
         return false;
     }
     else static if (isStaticArray!S)
     {
         foreach (size_t i; 0 .. S.length)
-            if (pointsTo(source[i], target)) return true;
+            if (doesPointTo(source[i], target)) return true;
         return false;
     }
     else static if (isDynamicArray!S)
@@ -980,14 +980,18 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
 }
 
 // for shared objects
-bool pointsTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
+bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
-    return pointsTo!(shared S, shared T, void)(source, target);
+    return doesPointTo!(shared S, shared T, void)(source, target);
 }
 bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
 {
     return mayPointTo!(shared S, shared T, void)(source, target);
 }
+
+deprecated ("pointsTo is ambiguous. Please use either of doesPointTo or mayPointTo")
+alias pointsTo = doesPointTo;
+
 /+
 Returns true if the field at index $(D i) in ($D T) shares its address with another field.
 
