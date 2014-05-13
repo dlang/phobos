@@ -217,7 +217,7 @@ enum: int
 /// In C/C++, it is redefinable by #define-ing the macro before #include-ing
 /// winsock.h. In D, use the $(D FD_CREATE) function to allocate a $(D fd_set)
 /// of an arbitrary size.
-enum FD_SETSIZE = 64;
+enum uint FD_SETSIZE = 64;
 
 
 struct fd_set_custom(uint SETSIZE)
