@@ -893,21 +893,32 @@ unittest
 }
 
 /**
+The "pointsTo" functions, $(D doesPointTo) and $(D mayPointTo).
+
 Returns $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it.
 
-If $(D source) is or contains a dynamic array, then, then pointsTo will check
+If $(D source) is or contains a dynamic array, then, then these functions will check
 if there is overlap between the dynamic array and $(D target)'s representation.
-
-If $(D source) is or contains a union, then every member of the union is
-checked for embedded pointers. This may lead to false positives, depending on
-which should be considered the "active" member of the union.
 
 If $(D source) is a class, then pointsTo will handle it as a pointer.
 
-If $(D target) is a pointer, a dynamic array or a class, then pointsTo will only
+If $(D target) is a pointer, a dynamic array or a class, then these functions will only
 check if $(D source) points to $(D target), $(I not) what $(D target) references.
+
+If $(D source) is or contains a union, then there may be either false positives or
+false negatives:
+
+$(D doesPointTo) will return $(D true) if it is absolutly certain
+$(D source) points to $(D target). It may produce false negatives, but never
+false positives. This function should be prefered when trying to validate
+input data.
+
+$(D mayPointTo) will return $(D false) if it is absolutly certain
+$(D source) does not point to $(D target). It may produce false positives, but never
+false negatives. This function should be prefered for defensively choosing a
+code path.
 
 Note: Evaluating $(D pointsTo(x, x)) checks whether $(D x) has
 internal pointers. This should only be done as an assertive test,
