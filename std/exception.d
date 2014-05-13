@@ -927,7 +927,8 @@ bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @t
     else static if (is(S == struct) || is(S == union))
     {
         foreach (i, Subobj; typeof(source.tupleof))
-            if (pointsTo(source.tupleof[i], target)) return true;
+            static if (!isUnionAliased!(S, i))
+                if (pointsTo(source.tupleof[i], target)) return true;
         return false;
     }
     else static if (isStaticArray!S)
