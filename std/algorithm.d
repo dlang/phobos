@@ -2391,7 +2391,7 @@ unittest
 
 unittest // 9975
 {
-    import std.exception : pointsTo;
+    import std.exception : doesPointTo, mayPointTo;
     static struct S2
     {
         union
@@ -2402,7 +2402,8 @@ unittest // 9975
     }
     S2 a , b;
     a.sz = -1;
-    assert(pointsTo(a, b));
+    assert(!doesPointTo(a, b));
+    assert( mayPointTo(a, b));
     swap(a, b);
 }
 

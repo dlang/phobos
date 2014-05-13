@@ -1051,9 +1051,9 @@ unittest
 {
     int  i = 0;
     int* p = null;
-    assert(!p.pointsTo(i));
+    assert(!p.doesPointTo(i));
     p = &i;
-    assert( p.pointsTo(i));
+    assert( p.doesPointTo(i));
 }
 
 /// Structs and Unions
@@ -1069,9 +1069,9 @@ unittest
 
     //structs and unions "own" their members
     //pointsTo will answer true if one of the members pointsTo.
-    assert(!s.pointsTo(s.v)); //s.v is just v member of s, so not pointed.
-    assert( s.p.pointsTo(i)); //i is pointed by s.p.
-    assert( s  .pointsTo(i)); //which means i is pointed by s itself.
+    assert(!s.doesPointTo(s.v)); //s.v is just v member of s, so not pointed.
+    assert( s.p.doesPointTo(i)); //i is pointed by s.p.
+    assert( s  .doesPointTo(i)); //which means i is pointed by s itself.
 
     //Unions will behave exactly the same. Points to will check each "member"
     //individually, even if they share the same memory
@@ -1087,23 +1087,23 @@ unittest
     int*[1] arrp   = [&i];
 
     //A slice points to all of its members:
-    assert( slice.pointsTo(slice[3]));
-    assert(!slice[0 .. 2].pointsTo(slice[3])); //Object 3 is outside of the slice [0 .. 2]
+    assert( slice.doesPointTo(slice[3]));
+    assert(!slice[0 .. 2].doesPointTo(slice[3])); //Object 3 is outside of the slice [0 .. 2]
 
     //Note that a slice will not take into account what its members point to.
-    assert( slicep[0].pointsTo(i));
-    assert(!slicep   .pointsTo(i));
+    assert( slicep[0].doesPointTo(i));
+    assert(!slicep   .doesPointTo(i));
 
     //static arrays are objects that own their members, just like structs:
-    assert(!arr.pointsTo(arr[0])); //arr[0] is just a member of arr, so not pointed.
-    assert( arrp[0].pointsTo(i));  //i is pointed by arrp[0].
-    assert( arrp   .pointsTo(i));  //which means i is pointed by arrp itslef.
+    assert(!arr.doesPointTo(arr[0])); //arr[0] is just a member of arr, so not pointed.
+    assert( arrp[0].doesPointTo(i));  //i is pointed by arrp[0].
+    assert( arrp   .doesPointTo(i));  //which means i is pointed by arrp itslef.
 
     //Notice the difference between static and dynamic arrays:
-    assert(!arr  .pointsTo(arr[0]));
-    assert( arr[].pointsTo(arr[0]));
-    assert( arrp  .pointsTo(i));
-    assert(!arrp[].pointsTo(i));
+    assert(!arr  .doesPointTo(arr[0]));
+    assert( arr[].doesPointTo(arr[0]));
+    assert( arrp  .doesPointTo(i));
+    assert(!arrp[].doesPointTo(i));
 }
 
 /// Classes
@@ -1119,21 +1119,21 @@ unittest
     C b = a;
     //Classes are a bit particular, as they are treated like simple pointers
     //to a class payload.
-    assert( a.p.pointsTo(i)); //a.p points to i.
-    assert(!a  .pointsTo(i)); //Yet a itself does not point i.
+    assert( a.p.doesPointTo(i)); //a.p points to i.
+    assert(!a  .doesPointTo(i)); //Yet a itself does not point i.
 
     //To check the class payload itself, iterate on its members:
     ()
     {
         foreach (index, _; FieldTypeTuple!C)
-            if (pointsTo(a.tupleof[index], i))
+            if (doesPointTo(a.tupleof[index], i))
                 return;
         assert(0);
     }();
 
     //To check if a class points a specific payload, a direct memmory check can be done:
     auto aLoc = cast(ubyte[__traits(classInstanceSize, C)]*) a;
-    assert(b.pointsTo(*aLoc)); //b points to where a is pointing
+    assert(b.doesPointTo(*aLoc)); //b points to where a is pointing
 }
 
 unittest
@@ -1141,49 +1141,49 @@ unittest
     struct S1 { int a; S1 * b; }
     S1 a1;
     S1 * p = &a1;
-    assert(pointsTo(p, a1));
+    assert(doesPointTo(p, a1));
 
     S1 a2;
     a2.b = &a1;
-    assert(pointsTo(a2, a1));
+    assert(doesPointTo(a2, a1));
 
     struct S3 { int[10] a; }
     S3 a3;
     auto a4 = a3.a[2 .. 3];
-    assert(pointsTo(a4, a3));
+    assert(doesPointTo(a4, a3));
 
     auto a5 = new double[4];
     auto a6 = a5[1 .. 2];
-    assert(!pointsTo(a5, a6));
+    assert(!doesPointTo(a5, a6));
 
     auto a7 = new double[3];
     auto a8 = new double[][1];
     a8[0] = a7;
-    assert(!pointsTo(a8[0], a8[0]));
+    assert(!doesPointTo(a8[0], a8[0]));
 
     // don't invoke postblit on subobjects
     {
         static struct NoCopy { this(this) { assert(0); } }
         static struct Holder { NoCopy a, b, c; }
         Holder h;
-        cast(void)pointsTo(h, h);
+        cast(void)doesPointTo(h, h);
     }
 
     shared S3 sh3;
     shared sh3sub = sh3.a[];
-    assert(pointsTo(sh3sub, sh3));
+    assert(doesPointTo(sh3sub, sh3));
 
     int[] darr = [1, 2, 3, 4];
 
     //dynamic arrays don't point to each other, or slices of themselves
-    assert(!pointsTo(darr, darr));
-    assert(!pointsTo(darr[0 .. 1], darr));
+    assert(!doesPointTo(darr, darr));
+    assert(!doesPointTo(darr[0 .. 1], darr));
 
     //But they do point their elements
     foreach(i; 0 .. 4)
-        assert(pointsTo(darr, darr[i]));
-    assert(pointsTo(darr[0..3], darr[2]));
-    assert(!pointsTo(darr[0..3], darr[3]));
+        assert(doesPointTo(darr, darr[i]));
+    assert(doesPointTo(darr[0..3], darr[2]));
+    assert(!doesPointTo(darr[0..3], darr[3]));
 }
 
 unittest
@@ -1195,22 +1195,22 @@ unittest
 
     //Standard array
     int[2] k;
-    assert(!pointsTo(k, k)); //an array doesn't point to itself
+    assert(!doesPointTo(k, k)); //an array doesn't point to itself
     //Technically, k doesn't point its elements, although it does alias them
-    assert(!pointsTo(k, k[0]));
-    assert(!pointsTo(k, k[1]));
+    assert(!doesPointTo(k, k[0]));
+    assert(!doesPointTo(k, k[1]));
     //But an extracted slice will point to the same array.
-    assert(pointsTo(k[], k));
-    assert(pointsTo(k[], k[1]));
+    assert(doesPointTo(k[], k));
+    assert(doesPointTo(k[], k[1]));
 
     //An array of pointers
     int*[2] pp;
     int a;
     int b;
     pp[0] = &a;
-    assert( pointsTo(pp, a));  //The array contains a pointer to a
-    assert(!pointsTo(pp, b));  //The array does NOT contain a pointer to b
-    assert(!pointsTo(pp, pp)); //The array does not point itslef
+    assert( doesPointTo(pp, a));  //The array contains a pointer to a
+    assert(!doesPointTo(pp, b));  //The array does NOT contain a pointer to b
+    assert(!doesPointTo(pp, pp)); //The array does not point itslef
 
     //A struct containing a static array of pointers
     static struct S
@@ -1219,9 +1219,9 @@ unittest
     }
     S s;
     s.p[0] = &a;
-    assert( pointsTo(s, a)); //The struct contains an array that points a
-    assert(!pointsTo(s, b)); //But doesn't point b
-    assert(!pointsTo(s, s)); //The struct doesn't actually point itslef.
+    assert( doesPointTo(s, a)); //The struct contains an array that points a
+    assert(!doesPointTo(s, b)); //But doesn't point b
+    assert(!doesPointTo(s, s)); //The struct doesn't actually point itslef.
 
     //An array containing structs that have pointers
     static struct SS
@@ -1229,9 +1229,9 @@ unittest
         int* p;
     }
     SS[2] ss = [SS(&a), SS(null)];
-    assert( pointsTo(ss, a));  //The array contains a struct that points to a
-    assert(!pointsTo(ss, b));  //The array doesn't contains a struct that points to b
-    assert(!pointsTo(ss, ss)); //The array doesn't point itself.
+    assert( doesPointTo(ss, a));  //The array contains a struct that points to a
+    assert(!doesPointTo(ss, b));  //The array doesn't contains a struct that points to b
+    assert(!doesPointTo(ss, ss)); //The array doesn't point itself.
 }
 
 
@@ -1254,18 +1254,24 @@ unittest //Unions
 
     U u;
     S s;
-    assert(!pointsTo(u, i));
-    assert(!pointsTo(s, i));
+    assert(!doesPointTo(u, i));
+    assert(!doesPointTo(s, i));
+    assert(!mayPointTo(u, i));
+    assert(!mayPointTo(s, i));
 
     u.asPointer = &i;
     s.asPointer = &i;
-    assert( pointsTo(u, i));
-    assert( pointsTo(s, i));
+    assert(!doesPointTo(u, i));
+    assert(!doesPointTo(s, i));
+    assert( mayPointTo(u, i));
+    assert( mayPointTo(s, i));
 
     u.asInt = cast(size_t)&i;
     s.asInt = cast(size_t)&i;
-    assert( pointsTo(u, i)); //logical false positive
-    assert( pointsTo(s, i)); //logical false positive
+    assert(!doesPointTo(u, i));
+    assert(!doesPointTo(s, i));
+    assert( mayPointTo(u, i));
+    assert( mayPointTo(s, i));
 }
 
 unittest //Classes
@@ -1276,9 +1282,9 @@ unittest //Classes
         int* p;
     }
     A a = new A, b = a;
-    assert(!pointsTo(a, b)); //a does not point to b
+    assert(!doesPointTo(a, b)); //a does not point to b
     a.p = &i;
-    assert(!pointsTo(a, i)); //a does not point to i
+    assert(!doesPointTo(a, i)); //a does not point to i
 }
 unittest //alias this test
 {
@@ -1292,10 +1298,10 @@ unittest //alias this test
     }
     assert(is(S : int*));
     S s = S(&j);
-    assert(!pointsTo(s, i));
-    assert( pointsTo(s, j));
-    assert( pointsTo(cast(int*)s, i));
-    assert(!pointsTo(cast(int*)s, j));
+    assert(!doesPointTo(s, i));
+    assert( doesPointTo(s, j));
+    assert( doesPointTo(cast(int*)s, i));
+    assert(!doesPointTo(cast(int*)s, j));
 }
 
 /*********************
