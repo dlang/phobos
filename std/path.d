@@ -128,8 +128,9 @@ version(Posix) private alias isSeparator = isDirSeparator;
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ptrdiff_t lastSeparator(C)(in C[] path)  @safe pure nothrow @nogc
-    if (isSomeChar!C)
+private ptrdiff_t lastSeparator(R)(const R path)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i])) --i;
@@ -139,13 +140,17 @@ private ptrdiff_t lastSeparator(C)(in C[] path)  @safe pure nothrow @nogc
 
 version (Windows)
 {
-    private bool isUNC(C)(in C[] path) @safe pure nothrow @nogc  if (isSomeChar!C)
+    private bool isUNC(R)(const R path)
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isNarrowString!R)
     {
         return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
             && !isDirSeparator(path[2]);
     }
 
-    private ptrdiff_t uncRootLength(C)(in C[] path) @safe pure nothrow @nogc  if (isSomeChar!C)
+    private ptrdiff_t uncRootLength(R)(const R path)
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isNarrowString!R)
         in { assert (isUNC(path)); }
         body
     {
@@ -164,12 +169,16 @@ version (Windows)
         return i;
     }
 
-    private bool hasDrive(C)(in C[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
+    private bool hasDrive(R)(const R path)
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isNarrowString!R)
     {
         return path.length >= 2 && isDriveSeparator(path[1]);
     }
 
-    private bool isDriveRoot(C)(in C[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
+    private bool isDriveRoot(R)(const R path)
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isNarrowString!R)
     {
         return path.length >= 3 && isDriveSeparator(path[1])
             && isDirSeparator(path[2]);
@@ -180,24 +189,27 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private inout(C)[] ltrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow @nogc
-    if (isSomeChar!C)
+private auto ltrimDirSeparators(R)(inout R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     int i = 0;
     while (i < path.length && isDirSeparator(path[i])) ++i;
-    return path[i .. $];
+    return path[i .. path.length];
 }
 
-private inout(C)[] rtrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow @nogc
-    if (isSomeChar!C)
+private auto rtrimDirSeparators(R)(inout R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && isDirSeparator(path[i])) --i;
     return path[0 .. i+1];
 }
 
-private inout(C)[] trimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow @nogc
-    if (isSomeChar!C)
+private auto trimDirSeparators(R)(inout R path)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
 }
@@ -273,7 +285,7 @@ else static assert (0);
     (with suitable adaptations for Windows paths).
 */
 inout(C)[] baseName(C)(inout(C)[] path)
-    @trusted pure //TODO: nothrow (BUG 5700)
+    @trusted pure nothrow
     if (isSomeChar!C)
 {
     auto p1 = stripDrive(path);
@@ -588,12 +600,14 @@ unittest
     }
     ---
 */
-inout(C)[] stripDrive(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
+auto stripDrive(R)(inout R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     version(Windows)
     {
-        if (hasDrive(path))      return path[2 .. $];
-        else if (isUNC(path))    return path[uncRootLength(path) .. $];
+        if (hasDrive(path))      return path[2 .. path.length];
+        else if (isUNC(path))    return path[uncRootLength(path) .. path.length];
     }
     return path;
 }
@@ -606,10 +620,20 @@ unittest
         assert (stripDrive(`d:\dir\file`) == `\dir\file`);
         assert (stripDrive(`\\server\share\dir\file`) == `\dir\file`);
         static assert (stripDrive(`d:\dir\file`) == `\dir\file`);
+
+        auto r = MockRange!(immutable(char))(`d:\dir\file`);
+        auto s = r.stripDrive();
+        foreach (i, c; `\dir\file`)
+            assert(s[i] == c);
     }
     version(Posix)
     {
         assert (stripDrive(`d:\dir\file`) == `d:\dir\file`);
+
+        auto r = MockRange!(immutable(char))(`d:\dir\file`);
+        auto s = r.stripDrive();
+        foreach (i, c; `d:\dir\file`)
+            assert(s[i] == c);
     }
 }
 
@@ -2923,4 +2947,35 @@ unittest
             assert(expandTilde("~root/") == "/root/", expandTilde("~root/"));
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }
+}
+
+version (unittest)
+{
+    /* Define a mock RandomAccessRange to use for unittesting.
+     */
+
+    struct MockRange(C)
+    {
+        this(C[] array) { this.array = array; }
+      const
+      {
+        @property size_t length() { return array.length; }
+        @property bool empty() { return array.length == 0; }
+        @property C front() { return array[0]; }
+        @property C back()  { return array[$ - 1]; }
+        @property size_t opDollar() { return length(); }
+        C opIndex(size_t i) { return array[i]; }
+      }
+        void popFront() { array = array[1 .. $]; }
+        void popBack()  { array = array[0 .. $-1]; }
+        MockRange!C opSlice( size_t lwr, size_t upr) const
+        {
+            return MockRange!C(array[lwr .. upr]);
+        }
+        @property MockRange save() { return this; }
+      private:
+        C[] array;
+    }
+
+    static assert( isRandomAccessRange!(MockRange!(const(char))) );
 }
