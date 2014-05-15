@@ -4554,10 +4554,11 @@ destruction.
 +/
 package template lvalueInit(T)
 {
-    static if (is(T == immutable(T)))
-        static lvalueInit = T.init;
-    else
-        alias lvalueInit = .lvalueInit!(immutable(T));
+    //static if (is(T == immutable(T)))
+    //    static lvalueInit = T.init;
+    //else
+    //    alias lvalueInit = .lvalueInit!(immutable(T));
+    static lvalueInit = immutable(T).init;
 }
 
 //
