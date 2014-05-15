@@ -2092,7 +2092,7 @@ unittest
 
 /**
 Computes the greatest common divisor of $(D a) and $(D b) by using
-Euler's algorithm.
+Euclid's algorithm.
  */
 T gcd(T)(T a, T b) {
     static if (is(T == const) || is(T == immutable)) {
