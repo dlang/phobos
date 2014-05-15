@@ -39,7 +39,7 @@
         Thomas Kühne,
         $(WEB erdani.org, Andrei Alexandrescu)
     Copyright:
-        Copyright (c) 2000–2011, the authors. All rights reserved.
+        Copyright (c) 2000-2014, the authors. All rights reserved.
     License:
         $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:
@@ -269,10 +269,10 @@ else static assert (0);
 
     Note:
     This function $(I only) strips away the specified suffix, which
-    doesn't necessarily have to represent an extension.  If you want
-    to remove the extension from a path, regardless of what the extension
+    doesn't necessarily have to represent an extension.
+    To remove the extension from a path, regardless of what the extension
     is, use $(LREF stripExtension).
-    If you want the filename without leading directories and without
+    To obtain the filename without leading directories and without
     an extension, combine the functions like this:
     ---
     assert (baseName(stripExtension("dir/file.ext")) == "file");
@@ -284,24 +284,27 @@ else static assert (0);
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-inout(C)[] baseName(C)(inout(C)[] path)
-    @trusted pure nothrow
-    if (isSomeChar!C)
+auto baseName(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isSomeString!R)
 {
     auto p1 = stripDrive(path);
     if (p1.empty)
     {
         version (Windows) if (isUNC(path))
         {
-            return cast(typeof(return)) dirSeparator.dup;
+            return path[0..1];
         }
-        return null;
+        static if (isSomeString!R)
+            return null;
+        else
+            return p1; // which is empty
     }
 
     auto p2 = rtrimDirSeparators(p1);
     if (p2.empty) return p1[0 .. 1];
 
-    return p2[lastSeparator(p2)+1 .. $];
+    return p2[lastSeparator(p2)+1 .. p2.length];
 }
 
 /// ditto
@@ -339,6 +342,13 @@ unittest
     assert (baseName!(CaseSensitive.yes)("file.ext", ".EXT") == "file.ext");
     assert (baseName!(CaseSensitive.no)("file.ext", ".EXT") == "file");
 
+    {
+        auto r = MockRange!(immutable(char))(`dir/file.ext`);
+        auto s = r.baseName();
+        foreach (i, c; `file`)
+            assert(s[i] == c);
+    }
+
     version (Windows)
     {
         assert (baseName(`dir\file.ext`) == `file.ext`);
@@ -358,6 +368,11 @@ unittest
         assert (baseName(`\\server\share\file`) == `file`);
         assert (baseName(`\\server\share\`) == `\`);
         assert (baseName(`\\server\share`) == `\`);
+
+        auto r = MockRange!(immutable(char))(`\\server\share`);
+        auto s = r.baseName();
+        foreach (i, c; `\`)
+            assert(s[i] == c);
     }
 
     assert (baseName(stripExtension("dir/file.ext")) == "file");
@@ -643,8 +658,9 @@ unittest
 /*  Helper function that returns the position of the filename/extension
     separator dot in path.  If not found, returns -1.
 */
-private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow @nogc
-    if (isSomeChar!C)
+private ptrdiff_t extSeparatorPos(R)(const R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isSomeString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i]))
@@ -672,11 +688,19 @@ private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow @nogc
     assert (extension(".file.ext")      == ".ext");
     ---
 */
-inout(C)[] extension(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
+auto extension(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isSomeString!R)
 {
     auto i = extSeparatorPos(path);
-    if (i == -1) return null;
-    else return path[i .. $];
+    if (i == -1)
+    {
+        static if (isSomeString!R)
+            return null;
+        else
+            return path[0 .. 0];
+    }
+    else return path[i .. path.length];
 }
 
 
@@ -715,6 +739,13 @@ unittest
 
     static assert (extension("file").empty);
     static assert (extension("file.ext") == ".ext");
+
+    {
+        auto r = MockRange!(immutable(char))(`file.ext1.ext2`);
+        auto s = r.extension();
+        foreach (i, c; `.ext2`)
+            assert(s[i] == c);
+    }
 }
 
 
@@ -1792,7 +1823,9 @@ unittest
     }
     ---
 */
-bool isRooted(C)(in C[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
+bool isRooted(R)(const R path)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isSomeString!R)
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
     version (Posix)         return false;
@@ -1858,8 +1891,9 @@ unittest
 version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow @nogc
     if (isSomeChar!C);
 
-else version (Windows) bool isAbsolute(C)(in C[] path)  @safe pure nothrow @nogc
-    if (isSomeChar!C)
+else version (Windows) bool isAbsolute(R)(const R path)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isSomeString!R)
 {
     return isDriveRoot(path) || isUNC(path);
 }
@@ -1890,6 +1924,11 @@ unittest
     assert (!isAbsolute("d:"));
     assert (!isAbsolute("d:foo"));
     static assert (isAbsolute(`d:\foo`));
+    }
+
+    {
+        auto r = MockRange!(immutable(char))(`../foo`);
+        assert(!r.isAbsolute());
     }
 }
 
