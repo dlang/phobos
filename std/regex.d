@@ -923,6 +923,14 @@ struct Parser(R)
         backrefed[n / 32] |= 1 << (n & 31);
     }
 
+    bool isOpenGroup(uint n)
+    {
+        // walk the fixup stack and see if there are groups labeled 'n'
+        // fixup '0' is reserved for alternations
+        return fixupStack.data[1..$].
+            canFind!(fix => ir[fix].code == IR.GroupStart && ir[fix].data == n)();
+    }
+
     @property dchar current(){ return _current; }
 
     bool _next()
@@ -1923,10 +1931,7 @@ struct Parser(R)
             break;
         case '1': .. case '9':
             uint nref = cast(uint)current - '0';
-            uint maxBackref;
-            foreach(v; groupStack.data)
-                maxBackref += v;
-            uint localLimit = maxBackref - groupStack.top;
+            uint maxBackref = sum(groupStack.data);
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
@@ -1936,7 +1941,8 @@ struct Parser(R)
             }
             if(nref >= maxBackref)
                 nref /= 10;
-
+            enforce(!isOpenGroup(nref), "Backref to open group");
+            uint localLimit = maxBackref - groupStack.top;
             if(nref >= localLimit)
             {
                 put(Bytecode(IR.Backref, nref-localLimit));
@@ -2283,7 +2289,7 @@ unittest
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
-    enforce(fnd < dict.length && equal(dict[fnd].name, name), 
+    enforce(fnd < dict.length && equal(dict[fnd].name, name),
         text("no submatch named ", name));
     return dict[fnd].group;
 }
@@ -2749,7 +2755,7 @@ public:
                     }
                     else
                     {
-                        
+
                         static if(charSize == 1)
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
@@ -7123,7 +7129,7 @@ unittest
     assert(equal(mx.captures, [ "B", "B"]));
     enum cx2 = ctRegex!"(A|B)*";
     assert(match("BAAA",cx2));
-    
+
     enum cx3 = ctRegex!("a{3,4}","i");
     auto mx3 = match("AaA",cx3);
     assert(mx3);
@@ -7550,6 +7556,14 @@ unittest
 unittest
 {
     assertThrown(regex("[[a-z]([a-z]|(([[a-z])))"));
+}
+
+//bugzilla 12747
+unittest
+{
+    assertThrown(regex(`^x(\1)`));
+    assertThrown(regex(`^(x(\1))`));
+    assertThrown(regex(`^((x)(?=\1))`));
 }
 
 }//version(unittest)
