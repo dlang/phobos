@@ -1901,16 +1901,15 @@ void move(T)(ref T source, ref T target)
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            static T empty;
             static if (T.tupleof.length > 0 &&
                        T.tupleof[$-1].stringof.endsWith("this"))
             {
                 // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+                memcpy(&source, &lvalueInit!T, T.sizeof - (void*).sizeof);
             }
             else
             {
-                memcpy(&source, &empty, T.sizeof);
+                memcpy(&source, &lvalueInit!T, T.sizeof);
             }
         }
     }
@@ -1974,6 +1973,22 @@ unittest
     assert(s42.x.n == 1);
 }
 
+unittest
+{
+    static struct S
+    {
+        int i;
+        @disable this();
+        @disable this(this);
+        void opAssign(S){assert(0);}
+        ~this(){}
+    }
+    S a = S.init;
+    S b = void;
+    a.move(b);
+    b.move();
+}
+
 /// Ditto
 T move(T)(ref T source)
 {
@@ -1994,16 +2009,15 @@ T move(T)(ref T source)
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            static T empty;
             static if (T.tupleof.length > 0 &&
                        T.tupleof[$-1].stringof.endsWith("this"))
             {
                 // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+                memcpy(&source, &lvalueInit!T, T.sizeof - (void*).sizeof);
             }
             else
             {
-                memcpy(&source, &empty, T.sizeof);
+                memcpy(&source, &lvalueInit!T, T.sizeof);
             }
         }
     }

@@ -3975,8 +3975,7 @@ private ref T emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
         chunk = T.init;
     else
     {
-        static immutable T init = T.init;
-        memcpy(&chunk, &init, T.sizeof);
+        memcpy(&chunk, &lvalueInit!T, T.sizeof);
     }
     return chunk;
 }
