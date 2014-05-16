@@ -4319,6 +4319,8 @@ struct CtContext
             {
                 pc++;
             }
+            else if(ir[pc].code == IR.Backref)
+                break;
             else
             {
                 auto code = ctAtomCode(ir[pc..$], -1);
@@ -7520,6 +7522,14 @@ unittest
 {
     assert("abcdefghijklmnopqrstuvwxyz"
         .matchFirst("[a-z&&[^aeiuo]]").hit == "b");
+}
+
+//bugzilla 12366
+unittest
+{
+     auto re = ctRegex!(`^((?=(xx+?)\2+$)((?=\2+$)(?=(x+)(\4+$))\5){2})*x?$`);
+     assert("xxxxxxxx".match(re).empty);
+     assert(!"xxxx".match(re).empty);
 }
 
 // bugzilla 12582
