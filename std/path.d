@@ -2513,7 +2513,9 @@ unittest
     On POSIX, $(D filename) may not contain a forward slash ($(D '/')) or
     the null character ($(D '\0')).
 */
-bool isValidFilename(C)(in C[] filename)  @safe pure nothrow @nogc  if (isSomeChar!C)
+bool isValidFilename(R)(R filename)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isSomeString!R)
 {
     import core.stdc.stdio;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
@@ -2536,7 +2538,9 @@ bool isValidFilename(C)(in C[] filename)  @safe pure nothrow @nogc  if (isSomeCh
                 case '?':
                 case '*':
                     return false;
+
                 default:
+                    break;
             }
         }
         else version (Posix)
@@ -2547,7 +2551,8 @@ bool isValidFilename(C)(in C[] filename)  @safe pure nothrow @nogc  if (isSomeCh
     }
     version (Windows)
     {
-        if (filename[$-1] == '.' || filename[$-1] == ' ') return false;
+        auto last = filename[filename.length - 1];
+        if (last == '.' || last == ' ') return false;
     }
 
     // All criteria passed
@@ -2572,6 +2577,11 @@ unittest
             assert (isValidFilename(to!T(fn)));
         foreach (fn; invalid)
             assert (!isValidFilename(to!T(fn)));
+    }
+
+    {
+        auto r = MockRange!(immutable(char))(`dir/file.d`);
+        assert(!isValidFilename(r));
     }
 }
 
