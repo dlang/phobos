@@ -417,12 +417,12 @@ be compatible with the mode of the file descriptor.
 
 Throws: $(D ErrnoException) in case of error.
  */
-    void fdopen(int fd, in char[] stdioOpenmode = "rb")
+    void fdopen(int fd, in char[] stdioOpenmode = "rb") @safe
     {
         fdopen(fd, stdioOpenmode, null);
     }
 
-    package void fdopen(int fd, in char[] stdioOpenmode, string name)
+    package void fdopen(int fd, in char[] stdioOpenmode, string name) @trusted
     {
         import std.string : toStringz;
         import std.exception : errnoEnforce;
