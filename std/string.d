@@ -946,7 +946,7 @@ unittest
 }
 
 private ptrdiff_t indexOfAnyImpl(bool forward, Char, Char2)(
-        const(Char)[] haystack, const(Char2)[] needles, 
+        const(Char)[] haystack, const(Char2)[] needles,
         CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
@@ -960,7 +960,7 @@ private ptrdiff_t indexOfAnyImpl(bool forward, Char, Char2)(
         else
         {
             size_t n = haystack.retro.findAmong(needles).source.length;
-            if (n) 
+            if (n)
             {
                 return n - haystack.strideBack(n);
             }
@@ -1035,7 +1035,7 @@ private ptrdiff_t indexOfAnyImpl(bool forward, Char, Char2)(
 
 /**
     Returns the index of the first occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found, 
+    needles) in $(D haystack). If no element of $(D needles) is found,
     then $(D -1) is returned.
 
     Params:
@@ -1044,7 +1044,7 @@ private ptrdiff_t indexOfAnyImpl(bool forward, Char, Char2)(
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
         CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
-{    
+{
     return indexOfAnyImpl!(true)(haystack, needles, cs);
 }
 
@@ -1073,16 +1073,16 @@ unittest
             assert(indexOfAny(to!S("dfefffg"), to!T("fgh")) == 1);
             assert(indexOfAny(to!S("dfeffgfff"), to!T("feg")) == 1);
 
-            assert(indexOfAny(to!S("zfeffgfff"), to!T("ACDC"), 
+            assert(indexOfAny(to!S("zfeffgfff"), to!T("ACDC"),
                 CaseSensitive.no) == -1);
-            assert(indexOfAny(to!S("def"), to!T("MI6"), 
+            assert(indexOfAny(to!S("def"), to!T("MI6"),
                 CaseSensitive.no) == -1);
-            assert(indexOfAny(to!S("abba"), to!T("DEA"), 
+            assert(indexOfAny(to!S("abba"), to!T("DEA"),
                 CaseSensitive.no) == 0);
             assert(indexOfAny(to!S("def"), to!T("FBI"), CaseSensitive.no) == 2);
-            assert(indexOfAny(to!S("dfefffg"), to!T("NSA"), CaseSensitive.no) 
+            assert(indexOfAny(to!S("dfefffg"), to!T("NSA"), CaseSensitive.no)
                 == -1);
-            assert(indexOfAny(to!S("dfeffgfff"), to!T("BND"), 
+            assert(indexOfAny(to!S("dfeffgfff"), to!T("BND"),
                 CaseSensitive.no) == 0);
 
             assert(indexOfAny("\u0100", to!T("\u0100"), CaseSensitive.no) == 0);
@@ -1093,9 +1093,9 @@ unittest
 
 /**
     Returns the index of the first occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found, 
-    then $(D -1) is returned. The $(D startIdx) slices $(D s) in the following 
-    way $(D haystack[startIdx .. $]). $(D startIdx) represents a codeunit 
+    needles) in $(D haystack). If no element of $(D needles) is found,
+    then $(D -1) is returned. The $(D startIdx) slices $(D s) in the following
+    way $(D haystack[startIdx .. $]). $(D startIdx) represents a codeunit
     index in $(D haystack). If the sequence ending at $(D startIdx) does not
     represent a well formed codepoint, then a $(XREF utf,UTFException) may be
     thrown.
@@ -1109,7 +1109,7 @@ unittest
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
         const size_t startIdx, CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
-{    
+{
     if (startIdx < haystack.length)
     {
         ptrdiff_t foundIdx = indexOfAny(haystack[startIdx .. $], needles, cs);
@@ -1147,32 +1147,32 @@ unittest
             assert(indexOfAny(to!S("dfefffg"), to!T("foo"), 2) == 3);
             assert(indexOfAny(to!S("dfeffgfff"), to!T("fsb"), 5) == 6);
 
-            assert(indexOfAny(to!S("dfeffgfff"), to!T("NDS"), 1, 
+            assert(indexOfAny(to!S("dfeffgfff"), to!T("NDS"), 1,
                 CaseSensitive.no) == -1);
-            assert(indexOfAny(to!S("def"), to!T("DRS"), 2, 
+            assert(indexOfAny(to!S("def"), to!T("DRS"), 2,
                 CaseSensitive.no) == -1);
-            assert(indexOfAny(to!S("abba"), to!T("SI"), 3, 
+            assert(indexOfAny(to!S("abba"), to!T("SI"), 3,
                 CaseSensitive.no) == -1);
-            assert(indexOfAny(to!S("deO"), to!T("ASIO"), 1, 
+            assert(indexOfAny(to!S("deO"), to!T("ASIO"), 1,
                 CaseSensitive.no) == 2);
-            assert(indexOfAny(to!S("dfefffg"), to!T("fbh"), 2, 
+            assert(indexOfAny(to!S("dfefffg"), to!T("fbh"), 2,
                 CaseSensitive.no) == 3);
-            assert(indexOfAny(to!S("dfeffgfff"), to!T("fEe"), 4, 
+            assert(indexOfAny(to!S("dfeffgfff"), to!T("fEe"), 4,
                 CaseSensitive.no) == 4);
             assert(indexOfAny(to!S("dfeffgffföä"), to!T("föä"), 9,
                 CaseSensitive.no) == 9);
 
-            assert(indexOfAny("\u0100", to!T("\u0100"), 0, 
+            assert(indexOfAny("\u0100", to!T("\u0100"), 0,
                 CaseSensitive.no) == 0);
         }
 
         foreach(cs; EnumMembers!CaseSensitive)
         {
-            assert(indexOfAny("hello\U00010143\u0100\U00010143", 
+            assert(indexOfAny("hello\U00010143\u0100\U00010143",
                 to!S("e\u0100"), 3, cs) == 9);
-            assert(indexOfAny("hello\U00010143\u0100\U00010143"w, 
+            assert(indexOfAny("hello\U00010143\u0100\U00010143"w,
                 to!S("h\u0100"), 3, cs) == 7);
-            assert(indexOfAny("hello\U00010143\u0100\U00010143"d, 
+            assert(indexOfAny("hello\U00010143\u0100\U00010143"d,
                 to!S("l\u0100"), 5, cs) == 6);
         }
     }
@@ -1180,16 +1180,16 @@ unittest
 
 /**
     Returns the index of the last occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found, 
+    needles) in $(D haystack). If no element of $(D needles) is found,
     then $(D -1) is returned.
 
     Params:
         cs = Indicates whether the comparisons are case sensitive.
 */
-ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack, 
+ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
-{    
+{
     return indexOfAnyImpl!(false)(haystack, needles, cs);
 }
 
@@ -1197,7 +1197,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 unittest
 {
     ptrdiff_t i = "helloWorld".lastIndexOfAny("Wlo");
-    assert(i == 8); 
+    assert(i == 8);
 
     i = "Foo öäöllo world".lastIndexOfAny("öF");
     assert(i == 8);
@@ -1228,15 +1228,15 @@ unittest
             auto foundOeIdx = lastIndexOfAny(to!S("dfeffgföf"), to!T("feg"));
             assert(foundOeIdx == oeIdx, to!string(foundOeIdx));
 
-            assert(lastIndexOfAny(to!S("zfeffgfff"), to!T("ACDC"), 
+            assert(lastIndexOfAny(to!S("zfeffgfff"), to!T("ACDC"),
                 CaseSensitive.no) == -1);
-            assert(lastIndexOfAny(to!S("def"), to!T("MI6"), 
+            assert(lastIndexOfAny(to!S("def"), to!T("MI6"),
                 CaseSensitive.no) == -1);
-            assert(lastIndexOfAny(to!S("abba"), to!T("DEA"), 
+            assert(lastIndexOfAny(to!S("abba"), to!T("DEA"),
                 CaseSensitive.no) == 3);
-            assert(lastIndexOfAny(to!S("def"), to!T("FBI"), 
+            assert(lastIndexOfAny(to!S("def"), to!T("FBI"),
                 CaseSensitive.no) == 2);
-            assert(lastIndexOfAny(to!S("dfefffg"), to!T("NSA"), 
+            assert(lastIndexOfAny(to!S("dfefffg"), to!T("NSA"),
                 CaseSensitive.no) == -1);
 
             oeIdx = 2;
@@ -1244,10 +1244,10 @@ unittest
             {
                 oeIdx = 1;
             }
-            assert(lastIndexOfAny(to!S("ödfeffgfff"), to!T("BND"), 
+            assert(lastIndexOfAny(to!S("ödfeffgfff"), to!T("BND"),
                 CaseSensitive.no) == oeIdx);
 
-            assert(lastIndexOfAny("\u0100", to!T("\u0100"), 
+            assert(lastIndexOfAny("\u0100", to!T("\u0100"),
                 CaseSensitive.no) == 0);
         }
     }
@@ -1256,10 +1256,10 @@ unittest
 
 /**
     Returns the index of the last occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found, 
-    then $(D -1) is returned. The $(D stopIdx) slices $(D s) in the following 
-    way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit index in 
-    $(D s). If the sequence ending at $(D startIdx) does not represent a well 
+    needles) in $(D haystack). If no element of $(D needles) is found,
+    then $(D -1) is returned. The $(D stopIdx) slices $(D s) in the following
+    way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit index in
+    $(D s). If the sequence ending at $(D startIdx) does not represent a well
     formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     Params:
@@ -1268,11 +1268,11 @@ unittest
         the stopIdx is greater equal the length of haystack the functions
         returns $(D -1).
 */
-ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack, 
-        const(Char2)[] needles, const size_t stopIdx, 
+ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, const size_t stopIdx,
         CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
-{    
+{
     if (stopIdx <= haystack.length)
     {
         return lastIndexOfAny(haystack[0u .. stopIdx], needles, cs);
@@ -1303,26 +1303,26 @@ unittest
         {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
-            assert(lastIndexOfAny(cast(S)null, to!T("a"), 1337) == -1, 
+            assert(lastIndexOfAny(cast(S)null, to!T("a"), 1337) == -1,
                 typeStr);
-            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("c"), 7) == 6, 
+            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("c"), 7) == 6,
                 typeStr);
-            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("cd"), 5) == 3, 
+            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("cd"), 5) == 3,
                 typeStr);
-            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("ef"), 6) == 5, 
+            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("ef"), 6) == 5,
                 typeStr);
-            assert(lastIndexOfAny(to!S("abcdefCdef"), to!T("c"), 8) == 2, 
+            assert(lastIndexOfAny(to!S("abcdefCdef"), to!T("c"), 8) == 2,
                 typeStr);
-            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("x"), 7) == -1, 
+            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("x"), 7) == -1,
                 typeStr);
-            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("xy"), 4) == -1, 
+            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("xy"), 4) == -1,
                 typeStr);
-            assert(lastIndexOfAny(to!S("öabcdefcdef"), to!T("ö"), 2) == 0, 
+            assert(lastIndexOfAny(to!S("öabcdefcdef"), to!T("ö"), 2) == 0,
                 typeStr);
 
-            assert(lastIndexOfAny(cast(S)null, to!T("a"), 1337, 
+            assert(lastIndexOfAny(cast(S)null, to!T("a"), 1337,
                 CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("C"), 7, 
+            assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("C"), 7,
                 CaseSensitive.no) == 6, typeStr);
             assert(lastIndexOfAny(to!S("ABCDEFCDEF"), to!T("cd"), 5,
                 CaseSensitive.no) == 3, typeStr);

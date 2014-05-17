@@ -16,7 +16,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
 
  * Computes SHA1 and SHA2 hashes of arbitrary data. SHA hashes are 20 to 64 byte
  * quantities (depending on the SHA algorithm) that are like a checksum or CRC,
- * but are more robust. 
+ * but are more robust.
  *
  * SHA2 comes in several different versions, all supported by this module:
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
@@ -196,11 +196,11 @@ private nothrow pure ulong rotateRight(ulong x, uint n)
 /**
  * Template API SHA1/SHA2 implementation. Supports: SHA-1, SHA-224, SHA-256,
  * SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
- * 
+ *
  * The blockSize and digestSize are in bits. However, it's likely easier to
  * simply use the convenience aliases: SHA1, SHA224, SHA256, SHA384, SHA512,
  * SHA512_224 and SHA512_256.
- * 
+ *
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
 struct SHA(int blockSize, int digestSize)
@@ -338,7 +338,7 @@ struct SHA(int blockSize, int digestSize)
         }
         else
             static assert(0);
-        
+
         /*
          * number of bits, modulo 2^64 (ulong[1]) or 2^128 (ulong[2]),
          * should just use ucent instead of ulong[2] once it's available
@@ -365,10 +365,10 @@ struct SHA(int blockSize, int digestSize)
             /* All SHA1/SHA2 */
             T Ch(T)(T x, T y, T z) { return z ^ (x & (y ^ z)); }
             T Maj(T)(T x, T y, T z) { return (x & y) | (z & (x ^ y)); }
-            
+
             /* SHA-1 */
             uint Parity(uint x, uint y, uint z) { return x ^ y ^ z; }
-            
+
             /* SHA-224, SHA-256 */
             uint BigSigma0(uint x) { return rotateRight(x, 2) ^ rotateRight(x, 13) ^ rotateRight(x, 22); }
             uint BigSigma1(uint x) { return rotateRight(x, 6) ^ rotateRight(x, 11) ^ rotateRight(x, 25); }
@@ -627,7 +627,7 @@ struct SHA(int blockSize, int digestSize)
             T_SHA2_16_79!Word(61, W, D, E, F, G, H, A, B, C, constants[61]);
             T_SHA2_16_79!Word(62, W, C, D, E, F, G, H, A, B, constants[62]);
             T_SHA2_16_79!Word(63, W, B, C, D, E, F, G, H, A, constants[63]);
-            
+
             static if(is(Word==ulong))
             {
                 T_SHA2_16_79!Word(64, W, A, B, C, D, E, F, G, H, constants[64]);

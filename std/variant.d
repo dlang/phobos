@@ -256,8 +256,8 @@ private:
         {
             static if (is(typeof(*rhsPA == *zis)))
             {
-                // Work-around for bug 12164. 
-                // Without the check for if selector is -1, this function always returns 0. 
+                // Work-around for bug 12164.
+                // Without the check for if selector is -1, this function always returns 0.
                 // TODO: Remove this once 12164 is fixed.
                 if (*rhsPA == *zis && selector != cast(OpID)-1)
                 {
@@ -305,7 +305,7 @@ private:
                 alias AllTypes = ConstTypes;
             else //static if (isMutable!A)
                 alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
-                
+
             foreach (T ; AllTypes)
             {
                 if (targetType != typeid(T))
@@ -671,7 +671,7 @@ public:
             return null;
         static if (T.sizeof <= size)
             return cast(T*)&store;
-        else 
+        else
             return *cast(T**)&store;
     }
 
@@ -1649,7 +1649,7 @@ unittest
 }
 
 // Class and interface opEquals, issue 12157
-unittest 
+unittest
 {
     class Foo { }
 
@@ -1665,7 +1665,7 @@ unittest
     assert(v2 != v1);
     assert(v2 == f2);
 
-    // TODO: Remove once 12164 is fixed. 
+    // TODO: Remove once 12164 is fixed.
     // Verify our assumption that there is no -1 OpID.
     // Could also use std.algorithm.canFind at compile-time, but that may create bloat.
     foreach(member; EnumMembers!(Variant.OpID))
@@ -1743,14 +1743,14 @@ unittest
 }
 
 // Handling of empty types and arrays, e.g. issue 10958
-unittest 
+unittest
 {
     class EmptyClass { }
     struct EmptyStruct { }
     alias EmptyArray = void[0];
     alias Alg = Algebraic!(EmptyClass, EmptyStruct, EmptyArray);
 
-    Variant testEmpty(T)() 
+    Variant testEmpty(T)()
     {
         T inst;
         Variant v = inst;
@@ -1796,7 +1796,7 @@ unittest
         int val2;
     }
 
-    void testPeekWith(T)() 
+    void testPeekWith(T)()
     {
         T inst;
         inst.val1 = 3;
@@ -2226,14 +2226,14 @@ unittest
     assertNotThrown!VariantException(v.get!(immutable(Object)));
 }
 
-unittest 
+unittest
 {
     static struct DummyScope
     {
         // https://d.puremagic.com/issues/show_bug.cgi?id=12540
         alias Alias12540 = Algebraic!Class12540;
 
-        static class Class12540 
+        static class Class12540
         {
             Alias12540 entity;
         }

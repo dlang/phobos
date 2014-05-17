@@ -2823,16 +2823,16 @@ unittest
 
 unittest //12000
 {
-    static struct S(T) 
+    static struct S(T)
     {
         static assert(hasIndirections!T);
     }
-    
-    static class A(T) 
+
+    static class A(T)
     {
         S!A a;
     }
-    
+
     A!int dummy;
 }
 
