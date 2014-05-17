@@ -94,7 +94,7 @@ enum: int
     WSAEFAULT = (WSABASEERR+14),
     WSAEINVAL = (WSABASEERR+22),
     WSAEMFILE = (WSABASEERR+24),
-    
+
     /*
      * Windows Sockets definitions of regular Berkeley error constants
      */
@@ -135,30 +135,30 @@ enum: int
     WSAEDQUOT = (WSABASEERR+69),
     WSAESTALE = (WSABASEERR+70),
     WSAEREMOTE = (WSABASEERR+71),
-    
+
     /*
      * Extended Windows Sockets error constant definitions
      */
     WSASYSNOTREADY = (WSABASEERR+91),
     WSAVERNOTSUPPORTED = (WSABASEERR+92),
     WSANOTINITIALISED = (WSABASEERR+93),
-    
+
     /* Authoritative Answer: Host not found */
     WSAHOST_NOT_FOUND = (WSABASEERR+1001),
     HOST_NOT_FOUND = WSAHOST_NOT_FOUND,
-    
+
     /* Non-Authoritative: Host not found, or SERVERFAIL */
     WSATRY_AGAIN = (WSABASEERR+1002),
     TRY_AGAIN = WSATRY_AGAIN,
-    
+
     /* Non recoverable errors, FORMERR, REFUSED, NOTIMP */
     WSANO_RECOVERY = (WSABASEERR+1003),
     NO_RECOVERY = WSANO_RECOVERY,
-    
+
     /* Valid name, no data record of requested type */
     WSANO_DATA = (WSABASEERR+1004),
     NO_DATA = WSANO_DATA,
-    
+
     /* no address, look for MX record */
     WSANO_ADDRESS = WSANO_DATA,
     NO_ADDRESS = WSANO_ADDRESS
