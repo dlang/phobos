@@ -270,17 +270,6 @@ debug(std_regex_test) import std.stdio; //trace test suite progress
 
 private:
 
-
-//TODO: remove this hack due to CTFE not able to run insertInPlace
-@trusted void insertInPlaceAlt(T)(ref T[] arr, size_t idx, T[] items...)
-{
-    if(__ctfe)
-        arr = arr[0..idx] ~ items ~ arr[idx..$];
-    else
-        insertInPlace(arr, idx, items);
-}
-
-
 // IR bit pattern: 0b1_xxxxx_yy
 // where yy indicates class of instruction, xxxxx for actual operation code
 //     00: atom, a normal instruction
@@ -1072,7 +1061,7 @@ struct Parser(R)
                         auto t = NamedGroup(name, nglob);
                         auto d = assumeSorted!"a.name < b.name"(dict);
                         auto ind = d.lowerBound(t).length;
-                        insertInPlaceAlt(dict, ind, t);
+                        insertInPlace(dict, ind, t);
                         put(Bytecode(IR.GroupStart, nglob));
                         break;
                     case '<':
@@ -1161,7 +1150,7 @@ struct Parser(R)
                     len = cast(uint)ir.length - fix - (ir[fix].length - 1);
                     orStart = fix + ir[fix].length;
                 }
-                insertInPlaceAlt(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
+                insertInPlace(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
                 assert(ir[orStart].code == IR.OrStart);
                 put(Bytecode(IR.GotoEndOr, 0));
                 fixupStack.push(orStart); //fixup for StartOR
@@ -1274,7 +1263,7 @@ struct Parser(R)
                 if(replace)
                     ir[offset] = op;
                 else
-                    insertInPlaceAlt(ir, offset, op);
+                    insertInPlace(ir, offset, op);
                 put(Bytecode(greedy ? IR.RepeatEnd : IR.RepeatQEnd, len));
                 put(Bytecode.init); //hotspot
                 putRaw(1);
@@ -1291,7 +1280,7 @@ struct Parser(R)
                 if(replace)
                     ir[offset] = op;
                 else
-                    insertInPlaceAlt(ir, offset, op);
+                    insertInPlace(ir, offset, op);
                 offset += 1;//so it still points to the repeated block
                 put(Bytecode(greedy ? IR.RepeatEnd : IR.RepeatQEnd, len));
                 put(Bytecode.init); //hotspot
@@ -1318,7 +1307,7 @@ struct Parser(R)
             if(replace)
                 ir[offset] = op;
             else
-                insertInPlaceAlt(ir, offset, op);
+                insertInPlace(ir, offset, op);
             //IR.InfinteX is always a hotspot
             put(Bytecode(greedy ? IR.InfiniteEnd : IR.InfiniteQEnd, len));
             put(Bytecode.init); //merge index
@@ -7011,27 +7000,22 @@ unittest
         version(std_regex_ct1)
         {
             pragma(msg, "Testing 1st part of ctRegex");
-            alias Tests = Sequence!(0, 90);
+            alias Tests = Sequence!(0, 155);
         }
         else version(std_regex_ct2)
         {
             pragma(msg, "Testing 2nd part of ctRegex");
-            alias Tests = Sequence!(90, 155);
-        }
-        else version(std_regex_ct3)
-        {
-            pragma(msg, "Testing 3rd part of ctRegex");
             alias Tests = Sequence!(155, 174);
         }
         //FIXME: #174-178 contains CTFE parser bug
+        else version(std_regex_ct3)
+        {
+            pragma(msg, "Testing 3rd part of ctRegex");
+            alias Tests = Sequence!(178, 220);
+        }
         else version(std_regex_ct4)
         {
             pragma(msg, "Testing 4th part of ctRegex");
-            alias Tests = Sequence!(178, 220);
-        }
-        else version(std_regex_ct5)
-        {
-            pragma(msg, "Testing 5th part of ctRegex");
             alias Tests = Sequence!(220, tv.length);
         }
         else
