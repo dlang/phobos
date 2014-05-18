@@ -4774,6 +4774,8 @@ Finds two or more $(D needles) into a $(D haystack). The predicate $(D
 pred) is used throughout to compare elements. By default, elements are
 compared for equality.
 
+$(D BoyerMooreFinder) allocates GC memory.
+
 Params:
 
 haystack = The target of the search. Must be an $(GLOSSARY input
@@ -4919,8 +4921,8 @@ unittest
 struct BoyerMooreFinder(alias pred, Range)
 {
 private:
-    size_t[] skip;
-    ptrdiff_t[ElementType!(Range)] occ;
+    size_t[] skip;                              // GC allocated
+    ptrdiff_t[ElementType!(Range)] occ;         // GC allocated
     Range needle;
 
     ptrdiff_t occurrence(ElementType!(Range) c)
@@ -7606,25 +7608,25 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
             auto tt = t;
             foreach (j; 1 .. cols)
             {
-                auto cSub = _matrix[i - 1][j - 1]
+                auto cSub = matrix(i - 1,j - 1)
                     + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
                 tt.popFront();
-                auto cIns = _matrix[i][j - 1] + _insertionIncrement;
-                auto cDel = _matrix[i - 1][j] + _deletionIncrement;
+                auto cIns = matrix(i,j - 1) + _insertionIncrement;
+                auto cDel = matrix(i - 1,j) + _deletionIncrement;
                 switch (min_index(cSub, cIns, cDel)) {
                 case 0:
-                    _matrix[i][j] = cSub;
+                    matrix(i,j) = cSub;
                     break;
                 case 1:
-                    _matrix[i][j] = cIns;
+                    matrix(i,j) = cIns;
                     break;
                 default:
-                    _matrix[i][j] = cDel;
+                    matrix(i,j) = cDel;
                     break;
                 }
             }
         }
-        return _matrix[slen][tlen];
+        return matrix(slen,tlen);
     }
 
     EditOp[] path(Range s, Range t)
@@ -7639,14 +7641,14 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         size_t i = rows - 1, j = cols - 1;
         // restore the path
         while (i || j) {
-            auto cIns = j == 0 ? CostType.max : _matrix[i][j - 1];
-            auto cDel = i == 0 ? CostType.max : _matrix[i - 1][j];
+            auto cIns = j == 0 ? CostType.max : matrix(i,j - 1);
+            auto cDel = i == 0 ? CostType.max : matrix(i - 1,j);
             auto cSub = i == 0 || j == 0
                 ? CostType.max
-                : _matrix[i - 1][j - 1];
+                : matrix(i - 1,j - 1);
             switch (min_index(cSub, cIns, cDel)) {
             case 0:
-                result ~= _matrix[i - 1][j - 1] == _matrix[i][j]
+                result ~= matrix(i - 1,j - 1) == matrix(i,j)
                     ? EditOp.none
                     : EditOp.substitute;
                 --i;
@@ -7670,27 +7672,27 @@ private:
     CostType _deletionIncrement = 1,
         _insertionIncrement = 1,
         _substitutionIncrement = 1;
-    CostType[][] _matrix;
+    CostType[] _matrix;
     size_t rows, cols;
+
+    // Treat _matrix as a rectangular array
+    ref CostType matrix(size_t row, size_t col) { return _matrix[row * cols + col]; }
 
     void AllocMatrix(size_t r, size_t c) {
         rows = r;
         cols = c;
-        if (_matrix.length < r || _matrix[0].length < c) {
+        if (_matrix.length < r * c) {
             delete _matrix;
-            _matrix = new CostType[][](r, c);
+            _matrix = new CostType[r * c];
             InitMatrix();
         }
     }
 
     void InitMatrix() {
-        foreach (i, row; _matrix) {
-            row[0] = i * _deletionIncrement;
-        }
-        if (!_matrix.length) return;
-        for (auto i = 0u; i != _matrix[0].length; ++i) {
-            _matrix[0][i] = i * _insertionIncrement;
-        }
+        foreach (r; 0 .. rows)
+            matrix(r,0) = r * _deletionIncrement;
+        foreach (c; 0 .. cols)
+            matrix(0,c) = c * _insertionIncrement;
     }
 
     static uint min_index(CostType i0, CostType i1, CostType i2)
@@ -7712,6 +7714,8 @@ distance) between $(D s) and $(D t). The Levenshtein distance computes
 the minimal amount of edit operations necessary to transform $(D s)
 into $(D t).  Performs $(BIGOH s.length * t.length) evaluations of $(D
 equals) and occupies $(BIGOH s.length * t.length) storage.
+
+Allocates GC memory.
 */
 size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
@@ -7736,6 +7740,8 @@ unittest
 /**
 Returns the Levenshtein distance and the edit path between $(D s) and
 $(D t).
+
+Allocates GC memory.
 */
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
