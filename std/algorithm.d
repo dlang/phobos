@@ -4919,6 +4919,8 @@ unittest
 struct BoyerMooreFinder(alias pred, Range)
 {
 private:
+    import core.stdc.stdlib;
+
     size_t[] skip;
     ptrdiff_t[ElementType!(Range)] occ;
     Range needle;
@@ -4956,7 +4958,7 @@ is ignored.
     }
 
 public:
-    this(Range needle)
+    this(Range needle) @trusted
     {
         if (!needle.length) return;
         this.needle = needle;
@@ -4969,7 +4971,12 @@ public:
         /* Preprocess #2: init skip[] */
         /* Note: This step could be made a lot faster.
          * A simple implementation is shown here. */
-        this.skip = new size_t[needle.length];
+        if (needle.length)
+        {
+            this.skip = (cast(size_t *)core.stdc.stdlib.malloc(needle.length * size_t.sizeof))[0 .. needle.length];
+            assert(this.skip.ptr != null);
+        }
+
         foreach (a; 0 .. needle.length)
         {
             size_t value = 0;
@@ -4982,7 +4989,7 @@ public:
         }
     }
 
-    Range beFound(Range haystack)
+    Range beFound(Range haystack) @trusted
     {
         if (!needle.length) return haystack;
         if (needle.length > haystack.length) return haystack[$ .. $];
@@ -4998,6 +5005,10 @@ public:
             }
             hpos += max(skip[npos], cast(sizediff_t) npos - occurrence(haystack[npos+hpos]));
         }
+
+        core.stdc.stdlib.free(skip.ptr);
+        skip = null;                    // no dangling references
+
         return haystack[$ .. $];
     }
 
