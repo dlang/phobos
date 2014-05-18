@@ -51,6 +51,9 @@
 module std.internal.math.biguintx86;
 
 @system:
+pure:
+nothrow:
+
 /*
   Naked asm is used throughout, because:
   (a) it frees up the EBP register
