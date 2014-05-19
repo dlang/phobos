@@ -1901,64 +1901,72 @@ Target parse(Target, Source)(ref Source s)
         // smaller types are handled like integers
         auto v = .parse!(Select!(Target.min < 0, int, uint))(s);
         auto result = ()@trusted{ return cast(Target) v; }();
-        if (result != v)
-            goto Loverflow;
-        return result;
+        if (result == v)
+            return result;
+        throw new ConvOverflowException("Overflow in integral conversion");
     }
     else
     {
         // Larger than int types
 
         static if (Target.min < 0)
-            int sign = 0;
+            bool sign = 0;
         else
-            enum int sign = 0;
-        Target v = 0;
-        bool atStart = true;
-        enum char maxLastDigit = Target.min < 0 ? '7' : '5';
-        while (!s.empty)
-        {
-            immutable c = s.front;
-            if (c >= '0' && c <= '9')
-            {
-                if (v >= Target.max/10 &&
-                        (v != Target.max/10 || c + sign > maxLastDigit))
-                    goto Loverflow;
-                v = cast(Target) (v * 10 + (c - '0'));
-                s.popFront();
-                atStart = false;
-            }
-            else static if (Target.min < 0)
-            {
-                if (c == '-' && atStart)
-                {
-                    s.popFront();
-                    sign = -1;
-                }
-                else if (c == '+' && atStart)
-                    s.popFront();
-                else
-                    break;
-            }
-            else
-                break;
-        }
-        if (atStart)
+            enum bool sign = 0;
+
+        enum char maxLastDigit = Target.min < 0 ? 7 : 5;
+        Unqual!(typeof(s.front)) c;
+
+        if (s.empty)
             goto Lerr;
+
+        c = s.front;
+        s.popFront();
         static if (Target.min < 0)
         {
-            if (sign == -1)
+            switch (c)
             {
-                v = -v;
+                case '-':
+                    sign = true;
+                    goto case '+';
+                case '+':
+                    if (s.empty)
+                        goto Lerr;
+                    c = s.front;
+                    s.popFront();
+                    break;
+
+                default:
+                    break;
             }
         }
-        return v;
-    }
+        c -= '0';
+        if (c <= 9)
+        {
+            Target v = cast(Target)c;
+            while (!s.empty)
+            {
+                c = s.front - '0';
+                if (c > 9)
+                    break;
 
-Loverflow:
-    throw new ConvOverflowException("Overflow in integral conversion");
+                if (v < Target.max/10 ||
+                    (v == Target.max/10 && c <= maxLastDigit + sign))
+                {
+                    v = cast(Target) (v * 10 + c);
+                    s.popFront();
+                }
+                else
+                    throw new ConvOverflowException("Overflow in integral conversion");
+            }
+
+            if (sign)
+                v = -v;
+            return v;
+        }
 Lerr:
-    throw convError!(Source, Target)(s);
+        throw convError!(Source, Target)(s);
+    }
 }
 
 @safe pure unittest
@@ -2080,6 +2088,10 @@ Lerr:
                 "1-",
                 "xx",
                 "123h",
+                "-+1",
+                "--1",
+                "+-1",
+                "++1",
             ];
             foreach (j, s; errors1)
                 assertThrown!ConvException(to!Int(s));
