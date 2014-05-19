@@ -337,8 +337,8 @@ struct JSONValue
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
     ref inout(JSONValue) opIndex(string k) inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
-                                "JSONValue is not an object");
+        enforceEx!JSONException(k in this,
+                                "Key not found: " ~ k);
         return store.object[k];
     }
 
@@ -887,8 +887,10 @@ unittest
     assertNotThrown(jv["key"]);
     assert("key" in jv);
     assert("notAnElement" !in jv);
+    assertThrown!JSONException(jv["notAnElement"]);
     const cjv = jv;
     assert("key" in cjv);
+    assertThrown!JSONException(cjv["notAnElement"]);
 
     foreach(string key, value; jv)
     {
