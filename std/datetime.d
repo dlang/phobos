@@ -976,13 +976,6 @@ public:
         Throws:
             $(LREF DateTimeException) if the new year is not a leap year and the
             resulting date would be on February 29th.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
-assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
-assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
---------------------
      +/
     @property void year(int year)
     {
@@ -1002,7 +995,7 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
@@ -1062,20 +1055,13 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
 
         Throws:
             $(LREF DateTimeException) if $(D isAD) is true.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
-assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
-assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
---------------------
      +/
     @property ushort yearBC() const
     {
         return (cast(Date)this).yearBC;
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
@@ -1112,16 +1098,6 @@ assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
 
         Throws:
             $(LREF DateTimeException) if a non-positive value is given.
-
-        Examples:
---------------------
-auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
-st.yearBC = 1;
-assert(st == SysTime(DateTime(0, 1, 1, 7, 30, 0)));
-
-st.yearBC = 10;
-assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
---------------------
      +/
     @property void yearBC(int year)
     {
@@ -1141,7 +1117,6 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    //Verify Examples
     unittest
     {
         auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
@@ -1211,20 +1186,13 @@ assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
 
     /++
         Month of a Gregorian Year.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
-assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
-assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
---------------------
      +/
     @property Month month() const nothrow
     {
         return (cast(Date)this).month;
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
@@ -1376,20 +1344,13 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
 
     /++
         Day of a Gregorian Month.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
-assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
-assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
---------------------
      +/
     @property ubyte day() const nothrow
     {
         return (cast(Date)this).day;
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
@@ -2404,25 +2365,6 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
                             $(LREF SysTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
-
-        Examples:
---------------------
-auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
-st1.add!"months"(11);
-assert(st1 == SysTime(DateTime(2010, 12, 1, 12, 30, 33)));
-
-auto st2 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
-st2.add!"months"(-11);
-assert(st2 == SysTime(DateTime(2009, 2, 1, 12, 30, 33)));
-
-auto st3 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-st3.add!"years"(1);
-assert(st3 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
-
-auto st4 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-st4.add!"years"(1, AllowDayOverflow.no);
-assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
---------------------
       +/
     ref SysTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years" ||
@@ -2454,7 +2396,6 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         return this;
     }
 
-    //Verify Examples.
     unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
@@ -3563,33 +3504,6 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
                             $(LREF SysTime).
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
-
-        Examples:
---------------------
-auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
-st1.roll!"months"(1);
-assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
-
-auto st2 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
-st2.roll!"months"(-1);
-assert(st2 == SysTime(DateTime(2010, 12, 1, 12, 33, 33)));
-
-auto st3 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
-st3.roll!"months"(1);
-assert(st3 == SysTime(DateTime(1999, 3, 1, 12, 33, 33)));
-
-auto st4 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
-st4.roll!"months"(1, AllowDayOverflow.no);
-assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
-
-auto st5 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-st5.roll!"years"(1);
-assert(st5 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
-
-auto st6 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-st6.roll!"years"(1, AllowDayOverflow.no);
-assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
---------------------
       +/
     /+ref SysTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years")
@@ -3597,9 +3511,9 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         add!"years"(value, allowOverflow);
     }
 
+    ///
     unittest
     {
-        //Verify Examples.
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
         st1.roll!"months"(1);
         assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
@@ -4034,23 +3948,6 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.roll!"months"(4)));
         //static assert(!__traits(compiles, ist.roll!"months"(4)));
-
-        //Verify Examples.
-        auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
-        st1.roll!"months"(1);
-        assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
-
-        auto st2 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
-        st2.roll!"months"(-1);
-        assert(st2 == SysTime(DateTime(2010, 12, 1, 12, 33, 33)));
-
-        auto st3 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
-        st3.roll!"months"(1);
-        assert(st3 == SysTime(DateTime(1999, 3, 1, 12, 33, 33)));
-
-        auto st4 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
-        st4.roll!"months"(1, AllowDayOverflow.no);
-        assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
     }
 
     //Test roll!"months"() with AllowDayOverlow.no
@@ -4440,31 +4337,6 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         Params:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this $(LREF SysTime).
-
-        Examples:
---------------------
-auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
-st1.roll!"days"(1);
-assert(st1 == SysTime(DateTime(2010, 1, 2, 11, 23, 12)));
-st1.roll!"days"(365);
-assert(st1 == SysTime(DateTime(2010, 1, 26, 11, 23, 12)));
-st1.roll!"days"(-32);
-assert(st1 == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
-
-auto st2 = SysTime(DateTime(2010, 7, 4, 12, 0, 0));
-st2.roll!"hours"(1);
-assert(st2 == SysTime(DateTime(2010, 7, 4, 13, 0, 0)));
-
-auto st3 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
-st3.roll!"seconds"(-1);
-assert(st3 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
-
-auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0),
-                   FracSec.from!"usecs"(2_400));
-st4.roll!"usecs"(-1_200_000);
-assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
-                      FracSec.from!"usecs"(802_400)));
---------------------
       +/
     /+ref SysTime+/ void roll(string units)(long value) nothrow
         if(units == "days")
@@ -4493,7 +4365,7 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
@@ -4508,15 +4380,45 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         st2.roll!"hours"(1);
         assert(st2 == SysTime(DateTime(2010, 7, 4, 13, 0, 0)));
 
-        auto st3 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
-        st3.roll!"seconds"(-1);
-        assert(st3 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
+        auto st3 = SysTime(DateTime(2010, 2, 12, 12, 0, 0));
+        st3.roll!"hours"(-1);
+        assert(st3 == SysTime(DateTime(2010, 2, 12, 11, 0, 0)));
 
-        auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0),
-                           FracSec.from!"usecs"(2_400));
-        st4.roll!"usecs"(-1_200_000);
-        assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
-                              FracSec.from!"usecs"(802_400)));
+        auto st4 = SysTime(DateTime(2009, 12, 31, 0, 0, 0));
+        st4.roll!"minutes"(1);
+        assert(st4 == SysTime(DateTime(2009, 12, 31, 0, 1, 0)));
+
+        auto st5 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+        st5.roll!"minutes"(-1);
+        assert(st5 == SysTime(DateTime(2010, 1, 1, 0, 59, 0)));
+
+        auto st6 = SysTime(DateTime(2009, 12, 31, 0, 0, 0));
+        st6.roll!"seconds"(1);
+        assert(st6 == SysTime(DateTime(2009, 12, 31, 0, 0, 1)));
+
+        auto st7 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+        st7.roll!"seconds"(-1);
+        assert(st7 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
+
+        auto st8 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+        st8.roll!"msecs"(1);
+        assert(st8 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                              FracSec.from!"msecs"(1)));
+
+        auto st9 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+        st9.roll!"msecs"(-1);
+        assert(st9 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                              FracSec.from!"msecs"(999)));
+
+        auto st10 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+        st10.roll!"hnsecs"(1);
+        assert(st10 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                              FracSec.from!"hnsecs"(1)));
+
+        auto st11 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
+        st11.roll!"hnsecs"(-1);
+        assert(st11 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
+                               FracSec.from!"hnsecs"(9_999_999)));
     }
 
     unittest
@@ -4785,15 +4687,6 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.roll!"days"(4)));
         //static assert(!__traits(compiles, ist.roll!"days"(4)));
-
-        //Verify Examples.
-        auto st = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
-        st.roll!"days"(1);
-        assert(st == SysTime(DateTime(2010, 1, 2, 11, 23, 12)));
-        st.roll!"days"(365);
-        assert(st == SysTime(DateTime(2010, 1, 26, 11, 23, 12)));
-        st.roll!"days"(-32);
-        assert(st == SysTime(DateTime(2010, 1, 25, 11, 23, 12)));
     }
 
 
@@ -5045,31 +4938,6 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.roll!"hours"(4)));
         //static assert(!__traits(compiles, ist.roll!"hours"(4)));
-
-        //Verify Examples.
-        auto st1 = SysTime(DateTime(2010, 7, 4, 12, 0, 0));
-        st1.roll!"hours"(1);
-        assert(st1 == SysTime(DateTime(2010, 7, 4, 13, 0, 0)));
-
-        auto st2 = SysTime(DateTime(2010, 2, 12, 12, 0, 0));
-        st2.roll!"hours"(-1);
-        assert(st2 == SysTime(DateTime(2010, 2, 12, 11, 0, 0)));
-
-        auto st3 = SysTime(DateTime(2009, 12, 31, 0, 0, 0));
-        st3.roll!"minutes"(1);
-        assert(st3 == SysTime(DateTime(2009, 12, 31, 0, 1, 0)));
-
-        auto st4 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
-        st4.roll!"minutes"(-1);
-        assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 59, 0)));
-
-        auto st5 = SysTime(DateTime(2009, 12, 31, 0, 0, 0));
-        st5.roll!"seconds"(1);
-        assert(st5 == SysTime(DateTime(2009, 12, 31, 0, 0, 1)));
-
-        auto st6 = SysTime(DateTime(2010, 1, 1, 0, 0, 0));
-        st6.roll!"seconds"(-1);
-        assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
     }
 
     //Test roll!"minutes"().
@@ -6368,18 +6236,19 @@ assert(st4 == SysTime(DateTime(2010, 1, 1, 0, 0, 0),
 
         Params:
             rhs = The $(LREF SysTime) to subtract from this one.
-
-        Examples:
---------------------
-assert(SysTime(Date(1999, 2, 1)).diffMonths(SysTime(Date(1999, 1, 31))) == 1);
-assert(SysTime(Date(1999, 1, 31)).diffMonths(SysTime(Date(1999, 2, 1))) == -1);
-assert(SysTime(Date(1999, 3, 1)).diffMonths(SysTime(Date(1999, 1, 1))) == 2);
-assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
---------------------
       +/
     int diffMonths(in SysTime rhs) const nothrow
     {
         return (cast(Date)this).diffMonths(cast(Date)rhs);
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(Date(1999, 2, 1)).diffMonths(SysTime(Date(1999, 1, 31))) == 1);
+        assert(SysTime(Date(1999, 1, 31)).diffMonths(SysTime(Date(1999, 2, 1))) == -1);
+        assert(SysTime(Date(1999, 3, 1)).diffMonths(SysTime(Date(1999, 1, 1))) == 2);
+        assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
     }
 
     unittest
@@ -6398,12 +6267,6 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
         //static assert(__traits(compiles, st.diffMonths(ist)));
         //static assert(__traits(compiles, cst.diffMonths(ist)));
         //static assert(__traits(compiles, ist.diffMonths(ist)));
-
-        //Verify Examples.
-        assert(SysTime(Date(1999, 2, 1)).diffMonths(SysTime(Date(1999, 1, 31))) == 1);
-        assert(SysTime(Date(1999, 1, 31)).diffMonths(SysTime(Date(1999, 2, 1))) == -1);
-        assert(SysTime(Date(1999, 3, 1)).diffMonths(SysTime(Date(1999, 1, 1))) == 2);
-        assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
     }
 
 
@@ -6447,17 +6310,18 @@ assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
 
     /++
         Day of the year this $(LREF SysTime) is on.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(1999, 1, 1, 12, 22, 7)).dayOfYear == 1);
-assert(SysTime(DateTime(1999, 12, 31, 7, 2, 59)).dayOfYear == 365);
-assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
---------------------
       +/
     @property ushort dayOfYear() const nothrow
     {
         return (cast(Date)this).dayOfYear;
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(1999, 1, 1, 12, 22, 7)).dayOfYear == 1);
+        assert(SysTime(DateTime(1999, 12, 31, 7, 2, 59)).dayOfYear == 365);
+        assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
     }
 
     unittest
@@ -6468,11 +6332,6 @@ assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
         static assert(__traits(compiles, st.dayOfYear));
         static assert(__traits(compiles, cst.dayOfYear));
         //static assert(__traits(compiles, ist.dayOfYear));
-
-        //Verify Examples.
-        assert(SysTime(DateTime(1999, 1, 1, 12, 22, 7)).dayOfYear == 1);
-        assert(SysTime(DateTime(1999, 12, 31, 7, 2, 59)).dayOfYear == 365);
-        assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
     }
 
 
@@ -6510,20 +6369,6 @@ assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
 
     /++
         The Xth day of the Gregorian Calendar that this $(LREF SysTime) is on.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
-assert(SysTime(DateTime(1, 12, 31, 23, 59, 59)).dayOfGregorianCal == 365);
-assert(SysTime(DateTime(2, 1, 1, 2, 2, 2)).dayOfGregorianCal == 366);
-
-assert(SysTime(DateTime(0, 12, 31, 7, 7, 7)).dayOfGregorianCal == 0);
-assert(SysTime(DateTime(0, 1, 1, 19, 30, 0)).dayOfGregorianCal == -365);
-assert(SysTime(DateTime(-1, 12, 31, 4, 7, 0)).dayOfGregorianCal == -366);
-
-assert(SysTime(DateTime(2000, 1, 1, 9, 30, 20)).dayOfGregorianCal == 730_120);
-assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137);
---------------------
      +/
     @property int dayOfGregorianCal() const nothrow
     {
@@ -6539,6 +6384,21 @@ assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137)
         immutable days = cast(int)splitUnitsFromHNSecs!"days"(hnsecs);
 
         return hnsecs == 0 ? days + 1 : days;
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
+        assert(SysTime(DateTime(1, 12, 31, 23, 59, 59)).dayOfGregorianCal == 365);
+        assert(SysTime(DateTime(2, 1, 1, 2, 2, 2)).dayOfGregorianCal == 366);
+
+        assert(SysTime(DateTime(0, 12, 31, 7, 7, 7)).dayOfGregorianCal == 0);
+        assert(SysTime(DateTime(0, 1, 1, 19, 30, 0)).dayOfGregorianCal == -365);
+        assert(SysTime(DateTime(-1, 12, 31, 4, 7, 0)).dayOfGregorianCal == -366);
+
+        assert(SysTime(DateTime(2000, 1, 1, 9, 30, 20)).dayOfGregorianCal == 730_120);
+        assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137);
     }
 
     unittest
@@ -6706,18 +6566,6 @@ assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137)
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(__traits(compiles, cst.dayOfGregorianCal));
         //static assert(__traits(compiles, ist.dayOfGregorianCal));
-
-        //Verify Examples.
-        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
-        assert(SysTime(DateTime(1, 12, 31, 23, 59, 59)).dayOfGregorianCal == 365);
-        assert(SysTime(DateTime(2, 1, 1, 2, 2, 2)).dayOfGregorianCal == 366);
-
-        assert(SysTime(DateTime(0, 12, 31, 7, 7, 7)).dayOfGregorianCal == 0);
-        assert(SysTime(DateTime(0, 1, 1, 19, 30, 0)).dayOfGregorianCal == -365);
-        assert(SysTime(DateTime(-1, 12, 31, 4, 7, 0)).dayOfGregorianCal == -366);
-
-        assert(SysTime(DateTime(2000, 1, 1, 9, 30, 20)).dayOfGregorianCal == 730_120);
-        assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137);
     }
 
 
@@ -6880,34 +6728,6 @@ assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137)
         Params:
             days = The day of the Gregorian Calendar to set this $(LREF SysTime)
                    to.
-
-        Examples:
---------------------
-auto st = SysTime(DateTime(0, 0, 0, 12, 0, 0));
-st.dayOfGregorianCal = 1;
-assert(st == SysTime(DateTime(1, 1, 1, 12, 0, 0)));
-
-st.dayOfGregorianCal = 365;
-assert(st == SysTime(DateTime(1, 12, 31, 12, 0, 0)));
-
-st.dayOfGregorianCal = 366;
-assert(st == SysTime(DateTime(2, 1, 1, 12, 0, 0)));
-
-st.dayOfGregorianCal = 0;
-assert(st == SysTime(DateTime(0, 12, 31, 12, 0, 0)));
-
-st.dayOfGregorianCal = -365;
-assert(st == SysTime(DateTime(-0, 1, 1, 12, 0, 0)));
-
-st.dayOfGregorianCal = -366;
-assert(st == SysTime(DateTime(-1, 12, 31, 12, 0, 0)));
-
-st.dayOfGregorianCal = 730_120;
-assert(st == SysTime(DateTime(2000, 1, 1, 12, 0, 0)));
-
-st.dayOfGregorianCal = 734_137;
-assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
---------------------
      +/
     @property void dayOfGregorianCal(int days) nothrow
     {
@@ -6926,6 +6746,35 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
         immutable newDaysHNSecs = convert!("days", "hnsecs")(days);
 
         adjTime = newDaysHNSecs + hnsecs;
+    }
+
+    ///
+    unittest
+    {
+        auto st = SysTime(DateTime(0, 1, 1, 12, 0, 0));
+        st.dayOfGregorianCal = 1;
+        assert(st == SysTime(DateTime(1, 1, 1, 12, 0, 0)));
+
+        st.dayOfGregorianCal = 365;
+        assert(st == SysTime(DateTime(1, 12, 31, 12, 0, 0)));
+
+        st.dayOfGregorianCal = 366;
+        assert(st == SysTime(DateTime(2, 1, 1, 12, 0, 0)));
+
+        st.dayOfGregorianCal = 0;
+        assert(st == SysTime(DateTime(0, 12, 31, 12, 0, 0)));
+
+        st.dayOfGregorianCal = -365;
+        assert(st == SysTime(DateTime(-0, 1, 1, 12, 0, 0)));
+
+        st.dayOfGregorianCal = -366;
+        assert(st == SysTime(DateTime(-1, 12, 31, 12, 0, 0)));
+
+        st.dayOfGregorianCal = 730_120;
+        assert(st == SysTime(DateTime(2000, 1, 1, 12, 0, 0)));
+
+        st.dayOfGregorianCal = 734_137;
+        assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
     }
 
     unittest
@@ -7117,32 +6966,6 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.dayOfGregorianCal = 7));
         //static assert(!__traits(compiles, ist.dayOfGregorianCal = 7));
-
-        //Verify Examples.
-        auto st = SysTime(DateTime(0, 1, 1, 12, 0, 0));
-        st.dayOfGregorianCal = 1;
-        assert(st == SysTime(DateTime(1, 1, 1, 12, 0, 0)));
-
-        st.dayOfGregorianCal = 365;
-        assert(st == SysTime(DateTime(1, 12, 31, 12, 0, 0)));
-
-        st.dayOfGregorianCal = 366;
-        assert(st == SysTime(DateTime(2, 1, 1, 12, 0, 0)));
-
-        st.dayOfGregorianCal = 0;
-        assert(st == SysTime(DateTime(0, 12, 31, 12, 0, 0)));
-
-        st.dayOfGregorianCal = -365;
-        assert(st == SysTime(DateTime(-0, 1, 1, 12, 0, 0)));
-
-        st.dayOfGregorianCal = -366;
-        assert(st == SysTime(DateTime(-1, 12, 31, 12, 0, 0)));
-
-        st.dayOfGregorianCal = 730_120;
-        assert(st == SysTime(DateTime(2000, 1, 1, 12, 0, 0)));
-
-        st.dayOfGregorianCal = 734_137;
-        assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
     }
 
 
@@ -7171,28 +6994,6 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
     /++
         $(LREF SysTime) for the last day in the month that this Date is in.
         The time portion of endOfMonth is always 23:59:59.9999999.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
-       SysTime(DateTime(1999, 1, 31, 23, 59, 59),
-               FracSec.from!"hnsecs"(9_999_999)));
-
-assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0),
-               FracSec.from!"msecs"(24)).endOfMonth ==
-       SysTime(DateTime(1999, 2, 28, 23, 59, 59),
-               FracSec.from!"hnsecs"(9_999_999)));
-
-assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27),
-               FracSec.from!"usecs"(5203)).endOfMonth ==
-       SysTime(DateTime(2000, 2, 29, 23, 59, 59),
-               FracSec.from!"hnsecs"(9_999_999)));
-
-assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
-               FracSec.from!"hnsecs"(12345)).endOfMonth ==
-       SysTime(DateTime(2000, 6, 30, 23, 59, 59),
-               FracSec.from!"hnsecs"(9_999_999)));
---------------------
       +/
     @property SysTime endOfMonth() const nothrow
     {
@@ -7217,6 +7018,15 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
         retval.adjTime = newDaysHNSecs + theTimeHNSecs;
 
         return retval;
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth == SysTime(DateTime(1999, 1, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
+        assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0), FracSec.from!"msecs"(24)).endOfMonth == SysTime(DateTime(1999, 2, 28, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
+        assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27), FracSec.from!"usecs"(5203)).endOfMonth == SysTime(DateTime(2000, 2, 29, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
+        assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9), FracSec.from!"hnsecs"(12345)).endOfMonth == SysTime(DateTime(2000, 6, 30, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
     }
 
     unittest
@@ -7255,29 +7065,24 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(__traits(compiles, cst.endOfMonth));
         //static assert(__traits(compiles, ist.endOfMonth));
-
-        //Verify Examples.
-        assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth == SysTime(DateTime(1999, 1, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0), FracSec.from!"msecs"(24)).endOfMonth == SysTime(DateTime(1999, 2, 28, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27), FracSec.from!"usecs"(5203)).endOfMonth == SysTime(DateTime(2000, 2, 29, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9), FracSec.from!"hnsecs"(12345)).endOfMonth == SysTime(DateTime(2000, 6, 30, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
     }
 
 
     /++
         The last day in the month that this $(LREF SysTime) is in.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
-assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
-assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
-assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
---------------------
       +/
     @property ubyte daysInMonth() const nothrow
     {
         return Date(dayOfGregorianCal).daysInMonth;
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
+        assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
+        assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
+        assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
     unittest
@@ -7316,29 +7121,24 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(__traits(compiles, cst.daysInMonth));
         //static assert(__traits(compiles, ist.daysInMonth));
-
-        //Verify Examples.
-        assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
-        assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
-        assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27)).daysInMonth == 29);
-        assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
 
     /++
         Whether the current year is a date in A.D.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(1, 1, 1, 12, 7, 0)).isAD);
-assert(SysTime(DateTime(2010, 12, 31, 0, 0, 0)).isAD);
-assert(!SysTime(DateTime(0, 12, 31, 23, 59, 59)).isAD);
-assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
---------------------
       +/
     @property bool isAD() const nothrow
     {
         return adjTime >= 0;
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(1, 1, 1, 12, 7, 0)).isAD);
+        assert(SysTime(DateTime(2010, 12, 31, 0, 0, 0)).isAD);
+        assert(!SysTime(DateTime(0, 12, 31, 23, 59, 59)).isAD);
+        assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
     }
 
     unittest
@@ -7354,12 +7154,6 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(__traits(compiles, cst.isAD));
         //static assert(__traits(compiles, ist.isAD));
-
-        //Verify Examples.
-        assert(SysTime(DateTime(1, 1, 1, 12, 7, 0)).isAD);
-        assert(SysTime(DateTime(2010, 12, 31, 0, 0, 0)).isAD);
-        assert(!SysTime(DateTime(0, 12, 31, 23, 59, 59)).isAD);
-        assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
     }
 
 
@@ -7605,23 +7399,6 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
         is $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
-       "20100704T070612");
-
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toISOString() ==
-       "19981225T021500.024");
-
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
-       "00000105T230959");
-
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toISOString() ==
-       "-00040105T000002.052092");
---------------------
       +/
     string toISOString() const nothrow
     {
@@ -7660,6 +7437,24 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         }
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
+               "20100704T070612");
+
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toISOString() ==
+               "19981225T021500.024");
+
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
+               "00000105T230959");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toISOString() ==
+               "-00040105T000002.052092");
     }
 
     unittest
@@ -7711,21 +7506,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(__traits(compiles, cast(TimeOfDay)cst));
         //static assert(__traits(compiles, cast(TimeOfDay)ist));
-
-        //Verify Examples.
-        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
-               "20100704T070612");
-
-        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-                       FracSec.from!"msecs"(24)).toISOString() ==
-               "19981225T021500.024");
-
-        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOString() ==
-               "00000105T230959");
-
-        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-                       FracSec.from!"hnsecs"(520_920)).toISOString() ==
-               "-00040105T000002.052092");
     }
 
 
@@ -7747,23 +7527,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
-       "2010-07-04T07:06:12");
-
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toISOExtString() ==
-       "1998-12-25T02:15:00.024");
-
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
-       "0000-01-05T23:09:59");
-
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
-       "-0004-01-05T00:00:02.052092");
---------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -7802,6 +7565,24 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         }
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
+               "2010-07-04T07:06:12");
+
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toISOExtString() ==
+               "1998-12-25T02:15:00.024");
+
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
+               "0000-01-05T23:09:59");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
+               "-0004-01-05T00:00:02.052092");
     }
 
     unittest
@@ -7853,21 +7634,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(__traits(compiles, cast(TimeOfDay)cst));
         //static assert(__traits(compiles, cast(TimeOfDay)ist));
-
-        //Verify Examples.
-        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
-               "2010-07-04T07:06:12");
-
-        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-                       FracSec.from!"msecs"(24)).toISOExtString() ==
-               "1998-12-25T02:15:00.024");
-
-        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toISOExtString() ==
-               "0000-01-05T23:09:59");
-
-        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-                       FracSec.from!"hnsecs"(520_920)).toISOExtString() ==
-               "-0004-01-05T00:00:02.052092");
     }
 
     /++
@@ -7887,23 +7653,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         $(I not) enough to uniquely identify the time zone.
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
-
-        Examples:
---------------------
-assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
-       "2010-Jul-04 07:06:12");
-
-assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-               FracSec.from!"msecs"(24)).toSimpleString() ==
-       "1998-Dec-25 02:15:00.024");
-
-assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
-       "0000-Jan-05 23:09:59");
-
-assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-               FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
-        "-0004-Jan-05 00:00:02.052092");
---------------------
       +/
     string toSimpleString() const nothrow
     {
@@ -7942,6 +7691,24 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         }
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
+               "2010-Jul-04 07:06:12");
+
+        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
+                       FracSec.from!"msecs"(24)).toSimpleString() ==
+               "1998-Dec-25 02:15:00.024");
+
+        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
+               "0000-Jan-05 23:09:59");
+
+        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
+                       FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
+                "-0004-Jan-05 00:00:02.052092");
     }
 
     unittest
@@ -7993,21 +7760,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(__traits(compiles, cast(TimeOfDay)cst));
         //static assert(__traits(compiles, cast(TimeOfDay)ist));
-
-        //Verify Examples.
-        assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
-               "2010-Jul-04 07:06:12");
-
-        assert(SysTime(DateTime(1998, 12, 25, 2, 15, 0),
-                       FracSec.from!"msecs"(24)).toSimpleString() ==
-               "1998-Dec-25 02:15:00.024");
-
-        assert(SysTime(DateTime(0, 1, 5, 23, 9, 59)).toSimpleString() ==
-               "0000-Jan-05 23:09:59");
-
-        assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
-                       FracSec.from!"hnsecs"(520_920)).toSimpleString() ==
-                "-0004-Jan-05 00:00:02.052092");
     }
 
 
@@ -8073,29 +7825,6 @@ assert(SysTime(DateTime(-4, 1, 5, 0, 0, 2),
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF SysTime) would not be valid.
-
-        Examples:
---------------------
-assert(SysTime.fromISOString("20100704T070612") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-assert(SysTime.fromISOString("19981225T021500.007") ==
-       SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-assert(SysTime.fromISOString("00000105T230959.00002") ==
-       SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-assert(SysTime.fromISOString("-00040105T000002") ==
-       SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-assert(SysTime.fromISOString(" 20100704T070612 ") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-
-assert(SysTime.fromISOString("20100704T070612Z") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-assert(SysTime.fromISOString("20100704T070612-8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(-8))));
-assert(SysTime.fromISOString("20100704T070612+8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(8))));
---------------------
       +/
     static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null)
         if(isSomeString!S)
@@ -8149,6 +7878,22 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         }
         catch(DateTimeException dte)
             throw new DateTimeException(format("Invalid ISO String: %s", isoString));
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime.fromISOString("20100704T070612") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromISOString("19981225T021500.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+        assert(SysTime.fromISOString("00000105T230959.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+        assert(SysTime.fromISOString("-00040105T000002") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromISOString(" 20100704T070612 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+
+        assert(SysTime.fromISOString("20100704T070612Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+        assert(SysTime.fromISOString("20100704T070612-8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
+        assert(SysTime.fromISOString("20100704T070612+8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
     unittest
@@ -8251,19 +7996,6 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         assert(SysTime.fromISOString("20101222T172201.45+8:00") ==
                          SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000),
                                  new immutable SimpleTimeZone(dur!"minutes"(480))));
-
-        //Verify Examples.
-        assert(SysTime.fromISOString("20100704T070612") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-        assert(SysTime.fromISOString("19981225T021500.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-        assert(SysTime.fromISOString("00000105T230959.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-        assert(SysTime.fromISOString("-00040105T000002") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-        assert(SysTime.fromISOString(" 20100704T070612 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-
-        assert(SysTime.fromISOString("20100704T070612Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-        assert(SysTime.fromISOString("20100704T070612-8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
-        assert(SysTime.fromISOString("20100704T070612+8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
 
@@ -8297,29 +8029,6 @@ assert(SysTime.fromISOString("20100704T070612+8:00") ==
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF SysTime) would not be valid.
-
-        Examples:
---------------------
-assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
-       SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
-       SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") ==
-       SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-
-assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(-8))));
-assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(8))));
---------------------
       +/
     static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null)
         if(isSomeString!(S))
@@ -8375,6 +8084,24 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
         }
         catch(DateTimeException dte)
             throw new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString));
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
+               SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+        assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
+               SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+        assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
     unittest
@@ -8478,21 +8205,6 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
         assert(SysTime.fromISOExtString("2010-12-22T17:22:01.45+8:00") ==
                          SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000),
                                  new immutable SimpleTimeZone(dur!"minutes"(480))));
-
-        //Verify Examples.
-        assert(SysTime.fromISOExtString("2010-07-04T07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-        assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
-               SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-        assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
-               SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-        assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-        assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-
-        assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-        assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
-        assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
 
@@ -8527,29 +8239,6 @@ assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF SysTime) would not be valid.
-
-        Examples:
---------------------
-assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-assert(SysTime.fromSimpleString("1998-Dec-25 02:15:00.007") ==
-       SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") ==
-       SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
-       SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-assert(SysTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-
-assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12Z") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12-8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(-8))));
-assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
-       SysTime(DateTime(2010, 7, 4, 7, 6, 12),
-               new SimpleTimeZone(dur!"hours"(8))));
---------------------
       +/
     static SysTime fromSimpleString(S)(in S simpleString, immutable TimeZone tz = null)
         if(isSomeString!(S))
@@ -8605,6 +8294,23 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
         }
         catch(DateTimeException dte)
             throw new DateTimeException(format("Invalid Simple String: %s", simpleString));
+    }
+
+    ///
+    unittest
+    {
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromSimpleString("1998-Dec-25 02:15:00.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+        assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+        assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12Z") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12-8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
     unittest
@@ -8708,20 +8414,6 @@ assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
         assert(SysTime.fromSimpleString("2010-Dec-22 17:22:01.45+8:00") ==
                          SysTime(DateTime(2010, 12, 22, 17, 22, 01), FracSec.from!"hnsecs"(4_500_000),
                                  new immutable SimpleTimeZone(dur!"minutes"(480))));
-
-        //Verify Examples.
-        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-        assert(SysTime.fromSimpleString("1998-Dec-25 02:15:00.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-        assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-        assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-        assert(SysTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-
-        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12Z") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
-        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12-8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
-        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
 
