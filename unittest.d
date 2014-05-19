@@ -102,7 +102,7 @@ int main(char[][] args)
     assert(x[2] == 45);
 
     cast(void)std.math.sin(3.0);
-    std.mathspecial.gamma(6.2);
+    cast(void)std.mathspecial.gamma(6.2);
 
     std.demangle.demangle("hello");
 
