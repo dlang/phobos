@@ -6245,10 +6245,17 @@ public:
     ///
     unittest
     {
-        assert(SysTime(Date(1999, 2, 1)).diffMonths(SysTime(Date(1999, 1, 31))) == 1);
-        assert(SysTime(Date(1999, 1, 31)).diffMonths(SysTime(Date(1999, 2, 1))) == -1);
-        assert(SysTime(Date(1999, 3, 1)).diffMonths(SysTime(Date(1999, 1, 1))) == 2);
-        assert(SysTime(Date(1999, 1, 1)).diffMonths(SysTime(Date(1999, 3, 31))) == -2);
+        assert(SysTime(Date(1999, 2, 1)).diffMonths(
+                    SysTime(Date(1999, 1, 31))) == 1);
+
+        assert(SysTime(Date(1999, 1, 31)).diffMonths(
+                    SysTime(Date(1999, 2, 1))) == -1);
+
+        assert(SysTime(Date(1999, 3, 1)).diffMonths(
+                    SysTime(Date(1999, 1, 1))) == 2);
+
+        assert(SysTime(Date(1999, 1, 1)).diffMonths(
+                    SysTime(Date(1999, 3, 31))) == -2);
     }
 
     unittest
@@ -7023,10 +7030,24 @@ public:
     ///
     unittest
     {
-        assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth == SysTime(DateTime(1999, 1, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0), FracSec.from!"msecs"(24)).endOfMonth == SysTime(DateTime(1999, 2, 28, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27), FracSec.from!"usecs"(5203)).endOfMonth == SysTime(DateTime(2000, 2, 29, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9), FracSec.from!"hnsecs"(12345)).endOfMonth == SysTime(DateTime(2000, 6, 30, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
+        assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
+           SysTime(DateTime(1999, 1, 31, 23, 59, 59),
+                   FracSec.from!"hnsecs"(9_999_999)));
+
+        assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0),
+                       FracSec.from!"msecs"(24)).endOfMonth ==
+               SysTime(DateTime(1999, 2, 28, 23, 59, 59),
+                       FracSec.from!"hnsecs"(9_999_999)));
+
+        assert(SysTime(DateTime(2000, 2, 7, 5, 12, 27),
+                       FracSec.from!"usecs"(5203)).endOfMonth ==
+               SysTime(DateTime(2000, 2, 29, 23, 59, 59),
+                       FracSec.from!"hnsecs"(9_999_999)));
+
+        assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9),
+                       FracSec.from!"hnsecs"(12345)).endOfMonth ==
+               SysTime(DateTime(2000, 6, 30, 23, 59, 59),
+                       FracSec.from!"hnsecs"(9_999_999)));
     }
 
     unittest
@@ -7883,17 +7904,25 @@ public:
     ///
     unittest
     {
-        assert(SysTime.fromISOString("20100704T070612") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-        assert(SysTime.fromISOString("19981225T021500.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-        assert(SysTime.fromISOString("00000105T230959.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-        assert(SysTime.fromISOString("-00040105T000002") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-        assert(SysTime.fromISOString(" 20100704T070612 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromISOString("20100704T070612") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromISOString("19981225T021500.007") ==
+               SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+        assert(SysTime.fromISOString("00000105T230959.00002") ==
+               SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+        assert(SysTime.fromISOString("-00040105T000002") ==
+               SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromISOString(" 20100704T070612 ") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-        assert(SysTime.fromISOString("20100704T070612Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+        assert(SysTime.fromISOString("20100704T070612Z") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
         assert(SysTime.fromISOString("20100704T070612-8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new immutable SimpleTimeZone(dur!"hours"(-8))));
         assert(SysTime.fromISOString("20100704T070612+8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
     unittest
@@ -8089,19 +8118,25 @@ public:
     ///
     unittest
     {
-        assert(SysTime.fromISOExtString("2010-07-04T07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
         assert(SysTime.fromISOExtString("1998-12-25T02:15:00.007") ==
                SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
         assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
                SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-        assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-        assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") ==
+               SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromISOExtString(" 2010-07-04T07:06:12 ") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
-        assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") == SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
+        assert(SysTime.fromISOExtString("2010-07-04T07:06:12Z") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
         assert(SysTime.fromISOExtString("2010-07-04T07:06:12-8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new immutable SimpleTimeZone(dur!"hours"(-8))));
         assert(SysTime.fromISOExtString("2010-07-04T07:06:12+8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
     unittest
@@ -8299,18 +8334,25 @@ public:
     ///
     unittest
     {
-        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
-        assert(SysTime.fromSimpleString("1998-Dec-25 02:15:00.007") == SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
-        assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") == SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
-        assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") == SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
-        assert(SysTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") == SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
+        assert(SysTime.fromSimpleString("1998-Dec-25 02:15:00.007") ==
+               SysTime(DateTime(1998, 12, 25, 2, 15, 0), FracSec.from!"msecs"(7)));
+        assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") ==
+               SysTime(DateTime(0, 1, 5, 23, 9, 59), FracSec.from!"usecs"(20)));
+        assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
+               SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
+        assert(SysTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
 
         assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12Z") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12), UTC()));
         assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12-8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(-8))));
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new immutable SimpleTimeZone(dur!"hours"(-8))));
         assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12+8:00") ==
-               SysTime(DateTime(2010, 7, 4, 7, 6, 12), new immutable SimpleTimeZone(dur!"hours"(8))));
+               SysTime(DateTime(2010, 7, 4, 7, 6, 12),
+                       new immutable SimpleTimeZone(dur!"hours"(8))));
     }
 
     unittest
@@ -15908,10 +15950,17 @@ public:
     ///
     unittest
     {
-        assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(DateTime(1999, 1, 31, 23, 59, 59)) == 1);
-        assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(DateTime(1999, 2, 1, 12, 3, 42)) == -1);
-        assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(DateTime(1999, 1, 1, 2, 4, 7)) == 2);
-        assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)) == -2);
+        assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(
+                    DateTime(1999, 1, 31, 23, 59, 59)) == 1);
+
+        assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(
+                    DateTime(1999, 2, 1, 12, 3, 42)) == -1);
+
+        assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(
+                    DateTime(1999, 1, 1, 2, 4, 7)) == 2);
+
+        assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(
+                    DateTime(1999, 3, 31, 0, 30, 58)) == -2);
     }
 
     unittest
