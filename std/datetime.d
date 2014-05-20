@@ -8850,17 +8850,18 @@ public:
     /++
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
-
-        Examples:
---------------------
-assert(Date(1999, 7, 6).year == 1999);
-assert(Date(2010, 10, 4).year == 2010);
-assert(Date(-7, 4, 5).year == -7);
---------------------
      +/
     @property short year() const pure nothrow
     {
         return _year;
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date(2010, 10, 4).year == 2010);
+        assert(Date(-7, 4, 5).year == -7);
     }
 
     unittest
@@ -8873,11 +8874,6 @@ assert(Date(-7, 4, 5).year == -7);
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.year == 1999));
         static assert(__traits(compiles, idate.year == 1999));
-
-        //Verify Examples.
-        assert(Date(1999, 7, 6).year == 1999);
-        assert(Date(2010, 10, 4).year == 2010);
-        assert(Date(-7, 4, 5).year == -7);
     }
 
     /++
@@ -8895,6 +8891,14 @@ assert(Date(-7, 4, 5).year == -7);
     {
         enforceValid!"days"(year, _month, _day);
         _year = cast(short)year;
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date(2010, 10, 4).year == 2010);
+        assert(Date(-7, 4, 5).year == -7);
     }
 
     unittest
@@ -8920,11 +8924,6 @@ assert(Date(-7, 4, 5).year == -7);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.year = 1999));
         static assert(!__traits(compiles, idate.year = 1999));
-
-        //Verify Examples.
-        assert(Date(1999, 7, 6).year == 1999);
-        assert(Date(2010, 10, 4).year == 2010);
-        assert(Date(-7, 4, 5).year == -7);
     }
 
 
@@ -8933,13 +8932,6 @@ assert(Date(-7, 4, 5).year == -7);
 
         Throws:
             $(LREF DateTimeException) if $(D isAD) is true.
-
-        Examples:
---------------------
-assert(Date(0, 1, 1).yearBC == 1);
-assert(Date(-1, 1, 1).yearBC == 2);
-assert(Date(-100, 1, 1).yearBC == 101);
---------------------
      +/
     @property ushort yearBC() const pure
     {
@@ -8949,6 +8941,14 @@ assert(Date(-100, 1, 1).yearBC == 101);
             //throw new DateTimeException(format("%s is A.D.", this));
 
         return cast(ushort)((_year * -1) + 1);
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(0, 1, 1).yearBC == 1);
+        assert(Date(-1, 1, 1).yearBC == 2);
+        assert(Date(-100, 1, 1).yearBC == 101);
     }
 
     unittest
@@ -8961,11 +8961,6 @@ assert(Date(-100, 1, 1).yearBC == 101);
         static assert(__traits(compiles, date.yearBC));
         static assert(__traits(compiles, cdate.yearBC));
         static assert(__traits(compiles, idate.yearBC));
-
-        //Verify Examples.
-        assert(Date(0, 1, 1).yearBC == 1);
-        assert(Date(-1, 1, 1).yearBC == 2);
-        assert(Date(-100, 1, 1).yearBC == 101);
     }
 
 
@@ -8977,16 +8972,6 @@ assert(Date(-100, 1, 1).yearBC == 101);
 
         Throws:
             $(LREF DateTimeException) if a non-positive value is given.
-
-        Examples:
---------------------
-auto date = Date(2010, 1, 1);
-date.yearBC = 1;
-assert(date == Date(0, 1, 1));
-
-date.yearBC = 10;
-assert(date == Date(-9, 1, 1));
---------------------
      +/
     @property void yearBC(int year) pure
     {
@@ -8996,44 +8981,44 @@ assert(date == Date(-9, 1, 1));
         _year = cast(short)((year - 1) * -1);
     }
 
+    ///
+    unittest
+    {
+        auto date = Date(2010, 1, 1);
+        date.yearBC = 1;
+        assert(date == Date(0, 1, 1));
+
+        date.yearBC = 10;
+        assert(date == Date(-9, 1, 1));
+    }
+
     unittest
     {
         assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
 
-        {
-            auto date = Date(0, 7, 6);
-            const cdate = Date(0, 7, 6);
-            immutable idate = Date(0, 7, 6);
-            static assert(__traits(compiles, date.yearBC = 7));
-            static assert(!__traits(compiles, cdate.yearBC = 7));
-            static assert(!__traits(compiles, idate.yearBC = 7));
-        }
-
-        //Verify Examples.
-        {
-            auto date = Date(2010, 1, 1);
-            date.yearBC = 1;
-            assert(date == Date(0, 1, 1));
-
-            date.yearBC = 10;
-            assert(date == Date(-9, 1, 1));
-        }
+        auto date = Date(0, 7, 6);
+        const cdate = Date(0, 7, 6);
+        immutable idate = Date(0, 7, 6);
+        static assert(__traits(compiles, date.yearBC = 7));
+        static assert(!__traits(compiles, cdate.yearBC = 7));
+        static assert(!__traits(compiles, idate.yearBC = 7));
     }
 
 
     /++
         Month of a Gregorian Year.
-
-        Examples:
---------------------
-assert(Date(1999, 7, 6).month == 7);
-assert(Date(2010, 10, 4).month == 10);
-assert(Date(-7, 4, 5).month == 4);
---------------------
      +/
     @property Month month() const pure nothrow
     {
         return _month;
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(1999, 7, 6).month == 7);
+        assert(Date(2010, 10, 4).month == 10);
+        assert(Date(-7, 4, 5).month == 4);
     }
 
     unittest
@@ -9046,11 +9031,6 @@ assert(Date(-7, 4, 5).month == 4);
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.month == 7));
         static assert(__traits(compiles, idate.month == 7));
-
-        //Verify Examples.
-        assert(Date(1999, 7, 6).month == 7);
-        assert(Date(2010, 10, 4).month == 10);
-        assert(Date(-7, 4, 5).month == 4);
     }
 
     /++
@@ -9096,20 +9076,13 @@ assert(Date(-7, 4, 5).month == 4);
 
     /++
         Day of a Gregorian Month.
-
-        Examples:
---------------------
-assert(Date(1999, 7, 6).day == 6);
-assert(Date(2010, 10, 4).day == 4);
-assert(Date(-7, 4, 5).day == 5);
---------------------
      +/
     @property ubyte day() const pure nothrow
     {
         return _day;
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         assert(Date(1999, 7, 6).day == 6);
@@ -9257,25 +9230,6 @@ assert(Date(-7, 4, 5).day == 5);
                             $(LREF Date).
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
-
-        Examples:
---------------------
-auto d1 = Date(2010, 1, 1);
-d1.add!"months"(11);
-assert(d1 == Date(2010, 12, 1));
-
-auto d2 = Date(2010, 1, 1);
-d2.add!"months"(-11);
-assert(d2 == Date(2009, 2, 1));
-
-auto d3 = Date(2000, 2, 29);
-d3.add!"years"(1);
-assert(d3 == Date(2001, 3, 1));
-
-auto d4 = Date(2000, 2, 29);
-d4.add!"years"(1, AllowDayOverflow.no);
-assert(d4 == Date(2001, 2, 28));
---------------------
       +/
     /+ref Date+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years")
@@ -9296,7 +9250,7 @@ assert(d4 == Date(2001, 2, 28));
         }
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         auto d1 = Date(2010, 1, 1);
@@ -10030,33 +9984,6 @@ assert(d4 == Date(2001, 2, 28));
                             $(LREF Date).
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
-
-        Examples:
---------------------
-auto d1 = Date(2010, 1, 1);
-d1.roll!"months"(1);
-assert(d1 == Date(2010, 2, 1));
-
-auto d2 = Date(2010, 1, 1);
-d2.roll!"months"(-1);
-assert(d2 == Date(2010, 12, 1));
-
-auto d3 = Date(1999, 1, 29);
-d3.roll!"months"(1);
-assert(d3 == Date(1999, 3, 1));
-
-auto d4 = Date(1999, 1, 29);
-d4.roll!"months"(1, AllowDayOverflow.no);
-assert(d4 == Date(1999, 2, 28));
-
-auto d5 = Date(2000, 2, 29);
-d5.roll!"years"(1);
-assert(d5 == Date(2001, 3, 1));
-
-auto d6 = Date(2000, 2, 29);
-d6.roll!"years"(1, AllowDayOverflow.no);
-assert(d6 == Date(2001, 2, 28));
---------------------
       +/
     /+ref Date+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years")
@@ -10064,7 +9991,7 @@ assert(d6 == Date(2001, 2, 28));
         add!"years"(value, allowOverflow);
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         auto d1 = Date(2010, 1, 1);
@@ -10402,23 +10329,6 @@ assert(d6 == Date(2001, 2, 28));
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.roll!"months"(3)));
         static assert(!__traits(compiles, idate.roll!"months"(3)));
-
-        //Verify Examples.
-        auto date1 = Date(2010, 1, 1);
-        date1.roll!"months"(1);
-        assert(date1 == Date(2010, 2, 1));
-
-        auto date2 = Date(2010, 1, 1);
-        date2.roll!"months"(-1);
-        assert(date2 == Date(2010, 12, 1));
-
-        auto date3 = Date(1999, 1, 29);
-        date3.roll!"months"(1);
-        assert(date3 == Date(1999, 3, 1));
-
-        auto date4 = Date(1999, 1, 29);
-        date4.roll!"months"(1, AllowDayOverflow.no);
-        assert(date4 == Date(1999, 2, 28));
     }
 
     //Test roll!"months"() with AllowDayOverlow.no
@@ -10698,17 +10608,6 @@ assert(d6 == Date(2001, 2, 28));
         Params:
             units = The units to add. Must be $(D "days").
             days  = The number of days to add to this $(LREF Date).
-
-        Examples:
---------------------
-auto d = Date(2010, 1, 1);
-d.roll!"days"(1);
-assert(d == Date(2010, 1, 2));
-d.roll!"days"(365);
-assert(d == Date(2010, 1, 26));
-d.roll!"days"(-32);
-assert(d == Date(2010, 1, 25));
---------------------
       +/
     /+ref Date+/ void roll(string units)(long days) pure nothrow
         if(units == "days")
@@ -10728,7 +10627,7 @@ assert(d == Date(2010, 1, 25));
         _day = cast(ubyte)newDay;
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         auto d = Date(2010, 1, 1);
@@ -10923,15 +10822,6 @@ assert(d == Date(2010, 1, 25));
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.roll!"days"(12)));
         static assert(!__traits(compiles, idate.roll!"days"(12)));
-
-        //Verify Examples.
-        auto date = Date(2010, 1, 1);
-        date.roll!"days"(1);
-        assert(date == Date(2010, 1, 2));
-        date.roll!"days"(365);
-        assert(date == Date(2010, 1, 26));
-        date.roll!"days"(-32);
-        assert(date == Date(2010, 1, 25));
     }
 
 
@@ -11196,14 +11086,6 @@ assert(d == Date(2010, 1, 25));
 
         Params:
             rhs = The $(LREF Date) to subtract from this one.
-
-        Examples:
---------------------
-assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
-assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
-assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
-assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
---------------------
       +/
     int diffMonths(in Date rhs) const pure nothrow
     {
@@ -11211,6 +11093,15 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
         immutable monthDiff = _month - rhs._month;
 
         return yearDiff * 12 + monthDiff;
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
+        assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
+        assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
+        assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
     }
 
     unittest
@@ -11428,12 +11319,6 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
         static assert(__traits(compiles, date.diffMonths(idate)));
         static assert(__traits(compiles, cdate.diffMonths(idate)));
         static assert(__traits(compiles, idate.diffMonths(idate)));
-
-        //Verify Examples.
-        assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
-        assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
-        assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
-        assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
     }
 
 
@@ -11477,13 +11362,6 @@ assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
 
     /++
         Day of the year this $(LREF Date) is on.
-
-        Examples:
---------------------
-assert(Date(1999, 1, 1).dayOfYear == 1);
-assert(Date(1999, 12, 31).dayOfYear == 365);
-assert(Date(2000, 12, 31).dayOfYear == 366);
---------------------
       +/
     @property ushort dayOfYear() const pure nothrow
     {
@@ -11497,7 +11375,7 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
         assert(0, "Invalid month.");
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         assert(Date(1999, 1, 1).dayOfYear == 1);
@@ -11593,20 +11471,6 @@ assert(Date(2000, 12, 31).dayOfYear == 366);
 
     /++
         The Xth day of the Gregorian Calendar that this $(LREF Date) is on.
-
-        Examples:
---------------------
-assert(Date(1, 1, 1).dayOfGregorianCal == 1);
-assert(Date(1, 12, 31).dayOfGregorianCal == 365);
-assert(Date(2, 1, 1).dayOfGregorianCal == 366);
-
-assert(Date(0, 12, 31).dayOfGregorianCal == 0);
-assert(Date(0, 1, 1).dayOfGregorianCal == -365);
-assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
-
-assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
-assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
---------------------
      +/
     @property int dayOfGregorianCal() const pure nothrow
     {
@@ -11661,7 +11525,7 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
         }
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         assert(Date(1, 1, 1).dayOfGregorianCal == 1);
@@ -11694,78 +11558,49 @@ assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
 
         Params:
             day = The day of the Gregorian Calendar to set this $(LREF Date) to.
-
-        Examples:
---------------------
-auto date = Date.init;
-date.dayOfGregorianCal = 1;
-assert(date == Date(1, 1, 1));
-
-date.dayOfGregorianCal = 365;
-assert(date == Date(1, 12, 31));
-
-date.dayOfGregorianCal = 366;
-assert(date == Date(2, 1, 1));
-
-date.dayOfGregorianCal = 0;
-assert(date == Date(0, 12, 31));
-
-date.dayOfGregorianCal = -365;
-assert(date == Date(-0, 1, 1));
-
-date.dayOfGregorianCal = -366;
-assert(date == Date(-1, 12, 31));
-
-date.dayOfGregorianCal = 730_120;
-assert(date == Date(2000, 1, 1));
-
-date.dayOfGregorianCal = 734_137;
-assert(date == Date(2010, 12, 31));
---------------------
      +/
     @property void dayOfGregorianCal(int day) pure nothrow
     {
         this = Date(day);
     }
 
+    ///
     unittest
     {
-        {
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.dayOfGregorianCal = 187));
-            static assert(!__traits(compiles, cdate.dayOfGregorianCal = 187));
-            static assert(!__traits(compiles, idate.dayOfGregorianCal = 187));
-        }
+        auto date = Date.init;
+        date.dayOfGregorianCal = 1;
+        assert(date == Date(1, 1, 1));
 
-        //Verify Examples.
-        {
-            auto date = Date.init;
-            date.dayOfGregorianCal = 1;
-            assert(date == Date(1, 1, 1));
+        date.dayOfGregorianCal = 365;
+        assert(date == Date(1, 12, 31));
 
-            date.dayOfGregorianCal = 365;
-            assert(date == Date(1, 12, 31));
+        date.dayOfGregorianCal = 366;
+        assert(date == Date(2, 1, 1));
 
-            date.dayOfGregorianCal = 366;
-            assert(date == Date(2, 1, 1));
+        date.dayOfGregorianCal = 0;
+        assert(date == Date(0, 12, 31));
 
-            date.dayOfGregorianCal = 0;
-            assert(date == Date(0, 12, 31));
+        date.dayOfGregorianCal = -365;
+        assert(date == Date(-0, 1, 1));
 
-            date.dayOfGregorianCal = -365;
-            assert(date == Date(-0, 1, 1));
+        date.dayOfGregorianCal = -366;
+        assert(date == Date(-1, 12, 31));
 
-            date.dayOfGregorianCal = -366;
-            assert(date == Date(-1, 12, 31));
+        date.dayOfGregorianCal = 730_120;
+        assert(date == Date(2000, 1, 1));
 
-            date.dayOfGregorianCal = 730_120;
-            assert(date == Date(2000, 1, 1));
+        date.dayOfGregorianCal = 734_137;
+        assert(date == Date(2010, 12, 31));
+    }
 
-            date.dayOfGregorianCal = 734_137;
-            assert(date == Date(2010, 12, 31));
-        }
+    unittest
+    {
+        auto date = Date(1999, 7, 6);
+        const cdate = Date(1999, 7, 6);
+        immutable idate = Date(1999, 7, 6);
+        static assert(__traits(compiles, date.dayOfGregorianCal = 187));
+        static assert(!__traits(compiles, cdate.dayOfGregorianCal = 187));
+        static assert(!__traits(compiles, idate.dayOfGregorianCal = 187));
     }
 
 
@@ -11873,14 +11708,6 @@ assert(date == Date(2010, 12, 31));
 
     /++
         $(LREF Date) for the last day in the month that this $(LREF Date) is in.
-
-        Examples:
---------------------
-assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
-assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
-assert(Date(2000, 2, 7).endOfMonth == Date(1999, 2, 29));
-assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
---------------------
       +/
     @property Date endOfMonth() const pure nothrow
     {
@@ -11888,6 +11715,15 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
             return Date(_year, _month, maxDay(_year, _month));
         catch(Exception e)
             assert(0, "Date's constructor threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
+        assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
+        assert(Date(2000, 2, 7).endOfMonth == Date(2000, 2, 29));
+        assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
     }
 
     unittest
@@ -11926,29 +11762,24 @@ assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.endOfMonth = Date(1999, 7, 30)));
         static assert(!__traits(compiles, idate.endOfMonth = Date(1999, 7, 30)));
-
-        //Verify Examples.
-        assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
-        assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
-        assert(Date(2000, 2, 7).endOfMonth == Date(2000, 2, 29));
-        assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
     }
 
 
     /++
         The last day in the month that this $(LREF Date) is in.
-
-        Examples:
---------------------
-assert(Date(1999, 1, 6).daysInMonth == 31);
-assert(Date(1999, 2, 7).daysInMonth == 28);
-assert(Date(2000, 2, 7).daysInMonth == 29);
-assert(Date(2000, 6, 4).daysInMonth == 30);
---------------------
       +/
     @property ubyte daysInMonth() const pure nothrow
     {
         return maxDay(_year, _month);
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(1999, 1, 6).daysInMonth == 31);
+        assert(Date(1999, 2, 7).daysInMonth == 28);
+        assert(Date(2000, 2, 7).daysInMonth == 29);
+        assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
     unittest
@@ -11987,29 +11818,24 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.daysInMonth = 30));
         static assert(!__traits(compiles, idate.daysInMonth = 30));
-
-        //Verify Examples.
-        assert(Date(1999, 1, 6).daysInMonth == 31);
-        assert(Date(1999, 2, 7).daysInMonth == 28);
-        assert(Date(2000, 2, 7).daysInMonth == 29);
-        assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
 
     /++
         Whether the current year is a date in A.D.
-
-        Examples:
---------------------
-assert(Date(1, 1, 1).isAD);
-assert(Date(2010, 12, 31).isAD);
-assert(!Date(0, 12, 31).isAD);
-assert(!Date(-2010, 1, 1).isAD);
---------------------
       +/
     @property bool isAD() const pure nothrow
     {
         return _year > 0;
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(1, 1, 1).isAD);
+        assert(Date(2010, 12, 31).isAD);
+        assert(!Date(0, 12, 31).isAD);
+        assert(!Date(-2010, 1, 1).isAD);
     }
 
     unittest
@@ -12024,12 +11850,6 @@ assert(!Date(-2010, 1, 1).isAD);
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.isAD));
         static assert(__traits(compiles, idate.isAD));
-
-        //Verify Examples.
-        assert(Date(1, 1, 1).isAD);
-        assert(Date(2010, 12, 31).isAD);
-        assert(!Date(0, 12, 31).isAD);
-        assert(!Date(-2010, 1, 1).isAD);
     }
 
 
@@ -12083,14 +11903,6 @@ assert(!Date(-2010, 1, 1).isAD);
 
     /++
         Converts this $(LREF Date) to a string with the format YYYYMMDD.
-
-        Examples:
---------------------
-assert(Date(2010, 7, 4).toISOString() == "20100704");
-assert(Date(1998, 12, 25).toISOString() == "19981225");
-assert(Date(0, 1, 5).toISOString() == "00000105");
-assert(Date(-4, 1, 5).toISOString() == "-00040105");
---------------------
       +/
     string toISOString() const nothrow
     {
@@ -12110,6 +11922,15 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
         }
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(2010, 7, 4).toISOString() == "20100704");
+        assert(Date(1998, 12, 25).toISOString() == "19981225");
+        assert(Date(0, 1, 5).toISOString() == "00000105");
+        assert(Date(-4, 1, 5).toISOString() == "-00040105");
     }
 
     unittest
@@ -12133,24 +11954,10 @@ assert(Date(-4, 1, 5).toISOString() == "-00040105");
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.toISOString()));
         static assert(__traits(compiles, idate.toISOString()));
-
-        //Verify Examples.
-        assert(Date(2010, 7, 4).toISOString() == "20100704");
-        assert(Date(1998, 12, 25).toISOString() == "19981225");
-        assert(Date(0, 1, 5).toISOString() == "00000105");
-        assert(Date(-4, 1, 5).toISOString() == "-00040105");
     }
 
     /++
         Converts this $(LREF Date) to a string with the format YYYY-MM-DD.
-
-        Examples:
---------------------
-assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
-assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
-assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
-assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
---------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -12170,6 +11977,15 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
         }
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
+        assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
+        assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
+        assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     unittest
@@ -12193,24 +12009,10 @@ assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.toISOExtString()));
         static assert(__traits(compiles, idate.toISOExtString()));
-
-        //Verify Examples.
-        assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
-        assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
-        assert(Date(0, 1, 5).toISOExtString() == "0000-01-05");
-        assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
     /++
         Converts this $(LREF Date) to a string with the format YYYY-Mon-DD.
-
-        Examples:
---------------------
-assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
-assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
-assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
-assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
---------------------
       +/
     string toSimpleString() const nothrow
     {
@@ -12230,6 +12032,15 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
         }
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
+        assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
+        assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
+        assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
     }
 
     unittest
@@ -12253,12 +12064,6 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.toSimpleString()));
         static assert(__traits(compiles, idate.toSimpleString()));
-
-        //Verify Examples.
-        assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
-        assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
-        assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
-        assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
     }
 
     //TODO Add a function which returns a string in a user-specified format.
@@ -12307,15 +12112,6 @@ assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF Date) would not be valid.
-
-        Examples:
---------------------
-assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
-assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
-assert(Date.fromISOString("00000105") == Date(0, 1, 5));
-assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
-assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
---------------------
       +/
     static Date fromISOString(S)(in S isoString)
         if(isSomeString!S)
@@ -12342,6 +12138,16 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
             enforce(all!isDigit(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
+    }
+
+    ///
+    unittest
+    {
+        assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
+        assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
+        assert(Date.fromISOString("00000105") == Date(0, 1, 5));
+        assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
+        assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
     }
 
     unittest
@@ -12408,13 +12214,6 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
         assert(Date.fromISOString("19990706 ") == Date(1999, 7, 6));
         assert(Date.fromISOString(" 19990706") == Date(1999, 7, 6));
         assert(Date.fromISOString(" 19990706 ") == Date(1999, 7, 6));
-
-        //Verify Examples.
-        assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
-        assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
-        assert(Date.fromISOString("00000105") == Date(0, 1, 5));
-        assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
-        assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
     }
 
 
@@ -12429,15 +12228,6 @@ assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO
             Extended format or if the resulting $(LREF Date) would not be valid.
-
-        Examples:
---------------------
-assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
-assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
-assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
-assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
-assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
---------------------
       +/
     static Date fromISOExtString(S)(in S isoExtString)
         if(isSomeString!(S))
@@ -12469,6 +12259,16 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
                     new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         return Date(to!short(year), to!ubyte(month), to!ubyte(day));
+    }
+
+    ///
+    unittest
+    {
+        assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
+        assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
+        assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
+        assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
+        assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
     unittest
@@ -12535,13 +12335,6 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
         assert(Date.fromISOExtString("1999-07-06 ") == Date(1999, 7, 6));
         assert(Date.fromISOExtString(" 1999-07-06") == Date(1999, 7, 6));
         assert(Date.fromISOExtString(" 1999-07-06 ") == Date(1999, 7, 6));
-
-        //Verify Examples.
-        assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
-        assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
-        assert(Date.fromISOExtString("0000-01-05") == Date(0, 1, 5));
-        assert(Date.fromISOExtString("-0004-01-05") == Date(-4, 1, 5));
-        assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
 
@@ -12556,15 +12349,6 @@ assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
         Throws:
             $(LREF DateTimeException) if the given string is not in the correct
             format or if the resulting $(LREF Date) would not be valid.
-
-        Examples:
---------------------
-assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
-assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
-assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
-assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
-assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
---------------------
       +/
     static Date fromSimpleString(S)(in S simpleString)
         if(isSomeString!(S))
@@ -12593,6 +12377,16 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
                     new DateTimeException(format("Invalid string format: %s", simpleString)));
 
         return Date(to!short(year), month, to!ubyte(day));
+    }
+
+    ///
+    unittest
+    {
+        assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
+        assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
+        assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
+        assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
+        assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
     }
 
     unittest
@@ -12659,13 +12453,6 @@ assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
         assert(Date.fromSimpleString("1999-Jul-06 ") == Date(1999, 7, 6));
         assert(Date.fromSimpleString(" 1999-Jul-06") == Date(1999, 7, 6));
         assert(Date.fromSimpleString(" 1999-Jul-06 ") == Date(1999, 7, 6));
-
-        //Verify Examples.
-        assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
-        assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
-        assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
-        assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
-        assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
     }
 
 
