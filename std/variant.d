@@ -424,12 +424,8 @@ private:
         case OpID.index:
             // Added allowed!(...) prompted by a bug report by Chris
             // Nicholson-Sauls.
-            static if (isStaticArray!(A) && allowed!(typeof(A.init)))
-            {
-                enforce(0, "Not implemented");
-            }
-            // Can't handle void arrays as there isn't any result to return.
-            static if (isDynamicArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
+            static if ((isStaticArray!(A) || isDynamicArray!(A))
+                    && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
             {
                 // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;
@@ -1177,6 +1173,19 @@ unittest
     static int bar(string s) { return to!int(s); }
     v = &bar;
     assert(v("43") == 43);
+}
+
+// opIndex with static arrays, issue 12771
+unittest
+{
+    int[4] elements = [0, 1, 2, 3];
+    Variant v = elements;
+    assert(v == elements);
+    assert(v[2] == 2);
+    assert(v[3] == 3);
+    v[2] = 6;
+    assert(v[2] == 6);
+    assert(v != elements);
 }
 
 //Issue# 8195
