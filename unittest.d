@@ -18,6 +18,7 @@ public import std.base64;
 public import std.compiler;
 public import std.concurrency;
 public import std.conv;
+public import std.container;
 public import std.cstream;
 public import std.datetime;
 public import std.demangle;
@@ -102,7 +103,7 @@ int main(char[][] args)
     assert(x[2] == 45);
 
     cast(void)std.math.sin(3.0);
-    std.mathspecial.gamma(6.2);
+    cast(void)std.mathspecial.gamma(6.2);
 
     std.demangle.demangle("hello");
 
