@@ -5158,7 +5158,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             else
             {
                 version (X86)
-                    argptr = p;
+                    argptr = cast(va_list)p;
                 else version(X86_64)
                 {   __va_list va;
                     va.stack_args = p;
@@ -5208,7 +5208,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 //doFormat(putc, (&keyti)[0..1], pkey);
                 m = getMan(keyti);
                 version (X86)
-                    argptr = pkey;
+                    argptr = cast(va_list)pkey;
                 else version (Win64)
                 {
                     void* q = void;
@@ -5217,7 +5217,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                         argptr = &q;
                     }
                     else
-                        argptr = pkey;
+                        argptr = cast(va_list)pkey;
                 }
                 else version (X86_64)
                 {   __va_list va;
@@ -5233,7 +5233,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 //doFormat(putc, (&valti)[0..1], pvalue);
                 m = getMan(valti);
                 version (X86)
-                    argptr = pvalue;
+                    argptr = cast(va_list)pvalue;
                 else version (Win64)
                 {
                     void* q2 = void;

@@ -17,6 +17,7 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
 module std.stdio;
 
 public import core.stdc.stdio, std.string : KeepTerminator;
+import core.vararg;
 static import std.c.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
@@ -2363,7 +2364,7 @@ unittest
 }
 
 private
-void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
+void writefx(FILE* fps, TypeInfo[] arguments, va_list argptr, int newline=false)
 {
     import std.format : doFormat;
     import std.utf : toUTF8;
