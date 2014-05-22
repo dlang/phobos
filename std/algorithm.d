@@ -7601,9 +7601,10 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         InitMatrix();
     }
 
-    CostType distance(Range s, Range t) 
+    CostType distance(Range s, Range t)
     {
-        if (s.length >= t.length) {
+        if (s.length >= t.length)
+        {
             auto swap = s.idup;
             s = t;
             t = swap;
@@ -7611,18 +7612,22 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
 
         CostType lastdiag, olddiag;
         AllocMatrix(s.length+1,1);
-        foreach (y; 1 .. s.length + 1) {
+        foreach (y; 1 .. s.length + 1)
+        {
             matrix(y,0) = y;
         }
-        foreach (x; 1 .. t.length + 1) {
+        foreach (x; 1 .. t.length + 1)
+        {
             matrix(0,0) = x;
             lastdiag = x - 1;
-            foreach (y; 1 .. s.length + 1) {
+            foreach (y; 1 .. s.length + 1)
+            {
                 olddiag = matrix(0,y);
                 auto cSub = lastdiag + (equals(s[y-1], t[x-1]) ? 0 : _substitutionIncrement);
                 auto cIns = matrix(0,y - 1) + _insertionIncrement;
                 auto cDel = matrix(0,y) + _deletionIncrement;
-                switch (min_index(cSub, cIns, cDel)) {
+                switch (min_index(cSub, cIns, cDel))
+                {
                 case 0:
                     matrix(0,y) = cSub;
                     break;
