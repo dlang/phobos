@@ -53,16 +53,11 @@ enum LetterCase : bool
     lower  /// Lower case letters
 }
 
+/// Newline sequence for this system.
 version(Windows)
-{
-    /// Newline sequence for this system.
     immutable newline = "\r\n";
-}
 else version(Posix)
-{
-    /// Newline sequence for this system.
     immutable newline = "\n";
-}
 else
     static assert(0, "Unsupported OS");
 
