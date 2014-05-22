@@ -924,19 +924,33 @@ struct BitArray
         auto p1 = this.ptr;
         auto p2 = a2.ptr;
         auto n = len / bitsPerSizeT;
-        for (i = 0; i < n; i++)
+
+        for (i = 0; i < n; ++i)
         {
             if (p1[i] != p2[i])
-                break;                // not equal
+            {
+                return p1[i] & cast(size_t)1 << bsf(p1[i] ^ p2[i]) ? 1 : -1;
+            }
         }
-        for (size_t j = 0; j < len-i * bitsPerSizeT; j++)
+
+        immutable lenLastChunk = len % bitsPerSizeT;
+        if (lenLastChunk > 0)
         {
-            size_t mask = cast(size_t)(1 << j);
-            auto c = (cast(long)(p1[i] & mask) - cast(long)(p2[i] & mask));
-            if (c)
-                return c > 0 ? 1 : -1;
+            immutable diff = p1[i] ^ p2[i];
+            if (diff)
+            {
+                immutable index = bsf(diff);
+                if (index < lenLastChunk)
+                {
+                    return p1[i] & cast(size_t)1 << index ? 1 : -1;
+                }
+            }
         }
-        return cast(int)this.len - cast(int)a2.length;
+
+        // Standard: 
+        // A bool value can be implicitly converted to any integral type,
+        // with false becoming 0 and true becoming 1
+        return (this.length > a2.length) - (this.length < a2.length);
     }
 
     unittest
@@ -966,7 +980,7 @@ struct BitArray
         assert(a >= e);
 
         bool[] v;
-        for (int i = 1; i < 256; i++)
+        foreach  (i; 1 .. 256)
         {
             v.length = i;
             v[] = false;
@@ -975,6 +989,20 @@ struct BitArray
             BitArray y; y.init(v);
             assert(x < y);
             assert(x <= y);
+        }
+
+        foreach (i; 2 .. 256)
+        {
+            foreach (j; 1 .. i)
+            {
+                BitArray a1, a2;
+                a1.length = i;
+                a2.length = i;
+                a1[j-1] = true;
+                a2[j] = true;
+                assert(a1 > a2);
+                assert(a1 >= a2);
+            }
         }
     }
 
