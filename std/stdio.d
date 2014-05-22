@@ -83,6 +83,8 @@ version (DIGITAL_MARS_STDIO)
          * Use _iobuf* for the unshared version of FILE*,
          * usable when the FILE is locked.
          */
+      nothrow:
+      @nogc:
         int _fputc_nlock(int, _iobuf*);
         int _fputwc_nlock(int, _iobuf*);
         int _fgetc_nlock(_iobuf*);
@@ -112,6 +114,8 @@ else version (MICROSOFT_STDIO)
         /* **
          * Microsoft under-the-hood C I/O functions
          */
+      nothrow:
+      @nogc:
         int _fputc_nolock(int, _iobuf*);
         int _fputwc_nolock(int, _iobuf*);
         int _fgetc_nolock(_iobuf*);
@@ -146,6 +150,8 @@ else version (GCC_IO)
      */
     extern (C)
     {
+      nothrow:
+      @nogc:
         int fputc_unlocked(int, _iobuf*);
         int fputwc_unlocked(wchar_t, _iobuf*);
         int fgetc_unlocked(_iobuf*);
@@ -169,6 +175,9 @@ else version (GCC_IO)
 }
 else version (GENERIC_IO)
 {
+    nothrow:
+    @nogc:
+
     extern (C)
     {
         void flockfile(FILE*);
