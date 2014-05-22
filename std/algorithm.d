@@ -316,7 +316,6 @@ into $(D b). $(D move(a)) reads $(D a) destructively.)
 )
 $(TR $(TDNW $(LREF moveAll)) $(TD Moves all elements from one
 range to another.)
-
 )
 $(TR $(TDNW $(LREF moveSome)) $(TD Moves as many elements as
 possible from one range to another.)
