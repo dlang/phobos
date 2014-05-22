@@ -342,6 +342,13 @@ struct JSONValue
         return store.object[k];
     }
 
+    auto opBinaryRight(string op : "in")(string k) const
+    {
+        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+                                "JSONValue is not an object");
+        return k in store.object;
+    }
+
     /// Implements the foreach $(D opApply) interface for json arrays.
     int opApply(int delegate(size_t index, ref JSONValue) dg)
     {
@@ -878,6 +885,11 @@ unittest
     assert(jv.type == JSON_TYPE.OBJECT);
     assertNotThrown(jv.object);
     assertNotThrown(jv["key"]);
+    assert("key" in jv);
+    assert("notAnElement" !in jv);
+    const cjv = jv;
+    assert("key" in cjv);
+
     foreach(string key, value; jv)
     {
         static assert(is(typeof(value) == JSONValue));
