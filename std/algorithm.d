@@ -316,6 +316,7 @@ into $(D b). $(D move(a)) reads $(D a) destructively.)
 )
 $(TR $(TDNW $(LREF moveAll)) $(TD Moves all elements from one
 range to another.)
+
 )
 $(TR $(TDNW $(LREF moveSome)) $(TD Moves as many elements as
 possible from one range to another.)
@@ -7601,36 +7602,42 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         InitMatrix();
     }
 
-    CostType distance(Range s, Range t)
+    CostType distance(Range s, Range t) 
     {
-        auto slen = walkLength(s.save), tlen = walkLength(t.save);
-        AllocMatrix(slen + 1, tlen + 1);
-        foreach (i; 1 .. rows)
-        {
-            auto sfront = s.front;
-            s.popFront();
-            auto tt = t;
-            foreach (j; 1 .. cols)
-            {
-                auto cSub = matrix(i - 1,j - 1)
-                    + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
-                tt.popFront();
-                auto cIns = matrix(i,j - 1) + _insertionIncrement;
-                auto cDel = matrix(i - 1,j) + _deletionIncrement;
+        if (s.length >= t.length) {
+            auto swap = s.idup;
+            s = t;
+            t = swap;
+        }
+
+        CostType lastdiag, olddiag;
+        AllocMatrix(s.length+1,1);
+        foreach (y; 1 .. s.length + 1) {
+            matrix(y,0) = y;
+        }
+        foreach (x; 1 .. t.length + 1) {
+            matrix(0,0) = x;
+            lastdiag = x - 1;
+            foreach (y; 1 .. s.length + 1) {
+                olddiag = matrix(0,y);
+                auto cSub = lastdiag + (equals(s[y-1], t[x-1]) ? 0 : _substitutionIncrement);
+                auto cIns = matrix(0,y - 1) + _insertionIncrement;
+                auto cDel = matrix(0,y) + _deletionIncrement;
                 switch (min_index(cSub, cIns, cDel)) {
                 case 0:
-                    matrix(i,j) = cSub;
+                    matrix(0,y) = cSub;
                     break;
                 case 1:
-                    matrix(i,j) = cIns;
+                    matrix(0,y) = cIns;
                     break;
                 default:
-                    matrix(i,j) = cDel;
+                    matrix(0,y) = cDel;
                     break;
                 }
+                lastdiag = olddiag;
             }
         }
-        return matrix(slen,tlen);
+        return(matrix(0,s.length));
     }
 
     EditOp[] path(Range s, Range t)
