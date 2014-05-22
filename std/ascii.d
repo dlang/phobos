@@ -44,25 +44,20 @@ immutable uppercase      = letters[0..26];               /// A..Z
 immutable lowercase      = letters[26..52];              /// a..z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
-/**
-Letter case specifier.
- */
+/++
+    Letter case specifier.
+  +/
 enum LetterCase : bool
 {
     upper, /// Upper case letters
     lower  /// Lower case letters
 }
 
+/// Newline sequence for this system.
 version(Windows)
-{
-    /// Newline sequence for this system.
     immutable newline = "\r\n";
-}
 else version(Posix)
-{
-    /// Newline sequence for this system.
     immutable newline = "\n";
-}
 else
     static assert(0, "Unsupported OS");
 
