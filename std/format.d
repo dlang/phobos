@@ -5148,10 +5148,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
                 if (tsize > 8 && m != Mangle.Tsarray)
                 {   q = p;
-                    argptr = &q;
+                    argptr = cast(va_list)&q;
                 }
                 else
-                argptr = p;
+                argptr = cast(va_list)p;
                 formatArg('s');
                 p += tsize;
             }
@@ -5214,7 +5214,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     void* q = void;
                     if (keysize > 8 && m != Mangle.Tsarray)
                     {   q = pkey;
-                        argptr = &q;
+                        argptr = cast(va_list)&q;
                     }
                     else
                         argptr = cast(va_list)pkey;
@@ -5240,10 +5240,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     auto valuesize = valti.tsize;
                     if (valuesize > 8 && m != Mangle.Tsarray)
                     {   q2 = pvalue;
-                        argptr = &q2;
+                        argptr = cast(va_list)&q2;
                     }
                     else
-                        argptr = pvalue;
+                        argptr = cast(va_list)pvalue;
                 }
                 else version (X86_64)
                 {   __va_list va2;
