@@ -337,9 +337,10 @@ struct JSONValue
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
     ref inout(JSONValue) opIndex(string k) inout
     {
-        enforceEx!JSONException(k in this,
-                                "Key not found: " ~ k);
-        return store.object[k];
+        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+                                "JSONValue is not an object");
+        return *enforceEx!JSONException(k in store.object,
+                                        "Key not found: " ~ k);
     }
 
     auto opBinaryRight(string op : "in")(string k) const
