@@ -133,22 +133,108 @@ unittest
     //assert(binaryFun!("return a + b;")(41, 1) == 42);
 }
 
-/*
+private template safeOp(string S)
+    if (is(typeof(mixin("0 "~S~" 0")) == bool))
+{
+    private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
+        if (isIntegral!ElementType1 && isIntegral!ElementType2)
+    {
+        alias T = CommonType!(ElementType1, ElementType2);
+        return mixin("cast(T)a "~S~" cast(T)b");
+    }
+
+    private bool safeOp(T0, T1)(T0 a, T1 b) pure
+    {
+        static if (isIntegral!T0 && isIntegral!T1 &&
+                   (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
+        {
+            static if (S == "<=" || S == "<")
+            {
+                static if (mostNegative!T0 < 0)
+                    immutable result = a < 0 || unsafeOp(a, b);
+                else
+                    immutable result = b >= 0 && unsafeOp(a, b);
+            }
+            else
+            {
+                static if (mostNegative!T0 < 0)
+                    immutable result = a >= 0 && unsafeOp(a, b);
+                else
+                    immutable result = b < 0 || unsafeOp(a, b);
+            }
+        }
+        else
+        {
+            static assert (is(typeof(mixin("a "~S~" b"))),
+                "Invalid arguments: Cannot compare types " ~ T0.stringof ~ " and " ~ T1.stringof ~ ".");
+
+            immutable result = mixin("a "~S~" b");
+        }
+        return result;
+    }
+}
+
+/**
    Predicate that returns $(D_PARAM a < b).
+   Correctly compares signed and unsigned integers, ie. -1 < 2U.
 */
-//bool less(T)(T a, T b) { return a < b; }
-//alias less = binaryFun!(q{a < b});
+bool lessThan(T0, T1)(T0 a, T1 b)
+{
+  return safeOp!"<"(a, b);
+}
 
-/*
+unittest
+{
+    assert(lessThan(2, 3));
+    assert(lessThan(2U, 3U));
+    assert(lessThan(2, 3.0));
+    assert(lessThan(-2, 3U));
+    assert(lessThan(2, 3U));
+    assert(!lessThan(3U, -2));
+    assert(!lessThan(3U, 2));
+    assert(!lessThan(0, 0));
+    assert(!lessThan(0U, 0));
+    assert(!lessThan(0, 0U));
+}
+
+/**
    Predicate that returns $(D_PARAM a > b).
+   Correctly compares signed and unsigned integers, ie. 2U > -1.
 */
-//alias greater = binaryFun!(q{a > b});
+bool greaterThan(T0, T1)(T0 a, T1 b)
+{
+  return safeOp!">"(a, b);
+}
 
-/*
+unittest
+{
+    assert(!greaterThan(2, 3));
+    assert(!greaterThan(2U, 3U));
+    assert(!greaterThan(2, 3.0));
+    assert(!greaterThan(-2, 3U));
+    assert(!greaterThan(2, 3U));
+    assert(greaterThan(3U, -2));
+    assert(greaterThan(3U, 2));
+    assert(!greaterThan(0, 0));
+    assert(!greaterThan(0U, 0));
+    assert(!greaterThan(0, 0U));
+}
+
+/**
    Predicate that returns $(D_PARAM a == b).
+   Correctly compares signed and unsigned integers, ie. !(-1 == ~0U).
 */
-//alias equalTo = binaryFun!(q{a == b});
+bool equalTo(T0, T1)(T0 a, T1 b)
+{
+  return safeOp!"=="(a, b);
+}
 
+unittest
+{
+    assert(equalTo(0U, 0));
+    assert(equalTo(0, 0U));
+    assert(!equalTo(-1, ~0U));
+}
 /**
    N-ary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b, c)), returns $(D pred(c, b, a)).
