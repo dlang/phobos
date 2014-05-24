@@ -63,6 +63,11 @@ version (FreeBSD)
     version = GENERIC_IO;
 }
 
+version (Android)
+{
+    version = GENERIC_IO;
+}
+
 version(Windows)
 {
     // core.stdc.stdio.fopen expects file names to be
@@ -809,7 +814,7 @@ Throws: $(D Exception) if the file is not opened.
         else
         {
             //static assert(off_t.sizeof == 8);
-            errnoEnforce(fseeko(_p.handle, offset, origin) == 0,
+            errnoEnforce(fseeko(_p.handle, cast(off_t) offset, origin) == 0,
                     "Could not seek in file `"~_name~"'");
         }
     }
@@ -832,7 +837,10 @@ Throws: $(D Exception) if the file is not opened.
         {
             import std.conv : text;
 
-            auto bigOffset = cast(ulong) int.max + 100;
+            version (Android)
+                auto bigOffset = int.max - 100;
+            else
+                auto bigOffset = cast(ulong) int.max + 100;
             f.seek(bigOffset);
             assert(f.tell == bigOffset, text(f.tell));
             // Uncomment the tests below only if you want to wait for

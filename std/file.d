@@ -55,6 +55,17 @@ version (unittest)
 
         return _deleteme;
     }
+
+    version(Android)
+    {
+        enum system_directory = "/system/etc";
+        enum system_file      = "/system/etc/hosts";
+    }
+    else version(Posix)
+    {
+        enum system_directory = "/usr/include";
+        enum system_file      = "/usr/include/assert.h";
+    }
 }
 
 
@@ -718,7 +729,8 @@ void setTimes(in char[] name,
 
 unittest
 {
-    string dir = deleteme ~ r".dir/a/b/c";
+    string newdir = deleteme ~ r".dir";
+    string dir = newdir ~ r"/a/b/c";
     string file = dir ~ "/file";
 
     if (!exists(dir)) mkdirRecurse(dir);
@@ -737,7 +749,7 @@ unittest
         assert(mtime == mtime_res);
     }
 
-    rmdirRecurse(dir);
+    rmdirRecurse(newdir);
 }
 
 /++
@@ -1021,11 +1033,11 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
-            assert("/usr/include".isDir);
+        if(system_directory.exists)
+            assert(system_directory.isDir);
 
-        if("/usr/include/assert.h".exists)
-            assert(!"/usr/include/assert.h".isDir);
+        if(system_file.exists)
+            assert(!system_file.isDir);
     }
 }
 
@@ -1072,16 +1084,16 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
+        if(system_directory.exists)
         {
-            assert(attrIsDir(getAttributes("/usr/include")));
-            assert(attrIsDir(getLinkAttributes("/usr/include")));
+            assert(attrIsDir(getAttributes(system_directory)));
+            assert(attrIsDir(getLinkAttributes(system_directory)));
         }
 
-        if("/usr/include/assert.h".exists)
+        if(system_file.exists)
         {
-            assert(!attrIsDir(getAttributes("/usr/include/assert.h")));
-            assert(!attrIsDir(getLinkAttributes("/usr/include/assert.h")));
+            assert(!attrIsDir(getAttributes(system_file)));
+            assert(!attrIsDir(getLinkAttributes(system_file)));
         }
     }
 }
@@ -1134,11 +1146,11 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
-            assert(!"/usr/include".isFile);
+        if(system_directory.exists)
+            assert(!system_directory.isFile);
 
-        if("/usr/include/assert.h".exists)
-            assert("/usr/include/assert.h".isFile);
+        if(system_file.exists)
+            assert(system_file.isFile);
     }
 }
 
@@ -1196,16 +1208,16 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
+        if(system_directory.exists)
         {
-            assert(!attrIsFile(getAttributes("/usr/include")));
-            assert(!attrIsFile(getLinkAttributes("/usr/include")));
+            assert(!attrIsFile(getAttributes(system_directory)));
+            assert(!attrIsFile(getLinkAttributes(system_directory)));
         }
 
-        if("/usr/include/assert.h".exists)
+        if(system_file.exists)
         {
-            assert(attrIsFile(getAttributes("/usr/include/assert.h")));
-            assert(attrIsFile(getLinkAttributes("/usr/include/assert.h")));
+            assert(attrIsFile(getAttributes(system_file)));
+            assert(attrIsFile(getLinkAttributes(system_file)));
         }
     }
 }
@@ -1260,14 +1272,14 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
+        if(system_directory.exists)
         {
-            assert(!"/usr/include".isSymlink);
+            assert(!system_directory.isSymlink);
 
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            core.sys.posix.unistd.symlink("/usr/include", symfile.ptr);
+            core.sys.posix.unistd.symlink(system_directory, symfile.ptr);
 
             assert(symfile.isSymlink);
             assert(!attrIsSymlink(getAttributes(symfile)));
@@ -1280,14 +1292,14 @@ unittest
             assert(!attrIsFile(getLinkAttributes(symfile)));
         }
 
-        if("/usr/include/assert.h".exists)
+        if(system_file.exists)
         {
-            assert(!"/usr/include/assert.h".isSymlink);
+            assert(!system_file.isSymlink);
 
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            core.sys.posix.unistd.symlink("/usr/include/assert.h", symfile.ptr);
+            core.sys.posix.unistd.symlink(system_file, symfile.ptr);
 
             assert(symfile.isSymlink);
             assert(!attrIsSymlink(getAttributes(symfile)));
@@ -1496,12 +1508,12 @@ else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link)
 
 version(Posix) unittest
 {
-    if("/usr/include".exists)
+    if(system_directory.exists)
     {
         immutable symfile = deleteme ~ "_slink\0";
         scope(exit) if(symfile.exists) symfile.remove();
 
-        symlink("/usr/include", symfile);
+        symlink(system_directory, symfile);
 
         assert(symfile.exists);
         assert(symfile.isSymlink);
@@ -1515,14 +1527,14 @@ version(Posix) unittest
         assert(!attrIsFile(getLinkAttributes(symfile)));
     }
 
-    if("/usr/include/assert.h".exists)
+    if(system_file.exists)
     {
-        assert(!"/usr/include/assert.h".isSymlink);
+        assert(!system_file.isSymlink);
 
         immutable symfile = deleteme ~ "_slink\0";
         scope(exit) if(symfile.exists) symfile.remove();
 
-        symlink("/usr/include/assert.h", symfile);
+        symlink(system_file, symfile);
 
         assert(symfile.exists);
         assert(symfile.isSymlink);
@@ -1587,7 +1599,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
 
 version(Posix) unittest
 {
-    foreach(file; ["/usr/include", "/usr/include/assert.h"])
+    foreach(file; [system_directory, system_file])
     {
         if(file.exists)
         {
@@ -1720,6 +1732,10 @@ else version (FreeBSD)
         errnoEnforce(result == 0);
 
         return buffer.assumeUnique;
+    }
+    else version (Android)
+    {
+        return readLink("/proc/self/exe");
     }
     else
         static assert(0, "thisExePath is not supported on this platform");
@@ -2215,10 +2231,10 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
+        if(system_directory.exists)
         {
             {
-                auto de = DirEntry("/usr/include");
+                auto de = DirEntry(system_directory);
                 assert(!de.isFile);
                 assert(de.isDir);
                 assert(!de.isSymlink);
@@ -2227,7 +2243,7 @@ unittest
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            core.sys.posix.unistd.symlink("/usr/include", symfile.ptr);
+            core.sys.posix.unistd.symlink(system_directory, symfile.ptr);
 
             {
                 auto de = DirEntry(symfile);
@@ -2257,9 +2273,9 @@ unittest
             }
         }
 
-        if("/usr/include/assert.h".exists)
+        if(system_file.exists)
         {
-            auto de = DirEntry("/usr/include/assert.h");
+            auto de = DirEntry(system_file);
             assert(de.isFile);
             assert(!de.isDir);
             assert(!de.isSymlink);
@@ -2424,7 +2440,9 @@ version(Posix) unittest
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
-    std.process.system("ln -sf "~deleteme~"/a/b/c "~deleteme~"/link");
+    version(Android) string link_cmd = "ln -s ";
+    else string link_cmd = "ln -sf ";
+    std.process.system(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
     enforce(!exists(deleteme));
 }
@@ -3138,7 +3156,7 @@ string tempDir() @trusted
         }
         else static assert (false, "Unsupported platform");
 
-        if (cache is null) cache = ".";
+        if (cache is null) cache = getcwd();
     }
     return cache;
 }

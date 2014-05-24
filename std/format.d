@@ -1672,7 +1672,9 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         formatTest( to!(    const T)(5.5), "5.5" );
         formatTest( to!(immutable T)(5.5), "5.5" );
 
-        formatTest( T.nan, "nan" );
+        // bionic doesn't support lower-case string formatting of nan yet
+        version(Android) { formatTest( T.nan, "NaN" ); }
+        else { formatTest( T.nan, "nan" ); }
     }
 }
 
@@ -3423,6 +3425,13 @@ unittest
         assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
                 stream.data);
     }
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers
+        // or lower-case string formatting of nan yet, but it was committed
+        // recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
+    }
     else
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
@@ -3450,6 +3459,12 @@ unittest
     //formattedWrite(stream, "%x %X", 1.32);
     version (Win64)
         assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers,
+        // but it was committed recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
+    }
     else
         assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
@@ -5956,6 +5971,13 @@ unittest
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     else version (Win64)
         assert(s == "1.67 -0X1.47AE14P+0 nan", s);
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers
+        // or lower-case string formatting of nan yet, but it was committed
+        // recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
+    }
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
