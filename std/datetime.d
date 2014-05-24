@@ -315,56 +315,6 @@ immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minute
 
 
 //==============================================================================
-// Section with private constants.
-//==============================================================================
-
-/++
-    Array of integers representing the last days of each month in a year.
-  +/
-private immutable int[13] lastDayNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
-
-/++
-    Array of integers representing the last days of each month in a leap year.
-  +/
-private immutable int[13] lastDayLeap = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
-
-/++
-    Array of the long names of each month.
-  +/
-private immutable string[12] longMonthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December"
-];
-
-/++
-    Array of the short (three letter) names of each month.
-  +/
-private immutable string[12] shortMonthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec"
-];
-
-//==============================================================================
 // Section with other types.
 //==============================================================================
 
@@ -646,10 +596,7 @@ public:
             this(standardTime, _timezone);
         }
         catch(Exception e)
-        {
-            assert(0, "Date, TimeOfDay, or DateTime's constructor threw when " ~
-                      "it shouldn't have.");
-        }
+            assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
     }
 
     unittest
@@ -2276,17 +2223,15 @@ public:
 
             version(Posix)
             {
-                char[] zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName).dup;
-                zone ~= "\0";
-
                 timeInfo.tm_gmtoff = cast(int)convert!("hnsecs", "seconds")(adjTime - _stdTime);
-                timeInfo.tm_zone = zone.ptr;
+                auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName).dup;
+                timeInfo.tm_zone = zone.toUTFz!(const(char)*)();
             }
 
             return timeInfo;
         }
         catch(Exception e)
-            assert(0, "Either DateTime's constructor threw.");
+            assert(0, "Encountered impossible exception.");
     }
 
     unittest
@@ -5711,19 +5656,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        //Ideally, this would just be
-        //retval._stdTime += unaryFun!(op ~ "a")(hnsecs);
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        retval._stdTime += signedHNSecs;
-
+        mixin(format("retval._stdTime %s= hnsecs;", op));
         return retval;
     }
 
@@ -5932,19 +5865,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             auto hnsecs = duration.hnsecs;
 
-        //Ideally, this would just be
-        //_stdTime += unaryFun!(op ~ "a")(hnsecs);
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        _stdTime += signedHNSecs;
-
+        mixin(format("_stdTime %s= hnsecs;", op));
         return this;
     }
 
@@ -8978,10 +8899,7 @@ public:
     @property ushort yearBC() const pure
     {
         if(isAD)
-            throw new DateTimeException("Year " ~ numToString(_year) ~ " is A.D.");
-            //Once format is pure, this would be a better error message.
-            //throw new DateTimeException(format("%s is A.D.", this));
-
+            throw new DateTimeException(format("Year %s is A.D.", _year));
         return cast(ushort)((_year * -1) + 1);
     }
 
@@ -10893,18 +10811,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable days = convert!("hnsecs", "days")(duration.hnsecs);
 
-        //Ideally, this would just be
-        //return retval.addDays(unaryFun!(op ~ "a")(days));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedDays = days;
-        else static if(op == "-")
-            immutable signedDays = -days;
-        else
-            static assert(0);
-
-        return retval.addDays(signedDays);
+        mixin(format("return retval.addDays(%sdays);", op));
     }
 
     unittest
@@ -11000,18 +10907,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable days = convert!("hnsecs", "days")(duration.hnsecs);
 
-        //Ideally, this would just be
-        //return addDays(unaryFun!(op ~ "a")(days));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedDays = days;
-        else static if(op == "-")
-            immutable signedDays = -days;
-        else
-            static assert(0);
-
-        return addDays(signedDays);
+        mixin(format("return addDays(%sdays);", op));
     }
 
     unittest
@@ -12063,14 +11959,14 @@ public:
             if(_year >= 0)
             {
                 if(_year < 10_000)
-                    return format("%04d-%s-%02d", _year, monthToString(_month, false), _day);
+                    return format("%04d-%s-%02d", _year, monthToString(_month), _day);
                 else
-                    return format("+%05d-%s-%02d", _year, monthToString(_month, false), _day);
+                    return format("+%05d-%s-%02d", _year, monthToString(_month), _day);
             }
             else if(_year > -10_000)
-                return format("%05d-%s-%02d", _year, monthToString(_month, false), _day);
+                return format("%05d-%s-%02d", _year, monthToString(_month), _day);
             else
-                return format("%06d-%s-%02d", _year, monthToString(_month, false), _day);
+                return format("%06d-%s-%02d", _year, monthToString(_month), _day);
         }
         catch(Exception e)
             assert(0, "format() threw.");
@@ -12749,20 +12645,10 @@ private:
 
     pure invariant()
     {
-        assert(valid!"months"(_month), "Invariant Failure: year [" ~
-                                       numToString(_year) ~
-                                       "] month [" ~
-                                       numToString(_month) ~
-                                       "] day [" ~
-                                       numToString(_day) ~
-                                       "]");
-        assert(valid!"days"(_year, _month, _day), "Invariant Failure: year [" ~
-                                                  numToString(_year) ~
-                                                  "] month [" ~
-                                                  numToString(_month) ~
-                                                  "] day [" ~
-                                                  numToString(_day) ~
-                                                  "]");
+        assert(valid!"months"(_month),
+               format("Invariant Failure: year [%s] month [%s] day [%s]", _year, _month, _day));
+        assert(valid!"days"(_year, _month, _day),
+               format("Invariant Failure: year [%s] month [%s] day [%s]", _year, _month, _day));
     }
 
 
@@ -13152,7 +13038,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
             static assert(0);
 
         value %= 60;
-        mixin("auto newVal = cast(ubyte)(_" ~ memberVarStr ~ ") + value;");
+        mixin(format("auto newVal = cast(ubyte)(_%s) + value;", memberVarStr));
 
         if(value < 0)
         {
@@ -13162,7 +13048,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         else if(newVal >= 60)
             newVal -= 60;
 
-        mixin("_" ~ memberVarStr ~ " = cast(ubyte)newVal;");
+        mixin(format("_%s = cast(ubyte)newVal;", memberVarStr));
     }
 
     //Test roll!"minutes"().
@@ -13375,18 +13261,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        //Ideally, this would just be
-        //return retval.addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        return retval.addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
+        mixin(format(`return retval.addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     unittest
@@ -13476,18 +13351,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        //Ideally, this would just be
-        //return addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        return addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
+        mixin(format(`return addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     unittest
@@ -14068,13 +13932,7 @@ private:
     pure invariant()
     {
         assert(_valid(_hour, _minute, _second),
-               "Invariant Failure: hour [" ~
-               numToString(_hour) ~
-               "] minute [" ~
-               numToString(_minute) ~
-               "] second [" ~
-               numToString(_second) ~
-               "]");
+               format("Invariant Failure: hour [%s] minute [%s] second [%s]", _hour, _minute, _second));
     }
 
     ubyte _hour;
@@ -15667,18 +15525,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        //Ideally, this would just be
-        //return retval.addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        return retval.addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
+        mixin(format(`return retval.addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     unittest
@@ -15774,18 +15621,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        //Ideally, this would just be
-       //return addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        return addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
+        mixin(format(`return addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     unittest
@@ -26229,7 +26065,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                 //be there, but since PosixTimeZone _does_ use leap seconds if
                 //the time zone file does, we'll test that functionality if the
                 //appropriate files exist.
-                if((PosixTimeZone.defaultTZDatabaseDir ~ "right/" ~ tzName).exists())
+                if(buildPath(PosixTimeZone.defaultTZDatabaseDir, "right", tzName).exists)
                 {
                     auto leapTZ = PosixTimeZone.getTimeZone("right/" ~ tzName);
 
@@ -27790,16 +27626,13 @@ assert(tz.dstName == "PDT");
         enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
-        version(Posix)
-            auto file = tzDatabaseDir ~ name;
-        else version(Windows)
-            auto file = tzDatabaseDir ~ replace(strip(name), "/", dirSeparator);
+        immutable file = buildNormalizedPath(tzDatabaseDir, name);
 
         enforce(file.exists, new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
 
         auto tzFile = File(file);
-        immutable gmtZone = file.canFind("GMT");
+        immutable gmtZone = file.representation.canFind("GMT");
 
         try
         {
@@ -28106,9 +27939,6 @@ assert(tz.dstName == "PDT");
             subName = strip(subName);
         else version(Windows)
             subName = replace(strip(subName), "/", dirSeparator);
-
-        if(!tzDatabaseDir.endsWith(dirSeparator))
-            tzDatabaseDir ~= dirSeparator;
 
         enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
@@ -28836,26 +28666,7 @@ else version(Windows)
 
         this(string name, TIME_ZONE_INFORMATION tzInfo) immutable
         {
-            //Cannot use to!string(wchar*), probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-            static string conv(wchar* wcstr)
-            {
-                wcstr[31] = '\0';
-                wstring retval;
-
-                for(;; ++wcstr)
-                {
-                    if(*wcstr == '\0')
-                        break;
-
-                    retval ~= *wcstr;
-                }
-
-                return to!string(retval);
-            }
-
-            //super(name, to!string(tzInfo.StandardName.ptr), to!string(tzInfo.DaylightName.ptr));
-            super(name, conv(tzInfo.StandardName.ptr), conv(tzInfo.DaylightName.ptr));
-
+            super(name, to!string(tzInfo.StandardName.ptr), to!string(tzInfo.DaylightName.ptr));
             _tzInfo = tzInfo;
         }
 
@@ -28892,9 +28703,8 @@ else version(Posix)
     {
         try
         {
-            auto value = PosixTimeZone.defaultTZDatabaseDir ~ tzDatabaseName ~ "\0";
-
-            setenv("TZ", value.ptr, 1);
+            immutable value = buildNormalizedPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName).toStringz();
+            setenv("TZ", value, 1);
             tzset();
         }
         catch(Exception e)
@@ -30320,28 +30130,20 @@ unittest
     static string genTest(size_t index)
     {
         auto currUnits = timeStrings[index];
-        auto test = `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ currUnits ~ `") == 0); `;
+        auto test = format(`assert(CmpTimeUnits!("%s", "%s") == 0);`, currUnits, currUnits);
 
-        //For some reason, $ won't compile.
-        foreach(units; timeStrings[index + 1 .. timeStrings.length])
-            test ~= `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ units ~ `") == -1); `;
+        foreach(units; timeStrings[index + 1 .. $])
+            test ~= format(`assert(CmpTimeUnits!("%s", "%s") == -1);`, currUnits, units);
 
         foreach(units; timeStrings[0 .. index])
-            test ~= `assert(CmpTimeUnits!("` ~ currUnits ~ `", "` ~ units ~ `") == 1); `;
+            test ~= format(`assert(CmpTimeUnits!("%s", "%s") == 1);`, currUnits, units);
 
         return test;
     }
 
-    mixin(genTest(0));
-    mixin(genTest(1));
-    mixin(genTest(2));
-    mixin(genTest(3));
-    mixin(genTest(4));
-    mixin(genTest(5));
-    mixin(genTest(6));
-    mixin(genTest(7));
-    mixin(genTest(8));
-    mixin(genTest(9));
+    static assert(timeStrings.length == 10);
+    foreach(n; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+        mixin(genTest(n));
 }
 
 
@@ -30425,22 +30227,22 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
     static if(units == "months")
     {
         if(!valid!units(value))
-            throw new DateTimeException(numToString(value) ~ " is not a valid month of the year.", file, line);
+            throw new DateTimeException(format("%s is not a valid month of the year.", value), file, line);
     }
     else static if(units == "hours")
     {
         if(!valid!units(value))
-            throw new DateTimeException(numToString(value) ~ " is not a valid hour of the day.", file, line);
+            throw new DateTimeException(format("%s is not a valid hour of the day.", value), file, line);
     }
     else static if(units == "minutes")
     {
         if(!valid!units(value))
-            throw new DateTimeException(numToString(value) ~ " is not a valid minute of an hour.", file, line);
+            throw new DateTimeException(format("%s is not a valid minute of an hour.", value), file, line);
     }
     else static if(units == "seconds")
     {
         if(!valid!units(value))
-            throw new DateTimeException(numToString(value) ~ " is not a valid second of a minute.", file, line);
+            throw new DateTimeException(format("%s is not a valid second of a minute.", value), file, line);
     }
 }
 
@@ -30462,13 +30264,7 @@ void enforceValid(string units)(int year, Month month, int day, string file = __
     if(units == "days")
 {
     if(!valid!"days"(year, month, day))
-    {
-        throw new DateTimeException(numToString(day) ~
-                                    " is not a valid day in " ~
-                                    monthToString(month) ~
-                                    " in " ~
-                                    numToString(year), file, line);
-    }
+        throw new DateTimeException(format("%s is not a valid day in %s in %s", day, month, year), file, line);
 }
 
 
@@ -30782,11 +30578,37 @@ private:
 // Section with private enums and constants.
 //==============================================================================
 
-enum daysInYear     = 365;  /// The number of days in a non-leap year.
-enum daysInLeapYear = 366;  /// The numbef or days in a leap year.
+enum daysInYear     = 365;  // The number of days in a non-leap year.
+enum daysInLeapYear = 366;  // The numbef or days in a leap year.
 enum daysIn4Years   = daysInYear * 3 + daysInLeapYear;  /// Number of days in 4 years.
-enum daysIn100Years = daysIn4Years * 25 - 1;  /// The number of days in 100 years.
-enum daysIn400Years = daysIn100Years * 4 + 1; /// The number of days in 400 years.
+enum daysIn100Years = daysIn4Years * 25 - 1;  // The number of days in 100 years.
+enum daysIn400Years = daysIn100Years * 4 + 1; // The number of days in 400 years.
+
+/+
+    Array of integers representing the last days of each month in a year.
+  +/
+immutable int[13] lastDayNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
+
+/+
+    Array of integers representing the last days of each month in a leap year.
+  +/
+immutable int[13] lastDayLeap = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366];
+
+/+
+    Array of the short (three letter) names of each month.
+  +/
+immutable string[12] monthNames = [ "Jan",
+                                    "Feb",
+                                    "Mar",
+                                    "Apr",
+                                    "May",
+                                    "Jun",
+                                    "Jul",
+                                    "Aug",
+                                    "Sep",
+                                    "Oct",
+                                    "Nov",
+                                    "Dec" ];
 
 
 //==============================================================================
@@ -31096,74 +30918,32 @@ unittest
 
 /+
     Returns the string representation of the given month.
-
-    Params:
-        useLongName = Whether the long or short version of the month name should
-                      be used.
-        plural      = Whether the string should be plural or not.
-
-    Throws:
-        $(LREF DateTimeException) if the given month is not a valid month.
   +/
-string monthToString(Month month, bool useLongName = true) pure
+string monthToString(Month month) pure
 {
-    if (month < Month.jan || month > Month.dec)
-    {
-        throw new DateTimeException("Invalid month: " ~  numToString(month));
-    }
-
-    if(useLongName == true)
-    {
-        return longMonthNames[month - Month.jan];
-    }
-    else
-    {
-        return shortMonthNames[month - Month.jan];
-    }
+    assert(month >= Month.jan && month <= Month.dec, format("Invalid month: %s", month));
+    return monthNames[month - Month.jan];
 }
 
 unittest
 {
-    static void testMTSInvalid(Month month, bool useLongName)
-    {
-        monthToString(month, useLongName);
-    }
-
-    assertThrown!DateTimeException(testMTSInvalid(cast(Month)0, true));
-    assertThrown!DateTimeException(testMTSInvalid(cast(Month)0, false));
-    assertThrown!DateTimeException(testMTSInvalid(cast(Month)13, true));
-    assertThrown!DateTimeException(testMTSInvalid(cast(Month)13, false));
-
-    assert(monthToString(Month.jan) == "January");
-    assert(monthToString(Month.feb) == "February");
-    assert(monthToString(Month.mar) == "March");
-    assert(monthToString(Month.apr) == "April");
+    assert(monthToString(Month.jan) == "Jan");
+    assert(monthToString(Month.feb) == "Feb");
+    assert(monthToString(Month.mar) == "Mar");
+    assert(monthToString(Month.apr) == "Apr");
     assert(monthToString(Month.may) == "May");
-    assert(monthToString(Month.jun) == "June");
-    assert(monthToString(Month.jul) == "July");
-    assert(monthToString(Month.aug) == "August");
-    assert(monthToString(Month.sep) == "September");
-    assert(monthToString(Month.oct) == "October");
-    assert(monthToString(Month.nov) == "November");
-    assert(monthToString(Month.dec) == "December");
-
-    assert(monthToString(Month.jan, false) == "Jan");
-    assert(monthToString(Month.feb, false) == "Feb");
-    assert(monthToString(Month.mar, false) == "Mar");
-    assert(monthToString(Month.apr, false) == "Apr");
-    assert(monthToString(Month.may, false) == "May");
-    assert(monthToString(Month.jun, false) == "Jun");
-    assert(monthToString(Month.jul, false) == "Jul");
-    assert(monthToString(Month.aug, false) == "Aug");
-    assert(monthToString(Month.sep, false) == "Sep");
-    assert(monthToString(Month.oct, false) == "Oct");
-    assert(monthToString(Month.nov, false) == "Nov");
-    assert(monthToString(Month.dec, false) == "Dec");
+    assert(monthToString(Month.jun) == "Jun");
+    assert(monthToString(Month.jul) == "Jul");
+    assert(monthToString(Month.aug) == "Aug");
+    assert(monthToString(Month.sep) == "Sep");
+    assert(monthToString(Month.oct) == "Oct");
+    assert(monthToString(Month.nov) == "Nov");
+    assert(monthToString(Month.dec) == "Dec");
 }
 
 
 /+
-    Returns the Month corresponding to the given string. Casing is ignored.
+    Returns the Month corresponding to the given string.
 
     Params:
         monthStr = The string representation of the month to get the Month for.
@@ -31173,42 +30953,31 @@ unittest
   +/
 Month monthFromString(string monthStr)
 {
-    switch(toLower(monthStr))
+    switch(monthStr)
     {
-        case "january":
-        case "jan":
+        case "Jan":
             return Month.jan;
-        case "february":
-        case "feb":
+        case "Feb":
             return Month.feb;
-        case "march":
-        case "mar":
+        case "Mar":
             return Month.mar;
-        case "april":
-        case "apr":
+        case "Apr":
             return Month.apr;
-        case "may":
+        case "May":
             return Month.may;
-        case "june":
-        case "jun":
+        case "Jun":
             return Month.jun;
-        case "july":
-        case "jul":
+        case "Jul":
             return Month.jul;
-        case "august":
-        case "aug":
+        case "Aug":
             return Month.aug;
-        case "september":
-        case "sep":
+        case "Sep":
             return Month.sep;
-        case "october":
-        case "oct":
+        case "Oct":
             return Month.oct;
-        case "november":
-        case "nov":
+        case "Nov":
             return Month.nov;
-        case "december":
-        case "dec":
+        case "Dec":
             return Month.dec;
         default:
             throw new DateTimeException(format("Invalid month %s", monthStr));
@@ -31217,51 +30986,18 @@ Month monthFromString(string monthStr)
 
 unittest
 {
-    static void testMFSInvalid(string monthStr)
+    foreach(badStr; ["Ja", "Janu", "Januar", "Januarys", "JJanuary", "JANUARY",
+                     "JAN", "january", "jaNuary", "jaN", "jaNuaRy", "jAn"])
     {
-        monthFromString(monthStr);
+        scope(failure) writeln(badStr);
+        assertThrown!DateTimeException(monthFromString(badStr));
     }
 
-    assertThrown!DateTimeException(testMFSInvalid("Ja"));
-    assertThrown!DateTimeException(testMFSInvalid("Janu"));
-    assertThrown!DateTimeException(testMFSInvalid("Januar"));
-    assertThrown!DateTimeException(testMFSInvalid("Januarys"));
-    assertThrown!DateTimeException(testMFSInvalid("JJanuary"));
-
-    assert(monthFromString(monthToString(Month.jan)) == Month.jan);
-    assert(monthFromString(monthToString(Month.feb)) == Month.feb);
-    assert(monthFromString(monthToString(Month.mar)) == Month.mar);
-    assert(monthFromString(monthToString(Month.apr)) == Month.apr);
-    assert(monthFromString(monthToString(Month.may)) == Month.may);
-    assert(monthFromString(monthToString(Month.jun)) == Month.jun);
-    assert(monthFromString(monthToString(Month.jul)) == Month.jul);
-    assert(monthFromString(monthToString(Month.aug)) == Month.aug);
-    assert(monthFromString(monthToString(Month.sep)) == Month.sep);
-    assert(monthFromString(monthToString(Month.oct)) == Month.oct);
-    assert(monthFromString(monthToString(Month.nov)) == Month.nov);
-    assert(monthFromString(monthToString(Month.dec)) == Month.dec);
-
-    assert(monthFromString(monthToString(Month.jan, false)) == Month.jan);
-    assert(monthFromString(monthToString(Month.feb, false)) == Month.feb);
-    assert(monthFromString(monthToString(Month.mar, false)) == Month.mar);
-    assert(monthFromString(monthToString(Month.apr, false)) == Month.apr);
-    assert(monthFromString(monthToString(Month.may, false)) == Month.may);
-    assert(monthFromString(monthToString(Month.jun, false)) == Month.jun);
-    assert(monthFromString(monthToString(Month.jul, false)) == Month.jul);
-    assert(monthFromString(monthToString(Month.aug, false)) == Month.aug);
-    assert(monthFromString(monthToString(Month.sep, false)) == Month.sep);
-    assert(monthFromString(monthToString(Month.oct, false)) == Month.oct);
-    assert(monthFromString(monthToString(Month.nov, false)) == Month.nov);
-    assert(monthFromString(monthToString(Month.dec, false)) == Month.dec);
-
-    assert(monthFromString("JANUARY") == Month.jan);
-    assert(monthFromString("JAN") == Month.jan);
-    assert(monthFromString("january") == Month.jan);
-    assert(monthFromString("jan") == Month.jan);
-    assert(monthFromString("jaNuary") == Month.jan);
-    assert(monthFromString("jaN") == Month.jan);
-    assert(monthFromString("jaNuaRy") == Month.jan);
-    assert(monthFromString("jAn") == Month.jan);
+    foreach(month; EnumMembers!Month)
+    {
+        scope(failure) writeln(month);
+        assert(monthFromString(monthToString(month)) == month);
+    }
 }
 
 
@@ -31634,44 +31370,6 @@ unittest
     static assert(hasOverloadedOpBinaryWithSelf!(immutable SysTime));
 }
 
-/+
-    Unfortunately, to!string() is not pure, so here's a way to convert
-    a number to a string which is. Once to!string() is properly pure
-    (like it hopefully will be at some point), this function should
-    be removed in favor of using to!string().
-  +/
-string numToString(long value) pure nothrow
-{
-    try
-    {
-        immutable negative = value < 0;
-        char[25] str;
-        size_t i = str.length;
-
-        if(negative)
-            value = -value;
-
-        while(1)
-        {
-            char digit = cast(char)('0' + value % 10);
-            value /= 10;
-
-            str[--i] = digit;
-            assert(i > 0);
-
-            if(value == 0)
-                break;
-        }
-
-        if(negative)
-            return "-" ~ str[i .. $].idup;
-        else
-            return str[i .. $].idup;
-    }
-    catch(Exception e)
-        assert(0, "Something threw when nothing can throw.");
-}
-
 
 version(unittest)
 {
@@ -32014,10 +31712,6 @@ version(unittest)
 }
 
 
-//==============================================================================
-// Unit testing functions.
-//==============================================================================
-
 unittest
 {
     /* Issue 6642 */
@@ -32025,19 +31719,4 @@ unittest
     static assert(!hasUnsharedAliasing!TimeOfDay);
     static assert(!hasUnsharedAliasing!DateTime);
     static assert(!hasUnsharedAliasing!SysTime);
-}
-
-template _isPrintable(T...)
-{
-    static if(T.length == 0)
-        enum _isPrintable = true;
-    else static if(T.length == 1)
-    {
-        enum _isPrintable = (!isArray!(T[0]) && __traits(compiles, to!string(T[0].init))) ||
-                           (isArray!(T[0]) && __traits(compiles, to!string(T[0].init[0])));
-    }
-    else
-    {
-        enum _isPrintable = _isPrintable!(T[0]) && _isPrintable!(T[1 .. $]);
-    }
 }
