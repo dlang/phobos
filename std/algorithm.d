@@ -7603,24 +7603,25 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
 
     CostType distance(Range s, Range t)
     {
-        if (s.length >= t.length)
+        if (s.length > t.length)
         {
             auto swap = s.idup;
             s = t;
             t = swap;
         }
 
+        auto slen = walkLength(s.save), tlen = walkLength(t.save);
         CostType lastdiag, olddiag;
-        AllocMatrix(s.length+1,1);
-        foreach (y; 1 .. s.length + 1)
+        AllocMatrix(slen + 1,1);
+        foreach (y; 1 .. slen + 1)
         {
             matrix(y,0) = y;
         }
-        foreach (x; 1 .. t.length + 1)
+        foreach (x; 1 .. tlen + 1)
         {
             matrix(0,0) = x;
             lastdiag = x - 1;
-            foreach (y; 1 .. s.length + 1)
+            foreach (y; 1 .. rows)
             {
                 olddiag = matrix(0,y);
                 auto cSub = lastdiag + (equals(s[y-1], t[x-1]) ? 0 : _substitutionIncrement);
@@ -7641,7 +7642,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
                 lastdiag = olddiag;
             }
         }
-        return(matrix(0,s.length));
+        return(matrix(0,slen));
     }
 
     EditOp[] path(Range s, Range t)
@@ -7721,6 +7722,39 @@ private:
             return i1 <= i2 ? 1 : 2;
         }
     }
+
+    CostType distanceWithPath(Range s, Range t)
+    {
+        auto slen = walkLength(s.save), tlen = walkLength(t.save);
+        AllocMatrix(slen + 1, tlen + 1);
+        foreach (i; 1 .. rows)
+        {
+            auto sfront = s.front;
+            s.popFront();
+            auto tt = t;
+            foreach (j; 1 .. cols)
+            {
+                auto cSub = matrix(i - 1,j - 1)
+                    + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
+                tt.popFront();
+                auto cIns = matrix(i,j - 1) + _insertionIncrement;
+                auto cDel = matrix(i - 1,j) + _deletionIncrement;
+                switch (min_index(cSub, cIns, cDel))
+                {
+                case 0:
+                    matrix(i,j) = cSub;
+                    break;
+                case 1:
+                    matrix(i,j) = cIns;
+                    break;
+                default:
+                    matrix(i,j) = cDel;
+                    break;
+                }
+            }
+        }
+        return matrix(slen,tlen);
+    }
 }
 
 /**
@@ -7764,7 +7798,7 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     Levenshtein!(Range1, binaryFun!(equals)) lev;
-    auto d = lev.distance(s, t);
+    auto d = lev.distanceWithPath(s, t);
     return tuple(d, lev.path());
 }
 
