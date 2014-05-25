@@ -30,9 +30,8 @@ struct BitArray
 
             if (newdim != olddim)
             {
-                // Create a fake array so we can use D's realloc machinery
                 auto b = ptr[0 .. olddim];
-                b.length = newdim;                // realloc
+                b.length = newdim; // realloc
                 ptr = b.ptr;
             }
 
@@ -44,18 +43,32 @@ struct BitArray
     void init(bool[] ba)
     {
         length = ba.length;
-        foreach (i, b; ba)
+
+        version(nobug2)
         {
-            this[i] = b;
+            foreach (ref e; ptr[0 .. dim])
+                e = 0;
+        }
+        else
+        {
+            foreach (i, b; ba)
+            {
+                version(nobug3)
+                {
+                    if (b)
+                        bts(ptr, i);
+                    else
+                        btr(ptr, i);
+                }
+                else
+                {
+                    this[i] = b;
+                }
+            }
         }
     }
 
     bool opIndexAssign(bool b, size_t i)
-    in
-    {
-        assert(i < len);
-    }
-    body
     {
         if (b)
             bts(ptr, i);
@@ -66,27 +79,33 @@ struct BitArray
 
     unittest
     {
-        foreach (i; 1 .. 256)
+
+        version(nobug4) {}
+        else
         {
-            foreach (j; 0 .. i)
+            foreach (i; 1 .. 256)
             {
-                BitArray a1, a2;
-                a1.length = i;
-                a2.length = i;
-                a1[j] = true;
+                foreach (j; 0 .. i)
+                {
+                    BitArray a1, a2;
+                    a1.length = i;
+                    a2.length = i;
+                }
             }
         }
-    }
 
-    unittest
-    {
+        version(nobug5)
+        {
+            import core.memory;
+            GC.collect;
+            GC.minimize;
+        }
+
         bool[] v;
         for (int i = 1; i < 256; i++)
         {   stderr.writeln("opCmp test it: ",i);
             v.length = i;
-            v[] = false;
             BitArray x; x.init(v);
-            v[i-1] = true;
             BitArray y; y.init(v);
         }
     }
