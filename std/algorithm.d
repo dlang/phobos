@@ -1885,6 +1885,12 @@ void move(T)(ref T source, ref T target)
 {
     import core.stdc.string : memcpy;
 
+    static if (hasAliasing!T) if (!__ctfe)
+    {
+        import std.exception : doesPointTo;
+        assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
+    }
+
     static if (is(T == struct))
     {
         if (&source == &target) return;
@@ -1979,7 +1985,11 @@ T move(T)(ref T source)
 {
     import core.stdc.string : memcpy;
 
-    // Can avoid to check aliasing.
+    static if (hasAliasing!T) if (!__ctfe)
+    {
+        import std.exception : doesPointTo;
+        assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
+    }
 
     T result = void;
     static if (is(T == struct))
@@ -2217,10 +2227,19 @@ If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
 its fields must also all be (recursivelly) mutable.
- */
+*/
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
+    static if (hasAliasing!T) if (!__ctfe)
+    {
+        import std.exception : doesPointTo;
+        assert(!doesPointTo(lhs, lhs), "Swap: lhs internal pointer.");
+        assert(!doesPointTo(rhs, rhs), "Swap: rhs internal pointer.");
+        assert(!doesPointTo(lhs, rhs), "Swap: lhs points to rhs.");
+        assert(!doesPointTo(rhs, lhs), "Swap: rhs points to lhs.");
+    }
+
     static if (hasElaborateAssign!T || !isAssignable!T)
     {
         if (&lhs != &rhs)
@@ -2367,26 +2386,6 @@ unittest
     // 12024
     import std.datetime;
     SysTime a, b;
-
-    //Verify swap is callable even with
-    //internal pointers
-    static struct S
-    {
-        S[] someRange;
-        void opAssign(S other)
-        {
-            assert(0);
-        }
-    }
-
-    S[2] arr;
-    foreach(ref e; arr)
-        //The elements are themselves part of arr
-        //this means there is some aliasing
-        e.someRange = arr[];
-
-    //verify this calls still works
-    swap(arr[0], arr[1]);
 }
 
 unittest // 9975
@@ -2405,6 +2404,14 @@ unittest // 9975
     assert(!doesPointTo(a, b));
     assert( mayPointTo(a, b));
     swap(a, b);
+
+    //Note: we can catch an error here, because there is no RAII in this test
+    import std.exception : assertThrown;
+    void* p, pp;
+    p = &p;
+    assertThrown!Error(move(p));
+    assertThrown!Error(move(p, pp));
+    assertThrown!Error(swap(p, pp));
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
