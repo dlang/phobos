@@ -7603,28 +7603,25 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
 
     CostType distance(Range s, Range t)
     {
-        if (s.length > t.length)
-        {
-            auto swap = s.idup;
-            s = t;
-            t = swap;
-        }
-
         auto slen = walkLength(s.save), tlen = walkLength(t.save);
         CostType lastdiag, olddiag;
-        AllocMatrix(slen + 1,1);
+        AllocMatrix(slen + 1, 1);
         foreach (y; 1 .. slen + 1)
         {
             matrix(y,0) = y;
         }
         foreach (x; 1 .. tlen + 1)
         {
+            auto tfront = t.front;
+            t.popFront();
+            auto ss = s;
             matrix(0,0) = x;
             lastdiag = x - 1;
             foreach (y; 1 .. rows)
             {
                 olddiag = matrix(0,y);
-                auto cSub = lastdiag + (equals(s[y-1], t[x-1]) ? 0 : _substitutionIncrement);
+                auto cSub = lastdiag + (equals(ss.front, tfront) ? 0 : _substitutionIncrement);
+                ss.popFront();
                 auto cIns = matrix(0,y - 1) + _insertionIncrement;
                 auto cDel = matrix(0,y) + _deletionIncrement;
                 switch (min_index(cSub, cIns, cDel))
@@ -7642,7 +7639,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
                 lastdiag = olddiag;
             }
         }
-        return(matrix(0,slen));
+        return matrix(0,slen);
     }
 
     EditOp[] path(Range s, Range t)
@@ -7771,7 +7768,14 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     Levenshtein!(Range1, binaryFun!(equals), size_t) lev;
-    return lev.distance(s, t);
+    if (walkLength(s.save) > walkLength(t.save))
+    {
+        return lev.distance(s, t);
+    }
+    else
+    {
+        return lev.distance(t, s);
+    }
 }
 
 ///
@@ -7784,6 +7788,8 @@ unittest
     assert(levenshteinDistance("kitten", "sitting") == 3);
     assert(levenshteinDistance!((a, b) => std.uni.toUpper(a) == std.uni.toUpper(b))
         ("parks", "SPARK") == 2);
+    assert(levenshteinDistance("parks".filter!"true", "spark".filter!"true") == 2);
+    assert(levenshteinDistance("ID", "I♥D") == 1);
 }
 
 /**
