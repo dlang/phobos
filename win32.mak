@@ -113,7 +113,7 @@ SRC_STD_2_HEAVY= std\range.d
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\metastrings.d std\bitmanip.d std\typecons.d \
+    std\metastrings.d std\bitmanip.d std\bitmanip2.d std\typecons.d \
     std\uni.d std\base64.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
@@ -164,7 +164,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\cstream.d std\demangle.d \
 	std\signals.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
-	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
+	std\variant.d std\numeric.d std\bitmanip.d std\bitmanip2.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
