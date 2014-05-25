@@ -1479,7 +1479,7 @@ $(D ElementType).
  */
 template ElementEncodingType(R)
 {
-    static if (isNarrowString!R && is(R : E[], E))
+    static if (is(StringTypeOf!R) && is(R : E[], E))
         alias ElementEncodingType = E;
     else
         alias ElementEncodingType = ElementType!R;
