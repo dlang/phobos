@@ -929,7 +929,7 @@ bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target)
     if (__traits(isRef, source) || isDynamicArray!S ||
         isPointer!S || is(S == class))
 {
-    static if (isPointer!S || is(S == class))
+    static if (isPointer!S || is(S == class) || is(S == interface))
     {
         const m = cast(void*) source,
               b = cast(void*) &target, e = b + target.sizeof;
@@ -962,7 +962,7 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
     if (__traits(isRef, source) || isDynamicArray!S ||
         isPointer!S || is(S == class))
 {
-    static if (isPointer!S || is(S == class))
+    static if (isPointer!S || is(S == class) || is(S == interface))
     {
         const m = cast(void*) source,
               b = cast(void*) &target, e = b + target.sizeof;
