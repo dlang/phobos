@@ -1,10 +1,7 @@
 module std.bitmanip2;
 import core.bitop;
-version(unittest)
-{
-    import std.stdio;
-}
-
+import std.stdio;
+bool ittrigger = false;
 struct BitArray
 {
     size_t len;
@@ -62,6 +59,8 @@ struct BitArray
                 }
                 else
                 {
+                    if (ittrigger)
+                        stderr.writeln(i);
                     this[i] = b;
                 }
             }
@@ -103,7 +102,7 @@ struct BitArray
 
         bool[] v;
         for (int i = 1; i < 256; i++)
-        {   stderr.writeln("opCmp test it: ",i);
+        {   if (i == 30) ittrigger = true;
             v.length = i;
             BitArray x; x.init(v);
             BitArray y; y.init(v);
