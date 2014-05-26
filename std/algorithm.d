@@ -7601,9 +7601,8 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         InitMatrix();
     }
 
-    CostType distance(Range s, Range t)
+    CostType distance(Range s, Range t, CostType slen, CostType tlen)
     {
-        auto slen = walkLength(s.save), tlen = walkLength(t.save);
         CostType lastdiag, olddiag;
         AllocMatrix(slen + 1, 1);
         foreach (y; 1 .. slen + 1)
@@ -7613,8 +7612,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         foreach (x; 1 .. tlen + 1)
         {
             auto tfront = t.front;
-            t.popFront();
-            auto ss = s;
+            auto ss = s.save;
             matrix(0,0) = x;
             lastdiag = x - 1;
             foreach (y; 1 .. rows)
@@ -7638,13 +7636,14 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
                 }
                 lastdiag = olddiag;
             }
+            t.popFront();
         }
         return matrix(0,slen);
     }
 
     EditOp[] path(Range s, Range t)
     {
-        distance(s, t);
+        distanceWithPath(s, t);
         return path();
     }
 
@@ -7727,8 +7726,7 @@ private:
         foreach (i; 1 .. rows)
         {
             auto sfront = s.front;
-            s.popFront();
-            auto tt = t;
+            auto tt = t.save;
             foreach (j; 1 .. cols)
             {
                 auto cSub = matrix(i - 1,j - 1)
@@ -7749,6 +7747,7 @@ private:
                     break;
                 }
             }
+            s.popFront();
         }
         return matrix(slen,tlen);
     }
@@ -7768,13 +7767,15 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     Levenshtein!(Range1, binaryFun!(equals), size_t) lev;
-    if (walkLength(s.save) > walkLength(t.save))
+    auto slen = walkLength(s.save);
+    auto tlen = walkLength(t.save);
+    if (slen > tlen)
     {
-        return lev.distance(s, t);
+        return lev.distance(s, t, slen, tlen);
     }
     else
     {
-        return lev.distance(t, s);
+        return lev.distance(t, s, tlen, slen);
     }
 }
 
