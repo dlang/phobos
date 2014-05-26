@@ -176,7 +176,7 @@ MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint \
-        bitmanip compiler complex concurrency container conv		\
+        bitmanip bitmanip2 compiler complex concurrency container conv		\
         cstream csv datetime demangle encoding exception	\
         file format functional getopt json math mathspecial	\
         metastrings mmfile numeric outbuffer parallelism path		\
