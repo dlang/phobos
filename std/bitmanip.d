@@ -884,7 +884,7 @@ struct BitArray
         }
 
         n = this.length & (bitsPerSizeT-1);
-        size_t mask = (1 << n) - 1;
+        size_t mask = (size_t(1) << n) - 1;
         //printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, p1[i], p2[i]);
         return (mask == 0) || (p1[i] & mask) == (p2[i] & mask);
     }
@@ -898,17 +898,22 @@ struct BitArray
         static bool[] bc = [1,0,1,0,1,0,1];
         static bool[] bd = [1,0,1,1,1];
         static bool[] be = [1,0,1,0,1];
+        static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
         BitArray c; c.init(bc);
         BitArray d; d.init(bd);
         BitArray e; e.init(be);
+        BitArray f; f.init(bf);
+        BitArray g; g.init(bg);
 
         assert(a != b);
         assert(a != c);
         assert(a != d);
         assert(a == e);
+        assert(f != g);
     }
 
     /***************************************
@@ -931,7 +936,7 @@ struct BitArray
         }
         for (size_t j = 0; j < len-i * bitsPerSizeT; j++)
         {
-            size_t mask = cast(size_t)(1 << j);
+            size_t mask = (size_t(1) << j);
             auto c = (cast(long)(p1[i] & mask) - cast(long)(p2[i] & mask));
             if (c)
                 return c > 0 ? 1 : -1;
@@ -948,12 +953,16 @@ struct BitArray
         static bool[] bc = [1,0,1,0,1,0,1];
         static bool[] bd = [1,0,1,1,1];
         static bool[] be = [1,0,1,0,1];
+        static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
+        static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
         BitArray c; c.init(bc);
         BitArray d; d.init(bd);
         BitArray e; e.init(be);
+        BitArray f; f.init(bf);
+        BitArray g; g.init(bg);
 
         assert(a >  b);
         assert(a >= b);
@@ -964,6 +973,8 @@ struct BitArray
         assert(a == e);
         assert(a <= e);
         assert(a >= e);
+        assert(f <  g);
+        assert(g <= g);
 
         bool[] v;
         for (int i = 1; i < 256; i++)
