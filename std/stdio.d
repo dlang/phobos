@@ -1658,8 +1658,9 @@ may throw $(D StdioException) on I/O error.
 Note:
 Each $(D front) will not persist after $(D
 popFront) is called, so the caller must copy its contents (e.g. by
-calling $(D to!string)) if retention is needed. Alternatively use
-$(LREF byLineCopy) instead.
+calling $(D to!string)) when retention is needed. If the caller needs 
+to retain a copy of every line, use the $(LREF byLineCopy) function 
+instead.
 
 Params:
 Char = Character type for each line, defaulting to $(D char).
