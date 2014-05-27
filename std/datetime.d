@@ -12954,33 +12954,6 @@ public:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this
                     $(LREF TimeOfDay).
-
-        Examples:
---------------------
-auto tod1 = TimeOfDay(7, 12, 0);
-tod1.roll!"hours"(1);
-assert(tod1 == TimeOfDay(8, 12, 0));
-
-auto tod2 = TimeOfDay(7, 12, 0);
-tod2.roll!"hours"(-1);
-assert(tod2 == TimeOfDay(6, 12, 0));
-
-auto tod3 = TimeOfDay(23, 59, 0);
-tod3.roll!"minutes"(1);
-assert(tod3 == TimeOfDay(23, 0, 0));
-
-auto tod4 = TimeOfDay(0, 0, 0);
-tod4.roll!"minutes"(-1);
-assert(tod4 == TimeOfDay(0, 59, 0));
-
-auto tod5 = TimeOfDay(23, 59, 59);
-tod5.roll!"seconds"(1);
-assert(tod5 == TimeOfDay(23, 59, 0));
-
-auto tod6 = TimeOfDay(0, 0, 0);
-tod6.roll!"seconds"(-1);
-assert(tod6 == TimeOfDay(0, 0, 59));
---------------------
       +/
     /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
         if(units == "hours")
@@ -12988,7 +12961,7 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         this += dur!"hours"(value);
     }
 
-    //Verify Examples.
+    ///
     unittest
     {
         auto tod1 = TimeOfDay(7, 12, 0);
@@ -13129,39 +13102,6 @@ assert(tod6 == TimeOfDay(0, 0, 59));
         immutable itod = TimeOfDay(0, 0, 0);
         static assert(!__traits(compiles, ctod.roll!"minutes"(7)));
         static assert(!__traits(compiles, itod.roll!"minutes"(7)));
-
-        //Verify Examples.
-        auto tod1 = TimeOfDay(7, 12, 0);
-        tod1.roll!"minutes"(1);
-        assert(tod1 == TimeOfDay(7, 13, 0));
-
-        auto tod2 = TimeOfDay(7, 12, 0);
-        tod2.roll!"minutes"(-1);
-        assert(tod2 == TimeOfDay(7, 11, 0));
-
-        auto tod3 = TimeOfDay(23, 59, 0);
-        tod3.roll!"minutes"(1);
-        assert(tod3 == TimeOfDay(23, 0, 0));
-
-        auto tod4 = TimeOfDay(0, 0, 0);
-        tod4.roll!"minutes"(-1);
-        assert(tod4 == TimeOfDay(0, 59, 0));
-
-        auto tod5 = TimeOfDay(7, 32, 12);
-        tod5.roll!"seconds"(1);
-        assert(tod5 == TimeOfDay(7, 32, 13));
-
-        auto tod6 = TimeOfDay(7, 32, 12);
-        tod6.roll!"seconds"(-1);
-        assert(tod6 == TimeOfDay(7, 32, 11));
-
-        auto tod7 = TimeOfDay(23, 59, 59);
-        tod7.roll!"seconds"(1);
-        assert(tod7 == TimeOfDay(23, 59, 0));
-
-        auto tod8 = TimeOfDay(0, 0, 0);
-        tod8.roll!"seconds"(-1);
-        assert(tod8 == TimeOfDay(0, 0, 59));
     }
 
     //Test roll!"seconds"().
@@ -13447,12 +13387,6 @@ assert(tod6 == TimeOfDay(0, 0, 59));
 
     /++
         Converts this $(LREF TimeOfDay) to a string with the format HHMMSS.
-
-        Examples:
---------------------
-assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
---------------------
       +/
     string toISOString() const nothrow
     {
@@ -13460,6 +13394,13 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
             return format("%02d%02d%02d", _hour, _minute, _second);
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
+        assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
     }
 
     unittest
@@ -13470,21 +13411,11 @@ assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
         static assert(__traits(compiles, tod.toISOString()));
         static assert(__traits(compiles, ctod.toISOString()));
         static assert(__traits(compiles, itod.toISOString()));
-
-        //Verify Examples.
-        assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
-        assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
     }
 
 
     /++
         Converts this $(LREF TimeOfDay) to a string with the format HH:MM:SS.
-
-        Examples:
---------------------
-assert(TimeOfDay(0, 0, 0).toISOExtString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
---------------------
       +/
     string toISOExtString() const nothrow
     {
@@ -13492,6 +13423,13 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
             return format("%02d:%02d:%02d", _hour, _minute, _second);
         catch(Exception e)
             assert(0, "format() threw.");
+    }
+
+    ///
+    unittest
+    {
+        assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
+        assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
     }
 
     unittest
@@ -13502,10 +13440,6 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
         static assert(__traits(compiles, tod.toISOExtString()));
         static assert(__traits(compiles, ctod.toISOExtString()));
         static assert(__traits(compiles, itod.toISOExtString()));
-
-        //Verify Examples.
-        assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
-        assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
     }
 
 
@@ -13556,13 +13490,6 @@ assert(TimeOfDay(12, 30, 33).toISOExtString() == "123033");
         Throws:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF TimeOfDay) would not be valid.
-
-        Examples:
---------------------
-assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
-assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
-assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
---------------------
       +/
     static TimeOfDay fromISOString(S)(in S isoString)
         if(isSomeString!S)
@@ -13580,6 +13507,14 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
         enforce(all!isDigit(seconds), new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
+    }
+
+    ///
+    unittest
+    {
+        assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
+        assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
+        assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
     }
 
     unittest
@@ -13643,11 +13578,6 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOString("011217 ") == TimeOfDay(1, 12, 17));
         assert(TimeOfDay.fromISOString(" 011217") == TimeOfDay(1, 12, 17));
         assert(TimeOfDay.fromISOString(" 011217 ") == TimeOfDay(1, 12, 17));
-
-        //Verify Examples.
-        assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
-        assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
-        assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
     }
 
 
@@ -13662,13 +13592,6 @@ assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
             $(LREF DateTimeException) if the given string is not in the ISO
             Extended format or if the resulting $(LREF TimeOfDay) would not be
             valid.
-
-        Examples:
---------------------
-assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
-assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
-assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
---------------------
       +/
     static TimeOfDay fromISOExtString(S)(in S isoExtString)
         if(isSomeString!S)
@@ -13691,6 +13614,14 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
                 new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
         return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
+    }
+
+    ///
+    unittest
+    {
+        assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
+        assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
+        assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
     unittest
@@ -13754,11 +13685,6 @@ assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOExtString("01:12:17 ") == TimeOfDay(1, 12, 17));
         assert(TimeOfDay.fromISOExtString(" 01:12:17") == TimeOfDay(1, 12, 17));
         assert(TimeOfDay.fromISOExtString(" 01:12:17 ") == TimeOfDay(1, 12, 17));
-
-        //Verify Examples.
-        assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
-        assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
-        assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
 
@@ -24234,28 +24160,6 @@ unittest
                     $(D fwdRange), use $(D Direction.fwd). If passing it to
                     $(D bwdRange), use $(D Direction.bwd).
         dayOfWeek = The week that each time point in the range will be.
-
-    Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
-auto func = everyDayOfWeek!Date(DayOfWeek.mon);
-auto range = interval.fwdRange(func);
-
-//A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
-assert(range.front == Date(2010, 9, 2));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 13));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 20));
-
-range.popFront();
-assert(range.empty);
---------------------
   +/
 static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayOfWeek dayOfWeek) nothrow
     if(isTimePoint!TP &&
@@ -24278,6 +24182,29 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
     }
 
     return &func;
+}
+
+///
+unittest
+{
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
+    auto func = everyDayOfWeek!Date(DayOfWeek.mon);
+    auto range = interval.fwdRange(func);
+
+    //A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
+    assert(range.front == Date(2010, 9, 2));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 6));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 13));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 20));
+
+    range.popFront();
+    assert(range.empty);
 }
 
 unittest
@@ -24312,26 +24239,6 @@ unittest
     static assert(!__traits(compiles, everyDayOfWeek!(TimeOfDay)(DayOfWeek.mon)));
     static assert(__traits(compiles, everyDayOfWeek!(DateTime)(DayOfWeek.mon)));
     static assert(__traits(compiles, everyDayOfWeek!(SysTime)(DayOfWeek.mon)));
-
-    //Verify Examples.
-    auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
-    auto func = everyDayOfWeek!Date(DayOfWeek.mon);
-    auto range = interval.fwdRange(func);
-
-    //A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
-    assert(range.front == Date(2010, 9, 2));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 6));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 13));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 20));
-
-    range.popFront();
-    assert(range.empty);
 }
 
 
@@ -24357,34 +24264,6 @@ unittest
                 $(D fwdRange), use $(D Direction.fwd). If passing it to
                 $(D bwdRange), use $(D Direction.bwd).
         month = The month that each time point in the range will be in.
-
-    Examples:
---------------------
-auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
-auto func = everyMonth!(Date)(Month.feb);
-auto range = interval.fwdRange(func);
-
-//Using PopFirst.yes would have made this Date(2010, 2, 29).
-assert(range.front == Date(2000, 1, 30));
-
-range.popFront();
-assert(range.front == Date(2000, 2, 29));
-
-range.popFront();
-assert(range.front == Date(2001, 2, 28));
-
-range.popFront();
-assert(range.front == Date(2002, 2, 28));
-
-range.popFront();
-assert(range.front == Date(2003, 2, 28));
-
-range.popFront();
-assert(range.front == Date(2004, 2, 28));
-
-range.popFront();
-assert(range.empty);
---------------------
   +/
 static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
     if(isTimePoint!TP &&
@@ -24417,6 +24296,35 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
     }
 
     return &func;
+}
+
+///
+unittest
+{
+    auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
+    auto func = everyMonth!(Date)(Month.feb);
+    auto range = interval.fwdRange(func);
+
+    //Using PopFirst.yes would have made this Date(2010, 2, 29).
+    assert(range.front == Date(2000, 1, 30));
+
+    range.popFront();
+    assert(range.front == Date(2000, 2, 29));
+
+    range.popFront();
+    assert(range.front == Date(2001, 2, 28));
+
+    range.popFront();
+    assert(range.front == Date(2002, 2, 28));
+
+    range.popFront();
+    assert(range.front == Date(2003, 2, 28));
+
+    range.popFront();
+    assert(range.front == Date(2004, 2, 28));
+
+    range.popFront();
+    assert(range.empty);
 }
 
 unittest
@@ -24459,32 +24367,6 @@ unittest
     static assert(!__traits(compiles, everyMonth!(TimeOfDay)(Month.jan)));
     static assert(__traits(compiles, everyMonth!(DateTime)(Month.jan)));
     static assert(__traits(compiles, everyMonth!(SysTime)(Month.jan)));
-
-    //Verify Examples.
-    auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
-    auto func = everyMonth!(Date)(Month.feb);
-    auto range = interval.fwdRange(func);
-
-    //Using PopFirst.yes would have made this Date(2010, 2, 29).
-    assert(range.front == Date(2000, 1, 30));
-
-    range.popFront();
-    assert(range.front == Date(2000, 2, 29));
-
-    range.popFront();
-    assert(range.front == Date(2001, 2, 28));
-
-    range.popFront();
-    assert(range.front == Date(2002, 2, 28));
-
-    range.popFront();
-    assert(range.front == Date(2003, 2, 28));
-
-    range.popFront();
-    assert(range.front == Date(2004, 2, 28));
-
-    range.popFront();
-    assert(range.empty);
 }
 
 
@@ -24505,28 +24387,6 @@ unittest
                    $(D bwdRange), use $(D Direction.bwd).
         duration = The duration which separates each successive time point in
                    the range.
-
-    Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
-auto func = everyDuration!Date(dur!"days"(8));
-auto range = interval.fwdRange(func);
-
-//Using PopFirst.yes would have made this Date(2010, 9, 10).
-assert(range.front == Date(2010, 9, 2));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 10));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 18));
-
-range.popFront();
-assert(range.front == Date(2010, 9, 26));
-
-range.popFront();
-assert(range.empty);
---------------------
   +/
 static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (D duration) nothrow
@@ -24543,6 +24403,29 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
     }
 
     return &func;
+}
+
+///
+unittest
+{
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
+    auto func = everyDuration!Date(dur!"days"(8));
+    auto range = interval.fwdRange(func);
+
+    //Using PopFirst.yes would have made this Date(2010, 9, 10).
+    assert(range.front == Date(2010, 9, 2));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 10));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 18));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 26));
+
+    range.popFront();
+    assert(range.empty);
 }
 
 unittest
@@ -24564,26 +24447,6 @@ unittest
     static assert(__traits(compiles, everyDuration!TimeOfDay(dur!"hnsecs"(1))));
     static assert(__traits(compiles, everyDuration!DateTime(dur!"hnsecs"(1))));
     static assert(__traits(compiles, everyDuration!SysTime(dur!"hnsecs"(1))));
-
-    //Verify Examples.
-    auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
-    auto func = everyDuration!Date(dur!"days"(8));
-    auto range = interval.fwdRange(func);
-
-    //Using PopFirst.yes would have made this Date(2010, 9, 10).
-    assert(range.front == Date(2010, 9, 2));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 10));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 18));
-
-    range.popFront();
-    assert(range.front == Date(2010, 9, 26));
-
-    range.popFront();
-    assert(range.empty);
 }
 
 
@@ -24624,28 +24487,6 @@ unittest
                         increment.
         duration      = The duration to add to the time point passed to the
                         delegate.
-
-    Examples:
---------------------
-auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
-auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
-auto range = interval.fwdRange(func);
-
-//Using PopFirst.yes would have made this Date(2014, 10, 12).
-assert(range.front == Date(2010, 9, 2));
-
-range.popFront();
-assert(range.front == Date(2014, 10, 4));
-
-range.popFront();
-assert(range.front == Date(2018, 11, 6));
-
-range.popFront();
-assert(range.front == Date(2022, 12, 8));
-
-range.popFront();
-assert(range.empty);
---------------------
   +/
 static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (int years,
@@ -24681,6 +24522,29 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
     }
 
     return &func;
+}
+
+///
+unittest
+{
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
+    auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
+    auto range = interval.fwdRange(func);
+
+    //Using PopFirst.yes would have made this Date(2014, 10, 12).
+    assert(range.front == Date(2010, 9, 2));
+
+    range.popFront();
+    assert(range.front == Date(2014, 10, 4));
+
+    range.popFront();
+    assert(range.front == Date(2018, 11, 6));
+
+    range.popFront();
+    assert(range.front == Date(2022, 12, 8));
+
+    range.popFront();
+    assert(range.empty);
 }
 
 unittest
@@ -24723,26 +24587,6 @@ unittest
     static assert(!__traits(compiles, everyDuration!TimeOfDay(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
     static assert(__traits(compiles, everyDuration!DateTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
     static assert(__traits(compiles, everyDuration!SysTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
-
-    //Verify Examples.
-    auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
-    auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
-    auto range = interval.fwdRange(func);
-
-    //Using PopFirst.yes would have made this Date(2014, 10, 12).
-    assert(range.front == Date(2010, 9, 2));
-
-    range.popFront();
-    assert(range.front == Date(2014, 10, 4));
-
-    range.popFront();
-    assert(range.front == Date(2018, 11, 6));
-
-    range.popFront();
-    assert(range.front == Date(2022, 12, 8));
-
-    range.popFront();
-    assert(range.empty);
 }
 
 
@@ -30156,14 +30000,6 @@ unittest
     Params:
         units = The units of time to validate.
         value = The number to validate.
-
-    Examples:
---------------------
-assert(valid!"hours"(12));
-assert(!valid!"hours"(32));
-assert(valid!"months"(12));
-assert(!valid!"months"(13));
---------------------
   +/
 bool valid(string units)(int value) pure nothrow
     if(units == "months" ||
@@ -30181,9 +30017,9 @@ bool valid(string units)(int value) pure nothrow
         return value >= 0 && value <= TimeOfDay.maxSecond;
 }
 
+///
 unittest
 {
-    //Verify Examples.
     assert(valid!"hours"(12));
     assert(!valid!"hours"(32));
     assert(valid!"months"(12));
@@ -30652,18 +30488,6 @@ template hnsecsPer(string units)
 
     Returns:
         The number of the given units from converting hnsecs to those units.
-
-    Examples:
---------------------
-auto hnsecs = 2595000000007L;
-immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
-assert(days == 3);
-assert(hnsecs == 3000000007);
-
-immutable minutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
-assert(minutes == 5);
-assert(hnsecs == 7);
---------------------
   +/
 long splitUnitsFromHNSecs(string units)(ref long hnsecs) pure nothrow
     if(validTimeUnits(units) &&
@@ -30677,7 +30501,6 @@ long splitUnitsFromHNSecs(string units)(ref long hnsecs) pure nothrow
 
 unittest
 {
-    //Verify Example.
     auto hnsecs = 2595000000007L;
     immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
     assert(days == 3);
@@ -30702,14 +30525,6 @@ unittest
 
     Returns:
         The split out value.
-
-    Examples:
---------------------
-auto hnsecs = 2595000000007L;
-immutable days = getUnitsFromHNSecs!"days"(hnsecs);
-assert(days == 3);
-assert(hnsecs == 2595000000007L);
---------------------
   +/
 long getUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
     if(validTimeUnits(units) &&
@@ -30720,7 +30535,6 @@ long getUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
 
 unittest
 {
-    //Verify Example.
     auto hnsecs = 2595000000007L;
     immutable days = getUnitsFromHNSecs!"days"(hnsecs);
     assert(days == 3);
@@ -30741,14 +30555,6 @@ unittest
 
     Returns:
         The remaining hnsecs.
-
-    Examples:
---------------------
-auto hnsecs = 2595000000007L;
-auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
-assert(returned == 3000000007);
-assert(hnsecs == 2595000000007L);
---------------------
   +/
 long removeUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
     if(validTimeUnits(units) &&
@@ -30761,7 +30567,6 @@ long removeUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
 
 unittest
 {
-    //Verify Example.
     auto hnsecs = 2595000000007L;
     auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
     assert(returned == 3000000007);
@@ -31003,12 +30808,6 @@ unittest
 
 /+
     The time units which are one step smaller than the given units.
-
-    Examples:
---------------------
-assert(nextSmallerTimeUnits!"years" == "months");
-assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
---------------------
   +/
 template nextSmallerTimeUnits(string units)
     if(validTimeUnits(units) &&
@@ -31019,6 +30818,7 @@ template nextSmallerTimeUnits(string units)
 
 unittest
 {
+    assert(nextSmallerTimeUnits!"years" == "months");
     assert(nextSmallerTimeUnits!"months" == "weeks");
     assert(nextSmallerTimeUnits!"weeks" == "days");
     assert(nextSmallerTimeUnits!"days" == "hours");
@@ -31026,23 +30826,13 @@ unittest
     assert(nextSmallerTimeUnits!"minutes" == "seconds");
     assert(nextSmallerTimeUnits!"seconds" == "msecs");
     assert(nextSmallerTimeUnits!"msecs" == "usecs");
-
-    static assert(!__traits(compiles, nextSmallerTimeUnits!"hnsecs"));
-
-    //Verify Examples.
-    assert(nextSmallerTimeUnits!"years" == "months");
     assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
+    static assert(!__traits(compiles, nextSmallerTimeUnits!"hnsecs"));
 }
 
 
 /+
     The time units which are one step larger than the given units.
-
-    Examples:
---------------------
-assert(nextLargerTimeUnits!"months" == "years");
-assert(nextLargerTimeUnits!"hnsecs" == "usecs");
---------------------
   +/
 template nextLargerTimeUnits(string units)
     if(validTimeUnits(units) &&
@@ -31053,6 +30843,7 @@ template nextLargerTimeUnits(string units)
 
 unittest
 {
+    assert(nextLargerTimeUnits!"hnsecs" == "usecs");
     assert(nextLargerTimeUnits!"usecs" == "msecs");
     assert(nextLargerTimeUnits!"msecs" == "seconds");
     assert(nextLargerTimeUnits!"seconds" == "minutes");
@@ -31060,12 +30851,8 @@ unittest
     assert(nextLargerTimeUnits!"hours" == "days");
     assert(nextLargerTimeUnits!"days" == "weeks");
     assert(nextLargerTimeUnits!"weeks" == "months");
-
-    static assert(!__traits(compiles, nextLargerTimeUnits!"years"));
-
-    //Verify Examples.
     assert(nextLargerTimeUnits!"months" == "years");
-    assert(nextLargerTimeUnits!"hnsecs" == "usecs");
+    static assert(!__traits(compiles, nextLargerTimeUnits!"years"));
 }
 
 
