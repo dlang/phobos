@@ -424,8 +424,7 @@ private:
         case OpID.index:
             // Added allowed!(...) prompted by a bug report by Chris
             // Nicholson-Sauls.
-            static if ((isStaticArray!(A) || isDynamicArray!(A))
-                    && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
+            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
             {
                 // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;
