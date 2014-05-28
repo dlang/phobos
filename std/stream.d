@@ -2099,7 +2099,7 @@ class File: Stream {
         throw new SeekException("unable to move file pointer");
       ulong result = (cast(ulong)hi << 32) + low;
     } else version (Posix) {
-      auto result = lseek(hFile, cast(int)offset, rel);
+      auto result = lseek(hFile, cast(off_t)offset, rel);
       if (result == cast(typeof(result))-1)
         throw new SeekException("unable to move file pointer");
     }

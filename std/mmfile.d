@@ -127,7 +127,7 @@ class MmFile
         if (prot & PROT_WRITE && size > statbuf.st_size)
         {
             // Need to make the file size bytes big
-            lseek(fd, cast(int)(size - 1), SEEK_SET);
+            lseek(fd, cast(off_t)(size - 1), SEEK_SET);
             char c = 0;
             core.sys.posix.unistd.write(fd, &c, 1);
         }
@@ -331,7 +331,7 @@ class MmFile
                 if (prot & PROT_WRITE && size > statbuf.st_size)
                 {
                     // Need to make the file size bytes big
-                    .lseek(fd, cast(int)(size - 1), SEEK_SET);
+                    .lseek(fd, cast(off_t)(size - 1), SEEK_SET);
                     char c = 0;
                     core.sys.posix.unistd.write(fd, &c, 1);
                 }
@@ -509,7 +509,7 @@ class MmFile
             p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint)start, len, address);
             errnoEnforce(p);
         } else {
-            p = mmap(address, len, prot, flags, fd, cast(int)start);
+            p = mmap(address, len, prot, flags, fd, cast(off_t)start);
             errnoEnforce(p != MAP_FAILED);
         }
         data = p[0 .. len];
