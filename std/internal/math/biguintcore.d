@@ -618,7 +618,7 @@ public:
     }
 
     // return x / y
-    static BigUint div(BigUint x, BigUint y) pure
+    static BigUint div(BigUint x, BigUint y) pure nothrow
     {
         if (y.data.length > x.data.length)
             return BigUint(ZERO);

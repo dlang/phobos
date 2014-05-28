@@ -137,7 +137,7 @@ public:
 
     // BigInt op= integer
     BigInt opOpAssign(string op, T)(T y) pure nothrow
-        if ((op=="+" || op=="-" || op=="*" || op=="/"
+        if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         ulong u = absUnsign(y);
@@ -166,6 +166,20 @@ public:
             static assert(!is(T == long) && !is(T == ulong));
             data = BigUint.divInt(data, cast(uint)u);
             sign = data.isZero() ? false : sign ^ (y < 0);
+        }
+        else static if (op=="%")
+        {
+            assert(y!=0, "Division by zero");
+            static if (is(immutable(T) == immutable(long)) || is( immutable(T) == immutable(ulong) ))
+            {
+                this %= BigInt(y);
+            }
+            else
+            {
+                data = cast(ulong)BigUint.modInt(data, cast(uint)u);
+            }
+            // x%y always has the same sign as x.
+            // This is not the same as mathematical mod.
         }
         else static if (op==">>" || op=="<<")
         {
@@ -197,30 +211,10 @@ public:
         else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
     }
-    // BigInt op= integer
-    BigInt opOpAssign(string op, T)(T y) pure
-        if (op=="%" && isIntegral!T)
-    {
-        ulong u = absUnsign(y);
-
-        assert(y!=0, "Division by zero");
-        static if (is(immutable(T) == immutable(long)) || is( immutable(T) == immutable(ulong) ))
-        {
-            this %= BigInt(y);
-        }
-        else
-        {
-            data = cast(ulong)BigUint.modInt(data, cast(uint)u);
-        }
-        // x%y always has the same sign as x.
-        // This is not the same as mathematical mod.
-
-        return this;
-    }
 
     // BigInt op= BigInt
     BigInt opOpAssign(string op, T)(T y) pure nothrow
-        if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^")
+        if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
             && is (T: BigInt))
     {
         static if (op == "+")
@@ -236,20 +230,7 @@ public:
             data = BigUint.mul(data, y.data);
             sign = isZero() ? false : sign ^ y.sign;
         }
-        else static if (op == "|" || op == "&" || op == "^")
-        {
-            data = BigUint.bitwiseOp!op(data, y.data, sign, y.sign, sign);
-        }
-        else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
-        return this;
-    }
-
-    // BigInt op= BigInt
-    BigInt opOpAssign(string op, T)(T y) pure
-        if ((op=="/" || op=="%")
-            && is (T: BigInt))
-    {
-        static if (op == "/")
+        else static if (op == "/")
         {
             y.checkDivByZero();
             if (!isZero())
@@ -269,22 +250,19 @@ public:
                     sign = false;
             }
         }
-        else static assert(false); // impossible
+        else static if (op == "|" || op == "&" || op == "^")
+        {
+            data = BigUint.bitwiseOp!op(data, y.data, sign, y.sign, sign);
+        }
+        else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~
+            T.stringof ~ " is not supported");
         return this;
     }
 
     // BigInt op BigInt
     BigInt opBinary(string op, T)(T y) pure nothrow const
-        if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^")
-            && is (T: BigInt))
-    {
-        BigInt r = this;
-        return r.opOpAssign!(op)(y);
-    }
-
-    // BigInt op BigInt
-    BigInt opBinary(string op, T)(T y) pure const
-        if ((op=="/" || op=="%")
+        if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^" ||
+            op=="/" || op=="%")
             && is (T: BigInt))
     {
         BigInt r = this;
@@ -293,8 +271,9 @@ public:
 
     // BigInt op integer
     BigInt opBinary(string op, T)(T y) pure nothrow const
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" || op=="^"
-            || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
+            op=="^"|| op==">>" || op=="<<" || op=="^^")
+            && isIntegral!T)
     {
         BigInt r = this;
         return r.opOpAssign!(op)(y);
@@ -335,7 +314,7 @@ public:
     }
 
     //  integer = integer op BigInt
-    T opBinaryRight(string op, T)(T x) pure const
+    T opBinaryRight(string op, T)(T x) pure nothrow const
         if ((op=="%" || op=="/") && isIntegral!T)
     {
         checkDivByZero();
@@ -375,7 +354,7 @@ public:
     }
 
     // non-const unary operations
-    BigInt opUnary(string op)() pure if (op=="++" || op=="--")
+    BigInt opUnary(string op)() pure nothrow if (op=="++" || op=="--")
     {
         static if (op=="++")
         {
@@ -417,14 +396,14 @@ public:
     // Hack to make BigInt's typeinfo.compare work properly.
     // Note that this must appear before the other opCmp overloads, otherwise
     // DMD won't find it.
-    int opCmp(ref const BigInt y) const
+    int opCmp(ref const BigInt y) pure nothrow const
     {
         // Simply redirect to the "real" opCmp implementation.
         return this.opCmp!BigInt(y);
     }
 
     ///
-    int opCmp(T)(T y) pure const if (isIntegral!T)
+    int opCmp(T)(T y) pure nothrow const if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
@@ -432,7 +411,7 @@ public:
         return sign? -cmp: cmp;
     }
     ///
-    int opCmp(T:BigInt)(const T y) pure const
+    int opCmp(T:BigInt)(const T y) pure nothrow const
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
@@ -441,7 +420,7 @@ public:
     }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
-    long toLong() pure const
+    long toLong() pure nothrow const
     {
         return (sign ? -1 : 1) *
           (data.ulongLength() == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
@@ -450,7 +429,7 @@ public:
     }
     /// Returns the value of this BigInt as an int,
     /// or +- int.max if outside the representable range.
-    int toInt() pure const
+    int toInt() pure nothrow const
     {
         return (sign ? -1 : 1) *
           (data.uintLength() == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
@@ -459,13 +438,13 @@ public:
     }
     /// Number of significant uints which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
-    @property size_t uintLength() pure const
+    @property size_t uintLength() pure nothrow const
     {
         return data.uintLength();
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
-    @property size_t ulongLength() pure const
+    @property size_t ulongLength() pure nothrow const
     {
         return data.ulongLength();
     }
@@ -564,7 +543,7 @@ private:
     }
 
     // Generate a runtime error if division by zero occurs
-    void checkDivByZero() pure const @safe
+    void checkDivByZero() pure const nothrow @safe
     {
         if (isZero())
             throw new Error("BigInt division by zero");
@@ -611,7 +590,7 @@ Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
     }
 }
 
-nothrow
+nothrow pure
 unittest {
     BigInt a, b;
     a = 1;
@@ -619,12 +598,36 @@ unittest {
     auto c = a + b;
 }
 
-nothrow
+nothrow pure
 unittest {
     long a;
     BigInt b;
     auto c = a + b;
     auto d = b + a;
+}
+
+nothrow pure
+unittest {
+    BigInt x = 1, y = 2;
+    assert(x <  y);
+    assert(x <= y);
+    assert(y >= x);
+    assert(y >  x);
+    assert(x != y);
+
+    long r1 = x.toLong;
+    assert(r1 == 1);
+
+    BigInt r2 = 10 % x;
+    assert(r2 == 0);
+
+    BigInt r3 = 10 / y;
+    assert(r3 == 5);
+
+    BigInt[] arr = [BigInt(1)];
+    auto incr = arr[0]++;
+    assert(arr == [BigInt(2)]);
+    assert(incr == BigInt(1));
 }
 
 unittest {
