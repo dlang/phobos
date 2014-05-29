@@ -317,6 +317,7 @@ $(I FormatChar):
 
     Examples:
     -------------------------
+    import std.array;
     import std.c.stdio;
     import std.format;
 
@@ -5438,7 +5439,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     m2 = cast(Mangle)typeid(ti).name[mi];
                     switch (m2)
                     {
-                        case Mangle.Tchar:
+                      %c  case Mangle.Tchar:
                         LarrayChar:
                             s = va_arg!(string)(argptr);
                             goto Lputstr;
