@@ -9,9 +9,9 @@ are preferable because they don't exhibit undesired aliasing, thus
 making code more robust.
 
 A number of common operations on strings are also found in the 
-Unicode $(B std.uni), and array $(B std.array) libraries. If a
+Unicode $(B std.uni), and array $(B std.array) modules. If a
 function you are looking for does not appear here, try looking
-in those libraries.
+in one of those modules.
 
 Macros: WIKI = Phobos/StdString
 
