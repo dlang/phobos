@@ -29971,6 +29971,8 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs)
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     static string genTest(size_t index)
     {
         auto currUnits = timeStrings[index];
