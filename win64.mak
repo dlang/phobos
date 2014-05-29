@@ -148,7 +148,6 @@ SRC_STD_6f=std\socketstream.d
 SRC_STD_6h=std\conv.d
 SRC_STD_6i=std\zip.d
 SRC_STD_6j=std\cstream.d
-SRC_STD_6k=std\regex.d
 
 SRC_STD_7= \
 	std\stdint.d \
@@ -171,7 +170,6 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6h) \
 	$(SRC_STD_6i) \
 	$(SRC_STD_6j) \
-	$(SRC_STD_6k) \
 	$(SRC_STD_7)
 
 SRC=	unittest.d index.d
@@ -192,8 +190,10 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d \
 	std\exception.d std\ascii.d
+
+SRC_STD_REGEX= std\regex\ir.d std\regex\package.d std\regex\parser.d std\regex\tests.d \
+    std\regex\backtracking.d std\regex\thompson.d std\regex\kickstart.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -232,6 +232,7 @@ SRC_ETC=
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
 SRC_TO_COMPILE_NOT_STD= \
+    $(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
@@ -410,7 +411,6 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest6h.obj \
 		unittest6i.obj \
 		unittest6j.obj \
-		unittest6k.obj \
 		unittest7.obj
 
 unittest : $(LIB)
@@ -434,7 +434,6 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6f.obj $(SRC_STD_6f)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_CONTAINER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6k.obj $(SRC_STD_6k)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
@@ -633,8 +632,8 @@ $(DOC)\std_random.html : $(STDDOC) std\random.d
 $(DOC)\std_range.html : $(STDDOC) std\range.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range.d
 
-$(DOC)\std_regex.html : $(STDDOC) std\regex.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex.d
+$(DOC)\std_regex.html : $(STDDOC) std\regex\package.d
+    $(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex\package.d
 
 $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d

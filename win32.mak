@@ -144,8 +144,7 @@ SRC_STD_6= std\variant.d \
 	std\conv.d std\zip.d std\cstream.d \
 	$(SRC_STD_CONTAINER)
 
-SRC_STD_REST= std\regex.d \
-	std\stdint.d \
+SRC_STD_REST= std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
@@ -173,8 +172,11 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d \
 	std\exception.d std\ascii.d
+
+SRC_STD_REGEX= std\regex\ir.d std\regex\package.d std\regex\parser.d std\regex\tests.d \
+    std\regex\backtracking.d std\regex\thompson.d std\regex\kickstart.d \
+    std\regex\generator.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -213,6 +215,7 @@ SRC_ETC=
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
 SRC_TO_COMPILE_NOT_STD= \
+    $(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
@@ -460,7 +463,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -cov=0  -unittest -main -run std\zip.d
 	$(DMD) -cov=92 -unittest -main -run std\cstream.d
-	$(DMD) -cov=77 -unittest -main -run std\regex.d
+	$(DMD) -cov=77 -unittest -main -run std\regex\tests.d
 	$(DMD) -cov=92 -unittest -main -run std\json.d
 	$(DMD) -cov=87 -unittest -main -run std\parallelism.d
 	$(DMD) -cov=50 -unittest -main -run std\mathspecial.d
@@ -658,8 +661,8 @@ $(DOC)\std_random.html : $(STDDOC) std\random.d
 $(DOC)\std_range.html : $(STDDOC) std\range.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range.d
 
-$(DOC)\std_regex.html : $(STDDOC) std\regex.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex.d
+$(DOC)\std_regex.html : $(STDDOC) std\regex\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex\package.d
 
 $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d
