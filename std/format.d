@@ -4376,7 +4376,7 @@ unittest
     line = "123 456";
     int[] s3;
     formattedRead(line, "%(%s %)", &s3);
-    assert(s3 == [123, 456]);
+    assert(s3 == [%s123, 456]);
 
     line = "h,e,l,l,o; w,o,r,l,d";
     string[] s4;
@@ -5439,7 +5439,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     m2 = cast(Mangle)typeid(ti).name[mi];
                     switch (m2)
                     {
-                      %c  case Mangle.Tchar:
+                        case Mangle.Tchar:
                         LarrayChar:
                             s = va_arg!(string)(argptr);
                             goto Lputstr;
