@@ -2401,6 +2401,144 @@ See $(LREF byChunk) for an example.
 
 unittest
 {
+    @system struct SystemToString
+    {
+        string toString()
+        {
+            return "system";
+        }
+    }
+
+    @trusted struct TrustedToString
+    {
+        string toString()
+        {
+            return "trusted";
+        }
+    }
+
+    @safe struct SafeToString
+    {
+        string toString()
+        {
+            return "safe";
+        }
+    }
+
+    @system void systemTests()
+    {
+        //system code can write to files/stdout with anything!
+        if(false)
+        {
+            auto f = File();
+
+            f.write("just a string");
+            f.write("string with arg: ", 47);
+            f.write(SystemToString());
+            f.write(TrustedToString());
+            f.write(SafeToString());
+
+            write("just a string");
+            write("string with arg: ", 47);
+            write(SystemToString());
+            write(TrustedToString());
+            write(SafeToString());
+
+            f.writeln("just a string");
+            f.writeln("string with arg: ", 47);
+            f.writeln(SystemToString());
+            f.writeln(TrustedToString());
+            f.writeln(SafeToString());
+
+            writeln("just a string");
+            writeln("string with arg: ", 47);
+            writeln(SystemToString());
+            writeln(TrustedToString());
+            writeln(SafeToString());
+
+            f.writef("string with arg: %s", 47);
+            f.writef("%s", SystemToString());
+            f.writef("%s", TrustedToString());
+            f.writef("%s", SafeToString());
+
+            writef("string with arg: %s", 47);
+            writef("%s", SystemToString());
+            writef("%s", TrustedToString());
+            writef("%s", SafeToString());
+
+            f.writefln("string with arg: %s", 47);
+            f.writefln("%s", SystemToString());
+            f.writefln("%s", TrustedToString());
+            f.writefln("%s", SafeToString());
+
+            writefln("string with arg: %s", 47);
+            writefln("%s", SystemToString());
+            writefln("%s", TrustedToString());
+            writefln("%s", SafeToString());
+        }
+    }
+
+    @safe void safeTests()
+    {
+        auto f = File();
+
+        //safe code can write to files only with @safe and @trusted code...
+        if(false)
+        {
+            f.write("just a string");
+            f.write("string with arg: ", 47);
+            f.write(TrustedToString());
+            f.write(SafeToString());
+
+            write("just a string");
+            write("string with arg: ", 47);
+            write(TrustedToString());
+            write(SafeToString());
+
+            f.writeln("just a string");
+            f.writeln("string with arg: ", 47);
+            f.writeln(TrustedToString());
+            f.writeln(SafeToString());
+
+            writeln("just a string");
+            writeln("string with arg: ", 47);
+            writeln(TrustedToString());
+            writeln(SafeToString());
+
+            f.writef("string with arg: %s", 47);
+            f.writef("%s", TrustedToString());
+            f.writef("%s", SafeToString());
+
+            writef("string with arg: %s", 47);
+            writef("%s", TrustedToString());
+            writef("%s", SafeToString());
+
+            f.writefln("string with arg: %s", 47);
+            f.writefln("%s", TrustedToString());
+            f.writefln("%s", SafeToString());
+
+            writefln("string with arg: %s", 47);
+            writefln("%s", TrustedToString());
+            writefln("%s", SafeToString());
+        }
+
+        static assert(!__traits(compiles, f.write(SystemToString().toString())));
+        static assert(!__traits(compiles, f.writeln(SystemToString())));
+        static assert(!__traits(compiles, f.writef("%s", SystemToString())));
+        static assert(!__traits(compiles, f.writefln("%s", SystemToString())));
+
+        static assert(!__traits(compiles, write(SystemToString().toString())));
+        static assert(!__traits(compiles, writeln(SystemToString())));
+        static assert(!__traits(compiles, writef("%s", SystemToString())));
+        static assert(!__traits(compiles, writefln("%s", SystemToString())));
+    }
+
+    systemTests();
+    safeTests();
+}
+
+unittest
+{
     static import std.file;
     import std.exception : collectException;
 
@@ -2642,6 +2780,11 @@ unittest
 deprecated("Please use isFileHandle instead.")
 alias isStreamingDevice = isFileHandle;
 
+/**
+ * Property used by writeln/etc. so it can infer @safe since stdout is __gshared
+ */
+private @property File trustedStdout() @trusted { return stdout; }
+
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
 $(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
@@ -2652,7 +2795,7 @@ Throws: In case of an I/O error, throws an $(D StdioException).
  */
 void write(T...)(T args) if (!is(T[0] : File))
 {
-    stdout.write(args);
+    trustedStdout.write(args);
 }
 
 unittest
@@ -2703,14 +2846,14 @@ void writeln(T...)(T args)
         import std.exception : enforce;
 
         // Specialization for strings - a very frequent case
-        auto w = .stdout.lockingTextWriter();
+        auto w = .trustedStdout.lockingTextWriter();
         w.put(args[0]);
         w.put("\n");
     }
     else
     {
         // Most general instance
-        stdout.write(args, '\n');
+        trustedStdout.write(args, '\n');
     }
 }
 
@@ -2864,7 +3007,7 @@ to write numbers in platform-native format.
 
 void writef(T...)(T args)
 {
-    stdout.writef(args);
+    trustedStdout.writef(args);
 }
 
 unittest
@@ -2895,7 +3038,7 @@ unittest
  */
 void writefln(T...)(T args)
 {
-    stdout.writefln(args);
+    trustedStdout.writefln(args);
 }
 
 unittest
