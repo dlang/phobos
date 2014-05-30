@@ -791,7 +791,7 @@ for the file handle.
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) if the call to $(D fseek) fails.
  */
-    void seek(long offset, int origin = SEEK_SET)
+    void seek(long offset, int origin = SEEK_SET) @trusted
     {
         import std.exception : enforce, errnoEnforce;
         import std.conv : to, text;
