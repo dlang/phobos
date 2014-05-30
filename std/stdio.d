@@ -1148,94 +1148,6 @@ Removes the lock over the specified file segment.
         f.unlock();
     }
 
-
-/**
-Writes its arguments in text format to the file.
-
-Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
-*/
-    void write(S...)(S args)
-    {
-        auto w = lockingTextWriter();
-        foreach (arg; args)
-        {
-            alias A = typeof(arg);
-            static if (isAggregateType!A || is(A == enum))
-            {
-                import std.format : formattedWrite;
-
-                std.format.formattedWrite(w, "%s", arg);
-            }
-            else static if (isSomeString!A)
-            {
-                put(w, arg);
-            }
-            else static if (isIntegral!A)
-            {
-                import std.conv : toTextRange;
-
-                toTextRange(arg, w);
-            }
-            else static if (isBoolean!A)
-            {
-                put(w, arg ? "true" : "false");
-            }
-            else static if (isSomeChar!A)
-            {
-                put(w, arg);
-            }
-            else
-            {
-                import std.format : formattedWrite;
-
-                // Most general case
-                std.format.formattedWrite(w, "%s", arg);
-            }
-        }
-    }
-
-/**
-Writes its arguments in text format to the file, followed by a newline.
-
-Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
-*/
-    void writeln(S...)(S args)
-    {
-        write(args, '\n');
-    }
-
-/**
-Writes its arguments in text format to the file, according to the
-format in the first argument.
-
-Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
-*/
-    void writef(Char, A...)(in Char[] fmt, A args)
-    {
-        import std.format : formattedWrite;
-
-        std.format.formattedWrite(lockingTextWriter(), fmt, args);
-    }
-
-/**
-Writes its arguments in text format to the file, according to the
-format in the first argument, followed by a newline.
-
-Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
-*/
-    void writefln(Char, A...)(in Char[] fmt, A args)
-    {
-        import std.format : formattedWrite;
-
-        auto w = lockingTextWriter();
-        std.format.formattedWrite(w, fmt, args);
-        w.put('\n');
-    }
-
 /**
 Read line from the file handle and return it as a specified type.
 
@@ -2053,7 +1965,7 @@ $(D StdioException).
 /*
 $(D Range) that locks the file and allows fast writing to it.
  */
-    struct LockingTextWriter
+    @trusted struct LockingTextWriter
     {
         FILE* fps;          // the shared file handle
         _iobuf* handle;     // the unshared version of fps
@@ -2208,7 +2120,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
 See $(LREF byChunk) for an example.
 */
-    auto lockingTextWriter()
+    auto lockingTextWriter() @trusted
     {
         return LockingTextWriter(this);
     }
@@ -2224,6 +2136,289 @@ See $(LREF byChunk) for an example.
         seek(0, SEEK_END);
         return tell;
     }
+}
+
+/**
+Writes its arguments in text format to the file.
+
+Throws: $(D Exception) if the file is not opened.
+$(D ErrnoException) on an error writing to the file.
+*/
+void write(S...)(File file, S args)
+{
+    //Uses UFCS so we can infer safety
+    auto w = file.lockingTextWriter();
+    foreach (arg; args)
+    {
+        alias A = typeof(arg);
+        static if (isAggregateType!A || is(A == enum))
+        {
+            import std.format : formattedWrite;
+
+            std.format.formattedWrite(w, "%s", arg);
+        }
+        else static if (isSomeString!A)
+        {
+            put(w, arg);
+        }
+        else static if (isIntegral!A)
+        {
+            import std.conv : toTextRange;
+
+            toTextRange(arg, w);
+        }
+        else static if (isBoolean!A)
+        {
+            put(w, arg ? "true" : "false");
+        }
+        else static if (isSomeChar!A)
+        {
+            put(w, arg);
+        }
+        else
+        {
+            import std.format : formattedWrite;
+
+            // Most general case
+            std.format.formattedWrite(w, "%s", arg);
+        }
+    }
+}
+
+/**
+Writes its arguments in text format to the file, followed by a newline.
+
+Throws: $(D Exception) if the file is not opened.
+$(D ErrnoException) on an error writing to the file.
+*/
+void writeln(S...)(File file, S args)
+{
+    //Uses UFCS so we can infer safety
+    file.write(args, '\n');
+}
+
+/**
+Writes its arguments in text format to the file, according to the
+format in the first argument.
+
+Throws: $(D Exception) if the file is not opened.
+$(D ErrnoException) on an error writing to the file.
+*/
+void writef(Char, A...)(File file, in Char[] fmt, A args)
+{
+    //Uses UFCS so we can infer safety
+    import std.format : formattedWrite;
+
+    std.format.formattedWrite(file.lockingTextWriter(), fmt, args);
+}
+
+/**
+Writes its arguments in text format to the file, according to the
+format in the first argument, followed by a newline.
+
+Throws: $(D Exception) if the file is not opened.
+$(D ErrnoException) on an error writing to the file.
+*/
+void writefln(Char, A...)(File file, in Char[] fmt, A args)
+{
+    //Uses UFCS so we can infer safety
+    import std.format : formattedWrite;
+
+    auto w = file.lockingTextWriter();
+    std.format.formattedWrite(w, fmt, args);
+    w.put('\n');
+}
+
+unittest
+{
+    @system struct SystemToString
+    {
+        string toString()
+        {
+            return "system";
+        }
+    }
+
+    @trusted struct TrustedToString
+    {
+        string toString()
+        {
+            return "trusted";
+        }
+    }
+
+    @safe struct SafeToString
+    {
+        string toString()
+        {
+            return "safe";
+        }
+    }
+
+    @system void systemTests()
+    {
+        //system code can write to files/stdout with anything!
+        if(false)
+        {
+            auto f = File();
+
+            f.write("just a string");
+            f.write("string with arg: ", 47);
+            f.write(SystemToString());
+            f.write(TrustedToString());
+            f.write(SafeToString());
+
+            write("just a string");
+            write("string with arg: ", 47);
+            write(SystemToString());
+            write(TrustedToString());
+            write(SafeToString());
+
+            f.writeln("just a string");
+            f.writeln("string with arg: ", 47);
+            f.writeln(SystemToString());
+            f.writeln(TrustedToString());
+            f.writeln(SafeToString());
+
+            writeln("just a string");
+            writeln("string with arg: ", 47);
+            writeln(SystemToString());
+            writeln(TrustedToString());
+            writeln(SafeToString());
+
+            f.writef("string with arg: %s", 47);
+            f.writef("%s", SystemToString());
+            f.writef("%s", TrustedToString());
+            f.writef("%s", SafeToString());
+
+            writef("string with arg: %s", 47);
+            writef("%s", SystemToString());
+            writef("%s", TrustedToString());
+            writef("%s", SafeToString());
+
+            f.writefln("string with arg: %s", 47);
+            f.writefln("%s", SystemToString());
+            f.writefln("%s", TrustedToString());
+            f.writefln("%s", SafeToString());
+
+            writefln("string with arg: %s", 47);
+            writefln("%s", SystemToString());
+            writefln("%s", TrustedToString());
+            writefln("%s", SafeToString());
+        }
+    }
+
+    @trusted void trustedTests()
+    {
+        //trusted code can write to files/stdio with anything!
+        if(false)
+        {
+            auto f = File();
+
+            f.write("just a string");
+            f.write("string with arg: ", 47);
+            f.write(SystemToString());
+            f.write(TrustedToString());
+            f.write(SafeToString());
+
+            write("just a string");
+            write("string with arg: ", 47);
+            write(SystemToString());
+            write(TrustedToString());
+            write(SafeToString());
+
+            f.writeln("just a string");
+            f.writeln("string with arg: ", 47);
+            f.writeln(SystemToString());
+            f.writeln(TrustedToString());
+            f.writeln(SafeToString());
+
+            writeln("just a string");
+            writeln("string with arg: ", 47);
+            writeln(SystemToString());
+            writeln(TrustedToString());
+            writeln(SafeToString());
+
+            f.writef("string with arg: %s", 47);
+            f.writef("%s", SystemToString());
+            f.writef("%s", TrustedToString());
+            f.writef("%s", SafeToString());
+
+            writef("string with arg: %s", 47);
+            writef("%s", SystemToString());
+            writef("%s", TrustedToString());
+            writef("%s", SafeToString());
+
+            f.writefln("string with arg: %s", 47);
+            f.writefln("%s", SystemToString());
+            f.writefln("%s", TrustedToString());
+            f.writefln("%s", SafeToString());
+
+            writefln("string with arg: %s", 47);
+            writefln("%s", SystemToString());
+            writefln("%s", TrustedToString());
+            writefln("%s", SafeToString());
+        }
+    }
+
+    @safe void safeTests()
+    {
+        auto f = File();
+
+        //safe code can write to files only with @safe and @trusted code...
+        if(false)
+        {
+            f.write("just a string");
+            f.write("string with arg: ", 47);
+            f.write(TrustedToString());
+            f.write(SafeToString());
+
+            write("just a string");
+            write("string with arg: ", 47);
+            write(TrustedToString());
+            write(SafeToString());
+
+            f.writeln("just a string");
+            f.writeln("string with arg: ", 47);
+            f.writeln(TrustedToString());
+            f.writeln(SafeToString());
+
+            writeln("just a string");
+            writeln("string with arg: ", 47);
+            writeln(TrustedToString());
+            writeln(SafeToString());
+
+            f.writef("string with arg: %s", 47);
+            f.writef("%s", TrustedToString());
+            f.writef("%s", SafeToString());
+
+            writef("string with arg: %s", 47);
+            writef("%s", TrustedToString());
+            writef("%s", SafeToString());
+
+            f.writefln("string with arg: %s", 47);
+            f.writefln("%s", TrustedToString());
+            f.writefln("%s", SafeToString());
+
+            writefln("string with arg: %s", 47);
+            writefln("%s", TrustedToString());
+            writefln("%s", SafeToString());
+        }
+
+        static assert(!__traits(compiles, f.write(SystemToString().toString())));
+        static assert(!__traits(compiles, f.writeln(SystemToString())));
+        static assert(!__traits(compiles, f.writef("%s", SystemToString())));
+        static assert(!__traits(compiles, f.writefln("%s", SystemToString())));
+
+        static assert(!__traits(compiles, write(SystemToString().toString())));
+        static assert(!__traits(compiles, writeln(SystemToString())));
+        static assert(!__traits(compiles, writef("%s", SystemToString())));
+        static assert(!__traits(compiles, writefln("%s", SystemToString())));
+    }
+
+    systemTests();
+    trustedTests();
+    safeTests();
 }
 
 unittest
@@ -2468,6 +2663,8 @@ unittest
  */
 alias isStreamingDevice = isFileHandle;
 
+private @property File trustedStdout() @trusted { return stdout; }
+
 /***********************************
 For each argument $(D arg) in $(D args), format the argument (as per
 $(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
@@ -2478,7 +2675,7 @@ Throws: In case of an I/O error, throws an $(D StdioException).
  */
 void write(T...)(T args) if (!is(T[0] : File))
 {
-    stdout.write(args);
+    trustedStdout.write(args);
 }
 
 unittest
@@ -2507,12 +2704,21 @@ unittest
     // assert(result == "Hello, world number 42! null", result);
 }
 
+private void writelnString(T)(T arg) @trusted
+{
+	import std.exception : enforce;
+
+	// Specialization for strings - a very frequent case
+	enforce(fprintf(.stdout._p.handle, "%.*s\n",
+					cast(int) arg.length, arg.ptr) >= 0);
+}
+
 /***********************************
  * Equivalent to $(D write(args, '\n')).  Calling $(D writeln) without
  * arguments is valid and just prints a newline to the standard
  * output.
  */
-void writeln(T...)(T args)
+void writeln(T...)(T args) if(!is(T[0] : File))
 {
     static if (T.length == 0)
     {
@@ -2526,16 +2732,12 @@ void writeln(T...)(T args)
                     !is(Unqual!(typeof(args[0])) == typeof(null)) &&
                     !isAggregateType!(typeof(args[0])))
     {
-        import std.exception : enforce;
-
-        // Specialization for strings - a very frequent case
-        enforce(fprintf(.stdout._p.handle, "%.*s\n",
-                        cast(int) args[0].length, args[0].ptr) >= 0);
+        writelnString(args[0]);
     }
     else
     {
         // Most general instance
-        stdout.write(args, '\n');
+        trustedStdout.write(args, '\n');
     }
 }
 
@@ -2686,9 +2888,9 @@ to write numbers in platform-native format.
 
 */
 
-void writef(T...)(T args)
+void writef(T...)(T args) if(!is(T[0] : File))
 {
-    stdout.writef(args);
+    trustedStdout.writef(args);
 }
 
 unittest
@@ -2717,9 +2919,9 @@ unittest
 /***********************************
  * Equivalent to $(D writef(args, '\n')).
  */
-void writefln(T...)(T args)
+void writefln(T...)(T args) if(!is(T[0] : File))
 {
-    stdout.writefln(args);
+    trustedStdout.writefln(args);
 }
 
 unittest
