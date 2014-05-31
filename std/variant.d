@@ -777,7 +777,7 @@ public:
 
     @property T coerce(T)()
     {
-        static if (isNumeric!(T))
+        static if (isNumeric!T || isBoolean!T)
         {
             if (convertsTo!real)
             {
@@ -797,7 +797,6 @@ public:
             {
                 return to!T(get!(immutable(char)[]));
             }
-
             else
             {
                 enforce(false, text("Type ", type, " does not convert to ",
@@ -818,13 +817,6 @@ public:
             // Fix for bug 1649
             static assert(false, "unsupported type for coercion");
         }
-    }
-
-    // testing the string coerce
-    unittest
-    {
-        Variant a = "10";
-        assert(a.coerce!int == 10);
     }
 
     /**
@@ -1411,6 +1403,26 @@ unittest
     // coerce tests
     a = Variant(42.22); assert(a.coerce!(int) == 42);
     a = cast(short) 5; assert(a.coerce!(double) == 5);
+    a = Variant("10"); assert(a.coerce!int == 10);
+
+    a = Variant(1);
+    assert(a.coerce!bool);
+    a = Variant(0);
+    assert(!a.coerce!bool);
+
+    a = Variant(1.0);
+    assert(a.coerce!bool);
+    a = Variant(0.0);
+    assert(!a.coerce!bool);
+    a = Variant(float.init);
+    assertThrown!ConvException(a.coerce!bool);
+
+    a = Variant("true");
+    assert(a.coerce!bool);
+    a = Variant("false");
+    assert(!a.coerce!bool);
+    a = Variant("");
+    assertThrown!ConvException(a.coerce!bool);
 
     // Object tests
     class B1 {}
@@ -1418,8 +1430,7 @@ unittest
     a = new B2;
     assert(a.coerce!(B1) !is null);
     a = new B1;
-// BUG: I can't get the following line to pass:
-//    assert(collectException(a.coerce!(B2) is null));
+    assert(collectException(a.coerce!(B2) is null));
     a = cast(Object) new B2; // lose static type info; should still work
     assert(a.coerce!(B2) !is null);
 
