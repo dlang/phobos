@@ -317,6 +317,7 @@ $(I FormatChar):
 
     Examples:
     -------------------------
+    import std.array;
     import std.c.stdio;
     import std.format;
 
@@ -4375,7 +4376,7 @@ unittest
     line = "123 456";
     int[] s3;
     formattedRead(line, "%(%s %)", &s3);
-    assert(s3 == [123, 456]);
+    assert(s3 == [%s123, 456]);
 
     line = "h,e,l,l,o; w,o,r,l,d";
     string[] s4;
