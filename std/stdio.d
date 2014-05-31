@@ -1472,7 +1472,7 @@ for every line.
  Returns a temporary file by calling $(WEB
  cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
  Note that the created file has no $(LREF name).*/
-    static File tmpfile()
+    static File tmpfile() @safe
     {
         import std.exception : errnoEnforce;
 
@@ -1485,7 +1485,7 @@ for every line.
 Unsafe function that wraps an existing $(D FILE*). The resulting $(D
 File) never takes the initiative in closing the file.
 Note that the created file has no $(LREF name)*/
-    /*private*/ static File wrapFile(FILE* f)
+    /*private*/ static File wrapFile(FILE* f) @safe
     {
         import std.exception : enforce;
 
@@ -2214,7 +2214,7 @@ See $(LREF byChunk) for an example.
     }
 
 /// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
-    @property ulong size()
+    @property ulong size() @safe
     {
         import std.exception : collectException;
 
