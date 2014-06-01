@@ -91,6 +91,7 @@
  *           $(LREF isBuiltinType)
  *           $(LREF isPointer)
  *           $(LREF isAggregateType)
+ *           $(LREF isVector)
  * ))
  * $(TR $(TD xxx) $(TD
  *           $(LREF isIterable)
@@ -139,7 +140,8 @@
  *            $(WEB octarineparrot.com, Robert Clipsham),
  *            $(WEB klickverbot.at, David Nadlinger),
  *            Kenji Hara,
- *            Shoichi Kato
+ *            Shoichi Kato,
+ *            Brian Schott
  * Source:    $(PHOBOSSRC std/_traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -5386,6 +5388,44 @@ unittest
  */
 enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
                                is(T == class) || is(T == interface);
+
+/**
+ * Detect whether type $(D T) is a vector type as defined in core.simd.
+ */
+template isVector(T)
+{
+    import core.simd;
+    enum bool isVector = is (T == void16)
+                      || is (T == double2)
+                      || is (T == float4)
+                      || is (T == byte16)
+                      || is (T == ubyte16)
+                      || is (T == short8)
+                      || is (T == ushort8)
+                      || is (T == int4)
+                      || is (T == uint4)
+                      || is (T == long2)
+                      || is (T == ulong2)
+                      || is (T == void32)
+                      || is (T == double4)
+                      || is (T == float8)
+                      || is (T == byte32)
+                      || is (T == ubyte32)
+                      || is (T == short16)
+                      || is (T == ushort16)
+                      || is (T == int8)
+                      || is (T == uint8)
+                      || is (T == long4)
+                      || is (T == ulong4);
+}
+
+unittest
+{
+    import core.simd;
+    static assert (!isVector!int);
+    static assert (isVector!int8);
+}
+
 
 /**
  * Returns $(D true) if T can be iterated over using a $(D foreach) loop with

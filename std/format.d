@@ -1338,6 +1338,26 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 /**
+   Vectors are formatted as arrays.
+ */
+void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+if (isVector!T)
+{
+    formatValue(w, obj.array, f);
+}
+
+unittest
+{
+    import core.simd;
+    int4 i;
+    i.array[0] = 1;
+    i.array[1] = 2;
+    i.array[2] = 3;
+    i.array[3] = 4;
+    formatTest(i, "[1, 2, 3, 4]");
+}
+
+/**
    Integrals are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
