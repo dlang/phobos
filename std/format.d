@@ -301,6 +301,7 @@ $(I FormatChar):
 Examples:
 
 -------------------------
+import std.array;
 import std.c.stdio;
 import std.format;
 
