@@ -1333,7 +1333,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     {
         enforce(a < ResultType.max,
                 text("std.random.uniform(): invalid left bound ", a));
-        ResultType lower = a + 1;
+        ResultType lower = cast(ResultType) (a + 1);
     }
     else
     {
@@ -1399,10 +1399,38 @@ unittest
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
-        T init = uniform(lo, hi);
-        size_t i = 50;
-        while (--i && uniform(lo, hi) == init) {}
-        assert(i > 0);
+
+        // Try tests with each of the possible bounds
+        {
+            T init = uniform(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"[)"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"(]"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"()"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"[]"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
 
         /* Test case with closed boundaries covering whole range
          * of integral type
