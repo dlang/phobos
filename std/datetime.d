@@ -26983,9 +26983,8 @@ public:
 
     /++
         Params:
-            utcOffset = This time zone's offset from UTC in minutes with west of
-                        UTC being negative (it is added to UTC to get the
-                        adjusted time).
+            utcOffset = This time zone's offset from UTC with west of UTC being
+                        negative (it is added to UTC to get the adjusted time).
             stdName   = The $(D stdName) for this time zone.
       +/
     this(Duration utcOffset, string stdName = "") immutable
@@ -26998,33 +26997,37 @@ public:
         this._utcOffset = utcOffset;
     }
 
-    /++ Ditto +/
-    this(int utcOffset, string stdName = "") immutable
+    /++
+        $(RED Deprecated. Please use the overload which takes a Duration. This
+              overload will be removed in December 2014).
+
+        Params:
+            utcOffset = This time zone's offset from UTC in minutes with west of
+                        negative (it is added to UTC to get the adjusted time).
+            stdName   = The $(D stdName) for this time zone.
+      +/
+    deprecated("Please use the overload which takes a Duration.") this(int utcOffset, string stdName = "") immutable
     {
         this(dur!"minutes"(utcOffset), stdName);
     }
 
     unittest
     {
-        foreach(stz; [new immutable SimpleTimeZone(dur!"hours"(-8), "PST"),
-                      new immutable SimpleTimeZone(-8 * 60, "PST")])
-
-        {
-            assert(stz.name == "");
-            assert(stz.stdName == "PST");
-            assert(stz.dstName == "");
-            assert(stz.utcOffset == -8 * 60);
-        }
+        auto stz = new immutable SimpleTimeZone(dur!"hours"(-8), "PST");
+        assert(stz.name == "");
+        assert(stz.stdName == "PST");
+        assert(stz.dstName == "");
+        assert(stz.utcOffset == dur!"hours"(-8));
     }
 
 
     /++
-        The number of minutes the offset from UTC is (negative is west of UTC,
+        The amount of time the offset from UTC is (negative is west of UTC,
         positive is east).
       +/
-    @property int utcOffset() @safe const pure nothrow
+    @property Duration utcOffset() @safe const pure nothrow
     {
-        return cast(int)_utcOffset.total!"minutes";
+        return _utcOffset;
     }
 
 
@@ -27222,9 +27225,9 @@ private:
         static void testSTZ(in string isoString, int expectedOffset, size_t line = __LINE__)
         {
             auto stz = SimpleTimeZone.fromISOString(isoString);
-            assert(stz.utcOffset == expectedOffset);
+            assert(stz.utcOffset == dur!"minutes"(expectedOffset));
 
-            auto result = SimpleTimeZone.toISOString(dur!"minutes"(stz.utcOffset));
+            auto result = SimpleTimeZone.toISOString(stz.utcOffset);
             assert(result == isoString);
         }
 
