@@ -29150,13 +29150,6 @@ private:
 }
 
 
-// workaround for bug4886
-@safe size_t lengthof(aliases...)() pure nothrow
-{
-    return aliases.length;
-}
-
-
 /++
     Benchmarks code for speed assessment and comparison.
 
@@ -29178,9 +29171,9 @@ private:
     See_Also:
         $(LREF measureTime)
   +/
-TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
+TickDuration[fun.length] benchmark(fun...)(uint n)
 {
-    TickDuration[lengthof!(fun)()] result;
+    TickDuration[fun.length] result;
     StopWatch sw;
     sw.start();
 
