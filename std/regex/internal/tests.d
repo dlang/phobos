@@ -310,7 +310,7 @@ unittest
         TestVectors(    "(foo.)(?=(bar))",     "foobar foodbar", "y", "$&-$1-$2", "food-food-bar" ),
         TestVectors(    `\b(\d+)[a-z](?=\1)`,  "123a123",        "y", "$&-$1", "123a-123" ),
         TestVectors(    `\$(?!\d{3})\w+`,      "$123 $abc",      "y", "$&", "$abc"),
-        TestVectors(    `(abc)(?=(ed(f))\3)`,    "abcedff",      "y", "-", "-"),
+        TestVectors(    `(abc)(?=(ed(Ф))\3)`,    "abcedФФ",      "y", "-", "-"),
         TestVectors(    `\b[A-Za-z0-9.]+(?=(@(?!gmail)))`, "a@gmail,x@com",  "y", "$&-$1", "x-@"),
         TestVectors(    `x()(abc)(?=(d)(e)(f)\2)`,   "xabcdefabc", "y", "$&", "xabc"),
         TestVectors(    `x()(abc)(?=(d)(e)(f)()\3\4\5)`,   "xabcdefdef", "y", "$&", "xabc"),
@@ -337,6 +337,13 @@ unittest
 //mixed lookaround
         TestVectors(   `a(?<=a(?=b))b`,    "ab", "y",      "$&", "ab"),
         TestVectors(   `a(?<=a(?!b))c`,    "ac", "y",      "$&", "ac"),
+//exercise more of Unicode and back-refs in lookbehind
+        TestVectors(   `(?<=\p{Cyrillic}+)!`,    "йа!", "y",      "$&", "!"),
+        TestVectors(   `(\p{Cyrillic}*)!(?<=\1!)`,    "аф!", "y",      "$1", "аф"),
+//TODO: need a way to wed out this pattern and support the 2nd one
+//In lookbehind "back-ref" has reverse dependecy
+//        TestVectors(   `(?<=([a-z]+)\1!)`,    "аф!", "y",      "$1", "аф"),
+//        TestVectors(   `(?<=\1([a-z]+)!)`,    "аф!", "y",      "$1", "аф"),
         ];
     string produceExpected(M,String)(auto ref M m, String fmt)
     {
@@ -347,7 +354,7 @@ unittest
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach(Char; TypeTuple!( char, wchar, dchar))
+        foreach(Char; TypeTuple!(char, wchar, dchar))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
@@ -463,34 +470,19 @@ unittest
     assert(bmatch("abc",cr).hit == "abc");
     auto cr2 = ctRegex!("ab*c");
     assert(bmatch("abbbbc",cr2).hit == "abbbbc");
-}
-unittest
-{
     auto cr3 = ctRegex!("^abc$");
     assert(bmatch("abc",cr3).hit == "abc");
     auto cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
     assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
-}
-
-unittest
-{
     auto cr5 = ctRegex!("(?:a{2,4}b{1,3}){1,2}");
     assert(bmatch("aaabaaaabbb", cr5).hit == "aaabaaaabbb");
     auto cr6 = ctRegex!("(?:a{2,4}b{1,3}){1,2}?"w);
     assert(bmatch("aaabaaaabbb"w,  cr6).hit == "aaab"w);
-}
-
-unittest
-{
     auto cr7 = ctRegex!(`\r.*?$`,"sm");
     assert(bmatch("abc\r\nxy",  cr7).hit == "\r\nxy");
     auto greed =  ctRegex!("<packet.*?/packet>");
     assert(bmatch("<packet>text</packet><packet>text</packet>", greed).hit
             == "<packet>text</packet>");
-}
-
-unittest
-{
     auto cr8 = ctRegex!("^(a)(b)?(c*)");
     auto m8 = bmatch("abcc",cr8);
     assert(m8);
@@ -501,10 +493,7 @@ unittest
     auto m9 = match("xxqababqyy",cr9);
     assert(m9);
     assert(equal(bmatch("xxqababqyy",cr9).captures, ["qababq", "b"]));
-}
 
-unittest
-{
     auto rtr = regex("a|b|c");
     enum ctr = regex("a|b|c");
     assert(equal(rtr.ir,ctr.ir));
@@ -776,6 +765,7 @@ unittest
     //a second issue with same symptoms
     auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
     match("аллея Театральная", r2);
+    bmatch("аллея Театральная", r2);
 }
 unittest
 {// bugzilla 8637 purity of enforce
