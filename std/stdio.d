@@ -2059,7 +2059,7 @@ $(D Range) that locks the file and allows fast writing to it.
         _iobuf* handle;     // the unshared version of fps
         int orientation;
 
-        this(ref File f)
+        this(ref File f) @trusted
         {
             import std.exception : enforce;
 
@@ -2070,7 +2070,7 @@ $(D Range) that locks the file and allows fast writing to it.
             handle = cast(_iobuf*)fps;
         }
 
-        ~this()
+        ~this() @trusted
         {
             if(fps)
             {
@@ -2080,7 +2080,7 @@ $(D Range) that locks the file and allows fast writing to it.
             }
         }
 
-        this(this)
+        this(this) @trusted
         {
             if(fps)
             {
