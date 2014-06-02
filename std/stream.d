@@ -703,7 +703,7 @@ class Stream : InputStream, OutputStream {
       }
       if (fmt.length == 0 || i == fmt.length) {
         i = 0;
-        if (arguments[j] is typeid(char[])) {
+        if (arguments[j] is typeid(string) || arguments[j] is typeid(char[])) {
           fmt = va_arg!(string)(args);
           j++;
           continue;
