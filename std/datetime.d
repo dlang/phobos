@@ -27217,11 +27217,9 @@ private:
         immutable absOffset = abs(utcOffset);
         enforceEx!DateTimeException(absOffset < dur!"minutes"(1440),
                                     "Offset from UTC must be within range (-24:00 - 24:00).");
-
         if(utcOffset < Duration.zero)
-            return format("-%02d:%02d", absOffset.hours, absOffset.minutes);
-
-        return format("+%02d:%02d", absOffset.hours, absOffset.minutes);
+            return format("-%02d:%02d", absOffset.getOnly!"hours"(), absOffset.getOnly!"minutes"());
+        return format("+%02d:%02d", absOffset.getOnly!"hours"(), absOffset.getOnly!"minutes"());
     }
 
     unittest
