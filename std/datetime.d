@@ -2550,6 +2550,12 @@ public:
             assert(sysTime == SysTime(DateTime(-1, 3, 1, 5, 5, 5), FracSec.from!"msecs"(555)));
         }
 
+        {
+            auto sysTime = SysTime(DateTime(4, 2, 29, 5, 5, 5), FracSec.from!"msecs"(555));
+            sysTime.add!"years"(-5).add!"years"(7);
+            assert(sysTime == SysTime(DateTime(6, 3, 1, 5, 5, 5), FracSec.from!"msecs"(555)));
+        }
+
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.add!"years"(4)));
@@ -2752,6 +2758,12 @@ public:
             auto sysTime = SysTime(DateTime(4, 2, 29, 5, 5, 5), FracSec.from!"msecs"(555));
             sysTime.add!"years"(-5, AllowDayOverflow.no);
             assert(sysTime == SysTime(DateTime(-1, 2, 28, 5, 5, 5), FracSec.from!"msecs"(555)));
+        }
+
+        {
+            auto sysTime = SysTime(DateTime(4, 2, 29, 5, 5, 5), FracSec.from!"msecs"(555));
+            sysTime.add!"years"(-5, AllowDayOverflow.no).add!"years"(7, AllowDayOverflow.no);
+            assert(sysTime == SysTime(DateTime(6, 2, 28, 5, 5, 5), FracSec.from!"msecs"(555)));
         }
     }
 
@@ -3087,6 +3099,12 @@ public:
             assert(sysTime == SysTime(DateTime(4, 5, 1, 12, 11, 10), FracSec.from!"msecs"(9)));
             sysTime.add!"months"(-85);
             assert(sysTime == SysTime(DateTime(-3, 4, 1, 12, 11, 10), FracSec.from!"msecs"(9)));
+        }
+
+        {
+            auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), FracSec.from!"msecs"(9));
+            sysTime.add!"months"(85).add!"months"(-83);
+            assert(sysTime == SysTime(DateTime(-3, 6, 1, 12, 11, 10), FracSec.from!"msecs"(9)));
         }
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -3428,6 +3446,12 @@ public:
             sysTime.add!"months"(-85, AllowDayOverflow.no);
             assert(sysTime == SysTime(DateTime(-3, 3, 30, 12, 11, 10), FracSec.from!"msecs"(9)));
         }
+
+        {
+            auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), FracSec.from!"msecs"(9));
+            sysTime.add!"months"(85, AllowDayOverflow.no).add!"months"(-83, AllowDayOverflow.no);
+            assert(sysTime == SysTime(DateTime(-3, 5, 30, 12, 11, 10), FracSec.from!"msecs"(9)));
+        }
     }
 
 
@@ -3450,10 +3474,10 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    /+ref SysTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
+    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "years")
     {
-        add!"years"(value, allowOverflow);
+        return add!"years"(value, allowOverflow);
     }
 
     ///
@@ -3495,8 +3519,8 @@ public:
     }
 
 
-    //Shares documentation with "years" version.
-    /+ref SysTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
+    //Shares documentation with "years" overload.
+    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
         if(units == "months")
     {
         auto hnsecs = adjTime;
@@ -3519,8 +3543,8 @@ public:
         }
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(days);
-
         adjTime = newDaysHNSecs + hnsecs;
+        return this;
     }
 
     //Test roll!"months"() with AllowDayOverlow.yes
@@ -3887,6 +3911,12 @@ public:
             assert(sysTime == SysTime(DateTime(-3, 5, 1, 12, 11, 10), FracSec.from!"msecs"(9)));
             sysTime.roll!"months"(-85);
             assert(sysTime == SysTime(DateTime(-3, 4, 1, 12, 11, 10), FracSec.from!"msecs"(9)));
+        }
+
+        {
+            auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), FracSec.from!"msecs"(9));
+            sysTime.roll!"months"(85).roll!"months"(-83);
+            assert(sysTime == SysTime(DateTime(-3, 6, 1, 12, 11, 10), FracSec.from!"msecs"(9)));
         }
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -4260,6 +4290,12 @@ public:
             sysTime.roll!"months"(-85, AllowDayOverflow.no);
             assert(sysTime == SysTime(DateTime(-3, 3, 30, 12, 11, 10), FracSec.from!"msecs"(9)));
         }
+
+        {
+            auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), FracSec.from!"msecs"(9));
+            sysTime.roll!"months"(85, AllowDayOverflow.no).roll!"months"(-83, AllowDayOverflow.no);
+            assert(sysTime == SysTime(DateTime(-3, 5, 30, 12, 11, 10), FracSec.from!"msecs"(9)));
+        }
     }
 
 
@@ -4283,7 +4319,7 @@ public:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this $(LREF SysTime).
       +/
-    /+ref SysTime+/ void roll(string units)(long value) nothrow
+    ref SysTime roll(string units)(long value) nothrow
         if(units == "days")
     {
         auto hnsecs = adjTime;
@@ -4306,8 +4342,8 @@ public:
         }
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(gdays);
-
         adjTime = newDaysHNSecs + hnsecs;
+        return  this;
     }
 
     ///
@@ -4628,6 +4664,12 @@ public:
             assert(sysTime == SysTime(DateTime(0, 7, 5, 13, 13, 9), FracSec.from!"msecs"(22)));
         }
 
+        {
+            auto sysTime = SysTime(DateTime(0, 7, 6, 13, 13, 9), FracSec.from!"msecs"(22));
+            sysTime.roll!"days"(-365).roll!"days"(362).roll!"days"(-12).roll!"days"(730);
+            assert(sysTime == SysTime(DateTime(0, 7, 8, 13, 13, 9), FracSec.from!"msecs"(22)));
+        }
+
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.roll!"days"(4)));
@@ -4636,7 +4678,7 @@ public:
 
 
     //Shares documentation with "days" version.
-    /+ref SysTime+/ void roll(string units)(long value) nothrow
+    ref SysTime roll(string units)(long value) nothrow
         if(units == "hours" ||
            units == "minutes" ||
            units == "seconds")
@@ -4671,8 +4713,8 @@ public:
             }
 
             immutable newDaysHNSecs = convert!("days", "hnsecs")(days);
-
             adjTime = newDaysHNSecs + hnsecs;
+            return this;
         }
         catch(Exception e)
             assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
@@ -4879,6 +4921,12 @@ public:
             assert(sysTime == SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         }
 
+        {
+            auto sysTime = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            sysTime.roll!"hours"(1).roll!"hours"(-67);
+            assert(sysTime == SysTime(DateTime(0, 12, 31, 5, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
+        }
+
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.roll!"hours"(4)));
@@ -5079,6 +5127,12 @@ public:
             assert(sysTime == SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         }
 
+        {
+            auto sysTime = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            sysTime.roll!"minutes"(1).roll!"minutes"(-79);
+            assert(sysTime == SysTime(DateTime(0, 12, 31, 23, 41, 59), FracSec.from!"hnsecs"(9_999_999)));
+        }
+
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.roll!"minutes"(4)));
@@ -5257,6 +5311,12 @@ public:
             assert(sysTime == SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         }
 
+        {
+            auto sysTime = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            sysTime.roll!"seconds"(1).roll!"seconds"(-102);
+            assert(sysTime == SysTime(DateTime(0, 12, 31, 23, 59, 18), FracSec.from!"hnsecs"(9_999_999)));
+        }
+
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst.roll!"seconds"(4)));
@@ -5265,7 +5325,7 @@ public:
 
 
     //Shares documentation with "days" version.
-    /+ref SysTime+/ void roll(string units)(long value) nothrow
+    ref SysTime roll(string units)(long value) nothrow
         if(units == "msecs" ||
            units == "usecs" ||
            units == "hnsecs")
@@ -5278,21 +5338,19 @@ public:
             hnsecs += convert!("hours", "hnsecs")(24);
 
         immutable seconds = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
         hnsecs += convert!(units, "hnsecs")(value);
         hnsecs %= convert!("seconds", "hnsecs")(1);
 
         if(hnsecs < 0)
             hnsecs += convert!("seconds", "hnsecs")(1);
-
         hnsecs += convert!("seconds", "hnsecs")(seconds);
 
         if(negative)
             hnsecs -= convert!("hours", "hnsecs")(24);
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(days);
-
         adjTime = newDaysHNSecs + hnsecs;
+        return this;
     }
 
 
@@ -5383,6 +5441,12 @@ public:
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 1000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2555, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(5_549_999)));
+
+        {
+            auto st = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            st.roll!"msecs"(1202).roll!"msecs"(-703);
+            assert(st == SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(4_989_999)));
+        }
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -5495,6 +5559,18 @@ public:
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 1_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2_333_333, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(3_333_329)));
+
+        {
+            auto st = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            st.roll!"usecs"(9_020_027);
+            assert(st == SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(200_269)));
+        }
+
+        {
+            auto st = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            st.roll!"usecs"(9_020_027).roll!"usecs"(-70_034);
+            assert(st == SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_499_929)));
+        }
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -5621,6 +5697,12 @@ public:
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 10_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_888_888, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(888_887)));
+
+        {
+            auto st = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            st.roll!"hnsecs"(70_777_222).roll!"hnsecs"(-222_555_292);
+            assert(st == SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(8_221_929)));
+        }
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -5855,7 +5937,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF SysTime).
       +/
-    /+ref+/ SysTime opOpAssign(string op, D)(in D duration) pure nothrow
+    ref SysTime opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -6023,6 +6105,12 @@ public:
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 10_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(9_999_999)));
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(9_999_999)));
         TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_888_888, SysTime(DateTime(1, 1, 1, 0, 0, 2), FracSec.from!"hnsecs"(888_887)));
+
+        {
+            auto st = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            st += dur!"hnsecs"(52) += dur!"seconds"(-907);
+            assert(st == SysTime(DateTime(0, 12, 31, 23, 44, 53), FracSec.from!"hnsecs"(51)));
+        }
 
         auto duration = dur!"seconds"(12);
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -9191,7 +9279,7 @@ public:
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
       +/
-    /+ref Date+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years")
     {
         immutable newYear = _year + value;
@@ -9208,6 +9296,8 @@ public:
             else
                 _day = 28;
         }
+
+        return this;
     }
 
     ///
@@ -9320,6 +9410,12 @@ public:
             assert(date == Date(-1, 3, 1));
         }
 
+        {
+            auto date = Date(4, 2, 29);
+            date.add!"years"(-5).add!"years"(7);
+            assert(date == Date(6, 3, 1));
+        }
+
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.add!"years"(7)));
@@ -9415,11 +9511,17 @@ public:
             date.add!"years"(-5, AllowDayOverflow.no);
             assert(date == Date(-1, 2, 28));
         }
+
+        {
+            auto date = Date(4, 2, 29);
+            date.add!"years"(-5, AllowDayOverflow.no).add!"years"(7, AllowDayOverflow.no);
+            assert(date == Date(6, 2, 28));
+        }
     }
 
 
     //Shares documentation with "years" version.
-    /+ref Date+/ void add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "months")
     {
         auto years = months / 12;
@@ -9456,6 +9558,8 @@ public:
             else
                 _day = cast(ubyte)currMaxDay;
         }
+
+        return this;
     }
 
     //Test add!"months"() with AllowDayOverlow.yes
@@ -9686,6 +9790,12 @@ public:
             assert(date == Date(-3, 3, 3));
             date.add!"months"(85);
             assert(date == Date(4, 4, 3));
+        }
+
+        {
+            auto date = Date(-3, 3, 31);
+            date.add!"months"(85).add!"months"(-83);
+            assert(date == Date(-3, 6, 1));
         }
 
         const cdate = Date(1999, 7, 6);
@@ -9923,6 +10033,12 @@ public:
             date.add!"months"(85, AllowDayOverflow.no);
             assert(date == Date(4, 3, 28));
         }
+
+        {
+            auto date = Date(-3, 3, 31);
+            date.add!"months"(85, AllowDayOverflow.no).add!"months"(-83, AllowDayOverflow.no);
+            assert(date == Date(-3, 5, 30));
+        }
     }
 
 
@@ -9945,10 +10061,10 @@ public:
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
       +/
-    /+ref Date+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years")
     {
-        add!"years"(value, allowOverflow);
+        return add!"years"(value, allowOverflow);
     }
 
     ///
@@ -9989,7 +10105,7 @@ public:
 
 
     //Shares documentation with "years" version.
-    /+ref Date+/ void roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "months")
     {
         months %= 12;
@@ -10021,6 +10137,8 @@ public:
             else
                 _day = cast(ubyte)currMaxDay;
         }
+
+        return this;
     }
 
     //Test roll!"months"() with AllowDayOverlow.yes
@@ -10283,6 +10401,12 @@ public:
             assert(date == Date(-4, 3, 2));
             date.roll!"months"(85);
             assert(date == Date(-4, 4, 2));
+        }
+
+        {
+            auto date = Date(-3, 3, 31);
+            date.roll!"months"(85).roll!"months"(-83);
+            assert(date == Date(-3, 6, 1));
         }
 
         const cdate = Date(1999, 7, 6);
@@ -10552,6 +10676,12 @@ public:
             date.roll!"months"(85, AllowDayOverflow.no);
             assert(date == Date(-4, 3, 29));
         }
+
+        {
+            auto date = Date(-3, 3, 31);
+            date.roll!"months"(85, AllowDayOverflow.no).roll!"months"(-83, AllowDayOverflow.no);
+            assert(date == Date(-3, 5, 30));
+        }
     }
 
 
@@ -10569,7 +10699,7 @@ public:
             units = The units to add. Must be $(D "days").
             days  = The number of days to add to this $(LREF Date).
       +/
-    /+ref Date+/ void roll(string units)(long days) pure nothrow
+    ref Date roll(string units)(long days) pure nothrow
         if(units == "days")
     {
         immutable limit = maxDay(_year, _month);
@@ -10585,6 +10715,7 @@ public:
             newDay -= limit;
 
         _day = cast(ubyte)newDay;
+        return this;
     }
 
     ///
@@ -10778,6 +10909,12 @@ public:
             assert(date == Date(0, 7, 5));
         }
 
+        {
+            auto date = Date(0, 7, 6);
+            date.roll!"days"(-365).roll!"days"(362).roll!"days"(-12).roll!"days"(730);
+            assert(date == Date(0, 7, 8));
+        }
+
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.roll!"days"(12)));
@@ -10811,7 +10948,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable days = convert!("hnsecs", "days")(duration.hnsecs);
 
-        mixin(format("return retval.addDays(%sdays);", op));
+        mixin(format("return retval._addDays(%sdays);", op));
     }
 
     unittest
@@ -10897,7 +11034,7 @@ public:
         Params:
             duration = The duration to add to or subtract from this $(LREF Date).
       +/
-    /+ref+/ Date opOpAssign(string op, D)(in D duration) pure nothrow
+    ref Date opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -10907,7 +11044,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable days = convert!("hnsecs", "days")(duration.hnsecs);
 
-        mixin(format("return addDays(%sdays);", op));
+        mixin(format("return _addDays(%sdays);", op));
     }
 
     unittest
@@ -10947,6 +11084,12 @@ public:
         assert(Date(1999, 7, 6) - dur!"usecs"(86_400_000_000) == Date(1999, 7, 5));
         assert(Date(1999, 7, 6) - dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 7));
         assert(Date(1999, 7, 6) - dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 5));
+
+        {
+            auto date = Date(0, 1, 31);
+            date += dur!"days"(507) += dur!"days"(-2);
+            assert(date == Date(1, 6, 19));
+        }
 
         auto duration = dur!"days"(12);
         auto date = Date(1999, 7, 6);
@@ -12471,16 +12614,15 @@ private:
         decrease) to the month would cause it to overflow (or underflow) the
         current year.
 
-        $(D addDays(numDays)) is effectively equivalent to
+        $(D _addDays(numDays)) is effectively equivalent to
         $(D date.dayOfGregorianCal = date.dayOfGregorianCal + days).
 
         Params:
             days = The number of days to add to this Date.
       +/
-    ref Date addDays(long days) pure nothrow
+    ref Date _addDays(long days) pure nothrow
     {
         dayOfGregorianCal = cast(int)(dayOfGregorianCal + days);
-
         return this;
     }
 
@@ -12489,157 +12631,157 @@ private:
         //Test A.D.
         {
             auto date = Date(1999, 2, 28);
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(1999, 3, 1));
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(1999, 2, 28));
         }
 
         {
             auto date = Date(2000, 2, 28);
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(2000, 2, 29));
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(2000, 3, 1));
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(2000, 2, 29));
         }
 
         {
             auto date = Date(1999, 6, 30);
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(1999, 7, 1));
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(1999, 6, 30));
         }
 
         {
             auto date = Date(1999, 7, 31);
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(1999, 8, 1));
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(1999, 7, 31));
         }
 
         {
             auto date = Date(1999, 1, 1);
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(1998, 12, 31));
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(1999, 1, 1));
         }
 
         {
             auto date = Date(1999, 7, 6);
-            date.addDays(9);
+            date._addDays(9);
             assert(date == Date(1999, 7, 15));
-            date.addDays(-11);
+            date._addDays(-11);
             assert(date == Date(1999, 7, 4));
-            date.addDays(30);
+            date._addDays(30);
             assert(date == Date(1999, 8, 3));
-            date.addDays(-3);
+            date._addDays(-3);
             assert(date == Date(1999, 7, 31));
         }
 
         {
             auto date = Date(1999, 7, 6);
-            date.addDays(365);
+            date._addDays(365);
             assert(date == Date(2000, 7, 5));
-            date.addDays(-365);
+            date._addDays(-365);
             assert(date == Date(1999, 7, 6));
-            date.addDays(366);
+            date._addDays(366);
             assert(date == Date(2000, 7, 6));
-            date.addDays(730);
+            date._addDays(730);
             assert(date == Date(2002, 7, 6));
-            date.addDays(-1096);
+            date._addDays(-1096);
             assert(date == Date(1999, 7, 6));
         }
 
         //Test B.C.
         {
             auto date = Date(-1999, 2, 28);
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(-1999, 3, 1));
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(-1999, 2, 28));
         }
 
         {
             auto date = Date(-2000, 2, 28);
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(-2000, 2, 29));
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(-2000, 3, 1));
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(-2000, 2, 29));
         }
 
         {
             auto date = Date(-1999, 6, 30);
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(-1999, 7, 1));
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(-1999, 6, 30));
         }
 
         {
             auto date = Date(-1999, 7, 31);
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(-1999, 8, 1));
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(-1999, 7, 31));
         }
 
         {
             auto date = Date(-1999, 1, 1);
-            date.addDays(-1);
+            date._addDays(-1);
             assert(date == Date(-2000, 12, 31));
-            date.addDays(1);
+            date._addDays(1);
             assert(date == Date(-1999, 1, 1));
         }
 
         {
             auto date = Date(-1999, 7, 6);
-            date.addDays(9);
+            date._addDays(9);
             assert(date == Date(-1999, 7, 15));
-            date.addDays(-11);
+            date._addDays(-11);
             assert(date == Date(-1999, 7, 4));
-            date.addDays(30);
+            date._addDays(30);
             assert(date == Date(-1999, 8, 3));
-            date.addDays(-3);
+            date._addDays(-3);
         }
 
         {
             auto date = Date(-1999, 7, 6);
-            date.addDays(365);
+            date._addDays(365);
             assert(date == Date(-1998, 7, 6));
-            date.addDays(-365);
+            date._addDays(-365);
             assert(date == Date(-1999, 7, 6));
-            date.addDays(366);
+            date._addDays(366);
             assert(date == Date(-1998, 7, 7));
-            date.addDays(730);
+            date._addDays(730);
             assert(date == Date(-1996, 7, 6));
-            date.addDays(-1096);
+            date._addDays(-1096);
             assert(date == Date(-1999, 7, 6));
         }
 
         //Test Both
         {
             auto date = Date(1, 7, 6);
-            date.addDays(-365);
+            date._addDays(-365);
             assert(date == Date(0, 7, 6));
-            date.addDays(365);
+            date._addDays(365);
             assert(date == Date(1, 7, 6));
-            date.addDays(-731);
+            date._addDays(-731);
             assert(date == Date(-1, 7, 6));
-            date.addDays(730);
+            date._addDays(730);
             assert(date == Date(1, 7, 5));
         }
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(!__traits(compiles, cdate.addDays(12)));
-        static assert(!__traits(compiles, idate.addDays(12)));
+        static assert(!__traits(compiles, cdate._addDays(12)));
+        static assert(!__traits(compiles, idate._addDays(12)));
     }
 
 
@@ -16647,7 +16789,7 @@ private:
             --days;
         }
 
-        _date.addDays(days);
+        _date._addDays(days);
 
         immutable newHours = splitUnitsFromHNSecs!"hours"(hnsecs);
         immutable newMinutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
@@ -29150,13 +29292,6 @@ private:
 }
 
 
-// workaround for bug4886
-@safe size_t lengthof(aliases...)() pure nothrow
-{
-    return aliases.length;
-}
-
-
 /++
     Benchmarks code for speed assessment and comparison.
 
@@ -29178,9 +29313,9 @@ private:
     See_Also:
         $(LREF measureTime)
   +/
-TickDuration[lengthof!(fun)()] benchmark(fun...)(uint n)
+TickDuration[fun.length] benchmark(fun...)(uint n)
 {
-    TickDuration[lengthof!(fun)()] result;
+    TickDuration[fun.length] result;
     StopWatch sw;
     sw.start();
 
