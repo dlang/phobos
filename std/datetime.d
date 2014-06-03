@@ -176,12 +176,6 @@ unittest
            dur!"days"(-26));
 }
 
-//Note: There various functions which void as their return type and ref of the
-//      struct type which they're in as a commented out return type. Ideally,
-//      they would return the ref, but there are several dmd bugs which prevent
-//      that, relating to both ref and invariants. So, I've left the ref return
-//      types commented out with the idea that those functions can be made to
-//      return a ref to this once those bugs have been fixed.
 
 //==============================================================================
 // Section with public enums and constants.
@@ -6108,7 +6102,7 @@ public:
 
         {
             auto st = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-            st += dur!"hnsecs"(52) += dur!"seconds"(-907);
+            (st += dur!"hnsecs"(52)) += dur!"seconds"(-907);
             assert(st == SysTime(DateTime(0, 12, 31, 23, 44, 53), FracSec.from!"hnsecs"(51)));
         }
 
@@ -11087,7 +11081,7 @@ public:
 
         {
             auto date = Date(0, 1, 31);
-            date += dur!"days"(507) += dur!"days"(-2);
+            (date += dur!"days"(507)) += dur!"days"(-2);
             assert(date == Date(1, 6, 19));
         }
 
@@ -13097,10 +13091,10 @@ public:
             value = The number of $(D_PARAM units) to add to this
                     $(LREF TimeOfDay).
       +/
-    /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
+    ref TimeOfDay roll(string units)(long value) pure nothrow
         if(units == "hours")
     {
-        this += dur!"hours"(value);
+        return this += dur!"hours"(value);
     }
 
     ///
@@ -13133,6 +13127,10 @@ public:
 
     unittest
     {
+        auto tod = TimeOfDay(12, 27, 2);
+        tod.roll!"hours"(22).roll!"hours"(-7);
+        assert(tod == TimeOfDay(3, 27, 2));
+
         const ctod = TimeOfDay(0, 0, 0);
         immutable itod = TimeOfDay(0, 0, 0);
         static assert(!__traits(compiles, ctod.roll!"hours"(53)));
@@ -13141,17 +13139,11 @@ public:
 
 
     //Shares documentation with "hours" version.
-    /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
+    ref TimeOfDay roll(string units)(long value) pure nothrow
         if(units == "minutes" ||
            units == "seconds")
     {
-        static if(units == "minutes")
-            enum memberVarStr = "minute";
-        else static if(units == "seconds")
-            enum memberVarStr = "second";
-        else
-            static assert(0);
-
+        enum memberVarStr = units[0 .. $ - 1];
         value %= 60;
         mixin(format("auto newVal = cast(ubyte)(_%s) + value;", memberVarStr));
 
@@ -13164,6 +13156,7 @@ public:
             newVal -= 60;
 
         mixin(format("_%s = cast(ubyte)newVal;", memberVarStr));
+        return this;
     }
 
     //Test roll!"minutes"().
@@ -13240,6 +13233,10 @@ public:
         testTOD(TimeOfDay(23, 59, 33), 0, TimeOfDay(23, 59, 33));
         testTOD(TimeOfDay(23, 59, 33), -1, TimeOfDay(23, 58, 33));
 
+        auto tod = TimeOfDay(12, 27, 2);
+        tod.roll!"minutes"(97).roll!"minutes"(-102);
+        assert(tod == TimeOfDay(12, 22, 2));
+
         const ctod = TimeOfDay(0, 0, 0);
         immutable itod = TimeOfDay(0, 0, 0);
         static assert(!__traits(compiles, ctod.roll!"minutes"(7)));
@@ -13309,6 +13306,10 @@ public:
         testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
         testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
 
+        auto tod = TimeOfDay(12, 27, 2);
+        tod.roll!"seconds"(105).roll!"seconds"(-77);
+        assert(tod == TimeOfDay(12, 27, 30));
+
         const ctod = TimeOfDay(0, 0, 0);
         immutable itod = TimeOfDay(0, 0, 0);
         static assert(!__traits(compiles, ctod.roll!"seconds"(7)));
@@ -13343,7 +13344,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        mixin(format(`return retval.addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+        mixin(format(`return retval._addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     unittest
@@ -13423,7 +13424,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF TimeOfDay).
       +/
-    /+ref+/ TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
+    ref TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -13433,7 +13434,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        mixin(format(`return addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+        mixin(format(`return _addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     unittest
@@ -13467,6 +13468,10 @@ public:
         assert(TimeOfDay(12, 30, 33) - dur!"usecs"(7_000_000) == TimeOfDay(12, 30, 26));
         assert(TimeOfDay(12, 30, 33) - dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 40));
         assert(TimeOfDay(12, 30, 33) - dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 26));
+
+        auto tod = TimeOfDay(19, 17, 22);
+        (tod += dur!"seconds"(9)) += dur!"seconds"(-7292);
+        assert(tod == TimeOfDay(17, 15, 59));
 
         const ctod = TimeOfDay(12, 33, 30);
         immutable itod = TimeOfDay(12, 33, 30);
@@ -13889,7 +13894,7 @@ private:
         Params:
             seconds = The number of seconds to add to this TimeOfDay.
       +/
-    ref TimeOfDay addSeconds(long seconds) pure nothrow
+    ref TimeOfDay _addSeconds(long seconds) pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_hour);
@@ -13916,7 +13921,7 @@ private:
     {
         static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
-            orig.addSeconds(seconds);
+            orig._addSeconds(seconds);
             assert(orig == expected);
         }
 
@@ -13983,8 +13988,8 @@ private:
 
         const ctod = TimeOfDay(0, 0, 0);
         immutable itod = TimeOfDay(0, 0, 0);
-        static assert(!__traits(compiles, ctod.addSeconds(7)));
-        static assert(!__traits(compiles, itod.addSeconds(7)));
+        static assert(!__traits(compiles, ctod._addSeconds(7)));
+        static assert(!__traits(compiles, itod._addSeconds(7)));
     }
 
 
@@ -14920,11 +14925,12 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    /+ref DateTime+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref DateTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years" ||
            units == "months")
     {
         _date.add!units(value, allowOverflow);
+        return this;
     }
 
     ///
@@ -14949,6 +14955,10 @@ public:
 
     unittest
     {
+        auto dt = DateTime(2000, 1, 31);
+        dt.add!"years"(7).add!"months"(-4);
+        assert(dt == DateTime(2006, 10, 1));
+
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
         static assert(!__traits(compiles, cdt.add!"years"(4)));
@@ -14977,11 +14987,12 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    /+ref DateTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref DateTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
         if(units == "years" ||
            units == "months")
     {
         _date.roll!units(value, allowOverflow);
+        return this;
     }
 
     ///
@@ -15014,14 +15025,16 @@ public:
 
     unittest
     {
+        auto dt = DateTime(2000, 1, 31);
+        dt.roll!"years"(7).roll!"months"(-4);
+        assert(dt == DateTime(2007, 10, 1));
+
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
         static assert(!__traits(compiles, cdt.roll!"years"(4)));
         static assert(!__traits(compiles, idt.roll!"years"(4)));
         static assert(!__traits(compiles, cdt.roll!"months"(4)));
         static assert(!__traits(compiles, idt.roll!"months"(4)));
-        static assert(!__traits(compiles, cdt.roll!"days"(4)));
-        static assert(!__traits(compiles, idt.roll!"days"(4)));
     }
 
 
@@ -15040,10 +15053,11 @@ public:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this $(LREF DateTime).
       +/
-    /+ref DateTime+/ void roll(string units)(long value) pure nothrow
+    ref DateTime roll(string units)(long value) pure nothrow
         if(units == "days")
     {
         _date.roll!"days"(value);
+        return this;
     }
 
     ///
@@ -15068,6 +15082,10 @@ public:
 
     unittest
     {
+        auto dt = DateTime(2000, 1, 31);
+        dt.roll!"days"(7).roll!"days"(-4);
+        assert(dt == DateTime(2000, 1, 3));
+
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
         static assert(!__traits(compiles, cdt.roll!"days"(4)));
@@ -15076,12 +15094,13 @@ public:
 
 
     //Shares documentation with "days" version.
-    /+ref DateTime+/ void roll(string units)(long value) pure nothrow
+    ref DateTime roll(string units)(long value) pure nothrow
         if(units == "hours" ||
            units == "minutes" ||
            units == "seconds")
     {
         _tod.roll!units(value);
+        return this;
     }
 
     //Test roll!"hours"().
@@ -15244,6 +15263,10 @@ public:
         //Test Both
         testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 17_546, DateTime(Date(-1, 1, 1), TimeOfDay(13, 30, 33)));
         testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -17_546, DateTime(Date(1, 1, 1), TimeOfDay(11, 30, 33)));
+
+        auto dt = DateTime(2000, 1, 31, 9, 7, 6);
+        dt.roll!"hours"(27).roll!"hours"(-9);
+        assert(dt == DateTime(2000, 1, 31, 3, 7, 6));
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
@@ -15413,6 +15436,10 @@ public:
         testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_782, DateTime(Date(-1, 1, 1), TimeOfDay(11, 52, 33)));
         testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 52, 33)), -1_052_782, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
 
+        auto dt = DateTime(2000, 1, 31, 9, 7, 6);
+        dt.roll!"minutes"(92).roll!"minutes"(-292);
+        assert(dt == DateTime(2000, 1, 31, 9, 47, 6));
+
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
         static assert(!__traits(compiles, cdt.roll!"minutes"(4)));
@@ -15559,6 +15586,10 @@ public:
         testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_617L, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 50)));
         testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 50)), -63_165_617L, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
 
+        auto dt = DateTime(2000, 1, 31, 9, 7, 6);
+        dt.roll!"seconds"(92).roll!"seconds"(-292);
+        assert(dt == DateTime(2000, 1, 31, 9, 7, 46));
+
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
         static assert(!__traits(compiles, cdt.roll!"seconds"(4)));
@@ -15593,7 +15624,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        mixin(format(`return retval.addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+        mixin(format(`return retval._addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     unittest
@@ -15677,7 +15708,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF DateTime).
       +/
-    /+ref+/ DateTime opOpAssign(string op, D)(in D duration) pure nothrow
+    ref DateTime opOpAssign(string op, D)(in D duration) pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -15689,7 +15720,7 @@ public:
         else static if(is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
-        mixin(format(`return addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
+        mixin(format(`return _addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     unittest
@@ -15729,6 +15760,10 @@ public:
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"usecs"(7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hnsecs"(-70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - dur!"hnsecs"(70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+
+        auto dt = DateTime(2000, 1, 31, 9, 7, 6);
+        (dt += dur!"seconds"(92)) -= dur!"days"(-500);
+        assert(dt == DateTime(2001, 6, 14, 9, 8, 38));
 
         auto duration = dur!"seconds"(12);
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -16774,7 +16809,7 @@ private:
         Params:
             seconds = The number of seconds to add to this $(LREF DateTime).
       +/
-    ref DateTime addSeconds(long seconds) pure nothrow
+    ref DateTime _addSeconds(long seconds) pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_tod._hour);
@@ -16806,7 +16841,7 @@ private:
     {
         static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
         {
-            orig.addSeconds(seconds);
+            orig._addSeconds(seconds);
             assert(orig == expected);
         }
 
@@ -16968,8 +17003,8 @@ private:
 
         const cdt = DateTime(1999, 7, 6, 12, 30, 33);
         immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-        static assert(!__traits(compiles, cdt.addSeconds(4)));
-        static assert(!__traits(compiles, idt.addSeconds(4)));
+        static assert(!__traits(compiles, cdt._addSeconds(4)));
+        static assert(!__traits(compiles, idt._addSeconds(4)));
     }
 
 
@@ -17058,11 +17093,10 @@ assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
         Params:
             rhs = The $(LREF2 .Interval, Interval) to assign to this one.
       +/
-    /+ref+/ Interval opAssign(const ref Interval rhs) pure nothrow
+    ref Interval opAssign(const ref Interval rhs) pure nothrow
     {
         _begin = cast(TP)rhs._begin;
         _end = cast(TP)rhs._end;
-
         return this;
     }
 
@@ -17071,11 +17105,10 @@ assert(Interval!Date(Date(1996, 1, 2), dur!"years"(3)) ==
         Params:
             rhs = The $(LREF2 .Interval, Interval) to assign to this one.
       +/
-    /+ref+/ Interval opAssign(Interval rhs) pure nothrow
+    ref Interval opAssign(Interval rhs) pure nothrow
     {
         _begin = cast(TP)rhs._begin;
         _end = cast(TP)rhs._end;
-
         return this;
     }
 
@@ -19922,10 +19955,9 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         Params:
             rhs = The $(D PosInfInterval) to assign to this one.
       +/
-    /+ref+/ PosInfInterval opAssign(const ref PosInfInterval rhs) pure nothrow
+    ref PosInfInterval opAssign(const ref PosInfInterval rhs) pure nothrow
     {
         _begin = cast(TP)rhs._begin;
-
         return this;
     }
 
@@ -19934,10 +19966,9 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         Params:
             rhs = The $(D PosInfInterval) to assign to this one.
       +/
-    /+ref+/ PosInfInterval opAssign(PosInfInterval rhs) pure nothrow
+    ref PosInfInterval opAssign(PosInfInterval rhs) pure nothrow
     {
         _begin = cast(TP)rhs._begin;
-
         return this;
     }
 
@@ -22109,10 +22140,9 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         Params:
             rhs = The $(D NegInfInterval) to assign to this one.
       +/
-    /+ref+/ NegInfInterval opAssign(const ref NegInfInterval rhs) pure nothrow
+    ref NegInfInterval opAssign(const ref NegInfInterval rhs) pure nothrow
     {
         _end = cast(TP)rhs._end;
-
         return this;
     }
 
@@ -22121,10 +22151,9 @@ auto interval = PosInfInterval!Date(Date(1996, 1, 2));
         Params:
             rhs = The $(D NegInfInterval) to assign to this one.
       +/
-    /+ref+/ NegInfInterval opAssign(NegInfInterval rhs) pure nothrow
+    ref NegInfInterval opAssign(NegInfInterval rhs) pure nothrow
     {
         _end = cast(TP)rhs._end;
-
         return this;
     }
 
@@ -24796,17 +24825,16 @@ public:
         Params:
             rhs = The $(D IntervalRange) to assign to this one.
       +/
-    /+ref+/ IntervalRange opAssign(ref IntervalRange rhs) pure nothrow
+    ref IntervalRange opAssign(ref IntervalRange rhs) pure nothrow
     {
         _interval = rhs._interval;
         _func = rhs._func;
-
         return this;
     }
 
 
     /++ Ditto +/
-    /+ref+/ IntervalRange opAssign(IntervalRange rhs) pure nothrow
+    ref IntervalRange opAssign(IntervalRange rhs) pure nothrow
     {
         return this = rhs;
     }
@@ -25293,7 +25321,7 @@ public:
         Params:
             rhs = The $(D PosInfIntervalRange) to assign to this one.
       +/
-    /+ref+/ PosInfIntervalRange opAssign(ref PosInfIntervalRange rhs) pure nothrow
+    ref PosInfIntervalRange opAssign(ref PosInfIntervalRange rhs) pure nothrow
     {
         _interval = rhs._interval;
         _func = rhs._func;
@@ -25303,7 +25331,7 @@ public:
 
 
     /++ Ditto +/
-    /+ref+/ PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
+    ref PosInfIntervalRange opAssign(PosInfIntervalRange rhs) pure nothrow
     {
         return this = rhs;
     }
@@ -25578,7 +25606,7 @@ public:
         Params:
             rhs = The $(D NegInfIntervalRange) to assign to this one.
       +/
-    /+ref+/ NegInfIntervalRange opAssign(ref NegInfIntervalRange rhs) pure nothrow
+    ref NegInfIntervalRange opAssign(ref NegInfIntervalRange rhs) pure nothrow
     {
         _interval = rhs._interval;
         _func = rhs._func;
@@ -25588,7 +25616,7 @@ public:
 
 
     /++ Ditto +/
-    /+ref+/ NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
+    ref NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
     {
         return this = rhs;
     }
