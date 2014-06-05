@@ -740,7 +740,11 @@ if (isSomeChar!E)
     {
         import std.utf;
         /+static+/ Select!(wsCond, wchar[2], char[4]) buf; //static prevents purity.
-        doPut(r, buf.ptr[0 .. encode(buf, e)]); //the word ".ptr" added to enforce un-safety.
+        auto trustedPtrSlicing(ref typeof(buf) b, E e) @trusted
+        {
+            return b.ptr[0 .. encode(b, e)];
+        }
+        doPut(r, trustedPtrSlicing(buf, e));
     }
     //Slowly encode a wide char into a series of narrower chars
     else static if (wcCond || ccCond)
