@@ -2416,19 +2416,6 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 {
     import std.algorithm;
 
-    static size_t zeroLen(C)(const(C)* ptr)
-    {
-        size_t len = 0;
-
-        while (*ptr != '\0')
-        {
-            ++ptr;
-            ++len;
-        }
-
-        return len;
-    }
-
     assertCTFEable!(
     {
     foreach (S; TypeTuple!(string, wstring, dstring))
@@ -2461,6 +2448,13 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 
     static void test(P, S)(S s, size_t line = __LINE__) @trusted
     {
+        static size_t zeroLen(C)(const(C)* ptr) @trusted
+        {
+            size_t len = 0;
+            while (*ptr != '\0') { ++ptr; ++len; }
+            return len;
+        }
+
         auto p = toUTFz!P(s);
         immutable len = zeroLen(p);
         enforce(cmp(s, p[0 .. len]) == 0,
