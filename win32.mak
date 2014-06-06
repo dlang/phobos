@@ -132,7 +132,7 @@ SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
     
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
     std\container\dlist.d std\container\rbtree.d std\container\slist.d \
-    std\container\totalcontainer.d std\container\util.d std\container\package.d
+    std\container\util.d std\container\package.d
     
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
@@ -297,7 +297,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_container_dlist.html \
 	$(DOC)\std_container_rbtree.html \
 	$(DOC)\std_container_slist.html \
-	$(DOC)\std_container_totalcontainer.html \
 	$(DOC)\std_container_package.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
@@ -459,7 +458,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=93 -unittest -main -run std\container\rbtree.d
 	$(DMD) -cov=92 -unittest -main -run std\container\slist.d
 	$(DMD) -cov=100 -unittest -main -run std\container\util.d
-	$(DMD) -cov=0 -unittest -main -run std\container\totalcontainer.d
 	$(DMD) -cov=100 -unittest -main -run std\container\package.d
 	$(DMD) -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -cov=0  -unittest -main -run std\zip.d
@@ -592,9 +590,6 @@ $(DOC)\std_container_rbtree.html : $(STDDOC) std\container\rbtree.d
 
 $(DOC)\std_container_slist.html : $(STDDOC) std\container\slist.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_slist.html $(STDDOC) std\container\slist.d
-
-$(DOC)\std_container_totalcontainer.html : $(STDDOC) std\container\totalcontainer.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_totalcontainer.html $(STDDOC) std\container\totalcontainer.d
 
 $(DOC)\std_container_util.html : $(STDDOC) std\container\util.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_util.html $(STDDOC) std\container\util.d
