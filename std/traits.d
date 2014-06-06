@@ -5273,7 +5273,8 @@ unittest
 }
 
 /**
- * Detect whether type $(D T) is an array.
+ * Detect whether type $(D T) is an array (static or dynamic; for associative
+ *  arrays see $(LREF isAssociativeArray)).
  */
 enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 
