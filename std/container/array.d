@@ -938,10 +938,9 @@ unittest
     assert(equal(a[1..4], [1, 2, 3]));
 }
 // Test issue 5920
-version(unittest)
+unittest
 {
-    //@@@BUG4274@@@: This cannot be declared as an inner struct.
-    private struct structBug5920
+    struct structBug5920
     {
         int order;
         uint* pDestructionMask;
@@ -951,9 +950,7 @@ version(unittest)
                 *pDestructionMask += 1 << order;
         }
     }
-}
-unittest
-{
+
     alias S = structBug5920;
     uint dMask;
 

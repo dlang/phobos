@@ -610,6 +610,11 @@ unittest
 
 unittest
 {
+    auto s = make!(SList!int)(1, 2, 3);
+}
+
+unittest
+{
     // 5193
     static struct Data
     {
