@@ -1842,7 +1842,17 @@ struct Parser(R)
         }
         else
         {
+            import std.algorithm : countUntil;
             auto ivals = set.byInterval;
+            auto n = charsets.countUntil(set);
+            if(n >= 0)
+            {
+                if(ivals.length*2 > maxCharsetUsed)
+                    put(Bytecode(IR.Trie, cast(uint)n));
+                else
+                    put(Bytecode(IR.CodepointSet, cast(uint)n));
+                return;
+            }
             if(ivals.length*2 > maxCharsetUsed)
             {
                 auto t  = getTrie(set);
@@ -2283,7 +2293,7 @@ unittest
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
-    enforce(fnd < dict.length && equal(dict[fnd].name, name), 
+    enforce(fnd < dict.length && equal(dict[fnd].name, name),
         text("no submatch named ", name));
     return dict[fnd].group;
 }
@@ -2749,7 +2759,7 @@ public:
                     }
                     else
                     {
-                        
+
                         static if(charSize == 1)
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
@@ -7077,6 +7087,13 @@ unittest
 
 unittest
 {
+    // test parser optimization of identical character classes
+    auto n = regex("[a-z]/[a-z]/[a-z]").charsets.length;
+    assert(n == 1, text(n));
+}
+
+unittest
+{
     auto cr = ctRegex!("abc");
     assert(bmatch("abc",cr).hit == "abc");
     auto cr2 = ctRegex!("ab*c");
@@ -7123,7 +7140,7 @@ unittest
     assert(equal(mx.captures, [ "B", "B"]));
     enum cx2 = ctRegex!"(A|B)*";
     assert(match("BAAA",cx2));
-    
+
     enum cx3 = ctRegex!("a{3,4}","i");
     auto mx3 = match("AaA",cx3);
     assert(mx3);
