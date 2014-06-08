@@ -7607,38 +7607,38 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         AllocMatrix(slen + 1, 1);
         foreach (y; 1 .. slen + 1)
         {
-            matrix(y,0) = y;
+            _matrix[y] = y;
         }
         foreach (x; 1 .. tlen + 1)
         {
             auto tfront = t.front;
             auto ss = s.save;
-            matrix(0,0) = x;
+            _matrix[0] = x;
             lastdiag = x - 1;
             foreach (y; 1 .. rows)
             {
-                olddiag = matrix(0,y);
+                olddiag = _matrix[y];
                 auto cSub = lastdiag + (equals(ss.front, tfront) ? 0 : _substitutionIncrement);
                 ss.popFront();
-                auto cIns = matrix(0,y - 1) + _insertionIncrement;
-                auto cDel = matrix(0,y) + _deletionIncrement;
+                auto cIns = _matrix[y - 1] + _insertionIncrement;
+                auto cDel = _matrix[y] + _deletionIncrement;
                 switch (min_index(cSub, cIns, cDel))
                 {
                 case 0:
-                    matrix(0,y) = cSub;
+                    _matrix[y] = cSub;
                     break;
                 case 1:
-                    matrix(0,y) = cIns;
+                    _matrix[y] = cIns;
                     break;
                 default:
-                    matrix(0,y) = cDel;
+                    _matrix[y] = cDel;
                     break;
                 }
                 lastdiag = olddiag;
             }
             t.popFront();
         }
-        return matrix(0,slen);
+        return _matrix[slen];
     }
 
     EditOp[] path(Range s, Range t)
