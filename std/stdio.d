@@ -2104,7 +2104,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
-                    auto trustedFwrite(in void* ptr, size_t size, size_t nmemb, FILE* stream) @trusted
+                    static auto trustedFwrite(in void* ptr, size_t size, size_t nmemb, FILE* stream) @trusted
                     {
                         return .fwrite(ptr, size, nmemb, stream);
                     }
