@@ -367,7 +367,7 @@ private Pid spawnProcessImpl(in char[][] args,
     {
         name = searchPathFor(name);
         if (name is null)
-            throw new ProcessException(text("Executable file not found: ", name));
+            throw new ProcessException(text("Executable file not found: ", args[0]));
     }
 
     // Convert program name and arguments to C-style strings.
