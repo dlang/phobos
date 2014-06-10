@@ -4149,29 +4149,7 @@ unittest
  * the input from being outdented.
  *
  * Works at compile-time.
- *
- * Example:
- * ---
- * writeln(q{
- *     import std.stdio;
- *     void main() {
- *         writeln("Hello");
- *     }
- * }.outdent());
- * ---
- *
- * Output:
- * ---
- *
- * import std.stdio;
- * void main() {
- *     writeln("Hello");
- * }
- *
- * ---
- *
  */
-
 S outdent(S)(S str) @safe pure if(isSomeString!S)
 {
     return str.splitLines(KeepTerminator.yes).outdent().join();
@@ -4187,17 +4165,17 @@ S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
 
     static S leadingWhiteOf(S str)
     {
-        return str[ 0 .. $-find!(not!(std.uni.isWhite))(str).length ];
+        return str[ 0 .. $ - stripLeft(str).length ];
     }
 
     S shortestIndent;
-    foreach (i, line; lines)
+    foreach (ref line; lines)
     {
-        auto stripped = __ctfe? line.ctfe_strip() : line.strip();
+        auto stripped = line.stripLeft();
 
         if (stripped.empty)
         {
-            lines[i] = line[line.chomp().length..$];
+            line = line[line.chomp().length .. $];
         }
         else
         {
@@ -4214,53 +4192,45 @@ S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
         }
     }
 
-    foreach (i; 0..lines.length)
+    foreach (ref line; lines)
     {
-        auto stripped = __ctfe? lines[i].ctfe_strip() : lines[i].strip();
+        auto stripped = line.stripLeft();
 
         if (stripped.empty)
         {
             // Do nothing
         }
-        else if (lines[i].startsWith(shortestIndent))
+        else if (line.startsWith(shortestIndent))
         {
-            lines[i] = lines[i][shortestIndent.length..$];
+            line = line[shortestIndent.length .. $];
         }
         else
         {
-            if (__ctfe)
-                assert(false, "outdent: Inconsistent indentation");
-            else
-                throw new StringException("outdent: Inconsistent indentation");
+            throw new StringException("outdent: Inconsistent indentation");
         }
     }
 
     return lines;
 }
 
-// TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
-private S ctfe_strip(S)(S str) if(isSomeString!(Unqual!S))
+///
+unittest
 {
-    return str.stripLeft().ctfe_stripRight();
+    enum pretty = q{
+       import std.stdio;
+       void main() {
+           writeln("Hello");
+       }
+    }.outdent();
+
+    enum ugly = q{
+import std.stdio;
+void main() {
+    writeln("Hello");
 }
+};
 
-// TODO: Remove this and use std.string.strip when retro() becomes ctfe-able.
-private S ctfe_stripRight(S)(S str) if(isSomeString!(Unqual!S))
-{
-    size_t endIndex = 0;
-    size_t prevIndex = str.length;
-
-    foreach_reverse (i, dchar ch; str)
-    {
-        if (!std.uni.isWhite(ch))
-        {
-            endIndex = prevIndex;
-            break;
-        }
-        prevIndex = i;
-    }
-
-    return str[0..endIndex];
+    assert(pretty == ugly);
 }
 
 unittest
@@ -4293,11 +4263,6 @@ unittest
 
     assertCTFEable!(
     {
-    static assert(ctfe_strip(" \tHi \r\n") == "Hi");
-    static assert(ctfe_strip(" \tHi&copy;\u2028 \r\n") == "Hi&copy;");
-    static assert(ctfe_strip("Hi")         == "Hi");
-    static assert(ctfe_strip(" \t \r\n")   == "");
-    static assert(ctfe_strip("")           == "");
 
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
@@ -4351,6 +4316,11 @@ unittest
         enum expected6 = "\r\n\r\n\u2028\u2029";
         assert(testStr6.outdent() == expected6);
         static assert(testStr6.outdent() == expected6);
+
+        enum testStr7 = " a \n b ";
+        enum expected7 = "a \nb ";
+        assert(testStr7.outdent() == expected7);
+        static assert(testStr7.outdent() == expected7);
     }
     });
 }
