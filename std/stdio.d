@@ -2129,20 +2129,20 @@ $(D Range) that locks the file and allows fast writing to it.
             version(DIGITAL_MARS_STDIO) alias WCTYPE = int;
             version(MICROSOFT_STDIO)    alias WCTYPE = int;
             else                        alias WCTYPE = wchar_t;
-            auto trustedFPUTC(int ch) @trusted
+            auto trustedFPUTC(int ch, _iobuf* h) @trusted
             {
-                return FPUTC(ch, handle);
+                return FPUTC(ch, h);
             }
-            auto trustedFPUTWC(WCTYPE ch) @trusted
+            auto trustedFPUTWC(WCTYPE ch, _iobuf* h) @trusted
             {
-                return FPUTWC(ch, handle);
+                return FPUTWC(ch, h);
             }
 
             static if (c.sizeof == 1)
             {
                 // simple char
-                if (orientation <= 0) trustedFPUTC(c);
-                else trustedFPUTWC(c);
+                if (orientation <= 0) trustedFPUTC(c, handle);
+                else trustedFPUTWC(c, handle);
             }
             else static if (c.sizeof == 2)
             {
@@ -2152,19 +2152,19 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     if (c <= 0x7F)
                     {
-                        trustedFPUTC(c);
+                        trustedFPUTC(c, handle);
                     }
                     else
                     {
                         char[4] buf;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            trustedFPUTC(b[i]);
+                            trustedFPUTC(b[i], handle);
                     }
                 }
                 else
                 {
-                    trustedFPUTWC(c);
+                    trustedFPUTWC(c, handle);
                 }
             }
             else // 32-bit characters
@@ -2175,14 +2175,14 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     if (c <= 0x7F)
                     {
-                        trustedFPUTC(c);
+                        trustedFPUTC(c, handle);
                     }
                     else
                     {
                         char[4] buf = void;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            trustedFPUTC(b[i]);
+                            trustedFPUTC(b[i], handle);
                     }
                 }
                 else
@@ -2194,20 +2194,21 @@ $(D Range) that locks the file and allows fast writing to it.
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
-                            trustedFPUTWC(c);
+                            trustedFPUTWC(c, handle);
                         }
                         else
                         {
                             trustedFPUTWC(cast(wchar)
                                            ((((c - 0x10000) >> 10) & 0x3FF)
-                                                   + 0xD800));
+                                                   + 0xD800), handle);
                             trustedFPUTWC(cast(wchar)
-                                           (((c - 0x10000) & 0x3FF) + 0xDC00));
+                                           (((c - 0x10000) & 0x3FF) + 0xDC00),
+                                           handle);
                         }
                     }
                     else version (Posix)
                     {
-                        trustedFPUTWC(c);
+                        trustedFPUTWC(c, handle);
                     }
                     else
                     {
