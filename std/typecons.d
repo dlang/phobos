@@ -1075,29 +1075,29 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArra
                 T original;
                 U stripped;
             }
-            void opAssign(T another) pure nothrow
+            void opAssign(T another) @trusted pure nothrow
             {
                 stripped = cast(U) another;
             }
-            void opAssign(Rebindable another) pure nothrow
+            void opAssign(Rebindable another) @trusted pure nothrow
             {
                 stripped = another.stripped;
             }
             static if (is(T == const U))
             {
                 // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another) pure nothrow
+                void opAssign(Rebindable!(immutable U) another) @trusted pure nothrow
                 {
                     stripped = another.stripped;
                 }
             }
 
-            this(T initializer) pure nothrow
+            this(T initializer) @safe pure nothrow
             {
                 opAssign(initializer);
             }
 
-            @property ref inout(T) get() inout pure nothrow
+            @property ref inout(T) get() @trusted inout pure nothrow
             {
                 return original;
             }
