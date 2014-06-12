@@ -236,7 +236,7 @@ class MmFile
             if (hFile != INVALID_HANDLE_VALUE)
             {
                 int hi = cast(int)(size>>32);
-                hFileMap = CreateFileMappingA(hFile, null, flProtect,
+                hFileMap = CreateFileMappingW(hFile, null, flProtect,
                         hi, cast(uint)size, null);
             }
             if (hFileMap != null)               // mapping didn't fail
