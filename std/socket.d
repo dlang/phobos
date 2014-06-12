@@ -3109,8 +3109,7 @@ public:
         else version (Posix)
         {
             _ctimeval tv;
-            tv.tv_sec  = to!(typeof(tv.tv_sec ))(value.total!"seconds");
-            tv.tv_usec = to!(typeof(tv.tv_usec))(value.fracSec.usecs);
+            value.split!("seconds", "usecs")(tv.tv_sec, tv.tv_usec);
             setOption(level, option, (&tv)[0 .. 1]);
         }
         else static assert(false);
@@ -3185,9 +3184,10 @@ public:
     //Winsock: possibly internally limited to 64 sockets per set
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout)
     {
+        auto vals = timeout.split!("seconds", "usecs")();
         TimeVal tv;
-        tv.seconds      = to!(tv.tv_sec_t )(timeout.total!"seconds");
-        tv.microseconds = to!(tv.tv_usec_t)(timeout.fracSec.usecs);
+        tv.seconds      = cast(tv.tv_sec_t )vals.seconds;
+        tv.microseconds = cast(tv.tv_usec_t)vals.usecs;
         return select(checkRead, checkWrite, checkError, &tv);
     }
 
