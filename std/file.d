@@ -1754,7 +1754,6 @@ version(StdDdoc)
 
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATA* fd);
             private this(string path, in WIN32_FIND_DATAW *fd);
         }
         else version (Posix)
@@ -1921,23 +1920,6 @@ else version(Windows)
             }
         }
 
-        private this(string path, in WIN32_FIND_DATA* fd)
-        {
-            auto clength = to!int(core.stdc.string.strlen(fd.cFileName.ptr));
-
-            // Convert cFileName[] to unicode
-            const wlength = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, null, 0);
-            auto wbuf = new wchar[wlength];
-            const n = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, wbuf.ptr, wlength);
-            assert(n == wlength);
-            // toUTF8() returns a new buffer
-            _name = buildPath(path, std.utf.toUTF8(wbuf[0 .. wlength]));
-            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
-            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
-            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
-            _attributes = fd.dwFileAttributes;
-        }
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             size_t clength = std.string.wcslen(fd.cFileName.ptr);
@@ -2547,27 +2529,6 @@ private struct DirIteratorImpl
             while( std.string.wcscmp(findinfo.cFileName.ptr, ".") == 0
                     || std.string.wcscmp(findinfo.cFileName.ptr, "..") == 0)
                 if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
-                {
-                    popDirStack();
-                    return false;
-                }
-            _cur = DirEntry(_stack.data[$-1].dirpath, findinfo);
-            return true;
-        }
-
-        bool toNext(bool fetch, WIN32_FIND_DATA* findinfo)
-        {
-            if(fetch)
-            {
-                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
-                {
-                    popDirStack();
-                    return false;
-                }
-            }
-            while( core.stdc.string.strcmp(findinfo.cFileName.ptr, ".") == 0
-                    || core.stdc.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
-                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
