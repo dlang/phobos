@@ -13988,7 +13988,7 @@ public:
             date = The date portion of $(LREF DateTime).
             tod  = The time portion of $(LREF DateTime).
       +/
-    this(in Date date, in TimeOfDay tod = TimeOfDay.init) pure nothrow
+    this(in Date date, in TimeOfDay tod = TimeOfDay.init) @safe pure nothrow
     {
         _date = date;
         _tod = tod;
@@ -14025,8 +14025,7 @@ public:
             minute = The minute portion of the time;
             second = The second portion of the time;
       +/
-    this(int year, int month, int day,
-         int hour = 0, int minute = 0, int second = 0) pure
+    this(int year, int month, int day, int hour = 0, int minute = 0, int second = 0) @safe pure
     {
         _date = Date(year, month, day);
         _tod = TimeOfDay(hour, minute, second);
@@ -14058,7 +14057,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in DateTime rhs) const pure nothrow
+    int opCmp(in DateTime rhs) @safe const pure nothrow
     {
         immutable dateResult = _date.opCmp(rhs._date);
 
@@ -14268,7 +14267,7 @@ public:
     /++
         The date portion of $(LREF DateTime).
       +/
-    @property Date date() const pure nothrow
+    @property Date date() @safe const pure nothrow
     {
         return _date;
     }
@@ -14298,7 +14297,7 @@ public:
         Params:
             date = The Date to set this $(LREF DateTime)'s date portion to.
       +/
-    @property void date(in Date date) pure nothrow
+    @property void date(in Date date) @safe pure nothrow
     {
         _date = date;
     }
@@ -14320,7 +14319,7 @@ public:
     /++
         The time portion of $(LREF DateTime).
       +/
-    @property TimeOfDay timeOfDay() const pure nothrow
+    @property TimeOfDay timeOfDay() @safe const pure nothrow
     {
         return _tod;
     }
@@ -14351,7 +14350,7 @@ public:
             tod = The $(LREF TimeOfDay) to set this $(LREF DateTime)'s time portion
                   to.
       +/
-    @property void timeOfDay(in TimeOfDay tod) pure nothrow
+    @property void timeOfDay(in TimeOfDay tod) @safe pure nothrow
     {
         _tod = tod;
     }
@@ -14374,7 +14373,7 @@ public:
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
      +/
-    @property short year() const pure nothrow
+    @property short year() @safe const pure nothrow
     {
         return _date.year;
     }
@@ -14403,7 +14402,7 @@ public:
             $(LREF DateTimeException) if the new year is not a leap year and if the
             resulting date would be on February 29th.
      +/
-    @property void year(int year) pure
+    @property void year(int year) @safe pure
     {
         _date.year = year;
     }
@@ -14441,7 +14440,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D isAD) is true.
      +/
-    @property short yearBC() const pure
+    @property short yearBC() @safe const pure
     {
         return _date.yearBC;
     }
@@ -14476,7 +14475,7 @@ public:
         Throws:
             $(LREF DateTimeException) if a non-positive value is given.
      +/
-    @property void yearBC(int year) pure
+    @property void yearBC(int year) @safe pure
     {
         _date.yearBC = year;
     }
@@ -14508,7 +14507,7 @@ public:
     /++
         Month of a Gregorian Year.
      +/
-    @property Month month() const pure nothrow
+    @property Month month() @safe const pure nothrow
     {
         return _date.month;
     }
@@ -14543,7 +14542,7 @@ public:
         Throws:
             $(LREF DateTimeException) if the given month is not a valid month.
      +/
-    @property void month(Month month) pure
+    @property void month(Month month) @safe pure
     {
         _date.month = month;
     }
@@ -14573,7 +14572,7 @@ public:
     /++
         Day of a Gregorian Month.
      +/
-    @property ubyte day() const pure nothrow
+    @property ubyte day() @safe const pure nothrow
     {
         return _date.day;
     }
@@ -14619,7 +14618,7 @@ public:
             $(LREF DateTimeException) if the given day is not a valid day of the
             current month.
      +/
-    @property void day(int day) pure
+    @property void day(int day) @safe pure
     {
         _date.day = day;
     }
@@ -14711,7 +14710,7 @@ public:
     /++
         Hours passed midnight.
      +/
-    @property ubyte hour() const pure nothrow
+    @property ubyte hour() @safe const pure nothrow
     {
         return _tod.hour;
     }
@@ -14738,7 +14737,7 @@ public:
             $(LREF DateTimeException) if the given hour would result in an invalid
             $(LREF DateTime).
      +/
-    @property void hour(int hour) pure
+    @property void hour(int hour) @safe pure
     {
         _tod.hour = hour;
     }
@@ -14761,7 +14760,7 @@ public:
     /++
         Minutes passed the hour.
      +/
-    @property ubyte minute() const pure nothrow
+    @property ubyte minute() @safe const pure nothrow
     {
         return _tod.minute;
     }
@@ -14788,7 +14787,7 @@ public:
             $(LREF DateTimeException) if the given minute would result in an
             invalid $(LREF DateTime).
      +/
-    @property void minute(int minute) pure
+    @property void minute(int minute) @safe pure
     {
         _tod.minute = minute;
     }
@@ -14811,7 +14810,7 @@ public:
     /++
         Seconds passed the minute.
      +/
-    @property ubyte second() const pure nothrow
+    @property ubyte second() @safe const pure nothrow
     {
         return _tod.second;
     }
@@ -14838,7 +14837,7 @@ public:
             $(LREF DateTimeException) if the given seconds would result in an
             invalid $(LREF DateTime).
      +/
-    @property void second(int second) pure
+    @property void second(int second) @safe pure
     {
         _tod.second = second;
     }
@@ -14877,7 +14876,8 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref DateTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref DateTime add(string units)
+                    (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "years" ||
            units == "months")
     {
@@ -14939,7 +14939,8 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref DateTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref DateTime roll(string units)
+                     (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "years" ||
            units == "months")
     {
@@ -15005,7 +15006,7 @@ public:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this $(LREF DateTime).
       +/
-    ref DateTime roll(string units)(long value) pure nothrow
+    ref DateTime roll(string units)(long value) @safe pure nothrow
         if(units == "days")
     {
         _date.roll!"days"(value);
@@ -15046,7 +15047,7 @@ public:
 
 
     //Shares documentation with "days" version.
-    ref DateTime roll(string units)(long value) pure nothrow
+    ref DateTime roll(string units)(long value) @safe pure nothrow
         if(units == "hours" ||
            units == "minutes" ||
            units == "seconds")
@@ -15564,7 +15565,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF DateTime).
       +/
-    DateTime opBinary(string op, D)(in D duration) const pure nothrow
+    DateTime opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -15660,7 +15661,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF DateTime).
       +/
-    ref DateTime opOpAssign(string op, D)(in D duration) pure nothrow
+    ref DateTime opOpAssign(string op, D)(in D duration) @safe pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -15736,7 +15737,7 @@ public:
         $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in DateTime rhs) const pure nothrow
+    Duration opBinary(string op)(in DateTime rhs) @safe const pure nothrow
         if(op == "-")
     {
         immutable dateResult = _date - rhs.date;
@@ -15833,7 +15834,7 @@ public:
         Params:
             rhs = The $(LREF DateTime) to subtract from this one.
       +/
-    int diffMonths(in DateTime rhs) const pure nothrow
+    int diffMonths(in DateTime rhs) @safe const pure nothrow
     {
         return _date.diffMonths(rhs._date);
     }
@@ -15876,7 +15877,7 @@ public:
     /++
         Whether this $(LREF DateTime) is in a leap year.
      +/
-    @property bool isLeapYear() const pure nothrow
+    @property bool isLeapYear() @safe const pure nothrow
     {
         return _date.isLeapYear;
     }
@@ -15895,7 +15896,7 @@ public:
     /++
         Day of the week this $(LREF DateTime) is on.
       +/
-    @property DayOfWeek dayOfWeek() const pure nothrow
+    @property DayOfWeek dayOfWeek() @safe const pure nothrow
     {
         return _date.dayOfWeek;
     }
@@ -15914,7 +15915,7 @@ public:
     /++
         Day of the year this $(LREF DateTime) is on.
       +/
-    @property ushort dayOfYear() const pure nothrow
+    @property ushort dayOfYear() @safe const pure nothrow
     {
         return _date.dayOfYear;
     }
@@ -15945,7 +15946,7 @@ public:
             day = The day of the year to set which day of the year this
                   $(LREF DateTime) is on.
       +/
-    @property void dayOfYear(int day) pure
+    @property void dayOfYear(int day) @safe pure
     {
         _date.dayOfYear = day;
     }
@@ -15964,7 +15965,7 @@ public:
     /++
         The Xth day of the Gregorian Calendar that this $(LREF DateTime) is on.
      +/
-    @property int dayOfGregorianCal() const pure nothrow
+    @property int dayOfGregorianCal() @safe const pure nothrow
     {
         return _date.dayOfGregorianCal;
     }
@@ -16002,7 +16003,7 @@ public:
             days = The day of the Gregorian Calendar to set this $(LREF DateTime)
                    to.
      +/
-    @property void dayOfGregorianCal(int days) pure nothrow
+    @property void dayOfGregorianCal(int days) @safe pure nothrow
     {
         _date.dayOfGregorianCal = days;
     }
@@ -16051,7 +16052,7 @@ public:
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
-    @property ubyte isoWeek() const pure nothrow
+    @property ubyte isoWeek() @safe const pure nothrow
     {
         return _date.isoWeek;
     }
@@ -16071,7 +16072,7 @@ public:
         $(LREF DateTime) for the last day in the month that this $(LREF DateTime) is
         in. The time portion of endOfMonth is always 23:59:59.
       +/
-    @property DateTime endOfMonth() const pure nothrow
+    @property DateTime endOfMonth() @safe const pure nothrow
     {
         try
             return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
@@ -16137,7 +16138,7 @@ public:
     /++
         The last day in the month that this $(LREF DateTime) is in.
       +/
-    @property ubyte daysInMonth() const pure nothrow
+    @property ubyte daysInMonth() @safe const pure nothrow
     {
         return _date.daysInMonth;
     }
@@ -16163,7 +16164,7 @@ public:
     /++
         Whether the current year is a date in A.D.
       +/
-    @property bool isAD() const pure nothrow
+    @property bool isAD() @safe const pure nothrow
     {
         return _date.isAD;
     }
@@ -16187,12 +16188,13 @@ public:
 
 
     /++
-        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this $(LREF DateTime) at the given time. For example,
-        prior to noon, 1996-03-31 would be the Julian day number 2_450_173, so
-        this function returns 2_450_173, while from noon onward, the julian
-        day number would be 2_450_174, so this function returns 2_450_174.
+        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this
+        $(LREF DateTime) at the given time. For example, prior to noon,
+        1996-03-31 would be the Julian day number 2_450_173, so this function
+        returns 2_450_173, while from noon onward, the julian day number would
+        be 2_450_174, so this function returns 2_450_174.
       +/
-    @property long julianDay() const pure nothrow
+    @property long julianDay() @safe const pure nothrow
     {
         if(_tod._hour < 12)
             return _date.julianDay - 1;
@@ -16234,10 +16236,10 @@ public:
 
 
     /++
-        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
-        Julian day changes at midnight).
+        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any
+        time on this date (since, the modified Julian day changes at midnight).
       +/
-    @property long modJulianDay() const pure nothrow
+    @property long modJulianDay() @safe const pure nothrow
     {
         return _date.modJulianDay;
     }
@@ -16260,7 +16262,7 @@ public:
     /++
         Converts this $(LREF DateTime) to a string with the format YYYYMMDDTHHMMSS.
       +/
-    string toISOString() const nothrow
+    string toISOString() @safe const pure nothrow
     {
         try
             return format("%sT%s", _date.toISOString(), _tod.toISOString());
@@ -16312,7 +16314,7 @@ public:
         Converts this $(LREF DateTime) to a string with the format
         YYYY-MM-DDTHH:MM:SS.
       +/
-    string toISOExtString() const nothrow
+    string toISOExtString() @safe const pure nothrow
     {
         try
             return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
@@ -16363,7 +16365,7 @@ public:
         Converts this $(LREF DateTime) to a string with the format
         YYYY-Mon-DD HH:MM:SS.
       +/
-    string toSimpleString() const nothrow
+    string toSimpleString() @safe const pure nothrow
     {
         try
             return format("%s %s", _date.toSimpleString(), _tod.toString());
@@ -16411,24 +16413,10 @@ public:
     }
 
 
-    /+
-        Converts this $(LREF DateTime) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
-    }
-
     /++
         Converts this $(LREF DateTime) to a string.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
+    string toString() @safe const pure nothrow
     {
         return toSimpleString();
     }
@@ -16456,7 +16444,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF DateTime) would not be valid.
       +/
-    static DateTime fromISOString(S)(in S isoString)
+    static DateTime fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
         immutable dstr = to!dstring(strip(isoString));
@@ -16539,7 +16527,7 @@ public:
             Extended format or if the resulting $(LREF DateTime) would not be
             valid.
       +/
-    static DateTime fromISOExtString(S)(in S isoExtString)
+    static DateTime fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!(S))
     {
         immutable dstr = to!dstring(strip(isoExtString));
@@ -16620,7 +16608,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the correct
             format or if the resulting $(LREF DateTime) would not be valid.
       +/
-    static DateTime fromSimpleString(S)(in S simpleString)
+    static DateTime fromSimpleString(S)(in S simpleString) @safe pure
         if(isSomeString!(S))
     {
         immutable dstr = to!dstring(strip(simpleString));
@@ -16686,18 +16674,11 @@ public:
     }
 
 
-    //TODO Add function which takes a user-specified time format and produces a DateTime
-
-    //TODO Add function which takes pretty much any time-string and produces a DateTime
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
     /++
         Returns the $(LREF DateTime) farthest in the past which is representable by
         $(LREF DateTime).
       +/
-    @property static DateTime min() pure nothrow
+    @property static DateTime min() @safe pure nothrow
     out(result)
     {
         assert(result._date == Date.min);
@@ -16724,7 +16705,7 @@ public:
         Returns the $(LREF DateTime) farthest in the future which is representable
         by $(LREF DateTime).
       +/
-    @property static DateTime max() pure nothrow
+    @property static DateTime max() @safe pure nothrow
     out(result)
     {
         assert(result._date == Date.max);
@@ -16761,7 +16742,7 @@ private:
         Params:
             seconds = The number of seconds to add to this $(LREF DateTime).
       +/
-    ref DateTime _addSeconds(long seconds) pure nothrow
+    ref DateTime _addSeconds(long seconds) @safe pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_tod._hour);
