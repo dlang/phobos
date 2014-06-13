@@ -12790,7 +12790,7 @@ public:
             $(LREF DateTimeException) if the resulting $(LREF TimeOfDay) would be not
             be valid.
      +/
-    this(int hour, int minute, int second = 0) pure
+    this(int hour, int minute, int second = 0) @safe pure
     {
         enforceValid!"hours"(hour);
         enforceValid!"minutes"(minute);
@@ -12842,7 +12842,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in TimeOfDay rhs) const pure nothrow
+    int opCmp(in TimeOfDay rhs) @safe const pure nothrow
     {
         if(_hour < rhs._hour)
             return -1;
@@ -12902,7 +12902,7 @@ public:
     /++
         Hours passed midnight.
      +/
-    @property ubyte hour() const pure nothrow
+    @property ubyte hour() @safe const pure nothrow
     {
         return _hour;
     }
@@ -12929,7 +12929,7 @@ public:
             $(LREF DateTimeException) if the given hour would result in an invalid
             $(LREF TimeOfDay).
      +/
-    @property void hour(int hour) pure
+    @property void hour(int hour) @safe pure
     {
         enforceValid!"hours"(hour);
         _hour = cast(ubyte)hour;
@@ -12953,7 +12953,7 @@ public:
     /++
         Minutes passed the hour.
      +/
-    @property ubyte minute() const pure nothrow
+    @property ubyte minute() @safe const pure nothrow
     {
         return _minute;
     }
@@ -12980,7 +12980,7 @@ public:
             $(LREF DateTimeException) if the given minute would result in an
             invalid $(LREF TimeOfDay).
      +/
-    @property void minute(int minute) pure
+    @property void minute(int minute) @safe pure
     {
         enforceValid!"minutes"(minute);
         _minute = cast(ubyte)minute;
@@ -13004,7 +13004,7 @@ public:
     /++
         Seconds passed the minute.
      +/
-    @property ubyte second() const pure nothrow
+    @property ubyte second() @safe const pure nothrow
     {
         return _second;
     }
@@ -13031,7 +13031,7 @@ public:
             $(LREF DateTimeException) if the given second would result in an
             invalid $(LREF TimeOfDay).
      +/
-    @property void second(int second) pure
+    @property void second(int second) @safe pure
     {
         enforceValid!"seconds"(second);
         _second = cast(ubyte)second;
@@ -13068,7 +13068,7 @@ public:
             value = The number of $(D_PARAM units) to add to this
                     $(LREF TimeOfDay).
       +/
-    ref TimeOfDay roll(string units)(long value) pure nothrow
+    ref TimeOfDay roll(string units)(long value) @safe pure nothrow
         if(units == "hours")
     {
         return this += dur!"hours"(value);
@@ -13116,7 +13116,7 @@ public:
 
 
     //Shares documentation with "hours" version.
-    ref TimeOfDay roll(string units)(long value) pure nothrow
+    ref TimeOfDay roll(string units)(long value) @safe pure nothrow
         if(units == "minutes" ||
            units == "seconds")
     {
@@ -13309,7 +13309,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF TimeOfDay).
       +/
-    TimeOfDay opBinary(string op, D)(in D duration) const pure nothrow
+    TimeOfDay opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -13401,7 +13401,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF TimeOfDay).
       +/
-    ref TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
+    ref TimeOfDay opOpAssign(string op, D)(in D duration) @safe pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -13471,7 +13471,7 @@ public:
         Params:
             rhs = The $(LREF TimeOfDay) to subtract from this one.
       +/
-    Duration opBinary(string op)(in TimeOfDay rhs) const pure nothrow
+    Duration opBinary(string op)(in TimeOfDay rhs) @safe const pure nothrow
         if(op == "-")
     {
         immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
@@ -13512,7 +13512,7 @@ public:
     /++
         Converts this $(LREF TimeOfDay) to a string with the format HHMMSS.
       +/
-    string toISOString() const nothrow
+    string toISOString() @safe const pure nothrow
     {
         try
             return format("%02d%02d%02d", _hour, _minute, _second);
@@ -13541,7 +13541,7 @@ public:
     /++
         Converts this $(LREF TimeOfDay) to a string with the format HH:MM:SS.
       +/
-    string toISOExtString() const nothrow
+    string toISOExtString() @safe const pure nothrow
     {
         try
             return format("%02d:%02d:%02d", _hour, _minute, _second);
@@ -13567,25 +13567,10 @@ public:
     }
 
 
-    /+
-        Converts this $(LREF TimeOfDay) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toISOExtString();
-    }
-
-
     /++
         Converts this TimeOfDay to a string.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
+    string toString() @safe const pure nothrow
     {
         return toISOExtString();
     }
@@ -13600,9 +13585,6 @@ public:
         static assert(__traits(compiles, itod.toString()));
     }
 
-    //TODO Add a function which returns a string in a user-specified format.
-
-
 
     /++
         Creates a $(LREF TimeOfDay) from a string with the format HHMMSS.
@@ -13615,7 +13597,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF TimeOfDay) would not be valid.
       +/
-    static TimeOfDay fromISOString(S)(in S isoString)
+    static TimeOfDay fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoString));
@@ -13717,7 +13699,7 @@ public:
             Extended format or if the resulting $(LREF TimeOfDay) would not be
             valid.
       +/
-    static TimeOfDay fromISOExtString(S)(in S isoExtString)
+    static TimeOfDay fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -13812,17 +13794,10 @@ public:
     }
 
 
-    //TODO Add function which takes a user-specified time format and produces a TimeOfDay
-
-    //TODO Add function which takes pretty much any time-string and produces a TimeOfDay
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
     /++
         Returns midnight.
       +/
-    @property static TimeOfDay min() pure nothrow
+    @property static TimeOfDay min() @safe pure nothrow
     {
         return TimeOfDay.init;
     }
@@ -13839,7 +13814,7 @@ public:
     /++
         Returns one second short of midnight.
       +/
-    @property static TimeOfDay max() pure nothrow
+    @property static TimeOfDay max() @safe pure nothrow
     {
         auto tod = TimeOfDay.init;
         tod._hour = maxHour;
@@ -13871,7 +13846,7 @@ private:
         Params:
             seconds = The number of seconds to add to this TimeOfDay.
       +/
-    ref TimeOfDay _addSeconds(long seconds) pure nothrow
+    ref TimeOfDay _addSeconds(long seconds) @safe pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_hour);
@@ -13973,13 +13948,13 @@ private:
     /+
         Whether the given values form a valid $(LREF TimeOfDay).
      +/
-    static bool _valid(int hour, int minute, int second) pure nothrow
+    static bool _valid(int hour, int minute, int second) @safe pure nothrow
     {
         return valid!"hours"(hour) && valid!"minutes"(minute) && valid!"seconds"(second);
     }
 
 
-    pure invariant()
+    @safe pure invariant()
     {
         assert(_valid(_hour, _minute, _second),
                format("Invariant Failure: hour [%s] minute [%s] second [%s]", _hour, _minute, _second));
