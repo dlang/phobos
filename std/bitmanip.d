@@ -1002,18 +1002,21 @@ struct BitArray
             assert(x <= y);
         }
 
-        foreach (i; 2 .. 256)
+        BitArray a1, a2;
+
+        for (size_t len = 4; len <= 256; len <<= 1)
         {
-            foreach (j; 1 .. i)
-            {
-                BitArray a1, a2;
-                a1.length = i;
-                a2.length = i;
-                a1[j-1] = true;
-                a2[j] = true;
-                assert(a1 > a2);
-                assert(a1 >= a2);
-            }
+            a1.length = a2.length = len;
+            a1[len-2] = a2[len-1] = true;
+            assert(a1 > a2);
+            a1[len-2] = a2[len-1] = false;
+        }
+
+        foreach (j; 1 .. a1.length)
+        {
+            a1[j-1] = a2[j] = true;
+            assert(a1 > a2);
+            a1[j-1] = a2[j] = false;
         }
     }
 
