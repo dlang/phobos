@@ -8572,7 +8572,7 @@ public:
             month = Month of the year.
             day   = Day of the month.
      +/
-    this(int year, int month, int day) pure
+    this(int year, int month, int day) @safe pure
     {
         enforceValid!"months"(cast(Month)month);
         enforceValid!"days"(year, cast(Month)month, day);
@@ -8647,7 +8647,7 @@ public:
             day = The Xth day of the Gregorian Calendar that the constructed
                   $(LREF Date) will be for.
      +/
-    this(int day) pure nothrow
+    this(int day) @safe pure nothrow
     {
         if(day > 0)
         {
@@ -8788,7 +8788,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in Date rhs) const pure nothrow
+    int opCmp(in Date rhs) @safe const pure nothrow
     {
         if(_year < rhs._year)
             return -1;
@@ -8896,7 +8896,7 @@ public:
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
      +/
-    @property short year() const pure nothrow
+    @property short year() @safe const pure nothrow
     {
         return _year;
     }
@@ -8932,7 +8932,7 @@ public:
             $(LREF DateTimeException) if the new year is not a leap year and the
             resulting date would be on February 29th.
      +/
-    @property void year(int year) pure
+    @property void year(int year) @safe pure
     {
         enforceValid!"days"(year, _month, _day);
         _year = cast(short)year;
@@ -8978,7 +8978,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D isAD) is true.
      +/
-    @property ushort yearBC() const pure
+    @property ushort yearBC() @safe const pure
     {
         if(isAD)
             throw new DateTimeException(format("Year %s is A.D.", _year));
@@ -9015,7 +9015,7 @@ public:
         Throws:
             $(LREF DateTimeException) if a non-positive value is given.
      +/
-    @property void yearBC(int year) pure
+    @property void yearBC(int year) @safe pure
     {
         if(year <= 0)
             throw new DateTimeException("The given year is not a year B.C.");
@@ -9050,7 +9050,7 @@ public:
     /++
         Month of a Gregorian Year.
      +/
-    @property Month month() const pure nothrow
+    @property Month month() @safe const pure nothrow
     {
         return _month;
     }
@@ -9085,7 +9085,7 @@ public:
             $(LREF DateTimeException) if the given month is not a valid month or if
             the current day would not be valid in the given month.
      +/
-    @property void month(Month month) pure
+    @property void month(Month month) @safe pure
     {
         enforceValid!"months"(month);
         enforceValid!"days"(_year, month, _day);
@@ -9119,7 +9119,7 @@ public:
     /++
         Day of a Gregorian Month.
      +/
-    @property ubyte day() const pure nothrow
+    @property ubyte day() @safe const pure nothrow
     {
         return _day;
     }
@@ -9162,7 +9162,7 @@ public:
             $(LREF DateTimeException) if the given day is not a valid day of the
             current month.
      +/
-    @property void day(int day) pure
+    @property void day(int day) @safe pure
     {
         enforceValid!"days"(_year, _month, day);
         _day = cast(ubyte)day;
@@ -9273,7 +9273,7 @@ public:
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "years")
     {
         immutable newYear = _year + value;
@@ -9515,7 +9515,7 @@ public:
 
 
     //Shares documentation with "years" version.
-    ref Date add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "months")
     {
         auto years = months / 12;
@@ -10055,7 +10055,7 @@ public:
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "years")
     {
         return add!"years"(value, allowOverflow);
@@ -10099,7 +10099,7 @@ public:
 
 
     //Shares documentation with "years" version.
-    ref Date roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "months")
     {
         months %= 12;
@@ -10693,7 +10693,7 @@ public:
             units = The units to add. Must be $(D "days").
             days  = The number of days to add to this $(LREF Date).
       +/
-    ref Date roll(string units)(long days) pure nothrow
+    ref Date roll(string units)(long days) @safe pure nothrow
         if(units == "days")
     {
         immutable limit = maxDay(_year, _month);
@@ -10930,7 +10930,7 @@ public:
         Params:
             duration = The duration to add to or subtract from this $(LREF Date).
       +/
-    Date opBinary(string op, D)(in D duration) const pure nothrow
+    Date opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -11028,7 +11028,7 @@ public:
         Params:
             duration = The duration to add to or subtract from this $(LREF Date).
       +/
-    ref Date opOpAssign(string op, D)(in D duration) pure nothrow
+    ref Date opOpAssign(string op, D)(in D duration) @safe pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -11108,7 +11108,7 @@ public:
         $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in Date rhs) const pure nothrow
+    Duration opBinary(string op)(in Date rhs) @safe const pure nothrow
         if(op == "-")
     {
         return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
@@ -11162,7 +11162,7 @@ public:
         Params:
             rhs = The $(LREF Date) to subtract from this one.
       +/
-    int diffMonths(in Date rhs) const pure nothrow
+    int diffMonths(in Date rhs) @safe const pure nothrow
     {
         immutable yearDiff = _year - rhs._year;
         immutable monthDiff = _month - rhs._month;
@@ -11400,7 +11400,7 @@ public:
     /++
         Whether this $(LREF Date) is in a leap year.
      +/
-    @property bool isLeapYear() const pure nothrow
+    @property bool isLeapYear() @safe const pure nothrow
     {
         return yearIsLeapYear(_year);
     }
@@ -11419,7 +11419,7 @@ public:
     /++
         Day of the week this $(LREF Date) is on.
       +/
-    @property DayOfWeek dayOfWeek() const pure nothrow
+    @property DayOfWeek dayOfWeek() @safe const pure nothrow
     {
         return getDayOfWeek(dayOfGregorianCal);
     }
@@ -11438,7 +11438,7 @@ public:
     /++
         Day of the year this $(LREF Date) is on.
       +/
-    @property ushort dayOfYear() const pure nothrow
+    @property ushort dayOfYear() @safe const pure nothrow
     {
         if (_month >= Month.jan && _month <= Month.dec)
         {
@@ -11497,7 +11497,7 @@ public:
             $(LREF DateTimeException) if the given day is an invalid day of the
             year.
       +/
-    @property void dayOfYear(int day) pure
+    @property void dayOfYear(int day) @safe pure
     {
         immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
 
@@ -11547,7 +11547,7 @@ public:
     /++
         The Xth day of the Gregorian Calendar that this $(LREF Date) is on.
      +/
-    @property int dayOfGregorianCal() const pure nothrow
+    @property int dayOfGregorianCal() @safe const pure nothrow
     {
         if(isAD)
         {
@@ -11634,7 +11634,7 @@ public:
         Params:
             day = The day of the Gregorian Calendar to set this $(LREF Date) to.
      +/
-    @property void dayOfGregorianCal(int day) pure nothrow
+    @property void dayOfGregorianCal(int day) @safe pure nothrow
     {
         this = Date(day);
     }
@@ -11685,7 +11685,7 @@ public:
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
-    @property ubyte isoWeek() const pure nothrow
+    @property ubyte isoWeek() @safe const pure nothrow
     {
         immutable weekday = dayOfWeek;
         immutable adjustedWeekday = weekday == DayOfWeek.sun ? 7 : weekday;
@@ -11784,7 +11784,7 @@ public:
     /++
         $(LREF Date) for the last day in the month that this $(LREF Date) is in.
       +/
-    @property Date endOfMonth() const pure nothrow
+    @property Date endOfMonth() @safe const pure nothrow
     {
         try
             return Date(_year, _month, maxDay(_year, _month));
@@ -11843,7 +11843,7 @@ public:
     /++
         The last day in the month that this $(LREF Date) is in.
       +/
-    @property ubyte daysInMonth() const pure nothrow
+    @property ubyte daysInMonth() @safe const pure nothrow
     {
         return maxDay(_year, _month);
     }
@@ -11899,7 +11899,7 @@ public:
     /++
         Whether the current year is a date in A.D.
       +/
-    @property bool isAD() const pure nothrow
+    @property bool isAD() @safe const pure nothrow
     {
         return _year > 0;
     }
@@ -11932,7 +11932,7 @@ public:
         The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this $(LREF Date) at noon (since the Julian day changes
         at noon).
       +/
-    @property long julianDay() const pure nothrow
+    @property long julianDay() @safe const pure nothrow
     {
         return dayOfGregorianCal + 1_721_425;
     }
@@ -11959,7 +11959,7 @@ public:
         The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
         Julian day changes at midnight).
       +/
-    @property long modJulianDay() const pure nothrow
+    @property long modJulianDay() @safe const pure nothrow
     {
         return julianDay - 2_400_001;
     }
@@ -11979,7 +11979,7 @@ public:
     /++
         Converts this $(LREF Date) to a string with the format YYYYMMDD.
       +/
-    string toISOString() const nothrow
+    string toISOString() @safe const pure nothrow
     {
         try
         {
@@ -12034,7 +12034,7 @@ public:
     /++
         Converts this $(LREF Date) to a string with the format YYYY-MM-DD.
       +/
-    string toISOExtString() const nothrow
+    string toISOExtString() @safe const pure nothrow
     {
         try
         {
@@ -12089,7 +12089,7 @@ public:
     /++
         Converts this $(LREF Date) to a string with the format YYYY-Mon-DD.
       +/
-    string toSimpleString() const nothrow
+    string toSimpleString() @safe const pure nothrow
     {
         try
         {
@@ -12141,27 +12141,11 @@ public:
         static assert(__traits(compiles, idate.toSimpleString()));
     }
 
-    //TODO Add a function which returns a string in a user-specified format.
-
-
-    /+
-        Converts this $(LREF Date) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
-    }
 
     /++
         Converts this $(LREF Date) to a string.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
+    string toString() @safe const pure nothrow
     {
         return toSimpleString();
     }
@@ -12188,7 +12172,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF Date) would not be valid.
       +/
-    static Date fromISOString(S)(in S isoString)
+    static Date fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoString));
@@ -12304,7 +12288,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO
             Extended format or if the resulting $(LREF Date) would not be valid.
       +/
-    static Date fromISOExtString(S)(in S isoExtString)
+    static Date fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -12425,7 +12409,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the correct
             format or if the resulting $(LREF Date) would not be valid.
       +/
-    static Date fromSimpleString(S)(in S simpleString)
+    static Date fromSimpleString(S)(in S simpleString) @safe pure
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(simpleString));
@@ -12531,18 +12515,11 @@ public:
     }
 
 
-    //TODO Add function which takes a user-specified time format and produces a Date
-
-    //TODO Add function which takes pretty much any time-string and produces a Date
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
     /++
         Returns the $(LREF Date) farthest in the past which is representable by
         $(LREF Date).
       +/
-    @property static Date min() pure nothrow
+    @property static Date min() @safe pure nothrow
     {
         auto date = Date.init;
         date._year = short.min;
@@ -12563,7 +12540,7 @@ public:
         Returns the $(LREF Date) farthest in the future which is representable by
         $(LREF Date).
       +/
-    @property static Date max() pure nothrow
+    @property static Date max() @safe pure nothrow
     {
         auto date = Date.init;
         date._year = short.max;
@@ -12590,7 +12567,7 @@ private:
             month = The month of the Gregorian Calendar to test.
             day   = The day of the month to test.
      +/
-    static bool _valid(int year, int month, int day) pure nothrow
+    static bool _valid(int year, int month, int day) @safe pure nothrow
     {
         if(!valid!"months"(month))
             return false;
@@ -12614,7 +12591,7 @@ private:
         Params:
             days = The number of days to add to this Date.
       +/
-    ref Date _addDays(long days) pure nothrow
+    ref Date _addDays(long days) @safe pure nothrow
     {
         dayOfGregorianCal = cast(int)(dayOfGregorianCal + days);
         return this;
@@ -12779,7 +12756,7 @@ private:
     }
 
 
-    pure invariant()
+    @safe pure invariant()
     {
         assert(valid!"months"(_month),
                format("Invariant Failure: year [%s] month [%s] day [%s]", _year, _month, _day));
@@ -28765,7 +28742,7 @@ else version(Posix)
         $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
         converted.
   +/
-string tzDatabaseNameToWindowsTZName(string tzName)
+string tzDatabaseNameToWindowsTZName(string tzName) @safe
 {
     switch(tzName)
     {
@@ -28909,7 +28886,7 @@ version(Windows) unittest
         $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
         converted.
   +/
-string windowsTZNameToTZDatabaseName(string tzName)
+string windowsTZNameToTZDatabaseName(string tzName) @safe
 {
     switch(tzName)
     {
@@ -29534,7 +29511,7 @@ unittest
     Params:
         year = The year to to be tested.
  +/
-static bool yearIsLeapYear(int year) pure nothrow
+static bool yearIsLeapYear(int year) @safe pure nothrow
 {
     if(year % 400 == 0)
         return true;
@@ -29569,7 +29546,7 @@ unittest
     Params:
         unixTime = The $(D time_t) to convert.
   +/
-long unixTimeToStdTime(time_t unixTime) pure nothrow
+long unixTimeToStdTime(time_t unixTime) @safe pure nothrow
 {
     return 621_355_968_000_000_000L + convert!("seconds", "hnsecs")(unixTime);
 
@@ -29606,7 +29583,7 @@ unittest
     Params:
         stdTime = The std time to convert.
   +/
-time_t stdTimeToUnixTime(long stdTime) pure nothrow
+time_t stdTimeToUnixTime(long stdTime) @safe pure nothrow
 {
     immutable unixTime = convert!("hnsecs", "seconds")(stdTime - 621_355_968_000_000_000L);
 
@@ -30031,7 +30008,7 @@ unittest
     can handle precision greater than hnsecs, and the few functions in core.time
     which deal with "nsecs" deal with it explicitly.
   +/
-bool validTimeUnits(string[] units...)
+bool validTimeUnits(string[] units...) @safe pure nothrow
 {
     foreach(str; units)
     {
@@ -30058,7 +30035,7 @@ bool validTimeUnits(string[] units...)
         $(LREF DateTimeException) if either of the given strings is not a valid
         time unit string.
  +/
-int cmpTimeUnits(string lhs, string rhs)
+int cmpTimeUnits(string lhs, string rhs) @safe pure
 {
     auto tstrings = timeStrings.dup;
     immutable indexOfLHS = countUntil(tstrings, lhs);
@@ -30120,7 +30097,7 @@ template CmpTimeUnits(string lhs, string rhs)
 /+
     Helper function for $(D CmpTimeUnits).
  +/
-private int cmpTimeUnitsCTFE(string lhs, string rhs)
+private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
 {
     auto tstrings = timeStrings.dup;
     immutable indexOfLHS = countUntil(tstrings, lhs);
@@ -30168,7 +30145,7 @@ unittest
         units = The units of time to validate.
         value = The number to validate.
   +/
-bool valid(string units)(int value) pure nothrow
+bool valid(string units)(int value) @safe pure nothrow
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
@@ -30203,7 +30180,7 @@ unittest
         month = The month of the day to validate.
         day   = The day to validate.
   +/
-bool valid(string units)(int year, int month, int day) pure nothrow
+bool valid(string units)(int year, int month, int day) @safe pure nothrow
     if(units == "days")
 {
     return day > 0 && day <= maxDay(year, month);
@@ -30221,7 +30198,7 @@ bool valid(string units)(int year, int month, int day) pure nothrow
     Throws:
         $(LREF DateTimeException) if $(D valid!units(value)) is false.
   +/
-void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) pure
+void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) @safe pure
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
@@ -30263,7 +30240,8 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
     Throws:
         $(LREF DateTimeException) if $(D valid!"days"(year, month, day)) is false.
   +/
-void enforceValid(string units)(int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) pure
+void enforceValid(string units)
+                 (int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) @safe pure
     if(units == "days")
 {
     if(!valid!"days"(year, month, day))
@@ -30279,7 +30257,7 @@ void enforceValid(string units)(int year, Month month, int day, string file = __
         currMonth = The current month of the year.
         month     = The month of the year to get the number of months to.
   +/
-static int monthsToMonth(int currMonth, int month) pure
+static int monthsToMonth(int currMonth, int month) @safe pure
 {
     enforceValid!"months"(currMonth);
     enforceValid!"months"(month);
@@ -30357,7 +30335,7 @@ unittest
         currDoW = The current day of the week.
         dow     = The day of the week to get the number of days to.
   +/
-static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) pure nothrow
+static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
 {
     if(currDoW == dow)
         return 0;
@@ -30656,7 +30634,7 @@ template hnsecsPer(string units)
     Returns:
         The number of the given units from converting hnsecs to those units.
   +/
-long splitUnitsFromHNSecs(string units)(ref long hnsecs) pure nothrow
+long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -30693,7 +30671,7 @@ unittest
     Returns:
         The split out value.
   +/
-long getUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
+long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -30723,7 +30701,7 @@ unittest
     Returns:
         The remaining hnsecs.
   +/
-long removeUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
+long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -30748,7 +30726,7 @@ unittest
         year  = The year to get the day for.
         month = The month of the Gregorian Calendar to get the day for.
  +/
-static ubyte maxDay(int year, int month) pure nothrow
+static ubyte maxDay(int year, int month) @safe pure nothrow
 in
 {
     assert(valid!"months"(month));
@@ -30833,7 +30811,7 @@ unittest
         day = The day of the Gregorian Calendar for which to get the day of
               the week.
   +/
-DayOfWeek getDayOfWeek(int day) pure nothrow
+DayOfWeek getDayOfWeek(int day) @safe pure nothrow
 {
     //January 1st, 1 A.D. was a Monday
     if(day >= 0)
@@ -30891,7 +30869,7 @@ unittest
 /+
     Returns the string representation of the given month.
   +/
-string monthToString(Month month) pure
+string monthToString(Month month) @safe pure
 {
     assert(month >= Month.jan && month <= Month.dec, format("Invalid month: %s", month));
     return monthNames[month - Month.jan];
@@ -30923,7 +30901,7 @@ unittest
     Throws:
         $(LREF DateTimeException) if the given month is not a valid month string.
   +/
-Month monthFromString(string monthStr)
+Month monthFromString(string monthStr) @safe pure
 {
     switch(monthStr)
     {
@@ -31026,7 +31004,7 @@ unittest
 /+
     Returns the given hnsecs as an ISO string of fractional seconds.
   +/
-static string fracSecToISOString(int hnsecs) nothrow
+static string fracSecToISOString(int hnsecs) @safe pure nothrow
 in
 {
     assert(hnsecs >= 0);
@@ -31081,7 +31059,7 @@ unittest
     Returns a FracSec corresponding to to the given ISO string of
     fractional seconds.
   +/
-static FracSec fracSecFromISOString(S)(in S isoString)
+static FracSec fracSecFromISOString(S)(in S isoString) @safe pure
     if(isSomeString!S)
 {
     if(isoString.empty)
