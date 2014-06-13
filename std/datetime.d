@@ -25804,7 +25804,7 @@ public:
             $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
               Time Zones)
       +/
-    @property string name() const nothrow
+    @property string name() @safe const nothrow
     {
         return _name;
     }
@@ -25817,7 +25817,7 @@ public:
         However, on Windows, it may be the unabbreviated name (e.g. Pacific
         Standard Time). Regardless, it is not the same as name.
       +/
-    @property string stdName() const nothrow
+    @property string stdName() @safe const nothrow
     {
         return _stdName;
     }
@@ -25830,7 +25830,7 @@ public:
         However, on Windows, it may be the unabbreviated name (e.g. Pacific
         Daylight Time). Regardless, it is not the same as name.
       +/
-    @property string dstName() const nothrow
+    @property string dstName() @safe const nothrow
     {
         return _dstName;
     }
@@ -25842,7 +25842,7 @@ public:
         but will still return true for $(D hasDST) because the time zone did at
         some point have DST.
       +/
-    @property abstract bool hasDST() const nothrow;
+    @property abstract bool hasDST() @safe const nothrow;
 
 
     /++
@@ -25854,7 +25854,7 @@ public:
             stdTime = The UTC time that needs to be checked for DST in this time
                       zone.
       +/
-    abstract bool dstInEffect(long stdTime) const nothrow;
+    abstract bool dstInEffect(long stdTime) @safe const nothrow;
 
 
     /++
@@ -25865,7 +25865,7 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    abstract long utcToTZ(long stdTime) const nothrow;
+    abstract long utcToTZ(long stdTime) @safe const nothrow;
 
 
     /++
@@ -25876,7 +25876,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    abstract long tzToUTC(long adjTime) const nothrow;
+    abstract long tzToUTC(long adjTime) @safe const nothrow;
 
 
     /++
@@ -25887,7 +25887,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    Duration utcOffsetAt(long stdTime) const nothrow
+    Duration utcOffsetAt(long stdTime) @safe const nothrow
     {
         return dur!"hnsecs"(utcToTZ(stdTime) - stdTime);
     }
@@ -25926,7 +25926,7 @@ public:
 auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 --------------------
       +/
-    static immutable(TimeZone) getTimeZone(string name)
+    static immutable(TimeZone) getTimeZone(string name) @safe
     {
         version(Posix)
             return PosixTimeZone.getTimeZone(name);
@@ -26232,7 +26232,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             $(LREF DateTimeException) on Windows systems if it fails to read the
             registry.
       +/
-    static string[] getInstalledTZNames(string subName = "")
+    static string[] getInstalledTZNames(string subName = "") @safe
     {
         version(Posix)
             return PosixTimeZone.getInstalledTZNames(subName);
@@ -26256,7 +26256,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
 
     unittest
-{
+    {
         static void testPZSuccess(string tzName)
         {
             scope(failure) writefln("TZName which threw: %s", tzName);
@@ -26268,7 +26268,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
         foreach(tzName; tzNames)
             assertNotThrown!DateTimeException(testPZSuccess(tzName));
-}
+    }
 
 
 private:
@@ -26279,7 +26279,7 @@ private:
             stdName = The abbreviation for the time zone during std time.
             dstName = The abbreviation for the time zone during DST.
       +/
-    this(string name, string stdName, string dstName) immutable pure
+    this(string name, string stdName, string dstName) @safe immutable pure
     {
         _name = name;
         _stdName = stdName;
@@ -26311,9 +26311,9 @@ public:
         $(LREF LocalTime) is a singleton class. $(LREF LocalTime) returns its only
         instance.
       +/
-    static immutable(LocalTime) opCall() pure nothrow
+    static immutable(LocalTime) opCall() @trusted pure nothrow
     {
-        alias pure nothrow immutable(LocalTime) function() FuncType;
+        alias @safe pure nothrow immutable(LocalTime) function() FuncType;
         return (cast(FuncType)&singleton)();
     }
 
@@ -26336,7 +26336,7 @@ public:
                 $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
                   of Time Zones)
           +/
-        @property override string name() const nothrow;
+        @property override string name() @safe const nothrow;
     }
 
 
@@ -26352,7 +26352,7 @@ public:
         dynamically rather than it being fixed like it would be with most time
         zones.
       +/
-    @property override string stdName() const nothrow
+    @property override string stdName() @trusted const nothrow
     {
         version(Posix)
         {
@@ -26422,7 +26422,7 @@ public:
         dynamically rather than it being fixed like it would be with most time
         zones.
       +/
-    @property override string dstName() const nothrow
+    @property override string dstName() @trusted const nothrow
     {
         version(Posix)
         {
@@ -26486,7 +26486,7 @@ public:
         dates but will still return true for $(D hasDST) because the time zone
         did at some point have DST.
       +/
-    @property override bool hasDST() const nothrow
+    @property override bool hasDST() @trusted const nothrow
     {
         version(Posix)
         {
@@ -26551,7 +26551,7 @@ public:
             stdTime = The UTC time that needs to be checked for DST in this time
                       zone.
       +/
-    override bool dstInEffect(long stdTime) const nothrow
+    override bool dstInEffect(long stdTime) @trusted const nothrow
     {
         time_t unixTime = stdTimeToUnixTime(stdTime);
 
@@ -26602,7 +26602,7 @@ public:
         See_Also:
             $(D TimeZone.utcToTZ)
       +/
-    override long utcToTZ(long stdTime) const nothrow
+    override long utcToTZ(long stdTime) @trusted const nothrow
     {
         version(Posix)
         {
@@ -26642,7 +26642,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) const nothrow
+    override long tzToUTC(long adjTime) @trusted const nothrow
     {
         version(Posix)
         {
@@ -26823,7 +26823,7 @@ public:
 
 private:
 
-    this() immutable
+    this() @safe immutable pure
     {
         super("", "", "");
     }
@@ -26837,7 +26837,7 @@ private:
 
     // This is done so that we can maintain purity in spite of doing an impure
     // operation the first time that LocalTime() is called.
-    static immutable(LocalTime) singleton()
+    static immutable(LocalTime) singleton() @trusted
     {
         if(!_lowLock)
         {
@@ -26868,7 +26868,7 @@ public:
     /++
         $(D UTC) is a singleton class. $(D UTC) returns its only instance.
       +/
-    static immutable(UTC) opCall() pure nothrow
+    static immutable(UTC) opCall() @safe pure nothrow
     {
         return _utc;
     }
@@ -26877,7 +26877,7 @@ public:
     /++
         Always returns false.
       +/
-    @property override bool hasDST() const nothrow
+    @property override bool hasDST() @safe const nothrow
     {
         return false;
     }
@@ -26886,7 +26886,7 @@ public:
     /++
         Always returns false.
       +/
-    override bool dstInEffect(long stdTime) const nothrow
+    override bool dstInEffect(long stdTime) @safe const nothrow
     {
         return false;
     }
@@ -26902,7 +26902,7 @@ public:
         See_Also:
             $(D TimeZone.utcToTZ)
       +/
-    override long utcToTZ(long stdTime) const nothrow
+    override long utcToTZ(long stdTime) @safe const nothrow
     {
         return stdTime;
     }
@@ -26934,7 +26934,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) const nothrow
+    override long tzToUTC(long adjTime) @safe const nothrow
     {
         return adjTime;
     }
@@ -26963,7 +26963,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    override Duration utcOffsetAt(long stdTime) const nothrow
+    override Duration utcOffsetAt(long stdTime) @safe const nothrow
     {
         return dur!"hnsecs"(0);
     }
@@ -26971,7 +26971,7 @@ public:
 
 private:
 
-    this() immutable pure
+    this() @safe immutable pure
     {
         super("UTC", "UTC", "UTC");
     }
@@ -27000,7 +27000,7 @@ public:
     /++
         Always returns false.
       +/
-    @property override bool hasDST() const nothrow
+    @property override bool hasDST() @safe const nothrow
     {
         return false;
     }
@@ -27009,7 +27009,7 @@ public:
     /++
         Always returns false.
       +/
-    override bool dstInEffect(long stdTime) const nothrow
+    override bool dstInEffect(long stdTime) @safe const nothrow
     {
         return false;
     }
@@ -27023,7 +27023,7 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    override long utcToTZ(long stdTime) const nothrow
+    override long utcToTZ(long stdTime) @safe const nothrow
     {
         return stdTime + _utcOffset.total!"hnsecs";
     }
@@ -27051,7 +27051,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) const nothrow
+    override long tzToUTC(long adjTime) @safe const nothrow
     {
         return adjTime - _utcOffset.total!"hnsecs";
     }
@@ -27078,7 +27078,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    override Duration utcOffsetAt(long stdTime) const nothrow
+    override Duration utcOffsetAt(long stdTime) @safe const nothrow
     {
         return _utcOffset;
     }
@@ -27090,7 +27090,7 @@ public:
                         negative (it is added to UTC to get the adjusted time).
             stdName   = The $(D stdName) for this time zone.
       +/
-    this(Duration utcOffset, string stdName = "") immutable
+    this(Duration utcOffset, string stdName = "") @safe immutable pure
     {
         //FIXME This probably needs to be changed to something like (-12 - 13).
         enforceEx!DateTimeException(abs(utcOffset) < dur!"minutes"(1440),
@@ -27109,7 +27109,8 @@ public:
                         negative (it is added to UTC to get the adjusted time).
             stdName   = The $(D stdName) for this time zone.
       +/
-    deprecated("Please use the overload which takes a Duration.") this(int utcOffset, string stdName = "") immutable
+    deprecated("Please use the overload which takes a Duration.")
+    this(int utcOffset, string stdName = "") @safe immutable pure
     {
         this(dur!"minutes"(utcOffset), stdName);
     }
@@ -27145,7 +27146,7 @@ private:
             utcOffset = The number of minutes offset from UTC (negative means
                         west).
       +/
-    static string toISOString(Duration utcOffset)
+    static string toISOString(Duration utcOffset) @safe pure
     {
         immutable absOffset = abs(utcOffset);
         enforceEx!DateTimeException(absOffset < dur!"minutes"(1440),
@@ -27197,7 +27198,7 @@ private:
         Params:
             isoString = A string which represents a time zone in the ISO format.
       +/
-    static immutable(SimpleTimeZone) fromISOString(S)(S isoString)
+    static immutable(SimpleTimeZone) fromISOString(S)(S isoString) @safe pure
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoString));
@@ -27399,7 +27400,7 @@ public:
         dates but will still return true for $(D hasDST) because the time zone
         did at some point have DST.
       +/
-    @property override bool hasDST() const nothrow
+    @property override bool hasDST() @safe const nothrow
     {
         return _hasDST;
     }
@@ -27414,24 +27415,19 @@ public:
             stdTime = The UTC time that needs to be checked for DST in this time
                       zone.
       +/
-    override bool dstInEffect(long stdTime) const nothrow
+    override bool dstInEffect(long stdTime) @safe const nothrow
     {
         assert(!_transitions.empty);
 
-        try
-        {
-            immutable unixTime = stdTimeToUnixTime(stdTime);
-            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+        immutable unixTime = stdTimeToUnixTime(stdTime);
+        immutable found = countUntil!"b < a.timeT"(_transitions, unixTime);
 
-            if(found == -1)
-                return _transitions.back.ttInfo.isDST;
+        if(found == -1)
+            return _transitions.back.ttInfo.isDST;
 
-            immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+        immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
 
-            return transition.ttInfo.isDST;
-        }
-        catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+        return transition.ttInfo.isDST;
     }
 
 
@@ -27443,25 +27439,20 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    override long utcToTZ(long stdTime) const nothrow
+    override long utcToTZ(long stdTime) @safe const nothrow
     {
         assert(!_transitions.empty);
 
-        try
-        {
-            immutable leapSecs = calculateLeapSeconds(stdTime);
-            immutable unixTime = stdTimeToUnixTime(stdTime);
-            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+        immutable leapSecs = calculateLeapSeconds(stdTime);
+        immutable unixTime = stdTimeToUnixTime(stdTime);
+        immutable found = countUntil!"b < a.timeT"(_transitions, unixTime);
 
-            if(found == -1)
-                return stdTime + convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+        if(found == -1)
+            return stdTime + convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
-            immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+        immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
 
-            return stdTime + convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
-        }
-        catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+        return stdTime + convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
     }
 
 
@@ -27473,47 +27464,41 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) const nothrow
+    override long tzToUTC(long adjTime) @safe const nothrow
     {
         assert(!_transitions.empty);
 
-        try
-        {
-            immutable leapSecs = calculateLeapSeconds(adjTime);
-            time_t unixTime = stdTimeToUnixTime(adjTime);
-            immutable past = unixTime - convert!("days", "seconds")(1);
-            immutable future = unixTime + convert!("days", "seconds")(1);
+        immutable leapSecs = calculateLeapSeconds(adjTime);
+        time_t unixTime = stdTimeToUnixTime(adjTime);
+        immutable past = unixTime - convert!("days", "seconds")(1);
+        immutable future = unixTime + convert!("days", "seconds")(1);
 
-            immutable pastFound = countUntil!"b < a.timeT"(cast(Transition[])_transitions, past);
+        immutable pastFound = countUntil!"b < a.timeT"(_transitions, past);
 
-            if(pastFound == -1)
-                return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+        if(pastFound == -1)
+            return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
-            immutable futureFound = countUntil!"b < a.timeT"(cast(Transition[])_transitions[pastFound .. $], future);
-            immutable pastTrans = pastFound == 0 ? _transitions[0] : _transitions[pastFound - 1];
+        immutable futureFound = countUntil!"b < a.timeT"(_transitions[pastFound .. $], future);
+        immutable pastTrans = pastFound == 0 ? _transitions[0] : _transitions[pastFound - 1];
 
-            if(futureFound == 0)
-                return adjTime - convert!("seconds", "hnsecs")(pastTrans.ttInfo.utcOffset + leapSecs);
+        if(futureFound == 0)
+            return adjTime - convert!("seconds", "hnsecs")(pastTrans.ttInfo.utcOffset + leapSecs);
 
-            immutable futureTrans = futureFound == -1 ? _transitions.back
-                                                      : _transitions[pastFound + futureFound - 1];
-            immutable pastOffset = pastTrans.ttInfo.utcOffset;
+        immutable futureTrans = futureFound == -1 ? _transitions.back
+                                                  : _transitions[pastFound + futureFound - 1];
+        immutable pastOffset = pastTrans.ttInfo.utcOffset;
 
-            if(pastOffset < futureTrans.ttInfo.utcOffset)
-                unixTime -= convert!("hours", "seconds")(1);
+        if(pastOffset < futureTrans.ttInfo.utcOffset)
+            unixTime -= convert!("hours", "seconds")(1);
 
-            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions[pastFound .. $],
-                                                       unixTime - pastOffset);
+        immutable found = countUntil!"b < a.timeT"(_transitions[pastFound .. $], unixTime - pastOffset);
 
-            if(found == -1)
-                return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+        if(found == -1)
+            return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
-            immutable transition = found == 0 ? pastTrans : _transitions[pastFound + found - 1];
+        immutable transition = found == 0 ? pastTrans : _transitions[pastFound + found - 1];
 
-            return adjTime - convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
-        }
-        catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+        return adjTime - convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
     }
 
 
@@ -27568,7 +27553,7 @@ assert(tz.dstName == "PDT");
       +/
     //TODO make it possible for tzDatabaseDir to be gzipped tar file rather than an uncompressed
     //     directory.
-    static immutable(PosixTimeZone) getTimeZone(string name, string tzDatabaseDir = defaultTZDatabaseDir)
+    static immutable(PosixTimeZone) getTimeZone(string name, string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
         name = strip(name);
 
@@ -27882,7 +27867,7 @@ assert(tz.dstName == "PDT");
         Throws:
             $(D FileException) if it fails to read from disk.
       +/
-    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir)
+    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
         version(Posix)
             subName = strip(subName);
@@ -27959,7 +27944,7 @@ private:
       +/
     struct Transition
     {
-        this(long timeT, immutable (TTInfo)* ttInfo)
+        this(long timeT, immutable (TTInfo)* ttInfo) @safe pure
         {
             this.timeT = timeT;
             this.ttInfo = ttInfo;
@@ -27975,7 +27960,7 @@ private:
       +/
     struct LeapSecond
     {
-        this(long timeT, int total)
+        this(long timeT, int total) @safe pure
         {
             this.timeT = timeT;
             this.total = total;
@@ -27991,7 +27976,7 @@ private:
       +/
     struct TTInfo
     {
-        this(in TempTTInfo tempTTInfo, string abbrev) immutable
+        this(in TempTTInfo tempTTInfo, string abbrev) @safe immutable pure
         {
             utcOffset = tempTTInfo.tt_gmtoff;
             isDST = tempTTInfo.tt_isdst;
@@ -28010,7 +27995,7 @@ private:
       +/
     struct TempTTInfo
     {
-        this(int gmtOff, bool isDST, ubyte abbrInd)
+        this(int gmtOff, bool isDST, ubyte abbrInd) @safe pure
         {
             tt_gmtoff = gmtOff;
             tt_isdst = isDST;
@@ -28030,7 +28015,7 @@ private:
       +/
     struct TempTransition
     {
-        this(long timeT, immutable (TTInfo)* ttInfo, TransitionType* ttype)
+        this(long timeT, immutable (TTInfo)* ttInfo, TransitionType* ttype) @safe pure
         {
             this.timeT = timeT;
             this.ttInfo = ttInfo;
@@ -28050,7 +28035,7 @@ private:
       +/
     struct TransitionType
     {
-        this(bool isStd, bool inUTC)
+        this(bool isStd, bool inUTC) @safe pure
         {
             this.isStd = isStd;
             this.inUTC = inUTC;
@@ -28067,7 +28052,7 @@ private:
     /+
         Reads an int from a TZ file.
       +/
-    static T readVal(T)(ref File tzFile)
+    static T readVal(T)(ref File tzFile) @trusted
         if((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
     {
         import std.bitmanip;
@@ -28082,7 +28067,7 @@ private:
     /+
         Reads an array of values from a TZ file.
       +/
-    static T readVal(T)(ref File tzFile, size_t length)
+    static T readVal(T)(ref File tzFile, size_t length) @trusted
         if(isArray!T)
     {
         auto buff = new T(length);
@@ -28097,7 +28082,7 @@ private:
     /+
         Reads a $(D TempTTInfo) from a TZ file.
       +/
-    static T readVal(T)(ref File tzFile)
+    static T readVal(T)(ref File tzFile) @safe
         if(is(T == TempTTInfo))
     {
         return TempTTInfo(readVal!int(tzFile),
@@ -28110,36 +28095,31 @@ private:
         Throws:
             $(LREF DateTimeException) if $(D result) is false.
       +/
-    static void _enforceValidTZFile(bool result, size_t line = __LINE__)
+    static void _enforceValidTZFile(bool result, size_t line = __LINE__) @safe pure
     {
         if(!result)
             throw new DateTimeException("Not a valid tzdata file.", __FILE__, line);
     }
 
 
-    int calculateLeapSeconds(long stdTime) const nothrow
+    int calculateLeapSeconds(long stdTime) @safe const pure nothrow
     {
-        try
-        {
-            if(_leapSeconds.empty)
-                return 0;
+        if(_leapSeconds.empty)
+            return 0;
 
-            immutable unixTime = stdTimeToUnixTime(stdTime);
+        immutable unixTime = stdTimeToUnixTime(stdTime);
 
-            if(_leapSeconds.front.timeT >= unixTime)
-                return 0;
+        if(_leapSeconds.front.timeT >= unixTime)
+            return 0;
 
-            immutable found = countUntil!"b < a.timeT"(cast(LeapSecond[])_leapSeconds, unixTime);
+        immutable found = countUntil!"b < a.timeT"(_leapSeconds, unixTime);
 
-            if(found == -1)
-                return _leapSeconds.back.total;
+        if(found == -1)
+            return _leapSeconds.back.total;
 
-            immutable leapSecond = found == 0 ? _leapSeconds[0] : _leapSeconds[found - 1];
+        immutable leapSecond = found == 0 ? _leapSeconds[0] : _leapSeconds[found - 1];
 
-            return leapSecond.total;
-        }
-        catch(Exception e)
-            assert(0, format("Nothing in calculateLeapSeconds() should be throwing. Caught Exception: %s", e));
+        return leapSecond.total;
     }
 
 
@@ -28148,7 +28128,7 @@ private:
          string name,
          string stdName,
          string dstName,
-         bool hasDST) immutable
+         bool hasDST) @safe immutable pure
     {
         if(dstName.empty && !stdName.empty)
             dstName = stdName;
@@ -28224,7 +28204,7 @@ version(StdDdoc)
             current dates but will still return true for $(D hasDST) because the
             time zone did at some point have DST.
           +/
-        @property override bool hasDST() const nothrow;
+        @property override bool hasDST() @safe const nothrow;
 
 
         /++
@@ -28236,7 +28216,7 @@ version(StdDdoc)
                 stdTime = The UTC time that needs to be checked for DST in this
                           time zone.
           +/
-        override bool dstInEffect(long stdTime) const nothrow;
+        override bool dstInEffect(long stdTime) @safe const nothrow;
 
 
         /++
@@ -28248,7 +28228,7 @@ version(StdDdoc)
                 stdTime = The UTC time that needs to be adjusted to this time
                           zone's time.
           +/
-        override long utcToTZ(long stdTime) const nothrow;
+        override long utcToTZ(long stdTime) @safe const nothrow;
 
 
         /++
@@ -28260,7 +28240,7 @@ version(StdDdoc)
                 adjTime = The time in this time zone that needs to be adjusted
                           to UTC time.
           +/
-        override long tzToUTC(long adjTime) const nothrow;
+        override long tzToUTC(long adjTime) @safe const nothrow;
 
 
         /++
@@ -28286,14 +28266,14 @@ version(StdDdoc)
     auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     --------------------
           +/
-        static immutable(WindowsTimeZone) getTimeZone(string name);
+        static immutable(WindowsTimeZone) getTimeZone(string name) @safe;
 
 
         /++
             Returns a list of the names of the time zones installed on the
             system.
           +/
-        static string[] getInstalledTZNames();
+        static string[] getInstalledTZNames() @safe;
 
     private:
 
@@ -28318,31 +28298,31 @@ else version(Windows)
     {
     public:
 
-        @property override bool hasDST() const nothrow
+        @property override bool hasDST() @safe const nothrow
         {
             return _tzInfo.DaylightDate.wMonth != 0;
         }
 
 
-        override bool dstInEffect(long stdTime) const nothrow
+        override bool dstInEffect(long stdTime) @safe const nothrow
         {
             return _dstInEffect(&_tzInfo, stdTime);
         }
 
 
-        override long utcToTZ(long stdTime) const nothrow
+        override long utcToTZ(long stdTime) @safe const nothrow
         {
             return _utcToTZ(&_tzInfo, stdTime, hasDST);
         }
 
 
-        override long tzToUTC(long adjTime) const nothrow
+        override long tzToUTC(long adjTime) @safe const nothrow
         {
             return _tzToUTC(&_tzInfo, adjTime, hasDST);
         }
 
 
-        static immutable(WindowsTimeZone) getTimeZone(string name)
+        static immutable(WindowsTimeZone) getTimeZone(string name) @trusted
         {
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
@@ -28386,7 +28366,7 @@ else version(Windows)
             throw new DateTimeException(format("Failed to find time zone: %s", name));
         }
 
-        static string[] getInstalledTZNames()
+        static string[] getInstalledTZNames() @trusted
         {
             auto timezones = appender!(string[])();
 
@@ -28419,7 +28399,7 @@ else version(Windows)
 
     private:
 
-        static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) nothrow
+        static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) @trusted nothrow
         {
             try
             {
@@ -28502,7 +28482,7 @@ else version(Windows)
         }
 
 
-        static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) nothrow
+        static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) @safe nothrow
         {
             if(hasDST && WindowsTimeZone._dstInEffect(tzInfo, stdTime))
                 return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
@@ -28511,7 +28491,7 @@ else version(Windows)
         }
 
 
-        static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) nothrow
+        static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) @trusted nothrow
         {
             if(hasDST)
             {
@@ -28613,7 +28593,7 @@ else version(Windows)
         }
 
 
-        this(string name, TIME_ZONE_INFORMATION tzInfo) immutable
+        this(string name, TIME_ZONE_INFORMATION tzInfo) @safe immutable pure
         {
             super(name, to!string(tzInfo.StandardName.ptr), to!string(tzInfo.DaylightName.ptr));
             _tzInfo = tzInfo;
@@ -28636,7 +28616,7 @@ version(StdDdoc)
         Unfortunately, there is no way to do it on Windows using the TZ
         Database name, so this function only exists on Posix systems.
       +/
-    void setTZEnvVar(string tzDatabaseName);
+    void setTZEnvVar(string tzDatabaseName) @safe nothrow;
 
 
     /++
@@ -28644,11 +28624,11 @@ version(StdDdoc)
 
         Clears the TZ environment variable.
       +/
-    void clearTZEnvVar();
+    void clearTZEnvVar() @safe nothrow;
 }
 else version(Posix)
 {
-    void setTZEnvVar(string tzDatabaseName) nothrow
+    void setTZEnvVar(string tzDatabaseName) @trusted nothrow
     {
         try
         {
@@ -28661,7 +28641,7 @@ else version(Posix)
     }
 
 
-    void clearTZEnvVar() nothrow
+    void clearTZEnvVar() @trusted nothrow
     {
         try
         {
@@ -28698,7 +28678,7 @@ else version(Posix)
         $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
         converted.
   +/
-string tzDatabaseNameToWindowsTZName(string tzName) @safe
+string tzDatabaseNameToWindowsTZName(string tzName) @safe pure
 {
     switch(tzName)
     {
@@ -28842,7 +28822,7 @@ version(Windows) unittest
         $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
         converted.
   +/
-string windowsTZNameToTZDatabaseName(string tzName) @safe
+string windowsTZNameToTZDatabaseName(string tzName) @safe pure
 {
     switch(tzName)
     {
