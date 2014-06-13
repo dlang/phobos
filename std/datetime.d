@@ -334,7 +334,7 @@ public:
             $(XREF exception, ErrnoException) (on Posix) or $(XREF exception, Exception) (on Windows)
             if it fails to get the time of day.
       +/
-    static SysTime currTime(immutable TimeZone tz = LocalTime())
+    static SysTime currTime(immutable TimeZone tz = LocalTime()) @safe
     {
         return SysTime(currStdTime, tz);
     }
@@ -370,8 +370,7 @@ public:
         Throws:
             $(LREF DateTimeException) if it fails to get the time.
       +/
-    @trusted
-    static @property long currStdTime()
+    static @property long currStdTime() @trusted
     {
         version(Windows)
         {
@@ -425,8 +424,7 @@ public:
         Throws:
             $(LREF DateTimeException) if it fails to get the time.
       +/
-    @safe
-    static @property TickDuration currSystemTick()
+    static @property TickDuration currSystemTick() @safe
     {
         return TickDuration.currSystemTick;
     }
@@ -451,8 +449,7 @@ public:
         Throws:
             $(LREF DateTimeException) if it fails to get the time.
       +/
-    @safe
-    static @property TickDuration currAppTick()
+    static @property TickDuration currAppTick() @safe
     {
         return currSystemTick - TickDuration.appOrigin;
     }
@@ -530,7 +527,7 @@ public:
                        $(LREF LocalTime) will be used. The given $(LREF DateTime) is
                        assumed to be in the given time zone.
       +/
-    this(in DateTime dateTime, immutable TimeZone tz = null) nothrow
+    this(in DateTime dateTime, immutable TimeZone tz = null) @safe nothrow
     {
         try
             this(dateTime, FracSec.from!"hnsecs"(0), tz);
@@ -573,7 +570,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
       +/
-    this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null)
+    this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
         enforce(fracHNSecs >= 0, new DateTimeException("A SysTime cannot have negative fractional seconds."));
@@ -628,7 +625,7 @@ public:
                    $(LREF LocalTime) will be used. The given $(LREF Date) is assumed
                    to be in the given time zone.
       +/
-    this(in Date date, immutable TimeZone tz = null) nothrow
+    this(in Date date, immutable TimeZone tz = null) @safe nothrow
     {
         _timezone = tz is null ? LocalTime() : tz;
 
@@ -675,7 +672,7 @@ public:
             tz      = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
                       $(LREF LocalTime) will be used.
       +/
-    this(long stdTime, immutable TimeZone tz = null) pure nothrow
+    this(long stdTime, immutable TimeZone tz = null) @safe pure nothrow
     {
         _stdTime = stdTime;
         _timezone = tz is null ? LocalTime() : tz;
@@ -702,7 +699,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(const ref SysTime rhs) pure nothrow
+    ref SysTime opAssign(const ref SysTime rhs) @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
@@ -714,7 +711,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(SysTime rhs) pure nothrow
+    ref SysTime opAssign(SysTime rhs) @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
@@ -729,13 +726,13 @@ public:
         Note that the time zone is ignored. Only the internal
         std times (which are in UTC) are compared.
      +/
-    bool opEquals(const SysTime rhs) const pure nothrow
+    bool opEquals(const SysTime rhs) @safe const pure nothrow
     {
         return opEquals(rhs);
     }
 
     /// ditto
-    bool opEquals(const ref SysTime rhs) const pure nothrow
+    bool opEquals(const ref SysTime rhs) @safe const pure nothrow
     {
         return _stdTime == rhs._stdTime;
     }
@@ -795,7 +792,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in SysTime rhs) const pure nothrow
+    int opCmp(in SysTime rhs) @safe const pure nothrow
     {
         if(_stdTime < rhs._stdTime)
             return -1;
@@ -867,7 +864,7 @@ public:
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
      +/
-    @property short year() const nothrow
+    @property short year() @safe const nothrow
     {
         return (cast(Date)this).year;
     }
@@ -918,7 +915,7 @@ public:
             $(LREF DateTimeException) if the new year is not a leap year and the
             resulting date would be on February 29th.
      +/
-    @property void year(int year)
+    @property void year(int year) @safe
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
@@ -997,7 +994,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D isAD) is true.
      +/
-    @property ushort yearBC() const
+    @property ushort yearBC() @safe const
     {
         return (cast(Date)this).yearBC;
     }
@@ -1040,7 +1037,7 @@ public:
         Throws:
             $(LREF DateTimeException) if a non-positive value is given.
      +/
-    @property void yearBC(int year)
+    @property void yearBC(int year) @safe
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
@@ -1128,7 +1125,7 @@ public:
     /++
         Month of a Gregorian Year.
      +/
-    @property Month month() const nothrow
+    @property Month month() @safe const nothrow
     {
         return (cast(Date)this).month;
     }
@@ -1186,7 +1183,7 @@ public:
         Throws:
             $(LREF DateTimeException) if the given month is not a valid month.
      +/
-    @property void month(Month month)
+    @property void month(Month month) @safe
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
@@ -1286,7 +1283,7 @@ public:
     /++
         Day of a Gregorian Month.
      +/
-    @property ubyte day() const nothrow
+    @property ubyte day() @safe const nothrow
     {
         return (cast(Date)this).day;
     }
@@ -1345,7 +1342,7 @@ public:
             $(LREF DateTimeException) if the given day is not a valid day of the
             current month.
      +/
-    @property void day(int day)
+    @property void day(int day) @safe
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
@@ -1437,7 +1434,7 @@ public:
     /++
         Hours past midnight.
      +/
-    @property ubyte hour() const nothrow
+    @property ubyte hour() @safe const nothrow
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
@@ -1504,7 +1501,7 @@ public:
             $(LREF DateTimeException) if the given hour are not a valid hour of
             the day.
      +/
-    @property void hour(int hour)
+    @property void hour(int hour) @safe
     {
         enforceValid!"hours"(hour);
 
@@ -1555,7 +1552,7 @@ public:
     /++
         Minutes past the current hour.
      +/
-    @property ubyte minute() const nothrow
+    @property ubyte minute() @safe const nothrow
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
@@ -1624,7 +1621,7 @@ public:
             $(LREF DateTimeException) if the given minute are not a valid minute
             of an hour.
      +/
-    @property void minute(int minute)
+    @property void minute(int minute) @safe
     {
         enforceValid!"minutes"(minute);
 
@@ -1678,7 +1675,7 @@ public:
     /++
         Seconds past the current minute.
      +/
-    @property ubyte second() const nothrow
+    @property ubyte second() @safe const nothrow
     {
         auto hnsecs = adjTime;
         auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
@@ -1748,7 +1745,7 @@ public:
             $(LREF DateTimeException) if the given second are not a valid second
             of a minute.
      +/
-    @property void second(int second)
+    @property void second(int second) @safe
     {
         enforceValid!"seconds"(second);
 
@@ -1804,7 +1801,7 @@ public:
     /++
         Fractional seconds passed the second.
      +/
-    @property FracSec fracSec() const nothrow
+    @property FracSec fracSec() @safe const nothrow
     {
         try
         {
@@ -1874,7 +1871,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
      +/
-    @property void fracSec(FracSec fracSec)
+    @property void fracSec(FracSec fracSec) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
         enforce(fracHNSecs >= 0, new DateTimeException("A SysTime cannot have negative fractional seconds."));
@@ -1932,7 +1929,7 @@ public:
         The total hnsecs from midnight, January 1st, 1 A.D. UTC. This is the
         internal representation of $(LREF SysTime).
      +/
-    @property long stdTime() const pure nothrow
+    @property long stdTime() @safe const pure nothrow
     {
         return _stdTime;
     }
@@ -1961,7 +1958,7 @@ public:
         Params:
             stdTime = The number of hnsecs since January 1st, 1 A.D. UTC.
      +/
-    @property void stdTime(long stdTime) pure nothrow
+    @property void stdTime(long stdTime) @safe pure nothrow
     {
         _stdTime = stdTime;
     }
@@ -1994,7 +1991,7 @@ public:
         DST. Functions which return all or part of the time - such as hours -
         adjust the time to this $(LREF SysTime)'s time zone before returning.
       +/
-    @property immutable(TimeZone) timezone() const pure nothrow
+    @property immutable(TimeZone) timezone() @safe const pure nothrow
     {
         return _timezone;
     }
@@ -2009,7 +2006,7 @@ public:
         Params:
             timezone = The $(LREF2 .TimeZone, TimeZone) to set this $(LREF SysTime)'s time zone to.
       +/
-    @property void timezone(immutable TimeZone timezone) pure nothrow
+    @property void timezone(immutable TimeZone timezone) @safe pure nothrow
     {
         if(timezone is null)
             _timezone = LocalTime();
@@ -2021,7 +2018,7 @@ public:
     /++
         Returns whether DST is in effect for this $(LREF SysTime).
       +/
-    @property bool dstInEffect() const nothrow
+    @property bool dstInEffect() @safe const nothrow
     {
         return _timezone.dstInEffect(_stdTime);
         //This function's unit testing is done in the time zone classes.
@@ -2032,7 +2029,7 @@ public:
         Returns what the offset from UTC is for this $(LREF SysTime).
         It includes the DST offset in effect at that time (if any).
       +/
-    @property Duration utcOffset() const nothrow
+    @property Duration utcOffset() @safe const nothrow
     {
         return _timezone.utcOffsetAt(_stdTime);
     }
@@ -2042,7 +2039,7 @@ public:
         Returns a $(LREF SysTime) with the same std time as this one, but with
         $(LREF LocalTime) as its time zone.
       +/
-    SysTime toLocalTime() const nothrow
+    SysTime toLocalTime() @safe const pure nothrow
     {
         return SysTime(_stdTime, LocalTime());
     }
@@ -2074,7 +2071,7 @@ public:
         Returns a $(LREF SysTime) with the same std time as this one, but with
         $(D UTC) as its time zone.
       +/
-    SysTime toUTC() const pure nothrow
+    SysTime toUTC() @safe const pure nothrow
     {
         return SysTime(_stdTime, UTC());
     }
@@ -2094,7 +2091,7 @@ public:
         Returns a $(LREF SysTime) with the same std time as this one, but with
         given time zone as its time zone.
       +/
-    SysTime toOtherTZ(immutable TimeZone tz) const pure nothrow
+    SysTime toOtherTZ(immutable TimeZone tz) @safe const pure nothrow
     {
         if(tz is null)
             return SysTime(_stdTime, LocalTime());
@@ -2126,7 +2123,7 @@ public:
         used (so $(D time_t.max) if it goes over and $(D time_t.min) if it goes
         under).
       +/
-    time_t toUnixTime() const pure nothrow
+    time_t toUnixTime() @safe const pure nothrow
     {
         return stdTimeToUnixTime(_stdTime);
     }
@@ -2156,7 +2153,7 @@ public:
         used for $(D tv_sec). (so $(D time_t.max) if it goes over and
         $(D time_t.min) if it goes under).
       +/
-    timeval toTimeVal() const pure nothrow
+    timeval toTimeVal() @safe const pure nothrow
     {
         immutable tv_sec = toUnixTime();
 
@@ -2198,34 +2195,29 @@ public:
     /++
         Returns a $(D tm) which represents this $(LREF SysTime).
       +/
-    tm toTM() const nothrow
+    tm toTM() @safe const nothrow
     {
-        try
+        auto dateTime = cast(DateTime)this;
+        tm timeInfo;
+
+        timeInfo.tm_sec = dateTime.second;
+        timeInfo.tm_min = dateTime.minute;
+        timeInfo.tm_hour = dateTime.hour;
+        timeInfo.tm_mday = dateTime.day;
+        timeInfo.tm_mon = dateTime.month - 1;
+        timeInfo.tm_year = dateTime.year - 1900;
+        timeInfo.tm_wday = dateTime.dayOfWeek;
+        timeInfo.tm_yday = dateTime.dayOfYear - 1;
+        timeInfo.tm_isdst = _timezone.dstInEffect(_stdTime);
+
+        version(Posix)
         {
-            auto dateTime = cast(DateTime)this;
-            tm timeInfo;
-
-            timeInfo.tm_sec = dateTime.second;
-            timeInfo.tm_min = dateTime.minute;
-            timeInfo.tm_hour = dateTime.hour;
-            timeInfo.tm_mday = dateTime.day;
-            timeInfo.tm_mon = dateTime.month - 1;
-            timeInfo.tm_year = dateTime.year - 1900;
-            timeInfo.tm_wday = dateTime.dayOfWeek;
-            timeInfo.tm_yday = dateTime.dayOfYear - 1;
-            timeInfo.tm_isdst = _timezone.dstInEffect(_stdTime);
-
-            version(Posix)
-            {
-                timeInfo.tm_gmtoff = cast(int)convert!("hnsecs", "seconds")(adjTime - _stdTime);
-                auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName).dup;
-                timeInfo.tm_zone = zone.toUTFz!(const(char)*)();
-            }
-
-            return timeInfo;
+            timeInfo.tm_gmtoff = cast(int)convert!("hnsecs", "seconds")(adjTime - _stdTime);
+            auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName).dup;
+            timeInfo.tm_zone = zone.toUTFz!(const(char)*)();
         }
-        catch(Exception e)
-            assert(0, "Encountered impossible exception.");
+
+        return timeInfo;
     }
 
     unittest
@@ -2305,7 +2297,7 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref SysTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
+    ref SysTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
         if(units == "years" ||
            units == "months")
     {
@@ -3468,7 +3460,7 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
+    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
         if(units == "years")
     {
         return add!"years"(value, allowOverflow);
@@ -3514,7 +3506,7 @@ public:
 
 
     //Shares documentation with "years" overload.
-    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) nothrow
+    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
         if(units == "months")
     {
         auto hnsecs = adjTime;
@@ -4313,7 +4305,7 @@ public:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this $(LREF SysTime).
       +/
-    ref SysTime roll(string units)(long value) nothrow
+    ref SysTime roll(string units)(long value) @safe nothrow
         if(units == "days")
     {
         auto hnsecs = adjTime;
@@ -4672,7 +4664,7 @@ public:
 
 
     //Shares documentation with "days" version.
-    ref SysTime roll(string units)(long value) nothrow
+    ref SysTime roll(string units)(long value) @safe nothrow
         if(units == "hours" ||
            units == "minutes" ||
            units == "seconds")
@@ -5319,7 +5311,7 @@ public:
 
 
     //Shares documentation with "days" version.
-    ref SysTime roll(string units)(long value) nothrow
+    ref SysTime roll(string units)(long value) @safe nothrow
         if(units == "msecs" ||
            units == "usecs" ||
            units == "hnsecs")
@@ -5720,7 +5712,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF SysTime).
       +/
-    SysTime opBinary(string op, D)(in D duration) const pure nothrow
+    SysTime opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -5931,7 +5923,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF SysTime).
       +/
-    ref SysTime opOpAssign(string op, D)(in D duration) pure nothrow
+    ref SysTime opOpAssign(string op, D)(in D duration) @safe pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -6125,7 +6117,7 @@ public:
         $(TR $(TD SysTime) $(TD -) $(TD SysTime) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in SysTime rhs) const pure nothrow
+    Duration opBinary(string op)(in SysTime rhs) @safe const pure nothrow
         if(op == "-")
     {
         return dur!"hnsecs"(_stdTime - rhs._stdTime);
@@ -6240,7 +6232,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to subtract from this one.
       +/
-    int diffMonths(in SysTime rhs) const nothrow
+    int diffMonths(in SysTime rhs) @safe const nothrow
     {
         return (cast(Date)this).diffMonths(cast(Date)rhs);
     }
@@ -6283,7 +6275,7 @@ public:
     /++
         Whether this $(LREF SysTime) is in a leap year.
      +/
-    @property bool isLeapYear() const nothrow
+    @property bool isLeapYear() @safe const nothrow
     {
         return (cast(Date)this).isLeapYear;
     }
@@ -6302,7 +6294,7 @@ public:
     /++
         Day of the week this $(LREF SysTime) is on.
       +/
-    @property DayOfWeek dayOfWeek() const nothrow
+    @property DayOfWeek dayOfWeek() @safe const nothrow
     {
         return getDayOfWeek(dayOfGregorianCal);
     }
@@ -6321,7 +6313,7 @@ public:
     /++
         Day of the year this $(LREF SysTime) is on.
       +/
-    @property ushort dayOfYear() const nothrow
+    @property ushort dayOfYear() @safe const nothrow
     {
         return (cast(Date)this).dayOfYear;
     }
@@ -6352,7 +6344,7 @@ public:
             day = The day of the year to set which day of the year this
                   $(LREF SysTime) is on.
       +/
-    @property void dayOfYear(int day)
+    @property void dayOfYear(int day) @safe
     {
         immutable hnsecs = adjTime;
         immutable days = convert!("hnsecs", "days")(hnsecs);
@@ -6380,7 +6372,7 @@ public:
     /++
         The Xth day of the Gregorian Calendar that this $(LREF SysTime) is on.
      +/
-    @property int dayOfGregorianCal() const nothrow
+    @property int dayOfGregorianCal() @safe const nothrow
     {
         immutable adjustedTime = adjTime;
 
@@ -6739,7 +6731,7 @@ public:
             days = The day of the Gregorian Calendar to set this $(LREF SysTime)
                    to.
      +/
-    @property void dayOfGregorianCal(int days) nothrow
+    @property void dayOfGregorianCal(int days) @safe nothrow
     {
         auto hnsecs = adjTime;
         hnsecs = removeUnitsFromHNSecs!"days"(hnsecs);
@@ -6985,7 +6977,7 @@ public:
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date).
       +/
-    @property ubyte isoWeek() const nothrow
+    @property ubyte isoWeek() @safe const nothrow
     {
         return (cast(Date)this).isoWeek;
     }
@@ -7005,7 +6997,7 @@ public:
         $(LREF SysTime) for the last day in the month that this Date is in.
         The time portion of endOfMonth is always 23:59:59.9999999.
       +/
-    @property SysTime endOfMonth() const nothrow
+    @property SysTime endOfMonth() @safe const nothrow
     {
         immutable hnsecs = adjTime;
         immutable days = getUnitsFromHNSecs!"days"(hnsecs);
@@ -7095,7 +7087,7 @@ public:
     /++
         The last day in the month that this $(LREF SysTime) is in.
       +/
-    @property ubyte daysInMonth() const nothrow
+    @property ubyte daysInMonth() @safe const nothrow
     {
         return Date(dayOfGregorianCal).daysInMonth;
     }
@@ -7151,7 +7143,7 @@ public:
     /++
         Whether the current year is a date in A.D.
       +/
-    @property bool isAD() const nothrow
+    @property bool isAD() @safe const nothrow
     {
         return adjTime >= 0;
     }
@@ -7188,7 +7180,7 @@ public:
         this function returns 2_450_173, while from noon onward, the Julian
         day number would be 2_450_174, so this function returns 2_450_174.
       +/
-    @property long julianDay() const nothrow
+    @property long julianDay() @safe const nothrow
     {
         immutable jd = dayOfGregorianCal + 1_721_425;
 
@@ -7232,7 +7224,7 @@ public:
         The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
         Julian day changes at midnight).
       +/
-    @property long modJulianDay() const nothrow
+    @property long modJulianDay() @safe const nothrow
     {
         return (dayOfGregorianCal + 1_721_425) - 2_400_001;
     }
@@ -7255,7 +7247,7 @@ public:
     /++
         Returns a $(LREF Date) equivalent to this $(LREF SysTime).
       +/
-    Date opCast(T)() const nothrow
+    Date opCast(T)() @safe const nothrow
         if(is(Unqual!T == Date))
     {
         return Date(dayOfGregorianCal);
@@ -7289,7 +7281,7 @@ public:
     /++
         Returns a $(LREF DateTime) equivalent to this $(LREF SysTime).
       +/
-    DateTime opCast(T)() const nothrow
+    DateTime opCast(T)() @safe const nothrow
         if(is(Unqual!T == DateTime))
     {
         try
@@ -7348,7 +7340,7 @@ public:
     /++
         Returns a $(LREF TimeOfDay) equivalent to this $(LREF SysTime).
       +/
-    TimeOfDay opCast(T)() const nothrow
+    TimeOfDay opCast(T)() @safe const nothrow
         if(is(Unqual!T == TimeOfDay))
     {
         try
@@ -7399,7 +7391,7 @@ public:
     //It may be a good idea to keep it though, since casting from a type to itself
     //should be allowed, and it doesn't work without this opCast() since opCast()
     //has already been defined for other types.
-    SysTime opCast(T)() const pure nothrow
+    SysTime opCast(T)() @safe const pure nothrow
         if(is(Unqual!T == SysTime))
     {
         return SysTime(_stdTime, _timezone);
@@ -7424,7 +7416,7 @@ public:
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
       +/
-    string toISOString() const nothrow
+    string toISOString() @safe const nothrow
     {
         try
         {
@@ -7552,7 +7544,7 @@ public:
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
       +/
-    string toISOExtString() const nothrow
+    string toISOExtString() @safe const nothrow
     {
         try
         {
@@ -7678,7 +7670,7 @@ public:
 
         Time zone offsets will be in the form +HH:MM or -HH:MM.
       +/
-    string toSimpleString() const nothrow
+    string toSimpleString() @safe const nothrow
     {
         try
         {
@@ -7787,24 +7779,10 @@ public:
     }
 
 
-    /+
-        Converts this $(LREF SysTime) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
-    }
-
     /++
         Converts this $(LREF SysTime) to a string.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
+    string toString() @safe const nothrow
     {
         return toSimpleString();
     }
@@ -7850,7 +7828,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF SysTime) would not be valid.
       +/
-    static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null)
+    static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null) @safe
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoString));
@@ -8062,7 +8040,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF SysTime) would not be valid.
       +/
-    static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null)
+    static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null) @safe
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -8278,7 +8256,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF SysTime) would not be valid.
       +/
-    static SysTime fromSimpleString(S)(in S simpleString, immutable TimeZone tz = null)
+    static SysTime fromSimpleString(S)(in S simpleString, immutable TimeZone tz = null) @safe
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(simpleString));
@@ -8462,20 +8440,13 @@ public:
     }
 
 
-    //TODO Add function which takes a user-specified time format and produces a SysTime
-
-    //TODO Add function which takes pretty much any time-string and produces a SysTime.
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
     /++
         Returns the $(LREF SysTime) farthest in the past which is representable
         by $(LREF SysTime).
 
         The $(LREF SysTime) which is returned is in UTC.
       +/
-    @property static SysTime min() pure nothrow
+    @property static SysTime min() @safe pure nothrow
     {
         return SysTime(long.min, UTC());
     }
@@ -8493,7 +8464,7 @@ public:
 
         The $(LREF SysTime) which is returned is in UTC.
       +/
-    @property static SysTime max() pure nothrow
+    @property static SysTime max() @safe pure nothrow
     {
         return SysTime(long.max, UTC());
     }
@@ -8510,7 +8481,7 @@ private:
     /+
         Returns $(D stdTime) converted to $(LREF SysTime)'s time zone.
       +/
-    @property long adjTime() const nothrow
+    @property long adjTime() @safe const nothrow
     {
         return _timezone.utcToTZ(_stdTime);
     }
@@ -8519,7 +8490,7 @@ private:
     /+
         Converts the given hnsecs from $(LREF SysTime)'s time zone to std time.
       +/
-    @property void adjTime(long adjTime) nothrow
+    @property void adjTime(long adjTime) @safe nothrow
     {
         _stdTime = _timezone.tzToUTC(adjTime);
     }
@@ -8572,7 +8543,7 @@ public:
             month = Month of the year.
             day   = Day of the month.
      +/
-    this(int year, int month, int day) pure
+    this(int year, int month, int day) @safe pure
     {
         enforceValid!"months"(cast(Month)month);
         enforceValid!"days"(year, cast(Month)month, day);
@@ -8647,7 +8618,7 @@ public:
             day = The Xth day of the Gregorian Calendar that the constructed
                   $(LREF Date) will be for.
      +/
-    this(int day) pure nothrow
+    this(int day) @safe pure nothrow
     {
         if(day > 0)
         {
@@ -8788,7 +8759,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in Date rhs) const pure nothrow
+    int opCmp(in Date rhs) @safe const pure nothrow
     {
         if(_year < rhs._year)
             return -1;
@@ -8896,7 +8867,7 @@ public:
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
      +/
-    @property short year() const pure nothrow
+    @property short year() @safe const pure nothrow
     {
         return _year;
     }
@@ -8932,7 +8903,7 @@ public:
             $(LREF DateTimeException) if the new year is not a leap year and the
             resulting date would be on February 29th.
      +/
-    @property void year(int year) pure
+    @property void year(int year) @safe pure
     {
         enforceValid!"days"(year, _month, _day);
         _year = cast(short)year;
@@ -8978,7 +8949,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D isAD) is true.
      +/
-    @property ushort yearBC() const pure
+    @property ushort yearBC() @safe const pure
     {
         if(isAD)
             throw new DateTimeException(format("Year %s is A.D.", _year));
@@ -9015,7 +8986,7 @@ public:
         Throws:
             $(LREF DateTimeException) if a non-positive value is given.
      +/
-    @property void yearBC(int year) pure
+    @property void yearBC(int year) @safe pure
     {
         if(year <= 0)
             throw new DateTimeException("The given year is not a year B.C.");
@@ -9050,7 +9021,7 @@ public:
     /++
         Month of a Gregorian Year.
      +/
-    @property Month month() const pure nothrow
+    @property Month month() @safe const pure nothrow
     {
         return _month;
     }
@@ -9085,7 +9056,7 @@ public:
             $(LREF DateTimeException) if the given month is not a valid month or if
             the current day would not be valid in the given month.
      +/
-    @property void month(Month month) pure
+    @property void month(Month month) @safe pure
     {
         enforceValid!"months"(month);
         enforceValid!"days"(_year, month, _day);
@@ -9119,7 +9090,7 @@ public:
     /++
         Day of a Gregorian Month.
      +/
-    @property ubyte day() const pure nothrow
+    @property ubyte day() @safe const pure nothrow
     {
         return _day;
     }
@@ -9162,7 +9133,7 @@ public:
             $(LREF DateTimeException) if the given day is not a valid day of the
             current month.
      +/
-    @property void day(int day) pure
+    @property void day(int day) @safe pure
     {
         enforceValid!"days"(_year, _month, day);
         _day = cast(ubyte)day;
@@ -9273,7 +9244,7 @@ public:
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "years")
     {
         immutable newYear = _year + value;
@@ -9515,7 +9486,7 @@ public:
 
 
     //Shares documentation with "years" version.
-    ref Date add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "months")
     {
         auto years = months / 12;
@@ -10055,7 +10026,7 @@ public:
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "years")
     {
         return add!"years"(value, allowOverflow);
@@ -10099,7 +10070,7 @@ public:
 
 
     //Shares documentation with "years" version.
-    ref Date roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref Date roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "months")
     {
         months %= 12;
@@ -10693,7 +10664,7 @@ public:
             units = The units to add. Must be $(D "days").
             days  = The number of days to add to this $(LREF Date).
       +/
-    ref Date roll(string units)(long days) pure nothrow
+    ref Date roll(string units)(long days) @safe pure nothrow
         if(units == "days")
     {
         immutable limit = maxDay(_year, _month);
@@ -10930,7 +10901,7 @@ public:
         Params:
             duration = The duration to add to or subtract from this $(LREF Date).
       +/
-    Date opBinary(string op, D)(in D duration) const pure nothrow
+    Date opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -11028,7 +10999,7 @@ public:
         Params:
             duration = The duration to add to or subtract from this $(LREF Date).
       +/
-    ref Date opOpAssign(string op, D)(in D duration) pure nothrow
+    ref Date opOpAssign(string op, D)(in D duration) @safe pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -11108,7 +11079,7 @@ public:
         $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in Date rhs) const pure nothrow
+    Duration opBinary(string op)(in Date rhs) @safe const pure nothrow
         if(op == "-")
     {
         return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
@@ -11162,7 +11133,7 @@ public:
         Params:
             rhs = The $(LREF Date) to subtract from this one.
       +/
-    int diffMonths(in Date rhs) const pure nothrow
+    int diffMonths(in Date rhs) @safe const pure nothrow
     {
         immutable yearDiff = _year - rhs._year;
         immutable monthDiff = _month - rhs._month;
@@ -11400,7 +11371,7 @@ public:
     /++
         Whether this $(LREF Date) is in a leap year.
      +/
-    @property bool isLeapYear() const pure nothrow
+    @property bool isLeapYear() @safe const pure nothrow
     {
         return yearIsLeapYear(_year);
     }
@@ -11419,7 +11390,7 @@ public:
     /++
         Day of the week this $(LREF Date) is on.
       +/
-    @property DayOfWeek dayOfWeek() const pure nothrow
+    @property DayOfWeek dayOfWeek() @safe const pure nothrow
     {
         return getDayOfWeek(dayOfGregorianCal);
     }
@@ -11438,7 +11409,7 @@ public:
     /++
         Day of the year this $(LREF Date) is on.
       +/
-    @property ushort dayOfYear() const pure nothrow
+    @property ushort dayOfYear() @safe const pure nothrow
     {
         if (_month >= Month.jan && _month <= Month.dec)
         {
@@ -11497,7 +11468,7 @@ public:
             $(LREF DateTimeException) if the given day is an invalid day of the
             year.
       +/
-    @property void dayOfYear(int day) pure
+    @property void dayOfYear(int day) @safe pure
     {
         immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
 
@@ -11547,7 +11518,7 @@ public:
     /++
         The Xth day of the Gregorian Calendar that this $(LREF Date) is on.
      +/
-    @property int dayOfGregorianCal() const pure nothrow
+    @property int dayOfGregorianCal() @safe const pure nothrow
     {
         if(isAD)
         {
@@ -11634,7 +11605,7 @@ public:
         Params:
             day = The day of the Gregorian Calendar to set this $(LREF Date) to.
      +/
-    @property void dayOfGregorianCal(int day) pure nothrow
+    @property void dayOfGregorianCal(int day) @safe pure nothrow
     {
         this = Date(day);
     }
@@ -11685,7 +11656,7 @@ public:
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
-    @property ubyte isoWeek() const pure nothrow
+    @property ubyte isoWeek() @safe const pure nothrow
     {
         immutable weekday = dayOfWeek;
         immutable adjustedWeekday = weekday == DayOfWeek.sun ? 7 : weekday;
@@ -11784,7 +11755,7 @@ public:
     /++
         $(LREF Date) for the last day in the month that this $(LREF Date) is in.
       +/
-    @property Date endOfMonth() const pure nothrow
+    @property Date endOfMonth() @safe const pure nothrow
     {
         try
             return Date(_year, _month, maxDay(_year, _month));
@@ -11843,7 +11814,7 @@ public:
     /++
         The last day in the month that this $(LREF Date) is in.
       +/
-    @property ubyte daysInMonth() const pure nothrow
+    @property ubyte daysInMonth() @safe const pure nothrow
     {
         return maxDay(_year, _month);
     }
@@ -11899,7 +11870,7 @@ public:
     /++
         Whether the current year is a date in A.D.
       +/
-    @property bool isAD() const pure nothrow
+    @property bool isAD() @safe const pure nothrow
     {
         return _year > 0;
     }
@@ -11932,7 +11903,7 @@ public:
         The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this $(LREF Date) at noon (since the Julian day changes
         at noon).
       +/
-    @property long julianDay() const pure nothrow
+    @property long julianDay() @safe const pure nothrow
     {
         return dayOfGregorianCal + 1_721_425;
     }
@@ -11959,7 +11930,7 @@ public:
         The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
         Julian day changes at midnight).
       +/
-    @property long modJulianDay() const pure nothrow
+    @property long modJulianDay() @safe const pure nothrow
     {
         return julianDay - 2_400_001;
     }
@@ -11979,7 +11950,7 @@ public:
     /++
         Converts this $(LREF Date) to a string with the format YYYYMMDD.
       +/
-    string toISOString() const nothrow
+    string toISOString() @safe const pure nothrow
     {
         try
         {
@@ -12034,7 +12005,7 @@ public:
     /++
         Converts this $(LREF Date) to a string with the format YYYY-MM-DD.
       +/
-    string toISOExtString() const nothrow
+    string toISOExtString() @safe const pure nothrow
     {
         try
         {
@@ -12089,7 +12060,7 @@ public:
     /++
         Converts this $(LREF Date) to a string with the format YYYY-Mon-DD.
       +/
-    string toSimpleString() const nothrow
+    string toSimpleString() @safe const pure nothrow
     {
         try
         {
@@ -12141,27 +12112,11 @@ public:
         static assert(__traits(compiles, idate.toSimpleString()));
     }
 
-    //TODO Add a function which returns a string in a user-specified format.
-
-
-    /+
-        Converts this $(LREF Date) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
-    }
 
     /++
         Converts this $(LREF Date) to a string.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
+    string toString() @safe const pure nothrow
     {
         return toSimpleString();
     }
@@ -12188,7 +12143,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF Date) would not be valid.
       +/
-    static Date fromISOString(S)(in S isoString)
+    static Date fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoString));
@@ -12304,7 +12259,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO
             Extended format or if the resulting $(LREF Date) would not be valid.
       +/
-    static Date fromISOExtString(S)(in S isoExtString)
+    static Date fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -12425,7 +12380,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the correct
             format or if the resulting $(LREF Date) would not be valid.
       +/
-    static Date fromSimpleString(S)(in S simpleString)
+    static Date fromSimpleString(S)(in S simpleString) @safe pure
         if(isSomeString!(S))
     {
         auto dstr = to!dstring(strip(simpleString));
@@ -12531,18 +12486,11 @@ public:
     }
 
 
-    //TODO Add function which takes a user-specified time format and produces a Date
-
-    //TODO Add function which takes pretty much any time-string and produces a Date
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
     /++
         Returns the $(LREF Date) farthest in the past which is representable by
         $(LREF Date).
       +/
-    @property static Date min() pure nothrow
+    @property static Date min() @safe pure nothrow
     {
         auto date = Date.init;
         date._year = short.min;
@@ -12563,7 +12511,7 @@ public:
         Returns the $(LREF Date) farthest in the future which is representable by
         $(LREF Date).
       +/
-    @property static Date max() pure nothrow
+    @property static Date max() @safe pure nothrow
     {
         auto date = Date.init;
         date._year = short.max;
@@ -12590,7 +12538,7 @@ private:
             month = The month of the Gregorian Calendar to test.
             day   = The day of the month to test.
      +/
-    static bool _valid(int year, int month, int day) pure nothrow
+    static bool _valid(int year, int month, int day) @safe pure nothrow
     {
         if(!valid!"months"(month))
             return false;
@@ -12614,7 +12562,7 @@ private:
         Params:
             days = The number of days to add to this Date.
       +/
-    ref Date _addDays(long days) pure nothrow
+    ref Date _addDays(long days) @safe pure nothrow
     {
         dayOfGregorianCal = cast(int)(dayOfGregorianCal + days);
         return this;
@@ -12779,7 +12727,7 @@ private:
     }
 
 
-    pure invariant()
+    @safe pure invariant()
     {
         assert(valid!"months"(_month),
                format("Invariant Failure: year [%s] month [%s] day [%s]", _year, _month, _day));
@@ -12813,7 +12761,7 @@ public:
             $(LREF DateTimeException) if the resulting $(LREF TimeOfDay) would be not
             be valid.
      +/
-    this(int hour, int minute, int second = 0) pure
+    this(int hour, int minute, int second = 0) @safe pure
     {
         enforceValid!"hours"(hour);
         enforceValid!"minutes"(minute);
@@ -12865,7 +12813,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in TimeOfDay rhs) const pure nothrow
+    int opCmp(in TimeOfDay rhs) @safe const pure nothrow
     {
         if(_hour < rhs._hour)
             return -1;
@@ -12925,7 +12873,7 @@ public:
     /++
         Hours passed midnight.
      +/
-    @property ubyte hour() const pure nothrow
+    @property ubyte hour() @safe const pure nothrow
     {
         return _hour;
     }
@@ -12952,7 +12900,7 @@ public:
             $(LREF DateTimeException) if the given hour would result in an invalid
             $(LREF TimeOfDay).
      +/
-    @property void hour(int hour) pure
+    @property void hour(int hour) @safe pure
     {
         enforceValid!"hours"(hour);
         _hour = cast(ubyte)hour;
@@ -12976,7 +12924,7 @@ public:
     /++
         Minutes passed the hour.
      +/
-    @property ubyte minute() const pure nothrow
+    @property ubyte minute() @safe const pure nothrow
     {
         return _minute;
     }
@@ -13003,7 +12951,7 @@ public:
             $(LREF DateTimeException) if the given minute would result in an
             invalid $(LREF TimeOfDay).
      +/
-    @property void minute(int minute) pure
+    @property void minute(int minute) @safe pure
     {
         enforceValid!"minutes"(minute);
         _minute = cast(ubyte)minute;
@@ -13027,7 +12975,7 @@ public:
     /++
         Seconds passed the minute.
      +/
-    @property ubyte second() const pure nothrow
+    @property ubyte second() @safe const pure nothrow
     {
         return _second;
     }
@@ -13054,7 +13002,7 @@ public:
             $(LREF DateTimeException) if the given second would result in an
             invalid $(LREF TimeOfDay).
      +/
-    @property void second(int second) pure
+    @property void second(int second) @safe pure
     {
         enforceValid!"seconds"(second);
         _second = cast(ubyte)second;
@@ -13091,7 +13039,7 @@ public:
             value = The number of $(D_PARAM units) to add to this
                     $(LREF TimeOfDay).
       +/
-    ref TimeOfDay roll(string units)(long value) pure nothrow
+    ref TimeOfDay roll(string units)(long value) @safe pure nothrow
         if(units == "hours")
     {
         return this += dur!"hours"(value);
@@ -13139,7 +13087,7 @@ public:
 
 
     //Shares documentation with "hours" version.
-    ref TimeOfDay roll(string units)(long value) pure nothrow
+    ref TimeOfDay roll(string units)(long value) @safe pure nothrow
         if(units == "minutes" ||
            units == "seconds")
     {
@@ -13332,7 +13280,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF TimeOfDay).
       +/
-    TimeOfDay opBinary(string op, D)(in D duration) const pure nothrow
+    TimeOfDay opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -13424,7 +13372,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF TimeOfDay).
       +/
-    ref TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
+    ref TimeOfDay opOpAssign(string op, D)(in D duration) @safe pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -13494,7 +13442,7 @@ public:
         Params:
             rhs = The $(LREF TimeOfDay) to subtract from this one.
       +/
-    Duration opBinary(string op)(in TimeOfDay rhs) const pure nothrow
+    Duration opBinary(string op)(in TimeOfDay rhs) @safe const pure nothrow
         if(op == "-")
     {
         immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
@@ -13535,7 +13483,7 @@ public:
     /++
         Converts this $(LREF TimeOfDay) to a string with the format HHMMSS.
       +/
-    string toISOString() const nothrow
+    string toISOString() @safe const pure nothrow
     {
         try
             return format("%02d%02d%02d", _hour, _minute, _second);
@@ -13564,7 +13512,7 @@ public:
     /++
         Converts this $(LREF TimeOfDay) to a string with the format HH:MM:SS.
       +/
-    string toISOExtString() const nothrow
+    string toISOExtString() @safe const pure nothrow
     {
         try
             return format("%02d:%02d:%02d", _hour, _minute, _second);
@@ -13590,25 +13538,10 @@ public:
     }
 
 
-    /+
-        Converts this $(LREF TimeOfDay) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toISOExtString();
-    }
-
-
     /++
         Converts this TimeOfDay to a string.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
+    string toString() @safe const pure nothrow
     {
         return toISOExtString();
     }
@@ -13623,9 +13556,6 @@ public:
         static assert(__traits(compiles, itod.toString()));
     }
 
-    //TODO Add a function which returns a string in a user-specified format.
-
-
 
     /++
         Creates a $(LREF TimeOfDay) from a string with the format HHMMSS.
@@ -13638,7 +13568,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF TimeOfDay) would not be valid.
       +/
-    static TimeOfDay fromISOString(S)(in S isoString)
+    static TimeOfDay fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoString));
@@ -13740,7 +13670,7 @@ public:
             Extended format or if the resulting $(LREF TimeOfDay) would not be
             valid.
       +/
-    static TimeOfDay fromISOExtString(S)(in S isoExtString)
+    static TimeOfDay fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoExtString));
@@ -13835,17 +13765,10 @@ public:
     }
 
 
-    //TODO Add function which takes a user-specified time format and produces a TimeOfDay
-
-    //TODO Add function which takes pretty much any time-string and produces a TimeOfDay
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
     /++
         Returns midnight.
       +/
-    @property static TimeOfDay min() pure nothrow
+    @property static TimeOfDay min() @safe pure nothrow
     {
         return TimeOfDay.init;
     }
@@ -13862,7 +13785,7 @@ public:
     /++
         Returns one second short of midnight.
       +/
-    @property static TimeOfDay max() pure nothrow
+    @property static TimeOfDay max() @safe pure nothrow
     {
         auto tod = TimeOfDay.init;
         tod._hour = maxHour;
@@ -13894,7 +13817,7 @@ private:
         Params:
             seconds = The number of seconds to add to this TimeOfDay.
       +/
-    ref TimeOfDay _addSeconds(long seconds) pure nothrow
+    ref TimeOfDay _addSeconds(long seconds) @safe pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_hour);
@@ -13996,13 +13919,13 @@ private:
     /+
         Whether the given values form a valid $(LREF TimeOfDay).
      +/
-    static bool _valid(int hour, int minute, int second) pure nothrow
+    static bool _valid(int hour, int minute, int second) @safe pure nothrow
     {
         return valid!"hours"(hour) && valid!"minutes"(minute) && valid!"seconds"(second);
     }
 
 
-    pure invariant()
+    @safe pure invariant()
     {
         assert(_valid(_hour, _minute, _second),
                format("Invariant Failure: hour [%s] minute [%s] second [%s]", _hour, _minute, _second));
@@ -14036,7 +13959,7 @@ public:
             date = The date portion of $(LREF DateTime).
             tod  = The time portion of $(LREF DateTime).
       +/
-    this(in Date date, in TimeOfDay tod = TimeOfDay.init) pure nothrow
+    this(in Date date, in TimeOfDay tod = TimeOfDay.init) @safe pure nothrow
     {
         _date = date;
         _tod = tod;
@@ -14073,8 +13996,7 @@ public:
             minute = The minute portion of the time;
             second = The second portion of the time;
       +/
-    this(int year, int month, int day,
-         int hour = 0, int minute = 0, int second = 0) pure
+    this(int year, int month, int day, int hour = 0, int minute = 0, int second = 0) @safe pure
     {
         _date = Date(year, month, day);
         _tod = TimeOfDay(hour, minute, second);
@@ -14106,7 +14028,7 @@ public:
             $(TR $(TD this &gt; rhs) $(TD &gt; 0))
             )
      +/
-    int opCmp(in DateTime rhs) const pure nothrow
+    int opCmp(in DateTime rhs) @safe const pure nothrow
     {
         immutable dateResult = _date.opCmp(rhs._date);
 
@@ -14316,7 +14238,7 @@ public:
     /++
         The date portion of $(LREF DateTime).
       +/
-    @property Date date() const pure nothrow
+    @property Date date() @safe const pure nothrow
     {
         return _date;
     }
@@ -14346,7 +14268,7 @@ public:
         Params:
             date = The Date to set this $(LREF DateTime)'s date portion to.
       +/
-    @property void date(in Date date) pure nothrow
+    @property void date(in Date date) @safe pure nothrow
     {
         _date = date;
     }
@@ -14368,7 +14290,7 @@ public:
     /++
         The time portion of $(LREF DateTime).
       +/
-    @property TimeOfDay timeOfDay() const pure nothrow
+    @property TimeOfDay timeOfDay() @safe const pure nothrow
     {
         return _tod;
     }
@@ -14399,7 +14321,7 @@ public:
             tod = The $(LREF TimeOfDay) to set this $(LREF DateTime)'s time portion
                   to.
       +/
-    @property void timeOfDay(in TimeOfDay tod) pure nothrow
+    @property void timeOfDay(in TimeOfDay tod) @safe pure nothrow
     {
         _tod = tod;
     }
@@ -14422,7 +14344,7 @@ public:
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
      +/
-    @property short year() const pure nothrow
+    @property short year() @safe const pure nothrow
     {
         return _date.year;
     }
@@ -14451,7 +14373,7 @@ public:
             $(LREF DateTimeException) if the new year is not a leap year and if the
             resulting date would be on February 29th.
      +/
-    @property void year(int year) pure
+    @property void year(int year) @safe pure
     {
         _date.year = year;
     }
@@ -14489,7 +14411,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D isAD) is true.
      +/
-    @property short yearBC() const pure
+    @property short yearBC() @safe const pure
     {
         return _date.yearBC;
     }
@@ -14524,7 +14446,7 @@ public:
         Throws:
             $(LREF DateTimeException) if a non-positive value is given.
      +/
-    @property void yearBC(int year) pure
+    @property void yearBC(int year) @safe pure
     {
         _date.yearBC = year;
     }
@@ -14556,7 +14478,7 @@ public:
     /++
         Month of a Gregorian Year.
      +/
-    @property Month month() const pure nothrow
+    @property Month month() @safe const pure nothrow
     {
         return _date.month;
     }
@@ -14591,7 +14513,7 @@ public:
         Throws:
             $(LREF DateTimeException) if the given month is not a valid month.
      +/
-    @property void month(Month month) pure
+    @property void month(Month month) @safe pure
     {
         _date.month = month;
     }
@@ -14621,7 +14543,7 @@ public:
     /++
         Day of a Gregorian Month.
      +/
-    @property ubyte day() const pure nothrow
+    @property ubyte day() @safe const pure nothrow
     {
         return _date.day;
     }
@@ -14667,7 +14589,7 @@ public:
             $(LREF DateTimeException) if the given day is not a valid day of the
             current month.
      +/
-    @property void day(int day) pure
+    @property void day(int day) @safe pure
     {
         _date.day = day;
     }
@@ -14759,7 +14681,7 @@ public:
     /++
         Hours passed midnight.
      +/
-    @property ubyte hour() const pure nothrow
+    @property ubyte hour() @safe const pure nothrow
     {
         return _tod.hour;
     }
@@ -14786,7 +14708,7 @@ public:
             $(LREF DateTimeException) if the given hour would result in an invalid
             $(LREF DateTime).
      +/
-    @property void hour(int hour) pure
+    @property void hour(int hour) @safe pure
     {
         _tod.hour = hour;
     }
@@ -14809,7 +14731,7 @@ public:
     /++
         Minutes passed the hour.
      +/
-    @property ubyte minute() const pure nothrow
+    @property ubyte minute() @safe const pure nothrow
     {
         return _tod.minute;
     }
@@ -14836,7 +14758,7 @@ public:
             $(LREF DateTimeException) if the given minute would result in an
             invalid $(LREF DateTime).
      +/
-    @property void minute(int minute) pure
+    @property void minute(int minute) @safe pure
     {
         _tod.minute = minute;
     }
@@ -14859,7 +14781,7 @@ public:
     /++
         Seconds passed the minute.
      +/
-    @property ubyte second() const pure nothrow
+    @property ubyte second() @safe const pure nothrow
     {
         return _tod.second;
     }
@@ -14886,7 +14808,7 @@ public:
             $(LREF DateTimeException) if the given seconds would result in an
             invalid $(LREF DateTime).
      +/
-    @property void second(int second) pure
+    @property void second(int second) @safe pure
     {
         _tod.second = second;
     }
@@ -14925,7 +14847,8 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref DateTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref DateTime add(string units)
+                    (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "years" ||
            units == "months")
     {
@@ -14987,7 +14910,8 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref DateTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+    ref DateTime roll(string units)
+                     (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
         if(units == "years" ||
            units == "months")
     {
@@ -15053,7 +14977,7 @@ public:
             units = The units to add.
             value = The number of $(D_PARAM units) to add to this $(LREF DateTime).
       +/
-    ref DateTime roll(string units)(long value) pure nothrow
+    ref DateTime roll(string units)(long value) @safe pure nothrow
         if(units == "days")
     {
         _date.roll!"days"(value);
@@ -15094,7 +15018,7 @@ public:
 
 
     //Shares documentation with "days" version.
-    ref DateTime roll(string units)(long value) pure nothrow
+    ref DateTime roll(string units)(long value) @safe pure nothrow
         if(units == "hours" ||
            units == "minutes" ||
            units == "seconds")
@@ -15612,7 +15536,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF DateTime).
       +/
-    DateTime opBinary(string op, D)(in D duration) const pure nothrow
+    DateTime opBinary(string op, D)(in D duration) @safe const pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -15708,7 +15632,7 @@ public:
             duration = The duration to add to or subtract from this
                        $(LREF DateTime).
       +/
-    ref DateTime opOpAssign(string op, D)(in D duration) pure nothrow
+    ref DateTime opOpAssign(string op, D)(in D duration) @safe pure nothrow
         if((op == "+" || op == "-") &&
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
@@ -15784,7 +15708,7 @@ public:
         $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
         )
       +/
-    Duration opBinary(string op)(in DateTime rhs) const pure nothrow
+    Duration opBinary(string op)(in DateTime rhs) @safe const pure nothrow
         if(op == "-")
     {
         immutable dateResult = _date - rhs.date;
@@ -15881,7 +15805,7 @@ public:
         Params:
             rhs = The $(LREF DateTime) to subtract from this one.
       +/
-    int diffMonths(in DateTime rhs) const pure nothrow
+    int diffMonths(in DateTime rhs) @safe const pure nothrow
     {
         return _date.diffMonths(rhs._date);
     }
@@ -15924,7 +15848,7 @@ public:
     /++
         Whether this $(LREF DateTime) is in a leap year.
      +/
-    @property bool isLeapYear() const pure nothrow
+    @property bool isLeapYear() @safe const pure nothrow
     {
         return _date.isLeapYear;
     }
@@ -15943,7 +15867,7 @@ public:
     /++
         Day of the week this $(LREF DateTime) is on.
       +/
-    @property DayOfWeek dayOfWeek() const pure nothrow
+    @property DayOfWeek dayOfWeek() @safe const pure nothrow
     {
         return _date.dayOfWeek;
     }
@@ -15962,7 +15886,7 @@ public:
     /++
         Day of the year this $(LREF DateTime) is on.
       +/
-    @property ushort dayOfYear() const pure nothrow
+    @property ushort dayOfYear() @safe const pure nothrow
     {
         return _date.dayOfYear;
     }
@@ -15993,7 +15917,7 @@ public:
             day = The day of the year to set which day of the year this
                   $(LREF DateTime) is on.
       +/
-    @property void dayOfYear(int day) pure
+    @property void dayOfYear(int day) @safe pure
     {
         _date.dayOfYear = day;
     }
@@ -16012,7 +15936,7 @@ public:
     /++
         The Xth day of the Gregorian Calendar that this $(LREF DateTime) is on.
      +/
-    @property int dayOfGregorianCal() const pure nothrow
+    @property int dayOfGregorianCal() @safe const pure nothrow
     {
         return _date.dayOfGregorianCal;
     }
@@ -16050,7 +15974,7 @@ public:
             days = The day of the Gregorian Calendar to set this $(LREF DateTime)
                    to.
      +/
-    @property void dayOfGregorianCal(int days) pure nothrow
+    @property void dayOfGregorianCal(int days) @safe pure nothrow
     {
         _date.dayOfGregorianCal = days;
     }
@@ -16099,7 +16023,7 @@ public:
         See_Also:
             $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
       +/
-    @property ubyte isoWeek() const pure nothrow
+    @property ubyte isoWeek() @safe const pure nothrow
     {
         return _date.isoWeek;
     }
@@ -16119,7 +16043,7 @@ public:
         $(LREF DateTime) for the last day in the month that this $(LREF DateTime) is
         in. The time portion of endOfMonth is always 23:59:59.
       +/
-    @property DateTime endOfMonth() const pure nothrow
+    @property DateTime endOfMonth() @safe const pure nothrow
     {
         try
             return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
@@ -16185,7 +16109,7 @@ public:
     /++
         The last day in the month that this $(LREF DateTime) is in.
       +/
-    @property ubyte daysInMonth() const pure nothrow
+    @property ubyte daysInMonth() @safe const pure nothrow
     {
         return _date.daysInMonth;
     }
@@ -16211,7 +16135,7 @@ public:
     /++
         Whether the current year is a date in A.D.
       +/
-    @property bool isAD() const pure nothrow
+    @property bool isAD() @safe const pure nothrow
     {
         return _date.isAD;
     }
@@ -16235,12 +16159,13 @@ public:
 
 
     /++
-        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this $(LREF DateTime) at the given time. For example,
-        prior to noon, 1996-03-31 would be the Julian day number 2_450_173, so
-        this function returns 2_450_173, while from noon onward, the julian
-        day number would be 2_450_174, so this function returns 2_450_174.
+        The $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for this
+        $(LREF DateTime) at the given time. For example, prior to noon,
+        1996-03-31 would be the Julian day number 2_450_173, so this function
+        returns 2_450_173, while from noon onward, the julian day number would
+        be 2_450_174, so this function returns 2_450_174.
       +/
-    @property long julianDay() const pure nothrow
+    @property long julianDay() @safe const pure nothrow
     {
         if(_tod._hour < 12)
             return _date.julianDay - 1;
@@ -16282,10 +16207,10 @@ public:
 
 
     /++
-        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any time on this date (since, the modified
-        Julian day changes at midnight).
+        The modified $(WEB en.wikipedia.org/wiki/Julian_day, Julian day) for any
+        time on this date (since, the modified Julian day changes at midnight).
       +/
-    @property long modJulianDay() const pure nothrow
+    @property long modJulianDay() @safe const pure nothrow
     {
         return _date.modJulianDay;
     }
@@ -16308,7 +16233,7 @@ public:
     /++
         Converts this $(LREF DateTime) to a string with the format YYYYMMDDTHHMMSS.
       +/
-    string toISOString() const nothrow
+    string toISOString() @safe const pure nothrow
     {
         try
             return format("%sT%s", _date.toISOString(), _tod.toISOString());
@@ -16360,7 +16285,7 @@ public:
         Converts this $(LREF DateTime) to a string with the format
         YYYY-MM-DDTHH:MM:SS.
       +/
-    string toISOExtString() const nothrow
+    string toISOExtString() @safe const pure nothrow
     {
         try
             return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
@@ -16411,7 +16336,7 @@ public:
         Converts this $(LREF DateTime) to a string with the format
         YYYY-Mon-DD HH:MM:SS.
       +/
-    string toSimpleString() const nothrow
+    string toSimpleString() @safe const pure nothrow
     {
         try
             return format("%s %s", _date.toSimpleString(), _tod.toString());
@@ -16459,24 +16384,10 @@ public:
     }
 
 
-    /+
-        Converts this $(LREF DateTime) to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
-    }
-
     /++
         Converts this $(LREF DateTime) to a string.
       +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
+    string toString() @safe const pure nothrow
     {
         return toSimpleString();
     }
@@ -16504,7 +16415,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the ISO format
             or if the resulting $(LREF DateTime) would not be valid.
       +/
-    static DateTime fromISOString(S)(in S isoString)
+    static DateTime fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
         immutable dstr = to!dstring(strip(isoString));
@@ -16587,7 +16498,7 @@ public:
             Extended format or if the resulting $(LREF DateTime) would not be
             valid.
       +/
-    static DateTime fromISOExtString(S)(in S isoExtString)
+    static DateTime fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!(S))
     {
         immutable dstr = to!dstring(strip(isoExtString));
@@ -16668,7 +16579,7 @@ public:
             $(LREF DateTimeException) if the given string is not in the correct
             format or if the resulting $(LREF DateTime) would not be valid.
       +/
-    static DateTime fromSimpleString(S)(in S simpleString)
+    static DateTime fromSimpleString(S)(in S simpleString) @safe pure
         if(isSomeString!(S))
     {
         immutable dstr = to!dstring(strip(simpleString));
@@ -16734,18 +16645,11 @@ public:
     }
 
 
-    //TODO Add function which takes a user-specified time format and produces a DateTime
-
-    //TODO Add function which takes pretty much any time-string and produces a DateTime
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
     /++
         Returns the $(LREF DateTime) farthest in the past which is representable by
         $(LREF DateTime).
       +/
-    @property static DateTime min() pure nothrow
+    @property static DateTime min() @safe pure nothrow
     out(result)
     {
         assert(result._date == Date.min);
@@ -16772,7 +16676,7 @@ public:
         Returns the $(LREF DateTime) farthest in the future which is representable
         by $(LREF DateTime).
       +/
-    @property static DateTime max() pure nothrow
+    @property static DateTime max() @safe pure nothrow
     out(result)
     {
         assert(result._date == Date.max);
@@ -16809,7 +16713,7 @@ private:
         Params:
             seconds = The number of seconds to add to this $(LREF DateTime).
       +/
-    ref DateTime _addSeconds(long seconds) pure nothrow
+    ref DateTime _addSeconds(long seconds) @safe pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_tod._hour);
@@ -25871,7 +25775,7 @@ public:
             $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
               Time Zones)
       +/
-    @property string name() const nothrow
+    @property string name() @safe const nothrow
     {
         return _name;
     }
@@ -25884,7 +25788,7 @@ public:
         However, on Windows, it may be the unabbreviated name (e.g. Pacific
         Standard Time). Regardless, it is not the same as name.
       +/
-    @property string stdName() const nothrow
+    @property string stdName() @safe const nothrow
     {
         return _stdName;
     }
@@ -25897,7 +25801,7 @@ public:
         However, on Windows, it may be the unabbreviated name (e.g. Pacific
         Daylight Time). Regardless, it is not the same as name.
       +/
-    @property string dstName() const nothrow
+    @property string dstName() @safe const nothrow
     {
         return _dstName;
     }
@@ -25909,7 +25813,7 @@ public:
         but will still return true for $(D hasDST) because the time zone did at
         some point have DST.
       +/
-    @property abstract bool hasDST() const nothrow;
+    @property abstract bool hasDST() @safe const nothrow;
 
 
     /++
@@ -25921,7 +25825,7 @@ public:
             stdTime = The UTC time that needs to be checked for DST in this time
                       zone.
       +/
-    abstract bool dstInEffect(long stdTime) const nothrow;
+    abstract bool dstInEffect(long stdTime) @safe const nothrow;
 
 
     /++
@@ -25932,7 +25836,7 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    abstract long utcToTZ(long stdTime) const nothrow;
+    abstract long utcToTZ(long stdTime) @safe const nothrow;
 
 
     /++
@@ -25943,7 +25847,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    abstract long tzToUTC(long adjTime) const nothrow;
+    abstract long tzToUTC(long adjTime) @safe const nothrow;
 
 
     /++
@@ -25954,7 +25858,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    Duration utcOffsetAt(long stdTime) const nothrow
+    Duration utcOffsetAt(long stdTime) @safe const nothrow
     {
         return dur!"hnsecs"(utcToTZ(stdTime) - stdTime);
     }
@@ -25993,7 +25897,7 @@ public:
 auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 --------------------
       +/
-    static immutable(TimeZone) getTimeZone(string name)
+    static immutable(TimeZone) getTimeZone(string name) @safe
     {
         version(Posix)
             return PosixTimeZone.getTimeZone(name);
@@ -26299,7 +26203,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             $(LREF DateTimeException) on Windows systems if it fails to read the
             registry.
       +/
-    static string[] getInstalledTZNames(string subName = "")
+    static string[] getInstalledTZNames(string subName = "") @safe
     {
         version(Posix)
             return PosixTimeZone.getInstalledTZNames(subName);
@@ -26323,7 +26227,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
 
     unittest
-{
+    {
         static void testPZSuccess(string tzName)
         {
             scope(failure) writefln("TZName which threw: %s", tzName);
@@ -26335,7 +26239,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
         foreach(tzName; tzNames)
             assertNotThrown!DateTimeException(testPZSuccess(tzName));
-}
+    }
 
 
 private:
@@ -26346,7 +26250,7 @@ private:
             stdName = The abbreviation for the time zone during std time.
             dstName = The abbreviation for the time zone during DST.
       +/
-    this(string name, string stdName, string dstName) immutable pure
+    this(string name, string stdName, string dstName) @safe immutable pure
     {
         _name = name;
         _stdName = stdName;
@@ -26378,9 +26282,9 @@ public:
         $(LREF LocalTime) is a singleton class. $(LREF LocalTime) returns its only
         instance.
       +/
-    static immutable(LocalTime) opCall() pure nothrow
+    static immutable(LocalTime) opCall() @trusted pure nothrow
     {
-        alias pure nothrow immutable(LocalTime) function() FuncType;
+        alias @safe pure nothrow immutable(LocalTime) function() FuncType;
         return (cast(FuncType)&singleton)();
     }
 
@@ -26403,7 +26307,7 @@ public:
                 $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
                   of Time Zones)
           +/
-        @property override string name() const nothrow;
+        @property override string name() @safe const nothrow;
     }
 
 
@@ -26419,7 +26323,7 @@ public:
         dynamically rather than it being fixed like it would be with most time
         zones.
       +/
-    @property override string stdName() const nothrow
+    @property override string stdName() @trusted const nothrow
     {
         version(Posix)
         {
@@ -26489,7 +26393,7 @@ public:
         dynamically rather than it being fixed like it would be with most time
         zones.
       +/
-    @property override string dstName() const nothrow
+    @property override string dstName() @trusted const nothrow
     {
         version(Posix)
         {
@@ -26553,7 +26457,7 @@ public:
         dates but will still return true for $(D hasDST) because the time zone
         did at some point have DST.
       +/
-    @property override bool hasDST() const nothrow
+    @property override bool hasDST() @trusted const nothrow
     {
         version(Posix)
         {
@@ -26618,7 +26522,7 @@ public:
             stdTime = The UTC time that needs to be checked for DST in this time
                       zone.
       +/
-    override bool dstInEffect(long stdTime) const nothrow
+    override bool dstInEffect(long stdTime) @trusted const nothrow
     {
         time_t unixTime = stdTimeToUnixTime(stdTime);
 
@@ -26669,7 +26573,7 @@ public:
         See_Also:
             $(D TimeZone.utcToTZ)
       +/
-    override long utcToTZ(long stdTime) const nothrow
+    override long utcToTZ(long stdTime) @trusted const nothrow
     {
         version(Posix)
         {
@@ -26709,7 +26613,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) const nothrow
+    override long tzToUTC(long adjTime) @trusted const nothrow
     {
         version(Posix)
         {
@@ -26890,7 +26794,7 @@ public:
 
 private:
 
-    this() immutable
+    this() @safe immutable pure
     {
         super("", "", "");
     }
@@ -26904,7 +26808,7 @@ private:
 
     // This is done so that we can maintain purity in spite of doing an impure
     // operation the first time that LocalTime() is called.
-    static immutable(LocalTime) singleton()
+    static immutable(LocalTime) singleton() @trusted
     {
         if(!_lowLock)
         {
@@ -26935,7 +26839,7 @@ public:
     /++
         $(D UTC) is a singleton class. $(D UTC) returns its only instance.
       +/
-    static immutable(UTC) opCall() pure nothrow
+    static immutable(UTC) opCall() @safe pure nothrow
     {
         return _utc;
     }
@@ -26944,7 +26848,7 @@ public:
     /++
         Always returns false.
       +/
-    @property override bool hasDST() const nothrow
+    @property override bool hasDST() @safe const nothrow
     {
         return false;
     }
@@ -26953,7 +26857,7 @@ public:
     /++
         Always returns false.
       +/
-    override bool dstInEffect(long stdTime) const nothrow
+    override bool dstInEffect(long stdTime) @safe const nothrow
     {
         return false;
     }
@@ -26969,7 +26873,7 @@ public:
         See_Also:
             $(D TimeZone.utcToTZ)
       +/
-    override long utcToTZ(long stdTime) const nothrow
+    override long utcToTZ(long stdTime) @safe const nothrow
     {
         return stdTime;
     }
@@ -27001,7 +26905,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) const nothrow
+    override long tzToUTC(long adjTime) @safe const nothrow
     {
         return adjTime;
     }
@@ -27030,7 +26934,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    override Duration utcOffsetAt(long stdTime) const nothrow
+    override Duration utcOffsetAt(long stdTime) @safe const nothrow
     {
         return dur!"hnsecs"(0);
     }
@@ -27038,7 +26942,7 @@ public:
 
 private:
 
-    this() immutable pure
+    this() @safe immutable pure
     {
         super("UTC", "UTC", "UTC");
     }
@@ -27067,7 +26971,7 @@ public:
     /++
         Always returns false.
       +/
-    @property override bool hasDST() const nothrow
+    @property override bool hasDST() @safe const nothrow
     {
         return false;
     }
@@ -27076,7 +26980,7 @@ public:
     /++
         Always returns false.
       +/
-    override bool dstInEffect(long stdTime) const nothrow
+    override bool dstInEffect(long stdTime) @safe const nothrow
     {
         return false;
     }
@@ -27090,7 +26994,7 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    override long utcToTZ(long stdTime) const nothrow
+    override long utcToTZ(long stdTime) @safe const nothrow
     {
         return stdTime + _utcOffset.total!"hnsecs";
     }
@@ -27118,7 +27022,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) const nothrow
+    override long tzToUTC(long adjTime) @safe const nothrow
     {
         return adjTime - _utcOffset.total!"hnsecs";
     }
@@ -27145,7 +27049,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    override Duration utcOffsetAt(long stdTime) const nothrow
+    override Duration utcOffsetAt(long stdTime) @safe const nothrow
     {
         return _utcOffset;
     }
@@ -27157,7 +27061,7 @@ public:
                         negative (it is added to UTC to get the adjusted time).
             stdName   = The $(D stdName) for this time zone.
       +/
-    this(Duration utcOffset, string stdName = "") immutable
+    this(Duration utcOffset, string stdName = "") @safe immutable pure
     {
         //FIXME This probably needs to be changed to something like (-12 - 13).
         enforceEx!DateTimeException(abs(utcOffset) < dur!"minutes"(1440),
@@ -27176,7 +27080,8 @@ public:
                         negative (it is added to UTC to get the adjusted time).
             stdName   = The $(D stdName) for this time zone.
       +/
-    deprecated("Please use the overload which takes a Duration.") this(int utcOffset, string stdName = "") immutable
+    deprecated("Please use the overload which takes a Duration.")
+    this(int utcOffset, string stdName = "") @safe immutable pure
     {
         this(dur!"minutes"(utcOffset), stdName);
     }
@@ -27212,7 +27117,7 @@ private:
             utcOffset = The number of minutes offset from UTC (negative means
                         west).
       +/
-    static string toISOString(Duration utcOffset)
+    static string toISOString(Duration utcOffset) @safe pure
     {
         immutable absOffset = abs(utcOffset);
         enforceEx!DateTimeException(absOffset < dur!"minutes"(1440),
@@ -27264,7 +27169,7 @@ private:
         Params:
             isoString = A string which represents a time zone in the ISO format.
       +/
-    static immutable(SimpleTimeZone) fromISOString(S)(S isoString)
+    static immutable(SimpleTimeZone) fromISOString(S)(S isoString) @safe pure
         if(isSomeString!S)
     {
         auto dstr = to!dstring(strip(isoString));
@@ -27466,7 +27371,7 @@ public:
         dates but will still return true for $(D hasDST) because the time zone
         did at some point have DST.
       +/
-    @property override bool hasDST() const nothrow
+    @property override bool hasDST() @safe const nothrow
     {
         return _hasDST;
     }
@@ -27481,24 +27386,19 @@ public:
             stdTime = The UTC time that needs to be checked for DST in this time
                       zone.
       +/
-    override bool dstInEffect(long stdTime) const nothrow
+    override bool dstInEffect(long stdTime) @safe const nothrow
     {
         assert(!_transitions.empty);
 
-        try
-        {
-            immutable unixTime = stdTimeToUnixTime(stdTime);
-            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+        immutable unixTime = stdTimeToUnixTime(stdTime);
+        immutable found = countUntil!"b < a.timeT"(_transitions, unixTime);
 
-            if(found == -1)
-                return _transitions.back.ttInfo.isDST;
+        if(found == -1)
+            return _transitions.back.ttInfo.isDST;
 
-            immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+        immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
 
-            return transition.ttInfo.isDST;
-        }
-        catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+        return transition.ttInfo.isDST;
     }
 
 
@@ -27510,25 +27410,20 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    override long utcToTZ(long stdTime) const nothrow
+    override long utcToTZ(long stdTime) @safe const nothrow
     {
         assert(!_transitions.empty);
 
-        try
-        {
-            immutable leapSecs = calculateLeapSeconds(stdTime);
-            immutable unixTime = stdTimeToUnixTime(stdTime);
-            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+        immutable leapSecs = calculateLeapSeconds(stdTime);
+        immutable unixTime = stdTimeToUnixTime(stdTime);
+        immutable found = countUntil!"b < a.timeT"(_transitions, unixTime);
 
-            if(found == -1)
-                return stdTime + convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+        if(found == -1)
+            return stdTime + convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
-            immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+        immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
 
-            return stdTime + convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
-        }
-        catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+        return stdTime + convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
     }
 
 
@@ -27540,47 +27435,41 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) const nothrow
+    override long tzToUTC(long adjTime) @safe const nothrow
     {
         assert(!_transitions.empty);
 
-        try
-        {
-            immutable leapSecs = calculateLeapSeconds(adjTime);
-            time_t unixTime = stdTimeToUnixTime(adjTime);
-            immutable past = unixTime - convert!("days", "seconds")(1);
-            immutable future = unixTime + convert!("days", "seconds")(1);
+        immutable leapSecs = calculateLeapSeconds(adjTime);
+        time_t unixTime = stdTimeToUnixTime(adjTime);
+        immutable past = unixTime - convert!("days", "seconds")(1);
+        immutable future = unixTime + convert!("days", "seconds")(1);
 
-            immutable pastFound = countUntil!"b < a.timeT"(cast(Transition[])_transitions, past);
+        immutable pastFound = countUntil!"b < a.timeT"(_transitions, past);
 
-            if(pastFound == -1)
-                return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+        if(pastFound == -1)
+            return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
-            immutable futureFound = countUntil!"b < a.timeT"(cast(Transition[])_transitions[pastFound .. $], future);
-            immutable pastTrans = pastFound == 0 ? _transitions[0] : _transitions[pastFound - 1];
+        immutable futureFound = countUntil!"b < a.timeT"(_transitions[pastFound .. $], future);
+        immutable pastTrans = pastFound == 0 ? _transitions[0] : _transitions[pastFound - 1];
 
-            if(futureFound == 0)
-                return adjTime - convert!("seconds", "hnsecs")(pastTrans.ttInfo.utcOffset + leapSecs);
+        if(futureFound == 0)
+            return adjTime - convert!("seconds", "hnsecs")(pastTrans.ttInfo.utcOffset + leapSecs);
 
-            immutable futureTrans = futureFound == -1 ? _transitions.back
-                                                      : _transitions[pastFound + futureFound - 1];
-            immutable pastOffset = pastTrans.ttInfo.utcOffset;
+        immutable futureTrans = futureFound == -1 ? _transitions.back
+                                                  : _transitions[pastFound + futureFound - 1];
+        immutable pastOffset = pastTrans.ttInfo.utcOffset;
 
-            if(pastOffset < futureTrans.ttInfo.utcOffset)
-                unixTime -= convert!("hours", "seconds")(1);
+        if(pastOffset < futureTrans.ttInfo.utcOffset)
+            unixTime -= convert!("hours", "seconds")(1);
 
-            immutable found = countUntil!"b < a.timeT"(cast(Transition[])_transitions[pastFound .. $],
-                                                       unixTime - pastOffset);
+        immutable found = countUntil!"b < a.timeT"(_transitions[pastFound .. $], unixTime - pastOffset);
 
-            if(found == -1)
-                return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+        if(found == -1)
+            return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
 
-            immutable transition = found == 0 ? pastTrans : _transitions[pastFound + found - 1];
+        immutable transition = found == 0 ? pastTrans : _transitions[pastFound + found - 1];
 
-            return adjTime - convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
-        }
-        catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+        return adjTime - convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
     }
 
 
@@ -27635,7 +27524,7 @@ assert(tz.dstName == "PDT");
       +/
     //TODO make it possible for tzDatabaseDir to be gzipped tar file rather than an uncompressed
     //     directory.
-    static immutable(PosixTimeZone) getTimeZone(string name, string tzDatabaseDir = defaultTZDatabaseDir)
+    static immutable(PosixTimeZone) getTimeZone(string name, string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
         name = strip(name);
 
@@ -27949,7 +27838,7 @@ assert(tz.dstName == "PDT");
         Throws:
             $(D FileException) if it fails to read from disk.
       +/
-    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir)
+    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
         version(Posix)
             subName = strip(subName);
@@ -28026,7 +27915,7 @@ private:
       +/
     struct Transition
     {
-        this(long timeT, immutable (TTInfo)* ttInfo)
+        this(long timeT, immutable (TTInfo)* ttInfo) @safe pure
         {
             this.timeT = timeT;
             this.ttInfo = ttInfo;
@@ -28042,7 +27931,7 @@ private:
       +/
     struct LeapSecond
     {
-        this(long timeT, int total)
+        this(long timeT, int total) @safe pure
         {
             this.timeT = timeT;
             this.total = total;
@@ -28058,7 +27947,7 @@ private:
       +/
     struct TTInfo
     {
-        this(in TempTTInfo tempTTInfo, string abbrev) immutable
+        this(in TempTTInfo tempTTInfo, string abbrev) @safe immutable pure
         {
             utcOffset = tempTTInfo.tt_gmtoff;
             isDST = tempTTInfo.tt_isdst;
@@ -28077,7 +27966,7 @@ private:
       +/
     struct TempTTInfo
     {
-        this(int gmtOff, bool isDST, ubyte abbrInd)
+        this(int gmtOff, bool isDST, ubyte abbrInd) @safe pure
         {
             tt_gmtoff = gmtOff;
             tt_isdst = isDST;
@@ -28097,7 +27986,7 @@ private:
       +/
     struct TempTransition
     {
-        this(long timeT, immutable (TTInfo)* ttInfo, TransitionType* ttype)
+        this(long timeT, immutable (TTInfo)* ttInfo, TransitionType* ttype) @safe pure
         {
             this.timeT = timeT;
             this.ttInfo = ttInfo;
@@ -28117,7 +28006,7 @@ private:
       +/
     struct TransitionType
     {
-        this(bool isStd, bool inUTC)
+        this(bool isStd, bool inUTC) @safe pure
         {
             this.isStd = isStd;
             this.inUTC = inUTC;
@@ -28134,7 +28023,7 @@ private:
     /+
         Reads an int from a TZ file.
       +/
-    static T readVal(T)(ref File tzFile)
+    static T readVal(T)(ref File tzFile) @trusted
         if((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
     {
         import std.bitmanip;
@@ -28149,7 +28038,7 @@ private:
     /+
         Reads an array of values from a TZ file.
       +/
-    static T readVal(T)(ref File tzFile, size_t length)
+    static T readVal(T)(ref File tzFile, size_t length) @trusted
         if(isArray!T)
     {
         auto buff = new T(length);
@@ -28164,7 +28053,7 @@ private:
     /+
         Reads a $(D TempTTInfo) from a TZ file.
       +/
-    static T readVal(T)(ref File tzFile)
+    static T readVal(T)(ref File tzFile) @safe
         if(is(T == TempTTInfo))
     {
         return TempTTInfo(readVal!int(tzFile),
@@ -28177,36 +28066,31 @@ private:
         Throws:
             $(LREF DateTimeException) if $(D result) is false.
       +/
-    static void _enforceValidTZFile(bool result, size_t line = __LINE__)
+    static void _enforceValidTZFile(bool result, size_t line = __LINE__) @safe pure
     {
         if(!result)
             throw new DateTimeException("Not a valid tzdata file.", __FILE__, line);
     }
 
 
-    int calculateLeapSeconds(long stdTime) const nothrow
+    int calculateLeapSeconds(long stdTime) @safe const pure nothrow
     {
-        try
-        {
-            if(_leapSeconds.empty)
-                return 0;
+        if(_leapSeconds.empty)
+            return 0;
 
-            immutable unixTime = stdTimeToUnixTime(stdTime);
+        immutable unixTime = stdTimeToUnixTime(stdTime);
 
-            if(_leapSeconds.front.timeT >= unixTime)
-                return 0;
+        if(_leapSeconds.front.timeT >= unixTime)
+            return 0;
 
-            immutable found = countUntil!"b < a.timeT"(cast(LeapSecond[])_leapSeconds, unixTime);
+        immutable found = countUntil!"b < a.timeT"(_leapSeconds, unixTime);
 
-            if(found == -1)
-                return _leapSeconds.back.total;
+        if(found == -1)
+            return _leapSeconds.back.total;
 
-            immutable leapSecond = found == 0 ? _leapSeconds[0] : _leapSeconds[found - 1];
+        immutable leapSecond = found == 0 ? _leapSeconds[0] : _leapSeconds[found - 1];
 
-            return leapSecond.total;
-        }
-        catch(Exception e)
-            assert(0, format("Nothing in calculateLeapSeconds() should be throwing. Caught Exception: %s", e));
+        return leapSecond.total;
     }
 
 
@@ -28215,7 +28099,7 @@ private:
          string name,
          string stdName,
          string dstName,
-         bool hasDST) immutable
+         bool hasDST) @safe immutable pure
     {
         if(dstName.empty && !stdName.empty)
             dstName = stdName;
@@ -28291,7 +28175,7 @@ version(StdDdoc)
             current dates but will still return true for $(D hasDST) because the
             time zone did at some point have DST.
           +/
-        @property override bool hasDST() const nothrow;
+        @property override bool hasDST() @safe const nothrow;
 
 
         /++
@@ -28303,7 +28187,7 @@ version(StdDdoc)
                 stdTime = The UTC time that needs to be checked for DST in this
                           time zone.
           +/
-        override bool dstInEffect(long stdTime) const nothrow;
+        override bool dstInEffect(long stdTime) @safe const nothrow;
 
 
         /++
@@ -28315,7 +28199,7 @@ version(StdDdoc)
                 stdTime = The UTC time that needs to be adjusted to this time
                           zone's time.
           +/
-        override long utcToTZ(long stdTime) const nothrow;
+        override long utcToTZ(long stdTime) @safe const nothrow;
 
 
         /++
@@ -28327,7 +28211,7 @@ version(StdDdoc)
                 adjTime = The time in this time zone that needs to be adjusted
                           to UTC time.
           +/
-        override long tzToUTC(long adjTime) const nothrow;
+        override long tzToUTC(long adjTime) @safe const nothrow;
 
 
         /++
@@ -28353,14 +28237,14 @@ version(StdDdoc)
     auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     --------------------
           +/
-        static immutable(WindowsTimeZone) getTimeZone(string name);
+        static immutable(WindowsTimeZone) getTimeZone(string name) @safe;
 
 
         /++
             Returns a list of the names of the time zones installed on the
             system.
           +/
-        static string[] getInstalledTZNames();
+        static string[] getInstalledTZNames() @safe;
 
     private:
 
@@ -28385,31 +28269,31 @@ else version(Windows)
     {
     public:
 
-        @property override bool hasDST() const nothrow
+        @property override bool hasDST() @safe const nothrow
         {
             return _tzInfo.DaylightDate.wMonth != 0;
         }
 
 
-        override bool dstInEffect(long stdTime) const nothrow
+        override bool dstInEffect(long stdTime) @safe const nothrow
         {
             return _dstInEffect(&_tzInfo, stdTime);
         }
 
 
-        override long utcToTZ(long stdTime) const nothrow
+        override long utcToTZ(long stdTime) @safe const nothrow
         {
             return _utcToTZ(&_tzInfo, stdTime, hasDST);
         }
 
 
-        override long tzToUTC(long adjTime) const nothrow
+        override long tzToUTC(long adjTime) @safe const nothrow
         {
             return _tzToUTC(&_tzInfo, adjTime, hasDST);
         }
 
 
-        static immutable(WindowsTimeZone) getTimeZone(string name)
+        static immutable(WindowsTimeZone) getTimeZone(string name) @trusted
         {
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
@@ -28453,7 +28337,7 @@ else version(Windows)
             throw new DateTimeException(format("Failed to find time zone: %s", name));
         }
 
-        static string[] getInstalledTZNames()
+        static string[] getInstalledTZNames() @trusted
         {
             auto timezones = appender!(string[])();
 
@@ -28486,7 +28370,7 @@ else version(Windows)
 
     private:
 
-        static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) nothrow
+        static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) @trusted nothrow
         {
             try
             {
@@ -28569,7 +28453,7 @@ else version(Windows)
         }
 
 
-        static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) nothrow
+        static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) @safe nothrow
         {
             if(hasDST && WindowsTimeZone._dstInEffect(tzInfo, stdTime))
                 return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
@@ -28578,7 +28462,7 @@ else version(Windows)
         }
 
 
-        static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) nothrow
+        static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) @trusted nothrow
         {
             if(hasDST)
             {
@@ -28680,7 +28564,7 @@ else version(Windows)
         }
 
 
-        this(string name, TIME_ZONE_INFORMATION tzInfo) immutable
+        this(string name, TIME_ZONE_INFORMATION tzInfo) @safe immutable pure
         {
             super(name, to!string(tzInfo.StandardName.ptr), to!string(tzInfo.DaylightName.ptr));
             _tzInfo = tzInfo;
@@ -28703,7 +28587,7 @@ version(StdDdoc)
         Unfortunately, there is no way to do it on Windows using the TZ
         Database name, so this function only exists on Posix systems.
       +/
-    void setTZEnvVar(string tzDatabaseName);
+    void setTZEnvVar(string tzDatabaseName) @safe nothrow;
 
 
     /++
@@ -28711,11 +28595,11 @@ version(StdDdoc)
 
         Clears the TZ environment variable.
       +/
-    void clearTZEnvVar();
+    void clearTZEnvVar() @safe nothrow;
 }
 else version(Posix)
 {
-    void setTZEnvVar(string tzDatabaseName) nothrow
+    void setTZEnvVar(string tzDatabaseName) @trusted nothrow
     {
         try
         {
@@ -28728,7 +28612,7 @@ else version(Posix)
     }
 
 
-    void clearTZEnvVar() nothrow
+    void clearTZEnvVar() @trusted nothrow
     {
         try
         {
@@ -28765,7 +28649,7 @@ else version(Posix)
         $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
         converted.
   +/
-string tzDatabaseNameToWindowsTZName(string tzName)
+string tzDatabaseNameToWindowsTZName(string tzName) @safe pure
 {
     switch(tzName)
     {
@@ -28909,7 +28793,7 @@ version(Windows) unittest
         $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
         converted.
   +/
-string windowsTZNameToTZDatabaseName(string tzName)
+string windowsTZNameToTZDatabaseName(string tzName) @safe pure
 {
     switch(tzName)
     {
@@ -29534,7 +29418,7 @@ unittest
     Params:
         year = The year to to be tested.
  +/
-static bool yearIsLeapYear(int year) pure nothrow
+static bool yearIsLeapYear(int year) @safe pure nothrow
 {
     if(year % 400 == 0)
         return true;
@@ -29569,7 +29453,7 @@ unittest
     Params:
         unixTime = The $(D time_t) to convert.
   +/
-long unixTimeToStdTime(time_t unixTime) pure nothrow
+long unixTimeToStdTime(time_t unixTime) @safe pure nothrow
 {
     return 621_355_968_000_000_000L + convert!("seconds", "hnsecs")(unixTime);
 
@@ -29606,7 +29490,7 @@ unittest
     Params:
         stdTime = The std time to convert.
   +/
-time_t stdTimeToUnixTime(long stdTime) pure nothrow
+time_t stdTimeToUnixTime(long stdTime) @safe pure nothrow
 {
     immutable unixTime = convert!("hnsecs", "seconds")(stdTime - 621_355_968_000_000_000L);
 
@@ -29666,7 +29550,7 @@ version(StdDdoc)
             $(D SysTime.max) is in 29,228 A.D. and the maximum $(D SYSTEMTIME)
             is in 30,827 A.D.
       +/
-    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime());
+    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime()) @safe;
 
 
     /++
@@ -29686,7 +29570,7 @@ version(StdDdoc)
             $(D SYSTEMTIME). This will only happen if the $(LREF SysTime)'s date is
             prior to 1601 A.D.
       +/
-    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime);
+    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime) @safe;
 
 
     /++
@@ -29702,7 +29586,7 @@ version(StdDdoc)
             $(LREF DateTimeException) if the given $(D FILETIME) cannot be
             represented as the return value.
       +/
-    long FILETIMEToStdTime(const FILETIME* ft);
+    long FILETIMEToStdTime(const FILETIME* ft) @safe;
 
 
     /++
@@ -29719,7 +29603,7 @@ version(StdDdoc)
             $(LREF DateTimeException) if the given $(D FILETIME) will not fit in a
             $(LREF SysTime).
       +/
-    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime());
+    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime()) @safe;
 
 
     /++
@@ -29735,7 +29619,7 @@ version(StdDdoc)
             $(LREF DateTimeException) if the given value will not fit in a
             $(D FILETIME).
       +/
-    FILETIME stdTimeToFILETIME(long stdTime);
+    FILETIME stdTimeToFILETIME(long stdTime) @safe;
 
 
     /++
@@ -29752,11 +29636,11 @@ version(StdDdoc)
             $(LREF DateTimeException) if the given $(LREF SysTime) will not fit in a
             $(D FILETIME).
       +/
-    FILETIME SysTimeToFILETIME(SysTime sysTime);
+    FILETIME SysTimeToFILETIME(SysTime sysTime) @safe;
 }
 else version(Windows)
 {
-    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime())
+    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime()) @safe
     {
         const max = SysTime.max;
 
@@ -29815,7 +29699,7 @@ else version(Windows)
     }
 
 
-    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime)
+    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime) @safe
     {
         immutable dt = cast(DateTime)sysTime;
 
@@ -29856,7 +29740,7 @@ else version(Windows)
 
     private enum hnsecsFrom1601 = 504_911_232_000_000_000L;
 
-    long FILETIMEToStdTime(const FILETIME* ft)
+    long FILETIMEToStdTime(const FILETIME* ft) @safe
     {
         ULARGE_INTEGER ul;
         ul.HighPart = ft.dwHighDateTime;
@@ -29869,7 +29753,7 @@ else version(Windows)
         return cast(long)tempHNSecs + hnsecsFrom1601;
     }
 
-    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime())
+    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime()) @safe
     {
         auto sysTime = SysTime(FILETIMEToStdTime(ft), UTC());
         sysTime.timezone = tz;
@@ -29892,7 +29776,7 @@ else version(Windows)
     }
 
 
-    FILETIME stdTimeToFILETIME(long stdTime)
+    FILETIME stdTimeToFILETIME(long stdTime) @safe
     {
         if(stdTime < hnsecsFrom1601)
             throw new DateTimeException("The given stdTime value cannot be represented as a FILETIME.");
@@ -29907,7 +29791,7 @@ else version(Windows)
         return ft;
     }
 
-    FILETIME SysTimeToFILETIME(SysTime sysTime)
+    FILETIME SysTimeToFILETIME(SysTime sysTime) @safe
     {
         return stdTimeToFILETIME(sysTime.stdTime);
     }
@@ -29944,7 +29828,7 @@ alias uint DosFileTime;
     Throws:
         $(LREF DateTimeException) if the $(D DosFileTime) is invalid.
   +/
-SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime())
+SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime()) @safe
 {
     uint dt = cast(uint)dft;
 
@@ -29957,8 +29841,6 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
     int hour = (dt >> 11) & 0x1F;          // 0..23
     int minute = (dt >> 5) & 0x3F;         // 0..59
     int second = (dt << 1) & 0x3E;         // 0..58 (in 2 second increments)
-
-    SysTime sysTime = void;
 
     try
         return SysTime(DateTime(year, month, dayOfMonth, hour, minute, second), tz);
@@ -29989,7 +29871,7 @@ unittest
         $(LREF DateTimeException) if the given $(LREF SysTime) cannot be converted to
         a $(D DosFileTime).
   +/
-DosFileTime SysTimeToDosFileTime(SysTime sysTime)
+DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
 {
     auto dateTime = cast(DateTime)sysTime;
 
@@ -30031,11 +29913,11 @@ unittest
     can handle precision greater than hnsecs, and the few functions in core.time
     which deal with "nsecs" deal with it explicitly.
   +/
-bool validTimeUnits(string[] units...)
+bool validTimeUnits(string[] units...) @safe pure nothrow
 {
     foreach(str; units)
     {
-        if(!canFind(timeStrings.dup, str))
+        if(!canFind(timeStrings[], str))
             return false;
     }
 
@@ -30058,7 +29940,7 @@ bool validTimeUnits(string[] units...)
         $(LREF DateTimeException) if either of the given strings is not a valid
         time unit string.
  +/
-int cmpTimeUnits(string lhs, string rhs)
+int cmpTimeUnits(string lhs, string rhs) @safe pure
 {
     auto tstrings = timeStrings.dup;
     immutable indexOfLHS = countUntil(tstrings, lhs);
@@ -30120,7 +30002,7 @@ template CmpTimeUnits(string lhs, string rhs)
 /+
     Helper function for $(D CmpTimeUnits).
  +/
-private int cmpTimeUnitsCTFE(string lhs, string rhs)
+private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
 {
     auto tstrings = timeStrings.dup;
     immutable indexOfLHS = countUntil(tstrings, lhs);
@@ -30168,7 +30050,7 @@ unittest
         units = The units of time to validate.
         value = The number to validate.
   +/
-bool valid(string units)(int value) pure nothrow
+bool valid(string units)(int value) @safe pure nothrow
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
@@ -30203,7 +30085,7 @@ unittest
         month = The month of the day to validate.
         day   = The day to validate.
   +/
-bool valid(string units)(int year, int month, int day) pure nothrow
+bool valid(string units)(int year, int month, int day) @safe pure nothrow
     if(units == "days")
 {
     return day > 0 && day <= maxDay(year, month);
@@ -30221,7 +30103,7 @@ bool valid(string units)(int year, int month, int day) pure nothrow
     Throws:
         $(LREF DateTimeException) if $(D valid!units(value)) is false.
   +/
-void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) pure
+void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) @safe pure
     if(units == "months" ||
        units == "hours" ||
        units == "minutes" ||
@@ -30263,7 +30145,8 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
     Throws:
         $(LREF DateTimeException) if $(D valid!"days"(year, month, day)) is false.
   +/
-void enforceValid(string units)(int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) pure
+void enforceValid(string units)
+                 (int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) @safe pure
     if(units == "days")
 {
     if(!valid!"days"(year, month, day))
@@ -30279,7 +30162,7 @@ void enforceValid(string units)(int year, Month month, int day, string file = __
         currMonth = The current month of the year.
         month     = The month of the year to get the number of months to.
   +/
-static int monthsToMonth(int currMonth, int month) pure
+static int monthsToMonth(int currMonth, int month) @safe pure
 {
     enforceValid!"months"(currMonth);
     enforceValid!"months"(month);
@@ -30357,7 +30240,7 @@ unittest
         currDoW = The current day of the week.
         dow     = The day of the week to get the number of days to.
   +/
-static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) pure nothrow
+static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
 {
     if(currDoW == dow)
         return 0;
@@ -30656,7 +30539,7 @@ template hnsecsPer(string units)
     Returns:
         The number of the given units from converting hnsecs to those units.
   +/
-long splitUnitsFromHNSecs(string units)(ref long hnsecs) pure nothrow
+long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -30693,7 +30576,7 @@ unittest
     Returns:
         The split out value.
   +/
-long getUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
+long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -30723,7 +30606,7 @@ unittest
     Returns:
         The remaining hnsecs.
   +/
-long removeUnitsFromHNSecs(string units)(long hnsecs) pure nothrow
+long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     if(validTimeUnits(units) &&
        CmpTimeUnits!(units, "months") < 0)
 {
@@ -30748,7 +30631,7 @@ unittest
         year  = The year to get the day for.
         month = The month of the Gregorian Calendar to get the day for.
  +/
-static ubyte maxDay(int year, int month) pure nothrow
+static ubyte maxDay(int year, int month) @safe pure nothrow
 in
 {
     assert(valid!"months"(month));
@@ -30833,7 +30716,7 @@ unittest
         day = The day of the Gregorian Calendar for which to get the day of
               the week.
   +/
-DayOfWeek getDayOfWeek(int day) pure nothrow
+DayOfWeek getDayOfWeek(int day) @safe pure nothrow
 {
     //January 1st, 1 A.D. was a Monday
     if(day >= 0)
@@ -30891,7 +30774,7 @@ unittest
 /+
     Returns the string representation of the given month.
   +/
-string monthToString(Month month) pure
+string monthToString(Month month) @safe pure
 {
     assert(month >= Month.jan && month <= Month.dec, format("Invalid month: %s", month));
     return monthNames[month - Month.jan];
@@ -30923,7 +30806,7 @@ unittest
     Throws:
         $(LREF DateTimeException) if the given month is not a valid month string.
   +/
-Month monthFromString(string monthStr)
+Month monthFromString(string monthStr) @safe pure
 {
     switch(monthStr)
     {
@@ -31026,7 +30909,7 @@ unittest
 /+
     Returns the given hnsecs as an ISO string of fractional seconds.
   +/
-static string fracSecToISOString(int hnsecs) nothrow
+static string fracSecToISOString(int hnsecs) @safe pure nothrow
 in
 {
     assert(hnsecs >= 0);
@@ -31081,7 +30964,7 @@ unittest
     Returns a FracSec corresponding to to the given ISO string of
     fractional seconds.
   +/
-static FracSec fracSecFromISOString(S)(in S isoString)
+static FracSec fracSecFromISOString(S)(in S isoString) @safe pure
     if(isSomeString!S)
 {
     if(isoString.empty)
