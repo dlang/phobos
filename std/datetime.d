@@ -29905,6 +29905,739 @@ unittest
 }
 
 
+/++
+    The given array of $(D char) or random-access range of $(D char) or
+    $(D ubyte) is expected to be in the format specified in
+    $(WEB http://tools.ietf.org/html/rfc5322, RFC 5322) section 3.3 with the
+    grammar rule $(I date-time). It is the date-time format commonly used in
+    internet messages such as e-mail and HTTP. The corresponding
+    $(LREF SysTime) will be returned.
+
+    RFC 822 was the original spec (hence the function's name), whereas RFC 5322
+    is the current spec.
+
+    The day of the week is ignored beyond verifying that it's a valid day of the
+    week, as the day of the week can be inferred from the date. It is not
+    checked whether the given day of the week matches the actual day of the week
+    of the given date (though it is technically invalid per the spec if the
+    day of the week doesn't match the actual day of the week of the given date).
+
+    If the time zone is $(D "-0000") (or considered to be equivalent to
+    $(D "-0000") by section 4.3 of the spec), a $(LREF SimpleTimeZone) with a
+    utc offset of $(D 0) is used rather than $(LREF UTC), whereas $(D "+0000")
+    uses $(LREF UTC).
+
+    Note that because $(LREF SysTime) does not currently support having a second
+    value of 60 (as is sometimes done for leap seconds), if the date-time value
+    does have a value of 60 for the seconds, it is treated as 59.
+
+    The one area in which this function violates RFC 5322 is that it accepts
+    $(D "\n") in folding whitespace in the place of $(D "\r\n"), because the
+    HTTP spec requires it.
+
+    Throws:
+        $(LREF DateTimeException) if the given string doesn't follow the grammar
+        for a date-time field or if the resulting $(LREF SysTime) is invalid.
+  +/
+SysTime parseRFC822DateTime()(in char[] value) @safe
+{
+    return parseRFC822DateTime(value.representation);
+}
+
+/++ Ditto +/
+SysTime parseRFC822DateTime(R)(R value) @safe
+    if(isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
+       (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+{
+    void stripAndCheckLen(R valueBefore, size_t minLen, size_t line = __LINE__)
+    {
+        value = _stripCFWS(valueBefore);
+        if(value.length < minLen)
+            throw new DateTimeException("date-time value too short", __FILE__, line);
+    }
+    stripAndCheckLen(value, "7Dec1200:00A".length);
+
+    static if(isArray!R && (is(ElementEncodingType!R == char) || is(ElementEncodingType!R == ubyte)))
+    {
+        static string sliceAsString(R str) @trusted
+        {
+            return cast(string)str;
+        }
+    }
+    else
+    {
+        char[4] temp;
+        char[] sliceAsString(R str) @trusted
+        {
+            size_t i = 0;
+            foreach(c; str)
+                temp[i++] = cast(char)c;
+            return temp[0 .. str.length];
+        }
+    }
+
+    // day-of-week
+    if(std.ascii.isAlpha(value[0]))
+    {
+        auto dowStr = sliceAsString(value[0 .. 3]);
+        switch(dowStr)
+        {
+            foreach(dow; EnumMembers!DayOfWeek)
+            {
+                enum dowC = capitalize(to!string(dow));
+                case dowC:
+                    goto afterDoW;
+            }
+            default: throw new DateTimeException(format("Invalid day-of-week: %s", dowStr));
+        }
+afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
+        if(value[0] != ',')
+            throw new DateTimeException("day-of-week missing comma");
+        stripAndCheckLen(value[1 .. value.length], "7Dec1200:00A".length);
+    }
+
+    // day
+    immutable digits = std.ascii.isDigit(value[1]) ? 2 : 1;
+    immutable day = _convDigits!short(value[0 .. digits]);
+    if(day == -1)
+        throw new DateTimeException("Invalid day");
+    stripAndCheckLen(value[digits .. value.length], "Dec1200:00A".length);
+
+    // month
+    Month month;
+    {
+        auto monStr = sliceAsString(value[0 .. 3]);
+        switch(monStr)
+        {
+            foreach(mon; EnumMembers!Month)
+            {
+                enum monC = capitalize(to!string(mon));
+                case monC:
+                {
+                    month = mon;
+                    goto afterMon;
+                }
+            }
+            default: throw new DateTimeException(format("Invalid month: %s", monStr));
+        }
+afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
+    }
+
+    // year
+    auto found = value[2 .. value.length].find!(not!(std.ascii.isDigit))();
+    size_t yearLen = value.length - found.length;
+    if(found.length == 0)
+        throw new DateTimeException("Invalid year");
+    if(found[0] == ':')
+        yearLen -= 2;
+    auto year = _convDigits!short(value[0 .. yearLen]);
+    if(year < 1900)
+    {
+        if(year == -1)
+            throw new DateTimeException("Invalid year");
+        if(yearLen < 4)
+        {
+            if(yearLen == 3)
+                year += 1900;
+            else if(yearLen == 2)
+                year += year < 50 ? 2000 : 1900;
+            else
+                throw new DateTimeException("Invalid year. Too few digits.");
+        }
+        else
+            throw new DateTimeException("Invalid year. Cannot be earlier than 1900.");
+    }
+    stripAndCheckLen(value[yearLen .. value.length], "00:00A".length);
+
+    // hour
+    immutable hour = _convDigits!short(value[0 .. 2]);
+    stripAndCheckLen(value[2 .. value.length], ":00A".length);
+    if(value[0] != ':')
+        throw new DateTimeException("Invalid hour");
+    stripAndCheckLen(value[1 .. value.length], "00A".length);
+
+    // minute
+    immutable minute = _convDigits!short(value[0 .. 2]);
+    stripAndCheckLen(value[2 .. value.length], "A".length);
+
+    // second
+    short second;
+    if(value[0] == ':')
+    {
+        stripAndCheckLen(value[1 .. value.length], "00A".length);
+        second = _convDigits!short(value[0 .. 2]);
+        // this is just if/until SysTime is sorted out to fully support leap seconds
+        if(second == 60)
+            second = 59;
+        stripAndCheckLen(value[2 .. value.length], "A".length);
+    }
+
+    immutable(TimeZone) parseTZ(int sign)
+    {
+        if(value.length < 5)
+            throw new DateTimeException("Invalid timezone");
+        immutable zoneHours = _convDigits!short(value[1 .. 3]);
+        immutable zoneMinutes = _convDigits!short(value[3 .. 5]);
+        if(zoneHours == -1 || zoneMinutes == -1 || zoneMinutes > 59)
+            throw new DateTimeException("Invalid timezone");
+        value = value[5 .. value.length];
+        immutable utcOffset = (dur!"hours"(zoneHours) + dur!"minutes"(zoneMinutes)) * sign;
+        if(utcOffset == Duration.zero)
+        {
+            return sign == 1 ? cast(immutable(TimeZone))UTC()
+                             : cast(immutable(TimeZone))new immutable SimpleTimeZone(Duration.zero);
+        }
+        return new immutable(SimpleTimeZone)(utcOffset);
+    }
+
+    // zone
+    Rebindable!(immutable TimeZone) tz;
+    if(value[0] == '-')
+        tz = parseTZ(-1);
+    else if(value[0] == '+')
+        tz = parseTZ(1);
+    else
+    {
+        // obs-zone
+        immutable tzLen = value.length - find(value, ' ', '\t', '(')[0].length;
+        switch(sliceAsString(value[0 .. tzLen <= 4 ? tzLen : 4]))
+        {
+            case "UT": case "GMT": tz = UTC(); break;
+            case "EST": tz = new immutable SimpleTimeZone(dur!"hours"(-5)); break;
+            case "EDT": tz = new immutable SimpleTimeZone(dur!"hours"(-4)); break;
+            case "CST": tz = new immutable SimpleTimeZone(dur!"hours"(-6)); break;
+            case "CDT": tz = new immutable SimpleTimeZone(dur!"hours"(-5)); break;
+            case "MST": tz = new immutable SimpleTimeZone(dur!"hours"(-7)); break;
+            case "MDT": tz = new immutable SimpleTimeZone(dur!"hours"(-6)); break;
+            case "PST": tz = new immutable SimpleTimeZone(dur!"hours"(-8)); break;
+            case "PDT": tz = new immutable SimpleTimeZone(dur!"hours"(-7)); break;
+            case "J": case "j": throw new DateTimeException("Invalid timezone");
+            default:
+            {
+                if(all!(std.ascii.isAlpha)(value[0 .. tzLen]))
+                {
+                    tz = new immutable SimpleTimeZone(Duration.zero);
+                    break;
+                }
+                throw new DateTimeException("Invalid timezone");
+            }
+        }
+        value = value[tzLen .. value.length];
+    }
+
+    // This is kind of arbitrary. Technically, nothing but CFWS is legal past
+    // the end of the timezone, but we don't want to be picky about that in a
+    // function that's just parsing rather than validating. So, the idea here is
+    // that if the next character is printable (and not part of CFWS), then it
+    // might be part of the timezone and thus affect what the timezone was
+    // supposed to be, so we'll throw, but otherwise, we'll just ignore it.
+    if(!value.empty && std.ascii.isPrintable(value[0]) && value[0] != ' ' && value[0] != '(')
+        throw new DateTimeException("Invalid timezone");
+
+    try
+        return SysTime(DateTime(year, month, day, hour, minute, second), tz);
+    catch(DateTimeException dte)
+        throw new DateTimeException("date-time format is correct, but the resulting SysTime is invalid.", dte);
+}
+
+///
+unittest
+{
+    auto tz = new immutable SimpleTimeZone(hours(-8));
+    assert(parseRFC822DateTime("Sat, 6 Jan 1990 12:14:19 -0800") ==
+           SysTime(DateTime(1990, 1, 6, 12, 14, 19), tz));
+
+    assert(parseRFC822DateTime("9 Jul 2002 13:11 +0000") ==
+           SysTime(DateTime(2002, 7, 9, 13, 11, 0), UTC()));
+
+    auto badStr = "29 Feb 2001 12:17:16 +0200";
+    assertThrown!DateTimeException(parseRFC822DateTime(badStr));
+}
+
+version(unittest) void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
+{
+    auto value = cr(str);
+    auto result = parseRFC822DateTime(value);
+    if(result != expected)
+        throw new AssertError(format("wrong result. expected [%s], actual[%s]", expected, result), __FILE__, line);
+}
+
+version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LINE__)
+{
+    try
+        parseRFC822DateTime(cr(str));
+    catch(DateTimeException)
+        return;
+    throw new AssertError("No DateTimeException was thrown", __FILE__, line);
+}
+
+unittest
+{
+    static struct Rand3Letters
+    {
+        enum empty = false;
+        @property auto front() { return _mon; }
+        void popFront()
+        {
+            import std.random;
+            alias std.ascii.letters letters;
+            _mon = rndGen().map!(a => letters[a % letters.length])().take(3).array().assumeUnique();
+        }
+        string _mon;
+        static auto start() { Rand3Letters retval; retval.popFront(); return retval; }
+    }
+
+    foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
+                           function(string a){return cast(ubyte[])a;},
+                           function(string a){return a;},
+                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    {
+        scope(failure) writeln(typeof(cr).stringof);
+        alias testParse822!cr test;
+        alias testBadParse822!cr testBad;
+
+        immutable std = DateTime(2012, 12, 21, 13, 14, 15);
+        immutable std2 = DateTime(2012, 12, 21, 13, 14, 0);
+        immutable dst = DateTime(1976, 7, 4, 5, 4, 22);
+        immutable dst2 = DateTime(1976, 7, 4, 5, 4, 0);
+
+        test("21 Dec 2012 13:14:15 +0000", SysTime(std, UTC()));
+        test("21 Dec 2012 13:14 +0000", SysTime(std2, UTC()));
+        test("Fri, 21 Dec 2012 13:14 +0000", SysTime(std2, UTC()));
+        test("Fri, 21 Dec 2012 13:14:15 +0000", SysTime(std, UTC()));
+
+        test("04 Jul 1976 05:04:22 +0000", SysTime(dst, UTC()));
+        test("04 Jul 1976 05:04 +0000", SysTime(dst2, UTC()));
+        test("Sun, 04 Jul 1976 05:04 +0000", SysTime(dst2, UTC()));
+        test("Sun, 04 Jul 1976 05:04:22 +0000", SysTime(dst, UTC()));
+
+        test("4 Jul 1976 05:04:22 +0000", SysTime(dst, UTC()));
+        test("4 Jul 1976 05:04 +0000", SysTime(dst2, UTC()));
+        test("Sun, 4 Jul 1976 05:04 +0000", SysTime(dst2, UTC()));
+        test("Sun, 4 Jul 1976 05:04:22 +0000", SysTime(dst, UTC()));
+
+        auto badTZ = new immutable SimpleTimeZone(Duration.zero);
+        test("21 Dec 2012 13:14:15 -0000", SysTime(std, badTZ));
+        test("21 Dec 2012 13:14 -0000", SysTime(std2, badTZ));
+        test("Fri, 21 Dec 2012 13:14 -0000", SysTime(std2, badTZ));
+        test("Fri, 21 Dec 2012 13:14:15 -0000", SysTime(std, badTZ));
+
+        test("04 Jul 1976 05:04:22 -0000", SysTime(dst, badTZ));
+        test("04 Jul 1976 05:04 -0000", SysTime(dst2, badTZ));
+        test("Sun, 04 Jul 1976 05:04 -0000", SysTime(dst2, badTZ));
+        test("Sun, 04 Jul 1976 05:04:22 -0000", SysTime(dst, badTZ));
+
+        test("4 Jul 1976 05:04:22 -0000", SysTime(dst, badTZ));
+        test("4 Jul 1976 05:04 -0000", SysTime(dst2, badTZ));
+        test("Sun, 4 Jul 1976 05:04 -0000", SysTime(dst2, badTZ));
+        test("Sun, 4 Jul 1976 05:04:22 -0000", SysTime(dst, badTZ));
+
+        auto pst = new immutable SimpleTimeZone(dur!"hours"(-8));
+        auto pdt = new immutable SimpleTimeZone(dur!"hours"(-7));
+        test("21 Dec 2012 13:14:15 -0800", SysTime(std, pst));
+        test("21 Dec 2012 13:14 -0800", SysTime(std2, pst));
+        test("Fri, 21 Dec 2012 13:14 -0800", SysTime(std2, pst));
+        test("Fri, 21 Dec 2012 13:14:15 -0800", SysTime(std, pst));
+
+        test("04 Jul 1976 05:04:22 -0700", SysTime(dst, pdt));
+        test("04 Jul 1976 05:04 -0700", SysTime(dst2, pdt));
+        test("Sun, 04 Jul 1976 05:04 -0700", SysTime(dst2, pdt));
+        test("Sun, 04 Jul 1976 05:04:22 -0700", SysTime(dst, pdt));
+
+        test("4 Jul 1976 05:04:22 -0700", SysTime(dst, pdt));
+        test("4 Jul 1976 05:04 -0700", SysTime(dst2, pdt));
+        test("Sun, 4 Jul 1976 05:04 -0700", SysTime(dst2, pdt));
+        test("Sun, 4 Jul 1976 05:04:22 -0700", SysTime(dst, pdt));
+
+        auto cet = new immutable SimpleTimeZone(dur!"hours"(1));
+        auto cest = new immutable SimpleTimeZone(dur!"hours"(2));
+        test("21 Dec 2012 13:14:15 +0100", SysTime(std, cet));
+        test("21 Dec 2012 13:14 +0100", SysTime(std2, cet));
+        test("Fri, 21 Dec 2012 13:14 +0100", SysTime(std2, cet));
+        test("Fri, 21 Dec 2012 13:14:15 +0100", SysTime(std, cet));
+
+        test("04 Jul 1976 05:04:22 +0200", SysTime(dst, cest));
+        test("04 Jul 1976 05:04 +0200", SysTime(dst2, cest));
+        test("Sun, 04 Jul 1976 05:04 +0200", SysTime(dst2, cest));
+        test("Sun, 04 Jul 1976 05:04:22 +0200", SysTime(dst, cest));
+
+        test("4 Jul 1976 05:04:22 +0200", SysTime(dst, cest));
+        test("4 Jul 1976 05:04 +0200", SysTime(dst2, cest));
+        test("Sun, 4 Jul 1976 05:04 +0200", SysTime(dst2, cest));
+        test("Sun, 4 Jul 1976 05:04:22 +0200", SysTime(dst, cest));
+
+        // dst and std times are switched in the Southern Hemisphere which is why the
+        // time zone names and DateTime variables don't match.
+        auto cstStd = new immutable SimpleTimeZone(dur!"hours"(9) + dur!"minutes"(30));
+        auto cstDST = new immutable SimpleTimeZone(dur!"hours"(10) + dur!"minutes"(30));
+        test("21 Dec 2012 13:14:15 +1030", SysTime(std, cstDST));
+        test("21 Dec 2012 13:14 +1030", SysTime(std2, cstDST));
+        test("Fri, 21 Dec 2012 13:14 +1030", SysTime(std2, cstDST));
+        test("Fri, 21 Dec 2012 13:14:15 +1030", SysTime(std, cstDST));
+
+        test("04 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+        test("04 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
+        test("Sun, 04 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
+        test("Sun, 04 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+
+        test("4 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+        test("4 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
+        test("Sun, 4 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
+        test("Sun, 4 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+
+        foreach(int i, mon; _monthNames)
+        {
+            test(format("17 %s 2012 00:05:02 +0000", mon), SysTime(DateTime(2012, i + 1, 17, 0, 5, 2), UTC()));
+            test(format("17 %s 2012 00:05 +0000", mon), SysTime(DateTime(2012, i + 1, 17, 0, 5, 0), UTC()));
+        }
+
+        import std.uni;
+        foreach(mon; chain(_monthNames[].map!(a => toLower(a))(),
+                           _monthNames[].map!(a => toUpper(a))(),
+                           ["Jam", "Jen", "Fec", "Fdb", "Mas", "Mbr", "Aps", "Aqr", "Mai", "Miy",
+                            "Jum", "Jbn", "Jup", "Jal", "Aur", "Apg", "Sem", "Sap", "Ocm", "Odt",
+                            "Nom", "Nav", "Dem", "Dac"],
+                           Rand3Letters.start().take(20)))
+        {
+            scope(failure) writefln("Month: %s", mon);
+            testBad(format("17 %s 2012 00:05:02 +0000", mon));
+            testBad(format("17 %s 2012 00:05 +0000", mon));
+        }
+
+        immutable string[7] daysOfWeekNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        {
+            auto start = SysTime(DateTime(2012, 11, 11, 9, 42, 0), UTC());
+            int day = 11;
+
+            foreach(int i, dow; daysOfWeekNames)
+            {
+                auto curr = start + dur!"days"(i);
+                test(format("%s, %s Nov 2012 09:42:00 +0000", dow, day), curr);
+                test(format("%s, %s Nov 2012 09:42 +0000", dow, day++), curr);
+
+                // Whether the day of the week matches the date is ignored.
+                test(format("%s, 11 Nov 2012 09:42:00 +0000", dow), start);
+                test(format("%s, 11 Nov 2012 09:42 +0000", dow), start);
+            }
+        }
+
+        foreach(dow; chain(daysOfWeekNames[].map!(a => toLower(a))(),
+                           daysOfWeekNames[].map!(a => toUpper(a))(),
+                           ["Sum", "Spn", "Mom", "Man", "Tuf", "Tae", "Wem", "Wdd", "The", "Tur",
+                            "Fro", "Fai", "San", "Sut"],
+                           Rand3Letters.start().take(20)))
+        {
+            scope(failure) writefln("Day of Week: %s", dow);
+            testBad(format("%s, 11 Nov 2012 09:42:00 +0000", dow));
+            testBad(format("%s, 11 Nov 2012 09:42 +0000", dow));
+        }
+
+        testBad("31 Dec 1899 23:59:59 +0000");
+        test("01 Jan 1900 00:00:00 +0000", SysTime(Date(1900, 1, 1), UTC()));
+        test("01 Jan 1900 00:00:00 -0000", SysTime(Date(1900, 1, 1),
+                                                   new immutable SimpleTimeZone(Duration.zero)));
+        test("01 Jan 1900 00:00:00 -0700", SysTime(Date(1900, 1, 1),
+                                                   new immutable SimpleTimeZone(dur!"hours"(-7))));
+
+        {
+            auto st1 = SysTime(Date(1900, 1, 1), UTC());
+            auto st2 = SysTime(Date(1900, 1, 1), new immutable SimpleTimeZone(dur!"hours"(-11)));
+            foreach(i; 1900 .. 2102)
+            {
+                test(format("1 Jan %05d 00:00 +0000", i), st1);
+                test(format("1 Jan %05d 00:00 -1100", i), st2);
+                st1.add!"years"(1);
+                st2.add!"years"(1);
+            }
+            st1.year = 9998;
+            st2.year = 9998;
+            foreach(i; 9998 .. 11_002)
+            {
+                test(format("1 Jan %05d 00:00 +0000", i), st1);
+                test(format("1 Jan %05d 00:00 -1100", i), st2);
+                st1.add!"years"(1);
+                st2.add!"years"(1);
+            }
+        }
+
+        testBad("12 Feb 1907 23:17:09 0000");
+        testBad("12 Feb 1907 23:17:09 +000");
+        testBad("12 Feb 1907 23:17:09 -000");
+        testBad("12 Feb 1907 23:17:09 +00000");
+        testBad("12 Feb 1907 23:17:09 -00000");
+        testBad("12 Feb 1907 23:17:09 +A");
+        testBad("12 Feb 1907 23:17:09 +PST");
+        testBad("12 Feb 1907 23:17:09 -A");
+        testBad("12 Feb 1907 23:17:09 -PST");
+
+        // test trailing stuff that gets ignored
+        {
+            foreach(c; chain(iota(0, 33), ['('], iota(127, ubyte.max + 1)))
+            {
+                scope(failure) writefln("c: %d", c);
+                test(format("21 Dec 2012 13:14:15 +0000%c", cast(char)c), SysTime(std, UTC()));
+                test(format("21 Dec 2012 13:14:15 +0000%c  ", cast(char)c), SysTime(std, UTC()));
+                test(format("21 Dec 2012 13:14:15 +0000%chello", cast(char)c), SysTime(std, UTC()));
+            }
+        }
+
+        // test trailing stuff that doesn't get ignored
+        {
+            foreach(c; chain(iota(33, '('), iota('(' + 1, 127)))
+            {
+                scope(failure) writefln("c: %d", c);
+                testBad(format("21 Dec 2012 13:14:15 +0000%c", cast(char)c));
+                testBad(format("21 Dec 2012 13:14:15 +0000%c   ", cast(char)c));
+                testBad(format("21 Dec 2012 13:14:15 +0000%chello", cast(char)c));
+            }
+        }
+
+        testBad("32 Jan 2012 12:13:14 -0800");
+        testBad("31 Jan 2012 24:13:14 -0800");
+        testBad("31 Jan 2012 12:60:14 -0800");
+        testBad("31 Jan 2012 12:13:61 -0800");
+        testBad("31 Jan 2012 12:13:14 -0860");
+        test("31 Jan 2012 12:13:14 -0859",
+             SysTime(DateTime(2012, 1, 31, 12, 13, 14),
+                     new immutable SimpleTimeZone(dur!"hours"(-8) + dur!"minutes"(-59))));
+
+        // leap-seconds
+        test("21 Dec 2012 15:59:60 -0800", SysTime(DateTime(2012, 12, 21, 15, 59, 59), pst));
+
+        // FWS
+        test("Sun,4 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
+        test("Sun,4 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+        test("Sun,4 Jul 1976 05:04 +0930 (foo)", SysTime(dst2, cstStd));
+        test("Sun,4 Jul 1976 05:04:22 +0930 (foo)", SysTime(dst, cstStd));
+        test("Sun,4  \r\n  Jul  \r\n  1976  \r\n  05:04  \r\n  +0930  \r\n  (foo)", SysTime(dst2, cstStd));
+        test("Sun,4  \r\n  Jul  \r\n  1976  \r\n  05:04:22  \r\n  +0930  \r\n  (foo)", SysTime(dst, cstStd));
+
+        auto str = "01 Jan 2012 12:13:14 -0800 ";
+        test(str, SysTime(DateTime(2012, 1, 1, 12, 13, 14), new immutable SimpleTimeZone(hours(-8))));
+        foreach(i; 0 .. str.length)
+        {
+            auto currStr = str.dup;
+            currStr[i] = 'x';
+            scope(failure) writefln("failed: %s", currStr);
+            testBad(cast(string)currStr);
+        }
+        foreach(i; 2 .. str.length)
+        {
+            auto currStr = str[0 .. $ - i];
+            scope(failure) writefln("failed: %s", currStr);
+            testBad(cast(string)currStr);
+            testBad((cast(string)currStr) ~ "                                    ");
+        }
+    }
+}
+
+// Obsolete Format per section 4.3 of RFC 5322.
+unittest
+{
+    auto std = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
+    auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
+    auto std3 = SysTime(DateTime(1912, 12, 21, 13, 14, 15), UTC());
+    auto std4 = SysTime(DateTime(1912, 12, 21, 13, 14, 0), UTC());
+    auto dst = SysTime(DateTime(1976, 7, 4, 5, 4, 22), UTC());
+    auto dst2 = SysTime(DateTime(1976, 7, 4, 5, 4, 0), UTC());
+    auto tooLate = SysTime(Date(10_000, 1, 1), UTC());
+    auto tooLate2 = SysTime(DateTime(12_007, 12, 31, 12, 22, 19), UTC());
+
+    foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
+                           function(string a){return cast(ubyte[])a;},
+                           function(string a){return a;},
+                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    {
+        scope(failure) writeln(typeof(cr).stringof);
+        alias testParse822!cr test;
+        {
+            auto list = ["", " ", " \r\n\t", "\t\r\n (hello world( frien(dog)) silly \r\n )  \t\t \r\n ()",
+                         " \n ", "\t\n\t", " \n\t (foo) \n (bar) \r\n (baz) \n "];
+
+            foreach(i, cfws; list)
+            {
+                scope(failure) writefln("i: %s", i);
+
+                test(format("%1$s21%1$sDec%1$s2012%1$s13:14:15%1$s+0000%1$s", cfws), std);
+                test(format("%1$s21%1$sDec%1$s2012%1$s13:14%1$s+0000%1$s", cfws), std2);
+                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s2012%1$s13:14%1$s+0000%1$s", cfws), std2);
+                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s2012%1$s13:14:15%1$s+0000%1$s", cfws), std);
+
+                test(format("%1$s04%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s04%1$sJul%1$s1976%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s1976%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s1976%1$s05:04:22 +0000%1$s", cfws), dst);
+
+                test(format("%1$s4%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s4%1$sJul%1$s1976%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s1976%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+
+                test(format("%1$s21%1$sDec%1$s12%1$s13:14:15%1$s+0000%1$s", cfws), std);
+                test(format("%1$s21%1$sDec%1$s12%1$s13:14%1$s+0000%1$s", cfws), std2);
+                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s12%1$s13:14%1$s+0000%1$s", cfws), std2);
+                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s12%1$s13:14:15%1$s+0000%1$s", cfws), std);
+
+                test(format("%1$s04%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s04%1$sJul%1$s76%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s76%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+
+                test(format("%1$s4%1$sJul%1$s76 05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s4%1$sJul%1$s76 05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s76%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+
+                test(format("%1$s21%1$sDec%1$s012%1$s13:14:15%1$s+0000%1$s", cfws), std3);
+                test(format("%1$s21%1$sDec%1$s012%1$s13:14%1$s+0000%1$s", cfws), std4);
+                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s012%1$s13:14%1$s+0000%1$s", cfws), std4);
+                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s012%1$s13:14:15%1$s+0000%1$s", cfws), std3);
+
+                test(format("%1$s04%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s04%1$sJul%1$s076%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s076%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+
+                test(format("%1$s4%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s4%1$sJul%1$s076%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s076%1$s05:04%1$s+0000%1$s", cfws), dst2);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+
+                test(format("%1$s1%1$sJan%1$s10000%1$s00:00:00%1$s+0000%1$s", cfws), tooLate);
+                test(format("%1$s31%1$sDec%1$s12007%1$s12:22:19%1$s+0000%1$s", cfws), tooLate2);
+                test(format("%1$sSat%1$s,%1$s1%1$sJan%1$s10000%1$s00:00:00%1$s+0000%1$s", cfws), tooLate);
+                test(format("%1$sSun%1$s,%1$s31%1$sDec%1$s12007%1$s12:22:19%1$s+0000%1$s", cfws), tooLate2);
+            }
+        }
+
+        // test years of 1, 2, and 3 digits.
+        {
+            auto st1 = SysTime(Date(2000, 1, 1), UTC());
+            auto st2 = SysTime(Date(2000, 1, 1), new immutable SimpleTimeZone(dur!"hours"(-12)));
+            foreach(i; 0 .. 50)
+            {
+                test(format("1 Jan %02d 00:00 GMT", i), st1);
+                test(format("1 Jan %02d 00:00 -1200", i), st2);
+                st1.add!"years"(1);
+                st2.add!"years"(1);
+            }
+        }
+
+        {
+            auto st1 = SysTime(Date(1950, 1, 1), UTC());
+            auto st2 = SysTime(Date(1950, 1, 1), new immutable SimpleTimeZone(dur!"hours"(-12)));
+            foreach(i; 50 .. 100)
+            {
+                test(format("1 Jan %02d 00:00 GMT", i), st1);
+                test(format("1 Jan %02d 00:00 -1200", i), st2);
+                st1.add!"years"(1);
+                st2.add!"years"(1);
+            }
+        }
+
+        {
+            auto st1 = SysTime(Date(1900, 1, 1), UTC());
+            auto st2 = SysTime(Date(1900, 1, 1), new immutable SimpleTimeZone(dur!"hours"(-11)));
+            foreach(i; 0 .. 1000)
+            {
+                test(format("1 Jan %03d 00:00 GMT", i), st1);
+                test(format("1 Jan %03d 00:00 -1100", i), st2);
+                st1.add!"years"(1);
+                st2.add!"years"(1);
+            }
+        }
+
+        foreach(i; 0 .. 10)
+        {
+            auto str1 = cr(format("1 Jan %d 00:00 GMT", i));
+            auto str2 = cr(format("1 Jan %d 00:00 -1200", i));
+            assertThrown!DateTimeException(parseRFC822DateTime(str1));
+            assertThrown!DateTimeException(parseRFC822DateTime(str1));
+        }
+
+        // test time zones
+        {
+            auto dt = DateTime(1982, 05, 03, 12, 22, 04);
+            test("Wed, 03 May 1982 12:22:04 UT", SysTime(dt, UTC()));
+            test("Wed, 03 May 1982 12:22:04 GMT", SysTime(dt, UTC()));
+            test("Wed, 03 May 1982 12:22:04 EST", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-5))));
+            test("Wed, 03 May 1982 12:22:04 EDT", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-4))));
+            test("Wed, 03 May 1982 12:22:04 CST", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-6))));
+            test("Wed, 03 May 1982 12:22:04 CDT", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-5))));
+            test("Wed, 03 May 1982 12:22:04 MST", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-7))));
+            test("Wed, 03 May 1982 12:22:04 MDT", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-6))));
+            test("Wed, 03 May 1982 12:22:04 PST", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-8))));
+            test("Wed, 03 May 1982 12:22:04 PDT", SysTime(dt, new immutable SimpleTimeZone(dur!"hours"(-7))));
+
+            auto badTZ = new immutable SimpleTimeZone(Duration.zero);
+            foreach(dchar c; filter!(a => a != 'j' && a != 'J')(letters))
+            {
+                scope(failure) writefln("c: %s", c);
+                test(format("Wed, 03 May 1982 12:22:04 %s", c), SysTime(dt, badTZ));
+                test(format("Wed, 03 May 1982 12:22:04%s", c), SysTime(dt, badTZ));
+            }
+
+            foreach(dchar c; ['j', 'J'])
+            {
+                scope(failure) writefln("c: %s", c);
+                assertThrown!DateTimeException(parseRFC822DateTime(cr(format("Wed, 03 May 1982 12:22:04 %s", c))));
+                assertThrown!DateTimeException(parseRFC822DateTime(cr(format("Wed, 03 May 1982 12:22:04%s", c))));
+            }
+
+            foreach(string s; ["AAA", "GQW", "DDT", "PDA", "GT", "GM"])
+            {
+                scope(failure) writefln("s: %s", s);
+                test(format("Wed, 03 May 1982 12:22:04 %s", s), SysTime(dt, badTZ));
+            }
+
+            // test trailing stuff that gets ignored
+            {
+                foreach(c; chain(iota(0, 33), ['('], iota(127, ubyte.max + 1)))
+                {
+                    scope(failure) writefln("c: %d", c);
+                    test(format("21Dec1213:14:15+0000%c", cast(char)c), std);
+                    test(format("21Dec1213:14:15+0000%c  ", cast(char)c), std);
+                    test(format("21Dec1213:14:15+0000%chello", cast(char)c), std);
+                }
+            }
+
+            // test trailing stuff that doesn't get ignored
+            {
+                foreach(c; chain(iota(33, '('), iota('(' + 1, 127)))
+                {
+                    scope(failure) writefln("c: %d", c);
+                    assertThrown!DateTimeException(parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%c", cast(char)c))));
+                    assertThrown!DateTimeException(parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%c  ", cast(char)c))));
+                    assertThrown!DateTimeException(parseRFC822DateTime(cr(format("21Dec1213:14:15+0000%chello", cast(char)c))));
+                }
+            }
+        }
+
+        // test that the checks for minimum length work correctly and avoid
+        // any RangeErrors.
+        test("7Dec1200:00A", SysTime(DateTime(2012, 12, 7, 00, 00, 00),
+                                     new immutable SimpleTimeZone(Duration.zero)));
+        test("Fri,7Dec1200:00A", SysTime(DateTime(2012, 12, 7, 00, 00, 00),
+                                         new immutable SimpleTimeZone(Duration.zero)));
+        test("7Dec1200:00:00A", SysTime(DateTime(2012, 12, 7, 00, 00, 00),
+                                        new immutable SimpleTimeZone(Duration.zero)));
+        test("Fri,7Dec1200:00:00A", SysTime(DateTime(2012, 12, 7, 00, 00, 00),
+                                            new immutable SimpleTimeZone(Duration.zero)));
+
+        auto tooShortMsg = collectExceptionMsg!DateTimeException(parseRFC822DateTime(""));
+        foreach(str; ["Fri,7Dec1200:00:00", "7Dec1200:00:00"])
+        {
+            foreach(i; 0 .. str.length)
+            {
+                auto value = str[0 .. $ - i];
+                scope(failure) writeln(value);
+                assert(collectExceptionMsg!DateTimeException(parseRFC822DateTime(value)) == tooShortMsg);
+            }
+        }
+    }
+}
+
 
 /++
     Whether all of the given strings are valid units of time.
@@ -30483,7 +31216,7 @@ immutable int[13] lastDayLeap = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 30
 /+
     Array of the short (three letter) names of each month.
   +/
-immutable string[12] monthNames = [ "Jan",
+immutable string[12] _monthNames = ["Jan",
                                     "Feb",
                                     "Mar",
                                     "Apr",
@@ -30494,7 +31227,7 @@ immutable string[12] monthNames = [ "Jan",
                                     "Sep",
                                     "Oct",
                                     "Nov",
-                                    "Dec" ];
+                                    "Dec"];
 
 
 //==============================================================================
@@ -30777,7 +31510,7 @@ unittest
 string monthToString(Month month) @safe pure
 {
     assert(month >= Month.jan && month <= Month.dec, format("Invalid month: %s", month));
-    return monthNames[month - Month.jan];
+    return _monthNames[month - Month.jan];
 }
 
 unittest
@@ -31041,6 +31774,219 @@ unittest
     assert(fracSecFromISOString(".00999") == FracSec.from!"hnsecs"(99_900));
     assert(fracSecFromISOString(".0999000") == FracSec.from!"hnsecs"(999_000));
     assert(fracSecFromISOString(".0999") == FracSec.from!"hnsecs"(999_000));
+}
+
+
+/+
+    Strips what RFC 5322, section 3.2.2 refers to as CFWS from the left-hand
+    side of the given range (it strips comments delimited by $(D '(') and
+    $(D ')') as well as folding whitespace).
+
+    It is assumed that the given range contains the value of a header field and
+    no terminating CRLF for the line (though the CRLF for folding whitespace is
+    of course expected and stripped) and thus that the only case of CR or LF is
+    in folding whitespace.
+
+    If a comment does not terminate correctly (e.g. mismatched parens) or if the
+    the FWS is malformed, then the range will be empty when stripCWFS is done.
+    However, only minimal validation of the content is done (e.g. quoted pairs
+    within a comment aren't validated beyond \$LPAREN or \$RPAREN, because
+    they're inside a comment, and thus their value doesn't matter anyway). It's
+    only when the content does not conform to the grammar rules for FWS and thus
+    literally cannot be parsed that content is considered invalid, and an empty
+    range is returned.
+
+    Note that _stripCFWS is eager, not lazy. It does not create a new range.
+    Rather, it pops off the CFWS from the range and returns it.
+  +/
+R _stripCFWS(R)(R range)
+    if(isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
+       (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+{
+    immutable e = range.length;
+    outer: for(size_t i = 0; i < e; )
+    {
+        switch(range[i])
+        {
+            case ' ': case '\t':
+            {
+                ++i;
+                break;
+            }
+            case '\r':
+            {
+                if(i + 2 < e && range[i + 1] == '\n' && (range[i + 2] == ' ' || range[i + 2] == '\t'))
+                {
+                    i += 3;
+                    break;
+                }
+                break outer;
+            }
+            case '\n':
+            {
+                if(i + 1 < e && (range[i + 1] == ' ' || range[i + 1] == '\t'))
+                {
+                    i += 2;
+                    break;
+                }
+                break outer;
+            }
+            case '(':
+            {
+                ++i;
+                size_t commentLevel = 1;
+                while(i < e)
+                {
+                    if(range[i] == '(')
+                        ++commentLevel;
+                    else if(range[i] == ')')
+                    {
+                        ++i;
+                        if(--commentLevel == 0)
+                            continue outer;
+                        continue;
+                    }
+                    else if(range[i] == '\\')
+                    {
+                        if(++i == e)
+                            break outer;
+                    }
+                    ++i;
+                }
+                break outer;
+            }
+            default: return range[i .. e];
+        }
+    }
+    return range[e .. e];
+}
+
+unittest
+{
+    foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
+                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    {
+        scope(failure) writeln(typeof(cr).stringof);
+
+        assert(_stripCFWS(cr("")).empty);
+        assert(_stripCFWS(cr("\r")).empty);
+        assert(_stripCFWS(cr("\r\n")).empty);
+        assert(_stripCFWS(cr("\r\n ")).empty);
+        assert(_stripCFWS(cr(" \t\r\n")).empty);
+        assert(equal(_stripCFWS(cr(" \t\r\n hello")), cr("hello")));
+        assert(_stripCFWS(cr(" \t\r\nhello")).empty);
+        assert(_stripCFWS(cr(" \t\r\n\v")).empty);
+        assert(equal(_stripCFWS(cr("\v \t\r\n\v")), cr("\v \t\r\n\v")));
+        assert(_stripCFWS(cr("()")).empty);
+        assert(_stripCFWS(cr("(hello world)")).empty);
+        assert(_stripCFWS(cr("(hello world)(hello world)")).empty);
+        assert(_stripCFWS(cr("(hello world\r\n foo\r where's\nwaldo)")).empty);
+        assert(_stripCFWS(cr(" \t (hello \tworld\r\n foo\r where's\nwaldo)\t\t ")).empty);
+        assert(_stripCFWS(cr("      ")).empty);
+        assert(_stripCFWS(cr("\t\t\t")).empty);
+        assert(_stripCFWS(cr("\t \r\n\r \n")).empty);
+        assert(_stripCFWS(cr("(hello world) (can't find waldo) (he's lost)")).empty);
+        assert(_stripCFWS(cr("(hello\\) world) (can't \\(find waldo) (he's \\(\\)lost)")).empty);
+        assert(_stripCFWS(cr("(((((")).empty);
+        assert(_stripCFWS(cr("(((()))")).empty);
+        assert(_stripCFWS(cr("(((())))")).empty);
+        assert(equal(_stripCFWS(cr("(((()))))")), cr(")")));
+        assert(equal(_stripCFWS(cr(")))))")), cr(")))))")));
+        assert(equal(_stripCFWS(cr("()))))")), cr("))))")));
+        assert(equal(_stripCFWS(cr(" hello hello ")), cr("hello hello ")));
+        assert(equal(_stripCFWS(cr("\thello (world)")), cr("hello (world)")));
+        assert(equal(_stripCFWS(cr(" \r\n \\((\\))  foo")), cr("\\((\\))  foo")));
+        assert(equal(_stripCFWS(cr(" \r\n (\\((\\)))  foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" \r\n (\\(()))  foo")), cr(")  foo")));
+        assert(_stripCFWS(cr(" \r\n (((\\)))  foo")).empty);
+
+        assert(_stripCFWS(cr("(hello)(hello)")).empty);
+        assert(_stripCFWS(cr(" \r\n (hello)\r\n (hello)")).empty);
+        assert(_stripCFWS(cr(" \r\n (hello) \r\n (hello) \r\n ")).empty);
+        assert(_stripCFWS(cr("\t\t\t\t(hello)\t\t\t\t(hello)\t\t\t\t")).empty);
+        assert(equal(_stripCFWS(cr(" \r\n (hello)\r\n (hello) \r\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \r\n (hello) \r\n (hello) \r\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr("\t\r\n\t(hello)\r\n\t(hello)\t\r\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr("\t\r\n\t(hello)\t\r\n\t(hello)\t\r\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \r\n (hello) \r\n \r\n (hello) \r\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \r\n (hello) \r\n (hello) \r\n \r\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \r\n \r\n (hello)\t\r\n (hello) \r\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \r\n\t\r\n\t(hello)\t\r\n (hello) \r\n hello")), cr("hello")));
+
+        assert(equal(_stripCFWS(cr(" (\r\n ( \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" (\t\r\n ( \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" (\r\n\t( \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n (\t\r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n (\r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n (\r\n\t) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n )\t\r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n )\r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n ) \r\n) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n ) \r\n\t) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n ) \r\n ) \r\n foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n ) \r\n )\t\r\n foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n ( \r\n ) \r\n )\r\n foo")), cr("foo")));
+
+        assert(equal(_stripCFWS(cr(" ( \r\n \r\n ( \r\n \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n \r\n ( \r\n \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" (\t\r\n \r\n ( \r\n \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" (\r\n \r\n\t( \r\n \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" (\r\n \r\n( \r\n \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" (\r\n \r\n ( \r\n \r\n\t) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" (\r\n \r\n ( \r\n \r\n )\t\r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" (\r\n \r\n ( \r\n \r\n )\r\n ) foo")), cr("foo")));
+
+        assert(equal(_stripCFWS(cr(" ( \r\n bar \r\n ( \r\n bar \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n () \r\n ( \r\n () \r\n ) \r\n ) foo")), cr("foo")));
+        assert(equal(_stripCFWS(cr(" ( \r\n \\\\ \r\n ( \r\n \\\\ \r\n ) \r\n ) foo")), cr("foo")));
+
+        assert(_stripCFWS(cr("(hello)(hello)")).empty);
+        assert(_stripCFWS(cr(" \n (hello)\n (hello) \n ")).empty);
+        assert(_stripCFWS(cr(" \n (hello) \n (hello) \n ")).empty);
+        assert(equal(_stripCFWS(cr(" \n (hello)\n (hello) \n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \n (hello) \n (hello) \n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr("\t\n\t(hello)\n\t(hello)\t\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr("\t\n\t(hello)\t\n\t(hello)\t\n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \n (hello) \n \n (hello) \n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \n (hello) \n (hello) \n \n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \n \n (hello)\t\n (hello) \n hello")), cr("hello")));
+        assert(equal(_stripCFWS(cr(" \n\t\n\t(hello)\t\n (hello) \n hello")), cr("hello")));
+    }
+}
+
+// This is so that we don't have to worry about std.conv.to throwing. It also
+// doesn't have to worry about quite as many cases as std.conv.to, since it
+// doesn't have to worry about a sign on the value or about whether it fits.
+T _convDigits(T, R)(R str)
+    if(isIntegral!T && isSigned!T) // The constraints on R were already covered by parseRFC822DateTime.
+{
+    assert(!str.empty);
+    T num = 0;
+    foreach(i; 0 .. str.length)
+    {
+        if(i != 0)
+            num *= 10;
+        if(!std.ascii.isDigit(str[i]))
+            return -1;
+        num += str[i] - '0';
+    }
+    return num;
+}
+
+unittest
+{
+    foreach(i; chain(iota(0, 101), [250, 999, 1000, 1001, 2345, 9999]))
+    {
+        scope(failure) writeln(i);
+        assert(_convDigits!int(to!string(i)) == i);
+    }
+    foreach(str; ["-42", "+42", "1a", "1 ", " ", " 42 "])
+    {
+        scope(failure) writeln(str);
+        assert(_convDigits!int(str) == -1);
+    }
 }
 
 
