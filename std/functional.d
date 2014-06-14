@@ -81,7 +81,7 @@ unittest
 Transforms a string representing an expression into a Boolean binary
 predicate. The string must use symbol names $(D a) and $(D b) as the
 compared elements.  Setting $(D parm1Name) and $(D parm2Name) changes the
-symbol namesto use.
+symbol names to use.
 If $(D fun) is not a string, $(D binaryFun) aliases itself away to
 $(D fun).
 
