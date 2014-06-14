@@ -324,12 +324,10 @@ struct RBNode(V)
         // remove this node from the tree, fixing the color if necessary.
         //
         Node x;
-        Node ret;
-        if(_left is null || _right is null)
-        {
-            ret = next;
-        }
-        else
+        Node ret = next;
+
+        // if this node has 2 children
+        if (_left !is null && _right !is null)
         {
             //
             // normally, we can just swap this node's and y's value, but
@@ -339,7 +337,7 @@ struct RBNode(V)
             // struct, which takes a long time to copy.
             //
             Node yp, yl, yr;
-            Node y = next;
+            Node y = ret; // y = next
             yp = y._parent;
             yl = y._left;
             yr = y._right;
@@ -376,11 +374,6 @@ struct RBNode(V)
                     yp.right = &this;
             }
             color = yc;
-
-            //
-            // set return value
-            //
-            ret = y;
         }
 
         // if this has less than 2 children, remove it
@@ -389,13 +382,12 @@ struct RBNode(V)
         else
             x = _right;
 
-        // remove this from the tree at the end of the procedure
-        bool removeThis = false;
+        bool deferedUnlink = false;
         if(x is null)
         {
-            // pretend this is a null node, remove this on finishing
+            // pretend this is a null node, defer unlinking the node
             x = &this;
-            removeThis = true;
+            deferedUnlink = true;
         }
         else if(isLeftNode)
             _parent.left = x;
@@ -486,10 +478,10 @@ struct RBNode(V)
             x.color = Node.Color.Black;
         }
 
-        if(removeThis)
+        if(deferedUnlink)
         {
             //
-            // clear this node out of the tree
+            // unlink this node from the tree
             //
             if(isLeftNode)
                 _parent.left = null;
