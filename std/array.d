@@ -2985,9 +2985,9 @@ unittest
     //static assert(!is(typeof(Appender!string(cc))));
 
     //This should always work:
-    appender!string(null);
-    appender!(const(char)[])(null);
-    appender!(char[])(null);
+    {auto app = appender!string(null);}
+    {auto app = appender!(const(char)[])(null);}
+    {auto app = appender!(char[])(null);}
 }
 
 unittest //Test large allocations (for GC.extend)

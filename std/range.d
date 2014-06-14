@@ -2052,7 +2052,7 @@ unittest
     test([ 1, 2, 3, 4, 5, 6 ], [ 6, 5, 4, 3, 2, 1 ]);
 
    immutable foo = [1,2,3].idup;
-   retro(foo);
+   auto r = retro(foo);
 }
 
 unittest
@@ -9210,12 +9210,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
     else
     {
-        private static void _testSave(R)(R* range)
-        {
-            (*range).save;
-        }
-
-        static if(isSafe!(_testSave!R))
+        static if(isSafe!((R* r) => (*r).save))
         {
             @property auto save() @trusted
             {

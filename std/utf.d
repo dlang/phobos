@@ -507,10 +507,10 @@ uint stride(S)(auto ref S str)
     foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!({ stride(str, 0); }));
-        static assert(isSafe!({ stride(str);    }));
-        static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!(() => stride(str, 0)));
+        static assert(isSafe!(() => stride(str)   ));
+        static assert((functionAttributes!(() => stride(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
 }
@@ -623,10 +623,10 @@ unittest
     foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!({ strideBack(str, 0); }));
-        static assert(isSafe!({ strideBack(str);    }));
-        static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!(() => strideBack(str, 0)));
+        static assert(isSafe!(() => strideBack(str)   ));
+        static assert((functionAttributes!(() => strideBack(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => strideBack(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
 }
@@ -710,10 +710,10 @@ unittest
     foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!({ stride(str, 0); }));
-        static assert(isSafe!({ stride(str);    }));
-        static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!(() => stride(str, 0)));
+        static assert(isSafe!(() => stride(str)   ));
+        static assert((functionAttributes!(() => stride(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
 }
@@ -807,10 +807,10 @@ unittest
     foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!({ strideBack(str, 0); }));
-        static assert(isSafe!({ strideBack(str);    }));
-        static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!(() => strideBack(str, 0)));
+        static assert(isSafe!(() => strideBack(str)   ));
+        static assert((functionAttributes!(() => strideBack(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => strideBack(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
 }
