@@ -585,7 +585,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 }
                 else
                 {
-                    foreach (elem; val.splitter(arraySep).map!(a => to!E(a)))
+                    foreach (elem; val.splitter(arraySep).map!(a => to!E(a))())
                         *receiver ~= elem;
                 }
             }
