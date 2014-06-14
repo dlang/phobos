@@ -433,11 +433,11 @@ unittest
 
     try { s.a = uint.max; assert(0); }
     catch (AssertError ae)
-    { assert(ae.msg == "Value is greater than the maximum value of bitfield 'a'", ae.msg); }
+    { assert(ae.msg == "assert(v <= 63u) : Value is greater than the maximum value of bitfield 'a'", ae.msg); }
 
     try { s.b = int.min;  assert(0); }
     catch (AssertError ae)
-    { assert(ae.msg == "Value is smaller than the minimum value of bitfield 'b'", ae.msg); }
+    { assert(ae.msg == "assert(v >= -2) : Value is smaller than the minimum value of bitfield 'b'", ae.msg); }
 }
 
 /**
