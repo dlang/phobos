@@ -64,7 +64,7 @@ int main(char[][] args)
 {
     // Bring in unit test for module by referencing function in it
 
-    cmp("foo", "bar");                  // string
+    cast(void)cmp("foo", "bar");                  // string
     cast(void)filenameCharCmp('a', 'b');          // path
     cast(void)isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
