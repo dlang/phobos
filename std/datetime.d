@@ -7643,19 +7643,19 @@ public:
             auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
 
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
-            auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
+            auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if(_timezone is LocalTime())
-                return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs);
+                return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs);
 
             if(_timezone is UTC())
-                return dateTime.toISOString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toISOString(),
-                          fracSecToISOString(cast(int)hnsecs),
+                          fracSecsToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOString(utcOffset));
         }
         catch(Exception e)
@@ -7771,19 +7771,19 @@ public:
             auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
 
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
-            auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
+            auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if(_timezone is LocalTime())
-                return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs);
+                return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs);
 
             if(_timezone is UTC())
-                return dateTime.toISOExtString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toISOExtString(),
-                          fracSecToISOString(cast(int)hnsecs),
+                          fracSecsToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOString(utcOffset));
         }
         catch(Exception e)
@@ -7897,19 +7897,19 @@ public:
             auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
 
             auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
-            auto fracSecStr = fracSecToISOString(cast(int)hnsecs);
+            auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if(_timezone is LocalTime())
-                return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs);
+                return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs);
 
             if(_timezone is UTC())
-                return dateTime.toSimpleString() ~ fracSecToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toSimpleString(),
-                          fracSecToISOString(cast(int)hnsecs),
+                          fracSecsToISOString(cast(int)hnsecs),
                           SimpleTimeZone.toISOString(utcOffset));
         }
         catch(Exception e)
@@ -8068,7 +8068,7 @@ public:
         try
         {
             auto dateTime = DateTime.fromISOString(dateTimeStr);
-            auto fracSec = fracSecFromISOString(fracSecStr);
+            auto fracSec = fracSecsFromISOString(fracSecStr);
             Rebindable!(immutable TimeZone) parsedZone;
 
             if(zoneStr.empty)
@@ -8282,7 +8282,7 @@ public:
         try
         {
             auto dateTime = DateTime.fromISOExtString(dateTimeStr);
-            auto fracSec = fracSecFromISOString(fracSecStr);
+            auto fracSec = fracSecsFromISOString(fracSecStr);
             Rebindable!(immutable TimeZone) parsedZone;
 
             if(zoneStr.empty)
@@ -8498,7 +8498,7 @@ public:
         try
         {
             auto dateTime = DateTime.fromSimpleString(dateTimeStr);
-            auto fracSec = fracSecFromISOString(fracSecStr);
+            auto fracSec = fracSecsFromISOString(fracSecStr);
             Rebindable!(immutable TimeZone) parsedZone;
 
             if(zoneStr.empty)
@@ -31848,22 +31848,19 @@ unittest
 /+
     Returns the given hnsecs as an ISO string of fractional seconds.
   +/
-static string fracSecToISOString(int hnsecs) @safe pure nothrow
-in
+static string fracSecsToISOString(int hnsecs) @safe pure nothrow
 {
     assert(hnsecs >= 0);
-}
-body
-{
+
     try
     {
+        if(hnsecs == 0)
+            return "";
+
         string isoString = format(".%07d", hnsecs);
 
-        while(isoString.endsWith("0"))
+        while(isoString[$ - 1] == '0')
             isoString.popBack();
-
-        if(isoString.length == 1)
-            return "";
 
         return isoString;
     }
@@ -31873,68 +31870,67 @@ body
 
 unittest
 {
-    assert(fracSecToISOString(0) == "");
-    assert(fracSecToISOString(1) == ".0000001");
-    assert(fracSecToISOString(10) == ".000001");
-    assert(fracSecToISOString(100) == ".00001");
-    assert(fracSecToISOString(1000) == ".0001");
-    assert(fracSecToISOString(10_000) == ".001");
-    assert(fracSecToISOString(100_000) == ".01");
-    assert(fracSecToISOString(1_000_000) == ".1");
-    assert(fracSecToISOString(1_000_001) == ".1000001");
-    assert(fracSecToISOString(1_001_001) == ".1001001");
-    assert(fracSecToISOString(1_071_601) == ".1071601");
-    assert(fracSecToISOString(1_271_641) == ".1271641");
-    assert(fracSecToISOString(9_999_999) == ".9999999");
-    assert(fracSecToISOString(9_999_990) == ".999999");
-    assert(fracSecToISOString(9_999_900) == ".99999");
-    assert(fracSecToISOString(9_999_000) == ".9999");
-    assert(fracSecToISOString(9_990_000) == ".999");
-    assert(fracSecToISOString(9_900_000) == ".99");
-    assert(fracSecToISOString(9_000_000) == ".9");
-    assert(fracSecToISOString(999) == ".0000999");
-    assert(fracSecToISOString(9990) == ".000999");
-    assert(fracSecToISOString(99_900) == ".00999");
-    assert(fracSecToISOString(999_000) == ".0999");
+    assert(fracSecsToISOString(0) == "");
+    assert(fracSecsToISOString(1) == ".0000001");
+    assert(fracSecsToISOString(10) == ".000001");
+    assert(fracSecsToISOString(100) == ".00001");
+    assert(fracSecsToISOString(1000) == ".0001");
+    assert(fracSecsToISOString(10_000) == ".001");
+    assert(fracSecsToISOString(100_000) == ".01");
+    assert(fracSecsToISOString(1_000_000) == ".1");
+    assert(fracSecsToISOString(1_000_001) == ".1000001");
+    assert(fracSecsToISOString(1_001_001) == ".1001001");
+    assert(fracSecsToISOString(1_071_601) == ".1071601");
+    assert(fracSecsToISOString(1_271_641) == ".1271641");
+    assert(fracSecsToISOString(9_999_999) == ".9999999");
+    assert(fracSecsToISOString(9_999_990) == ".999999");
+    assert(fracSecsToISOString(9_999_900) == ".99999");
+    assert(fracSecsToISOString(9_999_000) == ".9999");
+    assert(fracSecsToISOString(9_990_000) == ".999");
+    assert(fracSecsToISOString(9_900_000) == ".99");
+    assert(fracSecsToISOString(9_000_000) == ".9");
+    assert(fracSecsToISOString(999) == ".0000999");
+    assert(fracSecsToISOString(9990) == ".000999");
+    assert(fracSecsToISOString(99_900) == ".00999");
+    assert(fracSecsToISOString(999_000) == ".0999");
 }
 
 
 /+
-    Returns a FracSec corresponding to to the given ISO string of
+    Returns a Duration corresponding to to the given ISO string of
     fractional seconds.
   +/
-static FracSec fracSecFromISOString(S)(in S isoString) @safe pure
+static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
     if(isSomeString!S)
 {
     if(isoString.empty)
-        return FracSec.from!"hnsecs"(0);
+        return Duration.zero;
 
-    auto dstr = to!dstring(isoString);
+    auto str = isoString.representation;
 
-    enforce(dstr.startsWith("."), new DateTimeException("Invalid ISO String"));
-    dstr.popFront();
+    enforce(str[0] == '.', new DateTimeException("Invalid ISO String"));
+    str.popFront();
 
-    enforce(!dstr.empty && dstr.length <= 7, new DateTimeException("Invalid ISO String"));
-    enforce(all!isDigit(dstr), new DateTimeException("Invalid ISO String"));
+    enforce(!str.empty && str.length <= 7, new DateTimeException("Invalid ISO String"));
+    enforce(all!isDigit(str), new DateTimeException("Invalid ISO String"));
 
-    dchar[7] fullISOString;
-
+    dchar[7] fullISOString = void;
     foreach(i, ref dchar c; fullISOString)
     {
-        if(i < dstr.length)
-            c = dstr[i];
+        if(i < str.length)
+            c = str[i];
         else
             c = '0';
     }
 
-    return FracSec.from!"hnsecs"(to!int(fullISOString[]));
+    return hnsecs(to!int(fullISOString[]));
 }
 
 unittest
 {
     static void testFSInvalid(string isoString)
     {
-        fracSecFromISOString(isoString);
+        fracSecsFromISOString(isoString);
     }
 
     assertThrown!DateTimeException(testFSInvalid("."));
@@ -31947,39 +31943,39 @@ unittest
     assertThrown!DateTimeException(testFSInvalid("T."));
     assertThrown!DateTimeException(testFSInvalid(".T"));
 
-    assert(fracSecFromISOString("") == FracSec.from!"hnsecs"(0));
-    assert(fracSecFromISOString(".0000001") == FracSec.from!"hnsecs"(1));
-    assert(fracSecFromISOString(".000001") == FracSec.from!"hnsecs"(10));
-    assert(fracSecFromISOString(".00001") == FracSec.from!"hnsecs"(100));
-    assert(fracSecFromISOString(".0001") == FracSec.from!"hnsecs"(1000));
-    assert(fracSecFromISOString(".001") == FracSec.from!"hnsecs"(10_000));
-    assert(fracSecFromISOString(".01") == FracSec.from!"hnsecs"(100_000));
-    assert(fracSecFromISOString(".1") == FracSec.from!"hnsecs"(1_000_000));
-    assert(fracSecFromISOString(".1000001") == FracSec.from!"hnsecs"(1_000_001));
-    assert(fracSecFromISOString(".1001001") == FracSec.from!"hnsecs"(1_001_001));
-    assert(fracSecFromISOString(".1071601") == FracSec.from!"hnsecs"(1_071_601));
-    assert(fracSecFromISOString(".1271641") == FracSec.from!"hnsecs"(1_271_641));
-    assert(fracSecFromISOString(".9999999") == FracSec.from!"hnsecs"(9_999_999));
-    assert(fracSecFromISOString(".9999990") == FracSec.from!"hnsecs"(9_999_990));
-    assert(fracSecFromISOString(".999999") == FracSec.from!"hnsecs"(9_999_990));
-    assert(fracSecFromISOString(".9999900") == FracSec.from!"hnsecs"(9_999_900));
-    assert(fracSecFromISOString(".99999") == FracSec.from!"hnsecs"(9_999_900));
-    assert(fracSecFromISOString(".9999000") == FracSec.from!"hnsecs"(9_999_000));
-    assert(fracSecFromISOString(".9999") == FracSec.from!"hnsecs"(9_999_000));
-    assert(fracSecFromISOString(".9990000") == FracSec.from!"hnsecs"(9_990_000));
-    assert(fracSecFromISOString(".999") == FracSec.from!"hnsecs"(9_990_000));
-    assert(fracSecFromISOString(".9900000") == FracSec.from!"hnsecs"(9_900_000));
-    assert(fracSecFromISOString(".9900") == FracSec.from!"hnsecs"(9_900_000));
-    assert(fracSecFromISOString(".99") == FracSec.from!"hnsecs"(9_900_000));
-    assert(fracSecFromISOString(".9000000") == FracSec.from!"hnsecs"(9_000_000));
-    assert(fracSecFromISOString(".9") == FracSec.from!"hnsecs"(9_000_000));
-    assert(fracSecFromISOString(".0000999") == FracSec.from!"hnsecs"(999));
-    assert(fracSecFromISOString(".0009990") == FracSec.from!"hnsecs"(9990));
-    assert(fracSecFromISOString(".000999") == FracSec.from!"hnsecs"(9990));
-    assert(fracSecFromISOString(".0099900") == FracSec.from!"hnsecs"(99_900));
-    assert(fracSecFromISOString(".00999") == FracSec.from!"hnsecs"(99_900));
-    assert(fracSecFromISOString(".0999000") == FracSec.from!"hnsecs"(999_000));
-    assert(fracSecFromISOString(".0999") == FracSec.from!"hnsecs"(999_000));
+    assert(fracSecsFromISOString("") == Duration.zero);
+    assert(fracSecsFromISOString(".0000001") == hnsecs(1));
+    assert(fracSecsFromISOString(".000001") == hnsecs(10));
+    assert(fracSecsFromISOString(".00001") == hnsecs(100));
+    assert(fracSecsFromISOString(".0001") == hnsecs(1000));
+    assert(fracSecsFromISOString(".001") == hnsecs(10_000));
+    assert(fracSecsFromISOString(".01") == hnsecs(100_000));
+    assert(fracSecsFromISOString(".1") == hnsecs(1_000_000));
+    assert(fracSecsFromISOString(".1000001") == hnsecs(1_000_001));
+    assert(fracSecsFromISOString(".1001001") == hnsecs(1_001_001));
+    assert(fracSecsFromISOString(".1071601") == hnsecs(1_071_601));
+    assert(fracSecsFromISOString(".1271641") == hnsecs(1_271_641));
+    assert(fracSecsFromISOString(".9999999") == hnsecs(9_999_999));
+    assert(fracSecsFromISOString(".9999990") == hnsecs(9_999_990));
+    assert(fracSecsFromISOString(".999999") == hnsecs(9_999_990));
+    assert(fracSecsFromISOString(".9999900") == hnsecs(9_999_900));
+    assert(fracSecsFromISOString(".99999") == hnsecs(9_999_900));
+    assert(fracSecsFromISOString(".9999000") == hnsecs(9_999_000));
+    assert(fracSecsFromISOString(".9999") == hnsecs(9_999_000));
+    assert(fracSecsFromISOString(".9990000") == hnsecs(9_990_000));
+    assert(fracSecsFromISOString(".999") == hnsecs(9_990_000));
+    assert(fracSecsFromISOString(".9900000") == hnsecs(9_900_000));
+    assert(fracSecsFromISOString(".9900") == hnsecs(9_900_000));
+    assert(fracSecsFromISOString(".99") == hnsecs(9_900_000));
+    assert(fracSecsFromISOString(".9000000") == hnsecs(9_000_000));
+    assert(fracSecsFromISOString(".9") == hnsecs(9_000_000));
+    assert(fracSecsFromISOString(".0000999") == hnsecs(999));
+    assert(fracSecsFromISOString(".0009990") == hnsecs(9990));
+    assert(fracSecsFromISOString(".000999") == hnsecs(9990));
+    assert(fracSecsFromISOString(".0099900") == hnsecs(99_900));
+    assert(fracSecsFromISOString(".00999") == hnsecs(99_900));
+    assert(fracSecsFromISOString(".0999000") == hnsecs(999_000));
+    assert(fracSecsFromISOString(".0999") == hnsecs(999_000));
 }
 
 
