@@ -145,6 +145,7 @@ version(unittest)
 {
     import core.stdc.string;
     import std.stdio;
+    import std.typetuple;
 }
 
 //I'd just alias it to indexOf, but
@@ -530,9 +531,9 @@ public:
     this(in DateTime dateTime, immutable TimeZone tz = null) @safe nothrow
     {
         try
-            this(dateTime, FracSec.from!"hnsecs"(0), tz);
+            this(dateTime, Duration.zero, tz);
         catch(Exception e)
-            assert(0, "FracSec's constructor threw when it shouldn't have.");
+            assert(0, "SysTime's constructor threw when it shouldn't have.");
     }
 
     unittest
@@ -562,6 +563,63 @@ public:
             dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
                        internal std time. As $(LREF DateTime) has no concept of
                        time zone, tz is used as its time zone.
+            fracSecs = The fractional seconds portion of the time.
+            tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
+                       $(LREF LocalTime) will be used. The given $(LREF DateTime) is
+                       assumed to be in the given time zone.
+
+        Throws:
+            $(LREF DateTimeException) if $(D fracSecs) is negative or if it's
+            greater than or equal to one second.
+      +/
+    this(in DateTime dateTime, in Duration fracSecs, immutable TimeZone tz = null) @safe
+    {
+        enforce(fracSecs >= Duration.zero, new DateTimeException("A SysTime cannot have negative fractional seconds."));
+        enforce(fracSecs < seconds(1), new DateTimeException("Fractional seconds must be less than one second."));
+        auto nonNullTZ = tz is null ? LocalTime() : tz;
+
+        immutable dateDiff = dateTime.date - Date.init;
+        immutable todDiff = dateTime.timeOfDay - TimeOfDay.init;
+
+        immutable adjustedTime = dateDiff + todDiff + fracSecs;
+        immutable standardTime = nonNullTZ.tzToUTC(adjustedTime.total!"hnsecs");
+
+        this(standardTime, nonNullTZ);
+    }
+
+    unittest
+    {
+        static void test(DateTime dt, Duration fracSecs, immutable TimeZone tz, long expected)
+        {
+            auto sysTime = SysTime(dt, fracSecs, tz);
+            assert(sysTime._stdTime == expected);
+            assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
+                   format("Given DateTime: %s, Given Duration: %s", dt, fracSecs));
+        }
+
+        test(DateTime.init, Duration.zero, UTC(), 0);
+        test(DateTime(1, 1, 1, 12, 30, 33), Duration.zero, UTC(), 450_330_000_000L);
+        test(DateTime(0, 12, 31, 12, 30, 33), Duration.zero, UTC(), -413_670_000_000L);
+        test(DateTime(1, 1, 1, 0, 0, 0), msecs(1), UTC(), 10_000L);
+        test(DateTime(0, 12, 31, 23, 59, 59), msecs(999), UTC(), -10_000L);
+
+        test(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999), UTC(), -1);
+        test(DateTime(0, 12, 31, 23, 59, 59), hnsecs(1), UTC(), -9_999_999);
+        test(DateTime(0, 12, 31, 23, 59, 59), Duration.zero, UTC(), -10_000_000);
+
+        assertThrown!DateTimeException(SysTime(DateTime.init, hnsecs(-1), UTC()));
+        assertThrown!DateTimeException(SysTime(DateTime.init, seconds(1), UTC()));
+    }
+
+    /++
+        $(RED Deprecated. Please use the overload which takes a
+              $(CXREF time, Duration) for the fractional seconds. This overload
+              will be removed in June 2015).
+
+        Params:
+            dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
+                       internal std time. As $(LREF DateTime) has no concept of
+                       time zone, tz is used as its time zone.
             fracSec  = The fractional seconds portion of the time.
             tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
                        $(LREF LocalTime) will be used. The given $(LREF DateTime) is
@@ -570,6 +628,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
       +/
+    deprecated("Please use the overload which takes a Duration instead of a FracSec.")
     this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
@@ -590,7 +649,7 @@ public:
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
     }
 
-    unittest
+    deprecated unittest
     {
         static void test(DateTime dt,
                          FracSec fracSec,
@@ -1799,8 +1858,153 @@ public:
 
 
     /++
-        Fractional seconds passed the second.
+        Fractional seconds past the second (i.e. the portion of a
+        $(LREF SysTime) which is less than a second).
      +/
+    @property Duration fracSecs() @safe const nothrow
+    {
+        auto hnsecs = removeUnitsFromHNSecs!"days"(adjTime);
+
+        if(hnsecs < 0)
+            hnsecs += convert!("hours", "hnsecs")(24);
+
+        return dur!"hnsecs"(removeUnitsFromHNSecs!"seconds"(hnsecs));
+    }
+
+    ///
+    unittest
+    {
+        auto dt = DateTime(1982, 4, 1, 20, 59, 22);
+        assert(SysTime(dt, msecs(213)).fracSecs == msecs(213));
+        assert(SysTime(dt, usecs(5202)).fracSecs == usecs(5202));
+        assert(SysTime(dt, hnsecs(1234567)).fracSecs == hnsecs(1234567));
+
+        // SysTime and Duration both have a precision of hnsecs (100 ns),
+        // so nsecs are going to be truncated.
+        assert(SysTime(dt, nsecs(123456789)).fracSecs == nsecs(123456700));
+    }
+
+    unittest
+    {
+        assert(SysTime(0, UTC()).fracSecs == Duration.zero);
+        assert(SysTime(1, UTC()).fracSecs == hnsecs(1));
+        assert(SysTime(-1, UTC()).fracSecs == hnsecs(9_999_999));
+
+        foreach(tz; testTZs)
+        {
+            foreach(year; chain(testYearsBC, testYearsAD))
+            {
+                foreach(md; testMonthDays)
+                {
+                    foreach(hour; testHours)
+                    {
+                        foreach(minute; testMinSecs)
+                        {
+                            foreach(second; testMinSecs)
+                            {
+                                auto dt = DateTime(Date(year, md.month, md.day), TimeOfDay(hour, minute, second));
+                                foreach(fs; testFracSecs)
+                                    assert(SysTime(dt, fs, tz).fracSecs == fs);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(__traits(compiles, cst.fracSecs));
+        //static assert(__traits(compiles, ist.fracSecs));
+    }
+
+
+    /++
+        Fractional seconds past the second (i.e. the portion of a
+        $(LREF SysTime) which is less than a second).
+
+        Params:
+            fracSec = The duration to set this $(LREF SysTime)'s fractional
+                      seconds to.
+
+        Throws:
+            $(LREF DateTimeException) if the given duration is negative or if
+            it's greater than or equal to one second.
+     +/
+    @property void fracSecs(Duration fracSecs) @safe
+    {
+        enforce(fracSecs >= Duration.zero, new DateTimeException("A SysTime cannot have negative fractional seconds."));
+        enforce(fracSecs < seconds(1), new DateTimeException("Fractional seconds must be less than one second."));
+
+        auto oldHNSecs = adjTime;
+        auto days = splitUnitsFromHNSecs!"days"(oldHNSecs);
+        immutable daysHNSecs = convert!("days", "hnsecs")(days);
+        immutable negative = oldHNSecs < 0;
+
+        if(negative)
+            oldHNSecs += convert!("hours", "hnsecs")(24);
+
+        immutable seconds = splitUnitsFromHNSecs!"seconds"(oldHNSecs);
+        immutable secondsHNSecs = convert!("seconds", "hnsecs")(seconds);
+        auto newHNSecs = fracSecs.total!"hnsecs" + secondsHNSecs;
+
+        if(negative)
+            newHNSecs -= convert!("hours", "hnsecs")(24);
+
+        adjTime = daysHNSecs + newHNSecs;
+    }
+
+    ///
+    unittest
+    {
+        auto st = SysTime(DateTime(1982, 4, 1, 20, 59, 22));
+        assert(st.fracSecs == Duration.zero);
+
+        st.fracSecs = msecs(213);
+        assert(st.fracSecs == msecs(213));
+
+        st.fracSecs = hnsecs(1234567);
+        assert(st.fracSecs == hnsecs(1234567));
+
+        // SysTime has a precision of hnsecs (100 ns), so nsecs are
+        // going to be truncated.
+        st.fracSecs = nsecs(123456789);
+        assert(st.fracSecs == hnsecs(1234567));
+    }
+
+    unittest
+    {
+        foreach(fracSec; testFracSecs)
+        {
+            foreach(st; chain(testSysTimesBC, testSysTimesAD))
+            {
+                auto dt = cast(DateTime)st;
+                auto expected = SysTime(dt, fracSec, st.timezone);
+                st.fracSecs = fracSec;
+                assert(st == expected, format("[%s] [%s]", st, expected));
+            }
+        }
+
+        auto st = testSysTimesAD[0];
+        assertThrown!DateTimeException(st.fracSecs = hnsecs(-1));
+        assertThrown!DateTimeException(st.fracSecs = seconds(1));
+
+        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        static assert(!__traits(compiles, cst.fracSecs = msecs(7)));
+        //static assert(!__traits(compiles, ist.fracSecs = msecs(7)));
+    }
+
+
+    /++
+        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
+              uses a $(CXREF time, Duration) to represent the fractional seconds
+              instead of a $(CXREF time, FracSec). This overload will be removed
+              in June 2015).
+
+        Fractional seconds past the second.
+     +/
+    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property FracSec fracSec() @safe const nothrow
     {
         try
@@ -1818,12 +2022,12 @@ public:
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
-    unittest
+    deprecated unittest
     {
-        static void test(SysTime sysTime, FracSec expected)
+        static void test(SysTime sysTime, FracSec expected, size_t line = __LINE__)
         {
-            assert(sysTime.fracSec == expected,
-                             format("Value given: %s", sysTime));
+            if(sysTime.fracSec != expected)
+                throw new AssertError(format("Value given: %s", sysTime.fracSec), __FILE__, line);
         }
 
         test(SysTime(0, UTC()), FracSec.from!"hnsecs"(0));
@@ -1846,7 +2050,7 @@ public:
                                                    TimeOfDay(hour, minute, second));
 
                                 foreach(fs; testFracSecs)
-                                    test(SysTime(dt, fs, tz), fs);
+                                    test(SysTime(dt, fs, tz), FracSec.from!"hnsecs"(fs.total!"hnsecs"));
                             }
                         }
                     }
@@ -1862,7 +2066,12 @@ public:
 
 
     /++
-        Fractional seconds passed the second.
+        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
+              uses a $(CXREF time, Duration) to represent the fractional seconds
+              instead of a $(CXREF time, FracSec). This overload will be removed
+              in June 2015).
+
+        Fractional seconds past the second.
 
         Params:
             fracSec = The fractional seconds to set this $(LREF SysTime)'s
@@ -1871,6 +2080,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
      +/
+    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property void fracSec(FracSec fracSec) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
@@ -1899,18 +2109,15 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    deprecated unittest
     {
         foreach(fracSec; testFracSecs)
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
             {
                 auto dt = cast(DateTime)st;
-                auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
-                                        fracSec,
-                                        st.timezone);
-
-                st.fracSec = fracSec;
+                auto expected = SysTime(dt, fracSec, st.timezone);
+                st.fracSec = FracSec.from!"hnsecs"(fracSec.total!"hnsecs");
                 assert(st == expected, format("[%s] [%s]", st, expected));
             }
         }
@@ -12871,7 +13078,7 @@ public:
 
 
     /++
-        Hours passed midnight.
+        Hours past midnight.
      +/
     @property ubyte hour() @safe const pure nothrow
     {
@@ -12891,7 +13098,7 @@ public:
 
 
     /++
-        Hours passed midnight.
+        Hours past midnight.
 
         Params:
             hour = The hour of the day to set this $(LREF TimeOfDay)'s hour to.
@@ -12922,7 +13129,7 @@ public:
 
 
     /++
-        Minutes passed the hour.
+        Minutes past the hour.
      +/
     @property ubyte minute() @safe const pure nothrow
     {
@@ -12942,7 +13149,7 @@ public:
 
 
     /++
-        Minutes passed the hour.
+        Minutes past the hour.
 
         Params:
             minute = The minute to set this $(LREF TimeOfDay)'s minute to.
@@ -12973,7 +13180,7 @@ public:
 
 
     /++
-        Seconds passed the minute.
+        Seconds past the minute.
      +/
     @property ubyte second() @safe const pure nothrow
     {
@@ -12993,7 +13200,7 @@ public:
 
 
     /++
-        Seconds passed the minute.
+        Seconds past the minute.
 
         Params:
             second = The second to set this $(LREF TimeOfDay)'s second to.
@@ -14679,7 +14886,7 @@ public:
 
 
     /++
-        Hours passed midnight.
+        Hours past midnight.
      +/
     @property ubyte hour() @safe const pure nothrow
     {
@@ -14699,7 +14906,7 @@ public:
 
 
     /++
-        Hours passed midnight.
+        Hours past midnight.
 
         Params:
             hour = The hour of the day to set this $(LREF DateTime)'s hour to.
@@ -14729,7 +14936,7 @@ public:
 
 
     /++
-        Minutes passed the hour.
+        Minutes past the hour.
      +/
     @property ubyte minute() @safe const pure nothrow
     {
@@ -14749,7 +14956,7 @@ public:
 
 
     /++
-        Minutes passed the hour.
+        Minutes past the hour.
 
         Params:
             minute = The minute to set this $(LREF DateTime)'s minute to.
@@ -14779,7 +14986,7 @@ public:
 
 
     /++
-        Seconds passed the minute.
+        Seconds past the minute.
      +/
     @property ubyte second() @safe const pure nothrow
     {
@@ -14799,7 +15006,7 @@ public:
 
 
     /++
-        Seconds passed the minute.
+        Seconds past the minute.
 
         Params:
             second = The second to set this $(LREF DateTime)'s second to.
@@ -27912,7 +28119,7 @@ private:
     /+
         Holds information on when a time transition occures (usually a
         transition to or from DST) as well as a pointer to the $(D TTInfo) which
-        holds information on the utc offset passed the transition.
+        holds information on the utc offset past the transition.
       +/
     struct Transition
     {
@@ -29880,7 +30087,7 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
         throw new DateTimeException("DOS File Times cannot hold dates prior to 1980.");
 
     if(dateTime.year > 2107)
-        throw new DateTimeException("DOS File Times cannot hold dates passed 2107.");
+        throw new DateTimeException("DOS File Times cannot hold dates past 2107.");
 
     uint retval = 0;
     retval = (dateTime.year - 1980) << 25;
@@ -30174,8 +30381,6 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
 
 unittest
 {
-    import std.typetuple : TypeTuple;
-
     static struct Rand3Letters
     {
         enum empty = false;
@@ -30438,8 +30643,6 @@ unittest
 // Obsolete Format per section 4.3 of RFC 5322.
 unittest
 {
-    import std.typetuple : TypeTuple;
-
     auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
     auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
     auto std3 = SysTime(DateTime(1912, 12, 21, 13, 14, 15), UTC());
@@ -30756,8 +30959,6 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
 
 unittest
 {
-    import std.typetuple : TypeTuple;
-
     static string genTest(size_t index)
     {
         auto currUnits = timeStrings[index];
@@ -31868,8 +32069,6 @@ R _stripCFWS(R)(R range)
 
 unittest
 {
-    import std.typetuple : TypeTuple;
-
     foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
     {
@@ -32216,7 +32415,7 @@ version(unittest)
     DateTime[] testDateTimesBC;
     DateTime[] testDateTimesAD;
 
-    FracSec[] testFracSecs;
+    Duration[] testFracSecs;
 
     SysTime[] testSysTimesBC;
     SysTime[] testSysTimesAD;
@@ -32452,10 +32651,7 @@ version(unittest)
         sort(diffs);
         testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
 
-        testFracSecs = [FracSec.from!"hnsecs"(0),
-                        FracSec.from!"hnsecs"(1),
-                        FracSec.from!"hnsecs"(5007),
-                        FracSec.from!"hnsecs"(9999999)];
+        testFracSecs = [Duration.zero, hnsecs(1), hnsecs(5007), hnsecs(9999999)];
 
         foreach(year; testYearsBC)
         {
