@@ -2092,6 +2092,15 @@ unittest
 
 unittest
 {
+    // Bug# 12889
+    int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
+    int[1][] stuff = [[0], [1]];
+    replaceInPlace(arr, 4, 6, stuff);
+    assert(arr == [[0], [1], [2], [3], [0], [1], [6]]);
+}
+
+unittest
+{
     bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
                string file = __FILE__, size_t line = __LINE__)
     {
