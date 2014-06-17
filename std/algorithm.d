@@ -8726,6 +8726,19 @@ unittest
     auto arr = [1,2,3];
     arr = arr.remove!(SwapStrategy.unstable)(2);
     assert(arr == [1,2]);
+
+}
+
+unittest
+{
+    // Bug# 12889
+    int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
+    auto orig = arr.dup;
+    foreach (i; iota(arr.length))
+    {
+        assert(orig == arr.remove!(SwapStrategy.unstable)(tuple(i,i)));
+        assert(orig == arr.remove!(SwapStrategy.stable)(tuple(i,i)));
+    }
 }
 
 /**
