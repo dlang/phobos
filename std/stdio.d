@@ -2104,11 +2104,8 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
-                    static auto trustedFwrite(in void* ptr, size_t size, size_t nmemb, FILE* stream) @trusted
-                    {
-                        return .fwrite(ptr, size, nmemb, stream);
-                    }
-                    auto result = trustedFwrite(writeme.ptr, C.sizeof, writeme.length, fps);
+                    auto result =
+                        .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
                     if (result != writeme.length) errnoEnforce(0);
                     return;
                 }
@@ -2124,25 +2121,13 @@ $(D Range) that locks the file and allows fast writing to it.
         // @@@BUG@@@ 2340
         //void front(C)(C c) if (is(C : dchar)) {
         /// ditto
-        void put(C)(C c) @safe if (is(C : const(dchar)))
+        void put(C)(C c) if (is(C : const(dchar)))
         {
-            version(DIGITAL_MARS_STDIO) alias WCTYPE = int;
-            version(MICROSOFT_STDIO)    alias WCTYPE = int;
-            else                        alias WCTYPE = wchar_t;
-            static auto trustedFPUTC(int ch, _iobuf* h) @trusted
-            {
-                return FPUTC(ch, h);
-            }
-            static auto trustedFPUTWC(WCTYPE ch, _iobuf* h) @trusted
-            {
-                return FPUTWC(ch, h);
-            }
-
             static if (c.sizeof == 1)
             {
                 // simple char
-                if (orientation <= 0) trustedFPUTC(c, handle);
-                else trustedFPUTWC(c, handle);
+                if (orientation <= 0) FPUTC(c, handle);
+                else FPUTWC(c, handle);
             }
             else static if (c.sizeof == 2)
             {
@@ -2152,19 +2137,19 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     if (c <= 0x7F)
                     {
-                        trustedFPUTC(c, handle);
+                        FPUTC(c, handle);
                     }
                     else
                     {
                         char[4] buf;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            trustedFPUTC(b[i], handle);
+                            FPUTC(b[i], handle);
                     }
                 }
                 else
                 {
-                    trustedFPUTWC(c, handle);
+                    FPUTWC(c, handle);
                 }
             }
             else // 32-bit characters
@@ -2175,14 +2160,14 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     if (c <= 0x7F)
                     {
-                        trustedFPUTC(c, handle);
+                        FPUTC(c, handle);
                     }
                     else
                     {
                         char[4] buf = void;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            trustedFPUTC(b[i], handle);
+                            FPUTC(b[i], handle);
                     }
                 }
                 else
@@ -2194,21 +2179,21 @@ $(D Range) that locks the file and allows fast writing to it.
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
-                            trustedFPUTWC(c, handle);
+                            FPUTWC(c, handle);
                         }
                         else
                         {
-                            trustedFPUTWC(cast(wchar)
-                                           ((((c - 0x10000) >> 10) & 0x3FF)
-                                                   + 0xD800), handle);
-                            trustedFPUTWC(cast(wchar)
-                                           (((c - 0x10000) & 0x3FF) + 0xDC00),
-                                           handle);
+                            FPUTWC(cast(wchar)
+                                    ((((c - 0x10000) >> 10) & 0x3FF)
+                                            + 0xD800), handle);
+                            FPUTWC(cast(wchar)
+                                    (((c - 0x10000) & 0x3FF) + 0xDC00),
+                                    handle);
                         }
                     }
                     else version (Posix)
                     {
-                        trustedFPUTWC(c, handle);
+                        FPUTWC(c, handle);
                     }
                     else
                     {
@@ -2223,7 +2208,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
 See $(LREF byChunk) for an example.
 */
-    auto lockingTextWriter() @safe
+    auto lockingTextWriter()
     {
         return LockingTextWriter(this);
     }
