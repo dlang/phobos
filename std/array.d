@@ -2048,7 +2048,8 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
         // replacement reduces length
         immutable stuffEnd = from + stuff.length;
         array[from .. stuffEnd] = stuff[];
-        array = remove(array, tuple(stuffEnd, to));
+        if (stuffEnd < to)
+            array = remove(array, tuple(stuffEnd, to));
     }
     else
     {
