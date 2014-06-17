@@ -2129,11 +2129,11 @@ $(D Range) that locks the file and allows fast writing to it.
             version(DIGITAL_MARS_STDIO) alias WCTYPE = int;
             version(MICROSOFT_STDIO)    alias WCTYPE = int;
             else                        alias WCTYPE = wchar_t;
-            auto trustedFPUTC(int ch, _iobuf* h) @trusted
+            static auto trustedFPUTC(int ch, _iobuf* h) @trusted
             {
                 return FPUTC(ch, h);
             }
-            auto trustedFPUTWC(WCTYPE ch, _iobuf* h) @trusted
+            static auto trustedFPUTWC(WCTYPE ch, _iobuf* h) @trusted
             {
                 return FPUTWC(ch, h);
             }
