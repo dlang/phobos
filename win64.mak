@@ -129,7 +129,13 @@ SRC_STD_3b= std\signals.d std\typetuple.d std\traits.d \
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
     std\digest\ripemd.d std\digest\digest.d
+
+SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
+    std\container\dlist.d std\container\rbtree.d std\container\slist.d \
+    std\container\util.d std\container\package.d
+    
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
+
 
 SRC_STD_5_HEAVY= std\algorithm.d
 
@@ -139,7 +145,6 @@ SRC_STD_6c=std\zlib.d
 SRC_STD_6d=std\stream.d
 SRC_STD_6e=std\socket.d
 SRC_STD_6f=std\socketstream.d
-SRC_STD_6g=std\container.d
 SRC_STD_6h=std\conv.d
 SRC_STD_6i=std\zip.d
 SRC_STD_6j=std\cstream.d
@@ -162,7 +167,7 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6d) \
 	$(SRC_STD_6e) \
 	$(SRC_STD_6f) \
-	$(SRC_STD_6g) \
+	$(SRC_STD_CONTAINER) \
 	$(SRC_STD_6h) \
 	$(SRC_STD_6i) \
 	$(SRC_STD_6j) \
@@ -171,7 +176,7 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
 
 SRC=	unittest.d index.d
 
-SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
+SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
@@ -306,7 +311,13 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
-	$(DOC)\std_container.html \
+	$(DOC)\std_container_array.html \
+	$(DOC)\std_container_binaryheap.html \
+	$(DOC)\std_container_dlist.html \
+	$(DOC)\std_container_rbtree.html \
+	$(DOC)\std_container_slist.html \
+	$(DOC)\std_container_util.html \
+	$(DOC)\std_container_package.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
@@ -422,7 +433,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6h.obj $(SRC_STD_6h)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6f.obj $(SRC_STD_6f)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_6g)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_CONTAINER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6k.obj $(SRC_STD_6k)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7)
@@ -539,8 +550,26 @@ $(DOC)\std_complex.html : $(STDDOC) std\complex.d
 $(DOC)\std_conv.html : $(STDDOC) std\conv.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_conv.html $(STDDOC) std\conv.d
 
-$(DOC)\std_container.html : $(STDDOC) std\container.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container.html $(STDDOC) std\container.d
+$(DOC)\std_container_array.html : $(STDDOC) std\container\array.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_array.html $(STDDOC) std\container\array.d
+
+$(DOC)\std_container_binaryheap.html : $(STDDOC) std\container\binaryheap.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_binaryheap.html $(STDDOC) std\container\binaryheap.d
+
+$(DOC)\std_container_dlist.html : $(STDDOC) std\container\dlist.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_dlist.html $(STDDOC) std\container\dlist.d
+
+$(DOC)\std_container_rbtree.html : $(STDDOC) std\container\rbtree.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_rbtree.html $(STDDOC) std\container\rbtree.d
+
+$(DOC)\std_container_slist.html : $(STDDOC) std\container\slist.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_slist.html $(STDDOC) std\container\slist.d
+
+$(DOC)\std_container_util.html : $(STDDOC) std\container\util.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_util.html $(STDDOC) std\container\util.d
+
+$(DOC)\std_container_package.html : $(STDDOC) std\container\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_package.html $(STDDOC) std\container\package.d
 
 $(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
@@ -749,7 +778,7 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) \
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
 	$(SRC_STD_INTERNAL_WINDOWS)
 	del phobos.zip
@@ -770,6 +799,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
 	zip32 -u phobos $(SRC_STD_DIGEST)
+	zip32 -u phobos $(SRC_STD_CONTAINER)
 
 phobos.zip : zip
 
