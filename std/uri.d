@@ -42,13 +42,8 @@ import std.exception : assumeUnique;
 import std.algorithm;
 import std.array;
 import std.conv;
-import std.regex;
-import std.path;
-import std.typetuple;
+import std.string;
 
-private auto uriRegex = ctRegex!(`^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?`);
-
-import std.socket;
 
 class URIException : Exception
 {
@@ -575,22 +570,6 @@ unittest
 /* ====================== URI Struct ================ */
 
 /** URI struct
- * Examples:
- * --------------------
- * URI uri = "scheme://user:pass@hostname:1234/path?query=string#_fragment_";
- * auto s1 = uri.scheme;        // s1 = "scheme"
- * auto s2 = uri.authority;     // s2 = "user:pass@hostname:1234"
- * auto s3 = uri.auth;          // s3 = "user:pass"
- * auto s4 = uri.resource;      // s4 = "hostname:1234"
- * auto s5 = uri.pathAndQuery;  // s5 = "/path?query=string"
- * auto s6 = uri.username;      // s6 = "user"
- * auto s7 = uri.password;      // s7 = "user"
- * auto s8 = uri.host;          // s8 = "hostname"
- * auto p1 = uri.port;          // p1 = 1234
- * auto s9 = uri.path;          // s9 = "/path"
- * auto s10 = uri.query;        // s10 = "query=string"
- * auto s11 = uri.fragment;     // s11 = "_fragment_"
- * --------------------
  */
 struct URI {
   private {
@@ -605,190 +584,223 @@ struct URI {
     string  _password;
     string  _path;
     ushort  _port;
-    Pair*[] _query;
+    Pair[]  _query;
   }
-  /**
-   * Create URI from string
-   * Examples:
-   * --------------------
-   * auto uri = URI("http://dlang.org/");
-   * --------------------
-   */
-  this(string uri) {
+
+  /// Create URI from string
+  this (string uri)
+  {
     opAssign(uri);
   }
-  /**
-   * Allows assign string to uri
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/";
-   * uri = "http://code.dlang.org/";
-   * --------------------
-   */
-  auto opAssign(string uri) {
-    auto m = match(decode(uri), uriRegex);
-    if (!m.empty) {
-      _scheme   = m.front[2];
-      authority = m.front[4];
-      query     = m.front[7];
-      path      = m.front[5];
-      _fragment = m.front[9];
-    }
+  ///
+  unittest
+  {
+    auto u = URI("http://dlang.org/");
   }
 
-  /**
-   * Return default port for this scheme.
-   * if $(B fast) is true returns defined values for scheme: http, https for other schemas return $(B 0). else uses $(B std.socket.Service) to determine port
-   * --------------------
-   * URI uri = "http://dlang.org/";
-   * auto p1 = uri.defaultPort();       // p1 = 80;
-   * uri.scheme = "ftp";                // "ftp://dlang.org/"
-   * auto p2 = uri.defaultPort();       // p2 = 0, because fast algorithm nothink know about "ftp"
-   * auto p3 = uri.defaultPort!false(); // p3 = 21 (at most OS where service is defined)
-   * --------------------
-   */
-  @property auto defaultPort(bool fast = true)() const {
-    ushort p = 0;
-    static if (fast) {
-      switch(_scheme) {
-      case "http":  p = 80;  break;
-      case "https": p = 443; break;
+  ///Allows assign string to uri
+  auto opAssign(string uri)
+  {
+    clear();
+    auto src = uri;
+    if (src.empty) {
+      throw new URIException("URI string is empty");
+    }
+    bool hasResource = false;
+
+    if ( src[0] != '/' ) {
+      auto idx = src.indexOf(':');
+      _scheme = (idx < 0) ? "" : src[0 .. idx];
+      src = src[idx + 1 .. $];
+      switch(_scheme){
+      case "ftp",  "sftp":
+      case "http", "https":
+      case "spdy":
+      case "file":
+        if (!src.startsWith("//")) {
+          throw new URIException(text("URI must start with ", _scheme, "://..."));
+        }
+        hasResource = true;
+        src = src[2 .. $];
+        goto default;
       default:
+        auto pathIdx = src.indexOf('/');
+        if( pathIdx < 0 ) pathIdx = src.length;
+        authority = src[0 .. pathIdx];
+        src = src[pathIdx  .. $];
       }
-    } else {
-      auto   s = new Service;
-      if (s.getServiceByName(_scheme, "tcp")) {
-        p = s.port;
-      }
-      delete s;
     }
-    return p;
+    auto fragIdx = src.indexOf('#');
+    if( fragIdx >= 0 ){
+      _fragment = src[fragIdx + 1 .. $];
+      src = src[0 .. fragIdx];
+    }
+
+    auto qIdx = src.indexOf('?');
+    if( qIdx >= 0 ){
+      query = src[qIdx + 1 .. $];
+      src   = src[0 .. qIdx];
+    }
+    _path  = src;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/";
+    u = "http://code.dlang.org/";
   }
 
-  /**
-   * Get/set URI scheme
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/";
-   * auto s1 = uri.scheme;     // s1 = "http"
-   * uri.scheme = "https";
-   * auto s2 = uri.toString(); // "https://dlang.org/"
-   * --------------------
-   */
-  @property auto scheme() const     { return _scheme; }
+  /// Get/set URI scheme
+  @property auto scheme() const
+  {
+    return _scheme;
+  }
   /// ditto
-  @property auto scheme(string s)   { return _scheme = s; }
-
-  /**
-   * Get/set URI username
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/";
-   * auto s1 = uri.username;   // s1 = ""
-   * uri.username = "anon";
-   * auto s2 = uri.toString(); // s2 = "http://anon@dlang.org/"
-   * --------------------
-   */
-  @property auto username() const   { return _username; }
-  /// ditto
-  @property auto username(string u) { return _username = u; }
-
-  /**
-   * Get/set URI username
-   * Examples:
-   * --------------------
-   * URI uri = "http://anon:1234@dlang.org/";
-   * auto s1 = uri.password;   // s1 = "1234"
-   * uri.password = "qwert";
-   * auto s2 = uri.toString(); // s2 = "http://anon:qwert@dlang.org/"
-   * --------------------
-   */
-  @property auto password() const   { return _password; }
-  /// ditto
-  @property auto password(string p) { return _password = p; }
-
-  /**
-   * Get/set URI host
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/";
-   * auto s1 = uri.host;          // s1 = "dlang.org"
-   * uri.host = "code.dlang.org";
-   * auto s2 = uri.toString();    // s2 = "http://code.dlang.org/"
-   * --------------------
-   */
-  @property auto host() const       { return _host; }
-  /// ditto
-  @property auto host(string h)     { return _host = h; }
-
-  /**
-   * Get/set URI host
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/#first";
-   * auto s1 = uri.fragment;   // s1 = "first"
-   * uri.fragment = "second";
-   * auto s2 = uri.toString(); // s2 = "http://dlang.org/#second"
-   * --------------------
-   */
-  @property auto fragment() const   { return _fragment; }
-  /// ditto
-  @property auto fragment(string f) { return _fragment = f; }
-
-  /**
-   * Get/set URI port.
-   * Returns $(B 0) if port not set
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/";
-   * auto p1 = uri.port;       // p1 = 0
-   * uri.port = 81;
-   * auto s1 = uri.toString(); // s1 = "http://dlang.org:81/"
-   * --------------------
-   */
-  @property auto port() const       { return _port; }
-  /// ditto
-  @property auto port(ushort p)     { return _port = p; }
-
-  /**
-   * Get/set URI path.
-   * If path isn't empty string and not starts with $(B /), then append $(B /) at string start
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org";
-   * auto s1 = uri.path;          // s1 = ""
-   * uri.path = "download.html";  // converted to "/download.html"
-   * auto s2 = uri.toString();    // s2 = "http://dlang.org/download.html"
-   * auto s3 = uri.path;          // s3 = "/download.html"
-   * --------------------
-   */
-  @property auto path() const       { return _path; }
-  /// ditto
-  @property auto path(string p)     { return _path = absolutePath(p, "/"); }
-
-  /// Get
-  @property auto pathAndQuery() const {
-    auto tmp = appender!string;
-    tmp.put(path);
-    auto q = query;
-    if (!q.empty) {
-      tmp.put('?');
-      tmp.put(q);
-    }
-    return tmp.data;
+  @property auto scheme(string s)
+  {
+    return _scheme = s;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/";
+    assert(u.scheme == "http");
+    u.scheme = "https";
+    assert(u.toString() == "https://dlang.org/");
   }
 
-  /**
-   * Get/set URI query as string representation.
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/?x=1";
-   * auto s1 = uri.query;        // s1 = "x=1"
-   * uri.query = "z=2&y=4";
-   * auto s2 = uri.toString();    // s2 = "http://dlang.org/?z=2&y=4"
-   * --------------------
-   */
-  @property auto query() const {
+  /// Get/set URI username
+  @property auto username() const
+  {
+    return _username;
+  }
+  /// ditto
+  @property auto username(string u)
+  {
+    return _username = u;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/";
+    assert(u.username == "");
+    u.username = "anon";
+    assert(u.toString() == "http://anon@dlang.org/");
+  }
+
+  /// Get/set URI password
+  @property auto password() const
+  {
+    return _password;
+  }
+  /// ditto
+  @property auto password(string p)
+  {
+    return _password = p;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://anon:1234@dlang.org/";
+    assert(u.password == "1234");
+    u.password = "qwert";
+    assert(u.toString() == "http://anon:qwert@dlang.org/");
+  }
+
+  /// Get/set URI host
+  @property auto host() const
+  {
+    return _host;
+  }
+  /// ditto
+  @property auto host(string h) {
+    return _host = h;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/";
+    assert(u.host == "dlang.org");
+    u.host = "code.dlang.org";
+    assert(u.toString() == "http://code.dlang.org/");
+  }
+
+  /// Get/set URI fragment
+  @property auto fragment() const
+  {
+    return _fragment;
+  }
+  /// ditto
+  @property auto fragment(string f)
+  {
+    return _fragment = f;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/#first";
+    assert(u.fragment == "first");
+    u.fragment = "second";
+    assert(u.toString() == "http://dlang.org/#second");
+  }
+
+  /// Get/set URI port.
+  /// Returns $(B 0) if port not set
+  @property auto port() const
+  {
+    return _port;
+  }
+  /// ditto
+  @property auto port(ushort p)
+  {
+    return _port = p;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/";
+    assert(u.port == 0);  // Port not set
+    u.port = 81;
+    assert(u.toString() == "http://dlang.org:81/");
+  }
+
+  /// Get/set URI path.
+  @property auto path() const
+  {
+    return _path;
+  }
+  /// ditto
+  @property auto path(string p)
+  {
+    return _path = p;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org";
+    assert(u.path == "");
+    u.path = "/download.html";  // converted to "/download.html"
+    assert(u.toString() == "http://dlang.org/download.html");
+    assert(u.path == "/download.html");
+  }
+
+  // May be usefull for HTTP requests where first line is "METHOD path?query HTTP/ver"
+  // Or may be replace with template wrap
+  //@property auto pathAndQuery() const
+  //{
+  //  auto tmp = appender!string;
+  //  tmp.put(path);
+  //  auto q = query;
+  //  if (!q.empty) {
+  //    tmp.put('?');
+  //    tmp.put(q);
+  //  }
+  //  return tmp.data;
+  //}
+
+  /// Get/set URI query as string representation.
+  @property auto query() const
+  {
     auto tmp = appender!string;
     foreach (p; _query) {
       if (p.key) {
@@ -802,13 +814,13 @@ struct URI {
     return tmp.data;
   }
   /// ditto
-  @property auto query(string q) {
+  @property auto query(string q)
+  {
     _query = [];
-    auto tmp = replace(q, "&amp;", "&");
-    foreach(p; split(tmp, "&")) {
+    foreach(p; split(q, "&")) {
       auto kv = split(p, "=");
       if (kv.length && kv[0].length) {
-        auto pair = new Pair;
+        Pair pair;
         pair.key  = kv[0];
         pair.val  = kv.length > 1 ? kv[1] : "";
         _query ~= pair;
@@ -816,7 +828,18 @@ struct URI {
     }
     return query;
   }
-  @property auto queryEncoded() const {
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/?x=1";
+    assert(u.query == "x=1");
+    u.query = "z=2&y=4";
+    assert(u.toString() == "http://dlang.org/?z=2&y=4");
+  }
+
+  /// GetU URI encoded query as string representation.
+  @property auto queryEncoded() const
+  {
     auto tmp = appender!string;
     foreach(p; _query) {
       if (p.key) {
@@ -830,17 +853,9 @@ struct URI {
     return tmp.data;
   }
 
-  /**
-   * Get/set URI authorization info
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/";
-   * auto s1 = uri.auth;       // s1 = ""
-   * uri.auth = "anon:1234";
-   * auto s2 = uri.toString(); // s2 = "http://anon:1234@dlang.org/"
-   * --------------------
-   */
-  @property string auth() const {
+  /// Get/set URI userInfo
+  @property string userInfo() const
+  {
     auto tmp = appender!string;
     tmp.put(_username);
     if (_password.length) {
@@ -849,48 +864,67 @@ struct URI {
     }
     return tmp.data;
   }
-
   /// ditto
-  @property string auth(string a) {
-    auto tmp = split(a, ":");
-    _username = (tmp.length > 0) ? tmp[0] : "";
-    _password = (tmp.length > 1) ? tmp[1] : "";
-    return auth;
+  @property string userInfo(string src)
+  {
+    auto passIdx = src.indexOf(':');
+    if ( passIdx >= 0 ){
+       _username = src[0 ..  passIdx];
+       _password = src[passIdx + 1 .. $];
+    } else {
+       _username = src;
+    }
+    return userInfo;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/";
+    assert(u.userInfo == "");
+    u.userInfo = "anon:1234";
+    assert(u.toString() == "http://anon:1234@dlang.org/");
   }
 
-  /**
-   * Get/set URI resource info
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org:81/";
-   * auto s1 = uri.auth;       // s1 = "dlang.org:81"
-   * uri.auth = "code.dlang.org:82";
-   * auto s2 = uri.toString(); // s2 = "http://code.dlang.org:82/"
-   * --------------------
-   */
-  @property string resource() const {
+  /// Get/set URI resource info
+  @property string resource() const
+  {
     auto tmp = appender!string;
     tmp.put(_host);
-    if (_port && _port != defaultPort) {
+    if (_port) {
       tmp.put(':');
       tmp.put(to!string(_port));
     }
     return tmp.data;
   }
   /// ditto
-  @property string resource(string r) {
-    auto tmp = split(r, ":");
-    _host = (tmp.length > 0) ? tmp[0] : "";
-    try {
-      _port = to!ushort((tmp.length > 1) ? tmp[1] : "0");
-    } catch {}
+  @property string resource(string src)
+  {
+    auto portIdx = src.indexOf(':');
+    if ( portIdx >= 0 ) {
+      _host = src[0 .. portIdx];
+      if (src[portIdx + 1 .. $].empty) {
+        throw new URIException("Empty port part");
+      }
+      _port = to!ushort(src[portIdx + 1 .. $]);
+    } else {
+      _host = src;
+    }
     return resource;
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org:81/";
+    assert(u.auth == "dlang.org:81");
+    u.auth = "code.dlang.org:82";
+    assert(u.toString() == "http://code.dlang.org:82/");
   }
 
   /// Get/set
-  @property string authority() const {
+  @property string authority() const
+  {
     auto tmp = appender!string;
-    tmp.put(auth);
+    tmp.put(userInfo);
     auto tmp2 = resource;
 
     if (!tmp.data.empty)
@@ -902,23 +936,26 @@ struct URI {
     return tmp.data;
   }
   /// ditto
-  @property string authority(string a) {
-    auto tmp = split(a, "@");
-    resource = (tmp.length == 1) ? tmp[0] : (tmp.length > 1) ? tmp[1] : "";
-    auth     = (tmp.length >  1) ? tmp[0] : "";
+  @property string authority(string src)
+  {
+    auto atIdx = src.indexOf('@');
+    if ( atIdx >= 0 ) {
+      userInfo = src[0 .. atIdx];
+      resource = src[atIdx + 1 .. $];
+    } else {
+      resource = src;
+    }
     return authority;
   }
+  ///
+  unittest
+  {
 
-  /**
-   * Returns all values for $(B key)
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/?x=1&x=a";
-   * auto x = uri.all("x"); // x = ["1","a"]
-   * auto z = uri.all("z"); // z = []
-   * --------------------
-   */
-  string[] all(string key) {
+  }
+
+  /// Returns all values for $(B key)
+  string[] all(string key)
+  {
     auto tmp = appender!(string[]);
     foreach(p; _query) {
       if (p.key == key) {
@@ -927,31 +964,31 @@ struct URI {
     }
     return tmp.data;
   }
-
-  /**
-   * Insert one more value with name $(B key)es for $(B key)
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/?x=1&x=a";
-   * uri.insert("x", "1");
-   * uri.insert("x", "2");
-   * auto x = uri.all("x"); // x = ["1","2"]
-   * --------------------
-   */
-  void insert(string key, string val) {
-    _query ~= new URI.Pair(key, val);
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/?x=1&x=a";
+    assert(u.all("x") == ["1","a"]);
+    assert(u.all("z") == []);
   }
 
-  /**
-   * Remove all values with name $(B key)
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/?x=1&x=a";
-   * uri.remove("x");
-   * auto s = uri.toString(); // s = "http://dlang.org/"
-   * --------------------
-   */
-  void remove(string key) {
+  /// Insert one or more values with name $(B key)
+  void insert(string key, string val)
+  {
+    _query ~= Pair(key, val);
+  }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/?x=1&x=a";
+    u.insert("x", "1");
+    u.insert("x", "2");
+    asert(u.all("x") == ["1","2"]);
+  }
+
+  /// Remove all values with name $(B key)
+  void remove(string key)
+  {
     long pos = 0;
     while (pos >= 0) {
       auto e = _query.find!("a.key == b")(key);
@@ -961,17 +998,17 @@ struct URI {
       _query = std.algorithm.remove(_query, pos);
     }
   }
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/?x=1&x=a";
+    u.remove("x");
+    assert(u.toString() == "http://dlang.org/");
+  }
 
-  /**
-   * Get query value with name $(B key), $(B returns empty string for non exists values)
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/?x=1";
-   * auto x = uri["x"]; // x = "1";
-   * auto z = uri["z"]; // z = "";
-   * --------------------
-   */
-  string opIndex(string key) {
+  /// Get query value with name $(B key), $(B returns empty string for non exists values)
+  string opIndex(string key)
+  {
     foreach(p; _query) {
       if (p.key == key) {
         return p.val;
@@ -979,18 +1016,17 @@ struct URI {
     }
     return "";
   }
-  /**
-   * Set query value with name $(B key), if some values by this key are defined, replaces first value
-   * Examples:
-   * --------------------
-   * URI uri = "http://dlang.org/?x=1&x=2&y=3";
-   * uri["x"] = "3";          // Replace first "x" value
-   * uri["y"] = "1";          // Replace "y" value
-   * uri["z"] = "0";          // Add "z" value
-   * auto s = uri.toString(); // s = "http://dlang.org/?x=3&x=2&y=1&z=0"
-   * --------------------
-   */
-  void opIndexAssign(string val, string key) {
+  ///
+  unittest
+  {
+    URI u = "http://dlang.org/?x=1";
+    assert(u["x"] == "1");
+    assert(u["z"] == "");
+  }
+
+  /// Set query value with name $(B key), if some values by this key are defined, replaces first value
+  void opIndexAssign(string val, string key)
+  {
     auto len = _query.length;
     for (auto i = 0; i < len; ++i){
       if (_query[i].key == key) {
@@ -998,9 +1034,21 @@ struct URI {
         return;
       }
     }
-    _query ~= new Pair(key, val);
+    _query ~= Pair(key, val);
   }
-  string toString() const {
+  ///
+  unittest
+  {
+   URI u = "http://dlang.org/?x=1&x=2&y=3";
+   u["x"] = "3";          // Replace first "x" value
+   u["y"] = "1";          // Replace "y" value
+   u["z"] = "0";          // Add "z" value
+   asert(u.toString() == "http://dlang.org/?x=3&x=2&y=1&z=0");
+  }
+
+  /// To string representation
+  string toString() const
+  {
     string tmp;
     if (_scheme.length) {
       tmp ~= _scheme ~ ":";
@@ -1024,38 +1072,47 @@ struct URI {
     }
     return tmp;
   }
-  string toEncoded() const {
-    return std.uri.encode(toString);
+
+  /// To encoded string representation
+  string toEncoded() const
+  {
+    return encode(toString);
   }
-
   ///
-  unittest {
-    auto i = URI("http://foo:bar@baz:1234/to?key=val&array=e1&array=e2#id1");
-    assert(i.scheme       == "http");
-    assert(i.username     == "foo");
-    assert(i.password     == "bar");
-    assert(i.host         == "baz");
-    assert(i.port         == 1234);
-    assert(i.path         == "/to");
-    assert(i.pathAndQuery == "/to?key=val&array=e1&array=e2");
-    assert(i.query        == "key=val&array=e1&array=e2");
-    assert(i["key"]       == "val");
-    assert(i.all("array") == ["e1","e2"]);
-    assert(i.fragment     == "id1");
-    assert(i.auth         == "foo:bar");
-    assert(i.resource     == "baz:1234");
-    assert(i.authority    == "foo:bar@baz:1234");
-    assert(to!string(i)   == "http://foo:bar@baz:1234/to?key=val&array=e1&array=e2#id1");
-    i.remove("array");
-    assert(to!string(i)   == "http://foo:bar@baz:1234/to?key=val#id1");
-    i["key"] = "val1";
-    i.insert("key","val2");
-    assert(to!string(i)   == "http://foo:bar@baz:1234/to?key=val1&key=val2#id1");
-
-    auto url = "http://ru.wikipedia.org/wiki/D_(%D1%8F%D0%B7%D1%8B%D0%BA_%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F)";
-    auto e = URI(url);
+  unittest
+  {
+    auto s = "http://ru.wikipedia.org/wiki/D_(%D1%8F%D0%B7%D1%8B%D0%BA_%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F)";
+    URI  e = s;
     assert(e.path == "/wiki/D_(язык_программирования)");
     assert(e.toString() == "http://ru.wikipedia.org/wiki/D_(язык_программирования)");
-    assert(e.toEncoded() == url);
+    assert(e.toEncoded() == s);
   }
+  
+  void clear() {
+    _scheme.length = 0;
+    _fragment.length = 0;
+    _host.length = 0;
+    _username.length = 0;
+    _password.length = 0;
+    _path.length = 0;
+    _port = 0;
+    _query.length = 0;
+  }
+}
+///
+unittest
+{
+  // Basic
+  URI u = "scheme://user:pass@hostname:1234/path?query=string#_fragment_";
+  assert(u.scheme == "scheme");
+  assert(u.authority == "user:pass@hostname:1234");
+  assert(u.userInfo == "user:pass");
+  assert(u.resource == "hostname:1234");
+  assert(u.username == "user");
+  assert(u.password == "user");
+  assert(u.host == "hostname");
+  assert(u.port == 1234);
+  assert(u.path == "/path");
+  assert(u.query == "query=string");
+  assert(u.fragment == "_fragment_");
 }
