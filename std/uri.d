@@ -915,8 +915,8 @@ struct URI {
   unittest
   {
     URI u = "http://dlang.org:81/";
-    assert(u.auth == "dlang.org:81");
-    u.auth = "code.dlang.org:82";
+    assert(u.resource == "dlang.org:81");
+    u.resource = "code.dlang.org:82";
     assert(u.toString() == "http://code.dlang.org:82/");
   }
 
@@ -983,7 +983,7 @@ struct URI {
     URI u = "http://dlang.org/?x=1&x=a";
     u.insert("x", "1");
     u.insert("x", "2");
-    asert(u.all("x") == ["1","2"]);
+    assert(u.all("x") == ["1","2"]);
   }
 
   /// Remove all values with name $(B key)
@@ -1043,7 +1043,7 @@ struct URI {
    u["x"] = "3";          // Replace first "x" value
    u["y"] = "1";          // Replace "y" value
    u["z"] = "0";          // Add "z" value
-   asert(u.toString() == "http://dlang.org/?x=3&x=2&y=1&z=0");
+   assert(u.toString() == "http://dlang.org/?x=3&x=2&y=1&z=0");
   }
 
   /// To string representation
