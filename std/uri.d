@@ -606,7 +606,7 @@ struct URI {
     if (src.empty) {
       throw new URIException("URI string is empty");
     }
-    bool hasResource = false;
+    bool reqResource = false;
 
     if ( src[0] != '/' ) {
       auto idx = src.indexOf(':');
@@ -616,16 +616,18 @@ struct URI {
       case "ftp",  "sftp":
       case "http", "https":
       case "spdy":
-      case "file":
+        reqResource = true;
         if (!src.startsWith("//")) {
           throw new URIException(text("URI must start with ", _scheme, "://..."));
         }
-        hasResource = true;
         src = src[2 .. $];
         goto default;
       default:
         auto pathIdx = src.indexOf('/');
         if( pathIdx < 0 ) pathIdx = src.length;
+        if (reqResource && src[0 .. pathIdx].empty) {
+          throw new URIException("URI resource required");
+        }
         authority = src[0 .. pathIdx];
         src = src[pathIdx  .. $];
       }
