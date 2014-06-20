@@ -602,7 +602,7 @@ struct URI {
   auto opAssign(string uri)
   {
     clear();
-    auto src = uri;
+    auto src = decode(uri);
     if (src.empty) {
       throw new URIException("URI string is empty");
     }
