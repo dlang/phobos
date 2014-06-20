@@ -1015,7 +1015,7 @@ public:
             foreach(year; chain(testYearsBC, testYearsAD))
             {
                 auto e = SysTime(DateTime(year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
-                                 st.fracSec,
+                                 st.fracSecs,
                                  st.timezone);
                 test(st, year, e);
             }
@@ -1139,9 +1139,8 @@ public:
             foreach(year; testYearsBC)
             {
                 auto e = SysTime(DateTime(year, dt.month, dt.day, dt.hour, dt.minute, dt.second),
-                                 st.fracSec,
+                                 st.fracSecs,
                                  st.timezone);
-
                 test(st, (year * -1) + 1, e);
             }
         }
@@ -1276,11 +1275,9 @@ public:
             {
                 if(st.day > maxDay(dt.year, md.month))
                     continue;
-
                 auto e = SysTime(DateTime(dt.year, md.month, dt.day, dt.hour, dt.minute, dt.second),
-                                 st.fracSec,
+                                 st.fracSecs,
                                  st.timezone);
-
                 test(st, md.month, e);
             }
         }
@@ -1429,11 +1426,9 @@ public:
 
                 if(day > maxDay(dt.year, dt.month))
                     continue;
-
                 auto expected = SysTime(DateTime(dt.year, dt.month, day, dt.hour, dt.minute, dt.second),
-                                        st.fracSec,
+                                        st.fracSecs,
                                         st.timezone);
-
                 st.day = day;
                 assert(st == expected, format("[%s] [%s]", st, expected));
             }
@@ -1589,9 +1584,8 @@ public:
             {
                 auto dt = cast(DateTime)st;
                 auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, hour, dt.minute, dt.second),
-                                        st.fracSec,
+                                        st.fracSecs,
                                         st.timezone);
-
                 st.hour = hour;
                 assert(st == expected, format("[%s] [%s]", st, expected));
             }
@@ -1712,9 +1706,8 @@ public:
             {
                 auto dt = cast(DateTime)st;
                 auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, minute, dt.second),
-                                        st.fracSec,
+                                        st.fracSecs,
                                         st.timezone);
-
                 st.minute = minute;
                 assert(st == expected, format("[%s] [%s]", st, expected));
             }
@@ -1838,9 +1831,8 @@ public:
             {
                 auto dt = cast(DateTime)st;
                 auto expected = SysTime(DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, second),
-                                        st.fracSec,
+                                        st.fracSecs,
                                         st.timezone);
-
                 st.second = second;
                 assert(st == expected, format("[%s] [%s]", st, expected));
             }
