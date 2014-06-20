@@ -957,8 +957,21 @@ struct URI {
 
   }
 
+  /// Returns $(B true) if key present in query
+  bool has(string key)
+  {
+    auto e = _query.find!("a.key == b")(key);
+    return !e.empty;
+  }
+  unittest
+  {
+    URI u = "http://dlang.org/?x=1";
+    assert(u.has("x") == true);
+    assert(u.has("z") == false);
+  }
+
   /// Returns all values for $(B key)
-  string[] all(string key)
+  auto all(string key)
   {
     auto tmp = appender!(string[]);
     foreach(p; _query) {
@@ -1010,7 +1023,7 @@ struct URI {
     assert(u.toString() == "http://dlang.org/");
   }
 
-  /// Get query value with name $(B key), $(B returns empty string for non exists values)
+  /// Get query value with name $(B key), throw exception for non exists keys
   string opIndex(string key)
   {
     foreach(p; _query) {
@@ -1018,14 +1031,18 @@ struct URI {
         return p.val;
       }
     }
-    return "";
+    throw new URIException(text("Key '", key, "' not exists"));
   }
   ///
   unittest
   {
     URI u = "http://dlang.org/?x=1";
     assert(u["x"] == "1");
-    assert(u["z"] == "");
+    try {
+      assert(u["z"] == "");
+    } catch(Exception e){
+      assert(e.msg == "URI Exception: Key 'z' not exists");
+    }
   }
 
   /// Set query value with name $(B key), if some values by this key are defined, replaces first value
@@ -1091,7 +1108,7 @@ struct URI {
     assert(e.toString() == "http://ru.wikipedia.org/wiki/D_(язык_программирования)");
     assert(e.toEncoded() == s);
   }
-
+  
   void clear() {
     _scheme.length = 0;
     _fragment.length = 0;
