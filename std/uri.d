@@ -39,10 +39,10 @@ import core.exception : OutOfMemoryError;
 import std.exception : assumeUnique;
 
 // Extra imports
-import std.algorithm;
-import std.array;
-import std.conv;
-import std.string;
+private import std.algorithm: find, remove, countUntil;
+private import std.array;
+private import std.conv: to, text;
+private import std.string: indexOf, startsWith;
 
 
 class URIException : Exception
@@ -577,6 +577,10 @@ struct URI {
       string key;
       string val;
     }
+    struct Opt {
+      bool  reqDSlash;
+      bool  reqAuthority;
+    }
     string  _scheme;
     string  _fragment;
     string  _host;
@@ -585,6 +589,25 @@ struct URI {
     string  _path;
     ushort  _port;
     Pair[]  _query;
+    
+
+    static auto takeOpt(const(char)[] s) {
+      Opt opt;
+      switch(s) {
+      case "ftp", "sftp", "http", "https", "spdy":
+        opt.reqDSlash    = true;
+        opt.reqAuthority = true;
+        break;
+      case "file":
+        opt.reqDSlash    = true;
+        break;
+      case "mailto":
+        opt.reqAuthority = true;
+        break;
+      default:
+      }
+      return opt;
+    }
   }
 
   /// Create URI from string
@@ -606,30 +629,24 @@ struct URI {
     if (src.empty) {
       throw new URIException("URI string is empty");
     }
-    bool hasResource = false;
-    bool reqResource = false;
 
     if ( src[0] != '/' ) {
+      bool hasDSlash = false;
       auto idx = src.indexOf(':');
-      _scheme = (idx < 0) ? "" : src[0 .. idx];
+      scheme = (idx < 0) ? "" : src[0 .. idx];
       src = src[idx + 1 .. $];
       if (src.startsWith("//")) {
-        hasResource = true;
+        hasDSlash = true;
         src = src[2 .. $];
       }
-      switch(_scheme){
-      case "ftp", "sftp", "http", "https", "spdy":
-        if (!hasResource) {
-          throw new URIException(text("URI must start with ", _scheme, "://..."));
-        }
-        reqResource = true;
-        break;
-      default:
+      auto opt = takeOpt(_scheme); 
+      if (opt.reqDSlash && !hasDSlash) {
+        throw new URIException(text("URI must start with '", _scheme, "://'"));
       }
       auto pathIdx = src.indexOf('/');
       if( pathIdx < 0 ) pathIdx = src.length;
-      if (reqResource && src[0 .. pathIdx].empty) {
-        throw new URIException("URI resource required");
+      if (opt.reqAuthority && src[0 .. pathIdx].empty) {
+        throw new URIException(text("Schema '", _scheme,"' requires authority"));
       }
       authority = src[0 .. pathIdx];
       src = src[pathIdx  .. $];
@@ -660,9 +677,12 @@ struct URI {
     return _scheme;
   }
   /// ditto
-  @property auto scheme(string s)
+  @property auto scheme(string src)
   {
-    return _scheme = s;
+    if (src.empty) {
+      throw new URIException("URI scheme is empty");
+    } 
+    return _scheme = src;
   }
   ///
   unittest
@@ -954,7 +974,10 @@ struct URI {
   ///
   unittest
   {
-
+    URI u = "mailto:noreply@dlang.org";
+    assert(u.authority == "noreply@dlang.org");
+    u.authority = "non-exists@dlang.org";
+    assert(u.toString() == "mailto:non-exists@dlang.org");
   }
 
   /// Returns $(B true) if key present in query
@@ -1006,13 +1029,8 @@ struct URI {
   /// Remove all values with name $(B key)
   void remove(string key)
   {
-    size_t pos = 0;
-    while (pos >= 0) {
-      auto e = _query.find!("a.key == b")(key);
-      if (!e.length)
-        break;
-      pos = _query.countUntil(e[0]);
-      _query = std.algorithm.remove(_query, pos);
+    foreach(ref e; _query.find!("a.key == b")(key)) {
+      _query = std.algorithm.remove(_query, _query.countUntil(e));
     }
   }
   ///
@@ -1067,31 +1085,44 @@ struct URI {
    assert(u.toString() == "http://dlang.org/?x=3&x=2&y=1&z=0");
   }
 
+  /// clears URI
+  void clear() {
+    _scheme.length = 0;
+    _fragment.length = 0;
+    _host.length = 0;
+    _username.length = 0;
+    _password.length = 0;
+    _path.length = 0;
+    _port = 0;
+    _query.length = 0;
+  }
   /// To string representation
   string toString() const
   {
-    string tmp;
-    if (_scheme.length) {
-      tmp ~= _scheme ~ ":";
-    }
+    auto tmp = appender!string();
+    auto opt = takeOpt(_scheme); 
+    tmp.put(_scheme);
+    tmp.put(":");
     auto a = authority;
     auto q = query;
     if (a.length) {
-      if (tmp.length) {
-        tmp ~= "//";
+      if (opt.reqDSlash) {
+        tmp.put("//");
       }
-      tmp ~= a;
+      tmp.put(a);
     }
-    if (_path) {
-      tmp ~= _path;
+    if (!_path.empty) {
+      tmp.put(_path);
     }
-    if (q.length) {
-      tmp ~= "?" ~ q;
+    if (!q.empty) {
+      tmp.put("?");
+      tmp.put(q);
     }
     if (_fragment.length) {
-      tmp ~= "#" ~ _fragment;
+      tmp.put("#");
+      tmp.put(_fragment);
     }
-    return tmp;
+    return tmp.data;
   }
 
   /// To encoded string representation
@@ -1108,17 +1139,8 @@ struct URI {
     assert(e.toString() == "http://ru.wikipedia.org/wiki/D_(язык_программирования)");
     assert(e.toEncoded() == s);
   }
-  
-  void clear() {
-    _scheme.length = 0;
-    _fragment.length = 0;
-    _host.length = 0;
-    _username.length = 0;
-    _password.length = 0;
-    _path.length = 0;
-    _port = 0;
-    _query.length = 0;
-  }
+
+  /// TODO: operators
 }
 ///
 unittest
