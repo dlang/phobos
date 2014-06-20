@@ -982,7 +982,7 @@ struct URI {
   ///
   unittest
   {
-    URI u = "http://dlang.org/?x=1&x=a";
+    URI u = "http://dlang.org/";
     u.insert("x", "1");
     u.insert("x", "2");
     assert(u.all("x") == ["1","2"]);
