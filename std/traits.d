@@ -6122,14 +6122,6 @@ unittest
 }
 
 
-// Remove import when unsigned is removed.
-import std.conv;
-
-// Purposefully undocumented. Will be removed in June 2014.
-deprecated("unsigned has been moved to std.conv. Please adjust your imports accordingly.")
-alias unsigned = std.conv.unsigned;
-
-
 /**
 Returns the most negative value of the numeric type T.
 */
