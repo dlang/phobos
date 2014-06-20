@@ -606,31 +606,33 @@ struct URI {
     if (src.empty) {
       throw new URIException("URI string is empty");
     }
+    bool hasResource = false;
     bool reqResource = false;
 
     if ( src[0] != '/' ) {
       auto idx = src.indexOf(':');
       _scheme = (idx < 0) ? "" : src[0 .. idx];
       src = src[idx + 1 .. $];
+      if (src.startsWith("//")) {
+        hasResource = true;
+        src = src[2 .. $];
+      }
       switch(_scheme){
-      case "ftp",  "sftp":
-      case "http", "https":
-      case "spdy":
-        reqResource = true;
-        if (!src.startsWith("//")) {
+      case "ftp", "sftp", "http", "https", "spdy":
+        if (!hasResource) {
           throw new URIException(text("URI must start with ", _scheme, "://..."));
         }
-        src = src[2 .. $];
-        goto default;
+        reqResource = true;
+        break;
       default:
-        auto pathIdx = src.indexOf('/');
-        if( pathIdx < 0 ) pathIdx = src.length;
-        if (reqResource && src[0 .. pathIdx].empty) {
-          throw new URIException("URI resource required");
-        }
-        authority = src[0 .. pathIdx];
-        src = src[pathIdx  .. $];
       }
+      auto pathIdx = src.indexOf('/');
+      if( pathIdx < 0 ) pathIdx = src.length;
+      if (reqResource && src[0 .. pathIdx].empty) {
+        throw new URIException("URI resource required");
+      }
+      authority = src[0 .. pathIdx];
+      src = src[pathIdx  .. $];
     }
     auto fragIdx = src.indexOf('#');
     if( fragIdx >= 0 ){
@@ -1089,7 +1091,7 @@ struct URI {
     assert(e.toString() == "http://ru.wikipedia.org/wiki/D_(язык_программирования)");
     assert(e.toEncoded() == s);
   }
-  
+
   void clear() {
     _scheme.length = 0;
     _fragment.length = 0;
@@ -1111,7 +1113,7 @@ unittest
   assert(u.userInfo == "user:pass");
   assert(u.resource == "hostname:1234");
   assert(u.username == "user");
-  assert(u.password == "user");
+  assert(u.password == "pass");
   assert(u.host == "hostname");
   assert(u.port == 1234);
   assert(u.path == "/path");
