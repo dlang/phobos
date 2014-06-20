@@ -5957,173 +5957,179 @@ public:
 
     unittest
     {
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678));
+        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
 
-        assert(st + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"weeks"(-7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"days"(7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"days"(-7) == SysTime(DateTime(1999, 6, 29, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"hours"(7) == SysTime(DateTime(1999, 7, 6, 19, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"hours"(-7) == SysTime(DateTime(1999, 7, 6, 5, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"minutes"(7) == SysTime(DateTime(1999, 7, 6, 12, 37, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"minutes"(-7) == SysTime(DateTime(1999, 7, 6, 12, 23, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"seconds"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 40), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"seconds"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 26), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st + dur!"msecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_415_678)));
-        assert(st + dur!"msecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_275_678)));
-        assert(st + dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_748)));
-        assert(st + dur!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
-        assert(st + dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_685)));
-        assert(st + dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_671)));
-
-        //This probably only runs in cases where gettimeofday() is used, but it's
-        //hard to do this test correctly with variable ticksPerSec.
-        if(TickDuration.ticksPerSec == 1_000_000)
-        {
-            assert(st + TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_748)));
-            assert(st + TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
-        }
-
-        assert(st - dur!"weeks"(-7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"weeks"(7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"days"(-7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"days"(7) == SysTime(DateTime(1999, 6, 29, 12, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"hours"(-7) == SysTime(DateTime(1999, 7, 6, 19, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"hours"(7) == SysTime(DateTime(1999, 7, 6, 5, 30, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"minutes"(-7) == SysTime(DateTime(1999, 7, 6, 12, 37, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"minutes"(7) == SysTime(DateTime(1999, 7, 6, 12, 23, 33), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"seconds"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 40), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"seconds"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 26), FracSec.from!"hnsecs"(2_345_678)));
-        assert(st - dur!"msecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_415_678)));
-        assert(st - dur!"msecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_275_678)));
-        assert(st - dur!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_748)));
-        assert(st - dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
-        assert(st - dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_685)));
-        assert(st - dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_671)));
+        assert(st + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33), hnsecs(2_345_678)));
+        assert(st + dur!"weeks"(-7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33), hnsecs(2_345_678)));
+        assert(st + dur!"days"(7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33), hnsecs(2_345_678)));
+        assert(st + dur!"days"(-7) == SysTime(DateTime(1999, 6, 29, 12, 30, 33), hnsecs(2_345_678)));
+        assert(st + dur!"hours"(7) == SysTime(DateTime(1999, 7, 6, 19, 30, 33), hnsecs(2_345_678)));
+        assert(st + dur!"hours"(-7) == SysTime(DateTime(1999, 7, 6, 5, 30, 33), hnsecs(2_345_678)));
+        assert(st + dur!"minutes"(7) == SysTime(DateTime(1999, 7, 6, 12, 37, 33), hnsecs(2_345_678)));
+        assert(st + dur!"minutes"(-7) == SysTime(DateTime(1999, 7, 6, 12, 23, 33), hnsecs(2_345_678)));
+        assert(st + dur!"seconds"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 40), hnsecs(2_345_678)));
+        assert(st + dur!"seconds"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 26), hnsecs(2_345_678)));
+        assert(st + dur!"msecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_415_678)));
+        assert(st + dur!"msecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_275_678)));
+        assert(st + dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
+        assert(st + dur!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
+        assert(st + dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_685)));
+        assert(st + dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_671)));
 
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
         if(TickDuration.ticksPerSec == 1_000_000)
         {
-            assert(st - TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_748)));
-            assert(st - TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2_345_608)));
+            assert(st + TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
+            assert(st + TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
         }
 
-        static void TestST(in SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
+        assert(st - dur!"weeks"(-7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33), hnsecs(2_345_678)));
+        assert(st - dur!"weeks"(7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33), hnsecs(2_345_678)));
+        assert(st - dur!"days"(-7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33), hnsecs(2_345_678)));
+        assert(st - dur!"days"(7) == SysTime(DateTime(1999, 6, 29, 12, 30, 33), hnsecs(2_345_678)));
+        assert(st - dur!"hours"(-7) == SysTime(DateTime(1999, 7, 6, 19, 30, 33), hnsecs(2_345_678)));
+        assert(st - dur!"hours"(7) == SysTime(DateTime(1999, 7, 6, 5, 30, 33), hnsecs(2_345_678)));
+        assert(st - dur!"minutes"(-7) == SysTime(DateTime(1999, 7, 6, 12, 37, 33), hnsecs(2_345_678)));
+        assert(st - dur!"minutes"(7) == SysTime(DateTime(1999, 7, 6, 12, 23, 33), hnsecs(2_345_678)));
+        assert(st - dur!"seconds"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 40), hnsecs(2_345_678)));
+        assert(st - dur!"seconds"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 26), hnsecs(2_345_678)));
+        assert(st - dur!"msecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_415_678)));
+        assert(st - dur!"msecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_275_678)));
+        assert(st - dur!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
+        assert(st - dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
+        assert(st - dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_685)));
+        assert(st - dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_671)));
+
+        //This probably only runs in cases where gettimeofday() is used, but it's
+        //hard to do this test correctly with variable ticksPerSec.
+        if(TickDuration.ticksPerSec == 1_000_000)
         {
-            assert(orig + dur!"hnsecs"(hnsecs) == expected);
+            assert(st - TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
+            assert(st - TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
+        }
+
+        static void testST(in SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
+        {
+            auto result = orig + dur!"hnsecs"(hnsecs);
+            if(result != expected)
+                throw new AssertError(format("Failed. actual [%s] != expected [%s]", result, expected), __FILE__, line);
         }
 
         //Test A.D.
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 0, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(275)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 2, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(276)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 10, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(284)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 100, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(374)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1001, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1275)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 2000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(26_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(27_000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_727, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(27_001)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_766_725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_766_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_766_726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_767_000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_000_000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_000_274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 60_000_000L, SysTime(DateTime(1999, 7, 6, 12, 30, 39), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 3_600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 36, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 31, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 36_000_000_000L, SysTime(DateTime(1999, 7, 6, 13, 30, 33), FracSec.from!"hnsecs"(274)));
+        auto beforeAD = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(274));
+        testST(beforeAD, 0, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(274)));
+        testST(beforeAD, 1, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(275)));
+        testST(beforeAD, 2, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(276)));
+        testST(beforeAD, 10, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(284)));
+        testST(beforeAD, 100, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(374)));
+        testST(beforeAD, 725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(999)));
+        testST(beforeAD, 726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1000)));
+        testST(beforeAD, 1000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1274)));
+        testST(beforeAD, 1001, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1275)));
+        testST(beforeAD, 2000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2274)));
+        testST(beforeAD, 26_725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(26_999)));
+        testST(beforeAD, 26_726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(27_000)));
+        testST(beforeAD, 26_727, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(27_001)));
+        testST(beforeAD, 1_766_725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1_766_999)));
+        testST(beforeAD, 1_766_726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1_767_000)));
+        testST(beforeAD, 1_000_000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1_000_274)));
+        testST(beforeAD, 60_000_000L, SysTime(DateTime(1999, 7, 6, 12, 30, 39), hnsecs(274)));
+        testST(beforeAD, 3_600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 36, 33), hnsecs(274)));
+        testST(beforeAD, 600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 31, 33), hnsecs(274)));
+        testST(beforeAD, 36_000_000_000L, SysTime(DateTime(1999, 7, 6, 13, 30, 33), hnsecs(274)));
 
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(273)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -2, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(272)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -10, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(264)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -100, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(174)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -274, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1001, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_273)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -2000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_998_274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -33_274, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_967_000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -33_275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_966_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_833_274, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(8_167_000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_833_275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(8_166_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_000_000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_000_274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -60_000_000L, SysTime(DateTime(1999, 7, 6, 12, 30, 27), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -3_600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 24, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 29, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -36_000_000_000L, SysTime(DateTime(1999, 7, 6, 11, 30, 33), FracSec.from!"hnsecs"(274)));
+        testST(beforeAD, -1, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(273)));
+        testST(beforeAD, -2, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(272)));
+        testST(beforeAD, -10, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(264)));
+        testST(beforeAD, -100, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(174)));
+        testST(beforeAD, -274, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(0)));
+        testST(beforeAD, -275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_999)));
+        testST(beforeAD, -1000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_274)));
+        testST(beforeAD, -1001, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_273)));
+        testST(beforeAD, -2000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_998_274)));
+        testST(beforeAD, -33_274, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_967_000)));
+        testST(beforeAD, -33_275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_966_999)));
+        testST(beforeAD, -1_833_274, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(8_167_000)));
+        testST(beforeAD, -1_833_275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(8_166_999)));
+        testST(beforeAD, -1_000_000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_000_274)));
+        testST(beforeAD, -60_000_000L, SysTime(DateTime(1999, 7, 6, 12, 30, 27), hnsecs(274)));
+        testST(beforeAD, -3_600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 24, 33), hnsecs(274)));
+        testST(beforeAD, -600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 29, 33), hnsecs(274)));
+        testST(beforeAD, -36_000_000_000L, SysTime(DateTime(1999, 7, 6, 11, 30, 33), hnsecs(274)));
 
         //Test B.C.
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 0, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(275)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 2, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(276)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 10, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(284)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 100, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(374)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1001, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1275)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 2000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(26_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(27_000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_727, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(27_001)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_766_725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_766_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_766_726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_767_000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_000_000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_000_274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 60_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 30, 39), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 3_600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 36, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 31, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 36_000_000_000L, SysTime(DateTime(-1999, 7, 6, 13, 30, 33), FracSec.from!"hnsecs"(274)));
+        auto beforeBC = SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(274));
+        testST(beforeBC, 0, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(274)));
+        testST(beforeBC, 1, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(275)));
+        testST(beforeBC, 2, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(276)));
+        testST(beforeBC, 10, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(284)));
+        testST(beforeBC, 100, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(374)));
+        testST(beforeBC, 725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(999)));
+        testST(beforeBC, 726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1000)));
+        testST(beforeBC, 1000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1274)));
+        testST(beforeBC, 1001, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1275)));
+        testST(beforeBC, 2000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(2274)));
+        testST(beforeBC, 26_725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(26_999)));
+        testST(beforeBC, 26_726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(27_000)));
+        testST(beforeBC, 26_727, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(27_001)));
+        testST(beforeBC, 1_766_725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1_766_999)));
+        testST(beforeBC, 1_766_726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1_767_000)));
+        testST(beforeBC, 1_000_000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1_000_274)));
+        testST(beforeBC, 60_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 30, 39), hnsecs(274)));
+        testST(beforeBC, 3_600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 36, 33), hnsecs(274)));
+        testST(beforeBC, 600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 31, 33), hnsecs(274)));
+        testST(beforeBC, 36_000_000_000L, SysTime(DateTime(-1999, 7, 6, 13, 30, 33), hnsecs(274)));
 
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(273)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -2, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(272)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -10, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(264)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -100, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(174)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -274, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1001, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_273)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -2000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_998_274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -33_274, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_967_000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -33_275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_966_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_833_274, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(8_167_000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_833_275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(8_166_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_000_000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_000_274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -60_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 30, 27), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -3_600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 24, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 29, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -36_000_000_000L, SysTime(DateTime(-1999, 7, 6, 11, 30, 33), FracSec.from!"hnsecs"(274)));
+        testST(beforeBC, -1, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(273)));
+        testST(beforeBC, -2, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(272)));
+        testST(beforeBC, -10, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(264)));
+        testST(beforeBC, -100, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(174)));
+        testST(beforeBC, -274, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(0)));
+        testST(beforeBC, -275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_999_999)));
+        testST(beforeBC, -1000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_999_274)));
+        testST(beforeBC, -1001, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_999_273)));
+        testST(beforeBC, -2000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_998_274)));
+        testST(beforeBC, -33_274, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_967_000)));
+        testST(beforeBC, -33_275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_966_999)));
+        testST(beforeBC, -1_833_274, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(8_167_000)));
+        testST(beforeBC, -1_833_275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(8_166_999)));
+        testST(beforeBC, -1_000_000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_000_274)));
+        testST(beforeBC, -60_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 30, 27), hnsecs(274)));
+        testST(beforeBC, -3_600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 24, 33), hnsecs(274)));
+        testST(beforeBC, -600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 29, 33), hnsecs(274)));
+        testST(beforeBC, -36_000_000_000L, SysTime(DateTime(-1999, 7, 6, 11, 30, 33), hnsecs(274)));
 
         //Test Both
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), 0, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -1, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_998)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -1000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_000)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_998_000)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2555, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_997_445)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -1_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_000_000)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(8_000_000)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2_333_333, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(7_666_667)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -10_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -20_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 58), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -20_888_888, SysTime(DateTime(0, 12, 31, 23, 59, 57), FracSec.from!"hnsecs"(9_111_112)));
+        auto beforeBoth1 = SysTime(DateTime(1, 1, 1, 0, 0, 0));
+        testST(beforeBoth1, 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1)));
+        testST(beforeBoth1, 0, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(0)));
+        testST(beforeBoth1, -1, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)));
+        testST(beforeBoth1, -2, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_998)));
+        testST(beforeBoth1, -1000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_000)));
+        testST(beforeBoth1, -2000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_998_000)));
+        testST(beforeBoth1, -2555, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_997_445)));
+        testST(beforeBoth1, -1_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_000_000)));
+        testST(beforeBoth1, -2_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(8_000_000)));
+        testST(beforeBoth1, -2_333_333, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(7_666_667)));
+        testST(beforeBoth1, -10_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(0)));
+        testST(beforeBoth1, -20_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 58), hnsecs(0)));
+        testST(beforeBoth1, -20_888_888, SysTime(DateTime(0, 12, 31, 23, 59, 57), hnsecs(9_111_112)));
 
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), -1, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_998)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 0, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 1000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2555, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(2554)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 1_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1_999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2_333_333, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(2_333_332)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 10_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_888_888, SysTime(DateTime(1, 1, 1, 0, 0, 2), FracSec.from!"hnsecs"(888_887)));
+        auto beforeBoth2 = SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999));
+        testST(beforeBoth2, -1, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_998)));
+        testST(beforeBoth2, 0, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)));
+        testST(beforeBoth2, 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(0)));
+        testST(beforeBoth2, 2, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1)));
+        testST(beforeBoth2, 1000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(999)));
+        testST(beforeBoth2, 2000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1999)));
+        testST(beforeBoth2, 2555, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(2554)));
+        testST(beforeBoth2, 1_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(999_999)));
+        testST(beforeBoth2, 2_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1_999_999)));
+        testST(beforeBoth2, 2_333_333, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(2_333_332)));
+        testST(beforeBoth2, 10_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(9_999_999)));
+        testST(beforeBoth2, 20_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 1), hnsecs(9_999_999)));
+        testST(beforeBoth2, 20_888_888, SysTime(DateTime(1, 1, 1, 0, 0, 2), hnsecs(888_887)));
 
         auto duration = dur!"seconds"(12);
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6166,163 +6172,171 @@ public:
 
     unittest
     {
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"weeks"(-7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"days"(7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"days"(-7) == SysTime(DateTime(1999, 6, 29, 12, 30, 33)));
+        auto before = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        assert(before + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
+        assert(before + dur!"weeks"(-7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
+        assert(before + dur!"days"(7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
+        assert(before + dur!"days"(-7) == SysTime(DateTime(1999, 6, 29, 12, 30, 33)));
 
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"hours"(7) == SysTime(DateTime(1999, 7, 6, 19, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"hours"(-7) == SysTime(DateTime(1999, 7, 6, 5, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"minutes"(7) == SysTime(DateTime(1999, 7, 6, 12, 37, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"minutes"(-7) == SysTime(DateTime(1999, 7, 6, 12, 23, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"seconds"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 40)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"seconds"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 26)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"msecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), msecs(7)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"msecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), msecs(993)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), usecs(7)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), usecs(999_993)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(7)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) + dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_993)));
+        assert(before + dur!"hours"(7) == SysTime(DateTime(1999, 7, 6, 19, 30, 33)));
+        assert(before + dur!"hours"(-7) == SysTime(DateTime(1999, 7, 6, 5, 30, 33)));
+        assert(before + dur!"minutes"(7) == SysTime(DateTime(1999, 7, 6, 12, 37, 33)));
+        assert(before + dur!"minutes"(-7) == SysTime(DateTime(1999, 7, 6, 12, 23, 33)));
+        assert(before + dur!"seconds"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 40)));
+        assert(before + dur!"seconds"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 26)));
+        assert(before + dur!"msecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), msecs(7)));
+        assert(before + dur!"msecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), msecs(993)));
+        assert(before + dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), usecs(7)));
+        assert(before + dur!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), usecs(999_993)));
+        assert(before + dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(7)));
+        assert(before + dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_993)));
 
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"weeks"(-7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"weeks"(7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"days"(-7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"days"(7) == SysTime(DateTime(1999, 6, 29, 12, 30, 33)));
+        assert(before - dur!"weeks"(-7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
+        assert(before - dur!"weeks"(7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
+        assert(before - dur!"days"(-7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
+        assert(before - dur!"days"(7) == SysTime(DateTime(1999, 6, 29, 12, 30, 33)));
 
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"hours"(-7) == SysTime(DateTime(1999, 7, 6, 19, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"hours"(7) == SysTime(DateTime(1999, 7, 6, 5, 30, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"minutes"(-7) == SysTime(DateTime(1999, 7, 6, 12, 37, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"minutes"(7) == SysTime(DateTime(1999, 7, 6, 12, 23, 33)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"seconds"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 40)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"seconds"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 26)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"msecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), msecs(7)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"msecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), msecs(993)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), usecs(7)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), usecs(999_993)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(7)));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_993)));
+        assert(before - dur!"hours"(-7) == SysTime(DateTime(1999, 7, 6, 19, 30, 33)));
+        assert(before - dur!"hours"(7) == SysTime(DateTime(1999, 7, 6, 5, 30, 33)));
+        assert(before - dur!"minutes"(-7) == SysTime(DateTime(1999, 7, 6, 12, 37, 33)));
+        assert(before - dur!"minutes"(7) == SysTime(DateTime(1999, 7, 6, 12, 23, 33)));
+        assert(before - dur!"seconds"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 40)));
+        assert(before - dur!"seconds"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 26)));
+        assert(before - dur!"msecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), msecs(7)));
+        assert(before - dur!"msecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), msecs(993)));
+        assert(before - dur!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), usecs(7)));
+        assert(before - dur!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), usecs(999_993)));
+        assert(before - dur!"hnsecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(7)));
+        assert(before - dur!"hnsecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_993)));
 
-        static void TestST(SysTime orig, long hnsecs, in SysTime expected)
+        static void testST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
         {
-            orig += dur!"hnsecs"(hnsecs);
-            assert(orig == expected);
+            auto r = orig += dur!"hnsecs"(hnsecs);
+            if(orig != expected)
+                throw new AssertError(format("Failed 1. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
+            if(r != expected)
+                throw new AssertError(format("Failed 2. actual [%s] != expected [%s]", r, expected), __FILE__, line);
         }
 
         //Test A.D.
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 0, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(275)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 2, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(276)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 10, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(284)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 100, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(374)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1001, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1275)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 2000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(26_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(27_000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_727, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(27_001)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_766_725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_766_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_766_726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_767_000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_000_000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_000_274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 60_000_000L, SysTime(DateTime(1999, 7, 6, 12, 30, 39), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 3_600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 36, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 31, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 36_000_000_000L, SysTime(DateTime(1999, 7, 6, 13, 30, 33), FracSec.from!"hnsecs"(274)));
+        auto beforeAD = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(274));
+        testST(beforeAD, 0, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(274)));
+        testST(beforeAD, 1, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(275)));
+        testST(beforeAD, 2, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(276)));
+        testST(beforeAD, 10, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(284)));
+        testST(beforeAD, 100, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(374)));
+        testST(beforeAD, 725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(999)));
+        testST(beforeAD, 726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1000)));
+        testST(beforeAD, 1000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1274)));
+        testST(beforeAD, 1001, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1275)));
+        testST(beforeAD, 2000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2274)));
+        testST(beforeAD, 26_725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(26_999)));
+        testST(beforeAD, 26_726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(27_000)));
+        testST(beforeAD, 26_727, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(27_001)));
+        testST(beforeAD, 1_766_725, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1_766_999)));
+        testST(beforeAD, 1_766_726, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1_767_000)));
+        testST(beforeAD, 1_000_000, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(1_000_274)));
+        testST(beforeAD, 60_000_000L, SysTime(DateTime(1999, 7, 6, 12, 30, 39), hnsecs(274)));
+        testST(beforeAD, 3_600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 36, 33), hnsecs(274)));
+        testST(beforeAD, 600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 31, 33), hnsecs(274)));
+        testST(beforeAD, 36_000_000_000L, SysTime(DateTime(1999, 7, 6, 13, 30, 33), hnsecs(274)));
 
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(273)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -2, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(272)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -10, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(264)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -100, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(174)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -274, SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1001, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_273)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -2000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_998_274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -33_274, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_967_000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -33_275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_966_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_833_274, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(8_167_000)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_833_275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(8_166_999)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_000_000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_000_274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -60_000_000L, SysTime(DateTime(1999, 7, 6, 12, 30, 27), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -3_600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 24, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 29, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -36_000_000_000L, SysTime(DateTime(1999, 7, 6, 11, 30, 33), FracSec.from!"hnsecs"(274)));
+        testST(beforeAD, -1, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(273)));
+        testST(beforeAD, -2, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(272)));
+        testST(beforeAD, -10, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(264)));
+        testST(beforeAD, -100, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(174)));
+        testST(beforeAD, -274, SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(0)));
+        testST(beforeAD, -275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_999)));
+        testST(beforeAD, -1000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_274)));
+        testST(beforeAD, -1001, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_999_273)));
+        testST(beforeAD, -2000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_998_274)));
+        testST(beforeAD, -33_274, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_967_000)));
+        testST(beforeAD, -33_275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_966_999)));
+        testST(beforeAD, -1_833_274, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(8_167_000)));
+        testST(beforeAD, -1_833_275, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(8_166_999)));
+        testST(beforeAD, -1_000_000, SysTime(DateTime(1999, 7, 6, 12, 30, 32), hnsecs(9_000_274)));
+        testST(beforeAD, -60_000_000L, SysTime(DateTime(1999, 7, 6, 12, 30, 27), hnsecs(274)));
+        testST(beforeAD, -3_600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 24, 33), hnsecs(274)));
+        testST(beforeAD, -600_000_000L, SysTime(DateTime(1999, 7, 6, 12, 29, 33), hnsecs(274)));
+        testST(beforeAD, -36_000_000_000L, SysTime(DateTime(1999, 7, 6, 11, 30, 33), hnsecs(274)));
 
         //Test B.C.
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 0, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(275)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 2, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(276)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 10, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(284)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 100, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(374)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1001, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1275)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 2000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(2274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(26_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(27_000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 26_727, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(27_001)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_766_725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_766_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_766_726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_767_000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 1_000_000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_000_274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 60_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 30, 39), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 3_600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 36, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 31, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), 36_000_000_000L, SysTime(DateTime(-1999, 7, 6, 13, 30, 33), FracSec.from!"hnsecs"(274)));
+        auto beforeBC = SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(274));
+        testST(beforeBC, 0, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(274)));
+        testST(beforeBC, 1, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(275)));
+        testST(beforeBC, 2, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(276)));
+        testST(beforeBC, 10, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(284)));
+        testST(beforeBC, 100, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(374)));
+        testST(beforeBC, 725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(999)));
+        testST(beforeBC, 726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1000)));
+        testST(beforeBC, 1000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1274)));
+        testST(beforeBC, 1001, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1275)));
+        testST(beforeBC, 2000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(2274)));
+        testST(beforeBC, 26_725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(26_999)));
+        testST(beforeBC, 26_726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(27_000)));
+        testST(beforeBC, 26_727, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(27_001)));
+        testST(beforeBC, 1_766_725, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1_766_999)));
+        testST(beforeBC, 1_766_726, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1_767_000)));
+        testST(beforeBC, 1_000_000, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(1_000_274)));
+        testST(beforeBC, 60_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 30, 39), hnsecs(274)));
+        testST(beforeBC, 3_600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 36, 33), hnsecs(274)));
+        testST(beforeBC, 600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 31, 33), hnsecs(274)));
+        testST(beforeBC, 36_000_000_000L, SysTime(DateTime(-1999, 7, 6, 13, 30, 33), hnsecs(274)));
 
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(273)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -2, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(272)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -10, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(264)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -100, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(174)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -274, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1001, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_999_273)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -2000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_998_274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -33_274, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_967_000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -33_275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_966_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_833_274, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(8_167_000)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_833_275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(8_166_999)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -1_000_000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), FracSec.from!"hnsecs"(9_000_274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -60_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 30, 27), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -3_600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 24, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 29, 33), FracSec.from!"hnsecs"(274)));
-        TestST(SysTime(DateTime(-1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(274)), -36_000_000_000L, SysTime(DateTime(-1999, 7, 6, 11, 30, 33), FracSec.from!"hnsecs"(274)));
+        testST(beforeBC, -1, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(273)));
+        testST(beforeBC, -2, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(272)));
+        testST(beforeBC, -10, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(264)));
+        testST(beforeBC, -100, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(174)));
+        testST(beforeBC, -274, SysTime(DateTime(-1999, 7, 6, 12, 30, 33), hnsecs(0)));
+        testST(beforeBC, -275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_999_999)));
+        testST(beforeBC, -1000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_999_274)));
+        testST(beforeBC, -1001, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_999_273)));
+        testST(beforeBC, -2000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_998_274)));
+        testST(beforeBC, -33_274, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_967_000)));
+        testST(beforeBC, -33_275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_966_999)));
+        testST(beforeBC, -1_833_274, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(8_167_000)));
+        testST(beforeBC, -1_833_275, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(8_166_999)));
+        testST(beforeBC, -1_000_000, SysTime(DateTime(-1999, 7, 6, 12, 30, 32), hnsecs(9_000_274)));
+        testST(beforeBC, -60_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 30, 27), hnsecs(274)));
+        testST(beforeBC, -3_600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 24, 33), hnsecs(274)));
+        testST(beforeBC, -600_000_000L, SysTime(DateTime(-1999, 7, 6, 12, 29, 33), hnsecs(274)));
+        testST(beforeBC, -36_000_000_000L, SysTime(DateTime(-1999, 7, 6, 11, 30, 33), hnsecs(274)));
 
         //Test Both
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), 0, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -1, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_998)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -1000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_000)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_998_000)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2555, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_997_445)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -1_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_000_000)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(8_000_000)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -2_333_333, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(7_666_667)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -10_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -20_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 58), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)), -20_888_888, SysTime(DateTime(0, 12, 31, 23, 59, 57), FracSec.from!"hnsecs"(9_111_112)));
+        auto beforeBoth1 = SysTime(DateTime(1, 1, 1, 0, 0, 0));
+        testST(beforeBoth1, 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1)));
+        testST(beforeBoth1, 0, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(0)));
+        testST(beforeBoth1, -1, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)));
+        testST(beforeBoth1, -2, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_998)));
+        testST(beforeBoth1, -1000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_000)));
+        testST(beforeBoth1, -2000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_998_000)));
+        testST(beforeBoth1, -2555, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_997_445)));
+        testST(beforeBoth1, -1_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_000_000)));
+        testST(beforeBoth1, -2_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(8_000_000)));
+        testST(beforeBoth1, -2_333_333, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(7_666_667)));
+        testST(beforeBoth1, -10_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(0)));
+        testST(beforeBoth1, -20_000_000, SysTime(DateTime(0, 12, 31, 23, 59, 58), hnsecs(0)));
+        testST(beforeBoth1, -20_888_888, SysTime(DateTime(0, 12, 31, 23, 59, 57), hnsecs(9_111_112)));
 
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), -1, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_998)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 0, SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 1000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2555, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(2554)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 1_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1_999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 2_333_333, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(2_333_332)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 10_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(9_999_999)));
-        TestST(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), 20_888_888, SysTime(DateTime(1, 1, 1, 0, 0, 2), FracSec.from!"hnsecs"(888_887)));
+        auto beforeBoth2 = SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999));
+        testST(beforeBoth2, -1, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_998)));
+        testST(beforeBoth2, 0, SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)));
+        testST(beforeBoth2, 1, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(0)));
+        testST(beforeBoth2, 2, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1)));
+        testST(beforeBoth2, 1000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(999)));
+        testST(beforeBoth2, 2000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1999)));
+        testST(beforeBoth2, 2555, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(2554)));
+        testST(beforeBoth2, 1_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(999_999)));
+        testST(beforeBoth2, 2_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1_999_999)));
+        testST(beforeBoth2, 2_333_333, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(2_333_332)));
+        testST(beforeBoth2, 10_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(9_999_999)));
+        testST(beforeBoth2, 20_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 1), hnsecs(9_999_999)));
+        testST(beforeBoth2, 20_888_888, SysTime(DateTime(1, 1, 1, 0, 0, 2), hnsecs(888_887)));
 
         {
-            auto st = SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
+            auto st = SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999));
             (st += dur!"hnsecs"(52)) += dur!"seconds"(-907);
-            assert(st == SysTime(DateTime(0, 12, 31, 23, 44, 53), FracSec.from!"hnsecs"(51)));
+            assert(st == SysTime(DateTime(0, 12, 31, 23, 44, 53), hnsecs(51)));
         }
 
         auto duration = dur!"seconds"(12);
@@ -6389,21 +6403,19 @@ public:
 
             assert(SysTime(dt, usecs(333_347)) - SysTime(dt) == usecs(333_347));
             assert(SysTime(dt) - SysTime(dt, usecs(333_347)) == usecs(-333_347));
-        }
 
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_234_567)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33)) ==
-                    dur!"hnsecs"(1_234_567));
-        assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1999, 7, 6, 12, 30, 33), FracSec.from!"hnsecs"(1_234_567)) ==
-                    dur!"hnsecs"(-1_234_567));
+            assert(SysTime(dt, hnsecs(1_234_567)) - SysTime(dt) == hnsecs(1_234_567));
+            assert(SysTime(dt) - SysTime(dt, hnsecs(1_234_567)) == hnsecs(-1_234_567));
+        }
 
         assert(SysTime(DateTime(1, 1, 1, 12, 30, 33)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)) == dur!"seconds"(45033));
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(1, 1, 1, 12, 30, 33)) == dur!"seconds"(-45033));
         assert(SysTime(DateTime(0, 12, 31, 12, 30, 33)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)) == dur!"seconds"(-41367));
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 12, 30, 33)) == dur!"seconds"(41367));
 
-        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)) ==
+        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)) ==
                         dur!"hnsecs"(1));
-        assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)) ==
+        assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)) ==
                         dur!"hnsecs"(-1));
 
         auto tz = TimeZone.getTimeZone("America/Los_Angeles");
@@ -6628,9 +6640,9 @@ public:
     unittest
     {
         //Test A.D.
-        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)).dayOfGregorianCal == 1);
-        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(1)).dayOfGregorianCal == 1);
-        assert(SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)).dayOfGregorianCal == 1);
+        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(0)).dayOfGregorianCal == 1);
+        assert(SysTime(DateTime(1, 1, 1, 0, 0, 0), hnsecs(1)).dayOfGregorianCal == 1);
+        assert(SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999)).dayOfGregorianCal == 1);
 
         assert(SysTime(DateTime(1, 1, 1, 12, 2, 9), msecs(212)).dayOfGregorianCal == 1);
         assert(SysTime(DateTime(1, 1, 2, 12, 2, 9), msecs(212)).dayOfGregorianCal == 2);
@@ -6694,16 +6706,16 @@ public:
         assert(SysTime(DateTime(2012, 3, 1, 0, 0, 0), msecs(0)).dayOfGregorianCal == 734_563);
 
         //Test B.C.
-        assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)).dayOfGregorianCal == 0);
-        assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_998)).dayOfGregorianCal == 0);
-        assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0)).dayOfGregorianCal == 0);
-        assert(SysTime(DateTime(0, 12, 31, 0, 0, 0), FracSec.from!"hnsecs"(1)).dayOfGregorianCal == 0);
-        assert(SysTime(DateTime(0, 12, 31, 0, 0, 0), FracSec.from!"hnsecs"(0)).dayOfGregorianCal == 0);
+        assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)).dayOfGregorianCal == 0);
+        assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_998)).dayOfGregorianCal == 0);
+        assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(0)).dayOfGregorianCal == 0);
+        assert(SysTime(DateTime(0, 12, 31, 0, 0, 0), hnsecs(1)).dayOfGregorianCal == 0);
+        assert(SysTime(DateTime(0, 12, 31, 0, 0, 0), hnsecs(0)).dayOfGregorianCal == 0);
 
-        assert(SysTime(DateTime(-1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)).dayOfGregorianCal == -366);
-        assert(SysTime(DateTime(-1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_998)).dayOfGregorianCal == -366);
-        assert(SysTime(DateTime(-1, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(0)).dayOfGregorianCal == -366);
-        assert(SysTime(DateTime(-1, 12, 31, 0, 0, 0), FracSec.from!"hnsecs"(0)).dayOfGregorianCal == -366);
+        assert(SysTime(DateTime(-1, 12, 31, 23, 59, 59), hnsecs(9_999_999)).dayOfGregorianCal == -366);
+        assert(SysTime(DateTime(-1, 12, 31, 23, 59, 59), hnsecs(9_999_998)).dayOfGregorianCal == -366);
+        assert(SysTime(DateTime(-1, 12, 31, 23, 59, 59), hnsecs(0)).dayOfGregorianCal == -366);
+        assert(SysTime(DateTime(-1, 12, 31, 0, 0, 0), hnsecs(0)).dayOfGregorianCal == -366);
 
         assert(SysTime(DateTime(0, 12, 31, 12, 2, 9), msecs(212)).dayOfGregorianCal == 0);
         assert(SysTime(DateTime(0, 12, 30, 12, 2, 9), msecs(212)).dayOfGregorianCal == -1);
