@@ -1488,10 +1488,10 @@ unittest
 
 
 /**
-$(RED Scheduled for deprecation in January 2013. It's badly named and provides
-redundant functionality. It was also badly broken prior to 2.060 (bug# 8362), so
-any code which uses it probably needs to be changed anyway. Please use
-$(D allSatisfy(isSafe, ...)) instead.)
+$(RED Deprecated. It's badly named and provides redundant functionality. It was
+also badly broken prior to 2.060 (bug# 8362), so any code which uses it
+probably needs to be changed anyway. Please use $(D allSatisfy(isSafe, ...))
+instead. This will be removed in June 2015.)
 
 $(D true) all functions are $(D isSafe).
 
@@ -1506,6 +1506,7 @@ static assert( areAllSafe!(add, sub));
 static assert(!areAllSafe!(sub, mul));
 --------------------
  */
+deprecated("Please use allSatisfy(isSafe, ...) instead.")
 template areAllSafe(funcs...)
     if (funcs.length > 0)
 {
@@ -1524,7 +1525,7 @@ template areAllSafe(funcs...)
 }
 
 //Verify Example
-unittest
+deprecated unittest
 {
     @safe    int add(int a, int b) {return a+b;}
     @trusted int sub(int a, int b) {return a-b;}
@@ -1535,7 +1536,7 @@ unittest
     static assert(!areAllSafe!(sub, mul));
 }
 
-unittest
+deprecated unittest
 {
     interface Set
     {
@@ -5371,7 +5372,11 @@ Returns the target type of a pointer.
 */
 alias PointerTarget(T : T*) = T;
 
-/// $(RED Scheduled for deprecation. Please use $(LREF PointerTarget) instead.)
+/**
+  $(RED Deprecated. Please use $(LREF PointerTarget) instead. This will be
+        removed in June 2015.)
+ */
+deprecated("Please use PointerTarget instead.")
 alias pointerTarget = PointerTarget;
 
 unittest
