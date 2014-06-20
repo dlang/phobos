@@ -991,7 +991,7 @@ struct URI {
   /// Remove all values with name $(B key)
   void remove(string key)
   {
-    long pos = 0;
+    size_t pos = 0;
     while (pos >= 0) {
       auto e = _query.find!("a.key == b")(key);
       if (!e.length)
