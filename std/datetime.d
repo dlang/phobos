@@ -31047,6 +31047,10 @@ unittest
 version(StdDdoc)
 {
     /++
+        $(RED Deprecated. Please use the $(D scope(exit)) with
+              $(LREF StopWatch) instead. It's functionally equivalent, making
+              measureTime redundant. This will be removed in June 2015).
+
         Function for starting to a stop watch time when the function is called
         and stopping it when its return value goes out of scope and is destroyed.
 
@@ -31080,10 +31084,12 @@ version(StdDdoc)
         See_Also:
             $(LREF benchmark)
       +/
+    deprecated("Use StopWatch, with scope(exit) calling StopWatch.peek instead. See documentation of measureTime for more details")
     auto measureTime(alias func)();
 }
 else
 {
+    deprecated("Use StopWatch, with scope(exit) calling StopWatch.peek instead. See documentation of measureTime for more details")
     @safe auto measureTime(alias func)()
         if(isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     {
@@ -31102,6 +31108,7 @@ else
         return Result(AutoStart.yes);
     }
 
+    deprecated("Use StopWatch, with scope(exit) calling StopWatch.peek instead. See documentation of measureTime for more details")
     auto measureTime(alias func)()
         if(!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     {
@@ -31122,7 +31129,7 @@ else
 }
 
 // Verify Example.
-unittest
+deprecated unittest
 {
     {
         auto mt = measureTime!((TickDuration a)
@@ -31141,7 +31148,7 @@ unittest
     }
 }
 
-@safe unittest
+deprecated @safe unittest
 {
     @safe static void func(TickDuration td)
     {
@@ -31159,7 +31166,7 @@ unittest
     +/
 }
 
-unittest
+deprecated unittest
 {
     static void func(TickDuration td)
     {
@@ -31178,7 +31185,7 @@ unittest
 }
 
 //Bug# 8450
-unittest
+deprecated unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
