@@ -30181,7 +30181,7 @@ unittest
         {
             import std.random;
             alias std.ascii.letters letters;
-            _mon = rndGen().map!(a => letters[a % letters.length])().take(3).array().assumeUnique();
+            _mon = rndGen.map!(a => letters[a % letters.length])().take(3).array().assumeUnique();
         }
         string _mon;
         static auto start() { Rand3Letters retval; retval.popFront(); return retval; }
