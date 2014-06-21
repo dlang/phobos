@@ -2716,7 +2716,7 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
 
         @property auto save()
         {
-            return ByCodeUnitImpl(r.save());
+            return ByCodeUnitImpl(r.save);
         }
 
       private:
@@ -3165,7 +3165,7 @@ auto ref byDchar(R)(R r)
             {
                 if (haveData)
                     return frontChar;
-                dchar c = r.front();
+                dchar c = r.front;
                 if (c < 0x80)
                 {
                 }
@@ -3268,7 +3268,7 @@ auto ref byDchar(R)(R r)
             {
                 if (haveData)
                     return frontChar;
-                dchar c = r.front();
+                dchar c = r.front;
                 if (c < 0xD800)
                 {
                 }
