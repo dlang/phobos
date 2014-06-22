@@ -1448,6 +1448,9 @@ class ErrnoException : Exception
     //Use a lambda to get the thrown object.
     assert("%s".format().ifThrown!Exception(e => e.classinfo.name) == "std.format.FormatException");
     --------------------
+
+    See_Also:
+        $(LREF handle)
     +/
 //lazy version
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
