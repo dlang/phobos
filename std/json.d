@@ -71,9 +71,14 @@ struct JSONValue
         return type_tag;
     }
 
-    /// Sets the _type of this $(D JSONValue). Previous content is cleared.
-    /// $(RED Scheduled for deprecation in September 2014. Instead, please
-    /// assign the value with the adequate type to $(D JSONValue) directly.)
+    /**
+        $(RED Deprecated. Instead, please assign the value with the adequate
+              type to $(D JSONValue) directly. This will be removed in
+              June 2015.)
+
+        Sets the _type of this $(D JSONValue). Previous content is cleared.
+      */
+    deprecated("Please assign the value with the adequate type to JSONValue directly.")
     @property JSON_TYPE type(JSON_TYPE newType)
     {
         if (type_tag != newType

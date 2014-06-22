@@ -338,11 +338,12 @@ T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, siz
 }
 
 /++
-   $(RED Scheduled for deprecation in January 2013. If passing the file or line
-         number explicitly, please use the version of enforce which takes them as
-         function arguments. Taking them as template arguments causes
-         unnecessary template bloat.)
+   $(RED Deprecated. If passing the file or line number explicitly, please use
+         the overload of enforce which takes them as function arguments. Taking
+         them as template arguments causes unnecessary template bloat. This
+         overload will be removed in June 2015.)
  +/
+deprecated("Use the overload of enforce that takes file and line as function arguments.")
 T enforce(T, string file, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null)
     if (is(typeof({ if (!value) {} })))
@@ -446,7 +447,6 @@ unittest
     S s;
 
     enforce(s);
-    enforce!(S, __FILE__, __LINE__)(s, ""); // scheduled for deprecation
     enforce(s, {});
     enforce(s, new Exception(""));
 
@@ -463,6 +463,23 @@ unittest
     }
     enforceEx!E1(s);
     enforceEx!E2(s);
+}
+
+deprecated unittest
+{
+    struct S
+    {
+        static int g;
+        ~this() {}  // impure & unsafe destructor
+        bool opCast(T:bool)() {
+            int* p = cast(int*)0;   // unsafe operation
+            int n = g;              // impure operation
+            return true;
+        }
+    }
+    S s;
+
+    enforce!(S, __FILE__, __LINE__)(s, "");
 }
 
 /++
