@@ -393,6 +393,17 @@ template Tuple(Specs...)
         alias Types = staticMap!(extractType, fieldSpecs);
 
         /**
+         * The names of the tuple's components. Unnamed fields have empty names.
+         *
+         * Examples:
+         * ----
+         * alias Fields = Tuple!(int, "id", string, float);
+         * static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+         * ----
+         */
+        alias fieldNames = staticMap!(extractName, fieldSpecs);
+
+        /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
          * components. The result of $(D expand) acts as if the tuple components
          * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
@@ -967,6 +978,17 @@ unittest
     TISIS d = tuple(s, s);
     IS[2] ss;
     TISIS e = TISIS(ss);
+}
+
+// Bugzilla #9819
+unittest
+{
+    alias T = Tuple!(int, "x", double, "foo");
+    static assert(T.fieldNames[0] == "x");
+    static assert(T.fieldNames[1] == "foo");
+
+    alias Fields = Tuple!(int, "id", string, float);
+    static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
 }
 
 /**
