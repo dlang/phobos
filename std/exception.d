@@ -537,9 +537,10 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     enforceEx!DataCorruptionException(line.length);
     --------------------
  +/
-template enforceEx(E)
+template enforceEx(E : Throwable)
     if (is(typeof(new E("", __FILE__, __LINE__))))
 {
+    /++ Ditto +/
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(msg, file, line);
@@ -547,9 +548,11 @@ template enforceEx(E)
     }
 }
 
-template enforceEx(E)
+/++ Ditto +/
+template enforceEx(E : Throwable)
     if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
+    /++ Ditto +/
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(file, line);
@@ -578,6 +581,24 @@ unittest
         assert(e.file == "file");
         assert(e.line == 42);
     }
+
+    {
+        auto e = collectException!Error(enforceEx!OutOfMemoryError(false));
+        assert(e !is null);
+        assert(e.msg == "Memory allocation failed");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__ - 4);
+    }
+
+    {
+        auto e = collectException!Error(enforceEx!OutOfMemoryError(false, "file", 42));
+        assert(e !is null);
+        assert(e.msg == "Memory allocation failed");
+        assert(e.file == "file");
+        assert(e.line == 42);
+    }
+
+    static assert(!is(typeof(enforceEx!int(true))));
 }
 
 unittest
