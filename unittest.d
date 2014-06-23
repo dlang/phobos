@@ -26,7 +26,6 @@ public import std.format;
 public import std.getopt;
 public import std.math;
 public import std.mathspecial;
-public import std.metastrings;
 public import std.mmfile;
 public import std.outbuffer;
 public import std.parallelism;
