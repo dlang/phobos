@@ -30173,6 +30173,8 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     static struct Rand3Letters
     {
         enum empty = false;
@@ -30435,6 +30437,8 @@ unittest
 // Obsolete Format per section 4.3 of RFC 5322.
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
     auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
     auto std3 = SysTime(DateTime(1912, 12, 21, 13, 14, 15), UTC());
@@ -31863,6 +31867,8 @@ R _stripCFWS(R)(R range)
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
     {
