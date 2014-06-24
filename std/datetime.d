@@ -30196,94 +30196,94 @@ unittest
         alias testParse822!cr test;
         alias testBadParse822!cr testBad;
 
-        immutable std = DateTime(2012, 12, 21, 13, 14, 15);
+        immutable std1 = DateTime(2012, 12, 21, 13, 14, 15);
         immutable std2 = DateTime(2012, 12, 21, 13, 14, 0);
-        immutable dst = DateTime(1976, 7, 4, 5, 4, 22);
+        immutable dst1 = DateTime(1976, 7, 4, 5, 4, 22);
         immutable dst2 = DateTime(1976, 7, 4, 5, 4, 0);
 
-        test("21 Dec 2012 13:14:15 +0000", SysTime(std, UTC()));
+        test("21 Dec 2012 13:14:15 +0000", SysTime(std1, UTC()));
         test("21 Dec 2012 13:14 +0000", SysTime(std2, UTC()));
         test("Fri, 21 Dec 2012 13:14 +0000", SysTime(std2, UTC()));
-        test("Fri, 21 Dec 2012 13:14:15 +0000", SysTime(std, UTC()));
+        test("Fri, 21 Dec 2012 13:14:15 +0000", SysTime(std1, UTC()));
 
-        test("04 Jul 1976 05:04:22 +0000", SysTime(dst, UTC()));
+        test("04 Jul 1976 05:04:22 +0000", SysTime(dst1, UTC()));
         test("04 Jul 1976 05:04 +0000", SysTime(dst2, UTC()));
         test("Sun, 04 Jul 1976 05:04 +0000", SysTime(dst2, UTC()));
-        test("Sun, 04 Jul 1976 05:04:22 +0000", SysTime(dst, UTC()));
+        test("Sun, 04 Jul 1976 05:04:22 +0000", SysTime(dst1, UTC()));
 
-        test("4 Jul 1976 05:04:22 +0000", SysTime(dst, UTC()));
+        test("4 Jul 1976 05:04:22 +0000", SysTime(dst1, UTC()));
         test("4 Jul 1976 05:04 +0000", SysTime(dst2, UTC()));
         test("Sun, 4 Jul 1976 05:04 +0000", SysTime(dst2, UTC()));
-        test("Sun, 4 Jul 1976 05:04:22 +0000", SysTime(dst, UTC()));
+        test("Sun, 4 Jul 1976 05:04:22 +0000", SysTime(dst1, UTC()));
 
         auto badTZ = new immutable SimpleTimeZone(Duration.zero);
-        test("21 Dec 2012 13:14:15 -0000", SysTime(std, badTZ));
+        test("21 Dec 2012 13:14:15 -0000", SysTime(std1, badTZ));
         test("21 Dec 2012 13:14 -0000", SysTime(std2, badTZ));
         test("Fri, 21 Dec 2012 13:14 -0000", SysTime(std2, badTZ));
-        test("Fri, 21 Dec 2012 13:14:15 -0000", SysTime(std, badTZ));
+        test("Fri, 21 Dec 2012 13:14:15 -0000", SysTime(std1, badTZ));
 
-        test("04 Jul 1976 05:04:22 -0000", SysTime(dst, badTZ));
+        test("04 Jul 1976 05:04:22 -0000", SysTime(dst1, badTZ));
         test("04 Jul 1976 05:04 -0000", SysTime(dst2, badTZ));
         test("Sun, 04 Jul 1976 05:04 -0000", SysTime(dst2, badTZ));
-        test("Sun, 04 Jul 1976 05:04:22 -0000", SysTime(dst, badTZ));
+        test("Sun, 04 Jul 1976 05:04:22 -0000", SysTime(dst1, badTZ));
 
-        test("4 Jul 1976 05:04:22 -0000", SysTime(dst, badTZ));
+        test("4 Jul 1976 05:04:22 -0000", SysTime(dst1, badTZ));
         test("4 Jul 1976 05:04 -0000", SysTime(dst2, badTZ));
         test("Sun, 4 Jul 1976 05:04 -0000", SysTime(dst2, badTZ));
-        test("Sun, 4 Jul 1976 05:04:22 -0000", SysTime(dst, badTZ));
+        test("Sun, 4 Jul 1976 05:04:22 -0000", SysTime(dst1, badTZ));
 
         auto pst = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto pdt = new immutable SimpleTimeZone(dur!"hours"(-7));
-        test("21 Dec 2012 13:14:15 -0800", SysTime(std, pst));
+        test("21 Dec 2012 13:14:15 -0800", SysTime(std1, pst));
         test("21 Dec 2012 13:14 -0800", SysTime(std2, pst));
         test("Fri, 21 Dec 2012 13:14 -0800", SysTime(std2, pst));
-        test("Fri, 21 Dec 2012 13:14:15 -0800", SysTime(std, pst));
+        test("Fri, 21 Dec 2012 13:14:15 -0800", SysTime(std1, pst));
 
-        test("04 Jul 1976 05:04:22 -0700", SysTime(dst, pdt));
+        test("04 Jul 1976 05:04:22 -0700", SysTime(dst1, pdt));
         test("04 Jul 1976 05:04 -0700", SysTime(dst2, pdt));
         test("Sun, 04 Jul 1976 05:04 -0700", SysTime(dst2, pdt));
-        test("Sun, 04 Jul 1976 05:04:22 -0700", SysTime(dst, pdt));
+        test("Sun, 04 Jul 1976 05:04:22 -0700", SysTime(dst1, pdt));
 
-        test("4 Jul 1976 05:04:22 -0700", SysTime(dst, pdt));
+        test("4 Jul 1976 05:04:22 -0700", SysTime(dst1, pdt));
         test("4 Jul 1976 05:04 -0700", SysTime(dst2, pdt));
         test("Sun, 4 Jul 1976 05:04 -0700", SysTime(dst2, pdt));
-        test("Sun, 4 Jul 1976 05:04:22 -0700", SysTime(dst, pdt));
+        test("Sun, 4 Jul 1976 05:04:22 -0700", SysTime(dst1, pdt));
 
         auto cet = new immutable SimpleTimeZone(dur!"hours"(1));
         auto cest = new immutable SimpleTimeZone(dur!"hours"(2));
-        test("21 Dec 2012 13:14:15 +0100", SysTime(std, cet));
+        test("21 Dec 2012 13:14:15 +0100", SysTime(std1, cet));
         test("21 Dec 2012 13:14 +0100", SysTime(std2, cet));
         test("Fri, 21 Dec 2012 13:14 +0100", SysTime(std2, cet));
-        test("Fri, 21 Dec 2012 13:14:15 +0100", SysTime(std, cet));
+        test("Fri, 21 Dec 2012 13:14:15 +0100", SysTime(std1, cet));
 
-        test("04 Jul 1976 05:04:22 +0200", SysTime(dst, cest));
+        test("04 Jul 1976 05:04:22 +0200", SysTime(dst1, cest));
         test("04 Jul 1976 05:04 +0200", SysTime(dst2, cest));
         test("Sun, 04 Jul 1976 05:04 +0200", SysTime(dst2, cest));
-        test("Sun, 04 Jul 1976 05:04:22 +0200", SysTime(dst, cest));
+        test("Sun, 04 Jul 1976 05:04:22 +0200", SysTime(dst1, cest));
 
-        test("4 Jul 1976 05:04:22 +0200", SysTime(dst, cest));
+        test("4 Jul 1976 05:04:22 +0200", SysTime(dst1, cest));
         test("4 Jul 1976 05:04 +0200", SysTime(dst2, cest));
         test("Sun, 4 Jul 1976 05:04 +0200", SysTime(dst2, cest));
-        test("Sun, 4 Jul 1976 05:04:22 +0200", SysTime(dst, cest));
+        test("Sun, 4 Jul 1976 05:04:22 +0200", SysTime(dst1, cest));
 
         // dst and std times are switched in the Southern Hemisphere which is why the
         // time zone names and DateTime variables don't match.
         auto cstStd = new immutable SimpleTimeZone(dur!"hours"(9) + dur!"minutes"(30));
         auto cstDST = new immutable SimpleTimeZone(dur!"hours"(10) + dur!"minutes"(30));
-        test("21 Dec 2012 13:14:15 +1030", SysTime(std, cstDST));
+        test("21 Dec 2012 13:14:15 +1030", SysTime(std1, cstDST));
         test("21 Dec 2012 13:14 +1030", SysTime(std2, cstDST));
         test("Fri, 21 Dec 2012 13:14 +1030", SysTime(std2, cstDST));
-        test("Fri, 21 Dec 2012 13:14:15 +1030", SysTime(std, cstDST));
+        test("Fri, 21 Dec 2012 13:14:15 +1030", SysTime(std1, cstDST));
 
-        test("04 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+        test("04 Jul 1976 05:04:22 +0930", SysTime(dst1, cstStd));
         test("04 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
         test("Sun, 04 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
-        test("Sun, 04 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+        test("Sun, 04 Jul 1976 05:04:22 +0930", SysTime(dst1, cstStd));
 
-        test("4 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+        test("4 Jul 1976 05:04:22 +0930", SysTime(dst1, cstStd));
         test("4 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
         test("Sun, 4 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
-        test("Sun, 4 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+        test("Sun, 4 Jul 1976 05:04:22 +0930", SysTime(dst1, cstStd));
 
         foreach(int i, mon; _monthNames)
         {
@@ -30376,9 +30376,9 @@ unittest
             foreach(c; chain(iota(0, 33), ['('], iota(127, ubyte.max + 1)))
             {
                 scope(failure) writefln("c: %d", c);
-                test(format("21 Dec 2012 13:14:15 +0000%c", cast(char)c), SysTime(std, UTC()));
-                test(format("21 Dec 2012 13:14:15 +0000%c  ", cast(char)c), SysTime(std, UTC()));
-                test(format("21 Dec 2012 13:14:15 +0000%chello", cast(char)c), SysTime(std, UTC()));
+                test(format("21 Dec 2012 13:14:15 +0000%c", cast(char)c), SysTime(std1, UTC()));
+                test(format("21 Dec 2012 13:14:15 +0000%c  ", cast(char)c), SysTime(std1, UTC()));
+                test(format("21 Dec 2012 13:14:15 +0000%chello", cast(char)c), SysTime(std1, UTC()));
             }
         }
 
@@ -30407,11 +30407,11 @@ unittest
 
         // FWS
         test("Sun,4 Jul 1976 05:04 +0930", SysTime(dst2, cstStd));
-        test("Sun,4 Jul 1976 05:04:22 +0930", SysTime(dst, cstStd));
+        test("Sun,4 Jul 1976 05:04:22 +0930", SysTime(dst1, cstStd));
         test("Sun,4 Jul 1976 05:04 +0930 (foo)", SysTime(dst2, cstStd));
-        test("Sun,4 Jul 1976 05:04:22 +0930 (foo)", SysTime(dst, cstStd));
+        test("Sun,4 Jul 1976 05:04:22 +0930 (foo)", SysTime(dst1, cstStd));
         test("Sun,4  \r\n  Jul  \r\n  1976  \r\n  05:04  \r\n  +0930  \r\n  (foo)", SysTime(dst2, cstStd));
-        test("Sun,4  \r\n  Jul  \r\n  1976  \r\n  05:04:22  \r\n  +0930  \r\n  (foo)", SysTime(dst, cstStd));
+        test("Sun,4  \r\n  Jul  \r\n  1976  \r\n  05:04:22  \r\n  +0930  \r\n  (foo)", SysTime(dst1, cstStd));
 
         auto str = "01 Jan 2012 12:13:14 -0800 ";
         test(str, SysTime(DateTime(2012, 1, 1, 12, 13, 14), new immutable SimpleTimeZone(hours(-8))));
@@ -30435,13 +30435,13 @@ unittest
 // Obsolete Format per section 4.3 of RFC 5322.
 unittest
 {
-    auto std = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
+    auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
     auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
     auto std3 = SysTime(DateTime(1912, 12, 21, 13, 14, 15), UTC());
     auto std4 = SysTime(DateTime(1912, 12, 21, 13, 14, 0), UTC());
-    auto dst = SysTime(DateTime(1976, 7, 4, 5, 4, 22), UTC());
+    auto dst1 = SysTime(DateTime(1976, 7, 4, 5, 4, 22), UTC());
     auto dst2 = SysTime(DateTime(1976, 7, 4, 5, 4, 0), UTC());
-    auto tooLate = SysTime(Date(10_000, 1, 1), UTC());
+    auto tooLate1 = SysTime(Date(10_000, 1, 1), UTC());
     auto tooLate2 = SysTime(DateTime(12_007, 12, 31, 12, 22, 19), UTC());
 
     foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
@@ -30459,54 +30459,54 @@ unittest
             {
                 scope(failure) writefln("i: %s", i);
 
-                test(format("%1$s21%1$sDec%1$s2012%1$s13:14:15%1$s+0000%1$s", cfws), std);
+                test(format("%1$s21%1$sDec%1$s2012%1$s13:14:15%1$s+0000%1$s", cfws), std1);
                 test(format("%1$s21%1$sDec%1$s2012%1$s13:14%1$s+0000%1$s", cfws), std2);
                 test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s2012%1$s13:14%1$s+0000%1$s", cfws), std2);
-                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s2012%1$s13:14:15%1$s+0000%1$s", cfws), std);
+                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s2012%1$s13:14:15%1$s+0000%1$s", cfws), std1);
 
-                test(format("%1$s04%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s04%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
                 test(format("%1$s04%1$sJul%1$s1976%1$s05:04%1$s+0000%1$s", cfws), dst2);
                 test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s1976%1$s05:04%1$s+0000%1$s", cfws), dst2);
-                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s1976%1$s05:04:22 +0000%1$s", cfws), dst);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s1976%1$s05:04:22 +0000%1$s", cfws), dst1);
 
-                test(format("%1$s4%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s4%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
                 test(format("%1$s4%1$sJul%1$s1976%1$s05:04%1$s+0000%1$s", cfws), dst2);
                 test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s1976%1$s05:04%1$s+0000%1$s", cfws), dst2);
-                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s1976%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
 
-                test(format("%1$s21%1$sDec%1$s12%1$s13:14:15%1$s+0000%1$s", cfws), std);
+                test(format("%1$s21%1$sDec%1$s12%1$s13:14:15%1$s+0000%1$s", cfws), std1);
                 test(format("%1$s21%1$sDec%1$s12%1$s13:14%1$s+0000%1$s", cfws), std2);
                 test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s12%1$s13:14%1$s+0000%1$s", cfws), std2);
-                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s12%1$s13:14:15%1$s+0000%1$s", cfws), std);
+                test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s12%1$s13:14:15%1$s+0000%1$s", cfws), std1);
 
-                test(format("%1$s04%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s04%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
                 test(format("%1$s04%1$sJul%1$s76%1$s05:04%1$s+0000%1$s", cfws), dst2);
                 test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s76%1$s05:04%1$s+0000%1$s", cfws), dst2);
-                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
 
-                test(format("%1$s4%1$sJul%1$s76 05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s4%1$sJul%1$s76 05:04:22%1$s+0000%1$s", cfws), dst1);
                 test(format("%1$s4%1$sJul%1$s76 05:04%1$s+0000%1$s", cfws), dst2);
                 test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s76%1$s05:04%1$s+0000%1$s", cfws), dst2);
-                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s76%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
 
                 test(format("%1$s21%1$sDec%1$s012%1$s13:14:15%1$s+0000%1$s", cfws), std3);
                 test(format("%1$s21%1$sDec%1$s012%1$s13:14%1$s+0000%1$s", cfws), std4);
                 test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s012%1$s13:14%1$s+0000%1$s", cfws), std4);
                 test(format("%1$sFri%1$s,%1$s21%1$sDec%1$s012%1$s13:14:15%1$s+0000%1$s", cfws), std3);
 
-                test(format("%1$s04%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s04%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
                 test(format("%1$s04%1$sJul%1$s076%1$s05:04%1$s+0000%1$s", cfws), dst2);
                 test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s076%1$s05:04%1$s+0000%1$s", cfws), dst2);
-                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$sSun%1$s,%1$s04%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
 
-                test(format("%1$s4%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$s4%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
                 test(format("%1$s4%1$sJul%1$s076%1$s05:04%1$s+0000%1$s", cfws), dst2);
                 test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s076%1$s05:04%1$s+0000%1$s", cfws), dst2);
-                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst);
+                test(format("%1$sSun%1$s,%1$s4%1$sJul%1$s076%1$s05:04:22%1$s+0000%1$s", cfws), dst1);
 
-                test(format("%1$s1%1$sJan%1$s10000%1$s00:00:00%1$s+0000%1$s", cfws), tooLate);
+                test(format("%1$s1%1$sJan%1$s10000%1$s00:00:00%1$s+0000%1$s", cfws), tooLate1);
                 test(format("%1$s31%1$sDec%1$s12007%1$s12:22:19%1$s+0000%1$s", cfws), tooLate2);
-                test(format("%1$sSat%1$s,%1$s1%1$sJan%1$s10000%1$s00:00:00%1$s+0000%1$s", cfws), tooLate);
+                test(format("%1$sSat%1$s,%1$s1%1$sJan%1$s10000%1$s00:00:00%1$s+0000%1$s", cfws), tooLate1);
                 test(format("%1$sSun%1$s,%1$s31%1$sDec%1$s12007%1$s12:22:19%1$s+0000%1$s", cfws), tooLate2);
             }
         }
@@ -30596,9 +30596,9 @@ unittest
                 foreach(c; chain(iota(0, 33), ['('], iota(127, ubyte.max + 1)))
                 {
                     scope(failure) writefln("c: %d", c);
-                    test(format("21Dec1213:14:15+0000%c", cast(char)c), std);
-                    test(format("21Dec1213:14:15+0000%c  ", cast(char)c), std);
-                    test(format("21Dec1213:14:15+0000%chello", cast(char)c), std);
+                    test(format("21Dec1213:14:15+0000%c", cast(char)c), std1);
+                    test(format("21Dec1213:14:15+0000%c  ", cast(char)c), std1);
+                    test(format("21Dec1213:14:15+0000%chello", cast(char)c), std1);
                 }
             }
 
