@@ -382,7 +382,7 @@ unittest
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real cos(real x) @nogc @safe pure nothrow @nogc;       /* intrinsic */
+real cos(real x) @safe pure nothrow @nogc;       /* intrinsic */
 
 /***********************************
  * Returns sine of x. x is in radians.
@@ -397,7 +397,7 @@ real cos(real x) @nogc @safe pure nothrow @nogc;       /* intrinsic */
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real sin(real x) @nogc @safe pure nothrow @nogc;       /* intrinsic */
+real sin(real x) @safe pure nothrow @nogc;       /* intrinsic */
 
 
 /***********************************
@@ -463,7 +463,7 @@ unittest
  *      )
  */
 
-real tan(real x) @nogc @trusted pure nothrow @nogc
+real tan(real x) @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
@@ -2877,7 +2877,7 @@ real cbrt(real x) @trusted nothrow @nogc
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
  */
-real fabs(real x) @nogc @safe pure nothrow @nogc;      /* intrinsic */
+real fabs(real x) @safe pure nothrow @nogc;      /* intrinsic */
 
 
 /***********************************************************************
@@ -3184,7 +3184,7 @@ real nearbyint(real x) @trusted nothrow @nogc
  * $(B nearbyint) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
-real rint(real x) @nogc @safe pure nothrow @nogc;      /* intrinsic */
+real rint(real x) @safe pure nothrow @nogc;      /* intrinsic */
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
