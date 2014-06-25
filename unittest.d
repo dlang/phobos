@@ -18,6 +18,7 @@ public import std.base64;
 public import std.compiler;
 public import std.concurrency;
 public import std.conv;
+public import std.container;
 public import std.cstream;
 public import std.datetime;
 public import std.demangle;
