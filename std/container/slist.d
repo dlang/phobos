@@ -439,8 +439,15 @@ Complexity: $(BIGOH n)
             enforce(!r._head);
             return this[];
         }
-        auto n = findNode(_root, r._head);
-        n._next = null;
+        if (_root == r._head)
+        {
+            clear();
+        }
+        else
+        {
+            auto n = findNode(_root, r._head);
+            n._next = null;
+        }
         return Range(null);
     }
 
@@ -587,6 +594,15 @@ unittest
     popFrontN(r, 3);
     auto r1 = s.linearRemove(r);
     assert(s == SList!int(1, 2, 3));
+    assert(r1.empty);
+}
+
+unittest
+{
+    auto s = SList!int(1, 2, 3, 4, 5);
+    auto r = s[];
+    auto r1 = s.linearRemove(r);
+    assert(s == SList!int());
     assert(r1.empty);
 }
 
