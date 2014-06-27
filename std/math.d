@@ -5017,6 +5017,17 @@ unittest
 
 }
 
+unittest
+{
+    ulong uimax = uint.max;
+    assert(uimax^^2uL == 18446744065119617025uL);
+    ulong three = 3uL;
+    assert(three^^40uL == 12157665459056928801uL);
+
+    assert((cast(ulong)uint.max)^^2uL == 18446744065119617025uL);
+    assert((3uL)^^40uL == 12157665459056928801uL);
+}
+
 /**Computes integer to floating point powers.*/
 real pow(I, F)(I x, F y) @nogc @trusted pure nothrow
     if(isIntegral!I && isFloatingPoint!F)
