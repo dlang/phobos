@@ -3026,13 +3026,13 @@ real ceil(real x)  @trusted pure nothrow @nogc
 
 unittest
 {
-    assert(ceil(+123.456) == +124);
-    assert(ceil(-123.456) == -123);
-    assert(ceil(-1.234) == -1);
-    assert(ceil(-0.123) == 0);
-    assert(ceil(0.0) == 0);
-    assert(ceil(+0.123) == 1);
-    assert(ceil(+1.234) == 2);
+    assert(ceil(+123.456L) == +124);
+    assert(ceil(-123.456L) == -123);
+    assert(ceil(-1.234L) == -1);
+    assert(ceil(-0.123L) == 0);
+    assert(ceil(0.0L) == 0);
+    assert(ceil(+0.123L) == 1);
+    assert(ceil(+1.234L) == 2);
     assert(ceil(real.infinity) == real.infinity);
     assert(isNaN(ceil(real.nan)));
     assert(isNaN(ceil(real.init)));
@@ -3153,13 +3153,13 @@ real floor(real x) @trusted pure nothrow @nogc
 
 unittest
 {
-    assert(floor(+123.456) == +123);
-    assert(floor(-123.456) == -124);
-    assert(floor(-1.234) == -2);
-    assert(floor(-0.123) == -1);
-    assert(floor(0.0) == 0);
-    assert(floor(+0.123) == 0);
-    assert(floor(+1.234) == 1);
+    assert(floor(+123.456L) == +123);
+    assert(floor(-123.456L) == -124);
+    assert(floor(-1.234L) == -2);
+    assert(floor(-0.123L) == -1);
+    assert(floor(0.0L) == 0);
+    assert(floor(+0.123L) == 0);
+    assert(floor(+1.234L) == 1);
     assert(floor(real.infinity) == real.infinity);
     assert(isNaN(floor(real.nan)));
     assert(isNaN(floor(real.init)));
