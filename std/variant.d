@@ -657,7 +657,7 @@ public:
      * assert(a == 6);
      * ----
      */
-    @property inout T * peek(T)() inout
+    @property T* peek(T)() inout
     {
         static if (!is(T == void))
             static assert(allowed!(T), "Cannot store a " ~ T.stringof

@@ -2071,7 +2071,7 @@ private:
             return set.length - FD_SET_OFFSET;
         }
 
-        final inout socket_t[] fds() inout @property
+        final socket_t[] fds() inout @property
         {
             return cast(socket_t[])set[FD_SET_OFFSET..FD_SET_OFFSET+count];
         }
