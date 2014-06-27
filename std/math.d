@@ -2989,7 +2989,7 @@ unittest
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted pure nothrow @nogc
+real ceil(real x) @trusted pure nothrow @nogc
 {
     version (Win64)
     {
@@ -3036,6 +3036,62 @@ unittest
     assert(ceil(real.infinity) == real.infinity);
     assert(isNaN(ceil(real.nan)));
     assert(isNaN(ceil(real.init)));
+}
+
+// ditto
+double ceil(double x) @trusted pure nothrow @nogc
+{
+    // Special cases.
+    if (isNaN(x) || isInfinity(x))
+        return x;
+
+    double y = floor(x);
+    if (y < x)
+        y += 1.0;
+
+    return y;
+}
+
+unittest
+{
+    assert(ceil(+123.456) == +124);
+    assert(ceil(-123.456) == -123);
+    assert(ceil(-1.234) == -1);
+    assert(ceil(-0.123) == 0);
+    assert(ceil(0.0) == 0);
+    assert(ceil(+0.123) == 1);
+    assert(ceil(+1.234) == 2);
+    assert(ceil(double.infinity) == double.infinity);
+    assert(isNaN(ceil(double.nan)));
+    assert(isNaN(ceil(double.init)));
+}
+
+// ditto
+float ceil(float x) @trusted pure nothrow @nogc
+{
+    // Special cases.
+    if (isNaN(x) || isInfinity(x))
+        return x;
+
+    float y = floor(x);
+    if (y < x)
+        y += 1.0;
+
+    return y;
+}
+
+unittest
+{
+    assert(ceil(+123.456f) == +124);
+    assert(ceil(-123.456f) == -123);
+    assert(ceil(-1.234f) == -1);
+    assert(ceil(-0.123f) == 0);
+    assert(ceil(0.0f) == 0);
+    assert(ceil(+0.123f) == 1);
+    assert(ceil(+1.234f) == 2);
+    assert(ceil(float.infinity) == float.infinity);
+    assert(isNaN(ceil(float.nan)));
+    assert(isNaN(ceil(float.init)));
 }
 
 /**************************************
@@ -3130,7 +3186,7 @@ real floor(real x) @trusted pure nothrow @nogc
 
         exp = (real.mant_dig - 1) - exp;
 
-        // Clean out 16 bits at a time.
+        // Zero 16 bits at a time.
         while (exp >= 16)
         {
             version (LittleEndian)
@@ -3163,6 +3219,164 @@ unittest
     assert(floor(real.infinity) == real.infinity);
     assert(isNaN(floor(real.nan)));
     assert(isNaN(floor(real.init)));
+}
+
+// ditto
+double floor(double x) @trusted pure nothrow @nogc
+{
+    // Bit clearing masks.
+    static immutable ushort[17] BMASK = [
+        0xffff, 0xfffe, 0xfffc, 0xfff8,
+        0xfff0, 0xffe0, 0xffc0, 0xff80,
+        0xff00, 0xfe00, 0xfc00, 0xf800,
+        0xf000, 0xe000, 0xc000, 0x8000,
+        0x0000,
+        ];
+
+    // Special cases.
+    if (isNaN(x) || isInfinity(x) || x == 0.0)
+        return x;
+
+    alias floatTraits!(double) F;
+    // Take care not to trigger library calls from the compiler,
+    // while ensuring that we don't get defeated by some optimizers.
+    union doubleBits
+    {
+        double rv;
+        ushort[4] vu;
+    }
+    doubleBits y = void;
+    y.rv = x;
+
+    // Find the exponent (power of 2)
+    int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+
+    if (exp < 0)
+    {
+        if (x < 0.0)
+            return -1.0;
+        else
+            return 0.0;
+    }
+
+    exp = (double.mant_dig - 1) - exp;
+
+    version (LittleEndian)
+        int pos = 0;
+    else
+        int pos = 3;
+
+    // Zero 16 bits at a time.
+    while (exp >= 16)
+    {
+        version (LittleEndian)
+            y.vu[pos++] = 0;
+        else
+            y.vu[pos--] = 0;
+        exp -= 16;
+    }
+
+    // Clear the remaining bits.
+    if (exp > 0)
+        y.vu[pos] &= BMASK[exp];
+
+    if ((x < 0.0) && (x != y.rv))
+        y.rv -= 1.0;
+
+    return y.rv;
+}
+
+unittest
+{
+    assert(floor(+123.456) == +123);
+    assert(floor(-123.456) == -124);
+    assert(floor(-1.234) == -2);
+    assert(floor(-0.123) == -1);
+    assert(floor(0.0) == 0);
+    assert(floor(+0.123) == 0);
+    assert(floor(+1.234) == 1);
+    assert(floor(double.infinity) == double.infinity);
+    assert(isNaN(floor(double.nan)));
+    assert(isNaN(floor(double.init)));
+}
+
+// ditto
+float floor(float x) @trusted pure nothrow @nogc
+{
+    // Bit clearing masks.
+    static immutable ushort[17] BMASK = [
+        0xffff, 0xfffe, 0xfffc, 0xfff8,
+        0xfff0, 0xffe0, 0xffc0, 0xff80,
+        0xff00, 0xfe00, 0xfc00, 0xf800,
+        0xf000, 0xe000, 0xc000, 0x8000,
+        0x0000,
+        ];
+
+    // Special cases.
+    if (isNaN(x) || isInfinity(x) || x == 0.0)
+        return x;
+
+    alias floatTraits!(float) F;
+    // Take care not to trigger library calls from the compiler,
+    // while ensuring that we don't get defeated by some optimizers.
+    union floatBits
+    {
+        float rv;
+        ushort[2] vu;
+    }
+    floatBits y = void;
+    y.rv = x;
+
+    // Find the exponent (power of 2)
+    int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
+
+    if (exp < 0)
+    {
+        if (x < 0.0)
+            return -1.0;
+        else
+            return 0.0;
+    }
+
+    exp = (float.mant_dig - 1) - exp;
+
+    version (LittleEndian)
+        int pos = 0;
+    else
+        int pos = 3;
+
+    // Zero 16 bits at a time.
+    while (exp >= 16)
+    {
+        version (LittleEndian)
+            y.vu[pos++] = 0;
+        else
+            y.vu[pos--] = 0;
+        exp -= 16;
+    }
+
+    // Clear the remaining bits.
+    if (exp > 0)
+        y.vu[pos] &= BMASK[exp];
+
+    if ((x < 0.0) && (x != y.rv))
+        y.rv -= 1.0;
+
+    return y.rv;
+}
+
+unittest
+{
+    assert(floor(+123.456f) == +123);
+    assert(floor(-123.456f) == -124);
+    assert(floor(-1.234f) == -2);
+    assert(floor(-0.123f) == -1);
+    assert(floor(0.0f) == 0);
+    assert(floor(+0.123f) == 0);
+    assert(floor(+1.234f) == 1);
+    assert(floor(float.infinity) == float.infinity);
+    assert(isNaN(floor(float.nan)));
+    assert(isNaN(floor(float.init)));
 }
 
 /******************************************
