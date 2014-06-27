@@ -3079,12 +3079,20 @@ real floor(real x) @trusted pure nothrow @nogc
             return x;
 
         alias F = floatTraits!(real);
-        auto vu = *cast(ushort[real.sizeof/2]*)(&x);
+        // Take care not to trigger library calls from the compiler,
+        // while ensuring that we don't get defeated by some optimizers.
+        union realBits
+        {
+            real rv;
+            ushort[real.sizeof/2] vu;
+        }
+        realBits y = void;
+        y.rv = x;
 
         // Find the exponent (power of 2)
         static if (real.mant_dig == 53)
         {
-            int exp = ((vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+            int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
 
             version (LittleEndian)
                 int pos = 0;
@@ -3093,7 +3101,7 @@ real floor(real x) @trusted pure nothrow @nogc
         }
         else static if (real.mant_dig == 64)
         {
-            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+            int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
             version (LittleEndian)
                 int pos = 0;
@@ -3102,7 +3110,7 @@ real floor(real x) @trusted pure nothrow @nogc
         }
         else if (real.mant_dig == 113)
         {
-            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+            int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
             version (LittleEndian)
                 int pos = 0;
@@ -3126,22 +3134,20 @@ real floor(real x) @trusted pure nothrow @nogc
         while (exp >= 16)
         {
             version (LittleEndian)
-                vu[pos++] = 0;
+                y.vu[pos++] = 0;
             else
-                vu[pos--] = 0;
+                y.vu[pos--] = 0;
             exp -= 16;
         }
 
         // Clear the remaining bits.
         if (exp > 0)
-            vu[pos] &= BMASK[exp];
+            y.vu[pos] &= BMASK[exp];
 
-        real y = *cast(real*)(&vu);
+        if ((x < 0.0) && (x != y.rv))
+            y.rv -= 1.0;
 
-        if ((x < 0.0) && (x != y))
-            y -= 1.0;
-
-        return y;
+        return y.rv;
     }
 }
 
