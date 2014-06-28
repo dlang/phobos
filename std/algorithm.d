@@ -370,7 +370,7 @@ import std.functional : unaryFun, binaryFun;
 import std.range;
 import std.traits;
 import std.typecons : tuple, Tuple;
-import std.typetuple : TypeTuple, staticMap, allSatisfy;
+import std.typetuple : TypeTuple, staticMap, allSatisfy, anySatisfy;
 
 version(unittest)
 {
@@ -12973,7 +12973,69 @@ unittest
 }
 
 /// ditto
+auto cartesianProduct(RR...)(RR ranges)
+    if (ranges.length > 2 &&
+    	allSatisfy!(isForwardRange, RR) &&
+        !anySatisfy!(isInfinite, RR))
+{
+    // This overload uses a much less template-heavy implementation when
+    // all ranges are finite forward ranges, which is the most common use
+    // case, so that we don't run out of resources too quickly.
+    //
+    // For infinite ranges or non-forward ranges, we fall back to the old
+    // implementation which expands an exponential number of templates.
+    import std.typecons : tuple;
+
+    static struct Result
+    {
+        RR ranges;
+        RR current;
+        bool empty = false;
+
+        this(RR _ranges)
+        {
+            ranges = _ranges;
+            foreach (i, r; ranges)
+                current[i] = r.save;
+        }
+        @property auto front()
+        {
+            return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
+                                    iota(0, current.length)));
+        }
+        void popFront()
+        {
+            foreach_reverse (i, ref r; current)
+            {
+                r.popFront();
+                if (!r.empty) break;
+
+                static if (i==0)
+                    empty = true;
+                else
+                    r = ranges[i].save; // rollover
+            }
+        }
+        @property Result save()
+        {
+            Result copy;
+            foreach (i, r; ranges)
+            {
+                copy.ranges[i] = r.save;
+                copy.current[i] = current[i].save;
+            }
+            return copy;
+        }
+    }
+    static assert(isForwardRange!Result);
+
+    return Result(ranges);
+}
+
+/// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
+    if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
+        anySatisfy!(isInfinite, R1, R2, RR))
 {
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
@@ -13034,6 +13096,19 @@ unittest
         tuple(3, 'b', "x"), tuple(3, 'b', "y"), tuple(3, 'b', "z"),
         tuple(3, 'c', "x"), tuple(3, 'c', "y"), tuple(3, 'c', "z")
     ]));
+}
+
+pure @safe nothrow @nogc unittest
+{
+    int[2] A = [1,2];
+    auto C = cartesianProduct(A[], A[], A[]);
+    assert(isForwardRange!(typeof(C)));
+
+    C.popFront();
+    auto front1 = C.front;
+    auto D = C.save;
+    C.popFront();
+    assert(D.front == front1);
 }
 
 /**
