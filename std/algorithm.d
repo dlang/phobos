@@ -12764,15 +12764,15 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
         else static assert(0, "cartesianProduct of infinite ranges requires "~
                               "forward ranges");
     }
-    else static if (isInputRange!R2 && isForwardRange!R1 && !isInfinite!R1)
-    {
-        return joiner(map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
-                          (range2));
-    }
     else static if (isInputRange!R1 && isForwardRange!R2 && !isInfinite!R2)
     {
         return joiner(map!((ElementType!R1 a) => zip(repeat(a), range2.save))
                           (range1));
+    }
+    else static if (isInputRange!R2 && isForwardRange!R1 && !isInfinite!R1)
+    {
+        return joiner(map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
+                          (range2));
     }
     else static assert(0, "cartesianProduct involving finite ranges must "~
                           "have at least one finite forward range");
@@ -13015,7 +13015,7 @@ unittest
     assert(canFind(N4, tuple(10, 31, 7, 12)));
 }
 
-///
+/// Issue 9878
 unittest
 {
     auto A = [ 1, 2, 3 ];
@@ -13024,15 +13024,15 @@ unittest
     auto ABC = cartesianProduct(A, B, C);
 
     assert(ABC.equal([
-        tuple(1, 'a', "x"), tuple(2, 'a', "x"), tuple(3, 'a', "x"),
-        tuple(1, 'b', "x"), tuple(2, 'b', "x"), tuple(3, 'b', "x"),
-        tuple(1, 'c', "x"), tuple(2, 'c', "x"), tuple(3, 'c', "x"),
-        tuple(1, 'a', "y"), tuple(2, 'a', "y"), tuple(3, 'a', "y"),
-        tuple(1, 'b', "y"), tuple(2, 'b', "y"), tuple(3, 'b', "y"),
-        tuple(1, 'c', "y"), tuple(2, 'c', "y"), tuple(3, 'c', "y"),
-        tuple(1, 'a', "z"), tuple(2, 'a', "z"), tuple(3, 'a', "z"),
-        tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
-        tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z"),
+        tuple(1, 'a', "x"), tuple(1, 'a', "y"), tuple(1, 'a', "z"),
+        tuple(1, 'b', "x"), tuple(1, 'b', "y"), tuple(1, 'b', "z"),
+        tuple(1, 'c', "x"), tuple(1, 'c', "y"), tuple(1, 'c', "z"),
+        tuple(2, 'a', "x"), tuple(2, 'a', "y"), tuple(2, 'a', "z"),
+        tuple(2, 'b', "x"), tuple(2, 'b', "y"), tuple(2, 'b', "z"),
+        tuple(2, 'c', "x"), tuple(2, 'c', "y"), tuple(2, 'c', "z"),
+        tuple(3, 'a', "x"), tuple(3, 'a', "y"), tuple(3, 'a', "z"),
+        tuple(3, 'b', "x"), tuple(3, 'b', "y"), tuple(3, 'b', "z"),
+        tuple(3, 'c', "x"), tuple(3, 'c', "y"), tuple(3, 'c', "z")
     ]));
 }
 
