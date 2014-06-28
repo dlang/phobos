@@ -4125,23 +4125,30 @@ unittest
  * Returns !=0 if e is a NaN.
  */
 
-bool isNaN(real x) @nogc @trusted pure nothrow
+bool isNaN(X)(X x) @nogc @trusted pure nothrow
+if (isFloatingPoint!(X))
 {
-    alias F = floatTraits!(real);
-    static if (real.mant_dig == 53) // double
+    alias F = floatTraits!(X);
+    static if (X.mant_dig == 24) // float
+    {
+        uint* p = cast(uint *)&x;
+        return ((*p & 0x7F80_0000) == 0x7F80_0000)
+        && *p & 0x007F_FFFF; // not infinity
+    }
+    else static if (X.mant_dig == 53) // double
     {
         ulong*  p = cast(ulong *)&x;
         return ((*p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-        && *p & 0x000F_FFFF_FFFF_FFFF;
+        && *p & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
-    else static if (real.mant_dig == 64)  // real80
+    else static if (X.mant_dig == 64)  // real80
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
         *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
-    else static if (real.mant_dig == 113) // quadruple
+    else static if (X.mant_dig == 113) // quadruple
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
@@ -4150,19 +4157,83 @@ bool isNaN(real x) @nogc @trusted pure nothrow
     }
     else
     {
-        return x!=x;
+        return x != x;
     }
 }
 
 
 unittest
 {
+    // CTFE-able tests
+    assert(isNaN(float.init));
+    assert(isNaN(-float.init));
     assert(isNaN(float.nan));
-    assert(isNaN(-double.nan));
-    assert(isNaN(real.nan));
-
-    assert(!isNaN(53.6));
+    assert(isNaN(-float.nan));
     assert(!isNaN(float.infinity));
+    assert(!isNaN(-float.infinity));
+    assert(!isNaN(53.6f));
+    assert(!isNaN(-53.6f));
+
+    assert(isNaN(double.init));
+    assert(isNaN(-double.init));
+    assert(isNaN(double.nan));
+    assert(isNaN(-double.nan));
+    assert(!isNaN(double.infinity));
+    assert(!isNaN(-double.infinity));
+    assert(!isNaN(53.6));
+    assert(!isNaN(-53.6));
+
+    assert(isNaN(real.init));
+    assert(isNaN(-real.init));
+    assert(isNaN(real.nan));
+    assert(isNaN(-real.nan));
+    assert(!isNaN(real.infinity));
+    assert(!isNaN(-real.infinity));
+    assert(!isNaN(53.6L));
+    assert(!isNaN(-53.6L));
+
+    // Runtime tests
+    shared float f;
+    f = float.init;
+    assert(isNaN(f));
+    assert(isNaN(-f));
+    f = float.nan;
+    assert(isNaN(f));
+    assert(isNaN(-f));
+    f = float.infinity;
+    assert(!isNaN(f));
+    assert(!isNaN(-f));
+    f = 53.6f;
+    assert(!isNaN(f));
+    assert(!isNaN(-f));
+
+    shared double d;
+    d = double.init;
+    assert(isNaN(d));
+    assert(isNaN(-d));
+    d = double.nan;
+    assert(isNaN(d));
+    assert(isNaN(-d));
+    d = double.infinity;
+    assert(!isNaN(d));
+    assert(!isNaN(-d));
+    d = 53.6;
+    assert(!isNaN(d));
+    assert(!isNaN(-d));
+
+    shared real e;
+    e = real.init;
+    assert(isNaN(e));
+    assert(isNaN(-e));
+    e = real.nan;
+    assert(isNaN(e));
+    assert(isNaN(-e));
+    e = real.infinity;
+    assert(!isNaN(e));
+    assert(!isNaN(-e));
+    e = 53.6L;
+    assert(!isNaN(e));
+    assert(!isNaN(-e));
 }
 
 /*********************************
@@ -4313,29 +4384,22 @@ unittest
  * Return !=0 if e is $(PLUSMN)$(INFIN).
  */
 
-bool isInfinity(real x) @nogc @trusted pure nothrow
+bool isInfinity(X)(X x) @nogc @trusted pure nothrow
+if (isFloatingPoint!(X))
 {
-    alias F = floatTraits!(real);
-    static if (real.mant_dig == 53)
+    alias F = floatTraits!(X);
+    static if (X.mant_dig == 24)
+    {
+        // float
+        return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
+    }
+    else static if (X.mant_dig == 53)
     {
         // double
         return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     }
-    else static if(real.mant_dig == 106)
-    {
-        //doubledouble
-        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
-            == 0x7FF8_0000_0000_0000;
-    }
-    else static if (real.mant_dig == 113)
-    {
-        // quadruple
-        long*   ps = cast(long *)&x;
-        return (ps[MANTISSA_LSB] == 0)
-            && (ps[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
-    }
-    else
+    else static if (X.mant_dig == 64)
     {
         // real80
         ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
@@ -4344,16 +4408,91 @@ bool isInfinity(real x) @nogc @trusted pure nothrow
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
         return e == F.EXPMASK && (*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
     }
+    else static if(X.mant_dig == 106)
+    {
+        //doubledouble
+        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
+            == 0x7FF8_0000_0000_0000;
+    }
+    else static if (X.mant_dig == 113)
+    {
+        // quadruple
+        long*   ps = cast(long *)&x;
+        return (ps[MANTISSA_LSB] == 0)
+            && (ps[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
+    }
+    else
+    {
+        return (x - 1) == x;
+    }
 }
 
 unittest
 {
-    assert(isInfinity(float.infinity));
+    // CTFE-able tests
+    assert(!isInfinity(float.init));
+    assert(!isInfinity(-float.init));
     assert(!isInfinity(float.nan));
-    assert(isInfinity(double.infinity));
-    assert(isInfinity(-real.infinity));
+    assert(!isInfinity(-float.nan));
+    assert(isInfinity(float.infinity));
+    assert(isInfinity(-float.infinity));
+    assert(isInfinity(-1.0f / 0.0f));
 
+    assert(!isInfinity(double.init));
+    assert(!isInfinity(-double.init));
+    assert(!isInfinity(double.nan));
+    assert(!isInfinity(-double.nan));
+    assert(isInfinity(double.infinity));
+    assert(isInfinity(-double.infinity));
     assert(isInfinity(-1.0 / 0.0));
+
+    assert(!isInfinity(real.init));
+    assert(!isInfinity(-real.init));
+    assert(!isInfinity(real.nan));
+    assert(!isInfinity(-real.nan));
+    assert(isInfinity(real.infinity));
+    assert(isInfinity(-real.infinity));
+    assert(isInfinity(-1.0L / 0.0L));
+
+    // Runtime tests
+    shared float f;
+    f = float.init;
+    assert(!isInfinity(f));
+    assert(!isInfinity(-f));
+    f = float.nan;
+    assert(!isInfinity(f));
+    assert(!isInfinity(-f));
+    f = float.infinity;
+    assert(isInfinity(f));
+    assert(isInfinity(-f));
+    f = (-1.0f / 0.0f);
+    assert(isInfinity(f));
+
+    shared double d;
+    d = double.init;
+    assert(!isInfinity(d));
+    assert(!isInfinity(-d));
+    d = double.nan;
+    assert(!isInfinity(d));
+    assert(!isInfinity(-d));
+    d = double.infinity;
+    assert(isInfinity(d));
+    assert(isInfinity(-d));
+    d = (-1.0 / 0.0);
+    assert(isInfinity(d));
+
+    shared real e;
+    e = real.init;
+    assert(!isInfinity(e));
+    assert(!isInfinity(-e));
+    e = real.nan;
+    assert(!isInfinity(e));
+    assert(!isInfinity(-e));
+    e = real.infinity;
+    assert(isInfinity(e));
+    assert(isInfinity(-e));
+    e = (-1.0L / 0.0L);
+    assert(isInfinity(e));
 }
 
 /*********************************
