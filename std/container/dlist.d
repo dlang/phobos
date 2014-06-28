@@ -378,6 +378,8 @@ Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
+        import std.algorithm : move;
+
         assert(!empty, "DList.removeAny: List is empty");
         auto result = move(back);
         removeBack();
@@ -584,6 +586,8 @@ private:
 
 unittest
 {
+    import std.algorithm : equal;
+
     //Tests construction signatures
     alias IntList = DList!int;
     auto a0 = IntList();
@@ -601,6 +605,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
     assert(equal(list[],[0,1,2,3]));
@@ -616,6 +622,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
     auto range = list[];
@@ -672,6 +680,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     auto dl = DList!string(["a", "b", "d"]);
     dl.insertAfter(dl[], "e"); // insert at the end
     assert(equal(dl[], ["a", "b", "d", "e"]));
@@ -683,6 +693,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     auto dl = DList!string(["a", "b", "d"]);
     dl.insertBefore(dl[], "e"); // insert at the front
     assert(equal(dl[], ["e", "a", "b", "d"]));
@@ -735,6 +747,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     //Verify all flavors of ~
     auto a = DList!int();
     auto b = DList!int();
@@ -769,6 +783,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     //8905
     auto a = DList!int([1, 2, 3, 4]);
     auto r = a[];
