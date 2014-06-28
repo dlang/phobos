@@ -354,7 +354,7 @@ clean :
 zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
-install2 : release
+install2 : all
 	mkdir -p $(INSTALL_DIR)/lib
 	cp $(LIB) $(INSTALL_DIR)/lib/
 ifneq (,$(findstring $(OS),linux))
