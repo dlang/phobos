@@ -186,8 +186,8 @@ template floatTraits(T)
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
     // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
     enum T RECIP_EPSILON = (1/T.epsilon);
-    static if (T.mant_dig == 24)
-    { // float
+    static if (T.mant_dig == 24) // float
+    {
         enum ushort EXPMASK = 0x7F80;
         enum ushort EXPBIAS = 0x3F00;
         enum uint EXPMASK_INT = 0x7F80_0000;
@@ -274,6 +274,101 @@ else
 {
     enum MANTISSA_LSB = 1;
     enum MANTISSA_MSB = 0;
+}
+
+// Common code for math implementations.
+
+// Helper for floor/ceil
+T floorImpl(T)(T x) @trusted pure nothrow @nogc
+{
+    // Bit clearing masks.
+    static immutable ushort[17] BMASK = [
+        0xffff, 0xfffe, 0xfffc, 0xfff8,
+        0xfff0, 0xffe0, 0xffc0, 0xff80,
+        0xff00, 0xfe00, 0xfc00, 0xf800,
+        0xf000, 0xe000, 0xc000, 0x8000,
+        0x0000,
+    ];
+
+    alias F = floatTraits!(T);
+    // Take care not to trigger library calls from the compiler,
+    // while ensuring that we don't get defeated by some optimizers.
+    union floatBits
+    {
+        T rv;
+        ushort[T.sizeof/2] vu;
+    }
+    floatBits y = void;
+    y.rv = x;
+
+    // Find the exponent (power of 2)
+    static if (T.mant_dig == 24) // float
+    {
+        int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 3;
+    }
+    else static if (T.mant_dig == 53) // double
+    {
+        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 3;
+    }
+    else static if (T.mant_dig == 64) // real80
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 4;
+    }
+    else if (T.mant_dig == 113) // quadruple
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 7;
+        }
+    else
+        static assert(false, "Not implemented for this architecture");
+
+    if (exp < 0)
+    {
+        if (x < 0.0)
+            return -1.0;
+        else
+            return 0.0;
+    }
+
+    exp = (T.mant_dig - 1) - exp;
+
+    // Zero 16 bits at a time.
+    while (exp >= 16)
+    {
+        version (LittleEndian)
+            y.vu[pos++] = 0;
+        else
+            y.vu[pos--] = 0;
+        exp -= 16;
+    }
+
+    // Clear the remaining bits.
+    if (exp > 0)
+        y.vu[pos] &= BMASK[exp];
+
+    if ((x < 0.0) && (x != y.rv))
+        y.rv -= 1.0;
+
+    return y.rv;
 }
 
 public:
@@ -3016,7 +3111,7 @@ real ceil(real x) @trusted pure nothrow @nogc
         if (isNaN(x) || isInfinity(x))
             return x;
 
-        real y = floor(x);
+        real y = floorImpl(x);
         if (y < x)
             y += 1.0;
 
@@ -3045,7 +3140,7 @@ double ceil(double x) @trusted pure nothrow @nogc
     if (isNaN(x) || isInfinity(x))
         return x;
 
-    double y = floor(x);
+    double y = floorImpl(x);
     if (y < x)
         y += 1.0;
 
@@ -3073,7 +3168,7 @@ float ceil(float x) @trusted pure nothrow @nogc
     if (isNaN(x) || isInfinity(x))
         return x;
 
-    float y = floor(x);
+    float y = floorImpl(x);
     if (y < x)
         y += 1.0;
 
@@ -3121,89 +3216,11 @@ real floor(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        // Bit clearing masks.
-        static immutable ushort[17] BMASK = [
-            0xffff, 0xfffe, 0xfffc, 0xfff8,
-            0xfff0, 0xffe0, 0xffc0, 0xff80,
-            0xff00, 0xfe00, 0xfc00, 0xf800,
-            0xf000, 0xe000, 0xc000, 0x8000,
-            0x0000,
-        ];
-
         // Special cases.
         if (isNaN(x) || isInfinity(x) || x == 0.0)
             return x;
 
-        alias F = floatTraits!(real);
-        // Take care not to trigger library calls from the compiler,
-        // while ensuring that we don't get defeated by some optimizers.
-        union realBits
-        {
-            real rv;
-            ushort[real.sizeof/2] vu;
-        }
-        realBits y = void;
-        y.rv = x;
-
-        // Find the exponent (power of 2)
-        static if (real.mant_dig == 53)
-        {
-            int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
-
-            version (LittleEndian)
-                int pos = 0;
-            else
-                int pos = 3;
-        }
-        else static if (real.mant_dig == 64)
-        {
-            int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-            version (LittleEndian)
-                int pos = 0;
-            else
-                int pos = 4;
-        }
-        else if (real.mant_dig == 113)
-        {
-            int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-            version (LittleEndian)
-                int pos = 0;
-            else
-                int pos = 7;
-        }
-        else
-            static assert(false, "Only 64-bit, 80-bit, and 128-bit reals are supported by floor()");
-
-        if (exp < 0)
-        {
-            if (x < 0.0)
-                return -1.0;
-            else
-                return 0.0;
-        }
-
-        exp = (real.mant_dig - 1) - exp;
-
-        // Zero 16 bits at a time.
-        while (exp >= 16)
-        {
-            version (LittleEndian)
-                y.vu[pos++] = 0;
-            else
-                y.vu[pos--] = 0;
-            exp -= 16;
-        }
-
-        // Clear the remaining bits.
-        if (exp > 0)
-            y.vu[pos] &= BMASK[exp];
-
-        if ((x < 0.0) && (x != y.rv))
-            y.rv -= 1.0;
-
-        return y.rv;
+        return floorImpl(x);
     }
 }
 
@@ -3224,66 +3241,11 @@ unittest
 // ditto
 double floor(double x) @trusted pure nothrow @nogc
 {
-    // Bit clearing masks.
-    static immutable ushort[17] BMASK = [
-        0xffff, 0xfffe, 0xfffc, 0xfff8,
-        0xfff0, 0xffe0, 0xffc0, 0xff80,
-        0xff00, 0xfe00, 0xfc00, 0xf800,
-        0xf000, 0xe000, 0xc000, 0x8000,
-        0x0000,
-        ];
-
     // Special cases.
     if (isNaN(x) || isInfinity(x) || x == 0.0)
         return x;
 
-    alias floatTraits!(double) F;
-    // Take care not to trigger library calls from the compiler,
-    // while ensuring that we don't get defeated by some optimizers.
-    union doubleBits
-    {
-        double rv;
-        ushort[4] vu;
-    }
-    doubleBits y = void;
-    y.rv = x;
-
-    // Find the exponent (power of 2)
-    int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
-
-    if (exp < 0)
-    {
-        if (x < 0.0)
-            return -1.0;
-        else
-            return 0.0;
-    }
-
-    exp = (double.mant_dig - 1) - exp;
-
-    version (LittleEndian)
-        int pos = 0;
-    else
-        int pos = 3;
-
-    // Zero 16 bits at a time.
-    while (exp >= 16)
-    {
-        version (LittleEndian)
-            y.vu[pos++] = 0;
-        else
-            y.vu[pos--] = 0;
-        exp -= 16;
-    }
-
-    // Clear the remaining bits.
-    if (exp > 0)
-        y.vu[pos] &= BMASK[exp];
-
-    if ((x < 0.0) && (x != y.rv))
-        y.rv -= 1.0;
-
-    return y.rv;
+    return floorImpl(x);
 }
 
 unittest
@@ -3303,66 +3265,11 @@ unittest
 // ditto
 float floor(float x) @trusted pure nothrow @nogc
 {
-    // Bit clearing masks.
-    static immutable ushort[17] BMASK = [
-        0xffff, 0xfffe, 0xfffc, 0xfff8,
-        0xfff0, 0xffe0, 0xffc0, 0xff80,
-        0xff00, 0xfe00, 0xfc00, 0xf800,
-        0xf000, 0xe000, 0xc000, 0x8000,
-        0x0000,
-        ];
-
     // Special cases.
     if (isNaN(x) || isInfinity(x) || x == 0.0)
         return x;
 
-    alias floatTraits!(float) F;
-    // Take care not to trigger library calls from the compiler,
-    // while ensuring that we don't get defeated by some optimizers.
-    union floatBits
-    {
-        float rv;
-        ushort[2] vu;
-    }
-    floatBits y = void;
-    y.rv = x;
-
-    // Find the exponent (power of 2)
-    int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
-
-    if (exp < 0)
-    {
-        if (x < 0.0)
-            return -1.0;
-        else
-            return 0.0;
-    }
-
-    exp = (float.mant_dig - 1) - exp;
-
-    version (LittleEndian)
-        int pos = 0;
-    else
-        int pos = 3;
-
-    // Zero 16 bits at a time.
-    while (exp >= 16)
-    {
-        version (LittleEndian)
-            y.vu[pos++] = 0;
-        else
-            y.vu[pos--] = 0;
-        exp -= 16;
-    }
-
-    // Clear the remaining bits.
-    if (exp > 0)
-        y.vu[pos] &= BMASK[exp];
-
-    if ((x < 0.0) && (x != y.rv))
-        y.rv -= 1.0;
-
-    return y.rv;
+    return floorImpl(x);
 }
 
 unittest
