@@ -1,6 +1,8 @@
 module std.container.rbtree;
 
 import std.exception, std.algorithm, std.range, std.traits;
+import std.functional : binaryFun;
+import std.typetuple : allSatisfy;
 public import std.container.util;
 
 version(unittest) version = RBDoChecks;
@@ -685,6 +687,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
         else
         {
+            import std.typecons : Tuple;
+
             if(added)
             {
                 ++_length;
