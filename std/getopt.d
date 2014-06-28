@@ -127,7 +127,7 @@ void main(string[] args)
 ---------
 
 To set $(D timeout) to $(D 5), invoke the program with either $(D
---timeout=5) or $(D --timeout 5).
+--timeout=5) or $(D --timeout 5).)
 
  $(UL $(LI $(I Incremental options.) If an option name has a "+" suffix and
  is bound to a numeric type, then the option's value tracks the number
