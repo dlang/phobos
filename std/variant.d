@@ -657,7 +657,7 @@ public:
      * assert(a == 6);
      * ----
      */
-    @property T* peek(T)() inout
+    @property inout(T)* peek(T)() inout
     {
         static if (!is(T == void))
             static assert(allowed!(T), "Cannot store a " ~ T.stringof
@@ -665,9 +665,9 @@ public:
         if (type != typeid(T))
             return null;
         static if (T.sizeof <= size)
-            return cast(T*)&store;
+            return cast(inout T*)&store;
         else
-            return *cast(T**)&store;
+            return *cast(inout T**)&store;
     }
 
     /**
