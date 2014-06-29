@@ -218,7 +218,7 @@ getopt(args, "tune", &tuningParms);
 With the above code you can invoke the program with
 "--tune=alpha=0.5,beta=0.6", or "--tune alpha=0.5,beta=0.6".
 
-In general, the keys and values can be of any parsable types.
+In general, the keys and values can be of any parsable types.)
 
 $(LI $(I Callback options.) An option can be bound to a function or
 delegate with the signature $(D void function()), $(D void function(string option)),
