@@ -17,7 +17,6 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
 module std.stdio;
 
 public import core.stdc.stdio, std.string : KeepTerminator;
-import core.atomic : atomicOp;
 import core.vararg;
 static import std.c.stdio;
 import std.stdiobase;
@@ -709,7 +708,7 @@ $(D rawRead) always reads in binary mode on Windows.
 
                 // @@@BUG@@@ 4243
                 immutable info = __fhnd_info[fd];
-                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
+                __fhnd_info[fd] &= ~FHND_TEXT;
                 scope(exit) __fhnd_info[fd] = info;
             }
         }
