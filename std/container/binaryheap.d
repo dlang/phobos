@@ -36,6 +36,8 @@ container.
 struct BinaryHeap(Store, alias less = "a < b")
 if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
+    import std.functional : binaryFun;
+
 // Really weird @@BUG@@: if you comment out the "private:" label below,
 // std.algorithm can't unittest anymore
 //private:

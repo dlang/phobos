@@ -24,7 +24,8 @@ import std.traits, std.typetuple;
 
 /**
 Transforms a string representing an expression into a unary
-function. The string must use symbol name $(D a) as the parameter.
+function. The string must either use symbol name $(D a) as
+the parameter or provide the symbol via the $(D parmName) argument.
 If $(D fun) is not a string, $(D unaryFun) aliases itself away to
 $(D fun).
 
@@ -78,8 +79,9 @@ unittest
 
 /**
 Transforms a string representing an expression into a Boolean binary
-predicate. The string must use symbol names $(D a) and $(D b) as the
-compared elements.
+predicate. The string must either use symbol names $(D a) and $(D b)
+as the parameters or provide the symbols via the $(D parm1Name) and
+$(D parm2Name) arguments.
 If $(D fun) is not a string, $(D binaryFun) aliases itself away to
 $(D fun).
 

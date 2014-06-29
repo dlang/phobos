@@ -126,6 +126,8 @@ Defines the container's primary range, which embodies a forward range.
 
         T moveFront()
         {
+            import std.algorithm : move;
+
             assert(!empty, "SList.Range.moveFront: Range is empty");
             return move(_head._payload);
         }
@@ -284,6 +286,8 @@ Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
+        import std.algorithm : move;
+
         assert(!empty, "SList.removeAny: List is empty");
         auto result = move(_root._payload);
         _root = _root._next;
@@ -435,8 +439,15 @@ Complexity: $(BIGOH n)
             enforce(!r._head);
             return this[];
         }
-        auto n = findNode(_root, r._head);
-        n._next = null;
+        if (_root == r._head)
+        {
+            clear();
+        }
+        else
+        {
+            auto n = findNode(_root, r._head);
+            n._next = null;
+        }
         return Range(null);
     }
 
@@ -533,6 +544,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     auto s = SList!int(1, 2, 3);
     s.removeFront();
     assert(equal(s[], [2, 3]));
@@ -564,6 +577,8 @@ unittest
 
 unittest
 {
+    import std.algorithm;
+
     // insertAfter documentation example
     auto sl = SList!string(["a", "b", "d"]);
     sl.insertAfter(sl[], "e"); // insert at the end (slowest)
@@ -584,6 +599,17 @@ unittest
 
 unittest
 {
+    auto s = SList!int(1, 2, 3, 4, 5);
+    auto r = s[];
+    auto r1 = s.linearRemove(r);
+    assert(s == SList!int());
+    assert(r1.empty);
+}
+
+unittest
+{
+    import std.algorithm : equal;
+
     auto s = SList!int(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
     auto r = s[];
     popFrontN(r, 3);
