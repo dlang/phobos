@@ -2855,7 +2855,7 @@ unittest
 
     mkdir(path);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
     assert(!de.isFile);
@@ -2905,7 +2905,7 @@ unittest
 
     write(path, "hello world");
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
     assert(de.isFile);
@@ -2958,7 +2958,7 @@ version(linux) unittest
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
     assert(!de.isFile);
@@ -3003,7 +3003,7 @@ version(linux) unittest
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
     assert(de.isFile);
