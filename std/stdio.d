@@ -17,6 +17,7 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
 module std.stdio;
 
 public import core.stdc.stdio, std.string : KeepTerminator;
+import core.atomic : atomicOp;
 import core.vararg;
 static import std.c.stdio;
 import std.stdiobase;

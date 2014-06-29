@@ -1590,7 +1590,7 @@ unittest
 
 /**
  * Generates a uniformly-distributed floating point number of type
- * $(D T) in the range [0, 1).  If no random number generator is
+ * $(D T) in the range [0, 1$(RPAREN).  If no random number generator is
  * specified, the default RNG $(D rndGen) will be used as the source
  * of randomness.
  *
