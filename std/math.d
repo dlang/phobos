@@ -281,15 +281,6 @@ else
 // Helper for floor/ceil
 T floorImpl(T)(T x) @trusted pure nothrow @nogc
 {
-    // Bit clearing masks.
-    static immutable ushort[17] BMASK = [
-        0xffff, 0xfffe, 0xfffc, 0xfff8,
-        0xfff0, 0xffe0, 0xffc0, 0xff80,
-        0xff00, 0xfe00, 0xfc00, 0xf800,
-        0xf000, 0xe000, 0xc000, 0x8000,
-        0x0000,
-    ];
-
     alias F = floatTraits!(T);
     // Take care not to trigger library calls from the compiler,
     // while ensuring that we don't get defeated by some optimizers.
@@ -363,7 +354,7 @@ T floorImpl(T)(T x) @trusted pure nothrow @nogc
 
     // Clear the remaining bits.
     if (exp > 0)
-        y.vu[pos] &= BMASK[exp];
+        y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
 
     if ((x < 0.0) && (x != y.rv))
         y.rv -= 1.0;
