@@ -203,10 +203,6 @@ define $(D opBinary).
     if (op == "~" && is(typeof(SList(rhs))))
     {
         auto toAdd = SList(rhs);
-        static if (is(Stuff == SList))
-        {
-            toAdd = toAdd.dup;
-        }
         if (empty) return toAdd;
         // TODO: optimize
         auto result = dup;
