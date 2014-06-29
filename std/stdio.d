@@ -704,9 +704,11 @@ $(D rawRead) always reads in binary mode on Windows.
             scope(exit) ._setmode(fd, mode);
             version(DIGITAL_MARS_STDIO)
             {
+                import core.atomic;
+
                 // @@@BUG@@@ 4243
                 immutable info = __fhnd_info[fd];
-                __fhnd_info[fd] &= ~FHND_TEXT;
+                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
                 scope(exit) __fhnd_info[fd] = info;
             }
         }
@@ -756,9 +758,11 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
             scope(exit) ._setmode(fd, mode);
             version(DIGITAL_MARS_STDIO)
             {
+                import core.atomic;
+
                 // @@@BUG@@@ 4243
                 immutable info = __fhnd_info[fd];
-                __fhnd_info[fd] &= ~FHND_TEXT;
+                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
                 scope(exit) __fhnd_info[fd] = info;
             }
             scope(exit) flush(); // before restoring translation mode
