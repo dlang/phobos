@@ -1066,7 +1066,7 @@ unittest
 }`);
 }
 
-unittest
+deprecated unittest
 {
     // Bugzilla 12332
 
