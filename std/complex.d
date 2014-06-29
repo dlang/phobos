@@ -633,7 +633,7 @@ unittest
     assert (z.re == 2.0  &&  z.im == 2.0);
 }
 
-unittest
+deprecated unittest
 {
     // Convert to string.
 
