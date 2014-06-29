@@ -2326,9 +2326,9 @@ public:
      * in form of open-right intervals.
      *
      * The formatting flag is applied individually to each value, for example:
-     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high) range of integrals)
-     * $(LI $(B %x) formats the intervals as a [low..high) range of lowercase hex characters)
-     * $(LI $(B %X) formats the intervals as a [low..high) range of uppercase hex characters)
+     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high$(RPAREN) range of integrals)
+     * $(LI $(B %x) formats the intervals as a [low..high$(RPAREN) range of lowercase hex characters)
+     * $(LI $(B %X) formats the intervals as a [low..high$(RPAREN) range of uppercase hex characters)
      */
     void toString(scope void delegate(const(char)[]) sink,
                   FormatSpec!char fmt) /* const */
