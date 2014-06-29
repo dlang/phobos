@@ -341,7 +341,7 @@ class MmFile
             else
             {
                 fd = -1;
-                flags |= MAP_ANON;
+                flags |= core.sys.linux.sys.mman.MAP_ANONYMOUS;
             }
             this.size = size;
             size_t initial_map = (window && 2*window<size)
