@@ -343,6 +343,7 @@ T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, siz
          function arguments. Taking them as template arguments causes
          unnecessary template bloat.)
  +/
+deprecated
 T enforce(T, string file, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null)
     if (is(typeof({ if (!value) {} })))
