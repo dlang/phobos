@@ -517,13 +517,26 @@ unittest
 
 unittest
 {
+    auto a = SList!int();
+    auto b = SList!int();
+    auto c = a ~ b[];
+    assert(c.empty);
+}
+
+unittest
+{
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(4, 5, 6);
-    // @@@BUG@@@ in compiler
-    //auto c = a ~ b;
-    auto d = [ 4, 5, 6 ];
-    auto e = a ~ d;
-    assert(e == SList!int(1, 2, 3, 4, 5, 6));
+    auto c = a ~ b[];
+    assert(c == SList!int(1, 2, 3, 4, 5, 6));
+}
+
+unittest
+{
+    auto a = SList!int(1, 2, 3);
+    auto b = [4, 5, 6];
+    auto c = a ~ b;
+    assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
 unittest
