@@ -196,23 +196,48 @@ Complexity: $(BIGOH 1)
 
 /**
 Returns a new $(D SList) that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
+argument.
      */
     SList opBinary(string op, Stuff)(Stuff rhs)
-    if (op == "~" && is(typeof(SList(rhs))))
+        if (op == "~" && is(typeof(insertBack(rhs))))
     {
-        auto toAdd = SList(rhs);
-        static if (is(Stuff == SList))
-        {
-            toAdd = toAdd.dup;
-        }
-        if (empty) return toAdd;
-        // TODO: optimize
-        auto result = dup;
-        auto n = findLastNode(result._root);
-        n._next = toAdd._root;
-        return result;
+        auto ret = this.dup;
+        ret.insertBack(rhs);
+        return ret;
+    }
+    
+    SList opBinary(string op)(SList rhs)
+        if (op == "~")
+    {
+        return this ~ rhs[];
+    }
+    
+/**
+Returns a new $(D SList) that's the concatenation of the argument $(D lhs)
+and $(D this).
+     */
+    SList opBinaryRight(string op, Stuff)(Stuff lhs)
+        if (op == "~" && is(typeof(insertFront(lhs))))
+    {
+        auto ret = this.dup;
+        ret.insertFront(lhs);
+        return ret;
+    }
+    
+/**
+Appends the contents of the argument $(D rhs) into $(D this).
+     */
+    SList opOpAssign(string op, Stuff)(Stuff rhs)
+        if (op == "~" && is(typeof(insertBack(rhs))))
+    {
+        insertBack(rhs);
+        return this;
+    }
+    
+    SList opOpAssign(string op)(SList rhs)
+        if (op == "~")
+    {
+        return this ~= rhs[];
     }
 
 /**
@@ -262,6 +287,35 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
     {
         auto newRoot = new Node(stuff, _root);
         _root = newRoot;
+        return 1;
+    }
+    
+    size_t insertBack(Stuff)(Stuff stuff)
+        if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+    {
+        size_t result;
+        foreach (item; stuff)
+        {
+            insertBack(item);
+            ++result;
+        }
+        return result;
+    }
+    
+    size_t insertBack(Stuff)(Stuff stuff)
+        if (isImplicitlyConvertible!(Stuff, T))
+    {
+        auto n = new Node(stuff, null);
+        if (_root is null)
+            _root = n;
+        else
+        {
+            auto ln = _root;
+            while (ln._next !is null)
+                ln = ln._next;
+            ln._next = n;
+        }
+        
         return 1;
     }
 
@@ -512,8 +566,9 @@ unittest
 {
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(4, 5, 6);
-    // @@@BUG@@@ in compiler
-    //auto c = a ~ b;
+    auto c = a ~ b;
+    assert(c == SList!int(1, 2, 3, 4, 5, 6));
+    
     auto d = [ 4, 5, 6 ];
     auto e = a ~ d;
     assert(e == SList!int(1, 2, 3, 4, 5, 6));
@@ -531,6 +586,42 @@ unittest
     auto s = SList!int(1, 2, 3, 4);
     s.insertFront([ 42, 43 ]);
     assert(s == SList!int(42, 43, 1, 2, 3, 4));
+}
+
+unittest
+{
+    import std.algorithm : equal;
+
+    //Verify all flavors of ~
+    auto a = SList!int();
+    auto b = SList!int();
+    auto c = SList!int([1, 2, 3]);
+    auto d = SList!int([4, 5, 6]);
+
+    assert((a ~ b[])[].empty);
+    assert((c ~ d[])[].equal([1, 2, 3, 4, 5, 6]));
+    assert(c[].equal([1, 2, 3]));
+    assert(d[].equal([4, 5, 6]));
+
+    assert((c[] ~ d)[].equal([1, 2, 3, 4, 5, 6]));
+    assert(c[].equal([1, 2, 3]));
+    assert(d[].equal([4, 5, 6]));
+
+    a~=c[];
+    assert(a[].equal([1, 2, 3]));
+    assert(c[].equal([1, 2, 3]));
+
+    a~=d[];
+    assert(a[].equal([1, 2, 3, 4, 5, 6]));
+    assert(d[].equal([4, 5, 6]));
+
+    a~=[7, 8, 9];
+    assert(a[].equal([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+
+    //trick test:
+    //auto r = c[];
+    //c.removeFront();
+    //c.removeBack();
 }
 
 unittest

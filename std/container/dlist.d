@@ -248,7 +248,7 @@ argument $(D rhs).
     DList opBinary(string op)(DList rhs)
     if (op == "~")
     {
-        return ret ~ rhs[];
+        return this ~ rhs[];
     }
 
 /**
@@ -779,6 +779,17 @@ unittest
     auto r = c[];
     c.removeFront();
     c.removeBack();
+}
+
+unittest
+{
+    import std.algorithm : equal;
+
+    auto a = DList!int(1, 2, 3);
+    auto b = DList!int(4, 5, 6);
+    
+    auto c = a ~ b;
+    assert(c[].equal([1, 2, 3, 4, 5, 6]));
 }
 
 unittest
