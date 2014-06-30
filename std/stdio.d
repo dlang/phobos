@@ -708,7 +708,7 @@ $(D rawRead) always reads in binary mode on Windows.
 
                 // @@@BUG@@@ 4243
                 immutable info = __fhnd_info[fd];
-                __fhnd_info[fd] &= ~FHND_TEXT;
+                atomicOp!"&="(__fhnd_info[fd], ~FHND_TEXT);
                 scope(exit) __fhnd_info[fd] = info;
             }
         }
