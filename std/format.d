@@ -2697,6 +2697,52 @@ if (is(T == class) && !is(T == enum))
     }
 }
 
+/++
+   $(D formatValue) allows to reuse existing format specifiers:
+ +/
+unittest
+{
+   import std.format;
+   import std.string: format;
+
+   struct Point
+   {
+       int x, y;
+
+       void toString(scope void delegate(const(char)[]) sink,
+                     FormatSpec!char fmt) const
+       {
+           sink("(");
+           sink.formatValue(x, fmt);
+           sink(",");
+           sink.formatValue(y, fmt);
+           sink(")");
+       }
+   }
+
+   auto p = Point(16,11);
+   assert(format("%03d", p) == "(016,011)");
+   assert(format("%02x", p) == "(10,0b)");
+}
+
+/++
+   The following code compares the use of $(D formatValue) and $(D formattedWrite).
+ +/
+unittest
+{
+   import std.format;
+   import std.string: appender;
+
+   auto writer1 = appender!string();
+   writer1.formattedWrite("%08b", 42);
+
+   auto writer2 = appender!string();
+   auto f = singleSpec("%08b");
+   writer2.formatValue(42, f);
+
+   assert(writer1.data == writer2.data && writer1.data == "00101010");
+}
+
 unittest
 {
     // class range (issue 5154)
