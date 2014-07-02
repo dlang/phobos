@@ -703,6 +703,41 @@ unittest
 }
 
 
+/++
+   Calculates the squared modulus of a complex number.
+   For genericity, if called on a real number, $(D sqAbs) returns its square.
++/
+T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
+{
+	return z.re*z.re + z.im*z.im;
+}
+
+unittest
+{
+	assert (sqAbs(complex(0.0)) == 0.0);
+	assert (sqAbs(complex(1.0)) == 1.0);
+	assert (sqAbs(complex(0.0, 1.0)) == 1.0);
+	assert (approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
+	assert (approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
+	assert (approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
+}
+
+/// ditto
+T sqAbs(T)(T x) @safe pure nothrow @nogc
+	if (isFloatingPoint!T)
+{
+	return x*x;
+}
+
+unittest
+{
+	assert (sqAbs(0.0) == 0.0);
+	assert (sqAbs(-1.0) == 1.0);
+	assert (approxEqual(sqAbs(-3.0L), 9.0L));
+	assert (approxEqual(sqAbs(-5.0f), 25.0f));
+}
+
+
 /** Calculates the argument (or phase) of a complex number. */
 T arg(T)(Complex!T z) @safe pure nothrow @nogc
 {
