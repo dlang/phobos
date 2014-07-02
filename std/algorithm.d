@@ -8581,7 +8581,7 @@ if (s != SwapStrategy.stable
         // Look for a blackout on the right
         if (blackouts[right].pos + blackouts[right].len >= range.length)
         {
-            range.popBackN(blackouts[right].len);
+            range.popBackExactly(blackouts[right].len);
 
             // Since right is unsigned, we must check for this case, otherwise
             // we might turn it into size_t.max and the loop condition will not
@@ -8596,7 +8596,7 @@ if (s != SwapStrategy.stable
         }
         // Advance to next blackout on the left
         assert(blackouts[left].pos >= steps);
-        tgt.popFrontN(blackouts[left].pos - steps);
+        tgt.popFrontExactly(blackouts[left].pos - steps);
         steps = blackouts[left].pos;
         auto toMove = min(
             blackouts[left].len,
@@ -8655,13 +8655,13 @@ if (s == SwapStrategy.stable
         }
         else
         {
-            src.popFrontN(from);
-            tgt.popFrontN(from);
+            src.popFrontExactly(from);
+            tgt.popFrontExactly(from);
             pos = from;
         }
         // now skip source to the "to" position
-        src.popFrontN(delta);
-        result.popBackN(delta);
+        src.popFrontExactly(delta);
+        result.popBackExactly(delta);
         pos += delta;
     }
     // leftover move
