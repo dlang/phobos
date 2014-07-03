@@ -376,7 +376,7 @@ void append(in char[] name, in void[] buffer)
 // Posix implementation helper for write and append
 
 version(Posix) private void writeImpl(in char[] name,
-        in void[] buffer, in uint mode)
+        in void[] buffer, in uint mode) @trusted
 {
     immutable fd = core.sys.posix.fcntl.open(toStringz(name),
             mode, octal!666);
