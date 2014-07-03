@@ -396,7 +396,7 @@ version(Posix) private void writeImpl(in char[] name,
  * If the target file exists, it is overwritten.
  * Throws: $(D FileException) on error.
  */
-void rename(in char[] from, in char[] to)
+void rename(in char[] from, in char[] to) @trusted
 {
     version(Windows)
     {
