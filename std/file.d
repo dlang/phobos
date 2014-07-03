@@ -426,7 +426,7 @@ unittest
 Delete file $(D name).
 Throws: $(D FileException) on error.
  */
-void remove(in char[] name)
+void remove(in char[] name) @trusted
 {
     version(Windows)
     {
