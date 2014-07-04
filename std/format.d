@@ -196,16 +196,16 @@ $(I FormatChar):
     <dt>$(I Width)
     <dd>
     Specifies the minimum field width.
-    If the width is a $(B *), the next argument, which must be
-    of type $(B int), is taken as the width.
+    If the width is a $(B *), an additional argument of type $(B int),
+    preceding the actual argument, is taken as the width.
     If the width is negative, it is as if the $(B -) was given
     as a $(I Flags) character.
 
     <dt>$(I Precision)
     <dd> Gives the precision for numeric conversions.
-    If the precision is a $(B *), the next argument, which must be
-    of type $(B int), is taken as the precision. If it is negative,
-    it is as if there was no $(I Precision).
+    If the precision is a $(B *), an additional argument of type $(B int),
+    preceding the actual argument, is taken as the precision.
+    If it is negative, it is as if there was no $(I Precision) specifier.
 
     <dt>$(I FormatChar)
     <dd>
