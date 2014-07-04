@@ -479,21 +479,6 @@ template Tuple(Specs...)
         }
 
         /**
-         * Comparison for equality.
-         */
-        bool opEquals(R)(R rhs)
-        if (areCompatibleTuples!(typeof(this), R, "=="))
-        {
-            return field[] == rhs.field[];
-        }
-        /// ditto
-        bool opEquals(R)(R rhs) const
-        if (areCompatibleTuples!(typeof(this), R, "=="))
-        {
-            return field[] == rhs.field[];
-        }
-
-        /**
          * Comparison for ordering.
          */
         int opCmp(R)(R rhs)
