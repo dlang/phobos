@@ -179,7 +179,7 @@ Throws: $(D FileException) on error.
  */
 void[] read(in char[] name, size_t upTo = size_t.max) @safe
 {
-    static trustedRef(ref stat_t buf) @trusted
+    static trustedRef(T)(ref T buf) @trusted
     {
         return &buf;
     }
