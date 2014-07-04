@@ -197,7 +197,7 @@ void[] read(in char[] name, size_t upTo = size_t.max) @trusted
         scope(failure) delete buf;
 
         DWORD numread = void;
-        cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
+        cenforce(ReadFile(h,buf.ptr, size, &numread, null) != 0
                 && numread == size, name);
         return buf[0 .. size];
     }
