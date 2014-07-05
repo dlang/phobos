@@ -4515,9 +4515,10 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
  * Return 1 if sign bit of e is set, 0 if not.
  */
 
-int signbit(real x) @nogc @trusted pure nothrow
+int signbit(X)(X x) @nogc @trusted pure nothrow
 {
-    return ((cast(ubyte *)&x)[floatTraits!(real).SIGNPOS_BYTE] & 0x80) != 0;
+    alias F = floatTraits!(X);
+    return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
 }
 
 unittest
@@ -4525,12 +4526,30 @@ unittest
     debug (math) printf("math.signbit.unittest\n");
     assert(!signbit(float.nan));
     assert(signbit(-float.nan));
+    assert(!signbit(168.1234f));
+    assert(signbit(-168.1234f));
+    assert(!signbit(0.0f));
+    assert(signbit(-0.0f));
+    assert(signbit(-float.max));
+    assert(!signbit(float.max));
+
+    assert(!signbit(double.nan));
+    assert(signbit(-double.nan));
     assert(!signbit(168.1234));
     assert(signbit(-168.1234));
     assert(!signbit(0.0));
     assert(signbit(-0.0));
     assert(signbit(-double.max));
     assert(!signbit(double.max));
+
+    assert(!signbit(real.nan));
+    assert(signbit(-real.nan));
+    assert(!signbit(168.1234L));
+    assert(signbit(-168.1234L));
+    assert(!signbit(0.0L));
+    assert(signbit(-0.0L));
+    assert(signbit(-real.max));
+    assert(!signbit(real.max));
 }
 
 /*********************************
