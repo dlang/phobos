@@ -1496,7 +1496,7 @@ unittest
         assert(s2 !is s1);
         s1 = to!S("\u0131 \u0130");
         s2 = capitalize(s1);
-        assert(cmp(s2, "I \u0130") == 0);
+        assert(cmp(s2, "\u0049 \u0069") == 0);
         assert(s2 !is s1);
 
         s1 = to!S("\u017F \u0049");
