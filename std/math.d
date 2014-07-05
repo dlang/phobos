@@ -4231,18 +4231,32 @@ unittest
  * Returns !=0 if e is finite (not infinite or $(NAN)).
  */
 
-int isFinite(real e) @trusted pure nothrow @nogc
+int isFinite(X)(X e) @trusted pure nothrow @nogc
 {
-    alias F = floatTraits!(real);
+    alias F = floatTraits!(X);
     ushort* pe = cast(ushort *)&e;
     return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
 
 unittest
 {
-    assert(isFinite(1.23));
-    assert(!isFinite(double.infinity));
+    assert(isFinite(1.23f));
+    assert(isFinite(float.max));
+    assert(isFinite(float.min_normal));
     assert(!isFinite(float.nan));
+    assert(!isFinite(float.infinity));
+
+    assert(isFinite(1.23));
+    assert(isFinite(double.max));
+    assert(isFinite(double.min_normal));
+    assert(!isFinite(double.nan));
+    assert(!isFinite(double.infinity));
+
+    assert(isFinite(1.23L));
+    assert(isFinite(real.max));
+    assert(isFinite(real.min_normal));
+    assert(!isFinite(real.nan));
+    assert(!isFinite(real.infinity));
 }
 
 
