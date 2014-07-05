@@ -190,10 +190,12 @@ template floatTraits(T)
         version(LittleEndian)
         {
             enum EXPPOS_SHORT = 1;
+            enum SIGNPOS_BYTE = 3;
         }
         else
         {
             enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
         }
     }
     else static if (T.mant_dig == 53) // double, or real==double
