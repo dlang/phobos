@@ -4556,35 +4556,60 @@ unittest
  * Return a value composed of to with from's sign bit.
  */
 
-real copysign(real to, real from) @trusted pure nothrow @nogc
+R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
+    if (isFloatingPoint!(R) && isFloatingPoint!(X))
 {
     ubyte* pto   = cast(ubyte *)&to;
     const ubyte* pfrom = cast(ubyte *)&from;
 
-    alias F = floatTraits!(real);
-    pto[F.SIGNPOS_BYTE] &= 0x7F;
-    pto[F.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
+    alias T = floatTraits!(R);
+    alias F = floatTraits!(X);
+    pto[T.SIGNPOS_BYTE] &= 0x7F;
+    pto[T.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
     return to;
+}
+
+// ditto
+R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
+    if (isIntegral!(X) && isFloatingPoint!(R))
+{
+    return copysign(cast(R)to, from);
 }
 
 unittest
 {
-    real e;
+    import std.typetuple;
 
-    e = copysign(21, 23.8);
-    assert(e == 21);
+    foreach (X; TypeTuple!(float, double, real, int, long))
+    {
+        foreach (Y; TypeTuple!(float, double, real))
+        {
+            X x = 21;
+            Y y = 23.8;
+            Y e = void;
 
-    e = copysign(-21, 23.8);
-    assert(e == 21);
+            e = copysign(x, y);
+            assert(e == 21.0);
 
-    e = copysign(21, -23.8);
-    assert(e == -21);
+            e = copysign(-x, y);
+            assert(e == 21.0);
 
-    e = copysign(-21, -23.8);
-    assert(e == -21);
+            e = copysign(x, -y);
+            assert(e == -21.0);
 
-    e = copysign(real.nan, -23.8);
-    assert(isNaN(e) && signbit(e));
+            e = copysign(-x, -y);
+            assert(e == -21.0);
+
+            static if (isFloatingPoint!X)
+            {
+                e = copysign(X.nan, y);
+                assert(isNaN(e) && !signbit(e));
+
+                e = copysign(X.nan, -y);
+                assert(isNaN(e) && signbit(e));
+            }
+        }
+    }
 }
 
 /*********************************
