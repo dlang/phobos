@@ -64,11 +64,6 @@ module std.math;
 import core.stdc.math;
 import std.traits;
 
-version(unittest)
-{
-    import std.typetuple;
-}
-
 version(LDC)
 {
     import ldc.intrinsics;
@@ -4313,48 +4308,23 @@ unittest
  * be converted to normal reals.
  */
 
-int isSubnormal(float f) @trusted pure nothrow @nogc
+int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
-    uint *p = cast(uint *)&f;
-    return (*p & 0x7F80_0000) == 0 && *p & 0x007F_FFFF;
-}
-
-unittest
-{
-    float f = 3.0;
-
-    for (f = 1.0; !isSubnormal(f); f /= 2)
-        assert(f != 0);
-}
-
-/// ditto
-
-int isSubnormal(double d) @trusted pure nothrow @nogc
-{
-    uint *p = cast(uint *)&d;
-    return (p[MANTISSA_MSB] & 0x7FF0_0000) == 0
-        && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & 0x000F_FFFF);
-}
-
-unittest
-{
-    double f;
-
-    for (f = 1; !isSubnormal(f); f /= 2)
-        assert(f != 0);
-}
-
-/// ditto
-
-int isSubnormal(real x) @trusted pure nothrow @nogc
-{
-    alias F = floatTraits!(real);
-    static if (real.mant_dig == 53)
+    alias F = floatTraits!(X);
+    static if (X.mant_dig == 24)
+    {
+        // float
+        uint *p = cast(uint *)&x;
+        return (*p & F.EXPMASK_INT) == 0 && *p & F.MANTISSAMASK_INT;
+    }
+    else static if (X.mant_dig == 53)
     {
         // double
-        return isSubnormal(cast(double)x);
+        uint *p = cast(uint *)&x;
+        return (p[MANTISSA_MSB] & F.EXPMASK_INT) == 0
+            && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & F.MANTISSAMASK_INT);
     }
-    else static if (real.mant_dig == 113)
+    else static if (X.mant_dig == 113)
     {
         // quadruple
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
@@ -4362,7 +4332,7 @@ int isSubnormal(real x) @trusted pure nothrow @nogc
         return (e == 0 &&
           (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) !=0));
     }
-    else static if (real.mant_dig==64)
+    else static if (X.mant_dig==64)
     {
         // real80
         ushort* pe = cast(ushort *)&x;
@@ -4370,19 +4340,27 @@ int isSubnormal(real x) @trusted pure nothrow @nogc
 
         return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
     }
-    else
+    else static if(X.mant_dig == 106)
     {
         // double double
         return isSubnormal((cast(double*)&x)[MANTISSA_MSB]);
+    }
+    else
+    {
+        static assert(false, "Not implemented for this architecture");
     }
 }
 
 unittest
 {
-    real f;
+    import std.typetuple;
 
-    for (f = 1; !isSubnormal(f); f /= 2)
-        assert(f != 0);
+    foreach (T; TypeTuple!(float, double, real))
+    {
+        T f;
+        for (f = 1.0; !isSubnormal(f); f /= 2)
+            assert(f != 0);
+    }
 }
 
 /*********************************
