@@ -159,14 +159,14 @@ private:
  */
 version(LittleEndian)
 {
-    static assert(real.mant_dig == 53 || real.mant_dig==64
+    static assert(real.mant_dig == 53 || real.mant_dig == 64
                || real.mant_dig == 113,
       "Only 64-bit, 80-bit, and 128-bit reals"~
       " are supported for LittleEndian CPUs");
 }
 else
 {
-    static assert(real.mant_dig == 53 || real.mant_dig==106
+    static assert(real.mant_dig == 53 || real.mant_dig == 106
                || real.mant_dig == 113,
     "Only 64-bit and 128-bit reals are supported for BigEndian CPUs."~
     " double-double reals have partial support");
@@ -2141,7 +2141,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
         }
         return value;
     }
-    else static if (real.mant_dig==53) // real is double
+    else static if (real.mant_dig == 53) // real is double
     {
         if (ex) // If exponent is non-zero
         {
@@ -2181,7 +2181,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
         }
         return value;
     }
-    else // static if (real.mant_dig==106) // real is doubledouble
+    else // static if (real.mant_dig == 106) // real is doubledouble
     {
         assert (0, "frexp not implemented");
     }
@@ -4114,34 +4114,34 @@ unittest
  */
 
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
-if (isFloatingPoint!(X))
+    if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
     static if (X.mant_dig == 24) // float
     {
         uint* p = cast(uint *)&x;
         return ((*p & 0x7F80_0000) == 0x7F80_0000)
-        && *p & 0x007F_FFFF; // not infinity
+            && *p & 0x007F_FFFF; // not infinity
     }
     else static if (X.mant_dig == 53) // double
     {
         ulong*  p = cast(ulong *)&x;
         return ((*p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-        && *p & 0x000F_FFFF_FFFF_FFFF; // not infinity
+            && *p & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (X.mant_dig == 64)  // real80
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
-        *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+            *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (X.mant_dig == 113) // quadruple
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
-        (ps[MANTISSA_LSB] | (ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))!=0;
+            (ps[MANTISSA_LSB] | (ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF)) != 0;
     }
     else
     {
@@ -4277,7 +4277,7 @@ int isNormal(X)(X x) @trusted pure nothrow @nogc
     else
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        return (e != F.EXPMASK && e!=0);
+        return (e != F.EXPMASK && e != 0);
     }
 }
 
@@ -4332,9 +4332,9 @@ int isSubnormal(X)(X x) @trusted pure nothrow @nogc
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         long*   ps = cast(long *)&x;
         return (e == 0 &&
-          (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) !=0));
+          (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) != 0));
     }
-    else static if (X.mant_dig==64)
+    else static if (X.mant_dig == 64)
     {
         // real80
         ushort* pe = cast(ushort *)&x;
@@ -4370,7 +4370,7 @@ unittest
  */
 
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
-if (isFloatingPoint!(X))
+    if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
     static if (X.mant_dig == 24)
@@ -4497,7 +4497,7 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
         //double
         return pxs[0] == pys[0];
     }
-    else static if (real.mant_dig == 113 || real.mant_dig==106)
+    else static if (real.mant_dig == 113 || real.mant_dig == 106)
     {
         // quadruple or doubledouble
         return pxs[0] == pys[0] && pxs[1] == pys[1];
@@ -4750,7 +4750,7 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
         m &= 0x0007_FFFF_FFFF_FFFF;
         m <<= 10;
     }
-    else static if (real.mant_dig==113)
+    else static if (real.mant_dig == 113)
     {
         // quadruple
         version(LittleEndian)
@@ -4856,18 +4856,18 @@ real nextUp(real x) @trusted pure nothrow @nogc
                 return x;
             }
             --*ps;
-            if (ps[MANTISSA_LSB]==0) --ps[MANTISSA_MSB];
+            if (ps[MANTISSA_LSB] == 0) --ps[MANTISSA_MSB];
         }
         else
         {
             // Positive number
             ++ps[MANTISSA_LSB];
-            if (ps[MANTISSA_LSB]==0) ++ps[MANTISSA_MSB];
+            if (ps[MANTISSA_LSB] == 0) ++ps[MANTISSA_MSB];
         }
         return x;
 
     }
-    else static if(real.mant_dig==64) // real80
+    else static if(real.mant_dig == 64) // real80
     {
         // For 80-bit reals, the "implied bit" is a nuisance...
         ushort *pe = cast(ushort *)&x;
@@ -4917,7 +4917,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
         }
         return x;
     }
-    else // static if (real.mant_dig==106) // real is doubledouble
+    else // static if (real.mant_dig == 106) // real is doubledouble
     {
         assert (0, "nextUp not implemented");
     }
@@ -5102,7 +5102,7 @@ unittest
  */
 T nextafter(T)(T x, T y) @safe pure nothrow @nogc
 {
-    if (x==y) return y;
+    if (x == y) return y;
     return ((y>x) ? nextUp(x) :  nextDown(x));
 }
 
@@ -5259,7 +5259,7 @@ unittest
  */
 
 typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pure nothrow
-if (isIntegral!(F) && isIntegral!(G))
+    if (isIntegral!(F) && isIntegral!(G))
 {
     if (n<0) return x/0; // Only support positive powers
     typeof(return) p, v = void;
@@ -5786,7 +5786,7 @@ in
 {
     // both x and y must have the same sign, and must not be NaN.
     assert(signbit(x) == signbit(y));
-    assert(x==x && y==y);
+    assert(x == x && y == y);
 }
 body
 {
@@ -5799,7 +5799,7 @@ body
 
     alias F = floatTraits!(real);
     T u;
-    static if (T.mant_dig==64)
+    static if (T.mant_dig == 64)
     {   // real80
 
         // There's slight additional complexity because they are actually
@@ -5854,7 +5854,7 @@ body
         if (xl[MANTISSA_LSB] & yl[MANTISSA_LSB] & 1)
         {
             ++ml;
-            if (ml==0) ++mh;
+            if (ml == 0) ++mh;
         }
         mh >>>=1;
         ul[MANTISSA_MSB] = mh | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
