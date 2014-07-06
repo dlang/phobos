@@ -165,10 +165,10 @@ private:
 /+ doesn't work yet
 unittest
 {
-    writeln("Unique class");
+    debug(Unique) writeln("Unique class");
     class Bar
     {
-        ~this() { writefln("    Bar destructor"); }
+        ~this() { debug(Unique) writeln("    Bar destructor"); }
         int val() const { return 4; }
     }
     alias UBar = Unique!(Bar);
@@ -179,41 +179,41 @@ unittest
     auto ub = UBar(new Bar);
     assert(!ub.isEmpty);
     assert(ub.val == 4);
-    // should not compile
-    // auto ub3 = g(ub);
-    writeln("Calling g");
+    //static assert(!__traits(compiles, {auto ub3 = g(ub);}));
+    debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
 }
++/
 
 unittest
 {
-    writeln("Unique struct");
+    debug(Unique) writeln("Unique struct");
     struct Foo
     {
-        ~this() { writefln("    Bar destructor"); }
+        ~this() { debug(Unique) writeln("    Foo destructor"); }
         int val() const { return 3; }
     }
     alias UFoo = Unique!(Foo);
 
     UFoo f(UFoo u)
     {
-        writeln("inside f");
-        return u;
+        debug(Unique) writeln("inside f");
+        //return u;
+        return u.release;
     }
 
     auto uf = UFoo(new Foo);
     assert(!uf.isEmpty);
     assert(uf.val == 3);
-    // should not compile
-    // auto uf3 = f(uf);
-    writeln("Unique struct: calling f");
+    //static assert(!__traits(compiles, {auto uf3 = f(uf);}));
+    debug(Unique) writeln("Unique struct: calling f");
     auto uf2 = f(uf.release);
+    debug(Unique) writeln("Unique struct: returned from f");
     assert(uf.isEmpty);
     assert(!uf2.isEmpty);
 }
-+/
 
 
 /**
