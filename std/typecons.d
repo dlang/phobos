@@ -107,7 +107,7 @@ public:
     /**
     Constructor that takes a Unique of a type that is convertible to our type:
     Disallow construction from lvalue (force the use of release on the source Unique)
-    If the source is an rvalue, null its content, so the destrutctor doesn't delete it
+    If the source is an rvalue, null its content, so the destructor doesn't delete it
 
     Typically used by the compiler to return $(D Unique) of derived type as $(D Unique)
     of base type.
@@ -162,7 +162,6 @@ private:
     RefT _p;
 }
 
-/+ doesn't work yet
 unittest
 {
     debug(Unique) writeln("Unique class");
@@ -174,7 +173,9 @@ unittest
     alias UBar = Unique!(Bar);
     UBar g(UBar u)
     {
-        return u;
+        debug(Unique) writeln("inside g");
+        //return u;
+        return u.release;
     }
     auto ub = UBar(new Bar);
     assert(!ub.isEmpty);
@@ -182,10 +183,10 @@ unittest
     //static assert(!__traits(compiles, {auto ub3 = g(ub);}));
     debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
+    debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
 }
-+/
 
 unittest
 {
