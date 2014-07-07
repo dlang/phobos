@@ -54,8 +54,6 @@ deleted at the end of the scope, unless it is transferred.  The
 transfer can be explicit, by calling $(D release), or implicit, when
 returning Unique from a function. The resource can be a polymorphic
 class object, in which case Unique behaves polymorphically too.
-
-Example:
 */
 struct Unique(T)
 {
@@ -80,7 +78,7 @@ public:
     /**
     Constructor that takes an rvalue.
     It will ensure uniqueness, as long as the rvalue
-    isn't just a view on an lvalue (e.g., a cast)
+    isn't just a view on an lvalue (e.g., a cast).
     Typical usage:
     ----
     Unique!(Foo) f = new Foo;
@@ -139,7 +137,7 @@ public:
     {
         return _p is null;
     }
-    /** Returns a unique rvalue. Nullifies the current contents */
+    /** Returns a unique rvalue. Nullifies the current contents. */
     Unique release()
     {
         debug(Unique) writeln("Release");
@@ -148,11 +146,11 @@ public:
         debug(Unique) writeln("return from Release");
         return u;
     }
-    /** Forwards member access to contents */
+    /** Forwards member access to contents. */
     RefT opDot() { return _p; }
 
     /**
-    Postblit operator is undefined to prevent the cloning of $(D Unique) objects
+    Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
     */
     @disable this(this);
 
@@ -172,7 +170,6 @@ unittest
     UBar g(UBar u)
     {
         debug(Unique) writeln("inside g");
-        //return u;
         return u.release;
     }
     auto ub = UBar(new Bar);
@@ -199,7 +196,6 @@ unittest
     UFoo f(UFoo u)
     {
         debug(Unique) writeln("inside f");
-        //return u;
         return u.release;
     }
 
