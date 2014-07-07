@@ -151,12 +151,10 @@ public:
     /** Forwards member access to contents */
     RefT opDot() { return _p; }
 
-/+ doesn't work yet!
     /**
     Postblit operator is undefined to prevent the cloning of $(D Unique) objects
     */
-    this(this) = null;
- +/
+    @disable this(this);
 
 private:
     RefT _p;
@@ -180,7 +178,7 @@ unittest
     auto ub = UBar(new Bar);
     assert(!ub.isEmpty);
     assert(ub.val == 4);
-    //static assert(!__traits(compiles, {auto ub3 = g(ub);}));
+    static assert(!__traits(compiles, {auto ub3 = g(ub);}));
     debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
     debug(Unique) writeln("Returned from g");
@@ -208,7 +206,7 @@ unittest
     auto uf = UFoo(new Foo);
     assert(!uf.isEmpty);
     assert(uf.val == 3);
-    //static assert(!__traits(compiles, {auto uf3 = f(uf);}));
+    static assert(!__traits(compiles, {auto uf3 = f(uf);}));
     debug(Unique) writeln("Unique struct: calling f");
     auto uf2 = f(uf.release);
     debug(Unique) writeln("Unique struct: returned from f");
