@@ -2699,7 +2699,7 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
         toRemove   = The characters to remove from the string.
   +/
 C1[] translate(C1, C2 = immutable char)(C1[] str,
-                                        dchar[dchar] transTable,
+                                        in dchar[dchar] transTable,
                                         const(C2)[] toRemove = null) @safe pure
     if (isSomeChar!C1 && isSomeChar!C2)
 {
@@ -2720,8 +2720,20 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
     assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
+@safe pure unittest // issue 13018
+{
+    immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+    assert(translate("hello world", transTable1) == "h5ll7 w7rld");
+
+    assert(translate("hello world", transTable1, "low") == "h5 rd");
+
+    immutable string[dchar] transTable2 = ['e' : "5", 'o' : "orange"];
+    assert(translate("hello world", transTable2) == "h5llorange worangerld");
+}
+
 @trusted pure unittest
 {
+
     assertCTFEable!(
     {
     foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
@@ -2742,22 +2754,17 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
                                wchar[], const(wchar)[], immutable(wchar)[],
                                dchar[], const(dchar)[], immutable(dchar)[]))
         {
-            assert(translate(to!S("hello world"),
-                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
-                             to!T("r")) ==
-                   to!S("qe55o wo5d"));
-            assert(translate(to!S("hello world"),
-                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
-                             to!T("helo")) ==
-                   to!S(" wrd"));
-            assert(translate(to!S("hello world"),
-                             cast(dchar[dchar])['h' : 'q', 'l' : '5'],
-                             to!T("q5")) ==
-                   to!S("qe55o wor5d"));
-            assert(translate(to!S("hello \U00010143 world"),
-                             cast(dchar[dchar])['o' : '0', '\U00010143' : 'o'],
-                             to!T("\U00010143 ")) ==
-                   to!S("hell0w0rld"));
+            foreach(R; TypeTuple!(dchar[dchar], const dchar[dchar],
+                        immutable dchar[dchar]))
+            {
+                R tt = ['h' : 'q', 'l' : '5'];
+                assert(translate(to!S("hello world"), tt, to!T("r"))
+                    == to!S("qe55o wo5d"));
+                assert(translate(to!S("hello world"), tt, to!T("helo"))
+                    == to!S(" wrd"));
+                assert(translate(to!S("hello world"), tt, to!T("q5"))
+                    == to!S("qe55o wor5d"));
+            }
         }
 
         auto s = to!S("hello world");
@@ -2769,7 +2776,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
 
 /++ Ditto +/
 C1[] translate(C1, S, C2 = immutable char)(C1[] str,
-                                           S[dchar] transTable,
+                                           in S[dchar] transTable,
                                            const(C2)[] toRemove = null) @safe pure
     if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
 {
@@ -2804,20 +2811,22 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                                wchar[], const(wchar)[], immutable(wchar)[],
                                dchar[], const(dchar)[], immutable(dchar)[]))
         {
-            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("r")) ==
-                   to!S("yellowe4242o wo42d"));
-            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("helo")) ==
-                   to!S(" wrd"));
-            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("y42")) ==
-                   to!S("yellowe4242o wor42d"));
-            assert(translate(to!S("hello \U00010143 world"),
-                             ['o' : "owl", '\U00010143' : "\n"],
-                             to!T("\U00010143 ")) ==
-                   to!S("hellowlwowlrld"));
-            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("hello world")) ==
-                   to!S(""));
-            assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("42")) ==
-                   to!S("yellowe4242o wor42d"));
+
+            foreach(R; TypeTuple!(string[dchar], const string[dchar],
+                        immutable string[dchar]))
+            {
+                R tt = ['h' : "yellow", 'l' : "42"];
+                assert(translate(to!S("hello world"), tt, to!T("r")) ==
+                       to!S("yellowe4242o wo42d"));
+                assert(translate(to!S("hello world"), tt, to!T("helo")) ==
+                       to!S(" wrd"));
+                assert(translate(to!S("hello world"), tt, to!T("y42")) ==
+                       to!S("yellowe4242o wor42d"));
+                assert(translate(to!S("hello world"), tt, to!T("hello world")) ==
+                       to!S(""));
+                assert(translate(to!S("hello world"), tt, to!T("42")) ==
+                       to!S("yellowe4242o wor42d"));
+            }
         }
 
         auto s = to!S("hello world");
@@ -2838,7 +2847,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
         buffer     = An output range to write the contents to.
   +/
 void translate(C1, C2 = immutable char, Buffer)(C1[] str,
-                                        dchar[dchar] transTable,
+                                        in dchar[dchar] transTable,
                                         const(C2)[] toRemove,
                                         Buffer buffer)
     if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
@@ -2864,9 +2873,26 @@ void translate(C1, C2 = immutable char, Buffer)(C1[] str,
     assert(buffer.data == "h5llorange worangerld");
 }
 
+@safe pure unittest // issue 13018
+{
+    immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+    auto buffer = appender!(dchar[])();
+    translate("hello world", transTable1, null, buffer);
+    assert(buffer.data == "h5ll7 w7rld");
+
+    buffer.clear();
+    translate("hello world", transTable1, "low", buffer);
+    assert(buffer.data == "h5 rd");
+
+    buffer.clear();
+    immutable string[dchar] transTable2 = ['e' : "5", 'o' : "orange"];
+    translate("hello world", transTable2, null, buffer);
+    assert(buffer.data == "h5llorange worangerld");
+}
+
 /++ Ditto +/
 void translate(C1, S, C2 = immutable char, Buffer)(C1[] str,
-                                                   S[dchar] transTable,
+                                                   in S[dchar] transTable,
                                                    const(C2)[] toRemove,
                                                    Buffer buffer)
     if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2 && isOutputRange!(Buffer, S))
