@@ -2703,7 +2703,7 @@ if (is(T == class) && !is(T == enum))
 unittest
 {
    import std.format;
-   import std.string: format;
+   import std.string : format;
 
    struct Point
    {
@@ -2731,7 +2731,7 @@ unittest
 unittest
 {
    import std.format;
-   import std.string: appender;
+   import std.array : appender;
 
    auto writer1 = appender!string();
    writer1.formattedWrite("%08b", 42);
