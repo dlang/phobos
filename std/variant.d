@@ -674,8 +674,10 @@ public:
      * Returns the $(D_PARAM typeid) of the currently held value.
      */
 
-    @property TypeInfo type() const
+    @property TypeInfo type() const nothrow @trusted
     {
+        scope(failure) assert(0);
+
         TypeInfo result;
         fptr(OpID.getTypeInfo, null, &result);
         return result;
@@ -872,7 +874,7 @@ public:
      * Computes the hash of the held value.
      */
 
-    size_t toHash()
+    size_t toHash() const nothrow @safe
     {
         return type.getHash(&store);
     }

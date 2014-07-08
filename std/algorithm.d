@@ -8527,23 +8527,25 @@ movement to be done which improves the execution time of the function.
 
 The function $(D remove) works on any forward range. The moving
 strategy is (listed from fastest to slowest): $(UL $(LI If $(D s ==
-SwapStrategy.unstable && isRandomAccessRange!Range &&
-hasLength!Range), then elements are moved from the end of the range
-into the slots to be filled. In this case, the absolute minimum of
-moves is performed.)  $(LI Otherwise, if $(D s ==
-SwapStrategy.unstable && isBidirectionalRange!Range &&
-hasLength!Range), then elements are still moved from the end of the
-range, but time is spent on advancing between slots by repeated calls
-to $(D range.popFront).)  $(LI Otherwise, elements are moved incrementally
-towards the front of $(D range); a given element is never moved
-several times, but more elements are moved than in the previous
+SwapStrategy.unstable && isRandomAccessRange!Range && hasLength!Range
+&& hasLvalueElements!Range), then elements are moved from the end
+of the range into the slots to be filled. In this case, the absolute
+minimum of moves is performed.)  $(LI Otherwise, if $(D s ==
+SwapStrategy.unstable && isBidirectionalRange!Range && hasLength!Range
+&& hasLvalueElements!Range), then elements are still moved from the
+end of the range, but time is spent on advancing between slots by repeated
+calls to $(D range.popFront).)  $(LI Otherwise, elements are moved
+incrementally towards the front of $(D range); a given element is never
+moved several times, but more elements are moved than in the previous
 cases.))
  */
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
 if (s != SwapStrategy.stable
-    && isBidirectionalRange!Range && hasLength!Range
+    && isBidirectionalRange!Range
+    && hasLvalueElements!Range
+    && hasLength!Range
     && Offset.length >= 1)
 {
     Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
@@ -8579,7 +8581,7 @@ if (s != SwapStrategy.stable
         // Look for a blackout on the right
         if (blackouts[right].pos + blackouts[right].len >= range.length)
         {
-            range.popBackN(blackouts[right].len);
+            range.popBackExactly(blackouts[right].len);
 
             // Since right is unsigned, we must check for this case, otherwise
             // we might turn it into size_t.max and the loop condition will not
@@ -8594,7 +8596,7 @@ if (s != SwapStrategy.stable
         }
         // Advance to next blackout on the left
         assert(blackouts[left].pos >= steps);
-        tgt.popFrontN(blackouts[left].pos - steps);
+        tgt.popFrontExactly(blackouts[left].pos - steps);
         steps = blackouts[left].pos;
         auto toMove = min(
             blackouts[left].len,
@@ -8621,7 +8623,10 @@ if (s != SwapStrategy.stable
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
-if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
+if (s == SwapStrategy.stable
+    && isBidirectionalRange!Range
+    && hasLvalueElements!Range
+    && Offset.length >= 1)
 {
     import std.exception : enforce;
 
@@ -8650,14 +8655,14 @@ if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
         }
         else
         {
-            src.popFrontN(from);
-            tgt.popFrontN(from);
+            src.popFrontExactly(from);
+            tgt.popFrontExactly(from);
             pos = from;
         }
         // now skip source to the "to" position
-        src.popFrontN(delta);
+        src.popFrontExactly(delta);
+        result.popBackExactly(delta);
         pos += delta;
-        foreach (j; 0 .. delta) result.popBack();
     }
     // leftover move
     moveAll(src, tgt);
@@ -8751,7 +8756,8 @@ order is preserved. Returns the filtered range.
 */
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
 (Range range)
-if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range
+    && hasLvalueElements!Range)
 {
     auto result = range;
     static if (s != SwapStrategy.stable)

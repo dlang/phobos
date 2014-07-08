@@ -58,7 +58,7 @@ struct JSONValue
         string                          str;
         long                            integer;
         ulong                           uinteger;
-        real                            floating;
+        double                          floating;
         JSONValue[string]               object;
         JSONValue[]                     array;
     }
@@ -161,14 +161,14 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.FLOAT).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.FLOAT).
-    @property inout(real) floating() inout
+    @property inout(double) floating() inout
     {
         enforceEx!JSONException(type == JSON_TYPE.FLOAT,
                                 "JSONValue is not a floating type");
         return store.floating;
     }
     /// ditto
-    @property real floating(real v)
+    @property double floating(double v)
     {
         assign(v);
         return store.floating;
@@ -299,7 +299,7 @@ struct JSONValue
      * be copied.
      * Otherwise, $(D arg) must be implicitly convertible to one of the
      * following types: $(D typeof(null)), $(D string), $(D ulong),
-     * $(D long), $(D real), an associative array $(D V[K]) for any $(D V)
+     * $(D long), $(D double), an associative array $(D V[K]) for any $(D V)
      * and $(D K) i.e. a JSON object, any array or $(D bool). The type will
      * be set accordingly.
     */
@@ -390,14 +390,14 @@ struct JSONValue
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue.
-    string toString()
+    string toString() const
     {
         return toJSON(&this);
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue, like $(D toString), but
     /// also passes $(I true) as $(I pretty) argument.
-    string toPrettyString()
+    string toPrettyString() const
     {
         return toJSON(&this, true);
     }
@@ -644,7 +644,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                 if(isFloat)
                 {
                     value.type_tag = JSON_TYPE.FLOAT;
-                    value.store.floating = parse!real(data);
+                    value.store.floating = parse!double(data);
                 }
                 else
                 {
@@ -1064,6 +1064,13 @@ unittest
         []
     ]
 }`);
+}
+
+unittest {
+  auto json = `"hello\nworld"`;
+  const jv = parseJSON(json);
+  assert(jv.toString == json);
+  assert(jv.toPrettyString == json);
 }
 
 deprecated unittest

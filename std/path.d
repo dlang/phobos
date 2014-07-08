@@ -308,6 +308,16 @@ auto baseName(R)(R path)
 }
 
 /// ditto
+inout(C)[] baseName(C)(inout(C)[] path)
+    if (isSomeChar!C)
+{
+    /* This overload is necessary because of the DirEntry unit test below;
+     * as the 'alias this' conflates strings that auto-decode with ranges that do not
+     */
+    return baseName!(inout(C)[])(path);
+}
+
+/// ditto
 inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
     (inout(C)[] path, in C1[] suffix)
     @safe pure //TODO: nothrow (because of filenameCmp())
@@ -379,6 +389,14 @@ unittest
 
     static assert (baseName("dir/file.ext") == "file.ext");
     static assert (baseName("dir/file.ext", ".ext") == "file");
+
+    struct DirEntry
+    {
+        alias name this;
+        @property string name() { return ""; }
+    }
+    DirEntry de;
+    auto a = de.baseName;
 }
 
 

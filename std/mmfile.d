@@ -341,6 +341,7 @@ class MmFile
             else
             {
                 fd = -1;
+                version(linux) import core.sys.linux.sys.mman : MAP_ANON;                
                 flags |= MAP_ANON;
             }
             this.size = size;
