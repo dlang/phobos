@@ -63,17 +63,18 @@ else
     alias RefT = T*;
 
 public:
-/+ Doesn't work yet
     /**
     The safe constructor. It creates the resource and
-    guarantees unique ownership of it (unless the constructor
-    of $(D T) publishes aliases of $(D this)),
+    guarantees unique ownership of it (unless $(D T)
+    publishes aliases of $(D this)).
+    Params:
+    args = Arguments to pass to $(D T)'s constructor.
     */
     this(A...)(A args)
     {
+        debug(Unique) writeln("Unique constructor creating ", T.stringof);
         _p = new T(args);
     }
-+/
 
     /**
     Constructor that takes an rvalue.
@@ -156,6 +157,33 @@ public:
 
 private:
     RefT _p;
+}
+
+///
+unittest
+{
+    static struct S
+    {
+        int i;
+        this(int i){this.i = i;}
+    }
+    Unique!S produce()
+    {
+        // Allocate a unique instance of S on the heap
+        return Unique!S(5);
+    }
+    void consume(Unique!S u)
+    {
+        assert(u.i == 6);
+        // Resource automatically deleted here
+    }
+    auto u1 = produce();
+    u1.i++;
+    assert(u1.i == 6);
+    //consume(u1); // Error: u1 is not copyable
+    // Transfer ownership of the resource
+    consume(u1.release);
+    assert(u1.isEmpty);
 }
 
 unittest
