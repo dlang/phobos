@@ -322,9 +322,13 @@ bool wouldHaveBlocked() nothrow @nogc
         static assert(0);
 }
 
-private __gshared typeof(&getnameinfo) getnameinfoPointer;
-private __gshared typeof(&getaddrinfo) getaddrinfoPointer;
-private __gshared typeof(&freeaddrinfo) freeaddrinfoPointer;
+
+private immutable
+{
+    typeof(&getnameinfo) getnameinfoPointer;
+    typeof(&getaddrinfo) getaddrinfoPointer;
+    typeof(&freeaddrinfo) freeaddrinfoPointer;
+}
 
 shared static this()
 {
@@ -1163,8 +1167,8 @@ unittest
         {
             // test via gethostbyname
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
-            getaddrinfoPointer = null;
-            scope(exit) getaddrinfoPointer = getaddrinfoPointerBackup;
+            cast() getaddrinfoPointer = null;
+            scope(exit) cast() getaddrinfoPointer = getaddrinfoPointerBackup;
 
             addresses = getAddress("63.105.9.61");
             assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
@@ -1243,8 +1247,8 @@ unittest
         {
             // test via inet_addr
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
-            getaddrinfoPointer = null;
-            scope(exit) getaddrinfoPointer = getaddrinfoPointerBackup;
+            cast() getaddrinfoPointer = null;
+            scope(exit) cast() getaddrinfoPointer = getaddrinfoPointerBackup;
 
             address = parseAddress("63.105.9.61");
             assert(address.toAddrString() == "63.105.9.61");
@@ -1702,8 +1706,8 @@ unittest
             {
                 // test reverse lookup, via gethostbyaddr
                 auto getnameinfoPointerBackup = getnameinfoPointer;
-                getnameinfoPointer = null;
-                scope(exit) getnameinfoPointer = getnameinfoPointerBackup;
+                cast() getnameinfoPointer = null;
+                scope(exit) cast() getnameinfoPointer = getnameinfoPointerBackup;
 
                 assert(ia.toHostNameString() == "digitalmars.com");
             }
