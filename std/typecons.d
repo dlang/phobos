@@ -479,6 +479,21 @@ template Tuple(Specs...)
         }
 
         /**
+         * Comparison for equality.
+         */
+        bool opEquals(R)(R rhs)
+        if (areCompatibleTuples!(typeof(this), R, "=="))
+        {
+            return field[] == rhs.field[];
+        }
+        /// ditto
+        bool opEquals(R)(R rhs) const
+        if (areCompatibleTuples!(typeof(this), R, "=="))
+        {
+            return field[] == rhs.field[];
+        }
+
+        /**
          * Comparison for ordering.
          */
         int opCmp(R)(R rhs)
@@ -554,6 +569,14 @@ template Tuple(Specs...)
         if (from <= to && to <= Types.length)
         {
             return *cast(typeof(return)*) &(field[from]);
+        }
+
+        size_t toHash() const nothrow @trusted
+        {
+            size_t h = 0;
+            foreach (i, T; Types)
+                h += typeid(T).getHash(cast(const void*)&field[i]);
+            return h;
         }
 
         /**
