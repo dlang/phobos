@@ -3096,7 +3096,7 @@ public:
         else static assert(false);
     }
 
-    // Set a socket option.
+    /// Set a socket option.
     void setOption(SocketOptionLevel level, SocketOption option, void[] value) @trusted
     {
         if(_SOCKET_ERROR == .setsockopt(sock, cast(int)level,
