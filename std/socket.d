@@ -2108,10 +2108,10 @@ private:
             set.length = FD_SET_OFFSET + size;
         }
 
-        final ref fd_set_count_type count() @trusted @property inout pure nothrow @nogc
+        final ref inout(fd_set_count_type) count() @trusted @property inout pure nothrow @nogc
         {
             assert(set.length);
-            return *cast(fd_set_count_type*)set.ptr;
+            return *cast(inout(fd_set_count_type)*)set.ptr;
         }
 
         final size_t capacity() @property const pure nothrow @nogc
