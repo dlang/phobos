@@ -65,7 +65,7 @@ version(Windows)
     private const int _SOCKET_ERROR = SOCKET_ERROR;
 
 
-    private int _lasterr()
+    private int _lasterr() nothrow @nogc
     {
         return WSAGetLastError();
     }
@@ -120,7 +120,7 @@ else version(Posix)
     private const int _SOCKET_ERROR = -1;
 
 
-    private int _lasterr()
+    private int _lasterr() nothrow @nogc
     {
         return errno;
     }
@@ -154,13 +154,13 @@ version(unittest)
 class SocketException: Exception
 {
     ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
     {
         super(msg, file, line, next);
     }
 
     ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
     {
         super(msg, next, file, line);
     }
@@ -280,13 +280,13 @@ class SocketOSException: SocketException
 class SocketParameterException: SocketException
 {
     ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
     {
         super(msg, file, line, next);
     }
 
     ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
     {
         super(msg, next, file, line);
     }
@@ -297,13 +297,13 @@ class SocketParameterException: SocketException
 class SocketFeatureException: SocketException
 {
     ///
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow
     {
         super(msg, file, line, next);
     }
 
     ///
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__) pure nothrow
     {
         super(msg, next, file, line);
     }
@@ -312,7 +312,7 @@ class SocketFeatureException: SocketException
 
 /// Return $(D true) if the last socket operation failed because the socket
 /// was in non-blocking mode and the operation would have blocked.
-bool wouldHaveBlocked()
+bool wouldHaveBlocked() nothrow @nogc
 {
     version(Windows)
         return _lasterr() == WSAEWOULDBLOCK;
@@ -361,7 +361,7 @@ shared static this()
 }
 
 
-shared static ~this()
+shared static ~this() nothrow @nogc
 {
     version(Windows)
     {
@@ -458,7 +458,7 @@ class Protocol
     string[] aliases;           /// ditto
 
 
-    void populate(protoent* proto)
+    void populate(protoent* proto) pure nothrow
     {
         type = cast(ProtocolType)proto.p_proto;
         name = to!string(proto.p_name);
@@ -486,7 +486,7 @@ class Protocol
     }
 
     /** Returns: false on failure */
-    bool getProtocolByName(in char[] name)
+    bool getProtocolByName(in char[] name) nothrow
     {
         protoent* proto;
         proto = getprotobyname(toStringz(name));
@@ -499,7 +499,7 @@ class Protocol
 
     /** Returns: false on failure */
     // Same as getprotobynumber().
-    bool getProtocolByType(ProtocolType type)
+    bool getProtocolByType(ProtocolType type) nothrow
     {
         protoent* proto;
         proto = getprotobynumber(type);
@@ -557,7 +557,7 @@ class Service
     string protocolName;        /// ditto
 
 
-    void populate(servent* serv)
+    void populate(servent* serv) pure nothrow
     {
         name = to!string(serv.s_name);
         port = ntohs(cast(ushort)serv.s_port);
@@ -589,7 +589,7 @@ class Service
      * If a protocol name is omitted, any protocol will be matched.
      * Returns: false on failure.
      */
-    bool getServiceByName(in char[] name, in char[] protocolName = null)
+    bool getServiceByName(in char[] name, in char[] protocolName = null) nothrow
     {
         servent* serv;
         serv = getservbyname(toStringz(name), protocolName !is null ? toStringz(protocolName) : null);
@@ -601,7 +601,7 @@ class Service
 
 
     /// ditto
-    bool getServiceByPort(ushort port, in char[] protocolName = null)
+    bool getServiceByPort(ushort port, in char[] protocolName = null) nothrow
     {
         servent* serv;
         serv = getservbyport(port, protocolName !is null ? toStringz(protocolName) : null);
@@ -708,14 +708,14 @@ class InternetHost
     uint[] addrList;            /// ditto
 
 
-    void validHostent(hostent* he)
+    void validHostent(in hostent* he)
     {
         if(he.h_addrtype != cast(int)AddressFamily.INET || he.h_length != 4)
             throw new HostException("Address family mismatch");
     }
 
 
-    void populate(hostent* he)
+    void populate(hostent* he) pure nothrow
     {
         int i;
         char* p;
@@ -1307,14 +1307,14 @@ class AddressException: SocketOSException
 abstract class Address
 {
     /// Returns pointer to underlying $(D sockaddr) structure.
-    abstract @property sockaddr* name();
-    abstract @property const(sockaddr)* name() const; /// ditto
+    abstract @property sockaddr* name() pure nothrow @nogc;
+    abstract @property const(sockaddr)* name() const pure nothrow @nogc; /// ditto
 
     /// Returns actual size of underlying $(D sockaddr) structure.
-    abstract @property socklen_t nameLen() const;
+    abstract @property socklen_t nameLen() const pure nothrow @nogc;
 
     /// Family of this address.
-    @property AddressFamily addressFamily() const
+    @property AddressFamily addressFamily() const pure nothrow @nogc
     {
         return cast(AddressFamily) name.sa_family;
     }
@@ -1489,14 +1489,14 @@ protected:
 
 public:
     /// Constructs an $(D Address) with a reference to the specified $(D sockaddr).
-    this(sockaddr* sa, socklen_t len)
+    this(sockaddr* sa, socklen_t len) pure nothrow @nogc
     {
         this.sa  = sa;
         this.len = len;
     }
 
     /// Constructs an $(D Address) with a copy of the specified $(D sockaddr).
-    this(const(sockaddr)* sa, socklen_t len)
+    this(const(sockaddr)* sa, socklen_t len) pure nothrow
     {
         this.sa = cast(sockaddr*) (cast(ubyte*)sa)[0..len].dup.ptr;
         this.len = len;
@@ -1533,7 +1533,7 @@ protected:
     sockaddr_in sin;
 
 
-    this()
+    this() pure nothrow @nogc
     {
     }
 
@@ -1561,13 +1561,13 @@ public:
     enum ushort PORT_ANY = 0;                /// Any IPv4 port number.
 
     /// Returns the IPv4 _port number (in host byte order).
-    @property ushort port() const
+    @property ushort port() const pure nothrow @nogc
     {
         return ntohs(sin.sin_port);
     }
 
     /// Returns the IPv4 address number (in host byte order).
-    @property uint addr() const
+    @property uint addr() const pure nothrow @nogc
     {
         return ntohl(sin.sin_addr.s_addr);
     }
@@ -1603,7 +1603,7 @@ public:
      *   addr = (optional) an IPv4 address in host byte order, may be $(D ADDR_ANY).
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(uint addr, ushort port)
+    this(uint addr, ushort port) pure nothrow @nogc
     {
         sin.sin_family = AddressFamily.INET;
         sin.sin_addr.s_addr = htonl(addr);
@@ -1611,7 +1611,7 @@ public:
     }
 
     /// ditto
-    this(ushort port)
+    this(ushort port) pure nothrow @nogc
     {
         sin.sin_family = AddressFamily.INET;
         sin.sin_addr.s_addr = ADDR_ANY;
@@ -1665,7 +1665,7 @@ public:
      * Returns: If the string is not a legitimate IPv4 address,
      * $(D ADDR_NONE) is returned.
      */
-    static uint parse(in char[] addr)
+    static uint parse(in char[] addr) nothrow
     {
         return ntohl(inet_addr(std.string.toStringz(addr)));
     }
@@ -1674,7 +1674,7 @@ public:
      * Convert an IPv4 address number in host byte order to a human readable
      * string representing the IPv4 address in dotted-decimal form.
      */
-    static string addrToString(uint addr)
+    static string addrToString(uint addr) nothrow
     {
         in_addr sin_addr;
         sin_addr.s_addr = htonl(addr);
@@ -1742,7 +1742,7 @@ protected:
     sockaddr_in6 sin6;
 
 
-    this()
+    this() pure nothrow @nogc
     {
     }
 
@@ -1766,7 +1766,7 @@ public:
 
 
     /// Any IPv6 host address.
-    static @property ref const(ubyte)[16] ADDR_ANY()
+    static @property ref const(ubyte)[16] ADDR_ANY() pure nothrow @nogc
     {
         const(ubyte)[16]* addr;
         static if (is(typeof(IN6ADDR_ANY)))
@@ -1787,13 +1787,13 @@ public:
     enum ushort PORT_ANY = 0;
 
     /// Returns the IPv6 port number.
-    @property ushort port() const
+    @property ushort port() const pure nothrow @nogc
     {
         return ntohs(sin6.sin6_port);
     }
 
     /// Returns the IPv6 address.
-    @property ubyte[16] addr() const
+    @property ubyte[16] addr() const pure nothrow @nogc
     {
         return sin6.sin6_addr.s6_addr;
     }
@@ -1834,7 +1834,7 @@ public:
      *          $(D ADDR_ANY).
      *   port = port number, may be $(D PORT_ANY).
      */
-    this(ubyte[16] addr, ushort port)
+    this(ubyte[16] addr, ushort port) pure nothrow @nogc
     {
         sin6.sin6_family = AddressFamily.INET6;
         sin6.sin6_addr.s6_addr = addr;
@@ -1842,7 +1842,7 @@ public:
     }
 
     /// ditto
-    this(ushort port)
+    this(ushort port) pure nothrow @nogc
     {
         sin6.sin6_family = AddressFamily.INET6;
         sin6.sin6_addr.s6_addr = ADDR_ANY;
@@ -1904,7 +1904,7 @@ static if (is(sockaddr_un))
         socklen_t len;
 
 
-        this()
+        this() pure nothrow @nogc
         {
         }
 
@@ -1927,7 +1927,7 @@ static if (is(sockaddr_un))
         }
 
 
-        this(in char[] path)
+        this(in char[] path) pure nothrow
         {
             len = cast(socklen_t)(sockaddr_un.init.sun_path.offsetof + path.length + 1);
             sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
@@ -1936,12 +1936,12 @@ static if (is(sockaddr_un))
             sun.sun_path.ptr[path.length] = 0;
         }
 
-        @property string path() const
+        @property string path() const pure
         {
             return to!string(sun.sun_path.ptr);
         }
 
-        override string toString() const
+        override string toString() const pure
         {
             return path;
         }
@@ -2031,13 +2031,13 @@ enum SocketFlags: int
 private mixin template FieldProxy(string target, string field)
 {
     mixin(`
-        @property typeof(`~target~`) `~field~`() const
+        @property typeof(`~target~`) `~field~`() const pure nothrow @nogc
         {
             return `~target~`;
         }
 
         /// ditto
-        @property typeof(`~target~`) `~field~`(typeof(`~target~`) value)
+        @property typeof(`~target~`) `~field~`(typeof(`~target~`) value) pure nothrow @nogc
         {
             return `~target~` = value;
         }
@@ -2096,23 +2096,23 @@ private:
 
         fd_set_type[] set;
 
-        final void resize(size_t size)
+        final void resize(size_t size) pure nothrow
         {
             set.length = FD_SET_OFFSET + size;
         }
 
-        final ref fd_set_count_type count() @property inout
+        final ref fd_set_count_type count() @property inout pure nothrow @nogc
         {
             assert(set.length);
             return *cast(fd_set_count_type*)set.ptr;
         }
 
-        final size_t capacity() @property const
+        final size_t capacity() @property const pure nothrow @nogc
         {
             return set.length - FD_SET_OFFSET;
         }
 
-        final inout(socket_t)[] fds() inout @property
+        final inout(socket_t)[] fds() inout @property pure nothrow @nogc
         {
             return cast(inout(socket_t)[])set[FD_SET_OFFSET..FD_SET_OFFSET+count];
         }
@@ -2136,35 +2136,35 @@ private:
 
         enum FD_NFDBITS = 8 * fd_set_type.sizeof;
 
-        static fd_set_type mask(uint n)
+        static fd_set_type mask(uint n) pure nothrow @nogc
         {
             return (cast(fd_set_type)1) << (n % FD_NFDBITS);
         }
 
         // Array size to fit that many sockets
 
-        static size_t lengthFor(size_t size)
+        static size_t lengthFor(size_t size) pure nothrow @nogc
         {
             return (size + (FD_NFDBITS-1)) / FD_NFDBITS;
         }
 
         fd_set_type[] set;
 
-        final void resize(size_t size)
+        final void resize(size_t size) pure nothrow
         {
             set.length = lengthFor(size);
         }
 
         // Make sure we can fit that many sockets
 
-        final void setMinCapacity(size_t size)
+        final void setMinCapacity(size_t size) pure nothrow
         {
             auto length = lengthFor(size);
             if (set.length < length)
                 set.length = length;
         }
 
-        final size_t capacity() @property const
+        final size_t capacity() @property const pure nothrow @nogc
         {
             return set.length / FD_NFDBITS;
         }
@@ -2180,14 +2180,14 @@ public:
      * Create a SocketSet with a specific initial capacity (defaults to
      * $(D FD_SETSIZE), the system's default capacity).
      */
-    this(size_t size = FD_SETSIZE)
+    this(size_t size = FD_SETSIZE) pure nothrow
     {
         resize(size);
         reset();
     }
 
     /// Reset the $(D SocketSet) so that there are 0 $(D Socket)s in the collection.
-    void reset()
+    void reset() pure nothrow @nogc
     {
         version (Windows)
             count = 0;
@@ -2199,7 +2199,7 @@ public:
     }
 
 
-    void add(socket_t s)
+    void add(socket_t s) pure nothrow
     {
         version (Windows)
         {
@@ -2229,12 +2229,12 @@ public:
 
     /// Add a $(D Socket) to the collection.
     /// The socket must not already be in the collection.
-    void add(Socket s)
+    void add(Socket s) pure nothrow
     {
         add(s.sock);
     }
 
-    void remove(socket_t s)
+    void remove(socket_t s) pure nothrow
     {
         version (Windows)
         {
@@ -2257,12 +2257,12 @@ public:
 
     /// Remove this $(D Socket) from the collection.
     /// Does nothing if the socket is not in the collection already.
-    void remove(Socket s)
+    void remove(Socket s) pure nothrow
     {
         remove(s.sock);
     }
 
-    int isSet(socket_t s) const
+    int isSet(socket_t s) const pure nothrow @nogc
     {
         version (Windows)
         {
@@ -2280,7 +2280,7 @@ public:
 
 
     /// Return nonzero if this $(D Socket) is in the collection.
-    int isSet(Socket s) const
+    int isSet(Socket s) const pure nothrow @nogc
     {
         return isSet(s.sock);
     }
@@ -2291,19 +2291,19 @@ public:
     /// Note that since D 2.065, this value does not indicate a
     /// restriction, and $(D SocketSet) will grow its capacity as
     /// needed automatically.
-    @property uint max() const
+    @property uint max() const pure nothrow @nogc
     {
         return cast(uint)capacity;
     }
 
 
-    fd_set* toFd_set()
+    fd_set* toFd_set() pure nothrow @nogc
     {
         return cast(fd_set*)set.ptr;
     }
 
 
-    int selectn() const
+    int selectn() const pure nothrow @nogc
     {
         version (Windows)
         {
@@ -2562,7 +2562,7 @@ private:
 
 
     // For use with accepting().
-    protected this()
+    protected this() pure nothrow @nogc
     {
     }
 
@@ -2614,7 +2614,7 @@ public:
     }
 
     /// Use an existing socket handle.
-    this(socket_t sock, AddressFamily af)
+    this(socket_t sock, AddressFamily af) pure nothrow @nogc
     {
         assert(sock != socket_t.init);
         this.sock = sock;
@@ -2622,14 +2622,14 @@ public:
     }
 
 
-    ~this()
+    ~this() nothrow @nogc
     {
         close();
     }
 
 
     /// Get underlying socket handle.
-    @property socket_t handle() const
+    @property socket_t handle() const pure nothrow @nogc
     {
         return sock;
     }
@@ -2641,7 +2641,7 @@ public:
      * will block and wait for data/action.
      * A non-blocking socket will immediately return instead of blocking.
      */
-    @property bool blocking() const
+    @property bool blocking() const nothrow @nogc
     {
         version(Windows)
         {
@@ -2756,7 +2756,7 @@ public:
      */
     // Override to use a derived class.
     // The returned socket's handle must not be set.
-    protected Socket accepting()
+    protected Socket accepting() pure nothrow
     {
         return new Socket;
     }
@@ -2793,13 +2793,13 @@ public:
     }
 
     /// Disables sends and/or receives.
-    void shutdown(SocketShutdown how)
+    void shutdown(SocketShutdown how) nothrow @nogc
     {
         .shutdown(sock, cast(int)how);
     }
 
 
-    private static void _close(socket_t sock)
+    private static void _close(socket_t sock) nothrow @nogc
     {
         version(Windows)
         {
@@ -2820,7 +2820,7 @@ public:
      */
     //calling shutdown() before this is recommended
     //for connection-oriented sockets
-    void close()
+    void close() nothrow @nogc
     {
         _close(sock);
         sock = socket_t.init;
@@ -3367,7 +3367,7 @@ public:
 
     /// Returns a new Address object for the current address family.
     /// Can be overridden to support other addresses.
-    protected Address createAddress()
+    protected Address createAddress() pure nothrow
     {
         Address result;
         switch(_family)
