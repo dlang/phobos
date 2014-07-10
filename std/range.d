@@ -6710,10 +6710,6 @@ unittest
     assert(mat1[1] == 10);
 }
 
-/**
-Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
-contains the $(I i)'th elements of the original subranges.
- */
 struct Transposed(RangeOfRanges)
     if (isForwardRange!RangeOfRanges &&
         isInputRange!(ElementType!RangeOfRanges) &&
@@ -6778,6 +6774,18 @@ unittest
     assert(transposed(ror).empty);
 }
 
+/**
+Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
+contains the $(I i)'th elements of the original subranges.
+ */
+Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
+    if (isForwardRange!RangeOfRanges &&
+        isInputRange!(ElementType!RangeOfRanges) &&
+        hasAssignableElements!RangeOfRanges)
+{
+    return Transposed!RangeOfRanges(rr);
+}
+
 /// Example
 unittest
 {
@@ -6791,15 +6799,6 @@ unittest
         [2, 5],
         [3, 6]
     ]));
-}
-
-/// ditto
-Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
-    if (isForwardRange!RangeOfRanges &&
-        isInputRange!(ElementType!RangeOfRanges) &&
-        hasAssignableElements!RangeOfRanges)
-{
-    return Transposed!RangeOfRanges(rr);
 }
 
 ///
