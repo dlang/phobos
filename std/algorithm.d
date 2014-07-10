@@ -370,7 +370,7 @@ import std.functional : unaryFun, binaryFun;
 import std.range;
 import std.traits;
 import std.typecons : tuple, Tuple;
-import std.typetuple : TypeTuple, staticMap, allSatisfy;
+import std.typetuple : TypeTuple, staticMap, allSatisfy, anySatisfy;
 
 version(unittest)
 {
@@ -12770,15 +12770,15 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
         else static assert(0, "cartesianProduct of infinite ranges requires "~
                               "forward ranges");
     }
-    else static if (isInputRange!R2 && isForwardRange!R1 && !isInfinite!R1)
-    {
-        return joiner(map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
-                          (range2));
-    }
     else static if (isInputRange!R1 && isForwardRange!R2 && !isInfinite!R2)
     {
         return joiner(map!((ElementType!R1 a) => zip(repeat(a), range2.save))
                           (range1));
+    }
+    else static if (isInputRange!R2 && isForwardRange!R1 && !isInfinite!R1)
+    {
+        return joiner(map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
+                          (range2));
     }
     else static assert(0, "cartesianProduct involving finite ranges must "~
                           "have at least one finite forward range");
@@ -12979,7 +12979,69 @@ unittest
 }
 
 /// ditto
+auto cartesianProduct(RR...)(RR ranges)
+    if (ranges.length > 2 &&
+    	allSatisfy!(isForwardRange, RR) &&
+        !anySatisfy!(isInfinite, RR))
+{
+    // This overload uses a much less template-heavy implementation when
+    // all ranges are finite forward ranges, which is the most common use
+    // case, so that we don't run out of resources too quickly.
+    //
+    // For infinite ranges or non-forward ranges, we fall back to the old
+    // implementation which expands an exponential number of templates.
+    import std.typecons : tuple;
+
+    static struct Result
+    {
+        RR ranges;
+        RR current;
+        bool empty = false;
+
+        this(RR _ranges)
+        {
+            ranges = _ranges;
+            foreach (i, r; ranges)
+                current[i] = r.save;
+        }
+        @property auto front()
+        {
+            return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
+                                    iota(0, current.length)));
+        }
+        void popFront()
+        {
+            foreach_reverse (i, ref r; current)
+            {
+                r.popFront();
+                if (!r.empty) break;
+
+                static if (i==0)
+                    empty = true;
+                else
+                    r = ranges[i].save; // rollover
+            }
+        }
+        @property Result save()
+        {
+            Result copy;
+            foreach (i, r; ranges)
+            {
+                copy.ranges[i] = r.save;
+                copy.current[i] = current[i].save;
+            }
+            return copy;
+        }
+    }
+    static assert(isForwardRange!Result);
+
+    return Result(ranges);
+}
+
+/// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
+    if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
+        anySatisfy!(isInfinite, R1, R2, RR))
 {
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
@@ -13021,7 +13083,7 @@ unittest
     assert(canFind(N4, tuple(10, 31, 7, 12)));
 }
 
-///
+/// Issue 9878
 unittest
 {
     auto A = [ 1, 2, 3 ];
@@ -13030,16 +13092,29 @@ unittest
     auto ABC = cartesianProduct(A, B, C);
 
     assert(ABC.equal([
-        tuple(1, 'a', "x"), tuple(2, 'a', "x"), tuple(3, 'a', "x"),
-        tuple(1, 'b', "x"), tuple(2, 'b', "x"), tuple(3, 'b', "x"),
-        tuple(1, 'c', "x"), tuple(2, 'c', "x"), tuple(3, 'c', "x"),
-        tuple(1, 'a', "y"), tuple(2, 'a', "y"), tuple(3, 'a', "y"),
-        tuple(1, 'b', "y"), tuple(2, 'b', "y"), tuple(3, 'b', "y"),
-        tuple(1, 'c', "y"), tuple(2, 'c', "y"), tuple(3, 'c', "y"),
-        tuple(1, 'a', "z"), tuple(2, 'a', "z"), tuple(3, 'a', "z"),
-        tuple(1, 'b', "z"), tuple(2, 'b', "z"), tuple(3, 'b', "z"),
-        tuple(1, 'c', "z"), tuple(2, 'c', "z"), tuple(3, 'c', "z"),
+        tuple(1, 'a', "x"), tuple(1, 'a', "y"), tuple(1, 'a', "z"),
+        tuple(1, 'b', "x"), tuple(1, 'b', "y"), tuple(1, 'b', "z"),
+        tuple(1, 'c', "x"), tuple(1, 'c', "y"), tuple(1, 'c', "z"),
+        tuple(2, 'a', "x"), tuple(2, 'a', "y"), tuple(2, 'a', "z"),
+        tuple(2, 'b', "x"), tuple(2, 'b', "y"), tuple(2, 'b', "z"),
+        tuple(2, 'c', "x"), tuple(2, 'c', "y"), tuple(2, 'c', "z"),
+        tuple(3, 'a', "x"), tuple(3, 'a', "y"), tuple(3, 'a', "z"),
+        tuple(3, 'b', "x"), tuple(3, 'b', "y"), tuple(3, 'b', "z"),
+        tuple(3, 'c', "x"), tuple(3, 'c', "y"), tuple(3, 'c', "z")
     ]));
+}
+
+pure @safe nothrow @nogc unittest
+{
+    int[2] A = [1,2];
+    auto C = cartesianProduct(A[], A[], A[]);
+    assert(isForwardRange!(typeof(C)));
+
+    C.popFront();
+    auto front1 = C.front;
+    auto D = C.save;
+    C.popFront();
+    assert(D.front == front1);
 }
 
 /**
