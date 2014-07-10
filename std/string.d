@@ -4642,3 +4642,108 @@ unittest
     }
     });
 }
+
+/** This function makes the assumption that the passed unsigned integer type
+array passed is actually a character array.
+
+$(D ubyte[]) are mapped to $(D char[]), $(D ushort[]) are mapped to
+$(D wchar[]) and $(D uint[]) are mapped to $(D dchar[]) qualifier are
+preserved.
+
+See_Also: $(LINK2 std_exception.html,assumeUnique)
+*/
+auto assumeUTF(T)(T[] t) pure @trusted
+{
+	static if(is(T == ubyte))
+	{
+		auto r = cast(char[])t;
+	}
+	else static if(is(T == const(ubyte)))
+	{
+		auto r = cast(const(char)[])t;
+	}
+	else static if(is(T == immutable(ubyte)))
+	{
+		auto r = cast(immutable(char)[])t;
+	}
+	else static if(is(T == ushort))
+	{
+		auto r = cast(wchar[])t;
+	}
+	else static if(is(T == const(ushort)))
+	{
+		auto r = cast(const(wchar)[])t;
+	}
+	else static if(is(T == immutable(ushort)))
+	{
+		auto r = cast(immutable(wchar)[])t;
+	}
+	else static if(is(T == uint))
+	{
+		auto r = cast(dchar[])t;
+	}
+	else static if(is(T == const(uint)))
+	{
+		auto r = cast(const(dchar)[])t;
+	}
+	else static if(is(T == immutable(uint)))
+	{
+		auto r = cast(immutable(dchar)[])t;
+	}
+	else
+	{
+		static assert(false,
+			"assumeUTF only accepts ubyte, ushort or uint arrays not :" ~
+			T.stringof);
+	}
+
+	debug 
+	{
+		validate(r);
+	}
+
+	return r;
+}
+
+///
+unittest
+{
+    char[] a = "Hölo World".dup;
+    ubyte[] b = cast(ubyte[])a;
+    char[] c = assumeUTF(b);
+
+    assert(a == c);
+}
+
+unittest
+{
+    foreach(it; TypeTuple!(char[], wchar[], dchar[]))
+    {
+        auto jt = to!(immutable it)("Hello World").dup;
+        static if(is(it == char[]))
+        {
+            auto gt = cast(ubyte[])jt;
+            auto gtc = cast(const(ubyte)[])jt;
+            auto gti = cast(immutable(ubyte)[])jt;
+        }
+        else static if(is(it == wchar[]))
+        {
+            auto gt = cast(ushort[])jt;
+            auto gtc = cast(const(ushort)[])jt;
+            auto gti = cast(immutable(ushort)[])jt;
+        }
+        else static if(is(it == dchar[]))
+        {
+            auto gt = cast(uint[])jt;
+            auto gtc = cast(const(uint)[])jt;
+            auto gti = cast(immutable(uint)[])jt;
+        }
+
+        auto ht = assumeUTF(gt);
+        auto htc = assumeUTF(gtc);
+        auto hti = assumeUTF(gti);
+        assert(equal(jt, ht));
+        assert(equal(jt, htc));
+        assert(equal(jt, hti));
+    }
+}
