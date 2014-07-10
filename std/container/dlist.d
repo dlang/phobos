@@ -477,6 +477,9 @@ Complexity: $(BIGOH 1)
      */
     Range remove(Range r)
     {
+        if (r.empty)
+            return r;
+
         assert(_root !is null, "Cannot remove from an un-initialized List");
         assert(r._first, "Remove: Range is empty");
 
@@ -800,4 +803,11 @@ unittest //12566
     assert(dl2[].walkLength == 1);
     dl2.removeBack();
     assert(dl2.empty, "not empty?!");
+}
+
+unittest //13076
+{
+    DList!int list;
+    assert(list.empty);
+    list.clear();
 }
