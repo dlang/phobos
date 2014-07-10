@@ -132,7 +132,7 @@ public:
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        delete _p;
+        if (_p !is null) delete _p;
         _p = null;
     }
     bool isEmpty() const
