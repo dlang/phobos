@@ -3408,6 +3408,15 @@ extern(C) void std_stdio_static_this()
     __gshared File.Impl stderrImpl;
     stderrImpl.handle = core.stdc.stdio.stderr;
     .stderr._p = &stderrImpl;
+    // stdnull
+    version (Posix)   .stdnull = File("/dev/null", "w+");
+    version (Windows) .stdnull = File("NUL", "w+");
+
+    // We must read from stdnull before eof can succeed
+    // Use rawRead to verify that no bytes were available
+	import std.exception : enforce;
+    ubyte[1] buf;
+    enforce(.stdnull.rawRead(buf).length == 0);
 }
 
 //---------
@@ -3416,6 +3425,16 @@ __gshared
     File stdin; /// The standard input stream.
     File stdout; /// The standard output stream.
     File stderr; /// The standard error stream.
+
+    /**
+     * Wraps the system $(WEB http://en.wikipedia.org/wiki/Null_device, Null Device).
+     * This file is open for both reading and writing, but always remains empty.
+     *----
+     * stdnull.writeln("This is going down a black hole");
+     * assert(stdnull.eof); // will always be EOF
+     *----
+     */
+    File stdnull;
 }
 
 unittest
@@ -3440,6 +3459,15 @@ unittest
         }
         assert(i == 3);
     }
+}
+
+// Issue 12815
+unittest
+{
+    stdnull.writeln("This goes nowhere!");
+
+    // stdnull should always be eof
+    assert(stdnull.eof);
 }
 
 // Private implementation of readln
