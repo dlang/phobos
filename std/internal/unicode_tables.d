@@ -2197,7 +2197,7 @@ bool isSpaceGen(dchar ch) @safe pure nothrow
     }
 }
 
-bool isWhiteGen(dchar ch) @safe pure nothrow
+bool isWhiteGen(dchar ch) @safe pure nothrow @nogc
 {
     if(ch < 133)
     {

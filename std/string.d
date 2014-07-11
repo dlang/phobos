@@ -209,7 +209,7 @@ body
 }
 
 /++ Ditto +/
-immutable(char)* toStringz(string s) @trusted pure nothrow
+immutable(char)* toStringz(in string s) @trusted pure nothrow
 {
     if (s.empty) return "".ptr;
     /* Peek past end of s[], if it's 0, no conversion necessary.
@@ -252,6 +252,10 @@ pure nothrow unittest
     test = "foo\0";
     p = toStringz(test);
     assert(p[0] == 'f' && p[1] == 'o' && p[2] == 'o' && p[3] == 0);
+
+    const string test2 = "";
+    p = toStringz(test2);
+    assert(*p == 0);
     //});
 }
 
@@ -267,9 +271,8 @@ enum CaseSensitive { no, yes }
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-ptrdiff_t indexOf(Char)(in Char[] s,
-                      dchar c,
-                      CaseSensitive cs = CaseSensitive.yes) @safe pure
+ptrdiff_t indexOf(Char)(in Char[] s, in dchar c,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -322,7 +325,7 @@ ptrdiff_t indexOf(Char)(in Char[] s,
     return -1;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.indexOf.unittest\n");
 
@@ -366,8 +369,8 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-ptrdiff_t indexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes) @safe pure
+ptrdiff_t indexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (startIdx < s.length)
@@ -381,7 +384,7 @@ ptrdiff_t indexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
     return -1;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.indexOf(startIdx).unittest\n");
 
@@ -427,9 +430,8 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s,
-                              const(Char2)[] sub,
-                              CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        in CaseSensitive cs = CaseSensitive.yes) @trusted
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     const(Char1)[] balance;
@@ -446,7 +448,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s,
     return balance.empty ? -1 : balance.ptr - s.ptr;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.indexOf.unittest\n");
 
@@ -508,8 +510,8 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes)
-    if (isSomeChar!Char1 && isSomeChar!Char2)
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes)
+    @safe if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (startIdx < s.length)
     {
@@ -522,7 +524,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     return -1;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.indexOf(startIdx).unittest\n");
 
@@ -586,9 +588,8 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
-                          dchar c,
-                          CaseSensitive cs = CaseSensitive.yes) @safe pure
+ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (cs == CaseSensitive.yes)
@@ -647,7 +648,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s,
     return -1;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.lastIndexOf.unittest\n");
 
@@ -695,8 +696,8 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes) @safe pure
+ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char)
 {
     if (startIdx <= s.length)
@@ -707,7 +708,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c, const size_t startIdx,
     return -1;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.lastIndexOf.unittest\n");
 
@@ -745,9 +746,8 @@ unittest
 
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
-ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
-                                  const(Char2)[] sub,
-                                  CaseSensitive cs = CaseSensitive.yes) @safe pure
+ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (sub.empty)
@@ -817,7 +817,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s,
     return -1;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.lastIndexOf.unittest\n");
 
@@ -886,7 +886,7 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (startIdx <= s.length)
@@ -897,7 +897,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     return -1;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.lastIndexOf.unittest\n");
 
@@ -947,7 +947,7 @@ unittest
 
 private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         const(Char)[] haystack, const(Char2)[] needles,
-        CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (cs == CaseSensitive.yes)
@@ -1066,21 +1066,21 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
-        CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(true, true)(haystack, needles, cs);
 }
 
 ///
-unittest {
+@safe pure unittest {
     ptrdiff_t i = "helloWorld".indexOfAny("Wr");
     assert(i == 5);
     i = "öällo world".indexOfAny("lo ");
     assert(i == 4, to!string(i));
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.indexOfAny.unittest\n");
 
@@ -1115,7 +1115,7 @@ unittest
         }
     }
     }
-	);
+    );
 }
 
 /**
@@ -1134,7 +1134,7 @@ unittest
         returns $(D -1).
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
-        const size_t startIdx, CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (startIdx < haystack.length)
@@ -1150,7 +1150,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     ptrdiff_t i = "helloWorld".indexOfAny("Wr", 4);
     assert(i == 5);
@@ -1159,7 +1159,7 @@ unittest
     assert(i == 8, to!string(i));
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.indexOfAny(startIdx).unittest\n");
 
@@ -1214,14 +1214,14 @@ unittest
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, CaseSensitive cs = CaseSensitive.yes) @safe pure
+        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(false, true)(haystack, needles, cs);
 }
 
 ///
-unittest
+@safe pure unittest
 {
     ptrdiff_t i = "helloWorld".lastIndexOfAny("Wlo");
     assert(i == 8);
@@ -1230,7 +1230,7 @@ unittest
     assert(i == 8);
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.lastIndexOfAny.unittest\n");
 
@@ -1279,7 +1279,7 @@ unittest
         }
     }
     }
-	);
+    );
 }
 
 /**
@@ -1297,8 +1297,8 @@ unittest
         returns $(D -1).
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, const size_t stopIdx,
-        CaseSensitive cs = CaseSensitive.yes) @safe pure
+        const(Char2)[] needles, in size_t stopIdx,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (stopIdx <= haystack.length)
@@ -1310,7 +1310,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     ptrdiff_t i = "helloWorld".lastIndexOfAny("Wlo", 4);
     assert(i == 3);
@@ -1319,7 +1319,7 @@ unittest
     assert(i == 0);
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.lastIndexOfAny(index).unittest\n");
 
@@ -1367,7 +1367,7 @@ unittest
         }
     }
     }
-	);
+    );
 }
 
 /**
@@ -1378,23 +1378,23 @@ unittest
     Params:
         cs = Indicates whether the comparisons are case sensitive.
 */
-ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack, 
-        const(Char2)[] needles, CaseSensitive cs = CaseSensitive.yes) 
+ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
-{    
+{
     return indexOfAnyNeitherImpl!(true, false)(haystack, needles, cs);
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(indexOfNeither("def", "a") == 0);
     assert(indexOfNeither("def", "de") == 2);
     assert(indexOfNeither("dfefffg", "dfe") == 6);
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.indexOf.unittest\n");
 
@@ -1407,28 +1407,28 @@ unittest
             assert(indexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(indexOfNeither("abba", "a") == 1);
 
-            assert(indexOfNeither(to!S("dfeffgfff"), to!T("a"), 
+            assert(indexOfNeither(to!S("dfeffgfff"), to!T("a"),
                 CaseSensitive.no) == 0);
-            assert(indexOfNeither(to!S("def"), to!T("D"), 
+            assert(indexOfNeither(to!S("def"), to!T("D"),
                 CaseSensitive.no) == 1);
-            assert(indexOfNeither(to!S("ABca"), to!T("a"), 
+            assert(indexOfNeither(to!S("ABca"), to!T("a"),
                 CaseSensitive.no) == 1);
-            assert(indexOfNeither(to!S("def"), to!T("f"), 
+            assert(indexOfNeither(to!S("def"), to!T("f"),
                 CaseSensitive.no) == 0);
-            assert(indexOfNeither(to!S("DfEfffg"), to!T("dFe"), 
+            assert(indexOfNeither(to!S("DfEfffg"), to!T("dFe"),
                 CaseSensitive.no) == 6);
             if (is(S == string))
             {
-                assert(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"), 
-                    CaseSensitive.no) == 8, 
-                    to!string(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"), 
+                assert(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
+                    CaseSensitive.no) == 8,
+                    to!string(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
                     CaseSensitive.no)));
             }
             else
             {
-                assert(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"), 
-                    CaseSensitive.no) == 7, 
-                    to!string(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"), 
+                assert(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
+                    CaseSensitive.no) == 7,
+                    to!string(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
                     CaseSensitive.no)));
             }
         }
@@ -1448,16 +1448,16 @@ unittest
         the startIdx is greater equal the length of haystack the functions
         returns $(D -1).
 */
-ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack, 
-        const(Char2)[] needles, const size_t startIdx,
-        CaseSensitive cs = CaseSensitive.yes) 
+ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
-{    
-    if (startIdx < haystack.length) 
+{
+    if (startIdx < haystack.length)
     {
         ptrdiff_t foundIdx = indexOfAnyNeitherImpl!(true, false)(
-			haystack[startIdx .. $], needles, cs);
+            haystack[startIdx .. $], needles, cs);
         if (foundIdx != -1)
         {
             return foundIdx + cast(ptrdiff_t)startIdx;
@@ -1467,14 +1467,14 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(indexOfNeither("abba", "a", 2) == 2);
     assert(indexOfNeither("def", "de", 1) == 2);
     assert(indexOfNeither("dfefffg", "dfe", 4) == 6);
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.indexOfNeither(index).unittest\n");
 
@@ -1488,7 +1488,7 @@ unittest
             assert(indexOfNeither(to!S("def"), to!T("a"), 1) == 1,
                 to!string(indexOfNeither(to!S("def"), to!T("a"), 1)));
 
-            assert(indexOfNeither(to!S("dfeffgfff"), to!T("a"), 4, 
+            assert(indexOfNeither(to!S("dfeffgfff"), to!T("a"), 4,
                 CaseSensitive.no) == 4);
             assert(indexOfNeither(to!S("def"), to!T("D"), 2,
                 CaseSensitive.no) == 2);
@@ -1517,29 +1517,29 @@ unittest
 }
 
 /**
-    Returns the last index of the first occurence of any character that is not 
-    an elements in $(D needles) in $(D haystack). If all element of 
+    Returns the last index of the first occurence of any character that is not
+    an elements in $(D needles) in $(D haystack). If all element of
     $(D haystack) are element of $(D needles) $(D -1) is returned.
 
     Params:
         cs = Indicates whether the comparisons are case sensitive.
 */
-ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack, 
-        const(Char2)[] needles, CaseSensitive cs = CaseSensitive.yes) 
+ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
-{    
+{
     return indexOfAnyNeitherImpl!(false, false)(haystack, needles, cs);
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(lastIndexOfNeither("abba", "a") == 2);
     assert(lastIndexOfNeither("def", "f") == 1);
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.lastIndexOfNeither.unittest\n");
 
@@ -1562,21 +1562,21 @@ unittest
             auto foundOeIdx = lastIndexOfNeither(to!S("ödfefegff"), to!T("zeg"));
             assert(foundOeIdx == oeIdx, to!string(foundOeIdx));
 
-            assert(lastIndexOfNeither(to!S("zfeffgfsb"), to!T("FSB"), 
+            assert(lastIndexOfNeither(to!S("zfeffgfsb"), to!T("FSB"),
                 CaseSensitive.no) == 5);
-            assert(lastIndexOfNeither(to!S("def"), to!T("MI6"), 
-                CaseSensitive.no) == 2, to!string(lastIndexOfNeither(to!S("def"), 
+            assert(lastIndexOfNeither(to!S("def"), to!T("MI6"),
+                CaseSensitive.no) == 2, to!string(lastIndexOfNeither(to!S("def"),
                 to!T("MI6"), CaseSensitive.no)));
-            assert(lastIndexOfNeither(to!S("abbadeafsb"), to!T("fSb"), 
+            assert(lastIndexOfNeither(to!S("abbadeafsb"), to!T("fSb"),
                 CaseSensitive.no) == 6, to!string(lastIndexOfNeither(
                 to!S("abbadeafsb"), to!T("fSb"), CaseSensitive.no)));
-            assert(lastIndexOfNeither(to!S("defbi"), to!T("FBI"), 
+            assert(lastIndexOfNeither(to!S("defbi"), to!T("FBI"),
                 CaseSensitive.no) == 1);
-            assert(lastIndexOfNeither(to!S("dfefffg"), to!T("NSA"), 
+            assert(lastIndexOfNeither(to!S("dfefffg"), to!T("NSA"),
                 CaseSensitive.no) == 6);
             assert(lastIndexOfNeither(to!S("dfeffgfffö"), to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"),
-                CaseSensitive.no) == 8, to!string(lastIndexOfNeither(to!S("dfeffgfffö"), 
-				to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"), CaseSensitive.no)));
+                CaseSensitive.no) == 8, to!string(lastIndexOfNeither(to!S("dfeffgfffö"),
+                to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"), CaseSensitive.no)));
         }
     }
     }
@@ -1584,8 +1584,8 @@ unittest
 }
 
 /**
-    Returns the last index of the first occurence of any character that is not 
-    an elements in $(D needles) in $(D haystack). If all element of 
+    Returns the last index of the first occurence of any character that is not
+    an elements in $(D needles) in $(D haystack). If all element of
     $(D haystack) are element of $(D needles) $(D -1) is returned.
 
     Params:
@@ -1594,28 +1594,28 @@ unittest
         the stopIdx is greater equal the length of haystack the functions
         returns $(D -1).
 */
-ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack, 
-        const(Char2)[] needles, const size_t stopIdx,
-        CaseSensitive cs = CaseSensitive.yes) 
+ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
+        const(Char2)[] needles, in size_t stopIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
-{    
+{
     if (stopIdx < haystack.length)
     {
-        return indexOfAnyNeitherImpl!(false, false)(haystack[0 .. stopIdx], 
-			needles, cs);
+        return indexOfAnyNeitherImpl!(false, false)(haystack[0 .. stopIdx],
+            needles, cs);
     }
     return -1;
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(lastIndexOfNeither("def", "rsa", 3) == -1);
     assert(lastIndexOfNeither("abba", "a", 2) == 1);
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.lastIndexOfNeither(index).unittest\n");
 
@@ -1635,14 +1635,14 @@ unittest
                 oeIdx = 5;
             }
 
-            auto foundOeIdx = lastIndexOfNeither(to!S("ödfefegff"), to!T("zeg"), 
+            auto foundOeIdx = lastIndexOfNeither(to!S("ödfefegff"), to!T("zeg"),
                 7);
             assert(foundOeIdx == oeIdx, to!string(foundOeIdx));
 
             assert(lastIndexOfNeither(to!S("zfeffgfsb"), to!T("FSB"), 6,
                 CaseSensitive.no) == 5);
             assert(lastIndexOfNeither(to!S("def"), to!T("MI6"), 2,
-                CaseSensitive.no) == 1, to!string(lastIndexOfNeither(to!S("def"), 
+                CaseSensitive.no) == 1, to!string(lastIndexOfNeither(to!S("def"),
                 to!T("MI6"), 2, CaseSensitive.no)));
             assert(lastIndexOfNeither(to!S("abbadeafsb"), to!T("fSb"), 6,
                 CaseSensitive.no) == 5, to!string(lastIndexOfNeither(
@@ -1664,7 +1664,7 @@ unittest
  * as the string except the character type is replaced by $(D ubyte),
  * $(D ushort), or $(D uint) depending on the character width.
  */
-auto representation(Char)(Char[] s) pure nothrow
+auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
 {
     // Get representation type
@@ -1687,14 +1687,14 @@ auto representation(Char)(Char[] s) pure nothrow
     return cast(ST[]) s;
 }
 ///
-unittest
+@safe pure unittest
 {
     string s = "hello";
     static assert(is(typeof(representation(s)) == immutable(ubyte)[]));
     assert(representation(s) is cast(immutable(ubyte)[]) s);
     assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
 }
-unittest
+@trusted pure unittest
 {
     assertCTFEable!(
     {
@@ -1791,7 +1791,7 @@ S capitalize(S)(S s) @trusted pure
     return changed ? cast(S)retval : s;
 }
 
-unittest
+@trusted pure unittest
 {
     assertCTFEable!(
     {
@@ -1833,7 +1833,7 @@ unittest
   +/
 enum KeepTerminator : bool { no, yes }
 /// ditto
-S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no) @safe pure
+S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pure
     if (isSomeString!S)
 {
     size_t iStart = 0;
@@ -1871,7 +1871,7 @@ S[] splitLines(S)(S s, KeepTerminator keepTerm = KeepTerminator.no) @safe pure
     return retval.data;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.splitLines.unittest\n");
 
@@ -1926,7 +1926,7 @@ unittest
     Postconditions: $(D str) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-C[] stripLeft(C)(C[] str) @safe pure
+C[] stripLeft(C)(C[] str) @safe pure @nogc
     if (isSomeChar!C)
 {
     foreach (i, dchar c; str)
@@ -1962,7 +1962,7 @@ C[] stripLeft(C)(C[] str) @safe pure
     Postconditions: $(D str) and the returned value
     will share the same head (see $(XREF array, sameHead)).
   +/
-C[] stripRight(C)(C[] str) @safe pure
+C[] stripRight(C)(C[] str) @safe pure @nogc
     if (isSomeChar!C)
 {
     foreach_reverse (i, dchar c; str)
@@ -2017,7 +2017,7 @@ C[] strip(C)(C[] str) @safe pure
            "hello world");
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.strip.unittest\n");
 
@@ -2071,7 +2071,7 @@ unittest
     the end of $(D str). If $(D str) does not end with any of those characters,
     then it is returned unchanged.
   +/
-C[] chomp(C)(C[] str) @safe pure
+C[] chomp(C)(C[] str) @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     if (str.empty)
@@ -2419,7 +2419,7 @@ S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     }
 }
 
-unittest
+@trusted pure unittest
 {
     debug(string) printf("string.justify.unittest\n");
 
@@ -2513,7 +2513,7 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
     return changes ? cast(S) result : s;
 }
 
-unittest
+@trusted pure unittest
 {
     debug(string) printf("string.detab.unittest\n");
 
@@ -2640,7 +2640,7 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
     return changes ? assumeUnique(result) : s;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.entab.unittest\n");
 
@@ -2720,7 +2720,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
     assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
-/* @safe */ pure unittest
+@trusted pure unittest
 {
     assertCTFEable!(
     {
@@ -2778,7 +2778,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
     return buffer.data;
 }
 
-/* @safe */ pure unittest
+@trusted pure unittest
 {
     assertCTFEable!(
     {
@@ -3038,7 +3038,8 @@ body
         toRemove   = The characters to remove from the string.
         buffer     = An output range to write the contents to.
   +/
-void translate(C = immutable char, Buffer)(in char[] str, in char[] transTable, in char[] toRemove, Buffer buffer)
+void translate(C = immutable char, Buffer)(in char[] str, in char[] transTable,
+        in char[] toRemove, Buffer buffer) @trusted pure
     if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
 in
 {
@@ -3067,7 +3068,9 @@ body
     assert(buffer.data == "h5 rd");
 }
 
-private void translateImplAscii(C = immutable char, Buffer)(in char[] str, in char[] transTable, ref bool[256] remTable, Buffer buffer, in char[] toRemove = null)
+private void translateImplAscii(C = immutable char, Buffer)(in char[] str,
+        in char[] transTable, ref bool[256] remTable, Buffer buffer,
+        in char[] toRemove = null) @trusted pure
 {
     static if (isOutputRange!(Buffer, char))
     {
@@ -3310,7 +3313,7 @@ deprecated unittest
  *  to be more like regular expression character classes.
  */
 
-bool inPattern(S)(dchar c, in S pattern) @safe pure if (isSomeString!S)
+bool inPattern(S)(dchar c, in S pattern) @safe pure @nogc if (isSomeString!S)
 {
     bool result = false;
     int range = 0;
@@ -3343,7 +3346,7 @@ bool inPattern(S)(dchar c, in S pattern) @safe pure if (isSomeString!S)
 }
 
 
-unittest
+@safe pure @nogc unittest
 {
     debug(string) printf("std.string.inPattern.unittest\n");
 
@@ -3376,7 +3379,7 @@ unittest
  * See if character c is in the intersection of the patterns.
  */
 
-bool inPattern(S)(dchar c, S[] patterns) @safe pure if (isSomeString!S)
+bool inPattern(S)(dchar c, S[] patterns) @safe pure @nogc if (isSomeString!S)
 {
     foreach (string pattern; patterns)
     {
@@ -3393,7 +3396,7 @@ bool inPattern(S)(dchar c, S[] patterns) @safe pure if (isSomeString!S)
  * Count characters in s that match pattern.
  */
 
-size_t countchars(S, S1)(S s, in S1 pattern) @safe pure if (isSomeString!S && isSomeString!S1)
+size_t countchars(S, S1)(S s, in S1 pattern) @safe pure @nogc if (isSomeString!S && isSomeString!S1)
 {
     size_t count;
     foreach (dchar c; s)
@@ -3403,7 +3406,7 @@ size_t countchars(S, S1)(S s, in S1 pattern) @safe pure if (isSomeString!S && is
     return count;
 }
 
-unittest
+@safe pure @nogc unittest
 {
     debug(string) printf("std.string.count.unittest\n");
 
@@ -3419,7 +3422,7 @@ unittest
  * Return string that is s with all characters removed that match pattern.
  */
 
-S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
+S removechars(S)(S s, in S pattern) @safe pure @nogc if (isSomeString!S)
 {
     Unqual!(typeof(s[0]))[] r;
     bool changed = false;
@@ -3446,7 +3449,7 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
         return s;
 }
 
-unittest
+@safe pure @nogc unittest
 {
     debug(string) printf("std.string.removechars.unittest\n");
 
@@ -3507,7 +3510,7 @@ S squeeze(S)(S s, in S pattern = null)
     return changed ? ((r is null) ? s[0 .. lasti] : cast(S) r) : s;
 }
 
-unittest
+@trusted pure @nogc unittest
 {
     debug(string) printf("std.string.squeeze.unittest\n");
 
@@ -3533,21 +3536,12 @@ unittest
  s[pos..$]). Returns the slice from the beginning of the original
  (before update) string up to, and excluding, $(D_PARAM pos).
 
- Example:
- ---
- string s = "123abc";
- string t = munch(s, "0123456789");
- assert(t == "123" && s == "abc");
- t = munch(s, "0123456789");
- assert(t == "" && s == "abc");
- ---
-
 The $(D_PARAM munch) function is mostly convenient for skipping
 certain category of characters (e.g. whitespace) when parsing
 strings. (In such cases, the return value is not used.)
  */
 
-S1 munch(S1, S2)(ref S1 s, S2 pattern)
+S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
 {
     size_t j = s.length;
     foreach (i, dchar c; s)
@@ -3562,7 +3556,17 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern)
     return s[0 .. j];
 }
 
-@safe pure unittest
+///
+@safe pure @nogc unittest
+{
+    string s = "123abc";
+    string t = munch(s, "0123456789");
+    assert(t == "123" && s == "abc");
+    t = munch(s, "0123456789");
+    assert(t == "" && s == "abc");
+}
+
+@safe pure @nogc unittest
 {
     string s = "123€abc";
     string t = munch(s, "0123456789");
@@ -3625,7 +3629,7 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
     return s;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("std.string.succ.unittest\n");
 
@@ -3987,7 +3991,7 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
     return sawDigits;
 }
 
-unittest
+@safe pure unittest
 {
     assert(!isNumeric("F"));
     assert(!isNumeric("L"));
@@ -4005,8 +4009,7 @@ unittest
     assert(!isNumeric("e+f"));
 }
 
-
-unittest
+@trusted unittest
 {
     debug(string) printf("isNumeric(in string, bool = false).unittest\n");
 
@@ -4085,7 +4088,8 @@ unittest
  *  but this one is the standard one.
  */
 
-char[] soundex(const(char)[] string, char[] buffer = null) @safe pure nothrow
+char[] soundex(const(char)[] string, char[] buffer = null)
+    @safe pure nothrow
 in
 {
     assert(!buffer.ptr || buffer.length >= 4);
@@ -4280,7 +4284,7 @@ string[string] abbrev(string[] values) @safe pure
     return result;
 }
 
-unittest
+@trusted pure unittest
 {
     debug(string) printf("string.abbrev.unittest\n");
 
@@ -4317,7 +4321,7 @@ unittest
  * leftmost column, which is numbered starting from 0.
  */
 
-size_t column(S)(S str, size_t tabsize = 8) @safe pure if (isSomeString!S)
+size_t column(S)(S str, in size_t tabsize = 8) @safe pure @nogc if (isSomeString!S)
 {
     size_t column;
 
@@ -4344,7 +4348,7 @@ size_t column(S)(S str, size_t tabsize = 8) @safe pure if (isSomeString!S)
     return column;
 }
 
-unittest
+@safe @nogc unittest
 {
     debug(string) printf("string.column.unittest\n");
 
@@ -4376,8 +4380,8 @@ unittest
  *  The resulting paragraph.
  */
 
-S wrap(S)(S s, size_t columns = 80, S firstindent = null,
-        S indent = null, size_t tabsize = 8) @safe pure if (isSomeString!S)
+S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
+        S indent = null, in size_t tabsize = 8) @safe pure if (isSomeString!S)
 {
     typeof(s.dup) result;
     int spaces;
@@ -4441,7 +4445,7 @@ S wrap(S)(S s, size_t columns = 80, S firstindent = null,
     return result;
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.wrap.unittest\n");
 
@@ -4532,7 +4536,7 @@ S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     enum pretty = q{
        import std.stdio;
@@ -4551,7 +4555,7 @@ void main() {
     assert(pretty == ugly);
 }
 
-unittest
+@safe pure unittest
 {
     debug(string) printf("string.outdent.unittest\n");
 

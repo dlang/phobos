@@ -7847,7 +7847,7 @@ version(std_uni_bootstrap)
 {
     // old version used for bootstrapping of gen_uni.d that generates
     // up to date optimal versions of all of isXXX functions
-    @safe pure nothrow public bool isWhite(dchar c)
+    @safe pure nothrow @nogc public bool isWhite(dchar c)
     {
         return std.ascii.isWhite(c) ||
                c == lineSep || c == paraSep ||
@@ -7903,7 +7903,7 @@ public:
     (general Unicode category: Part of C0(tab, vertical tab, form feed,
     carriage return, and linefeed characters), Zs, Zl, Zp, and NEL(U+0085))
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 public bool isWhite(dchar c)
 {
     return isWhiteGen(c); // call pregenerated binary search
