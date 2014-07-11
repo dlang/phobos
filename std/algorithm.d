@@ -7257,8 +7257,13 @@ Otherwise returns the nearest of the two. Equivalent to $(D max(lower,
 min(upper,val))).
 */
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
+in
 {
-    return max(lower, min(upper,val));
+    assert(lower <= upper);
+}
+body
+{
+    return max(lower, min(upper, val));
 }
 
 ///
@@ -7267,6 +7272,8 @@ unittest
     assert(clamp(2, 1, 3) == 2);
     assert(clamp(0, 1, 3) == 1);
     assert(clamp(4, 1, 3) == 3);
+
+    assert(clamp(1, 1, 1) == 1);
 }
 
 unittest
