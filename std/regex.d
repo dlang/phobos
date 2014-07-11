@@ -1839,7 +1839,17 @@ struct Parser(R)
         }
         else
         {
+            import std.algorithm : countUntil;
             auto ivals = set.byInterval;
+            auto n = charsets.countUntil(set);
+            if(n >= 0)
+            {
+                if(ivals.length*2 > maxCharsetUsed)
+                    put(Bytecode(IR.Trie, cast(uint)n));
+                else
+                    put(Bytecode(IR.CodepointSet, cast(uint)n));
+                return;
+            }
             if(ivals.length*2 > maxCharsetUsed)
             {
                 auto t  = getTrie(set);
@@ -7063,6 +7073,13 @@ unittest
     ct_tests();
     run_tests!bmatch(); //backtracker
     run_tests!match(); //thompson VM
+}
+
+unittest
+{
+    // test parser optimization of identical character classes
+    auto n = regex("[a-z]/[a-z]/[a-z]").charsets.length;
+    assert(n == 1, text(n));
 }
 
 unittest

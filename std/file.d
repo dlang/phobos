@@ -312,7 +312,7 @@ void main()
 }
 ----
  */
-void write(in char[] name, const void[] buffer)
+void write(in char[] name, const void[] buffer) @trusted
 {
     version(Windows)
     {
@@ -325,7 +325,7 @@ void write(in char[] name, const void[] buffer)
         cenforce(h != INVALID_HANDLE_VALUE, name);
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) == 1
+        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
                 && buffer.length == numwritten,
                 name);
     }
@@ -351,7 +351,7 @@ void main()
 }
 ----
  */
-void append(in char[] name, in void[] buffer)
+void append(in char[] name, in void[] buffer) @trusted
 {
     version(Windows)
     {
@@ -365,7 +365,7 @@ void append(in char[] name, in void[] buffer)
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
         cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) == 1
+                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
                 && buffer.length == numwritten,
                 name);
     }
@@ -376,7 +376,7 @@ void append(in char[] name, in void[] buffer)
 // Posix implementation helper for write and append
 
 version(Posix) private void writeImpl(in char[] name,
-        in void[] buffer, in uint mode)
+        in void[] buffer, in uint mode) @trusted
 {
     immutable fd = core.sys.posix.fcntl.open(toStringz(name),
             mode, octal!666);
@@ -396,7 +396,7 @@ version(Posix) private void writeImpl(in char[] name,
  * If the target file exists, it is overwritten.
  * Throws: $(D FileException) on error.
  */
-void rename(in char[] from, in char[] to)
+void rename(in char[] from, in char[] to) @trusted
 {
     version(Windows)
     {
@@ -426,7 +426,7 @@ unittest
 Delete file $(D name).
 Throws: $(D FileException) on error.
  */
-void remove(in char[] name)
+void remove(in char[] name) @trusted
 {
     version(Windows)
     {
@@ -1754,7 +1754,6 @@ version(StdDdoc)
 
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATA* fd);
             private this(string path, in WIN32_FIND_DATAW *fd);
         }
         else version (Posix)
@@ -1921,23 +1920,6 @@ else version(Windows)
             }
         }
 
-        private this(string path, in WIN32_FIND_DATA* fd)
-        {
-            auto clength = to!int(core.stdc.string.strlen(fd.cFileName.ptr));
-
-            // Convert cFileName[] to unicode
-            const wlength = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, null, 0);
-            auto wbuf = new wchar[wlength];
-            const n = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, wbuf.ptr, wlength);
-            assert(n == wlength);
-            // toUTF8() returns a new buffer
-            _name = buildPath(path, std.utf.toUTF8(wbuf[0 .. wlength]));
-            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
-            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
-            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
-            _attributes = fd.dwFileAttributes;
-        }
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             size_t clength = std.string.wcslen(fd.cFileName.ptr);
@@ -2555,27 +2537,6 @@ private struct DirIteratorImpl
             return true;
         }
 
-        bool toNext(bool fetch, WIN32_FIND_DATA* findinfo)
-        {
-            if(fetch)
-            {
-                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
-                {
-                    popDirStack();
-                    return false;
-                }
-            }
-            while( core.stdc.string.strcmp(findinfo.cFileName.ptr, ".") == 0
-                    || core.stdc.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
-                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
-                {
-                    popDirStack();
-                    return false;
-                }
-            _cur = DirEntry(_stack.data[$-1].dirpath, findinfo);
-            return true;
-        }
-
         void popDirStack()
         {
             assert(!_stack.data.empty);
@@ -2894,7 +2855,7 @@ unittest
 
     mkdir(path);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
     assert(!de.isFile);
@@ -2944,7 +2905,7 @@ unittest
 
     write(path, "hello world");
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
     assert(de.isFile);
@@ -2997,7 +2958,7 @@ version(linux) unittest
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
     assert(!de.isFile);
@@ -3042,7 +3003,7 @@ version(linux) unittest
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
     assert(de.isFile);

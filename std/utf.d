@@ -507,10 +507,10 @@ uint stride(S)(auto ref S str)
     foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!({ stride(str, 0); }));
-        static assert(isSafe!({ stride(str);    }));
-        static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!(() => stride(str, 0)));
+        static assert(isSafe!(() => stride(str)   ));
+        static assert((functionAttributes!(() => stride(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
 }
@@ -623,10 +623,10 @@ unittest
     foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!({ strideBack(str, 0); }));
-        static assert(isSafe!({ strideBack(str);    }));
-        static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!(() => strideBack(str, 0)));
+        static assert(isSafe!(() => strideBack(str)   ));
+        static assert((functionAttributes!(() => strideBack(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => strideBack(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
 }
@@ -710,10 +710,10 @@ unittest
     foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!({ stride(str, 0); }));
-        static assert(isSafe!({ stride(str);    }));
-        static assert((functionAttributes!({ stride(str, 0); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!(() => stride(str, 0)));
+        static assert(isSafe!(() => stride(str)   ));
+        static assert((functionAttributes!(() => stride(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => stride(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
 }
@@ -807,10 +807,10 @@ unittest
     foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
     {
         enum str = to!S("hello world");
-        static assert(isSafe!({ strideBack(str, 0); }));
-        static assert(isSafe!({ strideBack(str);    }));
-        static assert((functionAttributes!({ strideBack(str, 0); }) & FunctionAttribute.pure_) != 0);
-        static assert((functionAttributes!({ strideBack(str);    }) & FunctionAttribute.pure_) != 0);
+        static assert(isSafe!(() => strideBack(str, 0)));
+        static assert(isSafe!(() => strideBack(str)   ));
+        static assert((functionAttributes!(() => strideBack(str, 0)) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!(() => strideBack(str)   ) & FunctionAttribute.pure_) != 0);
     }
     });
 }
@@ -2416,19 +2416,6 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 {
     import std.algorithm;
 
-    static size_t zeroLen(C)(const(C)* ptr)
-    {
-        size_t len = 0;
-
-        while (*ptr != '\0')
-        {
-            ++ptr;
-            ++len;
-        }
-
-        return len;
-    }
-
     assertCTFEable!(
     {
     foreach (S; TypeTuple!(string, wstring, dstring))
@@ -2461,6 +2448,13 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 
     static void test(P, S)(S s, size_t line = __LINE__) @trusted
     {
+        static size_t zeroLen(C)(const(C)* ptr) @trusted
+        {
+            size_t len = 0;
+            while (*ptr != '\0') { ++ptr; ++len; }
+            return len;
+        }
+
         auto p = toUTFz!P(s);
         immutable len = zeroLen(p);
         enforce(cmp(s, p[0 .. len]) == 0,
@@ -2677,3 +2671,814 @@ version(unittest)
         C[] _str;
     }
 }
+
+
+/**
+ * Inserted in place of invalid UTF sequences.
+ *
+ * References:
+ *      $(LINK http://en.wikipedia.org/wiki/Replacement_character#Replacement_character)
+ */
+enum dchar replacementDchar = '\uFFFD';
+
+/********************************************
+ * Iterate a range of char, wchar, or dchars by code unit.
+ *
+ * The purpose is to bypass the special case decoding that
+ * $(XREF array,front) does to character arrays.
+ * Params:
+ *      r = input range of characters, or array of characters
+ * Returns:
+ *      input range
+ */
+
+auto byCodeUnit(R)(R r) if (isNarrowString!R)
+{
+    /* Turn an array into an InputRange.
+     */
+    static struct ByCodeUnitImpl
+    {
+        @property bool empty() const         { return r.length == 0; }
+        @property auto ref front() inout     { return r[0]; }
+        void popFront()                      { r = r[1 .. $]; }
+        auto ref opIndex(size_t index) inout { return r[index]; }
+
+        auto opSlice(size_t lower, size_t upper)
+        {
+            return r[lower..upper];
+        }
+
+        @property size_t length() const
+        {
+            return r.length;
+        }
+        alias opDollar = length;
+
+        @property auto save()
+        {
+            return ByCodeUnitImpl(r.save);
+        }
+
+      private:
+        R r;
+    }
+
+    return ByCodeUnitImpl(r);
+}
+
+/// Ditto
+auto ref byCodeUnit(R)(R r)
+    if (!isNarrowString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+{
+    // byCodeUnit for ranges and dchar[] is a no-op
+    return r;
+}
+
+unittest
+{
+  {
+    char[5] s;
+    int i;
+    foreach (c; "hello".byCodeUnit.byCodeUnit())
+    {
+        s[i++] = c;
+    }
+    assert(s == "hello");
+  }
+  {
+    wchar[5] s;
+    int i;
+    foreach (c; "hello"w.byCodeUnit.byCodeUnit())
+    {
+        s[i++] = c;
+    }
+    assert(s == "hello"w);
+  }
+  {
+    dchar[5] s;
+    int i;
+    foreach (c; "hello"d.byCodeUnit.byCodeUnit())
+    {
+        s[i++] = c;
+    }
+    assert(s == "hello"d);
+  }
+  {
+    auto r = "hello".byCodeUnit();
+    assert(r.length == 5);
+    assert(r[3] == 'l');
+    assert(r[2..4][1] == 'l');
+  }
+  {
+    auto s = "hello".dup.byCodeUnit();
+    s.front = 'H';
+    assert(s.front == 'H');
+    s[1] = 'E';
+    assert(s[1] == 'E');
+  }
+  {
+    auto r = "hello".byCodeUnit.byCodeUnit();
+    assert(isForwardRange!(typeof(r)));
+    auto s = r.save;
+    r.popFront();
+    assert(s.front == 'h');
+  }
+}
+
+/****************************
+ * Iterate an input range of characters by char, wchar, or dchar.
+ *
+ * UTF sequences that cannot be converted to UTF-8 are replaced by U+FFFD
+ * per "5.22 Best Practice for U+FFFD Substitution" of the Unicode Standard 6.2.
+ * Hence, byChar, byWchar, and byDchar are not symmetric.
+ * This algorithm is lazy, and does not allocate memory.
+ * Purity, nothrow, and safety are inferred from the r parameter.
+ * Params:
+ *      r = input range of characters, or array of characters
+ * Returns:
+ *      input range
+ */
+
+auto byChar(R)(R r) if (isNarrowString!R)
+{
+    /* This and the following two serve as adapters to convert arrays to ranges,
+     * so the following three
+     * won't get auto-decoded by std.array.front().
+     */
+    alias tchar = Unqual!(ElementEncodingType!R);
+
+    static if (is(tchar == char))
+    {
+        return r.byCodeUnit();
+    }
+    else
+    {
+        return r.byCodeUnit.byChar();
+    }
+}
+
+/// Ditto
+auto byWchar(R)(R r) if (isNarrowString!R)
+{
+    alias tchar = Unqual!(ElementEncodingType!R);
+
+    static if (is(tchar == wchar))
+    {
+        return r.byCodeUnit();
+    }
+    else
+    {
+        return r.byCodeUnit.byWchar();
+    }
+}
+
+/// Ditto
+auto byDchar(R)(R r) if (isNarrowString!R)
+{
+    alias tchar = Unqual!(ElementEncodingType!R);
+
+    return r.byCodeUnit.byDchar();
+}
+
+
+/// Ditto
+auto ref byChar(R)(R r)
+    if (!isNarrowString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+{
+    alias tchar = Unqual!(ElementEncodingType!R);
+
+    /* Defeat the auto-decoding of std.array.put() by handling arrays of chars
+     * explicitly.
+     */
+    static if (is(tchar == char))
+    {
+        return r;
+    }
+    else
+    {
+        static if (is(tchar == wchar))
+        {
+            // Convert wchar => dchar => char
+            auto r2 = r.byDchar();
+        }
+        else static if (is(tchar == dchar))
+        {
+            alias r2 = r;
+        }
+        else
+            static assert(0);
+
+        static struct byCharImpl
+        {
+            this(ref typeof(r2) r)
+            {
+                this.r = r;
+            }
+
+            @property bool empty()
+            {
+                return !nLeft && r.empty;
+            }
+
+            @property auto front()
+            {
+                static assert(replacementDchar > 0x7FF && replacementDchar <= 0xFFFF);
+                if (!nLeft)
+                {
+                    dchar c = r.front;
+
+                    if (c <= 0x7F)
+                    {
+                        buf[0] = cast(char)c;
+                        nLeft = 1;
+                    }
+                    else if (c <= 0x7FF)
+                    {
+                        buf[1] = cast(char)(0xC0 | (c >> 6));
+                        buf[0] = cast(char)(0x80 | (c & 0x3F));
+                        nLeft = 2;
+                    }
+                    else if (c <= 0xFFFF)
+                    {
+                        if (0xD800 <= c && c <= 0xDFFF)
+                            c = replacementDchar;
+
+                        buf[2] = cast(char)(0xE0 | (c >> 12));
+                        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+                        buf[0] = cast(char)(0x80 | (c & 0x3F));
+                        nLeft = 3;
+                    }
+                    else if (c <= 0x10FFFF)
+                    {
+                        buf[3] = cast(char)(0xF0 | (c >> 18));
+                        buf[2] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+                        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+                        buf[0] = cast(char)(0x80 | (c & 0x3F));
+                        nLeft = 4;
+                    }
+                    else
+                    {
+                        buf[2] = cast(char)(0xE0 | (replacementDchar >> 12));
+                        buf[1] = cast(char)(0x80 | ((replacementDchar >> 6) & 0x3F));
+                        buf[0] = cast(char)(0x80 | (replacementDchar & 0x3F));
+                        nLeft = 3;
+                    }
+                }
+                return buf[nLeft - 1];
+            }
+
+            void popFront()
+            {
+                if (!nLeft)
+                    front;
+                --nLeft;
+                if (!nLeft)
+                    r.popFront();
+            }
+
+            static if (isForwardRange!(typeof(r2)))
+            {
+                @property auto save()
+                {
+                    auto ret = this;
+                    ret.r = r.save;
+                    return ret;
+                }
+            }
+
+          private:
+            typeof(r2) r;
+            char[4] buf = void;
+            uint nLeft;
+        }
+
+        return byCharImpl(r2);
+    }
+}
+
+unittest
+{
+  {
+    char[5] s;
+    int i;
+    foreach (c; "hello".byChar.byChar())
+    {
+        //writefln("[%d] '%c'", i, c);
+        s[i++] = c;
+    }
+    assert(s == "hello");
+  }
+  {
+    char[5+2+3+4+3+3] s;
+    int i;
+    dchar[10] a;
+    a[0..8] = "hello\u07FF\uD7FF\U0010FFFF"d;
+    a[8] = 0xD800;   // invalid
+    a[9] = cast(dchar)0x110000; // invalid
+    foreach (c; a[].byChar())
+    {
+        //writefln("[%d] '%c'", i, c);
+        s[i++] = c;
+    }
+    assert(s == "hello\u07FF\uD7FF\U0010FFFF\uFFFD\uFFFD");
+  }
+  {
+    auto r = "hello"w.byChar();
+    r.popFront();
+    r.popFront();
+    assert(r.front == 'l');
+  }
+  {
+    auto r = "hello"d.byChar();
+    r.popFront();
+    r.popFront();
+    assert(r.front == 'l');
+  }
+  {
+    auto r = "hello"d.byChar();
+    assert(isForwardRange!(typeof(r)));
+    auto s = r.save;
+    r.popFront();
+    assert(s.front == 'h');
+  }
+}
+
+
+/// Ditto
+auto ref byWchar(R)(R r)
+    if (!isNarrowString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+{
+    alias tchar = Unqual!(ElementEncodingType!R);
+
+    static if (is(tchar == wchar))
+    {
+        return r;
+    }
+    else
+    {
+        static if (is(tchar == char))
+        {
+            auto r2 = r.byDchar();
+        }
+        else static if (is(tchar == dchar))
+        {
+            alias r2 = r;
+        }
+        else
+            static assert(0);
+
+        static struct byWcharImpl
+        {
+            this(ref typeof(r2) r)
+            {
+                this.r = r;
+            }
+
+            @property bool empty()
+            {
+                return !nLeft && r.empty;
+            }
+
+            @property auto front()
+            {
+                static assert(replacementDchar > 0x7FF && replacementDchar <= 0xFFFF);
+                if (!nLeft)
+                {
+                    dchar c = r.front;
+
+                    if (c <= 0xFFFF)
+                    {
+                        if (0xD800 <= c && c <= 0xDFFF)
+                            c = replacementDchar;
+
+                        buf[0] = cast(wchar)c;
+                        nLeft = 1;
+                    }
+                    else if (c <= 0x10FFFF)
+                    {
+                        buf[1] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+                        buf[0] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
+                        nLeft = 2;
+                    }
+                    else
+                    {
+                        buf[0] = replacementDchar;
+                        nLeft = 1;
+                    }
+                }
+                return buf[nLeft - 1];
+            }
+
+            void popFront()
+            {
+                if (!nLeft)
+                    front;
+                --nLeft;
+                if (!nLeft)
+                    r.popFront();
+            }
+
+            static if (isForwardRange!(typeof(r2)))
+            {
+                @property auto save()
+                {
+                    auto ret = this;
+                    ret.r = r.save;
+                    return ret;
+                }
+            }
+
+          private:
+            typeof(r2) r;
+            wchar[2] buf = void;
+            uint nLeft;
+        }
+
+        return byWcharImpl(r2);
+    }
+}
+
+unittest
+{
+  {
+    wchar[11] s;
+    int i;
+    dchar[10] a;
+    a[0..8] = "hello\u07FF\uD7FF\U0010FFFF"d;
+    a[8] = 0xD800;   // invalid
+    a[9] = cast(dchar)0x110000; // invalid
+    foreach (c; a[].byWchar())
+    {
+        //writefln("[%d] '%c' x%x", i, c, c);
+        s[i++] = c;
+    }
+    foreach (j, wchar c; "hello\u07FF\uD7FF\U0010FFFF\uFFFD\uFFFD"w)
+    {
+        //writefln("[%d] '%c' x%x", j, c, c);
+    }
+    assert(s == "hello\u07FF\uD7FF\U0010FFFF\uFFFD\uFFFD"w);
+  }
+
+  {
+    auto r = "hello".byWchar();
+    r.popFront();
+    r.popFront();
+    assert(r.front == 'l');
+  }
+  {
+    auto r = "hello"d.byWchar();
+    r.popFront();
+    r.popFront();
+    assert(r.front == 'l');
+  }
+  {
+    auto r = "hello"d.byWchar();
+    assert(isForwardRange!(typeof(r)));
+    auto s = r.save;
+    r.popFront();
+    assert(s.front == 'h');
+  }
+}
+
+
+/// Ditto
+auto ref byDchar(R)(R r)
+    if (!isNarrowString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+{
+    alias tchar = Unqual!(ElementEncodingType!R);
+
+    static if (is(tchar == char))
+    {
+        static struct byDcharImpl
+        {
+            this(ref R r)
+            {
+                this.r = r;
+            }
+
+            @property bool empty()
+            {
+                return !haveData && r.empty;
+            }
+
+            @property dchar front()
+            {
+                if (haveData)
+                    return frontChar;
+                dchar c = r.front;
+                if (c < 0x80)
+                {
+                }
+                else
+                {
+                    uint fst = c; // upper control bits are masked out later
+
+                    /* Dchar bitmask for different numbers of UTF-8 code units.
+                     */
+                    enum bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
+
+                    foreach (i; TypeTuple!(1, 2, 3))
+                    {
+
+                        r.popFront();
+                        if (r.empty)
+                            break;
+
+                        ubyte tmp = r.front;
+
+                        if ((tmp & 0xC0) != 0x80)
+                            break;
+
+                        c = (c << 6) | (tmp & 0x3F);
+
+                        if (!(fst & (0x40 >> i)))  // if no more bytes
+                        {
+                            c &= bitMask[i]; // mask out control bits
+
+                            // overlong, could have been encoded with i bytes
+                            if ((c & ~bitMask[i - 1]) == 0)
+                                break;
+
+                            // check for surrogates only needed for 3 bytes
+                            static if (i == 2)
+                            {
+                                if (c >= 0xD800 && c < 0xE000)
+                                    break;
+                            }
+
+                            // check for out of range only needed for 4 bytes
+                            static if (i == 3)
+                            {
+                                if (c > 0x10FFFF)
+                                    break;
+                            }
+
+                            frontChar = c;
+                            haveData = true;
+                            return c;
+                        }
+                    }
+                    c = replacementDchar;
+                }
+                frontChar = c;
+                haveData = true;
+                return c;
+            }
+
+            void popFront()
+            {
+                if (!haveData)
+                    front;
+                r.popFront();
+                haveData = false;
+            }
+
+            static if (isForwardRange!R)
+            {
+                @property auto save()
+                {
+                    auto ret = this;
+                    ret.r = r.save;
+                    return ret;
+                }
+            }
+
+          private:
+            R r;
+            dchar frontChar;
+            bool haveData;
+        }
+        return byDcharImpl(r);
+    }
+    else static if (is(tchar == wchar))
+    {
+        static struct byDcharImpl
+        {
+            this(ref R r)
+            {
+                this.r = r;
+            }
+
+            @property bool empty()
+            {
+                return !haveData && r.empty;
+            }
+
+            @property dchar front()
+            {
+                if (haveData)
+                    return frontChar;
+                dchar c = r.front;
+                if (c < 0xD800)
+                {
+                }
+                else if (c <= 0xDBFF)
+                {
+                    r.popFront();
+                    if (r.empty)
+                        c = replacementDchar;
+                    else
+                    {
+                        dchar c2 = r.front;
+                        if (c2 < 0xDC00 || c2 > 0xDFFF)
+                            c = replacementDchar;
+                        else
+                            c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+                    }
+                }
+                else if (c <= 0xDFFF)
+                    c = replacementDchar;
+                frontChar = c;
+                haveData = true;
+                return c;
+            }
+
+            void popFront()
+            {
+                if (!haveData)
+                    front;
+                r.popFront();
+                haveData = false;
+            }
+
+            static if (isForwardRange!R)
+            {
+                @property auto save()
+                {
+                    auto ret = this;
+                    ret.r = r.save;
+                    return ret;
+                }
+            }
+
+          private:
+            R r;
+            dchar frontChar;
+            bool haveData;
+        }
+        return byDcharImpl(r);
+    }
+    else static if (is(tchar == dchar))
+    {
+        return r;
+    }
+    else
+        static assert(0);
+}
+
+import std.stdio;
+
+unittest
+{
+  {
+    dchar[9] s;
+    int i;
+    string a = "hello\u07FF\uD7FF\U00010000\U0010FFFF"; // 1,2,3,4 byte sequences
+    foreach (c; a.byDchar())
+    {
+        //writefln("[%d] '%c' x%x", i, c, c);
+        s[i++] = c;
+    }
+    assert(s == "hello\u07FF\uD7FF\U00010000\U0010FFFF"d);
+  }
+  {
+    char[1] cs;
+    cs[0] = 0xC0;                       // truncated
+    auto r = cs[].byDchar();
+    assert(!r.empty);
+    dchar c = r.front;
+    assert(c == replacementDchar);
+  }
+  {
+    char[2] cs;
+    cs[0] = 0xC0;
+    cs[1] = 0xC0;                       // invalid continuation
+    auto r = cs[].byDchar();
+    assert(!r.empty);
+    assert(r.front == r.front);
+    dchar c = r.front;
+    assert(c == replacementDchar);
+  }
+  {
+    char[3] cs;
+    enum x = 0xDC00;                    // invalid surrogate value
+    cs[0] = 0xE0 | (x >> 12);
+    cs[1] = 0x80 | ((x >> 6) & 0x3F);
+    cs[2] = 0x80 | (x & 0x3F);
+    auto r = cs[].byDchar();
+    assert(!r.empty);
+    dchar c = r.front;
+    assert(c == replacementDchar);
+  }
+  {
+    char[4] cs;
+    cs[0] = 0xF0;
+    cs[1] = 0x82;
+    cs[2] = 0x82;
+    cs[3] = 0xAC;               // overlong
+    auto r = cs[].byDchar();
+    assert(!r.empty);
+    assert(r.front == r.front);
+    dchar c = r.front;
+    assert(c == replacementDchar);
+  }
+  {
+    char[4] cs;
+    enum x = 0x110000;                    // out of range
+    cs[0] = cast(char)(0xF0 | (x >> 18));
+    cs[1] = cast(char)(0x80 | ((x >> 12) & 0x3F));
+    cs[2] = cast(char)(0x80 | ((x >> 6) & 0x3F));
+    cs[3] = cast(char)(0x80 | (x & 0x3F));
+    auto r = cs[].byDchar();
+    assert(!r.empty);
+    dchar c = r.front;
+    assert(c == replacementDchar);
+  }
+  {
+    auto r = "hello".byDchar();
+    r.popFront();
+    r.popFront();
+    assert(r.front == 'l');
+  }
+
+  {
+    dchar[8] s;
+    int i;
+    wstring a = "hello\u07FF\uD7FF\U0010FFFF"w;
+    foreach (c; a.byDchar())
+    {
+        //writefln("[%d] '%c' x%x", i, c, c);
+        s[i++] = c;
+    }
+    assert(s == "hello\u07FF\uD7FF\U0010FFFF"d);
+  }
+  {
+    wchar[1] ws;
+    ws[0] = 0xD801;             // truncated surrogate pair
+    auto r = ws[].byDchar();
+    assert(!r.empty);
+    dchar c = r.front;
+    assert(c == replacementDchar);
+  }
+  {
+    wchar[1] ws;
+    ws[0] = 0xDC00;             // unpaired 2nd surrogate
+    auto r = ws[].byDchar();
+    assert(!r.empty);
+    dchar c = r.front;
+    assert(c == replacementDchar);
+  }
+  {
+    wchar[2] ws;
+    ws[0] = 0xD800;
+    ws[1] = 0xDD00;             // correct surrogate pair
+    auto r = ws[].byDchar();
+    assert(!r.empty);
+    assert(r.front == r.front);
+    dchar c = r.front;
+    assert(c == '\U00010100');
+  }
+  {
+    wchar[2] ws;
+    ws[0] = 0xD800;
+    ws[1] = 0xDBFF;             // second surrogate out of range
+    auto r = ws[].byDchar();
+    assert(!r.empty);
+    assert(r.front == r.front);
+    dchar c = r.front;
+    assert(c == replacementDchar);
+  }
+  {
+    auto r = "hello"w.byDchar();
+    r.popFront();
+    r.popFront();
+    assert(r.front == 'l');
+  }
+
+  {
+    dchar[5] s;
+    int i;
+    dstring a = "hello"d;
+    foreach (c; a.byDchar.byDchar())
+    {
+        //writefln("[%d] '%c' x%x", i, c, c);
+        s[i++] = c;
+    }
+    assert(s == "hello"d);
+  }
+  {
+    auto r = "hello".byDchar();
+    assert(isForwardRange!(typeof(r)));
+    auto s = r.save;
+    r.popFront();
+    assert(s.front == 'h');
+  }
+  {
+    auto r = "hello"w.byDchar();
+    assert(isForwardRange!(typeof(r)));
+    auto s = r.save;
+    r.popFront();
+    assert(s.front == 'h');
+  }
+}
+

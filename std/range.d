@@ -2052,7 +2052,7 @@ unittest
     test([ 1, 2, 3, 4, 5, 6 ], [ 6, 5, 4, 3, 2, 1 ]);
 
    immutable foo = [1,2,3].idup;
-   retro(foo);
+   auto r = retro(foo);
 }
 
 unittest
@@ -4763,7 +4763,7 @@ struct Zip(Ranges...)
 */
     @property ElementType front()
     {
-        auto tryGetFront(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].front;}
+        @property tryGetFront(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].front;}
         //ElementType(tryGetFront!0, tryGetFront!1, ...)
         return mixin(q{ElementType(%(tryGetFront!%s, %))}.format(iota(0, R.length)));
     }
@@ -4792,7 +4792,7 @@ struct Zip(Ranges...)
     {
         ElementType moveFront()
         {
-            auto tryMoveFront(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
+            @property tryMoveFront(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
             //ElementType(tryMoveFront!0, tryMoveFront!1, ...)
             return mixin(q{ElementType(%(tryMoveFront!%s, %))}.format(iota(0, R.length)));
         }
@@ -4807,7 +4807,7 @@ struct Zip(Ranges...)
         {
             //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
 
-            auto tryGetBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].back;}
+            @property tryGetBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].back;}
             //ElementType(tryGetBack!0, tryGetBack!1, ...)
             return mixin(q{ElementType(%(tryGetBack!%s, %))}.format(iota(0, R.length)));
         }
@@ -4821,7 +4821,7 @@ struct Zip(Ranges...)
             {
                 //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
 
-                auto tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
+                @property tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
                 //ElementType(tryMoveBack!0, tryMoveBack!1, ...)
                 return mixin(q{ElementType(%(tryMoveBack!%s, %))}.format(iota(0, R.length)));
             }
@@ -9210,12 +9210,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
     else
     {
-        private static void _testSave(R)(R* range)
-        {
-            (*range).save;
-        }
-
-        static if(isSafe!(_testSave!R))
+        static if(isSafe!((R* r) => (*r).save))
         {
             @property auto save() @trusted
             {

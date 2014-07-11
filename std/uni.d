@@ -2326,9 +2326,9 @@ public:
      * in form of open-right intervals.
      *
      * The formatting flag is applied individually to each value, for example:
-     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high) range of integrals)
-     * $(LI $(B %x) formats the intervals as a [low..high) range of lowercase hex characters)
-     * $(LI $(B %X) formats the intervals as a [low..high) range of uppercase hex characters)
+     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high$(RPAREN) range of integrals)
+     * $(LI $(B %x) formats the intervals as a [low..high$(RPAREN) range of lowercase hex characters)
+     * $(LI $(B %X) formats the intervals as a [low..high$(RPAREN) range of uppercase hex characters)
      */
     void toString(scope void delegate(const(char)[]) sink,
                   FormatSpec!char fmt) /* const */
@@ -7861,11 +7861,13 @@ else
 
 // trusted -> avoid bounds check
 @trusted pure nothrow
-ushort toLowerIndex(dchar c)
+ushort indexLookup(alias trie)(dchar c)
 {
-    alias trie = toLowerIndexTrie;
     return trie[c];
 }
+
+alias toLowerIndex = indexLookup!toLowerIndexTrie;
+alias toLowerSimpleIndex = indexLookup!toLowerSimpleIndexTrie;
 
 // trusted -> avoid bounds check
 @trusted pure nothrow
@@ -7874,13 +7876,8 @@ dchar toLowerTab(size_t idx)
     return toLowerTable[idx];
 }
 
-// trusted -> avoid bounds check
-@trusted pure nothrow
-ushort toTitleIndex(dchar c)
-{
-    alias trie = toTitleIndexTrie;
-    return trie[c];
-}
+alias toTitleIndex = indexLookup!toTitleIndexTrie;
+alias toTitleSimpleIndex = indexLookup!toTitleSimpleIndexTrie;
 
 // trusted -> avoid bounds check
 @trusted pure nothrow
@@ -7889,13 +7886,8 @@ dchar toTitleTab(size_t idx)
     return toTitleTable[idx];
 }
 
-// trusted -> avoid bounds check
-@trusted pure nothrow
-ushort toUpperIndex(dchar c)
-{
-    alias trie = toUpperIndexTrie;
-    return trie[c];
-}
+alias toUpperIndex = indexLookup!toUpperIndexTrie;
+alias toUpperSimpleIndex = indexLookup!toUpperSimpleIndexTrie;
 
 // trusted -> avoid bounds check
 @trusted pure nothrow
@@ -7997,8 +7989,8 @@ dchar toLower(dchar c)
             return c + 32;
         return c;
     }
-    size_t idx = toLowerIndex(c);
-    if(idx < MAX_SIMPLE_LOWER)
+    size_t idx = toLowerSimpleIndex(c);
+    if(idx != ushort.max)
     {
         return toLowerTab(idx);
     }
@@ -8019,8 +8011,8 @@ private dchar toTitlecase(dchar c)
             return c - 32;
         return c;
     }
-    size_t idx = toTitleIndex(c);
-    if(idx < MAX_SIMPLE_TITLE)
+    size_t idx = toTitleSimpleIndex(c);
+    if(idx != ushort.max)
     {
         return toTitleTab(idx);
     }
@@ -8454,6 +8446,15 @@ unittest
     // Test on wchar and dchar strings.
     assert(toLower("Some String"w) == "some string"w);
     assert(toLower("Some String"d) == "some string"d);
+
+    // bugzilla 12455
+    dchar c = 'İ'; // '\U0130' LATIN CAPITAL LETTER I WITH DOT ABOVE
+    assert(isUpper(c));
+    assert(toLower(c) == 'i');
+    // extend on 12455 reprot - check simple-case toUpper too
+    c = '\u1f87';
+    assert(isLower(c));
+    assert(toUpper(c) == '\u1F8F');
 }
 
 
@@ -8477,8 +8478,8 @@ dchar toUpper(dchar c)
             return c - 32;
         return c;
     }
-    size_t idx = toUpperIndex(c);
-    if(idx < MAX_SIMPLE_UPPER)
+    size_t idx = toUpperSimpleIndex(c);
+    if(idx != ushort.max)
     {
         return toUpperTab(idx);
     }
@@ -8492,10 +8493,12 @@ dchar toUpper(dchar c)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');
     assert(toUpper('δ') == 'Δ');
+    auto title = unicode.Titlecase_Letter;
     foreach(ch; unicode.lowerCase.byCodepoint)
     {
         dchar up = ch.toUpper();
-        assert(up == ch || isUpper(up), format("%s -> %s", ch, up));
+        assert(up == ch || isUpper(up) || title[up],
+            format("%x -> %x", ch, up));
     }
 }
 
@@ -8994,7 +8997,10 @@ private:
     auto toUpperIndexTrie() { static immutable res = asTrie(toUpperIndexTrieEntries); return res; }
     auto toLowerIndexTrie() { static immutable res = asTrie(toLowerIndexTrieEntries); return res; }
     auto toTitleIndexTrie() { static immutable res = asTrie(toTitleIndexTrieEntries); return res; }
-
+    //simple case conversion tables
+    auto toUpperSimpleIndexTrie() { static immutable res = asTrie(toUpperSimpleIndexTrieEntries); return res; }
+    auto toLowerSimpleIndexTrie() { static immutable res = asTrie(toLowerSimpleIndexTrieEntries); return res; }
+    auto toTitleSimpleIndexTrie() { static immutable res = asTrie(toTitleSimpleIndexTrieEntries); return res; }
 
 }
 

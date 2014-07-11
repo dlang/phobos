@@ -186,8 +186,8 @@ template floatTraits(T)
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
     // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
     enum T RECIP_EPSILON = (1/T.epsilon);
-    static if (T.mant_dig == 24)
-    { // float
+    static if (T.mant_dig == 24) // float
+    {
         enum ushort EXPMASK = 0x7F80;
         enum ushort EXPBIAS = 0x3F00;
         enum uint EXPMASK_INT = 0x7F80_0000;
@@ -274,6 +274,92 @@ else
 {
     enum MANTISSA_LSB = 1;
     enum MANTISSA_MSB = 0;
+}
+
+// Common code for math implementations.
+
+// Helper for floor/ceil
+T floorImpl(T)(T x) @trusted pure nothrow @nogc
+{
+    alias F = floatTraits!(T);
+    // Take care not to trigger library calls from the compiler,
+    // while ensuring that we don't get defeated by some optimizers.
+    union floatBits
+    {
+        T rv;
+        ushort[T.sizeof/2] vu;
+    }
+    floatBits y = void;
+    y.rv = x;
+
+    // Find the exponent (power of 2)
+    static if (T.mant_dig == 24) // float
+    {
+        int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 3;
+    }
+    else static if (T.mant_dig == 53) // double
+    {
+        int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 3;
+    }
+    else static if (T.mant_dig == 64) // real80
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 4;
+    }
+    else if (T.mant_dig == 113) // quadruple
+    {
+        int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
+
+        version (LittleEndian)
+            int pos = 0;
+        else
+            int pos = 7;
+        }
+    else
+        static assert(false, "Not implemented for this architecture");
+
+    if (exp < 0)
+    {
+        if (x < 0.0)
+            return -1.0;
+        else
+            return 0.0;
+    }
+
+    exp = (T.mant_dig - 1) - exp;
+
+    // Zero 16 bits at a time.
+    while (exp >= 16)
+    {
+        version (LittleEndian)
+            y.vu[pos++] = 0;
+        else
+            y.vu[pos--] = 0;
+        exp -= 16;
+    }
+
+    // Clear the remaining bits.
+    if (exp > 0)
+        y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
+
+    if ((x < 0.0) && (x != y.rv))
+        y.rv -= 1.0;
+
+    return y.rv;
 }
 
 public:
@@ -382,7 +468,7 @@ unittest
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real cos(real x) @nogc @safe pure nothrow @nogc;       /* intrinsic */
+real cos(real x) @safe pure nothrow @nogc;       /* intrinsic */
 
 /***********************************
  * Returns sine of x. x is in radians.
@@ -397,7 +483,7 @@ real cos(real x) @nogc @safe pure nothrow @nogc;       /* intrinsic */
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real sin(real x) @nogc @safe pure nothrow @nogc;       /* intrinsic */
+real sin(real x) @safe pure nothrow @nogc;       /* intrinsic */
 
 
 /***********************************
@@ -463,7 +549,7 @@ unittest
  *      )
  */
 
-real tan(real x) @nogc @trusted pure nothrow @nogc
+real tan(real x) @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
@@ -2877,7 +2963,7 @@ real cbrt(real x) @trusted nothrow @nogc
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
  */
-real fabs(real x) @nogc @safe pure nothrow @nogc;      /* intrinsic */
+real fabs(real x) @safe pure nothrow @nogc;      /* intrinsic */
 
 
 /***********************************************************************
@@ -2989,7 +3075,7 @@ unittest
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)  @trusted pure nothrow @nogc
+real ceil(real x) @trusted pure nothrow @nogc
 {
     version (Win64)
     {
@@ -3016,12 +3102,40 @@ real ceil(real x)  @trusted pure nothrow @nogc
         if (isNaN(x) || isInfinity(x))
             return x;
 
-        real y = floor(x);
+        real y = floorImpl(x);
         if (y < x)
             y += 1.0;
 
         return y;
     }
+}
+
+unittest
+{
+    assert(ceil(+123.456L) == +124);
+    assert(ceil(-123.456L) == -123);
+    assert(ceil(-1.234L) == -1);
+    assert(ceil(-0.123L) == 0);
+    assert(ceil(0.0L) == 0);
+    assert(ceil(+0.123L) == 1);
+    assert(ceil(+1.234L) == 2);
+    assert(ceil(real.infinity) == real.infinity);
+    assert(isNaN(ceil(real.nan)));
+    assert(isNaN(ceil(real.init)));
+}
+
+// ditto
+double ceil(double x) @trusted pure nothrow @nogc
+{
+    // Special cases.
+    if (isNaN(x) || isInfinity(x))
+        return x;
+
+    double y = floorImpl(x);
+    if (y < x)
+        y += 1.0;
+
+    return y;
 }
 
 unittest
@@ -3033,9 +3147,37 @@ unittest
     assert(ceil(0.0) == 0);
     assert(ceil(+0.123) == 1);
     assert(ceil(+1.234) == 2);
-    assert(ceil(real.infinity) == real.infinity);
-    assert(isNaN(ceil(real.nan)));
-    assert(isNaN(ceil(real.init)));
+    assert(ceil(double.infinity) == double.infinity);
+    assert(isNaN(ceil(double.nan)));
+    assert(isNaN(ceil(double.init)));
+}
+
+// ditto
+float ceil(float x) @trusted pure nothrow @nogc
+{
+    // Special cases.
+    if (isNaN(x) || isInfinity(x))
+        return x;
+
+    float y = floorImpl(x);
+    if (y < x)
+        y += 1.0;
+
+    return y;
+}
+
+unittest
+{
+    assert(ceil(+123.456f) == +124);
+    assert(ceil(-123.456f) == -123);
+    assert(ceil(-1.234f) == -1);
+    assert(ceil(-0.123f) == 0);
+    assert(ceil(0.0f) == 0);
+    assert(ceil(+0.123f) == 1);
+    assert(ceil(+1.234f) == 2);
+    assert(ceil(float.infinity) == float.infinity);
+    assert(isNaN(ceil(float.nan)));
+    assert(isNaN(ceil(float.init)));
 }
 
 /**************************************
@@ -3065,84 +3207,36 @@ real floor(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        // Bit clearing masks.
-        static immutable ushort[17] BMASK = [
-            0xffff, 0xfffe, 0xfffc, 0xfff8,
-            0xfff0, 0xffe0, 0xffc0, 0xff80,
-            0xff00, 0xfe00, 0xfc00, 0xf800,
-            0xf000, 0xe000, 0xc000, 0x8000,
-            0x0000,
-        ];
-
         // Special cases.
         if (isNaN(x) || isInfinity(x) || x == 0.0)
             return x;
 
-        alias F = floatTraits!(real);
-        auto vu = *cast(ushort[real.sizeof/2]*)(&x);
-
-        // Find the exponent (power of 2)
-        static if (real.mant_dig == 53)
-        {
-            int exp = ((vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
-
-            version (LittleEndian)
-                int pos = 0;
-            else
-                int pos = 3;
-        }
-        else static if (real.mant_dig == 64)
-        {
-            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-            version (LittleEndian)
-                int pos = 0;
-            else
-                int pos = 4;
-        }
-        else if (real.mant_dig == 113)
-        {
-            int exp = (vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
-
-            version (LittleEndian)
-                int pos = 0;
-            else
-                int pos = 7;
-        }
-        else
-            static assert(false, "Only 64-bit, 80-bit, and 128-bit reals are supported by floor()");
-
-        if (exp < 0)
-        {
-            if (x < 0.0)
-                return -1.0;
-            else
-                return 0.0;
-        }
-
-        exp = (real.mant_dig - 1) - exp;
-
-        // Clean out 16 bits at a time.
-        while (exp >= 16)
-        {
-            version (LittleEndian)
-                vu[pos++] = 0;
-            else
-                vu[pos--] = 0;
-            exp -= 16;
-        }
-
-        // Clear the remaining bits.
-        if (exp > 0)
-            vu[pos] &= BMASK[exp];
-
-        real y = *cast(real*)(&vu);
-
-        if ((x < 0.0) && (x != y))
-            y -= 1.0;
-
-        return y;
+        return floorImpl(x);
     }
+}
+
+unittest
+{
+    assert(floor(+123.456L) == +123);
+    assert(floor(-123.456L) == -124);
+    assert(floor(-1.234L) == -2);
+    assert(floor(-0.123L) == -1);
+    assert(floor(0.0L) == 0);
+    assert(floor(+0.123L) == 0);
+    assert(floor(+1.234L) == 1);
+    assert(floor(real.infinity) == real.infinity);
+    assert(isNaN(floor(real.nan)));
+    assert(isNaN(floor(real.init)));
+}
+
+// ditto
+double floor(double x) @trusted pure nothrow @nogc
+{
+    // Special cases.
+    if (isNaN(x) || isInfinity(x) || x == 0.0)
+        return x;
+
+    return floorImpl(x);
 }
 
 unittest
@@ -3154,9 +3248,33 @@ unittest
     assert(floor(0.0) == 0);
     assert(floor(+0.123) == 0);
     assert(floor(+1.234) == 1);
-    assert(floor(real.infinity) == real.infinity);
-    assert(isNaN(floor(real.nan)));
-    assert(isNaN(floor(real.init)));
+    assert(floor(double.infinity) == double.infinity);
+    assert(isNaN(floor(double.nan)));
+    assert(isNaN(floor(double.init)));
+}
+
+// ditto
+float floor(float x) @trusted pure nothrow @nogc
+{
+    // Special cases.
+    if (isNaN(x) || isInfinity(x) || x == 0.0)
+        return x;
+
+    return floorImpl(x);
+}
+
+unittest
+{
+    assert(floor(+123.456f) == +123);
+    assert(floor(-123.456f) == -124);
+    assert(floor(-1.234f) == -2);
+    assert(floor(-0.123f) == -1);
+    assert(floor(0.0f) == 0);
+    assert(floor(+0.123f) == 0);
+    assert(floor(+1.234f) == 1);
+    assert(floor(float.infinity) == float.infinity);
+    assert(isNaN(floor(float.nan)));
+    assert(isNaN(floor(float.init)));
 }
 
 /******************************************
@@ -3184,7 +3302,7 @@ real nearbyint(real x) @trusted nothrow @nogc
  * $(B nearbyint) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
-real rint(real x) @nogc @safe pure nothrow @nogc;      /* intrinsic */
+real rint(real x) @safe pure nothrow @nogc;      /* intrinsic */
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -3998,23 +4116,30 @@ unittest
  * Returns !=0 if e is a NaN.
  */
 
-bool isNaN(real x) @nogc @trusted pure nothrow
+bool isNaN(X)(X x) @nogc @trusted pure nothrow
+if (isFloatingPoint!(X))
 {
-    alias F = floatTraits!(real);
-    static if (real.mant_dig == 53) // double
+    alias F = floatTraits!(X);
+    static if (X.mant_dig == 24) // float
+    {
+        uint* p = cast(uint *)&x;
+        return ((*p & 0x7F80_0000) == 0x7F80_0000)
+        && *p & 0x007F_FFFF; // not infinity
+    }
+    else static if (X.mant_dig == 53) // double
     {
         ulong*  p = cast(ulong *)&x;
         return ((*p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-        && *p & 0x000F_FFFF_FFFF_FFFF;
+        && *p & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
-    else static if (real.mant_dig == 64)  // real80
+    else static if (X.mant_dig == 64)  // real80
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
         *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
-    else static if (real.mant_dig == 113) // quadruple
+    else static if (X.mant_dig == 113) // quadruple
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
@@ -4023,19 +4148,83 @@ bool isNaN(real x) @nogc @trusted pure nothrow
     }
     else
     {
-        return x!=x;
+        return x != x;
     }
 }
 
 
 unittest
 {
+    // CTFE-able tests
+    assert(isNaN(float.init));
+    assert(isNaN(-float.init));
     assert(isNaN(float.nan));
-    assert(isNaN(-double.nan));
-    assert(isNaN(real.nan));
-
-    assert(!isNaN(53.6));
+    assert(isNaN(-float.nan));
     assert(!isNaN(float.infinity));
+    assert(!isNaN(-float.infinity));
+    assert(!isNaN(53.6f));
+    assert(!isNaN(-53.6f));
+
+    assert(isNaN(double.init));
+    assert(isNaN(-double.init));
+    assert(isNaN(double.nan));
+    assert(isNaN(-double.nan));
+    assert(!isNaN(double.infinity));
+    assert(!isNaN(-double.infinity));
+    assert(!isNaN(53.6));
+    assert(!isNaN(-53.6));
+
+    assert(isNaN(real.init));
+    assert(isNaN(-real.init));
+    assert(isNaN(real.nan));
+    assert(isNaN(-real.nan));
+    assert(!isNaN(real.infinity));
+    assert(!isNaN(-real.infinity));
+    assert(!isNaN(53.6L));
+    assert(!isNaN(-53.6L));
+
+    // Runtime tests
+    shared float f;
+    f = float.init;
+    assert(isNaN(f));
+    assert(isNaN(-f));
+    f = float.nan;
+    assert(isNaN(f));
+    assert(isNaN(-f));
+    f = float.infinity;
+    assert(!isNaN(f));
+    assert(!isNaN(-f));
+    f = 53.6f;
+    assert(!isNaN(f));
+    assert(!isNaN(-f));
+
+    shared double d;
+    d = double.init;
+    assert(isNaN(d));
+    assert(isNaN(-d));
+    d = double.nan;
+    assert(isNaN(d));
+    assert(isNaN(-d));
+    d = double.infinity;
+    assert(!isNaN(d));
+    assert(!isNaN(-d));
+    d = 53.6;
+    assert(!isNaN(d));
+    assert(!isNaN(-d));
+
+    shared real e;
+    e = real.init;
+    assert(isNaN(e));
+    assert(isNaN(-e));
+    e = real.nan;
+    assert(isNaN(e));
+    assert(isNaN(-e));
+    e = real.infinity;
+    assert(!isNaN(e));
+    assert(!isNaN(-e));
+    e = 53.6L;
+    assert(!isNaN(e));
+    assert(!isNaN(-e));
 }
 
 /*********************************
@@ -4186,29 +4375,22 @@ unittest
  * Return !=0 if e is $(PLUSMN)$(INFIN).
  */
 
-bool isInfinity(real x) @nogc @trusted pure nothrow
+bool isInfinity(X)(X x) @nogc @trusted pure nothrow
+if (isFloatingPoint!(X))
 {
-    alias F = floatTraits!(real);
-    static if (real.mant_dig == 53)
+    alias F = floatTraits!(X);
+    static if (X.mant_dig == 24)
+    {
+        // float
+        return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
+    }
+    else static if (X.mant_dig == 53)
     {
         // double
         return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     }
-    else static if(real.mant_dig == 106)
-    {
-        //doubledouble
-        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
-            == 0x7FF8_0000_0000_0000;
-    }
-    else static if (real.mant_dig == 113)
-    {
-        // quadruple
-        long*   ps = cast(long *)&x;
-        return (ps[MANTISSA_LSB] == 0)
-            && (ps[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
-    }
-    else
+    else static if (X.mant_dig == 64)
     {
         // real80
         ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
@@ -4217,16 +4399,91 @@ bool isInfinity(real x) @nogc @trusted pure nothrow
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
         return e == F.EXPMASK && (*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
     }
+    else static if(X.mant_dig == 106)
+    {
+        //doubledouble
+        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
+            == 0x7FF8_0000_0000_0000;
+    }
+    else static if (X.mant_dig == 113)
+    {
+        // quadruple
+        long*   ps = cast(long *)&x;
+        return (ps[MANTISSA_LSB] == 0)
+            && (ps[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
+    }
+    else
+    {
+        return (x - 1) == x;
+    }
 }
 
 unittest
 {
-    assert(isInfinity(float.infinity));
+    // CTFE-able tests
+    assert(!isInfinity(float.init));
+    assert(!isInfinity(-float.init));
     assert(!isInfinity(float.nan));
-    assert(isInfinity(double.infinity));
-    assert(isInfinity(-real.infinity));
+    assert(!isInfinity(-float.nan));
+    assert(isInfinity(float.infinity));
+    assert(isInfinity(-float.infinity));
+    assert(isInfinity(-1.0f / 0.0f));
 
+    assert(!isInfinity(double.init));
+    assert(!isInfinity(-double.init));
+    assert(!isInfinity(double.nan));
+    assert(!isInfinity(-double.nan));
+    assert(isInfinity(double.infinity));
+    assert(isInfinity(-double.infinity));
     assert(isInfinity(-1.0 / 0.0));
+
+    assert(!isInfinity(real.init));
+    assert(!isInfinity(-real.init));
+    assert(!isInfinity(real.nan));
+    assert(!isInfinity(-real.nan));
+    assert(isInfinity(real.infinity));
+    assert(isInfinity(-real.infinity));
+    assert(isInfinity(-1.0L / 0.0L));
+
+    // Runtime tests
+    shared float f;
+    f = float.init;
+    assert(!isInfinity(f));
+    assert(!isInfinity(-f));
+    f = float.nan;
+    assert(!isInfinity(f));
+    assert(!isInfinity(-f));
+    f = float.infinity;
+    assert(isInfinity(f));
+    assert(isInfinity(-f));
+    f = (-1.0f / 0.0f);
+    assert(isInfinity(f));
+
+    shared double d;
+    d = double.init;
+    assert(!isInfinity(d));
+    assert(!isInfinity(-d));
+    d = double.nan;
+    assert(!isInfinity(d));
+    assert(!isInfinity(-d));
+    d = double.infinity;
+    assert(isInfinity(d));
+    assert(isInfinity(-d));
+    d = (-1.0 / 0.0);
+    assert(isInfinity(d));
+
+    shared real e;
+    e = real.init;
+    assert(!isInfinity(e));
+    assert(!isInfinity(-e));
+    e = real.nan;
+    assert(!isInfinity(e));
+    assert(!isInfinity(-e));
+    e = real.infinity;
+    assert(isInfinity(e));
+    assert(isInfinity(-e));
+    e = (-1.0L / 0.0L);
+    assert(isInfinity(e));
 }
 
 /*********************************

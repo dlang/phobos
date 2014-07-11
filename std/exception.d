@@ -10,7 +10,7 @@
     {
         FILE* f = enforce(fopen("some/file"));
         // f is not null from here on
-        FILE* g = enforceEx!WriteException(fopen("some/other/file", "w"));
+        FILE* g = enforce!WriteException(fopen("some/other/file", "w"));
         // g is not null from here on
 
         Exception e = collectException(write(g, readln(f)));
@@ -90,27 +90,27 @@ void assertNotThrown(T : Throwable = Exception, E)
 ///
 unittest
 {
-    assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
+    assertNotThrown!StringException(enforce!StringException(true, "Error!"));
 
     //Exception is the default.
-    assertNotThrown(enforceEx!StringException(true, "Error!"));
+    assertNotThrown(enforce!StringException(true, "Error!"));
 
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-               enforceEx!StringException(false, "Error!"))) ==
+               enforce!StringException(false, "Error!"))) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
 }
 unittest
 {
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-               enforceEx!StringException(false, ""), "Error!")) ==
+               enforce!StringException(false, ""), "Error!")) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
 
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-               enforceEx!StringException(false, ""))) ==
+               enforce!StringException(false, ""))) ==
            `assertNotThrown failed: StringException was thrown.`);
 
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-               enforceEx!StringException(false, ""), "")) ==
+               enforce!StringException(false, ""), "")) ==
            `assertNotThrown failed: StringException was thrown.`);
 }
 
@@ -225,13 +225,13 @@ void assertThrown(T : Throwable = Exception, E)
 ///
 unittest
 {
-    assertThrown!StringException(enforceEx!StringException(false, "Error!"));
+    assertThrown!StringException(enforce!StringException(false, "Error!"));
 
     //Exception is the default.
-    assertThrown(enforceEx!StringException(false, "Error!"));
+    assertThrown(enforce!StringException(false, "Error!"));
 
     assert(collectExceptionMsg!AssertError(assertThrown!StringException(
-               enforceEx!StringException(true, "Error!"))) ==
+               enforce!StringException(true, "Error!"))) ==
            `assertThrown failed: No StringException was thrown.`);
 }
 
@@ -330,19 +330,20 @@ unittest
     enforce(line.length, "Expected a non-empty line.");
     --------------------
  +/
-T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
+T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
     if (is(typeof({ if (!value) {} })))
 {
-    if (!value) bailOut(file, line, msg);
+    if (!value) bailOut!E(file, line, msg);
     return value;
 }
 
 /++
-   $(RED Scheduled for deprecation in January 2013. If passing the file or line
-         number explicitly, please use the version of enforce which takes them as
-         function arguments. Taking them as template arguments causes
-         unnecessary template bloat.)
+   $(RED Deprecated. If passing the file or line number explicitly, please use
+         the overload of enforce which takes them as function arguments. Taking
+         them as template arguments causes unnecessary template bloat. This
+         overload will be removed in June 2015.)
  +/
+deprecated("Use the overload of enforce that takes file and line as function arguments.")
 T enforce(T, string file, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null)
     if (is(typeof({ if (!value) {} })))
@@ -366,9 +367,21 @@ T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     return value;
 }
 
-private void bailOut(string file, size_t line, in char[] msg) @safe pure
+private void bailOut(E : Throwable = Exception)(string file, size_t line, in char[] msg)
 {
-    throw new Exception(msg.ptr ? msg.idup : "Enforcement failed", file, line);
+    static if (is(typeof(new E(string.init, string.init, size_t.init))))
+    {
+        throw new E(msg.ptr ? msg.idup : "Enforcement failed", file, line);
+    }
+    else static if (is(typeof(new E(string.init, size_t.init))))
+    {
+        throw new E(file, line);
+    }
+    else
+    {
+        static assert("Expected this(string, string, size_t) or this(string, size_t)" ~
+            " constructor for " ~ __traits(identifier, E));
+    }
 }
 
 unittest
@@ -446,7 +459,6 @@ unittest
     S s;
 
     enforce(s);
-    enforce!(S, __FILE__, __LINE__)(s, ""); // scheduled for deprecation
     enforce(s, {});
     enforce(s, new Exception(""));
 
@@ -461,8 +473,25 @@ unittest
     {
         this(string msg) { super(msg, __FILE__, __LINE__); }
     }
-    enforceEx!E1(s);
-    enforceEx!E2(s);
+    enforce!E1(s);
+    enforce!E2(s);
+}
+
+deprecated unittest
+{
+    struct S
+    {
+        static int g;
+        ~this() {}  // impure & unsafe destructor
+        bool opCast(T:bool)() {
+            int* p = cast(int*)0;   // unsafe operation
+            int n = g;              // impure operation
+            return true;
+        }
+    }
+    S s;
+
+    enforce!(S, __FILE__, __LINE__)(s, "");
 }
 
 /++
@@ -513,6 +542,8 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     and can be constructed with $(D new E(file, line)), then
     $(D new E(file, line)) will be thrown.
 
+    This is legacy name, it is recommended to use $(D enforce!E) instead.
+
     Example:
     --------------------
     auto f = enforceEx!FileMissingException(fopen("data.txt"));
@@ -520,9 +551,10 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     enforceEx!DataCorruptionException(line.length);
     --------------------
  +/
-template enforceEx(E)
+template enforceEx(E : Throwable)
     if (is(typeof(new E("", __FILE__, __LINE__))))
 {
+    /++ Ditto +/
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(msg, file, line);
@@ -530,9 +562,11 @@ template enforceEx(E)
     }
 }
 
-template enforceEx(E)
+/++ Ditto +/
+template enforceEx(E : Throwable)
     if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
+    /++ Ditto +/
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(file, line);
@@ -561,6 +595,24 @@ unittest
         assert(e.file == "file");
         assert(e.line == 42);
     }
+
+    {
+        auto e = collectException!Error(enforceEx!OutOfMemoryError(false));
+        assert(e !is null);
+        assert(e.msg == "Memory allocation failed");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__ - 4);
+    }
+
+    {
+        auto e = collectException!Error(enforceEx!OutOfMemoryError(false, "file", 42));
+        assert(e !is null);
+        assert(e.msg == "Memory allocation failed");
+        assert(e.file == "file");
+        assert(e.line == 42);
+    }
+
+    static assert(!is(typeof(enforceEx!int(true))));
 }
 
 unittest

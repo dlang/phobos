@@ -424,12 +424,7 @@ private:
         case OpID.index:
             // Added allowed!(...) prompted by a bug report by Chris
             // Nicholson-Sauls.
-            static if (isStaticArray!(A) && allowed!(typeof(A.init)))
-            {
-                enforce(0, "Not implemented");
-            }
-            // Can't handle void arrays as there isn't any result to return.
-            static if (isDynamicArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
+            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
             {
                 // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;
@@ -662,7 +657,7 @@ public:
      * assert(a == 6);
      * ----
      */
-    @property inout T * peek(T)() inout
+    @property inout(T)* peek(T)() inout
     {
         static if (!is(T == void))
             static assert(allowed!(T), "Cannot store a " ~ T.stringof
@@ -670,17 +665,19 @@ public:
         if (type != typeid(T))
             return null;
         static if (T.sizeof <= size)
-            return cast(T*)&store;
+            return cast(inout T*)&store;
         else
-            return *cast(T**)&store;
+            return *cast(inout T**)&store;
     }
 
     /**
      * Returns the $(D_PARAM typeid) of the currently held value.
      */
 
-    @property TypeInfo type() const
+    @property TypeInfo type() const nothrow @trusted
     {
+        scope(failure) assert(0);
+
         TypeInfo result;
         fptr(OpID.getTypeInfo, null, &result);
         return result;
@@ -877,7 +874,7 @@ public:
      * Computes the hash of the held value.
      */
 
-    size_t toHash()
+    size_t toHash() const nothrow @safe
     {
         return type.getHash(&store);
     }
@@ -1169,6 +1166,19 @@ unittest
     static int bar(string s) { return to!int(s); }
     v = &bar;
     assert(v("43") == 43);
+}
+
+// opIndex with static arrays, issue 12771
+unittest
+{
+    int[4] elements = [0, 1, 2, 3];
+    Variant v = elements;
+    assert(v == elements);
+    assert(v[2] == 2);
+    assert(v[3] == 3);
+    v[2] = 6;
+    assert(v[2] == 6);
+    assert(v != elements);
 }
 
 //Issue# 8195

@@ -2048,7 +2048,8 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
         // replacement reduces length
         immutable stuffEnd = from + stuff.length;
         array[from .. stuffEnd] = stuff[];
-        array = remove(array, tuple(stuffEnd, to));
+        if (stuffEnd < to)
+            array = remove(array, tuple(stuffEnd, to));
     }
     else
     {
@@ -2088,6 +2089,15 @@ unittest
     assert(a == [1, 3, 4, 5]);
     replaceInPlace(a, 1u, 3u, a[2 .. 4]);
     assert(a == [1, 4, 5, 5]);
+}
+
+unittest
+{
+    // Bug# 12889
+    int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
+    int[1][] stuff = [[0], [1]];
+    replaceInPlace(arr, 4, 6, stuff);
+    assert(arr == [[0], [1], [2], [3], [0], [1], [6]]);
 }
 
 unittest
@@ -2985,9 +2995,9 @@ unittest
     //static assert(!is(typeof(Appender!string(cc))));
 
     //This should always work:
-    appender!string(null);
-    appender!(const(char)[])(null);
-    appender!(char[])(null);
+    {auto app = appender!string(null);}
+    {auto app = appender!(const(char)[])(null);}
+    {auto app = appender!(char[])(null);}
 }
 
 unittest //Test large allocations (for GC.extend)

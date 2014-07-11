@@ -367,7 +367,7 @@ private Pid spawnProcessImpl(in char[][] args,
     {
         name = searchPathFor(name);
         if (name is null)
-            throw new ProcessException(text("Executable file not found: ", name));
+            throw new ProcessException(text("Executable file not found: ", args[0]));
     }
 
     // Convert program name and arguments to C-style strings.
@@ -3435,15 +3435,11 @@ version (Windows)
 {
     import core.sys.windows.windows;
 
-    extern (Windows)
-    HINSTANCE ShellExecuteA(HWND hwnd, LPCSTR lpOperation, LPCSTR lpFile, LPCSTR lpParameters, LPCSTR lpDirectory, INT nShowCmd);
-
-
     pragma(lib,"shell32.lib");
 
     void browse(string url)
     {
-        ShellExecuteA(null, "open", toStringz(url), null, null, SW_SHOWNORMAL);
+        ShellExecuteW(null, "open", toUTF16z(url), null, null, SW_SHOWNORMAL);
     }
 }
 else version (OSX)

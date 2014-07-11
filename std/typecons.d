@@ -393,6 +393,17 @@ template Tuple(Specs...)
         alias Types = staticMap!(extractType, fieldSpecs);
 
         /**
+         * The names of the tuple's components. Unnamed fields have empty names.
+         *
+         * Examples:
+         * ----
+         * alias Fields = Tuple!(int, "id", string, float);
+         * static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+         * ----
+         */
+        alias fieldNames = staticMap!(extractName, fieldSpecs);
+
+        /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
          * components. The result of $(D expand) acts as if the tuple components
          * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
@@ -558,6 +569,14 @@ template Tuple(Specs...)
         if (from <= to && to <= Types.length)
         {
             return *cast(typeof(return)*) &(field[from]);
+        }
+
+        size_t toHash() const nothrow @trusted
+        {
+            size_t h = 0;
+            foreach (i, T; Types)
+                h += typeid(T).getHash(cast(const void*)&field[i]);
+            return h;
         }
 
         /**
@@ -969,6 +988,17 @@ unittest
     TISIS e = TISIS(ss);
 }
 
+// Bugzilla #9819
+unittest
+{
+    alias T = Tuple!(int, "x", double, "foo");
+    static assert(T.fieldNames[0] == "x");
+    static assert(T.fieldNames[1] == "foo");
+
+    alias Fields = Tuple!(int, "id", string, float);
+    static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+}
+
 /**
 Returns a $(D Tuple) object instantiated and initialized according to
 the arguments.
@@ -1075,29 +1105,29 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArra
                 T original;
                 U stripped;
             }
-            void opAssign(T another) pure nothrow
+            void opAssign(T another) @trusted pure nothrow
             {
                 stripped = cast(U) another;
             }
-            void opAssign(Rebindable another) pure nothrow
+            void opAssign(Rebindable another) @trusted pure nothrow
             {
                 stripped = another.stripped;
             }
             static if (is(T == const U))
             {
                 // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another) pure nothrow
+                void opAssign(Rebindable!(immutable U) another) @trusted pure nothrow
                 {
                     stripped = another.stripped;
                 }
             }
 
-            this(T initializer) pure nothrow
+            this(T initializer) @safe pure nothrow
             {
                 opAssign(initializer);
             }
 
-            @property ref inout(T) get() inout pure nothrow
+            @property ref inout(T) get() @trusted inout pure nothrow
             {
                 return original;
             }

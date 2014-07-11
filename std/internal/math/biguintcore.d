@@ -109,7 +109,7 @@ private:
     }
 public:
     // Length in uints
-    size_t uintLength() pure nothrow const
+    @property size_t uintLength() pure nothrow const
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -121,7 +121,7 @@ public:
             ((data[$-1] & 0xFFFF_FFFF_0000_0000L) ? 1 : 0);
         }
     }
-    size_t ulongLength() pure nothrow const
+    @property size_t ulongLength() pure nothrow const
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
