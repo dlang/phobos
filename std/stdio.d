@@ -550,7 +550,7 @@ the file handle.
         return !isOpen || .ferror(cast(FILE*) _p.handle);
     }
 
-    unittest
+    @safe unittest
     {
         // Issue 12349
         static import std.file;
@@ -580,7 +580,7 @@ Throws: $(D ErrnoException) on failure if closing the file.
         }
     }
 
-    unittest
+    @safe unittest
     {
         static import std.file;
 
@@ -664,7 +664,7 @@ Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) f
         errnoEnforce(.fflush(_p.handle) == 0);
     }
 
-    unittest
+    @safe unittest
     {
         // Issue 12349
         static import std.file;
