@@ -2212,7 +2212,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
 See $(LREF byChunk) for an example.
 */
-    auto lockingTextWriter()
+    auto lockingTextWriter() @safe
     {
         return LockingTextWriter(this);
     }
