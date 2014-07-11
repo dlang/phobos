@@ -312,7 +312,7 @@ void main()
 }
 ----
  */
-void write(in char[] name, const void[] buffer)
+void write(in char[] name, const void[] buffer) @trusted
 {
     version(Windows)
     {
@@ -325,7 +325,7 @@ void write(in char[] name, const void[] buffer)
         cenforce(h != INVALID_HANDLE_VALUE, name);
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) == 1
+        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
                 && buffer.length == numwritten,
                 name);
     }
@@ -351,7 +351,7 @@ void main()
 }
 ----
  */
-void append(in char[] name, in void[] buffer)
+void append(in char[] name, in void[] buffer) @trusted
 {
     version(Windows)
     {
@@ -365,7 +365,7 @@ void append(in char[] name, in void[] buffer)
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
         cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) == 1
+                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
                 && buffer.length == numwritten,
                 name);
     }
