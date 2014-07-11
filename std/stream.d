@@ -703,7 +703,8 @@ class Stream : InputStream, OutputStream {
       }
       if (fmt.length == 0 || i == fmt.length) {
         i = 0;
-        if (arguments[j] is typeid(char[])) {
+        if (arguments[j] is typeid(string) || arguments[j] is typeid(char[])
+            || arguments[j] is typeid(const(char)[])) {
           fmt = va_arg!(string)(args);
           j++;
           continue;
@@ -1436,6 +1437,23 @@ class Stream : InputStream, OutputStream {
   final protected void assertSeekable() {
     if (!seekable)
       throw new SeekException("Stream is not seekable");
+  }
+
+  unittest { // unit test for Issue 3363
+    import std.stdio;
+    immutable fileName ="issue3363.txt"; 
+    auto w = File(fileName, "w");
+    scope (exit) remove(fileName.ptr);
+    w.write("one two three");
+    w.close();
+    auto r = File(fileName, "r");
+    const(char)[] constChar;
+    string str;
+    char[] chars;
+    r.readf("%s %s %s", &constChar, &str, &chars);
+    assert (constChar == "one", constChar);
+    assert (str == "two", str);
+    assert (chars == "three", chars);
   }
 
   unittest { //unit tests for Issue 1668
