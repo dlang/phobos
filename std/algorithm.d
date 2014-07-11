@@ -7251,19 +7251,24 @@ unittest
     assert(max(Date.max, Date.min) == Date.max);
 }
 
-// clamp
 /**
 Returns $(D val), if it is between $(D lower) and $(D upper).
 Otherwise returns the nearest of the two. Equivalent to $(D max(lower,
-min(upper,val))). The type of the result is computed by using $(XREF
-traits, MaxType).
+min(upper,val))).
 */
-MaxType!(T1, T2, T3) clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
+auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 {
     return max(lower, min(upper,val));
 }
 
 ///
+unittest
+{
+    assert(clamp(2, 1, 3) == 2);
+    assert(clamp(0, 1, 3) == 1);
+    assert(clamp(4, 1, 3) == 3);
+}
+
 unittest
 {
     debug(std_algorithm) scope(success)
@@ -7278,8 +7283,10 @@ unittest
     // mixed sign
     a = -5;
     uint f = 5;
-    static assert(is(typeof(clamp(f, a, b)) == uint));
+    static assert(is(typeof(clamp(f, a, b)) == int));
     assert(clamp(f, a, b) == f);
+    // similar type deduction for (u)long
+    static assert(is(typeof(clamp(-1L, -2L, 2UL)) == long));
 
     // user-defined types
     import std.datetime;
@@ -7287,6 +7294,7 @@ unittest
     assert(clamp(Date(1982, 1, 4), Date.min, Date.max) == Date(1982, 1, 4));
     // UFCS style
     assert(Date(1982, 1, 4).clamp(Date.min, Date.max) == Date(1982, 1, 4));
+
 }
 
 /**
