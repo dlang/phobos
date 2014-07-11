@@ -82,7 +82,7 @@ public:
     isn't just a view on an lvalue (e.g., a cast).
     Typical usage:
     ----
-    Unique!(Foo) f = new Foo;
+    Unique!Foo f = new Foo;
     ----
     */
     this(RefT p)
@@ -102,32 +102,26 @@ public:
         p = null;
         assert(p is null);
     }
-/+ Doesn't work yet
     /**
-    Constructor that takes a Unique of a type that is convertible to our type:
-    Disallow construction from lvalue (force the use of release on the source Unique)
-    If the source is an rvalue, null its content, so the destructor doesn't delete it
+    Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
-    Typically used by the compiler to return $(D Unique) of derived type as $(D Unique)
-    of base type.
-
+    Typically used to transfer a $(D Unique) rvalue of derived type to 
+    a $(D Unique) of base type.
     Example:
-    ----
-    Unique!(Base) create()
-    {
-        Unique!(Derived) d = new Derived;
-        return d; // Implicit Derived->Base conversion
-    }
-    ----
+    ---
+    class C {}
+    // Make u hold a new instance of C
+    Unique!Object u = Unique!C();
+    ---
     */
-    this(U)(ref Unique!(U) u) = null;
-    this(U)(Unique!(U) u)
+    this(U)(Unique!U u)
+    if (is(u.RefT:RefT))
     {
+        debug(Unique) writeln("Unique constructor converting from ", U.stringof);
         _p = u._p;
         u._p = null;
     }
-+/
-
+    
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
@@ -185,6 +179,20 @@ unittest
     // Transfer ownership of the resource
     consume(u1.release);
     assert(u1.isEmpty);
+}
+
+unittest
+{
+    // test conversion to base ref
+    class C {}
+    Unique!Object u = Unique!C();
+    assert(!u.isEmpty);
+    
+    Unique!C uc = new C;
+    static assert(!__traits(compiles, {Unique!Object uo = uc;}));
+    Unique!Object uo = uc.release;
+    assert(uc.isEmpty);
+    assert(!uo.isEmpty);
 }
 
 unittest
