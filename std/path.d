@@ -390,13 +390,8 @@ unittest
     static assert (baseName("dir/file.ext") == "file.ext");
     static assert (baseName("dir/file.ext", ".ext") == "file");
 
-    struct DirEntry
-    {
-        alias name this;
-        @property string name() { return ""; }
-    }
-    DirEntry de;
-    auto a = de.baseName;
+    static struct DirEntry { string s; alias s this; }
+    assert(baseName(DirEntry("dir/file.ext")) == "file.ext");
 }
 
 
@@ -690,8 +685,6 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
 }
 
 
-
-
 /** Returns the _extension part of a file name, including the dot.
 
     If there is no _extension, $(D null) is returned.
@@ -719,6 +712,12 @@ auto extension(R)(R path)
             return path[0 .. 0];
     }
     else return path[i .. path.length];
+}
+
+
+inout(C)[] extension(C)(inout(C)[] path)
+{
+    return extension!(inout(C)[])(path);
 }
 
 
@@ -764,6 +763,9 @@ unittest
         foreach (i, c; `.ext2`)
             assert(s[i] == c);
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert (extension(DirEntry("file")).empty);
 }
 
 
@@ -1851,6 +1853,13 @@ bool isRooted(R)(const R path)
 }
 
 
+bool isRooted(C)(const(C)[] path)
+    if (isSomeChar!C)
+{
+    return isRooted!(const(C)[])(path);
+}
+
+
 unittest
 {
     assert (isRooted("/"));
@@ -1870,6 +1879,9 @@ unittest
 
     static assert (isRooted("/foo"));
     static assert (!isRooted("foo"));
+
+    static struct DirEntry { string s; alias s this; }
+    assert (!isRooted(DirEntry("foo")));
 }
 
 
@@ -1906,17 +1918,31 @@ unittest
     }
     ---
 */
-version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow @nogc
-    if (isSomeChar!C);
-
-else version (Windows) bool isAbsolute(R)(const R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+version (StdDdoc)
 {
-    return isDriveRoot(path) || isUNC(path);
+    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isSomeString!R);
 }
+else version (Windows)
+{
+    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isSomeString!R)
+    {
+        return isDriveRoot(path) || isUNC(path);
+    }
 
-else version (Posix) alias isAbsolute = isRooted;
+    bool isAbsolute(C)(const(C)[] path) @safe pure nothrow @nogc
+        if (isSomeChar!C)
+    {
+        return isAbsolute!(const(C)[])(path);
+    }
+}
+else version (Posix)
+{
+    alias isAbsolute = isRooted;
+}
 
 
 unittest
@@ -1948,6 +1974,9 @@ unittest
         auto r = MockRange!(immutable(char))(`../foo`);
         assert(!r.isAbsolute());
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert(!isAbsolute(DirEntry("foo")));
 }
 
 
