@@ -537,33 +537,34 @@ define $(D opBinary).
 Complexity: $(BIGOH n + m), where m is the number of elements in $(D
 stuff)
      */
-    Array opBinary(string op, Stuff)(Stuff stuff)
+    Array opBinary(string op, Stuff)(Stuff rhs)
+        if (op == "~" && is(typeof(insertBack(rhs))))
+    {
+        auto ret = this.dup;
+        ret.insertBack(rhs);
+        return ret;
+    }
+    
+    Array opBinary(string op)(Array rhs)
         if (op == "~")
     {
-        // TODO: optimize
-        Array result;
-        // @@@BUG@@ result ~= this[] doesn't work
-        auto r = this[];
-        result ~= r;
-        assert(result.length == length);
-        result ~= stuff[];
-        return result;
+        return this ~ rhs[];
     }
 
 /**
 Forwards to $(D insertBack(stuff)).
      */
-    void opOpAssign(string op, Stuff)(Stuff stuff)
+    Array opOpAssign(string op, Stuff)(Stuff rhs)
+        if (op == "~" && is(typeof(insertBack(rhs))))
+    {
+        insertBack(rhs);
+        return this;
+    }
+    
+    Array opOpAssign(string op)(Array rhs)
         if (op == "~")
     {
-        static if (is(typeof(stuff[])))
-        {
-            insertBack(stuff[]);
-        }
-        else
-        {
-            insertBack(stuff);
-        }
+        return this ~= rhs[];
     }
 
 /**
@@ -891,6 +892,24 @@ unittest
     auto b = Array!int(11, 12, 13);
     a ~= b;
     assert(a == Array!int(1, 2, 3, 11, 12, 13));
+}
+
+unittest
+{
+    // Concantation test: single, multiple & both
+    Array!int a;
+    a ~= 1;
+    a ~= 2;
+    a ~= 3;
+    assert(a == Array!int(1, 2, 3));
+    
+    Array!int b;
+    b ~= [1, 2, 3];
+    assert(b == Array!int(1, 2, 3));
+    
+    Array!int c;
+    c ~= 1 ~ [2, 3] ~ 4 ;
+    assert(c == Array!int(1, 2, 3, 4));
 }
 
 unittest
