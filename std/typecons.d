@@ -134,7 +134,8 @@ public:
         if (_p !is null) delete _p;
         _p = null;
     }
-    bool isEmpty() const
+    /** Returns whether the resource exists. */
+    @property bool isEmpty() const
     {
         return _p is null;
     }
