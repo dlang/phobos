@@ -8906,9 +8906,11 @@ unittest
 // Test on an input range
 unittest
 {
-    import std.stdio, std.file, std.path, std.conv;
-    auto name = buildPath(tempDir(), "test.std.range." ~ text(__LINE__));
+    import std.stdio, std.file, std.path, std.conv, std.uuid;
+    auto name = buildPath(tempDir(), "test.std.range.line-" ~ text(__LINE__) ~
+                          "." ~ randomUUID().toString());
     auto f = File(name, "w");
+    scope(exit) if (exists(name)) remove(name);
     // write a sorted range of lines to the file
     f.write("abc\ndef\nghi\njkl");
     f.close();
@@ -8916,6 +8918,7 @@ unittest
     auto r = assumeSorted(f.byLine());
     auto r1 = r.upperBound!(SearchPolicy.linear)("def");
     assert(r1.front == "ghi", r1.front);
+    f.close();
 }
 
 /**

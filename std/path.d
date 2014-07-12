@@ -2920,68 +2920,77 @@ string expandTilde(string inputPath)
         // Replaces the tilde from path with the path from the user database.
         static string expandFromDatabase(string path)
         {
-            assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
-            assert(path[0] == '~');
-
-            // Extract username, searching for path separator.
-            string username;
-            auto last_char = std.string.indexOf(path, dirSeparator[0]);
-
-            if (last_char == -1)
+            // Android doesn't really support this, as getpwnam_r
+            // isn't provided and getpwnam is basically just a stub
+            version(Android)
             {
-                username = path[1 .. $] ~ '\0';
-                last_char = username.length + 1;
+                return path;
             }
             else
             {
-                username = path[1 .. last_char] ~ '\0';
-            }
-            assert(last_char > 1);
+                assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
+                assert(path[0] == '~');
 
-            // Reserve C memory for the getpwnam_r() function.
-            passwd result;
-            int extra_memory_size = 5 * 1024;
-            void* extra_memory;
+                // Extract username, searching for path separator.
+                string username;
+                auto last_char = std.string.indexOf(path, dirSeparator[0]);
 
-            while (1)
-            {
-                extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
-                if (extra_memory == null)
-                    goto Lerror;
-
-                // Obtain info from database.
-                passwd *verify;
-                errno = 0;
-                if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
-                        &verify) == 0)
+                if (last_char == -1)
                 {
-                    // Failure if verify doesn't point at result.
-                    if (verify != &result)
-                        // username is not found, so return path[]
-                        goto Lnotfound;
-                    break;
+                    username = path[1 .. $] ~ '\0';
+                    last_char = username.length + 1;
+                }
+                else
+                {
+                    username = path[1 .. last_char] ~ '\0';
+                }
+                assert(last_char > 1);
+
+                // Reserve C memory for the getpwnam_r() function.
+                passwd result;
+                int extra_memory_size = 5 * 1024;
+                void* extra_memory;
+
+                while (1)
+                {
+                    extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
+                    if (extra_memory == null)
+                        goto Lerror;
+
+                    // Obtain info from database.
+                    passwd *verify;
+                    errno = 0;
+                    if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
+                            &verify) == 0)
+                    {
+                        // Failure if verify doesn't point at result.
+                        if (verify != &result)
+                            // username is not found, so return path[]
+                            goto Lnotfound;
+                        break;
+                    }
+
+                    if (errno != ERANGE)
+                        goto Lerror;
+
+                    // extra_memory isn't large enough
+                    core.stdc.stdlib.free(extra_memory);
+                    extra_memory_size *= 2;
                 }
 
-                if (errno != ERANGE)
-                    goto Lerror;
+                path = combineCPathWithDPath(result.pw_dir, path, last_char);
 
-                // extra_memory isn't large enough
+            Lnotfound:
                 core.stdc.stdlib.free(extra_memory);
-                extra_memory_size *= 2;
+                return path;
+
+            Lerror:
+                // Errors are going to be caused by running out of memory
+                if (extra_memory)
+                    core.stdc.stdlib.free(extra_memory);
+                onOutOfMemoryError();
+                return null;
             }
-
-            path = combineCPathWithDPath(result.pw_dir, path, last_char);
-
-        Lnotfound:
-            core.stdc.stdlib.free(extra_memory);
-            return path;
-
-        Lerror:
-            // Errors are going to be caused by running out of memory
-            if (extra_memory)
-                core.stdc.stdlib.free(extra_memory);
-            onOutOfMemoryError();
-            return null;
         }
 
         // Return early if there is no tilde in path.
@@ -3032,15 +3041,20 @@ unittest
         if (oldHome !is null) environment["HOME"] = oldHome;
         else environment.remove("HOME");
 
-        // Test user expansion for root. Are there unices without /root?
+        // Test user expansion for root, no /root on Android
         version (OSX)
+        {
             assert(expandTilde("~root") == "/var/root", expandTilde("~root"));
-        else
-            assert(expandTilde("~root") == "/root", expandTilde("~root"));
-        version (OSX)
             assert(expandTilde("~root/") == "/var/root/", expandTilde("~root/"));
+        }
+        else version (Android)
+        {
+        }
         else
+        {
+            assert(expandTilde("~root") == "/root", expandTilde("~root"));
             assert(expandTilde("~root/") == "/root/", expandTilde("~root/"));
+        }
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }
 }

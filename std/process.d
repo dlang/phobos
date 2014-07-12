@@ -2155,7 +2155,8 @@ private struct TestScript
         else version (Posix)
         {
             auto ext = "";
-            auto firstLine = "#!/bin/sh";
+            version(Android) auto firstLine = "#!" ~ userShell;
+            else auto firstLine = "#!/bin/sh";
         }
         path = uniqueTempPath()~ext;
         std.file.write(path, firstLine~std.ascii.newline~code~std.ascii.newline);
