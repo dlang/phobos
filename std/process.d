@@ -719,11 +719,7 @@ private void setCLOEXEC(int fd, bool on)
         else    flags &= ~(cast(typeof(flags)) FD_CLOEXEC);
         flags = fcntl(fd, F_SETFD, flags);
     }
-    if (flags == -1)
-    {
-        throw new StdioException("Failed to "~(on ? "" : "un")
-                                 ~"set close-on-exec flag on file descriptor");
-    }
+    assert (flags != -1 || .errno == EBADF);
 }
 
 unittest // Command line arguments in spawnProcess().
