@@ -2075,16 +2075,16 @@ class ProcessException : Exception
                                          size_t line = __LINE__)
     {
         import core.stdc.errno;
-        import std.c.string;
+        import core.stdc.string;
         version (linux)
         {
             char[1024] buf;
             auto errnoMsg = to!string(
-                std.c.string.strerror_r(errno, buf.ptr, buf.length));
+                core.stdc.string.strerror_r(errno, buf.ptr, buf.length));
         }
         else
         {
-            auto errnoMsg = to!string(std.c.string.strerror(errno));
+            auto errnoMsg = to!string(core.stdc.string.strerror(errno));
         }
         auto msg = customMsg.empty ? errnoMsg
                                    : customMsg ~ " (" ~ errnoMsg ~ ')';
@@ -2962,7 +2962,7 @@ import std.c.stdlib;
 import core.stdc.errno;
 import core.thread;
 import std.c.process;
-import std.c.string;
+import core.stdc.string;
 
 version (Windows)
 {

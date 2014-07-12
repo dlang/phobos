@@ -65,7 +65,7 @@
  */
 module std.variant;
 
-import std.c.string, std.conv, std.exception, std.traits, std.typecons,
+import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
     std.typetuple;
 
 @trusted:

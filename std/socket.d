@@ -45,7 +45,7 @@
 
 module std.socket;
 
-import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv;
+import core.stdc.stdint, core.stdc.string, std.string, std.c.stdlib, std.conv;
 
 import core.stdc.config;
 import core.time : dur, Duration;

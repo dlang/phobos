@@ -143,7 +143,7 @@ else version(Posix)
 
 version(unittest)
 {
-    import std.c.string;
+    import core.stdc.string;
     import std.stdio;
 }
 
