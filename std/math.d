@@ -61,6 +61,12 @@
  */
 module std.math;
 
+version (Win64)
+{
+    version (D_InlineAsm_X86_64)
+        version = Win64_DMD_InlineAsm;
+}
+
 import core.stdc.math;
 import std.traits;
 
@@ -2273,7 +2279,7 @@ unittest
  */
 int ilogb(real x)  @trusted nothrow @nogc
 {
-    version (Win64)
+    version (Win64_DMD_InlineAsm)
     {
         asm
         {
@@ -2823,7 +2829,7 @@ unittest
  */
 real logb(real x) @trusted nothrow @nogc
 {
-    version (Win64)
+    version (Win64_DMD_InlineAsm)
     {
         asm
         {
@@ -2947,7 +2953,10 @@ real cbrt(real x) @trusted nothrow @nogc
 {
     version (Win64)
     {
-        return copysign(exp2(yl2x(fabs(x), 1.0L/3.0L)), x);
+        version (INLINE_YL2X)
+            return copysign(exp2(yl2x(fabs(x), 1.0L/3.0L)), x);
+        else
+            return core.stdc.math.cbrtl(x);
     }
     else
         return core.stdc.math.cbrtl(x);
@@ -3077,7 +3086,7 @@ unittest
  */
 real ceil(real x) @trusted pure nothrow @nogc
 {
-    version (Win64)
+    version (Win64_DMD_InlineAsm)
     {
         asm
         {
@@ -3186,7 +3195,7 @@ unittest
  */
 real floor(real x) @trusted pure nothrow @nogc
 {
-    version (Win64)
+    version (Win64_DMD_InlineAsm)
     {
         asm
         {
@@ -3512,7 +3521,7 @@ version(Posix)
  */
 real trunc(real x) @trusted nothrow @nogc
 {
-    version (Win64)
+    version (Win64_DMD_InlineAsm)
     {
         asm
         {
