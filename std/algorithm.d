@@ -13002,7 +13002,11 @@ auto cartesianProduct(RR...)(RR ranges)
         {
             ranges = _ranges;
             foreach (i, r; ranges)
+            {
                 current[i] = r.save;
+                if (current[i].empty)
+                    empty = true;
+            }
         }
         @property auto front()
         {
@@ -13036,6 +13040,22 @@ auto cartesianProduct(RR...)(RR ranges)
     static assert(isForwardRange!Result);
 
     return Result(ranges);
+}
+
+unittest
+{
+    // Issue 10693: cartesian product of empty ranges should be empty.
+    int[] a, b, c, d, e;
+    auto cprod = cartesianProduct(a,b,c,d,e);
+    assert(cprod.empty);
+    foreach (_; cprod) {} // should not crash
+
+    // Test case where only one of the ranges is empty: the result should still
+    // be empty.
+    int[] p=[1], q=[];
+    auto cprod2 = cartesianProduct(p,p,p,q,p);
+    assert(cprod2.empty);
+    foreach (_; cprod2) {} // should not crash
 }
 
 /// ditto
