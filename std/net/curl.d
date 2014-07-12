@@ -2610,7 +2610,7 @@ struct HTTP
       */
     @property void postData(const(void)[] data)
     {
-        _postData(data, "application/octet-stream");
+        setPostData(data, "application/octet-stream");
     }
 
     /** Specifying data to post when not using the onSend callback.
@@ -2629,11 +2629,28 @@ struct HTTP
       */
     @property void postData(const(char)[] data)
     {
-        _postData(data, "text/plain");
+        setPostData(data, "text/plain");
     }
 
-    // Helper for postData property
-    private void _postData(const(void)[] data, string contentType)
+    /**
+     * Specify data to post when not using the onSend callback, with
+     * user-specified Content-Type.
+     * Params:
+     *	data = Data to post.
+     *	contentType = MIME type of the data, for example, "text/plain" or
+     *	    "application/octet-stream". See also:
+     *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
+     *      Internet media type) on Wikipedia.
+     *-----
+     * import std.net.curl;
+     * auto http = HTTP("http://onlineform.example.com");
+     * auto data = "app=login&username=bob&password=s00perS3kret";
+     * http.setPostData(data, "application/x-www-form-urlencoded");
+     * http.onReceive = (ubyte[] data) { return data.length; };
+     * http.perform();
+     *-----
+     */
+    void setPostData(const(void)[] data, string contentType)
     {
         // cannot use callback when specifying data directly so it is disabled here.
         p.curl.clear(CurlOption.readfunction);
