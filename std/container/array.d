@@ -826,8 +826,6 @@ $(D r)
         length = offset1 + tailLength;
         return this[length - tailLength .. length];
     }
-    /// ditto
-    alias stableLinearRemove = remove;
 }
 
 unittest
@@ -915,9 +913,6 @@ unittest
 {
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6, 7, 8);
     a.linearRemove(a[4 .. 6]);
-    auto b = Array!int(0, 1, 2, 3, 6, 7, 8);
-    //writeln(a.length);
-    //foreach (e; a) writeln(e);
     assert(a == Array!int(0, 1, 2, 3, 6, 7, 8));
 }
 
@@ -1159,7 +1154,7 @@ unittest //6998
     assert(i == 0);
     auto c = new C();
     assert(i == 1);
-    
+
     //scope
     {
         auto arr = Array!C(c);
@@ -1963,8 +1958,6 @@ if (is(Unqual!T == bool))
         length = length - r.length;
         return this[r._a .. length];
     }
-    /// ditto
-    alias stableLinearRemove = linearRemove;
 }
 
 unittest
