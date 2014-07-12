@@ -3229,6 +3229,7 @@ struct SMTP
     private void initialize()
     {
         p.curl.initialize();
+        p.curl.set(CurlOption.upload, 1L);
         dataTimeout = _defaultDataTimeout;
         verifyPeer = true;
         verifyHost = true;
