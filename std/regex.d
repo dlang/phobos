@@ -257,9 +257,9 @@ import std.array, std.algorithm, std.range,
        std.uni, std.utf, std.format, std.typecons, std.bitmanip,
        std.functional, std.exception;
 
-import core.bitop, core.stdc.string, core.stdc.stdlib;
+import core.bitop, core.stdc.string, core.stdc.stdlib, core.exception;
 static import std.ascii;
-import std.string : representation;
+import std.string : representation, format;
 
 debug(std_regex_parser) import std.stdio; //trace parser progress
 debug(std_regex_search) import std.stdio; //trace prefix search engine
@@ -6627,6 +6627,250 @@ public class RegexException : Exception
     {//@@@BUG@@@ Exception constructor is not @safe
         super(msg, file, line);
     }
+}
+
+
+@system:
+
+/+
+    Runs a delegate with the Captures of a regex. Each capture group will be
+    transferred as a parameter, after being converted to the type of the
+    parameter.
+
+    Params:
+        captures = The regex's captures.
+        dlg      = The delegate to call.
++/
+private auto callWithCaptures(CapturesType, DelegateType)(CapturesType captures, DelegateType dlg)
+{
+    alias dlgPatameters = ParameterTypeTuple!dlg;
+    immutable delegateInvocation = {
+        auto argsBuilder = appender!(string[])();
+        foreach(i; 0 .. arity!dlg)
+        {
+            argsBuilder.put("captures[%d].to!(dlgPatameters[%s])()".format(i + 1, i));
+        }
+        return "dlg(%s)".format(argsBuilder.data().join(", "));
+    }();
+
+    return mixin(delegateInvocation);
+}
+
+/++
+    Tries to match text with multiple regular expressions. On the first match,
+    calls the delegate associated with the regular expression that matched.
+
+    A last delegate with no arguments and no associated regular expression will
+    be called if no regular expression matches the string. If no such delegate
+    is supplied and no regular expression matches the string, a SwitchError
+    will be thrown.
+
+    If a delegate's return type is void, the delegate must throw an exception,
+    unless all the delegates are void. In that case, regexSwitch itself will
+    return void.
+
+    Params:
+        PatternsAndHandlers = Pairs of regular expressions and delegates.
+        input    = The text to match with.
++/
+public template regexSwitch(PatternsAndHandlers...)
+{
+    auto regexSwitch(T)(T input)
+    {
+        // Check to see if all handlers return void.
+        enum areAllHandlersVoidResult={
+            foreach(index, handler; PatternsAndHandlers)
+            {
+                static if(index % 2 == 1)
+                {
+                    if(!is(ReturnType!handler == void))
+                    {
+                        return false;
+                    }
+                }
+            }
+            // If the template arguments' length is odd, the last one is also an handler.
+            static if(PatternsAndHandlers.length % 2 == 1)
+            {
+                return is(ReturnType!(PatternsAndHandlers[$ - 1]) == void);
+            }
+            else
+            {
+                return true;
+            }
+        }();
+
+        foreach(index, pattern;PatternsAndHandlers)
+        {
+            // The patterns are the template arguments at even positions, but
+            // if the number or template arguments is odd, the last one is a
+            // handler, not a pattern.
+            static if(index % 2 == 0 && index < PatternsAndHandlers.length - 1)
+            {
+                auto matches = match(input, pattern);
+                if(!matches.empty())
+                {
+                    static if(is(ReturnType!(PatternsAndHandlers[index + 1]) == void))
+                    {
+                        callWithCaptures(matches.captures, PatternsAndHandlers[index + 1]);
+                        static if(areAllHandlersVoidResult)
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            throw new SwitchError("Handlers that return void should throw");
+                        }
+                    }
+                    else
+                    {
+                        return callWithCaptures(matches.captures, PatternsAndHandlers[index + 1]);
+                    }
+                }
+            }
+        }
+
+        // If we couldn't find a match, check for a default handler.
+        static if(PatternsAndHandlers.length % 2 == 1)
+        {
+            static if(is(ReturnType!(PatternsAndHandlers[$ - 1]) == void))
+            {
+                PatternsAndHandlers[$ - 1]();
+                static if(areAllHandlersVoidResult)
+                {
+                    return;
+                }
+                else
+                {
+                    throw new SwitchError("Handlers that return void should throw");
+                }
+            }
+            else
+            {
+                return PatternsAndHandlers[$ - 1]();
+            }
+        }
+        else
+        {
+            throw new SwitchError("Match nonexhaustive - input not matched by any pattern");
+        }
+    }
+}
+
+///
+unittest
+{
+    //Handling input strings without a standard format.
+    enum Weekday
+    {
+        Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
+    }
+
+    struct Schedule
+    {
+        Weekday day;
+        int hour;
+    }
+
+    assert(equal(
+                [
+                    Schedule(Weekday.Sunday, 1),
+                    Schedule(Weekday.Monday, 14),
+                    Schedule(Weekday.Tuesday, 3),
+                    Schedule(Weekday.Wednesday, 4),
+                    Schedule(Weekday.Thursday, 17),
+                    Schedule(Weekday.Friday, 6),
+                    Schedule(Weekday.Sunday, 0),
+                ],
+                [
+                    "Sunday 1AM",
+                    "Monday 2PM",
+                    "Tuesday 3",
+                    "4AM Wednesday",
+                    "5PM Thursday",
+                    "6 Friday",
+                    "bla bla bla",
+                ].map!(regexSwitch!(
+                        `(\w+) (\d+)AM`, (Weekday day, int hour) => Schedule(day, hour % 12),
+                        `(\w+) (\d+)PM`, (Weekday day, int hour) => Schedule(day, hour % 12 + 12),
+                        `(\w+) (\d+)`, (Weekday day, int hour) => Schedule(day, hour),
+                        `(\d+)AM (\w+)`, (int hour, Weekday day) => Schedule(day, hour % 12),
+                        `(\d+)PM (\w+)`, (int hour, Weekday day) => Schedule(day, hour % 12 + 12),
+                        `(\d+) (\w+)`, (int hour, Weekday day) => Schedule(day, hour),
+                        () => Schedule(Weekday.Sunday, 0),
+                        ))()));
+
+
+    // Throwing exception from handlers that handle bad formats.
+    assertThrown!Exception(
+            "1 2 not-a-number".regexSwitch!(
+                `(\d+) (\d+) (\d+)`,(int num1, int num2, int num3)=>[num1, num2, num3],
+                (){throw new Exception("Bad format!");},
+                )());
+
+
+    // Using the version where all handlers are void.
+    foreach(text; ["a 1", "b 2", "c 3"])
+    {
+        text.regexSwitch!(
+                `a (\d+)`, (int num){
+                    assert(num == 1);
+                },
+                `b (\d+)`, (int num){
+                    assert(num == 2);
+                },
+                `c (\d+)`, (int num){
+                    assert(num == 3);
+                },
+                )();
+    }
+}
+
+unittest//other checks for regexSwitch
+{
+    //Using with single pattern:
+    assert("1 true hello".regexSwitch!(
+                `(\d+) (\w+) (.*)$`, (int a, bool b, string c) => tuple(a, b, c),
+                )() == tuple(1, true, "hello"));
+
+    //If no pattern matches, it should throw an exception:
+    assert("2 * 3".regexSwitch!(
+                `(\d+) \+ (\d+)`, (int a, int b) => a + b,
+                `(\d+) \- (\d+)`, (int a, int b) => a - b,
+                )().collectException!SwitchError() !is null);
+
+    //Unless a default delegate is supplied:
+    assert("2 * 3".regexSwitch!(
+                `(\d+) \+ (\d+)`, (int a, int b) => a + b,
+                `(\d+) \- (\d+)`, (int a, int b) => a - b,
+                () => 0,
+                )() == 0);
+
+    //If no patterns are given, it should throw an exception:
+    assert("bla bla bla".regexSwitch!()().collectException!SwitchError() !is null);
+
+    //Each pattern must have an handler:
+    static assert(!__traits(compiles, "yada yada yada".regexSwitch!(
+                    `(\d+)`, (int x) => x,
+                    `.*`,
+                    )()));
+    static assert(!__traits(compiles, "yada yada yada".regexSwitch!(
+                    `(\d+)`,
+                    `.*`,
+                    )()));
+    static assert(!__traits(compiles, "yada yada yada".regexSwitch!(
+                    `.*`,
+                    )()));
+
+
+    //Test for wstring and dstring
+    assert("number 12"w.regexSwitch!(
+                `number (\d+)`w, (int number) => number,
+                )() == 12);
+
+    assert("number 12"d.regexSwitch!(
+                `number (\d+)`d, (int number) => number,
+                )() == 12);
 }
 
 //--------------------- TEST SUITE ---------------------------------
