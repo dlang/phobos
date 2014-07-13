@@ -7117,17 +7117,9 @@ MinType!T min(T...)(T args)
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
     //Do the "min" proper with a and b
-    static if (isIntegral!T0 && isIntegral!T1 &&
-               (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
-    {
-        static if (mostNegative!T0 < 0)
-            immutable chooseB = b < a && a > 0;
-        else
-            immutable chooseB = b < a || b < 0;
-    }
-    else
-        immutable chooseB = b < a;
-    return cast(typeof(return)) (chooseB ? b : a);
+    import std.functional : lessThan;
+    immutable chooseA = lessThan!(T0, T1)(a, b);
+    return cast(typeof(return)) (chooseA ? a : b);
 }
 
 unittest
@@ -7209,16 +7201,8 @@ MaxType!T max(T...)(T args)
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
     //Do the "max" proper with a and b
-    static if (isIntegral!T0 && isIntegral!T1 &&
-               (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
-    {
-        static if (mostNegative!T0 < 0)
-            immutable chooseB = b > a || a < 0;
-        else
-            immutable chooseB = b > a && b > 0;
-    }
-    else
-        immutable chooseB = b > a;
+    import std.functional : lessThan;
+    immutable chooseB = lessThan!(T0, T1)(a, b);
     return cast(typeof(return)) (chooseB ? b : a);
 }
 
