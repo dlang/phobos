@@ -7601,44 +7601,37 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         InitMatrix();
     }
 
-    CostType distance(Range s, Range t, CostType slen, CostType tlen)
+    CostType distance(Range s, Range t)
     {
-        CostType lastdiag, olddiag;
-        AllocMatrix(slen + 1, 1);
-        foreach (y; 1 .. slen + 1)
+        auto slen = walkLength(s.save), tlen = walkLength(t.save);
+        AllocMatrix(slen + 1, tlen + 1);
+        foreach (i; 1 .. rows);
         {
-            _matrix[y] = y;
-        }
-        foreach (x; 1 .. tlen + 1)
-        {
-            auto tfront = t.front;
-            auto ss = s.save;
-            _matrix[0] = x;
-            lastdiag = x - 1;
-            foreach (y; 1 .. rows)
+            auto sfront = s.front;
+            s.popFront();
+            auto tt = t;
+            foreach (j; 1 .. cols)
             {
-                olddiag = _matrix[y];
-                auto cSub = lastdiag + (equals(ss.front, tfront) ? 0 : _substitutionIncrement);
-                ss.popFront();
-                auto cIns = _matrix[y - 1] + _insertionIncrement;
-                auto cDel = _matrix[y] + _deletionIncrement;
+                auto cSub = matrix(i - 1,j - 1)
+                    + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
+                tt.popFront();
+                auto cIns = matrix(i,j - 1) + _insertionIncrement;
+                auto cDel = matrix(i - 1,j) + _deletionIncrement;
                 switch (min_index(cSub, cIns, cDel))
                 {
-                case 0:
-                    _matrix[y] = cSub;
-                    break;
-                case 1:
-                    _matrix[y] = cIns;
-                    break;
-                default:
-                    _matrix[y] = cDel;
-                    break;
+                    case 0:
+                        matrix(i,j) = cSub;
+                        break;
+                    case 1:
+                        matrix(i,j) = cIns;
+                        break;
+                    default:
+                        matrix(i,j) = cDel;
+                        break;
                 }
-                lastdiag = olddiag;
             }
-            t.popFront();
         }
-        return _matrix[slen];
+        return matrix(slen,tlen);
     }
 
     EditOp[] path(Range s, Range t)
@@ -7751,6 +7744,46 @@ private:
         }
         return matrix(slen,tlen);
     }
+
+    CostType distanceLowMem(Range s, Range t, CostType slen, CostType tlen)
+    {
+        CostType lastdiag, olddiag;
+        AllocMatrix(slen + 1, 1);
+        foreach (y; 1 .. slen + 1)
+        {
+            _matrix[y] = y;
+        }
+        foreach (x; 1 .. tlen + 1)
+        {
+            auto tfront = t.front;
+            auto ss = s.save;
+            _matrix[0] = x;
+            lastdiag = x - 1;
+            foreach (y; 1 .. rows)
+            {
+                olddiag = _matrix[y];
+                auto cSub = lastdiag + (equals(ss.front, tfront) ? 0 : _substitutionIncrement);
+                ss.popFront();
+                auto cIns = _matrix[y - 1] + _insertionIncrement;
+                auto cDel = _matrix[y] + _deletionIncrement;
+                switch (min_index(cSub, cIns, cDel))
+                {
+                case 0:
+                    _matrix[y] = cSub;
+                    break;
+                case 1:
+                    _matrix[y] = cIns;
+                    break;
+                default:
+                    _matrix[y] = cDel;
+                    break;
+                }
+                lastdiag = olddiag;
+            }
+            t.popFront();
+        }
+        return _matrix[slen];
+    }
 }
 
 /**
@@ -7771,11 +7804,11 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     auto tlen = walkLength(t.save);
     if (slen > tlen)
     {
-        return lev.distance(s, t, slen, tlen);
+        return lev.distanceLowMem(s, t, slen, tlen);
     }
     else
     {
-        return lev.distance(t, s, tlen, slen);
+        return lev.distanceLowMem(t, s, tlen, slen);
     }
 }
 
