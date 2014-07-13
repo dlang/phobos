@@ -264,6 +264,8 @@ class OutBuffer
         char[128] buffer;
         int count;
 
+        // Can't use `tempCString()` here as it will result in compilation error:
+        // "cannot mix core.std.stdlib.alloca() and exception handling".
         auto f = toStringz(format);
         auto p = buffer.ptr;
         auto psize = buffer.length;

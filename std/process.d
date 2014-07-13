@@ -107,6 +107,7 @@ import std.path;
 import std.stdio;
 import std.string;
 import std.internal.processinit;
+import std.internal.cstring;
 
 
 // When the DMC runtime is used, we have to use some custom functions
@@ -388,7 +389,7 @@ private Pid spawnProcessImpl(in char[][] args,
     if (workDir)
     {
         import core.sys.posix.fcntl;
-        workDirFD = open(toStringz(workDir), O_RDONLY);
+        workDirFD = open(workDir.tempCString(), O_RDONLY);
         if (workDirFD < 0)
             throw ProcessException.newFromErrno("Failed to open working directory");
         stat_t s;
@@ -503,8 +504,6 @@ private Pid spawnProcessImpl(in char[] commandLine,
     import core.exception: RangeError;
 
     if (commandLine.empty) throw new RangeError("Command line is empty");
-    auto commandz = toUTFz!(wchar*)(commandLine);
-    auto workDirz = workDir is null ? null : toUTFz!(wchar*)(workDir);
 
     // Prepare environment.
     auto envz = createEnv(env, !(config & Config.newEnv));
@@ -552,8 +551,8 @@ private Pid spawnProcessImpl(in char[] commandLine,
     DWORD dwCreationFlags =
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
-    if (!CreateProcessW(null, commandz, null, null, true, dwCreationFlags,
-                        envz, workDirz, &startinfo, &pi))
+    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
+                        envz, workDir.tempCStringW(), &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
@@ -702,9 +701,9 @@ private string searchPathFor(in char[] executable)
 // Checks whether the file exists and can be executed by the
 // current user.
 version (Posix)
-private bool isExecutable(in char[] path) @trusted //TODO: @safe nothrow
+private bool isExecutable(in char[] path) @trusted nothrow @nogc //TODO: @safe
 {
-    return (access(toStringz(path), X_OK) == 0);
+    return (access(path.tempCString(), X_OK) == 0);
 }
 
 version (Posix) unittest
@@ -2197,7 +2196,7 @@ private struct TestScript
         version (Posix)
         {
             import core.sys.posix.sys.stat;
-            chmod(toStringz(path), octal!777);
+            chmod(path.tempCString(), octal!777);
         }
     }
 
@@ -2780,7 +2779,7 @@ static:
     {
         version (Posix)
         {
-            if (core.sys.posix.stdlib.setenv(toStringz(name), toStringz(value), 1) != -1)
+            if (core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), 1) != -1)
             {
                 return value;
             }
@@ -2795,7 +2794,7 @@ static:
         else version (Windows)
         {
             enforce(
-                SetEnvironmentVariableW(toUTF16z(name), toUTF16z(value)),
+                SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()),
                 sysErrorString(GetLastError())
             );
             return value;
@@ -2809,10 +2808,10 @@ static:
     If the variable isn't in the environment, this function returns
     successfully without doing anything.
     */
-    void remove(in char[] name) @trusted // TODO: @safe nothrow
+    void remove(in char[] name) @trusted nothrow @nogc // TODO: @safe
     {
-        version (Windows)    SetEnvironmentVariableW(toUTF16z(name), null);
-        else version (Posix) core.sys.posix.stdlib.unsetenv(toStringz(name));
+        version (Windows)    SetEnvironmentVariableW(name.tempCStringW(), null);
+        else version (Posix) core.sys.posix.stdlib.unsetenv(name.tempCString());
         else static assert(0);
     }
 
@@ -2890,8 +2889,8 @@ private:
     {
         version (Windows)
         {
-            const namez = toUTF16z(name);
-            immutable len = varLength(namez);
+            const namezTmp = name.tempCStringW();
+            immutable len = varLength(namezTmp);
             if (len == 0) return false;
             if (len == 1)
             {
@@ -2900,13 +2899,13 @@ private:
             }
 
             auto buf = new WCHAR[len];
-            GetEnvironmentVariableW(namez, buf.ptr, to!DWORD(buf.length));
+            GetEnvironmentVariableW(namezTmp, buf.ptr, to!DWORD(buf.length));
             value = toUTF8(buf[0 .. $-1]);
             return true;
         }
         else version (Posix)
         {
-            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
+            const vz = core.sys.posix.stdlib.getenv(name.tempCString());
             if (vz == null) return false;
             auto v = vz[0 .. strlen(vz)];
 
@@ -3036,8 +3035,7 @@ deprecated("Please use wait(spawnShell(command)) or executeShell(command) instea
 int system(string command)
 {
     if (!command.ptr) return std.c.process.system(null);
-    const commandz = toStringz(command);
-    immutable status = std.c.process.system(commandz);
+    immutable status = std.c.process.system(command.tempCString());
     if (status == -1) return status;
     version (Posix)
     {
@@ -3073,7 +3071,7 @@ private void toAStringz(in string[] a, const(char)**az)
 //
 //      toAStringz(argv, argv_);
 //
-//      return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
+//      return std.c.process.spawnvp(mode, pathname.tempCString(), argv_);
 //    }
 //}
 
@@ -3091,11 +3089,11 @@ int spawnvp(int mode, string pathname, string[] argv)
 
     version (Posix)
     {
-        return _spawnvp(mode, toStringz(pathname), argv_);
+        return _spawnvp(mode, pathname.tempCString(), argv_);
     }
     else version (Windows)
     {
-        return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
+        return std.c.process.spawnvp(mode, pathname.tempCString(), argv_);
     }
     else
         static assert(0, "spawnvp not implemented for this OS.");
@@ -3284,7 +3282,7 @@ private int execv_(in string pathname, in string[] argv)
 
     toAStringz(argv, argv_);
 
-    return std.c.process.execv(toStringz(pathname), argv_);
+    return std.c.process.execv(pathname.tempCString(), argv_);
 }
 
 private int execve_(in string pathname, in string[] argv, in string[] envp)
@@ -3295,7 +3293,7 @@ private int execve_(in string pathname, in string[] argv, in string[] envp)
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
 
-    return std.c.process.execve(toStringz(pathname), argv_, envp_);
+    return std.c.process.execve(pathname.tempCString(), argv_, envp_);
 }
 
 private int execvp_(in string pathname, in string[] argv)
@@ -3304,7 +3302,7 @@ private int execvp_(in string pathname, in string[] argv)
 
     toAStringz(argv, argv_);
 
-    return std.c.process.execvp(toStringz(pathname), argv_);
+    return std.c.process.execvp(pathname.tempCString(), argv_);
 }
 
 private int execvpe_(in string pathname, in string[] argv, in string[] envp)
@@ -3350,7 +3348,7 @@ else version(Windows)
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
 
-    return std.c.process.execvpe(toStringz(pathname), argv_, envp_);
+    return std.c.process.execvpe(pathname.tempCString(), argv_, envp_);
 }
 else
 {
@@ -3457,11 +3455,11 @@ $(RED Deprecated. Please use $(LREF environment.opIndex) or
 */
 
 deprecated("Please use environment.opIndex or environment.get instead")
-string getenv(in char[] name)
+string getenv(in char[] name) nothrow
 {
     // Cache the last call's result
     static string lastResult;
-    auto p = core.stdc.stdlib.getenv(toStringz(name));
+    auto p = core.stdc.stdlib.getenv(name.tempCString());
     if (!p) return null;
     auto value = p[0 .. strlen(p)];
     if (value == lastResult) return lastResult;
@@ -3484,7 +3482,7 @@ else version(Posix)
     void setenv(in char[] name, in char[] value, bool overwrite)
 {
     errnoEnforce(
-        std.c.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
+        std.c.stdlib.setenv(name.tempCString(), value.tempCString(), overwrite) == 0);
 }
 
 /**
@@ -3499,7 +3497,7 @@ else version(Posix)
     deprecated("Please use environment.remove instead")
     void unsetenv(in char[] name)
 {
-    errnoEnforce(std.c.stdlib.unsetenv(toStringz(name)) == 0);
+    errnoEnforce(std.c.stdlib.unsetenv(name.tempCString()) == 0);
 }
 
 version (Posix) deprecated unittest
@@ -3529,7 +3527,7 @@ version (Windows)
 
     void browse(string url)
     {
-        ShellExecuteW(null, "open", toUTF16z(url), null, null, SW_SHOWNORMAL);
+        ShellExecuteW(null, "open", url.tempCStringW(), null, null, SW_SHOWNORMAL);
     }
 }
 else version (OSX)
@@ -3546,13 +3544,13 @@ else version (OSX)
         if (browser)
         {   browser = strdup(browser);
             args[0] = browser;
-            args[1] = toStringz(url);
+            args[1] = url.tempCString();
             args[2] = null;
         }
         else
         {
             args[0] = "open".ptr;
-            args[1] = toStringz(url);
+            args[1] = url.tempCString();
             args[2] = null;
         }
 
@@ -3586,7 +3584,7 @@ else version (Posix)
             //args[0] = "x-www-browser".ptr;  // doesn't work on some systems
             args[0] = "xdg-open".ptr;
 
-        args[1] = toStringz(url);
+        args[1] = url.tempCString();
         args[2] = null;
 
         auto childpid = fork();

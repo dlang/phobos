@@ -74,7 +74,7 @@ version(Windows)
     // encoded in CP_ACP on Windows instead of UTF-8.
     /+ Waiting for druntime pull 299
     +/
-    extern (C) nothrow FILE* _wfopen(in wchar* filename, in wchar* mode);
+    extern (C) nothrow @nogc FILE* _wfopen(in wchar* filename, in wchar* mode);
 
     import core.sys.windows.windows : HANDLE;
 }
@@ -439,7 +439,7 @@ Throws: $(D ErrnoException) in case of error.
 
     package void fdopen(int fd, in char[] stdioOpenmode, string name) @trusted
     {
-        import std.string : toStringz;
+        import std.internal.cstring : tempCString;
         import std.exception : errnoEnforce;
 
         detach();
@@ -450,7 +450,7 @@ Throws: $(D ErrnoException) in case of error.
             // mucking with the file descriptor.  POSIX standard requires the
             // new fdopen'd file to retain the given file descriptor's
             // position.
-            auto fp = core.stdc.stdio.fopen("NUL", toStringz(stdioOpenmode));
+            auto fp = core.stdc.stdio.fopen("NUL", stdioOpenmode.tempCString());
             errnoEnforce(fp, "Cannot open placeholder NUL stream");
             FLOCK(fp);
             auto iob = cast(_iobuf*)fp;
@@ -462,9 +462,9 @@ Throws: $(D ErrnoException) in case of error.
         else
         {
             version (Windows) // MSVCRT
-                auto fp = _fdopen(fd, toStringz(stdioOpenmode));
+                auto fp = _fdopen(fd, stdioOpenmode.tempCString());
             else
-                auto fp = .fdopen(fd, toStringz(stdioOpenmode));
+                auto fp = .fdopen(fd, stdioOpenmode.tempCString());
             errnoEnforce(fp);
         }
         this = File(fp, name);
@@ -3155,14 +3155,14 @@ unittest
  * (to $(D _wfopen) on Windows)
  * with appropriately-constructed C-style strings.
  */
-private FILE* fopen(in char[] name, in char[] mode = "r") @trusted
+private FILE* fopen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
 {
-    import std.string : toStringz;
+    import std.internal.cstring : tempCString;
 
     version(Windows)
     {
-        import std.utf : toUTF16z;
-        return _wfopen(toUTF16z(name), toUTF16z(mode));
+        import std.internal.cstring : tempCStringW;
+        return _wfopen(name.tempCStringW(), mode.tempCStringW());
     }
     else version(Posix)
     {
@@ -3174,11 +3174,11 @@ private FILE* fopen(in char[] name, in char[] mode = "r") @trusted
          * probably isn't available. Do not use the old transitional API
          * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
          */
-        return core.sys.posix.stdio.fopen(toStringz(name), toStringz(mode));
+        return core.sys.posix.stdio.fopen(name.tempCString(), mode.tempCString());
     }
     else
     {
-        return core.stdc.stdio.fopen(toStringz(name), toStringz(mode));
+        return core.stdc.stdio.fopen(name.tempCString(), mode.tempCString());
     }
 }
 
@@ -3188,11 +3188,11 @@ version (Posix)
      * Convenience function that forwards to $(D std.c.stdio.popen)
      * with appropriately-constructed C-style strings.
      */
-    FILE* popen(in char[] name, in char[] mode = "r") @trusted
+    FILE* popen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
     {
-        import std.string : toStringz;
+        import std.internal.cstring : tempCString;
 
-        return core.sys.posix.stdio.popen(toStringz(name), toStringz(mode));
+        return core.sys.posix.stdio.popen(name.tempCString(), mode.tempCString());
     }
 }
 
@@ -4101,9 +4101,9 @@ version(linux)
         import core.stdc.string : memcpy;
         import std.conv : to;
         import std.exception : enforce;
-        import std.string : toStringz;
+        import std.internal.cstring : tempCString;
 
-        auto h = enforce( sock.gethostbyname(std.string.toStringz(host)),
+        auto h = enforce( sock.gethostbyname(host.tempCString()),
             new StdioException("gethostbyname"));
 
         int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);

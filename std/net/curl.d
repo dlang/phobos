@@ -170,6 +170,8 @@ import std.traits;
 import std.typecons;
 import std.typetuple;
 
+import std.internal.cstring;
+
 public import etc.c.curl : CurlOption;
 
 version(unittest)
@@ -2500,7 +2502,7 @@ struct HTTP
             return setUserAgent(value);
         string nv = format("%s: %s", name, value);
         p.headersOut = curl_slist_append(p.headersOut,
-                                         cast(char*) toStringz(nv));
+                                         nv.tempCString().buffPtr);
         p.curl.set(CurlOption.httpheader, p.headersOut);
     }
 
@@ -3120,7 +3122,7 @@ struct FTP
     void addCommand(const(char)[] command)
     {
         p.commands = curl_slist_append(p.commands,
-                                       cast(char*) toStringz(command));
+                                       command.tempCString().buffPtr);
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
@@ -3449,7 +3451,7 @@ struct SMTP
         {
             recipients_list =
                 curl_slist_append(recipients_list,
-                                  cast(char*)toStringz(recipient));
+                                  recipient.tempCString().buffPtr);
         }
         p.curl.set(CurlOption.mail_rcpt, recipients_list);
     }
@@ -3686,7 +3688,7 @@ struct Curl
     void set(CurlOption option, const(char)[] value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, toStringz(value)));
+        _check(curl_easy_setopt(this.handle, option, value.tempCString().buffPtr));
     }
 
     /**

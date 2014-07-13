@@ -30,6 +30,8 @@
 module std.stream;
 
 
+import std.internal.cstring;
+
 /* Class structure:
  *  InputStream       interface for reading
  *  OutputStream      interface for writing
@@ -1172,6 +1174,8 @@ class Stream : InputStream, OutputStream {
     // by Walter's permission
     char[1024] buffer;
     char* p = buffer.ptr;
+    // Can't use `tempCString()` here as it will result in compilation error:
+    // "cannot mix core.std.stdlib.alloca() and exception handling".
     auto f = toStringz(format);
     size_t psize = buffer.length;
     size_t count;
@@ -1988,12 +1992,12 @@ class File: Stream {
     readable = cast(bool)(mode & FileMode.In);
     writeable = cast(bool)(mode & FileMode.Out);
     version (Windows) {
-      hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
+      hFile = CreateFileW(filename.tempCStringW(), access, share,
                           null, createMode, 0, null);
       isopen = hFile != INVALID_HANDLE_VALUE;
     }
     version (Posix) {
-      hFile = core.sys.posix.fcntl.open(toStringz(filename), access | createMode, share);
+      hFile = core.sys.posix.fcntl.open(filename.tempCString(), access | createMode, share);
       isopen = hFile != -1;
     }
     if (!isopen)
@@ -2145,6 +2149,8 @@ class File: Stream {
 
   // run a few tests
   unittest {
+    import std.internal.cstring : tempCString;
+
     File file = new File;
     int i = 666;
     auto stream_file = std.file.deleteme ~ "-stream.$$$";
@@ -2215,7 +2221,7 @@ class File: Stream {
     assert( lines[2] == "");
     assert( lines[3] == "That was blank");
     file.close();
-    remove(toStringz(stream_file));
+    remove(stream_file.tempCString());
   }
 }
 
@@ -2263,6 +2269,8 @@ class BufferedFile: BufferedStream {
 
   // run a few tests same as File
   unittest {
+    import std.internal.cstring : tempCString;
+
     BufferedFile file = new BufferedFile;
     int i = 666;
     auto stream_file = std.file.deleteme ~ "-stream.$$$";
@@ -2308,7 +2316,7 @@ class BufferedFile: BufferedStream {
     // we must be at the end of file
     assert(file.eof);
     file.close();
-    remove(toStringz(stream_file));
+    remove(stream_file.tempCString());
   }
 
 }

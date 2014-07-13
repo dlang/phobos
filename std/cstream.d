@@ -151,9 +151,9 @@ class CFile : Stream {
   // run a few tests
   unittest {
     import std.file : deleteme;
-    import std.string : toStringz;
+    import std.internal.cstring : tempCString;
 
-    auto stream_file = toStringz(std.file.deleteme ~ "-stream.txt");
+    auto stream_file = (std.file.deleteme ~ "-stream.txt").tempCString();
     FILE* f = fopen(stream_file,"w");
     assert(f !is null);
     CFile file = new CFile(f,FileMode.Out);
