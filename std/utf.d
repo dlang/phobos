@@ -45,7 +45,7 @@ class UTFException : Exception
     uint[4] sequence;
     size_t  len;
 
-    @safe pure nothrow
+    @safe pure nothrow @nogc
     UTFException setSequence(uint[] data...)
     {
         import std.algorithm;
@@ -102,7 +102,7 @@ class UTFException : Exception
     not allowed for interchange by the Unicode standard.
   +/
 @safe
-pure nothrow bool isValidDchar(dchar c)
+pure nothrow bool isValidDchar(dchar c) @nogc
 {
     /* Note: FFFE and FFFF are specifically permitted by the
      * Unicode standard for application internal use, but are not
@@ -1857,7 +1857,7 @@ unittest
     Returns the number of code units that are required to encode the code point
     $(D c) when $(D C) is the character type used to encode it.
   +/
-ubyte codeLength(C)(dchar c) @safe pure nothrow
+ubyte codeLength(C)(dchar c) @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     static if (C.sizeof == 1)
@@ -1880,7 +1880,7 @@ ubyte codeLength(C)(dchar c) @safe pure nothrow
 }
 
 ///
-unittest
+pure nothrow @nogc unittest
 {
     assert(codeLength!char('a') == 1);
     assert(codeLength!wchar('a') == 1);
@@ -2025,7 +2025,7 @@ void validate(S)(in S str) @safe pure
 pure
 {
 
-char[] toUTF8(out char[4] buf, dchar c) nothrow @safe
+char[] toUTF8(out char[4] buf, dchar c) nothrow @nogc @safe
 in
 {
     assert(isValidDchar(c));
@@ -2129,7 +2129,7 @@ string toUTF8(in dchar[] s) @trusted
 
 /* =================== Conversion to UTF16 ======================= */
 
-wchar[] toUTF16(ref wchar[2] buf, dchar c) nothrow @safe
+wchar[] toUTF16(ref wchar[2] buf, dchar c) nothrow @nogc @safe
 in
 {
     assert(isValidDchar(c));
@@ -2560,13 +2560,13 @@ pure unittest
     Throws:
         $(D UTFException) if $(D str) is not well-formed.
   +/
-size_t count(C)(const(C)[] str) @trusted pure
+size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
     if (isSomeChar!C)
 {
     return walkLength(str);
 }
 
-unittest
+pure nothrow @nogc unittest
 {
     assertCTFEable!(
     {
@@ -2698,6 +2698,8 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
      */
     static struct ByCodeUnitImpl
     {
+    pure nothrow @nogc:
+
         @property bool empty() const         { return r.length == 0; }
         @property auto ref front() inout     { return r[0]; }
         void popFront()                      { r = r[1 .. $]; }
@@ -2734,7 +2736,7 @@ auto ref byCodeUnit(R)(R r)
     return r;
 }
 
-unittest
+pure nothrow @nogc unittest
 {
   {
     char[5] s;
@@ -2770,7 +2772,8 @@ unittest
     assert(r[2..4][1] == 'l');
   }
   {
-    auto s = "hello".dup.byCodeUnit();
+    char[5] buff = "hello";
+    auto s = buff[].byCodeUnit();
     s.front = 'H';
     assert(s.front == 'H');
     s[1] = 'E';
@@ -2870,6 +2873,8 @@ auto ref byChar(R)(R r)
 
         static struct byCharImpl
         {
+        pure nothrow @nogc:
+
             this(ref typeof(r2) r)
             {
                 this.r = r;
@@ -2956,7 +2961,7 @@ auto ref byChar(R)(R r)
     }
 }
 
-unittest
+pure nothrow @nogc unittest
 {
   {
     char[5] s;
@@ -3029,6 +3034,8 @@ auto ref byWchar(R)(R r)
 
         static struct byWcharImpl
         {
+        pure nothrow @nogc:
+
             this(ref typeof(r2) r)
             {
                 this.r = r;
@@ -3098,7 +3105,7 @@ auto ref byWchar(R)(R r)
     }
 }
 
-unittest
+pure nothrow @nogc unittest
 {
   {
     wchar[11] s;
@@ -3151,6 +3158,8 @@ auto ref byDchar(R)(R r)
     {
         static struct byDcharImpl
         {
+        pure nothrow @nogc:
+
             this(ref R r)
             {
                 this.r = r;
@@ -3175,7 +3184,7 @@ auto ref byDchar(R)(R r)
 
                     /* Dchar bitmask for different numbers of UTF-8 code units.
                      */
-                    enum bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
+                    enum uint[4] bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
 
                     foreach (i; TypeTuple!(1, 2, 3))
                     {
@@ -3254,6 +3263,8 @@ auto ref byDchar(R)(R r)
     {
         static struct byDcharImpl
         {
+        pure nothrow @nogc:
+
             this(ref R r)
             {
                 this.r = r;
@@ -3328,7 +3339,7 @@ auto ref byDchar(R)(R r)
 
 import std.stdio;
 
-unittest
+pure nothrow @nogc unittest
 {
   {
     dchar[9] s;
