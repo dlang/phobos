@@ -18,6 +18,7 @@ public import std.base64;
 public import std.compiler;
 public import std.concurrency;
 public import std.conv;
+public import std.container;
 public import std.cstream;
 public import std.datetime;
 public import std.demangle;
@@ -26,7 +27,6 @@ public import std.format;
 public import std.getopt;
 public import std.math;
 public import std.mathspecial;
-public import std.metastrings;
 public import std.mmfile;
 public import std.outbuffer;
 public import std.parallelism;
@@ -64,7 +64,7 @@ int main(char[][] args)
 {
     // Bring in unit test for module by referencing function in it
 
-    cmp("foo", "bar");                  // string
+    cast(void)cmp("foo", "bar");                  // string
     cast(void)filenameCharCmp('a', 'b');          // path
     cast(void)isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
@@ -102,7 +102,7 @@ int main(char[][] args)
     assert(x[2] == 45);
 
     cast(void)std.math.sin(3.0);
-    std.mathspecial.gamma(6.2);
+    cast(void)std.mathspecial.gamma(6.2);
 
     std.demangle.demangle("hello");
 

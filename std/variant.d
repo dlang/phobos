@@ -256,8 +256,8 @@ private:
         {
             static if (is(typeof(*rhsPA == *zis)))
             {
-                // Work-around for bug 12164. 
-                // Without the check for if selector is -1, this function always returns 0. 
+                // Work-around for bug 12164.
+                // Without the check for if selector is -1, this function always returns 0.
                 // TODO: Remove this once 12164 is fixed.
                 if (*rhsPA == *zis && selector != cast(OpID)-1)
                 {
@@ -305,7 +305,7 @@ private:
                 alias AllTypes = ConstTypes;
             else //static if (isMutable!A)
                 alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
-                
+
             foreach (T ; AllTypes)
             {
                 if (targetType != typeid(T))
@@ -424,12 +424,7 @@ private:
         case OpID.index:
             // Added allowed!(...) prompted by a bug report by Chris
             // Nicholson-Sauls.
-            static if (isStaticArray!(A) && allowed!(typeof(A.init)))
-            {
-                enforce(0, "Not implemented");
-            }
-            // Can't handle void arrays as there isn't any result to return.
-            static if (isDynamicArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
+            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
             {
                 // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;
@@ -662,7 +657,7 @@ public:
      * assert(a == 6);
      * ----
      */
-    @property inout T * peek(T)() inout
+    @property inout(T)* peek(T)() inout
     {
         static if (!is(T == void))
             static assert(allowed!(T), "Cannot store a " ~ T.stringof
@@ -670,17 +665,19 @@ public:
         if (type != typeid(T))
             return null;
         static if (T.sizeof <= size)
-            return cast(T*)&store;
-        else 
-            return *cast(T**)&store;
+            return cast(inout T*)&store;
+        else
+            return *cast(inout T**)&store;
     }
 
     /**
      * Returns the $(D_PARAM typeid) of the currently held value.
      */
 
-    @property TypeInfo type() const
+    @property TypeInfo type() const nothrow @trusted
     {
+        scope(failure) assert(0);
+
         TypeInfo result;
         fptr(OpID.getTypeInfo, null, &result);
         return result;
@@ -777,7 +774,7 @@ public:
 
     @property T coerce(T)()
     {
-        static if (isNumeric!(T))
+        static if (isNumeric!T || isBoolean!T)
         {
             if (convertsTo!real)
             {
@@ -797,7 +794,6 @@ public:
             {
                 return to!T(get!(immutable(char)[]));
             }
-
             else
             {
                 enforce(false, text("Type ", type, " does not convert to ",
@@ -818,13 +814,6 @@ public:
             // Fix for bug 1649
             static assert(false, "unsupported type for coercion");
         }
-    }
-
-    // testing the string coerce
-    unittest
-    {
-        Variant a = "10";
-        assert(a.coerce!int == 10);
     }
 
     /**
@@ -885,7 +874,7 @@ public:
      * Computes the hash of the held value.
      */
 
-    size_t toHash()
+    size_t toHash() const nothrow @safe
     {
         return type.getHash(&store);
     }
@@ -1179,6 +1168,19 @@ unittest
     assert(v("43") == 43);
 }
 
+// opIndex with static arrays, issue 12771
+unittest
+{
+    int[4] elements = [0, 1, 2, 3];
+    Variant v = elements;
+    assert(v == elements);
+    assert(v[2] == 2);
+    assert(v[3] == 3);
+    v[2] = 6;
+    assert(v[2] == 6);
+    assert(v != elements);
+}
+
 //Issue# 8195
 unittest
 {
@@ -1411,6 +1413,26 @@ unittest
     // coerce tests
     a = Variant(42.22); assert(a.coerce!(int) == 42);
     a = cast(short) 5; assert(a.coerce!(double) == 5);
+    a = Variant("10"); assert(a.coerce!int == 10);
+
+    a = Variant(1);
+    assert(a.coerce!bool);
+    a = Variant(0);
+    assert(!a.coerce!bool);
+
+    a = Variant(1.0);
+    assert(a.coerce!bool);
+    a = Variant(0.0);
+    assert(!a.coerce!bool);
+    a = Variant(float.init);
+    assertThrown!ConvException(a.coerce!bool);
+
+    a = Variant("true");
+    assert(a.coerce!bool);
+    a = Variant("false");
+    assert(!a.coerce!bool);
+    a = Variant("");
+    assertThrown!ConvException(a.coerce!bool);
 
     // Object tests
     class B1 {}
@@ -1418,8 +1440,7 @@ unittest
     a = new B2;
     assert(a.coerce!(B1) !is null);
     a = new B1;
-// BUG: I can't get the following line to pass:
-//    assert(collectException(a.coerce!(B2) is null));
+    assert(collectException(a.coerce!(B2) is null));
     a = cast(Object) new B2; // lose static type info; should still work
     assert(a.coerce!(B2) !is null);
 
@@ -1649,7 +1670,7 @@ unittest
 }
 
 // Class and interface opEquals, issue 12157
-unittest 
+unittest
 {
     class Foo { }
 
@@ -1665,7 +1686,7 @@ unittest
     assert(v2 != v1);
     assert(v2 == f2);
 
-    // TODO: Remove once 12164 is fixed. 
+    // TODO: Remove once 12164 is fixed.
     // Verify our assumption that there is no -1 OpID.
     // Could also use std.algorithm.canFind at compile-time, but that may create bloat.
     foreach(member; EnumMembers!(Variant.OpID))
@@ -1743,14 +1764,14 @@ unittest
 }
 
 // Handling of empty types and arrays, e.g. issue 10958
-unittest 
+unittest
 {
     class EmptyClass { }
     struct EmptyStruct { }
     alias EmptyArray = void[0];
     alias Alg = Algebraic!(EmptyClass, EmptyStruct, EmptyArray);
 
-    Variant testEmpty(T)() 
+    Variant testEmpty(T)()
     {
         T inst;
         Variant v = inst;
@@ -1796,7 +1817,7 @@ unittest
         int val2;
     }
 
-    void testPeekWith(T)() 
+    void testPeekWith(T)()
     {
         T inst;
         inst.val1 = 3;
@@ -2224,4 +2245,18 @@ unittest
     assertThrown!VariantException(v.get!(Object));
     assertNotThrown!VariantException(v.get!(const(Object)));
     assertNotThrown!VariantException(v.get!(immutable(Object)));
+}
+
+unittest
+{
+    static struct DummyScope
+    {
+        // https://d.puremagic.com/issues/show_bug.cgi?id=12540
+        alias Alias12540 = Algebraic!Class12540;
+
+        static class Class12540
+        {
+            Alias12540 entity;
+        }
+    }
 }

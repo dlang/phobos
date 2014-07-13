@@ -15,7 +15,7 @@
  *      $(LINK2 http://en.wikipedia.org/wiki/Observer_pattern, Observer pattern)$(BR)
  *      $(LINK2 http://en.wikipedia.org/wiki/Signals_and_slots, Wikipedia)$(BR)
  *      $(LINK2 http://boost.org/doc/html/$(SIGNALS).html, Boost Signals)$(BR)
- *      $(LINK2 http://doc.trolltech.com/4.1/signalsandslots.html, Qt)$(BR)
+ *      $(LINK2 http://qt-project.org/doc/qt-5/signalsandslots.html, Qt)$(BR)
  *
  *      There has been a great deal of discussion in the D newsgroups
  *      over this, and several implementations:

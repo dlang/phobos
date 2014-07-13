@@ -20,6 +20,10 @@ Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
+Windows x86 note:
+A DMD compatible libcurl static library can be downloaded from the dlang.org
+$(LINK2 http://dlang.org/download.html, download page).
+
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
 of the language. Futhermore it provides <a href="std_range.html">$(D range)</a>
@@ -2606,7 +2610,7 @@ struct HTTP
       */
     @property void postData(const(void)[] data)
     {
-        _postData(data, "application/octet-stream");
+        setPostData(data, "application/octet-stream");
     }
 
     /** Specifying data to post when not using the onSend callback.
@@ -2625,11 +2629,28 @@ struct HTTP
       */
     @property void postData(const(char)[] data)
     {
-        _postData(data, "text/plain");
+        setPostData(data, "text/plain");
     }
 
-    // Helper for postData property
-    private void _postData(const(void)[] data, string contentType)
+    /**
+     * Specify data to post when not using the onSend callback, with
+     * user-specified Content-Type.
+     * Params:
+     *	data = Data to post.
+     *	contentType = MIME type of the data, for example, "text/plain" or
+     *	    "application/octet-stream". See also:
+     *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
+     *      Internet media type) on Wikipedia.
+     *-----
+     * import std.net.curl;
+     * auto http = HTTP("http://onlineform.example.com");
+     * auto data = "app=login&username=bob&password=s00perS3kret";
+     * http.setPostData(data, "application/x-www-form-urlencoded");
+     * http.onReceive = (ubyte[] data) { return data.length; };
+     * http.perform();
+     *-----
+     */
+    void setPostData(const(void)[] data, string contentType)
     {
         // cannot use callback when specifying data directly so it is disabled here.
         p.curl.clear(CurlOption.readfunction);
@@ -3225,6 +3246,7 @@ struct SMTP
     private void initialize()
     {
         p.curl.initialize();
+        p.curl.set(CurlOption.upload, 1L);
         dataTimeout = _defaultDataTimeout;
         verifyPeer = true;
         verifyHost = true;
@@ -3553,14 +3575,21 @@ struct Curl
                                  opensocketfunction, noprogress,
                                  progressdata, progressfunction,
                                  debugdata, debugfunction,
-                                 ssl_ctx_function, interleavedata,
+                                 interleavedata,
                                  interleavefunction, chunk_data,
                                  chunk_bgn_function, chunk_end_function,
                                  fnmatch_data, fnmatch_function,
-                                 ssh_keydata, cookiejar, postfields);
+                                 cookiejar, postfields);
             foreach(option; tt)
                 copy.clear(option);
         }
+
+        // The options are only supported by libcurl when it has been built
+        // against certain versions of OpenSSL - if your libcurl uses an old
+        // OpenSSL, or uses an entirely different SSL engine, attempting to
+        // clear these normally will raise an exception
+        copy.clearIfSupported(CurlOption.ssl_ctx_function);
+        copy.clearIfSupported(CurlOption.ssh_keydata);
 
         // Enable for curl version > 7.21.7
         static if (LIBCURL_VERSION_MAJOR >= 7 &&
@@ -3679,6 +3708,22 @@ struct Curl
     {
         throwOnStopped();
         _check(curl_easy_setopt(this.handle, option, null));
+    }
+
+    /**
+       Clear a pointer option. Does not raise an exception if the underlying
+       libcurl does not support the option. Use sparingly.
+       Params:
+       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+    */
+    void clearIfSupported(CurlOption option)
+    {
+        throwOnStopped();
+        auto rval = curl_easy_setopt(this.handle, option, null);
+        if (rval != CurlError.unknown_telnet_option)
+        {
+            _check(rval);
+        }
     }
 
     /**

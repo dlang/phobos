@@ -7,11 +7,8 @@
 module std.c.windows.winsock;
 version (Windows):
 
-private import std.stdint;
-private import std.c.windows.windows;
-
-
 extern(Windows):
+nothrow:
 
 alias SOCKET = size_t;
 alias socklen_t = int;
@@ -19,17 +16,17 @@ alias socklen_t = int;
 const SOCKET INVALID_SOCKET = cast(SOCKET)~0;
 const int SOCKET_ERROR = -1;
 
-const int WSADESCRIPTION_LEN = 256;
-const int WSASYS_STATUS_LEN = 128;
+enum WSADESCRIPTION_LEN = 256;
+enum WSASYS_STATUS_LEN = 128;
 
 struct WSADATA
 {
-    WORD wVersion;
-    WORD wHighVersion;
+    ushort wVersion;
+    ushort wHighVersion;
     char[WSADESCRIPTION_LEN + 1] szDescription;
     char[WSASYS_STATUS_LEN + 1] szSystemStatus;
-    USHORT iMaxSockets;
-    USHORT iMaxUdpDg;
+    ushort iMaxSockets;
+    ushort iMaxUdpDg;
     char* lpVendorInfo;
 }
 alias LPWSADATA = WSADATA*;
@@ -37,12 +34,12 @@ alias LPWSADATA = WSADATA*;
 
 const int IOCPARM_MASK =  0x7F;
 const int IOC_IN =        cast(int)0x80000000;
-const int FIONBIO =       cast(int)(IOC_IN | ((UINT.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126);
+const int FIONBIO =       cast(int)(IOC_IN | ((uint.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126);
 
 enum NI_MAXHOST = 1025;
 enum NI_MAXSERV = 32;
 
-int WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData);
+int WSAStartup(ushort wVersionRequested, LPWSADATA lpWSAData);
 int WSACleanup();
 SOCKET socket(int af, int type, int protocol);
 int ioctlsocket(SOCKET s, int cmd, uint* argp);
@@ -82,14 +79,133 @@ enum: int
 int gethostname(const char* name, int namelen);
 int getaddrinfo(const(char)* nodename, const(char)* servname, const(addrinfo)* hints, addrinfo** res);
 void freeaddrinfo(addrinfo* ai);
-int getnameinfo(const(sockaddr)* sa, socklen_t salen, char* host, DWORD hostlen, char* serv, DWORD servlen, int flags);
+int getnameinfo(const(sockaddr)* sa, socklen_t salen, char* host, uint hostlen, char* serv, uint servlen, int flags);
+
+enum WSABASEERR = 10000;
 
 enum: int
 {
-    WSAEWOULDBLOCK =     10035,
-    WSAEINTR =           10004,
-    WSAHOST_NOT_FOUND =  11001,
-    WSANO_DATA        =  11004,
+    /*
+     * Windows Sockets definitions of regular Microsoft C error constants
+     */
+    WSAEINTR = (WSABASEERR+4),
+    WSAEBADF = (WSABASEERR+9),
+    WSAEACCES = (WSABASEERR+13),
+    WSAEFAULT = (WSABASEERR+14),
+    WSAEINVAL = (WSABASEERR+22),
+    WSAEMFILE = (WSABASEERR+24),
+
+    /*
+     * Windows Sockets definitions of regular Berkeley error constants
+     */
+    WSAEWOULDBLOCK = (WSABASEERR+35),
+    WSAEINPROGRESS = (WSABASEERR+36),
+    WSAEALREADY = (WSABASEERR+37),
+    WSAENOTSOCK = (WSABASEERR+38),
+    WSAEDESTADDRREQ = (WSABASEERR+39),
+    WSAEMSGSIZE = (WSABASEERR+40),
+    WSAEPROTOTYPE = (WSABASEERR+41),
+    WSAENOPROTOOPT = (WSABASEERR+42),
+    WSAEPROTONOSUPPORT = (WSABASEERR+43),
+    WSAESOCKTNOSUPPORT = (WSABASEERR+44),
+    WSAEOPNOTSUPP = (WSABASEERR+45),
+    WSAEPFNOSUPPORT = (WSABASEERR+46),
+    WSAEAFNOSUPPORT = (WSABASEERR+47),
+    WSAEADDRINUSE = (WSABASEERR+48),
+    WSAEADDRNOTAVAIL = (WSABASEERR+49),
+    WSAENETDOWN = (WSABASEERR+50),
+    WSAENETUNREACH = (WSABASEERR+51),
+    WSAENETRESET = (WSABASEERR+52),
+    WSAECONNABORTED = (WSABASEERR+53),
+    WSAECONNRESET = (WSABASEERR+54),
+    WSAENOBUFS = (WSABASEERR+55),
+    WSAEISCONN = (WSABASEERR+56),
+    WSAENOTCONN = (WSABASEERR+57),
+    WSAESHUTDOWN = (WSABASEERR+58),
+    WSAETOOMANYREFS = (WSABASEERR+59),
+    WSAETIMEDOUT = (WSABASEERR+60),
+    WSAECONNREFUSED = (WSABASEERR+61),
+    WSAELOOP = (WSABASEERR+62),
+    WSAENAMETOOLONG = (WSABASEERR+63),
+    WSAEHOSTDOWN = (WSABASEERR+64),
+    WSAEHOSTUNREACH = (WSABASEERR+65),
+    WSAENOTEMPTY = (WSABASEERR+66),
+    WSAEPROCLIM = (WSABASEERR+67),
+    WSAEUSERS = (WSABASEERR+68),
+    WSAEDQUOT = (WSABASEERR+69),
+    WSAESTALE = (WSABASEERR+70),
+    WSAEREMOTE = (WSABASEERR+71),
+
+    /*
+     * Extended Windows Sockets error constant definitions
+     */
+    WSASYSNOTREADY = (WSABASEERR+91),
+    WSAVERNOTSUPPORTED = (WSABASEERR+92),
+    WSANOTINITIALISED = (WSABASEERR+93),
+
+    /* Authoritative Answer: Host not found */
+    WSAHOST_NOT_FOUND = (WSABASEERR+1001),
+    HOST_NOT_FOUND = WSAHOST_NOT_FOUND,
+
+    /* Non-Authoritative: Host not found, or SERVERFAIL */
+    WSATRY_AGAIN = (WSABASEERR+1002),
+    TRY_AGAIN = WSATRY_AGAIN,
+
+    /* Non recoverable errors, FORMERR, REFUSED, NOTIMP */
+    WSANO_RECOVERY = (WSABASEERR+1003),
+    NO_RECOVERY = WSANO_RECOVERY,
+
+    /* Valid name, no data record of requested type */
+    WSANO_DATA = (WSABASEERR+1004),
+    NO_DATA = WSANO_DATA,
+
+    /* no address, look for MX record */
+    WSANO_ADDRESS = WSANO_DATA,
+    NO_ADDRESS = WSANO_ADDRESS
+}
+
+/*
+ * Windows Sockets errors redefined as regular Berkeley error constants
+ */
+enum: int
+{
+    EWOULDBLOCK = WSAEWOULDBLOCK,
+    EINPROGRESS = WSAEINPROGRESS,
+    EALREADY = WSAEALREADY,
+    ENOTSOCK = WSAENOTSOCK,
+    EDESTADDRREQ = WSAEDESTADDRREQ,
+    EMSGSIZE = WSAEMSGSIZE,
+    EPROTOTYPE = WSAEPROTOTYPE,
+    ENOPROTOOPT = WSAENOPROTOOPT,
+    EPROTONOSUPPORT = WSAEPROTONOSUPPORT,
+    ESOCKTNOSUPPORT = WSAESOCKTNOSUPPORT,
+    EOPNOTSUPP = WSAEOPNOTSUPP,
+    EPFNOSUPPORT = WSAEPFNOSUPPORT,
+    EAFNOSUPPORT = WSAEAFNOSUPPORT,
+    EADDRINUSE = WSAEADDRINUSE,
+    EADDRNOTAVAIL = WSAEADDRNOTAVAIL,
+    ENETDOWN = WSAENETDOWN,
+    ENETUNREACH = WSAENETUNREACH,
+    ENETRESET = WSAENETRESET,
+    ECONNABORTED = WSAECONNABORTED,
+    ECONNRESET = WSAECONNRESET,
+    ENOBUFS = WSAENOBUFS,
+    EISCONN = WSAEISCONN,
+    ENOTCONN = WSAENOTCONN,
+    ESHUTDOWN = WSAESHUTDOWN,
+    ETOOMANYREFS = WSAETOOMANYREFS,
+    ETIMEDOUT = WSAETIMEDOUT,
+    ECONNREFUSED = WSAECONNREFUSED,
+    ELOOP = WSAELOOP,
+    ENAMETOOLONG = WSAENAMETOOLONG,
+    EHOSTDOWN = WSAEHOSTDOWN,
+    EHOSTUNREACH = WSAEHOSTUNREACH,
+    ENOTEMPTY = WSAENOTEMPTY,
+    EPROCLIM = WSAEPROCLIM,
+    EUSERS = WSAEUSERS,
+    EDQUOT = WSAEDQUOT,
+    ESTALE = WSAESTALE,
+    EREMOTE = WSAEREMOTE
 }
 
 enum: int
@@ -217,12 +333,12 @@ enum: int
 /// In C/C++, it is redefinable by #define-ing the macro before #include-ing
 /// winsock.h. In D, use the $(D FD_CREATE) function to allocate a $(D fd_set)
 /// of an arbitrary size.
-const uint FD_SETSIZE = 64;
+enum int FD_SETSIZE = 64;
 
 
 struct fd_set_custom(uint SETSIZE)
 {
-    UINT fd_count;
+    uint fd_count;
     SOCKET[SETSIZE] fd_array;
 }
 
@@ -296,8 +412,8 @@ fd_set* FD_CREATE(uint capacity)
 
 struct linger
 {
-    USHORT l_onoff;
-    USHORT l_linger;
+    ushort l_onoff;
+    ushort l_linger;
 }
 
 
@@ -305,7 +421,7 @@ struct protoent
 {
     char* p_name;
     char** p_aliases;
-    SHORT p_proto;
+    short p_proto;
 }
 
 
@@ -317,11 +433,11 @@ struct servent
     version (Win64)
     {
         char* s_proto;
-        SHORT s_port;
+        short s_port;
     }
     else
     {
-        SHORT s_port;
+        short s_port;
         char* s_proto;
     }
 }
@@ -332,8 +448,8 @@ union in6_addr
 {
     private union _u_t
     {
-        BYTE[16] Byte;
-        WORD[8] Word;
+        ubyte[16] Byte;
+        ushort[8] Word;
     }
     _u_t u;
 }
@@ -341,20 +457,20 @@ union in6_addr
 
 struct in_addr6
 {
-    BYTE[16] s6_addr;
+    ubyte[16] s6_addr;
 }
 +/
 
 
 version(BigEndian)
 {
-    uint16_t htons(uint16_t x)
+    ushort htons(ushort x)
     {
         return x;
     }
 
 
-    uint32_t htonl(uint32_t x)
+    uint htonl(uint x)
     {
         return x;
     }
@@ -364,13 +480,13 @@ else version(LittleEndian)
     private import core.bitop;
 
 
-    uint16_t htons(uint16_t x)
+    ushort htons(ushort x)
     {
-        return cast(uint16_t)((x >> 8) | (x << 8));
+        return cast(ushort)((x >> 8) | (x << 8));
     }
 
 
-    uint32_t htonl(uint32_t x)
+    uint htonl(uint x)
     {
         return bswap(x);
     }
@@ -381,13 +497,13 @@ else
 }
 
 
-uint16_t ntohs(uint16_t x)
+ushort ntohs(ushort x)
 {
     return htons(x);
 }
 
 
-uint32_t ntohl(uint32_t x)
+uint ntohl(uint x)
 {
     return htonl(x);
 }
@@ -461,8 +577,8 @@ enum: int
 
 struct timeval
 {
-    int32_t tv_sec;
-    int32_t tv_usec;
+    int tv_sec;
+    int tv_usec;
 }
 
 
@@ -472,33 +588,33 @@ union in_addr
     {
         private struct _S_un_b_t
         {
-            uint8_t s_b1, s_b2, s_b3, s_b4;
+            ubyte s_b1, s_b2, s_b3, s_b4;
         }
         _S_un_b_t S_un_b;
 
         private struct _S_un_w_t
         {
-            uint16_t s_w1, s_w2;
+            ushort s_w1, s_w2;
         }
         _S_un_w_t S_un_w;
 
-        uint32_t S_addr;
+        uint S_addr;
     }
     _S_un_t S_un;
 
-    uint32_t s_addr;
+    uint s_addr;
 
     struct
     {
-        uint8_t s_net, s_host;
+        ubyte s_net, s_host;
 
         union
         {
-            uint16_t s_imp;
+            ushort s_imp;
 
             struct
             {
-                uint8_t s_lh, s_impno;
+                ubyte s_lh, s_impno;
             }
         }
     }
@@ -509,15 +625,15 @@ union in6_addr
 {
     private union _in6_u_t
     {
-        uint8_t[16] u6_addr8;
-        uint16_t[8] u6_addr16;
-        uint32_t[4] u6_addr32;
+        ubyte[16] u6_addr8;
+        ushort[8] u6_addr16;
+        uint[4] u6_addr32;
     }
     _in6_u_t in6_u;
 
-    uint8_t[16] s6_addr8;
-    uint16_t[8] s6_addr16;
-    uint32_t[4] s6_addr32;
+    ubyte[16] s6_addr8;
+    ushort[8] s6_addr16;
+    uint[4] s6_addr32;
 
     alias s6_addr = s6_addr8;
 }
@@ -528,21 +644,21 @@ const in6_addr IN6ADDR_LOOPBACK = { s6_addr8: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 //alias IN6ADDR_ANY_INIT = IN6ADDR_ANY;
 //alias IN6ADDR_LOOPBACK_INIT = IN6ADDR_LOOPBACK;
 
-const uint INET_ADDRSTRLEN = 16;
-const uint INET6_ADDRSTRLEN = 46;
+enum int INET_ADDRSTRLEN = 16;
+enum int INET6_ADDRSTRLEN = 46;
 
 
 struct sockaddr
 {
-    int16_t sa_family;
+    short sa_family;
     ubyte[14] sa_data;
 }
 
 
 struct sockaddr_in
 {
-    int16_t sin_family = AF_INET;
-    uint16_t sin_port;
+    short sin_family = AF_INET;
+    ushort sin_port;
     in_addr sin_addr;
     ubyte[8] sin_zero;
 }
@@ -550,20 +666,20 @@ struct sockaddr_in
 
 struct sockaddr_in6
 {
-    int16_t sin6_family = AF_INET6;
-    uint16_t sin6_port;
-    uint32_t sin6_flowinfo;
+    short sin6_family = AF_INET6;
+    ushort sin6_port;
+    uint sin6_flowinfo;
     in6_addr sin6_addr;
-    uint32_t sin6_scope_id;
+    uint sin6_scope_id;
 }
 
 
 struct addrinfo
 {
-    int32_t ai_flags;
-    int32_t ai_family;
-    int32_t ai_socktype;
-    int32_t ai_protocol;
+    int ai_flags;
+    int ai_family;
+    int ai_socktype;
+    int ai_protocol;
     size_t ai_addrlen;
     char* ai_canonname;
     sockaddr* ai_addr;
@@ -575,8 +691,8 @@ struct hostent
 {
     char* h_name;
     char** h_aliases;
-    int16_t h_addrtype;
-    int16_t h_length;
+    short h_addrtype;
+    short h_length;
     char** h_addr_list;
 
 
@@ -586,23 +702,24 @@ struct hostent
     }
 }
 
+// Note: These are Winsock2!!
 struct WSAOVERLAPPED;
 alias LPWSAOVERLAPPED = WSAOVERLAPPED*;
-alias LPWSAOVERLAPPED_COMPLETION_ROUTINE = void function(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
-int WSAIoctl(SOCKET s, DWORD dwIoControlCode,
-    LPVOID lpvInBuffer, DWORD cbInBuffer,
-    LPVOID lpvOutBuffer, DWORD cbOutBuffer,
-    LPDWORD lpcbBytesReturned,
+alias LPWSAOVERLAPPED_COMPLETION_ROUTINE = void function(uint, uint, LPWSAOVERLAPPED, uint);
+int WSAIoctl(SOCKET s, uint dwIoControlCode,
+    void* lpvInBuffer, uint cbInBuffer,
+    void* lpvOutBuffer, uint cbOutBuffer,
+    uint* lpcbBytesReturned,
     LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
 
 
-const int IOC_VENDOR = 0x18000000;
-const int SIO_KEEPALIVE_VALS = IOC_IN | IOC_VENDOR | 4;
+enum IOC_VENDOR = 0x18000000;
+enum SIO_KEEPALIVE_VALS = IOC_IN | IOC_VENDOR | 4;
 
 /* Argument structure for SIO_KEEPALIVE_VALS */
 struct tcp_keepalive
 {
-    uint32_t onoff;
-    uint32_t keepalivetime;
-    uint32_t keepaliveinterval;
+    uint onoff;
+    uint keepalivetime;
+    uint keepaliveinterval;
 }

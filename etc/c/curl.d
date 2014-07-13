@@ -3,6 +3,10 @@
 
    Converted to D from curl headers by $(LINK2 http://www.digitalmars.com/d/2.0/htod.html, htod) and
    cleaned up by Jonas Drewsen (jdrewsen)
+
+   Windows x86 note:
+   A DMD compatible libcurl static library can be downloaded from the dlang.org
+   $(LINK2 http://dlang.org/download.html, download page).
 */
 
 /* **************************************************************************

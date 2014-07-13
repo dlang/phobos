@@ -90,6 +90,14 @@ else version(Posix)
         private enum SD_SEND    = SHUT_WR;
         private enum SD_BOTH    = SHUT_RDWR;
     }
+    else version(Android)
+    {
+        import core.sys.posix.sys.socket;
+        import core.sys.posix.sys.select;
+        private enum SD_RECEIVE = SHUT_RD;
+        private enum SD_SEND    = SHUT_WR;
+        private enum SD_BOTH    = SHUT_RDWR;
+    }
     else
         static assert(false);
 
@@ -182,6 +190,14 @@ string formatSocketError(int err)
                 return "Socket error " ~ to!string(err);
         }
         else version (FreeBSD)
+        {
+            auto errs = strerror_r(err, buf.ptr, buf.length);
+            if (errs == 0)
+                cs = buf.ptr;
+            else
+                return "Socket error " ~ to!string(err);
+        }
+        else version (Android)
         {
             auto errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
@@ -383,18 +399,37 @@ enum SocketType: int
 /**
  * Protocol
  */
-enum ProtocolType: int
+version(Android)
 {
-    IP =    IPPROTO_IP,         /// Internet Protocol version 4
-    ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
-    IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
-    GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
-    TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
-    PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
-    UDP =   IPPROTO_UDP,        /// User Datagram Protocol
-    IDP =   IPPROTO_IDP,        /// Xerox NS protocol
-    RAW =   IPPROTO_RAW,        /// Raw IP packets
-    IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
+    // no GGP on Android
+    enum ProtocolType: int
+    {
+        IP =    IPPROTO_IP,         /// Internet Protocol version 4
+        ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
+        IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
+        TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
+        PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
+        UDP =   IPPROTO_UDP,        /// User Datagram Protocol
+        IDP =   IPPROTO_IDP,        /// Xerox NS protocol
+        RAW =   IPPROTO_RAW,        /// Raw IP packets
+        IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
+    }
+}
+else
+{
+    enum ProtocolType: int
+    {
+        IP =    IPPROTO_IP,         /// Internet Protocol version 4
+        ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
+        IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
+        GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
+        TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
+        PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
+        UDP =   IPPROTO_UDP,        /// User Datagram Protocol
+        IDP =   IPPROTO_IDP,        /// Xerox NS protocol
+        RAW =   IPPROTO_RAW,        /// Raw IP packets
+        IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
+    }
 }
 
 
@@ -478,6 +513,7 @@ class Protocol
 
 unittest
 {
+    // getprotobyname,number are unimplemented on Android
     softUnittest({
         Protocol proto = new Protocol;
         assert(proto.getProtocolByType(ProtocolType.TCP));
@@ -2071,9 +2107,9 @@ private:
             return set.length - FD_SET_OFFSET;
         }
 
-        final inout socket_t[] fds() inout @property
+        final inout(socket_t)[] fds() inout @property
         {
-            return cast(socket_t[])set[FD_SET_OFFSET..FD_SET_OFFSET+count];
+            return cast(inout(socket_t)[])set[FD_SET_OFFSET..FD_SET_OFFSET+count];
         }
     }
     else
@@ -2372,19 +2408,39 @@ unittest
 }
 
 /// The level at which a socket option is defined:
-enum SocketOptionLevel: int
+version(Android)
 {
-    SOCKET =  SOL_SOCKET,               /// Socket level
-    IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
-    ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
-    IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
-    GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
-    TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
-    PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
-    UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
-    IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
-    RAW =     ProtocolType.RAW,         /// Raw IP packet level
-    IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
+    // no GGP on Android
+    enum SocketOptionLevel: int
+    {
+        SOCKET =  SOL_SOCKET,               /// Socket level
+        IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
+        ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
+        IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
+        TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
+        PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
+        UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
+        IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
+        RAW =     ProtocolType.RAW,         /// Raw IP packet level
+        IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
+    }
+}
+else
+{
+    enum SocketOptionLevel: int
+    {
+        SOCKET =  SOL_SOCKET,               /// Socket level
+        IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
+        ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
+        IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
+        GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
+        TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
+        PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
+        UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
+        IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
+        RAW =     ProtocolType.RAW,         /// Raw IP packet level
+        IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
+    }
 }
 
 /// _Linger information for use with SocketOption.LINGER.
@@ -3109,8 +3165,7 @@ public:
         else version (Posix)
         {
             _ctimeval tv;
-            tv.tv_sec  = to!(typeof(tv.tv_sec ))(value.total!"seconds");
-            tv.tv_usec = to!(typeof(tv.tv_usec))(value.fracSec.usecs);
+            value.split!("seconds", "usecs")(tv.tv_sec, tv.tv_usec);
             setOption(level, option, (&tv)[0 .. 1]);
         }
         else static assert(false);
@@ -3185,9 +3240,10 @@ public:
     //Winsock: possibly internally limited to 64 sockets per set
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout)
     {
+        auto vals = timeout.split!("seconds", "usecs")();
         TimeVal tv;
-        tv.seconds      = to!(tv.tv_sec_t )(timeout.total!"seconds");
-        tv.microseconds = to!(tv.tv_usec_t)(timeout.fracSec.usecs);
+        tv.seconds      = cast(tv.tv_sec_t )vals.seconds;
+        tv.microseconds = cast(tv.tv_usec_t)vals.usecs;
         return select(checkRead, checkWrite, checkError, &tv);
     }
 

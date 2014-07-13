@@ -393,6 +393,17 @@ template Tuple(Specs...)
         alias Types = staticMap!(extractType, fieldSpecs);
 
         /**
+         * The names of the tuple's components. Unnamed fields have empty names.
+         *
+         * Examples:
+         * ----
+         * alias Fields = Tuple!(int, "id", string, float);
+         * static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+         * ----
+         */
+        alias fieldNames = staticMap!(extractName, fieldSpecs);
+
+        /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
          * components. The result of $(D expand) acts as if the tuple components
          * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
@@ -558,6 +569,14 @@ template Tuple(Specs...)
         if (from <= to && to <= Types.length)
         {
             return *cast(typeof(return)*) &(field[from]);
+        }
+
+        size_t toHash() const nothrow @trusted
+        {
+            size_t h = 0;
+            foreach (i, T; Types)
+                h += typeid(T).getHash(cast(const void*)&field[i]);
+            return h;
         }
 
         /**
@@ -969,6 +988,17 @@ unittest
     TISIS e = TISIS(ss);
 }
 
+// Bugzilla #9819
+unittest
+{
+    alias T = Tuple!(int, "x", double, "foo");
+    static assert(T.fieldNames[0] == "x");
+    static assert(T.fieldNames[1] == "foo");
+
+    alias Fields = Tuple!(int, "id", string, float);
+    static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+}
+
 /**
 Returns a $(D Tuple) object instantiated and initialized according to
 the arguments.
@@ -1075,29 +1105,29 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArra
                 T original;
                 U stripped;
             }
-            void opAssign(T another) pure nothrow
+            void opAssign(T another) @trusted pure nothrow
             {
                 stripped = cast(U) another;
             }
-            void opAssign(Rebindable another) pure nothrow
+            void opAssign(Rebindable another) @trusted pure nothrow
             {
                 stripped = another.stripped;
             }
             static if (is(T == const U))
             {
                 // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another) pure nothrow
+                void opAssign(Rebindable!(immutable U) another) @trusted pure nothrow
                 {
                     stripped = another.stripped;
                 }
             }
 
-            this(T initializer) pure nothrow
+            this(T initializer) @safe pure nothrow
             {
                 opAssign(initializer);
             }
 
-            @property ref inout(T) get() inout pure nothrow
+            @property ref inout(T) get() @trusted inout pure nothrow
             {
                 return original;
             }
@@ -1271,38 +1301,6 @@ unittest
     static assert(passNormalY || passAbnormalY && double.alignof <= int.alignof);
 }
 
-/*--*
-First-class reference type
-*/
-struct Ref(T)
-{
-    private T * _p;
-    this(ref T value) { _p = &value; }
-    ref T opDot() { return *_p; }
-    /*ref*/ T opImplicitCastTo() { return *_p; }
-    @property ref T value() { return *_p; }
-
-    void opAssign(T value)
-    {
-        *_p = value;
-    }
-    void opAssign(T * value)
-    {
-        _p = value;
-    }
-}
-
-unittest
-{
-    Ref!(int) x;
-    int y = 42;
-    x = &y;
-    assert(x.value == 42);
-    x = 5;
-    assert(x.value == 5);
-    assert(y == 5);
-}
-
 /**
 Defines a value paired with a distinctive "null" state that denotes
 the absence of a value. If default constructed, a $(D
@@ -1337,7 +1335,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const pure nothrow @safe
+    @property bool isNull() const @safe pure nothrow
     {
         return _isNull;
     }
@@ -1365,7 +1363,7 @@ succeeds, $(D this) becomes non-null.
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
  */
-    @property ref inout(T) get() inout pure nothrow @safe
+    @property ref inout(T) get() inout @safe pure nothrow
     {
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
         assert(!isNull, message);
@@ -1440,7 +1438,7 @@ unittest
 unittest
 {
     // Ensure Nullable can be used in pure/nothrow/@safe environment.
-    function() pure nothrow @safe
+    function() @safe pure nothrow
     {
         Nullable!int n;
         assert(n.isNull);
@@ -1712,7 +1710,7 @@ unittest
 unittest
 {
     // Ensure Nullable can be used in pure/nothrow/@safe environment.
-    function() pure nothrow @safe
+    function() @safe pure nothrow
     {
         Nullable!(int, int.min) n;
         assert(n.isNull);
@@ -1781,7 +1779,7 @@ struct NullableRef(T)
 /**
 Constructor binding $(D this) with $(D value).
  */
-    this(T* value) pure nothrow @safe
+    this(T* value) @safe pure nothrow
     {
         _value = value;
     }
@@ -1789,7 +1787,7 @@ Constructor binding $(D this) with $(D value).
 /**
 Binds the internal state to $(D value).
  */
-    void bind(T* value) pure nothrow @safe
+    void bind(T* value) @safe pure nothrow
     {
         _value = value;
     }
@@ -1797,7 +1795,7 @@ Binds the internal state to $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const pure nothrow @safe
+    @property bool isNull() const @safe pure nothrow
     {
         return _value is null;
     }
@@ -1805,7 +1803,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Forces $(D this) to the null state.
  */
-    void nullify() pure nothrow @safe
+    void nullify() @safe pure nothrow
     {
         _value = null;
     }
@@ -1825,7 +1823,7 @@ Assigns $(D value) to the internally-held state.
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
  */
-    @property ref inout(T) get() inout pure nothrow @safe
+    @property ref inout(T) get() inout @safe pure nothrow
     {
         enum message = "Called `get' on null NullableRef!" ~ T.stringof ~ ".";
         assert(!isNull, message);
@@ -1876,7 +1874,7 @@ unittest
 unittest
 {
     // Ensure NullableRef can be used in pure/nothrow/@safe environment.
-    function() pure nothrow @safe
+    function() @safe pure nothrow
     {
         auto storage = new int;
         *storage = 19902;
@@ -2013,6 +2011,11 @@ unittest
         inout(Object) foo() inout;
     }
     BlackHole!Foo o;
+
+    // Bugzilla 12464
+    import std.stream;
+    import std.typecons;
+    BlackHole!OutputStream dout;
 }
 
 
@@ -2375,9 +2378,9 @@ private static:
 }
 
 //debug = SHOW_GENERATED_CODE;
-version(unittest) import core.vararg;
 unittest
 {
+    import core.vararg;
     // no function to implement
     {
         interface I_1 {}
@@ -2642,6 +2645,9 @@ private static:
 
         string code; // the result
 
+        auto paramsRes = generateParameters!(myFuncInfo, func)();
+        code ~= paramsRes.imports;
+
         /*** Function Declarator ***/
         {
             alias Func = FunctionTypeOf!(func);
@@ -2699,7 +2705,7 @@ private static:
                     functionLinkage!(func),
                     returnType,
                     realName,
-                    generateParameters!(myFuncInfo, func)(),
+                    paramsRes.params,
                     postAtts, storageClass );
         }
 
@@ -2735,16 +2741,19 @@ private static:
     }
 
     /*
-     * Returns D code which declares function parameters.
+     * Returns D code which declares function parameters,
+     * and optionally any imports (e.g. core.vararg)
      * "ref int a0, real a1, ..."
      */
-    private string generateParameters(string myFuncInfo, func...)()
+    static struct GenParams { string imports, params; }
+    private GenParams generateParameters(string myFuncInfo, func...)()
     {
         alias STC = ParameterStorageClass;
         alias stcs = ParameterStorageClassTuple!(func);
         enum nparams = stcs.length;
 
-        string params = ""; // the result
+        string imports = ""; // any imports required
+        string params = ""; // parameters
 
         foreach (i, stc; stcs)
         {
@@ -2764,12 +2773,14 @@ private static:
         }
 
         // Add some ellipsis part if needed.
-        final switch (variadicFunctionStyle!(func))
+        auto style = variadicFunctionStyle!(func);
+        final switch (style)
         {
             case Variadic.no:
                 break;
 
             case Variadic.c, Variadic.d:
+                imports ~= "import core.vararg;\n";
                 // (...) or (a, b, ...)
                 params ~= (nparams == 0) ? "..." : ", ...";
                 break;
@@ -2779,7 +2790,7 @@ private static:
                 break;
         }
 
-        return params;
+        return typeof(return)(imports, params);
     }
 
     // Returns D code which enumerates n parameter variables using comma as the
@@ -3493,7 +3504,7 @@ unittest
     alias int F2() pure nothrow;
     static assert(is(DerivedFunctionType!(F1, F2) == F2));
     alias int F3() @safe;
-    alias int F23() pure nothrow @safe;
+    alias int F23() @safe pure nothrow;
     static assert(is(DerivedFunctionType!(F2, F3) == F23));
 
     // return type covariance
@@ -3536,7 +3547,7 @@ unittest
     static assert(is(DerivedFunctionType!(F17, F18) == void));
 }
 
-private template staticIota(int beg, int end)
+package template staticIota(int beg, int end)
 {
     static if (beg + 1 >= end)
     {
@@ -4252,18 +4263,64 @@ unittest
 }
 
 /**
-Library typedef.
- */
-alias Typedef(T) = .Typedef!(T, T.init);
+$(B Typedef) allows the creation of a unique type which is
+based on an existing type. Unlike the $(D alias) feature,
+$(B Typedef) ensures the two types are not considered as equals.
 
-/// ditto
-struct Typedef(T, T init, string cookie=null)
+Example:
+----
+alias MyInt = Typedef!int;
+static void takeInt(int) { }
+static void takeMyInt(MyInt) { }
+
+int i;
+takeInt(i);    // ok
+takeMyInt(i);  // fails
+
+MyInt myInt;
+takeInt(myInt);    // fails
+takeMyInt(myInt);  // ok
+----
+
+Params:
+
+init = Optional initial value for the new type. For example:
+
+----
+alias MyInt = Typedef!(int, 10);
+MyInt myInt;
+assert(myInt == 10);  // default-initialized to 10
+----
+
+cookie = Optional, used to create multiple unique types which are
+based on the same origin type $(D T). For example:
+
+----
+alias TypeInt1 = Typedef!int;
+alias TypeInt2 = Typedef!int;
+
+// The two Typedefs are the same type.
+static assert(is(TypeInt1 == TypeInt2));
+
+alias TypeFloat1 = Typedef!(float, float.init, "a");
+alias TypeFloat2 = Typedef!(float, float.init, "b");
+
+// The two Typedefs are _not_ the same type.
+static assert(!is(TypeFloat1 == TypeFloat2));
+----
+ */
+struct Typedef(T, T init = T.init, string cookie=null)
 {
     private T Typedef_payload = init;
 
     this(T init)
     {
         Typedef_payload = init;
+    }
+
+    this(Typedef tdef)
+    {
+        this(tdef.Typedef_payload);
     }
 
     mixin Proxy!Typedef_payload;
@@ -4349,6 +4406,14 @@ unittest
     }
 }
 
+unittest // Issue 12596
+{
+    import std.typecons;
+    alias TD = Typedef!int;
+    TD x = TD(1);
+    TD y = TD(x);
+    assert(x == y);
+}
 
 /**
 Allocates a $(D class) object right inside the current scope,

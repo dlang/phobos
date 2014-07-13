@@ -79,15 +79,15 @@ alias void  function (void* opaque, void* address) free_func;
 
 struct z_stream
 {
-    ubyte    *next_in;  /* next input byte */
+    ubyte*   next_in;  /* next input byte */
     uint     avail_in;  /* number of bytes available at next_in */
     c_ulong  total_in;  /* total nb of input bytes read so far */
 
-    ubyte    *next_out; /* next output byte should be put there */
+    ubyte*   next_out; /* next output byte should be put there */
     uint     avail_out; /* remaining free space at next_out */
     c_ulong  total_out; /* total nb of bytes output so far */
 
-    char     *msg;      /* last error message, NULL if no error */
+    char*    msg;      /* last error message, NULL if no error */
     void*    state;     /* not visible by applications */
 
     alloc_func zalloc;  /* used to allocate the internal state */
@@ -105,7 +105,8 @@ alias z_stream* z_streamp;
      gzip header information passed to and from zlib routines.  See RFC 1952
   for more details on the meanings of these fields.
 */
-struct gz_header {
+struct gz_header
+{
     int     text;       /* true if compressed data believed to be text */
     c_ulong time;       /* modification time */
     int     xflags;     /* extra flags (not used when writing a gzip file) */
@@ -113,9 +114,9 @@ struct gz_header {
     byte    *extra;     /* pointer to extra field or Z_NULL if none */
     uint    extra_len;  /* extra field length (valid if extra != Z_NULL) */
     uint    extra_max;  /* space at extra (only when reading header) */
-    byte    *name;      /* pointer to zero-terminated file name or Z_NULL */
+    byte*   name;      /* pointer to zero-terminated file name or Z_NULL */
     uint    name_max;   /* space at name (only when reading header) */
-    byte    *comment;   /* pointer to zero-terminated comment or Z_NULL */
+    byte*   comment;   /* pointer to zero-terminated comment or Z_NULL */
     uint    comm_max;   /* space at comment (only when reading header) */
     int     hcrc;       /* true if there was or will be a header crc */
     int     done;       /* true when done reading gzip header (not used
@@ -225,7 +226,7 @@ const int Z_NULL = 0;  /* for initializing zalloc, zfree, opaque */
 
                         /* basic functions */
 
-char* zlibVersion();
+const(char)* zlibVersion();
 /* The application can compare zlibVersion and ZLIB_VERSION for consistency.
    If the first character differs, the library code actually used is
    not compatible with the zlib.h header file used by the application.
@@ -558,7 +559,7 @@ int deflateInit2(z_streamp strm,
    not perform any compression: this will be done by deflate().
 */
 
-int deflateSetDictionary(z_streamp strm, ubyte* dictionary, uint  dictLength);
+int deflateSetDictionary(z_streamp strm, const(ubyte)* dictionary, uint  dictLength);
 /*
      Initializes the compression dictionary from the given byte sequence
    without producing any compressed output. This function must be called
@@ -798,7 +799,7 @@ int inflateInit2(z_streamp strm, int windowBits)
    and avail_out are unchanged.)
 /
 
-int inflateSetDictionary(z_streamp strm, ubyte* dictionary, uint  dictLength);
+int inflateSetDictionary(z_streamp strm, const(ubyte)* dictionary, uint  dictLength);
 /*
      Initializes the decompression dictionary from the given uncompressed byte
    sequence. This function must be called immediately after a call of inflate,
@@ -1017,7 +1018,7 @@ uint zlibCompileFlags();
 
 int compress(ubyte* dest,
              size_t* destLen,
-             ubyte* source,
+             const(ubyte)* source,
              size_t sourceLen);
 /*
      Compresses the source buffer into the destination buffer.  sourceLen is
@@ -1034,7 +1035,7 @@ int compress(ubyte* dest,
 
 int compress2(ubyte* dest,
               size_t* destLen,
-              ubyte* source,
+              const(ubyte)* source,
               size_t sourceLen,
               int level);
 /*
@@ -1059,7 +1060,7 @@ size_t compressBound(size_t sourceLen);
 
 int uncompress(ubyte* dest,
                size_t* destLen,
-               ubyte* source,
+               const(ubyte)* source,
                size_t sourceLen);
 /*
      Decompresses the source buffer into the destination buffer.  sourceLen is
@@ -1081,7 +1082,7 @@ int uncompress(ubyte* dest,
 alias void* gzFile;
 alias int z_off_t;              // file offset
 
-gzFile gzopen(char* path, char* mode);
+gzFile gzopen(const(char)* path, const(char)* mode);
 /*
      Opens a gzip (.gz) file for reading or writing. The mode parameter
    is as in fopen ("rb" or "wb") but can also include a compression level
@@ -1098,7 +1099,7 @@ gzFile gzopen(char* path, char* mode);
    can be checked to distinguish the two cases (if errno is zero, the
    zlib error is Z_MEM_ERROR).  */
 
-gzFile gzdopen(int fd, char* mode);
+gzFile gzdopen(int fd, const(char)* mode);
 /*
      gzdopen() associates a gzFile with the file descriptor fd.  File
    descriptors are obtained from calls like open, dup, creat, pipe or
@@ -1134,7 +1135,7 @@ int gzwrite(gzFile file, void* buf, uint len);
    (0 in case of error).
 */
 
-int gzprintf(gzFile file, char* format, ...);
+int gzprintf(gzFile file, const(char)* format, ...);
 /*
      Converts, formats, and writes the args to the compressed file under
    control of the format string, as in fprintf. gzprintf returns the number of
@@ -1147,14 +1148,14 @@ int gzprintf(gzFile file, char* format, ...);
    because the secure snprintf() or vsnprintf() functions were not available.
 */
 
-int gzputs(gzFile file, char* s);
+int gzputs(gzFile file, const(char)* s);
 /*
       Writes the given null-terminated string to the compressed file, excluding
    the terminating null character.
       gzputs returns the number of characters written, or -1 in case of error.
 */
 
-char* gzgets(gzFile file, char* buf, int len);
+const(char)* gzgets(gzFile file, const(char)* buf, int len);
 /*
       Reads bytes from the compressed file until len-1 characters are read, or
    a newline character is read and transferred to buf, or an end-of-file
@@ -1247,7 +1248,7 @@ int gzclose(gzFile file);
    error number (see function gzerror below).
 */
 
-char* gzerror(gzFile file, int *errnum);
+const(char)* gzerror(gzFile file, int* errnum);
 /*
      Returns the error message for the last error which occurred on the
    given compressed file. errnum is set to zlib error number. If an
@@ -1271,7 +1272,7 @@ void gzclearerr (gzFile file);
    compression library.
 */
 
- uint adler32  (uint adler, ubyte *buf, uint len);
+ uint adler32  (uint adler, ubyte* buf, uint len);
 
 /*
      Update a running Adler-32 checksum with the bytes buf[0..len-1] and
@@ -1296,7 +1297,7 @@ uint adler32_combine(uint adler1, uint adler2, z_off_t len2);
    seq1 and seq2 concatenated, requiring only adler1, adler2, and len2.
 */
 
-uint crc32(uint crc, ubyte *buf, uint len);
+uint crc32(uint crc, ubyte* buf, uint len);
 /*
      Update a running CRC-32 with the bytes buf[0..len-1] and return the
    updated CRC-32. If buf is NULL, this function returns the required initial
@@ -1330,11 +1331,11 @@ uint crc32_combine (uint crc1, uint crc2, z_off_t len2);
  */
 int deflateInit_(z_streamp strm,
                  int level,
-                 const char* versionx,
+                 const(char)* versionx,
                  int stream_size);
 
 int inflateInit_(z_streamp strm,
-                 const char* versionx,
+                 const(char)* versionx,
                  int stream_size);
 
 int deflateInit2_(z_streamp strm,
@@ -1343,20 +1344,20 @@ int deflateInit2_(z_streamp strm,
                   int windowBits,
                   int memLevel,
                   int strategy,
-                  const char* versionx,
+                  const(char)* versionx,
                   int stream_size);
 
 int inflateBackInit_(z_stream* strm,
                      int windowBits,
                      ubyte* window,
-                     const char* z_version,
+                     const(char)* z_version,
                      int stream_size);
 
 int inflateInit2_(z_streamp strm,
                   int windowBits,
-                  const char* versionx,
+                  const(char)* versionx,
                   int stream_size);
 
-char* zError(int err);
+const(char)* zError(int err);
 int inflateSyncPoint(z_streamp z);
-uint* get_crc_table();
+const(uint)* get_crc_table();

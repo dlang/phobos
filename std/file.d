@@ -55,6 +55,17 @@ version (unittest)
 
         return _deleteme;
     }
+
+    version(Android)
+    {
+        enum system_directory = "/system/etc";
+        enum system_file      = "/system/etc/hosts";
+    }
+    else version(Posix)
+    {
+        enum system_directory = "/usr/include";
+        enum system_file      = "/usr/include/assert.h";
+    }
 }
 
 
@@ -312,7 +323,7 @@ void main()
 }
 ----
  */
-void write(in char[] name, const void[] buffer)
+void write(in char[] name, const void[] buffer) @trusted
 {
     version(Windows)
     {
@@ -325,7 +336,7 @@ void write(in char[] name, const void[] buffer)
         cenforce(h != INVALID_HANDLE_VALUE, name);
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) == 1
+        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
                 && buffer.length == numwritten,
                 name);
     }
@@ -351,7 +362,7 @@ void main()
 }
 ----
  */
-void append(in char[] name, in void[] buffer)
+void append(in char[] name, in void[] buffer) @trusted
 {
     version(Windows)
     {
@@ -365,7 +376,7 @@ void append(in char[] name, in void[] buffer)
         scope(exit) cenforce(CloseHandle(h), name);
         DWORD numwritten;
         cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) == 1
+                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
                 && buffer.length == numwritten,
                 name);
     }
@@ -376,7 +387,7 @@ void append(in char[] name, in void[] buffer)
 // Posix implementation helper for write and append
 
 version(Posix) private void writeImpl(in char[] name,
-        in void[] buffer, in uint mode)
+        in void[] buffer, in uint mode) @trusted
 {
     immutable fd = core.sys.posix.fcntl.open(toStringz(name),
             mode, octal!666);
@@ -396,7 +407,7 @@ version(Posix) private void writeImpl(in char[] name,
  * If the target file exists, it is overwritten.
  * Throws: $(D FileException) on error.
  */
-void rename(in char[] from, in char[] to)
+void rename(in char[] from, in char[] to) @trusted
 {
     version(Windows)
     {
@@ -426,7 +437,7 @@ unittest
 Delete file $(D name).
 Throws: $(D FileException) on error.
  */
-void remove(in char[] name)
+void remove(in char[] name) @trusted
 {
     version(Windows)
     {
@@ -718,7 +729,8 @@ void setTimes(in char[] name,
 
 unittest
 {
-    string dir = deleteme ~ r".dir/a/b/c";
+    string newdir = deleteme ~ r".dir";
+    string dir = newdir ~ r"/a/b/c";
     string file = dir ~ "/file";
 
     if (!exists(dir)) mkdirRecurse(dir);
@@ -737,7 +749,7 @@ unittest
         assert(mtime == mtime_res);
     }
 
-    rmdirRecurse(dir);
+    rmdirRecurse(newdir);
 }
 
 /++
@@ -1021,11 +1033,11 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
-            assert("/usr/include".isDir);
+        if(system_directory.exists)
+            assert(system_directory.isDir);
 
-        if("/usr/include/assert.h".exists)
-            assert(!"/usr/include/assert.h".isDir);
+        if(system_file.exists)
+            assert(!system_file.isDir);
     }
 }
 
@@ -1072,16 +1084,16 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
+        if(system_directory.exists)
         {
-            assert(attrIsDir(getAttributes("/usr/include")));
-            assert(attrIsDir(getLinkAttributes("/usr/include")));
+            assert(attrIsDir(getAttributes(system_directory)));
+            assert(attrIsDir(getLinkAttributes(system_directory)));
         }
 
-        if("/usr/include/assert.h".exists)
+        if(system_file.exists)
         {
-            assert(!attrIsDir(getAttributes("/usr/include/assert.h")));
-            assert(!attrIsDir(getLinkAttributes("/usr/include/assert.h")));
+            assert(!attrIsDir(getAttributes(system_file)));
+            assert(!attrIsDir(getLinkAttributes(system_file)));
         }
     }
 }
@@ -1134,11 +1146,11 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
-            assert(!"/usr/include".isFile);
+        if(system_directory.exists)
+            assert(!system_directory.isFile);
 
-        if("/usr/include/assert.h".exists)
-            assert("/usr/include/assert.h".isFile);
+        if(system_file.exists)
+            assert(system_file.isFile);
     }
 }
 
@@ -1196,16 +1208,16 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
+        if(system_directory.exists)
         {
-            assert(!attrIsFile(getAttributes("/usr/include")));
-            assert(!attrIsFile(getLinkAttributes("/usr/include")));
+            assert(!attrIsFile(getAttributes(system_directory)));
+            assert(!attrIsFile(getLinkAttributes(system_directory)));
         }
 
-        if("/usr/include/assert.h".exists)
+        if(system_file.exists)
         {
-            assert(attrIsFile(getAttributes("/usr/include/assert.h")));
-            assert(attrIsFile(getLinkAttributes("/usr/include/assert.h")));
+            assert(attrIsFile(getAttributes(system_file)));
+            assert(attrIsFile(getLinkAttributes(system_file)));
         }
     }
 }
@@ -1260,14 +1272,14 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
+        if(system_directory.exists)
         {
-            assert(!"/usr/include".isSymlink);
+            assert(!system_directory.isSymlink);
 
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            core.sys.posix.unistd.symlink("/usr/include", symfile.ptr);
+            core.sys.posix.unistd.symlink(system_directory, symfile.ptr);
 
             assert(symfile.isSymlink);
             assert(!attrIsSymlink(getAttributes(symfile)));
@@ -1280,14 +1292,14 @@ unittest
             assert(!attrIsFile(getLinkAttributes(symfile)));
         }
 
-        if("/usr/include/assert.h".exists)
+        if(system_file.exists)
         {
-            assert(!"/usr/include/assert.h".isSymlink);
+            assert(!system_file.isSymlink);
 
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            core.sys.posix.unistd.symlink("/usr/include/assert.h", symfile.ptr);
+            core.sys.posix.unistd.symlink(system_file, symfile.ptr);
 
             assert(symfile.isSymlink);
             assert(!attrIsSymlink(getAttributes(symfile)));
@@ -1496,12 +1508,12 @@ else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link)
 
 version(Posix) unittest
 {
-    if("/usr/include".exists)
+    if(system_directory.exists)
     {
         immutable symfile = deleteme ~ "_slink\0";
         scope(exit) if(symfile.exists) symfile.remove();
 
-        symlink("/usr/include", symfile);
+        symlink(system_directory, symfile);
 
         assert(symfile.exists);
         assert(symfile.isSymlink);
@@ -1515,14 +1527,14 @@ version(Posix) unittest
         assert(!attrIsFile(getLinkAttributes(symfile)));
     }
 
-    if("/usr/include/assert.h".exists)
+    if(system_file.exists)
     {
-        assert(!"/usr/include/assert.h".isSymlink);
+        assert(!system_file.isSymlink);
 
         immutable symfile = deleteme ~ "_slink\0";
         scope(exit) if(symfile.exists) symfile.remove();
 
-        symlink("/usr/include/assert.h", symfile);
+        symlink(system_file, symfile);
 
         assert(symfile.exists);
         assert(symfile.isSymlink);
@@ -1587,7 +1599,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
 
 version(Posix) unittest
 {
-    foreach(file; ["/usr/include", "/usr/include/assert.h"])
+    foreach(file; [system_directory, system_file])
     {
         if(file.exists)
         {
@@ -1721,6 +1733,10 @@ else version (FreeBSD)
 
         return buffer.assumeUnique;
     }
+    else version (Android)
+    {
+        return readLink("/proc/self/exe");
+    }
     else
         static assert(0, "thisExePath is not supported on this platform");
 }
@@ -1754,7 +1770,6 @@ version(StdDdoc)
 
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATA* fd);
             private this(string path, in WIN32_FIND_DATAW *fd);
         }
         else version (Posix)
@@ -1921,23 +1936,6 @@ else version(Windows)
             }
         }
 
-        private this(string path, in WIN32_FIND_DATA* fd)
-        {
-            auto clength = to!int(core.stdc.string.strlen(fd.cFileName.ptr));
-
-            // Convert cFileName[] to unicode
-            const wlength = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, null, 0);
-            auto wbuf = new wchar[wlength];
-            const n = MultiByteToWideChar(0, 0, fd.cFileName.ptr, clength, wbuf.ptr, wlength);
-            assert(n == wlength);
-            // toUTF8() returns a new buffer
-            _name = buildPath(path, std.utf.toUTF8(wbuf[0 .. wlength]));
-            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
-            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
-            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
-            _attributes = fd.dwFileAttributes;
-        }
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             size_t clength = std.string.wcslen(fd.cFileName.ptr);
@@ -2233,10 +2231,10 @@ unittest
     }
     else version(Posix)
     {
-        if("/usr/include".exists)
+        if(system_directory.exists)
         {
             {
-                auto de = DirEntry("/usr/include");
+                auto de = DirEntry(system_directory);
                 assert(!de.isFile);
                 assert(de.isDir);
                 assert(!de.isSymlink);
@@ -2245,7 +2243,7 @@ unittest
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            core.sys.posix.unistd.symlink("/usr/include", symfile.ptr);
+            core.sys.posix.unistd.symlink(system_directory, symfile.ptr);
 
             {
                 auto de = DirEntry(symfile);
@@ -2275,9 +2273,9 @@ unittest
             }
         }
 
-        if("/usr/include/assert.h".exists)
+        if(system_file.exists)
         {
-            auto de = DirEntry("/usr/include/assert.h");
+            auto de = DirEntry(system_file);
             assert(de.isFile);
             assert(!de.isDir);
             assert(!de.isSymlink);
@@ -2442,7 +2440,9 @@ version(Posix) unittest
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
-    std.process.system("ln -sf "~deleteme~"/a/b/c "~deleteme~"/link");
+    version(Android) string link_cmd = "ln -s ";
+    else string link_cmd = "ln -sf ";
+    std.process.system(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
     enforce(!exists(deleteme));
 }
@@ -2547,27 +2547,6 @@ private struct DirIteratorImpl
             while( std.string.wcscmp(findinfo.cFileName.ptr, ".") == 0
                     || std.string.wcscmp(findinfo.cFileName.ptr, "..") == 0)
                 if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
-                {
-                    popDirStack();
-                    return false;
-                }
-            _cur = DirEntry(_stack.data[$-1].dirpath, findinfo);
-            return true;
-        }
-
-        bool toNext(bool fetch, WIN32_FIND_DATA* findinfo)
-        {
-            if(fetch)
-            {
-                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
-                {
-                    popDirStack();
-                    return false;
-                }
-            }
-            while( core.stdc.string.strcmp(findinfo.cFileName.ptr, ".") == 0
-                    || core.stdc.string.strcmp(findinfo.cFileName.ptr, "..") == 0)
-                if(FindNextFileA(_stack.data[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
@@ -2894,7 +2873,7 @@ unittest
 
     mkdir(path);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
     assert(!de.isFile);
@@ -2944,7 +2923,7 @@ unittest
 
     write(path, "hello world");
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
     assert(de.isFile);
@@ -2997,7 +2976,7 @@ version(linux) unittest
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
     assert(!de.isFile);
@@ -3042,7 +3021,7 @@ version(linux) unittest
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
     Thread.sleep(dur!"seconds"(2));
-    auto de = dirEntry(path);
+    auto de = DirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
     assert(de.isFile);
@@ -3084,6 +3063,13 @@ Example:
 // double.
 auto a = slurp!(int, double)("filename", "%s, %s");
 ----
+
+Bugs:
+$(D slurp) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
+instead of UTF-8 (as it internally uses $(XREF stdio, File),
+see $(BUGZILLA 7648)) thus must not be used in $(I Windows)
+or cross-platform applications other than with an immediate ASCII string as
+a file name to prevent accidental changes to result in incorrect behavior.
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
@@ -3177,7 +3163,7 @@ string tempDir() @trusted
         }
         else static assert (false, "Unsupported platform");
 
-        if (cache is null) cache = ".";
+        if (cache is null) cache = getcwd();
     }
     return cache;
 }

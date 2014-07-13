@@ -367,7 +367,7 @@ private Pid spawnProcessImpl(in char[][] args,
     {
         name = searchPathFor(name);
         if (name is null)
-            throw new ProcessException(text("Executable file not found: ", name));
+            throw new ProcessException(text("Executable file not found: ", args[0]));
     }
 
     // Convert program name and arguments to C-style strings.
@@ -719,11 +719,7 @@ private void setCLOEXEC(int fd, bool on)
         else    flags &= ~(cast(typeof(flags)) FD_CLOEXEC);
         flags = fcntl(fd, F_SETFD, flags);
     }
-    if (flags == -1)
-    {
-        throw new StdioException("Failed to "~(on ? "" : "un")
-                                 ~"set close-on-exec flag on file descriptor");
-    }
+    assert (flags != -1 || .errno == EBADF);
 }
 
 unittest // Command line arguments in spawnProcess().
@@ -1259,7 +1255,7 @@ A non-blocking version of $(LREF wait).
 
 If the process associated with $(D pid) has already terminated,
 $(D tryWait) has the exact same effect as $(D wait).
-In this case, it returns a struct where the $(D terminated) field
+In this case, it returns a tuple where the $(D terminated) field
 is set to $(D true) and the $(D status) field has the same
 interpretation as the return value of $(D wait).
 
@@ -1273,10 +1269,7 @@ get the exit code, but also to avoid the process becoming a "zombie"
 when it finally terminates.  (See $(LREF wait) for details).
 
 Returns:
-A $(D struct) which contains the fields $(D bool terminated)
-and $(D int status).  (This will most likely change to become a
-$(D std.typecons.Tuple!(bool,"terminated",int,"status")) in the future,
-but a compiler bug currently prevents this.)
+An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
 
 Throws:
 $(LREF ProcessException) on failure.
@@ -1303,14 +1296,10 @@ by the time we reach the end of the scope.
 */
 auto tryWait(Pid pid) @safe
 {
-    struct TryWaitResult
-    {
-        bool terminated;
-        int status;
-    }
+    import std.typecons : Tuple;
     assert(pid !is null, "Called tryWait on a null Pid.");
     auto code = pid.performWait(false);
-    return TryWaitResult(pid._processID == Pid.terminated, code);
+    return Tuple!(bool, "terminated", int, "status")(pid._processID == Pid.terminated, code);
 }
 // unittest: This function is tested together with kill() below.
 
@@ -1946,10 +1935,7 @@ workDir   = The working directory for the new process.
             directory.
 
 Returns:
-A $(D struct) which contains the fields $(D int status) and
-$(D string output).  (This will most likely change to become a
-$(D std.typecons.Tuple!(int,"status",string,"output")) in the future,
-but a compiler bug currently prevents this.)
+An $(D std.typecons.Tuple!(int, "status", string, "output")).
 
 POSIX_specific:
 If the process is terminated by a signal, the $(D status) field of
@@ -2000,6 +1986,8 @@ private auto executeImpl(alias pipeFunc, Cmd)(
     size_t maxOutput = size_t.max,
     in char[] workDir = null)
 {
+    import std.typecons : Tuple;
+
     auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
                       env, config, workDir);
 
@@ -2022,8 +2010,7 @@ private auto executeImpl(alias pipeFunc, Cmd)(
     // Exhaust the stream, if necessary.
     foreach (ubyte[] chunk; p.stdout.byChunk(defaultChunkSize)) { }
 
-    struct ProcessOutput { int status; string output; }
-    return ProcessOutput(wait(p.pid), cast(string) a.data);
+    return Tuple!(int, "status", string, "output")(wait(p.pid), cast(string) a.data);
 }
 
 unittest
@@ -2057,6 +2044,19 @@ unittest
     auto r3 = executeShell("exit 123");
     assert (r3.status == 123);
     assert (r3.output.empty);
+}
+
+unittest
+{
+    import std.typecons : Tuple;
+    void foo() //Just test the compilation
+    {
+        auto ret1 = execute(["dummy", "arg"]);
+        auto ret2 = executeShell("dummy arg");
+        static assert(is(typeof(ret1) == typeof(ret2)));
+
+        Tuple!(int, string) ret3 = execute(["dummy", "arg"]);
+    }
 }
 
 
@@ -2155,7 +2155,8 @@ private struct TestScript
         else version (Posix)
         {
             auto ext = "";
-            auto firstLine = "#!/bin/sh";
+            version(Android) auto firstLine = "#!" ~ userShell;
+            else auto firstLine = "#!/bin/sh";
         }
         path = uniqueTempPath()~ext;
         std.file.write(path, firstLine~std.ascii.newline~code~std.ascii.newline);
@@ -3431,15 +3432,11 @@ version (Windows)
 {
     import core.sys.windows.windows;
 
-    extern (Windows)
-    HINSTANCE ShellExecuteA(HWND hwnd, LPCSTR lpOperation, LPCSTR lpFile, LPCSTR lpParameters, LPCSTR lpDirectory, INT nShowCmd);
-
-
     pragma(lib,"shell32.lib");
 
     void browse(string url)
     {
-        ShellExecuteA(null, "open", toStringz(url), null, null, SW_SHOWNORMAL);
+        ShellExecuteW(null, "open", toUTF16z(url), null, null, SW_SHOWNORMAL);
     }
 }
 else version (OSX)

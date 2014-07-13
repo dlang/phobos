@@ -113,8 +113,8 @@ private template createAccessors(
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
                 ~"@property @safe void "~name~"("~T.stringof~" v) pure nothrow { "
-                ~"assert(v >= "~name~"_min); "
-                ~"assert(v <= "~name~"_max); "
+                ~"assert(v >= "~name~`_min, "Value is smaller than the minimum value of bitfield '`~name~`'"); `
+                ~"assert(v <= "~name~`_max, "Value is greater than the maximum value of bitfield '`~name~`'"); `
                 ~store~" = cast(typeof("~store~"))"
                 ~" (("~store~" & ~cast(typeof("~store~"))"~myToString(maskAllElse)~")"
                 ~" | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
@@ -414,6 +414,30 @@ unittest
     assert(f.checkExpectations(false));
     f.b = true;
     assert(f.checkExpectations(true));
+}
+
+// Issue 12477
+unittest
+{
+    import std.bitmanip : bitfields;
+    import core.exception : AssertError;
+
+    static struct S
+    {
+        mixin(bitfields!(
+            uint, "a", 6,
+            int, "b", 2));
+    }
+
+    S s;
+
+    try { s.a = uint.max; assert(0); }
+    catch (AssertError ae)
+    { assert(ae.msg == "Value is greater than the maximum value of bitfield 'a'", ae.msg); }
+
+    try { s.b = int.min;  assert(0); }
+    catch (AssertError ae)
+    { assert(ae.msg == "Value is smaller than the minimum value of bitfield 'b'", ae.msg); }
 }
 
 /**
@@ -860,7 +884,7 @@ struct BitArray
         }
 
         n = this.length & (bitsPerSizeT-1);
-        size_t mask = (1 << n) - 1;
+        size_t mask = (size_t(1) << n) - 1;
         //printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, p1[i], p2[i]);
         return (mask == 0) || (p1[i] & mask) == (p2[i] & mask);
     }
@@ -874,17 +898,22 @@ struct BitArray
         static bool[] bc = [1,0,1,0,1,0,1];
         static bool[] bd = [1,0,1,1,1];
         static bool[] be = [1,0,1,0,1];
+        static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
         BitArray c; c.init(bc);
         BitArray d; d.init(bd);
         BitArray e; e.init(be);
+        BitArray f; f.init(bf);
+        BitArray g; g.init(bg);
 
         assert(a != b);
         assert(a != c);
         assert(a != d);
         assert(a == e);
+        assert(f != g);
     }
 
     /***************************************
@@ -900,19 +929,33 @@ struct BitArray
         auto p1 = this.ptr;
         auto p2 = a2.ptr;
         auto n = len / bitsPerSizeT;
-        for (i = 0; i < n; i++)
+
+        for (i = 0; i < n; ++i)
         {
             if (p1[i] != p2[i])
-                break;                // not equal
+            {
+                return p1[i] & size_t(1) << bsf(p1[i] ^ p2[i]) ? 1 : -1;
+            }
         }
-        for (size_t j = 0; j < len-i * bitsPerSizeT; j++)
+
+        immutable lenLastChunk = len % bitsPerSizeT;
+        if (lenLastChunk > 0)
         {
-            size_t mask = cast(size_t)(1 << j);
-            auto c = (cast(long)(p1[i] & mask) - cast(long)(p2[i] & mask));
-            if (c)
-                return c > 0 ? 1 : -1;
+            immutable diff = p1[i] ^ p2[i];
+            if (diff)
+            {
+                immutable index = bsf(diff);
+                if (index < lenLastChunk)
+                {
+                    return p1[i] & size_t(1) << index ? 1 : -1;
+                }
+            }
         }
-        return cast(int)this.len - cast(int)a2.length;
+
+        // Standard: 
+        // A bool value can be implicitly converted to any integral type,
+        // with false becoming 0 and true becoming 1
+        return (this.length > a2.length) - (this.length < a2.length);
     }
 
     unittest
@@ -924,12 +967,16 @@ struct BitArray
         static bool[] bc = [1,0,1,0,1,0,1];
         static bool[] bd = [1,0,1,1,1];
         static bool[] be = [1,0,1,0,1];
+        static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
+        static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
 
         BitArray a; a.init(ba);
         BitArray b; b.init(bb);
         BitArray c; c.init(bc);
         BitArray d; d.init(bd);
         BitArray e; e.init(be);
+        BitArray f; f.init(bf);
+        BitArray g; g.init(bg);
 
         assert(a >  b);
         assert(a >= b);
@@ -940,9 +987,11 @@ struct BitArray
         assert(a == e);
         assert(a <= e);
         assert(a >= e);
+        assert(f <  g);
+        assert(g <= g);
 
         bool[] v;
-        for (int i = 1; i < 256; i++)
+        foreach  (i; 1 .. 256)
         {
             v.length = i;
             v[] = false;
@@ -951,6 +1000,23 @@ struct BitArray
             BitArray y; y.init(v);
             assert(x < y);
             assert(x <= y);
+        }
+
+        BitArray a1, a2;
+
+        for (size_t len = 4; len <= 256; len <<= 1)
+        {
+            a1.length = a2.length = len;
+            a1[len-2] = a2[len-1] = true;
+            assert(a1 > a2);
+            a1[len-2] = a2[len-1] = false;
+        }
+
+        foreach (j; 1 .. a1.length)
+        {
+            a1[j-1] = a2[j] = true;
+            assert(a1 > a2);
+            a1[j-1] = a2[j] = false;
         }
     }
 
@@ -2253,7 +2319,7 @@ unittest
     $(D T). The value returned is converted from the given endianness to the
     native endianness. The range is not consumed.
 
-    Parems:
+    Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
@@ -2582,7 +2648,7 @@ unittest
     native endianness. The $(D T.sizeof) bytes which are read are consumed from
     the range.
 
-    Parems:
+    Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
@@ -2839,7 +2905,7 @@ unittest
     to the given range of $(D ubyte)s as a sequence of $(D T.sizeof) $(D ubyte)s
     starting at index. $(D hasSlicing!R) must be $(D true).
 
-    Parems:
+    Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness to write the bytes in.
         range = The range to write to.
@@ -3227,7 +3293,7 @@ unittest
     $(D T.sizeof) $(D ubyte)s starting at index. $(D hasSlicing!R) must be
     $(D true).
 
-    Parems:
+    Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness to write the bytes in.
         range = The range to append to.

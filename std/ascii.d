@@ -44,25 +44,20 @@ immutable uppercase      = letters[0..26];               /// A..Z
 immutable lowercase      = letters[26..52];              /// a..z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
 
-/**
-Letter case specifier.
- */
+/++
+    Letter case specifier.
+  +/
 enum LetterCase : bool
 {
     upper, /// Upper case letters
     lower  /// Lower case letters
 }
 
+/// Newline sequence for this system.
 version(Windows)
-{
-    /// Newline sequence for this system.
     immutable newline = "\r\n";
-}
 else version(Posix)
-{
-    /// Newline sequence for this system.
     immutable newline = "\n";
-}
 else
     static assert(0, "Unsupported OS");
 
@@ -70,7 +65,7 @@ else
 /++
     Returns whether $(D c) is a letter or a number (0..9, a..z, A..Z).
   +/
-bool isAlphaNum(dchar c) @safe pure nothrow
+bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 {
     return c <= 'z' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'Z'));
 }
@@ -88,7 +83,7 @@ unittest
 /++
     Returns whether $(D c) is an ASCII letter (A..Z, a..z).
   +/
-bool isAlpha(dchar c) @safe pure nothrow
+bool isAlpha(dchar c) @safe pure nothrow @nogc
 {
     // Optimizer can turn this into a bitmask operation on 64 bit code
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
@@ -107,7 +102,7 @@ unittest
 /++
     Returns whether $(D c) is a lowercase ASCII letter (a..z).
   +/
-bool isLower(dchar c) @safe pure nothrow
+bool isLower(dchar c) @safe pure nothrow @nogc
 {
     return c >= 'a' && c <= 'z';
 }
@@ -125,7 +120,7 @@ unittest
 /++
     Returns whether $(D c) is an uppercase ASCII letter (A..Z).
   +/
-bool isUpper(dchar c) @safe pure nothrow
+bool isUpper(dchar c) @safe pure nothrow @nogc
 {
     return c <= 'Z' && 'A' <= c;
 }
@@ -143,7 +138,7 @@ unittest
 /++
     Returns whether $(D c) is a digit (0..9).
   +/
-bool isDigit(dchar c) @safe pure nothrow
+bool isDigit(dchar c) @safe pure nothrow @nogc
 {
     return '0' <= c && c <= '9';
 }
@@ -161,7 +156,7 @@ unittest
 /++
     Returns whether $(D c) is a digit in base 8 (0..7).
   +/
-bool isOctalDigit(dchar c) @safe pure nothrow
+bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 {
     return c >= '0' && c <= '7';
 }
@@ -179,7 +174,7 @@ unittest
 /++
     Returns whether $(D c) is a digit in base 16 (0..9, A..F, a..f).
   +/
-bool isHexDigit(dchar c) @safe pure nothrow
+bool isHexDigit(dchar c) @safe pure nothrow @nogc
 {
     return c <= 'f' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'F'));
 }
@@ -198,7 +193,7 @@ unittest
     Whether or not $(D c) is a whitespace character. That includes the space,
     tab, vertical tab, form feed, carriage return, and linefeed characters.
   +/
-bool isWhite(dchar c) @safe pure nothrow
+bool isWhite(dchar c) @safe pure nothrow @nogc
 {
     return c == ' ' || (c >= 0x09 && c <= 0x0D);
 }
@@ -216,7 +211,7 @@ unittest
 /++
     Returns whether $(D c) is a control character.
   +/
-bool isControl(dchar c) @safe pure nothrow
+bool isControl(dchar c) @safe pure nothrow @nogc
 {
     return c < 0x20 || c == 0x7F;
 }
@@ -236,7 +231,7 @@ unittest
     Whether or not $(D c) is a punctuation character. That includes all ASCII
     characters which are not control characters, letters, digits, or whitespace.
   +/
-bool isPunctuation(dchar c) @safe pure nothrow
+bool isPunctuation(dchar c) @safe pure nothrow @nogc
 {
     return c <= '~' && c >= '!' && !isAlphaNum(c);
 }
@@ -257,7 +252,7 @@ unittest
     Whether or not $(D c) is a printable character other than the space
     character.
   +/
-bool isGraphical(dchar c) @safe pure nothrow
+bool isGraphical(dchar c) @safe pure nothrow @nogc
 {
     return '!' <= c && c <= '~';
 }
@@ -278,7 +273,7 @@ unittest
     Whether or not $(D c) is a printable character - including the space
     character.
   +/
-bool isPrintable(dchar c) @safe pure nothrow
+bool isPrintable(dchar c) @safe pure nothrow @nogc
 {
     return c >= ' ' && c <= '~';
 }
@@ -299,7 +294,7 @@ unittest
     Whether or not $(D c) is in the ASCII character set - i.e. in the range
     0..0x7F.
   +/
-bool isASCII(dchar c) @safe pure nothrow
+bool isASCII(dchar c) @safe pure nothrow @nogc
 {
     return c <= 0x7F;
 }

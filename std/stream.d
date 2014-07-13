@@ -233,7 +233,7 @@ interface InputStream {
    * file.readf("%d hello %f", &x, &y, "%s", &s);
    * --------------------------
    */
-  int vreadf(TypeInfo[] arguments, void* args);
+  int vreadf(TypeInfo[] arguments, va_list args);
   int readf(...); /// ditto
 
   /// Retrieve the number of bytes available for immediate reading.
@@ -352,7 +352,7 @@ interface OutputStream {
    */
   OutputStream writef(...);
   OutputStream writefln(...); /// ditto
-  OutputStream writefx(TypeInfo[] arguments, void* argptr, int newline = false);  /// ditto
+  OutputStream writefx(TypeInfo[] arguments, va_list argptr, int newline = false);  /// ditto
 
   void flush(); /// Flush pending output if appropriate.
   void close(); /// Close the stream, flushing output if appropriate.
@@ -690,7 +690,7 @@ class Stream : InputStream, OutputStream {
     return c;
   }
 
-  int vreadf(TypeInfo[] arguments, void* args) {
+  int vreadf(TypeInfo[] arguments, va_list args) {
     string fmt;
     int j = 0;
     int count = 0, i = 0;
@@ -703,7 +703,8 @@ class Stream : InputStream, OutputStream {
       }
       if (fmt.length == 0 || i == fmt.length) {
         i = 0;
-        if (arguments[j] is typeid(char[])) {
+        if (arguments[j] is typeid(string) || arguments[j] is typeid(char[])
+            || arguments[j] is typeid(const(char)[])) {
           fmt = va_arg!(string)(args);
           j++;
           continue;
@@ -1236,7 +1237,7 @@ class Stream : InputStream, OutputStream {
   }
 
   // writes data with optional trailing newline
-  OutputStream writefx(TypeInfo[] arguments, void* argptr, int newline=false) {
+  OutputStream writefx(TypeInfo[] arguments, va_list argptr, int newline=false) {
     doFormat(&doFormatCallback,arguments,argptr);
     if (newline)
       writeLine("");
@@ -1436,6 +1437,23 @@ class Stream : InputStream, OutputStream {
   final protected void assertSeekable() {
     if (!seekable)
       throw new SeekException("Stream is not seekable");
+  }
+
+  unittest { // unit test for Issue 3363
+    import std.stdio;
+    immutable fileName ="issue3363.txt"; 
+    auto w = File(fileName, "w");
+    scope (exit) remove(fileName.ptr);
+    w.write("one two three");
+    w.close();
+    auto r = File(fileName, "r");
+    const(char)[] constChar;
+    string str;
+    char[] chars;
+    r.readf("%s %s %s", &constChar, &str, &chars);
+    assert (constChar == "one", constChar);
+    assert (str == "two", str);
+    assert (chars == "three", chars);
   }
 
   unittest { //unit tests for Issue 1668
@@ -1882,12 +1900,12 @@ class OpenException: StreamFileException {
   this(string msg) { super(msg); }
 }
 
-// access modes; may be or'ed
+/// Specifies the $(LREF File) access mode used when opening the file.
 enum FileMode {
-  In = 1,
-  Out = 2,
-  OutNew = 6, // includes FileMode.Out
-  Append = 10 // includes FileMode.Out
+  In = 1,     /// Opens the file for reading.
+  Out = 2,    /// Opens the file for writing.
+  OutNew = 6, /// Opens the file for writing, creates a new file if it doesn't exist.
+  Append = 10 /// Opens the file for writing, appending new data to the end of the file.
 }
 
 version (Windows) {
@@ -2099,7 +2117,7 @@ class File: Stream {
         throw new SeekException("unable to move file pointer");
       ulong result = (cast(ulong)hi << 32) + low;
     } else version (Posix) {
-      auto result = lseek(hFile, cast(int)offset, rel);
+      auto result = lseek(hFile, cast(off_t)offset, rel);
       if (result == cast(typeof(result))-1)
         throw new SeekException("unable to move file pointer");
     }

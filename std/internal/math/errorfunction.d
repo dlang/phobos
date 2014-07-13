@@ -25,6 +25,11 @@
 module std.internal.math.errorfunction;
 import std.math;
 
+pure:
+nothrow:
+@safe:
+@nogc:
+
 private {
 immutable real EXP_2  = 0.13533528323661269189L; /* exp(-2) */
 enum real SQRT2PI = 2.50662827463100050242E0L; // sqrt(2pi)

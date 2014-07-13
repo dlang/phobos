@@ -3,9 +3,10 @@ Guidelines for Contributing
 
 Welcome to the D community and thanks for your interest in contributing!
 
-# [How to contribute pull requests?](http://wiki.dlang.org/Pull_Requests)
+## [How to contribute pull requests?](http://wiki.dlang.org/Pull_Requests)
 
-# More Links
+More Links
+----------
 
 * Fork [on Github](https://github.com/D-Programming-Language/phobos)
 * Use our [Bugzilla bug tracker](http://d.puremagic.com/issues/)

@@ -1333,7 +1333,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     {
         enforce(a < ResultType.max,
                 text("std.random.uniform(): invalid left bound ", a));
-        ResultType lower = a + 1;
+        ResultType lower = cast(ResultType) (a + 1);
     }
     else
     {
@@ -1345,10 +1345,16 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
         enforce(lower <= b,
                 text("std.random.uniform(): invalid bounding interval ",
                         boundaries[0], a, ", ", b, boundaries[1]));
-        if (b == ResultType.max && lower == ResultType.min)
+        /* Cannot use this next optimization with dchar, as dchar
+         * only partially uses its full bit range
+         */
+        static if (!is(ResultType == dchar))
         {
-            // Special case - all bits are occupied
-            return std.random.uniform!ResultType(rng);
+            if (b == ResultType.max && lower == ResultType.min)
+            {
+                // Special case - all bits are occupied
+                return std.random.uniform!ResultType(rng);
+            }
         }
         auto upperDist = unsigned(b - lower) + 1u;
     }
@@ -1393,10 +1399,52 @@ unittest
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
-        T init = uniform(lo, hi);
-        size_t i = 50;
-        while (--i && uniform(lo, hi) == init) {}
-        assert(i > 0);
+
+        // Try tests with each of the possible bounds
+        {
+            T init = uniform(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"[)"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"(]"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"()"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"[]"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+
+        /* Test case with closed boundaries covering whole range
+         * of integral type
+         */
+        static if (isIntegral!T || isSomeChar!T)
+        {
+            foreach (immutable _; 0 .. 100)
+            {
+                auto u = uniform!"[]"(T.min, T.max);
+                static assert(is(typeof(u) == T));
+                assert(T.min <= u, "Lower bound violation for uniform!\"[]\" with " ~ T.stringof);
+                assert(u <= T.max, "Upper bound violation for uniform!\"[]\" with " ~ T.stringof);
+            }
+        }
     }
 
     auto reproRng = Xorshift(239842);
@@ -1478,18 +1526,28 @@ auto uniform(T, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
 if (!is(T == enum) && (isIntegral!T || isSomeChar!T) && isUniformRNG!UniformRandomNumberGenerator)
 {
-    auto r = urng.front;
-    urng.popFront();
-    static if (T.sizeof <= r.sizeof)
+    /* dchar does not use its full bit range, so we must
+     * revert to the uniform with specified bounds
+     */
+    static if (is(T == dchar))
     {
-        return cast(T) r;
+        return uniform!"[]"(T.min, T.max);
     }
     else
     {
-        static assert(T.sizeof == 8 && r.sizeof == 4);
-        T r1 = urng.front | (cast(T)r << 32);
+        auto r = urng.front;
         urng.popFront();
-        return r1;
+        static if (T.sizeof <= r.sizeof)
+        {
+            return cast(T) r;
+        }
+        else
+        {
+            static assert(T.sizeof == 8 && r.sizeof == 4);
+            T r1 = urng.front | (cast(T)r << 32);
+            urng.popFront();
+            return r1;
+        }
     }
 }
 
@@ -1509,6 +1567,14 @@ unittest
         size_t i = 50;
         while (--i && uniform!T() == init) {}
         assert(i > 0);
+
+        foreach (immutable _; 0 .. 100)
+        {
+            auto u = uniform!T();
+            static assert(is(typeof(u) == T));
+            assert(T.min <= u, "Lower bound violation for uniform!" ~ T.stringof);
+            assert(u <= T.max, "Upper bound violation for uniform!" ~ T.stringof);
+        }
     }
 }
 
@@ -1552,7 +1618,7 @@ unittest
 
 /**
  * Generates a uniformly-distributed floating point number of type
- * $(D T) in the range [0, 1).  If no random number generator is
+ * $(D T) in the range [0, 1$(RPAREN).  If no random number generator is
  * specified, the default RNG $(D rndGen) will be used as the source
  * of randomness.
  *

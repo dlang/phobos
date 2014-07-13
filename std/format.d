@@ -5,6 +5,10 @@
    I/O. It's comparable to C99's $(D vsprintf()) and uses a similar
    format encoding scheme.
 
+   For an introductory look at $(B std.format)'s capabilities and how to use
+   this module see the dedicated
+   $(LINK2 http://wiki.dlang.org/Defining_custom_print_format_specifiers, DWiki article).
+
    Macros: WIKI = Phobos/StdFormat
 
    Copyright: Copyright Digital Mars 2000-2013.
@@ -192,16 +196,16 @@ $(I FormatChar):
     <dt>$(I Width)
     <dd>
     Specifies the minimum field width.
-    If the width is a $(B *), the next argument, which must be
-    of type $(B int), is taken as the width.
+    If the width is a $(B *), an additional argument of type $(B int),
+    preceding the actual argument, is taken as the width.
     If the width is negative, it is as if the $(B -) was given
     as a $(I Flags) character.
 
     <dt>$(I Precision)
     <dd> Gives the precision for numeric conversions.
-    If the precision is a $(B *), the next argument, which must be
-    of type $(B int), is taken as the precision. If it is negative,
-    it is as if there was no $(I Precision).
+    If the precision is a $(B *), an additional argument of type $(B int),
+    preceding the actual argument, is taken as the precision.
+    If it is negative, it is as if there was no $(I Precision) specifier.
 
     <dt>$(I FormatChar)
     <dd>
@@ -220,15 +224,28 @@ $(I FormatChar):
             <dd>The result is the string converted to UTF-8.
             A $(I Precision) specifies the maximum number of characters
             to use in the result.
+            <dt>structs
+            <dd>If the struct defines a $(B toString()) method the result is the
+            string returned from this function. Otherwise the result is
+            StructName(field<sub>0</sub>, field<sub>1</sub>, ...) where field<sub>n</sub>
+            is the nth element formatted with the default format.
             <dt>classes derived from $(B Object)
             <dd>The result is the string returned from the class instance's
             $(B .toString()) method.
             A $(I Precision) specifies the maximum number of characters
             to use in the result.
+            <dt>unions
+            <dd>If the union defines a $(B toString()) method the result is the
+            string returned from this function. Otherwise the result is
+            the name of the union, without its contents.
             <dt>non-string static and dynamic arrays
             <dd>The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
-            where s<sub>k</sub> is the kth element
+            where s<sub>n</sub> is the nth element
             formatted with the default format.
+            <dt>associative arrays
+            <dd>The result is the equivalent of what the initializer
+            would look like for the contents of the associative array,
+            e.g.: ["red" : 10, "blue" : 20].
         </dl>
 
         <dt>$(B 'c')
@@ -1589,7 +1606,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         else if (isInfinity(tval))
             s = val >= 0 ? "inf" : "-inf"; // snprintf writes 1.#INF
 
-        if (s.length > 0) 
+        if (s.length > 0)
         {
           version(none)
           {
@@ -1655,7 +1672,9 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         formatTest( to!(    const T)(5.5), "5.5" );
         formatTest( to!(immutable T)(5.5), "5.5" );
 
-        formatTest( T.nan, "nan" );
+        // bionic doesn't support lower-case string formatting of nan yet
+        version(Android) { formatTest( T.nan, "NaN" ); }
+        else { formatTest( T.nan, "nan" ); }
     }
 }
 
@@ -1935,7 +1954,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 // alias this, input range I/F, and toString()
 unittest
 {
-    struct S(uint flags)
+    struct S(int flags)
     {
         int[] arr;
       static if (flags & 1)
@@ -2119,7 +2138,9 @@ if (isInputRange!T)
     // Formatting character ranges like string
     if (f.spec == 's')
     {
-        static if (is(CharTypeOf!(ElementType!T)))
+        alias E = ElementType!T;
+
+        static if (!is(E == enum) && is(CharTypeOf!E))
         {
             static if (is(StringTypeOf!T))
             {
@@ -2496,6 +2517,15 @@ unittest
     formatTest( S2(['c':1, 'd':2]), "S" );
 }
 
+unittest  // Issue 8921
+{
+    enum E : char { A = 'a', B = 'b', C = 'c' }
+    E[3] e = [E.A, E.B, E.C];
+    formatTest(e, "[A, B, C]");
+
+    E[] e2 = [E.A, E.B, E.C];
+    formatTest(e2, "[A, B, C]");
+}
 
 template hasToString(T, Char)
 {
@@ -2669,6 +2699,52 @@ if (is(T == class) && !is(T == enum))
     }
 }
 
+/++
+   $(D formatValue) allows to reuse existing format specifiers:
+ +/
+unittest
+{
+   import std.format;
+   import std.string : format;
+
+   struct Point
+   {
+       int x, y;
+
+       void toString(scope void delegate(const(char)[]) sink,
+                     FormatSpec!char fmt) const
+       {
+           sink("(");
+           sink.formatValue(x, fmt);
+           sink(",");
+           sink.formatValue(y, fmt);
+           sink(")");
+       }
+   }
+
+   auto p = Point(16,11);
+   assert(format("%03d", p) == "(016,011)");
+   assert(format("%02x", p) == "(10,0b)");
+}
+
+/++
+   The following code compares the use of $(D formatValue) and $(D formattedWrite).
+ +/
+unittest
+{
+   import std.format;
+   import std.array : appender;
+
+   auto writer1 = appender!string();
+   writer1.formattedWrite("%08b", 42);
+
+   auto writer2 = appender!string();
+   auto f = singleSpec("%08b");
+   writer2.formatValue(42, f);
+
+   assert(writer1.data == writer2.data && writer1.data == "00101010");
+}
+
 unittest
 {
     // class range (issue 5154)
@@ -2748,7 +2824,22 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
         }
         else
         {
-            formatValue(w, cast(Object)val, f);
+            version (Windows)
+            {
+                import std.c.windows.com : IUnknown;
+                static if (is(T : IUnknown))
+                {
+                    formatValue(w, *cast(void**)&val, f);
+                }
+                else
+                {
+                    formatValue(w, cast(Object)val, f);
+                }
+            }
+            else
+            {
+                formatValue(w, cast(Object)val, f);
+            }
         }
     }
 }
@@ -2770,6 +2861,26 @@ unittest
     }
     Whatever val = new C;
     formatTest( val, "ab" );
+
+    // Issue 11175
+    version (Windows)
+    {
+        import core.sys.windows.windows : HRESULT;
+        import std.c.windows.com : IUnknown, IID;
+
+        interface IUnknown2 : IUnknown { }
+
+        class D : IUnknown2
+        {
+            extern(Windows) HRESULT QueryInterface(const(IID)* riid, void** pvObject) { return typeof(return).init; }
+            extern(Windows) uint AddRef() { return 0; }
+            extern(Windows) uint Release() { return 0; }
+        }
+
+        IUnknown2 d = new D;
+        string expected = format("%X", cast(void*)d);
+        formatTest(d, expected);
+    }
 }
 
 /// ditto
@@ -3314,6 +3425,13 @@ unittest
         assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
                 stream.data);
     }
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers
+        // or lower-case string formatting of nan yet, but it was committed
+        // recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
+    }
     else
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
@@ -3341,6 +3459,12 @@ unittest
     //formattedWrite(stream, "%x %X", 1.32);
     version (Win64)
         assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers,
+        // but it was committed recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
+    }
     else
         assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
@@ -4197,7 +4321,7 @@ unittest
    Reads a string and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isSomeString!T && !is(T == enum))
+    if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     if (spec.spec == '(')
     {
@@ -4273,7 +4397,7 @@ unittest
    Reads an array (except for string types) and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isArray!T && !isSomeString!T && !is(T == enum))
+    if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     if (spec.spec == '(')
     {
@@ -4845,12 +4969,12 @@ $(I FormatChar):
 Example:
 
 -------------------------
-import std.c.stdio;
+import core.stdc.stdio;
 import std.format;
 
 void myPrint(...)
 {
-    void putc(char c)
+    void putc(dchar c)
     {
         fputc(c, stdout);
     }
@@ -4858,11 +4982,13 @@ void myPrint(...)
     std.format.doFormat(&putc, _arguments, _argptr);
 }
 
-...
+void main()
+{
+    int x = 27;
 
-int x = 27;
-// prints 'The answer is 27:6'
-myPrint("The answer is %s:", x, 6);
+    // prints 'The answer is 27:6'
+    myPrint("The answer is %s:", x, 6);
+}
 ------------------------
  */
 void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
@@ -5083,17 +5209,17 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
                 if (tsize > 8 && m != Mangle.Tsarray)
                 {   q = p;
-                    argptr = &q;
+                    argptr = cast(va_list)&q;
                 }
                 else
-                argptr = p;
+                argptr = cast(va_list)p;
                 formatArg('s');
                 p += tsize;
             }
             else
             {
                 version (X86)
-                    argptr = p;
+                    argptr = cast(va_list)p;
                 else version(X86_64)
                 {   __va_list va;
                     va.stack_args = p;
@@ -5143,16 +5269,16 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 //doFormat(putc, (&keyti)[0..1], pkey);
                 m = getMan(keyti);
                 version (X86)
-                    argptr = pkey;
+                    argptr = cast(va_list)pkey;
                 else version (Win64)
                 {
                     void* q = void;
                     if (keysize > 8 && m != Mangle.Tsarray)
                     {   q = pkey;
-                        argptr = &q;
+                        argptr = cast(va_list)&q;
                     }
                     else
-                        argptr = pkey;
+                        argptr = cast(va_list)pkey;
                 }
                 else version (X86_64)
                 {   __va_list va;
@@ -5168,17 +5294,17 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 //doFormat(putc, (&valti)[0..1], pvalue);
                 m = getMan(valti);
                 version (X86)
-                    argptr = pvalue;
+                    argptr = cast(va_list)pvalue;
                 else version (Win64)
                 {
                     void* q2 = void;
                     auto valuesize = valti.tsize;
                     if (valuesize > 8 && m != Mangle.Tsarray)
                     {   q2 = pvalue;
-                        argptr = &q2;
+                        argptr = cast(va_list)&q2;
                     }
                     else
-                        argptr = pvalue;
+                        argptr = cast(va_list)pvalue;
                 }
                 else version (X86_64)
                 {   __va_list va2;
@@ -5845,6 +5971,13 @@ unittest
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     else version (Win64)
         assert(s == "1.67 -0X1.47AE14P+0 nan", s);
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers
+        // or lower-case string formatting of nan yet, but it was committed
+        // recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
+    }
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 

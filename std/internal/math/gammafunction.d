@@ -22,6 +22,11 @@ module std.internal.math.gammafunction;
 import std.internal.math.errorfunction;
 import std.math;
 
+pure:
+nothrow:
+@safe:
+@nogc:
+
 private {
 
 enum real SQRT2PI = 2.50662827463100050242E0L; // sqrt(2pi)
@@ -490,7 +495,7 @@ unittest {
     assert(logGamma(-real.min_normal*real.epsilon) == real.infinity);
 
     // x, correct loggamma(x), correct d/dx loggamma(x).
-    static real[] testpoints = [
+    immutable static real[] testpoints = [
     8.0L,                    8.525146484375L      + 1.48766904143001655310E-5,   2.01564147795560999654E0L,
     8.99993896484375e-1L,    6.6375732421875e-2L  + 5.11505711292524166220E-6L, -7.54938684259372234258E-1,
     7.31597900390625e-1L,    2.2369384765625e-1   + 5.21506341809849792422E-6L, -1.13355566660398608343E0L,

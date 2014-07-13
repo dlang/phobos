@@ -10,7 +10,7 @@
     {
         FILE* f = enforce(fopen("some/file"));
         // f is not null from here on
-        FILE* g = enforceEx!WriteException(fopen("some/other/file", "w"));
+        FILE* g = enforce!WriteException(fopen("some/other/file", "w"));
         // g is not null from here on
 
         Exception e = collectException(write(g, readln(f)));
@@ -90,27 +90,27 @@ void assertNotThrown(T : Throwable = Exception, E)
 ///
 unittest
 {
-    assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
+    assertNotThrown!StringException(enforce!StringException(true, "Error!"));
 
     //Exception is the default.
-    assertNotThrown(enforceEx!StringException(true, "Error!"));
+    assertNotThrown(enforce!StringException(true, "Error!"));
 
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-               enforceEx!StringException(false, "Error!"))) ==
+               enforce!StringException(false, "Error!"))) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
 }
 unittest
 {
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-               enforceEx!StringException(false, ""), "Error!")) ==
+               enforce!StringException(false, ""), "Error!")) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
 
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-               enforceEx!StringException(false, ""))) ==
+               enforce!StringException(false, ""))) ==
            `assertNotThrown failed: StringException was thrown.`);
 
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
-               enforceEx!StringException(false, ""), "")) ==
+               enforce!StringException(false, ""), "")) ==
            `assertNotThrown failed: StringException was thrown.`);
 }
 
@@ -225,13 +225,13 @@ void assertThrown(T : Throwable = Exception, E)
 ///
 unittest
 {
-    assertThrown!StringException(enforceEx!StringException(false, "Error!"));
+    assertThrown!StringException(enforce!StringException(false, "Error!"));
 
     //Exception is the default.
-    assertThrown(enforceEx!StringException(false, "Error!"));
+    assertThrown(enforce!StringException(false, "Error!"));
 
     assert(collectExceptionMsg!AssertError(assertThrown!StringException(
-               enforceEx!StringException(true, "Error!"))) ==
+               enforce!StringException(true, "Error!"))) ==
            `assertThrown failed: No StringException was thrown.`);
 }
 
@@ -330,19 +330,20 @@ unittest
     enforce(line.length, "Expected a non-empty line.");
     --------------------
  +/
-T enforce(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
+T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__)
     if (is(typeof({ if (!value) {} })))
 {
-    if (!value) bailOut(file, line, msg);
+    if (!value) bailOut!E(file, line, msg);
     return value;
 }
 
 /++
-   $(RED Scheduled for deprecation in January 2013. If passing the file or line
-         number explicitly, please use the version of enforce which takes them as
-         function arguments. Taking them as template arguments causes
-         unnecessary template bloat.)
+   $(RED Deprecated. If passing the file or line number explicitly, please use
+         the overload of enforce which takes them as function arguments. Taking
+         them as template arguments causes unnecessary template bloat. This
+         overload will be removed in June 2015.)
  +/
+deprecated("Use the overload of enforce that takes file and line as function arguments.")
 T enforce(T, string file, size_t line = __LINE__)
     (T value, lazy const(char)[] msg = null)
     if (is(typeof({ if (!value) {} })))
@@ -366,9 +367,21 @@ T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     return value;
 }
 
-private void bailOut(string file, size_t line, in char[] msg) @safe pure
+private void bailOut(E : Throwable = Exception)(string file, size_t line, in char[] msg)
 {
-    throw new Exception(msg.ptr ? msg.idup : "Enforcement failed", file, line);
+    static if (is(typeof(new E(string.init, string.init, size_t.init))))
+    {
+        throw new E(msg.ptr ? msg.idup : "Enforcement failed", file, line);
+    }
+    else static if (is(typeof(new E(string.init, size_t.init))))
+    {
+        throw new E(file, line);
+    }
+    else
+    {
+        static assert("Expected this(string, string, size_t) or this(string, size_t)" ~
+            " constructor for " ~ __traits(identifier, E));
+    }
 }
 
 unittest
@@ -446,7 +459,6 @@ unittest
     S s;
 
     enforce(s);
-    enforce!(S, __FILE__, __LINE__)(s, ""); // scheduled for deprecation
     enforce(s, {});
     enforce(s, new Exception(""));
 
@@ -461,8 +473,25 @@ unittest
     {
         this(string msg) { super(msg, __FILE__, __LINE__); }
     }
-    enforceEx!E1(s);
-    enforceEx!E2(s);
+    enforce!E1(s);
+    enforce!E2(s);
+}
+
+deprecated unittest
+{
+    struct S
+    {
+        static int g;
+        ~this() {}  // impure & unsafe destructor
+        bool opCast(T:bool)() {
+            int* p = cast(int*)0;   // unsafe operation
+            int n = g;              // impure operation
+            return true;
+        }
+    }
+    S s;
+
+    enforce!(S, __FILE__, __LINE__)(s, "");
 }
 
 /++
@@ -513,6 +542,8 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     and can be constructed with $(D new E(file, line)), then
     $(D new E(file, line)) will be thrown.
 
+    This is legacy name, it is recommended to use $(D enforce!E) instead.
+
     Example:
     --------------------
     auto f = enforceEx!FileMissingException(fopen("data.txt"));
@@ -520,9 +551,10 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     enforceEx!DataCorruptionException(line.length);
     --------------------
  +/
-template enforceEx(E)
+template enforceEx(E : Throwable)
     if (is(typeof(new E("", __FILE__, __LINE__))))
 {
+    /++ Ditto +/
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(msg, file, line);
@@ -530,9 +562,11 @@ template enforceEx(E)
     }
 }
 
-template enforceEx(E)
+/++ Ditto +/
+template enforceEx(E : Throwable)
     if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
+    /++ Ditto +/
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(file, line);
@@ -561,6 +595,24 @@ unittest
         assert(e.file == "file");
         assert(e.line == 42);
     }
+
+    {
+        auto e = collectException!Error(enforceEx!OutOfMemoryError(false));
+        assert(e !is null);
+        assert(e.msg == "Memory allocation failed");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__ - 4);
+    }
+
+    {
+        auto e = collectException!Error(enforceEx!OutOfMemoryError(false, "file", 42));
+        assert(e !is null);
+        assert(e.msg == "Memory allocation failed");
+        assert(e.file == "file");
+        assert(e.line == 42);
+    }
+
+    static assert(!is(typeof(enforceEx!int(true))));
 }
 
 unittest
@@ -720,7 +772,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   char[] result = new char['z' - 'a' + 1];
  *   foreach (i, ref e; result)
  *   {
- *     e = 'a' + i;
+ *     e = cast(char)('a' + i);
  *   }
  *   return assumeUnique(result);
  * }
@@ -742,7 +794,7 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *   sneaky.length = last - first + 1;
  *   foreach (i, ref e; sneaky)
  *   {
- *     e = 'a' + i;
+ *     e = cast(char)('a' + i);
  *   }
  *   return assumeUnique(sneaky); // BAD
  * }
@@ -758,14 +810,33 @@ enum emptyExceptionMsg = "<Empty Exception Message>";
  *
  * The call will duplicate the array appropriately.
  *
- * Checking for uniqueness during compilation is possible in certain
- * cases (see the $(D unique) and $(D lent) keywords in
- * the $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
- * language), but complicates the language considerably. The downside
- * of $(D assumeUnique)'s convention-based usage is that at this
- * time there is no formal checking of the correctness of the
- * assumption; on the upside, the idiomatic use of $(D
- * assumeUnique) is simple and rare enough to be tolerable.
+ * Note that checking for uniqueness during compilation is
+ * possible in certain cases, especially when a function is
+ * marked as a pure function. The following example does not
+ * need to call assumeUnique because the compiler can infer the
+ * uniqueness of the array in the pure function:
+ * ----
+ * string letters() pure
+ * {
+ *   char[] result = new char['z' - 'a' + 1];
+ *   foreach (i, ref e; result)
+ *   {
+ *     e = cast(char)('a' + i);
+ *   }
+ *   return result;
+ * }
+ * ----
+ *
+ * For more on infering uniqueness see the $(B unique) and
+ * $(B lent) keywords in the
+ * $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
+ * language.
+ *
+ * The downside of using $(D assumeUnique)'s
+ * convention-based usage is that at this time there is no
+ * formal checking of the correctness of the assumption;
+ * on the upside, the idiomatic use of $(D assumeUnique) is
+ * simple and rare enough to be tolerable.
  *
  */
 immutable(T)[] assumeUnique(T)(T[] array) pure nothrow
@@ -874,32 +945,43 @@ unittest
 }
 
 /**
+The "pointsTo" functions, $(D doesPointTo) and $(D mayPointTo).
+
 Returns $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it.
 
-If $(D source) is or contains a dynamic array, then, then pointsTo will check
+If $(D source) is or contains a dynamic array, then, then these functions will check
 if there is overlap between the dynamic array and $(D target)'s representation.
-
-If $(D source) is or contains a union, then every member of the union is
-checked for embedded pointers. This may lead to false positives, depending on
-which should be considered the "active" member of the union.
 
 If $(D source) is a class, then pointsTo will handle it as a pointer.
 
-If $(D target) is a pointer, a dynamic array or a class, then pointsTo will only
+If $(D target) is a pointer, a dynamic array or a class, then these functions will only
 check if $(D source) points to $(D target), $(I not) what $(D target) references.
+
+If $(D source) is or contains a union, then there may be either false positives or
+false negatives:
+
+$(D doesPointTo) will return $(D true) if it is absolutly certain
+$(D source) points to $(D target). It may produce false negatives, but never
+false positives. This function should be prefered when trying to validate
+input data.
+
+$(D mayPointTo) will return $(D false) if it is absolutly certain
+$(D source) does not point to $(D target). It may produce false positives, but never
+false negatives. This function should be prefered for defensively choosing a
+code path.
 
 Note: Evaluating $(D pointsTo(x, x)) checks whether $(D x) has
 internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
-bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
+bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
     if (__traits(isRef, source) || isDynamicArray!S ||
         isPointer!S || is(S == class))
 {
-    static if (isPointer!S || is(S == class))
+    static if (isPointer!S || is(S == class) || is(S == interface))
     {
         const m = cast(void*) source,
               b = cast(void*) &target, e = b + target.sizeof;
@@ -908,13 +990,14 @@ bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @t
     else static if (is(S == struct) || is(S == union))
     {
         foreach (i, Subobj; typeof(source.tupleof))
-            if (pointsTo(source.tupleof[i], target)) return true;
+            static if (!isUnionAliased!(S, i))
+                if (doesPointTo(source.tupleof[i], target)) return true;
         return false;
     }
     else static if (isStaticArray!S)
     {
         foreach (size_t i; 0 .. S.length)
-            if (pointsTo(source[i], target)) return true;
+            if (doesPointTo(source[i], target)) return true;
         return false;
     }
     else static if (isDynamicArray!S)
@@ -926,10 +1009,104 @@ bool pointsTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @t
         return false;
     }
 }
-// for shared objects
-bool pointsTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
+
+bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
+    if (__traits(isRef, source) || isDynamicArray!S ||
+        isPointer!S || is(S == class))
 {
-    return pointsTo!(shared S, shared T, void)(source, target);
+    static if (isPointer!S || is(S == class) || is(S == interface))
+    {
+        const m = cast(void*) source,
+              b = cast(void*) &target, e = b + target.sizeof;
+        return b <= m && m < e;
+    }
+    else static if (is(S == struct) || is(S == union))
+    {
+        foreach (i, Subobj; typeof(source.tupleof))
+            if (mayPointTo(source.tupleof[i], target)) return true;
+        return false;
+    }
+    else static if (isStaticArray!S)
+    {
+        foreach (size_t i; 0 .. S.length)
+            if (mayPointTo(source[i], target)) return true;
+        return false;
+    }
+    else static if (isDynamicArray!S)
+    {
+        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+// for shared objects
+bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
+{
+    return doesPointTo!(shared S, shared T, void)(source, target);
+}
+bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target) @trusted pure nothrow
+{
+    return mayPointTo!(shared S, shared T, void)(source, target);
+}
+
+deprecated ("pointsTo is ambiguous. Please use either of doesPointTo or mayPointTo")
+alias pointsTo = doesPointTo;
+
+/+
+Returns true if the field at index $(D i) in ($D T) shares its address with another field.
+
+Note: This does not merelly check if the field is a member of an union, but also that
+it is not a single child.
++/
+package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
+private bool isUnionAliasedImpl(T)(size_t offset)
+{
+    int count = 0;
+    foreach (i, U; typeof(T.tupleof))
+        if (T.tupleof[i].offsetof == offset)
+            ++count;
+    return count >= 2;
+}
+//
+unittest
+{
+    static struct S
+    {
+        int a0; //Not aliased
+        union
+        {
+            int a1; //Not aliased
+        }
+        union
+        {
+            int a2; //Aliased
+            int a3; //Aliased
+        }
+        union A4
+        {
+            int b0; //Not aliased
+        };
+        A4 a4;
+        union A5
+        {
+            int b0; //Aliased
+            int b1; //Aliased
+        };
+        A5 a5;
+    }
+
+    static assert(!isUnionAliased!(S, 0)); //a0;
+    static assert(!isUnionAliased!(S, 1)); //a1;
+    static assert( isUnionAliased!(S, 2)); //a2;
+    static assert( isUnionAliased!(S, 3)); //a3;
+    static assert(!isUnionAliased!(S, 4)); //a4;
+        static assert(!isUnionAliased!(S.A4, 0)); //a4.b0;
+    static assert(!isUnionAliased!(S, 5)); //a5;
+        static assert( isUnionAliased!(S.A5, 0)); //a5.b0;
+        static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
 }
 
 /// Pointers
@@ -937,9 +1114,9 @@ unittest
 {
     int  i = 0;
     int* p = null;
-    assert(!p.pointsTo(i));
+    assert(!p.doesPointTo(i));
     p = &i;
-    assert( p.pointsTo(i));
+    assert( p.doesPointTo(i));
 }
 
 /// Structs and Unions
@@ -955,9 +1132,9 @@ unittest
 
     //structs and unions "own" their members
     //pointsTo will answer true if one of the members pointsTo.
-    assert(!s.pointsTo(s.v)); //s.v is just v member of s, so not pointed.
-    assert( s.p.pointsTo(i)); //i is pointed by s.p.
-    assert( s  .pointsTo(i)); //which means i is pointed by s itself.
+    assert(!s.doesPointTo(s.v)); //s.v is just v member of s, so not pointed.
+    assert( s.p.doesPointTo(i)); //i is pointed by s.p.
+    assert( s  .doesPointTo(i)); //which means i is pointed by s itself.
 
     //Unions will behave exactly the same. Points to will check each "member"
     //individually, even if they share the same memory
@@ -973,23 +1150,23 @@ unittest
     int*[1] arrp   = [&i];
 
     //A slice points to all of its members:
-    assert( slice.pointsTo(slice[3]));
-    assert(!slice[0 .. 2].pointsTo(slice[3])); //Object 3 is outside of the slice [0 .. 2]
+    assert( slice.doesPointTo(slice[3]));
+    assert(!slice[0 .. 2].doesPointTo(slice[3])); //Object 3 is outside of the slice [0 .. 2]
 
     //Note that a slice will not take into account what its members point to.
-    assert( slicep[0].pointsTo(i));
-    assert(!slicep   .pointsTo(i));
+    assert( slicep[0].doesPointTo(i));
+    assert(!slicep   .doesPointTo(i));
 
     //static arrays are objects that own their members, just like structs:
-    assert(!arr.pointsTo(arr[0])); //arr[0] is just a member of arr, so not pointed.
-    assert( arrp[0].pointsTo(i));  //i is pointed by arrp[0].
-    assert( arrp   .pointsTo(i));  //which means i is pointed by arrp itslef.
+    assert(!arr.doesPointTo(arr[0])); //arr[0] is just a member of arr, so not pointed.
+    assert( arrp[0].doesPointTo(i));  //i is pointed by arrp[0].
+    assert( arrp   .doesPointTo(i));  //which means i is pointed by arrp itslef.
 
     //Notice the difference between static and dynamic arrays:
-    assert(!arr  .pointsTo(arr[0]));
-    assert( arr[].pointsTo(arr[0]));
-    assert( arrp  .pointsTo(i));
-    assert(!arrp[].pointsTo(i));
+    assert(!arr  .doesPointTo(arr[0]));
+    assert( arr[].doesPointTo(arr[0]));
+    assert( arrp  .doesPointTo(i));
+    assert(!arrp[].doesPointTo(i));
 }
 
 /// Classes
@@ -1005,21 +1182,21 @@ unittest
     C b = a;
     //Classes are a bit particular, as they are treated like simple pointers
     //to a class payload.
-    assert( a.p.pointsTo(i)); //a.p points to i.
-    assert(!a  .pointsTo(i)); //Yet a itself does not point i.
+    assert( a.p.doesPointTo(i)); //a.p points to i.
+    assert(!a  .doesPointTo(i)); //Yet a itself does not point i.
 
     //To check the class payload itself, iterate on its members:
     ()
     {
         foreach (index, _; FieldTypeTuple!C)
-            if (pointsTo(a.tupleof[index], i))
+            if (doesPointTo(a.tupleof[index], i))
                 return;
         assert(0);
     }();
 
     //To check if a class points a specific payload, a direct memmory check can be done:
     auto aLoc = cast(ubyte[__traits(classInstanceSize, C)]*) a;
-    assert(b.pointsTo(*aLoc)); //b points to where a is pointing
+    assert(b.doesPointTo(*aLoc)); //b points to where a is pointing
 }
 
 unittest
@@ -1027,49 +1204,49 @@ unittest
     struct S1 { int a; S1 * b; }
     S1 a1;
     S1 * p = &a1;
-    assert(pointsTo(p, a1));
+    assert(doesPointTo(p, a1));
 
     S1 a2;
     a2.b = &a1;
-    assert(pointsTo(a2, a1));
+    assert(doesPointTo(a2, a1));
 
     struct S3 { int[10] a; }
     S3 a3;
     auto a4 = a3.a[2 .. 3];
-    assert(pointsTo(a4, a3));
+    assert(doesPointTo(a4, a3));
 
     auto a5 = new double[4];
     auto a6 = a5[1 .. 2];
-    assert(!pointsTo(a5, a6));
+    assert(!doesPointTo(a5, a6));
 
     auto a7 = new double[3];
     auto a8 = new double[][1];
     a8[0] = a7;
-    assert(!pointsTo(a8[0], a8[0]));
+    assert(!doesPointTo(a8[0], a8[0]));
 
     // don't invoke postblit on subobjects
     {
         static struct NoCopy { this(this) { assert(0); } }
         static struct Holder { NoCopy a, b, c; }
         Holder h;
-        cast(void)pointsTo(h, h);
+        cast(void)doesPointTo(h, h);
     }
 
     shared S3 sh3;
     shared sh3sub = sh3.a[];
-    assert(pointsTo(sh3sub, sh3));
+    assert(doesPointTo(sh3sub, sh3));
 
     int[] darr = [1, 2, 3, 4];
 
     //dynamic arrays don't point to each other, or slices of themselves
-    assert(!pointsTo(darr, darr));
-    assert(!pointsTo(darr[0 .. 1], darr));
+    assert(!doesPointTo(darr, darr));
+    assert(!doesPointTo(darr[0 .. 1], darr));
 
     //But they do point their elements
     foreach(i; 0 .. 4)
-        assert(pointsTo(darr, darr[i]));
-    assert(pointsTo(darr[0..3], darr[2]));
-    assert(!pointsTo(darr[0..3], darr[3]));
+        assert(doesPointTo(darr, darr[i]));
+    assert(doesPointTo(darr[0..3], darr[2]));
+    assert(!doesPointTo(darr[0..3], darr[3]));
 }
 
 unittest
@@ -1081,22 +1258,22 @@ unittest
 
     //Standard array
     int[2] k;
-    assert(!pointsTo(k, k)); //an array doesn't point to itself
+    assert(!doesPointTo(k, k)); //an array doesn't point to itself
     //Technically, k doesn't point its elements, although it does alias them
-    assert(!pointsTo(k, k[0]));
-    assert(!pointsTo(k, k[1]));
+    assert(!doesPointTo(k, k[0]));
+    assert(!doesPointTo(k, k[1]));
     //But an extracted slice will point to the same array.
-    assert(pointsTo(k[], k));
-    assert(pointsTo(k[], k[1]));
+    assert(doesPointTo(k[], k));
+    assert(doesPointTo(k[], k[1]));
 
     //An array of pointers
     int*[2] pp;
     int a;
     int b;
     pp[0] = &a;
-    assert( pointsTo(pp, a));  //The array contains a pointer to a
-    assert(!pointsTo(pp, b));  //The array does NOT contain a pointer to b
-    assert(!pointsTo(pp, pp)); //The array does not point itslef
+    assert( doesPointTo(pp, a));  //The array contains a pointer to a
+    assert(!doesPointTo(pp, b));  //The array does NOT contain a pointer to b
+    assert(!doesPointTo(pp, pp)); //The array does not point itslef
 
     //A struct containing a static array of pointers
     static struct S
@@ -1105,9 +1282,9 @@ unittest
     }
     S s;
     s.p[0] = &a;
-    assert( pointsTo(s, a)); //The struct contains an array that points a
-    assert(!pointsTo(s, b)); //But doesn't point b
-    assert(!pointsTo(s, s)); //The struct doesn't actually point itslef.
+    assert( doesPointTo(s, a)); //The struct contains an array that points a
+    assert(!doesPointTo(s, b)); //But doesn't point b
+    assert(!doesPointTo(s, s)); //The struct doesn't actually point itslef.
 
     //An array containing structs that have pointers
     static struct SS
@@ -1115,9 +1292,9 @@ unittest
         int* p;
     }
     SS[2] ss = [SS(&a), SS(null)];
-    assert( pointsTo(ss, a));  //The array contains a struct that points to a
-    assert(!pointsTo(ss, b));  //The array doesn't contains a struct that points to b
-    assert(!pointsTo(ss, ss)); //The array doesn't point itself.
+    assert( doesPointTo(ss, a));  //The array contains a struct that points to a
+    assert(!doesPointTo(ss, b));  //The array doesn't contains a struct that points to b
+    assert(!doesPointTo(ss, ss)); //The array doesn't point itself.
 }
 
 
@@ -1140,18 +1317,24 @@ unittest //Unions
 
     U u;
     S s;
-    assert(!pointsTo(u, i));
-    assert(!pointsTo(s, i));
+    assert(!doesPointTo(u, i));
+    assert(!doesPointTo(s, i));
+    assert(!mayPointTo(u, i));
+    assert(!mayPointTo(s, i));
 
     u.asPointer = &i;
     s.asPointer = &i;
-    assert( pointsTo(u, i));
-    assert( pointsTo(s, i));
+    assert(!doesPointTo(u, i));
+    assert(!doesPointTo(s, i));
+    assert( mayPointTo(u, i));
+    assert( mayPointTo(s, i));
 
     u.asInt = cast(size_t)&i;
     s.asInt = cast(size_t)&i;
-    assert( pointsTo(u, i)); //logical false positive
-    assert( pointsTo(s, i)); //logical false positive
+    assert(!doesPointTo(u, i));
+    assert(!doesPointTo(s, i));
+    assert( mayPointTo(u, i));
+    assert( mayPointTo(s, i));
 }
 
 unittest //Classes
@@ -1162,9 +1345,9 @@ unittest //Classes
         int* p;
     }
     A a = new A, b = a;
-    assert(!pointsTo(a, b)); //a does not point to b
+    assert(!doesPointTo(a, b)); //a does not point to b
     a.p = &i;
-    assert(!pointsTo(a, i)); //a does not point to i
+    assert(!doesPointTo(a, i)); //a does not point to i
 }
 unittest //alias this test
 {
@@ -1178,10 +1361,10 @@ unittest //alias this test
     }
     assert(is(S : int*));
     S s = S(&j);
-    assert(!pointsTo(s, i));
-    assert( pointsTo(s, j));
-    assert( pointsTo(cast(int*)s, i));
-    assert(!pointsTo(cast(int*)s, j));
+    assert(!doesPointTo(s, i));
+    assert( doesPointTo(s, j));
+    assert( doesPointTo(cast(int*)s, i));
+    assert(!doesPointTo(cast(int*)s, j));
 }
 
 /*********************
