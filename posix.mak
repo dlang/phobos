@@ -211,7 +211,7 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
-	processinit unicode_tables scopebuffer\
+	cstring processinit unicode_tables scopebuffer\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm)
 
 # Aggregate all D modules relevant to this build
