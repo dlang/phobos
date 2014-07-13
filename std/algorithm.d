@@ -7605,7 +7605,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
     {
         auto slen = walkLength(s.save), tlen = walkLength(t.save);
         AllocMatrix(slen + 1, tlen + 1);
-        foreach (i; 1 .. rows);
+        foreach (i; 1 .. rows)
         {
             auto sfront = s.front;
             s.popFront();
