@@ -9948,29 +9948,23 @@ unittest
     auto newValues = values.tee!(a => a + 1).array;
     assert(equal(newValues, values));
 
-    //No effect, as a is taken by value and not ref
-    auto newValues2 = values.tee!(a => a = 0).array;
-    assert(equal(newValues2, values));
-
-    //Ok
-    auto newValues2 = values.tee!((ref a) => a = 0).array;
-    assert(equal(newValues2, values));
-
     int count = 0;
-    auto newValues3 = values.filter!(a => a < 10)
+    auto newValues4 = values.filter!(a => a < 10)
                             .tee!(a => count++)
                             .map!(a => a + 1)
                             .filter!(a => a < 10);
 
     //Fine, equal also evaluates any lazy ranges passed to it.
     //count is not 3 until equal evaluates newValues3
-    assert(equal(newValues3, [2, 5]));
+    assert(equal(newValues4, [2, 5]));
     assert(count == 3);
 }
 
 //
 unittest
 {
+    import std.stdio: writefln;
+
     int[] values = [1, 4, 9, 16, 25];
 
     int count = 0;
