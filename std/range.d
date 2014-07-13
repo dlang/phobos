@@ -9863,66 +9863,12 @@ unittest
   in the case of the version of $(D tee) that takes a function, the function
   will not actually be executed until the range is "walked" using functions 
   that evaluate ranges, such as $(LREF array) or $(LREF reduce).
-
-  Example:
----
-  int [] values = [1, 4, 9, 16, 25];
-
-  int count = 0;
-  auto newValues = values.tee!(a => count++);
-  //Count has not been incremented as the
-  //result of tee has not yet been evaluated
-  assert(count == 0);
-  auto arrValues = count.array;
-  //The result of tee has now been evaluated and count is 3
-  assert(count == 3);
-
-  If a function is passed to $(D tee) and $(D pipeOnPop) is equal to
-  $(D Yes.pipeOnPop), $(D fun) is called on $(D front) before popping. 
-  Otherwise, $(D fun) will be called on $(D front) exactly once per element. 
-  The default behaviour is to call $(D fun) on $(D front) when calling 
-  $(D popFront).
-
-  Examples:
----
-  int[] values = [1, 4, 9, 16, 25];
-
-  int count = 0;
-  auto newValues = values.filter!(a => a < 10)
-                     .tee!(a => count++, No.pipeOnPop)
-                     .map!(a => a + 1)
-                     .filter!(a => a < 10);
-  auto val = newValues.front;
-  assert(count == 1);
-  //front is only evaluated once per element
-  val = newValues.front;
-  assert(count == 1);
-  //popFront() called, fun will be called
-  //again on the next access to front
-  newValues.popFront();
-  newValues.front;
-  assert(count == 2);
-
-  auto printValues = values.filter!(a => a < 10)
-                       .tee!(a => writefln("pre-map: %d", a))
-                       .map!(a => a + 1)
-                       .tee!(a => writefln("post-map: %d", a))
-                       .filter!(a => a < 10);
-  assert(equal(printValues, [2, 5]));
-  // Outputs (order due to range evaluation):
-  //   post-map: 2
-  //   pre-map: 1
-  //   post-map: 5
-  //   pre-map: 4
-  //   post-map: 10
-  //   pre-map: 9
----
 +/
 
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
 if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
 {
-    struct Result
+    static struct Result
     {
         private R1 _input;
         private R2 _output;
@@ -9979,6 +9925,7 @@ if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
     return Result(inputRange, outputRange);
 }
 
+/// ditto
 auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1)(R1 inputRange)
 if (is(typeof(fun) == void) || isSomeFunction!fun)
 {
@@ -9992,6 +9939,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     }
 }
 
+//
 unittest
 {
     // Pass-through
@@ -10000,7 +9948,12 @@ unittest
     auto newValues = values.tee!(a => a + 1).array;
     assert(equal(newValues, values));
 
+    //No effect, as a is taken by value and not ref
     auto newValues2 = values.tee!(a => a = 0).array;
+    assert(equal(newValues2, values));
+
+    //Ok
+    auto newValues2 = values.tee!((ref a) => a = 0).array;
     assert(equal(newValues2, values));
 
     int count = 0;
@@ -10008,13 +9961,52 @@ unittest
                             .tee!(a => count++)
                             .map!(a => a + 1)
                             .filter!(a => a < 10);
+
     //Fine, equal also evaluates any lazy ranges passed to it.
     //count is not 3 until equal evaluates newValues3
     assert(equal(newValues3, [2, 5]));
     assert(count == 3);
 }
 
+//
+unittest
+{
+    int[] values = [1, 4, 9, 16, 25];
 
+    int count = 0;
+    auto newValues = values.filter!(a => a < 10)
+                           .tee!(a => count++, No.pipeOnPop)
+                           .map!(a => a + 1)
+                           .filter!(a => a < 10);
+
+    auto val = newValues.front;
+    assert(count == 1);
+    //front is only evaluated once per element
+    val = newValues.front;
+    assert(count == 1);
+
+    //popFront() called, fun will be called
+    //again on the next access to front
+    newValues.popFront();
+    newValues.front;
+    assert(count == 2);
+
+    auto printValues = values.filter!(a => a < 10)
+        .tee!(a => writefln("pre-map: %d", a))
+        .map!(a => a + 1)
+        .tee!(a => writefln("post-map: %d", a))
+        .filter!(a => a < 10);
+    assert(equal(printValues, [2, 5]));
+    // Outputs (order due to range evaluation):
+    //   post-map: 2
+    //   pre-map: 1
+    //   post-map: 5
+    //   pre-map: 4
+    //   post-map: 10
+    //   pre-map: 9
+}
+
+//
 unittest
 {
     char[] txt = "Line one, Line 2".dup;
