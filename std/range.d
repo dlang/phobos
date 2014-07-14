@@ -9925,10 +9925,17 @@ if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
     return Result(inputRange, outputRange);
 }
 
-/// ditto
+/++
+  Distinguish between function literals and template lambdas
+  when using either as an $(LREF OutputRange). If it's a 
+  template lambda, it's first necessary to instantiate it
+  with the type of $(D inputRange.front).
++/
 auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1)(R1 inputRange)
 if (is(typeof(fun) == void) || isSomeFunction!fun)
 {
+    // Template lambdas will always return void
+    // because a template has no type
     static if (is(typeof(fun) == void))
     {
         return tee!pipeOnPop(inputRange, fun!(typeof(inputRange.front)));
