@@ -187,7 +187,7 @@ private:
     // the "handler" function below.
     enum OpID { getTypeInfo, get, compare, equals, testConversion, toString,
             index, indexAssign, catAssign, copyOut, length,
-            apply }
+            apply, postblit, destruct }
 
     // state
     ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
@@ -223,6 +223,9 @@ private:
         case OpID.toString:
             string * target = cast(string*) parm;
             *target = "<Uninitialized VariantN>";
+            break;
+        case OpID.postblit:
+        case OpID.destruct:
             break;
         case OpID.get:
         case OpID.testConversion:
@@ -539,6 +542,20 @@ private:
             }
             break;
 
+        case OpID.postblit:
+            static if (hasElaborateAssign!A)
+            {
+                typeid(A).postblit(zis);
+            }
+            break;
+
+        case OpID.destruct:
+            static if (hasElaborateDestructor!A)
+            {
+                typeid(A).destroy(zis);
+            }
+            break;
+
         default: assert(false);
         }
         return 0;
@@ -556,6 +573,16 @@ public:
         opAssign(value);
     }
 
+    this(this)
+    {
+        fptr(OpID.postblit, &store, null);
+    }
+
+    ~this()
+    {
+        fptr(OpID.destruct, &store, null);
+    }
+
     /** Assigns a $(D_PARAM VariantN) from a generic
      * argument. Statically rejects disallowed types. */
 
@@ -565,6 +592,9 @@ public:
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof ~ ". Valid types are "
                 ~ AllowedTypes.stringof);
+        // Assignment should destruct previous value
+        fptr(OpID.destruct, &store, null);
+
         static if (is(T : VariantN))
         {
             rhs.fptr(OpID.copyOut, &rhs.store, &this);
@@ -589,6 +619,10 @@ public:
                     memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
                 else
                     memcpy(&store, &rhs, rhs.sizeof);
+                static if (hasElaborateAssign!T)
+                {
+                    typeid(T).postblit(&store);
+                }
             }
             else
             {
@@ -2259,4 +2293,50 @@ unittest
             Alias12540 entity;
         }
     }
+}
+
+unittest
+{
+    // https://issues.dlang.org/show_bug.cgi?id=10194
+    // Also test for elaborate copying
+    static struct S
+    {
+        @disable this();
+        this(int dummy)
+        {
+            ++cnt;
+        }
+
+        this(this)
+        {
+            ++cnt;
+        }
+
+        @disable S opAssign();
+
+        ~this()
+        {
+            --cnt;
+            assert(cnt >= 0);
+        }
+        static int cnt = 0;
+    }
+
+    {
+        Variant v;
+        {
+            v = S(0);
+            assert(S.cnt == 1);
+        }
+        assert(S.cnt == 1);
+
+        // assigning a new value should destroy the existing one
+        v = 0;
+        assert(S.cnt == 0);
+
+        // destroying the variant should destroy it's current value
+        v = S(0);
+        assert(S.cnt == 1);
+    }
+    assert(S.cnt == 0);
 }
