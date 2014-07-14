@@ -12996,11 +12996,12 @@ auto cartesianProduct(RR...)(RR ranges)
     {
         RR ranges;
         RR current;
-        bool empty = false;
+        bool empty = true;
 
         this(RR _ranges)
         {
             ranges = _ranges;
+            empty = false;
             foreach (i, r; ranges)
             {
                 current[i] = r.save;
@@ -13056,6 +13057,14 @@ unittest
     auto cprod2 = cartesianProduct(p,p,p,q,p);
     assert(cprod2.empty);
     foreach (_; cprod2) {} // should not crash
+}
+
+unittest
+{
+    // .init value of cartesianProduct should be empty
+    auto cprod = cartesianProduct([0,0], [1,1], [2,2]);
+    assert(!cprod.empty);
+    assert(cprod.init.empty);
 }
 
 /// ditto
