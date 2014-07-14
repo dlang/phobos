@@ -1680,7 +1680,9 @@ may throw $(D StdioException) on I/O error.
 Note:
 Each $(D front) will not persist after $(D
 popFront) is called, so the caller must copy its contents (e.g. by
-calling $(D to!string)) if retention is needed.
+calling $(D to!string)) when retention is needed. If the caller needs 
+to retain a copy of every line, use the $(LREF byLineCopy) function 
+instead.
 
 Params:
 Char = Character type for each line, defaulting to $(D char).
@@ -1727,7 +1729,7 @@ $(D front) after the corresponding $(D popFront) call is made (because
 the contents may well have changed).
 */
     auto byLine(Terminator = char, Char = char)
-    (KeepTerminator keepTerminator = KeepTerminator.no,
+            (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
     if (isScalarType!Terminator)
     {
@@ -1736,10 +1738,133 @@ the contents may well have changed).
 
 /// ditto
     auto byLine(Terminator, Char = char)
-    (KeepTerminator keepTerminator, Terminator terminator)
+            (KeepTerminator keepTerminator, Terminator terminator)
     if (is(Unqual!(ElementEncodingType!Terminator) == Char))
     {
         return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
+    }
+
+    private struct ByLineCopy(Char, Terminator)
+    {
+    private:
+        import std.typecons;
+
+        /* Ref-counting stops the source range's ByLineCopyImpl
+         * from getting out of sync after the range is copied, e.g.
+         * when accessing range.front, then using std.range.take,
+         * then accessing range.front again. */
+        alias Impl = RefCounted!(ByLineCopyImpl!(Char, Terminator),
+            RefCountedAutoInitialize.no);
+        Impl impl;
+
+    public:
+        this(File f, KeepTerminator kt, Terminator terminator)
+        {
+            impl = Impl(f, kt, terminator);
+        }
+
+        @property bool empty()
+        {
+            return impl.refCountedPayload.empty;
+        }
+
+        @property Char[] front()
+        {
+            return impl.refCountedPayload.front;
+        }
+
+        void popFront()
+        {
+            impl.refCountedPayload.popFront();
+        }
+    }
+
+    private struct ByLineCopyImpl(Char, Terminator)
+    {
+        ByLineImpl!(Unqual!Char, Terminator) impl;
+        bool gotFront;
+        Char[] line;
+        
+    public:
+        this(File f, KeepTerminator kt, Terminator terminator)
+        {
+            impl = ByLineImpl!(Unqual!Char, Terminator)(f, kt, terminator);
+        }
+
+        @property bool empty()
+        {
+            return impl.empty;
+        }
+
+        @property front()
+        {
+            if (!gotFront)
+            {
+                line = impl.front.dup;
+                gotFront = true;
+            }
+            return line;
+        }
+        
+        void popFront()
+        {
+            impl.popFront();
+            gotFront = false;
+        }
+    }
+
+/**
+Returns an input range set up to read from the file handle one line
+at a time. Each line will be newly allocated.
+
+The element type for the range will be $(D Char[]). Range 
+primitives may throw $(D StdioException) on I/O error.
+
+Params:
+Char = Character type for each line, defaulting to $(D immutable char).
+keepTerminator = Use $(D KeepTerminator.yes) to include the
+terminator at the end of each line.
+terminator = Line separator ($(D '\n') by default).
+
+Example:
+----
+import std.algorithm, std.stdio;
+// Print sorted lines of a file.
+void main()
+{
+    auto sortedLines = File("file.txt")   // Open for reading
+                       .byLineCopy()      // Read persistent lines
+                       .array()           // into an array
+                       .sort();           // then sort them
+    foreach (line; sortedLines)
+        writeln(line);
+}
+----
+See_Also:
+$(XREF file,readText)
+*/
+    auto byLineCopy(Terminator = char, Char = immutable char)
+            (KeepTerminator keepTerminator = KeepTerminator.no,
+            Terminator terminator = '\n')
+    if (isScalarType!Terminator)
+    {
+        return ByLineCopy!(Char, Terminator)(this, keepTerminator, terminator);
+    }
+
+/// ditto
+    auto byLineCopy(Terminator, Char = immutable char)
+            (KeepTerminator keepTerminator, Terminator terminator)
+    if (is(Unqual!(ElementEncodingType!Terminator) == Unqual!Char))
+    {
+        return ByLineCopy!(Char, Terminator)(this, keepTerminator, terminator);
+    }
+    
+    unittest
+    {
+        static assert(is(typeof(File("").byLine.front) == char[]));
+        static assert(is(typeof(File("").byLineCopy.front) == string));
+        static assert(
+            is(typeof(File("").byLineCopy!(char, char).front) == char[]));
     }
 
     unittest
@@ -1762,7 +1887,7 @@ the contents may well have changed).
         f.detach();
         assert(!f.isOpen);
 
-        void test(Terminator)(string txt, string[] witness,
+        void test(Terminator)(string txt, in string[] witness,
                 KeepTerminator kt, Terminator term, bool popFirstLine = false)
         {
             import std.conv : text;
@@ -1789,8 +1914,11 @@ the contents may well have changed).
             assert(i == witness.length, text(i, " != ", witness.length));
 
             // Issue 11830
-            auto walkedLength = File(deleteme).byLine.walkLength;
+            auto walkedLength = File(deleteme).byLine(kt, term).walkLength;
             assert(walkedLength == witness.length, text(walkedLength, " != ", witness.length));
+            
+            // test persistent lines
+            assert(File(deleteme).byLineCopy(kt, term).array.sort() == witness.dup.sort());
         }
 
         KeepTerminator kt = KeepTerminator.no;
@@ -1853,6 +1981,18 @@ the contents may well have changed).
 
         file.detach();
         assert(!file.isOpen);
+    }
+
+    unittest
+    {
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hi");
+        scope(success) std.file.remove(deleteme);
+
+        auto blc = File(deleteme).byLineCopy;
+        assert(!blc.empty);
+        // check front is cached
+        assert(blc.front is blc.front);
     }
 
     template byRecord(Fields...)
