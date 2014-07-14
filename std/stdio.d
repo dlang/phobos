@@ -1707,7 +1707,7 @@ $(D front) after the corresponding $(D popFront) call is made (because
 the contents may well have changed).
 */
     auto byLine(Terminator = char, Char = char)
-    (KeepTerminator keepTerminator = KeepTerminator.no,
+            (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
     if (isScalarType!Terminator)
     {
@@ -1716,7 +1716,7 @@ the contents may well have changed).
 
 /// ditto
     auto byLine(Terminator, Char = char)
-    (KeepTerminator keepTerminator, Terminator terminator)
+            (KeepTerminator keepTerminator, Terminator terminator)
     if (is(Unqual!(ElementEncodingType!Terminator) == Char))
     {
         return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
@@ -1822,7 +1822,7 @@ See_Also:
 $(XREF file,readText)
 */
     auto byLineCopy(Terminator = char, Char = immutable char)
-    (KeepTerminator keepTerminator = KeepTerminator.no,
+            (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
     if (isScalarType!Terminator)
     {
@@ -1831,7 +1831,7 @@ $(XREF file,readText)
 
 /// ditto
     auto byLineCopy(Terminator, Char = immutable char)
-    (KeepTerminator keepTerminator, Terminator terminator)
+            (KeepTerminator keepTerminator, Terminator terminator)
     if (is(Unqual!(ElementEncodingType!Terminator) == Unqual!Char))
     {
         return ByLineCopy!(Char, Terminator)(this, keepTerminator, terminator);
