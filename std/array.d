@@ -2275,8 +2275,10 @@ app2.put([ 4, 5, 6 ]);
 assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 ----
  */
-struct Appender(A : T[], T)
+struct Appender(A)
+if (isDynamicArray!A)
 {
+    private alias T = ElementEncodingType!A;
     private struct Data
     {
         size_t capacity;
@@ -2633,11 +2635,13 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
  * underlying appender implementation.  Any calls made to the appender also update
  * the pointer to the original array passed in.
  */
-struct RefAppender(A : T[], T)
+struct RefAppender(A)
+if (isDynamicArray!A)
 {
     private
     {
-        Appender!(A, T) impl;
+        alias T = ElementEncodingType!A;
+        Appender!A impl;
         T[] *arr;
     }
 
@@ -2653,7 +2657,7 @@ struct RefAppender(A : T[], T)
      */
     this(T[] *arr)
     {
-        impl = Appender!(A, T)(*arr);
+        impl = Appender!A(*arr);
         this.arr = arr;
     }
 
@@ -2664,7 +2668,7 @@ struct RefAppender(A : T[], T)
         mixin("return impl." ~ fn ~ "(args);");
     }
 
-    private alias AppenderType = Appender!(A, T);
+    private alias AppenderType = Appender!A;
 
     /**
      * Appends one item to the managed array.
@@ -2714,13 +2718,17 @@ struct RefAppender(A : T[], T)
     Convenience function that returns an $(D Appender!A) object initialized
     with $(D array).
  +/
-Appender!(E[]) appender(A : E[], E)()
+Appender!A appender(A)()
+if (isDynamicArray!A)
 {
-    return Appender!(E[])(null);
+    return Appender!A(null);
 }
 /// ditto
-Appender!(E[]) appender(A : E[], E)(A array)
+Appender!(E[]) appender(A : E[], E)(auto ref A array)
 {
+    static assert (!isStaticArray!A || __traits(isRef, array),
+        "Cannot create Appender from an rvalue static array");
+
     return Appender!(E[])(array);
 }
 
@@ -3025,6 +3033,35 @@ unittest // check against .clear UFCS hijacking
     static assert(!__traits(compiles, app.clear()));
     static assert(__traits(compiles, clear(app)),
         "Remove me when object.clear is removed!");
+}
+
+unittest
+{
+    static struct D//dynamic
+    {
+        int[] i;
+        alias i this;
+    }
+    static struct S//static
+    {
+        int[5] i;
+        alias i this;
+    }
+    static assert(!is(Appender!(char[5])));
+    static assert(!is(Appender!D));
+    static assert(!is(Appender!S));
+
+    enum int[5] a = [];
+    int[5] b;
+    D d;
+    S s;
+    int[5] foo(){return a;}
+
+    static assert(!is(typeof(appender(a))));
+    static assert( is(typeof(appender(b))));
+    static assert( is(typeof(appender(d))));
+    static assert( is(typeof(appender(s))));
+    static assert(!is(typeof(appender(foo()))));
 }
 
 /++
