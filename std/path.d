@@ -2645,6 +2645,11 @@ bool isValidFilename(R)(R filename)
     return true;
 }
 
+bool isValidFilename(C)(inout(C)[] filename)
+    if (isSomeChar!C)
+{
+    return isValidFilename!(inout(C)[])(filename);
+}
 
 unittest
 {
@@ -2669,6 +2674,9 @@ unittest
         auto r = MockRange!(immutable(char))(`dir/file.d`);
         assert(!isValidFilename(r));
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert(isValidFilename(DirEntry("file.ext")));
 }
 
 
