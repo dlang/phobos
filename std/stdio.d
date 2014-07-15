@@ -2682,8 +2682,9 @@ void writeln(T...)(T args)
         import std.exception : enforce;
 
         // Specialization for strings - a very frequent case
-        enforce(fprintf(.stdout._p.handle, "%.*s\n",
-                        cast(int) args[0].length, args[0].ptr) >= 0);
+        auto w = .stdout.lockingTextWriter();
+        w.put(args[0]);
+        w.put("\n");
     }
     else
     {
