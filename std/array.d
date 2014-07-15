@@ -16,7 +16,7 @@ import core.memory, core.bitop;
 import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
        std.range, std.string, std.traits, std.typecons, std.typetuple,
        std.uni, std.utf;
-import std.c.string : memcpy;
+import core.stdc.string : memcpy;
 version(unittest) import core.exception, std.stdio;
 
 /**

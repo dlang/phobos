@@ -3505,16 +3505,16 @@ Initialize with a message and an error code. */
         errno = e;
         version (Posix)
         {
-            import std.c.string : strerror_r;
+            import core.stdc.string : strerror_r;
 
             char[256] buf = void;
             version (linux)
             {
-                auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
+                auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
             }
             else
             {
-                std.c.string.strerror_r(errno, buf.ptr, buf.length);
+                core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
                 auto s = buf.ptr;
             }
         }

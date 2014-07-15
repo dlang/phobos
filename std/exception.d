@@ -44,8 +44,8 @@
  +/
 module std.exception;
 
-import std.array, std.c.string, std.conv, std.range, std.string, std.traits;
-import core.exception, core.stdc.errno;
+import std.array, std.conv, std.range, std.string, std.traits;
+import core.exception, core.stdc.errno, core.stdc.string;
 
 /++
     Asserts that the given expression does $(I not) throw the given type
@@ -1379,11 +1379,11 @@ class ErrnoException : Exception
         version (linux)
         {
             char[1024] buf = void;
-            auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
+            auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
         }
         else
         {
-            auto s = std.c.string.strerror(errno);
+            auto s = core.stdc.string.strerror(errno);
         }
         super(msg~" ("~to!string(s)~")", file, line);
     }
