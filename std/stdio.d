@@ -2742,13 +2742,14 @@ unittest
     writeln("Hello!"c);
     writeln("Hello!"w);    // bug 8386
     writeln("Hello!"d);    // bug 8386
+    writeln("embedded\0null"c); // bug 8730
     stdout.close();
     version (Windows)
         assert(cast(char[]) std.file.read(deleteme) ==
-            "Hello!\r\nHello!\r\nHello!\r\n");
+            "Hello!\r\nHello!\r\nHello!\r\nembedded\0null\r\n");
     else
         assert(cast(char[]) std.file.read(deleteme) ==
-            "Hello!\nHello!\nHello!\n");
+            "Hello!\nHello!\nHello!\nembedded\0null\n");
 }
 
 unittest
