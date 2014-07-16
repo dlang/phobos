@@ -2787,7 +2787,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         {
             auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.decode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length*wchar.sizeof..$];
             return c;
         }
 
@@ -2800,7 +2800,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         {
             auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length*wchar.sizeof..$];
             return c;
         }
 
@@ -2865,7 +2865,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         {
             auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.decode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length*dchar.sizeof..$];
             return c;
         }
 
@@ -2878,7 +2878,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         {
             auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length*dchar.sizeof..$];
             return c;
         }
 
