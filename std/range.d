@@ -183,6 +183,10 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF only)))
         $(TD Creates a _range that iterates over the given arguments.
     ))
+    $(TR $(TD $(D $(LREF tee)))
+        $(TD Creates a _range that wraps a given _range, forwarding along
+        its elements while also calling a provided function with each element.
+    ))
 )
 
 These _range-construction tools are implemented using templates; but sometimes
@@ -290,7 +294,9 @@ public import std.array;
 import std.algorithm : copy, count, equal, filter, filterBidirectional,
     findSplitBefore, group, isSorted, joiner, move, map, max, min, sort, swap,
     until;
+import std.functional: unaryFun;
 import std.traits;
+import std.typecons : Flag, No, Tuple, tuple, Yes;
 import std.typetuple : allSatisfy, staticMap, TypeTuple;
 
 // For testing only.  This code is included in a string literal to be included
@@ -9829,6 +9835,7 @@ unittest    // bug 9060
     foo(r);
 }
 
+
 /*********************************
  * An OutputRange that discards the data it receives.
  */
@@ -9843,3 +9850,257 @@ unittest
     [4, 5, 6].map!(x => x * 2).copy(NullSink());
 }
 
+
+/++
+  Implements a "tee" style pipe, wrapping an input range so that elements
+  of the range can be passed to a provided function or $(LREF OutputRange)
+  as they are iterated over. This is useful for printing out intermediate 
+  values in a long chain of range code, performing some operation with 
+  side-effects on each call to $(D front) or $(D popFront), or diverting
+  the elements of a range into an auxiliary $(LREF OutputRange). 
+
+  It is important to note that as the resultant range is evaluated lazily, 
+  in the case of the version of $(D tee) that takes a function, the function
+  will not actually be executed until the range is "walked" using functions 
+  that evaluate ranges, such as $(LREF array) or $(LREF reduce).
++/
+
+auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
+if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
+{
+    static struct Result
+    {
+        private R1 _input;
+        private R2 _output;
+        static if (!pipeOnPop)
+        {
+            private bool _frontAccessed;
+        }
+
+        static if (hasLength!R1)
+        {
+            @property length()
+            {
+                return _input.length;
+            }
+        }
+
+        static if (isInfinite!R1)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty() { return _input.empty; }
+        }
+
+        void popFront()
+        {
+            assert(!_input.empty);
+            static if (pipeOnPop)
+            {
+                put(_output, _input.front);
+            }
+            else
+            {
+                _frontAccessed = false;
+            }
+            _input.popFront();
+        }
+
+        @property auto ref front()
+        {
+            static if (!pipeOnPop)
+            {
+                if (!_frontAccessed)
+                {
+                    _frontAccessed = true;
+                    put(_output, _input.front);
+                }
+            }
+            return _input.front;
+        }
+    }
+
+    return Result(inputRange, outputRange);
+}
+
+/++
+  Overload for taking a function or template lambda as an $(LREF OutputRange)
++/
+auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1)(R1 inputRange)
+if (is(typeof(fun) == void) || isSomeFunction!fun)
+{
+    /*
+        Distinguish between function literals and template lambdas
+        when using either as an $(LREF OutputRange). Since a template
+        has no type, typeof(template) will always return void. 
+        If it's a template lambda, it's first necessary to instantiate 
+        it with the type of $(D inputRange.front). 
+    */
+    static if (is(typeof(fun) == void))
+    {
+        return tee!pipeOnPop(inputRange, fun!(typeof(inputRange.front)));
+    }
+    else
+    {
+        return tee!pipeOnPop(inputRange, fun);
+    }
+}
+
+//
+unittest
+{
+    // Pass-through
+    int[] values = [1, 4, 9, 16, 25];
+
+    auto newValues = values.tee!(a => a + 1).array;
+    assert(equal(newValues, values));
+
+    int count = 0;
+    auto newValues4 = values.filter!(a => a < 10)
+                            .tee!(a => count++)
+                            .map!(a => a + 1)
+                            .filter!(a => a < 10);
+
+    //Fine, equal also evaluates any lazy ranges passed to it.
+    //count is not 3 until equal evaluates newValues3
+    assert(equal(newValues4, [2, 5]));
+    assert(count == 3);
+}
+
+//
+unittest
+{
+    import std.stdio: writefln;
+
+    int[] values = [1, 4, 9, 16, 25];
+
+    int count = 0;
+    auto newValues = values.filter!(a => a < 10)
+                           .tee!(a => count++, No.pipeOnPop)
+                           .map!(a => a + 1)
+                           .filter!(a => a < 10);
+
+    auto val = newValues.front;
+    assert(count == 1);
+    //front is only evaluated once per element
+    val = newValues.front;
+    assert(count == 1);
+
+    //popFront() called, fun will be called
+    //again on the next access to front
+    newValues.popFront();
+    newValues.front;
+    assert(count == 2);
+
+    auto printValues = values.filter!(a => a < 10)
+        .tee!(a => writefln("pre-map: %d", a))
+        .map!(a => a + 1)
+        .tee!(a => writefln("post-map: %d", a))
+        .filter!(a => a < 10);
+    assert(equal(printValues, [2, 5]));
+    // Outputs (order due to range evaluation):
+    //   post-map: 2
+    //   pre-map: 1
+    //   post-map: 5
+    //   pre-map: 4
+    //   post-map: 10
+    //   pre-map: 9
+}
+
+//
+unittest
+{
+    char[] txt = "Line one, Line 2".dup;
+
+    bool isVowel(dchar c)
+    {
+        return std.string.indexOf("AaEeIiOoUu", c) != -1;
+    }
+
+    int vowelCount = 0;
+    int shiftedCount = 0;
+    auto removeVowels = txt.tee!(c => isVowel(c) ? vowelCount++ : 0)
+                                .filter!(c => !isVowel(c))
+                                .map!(c => (c == ' ') ? c : c + 1)
+                                .tee!(c => isVowel(c) ? shiftedCount++ : 0);
+    assert(equal(removeVowels, "Mo o- Mo 3"));
+    assert(vowelCount == 6);
+    assert(shiftedCount == 3);
+}
+
+unittest
+{
+    // Manually stride to test different pipe behavior.
+    void testRange(Range)(Range r)
+    {
+        const int strideLen = 3;
+        int i = 0;
+        typeof(Range.front) elem1;
+        typeof(Range.front) elem2;
+        while (!r.empty)
+        {
+            if (i % strideLen == 0)
+            {
+                //Make sure front is only
+                //evaluated once per item
+                elem1 = r.front;
+                elem2 = r.front;
+                assert(elem1 == elem2);
+            }
+            r.popFront();
+            i++;
+        }
+    }
+
+    string txt = "abcdefghijklmnopqrstuvwxyz";
+
+    int popCount = 0;
+    auto pipeOnPop = txt.tee!(a => popCount++);
+    testRange(pipeOnPop);
+    assert(popCount == 26);
+
+    int frontCount = 0;
+    auto pipeOnFront = txt.tee!(a => frontCount++, No.pipeOnPop);
+    testRange(pipeOnFront);
+    assert(frontCount == 9);
+}
+
+unittest
+{
+    //Test diverting elements to an OutputRange
+    string txt = "abcdefghijklmnopqrstuvwxyz";
+
+    dchar[] asink1 = [];
+    auto fsink = (dchar c) { asink1 ~= c; };
+    auto result1 = txt.tee(fsink).array;
+    assert(equal(txt, result1) && (equal(result1, asink1)));
+
+    dchar[] _asink1 = [];
+    auto _result1 = txt.tee!((dchar c) { _asink1 ~= c; })().array;
+    assert(equal(txt, _result1) && (equal(_result1, _asink1)));
+
+    dchar[] asink2 = new dchar[](txt.length);
+    void fsink2(dchar c) { static int i = 0; asink2[i] = c; i++; }
+    auto result2 = txt.tee(&fsink2).array;
+    assert(equal(txt, result2) && equal(result2, asink2));
+
+    dchar[] asink3 = new dchar[](txt.length);
+    auto result3 = txt.tee(asink3).array;
+    assert(equal(txt, result3) && equal(result3, asink3));
+
+    foreach (CharType; TypeTuple!(char, wchar, dchar))
+    {
+        auto appSink = appender!(CharType[])();
+        auto appResult = txt.tee(appSink).array;
+        assert(equal(txt, appResult) && equal(appResult, appSink.data));
+    }
+
+    foreach (StringType; TypeTuple!(string, wstring, dstring))
+    {
+        auto appSink = appender!StringType();
+        auto appResult = txt.tee(appSink).array;
+        assert(equal(txt, appResult) && equal(appResult, appSink.data));
+    }
+}
