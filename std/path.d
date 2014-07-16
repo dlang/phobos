@@ -286,17 +286,17 @@ else static assert (0);
 */
 auto baseName(R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        is(StringTypeOf!R))
 {
-    auto p1 = stripDrive(path);
+    auto p1 = stripDrive!(BaseOf!R)(path);
     if (p1.empty)
     {
-        version (Windows) if (isUNC(path))
+        version (Windows) if (isUNC!(BaseOf!R)(path))
         {
             return path[0..1];
         }
-        static if (isSomeString!R)
-            return null;
+        static if (is(StringTypeOf!R))
+            return StringTypeOf!R.init[];   // which is null
         else
             return p1; // which is empty
     }
@@ -305,16 +305,6 @@ auto baseName(R)(R path)
     if (p2.empty) return p1[0 .. 1];
 
     return p2[lastSeparator(p2)+1 .. p2.length];
-}
-
-/// ditto
-inout(C)[] baseName(C)(inout(C)[] path)
-    if (isSomeChar!C)
-{
-    /* This overload is necessary because of the DirEntry unit test below;
-     * as the 'alias this' conflates strings that auto-decode with ranges that do not
-     */
-    return baseName!(inout(C)[])(path);
 }
 
 /// ditto
@@ -390,13 +380,8 @@ unittest
     static assert (baseName("dir/file.ext") == "file.ext");
     static assert (baseName("dir/file.ext", ".ext") == "file");
 
-    struct DirEntry
-    {
-        alias name this;
-        @property string name() { return ""; }
-    }
-    DirEntry de;
-    auto a = de.baseName;
+    static struct DirEntry { string s; alias s this; }
+    assert(baseName(DirEntry("dir/file.ext")) == "file.ext");
 }
 
 
@@ -635,12 +620,12 @@ unittest
 */
 auto stripDrive(R)(inout R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+        is(StringTypeOf!R))
 {
     version(Windows)
     {
-        if (hasDrive(path))      return path[2 .. path.length];
-        else if (isUNC(path))    return path[uncRootLength(path) .. path.length];
+        if (hasDrive!(BaseOf!R)(path))      return path[2 .. path.length];
+        else if (isUNC!(BaseOf!R)(path))    return path[uncRootLength!(BaseOf!R)(path) .. path.length];
     }
     return path;
 }
@@ -678,7 +663,7 @@ unittest
 */
 private ptrdiff_t extSeparatorPos(R)(const R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i]))
@@ -688,8 +673,6 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
     }
     return -1;
 }
-
-
 
 
 /** Returns the _extension part of a file name, including the dot.
@@ -708,13 +691,13 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
 */
 auto extension(R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        is(StringTypeOf!R))
 {
-    auto i = extSeparatorPos(path);
+    auto i = extSeparatorPos!(BaseOf!R)(path);
     if (i == -1)
     {
-        static if (isSomeString!R)
-            return null;
+        static if (is(StringTypeOf!R))
+            return StringTypeOf!R.init[];   // which is null
         else
             return path[0 .. 0];
     }
@@ -764,6 +747,9 @@ unittest
         foreach (i, c; `.ext2`)
             assert(s[i] == c);
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert (extension(DirEntry("file")).empty);
 }
 
 
@@ -1841,13 +1827,13 @@ unittest
     }
     ---
 */
-bool isRooted(R)(const R path)
+bool isRooted(R)(inout R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        is(StringTypeOf!R))
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
     version (Posix)         return false;
-    else version (Windows)  return isAbsolute(path);
+    else version (Windows)  return isAbsolute!(BaseOf!R)(path);
 }
 
 
@@ -1870,6 +1856,9 @@ unittest
 
     static assert (isRooted("/foo"));
     static assert (!isRooted("foo"));
+
+    static struct DirEntry { string s; alias s this; }
+    assert (!isRooted(DirEntry("foo")));
 }
 
 
@@ -1906,17 +1895,25 @@ unittest
     }
     ---
 */
-version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow @nogc
-    if (isSomeChar!C);
-
-else version (Windows) bool isAbsolute(R)(const R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+version (StdDdoc)
 {
-    return isDriveRoot(path) || isUNC(path);
+    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            is(StringTypeOf!R));
 }
-
-else version (Posix) alias isAbsolute = isRooted;
+else version (Windows)
+{
+    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            is(StringTypeOf!R))
+    {
+        return isDriveRoot!(BaseOf!R)(path) || isUNC!(BaseOf!R)(path);
+    }
+}
+else version (Posix)
+{
+    alias isAbsolute = isRooted;
+}
 
 
 unittest
@@ -1948,6 +1945,9 @@ unittest
         auto r = MockRange!(immutable(char))(`../foo`);
         assert(!r.isAbsolute());
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert(!isAbsolute(DirEntry("foo")));
 }
 
 
@@ -2572,7 +2572,7 @@ unittest
 */
 bool isValidFilename(R)(R filename)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        is(StringTypeOf!R))
 {
     import core.stdc.stdio;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
@@ -2640,6 +2640,9 @@ unittest
         auto r = MockRange!(immutable(char))(`dir/file.d`);
         assert(!isValidFilename(r));
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert(isValidFilename(DirEntry("file.ext")));
 }
 
 
@@ -3045,4 +3048,12 @@ version (unittest)
     }
 
     static assert( isRandomAccessRange!(MockRange!(const(char))) );
+}
+
+private template BaseOf(R)
+{
+    static if (isRandomAccessRange!R && isSomeChar!(ElementType!R))
+        alias BaseOf = R;
+    else
+        alias BaseOf = StringTypeOf!R;
 }
