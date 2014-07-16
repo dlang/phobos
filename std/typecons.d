@@ -1051,6 +1051,48 @@ unittest
     static assert(!isTuple!(S));
 }
 
+// used by both Rebindable and UnqualRef
+private mixin template RebindableCommon(T, U, alias This)
+    if (is(T == class) || is(T == interface))
+{
+    private union
+    {
+        T original;
+        U stripped;
+    }
+
+    void opAssign(T another) @trusted pure nothrow
+    {
+        stripped = cast(U) another;
+    }
+
+    void opAssign(typeof(this) another) @trusted pure nothrow
+    {
+        stripped = another.stripped;
+    }
+
+    static if (is(T == const U) && is(T == const shared U))
+    {
+        // safely assign immutable to const / const shared
+        void opAssign(This!(immutable U) another) @trusted pure nothrow
+        {
+            stripped = another.stripped;
+        }
+    }
+
+    this(T initializer) @safe pure nothrow
+    {
+        opAssign(initializer);
+    }
+
+    @property ref inout(T) get() @trusted inout pure nothrow
+    {
+        return original;
+    }
+
+
+    alias get this;
+}
 
 /**
 $(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
@@ -1088,7 +1130,7 @@ risks usually associated with $(D cast).
  */
 template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
 {
-    static if (!is(T X == const U, U) && !is(T X == immutable U, U))
+    static if (!is(T == const U, U) && !is(T == immutable U, U))
     {
         alias Rebindable = T;
     }
@@ -1100,39 +1142,7 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArra
     {
         struct Rebindable
         {
-            private union
-            {
-                T original;
-                U stripped;
-            }
-            void opAssign(T another) @trusted pure nothrow
-            {
-                stripped = cast(U) another;
-            }
-            void opAssign(Rebindable another) @trusted pure nothrow
-            {
-                stripped = another.stripped;
-            }
-            static if (is(T == const U))
-            {
-                // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another) @trusted pure nothrow
-                {
-                    stripped = another.stripped;
-                }
-            }
-
-            this(T initializer) @safe pure nothrow
-            {
-                opAssign(initializer);
-            }
-
-            @property ref inout(T) get() @trusted inout pure nothrow
-            {
-                return original;
-            }
-
-            alias get this;
+            mixin RebindableCommon!(T, U, Rebindable);
         }
     }
 }
@@ -1241,6 +1251,61 @@ unittest
     static assert(!__traits(compiles, Rebindable!(int[1])));
     static assert(!__traits(compiles, Rebindable!(const int[1])));
 }
+
+/**
+    Similar to $(D Rebindable!(T)) but strips all qualifiers from the reference as
+    opposed to just constness / immutability. Primary intended use case is with
+    shared (having thread-local reference to shared class data)
+ */
+template UnqualRef(T)
+    if (is(T == class) || is(T == interface))
+{
+    static if (!is(T == const U, U)
+        && !is(T == immutable U, U)
+        && !is(T == shared U, U)
+        && !is(T == const shared U, U))
+    {
+        alias UnqualRef = T;
+    }
+    else
+    {
+        struct UnqualRef
+        {
+            mixin RebindableCommon!(T, U, UnqualRef);
+        }
+    }
+}
+
+///
+unittest
+{
+    class Data {}
+
+    static shared(Data) a;
+    static UnqualRef!(shared Data) b;
+
+    import core.thread;
+
+    auto thread = new core.thread.Thread({
+        a = new shared Data();
+        b = new shared Data();
+    });
+
+    thread.start();
+    thread.join();
+
+    assert(a !is null);
+    assert(b is null);
+}
+
+unittest
+{
+    class C { }
+    alias T = UnqualRef!(const shared C);
+    static assert (is(typeof(T.stripped) == C));
+}
+
+
 
 /**
   Order the provided members to minimize size while preserving alignment.
