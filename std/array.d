@@ -1409,7 +1409,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 }
 
 /++
-    Returns whether the $(D lhs) is a slice of $(D rhs).
+    Returns whether $(D lhs) is a slice of $(D rhs).
   +/
 @trusted
 pure nothrow bool sliceOf(T)(in T[] lhs, in T[] rhs)
