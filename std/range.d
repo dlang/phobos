@@ -3412,11 +3412,12 @@ unittest //12731
     s = s[1 .. 3];
 }
 
-unittest
+unittest //13151
 {
-    auto r = take(take([1,2,3,4], 3), 2);
-    assert(r
+    auto r = take(repeat(1, 4), 3);
+    assert(r.equal(repeat(1, 3)));
 }
+
 
 /**
 Similar to $(LREF take), but assumes that $(D range) has at least $(D
