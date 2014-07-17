@@ -678,9 +678,8 @@ unittest
 }
 
 
-private:
 // Return true if a and b have opposite sign.
-bool oppositeSigns(T1, T2)(T1 a, T2 b)
+private bool oppositeSigns(T1, T2)(T1 a, T2 b)
 {
     return signbit(a) != signbit(b);
 }
@@ -730,7 +729,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
 /** Find root of a real function f(x) by bracketing, allowing the
  * termination condition to be specified.
- *
+ *re
  * Params:
  *
  * f = Function to be analyzed
