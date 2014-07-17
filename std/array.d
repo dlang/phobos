@@ -1408,6 +1408,39 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
     }
 }
 
+/++
+    Returns whether the $(D lhs) is a slice of $(D rhs).
+  +/
+@trusted
+pure nothrow bool sliceOf(T)(in T[] lhs, in T[] rhs)
+{
+    return rhs.ptr <= lhs.ptr && lhs.ptr + lhs.length <= rhs.ptr + rhs.length;
+}
+
+@safe pure nothrow unittest
+{
+    foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    {
+        T a = [1, 2, 3, 4, 5];
+        T b = a;
+        T c = a[1 .. $];
+        T d = a[0 .. 2];
+        T e = a[3 .. $];
+        T f = null;
+
+        assert(sliceOf(a, a));
+        assert(sliceOf(b, a));
+        assert(sliceOf(a, b));
+        assert(sliceOf(c, a));
+        assert(!sliceOf(a, c));
+        assert(!sliceOf(d, c));
+        assert(!sliceOf(c, d));
+        assert(!sliceOf(d, e));
+        assert(!sliceOf(e, d));
+        assert(!sliceOf(f, a));
+    }
+}
+
 /********************************************
 Returns an array that consists of $(D s) (which must be an input
 range) repeated $(D n) times. This function allocates, fills, and
