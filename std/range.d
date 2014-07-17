@@ -3415,7 +3415,7 @@ unittest //12731
 unittest //13151
 {
     auto r = take(repeat(1, 4), 3);
-    assert(r.equal(repeat(1, 3)));
+    assert(r.take(2).equal(repeat(1, 2)));
 }
 
 
