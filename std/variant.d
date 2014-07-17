@@ -494,7 +494,7 @@ private:
             }
 
         case OpID.length:
-            static if (is(typeof(zis.length)))
+            static if (isArray!(A) || isAssociativeArray!(A))
             {
                 return zis.length;
             }
@@ -2340,3 +2340,31 @@ unittest
     }
     assert(S.cnt == 0);
 }
+
+unittest
+{
+    // Make sure Variant can handle types with opDispatch but no length field.
+    struct SWithNoLength
+    {
+        void opDispatch(string s)() { }
+    }
+
+    struct SWithLength
+    {
+        @property int opDispatch(string s)()
+        {
+            // Assume that s == "length"
+            return 5; // Any value is OK for test.
+        }
+    }
+
+    SWithNoLength sWithNoLength;
+    Variant v = sWithNoLength;
+    assertThrown!VariantException(v.length);
+
+    SWithLength sWithLength;
+    v = sWithLength;
+    assertNotThrown!VariantException(v.get!SWithLength().length);
+    assertThrown!VariantException(v.length);
+}
+
