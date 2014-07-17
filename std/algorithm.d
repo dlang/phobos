@@ -16,7 +16,7 @@ $(MYREF until) )
 )
 $(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF cmp) $(MYREF equal) $(MYREF
 levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
-$(MYREF min) $(MYREF mismatch) )
+$(MYREF min) $(MYREF mismatch) $(MYREF clamp) )
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF filter) $(MYREF filterBidirectional)
 $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
@@ -184,6 +184,9 @@ $(TR $(TDNW $(LREF max)) $(TD $(D max(3, 4, 2)) returns $(D
 )
 $(TR $(TDNW $(LREF min)) $(TD $(D min(3, 4, 2)) returns $(D
 2).)
+)
+$(TR $(TDNW $(LREF clamp)) $(TD $(D clamp(1, 3, 6)) returns $(D
+3). $(D clamp(4, 3, 6)) return $(D 4).)
 )
 $(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("oh hi",
 "ohayo")) returns $(D tuple(" hi", "ayo")).)
