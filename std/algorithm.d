@@ -16,7 +16,7 @@ $(MYREF until) )
 )
 $(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF cmp) $(MYREF equal) $(MYREF
 levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
-$(MYREF min) $(MYREF mismatch) )
+$(MYREF min) $(MYREF mismatch) $(MYREF clamp) )
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF filter) $(MYREF filterBidirectional)
 $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
@@ -184,6 +184,9 @@ $(TR $(TDNW $(LREF max)) $(TD $(D max(3, 4, 2)) returns $(D
 )
 $(TR $(TDNW $(LREF min)) $(TD $(D min(3, 4, 2)) returns $(D
 2).)
+)
+$(TR $(TDNW $(LREF clamp)) $(TD $(D clamp(1, 3, 6)) returns $(D
+3). $(D clamp(4, 3, 6)) return $(D 4).)
 )
 $(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("oh hi",
 "ohayo")) returns $(D tuple(" hi", "ayo")).)
@@ -7249,6 +7252,59 @@ unittest
     assert(max(Date.max, Date(1982, 1, 4)) == Date.max);
     assert(max(Date.min, Date.max) == Date.max);
     assert(max(Date.max, Date.min) == Date.max);
+}
+
+/**
+Returns $(D val), if it is between $(D lower) and $(D upper).
+Otherwise returns the nearest of the two. Equivalent to $(D max(lower,
+min(upper,val))).
+*/
+auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
+in
+{
+    assert(lower <= upper);
+}
+body
+{
+    return max(lower, min(upper, val));
+}
+
+///
+unittest
+{
+    assert(clamp(2, 1, 3) == 2);
+    assert(clamp(0, 1, 3) == 1);
+    assert(clamp(4, 1, 3) == 3);
+
+    assert(clamp(1, 1, 1) == 1);
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int a = 1;
+    short b = 6;
+    double c = 2;
+    static assert(is(typeof(clamp(c,a,b)) == double));
+    assert(clamp(c,   a, b) == c);
+    assert(clamp(a-c, a, b) == a);
+    assert(clamp(b+c, a, b) == b);
+    // mixed sign
+    a = -5;
+    uint f = 5;
+    static assert(is(typeof(clamp(f, a, b)) == int));
+    assert(clamp(f, a, b) == f);
+    // similar type deduction for (u)long
+    static assert(is(typeof(clamp(-1L, -2L, 2UL)) == long));
+
+    // user-defined types
+    import std.datetime;
+    assert(clamp(Date(1982, 1, 4), Date(1012, 12, 21), Date(2012, 12, 21)) == Date(1982, 1, 4));
+    assert(clamp(Date(1982, 1, 4), Date.min, Date.max) == Date(1982, 1, 4));
+    // UFCS style
+    assert(Date(1982, 1, 4).clamp(Date.min, Date.max) == Date(1982, 1, 4));
+
 }
 
 /**
