@@ -2473,7 +2473,12 @@ struct Appender(A : T[], T)
             auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
             auto bigData = bigDataFun();
 
-            emplaceRef!T(bigData[len], item);
+            static if (is(Unqual!T == T))
+                alias uitem = item;
+            else
+                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item; }
+
+            emplaceRef!(Unqual!T)(bigData[len], uitem);
 
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
@@ -2939,7 +2944,8 @@ unittest
 }
 
 unittest
-{ //9528
+{
+    //9528
     const(E)[] fastCopy(E)(E[] src) {
             auto app = appender!(const(E)[])();
             foreach (i, e; src)
@@ -2955,15 +2961,16 @@ unittest
 }
 
 unittest
-{ //10753
+{
+    //10753
     struct Foo {
        immutable dchar d;
     }
     struct Bar {
        immutable int x;
     }
-   "12".map!Foo.array;
-   [1, 2].map!Bar.array;
+    "12".map!Foo.array;
+    [1, 2].map!Bar.array;
 }
 
 unittest
@@ -3025,6 +3032,24 @@ unittest // check against .clear UFCS hijacking
     static assert(!__traits(compiles, app.clear()));
     static assert(__traits(compiles, clear(app)),
         "Remove me when object.clear is removed!");
+}
+
+unittest
+{
+    // Issue 13077
+    static class A {}
+
+    // reduced case
+    auto w = appender!(shared(A)[])();
+    w.put(new shared A());
+
+    // original case
+    import std.range;
+    InputRange!(shared A) foo()
+    {
+        return [new shared A].inputRangeObject;
+    }
+    auto res = foo.array;
 }
 
 /++
