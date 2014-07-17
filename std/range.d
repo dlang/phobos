@@ -3288,7 +3288,8 @@ if (isInputRange!(Unqual!R) &&
 // take for finite ranges with slicing
 /// ditto
 Take!R take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R))
+if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
+    !is(R T == Take!T))
 {
     // @@@BUG@@@
     //return input[0 .. min(n, $)];
@@ -3409,6 +3410,12 @@ unittest //12731
     auto a = repeat(1);
     auto s = a[1 .. 5];
     s = s[1 .. 3];
+}
+
+unittest
+{
+    auto r = take(take([1,2,3,4], 3), 2);
+    assert(r
 }
 
 /**
