@@ -358,7 +358,7 @@ struct JSONValue
         enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
                                 "JSONValue must be object or null");
         
-        if( type == JSON_TYPE.NULL )
+        if(type == JSON_TYPE.NULL)
             this = (JSONValue[string]).init;
         
         store.object[key] = value;
