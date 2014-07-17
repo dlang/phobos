@@ -729,7 +729,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
 /** Find root of a real function f(x) by bracketing, allowing the
  * termination condition to be specified.
- *re
+ *
  * Params:
  *
  * f = Function to be analyzed
