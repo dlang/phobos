@@ -3288,7 +3288,8 @@ if (isInputRange!(Unqual!R) &&
 // take for finite ranges with slicing
 /// ditto
 Take!R take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R))
+if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
+    !is(R T == Take!T))
 {
     // @@@BUG@@@
     //return input[0 .. min(n, $)];
@@ -3410,6 +3411,13 @@ unittest //12731
     auto s = a[1 .. 5];
     s = s[1 .. 3];
 }
+
+unittest //13151
+{
+    auto r = take(repeat(1, 4), 3);
+    assert(r.take(2).equal(repeat(1, 2)));
+}
+
 
 /**
 Similar to $(LREF take), but assumes that $(D range) has at least $(D
