@@ -122,7 +122,7 @@ public:
     {
         return _p is null;
     }
-    /** Returns a unique rvalue. Nullifies the current contents. */
+    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
     Unique release()
     {
         debug(Unique) writeln("Release");
