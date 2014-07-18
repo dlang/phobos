@@ -220,7 +220,7 @@ $(V1
 	<!--dt><a href="std_thread.html"><b>std.thread</b></a>
 	<dd>One per thread. Operations to do on a thread.-->
 
-	<dt><a href="std_uni.html"><b>std.base64</b></a>
+	<dt><a href="std_uni.html"><b>std.uni</b></a>
 	<dd>Functions that operate on Unicode characters.
 
 	<dt><a href="std_uri.html"><b>std.uri</b></a>
