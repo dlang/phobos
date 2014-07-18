@@ -249,18 +249,15 @@ MAKEFILE = $(firstword $(MAKEFILE_LIST))
 
 # Main target (builds the dll on linux, too)
 ifeq (linux,$(OS))
-all : $(BUILD) $(BUILD)_pic
-$(BUILD)_pic :
-	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=$(BUILD) PIC=1 dll
+all : $(LIB) $(LIBSO)
 else
-all : $(BUILD)
+all : $(LIB)
 endif
 
 install :
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
 
-$(BUILD) : $(LIB)
 unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
 
 depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
@@ -271,14 +268,16 @@ depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 # Patterns begin here
 ################################################################################
 
-$(ROOT)/%$(DOTOBJ) : %.c
+.PHONY: lib dll
+lib: $(LIB)
+dll: $(LIBSO)
+
+$(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB) : $(OBJS) $(ALL_D_FILES) druntime_libs
+$(LIB): $(OBJS) $(ALL_D_FILES) druntime_libs
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
-
-dll : $(ROOT)/libphobos2.so
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 	ln -sf $(notdir $(LIBSO)) $@
@@ -286,6 +285,7 @@ $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
+$(LIBSO): override PIC:=-fPIC
 $(LIBSO): $(OBJS) $(ALL_D_FILES) druntime_libs $(LIBCURL_STUB)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) $(D_FILES) $(OBJS)
 
