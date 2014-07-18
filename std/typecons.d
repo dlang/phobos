@@ -54,6 +54,8 @@ deleted at the end of the scope, unless it is transferred.  The
 transfer can be explicit, by calling $(D release), or implicit, when
 returning Unique from a function. The resource can be a polymorphic
 class object, in which case Unique behaves polymorphically too.
+
+See $(LREF unique) for an example.
 */
 struct Unique(T)
 {
@@ -63,19 +65,6 @@ else
     alias RefT = T*;
 
 public:
-    /**
-    The safe constructor. It creates the resource and
-    guarantees unique ownership of it (unless $(D T)
-    publishes aliases of $(D this)).
-    Params:
-    args = Arguments to pass to $(D T)'s constructor.
-    */
-    this(A...)(A args)
-    {
-        debug(Unique) writeln("Unique constructor creating ", T.stringof);
-        _p = new T(args);
-    }
-
     /**
     Constructor that takes an rvalue.
     It will ensure uniqueness, as long as the rvalue
@@ -111,7 +100,7 @@ public:
     ---
     class C {}
     // Make u hold a new instance of C
-    Unique!Object u = Unique!C();
+    Unique!Object u = unique!C();
     ---
     */
     this(U)(Unique!U u)
@@ -154,6 +143,21 @@ private:
     RefT _p;
 }
 
+/**
+Allows safe construction of $(D Unique). It creates the resource and 
+guarantees unique ownership of it (unless $(D T) publishes aliases of 
+$(D this)).
+Params:
+args = Arguments to pass to $(D T)'s constructor.
+*/
+Unique!T unique(T, A...)(A args)
+{
+    debug(Unique) writeln("Factory unique creating ", T.stringof);
+    Unique!T u;
+    u._p = new T(args);
+    return u;
+}
+
 ///
 unittest
 {
@@ -165,14 +169,16 @@ unittest
     Unique!S produce()
     {
         // Allocate a unique instance of S on the heap
-        return Unique!S(5);
+        return unique!S(5);
     }
-    void consume(Unique!S u)
+    void consume(Unique!S u2)
     {
-        assert(u.i == 6);
+        assert(u2.i == 6);
         // Resource automatically deleted here
     }
-    auto u1 = produce();
+    Unique!S u1;
+    assert(u1.isEmpty);
+    u1 = produce();
     u1.i++;
     assert(u1.i == 6);
     //consume(u1); // Error: u1 is not copyable
@@ -184,8 +190,8 @@ unittest
 unittest
 {
     // test conversion to base ref
-    class C {}
-    Unique!Object u = Unique!C();
+    static class C {}
+    Unique!Object u = unique!C();
     assert(!u.isEmpty);
     
     Unique!C uc = new C;
