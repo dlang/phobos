@@ -70,11 +70,6 @@ version (Win64)
 import core.stdc.math;
 import std.traits;
 
-version(unittest)
-{
-    import std.typetuple;
-}
-
 version(LDC)
 {
     import ldc.intrinsics;
@@ -170,14 +165,14 @@ private:
  */
 version(LittleEndian)
 {
-    static assert(real.mant_dig == 53 || real.mant_dig==64
+    static assert(real.mant_dig == 53 || real.mant_dig == 64
                || real.mant_dig == 113,
       "Only 64-bit, 80-bit, and 128-bit reals"~
       " are supported for LittleEndian CPUs");
 }
 else
 {
-    static assert(real.mant_dig == 53 || real.mant_dig==106
+    static assert(real.mant_dig == 53 || real.mant_dig == 106
                || real.mant_dig == 113,
     "Only 64-bit and 128-bit reals are supported for BigEndian CPUs."~
     " double-double reals have partial support");
@@ -201,10 +196,12 @@ template floatTraits(T)
         version(LittleEndian)
         {
             enum EXPPOS_SHORT = 1;
+            enum SIGNPOS_BYTE = 3;
         }
         else
         {
             enum EXPPOS_SHORT = 0;
+            enum SIGNPOS_BYTE = 0;
         }
     }
     else static if (T.mant_dig == 53) // double, or real==double
@@ -2150,7 +2147,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
         }
         return value;
     }
-    else static if (real.mant_dig==53) // real is double
+    else static if (real.mant_dig == 53) // real is double
     {
         if (ex) // If exponent is non-zero
         {
@@ -2190,7 +2187,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
         }
         return value;
     }
-    else // static if (real.mant_dig==106) // real is doubledouble
+    else // static if (real.mant_dig == 106) // real is doubledouble
     {
         assert (0, "frexp not implemented");
     }
@@ -4126,34 +4123,34 @@ unittest
  */
 
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
-if (isFloatingPoint!(X))
+    if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
     static if (X.mant_dig == 24) // float
     {
         uint* p = cast(uint *)&x;
         return ((*p & 0x7F80_0000) == 0x7F80_0000)
-        && *p & 0x007F_FFFF; // not infinity
+            && *p & 0x007F_FFFF; // not infinity
     }
     else static if (X.mant_dig == 53) // double
     {
         ulong*  p = cast(ulong *)&x;
         return ((*p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-        && *p & 0x000F_FFFF_FFFF_FFFF; // not infinity
+            && *p & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (X.mant_dig == 64)  // real80
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
-        *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+            *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (X.mant_dig == 113) // quadruple
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
-        (ps[MANTISSA_LSB] | (ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))!=0;
+            (ps[MANTISSA_LSB] | (ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF)) != 0;
     }
     else
     {
@@ -4240,18 +4237,32 @@ unittest
  * Returns !=0 if e is finite (not infinite or $(NAN)).
  */
 
-int isFinite(real e) @trusted pure nothrow @nogc
+int isFinite(X)(X e) @trusted pure nothrow @nogc
 {
-    alias F = floatTraits!(real);
+    alias F = floatTraits!(X);
     ushort* pe = cast(ushort *)&e;
     return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
 
 unittest
 {
-    assert(isFinite(1.23));
-    assert(!isFinite(double.infinity));
+    assert(isFinite(1.23f));
+    assert(isFinite(float.max));
+    assert(isFinite(float.min_normal));
     assert(!isFinite(float.nan));
+    assert(!isFinite(float.infinity));
+
+    assert(isFinite(1.23));
+    assert(isFinite(double.max));
+    assert(isFinite(double.min_normal));
+    assert(!isFinite(double.nan));
+    assert(!isFinite(double.infinity));
+
+    assert(isFinite(1.23L));
+    assert(isFinite(real.max));
+    assert(isFinite(real.min_normal));
+    assert(!isFinite(real.nan));
+    assert(!isFinite(real.infinity));
 }
 
 
@@ -4275,7 +4286,7 @@ int isNormal(X)(X x) @trusted pure nothrow @nogc
     else
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        return (e != F.EXPMASK && e!=0);
+        return (e != F.EXPMASK && e != 0);
     }
 }
 
@@ -4308,56 +4319,31 @@ unittest
  * be converted to normal reals.
  */
 
-int isSubnormal(float f) @trusted pure nothrow @nogc
+int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
-    uint *p = cast(uint *)&f;
-    return (*p & 0x7F80_0000) == 0 && *p & 0x007F_FFFF;
-}
-
-unittest
-{
-    float f = 3.0;
-
-    for (f = 1.0; !isSubnormal(f); f /= 2)
-        assert(f != 0);
-}
-
-/// ditto
-
-int isSubnormal(double d) @trusted pure nothrow @nogc
-{
-    uint *p = cast(uint *)&d;
-    return (p[MANTISSA_MSB] & 0x7FF0_0000) == 0
-        && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & 0x000F_FFFF);
-}
-
-unittest
-{
-    double f;
-
-    for (f = 1; !isSubnormal(f); f /= 2)
-        assert(f != 0);
-}
-
-/// ditto
-
-int isSubnormal(real x) @trusted pure nothrow @nogc
-{
-    alias F = floatTraits!(real);
-    static if (real.mant_dig == 53)
+    alias F = floatTraits!(X);
+    static if (X.mant_dig == 24)
+    {
+        // float
+        uint *p = cast(uint *)&x;
+        return (*p & F.EXPMASK_INT) == 0 && *p & F.MANTISSAMASK_INT;
+    }
+    else static if (X.mant_dig == 53)
     {
         // double
-        return isSubnormal(cast(double)x);
+        uint *p = cast(uint *)&x;
+        return (p[MANTISSA_MSB] & F.EXPMASK_INT) == 0
+            && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & F.MANTISSAMASK_INT);
     }
-    else static if (real.mant_dig == 113)
+    else static if (X.mant_dig == 113)
     {
         // quadruple
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         long*   ps = cast(long *)&x;
         return (e == 0 &&
-          (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) !=0));
+          (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) != 0));
     }
-    else static if (real.mant_dig==64)
+    else static if (X.mant_dig == 64)
     {
         // real80
         ushort* pe = cast(ushort *)&x;
@@ -4365,19 +4351,27 @@ int isSubnormal(real x) @trusted pure nothrow @nogc
 
         return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
     }
-    else
+    else static if(X.mant_dig == 106)
     {
         // double double
         return isSubnormal((cast(double*)&x)[MANTISSA_MSB]);
+    }
+    else
+    {
+        static assert(false, "Not implemented for this architecture");
     }
 }
 
 unittest
 {
-    real f;
+    import std.typetuple;
 
-    for (f = 1; !isSubnormal(f); f /= 2)
-        assert(f != 0);
+    foreach (T; TypeTuple!(float, double, real))
+    {
+        T f;
+        for (f = 1.0; !isSubnormal(f); f /= 2)
+            assert(f != 0);
+    }
 }
 
 /*********************************
@@ -4385,7 +4379,7 @@ unittest
  */
 
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
-if (isFloatingPoint!(X))
+    if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
     static if (X.mant_dig == 24)
@@ -4512,7 +4506,7 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
         //double
         return pxs[0] == pys[0];
     }
-    else static if (real.mant_dig == 113 || real.mant_dig==106)
+    else static if (real.mant_dig == 113 || real.mant_dig == 106)
     {
         // quadruple or doubledouble
         return pxs[0] == pys[0] && pxs[1] == pys[1];
@@ -4530,9 +4524,10 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
  * Return 1 if sign bit of e is set, 0 if not.
  */
 
-int signbit(real x) @nogc @trusted pure nothrow
+int signbit(X)(X x) @nogc @trusted pure nothrow
 {
-    return ((cast(ubyte *)&x)[floatTraits!(real).SIGNPOS_BYTE] & 0x80) != 0;
+    alias F = floatTraits!(X);
+    return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
 }
 
 unittest
@@ -4540,47 +4535,90 @@ unittest
     debug (math) printf("math.signbit.unittest\n");
     assert(!signbit(float.nan));
     assert(signbit(-float.nan));
+    assert(!signbit(168.1234f));
+    assert(signbit(-168.1234f));
+    assert(!signbit(0.0f));
+    assert(signbit(-0.0f));
+    assert(signbit(-float.max));
+    assert(!signbit(float.max));
+
+    assert(!signbit(double.nan));
+    assert(signbit(-double.nan));
     assert(!signbit(168.1234));
     assert(signbit(-168.1234));
     assert(!signbit(0.0));
     assert(signbit(-0.0));
     assert(signbit(-double.max));
     assert(!signbit(double.max));
+
+    assert(!signbit(real.nan));
+    assert(signbit(-real.nan));
+    assert(!signbit(168.1234L));
+    assert(signbit(-168.1234L));
+    assert(!signbit(0.0L));
+    assert(signbit(-0.0L));
+    assert(signbit(-real.max));
+    assert(!signbit(real.max));
 }
 
 /*********************************
  * Return a value composed of to with from's sign bit.
  */
 
-real copysign(real to, real from) @trusted pure nothrow @nogc
+R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
+    if (isFloatingPoint!(R) && isFloatingPoint!(X))
 {
     ubyte* pto   = cast(ubyte *)&to;
     const ubyte* pfrom = cast(ubyte *)&from;
 
-    alias F = floatTraits!(real);
-    pto[F.SIGNPOS_BYTE] &= 0x7F;
-    pto[F.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
+    alias T = floatTraits!(R);
+    alias F = floatTraits!(X);
+    pto[T.SIGNPOS_BYTE] &= 0x7F;
+    pto[T.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
     return to;
+}
+
+// ditto
+R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
+    if (isIntegral!(X) && isFloatingPoint!(R))
+{
+    return copysign(cast(R)to, from);
 }
 
 unittest
 {
-    real e;
+    import std.typetuple;
 
-    e = copysign(21, 23.8);
-    assert(e == 21);
+    foreach (X; TypeTuple!(float, double, real, int, long))
+    {
+        foreach (Y; TypeTuple!(float, double, real))
+        {
+            X x = 21;
+            Y y = 23.8;
+            Y e = void;
 
-    e = copysign(-21, 23.8);
-    assert(e == 21);
+            e = copysign(x, y);
+            assert(e == 21.0);
 
-    e = copysign(21, -23.8);
-    assert(e == -21);
+            e = copysign(-x, y);
+            assert(e == 21.0);
 
-    e = copysign(-21, -23.8);
-    assert(e == -21);
+            e = copysign(x, -y);
+            assert(e == -21.0);
 
-    e = copysign(real.nan, -23.8);
-    assert(isNaN(e) && signbit(e));
+            e = copysign(-x, -y);
+            assert(e == -21.0);
+
+            static if (isFloatingPoint!X)
+            {
+                e = copysign(X.nan, y);
+                assert(isNaN(e) && !signbit(e));
+
+                e = copysign(X.nan, -y);
+                assert(isNaN(e) && signbit(e));
+            }
+        }
+    }
 }
 
 /*********************************
@@ -4721,7 +4759,7 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
         m &= 0x0007_FFFF_FFFF_FFFF;
         m <<= 10;
     }
-    else static if (real.mant_dig==113)
+    else static if (real.mant_dig == 113)
     {
         // quadruple
         version(LittleEndian)
@@ -4827,18 +4865,18 @@ real nextUp(real x) @trusted pure nothrow @nogc
                 return x;
             }
             --*ps;
-            if (ps[MANTISSA_LSB]==0) --ps[MANTISSA_MSB];
+            if (ps[MANTISSA_LSB] == 0) --ps[MANTISSA_MSB];
         }
         else
         {
             // Positive number
             ++ps[MANTISSA_LSB];
-            if (ps[MANTISSA_LSB]==0) ++ps[MANTISSA_MSB];
+            if (ps[MANTISSA_LSB] == 0) ++ps[MANTISSA_MSB];
         }
         return x;
 
     }
-    else static if(real.mant_dig==64) // real80
+    else static if(real.mant_dig == 64) // real80
     {
         // For 80-bit reals, the "implied bit" is a nuisance...
         ushort *pe = cast(ushort *)&x;
@@ -4888,7 +4926,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
         }
         return x;
     }
-    else // static if (real.mant_dig==106) // real is doubledouble
+    else // static if (real.mant_dig == 106) // real is doubledouble
     {
         assert (0, "nextUp not implemented");
     }
@@ -5073,7 +5111,7 @@ unittest
  */
 T nextafter(T)(T x, T y) @safe pure nothrow @nogc
 {
-    if (x==y) return y;
+    if (x == y) return y;
     return ((y>x) ? nextUp(x) :  nextDown(x));
 }
 
@@ -5230,7 +5268,7 @@ unittest
  */
 
 typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pure nothrow
-if (isIntegral!(F) && isIntegral!(G))
+    if (isIntegral!(F) && isIntegral!(G))
 {
     if (n<0) return x/0; // Only support positive powers
     typeof(return) p, v = void;
@@ -5757,7 +5795,7 @@ in
 {
     // both x and y must have the same sign, and must not be NaN.
     assert(signbit(x) == signbit(y));
-    assert(x==x && y==y);
+    assert(x == x && y == y);
 }
 body
 {
@@ -5770,7 +5808,7 @@ body
 
     alias F = floatTraits!(real);
     T u;
-    static if (T.mant_dig==64)
+    static if (T.mant_dig == 64)
     {   // real80
 
         // There's slight additional complexity because they are actually
@@ -5825,7 +5863,7 @@ body
         if (xl[MANTISSA_LSB] & yl[MANTISSA_LSB] & 1)
         {
             ++ml;
-            if (ml==0) ++mh;
+            if (ml == 0) ++mh;
         }
         mh >>>=1;
         ul[MANTISSA_MSB] = mh | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
