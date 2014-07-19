@@ -6777,11 +6777,40 @@ unittest
 }
 
 // equal
+private template getPredForEqual(alias pred, Range1, Range2, alias r1, alias r2)
+{
+    static if (is(typeof(pred) == string) && pred == "")
+    {
+        static if (isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
+        {
+            // dynamic arrays are special-cased in equal()
+            enum string getPredForEqual = "a == b";
+        }
+        else static if (is(typeof(binaryFun!"a == b"(r1.front, r2.front))))
+        {
+            enum string getPredForEqual = "a == b";
+        }
+        else static if (is(typeof(binaryFun!equal(r1.front, r2.front))))
+        {
+            alias getPredForEqual = equal;
+        }
+        else
+        {
+            // fall back to "a == b" to ensure backward compatibility
+            enum string getPredForEqual = "a == b";
+        }
+    }
+    else
+    {
+        alias getPredForEqual = pred;
+    }
+}
+
 /**
-Compares two ranges for equality, as defined by predicate $(D pred)
-(which is $(D ==) by default).
+Compares two ranges for equality, as defined by predicate $(D pred),
+which by default is $(D ==), with a fallback to $(D equal).
 */
-template equal(alias pred = "a == b")
+template equal(alias pred = "")
 {
     /++
     Returns $(D true) if and only if the two ranges compare equal element
@@ -6794,10 +6823,13 @@ template equal(alias pred = "a == b")
         $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 && is(typeof(binaryFun!pred(r1.front, r2.front))))
+    if (isInputRange!Range1 && isInputRange!Range2 &&
+        is(typeof(binaryFun!(getPredForEqual!(pred, Range1, Range2, r1, r2))(r1.front, r2.front))))
     {
+        alias actualPred = getPredForEqual!(pred, Range1, Range2, r1, r2);
+
         //Start by detecting default pred and compatible dynamicarray.
-        static if (is(typeof(pred) == string) && pred == "a == b" &&
+        static if (is(typeof(actualPred) == string) && actualPred == "a == b" &&
             isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
         {
             return r1 == r2;
@@ -6813,7 +6845,7 @@ template equal(alias pred = "a == b")
             //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
             for (; !r1.empty; r1.popFront(), r2.popFront())
             {
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                if (!binaryFun!(actualPred)(r1.front, r2.front)) return false;
             }
             return true;
         }
@@ -6823,7 +6855,7 @@ template equal(alias pred = "a == b")
             for (; !r1.empty; r1.popFront(), r2.popFront())
             {
                 if (r2.empty) return false;
-                if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+                if (!binaryFun!(actualPred)(r1.front, r2.front)) return false;
             }
             return r2.empty;
         }
@@ -6896,10 +6928,10 @@ unittest
     assert(!equal(["hello", "world"], ["hello"]));
     assert(!equal(["hello", "world"], ["hello", "Bob!"]));
 
-    //Should not compile, because "string == dstring" is illegal
-    static assert(!is(typeof(equal(["hello", "world"], ["hello"d, "world"d]))));
-    //However, arrays of non-matching string can be compared using equal!equal. Neat-o!
-    equal!equal(["hello", "world"], ["hello"d, "world"d]);
+    //Arrays of non-matching strings can be compared either explicitly, using equal!equal, ...
+    assert(equal!equal(["hello", "world"], ["hello"d, "world"d]));
+    //... or implicitly, using equal's predicate deduction
+    assert(equal(["hello", "world"], ["hello"d, "world"d]));
 
     //Tests, with more fancy map ranges
     int[] a = [ 1, 2, 4, 3 ];
