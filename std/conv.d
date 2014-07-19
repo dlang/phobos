@@ -21,7 +21,7 @@ WIKI = Phobos/StdConv
 */
 module std.conv;
 
-import core.stdc.string;
+import core.checkedint, core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.range,
     std.string, std.traits, std.typecons, std.typetuple, std.uni,
     std.utf;
@@ -2188,10 +2188,16 @@ body
                 c -= 'a'-10-'0';
             }
         }
-        auto blah = cast(Target) (v * radix + c - '0');
-        if (blah < v)
+        
+        bool overflow = false;
+        static if (isSigned!Target)
+            auto nextv = v.muls(radix, overflow).adds(c - '0', overflow);
+        else
+            auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
+        if (overflow || nextv > Target.max)
             goto Loverflow;
-        v = blah;
+        v = cast(Target) nextv;
+        
         atStart = false;
     }
     if (atStart)
@@ -2244,6 +2250,12 @@ Lerr:
     auto u = parse!uint(r, 16);
     assert(u == 42);
     assert(r.front == '!');
+}
+
+@safe pure unittest // bugzilla 13163
+{
+    foreach (s; ["fff", "123"])
+        assertThrown!ConvOverflowException(s.parse!ubyte(16));
 }
 
 Target parse(Target, Source)(ref Source s)
