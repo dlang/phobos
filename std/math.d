@@ -12,6 +12,15 @@
  * than C99-style lower case names. All of these functions behave correctly
  * when presented with an infinity or NaN.
  *
+ * The following IEEE 'real' formats are currently supported:
+ * $(UL
+ * $(LI 64 bit Big-endian  'double' (eg PowerPC))
+ * $(LI 128 bit Big-endian 'quadruple' (eg SPARC))
+ * $(LI 64 bit Little-endian 'double' (eg x86-SSE2))
+ * $(LI 80 bit Little-endian, with implied bit 'real80' (eg x87, Itanium))
+ * $(LI 128 bit Little-endian 'quadruple' (not implemented on any known processor!))
+ * $(LI Non-IEEE 128 bit Big-endian 'doubledouble' (eg PowerPC) has partial support)
+ * )
  * Unlike C, there is no global 'errno' variable. Consequently, almost all of
  * these functions are pure nothrow.
  *
@@ -55,8 +64,8 @@
  *            copying permissions.  These modifications are distributed here under
  *            the following terms:
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   $(WEB digitalmars.com, Walter Bright),
- *                        Don Clugston, Conversion of CEPHES math library to D by Iain Buclaw
+ * Authors:   $(WEB digitalmars.com, Walter Bright), Don Clugston,
+ *            Conversion of CEPHES math library to D by Iain Buclaw
  * Source: $(PHOBOSSRC std/_math.d)
  */
 module std.math;
@@ -153,16 +162,7 @@ version(unittest)
 
 
 private:
-/*
- * The following IEEE 'real' formats are currently supported:
- * 64 bit Big-endian  'double' (eg PowerPC)
- * 128 bit Big-endian 'quadruple' (eg SPARC)
- * 64 bit Little-endian 'double' (eg x86-SSE2)
- * 80 bit Little-endian, with implied bit 'real80' (eg x87, Itanium).
- * 128 bit Little-endian 'quadruple' (not implemented on any known processor!)
- *
- * Non-IEEE 128 bit Big-endian 'doubledouble' (eg PowerPC) has partial support
- */
+// The following IEEE 'real' formats are currently supported.
 version(LittleEndian)
 {
     static assert(real.mant_dig == 53 || real.mant_dig == 64
