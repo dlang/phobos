@@ -181,13 +181,13 @@ else
 // Underlying format exposed through floatTraits
 enum RealFormat
 {
-    IEEEHalf,
-    IEEESingle,
-    IEEEDouble,
-    IEEEExtended,   // x87 80-bit real
-    IEEEExtended53, // x87 real rounded to precision of double.
-    IBMExtended,    // IBM 128-bit extended
-    IEEEQuadruple,
+    ieeeHalf,
+    ieeeSingle,
+    ieeeDouble,
+    ieeeExtended,   // x87 80-bit real
+    ieeeExtended53, // x87 real rounded to precision of double.
+    ibmExtended,    // IBM 128-bit extended
+    ieeeQuadruple,
 }
 
 // Constants used for extracting the components of the representation.
@@ -206,7 +206,7 @@ template floatTraits(T)
         enum ushort EXPBIAS = 0x3F00;
         enum uint EXPMASK_INT = 0x7F80_0000;
         enum uint MANTISSAMASK_INT = 0x007F_FFFF;
-        enum realFormat = RealFormat.IEEESingle;
+        enum realFormat = RealFormat.ieeeSingle;
         version(LittleEndian)
         {
             enum EXPPOS_SHORT = 1;
@@ -227,7 +227,7 @@ template floatTraits(T)
             enum ushort EXPBIAS = 0x3FE0;
             enum uint EXPMASK_INT = 0x7FF0_0000;
             enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
-            enum realFormat = RealFormat.IEEEDouble;
+            enum realFormat = RealFormat.ieeeDouble;
             version(LittleEndian)
             {
                 enum EXPPOS_SHORT = 3;
@@ -244,7 +244,7 @@ template floatTraits(T)
             // Intel extended real80 rounded to double
             enum ushort EXPMASK = 0x7FFF;
             enum ushort EXPBIAS = 0x3FFE;
-            enum realFormat = RealFormat.IEEEExtended53;
+            enum realFormat = RealFormat.ieeeExtended53;
             version(LittleEndian)
             {
                 enum EXPPOS_SHORT = 4;
@@ -264,7 +264,7 @@ template floatTraits(T)
         // Intel extended real80
         enum ushort EXPMASK = 0x7FFF;
         enum ushort EXPBIAS = 0x3FFE;
-        enum realFormat = RealFormat.IEEEExtended;
+        enum realFormat = RealFormat.ieeeExtended;
         version(LittleEndian)
         {
             enum EXPPOS_SHORT = 4;
@@ -280,7 +280,7 @@ template floatTraits(T)
     {
         // Quadruple precision float
         enum ushort EXPMASK = 0x7FFF;
-        enum realFormat = RealFormat.IEEEQuadruple;
+        enum realFormat = RealFormat.ieeeQuadruple;
         version(LittleEndian)
         {
             enum EXPPOS_SHORT = 7;
@@ -296,7 +296,7 @@ template floatTraits(T)
     {
         // IBM Extended doubledouble
         enum ushort EXPMASK = 0x7FF0;
-        enum realFormat = RealFormat.IBMExtended;
+        enum realFormat = RealFormat.ibmExtended;
         // the exponent byte is not unique
         version(LittleEndian)
         {
@@ -342,7 +342,7 @@ T floorImpl(T)(T x) @trusted pure nothrow @nogc
     y.rv = x;
 
     // Find the exponent (power of 2)
-    static if (T.mant_dig == 24) // float
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
         int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
 
@@ -351,7 +351,7 @@ T floorImpl(T)(T x) @trusted pure nothrow @nogc
         else
             int pos = 3;
     }
-    else static if (T.mant_dig == 53) // double
+    else static if (F.realFormat == RealFormat.ieeeDouble)
     {
         int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
 
@@ -360,7 +360,7 @@ T floorImpl(T)(T x) @trusted pure nothrow @nogc
         else
             int pos = 3;
     }
-    else static if (T.mant_dig == 64) // real80
+    else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
@@ -369,7 +369,7 @@ T floorImpl(T)(T x) @trusted pure nothrow @nogc
         else
             int pos = 4;
     }
-    else if (T.mant_dig == 113) // quadruple
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
         int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
@@ -2111,7 +2111,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
     alias F = floatTraits!(real);
 
     ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
-    static if (real.mant_dig == 64)     // real80
+    static if (F.realFormat == RealFormat.ieeeExtended)
     {
         if (ex)
         {   // If exponent is non-zero
@@ -2150,7 +2150,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
         }
         return value;
     }
-    else static if (real.mant_dig == 113)   // quadruple
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
         if (ex)     // If exponent is non-zero
         {
@@ -2193,7 +2193,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
         }
         return value;
     }
-    else static if (real.mant_dig == 53) // real is double
+    else static if (F.realFormat == RealFormat.ieeeDouble)
     {
         if (ex) // If exponent is non-zero
         {
@@ -2233,7 +2233,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
         }
         return value;
     }
-    else // static if (real.mant_dig == 106) // real is doubledouble
+    else // static if (F.realFormat == RealFormat.ibmExtended)
     {
         assert (0, "frexp not implemented");
     }
@@ -2270,7 +2270,7 @@ unittest
 
     }
 
-    static if (real.mant_dig == 64)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     {
         static real[3][] extendedvals = [ // x,frexp,exp
                                           [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
@@ -2371,7 +2371,7 @@ real ldexp(real n, int exp) @nogc @safe pure nothrow;    /* intrinsic */
 
 unittest
 {
-    static if(real.mant_dig == 64)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     {
         assert(ldexp(1, -16384) == 0x1p-16384L);
         assert(ldexp(1, -16382) == 0x1p-16382L);
@@ -2381,7 +2381,7 @@ unittest
         assert(x==-16383);
         assert(ldexp(n, x)==0x1p-16384L);
     }
-    else static if(real.mant_dig == 53)
+    else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     {
         assert(ldexp(1, -1024) == 0x1p-1024L);
         assert(ldexp(1, -1022) == 0x1p-1022L);
@@ -3394,7 +3394,8 @@ long lrint(real x) @trusted pure nothrow @nogc
     }
     else
     {
-        static if (real.mant_dig == 53)
+        alias F = floatTraits!(real);
+        static if (F.realFormat == RealFormat.ieeeDouble)
         {
             long result;
 
@@ -3444,9 +3445,8 @@ long lrint(real x) @trusted pure nothrow @nogc
 
             return sign ? -result : result;
         }
-        else static if (real.mant_dig == 64)
+        else static if (F.realFormat == RealFormat.ieeeExtended)
         {
-            alias F = floatTraits!(real);
             long result;
 
             // Rounding limit when casting from real(80-bit) to ulong.
@@ -4172,26 +4172,26 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
-    static if (X.mant_dig == 24) // float
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
         uint* p = cast(uint *)&x;
         return ((*p & 0x7F80_0000) == 0x7F80_0000)
             && *p & 0x007F_FFFF; // not infinity
     }
-    else static if (X.mant_dig == 53) // double
+    else static if (F.realFormat == RealFormat.ieeeDouble)
     {
         ulong*  p = cast(ulong *)&x;
         return ((*p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
             && *p & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
-    else static if (X.mant_dig == 64)  // real80
+    else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
             *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
-    else static if (X.mant_dig == 113) // quadruple
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
@@ -4323,8 +4323,7 @@ unittest
 int isNormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-
-    static if(real.mant_dig == 106) // doubledouble
+    static if (F.realFormat == RealFormat.ibmExtended)
     {
         // doubledouble is normal if the least significant part is normal.
         return isNormal((cast(double*)&x)[MANTISSA_LSB]);
@@ -4368,38 +4367,33 @@ unittest
 int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
-    static if (X.mant_dig == 24)
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        // float
         uint *p = cast(uint *)&x;
         return (*p & F.EXPMASK_INT) == 0 && *p & F.MANTISSAMASK_INT;
     }
-    else static if (X.mant_dig == 53)
+    else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        // double
         uint *p = cast(uint *)&x;
         return (p[MANTISSA_MSB] & F.EXPMASK_INT) == 0
             && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & F.MANTISSAMASK_INT);
     }
-    else static if (X.mant_dig == 113)
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        // quadruple
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         long*   ps = cast(long *)&x;
         return (e == 0 &&
           (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) != 0));
     }
-    else static if (X.mant_dig == 64)
+    else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        // real80
         ushort* pe = cast(ushort *)&x;
         long*   ps = cast(long *)&x;
 
         return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
     }
-    else static if(X.mant_dig == 106)
+    else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        // double double
         return isSubnormal((cast(double*)&x)[MANTISSA_MSB]);
     }
     else
@@ -4428,35 +4422,30 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
-    static if (X.mant_dig == 24)
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        // float
         return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
     }
-    else static if (X.mant_dig == 53)
+    else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        // double
         return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF0_0000_0000_0000;
     }
-    else static if (X.mant_dig == 64)
+    else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        // real80
         ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
         ulong*  ps = cast(ulong *)&x;
 
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
         return e == F.EXPMASK && (*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
     }
-    else static if(X.mant_dig == 106)
+    else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        //doubledouble
         return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF8_0000_0000_0000;
     }
-    else static if (X.mant_dig == 113)
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        // quadruple
         long*   ps = cast(long *)&x;
         return (ps[MANTISSA_LSB] == 0)
             && (ps[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
@@ -4547,19 +4536,18 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
     // We're doing a bitwise comparison so the endianness is irrelevant.
     long*   pxs = cast(long *)&x;
     long*   pys = cast(long *)&y;
-    static if (real.mant_dig == 53)
+    alias F = floatTraits!(real);
+    static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        //double
         return pxs[0] == pys[0];
     }
-    else static if (real.mant_dig == 113 || real.mant_dig == 106)
+    else static if (F.realFormat == RealFormat.ieeeQuadruple
+                 || F.realFormat == RealFormat.ibmExtended)
     {
-        // quadruple or doubledouble
         return pxs[0] == pys[0] && pxs[1] == pys[1];
     }
     else
     {
-        // real80
         ushort* pxe = cast(ushort *)&x;
         ushort* pye = cast(ushort *)&y;
         return pxe[4] == pye[4] && pxs[0] == pys[0];
@@ -4702,10 +4690,11 @@ unittest
  */
 real NaN(ulong payload) @trusted pure nothrow @nogc
 {
-    static if (real.mant_dig == 64)
+    alias F = floatTraits!(real);
+    static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        //real80 (in x86 real format, the implied bit is actually
-        //not implied but a real bit which is stored in the real)
+        // real80 (in x86 real format, the implied bit is actually
+        // not implied but a real bit which is stored in the real)
         ulong v = 3; // implied bit = 1, quiet bit = 1
     }
     else
@@ -4730,11 +4719,9 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     a -= w;
     a >>=29;
 
-    static if (real.mant_dig == 53)
+    static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        // double
-
-        v |=0x7FF0_0000_0000_0000;
+        v |= 0x7FF0_0000_0000_0000;
         real x;
         * cast(ulong *)(&x) = v;
         return x;
@@ -4747,12 +4734,9 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
         real x = real.nan;
 
         // Extended real bits
-
-        static if (real.mant_dig == 113)
+        static if (F.realFormat == RealFormat.ieeeQuadruple)
         {
-            //quadruple
-
-            v<<=1; // there's no implicit bit
+            v <<= 1; // there's no implicit bit
 
             version(LittleEndian)
             {
@@ -4765,9 +4749,7 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
         }
         else
         {
-            // real80
-
-            * cast(ulong *)(&x) = v;
+            *cast(ulong *)(&x) = v;
         }
         return x;
     }
@@ -4775,7 +4757,7 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
 
 unittest
 {
-    static if (real.mant_dig == 53)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     {
         auto x = NaN(1);
         auto xl = *cast(ulong*)&x;
@@ -4797,7 +4779,8 @@ unittest
 ulong getNaNPayload(real x) @trusted pure nothrow @nogc
 {
     //  assert(isNaN(x));
-    static if (real.mant_dig == 53)
+    alias F = floatTraits!(real);
+    static if (F.realFormat == RealFormat.ieeeDouble)
     {
         ulong m = *cast(ulong *)(&x);
         // Make it look like an 80-bit significand.
@@ -4805,9 +4788,8 @@ ulong getNaNPayload(real x) @trusted pure nothrow @nogc
         m &= 0x0007_FFFF_FFFF_FFFF;
         m <<= 10;
     }
-    else static if (real.mant_dig == 113)
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        // quadruple
         version(LittleEndian)
         {
             ulong m = *cast(ulong*)(6+cast(ubyte*)(&x));
@@ -4839,7 +4821,8 @@ debug(UnitTest)
     unittest
     {
         real nan4 = NaN(0x789_ABCD_EF12_3456);
-        static if (real.mant_dig == 64 || real.mant_dig == 113)
+        static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended
+                || floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
         {
             assert (getNaNPayload(nan4) == 0x789_ABCD_EF12_3456);
         }
@@ -4878,16 +4861,12 @@ debug(UnitTest)
 real nextUp(real x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(real);
-    static if (real.mant_dig == 53)
+    static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        // double
-
         return nextUp(cast(double)x);
     }
-    else static if (real.mant_dig == 113)
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        // quadruple
-
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         if (e == F.EXPMASK)
         {
@@ -4922,7 +4901,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
         return x;
 
     }
-    else static if(real.mant_dig == 64) // real80
+    else static if (F.realFormat == RealFormat.ieeeExtended)
     {
         // For 80-bit reals, the "implied bit" is a nuisance...
         ushort *pe = cast(ushort *)&x;
@@ -4972,7 +4951,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
         }
         return x;
     }
-    else // static if (real.mant_dig == 106) // real is doubledouble
+    else // static if (F.realFormat == RealFormat.ibmExtended)
     {
         assert (0, "nextUp not implemented");
     }
@@ -5074,7 +5053,7 @@ unittest
 
 unittest
 {
-    static if (real.mant_dig == 64)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     {
 
         // Tests for 80-bit reals
@@ -5678,7 +5657,8 @@ int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
-    static if (X.mant_dig == 106)   // doubledouble
+    alias F = floatTraits!(X);
+    static if (F.realFormat == RealFormat.ibmExtended)
     {
         if (cast(double*)(&x)[MANTISSA_MSB] == cast(double*)(&y)[MANTISSA_MSB])
         {
@@ -5694,8 +5674,10 @@ int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
     }
     else
     {
-        static assert( X.mant_dig == 64 || X.mant_dig == 113
-            || X.mant_dig == double.mant_dig || X.mant_dig == float.mant_dig);
+        static assert (F.realFormat == RealFormat.ieeeSingle
+                    || F.realFormat == RealFormat.ieeeDouble
+                    || F.realFormat == RealFormat.ieeeExtended
+                    || F.realFormat == RealFormat.ieeeQuadruple);
 
         if (x == y)
             return X.mant_dig; // ensure diff!=0, cope with INF.
@@ -5706,7 +5688,6 @@ int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
         ushort *pb = cast(ushort *)(&y);
         ushort *pd = cast(ushort *)(&diff);
 
-        alias F = floatTraits!(X);
 
         // The difference in abs(exponent) between x or y and abs(x-y)
         // is equal to the number of significand bits of x which are
@@ -5718,20 +5699,21 @@ int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
         // always 1 lower than we want, except that if bitsdiff==0,
         // they could have 0 or 1 bits in common.
 
-        static if (X.mant_dig == 64 || X.mant_dig == 113)
-        {   // real80 or quadruple
+        static if (F.realFormat == RealFormat.ieeeExtended
+                || F.realFormat == RealFormat.ieeeQuadruple)
+        {
             int bitsdiff = ( ((pa[F.EXPPOS_SHORT] & F.EXPMASK)
                               + (pb[F.EXPPOS_SHORT] & F.EXPMASK) - 1) >> 1)
                               - pd[F.EXPPOS_SHORT];
         }
-        else static if (X.mant_dig == double.mant_dig)
-        {   // double
+        else static if (F.realFormat == RealFormat.ieeeDouble)
+        {
             int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7FF0)
                                + (pb[F.EXPPOS_SHORT]&0x7FF0)-0x10)>>1)
                                - (pd[F.EXPPOS_SHORT]&0x7FF0))>>4;
         }
-        else static if (X.mant_dig == float.mant_dig)
-        {   // float
+        else static if (F.realFormat == RealFormat.ieeeSingle)
+        {
             int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7F80)
                                + (pb[F.EXPPOS_SHORT]&0x7F80)-0x80)>>1)
                                - (pd[F.EXPPOS_SHORT]&0x7F80))>>7;
@@ -5749,11 +5731,13 @@ int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
             return bitsdiff + 1; // add the 1 we subtracted before
 
         // Avoid out-by-1 errors when factor is almost 2.
-        static if (X.mant_dig == 64 || X.mant_dig == 113)
-        {   // real80 or quadruple
+        static if (F.realFormat == RealFormat.ieeeExtended
+                || F.realFormat == RealFormat.ieeeQuadruple)
+        {
             return (bitsdiff == 0) ? (pa[F.EXPPOS_SHORT] == pb[F.EXPPOS_SHORT]) : 0;
         }
-        else static if (X.mant_dig == double.mant_dig || X.mant_dig == float.mant_dig)
+        else static if (F.realFormat == RealFormat.ieeeDouble
+                     || F.realFormat == RealFormat.ieeeSingle)
         {
             if (bitsdiff == 0
                 && !((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT]) & F.EXPMASK))
@@ -5810,7 +5794,7 @@ unittest
     }
 
     assert(feqrel(7.1824L, 7.1824L) == real.mant_dig);
-    static if(real.mant_dig == 64)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     {
         assert(feqrel(real.min_normal / 8, real.min_normal / 17) == 3);
     }
@@ -5852,11 +5836,10 @@ body
     // The implementation is simple: cast x and y to integers,
     // average them (avoiding overflow), and cast the result back to a floating-point number.
 
-    alias F = floatTraits!(real);
+    alias F = floatTraits!(T);
     T u;
-    static if (T.mant_dig == 64)
-    {   // real80
-
+    static if (F.realFormat == RealFormat.ieeeExtended)
+    {
         // There's slight additional complexity because they are actually
         // 79-bit reals...
         ushort *ue = cast(ushort *)&u;
@@ -5891,8 +5874,8 @@ body
 
         ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
     }
-    else static if(T.mant_dig == 113)
-    {   //quadruple
+    else static if (F.realFormat == RealFormat.ieeeQuadruple)
+    {
         // This would be trivial if 'ucent' were implemented...
         ulong *ul = cast(ulong *)&u;
         ulong *xl = cast(ulong *)&x;
@@ -5915,7 +5898,7 @@ body
         ul[MANTISSA_MSB] = mh | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
         ul[MANTISSA_LSB] = ml;
     }
-    else static if (T.mant_dig == double.mant_dig)
+    else static if (F.realFormat == RealFormat.ieeeDouble)
     {
         ulong *ul = cast(ulong *)&u;
         ulong *xl = cast(ulong *)&x;
@@ -5925,7 +5908,7 @@ body
                    m |= ((*xl) & 0x8000_0000_0000_0000L);
                    *ul = m;
     }
-    else static if (T.mant_dig == float.mant_dig)
+    else static if (F.realFormat == RealFormat.ieeeSingle)
     {
         uint *ul = cast(uint *)&u;
         uint *xl = cast(uint *)&x;
@@ -5956,7 +5939,7 @@ unittest
                  ==-1.5*(1+5*real.epsilon));
     assert(ieeeMean(0x1p60,0x1p-10)==0x1p25);
 
-    static if (real.mant_dig == 64)
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     {
       assert(ieeeMean(1.0L,real.infinity)==0x1p8192L);
       assert(ieeeMean(0.0L,real.infinity)==1.5);
