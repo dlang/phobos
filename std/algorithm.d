@@ -7262,7 +7262,8 @@ min(upper,val))).
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 in
 {
-    assert(lower <= upper);
+    import std.functional : greaterThan;
+    assert(!lower.greaterThan(upper));
 }
 body
 {
@@ -7277,6 +7278,8 @@ unittest
     assert(clamp(4, 1, 3) == 3);
 
     assert(clamp(1, 1, 1) == 1);
+
+    assert(clamp(5, -1, 2u) == 2);
 }
 
 unittest
