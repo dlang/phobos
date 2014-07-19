@@ -4647,96 +4647,53 @@ void main() {
     });
 }
 
-/** This function makes the assumption that the passed unsigned integer type
-array passed is actually a character array.
+/** Assume the given array of integers $(D arr) is a well-formed UTF string and
+return it typed as a UTF string.
 
-$(D ubyte[]) are mapped to $(D char[]), $(D ushort[]) are mapped to
-$(D wchar[]) and $(D uint[]) are mapped to $(D dchar[]) qualifier are
-preserved.
+$(D ubyte) becomes $(D char), $(D ushort) becomes $(D wchar) and $(D uint)
+becomes $(D dchar). Type qualifiers are preserved.
 
-See_Also: $(LINK2 std_exception.html,assumeUnique)
+See_Also: $(LREF representation)
 */
-auto assumeUTF(T)(T[] t) pure @trusted
+auto assumeUTF(T)(T[] arr) pure
+    if(staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
-	static if(is(T == ubyte))
-	{
-		auto r = cast(char[])t;
-	}
-	else static if(is(T == const(ubyte)))
-	{
-		auto r = cast(const(char)[])t;
-	}
-	else static if(is(T == immutable(ubyte)))
-	{
-		auto r = cast(immutable(char)[])t;
-	}
-	else static if(is(T == ushort))
-	{
-		auto r = cast(wchar[])t;
-	}
-	else static if(is(T == const(ushort)))
-	{
-		auto r = cast(const(wchar)[])t;
-	}
-	else static if(is(T == immutable(ushort)))
-	{
-		auto r = cast(immutable(wchar)[])t;
-	}
-	else static if(is(T == uint))
-	{
-		auto r = cast(dchar[])t;
-	}
-	else static if(is(T == const(uint)))
-	{
-		auto r = cast(const(dchar)[])t;
-	}
-	else static if(is(T == immutable(uint)))
-	{
-		auto r = cast(immutable(dchar)[])t;
-	}
-	else
-	{
-		static assert(false,
-			"assumeUTF only accepts ubyte, ushort or uint arrays not :" ~
-			T.stringof);
-	}
-
-	debug 
-	{
-		validate(r);
-	}
-
-	return r;
+    alias ToUTFType(U) = TypeTuple!(char, wchar, dchar)[U.sizeof / 2];
+    auto asUTF = cast(ModifyTypePreservingSTC!(ToUTFType, T)[])arr;
+    debug validate(asUTF);
+    return asUTF;
 }
 
 ///
-unittest
+@safe pure unittest
 {
-    char[] a = "Hölo World".dup;
-    ubyte[] b = cast(ubyte[])a;
-    char[] c = assumeUTF(b);
+    string a = "Hölo World";
+    immutable(ubyte)[] b = a.representation;
+    string c = b.assumeUTF;
 
     assert(a == c);
 }
 
-unittest
+pure unittest
 {
-    foreach(it; TypeTuple!(char[], wchar[], dchar[]))
+    foreach(T; TypeTuple!(char[], wchar[], dchar[]))
     {
-        auto jt = to!(immutable it)("Hello World").dup;
-        static if(is(it == char[]))
+        immutable T jti = "Hello World";
+        T jt = jti.dup;
+
+        static if(is(T == char[]))
         {
             auto gt = cast(ubyte[])jt;
             auto gtc = cast(const(ubyte)[])jt;
             auto gti = cast(immutable(ubyte)[])jt;
         }
-        else static if(is(it == wchar[]))
+        else static if(is(T == wchar[]))
         {
             auto gt = cast(ushort[])jt;
             auto gtc = cast(const(ushort)[])jt;
             auto gti = cast(immutable(ushort)[])jt;
         }
-        else static if(is(it == dchar[]))
+        else static if(is(T == dchar[]))
         {
             auto gt = cast(uint[])jt;
             auto gtc = cast(const(uint)[])jt;
