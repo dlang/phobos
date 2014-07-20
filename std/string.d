@@ -4658,55 +4658,55 @@ See_Also: $(LINK2 std_exception.html,assumeUnique)
 */
 auto assumeUTF(T)(T[] t) pure @trusted
 {
-	static if(is(T == ubyte))
-	{
-		auto r = cast(char[])t;
-	}
-	else static if(is(T == const(ubyte)))
-	{
-		auto r = cast(const(char)[])t;
-	}
-	else static if(is(T == immutable(ubyte)))
-	{
-		auto r = cast(immutable(char)[])t;
-	}
-	else static if(is(T == ushort))
-	{
-		auto r = cast(wchar[])t;
-	}
-	else static if(is(T == const(ushort)))
-	{
-		auto r = cast(const(wchar)[])t;
-	}
-	else static if(is(T == immutable(ushort)))
-	{
-		auto r = cast(immutable(wchar)[])t;
-	}
-	else static if(is(T == uint))
-	{
-		auto r = cast(dchar[])t;
-	}
-	else static if(is(T == const(uint)))
-	{
-		auto r = cast(const(dchar)[])t;
-	}
-	else static if(is(T == immutable(uint)))
-	{
-		auto r = cast(immutable(dchar)[])t;
-	}
-	else
-	{
-		static assert(false,
-			"assumeUTF only accepts ubyte, ushort or uint arrays not :" ~
-			T.stringof);
-	}
+    static if(is(T == ubyte))
+    {
+        auto r = cast(char[])t;
+    }
+    else static if(is(T == const(ubyte)))
+    {
+        auto r = cast(const(char)[])t;
+    }
+    else static if(is(T == immutable(ubyte)))
+    {
+        auto r = cast(immutable(char)[])t;
+    }
+    else static if(is(T == ushort))
+    {
+        auto r = cast(wchar[])t;
+    }
+    else static if(is(T == const(ushort)))
+    {
+        auto r = cast(const(wchar)[])t;
+    }
+    else static if(is(T == immutable(ushort)))
+    {
+        auto r = cast(immutable(wchar)[])t;
+    }
+    else static if(is(T == uint))
+    {
+        auto r = cast(dchar[])t;
+    }
+    else static if(is(T == const(uint)))
+    {
+        auto r = cast(const(dchar)[])t;
+    }
+    else static if(is(T == immutable(uint)))
+    {
+        auto r = cast(immutable(dchar)[])t;
+    }
+    else
+    {
+        static assert(false,
+            "assumeUTF only accepts ubyte, ushort or uint arrays not: " ~
+            T.stringof);
+    }
 
-	debug 
-	{
-		validate(r);
-	}
+    debug
+    {
+        validate(r);
+    }
 
-	return r;
+    return r;
 }
 
 ///
