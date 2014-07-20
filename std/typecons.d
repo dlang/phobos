@@ -54,8 +54,6 @@ deleted at the end of the scope, unless it is transferred.  The
 transfer can be explicit, by calling $(D release), or implicit, when
 returning Unique from a function. The resource can be a polymorphic
 class object, in which case Unique behaves polymorphically too.
-
-Example:
 */
 struct Unique(T)
 {
@@ -80,7 +78,7 @@ public:
     /**
     Constructor that takes an rvalue.
     It will ensure uniqueness, as long as the rvalue
-    isn't just a view on an lvalue (e.g., a cast)
+    isn't just a view on an lvalue (e.g., a cast).
     Typical usage:
     ----
     Unique!(Foo) f = new Foo;
@@ -107,7 +105,7 @@ public:
     /**
     Constructor that takes a Unique of a type that is convertible to our type:
     Disallow construction from lvalue (force the use of release on the source Unique)
-    If the source is an rvalue, null its content, so the destrutctor doesn't delete it
+    If the source is an rvalue, null its content, so the destructor doesn't delete it
 
     Typically used by the compiler to return $(D Unique) of derived type as $(D Unique)
     of base type.
@@ -132,14 +130,14 @@ public:
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        delete _p;
+        if (_p !is null) delete _p;
         _p = null;
     }
     bool isEmpty() const
     {
         return _p is null;
     }
-    /** Returns a unique rvalue. Nullifies the current contents */
+    /** Returns a unique rvalue. Nullifies the current contents. */
     Unique release()
     {
         debug(Unique) writeln("Release");
@@ -148,72 +146,69 @@ public:
         debug(Unique) writeln("return from Release");
         return u;
     }
-    /** Forwards member access to contents */
+    /** Forwards member access to contents. */
     RefT opDot() { return _p; }
 
-/+ doesn't work yet!
     /**
-    Postblit operator is undefined to prevent the cloning of $(D Unique) objects
+    Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
     */
-    this(this) = null;
- +/
+    @disable this(this);
 
 private:
     RefT _p;
 }
 
-/+ doesn't work yet
 unittest
 {
-    writeln("Unique class");
+    debug(Unique) writeln("Unique class");
     class Bar
     {
-        ~this() { writefln("    Bar destructor"); }
+        ~this() { debug(Unique) writeln("    Bar destructor"); }
         int val() const { return 4; }
     }
     alias UBar = Unique!(Bar);
     UBar g(UBar u)
     {
-        return u;
+        debug(Unique) writeln("inside g");
+        return u.release;
     }
     auto ub = UBar(new Bar);
     assert(!ub.isEmpty);
     assert(ub.val == 4);
-    // should not compile
-    // auto ub3 = g(ub);
-    writeln("Calling g");
+    static assert(!__traits(compiles, {auto ub3 = g(ub);}));
+    debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
+    debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
 }
 
 unittest
 {
-    writeln("Unique struct");
+    debug(Unique) writeln("Unique struct");
     struct Foo
     {
-        ~this() { writefln("    Bar destructor"); }
+        ~this() { debug(Unique) writeln("    Foo destructor"); }
         int val() const { return 3; }
     }
     alias UFoo = Unique!(Foo);
 
     UFoo f(UFoo u)
     {
-        writeln("inside f");
-        return u;
+        debug(Unique) writeln("inside f");
+        return u.release;
     }
 
     auto uf = UFoo(new Foo);
     assert(!uf.isEmpty);
     assert(uf.val == 3);
-    // should not compile
-    // auto uf3 = f(uf);
-    writeln("Unique struct: calling f");
+    static assert(!__traits(compiles, {auto uf3 = f(uf);}));
+    debug(Unique) writeln("Unique struct: calling f");
     auto uf2 = f(uf.release);
+    debug(Unique) writeln("Unique struct: returned from f");
     assert(uf.isEmpty);
     assert(!uf2.isEmpty);
 }
-+/
 
 
 /**
