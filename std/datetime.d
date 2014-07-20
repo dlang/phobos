@@ -26298,10 +26298,11 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
         version(Posix)
         {
-            version(FreeBSD) enum utcZone = "Etc/UTC";
-            version(linux)   enum utcZone = "UTC";
-            version(OSX)     enum utcZone = "UTC";
-            version(Android) enum utcZone = "UTC";
+            version(FreeBSD)      enum utcZone = "Etc/UTC";
+            else version(linux)   enum utcZone = "UTC";
+            else version(OSX)     enum utcZone = "UTC";
+            else version(Android) enum utcZone = "UTC";
+            else static assert(0, "The location of the UTC timezone file on this Posix platform must be set.");
 
             auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
                         testTZ("America/New_York", "EST", "EDT", dur!"hours"(-5), dur!"hours"(1)),
