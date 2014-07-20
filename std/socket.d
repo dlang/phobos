@@ -1012,6 +1012,8 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
 
 private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addrinfo* hints)
 {
+	import std.array : appender;
+
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
         addrinfo* ai_res;
@@ -1020,10 +1022,11 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
             node is null ? null : std.string.toStringz(node),
             service is null ? null : std.string.toStringz(service),
             hints, &ai_res);
-        scope(exit) if (ai_res) freeaddrinfoPointer(ai_res);
         enforce(ret == 0, new SocketOSException("getaddrinfo error", ret, &formatGaiError));
+        scope(exit) freeaddrinfoPointer(ai_res);
 
-        AddressInfo[] result;
+        auto result = appender!(AddressInfo[])();
+
         // Use const to force UnknownAddressReference to copy the sockaddr.
         for (const(addrinfo)* ai = ai_res; ai; ai = ai.ai_next)
             result ~= AddressInfo(
@@ -1033,8 +1036,8 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
                 new UnknownAddressReference(ai.ai_addr, cast(socklen_t) ai.ai_addrlen),
                 ai.ai_canonname ? to!string(ai.ai_canonname) : null);
 
-        assert(result.length > 0);
-        return result;
+        assert(result.data.length > 0);
+        return result.data;
     }
 
     throw new SocketFeatureException("Address info lookup is not available " ~
@@ -1118,10 +1121,11 @@ Address[] getAddress(in char[] hostname, in char[] service = null)
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
         // use getAddressInfo
-        Address[] results;
         auto infos = getAddressInfo(hostname, service);
-        foreach (ref info; infos)
-            results ~= info.address;
+        Address[] results;
+        results.length = infos.length;
+        foreach (i, ref result; results)
+            result = infos[i].address;
         return results;
     }
     else
