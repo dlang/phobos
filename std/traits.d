@@ -5873,7 +5873,7 @@ unittest
 }
 
 // [For internal use]
-private template ModifyTypePreservingSTC(alias Modifier, T)
+package template ModifyTypePreservingSTC(alias Modifier, T)
 {
          static if (is(T U ==          immutable U)) alias ModifyTypePreservingSTC =          immutable Modifier!U;
     else static if (is(T U == shared inout const U)) alias ModifyTypePreservingSTC = shared inout const Modifier!U;
