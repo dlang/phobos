@@ -1667,25 +1667,10 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
 {
-    // Get representation type
-    alias U = TypeTuple!(ubyte, ushort, uint)[Char.sizeof / 2];
-
-    // const and immutable storage classes
-    static if (is(Char == immutable))
-        alias T = immutable(U);
-    else static if (is(Char == const))
-        alias T = const(U);
-    else
-        alias T = U;
-
-    // shared storage class (because shared(const(T)) is possible)
-    static if (is(Char == shared))
-        alias ST = shared(T);
-    else
-        alias ST = T;
-
-    return cast(ST[]) s;
+    alias ToRepType(T) = TypeTuple!(ubyte, ushort, uint)[T.sizeof / 2];
+    return cast(ModifyTypePreservingSTC!(ToRepType, Char)[])s;
 }
+
 ///
 @safe pure unittest
 {
@@ -1694,6 +1679,7 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     assert(representation(s) is cast(immutable(ubyte)[]) s);
     assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
 }
+
 @trusted pure unittest
 {
     assertCTFEable!(
