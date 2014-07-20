@@ -111,6 +111,17 @@ public:
         u._p = null;
     }
     
+    /// Transfer ownership from a $(D Unique) of a type that is convertible to our type.
+    void opAssign(U)(Unique!U u)
+    if (is(u.RefT:RefT))
+    {
+        debug(Unique) writeln("Unique opAssign converting from ", U.stringof);
+        // first delete any resource we own
+        destroy(this);
+        _p = u._p;
+        u._p = null;
+    }
+    
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
@@ -190,15 +201,26 @@ unittest
 unittest
 {
     // test conversion to base ref
-    static class C {}
-    Unique!Object u = unique!C();
+    int deleted = 0;
+    class C
+    {
+        ~this(){deleted++;}
+    }
+    // constructor conversion
+    Unique!Object u = Unique!C(new C);
+    static assert(!__traits(compiles, {u = new C;}));
     assert(!u.isEmpty);
+    destroy(u);
+    assert(deleted == 1);
     
     Unique!C uc = new C;
     static assert(!__traits(compiles, {Unique!Object uo = uc;}));
-    Unique!Object uo = uc.release;
+    Unique!Object uo = new C;
+    // opAssign conversion, deleting uo resource first
+    uo = uc.release;
     assert(uc.isEmpty);
     assert(!uo.isEmpty);
+    assert(deleted == 2);
 }
 
 unittest
