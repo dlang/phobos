@@ -69,7 +69,7 @@ private:
  * Each instance of '@' in s is replaced by 0,1,...n-1. This is a helper
  * function for some of the asm routines.
  */
-string indexedLoopUnroll(int n, string s) pure
+string indexedLoopUnroll(int n, string s) pure @safe
 {
     string u;
     for (int i = 0; i<n; ++i) {
@@ -87,7 +87,7 @@ string indexedLoopUnroll(int n, string s) pure
     }
     return u;
 }
-unittest
+@safe pure unittest
 {
     assert(indexedLoopUnroll(3, "@*23;")=="0*23;1*23;2*23;");
 }
@@ -107,7 +107,7 @@ enum : int { KARATSUBASQUARELIMIT=26 }; // Minimum value for which square Karats
  * Set op == '+' for addition, '-' for subtraction.
  */
 uint multibyteAddSub(char op)(uint[] dest, const uint [] src1, const uint []
-        src2, uint carry) pure
+        src2, uint carry) pure @trusted
 {
     // Timing:
     // Pentium M: 2.25/int
@@ -173,7 +173,7 @@ done:
     }
 }
 
-unittest
+@safe pure unittest
 {
     uint [] a = new uint[40];
     uint [] b = new uint[40];
@@ -219,7 +219,7 @@ unittest
  *  op must be '+' or '-'
  *  Returns final carry or borrow (0 or 1)
  */
-uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure
+uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure @trusted
 {
     enum { LASTPARAM = 1*4 } // 0* pushes + return address.
     asm {
@@ -249,7 +249,8 @@ L2:     dec EAX;
  *  numbits must be in the range 1..31
  *  Returns the overflow
  */
-uint multibyteShlNoMMX(uint [] dest, const uint [] src, uint numbits) pure
+uint multibyteShlNoMMX(uint [] dest, const uint [] src, uint numbits) 
+	pure @trusted
 {
     // Timing: Optimal for P6 family.
     // 2.0 cycles/int on PPro..PM (limited by execution port p0)
@@ -300,7 +301,7 @@ L_last:
  *  numbits must be in the range 1..31
  * This version uses MMX.
  */
-uint multibyteShl(uint [] dest, const uint [] src, uint numbits) pure
+uint multibyteShl(uint [] dest, const uint [] src, uint numbits) pure @trusted
 {
     // Timing:
     // K7 1.2/int. PM 1.7/int P4 5.3/int
@@ -384,7 +385,7 @@ L_length1:
    }
 }
 
-void multibyteShr(uint [] dest, const uint [] src, uint numbits) pure
+void multibyteShr(uint [] dest, const uint [] src, uint numbits) pure @trusted
 {
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
     asm {
@@ -471,7 +472,8 @@ L_length1:
 /** dest[#] = src[#] >> numbits
  *  numbits must be in the range 1..31
  */
-void multibyteShrNoMMX(uint [] dest, const uint [] src, uint numbits) pure
+void multibyteShrNoMMX(uint [] dest, const uint [] src, uint numbits) 
+	pure @trusted
 {
     // Timing: Optimal for P6 family.
     // 2.0 cycles/int on PPro..PM (limited by execution port p0)
@@ -518,7 +520,7 @@ L_last:
      }
 }
 
-unittest
+@safe pure unittest
 {
 
     uint [] aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
@@ -560,7 +562,7 @@ unittest
  * Returns carry.
  */
 uint multibyteMul(uint[] dest, const uint[] src, uint multiplier, uint carry)
-    pure
+    pure @trusted
 {
     // Timing: definitely not optimal.
     // Pentium M: 5.0 cycles/operation, has 3 resource stalls/iteration
@@ -620,7 +622,7 @@ L_odd:
      }
 }
 
-unittest
+@safe pure unittest
 {
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteMul(aa[1..4], aa[1..4], 16, 0);
@@ -631,7 +633,7 @@ unittest
 // Multiples by M_ADDRESS which should be "ESP+LASTPARAM" or "ESP". OP must be "add" or "sub"
 // This is the most time-critical code in the BigInt library.
 // It is used by both MulAdd, multiplyAccumulate, and triangleAccumulate
-string asmMulAdd_innerloop(string OP, string M_ADDRESS) pure {
+string asmMulAdd_innerloop(string OP, string M_ADDRESS) pure @trusted {
     // The bottlenecks in this code are extremely complicated. The MUL, ADD, and ADC
     // need 4 cycles on each of the ALUs units p0 and p1. So we use memory load
     // (unit p2) for initializing registers to zero.
@@ -702,7 +704,7 @@ L_done: " ~ OP ~ " [-8+EDI+4*EBX], ECX;
                 // final carry is now in EBP
 }
 
-string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure {
+string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure @safe {
 return "asm {
         mul int ptr [" ~M_ADDRESS ~"];
         mov EBP, zero;
@@ -724,7 +726,8 @@ return "asm {
  * Returns carry out of MSB (0..FFFF_FFFF).
  */
 uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
-        multiplier, uint carry) pure {
+        multiplier, uint carry) pure @trusted
+{
     // Timing: This is the most time-critical bignum function.
     // Pentium M: 5.4 cycles/operation, still has 2 resource stalls + 1load block/iteration
 
@@ -786,7 +789,7 @@ L_enter_odd:
     mixin(asmMulAdd_enter_odd(OP, "ESP+LASTPARAM"));
 }
 
-unittest
+@safe pure unittest
 {
 
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
@@ -810,7 +813,8 @@ unittest
     ----
  */
 void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
-        const uint [] right) pure {
+        const uint [] right) pure @trusted 
+{
     // Register usage
     // EDX:EAX = used in multiply
     // EBX = index
@@ -895,7 +899,8 @@ L_enter_odd:
  * Based on public domain code by Eric Bainville.
  * (http://www.bealto.com/) Used with permission.
  */
-uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow) pure
+uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow) 
+	pure @trusted
 {
     // Timing: limited by a horrible dependency chain.
     // Pentium M: 18 cycles/op, 8 resource stalls/op.
@@ -1002,7 +1007,7 @@ Lc:
     }
 }
 
-unittest
+@safe pure unittest
 {
     uint [] aa = new uint[101];
     for (int i=0; i<aa.length; ++i) aa[i] = 0x8765_4321 * (i+3);
@@ -1013,7 +1018,8 @@ unittest
 }
 
 // Set dest[2*i..2*i+1]+=src[i]*src[i]
-void multibyteAddDiagonalSquares(uint [] dest, const uint [] src) pure
+void multibyteAddDiagonalSquares(uint [] dest, const uint [] src) 
+	pure @trusted 
 {
     /* Unlike mulAdd, the carry is only 1 bit,
            since FFFF*FFFF+FFFF_FFFF = 1_0000_0000.
@@ -1055,7 +1061,7 @@ L1:
  }
 }
 
-unittest
+@safe pure unittest
 {
     uint [] aa = new uint[13];
         uint [] bb = new uint[6];
@@ -1067,7 +1073,7 @@ unittest
         for (int i=0; i<bb.length; ++i) { assert(aa[2*i]==0x8000_0000+i*i); assert(aa[2*i+1]==0x8000_0000); }
 }
 
-void multibyteTriangleAccumulateD(uint[] dest, uint[] x) pure
+void multibyteTriangleAccumulateD(uint[] dest, uint[] x) pure @trusted
 {
     for (int i = 0; i < x.length-3; ++i) {
         dest[i+x.length] = multibyteMulAdd!('+')(
@@ -1089,7 +1095,8 @@ length2:
 //dest += src[0]*src[1...$] + src[1]*src[2..$] + ... + src[$-3]*src[$-2..$]+ src[$-2]*src[$-1]
 // assert(dest.length = src.length*2);
 // assert(src.length >= 3);
-void multibyteTriangleAccumulateAsm(uint[] dest, const uint[] src) pure
+void multibyteTriangleAccumulateAsm(uint[] dest, const uint[] src) 
+	pure @trusted
 {
     // Register usage
     // EDX:EAX = used in multiply
@@ -1195,7 +1202,7 @@ length_is_3:
         mixin(asmMulAdd_enter_odd("add", "ESP"));
 }
 
-unittest
+@safe pure unittest
 {
    uint [] aa = new uint[200];
    uint [] a  = aa[0..100];
@@ -1239,7 +1246,7 @@ unittest
 }
 
 
-void multibyteSquare(BigDigit[] result, const BigDigit [] x) pure
+void multibyteSquare(BigDigit[] result, const BigDigit [] x) pure @trusted
 {
     if (x.length < 4) {
         // Special cases, not worth doing triangular.
@@ -1266,7 +1273,7 @@ __gshared uint [2200] X1;
 __gshared uint [2200] Y1;
 __gshared uint [4000] Z1;
 
-void testPerformance() pure
+void testPerformance() pure @safe
 {
     // The performance results at the top of this file were obtained using
     // a Windows device driver to access the CPU performance counters.

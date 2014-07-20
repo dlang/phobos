@@ -80,7 +80,7 @@ public:
     /// It may have a leading + or - sign; followed by "0x" if hexadecimal.
     /// Underscores are permitted.
     /// BUG: Should throw a IllegalArgumentException/ConvError if invalid character found
-    this(T : const(char)[] )(T s) pure
+    this(T : const(char)[] )(T s) pure @safe
     {
         bool neg = false;
         if (s[0] == '-') {
@@ -107,20 +107,20 @@ public:
     }
 
     ///
-    this(T)(T x) pure nothrow if (isIntegral!T)
+    this(T)(T x) pure nothrow @safe if (isIntegral!T)
     {
         data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
 
     ///
-    this(T)(T x) pure nothrow if (is(Unqual!T == BigInt))
+    this(T)(T x) pure nothrow @safe if (is(Unqual!T == BigInt))
     {
         opAssign(x);
     }
 
     ///
-    BigInt opAssign(T)(T x) pure nothrow if (isIntegral!T)
+    BigInt opAssign(T)(T x) pure nothrow @safe if (isIntegral!T)
     {
         data = cast(ulong)absUnsign(x);
         sign = (x < 0);
@@ -128,7 +128,7 @@ public:
     }
 
     ///
-    BigInt opAssign(T:BigInt)(T x) pure
+    BigInt opAssign(T:BigInt)(T x) pure @safe
     {
         data = x.data;
         sign = x.sign;
@@ -136,7 +136,7 @@ public:
     }
 
     // BigInt op= integer
-    BigInt opOpAssign(string op, T)(T y) pure nothrow
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
@@ -213,7 +213,7 @@ public:
     }
 
     // BigInt op= BigInt
-    BigInt opOpAssign(string op, T)(T y) pure nothrow
+    BigInt opOpAssign(string op, T)(T y) pure nothrow @safe
         if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
             && is (T: BigInt))
     {
@@ -260,7 +260,7 @@ public:
     }
 
     // BigInt op BigInt
-    BigInt opBinary(string op, T)(T y) pure nothrow const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
         if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^" ||
             op=="/" || op=="%")
             && is (T: BigInt))
@@ -270,7 +270,7 @@ public:
     }
 
     // BigInt op integer
-    BigInt opBinary(string op, T)(T y) pure nothrow const
+    BigInt opBinary(string op, T)(T y) pure nothrow @safe const
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
             op=="^"|| op==">>" || op=="<<" || op=="^^")
             && isIntegral!T)
@@ -280,7 +280,7 @@ public:
     }
 
     //
-    int opBinary(string op, T : int)(T y) pure nothrow const
+    int opBinary(string op, T : int)(T y) pure nothrow @safe const
         if (op == "%" && isIntegral!T)
     {
         assert(y!=0);
@@ -292,14 +292,14 @@ public:
     }
 
     // Commutative operators
-    BigInt opBinaryRight(string op, T)(T y) pure nothrow const
+    BigInt opBinaryRight(string op, T)(T y) pure nothrow @safe const
         if ((op=="+" || op=="*" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
 
     //  BigInt = integer op BigInt
-    BigInt opBinaryRight(string op, T)(T y) pure nothrow const
+    BigInt opBinaryRight(string op, T)(T y) pure nothrow @safe const
         if (op == "-" && isIntegral!T)
     {
         ulong u = absUnsign(y);
@@ -314,7 +314,7 @@ public:
     }
 
     //  integer = integer op BigInt
-    T opBinaryRight(string op, T)(T x) pure nothrow const
+    T opBinaryRight(string op, T)(T x) pure nothrow @safe const
         if ((op=="%" || op=="/") && isIntegral!T)
     {
         checkDivByZero();
@@ -337,7 +337,8 @@ public:
         }
     }
     // const unary operations
-    BigInt opUnary(string op)() pure nothrow const if (op=="+" || op=="-" || op=="~")
+    BigInt opUnary(string op)() pure nothrow @safe const
+        if (op=="+" || op=="-" || op=="~")
     {
        static if (op=="-")
        {
@@ -354,7 +355,7 @@ public:
     }
 
     // non-const unary operations
-    BigInt opUnary(string op)() pure nothrow if (op=="++" || op=="--")
+    BigInt opUnary(string op)() pure nothrow @safe if (op=="++" || op=="--")
     {
         static if (op=="++")
         {
@@ -369,7 +370,7 @@ public:
     }
 
     ///
-    bool opEquals()(auto ref const BigInt y) const pure
+    bool opEquals()(auto ref const BigInt y) const pure @safe
     {
        return sign == y.sign && y.data == data;
     }
@@ -383,27 +384,27 @@ public:
     }
 
     ///
-    T opCast(T:bool)() pure const
+    T opCast(T:bool)() pure @safe const
     {
         return !isZero();
     }
 
     ///
-    T opCast(T)() pure const if (is(Unqual!T == BigInt)) {
+    T opCast(T)() pure @safe const if (is(Unqual!T == BigInt)) {
         return this;
     }
 
     // Hack to make BigInt's typeinfo.compare work properly.
     // Note that this must appear before the other opCmp overloads, otherwise
     // DMD won't find it.
-    int opCmp(ref const BigInt y) pure nothrow const
+    int opCmp(ref const BigInt y) pure nothrow @safe const
     {
         // Simply redirect to the "real" opCmp implementation.
         return this.opCmp!BigInt(y);
     }
 
     ///
-    int opCmp(T)(T y) pure nothrow const if (isIntegral!T)
+    int opCmp(T)(T y) pure nothrow @safe const if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
@@ -411,7 +412,7 @@ public:
         return sign? -cmp: cmp;
     }
     ///
-    int opCmp(T:BigInt)(const T y) pure nothrow const
+    int opCmp(T:BigInt)(const T y) pure nothrow @safe const
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
@@ -420,7 +421,7 @@ public:
     }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
-    long toLong() pure nothrow const
+    long toLong() pure nothrow @safe const
     {
         return (sign ? -1 : 1) *
           (data.ulongLength() == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
@@ -429,7 +430,7 @@ public:
     }
     /// Returns the value of this BigInt as an int,
     /// or +- int.max if outside the representable range.
-    int toInt() pure nothrow const
+    int toInt() pure nothrow @safe const
     {
         return (sign ? -1 : 1) *
           (data.uintLength() == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
@@ -438,13 +439,13 @@ public:
     }
     /// Number of significant uints which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
-    @property size_t uintLength() pure nothrow const
+    @property size_t uintLength() pure nothrow @safe const
     {
         return data.uintLength();
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
-    @property size_t ulongLength() pure nothrow const
+    @property size_t ulongLength() pure nothrow @safe const
     {
         return data.ulongLength();
     }
@@ -528,7 +529,7 @@ private:
     }
 +/
 private:
-    void negate() @safe pure nothrow
+    void negate() @safe pure nothrow @safe 
     {
         if (!data.isZero())
             sign = !sign;
@@ -556,7 +557,7 @@ private:
     }
 }
 
-string toDecimalString(const(BigInt) x)
+string toDecimalString(const(BigInt) x) @trusted
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -564,7 +565,7 @@ string toDecimalString(const(BigInt) x)
     return outbuff;
 }
 
-string toHex(const(BigInt) x)
+string toHex(const(BigInt) x) @trusted
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -573,7 +574,7 @@ string toHex(const(BigInt) x)
 }
 
 // Returns the absolute value of x converted to the corresponding unsigned type
-Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
+Unsigned!T absUnsign(T)(T x) @trusted if (isIntegral!T)
 {
     static if (isSigned!T)
     {
@@ -590,7 +591,7 @@ Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
     }
 }
 
-nothrow pure
+nothrow pure @safe
 unittest {
     BigInt a, b;
     a = 1;
@@ -598,7 +599,7 @@ unittest {
     auto c = a + b;
 }
 
-nothrow pure
+nothrow pure @safe
 unittest {
     long a;
     BigInt b;
@@ -606,7 +607,7 @@ unittest {
     auto d = b + a;
 }
 
-nothrow pure
+nothrow pure @safe
 unittest {
     BigInt x = 1, y = 2;
     assert(x <  y);
@@ -664,7 +665,7 @@ unittest {
     assert(BigInt("-1") > long.min); // bug 9548
 }
 
-unittest // Minimum signed value bug tests.
+@safe unittest // Minimum signed value bug tests.
 {
     assert(BigInt("-0x8000000000000000") == BigInt(long.min));
     assert(BigInt("-0x8000000000000000")+1 > BigInt(long.min));
@@ -685,7 +686,7 @@ unittest // Minimum signed value bug tests.
     assert((BigInt(int.min)-1)%int.min == -1);
 }
 
-unittest // Recursive division, bug 5568
+@safe unittest // Recursive division, bug 5568
 {
     enum Z = 4843;
     BigInt m = (BigInt(1) << (Z*8) ) - 1;
@@ -860,7 +861,7 @@ unittest
     assert(y.toLong() == -2);
 }
 
-unittest
+@safe pure unittest
 {
     import std.math:abs;
     auto r = abs(BigInt(-1000)); // 6486
@@ -876,9 +877,9 @@ unittest
     assert(one && !zero);
 }
 
-unittest // 6850
+@safe pure unittest // 6850
 {
-    pure long pureTest() {
+    @safe pure long pureTest() {
         BigInt a = 1;
         BigInt b = 1336;
         a += b;
@@ -912,7 +913,7 @@ unittest // 8435 & 10118
     assert(keys.empty);
 }
 
-unittest // 11148
+@safe pure unittest // 11148
 {
     void foo(BigInt) {}
     const BigInt cbi = 3;
@@ -949,13 +950,13 @@ unittest // 11148
     n *= 2;
 }
 
-unittest // 8167
+@safe pure unittest // 8167
 {
     BigInt a = BigInt(3);
     BigInt b = BigInt(a);
 }
 
-unittest // 9061
+@safe pure unittest // 9061
 {
     long l1 = 0x12345678_90ABCDEF;
     long l2 = 0xFEDCBA09_87654321;
@@ -974,7 +975,7 @@ unittest // 9061
     assert(l5 == b5);
 }
 
-unittest // 11600
+@safe pure unittest // 11600
 {
     import std.conv;
     import std.exception : assertThrown;
@@ -989,7 +990,7 @@ unittest // 11600
     assertThrown!ConvException(to!BigInt("-123four"));
 }
 
-unittest // 11583
+@safe pure unittest // 11583
 {
     BigInt x = 0;
     assert((x > 0) == false);
