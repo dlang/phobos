@@ -1281,7 +1281,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
        Complexity: $(BIGOH m log(n)) (where m is the number of elements to remove)
 
-        Examples:
+       Examples:
 --------------------
 auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
 rbt.removeKey(1, 4, 7);
@@ -1684,15 +1684,6 @@ unittest
 /++
     Convenience function for creating a $(D RedBlackTree!E) from a list of
     values.
-
-        Examples:
---------------------
-auto rbt1 = redBlackTree(0, 1, 5, 7);
-auto rbt2 = redBlackTree!string("hello", "world");
-auto rbt3 = redBlackTree!true(0, 1, 5, 7, 5);
-auto rbt4 = redBlackTree!"a > b"(0, 1, 5, 7);
-auto rbt5 = redBlackTree!("a > b", true)(0.1, 1.3, 5.9, 7.2, 5.9);
---------------------
   +/
 auto redBlackTree(E)(E[] elems...)
 {
@@ -1721,7 +1712,7 @@ auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
     return new RedBlackTree!(E, binaryFun!less, allowDuplicates)(elems);
 }
 
-//Verify Examples.
+///
 unittest
 {
     auto rbt1 = redBlackTree(0, 1, 5, 7);
