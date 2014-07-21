@@ -391,9 +391,8 @@ unittest
     includes the drive letter if present.
 
     This function performs a memory allocation if and only if $(D path)
-    is mutable and does not have a directory (in which case a new mutable
-    string is needed to hold the returned current-directory symbol,
-    $(D ".")).
+    does not have a directory (in which case a new string is needed to
+    hold the returned current-directory symbol, $(D ".")).
 
     Examples:
     ---
