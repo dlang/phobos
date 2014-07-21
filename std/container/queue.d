@@ -84,7 +84,7 @@ public:
 
         return this;
     }
-    /++ Retrieves the item at the end of the queue and
+    /++ Retrieves the item at the front of the queue and
      + removes it from the queue.
      + 
      + Params:
@@ -120,7 +120,7 @@ public:
         }
     }
     /++
-     + Retrieves the item at the end of the queue and
+     + Retrieves the item at the front of the queue and
      + removes it from the queue. Returns the queue the
      + item was removed from.
      + 
