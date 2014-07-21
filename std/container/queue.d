@@ -57,6 +57,8 @@ public:
                 // If we are able to resize the queue,
                 // append the item to the end of it.
                 this.pContents ~= item;
+                // Increase the capacity of the queue.
+                ++this.pCapacity;
                 // Indicate successful enqueuing.
                 return true;
             }
@@ -222,4 +224,12 @@ public:
     assert(i1 == 1);
     assert(i2 == 2);
     assert(q.length == 0);
+}
+
+@safe pure nothrow unittest {
+    auto q = Queue!int(0);
+
+    q.enqueue(100);
+
+    assert(q.capacity == 1);
 }
