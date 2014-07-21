@@ -67,3 +67,52 @@ unittest
     assert(a != c);
     assert(a != d);
 }
+
+/**
+ * Convenience function for constructing a generic container.
+ */
+template make(alias Container, Args...)
+    if(!is(Container))
+{
+    import std.range : isInputRange;
+    import std.traits : isDynamicArray;
+
+    auto make(Range)(Range range)
+        if(!isDynamicArray!Range && isInputRange!Range)
+    {
+        import std.range : ElementType;
+        return .make!(Container!(ElementType!Range, Args))(range);
+    }
+
+    auto make(T)(T[] items...)
+    {
+        return .make!(Container!(T, Args))(items);
+    }
+}
+
+///
+unittest
+{
+    import std.container.array, std.container.rbtree, std.container.slist;
+    import std.range : iota;
+
+    auto arr = make!Array(iota(5));
+    assert(equal(arr[], [0, 1, 2, 3, 4]));
+
+    auto rbtmax = make!(RedBlackTree, "a > b")(iota(5));
+    assert(equal(rbtmax[], [4, 3, 2, 1, 0]));
+
+    auto rbtmin = make!RedBlackTree(4, 1, 3, 2);
+    assert(equal(rbtmin[], [1, 2, 3, 4]));
+
+    alias makeList = make!SList;
+    auto list = makeList(1, 7, 42);
+    assert(equal(list[], [1, 7, 42]));
+}
+
+unittest
+{
+    import std.container.rbtree;
+    auto rbtmin = make!(RedBlackTree, "a < b", false)(3, 2, 2, 1);
+    assert(equal(rbtmin[], [1, 2, 3]));
+}
