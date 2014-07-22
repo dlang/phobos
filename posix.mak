@@ -355,15 +355,16 @@ zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
 install2 : all
-	mkdir -p $(INSTALL_DIR)/lib
-	cp $(LIB) $(INSTALL_DIR)/lib/
+	mkdir -p $(INSTALL_DIR)/$(OS)/lib$(MODEL)
+	cp $(LIB) $(INSTALL_DIR)/$(OS)/lib$(MODEL)/
 ifneq (,$(findstring $(OS),linux))
-	cp -P $(LIBSO) $(ROOT)/$(SONAME) $(ROOT)/libphobos2.so $(INSTALL_DIR)/lib/
+	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/lib$(MODEL)/
+	ln -s $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/lib$(MODEL)/libphobos2.so
 endif
-	mkdir -p $(INSTALL_DIR)/import/etc
-	mkdir -p $(INSTALL_DIR)/import/std
-	cp -r std/* $(INSTALL_DIR)/import/std/
-	cp -r etc/* $(INSTALL_DIR)/import/etc/
+	mkdir -p $(INSTALL_DIR)/src/phobos/etc
+	mkdir -p $(INSTALL_DIR)/src/phobos/std
+	cp -r std/* $(INSTALL_DIR)/src/phobos/std/
+	cp -r etc/* $(INSTALL_DIR)/src/phobos/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
 # Target druntime_libs produces $(DRUNTIME) and $(DRUNTIMESO). See
