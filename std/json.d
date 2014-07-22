@@ -386,7 +386,7 @@ struct JSONValue
         }
         else
         {
-            static assert(false, "argument need to be an array or a JSONValue array");
+            static assert(false, "argument is not an array or a JSONValue array");
         }
     }
 
@@ -406,7 +406,7 @@ struct JSONValue
         }
         else
         {
-            static assert(false, "argument need to be an array or a JSONValue array");
+            static assert(false, "argument is not an array or a JSONValue array");
         }
     }
 
