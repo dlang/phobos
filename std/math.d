@@ -4204,51 +4204,79 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     }
 }
 
-// ditto
-bool isNaN(X)(X x) @nogc @trusted pure nothrow
-    if (isIntegral!(X))
-{
-    return false;
-}
 
 unittest
 {
-    import std.typetuple;
+    // CTFE-able tests
+    assert(isNaN(float.init));
+    assert(isNaN(-float.init));
+    assert(isNaN(float.nan));
+    assert(isNaN(-float.nan));
+    assert(!isNaN(float.infinity));
+    assert(!isNaN(-float.infinity));
+    assert(!isNaN(53.6f));
+    assert(!isNaN(-53.6f));
 
-    foreach(T; TypeTuple!(float, double, real))
-    {
-        // CTFE-able tests
-        assert(isNaN(T.init));
-        assert(isNaN(-T.init));
-        assert(isNaN(T.nan));
-        assert(isNaN(-T.nan));
-        assert(!isNaN(T.infinity));
-        assert(!isNaN(-T.infinity));
-        assert(!isNaN(cast(T)53.6));
-        assert(!isNaN(cast(T)-53.6));
+    assert(isNaN(double.init));
+    assert(isNaN(-double.init));
+    assert(isNaN(double.nan));
+    assert(isNaN(-double.nan));
+    assert(!isNaN(double.infinity));
+    assert(!isNaN(-double.infinity));
+    assert(!isNaN(53.6));
+    assert(!isNaN(-53.6));
 
-        // Runtime tests
-        shared T f;
-        f = T.init;
-        assert(isNaN(f));
-        assert(isNaN(-f));
-        f = T.nan;
-        assert(isNaN(f));
-        assert(isNaN(-f));
-        f = T.infinity;
-        assert(!isNaN(f));
-        assert(!isNaN(-f));
-        f = cast(T)53.6;
-        assert(!isNaN(f));
-        assert(!isNaN(-f));
-    }
+    assert(isNaN(real.init));
+    assert(isNaN(-real.init));
+    assert(isNaN(real.nan));
+    assert(isNaN(-real.nan));
+    assert(!isNaN(real.infinity));
+    assert(!isNaN(-real.infinity));
+    assert(!isNaN(53.6L));
+    assert(!isNaN(-53.6L));
 
-    // Integer tests
-    foreach(T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
-    {
-        assert(!isNaN(T.init));
-        assert(!isNaN(-T.init));
-    }
+    // Runtime tests
+    shared float f;
+    f = float.init;
+    assert(isNaN(f));
+    assert(isNaN(-f));
+    f = float.nan;
+    assert(isNaN(f));
+    assert(isNaN(-f));
+    f = float.infinity;
+    assert(!isNaN(f));
+    assert(!isNaN(-f));
+    f = 53.6f;
+    assert(!isNaN(f));
+    assert(!isNaN(-f));
+
+    shared double d;
+    d = double.init;
+    assert(isNaN(d));
+    assert(isNaN(-d));
+    d = double.nan;
+    assert(isNaN(d));
+    assert(isNaN(-d));
+    d = double.infinity;
+    assert(!isNaN(d));
+    assert(!isNaN(-d));
+    d = 53.6;
+    assert(!isNaN(d));
+    assert(!isNaN(-d));
+
+    shared real e;
+    e = real.init;
+    assert(isNaN(e));
+    assert(isNaN(-e));
+    e = real.nan;
+    assert(isNaN(e));
+    assert(isNaN(-e));
+    e = real.infinity;
+    assert(!isNaN(e));
+    assert(!isNaN(-e));
+    e = 53.6L;
+    assert(!isNaN(e));
+    assert(!isNaN(-e));
 }
 
 /*********************************
