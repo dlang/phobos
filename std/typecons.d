@@ -182,6 +182,11 @@ unittest
         // Allocate a unique instance of S on the heap
         return unique!S(5);
     }
+    // Borrow a unique resource by ref
+    void increment(ref Unique!S ur)
+    {
+        ur.i++;
+    }
     void consume(Unique!S u2)
     {
         assert(u2.i == 6);
@@ -190,7 +195,7 @@ unittest
     Unique!S u1;
     assert(u1.isEmpty);
     u1 = produce();
-    u1.i++;
+    increment(u1);
     assert(u1.i == 6);
     //consume(u1); // Error: u1 is not copyable
     // Transfer ownership of the resource
