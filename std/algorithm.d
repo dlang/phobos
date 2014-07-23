@@ -5702,7 +5702,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         {
             _done = predSatisfied();
             _input.popFront();
-            _done |= _input.empty;
+            _done = _done || _input.empty;
         }
         else
         {
