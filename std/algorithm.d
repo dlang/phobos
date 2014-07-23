@@ -5700,13 +5700,9 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         assert(!empty);
         if (!_openRight)
         {
-            if (predSatisfied())
-            {
-                _done = true;
-                return;
-            }
+            _done = predSatisfied();
             _input.popFront();
-            _done = _input.empty;
+            _done = _done || _input.empty;
         }
         else
         {
@@ -5776,6 +5772,13 @@ unittest
     assert(equal(a.until([7, 2]), [1, 2, 4, 7][]));
     assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
     assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2][]));
+}
+
+unittest // bugzilla 13171
+{
+    auto a = [1, 2, 3, 4];
+    assert(equal(refRange(&a).until(3, OpenRight.no), [1, 2, 3]));
+    assert(a == [4]);
 }
 
 /**
