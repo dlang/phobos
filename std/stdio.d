@@ -1257,7 +1257,7 @@ better performance as it can reuse its read buffer.
 
 Params:
     S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
-    terminator = line terminator (by default, '\n')
+    terminator = Line terminator (by default, $(D '\n')).
 
 Returns:
     The line that was read, including the line terminator character.
@@ -1337,9 +1337,10 @@ the buffer for each call. Note that reusing the buffer means that you
 must copy the previous contents if you wish to retain them.
 
 Params:
-buf = buffer used to store the resulting line data. buf is
+buf = Buffer used to store the resulting line data. buf is
 resized as necessary.
-terminator = line terminator (by default, '\n')
+terminator = Line terminator (by default, $(D '\n')). Use
+$(XREF ascii, newline) for portability.
 
 Returns:
 0 for end of file, otherwise number of characters read
@@ -1688,7 +1689,8 @@ Params:
 Char = Character type for each line, defaulting to $(D char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
-terminator = Line separator ($(D '\n') by default).
+terminator = Line separator ($(D '\n') by default). Use
+$(XREF ascii, newline) for portability.
 
 Example:
 ----
@@ -1824,7 +1826,8 @@ Params:
 Char = Character type for each line, defaulting to $(D immutable char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
-terminator = Line separator ($(D '\n') by default).
+terminator = Line separator ($(D '\n') by default). Use
+$(XREF ascii, newline) for portability.
 
 Example:
 ----
@@ -2949,7 +2952,7 @@ unittest
  *        The line that was read, including the line terminator character.
  * Params:
  *        S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
- *        terminator = line terminator (by default, '\n')
+ *        terminator = Line terminator (by default, $(D '\n')).
  * Throws:
  *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
  * Example:
@@ -2982,7 +2985,7 @@ if (isSomeString!S)
  *        $(D size_t) 0 for end of file, otherwise number of characters read
  * Params:
  *        buf = Buffer used to store the resulting line data. buf is resized as necessary.
- *        terminator = line terminator (by default, '\n')
+ *        terminator = Line terminator (by default, $(D '\n')). Use $(XREF ascii, newline) for portability.
  * Throws:
  *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
  * Example:
@@ -3107,7 +3110,7 @@ void main()
   }
 }
 ---------
- The line terminator ('\n' by default) is part of the string read (it
+The line terminator ($(D '\n') by default) is part of the string read (it
 could be missing in the last line of the file). Several types are
 supported for $(D line), and the behavior of $(D lines)
 changes accordingly:
@@ -3144,6 +3147,12 @@ struct lines
     private dchar terminator = '\n';
     // private string fileName;  // Curretly, no use
 
+    /**
+    Constructor.
+    Params:
+    f = File to read lines from.
+    terminator = Line separator ($(D '\n') by default).
+    */
     this(File f, dchar terminator = '\n')
     {
         this.f = f;
