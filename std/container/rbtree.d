@@ -1281,7 +1281,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
        Complexity: $(BIGOH m log(n)) (where m is the number of elements to remove)
 
-        Examples:
+       Examples:
 --------------------
 auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
 rbt.removeKey(1, 4, 7);
@@ -1572,45 +1572,29 @@ assert(std.algorithm.equal(rbt[], [5]));
         }
     }
 
-    /+
-        For the moment, using templatized contstructors doesn't seem to work
-        very well (likely due to bug# 436 and/or bug# 1528). The redBlackTree
-        helper function seems to do the job well enough though.
-
     /**
-     * Constructor.  Pass in an array of elements, or individual elements to
+     * Constructor. Pass in an array of elements, or individual elements to
      * initialize the tree with.
      */
-    this(U)(U[] elems...) if (isImplicitlyConvertible!(U, Elem))
-    {
-        _setup();
-        stableInsert(elems);
-    }
-
-    /**
-     * Constructor.  Pass in a range of elements to initialize the tree with.
-     */
-    this(Stuff)(Stuff stuff) if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem) && !is(Stuff == Elem[]))
-    {
-        _setup();
-        stableInsert(stuff);
-    }
-    +/
-
-    /++ +/
-    this()
-    {
-        _setup();
-    }
-
-    /++
-       Constructor.  Pass in an array of elements, or individual elements to
-       initialize the tree with.
-     +/
     this(Elem[] elems...)
     {
         _setup();
         stableInsert(elems);
+    }
+
+    /**
+     * Constructor. Pass in a range of elements to initialize the tree with.
+     */
+    this(Stuff)(Stuff stuff) if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
+    {
+        _setup();
+        stableInsert(stuff);
+    }
+
+    ///
+    this()
+    {
+        _setup();
     }
 
     private this(Node end, size_t length)
@@ -1684,15 +1668,6 @@ unittest
 /++
     Convenience function for creating a $(D RedBlackTree!E) from a list of
     values.
-
-        Examples:
---------------------
-auto rbt1 = redBlackTree(0, 1, 5, 7);
-auto rbt2 = redBlackTree!string("hello", "world");
-auto rbt3 = redBlackTree!true(0, 1, 5, 7, 5);
-auto rbt4 = redBlackTree!"a > b"(0, 1, 5, 7);
-auto rbt5 = redBlackTree!("a > b", true)(0.1, 1.3, 5.9, 7.2, 5.9);
---------------------
   +/
 auto redBlackTree(E)(E[] elems...)
 {
@@ -1721,7 +1696,7 @@ auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
     return new RedBlackTree!(E, binaryFun!less, allowDuplicates)(elems);
 }
 
-//Verify Examples.
+///
 unittest
 {
     auto rbt1 = redBlackTree(0, 1, 5, 7);
@@ -1737,6 +1712,13 @@ unittest
     auto rbt1 = redBlackTree!(true, string)("hello", "hello");
     auto rbt2 = redBlackTree!((a, b){return a < b;}, double)(5.1, 2.3);
     auto rbt3 = redBlackTree!("a > b", true, string)("hello", "world");
+}
+
+//Range construction.
+unittest
+{
+    auto rbt = new RedBlackTree!(int, "a > b")(iota(5));
+    assert(equal(rbt[], [4, 3, 2, 1, 0]));
 }
 
 unittest
