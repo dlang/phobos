@@ -2190,10 +2190,7 @@ body
         }
         
         bool overflow = false;
-        static if (isSigned!Target)
-            auto nextv = v.muls(radix, overflow).adds(c - '0', overflow);
-        else
-            auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
+        auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
         if (overflow || nextv > Target.max)
             goto Loverflow;
         v = cast(Target) nextv;
