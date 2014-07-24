@@ -355,11 +355,12 @@ zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
 install2 : all
-	mkdir -p $(INSTALL_DIR)/$(OS)/lib$(MODEL)
-	cp $(LIB) $(INSTALL_DIR)/$(OS)/lib$(MODEL)/
+	$(eval lib_dir=$(if $(filter $(OS),osx), lib, lib$(MODEL)))
+	mkdir -p $(INSTALL_DIR)/$(OS)/$(lib_dir)
+	cp $(LIB) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 ifneq (,$(findstring $(OS),linux))
-	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/lib$(MODEL)/
-	ln -s $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/lib$(MODEL)/libphobos2.so
+	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
+	ln -s $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
 endif
 	mkdir -p $(INSTALL_DIR)/src/phobos/etc
 	mkdir -p $(INSTALL_DIR)/src/phobos/std
