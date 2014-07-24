@@ -6,19 +6,6 @@ import std.algorithm;
 Returns an initialized object. This function is mainly for eliminating
 construction differences between structs and classes. It allows code to not
 worry about whether the type it's constructing is a struct or a class.
-
-Examples:
---------------------
-auto arr = make!(Array!int)([4, 2, 3, 1]);
-assert(equal(arr[], [4, 2, 3, 1]));
-
-auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
-assert(equal(rbt[], [4, 3, 2, 1]));
-
-alias makeList = make!(DList!int);
-auto list = makeList([1, 7, 42]);
-assert(equal(list[], [1, 7, 42]));
---------------------
  */
 template make(T)
 if (is(T == struct) || is(T == class))
@@ -36,29 +23,26 @@ if (is(T == struct) || is(T == class))
     }
 }
 
-//Verify Examples.
+///
 unittest
 {
     import std.container;
-    
+
     auto arr = make!(Array!int)([4, 2, 3, 1]);
     assert(equal(arr[], [4, 2, 3, 1]));
 
     auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
     assert(equal(rbt[], [4, 3, 2, 1]));
 
-    alias makeList = make!(DList!int);
-    auto list = makeList([1, 7, 42]);
-    assert(equal(list[], [1, 7, 42]));
-    
-    auto s = make!(SList!int)(1, 2, 3);
-    assert(equal(s[], [1, 2, 3]));
+    alias makeList = make!(SList!int);
+    auto slist = makeList(1, 2, 3);
+    assert(equal(slist[], [1, 2, 3]));
 }
 
 unittest
 {
     import std.container;
-    
+
     auto arr1 = make!(Array!dchar)();
     assert(arr1.empty);
     auto arr2 = make!(Array!dchar)("hello"d);
@@ -74,12 +58,61 @@ unittest
 unittest
 {
     import std.container;
-    
+
     auto a = make!(DList!int)(1,2,3,4);
     auto b = make!(DList!int)(1,2,3,4);
     auto c = make!(DList!int)(1,2,3,5);
     auto d = make!(DList!int)(1,2,3,4,5);
     assert(a == b); // this better terminate!
-    assert(!(a == c));
-    assert(!(a == d));
+    assert(a != c);
+    assert(a != d);
+}
+
+/**
+ * Convenience function for constructing a generic container.
+ */
+template make(alias Container, Args...)
+    if(!is(Container))
+{
+    import std.range : isInputRange;
+    import std.traits : isDynamicArray;
+
+    auto make(Range)(Range range)
+        if(!isDynamicArray!Range && isInputRange!Range)
+    {
+        import std.range : ElementType;
+        return .make!(Container!(ElementType!Range, Args))(range);
+    }
+
+    auto make(T)(T[] items...)
+    {
+        return .make!(Container!(T, Args))(items);
+    }
+}
+
+///
+unittest
+{
+    import std.container.array, std.container.rbtree, std.container.slist;
+    import std.range : iota;
+
+    auto arr = make!Array(iota(5));
+    assert(equal(arr[], [0, 1, 2, 3, 4]));
+
+    auto rbtmax = make!(RedBlackTree, "a > b")(iota(5));
+    assert(equal(rbtmax[], [4, 3, 2, 1, 0]));
+
+    auto rbtmin = make!RedBlackTree(4, 1, 3, 2);
+    assert(equal(rbtmin[], [1, 2, 3, 4]));
+
+    alias makeList = make!SList;
+    auto list = makeList(1, 7, 42);
+    assert(equal(list[], [1, 7, 42]));
+}
+
+unittest
+{
+    import std.container.rbtree;
+    auto rbtmin = make!(RedBlackTree, "a < b", false)(3, 2, 2, 1);
+    assert(equal(rbtmin[], [1, 2, 3]));
 }
