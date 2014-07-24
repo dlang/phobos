@@ -49,13 +49,11 @@ import std.typetuple : TypeTuple, allSatisfy;
 debug(Unique) import std.stdio;
 
 /**
-Encapsulates unique ownership of a resource.  Resource of type T is
+Encapsulates unique ownership of a resource.  Resource of type $(D T) is
 deleted at the end of the scope, unless it is transferred.  The
 transfer can be explicit, by calling $(D release), or implicit, when
 returning Unique from a function. The resource can be a polymorphic
 class object, in which case Unique behaves polymorphically too.
-
-See $(LREF unique) for an example.
 */
 struct Unique(T)
 {
@@ -65,6 +63,21 @@ else
     alias RefT = T*;
 
 public:
+    /**
+    Allows safe construction of $(D Unique). It creates the resource and 
+    guarantees unique ownership of it (unless $(D T) publishes aliases of 
+    $(D this)).
+    Params:
+    args = Arguments to pass to $(D T)'s constructor.
+    */
+    static Unique!T create(A...)(A args)
+    {
+        debug(Unique) writeln("Unique.create for ", T.stringof);
+        Unique!T u;
+        u._p = new T(args);
+        return u;
+    }
+
     /**
     Constructor that takes an rvalue.
     It will ensure uniqueness, as long as the rvalue
@@ -100,7 +113,7 @@ public:
     ---
     class C {}
     // Make u hold a new instance of C
-    Unique!Object u = unique!C();
+    Unique!Object u = Unique!(C).create();
     ---
     */
     this(U)(Unique!U u)
@@ -154,21 +167,6 @@ private:
     RefT _p;
 }
 
-/**
-Allows safe construction of $(D Unique). It creates the resource and 
-guarantees unique ownership of it (unless $(D T) publishes aliases of 
-$(D this)).
-Params:
-args = Arguments to pass to $(D T)'s constructor.
-*/
-Unique!T unique(T, A...)(A args)
-{
-    debug(Unique) writeln("Factory unique creating ", T.stringof);
-    Unique!T u;
-    u._p = new T(args);
-    return u;
-}
-
 ///
 unittest
 {
@@ -179,8 +177,8 @@ unittest
     }
     Unique!S produce()
     {
-        // Allocate a unique instance of S on the heap
-        return unique!S(5);
+        // Construct a unique instance of S on the heap
+        return Unique!(S).create(5);
     }
     // Borrow a unique resource by ref
     void increment(ref Unique!S ur)
