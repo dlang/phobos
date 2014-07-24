@@ -2188,13 +2188,13 @@ body
                 c -= 'a'-10-'0';
             }
         }
-        
+
         bool overflow = false;
         auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
         if (overflow || nextv > Target.max)
             goto Loverflow;
         v = cast(Target) nextv;
-        
+
         atStart = false;
     }
     if (atStart)
