@@ -57,6 +57,7 @@ class object, in which case Unique behaves polymorphically too.
 */
 struct Unique(T)
 {
+/** Represents a reference to $(D T). Resolves to $(D T*) if $(D T) is a value type. */
 static if (is(T:Object))
     alias RefT = T;
 else
