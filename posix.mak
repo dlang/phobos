@@ -360,7 +360,7 @@ install2 : all
 	cp $(LIB) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 ifneq (,$(findstring $(OS),linux))
 	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
-	ln -s $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
+	ln -sf $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
 endif
 	mkdir -p $(INSTALL_DIR)/src/phobos/etc
 	mkdir -p $(INSTALL_DIR)/src/phobos/std
