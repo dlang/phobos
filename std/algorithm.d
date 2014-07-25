@@ -5500,6 +5500,21 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
     return countUntil!pred2(haystack);
 }
 
+/// ditto
+ptrdiff_t countUntil(T)(in T[] haystack, T needle) @trusted
+    if (T.sizeof == 1 && !hasMember!(T, "opEquals") && !hasMember!(T, "opCmp") && !isSomeChar!T)
+{
+    import std.c.string : memchr;
+
+    if (__ctfe)
+        return countUntil!("a == b")(haystack, needle);
+
+    auto v = memchr(haystack.ptr, *cast(ubyte*)&needle, haystack.length);
+    if (!v)
+        return -1;
+    return v - haystack.ptr;
+}
+
 ///
 unittest
 {
@@ -13112,7 +13127,7 @@ unittest
 /// ditto
 auto cartesianProduct(RR...)(RR ranges)
     if (ranges.length > 2 &&
-    	allSatisfy!(isForwardRange, RR) &&
+        allSatisfy!(isForwardRange, RR) &&
         !anySatisfy!(isInfinite, RR))
 {
     // This overload uses a much less template-heavy implementation when
