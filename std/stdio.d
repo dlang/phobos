@@ -1259,6 +1259,9 @@ Params:
     S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
     terminator = Line terminator (by default, $(D '\n')).
 
+Note:
+    String terminators are not supported due to ambiguity with readln(buf) below.
+
 Returns:
     The line that was read, including the line terminator character.
 
@@ -2953,6 +2956,8 @@ unittest
  * Params:
  *        S = Template parameter; the type of the allocated buffer, and the type returned. Defaults to $(D string).
  *        terminator = Line terminator (by default, $(D '\n')).
+ * Note:
+ *        String terminators are not supported due to ambiguity with readln(buf) below.
  * Throws:
  *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
  * Example:
@@ -3139,6 +3144,9 @@ Example:
 ----
 
  In case of an I/O error, an $(D StdioException) is thrown.
+
+See_Also:
+$(LREF byLine)
  */
 
 struct lines
