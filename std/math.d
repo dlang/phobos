@@ -4208,7 +4208,7 @@ deprecated("isNaN is not defined for integer types")
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isIntegral!(X))
 {
-    return false;
+    return isNaN(cast(float)x);
 }
 
 unittest
@@ -4276,6 +4276,12 @@ unittest
     assert(!isFinite(real.infinity));
 }
 
+deprecated("isFinite is not defined for integer types")
+int isFinite(X)(X x) @trusted pure nothrow @nogc
+    if (isIntegral!(X))
+{
+    return isFinite(cast(float)x);
+}
 
 /*********************************
  * Returns !=0 if x is normalized (not zero, subnormal, infinite, or $(NAN)).
@@ -4377,6 +4383,13 @@ unittest
         for (f = 1.0; !isSubnormal(f); f /= 2)
             assert(f != 0);
     }
+}
+
+deprecated("isSubnormal is not defined for integer types")
+int isSubnormal(X)(X x) @trusted pure nothrow @nogc
+    if (isIntegral!X)
+{
+    return isSubnormal(cast(double)x);
 }
 
 /*********************************
@@ -4560,6 +4573,14 @@ unittest
     assert(!signbit(real.max));
 }
 
+
+deprecated("signbit is not defined for integer types")
+int signbit(X)(X x) @nogc @trusted pure nothrow
+    if (isIntegral!X)
+{
+    return signbit(cast(float)x);
+}
+
 /*********************************
  * Return a value composed of to with from's sign bit.
  */
@@ -4618,6 +4639,13 @@ unittest
             }
         }
     }
+}
+
+deprecated("copysign : from can't be of integer type")
+R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
+    if (isIntegral!R)
+{
+    return copysign(to, cast(float)from);
 }
 
 /*********************************
