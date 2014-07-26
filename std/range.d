@@ -3469,6 +3469,13 @@ if (isInputRange!R)
             @property size_t length() const { return _n; }
             alias opDollar = length;
 
+            Take!R _takeExactly_Result_asTake()
+            {
+                return typeof(return)(_input, _n);
+            }
+
+            alias _takeExactly_Result_asTake this;
+
             static if (isForwardRange!R)
                 @property auto save()
                 {
@@ -3588,6 +3595,15 @@ unittest
             }
         }
     }
+}
+
+unittest
+{
+    alias DummyType = DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward);
+    auto te = takeExactly(DummyType(), 5);
+    Take!DummyType t = te;
+    assert(equal(t, [1, 2, 3, 4, 5]));
+    assert(equal(t, te));
 }
 
 /**
@@ -9918,14 +9934,14 @@ unittest
 /++
   Implements a "tee" style pipe, wrapping an input range so that elements
   of the range can be passed to a provided function or $(LREF OutputRange)
-  as they are iterated over. This is useful for printing out intermediate 
-  values in a long chain of range code, performing some operation with 
+  as they are iterated over. This is useful for printing out intermediate
+  values in a long chain of range code, performing some operation with
   side-effects on each call to $(D front) or $(D popFront), or diverting
-  the elements of a range into an auxiliary $(LREF OutputRange). 
+  the elements of a range into an auxiliary $(LREF OutputRange).
 
-  It is important to note that as the resultant range is evaluated lazily, 
+  It is important to note that as the resultant range is evaluated lazily,
   in the case of the version of $(D tee) that takes a function, the function
-  will not actually be executed until the range is "walked" using functions 
+  will not actually be executed until the range is "walked" using functions
   that evaluate ranges, such as $(LREF array) or $(LREF reduce).
 +/
 
@@ -9998,9 +10014,9 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     /*
         Distinguish between function literals and template lambdas
         when using either as an $(LREF OutputRange). Since a template
-        has no type, typeof(template) will always return void. 
-        If it's a template lambda, it's first necessary to instantiate 
-        it with the type of $(D inputRange.front). 
+        has no type, typeof(template) will always return void.
+        If it's a template lambda, it's first necessary to instantiate
+        it with the type of $(D inputRange.front).
     */
     static if (is(typeof(fun) == void))
     {
