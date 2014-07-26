@@ -2524,7 +2524,7 @@ public:
 
         The above outputs something along the lines of:
         ---
-        bool func(dchar ch)
+        bool func(dchar ch)  @safe pure nothrow @nogc
         {
             if(ch < 45)
             {
@@ -2622,7 +2622,7 @@ public:
             return result~indent~"}\n";
         }
 
-        string code = format("bool %s(dchar ch) @safe pure nothrow\n",
+        string code = format("bool %s(dchar ch) @safe pure nothrow @nogc\n",
             funcName.empty ? "function" : funcName);
         auto range = byInterval.array();
         // special case first bisection to be on ASCII vs beyond
