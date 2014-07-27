@@ -949,8 +949,8 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.exception : assertThrown;
+
     double[] a = [ 3, 4 ];
     auto r = reduce!("a + b")(0.0, a);
     assert(r == 7);
@@ -1000,16 +1000,10 @@ unittest
     assert(reduce!("a + b", max)(tuple(5, 0), oa) == tuple(hundredSum + 5, 99));
 
     // Test for throwing on empty range plus no seed.
-    try {
-        reduce!"a + b"([1, 2][0..0]);
-        assert(0);
-    } catch(Exception) {}
+    assertThrown(reduce!"a + b"([1, 2][0..0]));
 
     oa.actEmpty = true;
-    try {
-        reduce!"a + b"(oa);
-        assert(0);
-    } catch(Exception) {}
+    assertThrown(reduce!"a + b"(oa));
 }
 
 unittest
@@ -1039,7 +1033,7 @@ unittest
     enum foo = "a + 0.5 * b";
     auto r = [0, 1, 2, 3];
     auto r1 = reduce!foo(r);
-    auto r2 = reduce!(foo, foo,)(r);
+    auto r2 = reduce!(foo, foo)(r);
     assert(r1 == 3);
     assert(r2 == tuple(3, 3));
 }
@@ -1100,17 +1094,16 @@ unittest //12569
     static assert(!is(typeof(reduce!(min, max)(tuple(c), "hello"))));
     static assert(!is(typeof(reduce!(min, max)(tuple(c, c, c), "hello"))));
 
-    //Uncomment these to make sure a correct error message is generated
 
-    //Error: static assert  "Seed dchar should be a Tuple"
-    version(none) reduce!(min, max)(c, "hello"); // error
-    //Error: static assert  "Seed (dchar) does not have the correct amount of fields (should be 2)"
-    version(none) reduce!(min, max)(tuple(c), "hello"); // error
-    //Error: static assert  "Seed (dchar, dchar, dchar) does not have the correct amount of fields (should be 2)"
-    version(none) reduce!(min, max)(tuple(c, c, c), "hello"); // error
-    //Error: static assert  "Incompatable function/seed/element: all(alias pred = "a")/int/dchar"
-    version(none) reduce!all(1, "hello"); // error
-    version(none) reduce!(all, all)(tuple(1, 1), "hello"); // error
+    //"Seed dchar should be a Tuple"
+    static assert(!is(typeof(reduce!(min, max)(c, "hello"))));
+    //"Seed (dchar) does not have the correct amount of fields (should be 2)"
+    static assert(!is(typeof(reduce!(min, max)(tuple(c), "hello"))));
+    //"Seed (dchar, dchar, dchar) does not have the correct amount of fields (should be 2)"
+    static assert(!is(typeof(reduce!(min, max)(tuple(c, c, c), "hello"))));
+    //"Incompatable function/seed/element: all(alias pred = "a")/int/dchar"
+    static assert(!is(typeof(reduce!all(1, "hello"))));
+    static assert(!is(typeof(reduce!(all, all)(tuple(1, 1), "hello"))));
 }
 
 // sum
