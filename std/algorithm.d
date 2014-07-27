@@ -1033,6 +1033,86 @@ unittest
     assert(minmax == tuple(10, 30));
 }
 
+unittest
+{
+    //10709
+    enum foo = "a + 0.5 * b";
+    auto r = [0, 1, 2, 3];
+    auto r1 = reduce!foo(r);
+    auto r2 = reduce!(foo, foo,)(r);
+    assert(r1 == 3);
+    assert(r2 == tuple(3, 3));
+}
+
+unittest
+{
+    int i = 0;
+    static struct OpApply
+    {
+        int opApply(int delegate(ref int) dg)
+        {
+            int[] a = [1, 2, 3];
+
+            int res = 0;
+            foreach (ref e; a)
+            {
+                res = dg(e);
+                if (res) break;
+            }
+            return res;
+        }
+    }
+    //test CTFE and functions with context
+    int fun(int a, int b){return a + b + 1;}
+    auto foo()
+    {
+        auto a = reduce!(fun)([1, 2, 3]);
+        auto b = reduce!(fun, fun)([1, 2, 3]);
+        auto c = reduce!(fun)(0, [1, 2, 3]);
+        auto d = reduce!(fun, fun)(tuple(0, 0), [1, 2, 3]);
+        auto e = reduce!(fun)(0, OpApply());
+        auto f = reduce!(fun, fun)(tuple(0, 0), OpApply());
+
+        return max(a, b.expand, c, d.expand);
+    }
+    auto a = foo();
+    enum b = foo();
+}
+
+unittest
+{
+    //http://forum.dlang.org/thread/oghtttkopzjshsuflelk@forum.dlang.org
+    //Seed is tuple of const.
+    static auto minmaxElement(alias F = min, alias G = max, R)(in R range)
+        @safe pure nothrow if (isInputRange!R)
+    {
+        return reduce!(F, G)(tuple(ElementType!R.max,
+                                   ElementType!R.min), range);
+    }
+    assert(minmaxElement([1, 2, 3])== tuple(1, 3));
+}
+
+unittest //12569
+{
+    import std.typecons: tuple;
+    dchar c = 'a';
+    reduce!(min, max)(tuple(c, c), "hello"); // OK
+    static assert(!is(typeof(reduce!(min, max)(tuple(c), "hello"))));
+    static assert(!is(typeof(reduce!(min, max)(tuple(c, c, c), "hello"))));
+
+    //Uncomment these to make sure a correct error message is generated
+
+    //Error: static assert  "Seed dchar should be a Tuple"
+    version(none) reduce!(min, max)(c, "hello"); // error
+    //Error: static assert  "Seed (dchar) does not have the correct amount of fields (should be 2)"
+    version(none) reduce!(min, max)(tuple(c), "hello"); // error
+    //Error: static assert  "Seed (dchar, dchar, dchar) does not have the correct amount of fields (should be 2)"
+    version(none) reduce!(min, max)(tuple(c, c, c), "hello"); // error
+    //Error: static assert  "Incompatable function/seed/element: all(alias pred = "a")/int/dchar"
+    version(none) reduce!all(1, "hello"); // error
+    version(none) reduce!(all, all)(tuple(1, 1), "hello"); // error
+}
+
 // sum
 /**
 Sums elements of $(D r), which must be a finite input range. Although
