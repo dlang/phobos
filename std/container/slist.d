@@ -203,15 +203,22 @@ define $(D opBinary).
     if (op == "~" && is(typeof(SList(rhs))))
     {
         auto toAdd = SList(rhs);
-        static if (is(Stuff == SList))
-        {
-            toAdd = toAdd.dup;
-        }
         if (empty) return toAdd;
         // TODO: optimize
         auto result = dup;
         auto n = findLastNode(result._root);
         n._next = toAdd._root;
+        return result;
+    }
+
+    /// ditto
+    SList opBinaryRight(string op, Stuff)(Stuff lhs)
+    if (op == "~" && !is(typeof(lhs.opBinary!"~"(this))) && is(typeof(SList(lhs))))
+    {
+        auto toAdd = SList(lhs);
+        if (empty) return toAdd;
+        auto result = dup;
+        result.insertFront(toAdd[]);
         return result;
     }
 
@@ -510,13 +517,26 @@ unittest
 
 unittest
 {
+    auto a = SList!int();
+    auto b = SList!int();
+    auto c = a ~ b[];
+    assert(c.empty);
+}
+
+unittest
+{
     auto a = SList!int(1, 2, 3);
     auto b = SList!int(4, 5, 6);
-    // @@@BUG@@@ in compiler
-    //auto c = a ~ b;
-    auto d = [ 4, 5, 6 ];
-    auto e = a ~ d;
-    assert(e == SList!int(1, 2, 3, 4, 5, 6));
+    auto c = a ~ b[];
+    assert(c == SList!int(1, 2, 3, 4, 5, 6));
+}
+
+unittest
+{
+    auto a = SList!int(1, 2, 3);
+    auto b = [4, 5, 6];
+    auto c = a ~ b;
+    assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
 unittest
@@ -524,6 +544,21 @@ unittest
     auto a = SList!int(1, 2, 3);
     auto c = a ~ 4;
     assert(c == SList!int(1, 2, 3, 4));
+}
+
+unittest
+{
+    auto a = SList!int(2, 3, 4);
+    auto b = 1 ~ a;
+    assert(b == SList!int(1, 2, 3, 4));
+}
+
+unittest
+{
+    auto a = [1, 2, 3];
+    auto b = SList!int(4, 5, 6);
+    auto c = a ~ b;
+    assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
 
 unittest
