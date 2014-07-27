@@ -188,27 +188,55 @@ Returns: Untyped array of bytes _read.
 
 Throws: $(D FileException) on error.
  */
-void[] read(in char[] name, size_t upTo = size_t.max)
+void[] read(in char[] name, size_t upTo = size_t.max) @safe
 {
+    static trustedRef(T)(ref T buf) @trusted
+    {
+        return &buf;
+    }
     version(Windows)
     {
+        static trustedCreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+                                  SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
+                                  DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
+        {
+            return CreateFileW(lpFileName, dwDesiredAccess, dwShareMode,
+                               lpSecurityAttributes, dwCreationDisposition,
+                               dwFlagsAndAttributes, hTemplateFile);
+
+        }
+        static trustedCloseHandle(HANDLE hObject) @trusted
+        {
+            return CloseHandle(hObject);
+        }
+        static trustedGetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh) @trusted
+        {
+            return GetFileSize(hFile, lpFileSizeHigh);
+        }
+        static trustedReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
+                               DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped) @trusted
+        {
+            return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead,
+                            lpNumberOfBytesRead, lpOverlapped);
+        }
+
         alias defaults =
             TypeTuple!(GENERIC_READ,
                 FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
+        auto h = trustedCreateFileW(std.utf.toUTF16z(name), defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
-        auto size = GetFileSize(h, null);
+        scope(exit) cenforce(trustedCloseHandle(h), name);
+        auto size = trustedGetFileSize(h, null);
         cenforce(size != INVALID_FILE_SIZE, name);
         size = min(upTo, size);
         auto buf = uninitializedArray!(ubyte[])(size);
         scope(failure) delete buf;
 
         DWORD numread = void;
-        cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
+        cenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
                 && numread == size, name);
         return buf[0 .. size];
     }
@@ -222,13 +250,38 @@ void[] read(in char[] name, size_t upTo = size_t.max)
             maxSlackMemoryAllowed = 1024;
         // }
 
-        immutable fd = core.sys.posix.fcntl.open(toStringz(name),
+        static trustedOpen(in char* path, int oflag) @trusted
+        {
+            return core.sys.posix.fcntl.open(path, oflag);
+        }
+        static trustedFstat(int path, stat_t* buf) @trusted
+        {
+            return fstat(path, buf);
+        }
+        static trustedRead(int fildes, void* buf, size_t nbyte) @trusted
+        {
+            return core.sys.posix.unistd.read(fildes, buf, nbyte);
+        }
+        static trustedRealloc(void* p, size_t sz, uint ba = 0, const TypeInfo ti = null) @trusted
+        {
+            return GC.realloc(p, sz, ba, ti);
+        }
+        static trustedPtrAdd(void[] buf, size_t s) @trusted
+        {
+            return buf.ptr+s;
+        }
+        static trustedPtrSlicing(void* ptr, size_t lb, size_t ub) @trusted
+        {
+            return ptr[lb..ub];
+        }
+
+        immutable fd = trustedOpen(toStringz(name),
                 core.sys.posix.fcntl.O_RDONLY);
         cenforce(fd != -1, name);
         scope(exit) core.sys.posix.unistd.close(fd);
 
         stat_t statbuf = void;
-        cenforce(fstat(fd, &statbuf) == 0, name);
+        cenforce(trustedFstat(fd, trustedRef(statbuf)) == 0, name);
 
         immutable initialAlloc = to!size_t(statbuf.st_size
             ? min(statbuf.st_size + 1, maxInitialAlloc)
@@ -239,19 +292,19 @@ void[] read(in char[] name, size_t upTo = size_t.max)
 
         for (;;)
         {
-            immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
+            immutable actual = trustedRead(fd, trustedPtrAdd(result, size),
                     min(result.length, upTo) - size);
             cenforce(actual != -1, name);
             if (actual == 0) break;
             size += actual;
             if (size < result.length) continue;
             immutable newAlloc = size + sizeIncrement;
-            result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)
-                [0 .. newAlloc];
+            result = trustedPtrSlicing(trustedRealloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN),
+                                       0, newAlloc);
         }
 
         return result.length - size >= maxSlackMemoryAllowed
-            ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
+            ? trustedPtrSlicing(trustedRealloc(result.ptr, size, GC.BlkAttr.NO_SCAN), 0, size)
             : result[0 .. size];
     }
 }
