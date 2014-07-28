@@ -2207,36 +2207,42 @@ $(D Range) that locks the file and allows fast writing to it.
  */
     struct LockingTextWriter
     {
-        FILE* fps;          // the shared file handle
-        _iobuf* handle;     // the unshared version of fps
-        int orientation;
+    private:
+        FILE* fps_;          // the shared file handle
+        _iobuf* handle_;     // the unshared version of fps
+        int orientation_;
+    public:
+        deprecated("accessing fps/handle/orientation directly can break LockingTextWriter integrity")
+        alias fps = fps_;
+        deprecated alias handle = handle_;
+        deprecated alias orientation = orientation_;
 
         this(ref File f) @trusted
         {
             import std.exception : enforce;
 
             enforce(f._p && f._p.handle);
-            fps = f._p.handle;
-            orientation = fwide(fps, 0);
-            FLOCK(fps);
-            handle = cast(_iobuf*)fps;
+            fps_ = f._p.handle;
+            orientation_ = fwide(fps_, 0);
+            FLOCK(fps_);
+            handle_ = cast(_iobuf*)fps_;
         }
 
         ~this() @trusted
         {
-            if(fps)
+            if(fps_)
             {
-                FUNLOCK(fps);
-                fps = null;
-                handle = null;
+                FUNLOCK(fps_);
+                fps_ = null;
+                handle_ = null;
             }
         }
 
         this(this) @trusted
         {
-            if(fps)
+            if(fps_)
             {
-                FLOCK(fps);
+                FLOCK(fps_);
             }
         }
 
@@ -2252,7 +2258,7 @@ $(D Range) that locks the file and allows fast writing to it.
             static assert(!is(C == void));
             static if (isSomeString!A && C.sizeof == 1)
             {
-                if (orientation <= 0)
+                if (orientation_ <= 0)
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
@@ -2261,7 +2267,7 @@ $(D Range) that locks the file and allows fast writing to it.
                         return .fwrite(ptr, size, nmemb, stream);
                     }
                     auto result =
-                        trustedFwrite(writeme.ptr, C.sizeof, writeme.length, fps);
+                        trustedFwrite(writeme.ptr, C.sizeof, writeme.length, fps_);
                     if (result != writeme.length) errnoEnforce(0);
                     return;
                 }
@@ -2291,48 +2297,48 @@ $(D Range) that locks the file and allows fast writing to it.
             static if (c.sizeof == 1)
             {
                 // simple char
-                if (orientation <= 0) trustedFPUTC(c, handle);
-                else trustedFPUTWC(c, handle);
+                if (orientation_ <= 0) trustedFPUTC(c, handle_);
+                else trustedFPUTWC(c, handle_);
             }
             else static if (c.sizeof == 2)
             {
                 import std.utf : toUTF8;
 
-                if (orientation <= 0)
+                if (orientation_ <= 0)
                 {
                     if (c <= 0x7F)
                     {
-                        trustedFPUTC(c, handle);
+                        trustedFPUTC(c, handle_);
                     }
                     else
                     {
                         char[4] buf;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            trustedFPUTC(b[i], handle);
+                            trustedFPUTC(b[i], handle_);
                     }
                 }
                 else
                 {
-                    trustedFPUTWC(c, handle);
+                    trustedFPUTWC(c, handle_);
                 }
             }
             else // 32-bit characters
             {
                 import std.utf : toUTF8;
 
-                if (orientation <= 0)
+                if (orientation_ <= 0)
                 {
                     if (c <= 0x7F)
                     {
-                        trustedFPUTC(c, handle);
+                        trustedFPUTC(c, handle_);
                     }
                     else
                     {
                         char[4] buf = void;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            trustedFPUTC(b[i], handle);
+                            trustedFPUTC(b[i], handle_);
                     }
                 }
                 else
@@ -2344,21 +2350,21 @@ $(D Range) that locks the file and allows fast writing to it.
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
-                            trustedFPUTWC(c, handle);
+                            trustedFPUTWC(c, handle_);
                         }
                         else
                         {
                             trustedFPUTWC(cast(wchar)
                                     ((((c - 0x10000) >> 10) & 0x3FF)
-                                            + 0xD800), handle);
+                                            + 0xD800), handle_);
                             trustedFPUTWC(cast(wchar)
                                     (((c - 0x10000) & 0x3FF) + 0xDC00),
-                                    handle);
+                                    handle_);
                         }
                     }
                     else version (Posix)
                     {
-                        trustedFPUTWC(c, handle);
+                        trustedFPUTWC(c, handle_);
                     }
                     else
                     {
