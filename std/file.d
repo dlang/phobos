@@ -309,7 +309,7 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
     }
 }
 
-unittest
+@safe unittest
 {
     write(deleteme, "1234");
     scope(exit) { assert(exists(deleteme)); remove(deleteme); }
