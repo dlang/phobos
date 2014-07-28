@@ -2207,36 +2207,44 @@ $(D Range) that locks the file and allows fast writing to it.
  */
     struct LockingTextWriter
     {
-        FILE* fps;          // the shared file handle
-        _iobuf* handle;     // the unshared version of fps
-        int orientation;
+    private:
+        FILE* fps_;          // the shared file handle
+        _iobuf* handle_;     // the unshared version of fps
+        int orientation_;
+    public:
+        deprecated("accessing fps/handle/orientation directly can break LockingTextWriter integrity")
+        {
+            alias fps = fps_;
+            alias handle = handle_;
+            alias orientation = orientation_;
+        }
 
         this(ref File f) @trusted
         {
             import std.exception : enforce;
 
             enforce(f._p && f._p.handle);
-            fps = f._p.handle;
-            orientation = fwide(fps, 0);
-            FLOCK(fps);
-            handle = cast(_iobuf*)fps;
+            fps_ = f._p.handle;
+            orientation_ = fwide(fps_, 0);
+            FLOCK(fps_);
+            handle_ = cast(_iobuf*)fps_;
         }
 
         ~this() @trusted
         {
-            if(fps)
+            if(fps_)
             {
-                FUNLOCK(fps);
-                fps = null;
-                handle = null;
+                FUNLOCK(fps_);
+                fps_ = null;
+                handle_ = null;
             }
         }
 
         this(this) @trusted
         {
-            if(fps)
+            if(fps_)
             {
-                FLOCK(fps);
+                FLOCK(fps_);
             }
         }
 
@@ -2252,12 +2260,16 @@ $(D Range) that locks the file and allows fast writing to it.
             static assert(!is(C == void));
             static if (isSomeString!A && C.sizeof == 1)
             {
-                if (orientation <= 0)
+                if (orientation_ <= 0)
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
+                    static auto trustedFwrite(in void* ptr, size_t size, size_t nmemb, FILE* stream) @trusted
+                    {
+                        return .fwrite(ptr, size, nmemb, stream);
+                    }
                     auto result =
-                        .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
+                        trustedFwrite(writeme.ptr, C.sizeof, writeme.length, fps_);
                     if (result != writeme.length) errnoEnforce(0);
                     return;
                 }
@@ -2273,53 +2285,62 @@ $(D Range) that locks the file and allows fast writing to it.
         // @@@BUG@@@ 2340
         //void front(C)(C c) if (is(C : dchar)) {
         /// ditto
-        void put(C)(C c) if (is(C : const(dchar)))
+        void put(C)(C c) @safe if (is(C : const(dchar)))
         {
+            static auto trustedFPUTC(int ch, _iobuf* h) @trusted
+            {
+                return FPUTC(ch, h);
+            }
+            static auto trustedFPUTWC(ParameterTypeTuple!FPUTWC[0] ch, _iobuf* h) @trusted
+            {
+                return FPUTWC(ch, h);
+            }
+
             static if (c.sizeof == 1)
             {
                 // simple char
-                if (orientation <= 0) FPUTC(c, handle);
-                else FPUTWC(c, handle);
+                if (orientation_ <= 0) trustedFPUTC(c, handle_);
+                else trustedFPUTWC(c, handle_);
             }
             else static if (c.sizeof == 2)
             {
                 import std.utf : toUTF8;
 
-                if (orientation <= 0)
+                if (orientation_ <= 0)
                 {
                     if (c <= 0x7F)
                     {
-                        FPUTC(c, handle);
+                        trustedFPUTC(c, handle_);
                     }
                     else
                     {
                         char[4] buf;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            FPUTC(b[i], handle);
+                            trustedFPUTC(b[i], handle_);
                     }
                 }
                 else
                 {
-                    FPUTWC(c, handle);
+                    trustedFPUTWC(c, handle_);
                 }
             }
             else // 32-bit characters
             {
                 import std.utf : toUTF8;
 
-                if (orientation <= 0)
+                if (orientation_ <= 0)
                 {
                     if (c <= 0x7F)
                     {
-                        FPUTC(c, handle);
+                        trustedFPUTC(c, handle_);
                     }
                     else
                     {
                         char[4] buf = void;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            FPUTC(b[i], handle);
+                            trustedFPUTC(b[i], handle_);
                     }
                 }
                 else
@@ -2331,21 +2352,21 @@ $(D Range) that locks the file and allows fast writing to it.
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
-                            FPUTWC(c, handle);
+                            trustedFPUTWC(c, handle_);
                         }
                         else
                         {
-                            FPUTWC(cast(wchar)
+                            trustedFPUTWC(cast(wchar)
                                     ((((c - 0x10000) >> 10) & 0x3FF)
-                                            + 0xD800), handle);
-                            FPUTWC(cast(wchar)
+                                            + 0xD800), handle_);
+                            trustedFPUTWC(cast(wchar)
                                     (((c - 0x10000) & 0x3FF) + 0xDC00),
-                                    handle);
+                                    handle_);
                         }
                     }
                     else version (Posix)
                     {
-                        FPUTWC(c, handle);
+                        trustedFPUTWC(c, handle_);
                     }
                     else
                     {
