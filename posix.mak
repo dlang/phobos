@@ -249,9 +249,9 @@ MAKEFILE = $(firstword $(MAKEFILE_LIST))
 
 # Main target (builds the dll on linux, too)
 ifeq (linux,$(OS))
-all : $(LIB) $(LIBSO)
+all : lib dll
 else
-all : $(LIB)
+all : lib
 endif
 
 install :
@@ -270,7 +270,7 @@ depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 
 .PHONY: lib dll
 lib: $(LIB)
-dll: $(LIBSO)
+dll: $(ROOT)/libphobos2.so
 
 $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
@@ -279,10 +279,7 @@ $(ROOT)/%$(DOTOBJ): %.c
 $(LIB): $(OBJS) $(ALL_D_FILES) druntime_libs
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-$(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
-	ln -sf $(notdir $(LIBSO)) $@
-
-$(ROOT)/$(SONAME): $(LIBSO)
+$(ROOT)/libphobos2.so: $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): override PIC:=-fPIC
