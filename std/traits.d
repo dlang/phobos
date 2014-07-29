@@ -1223,92 +1223,189 @@ unittest
 
 /**
 Returns the attributes attached to a function $(D func).
-
-Example:
---------------------
-alias FA = FunctionAttribute; // shorten the enum name
-
-real func(real x) @safe pure nothrow
-{
-    return x;
-}
-static assert(functionAttributes!func & FA.pure_);
-static assert(functionAttributes!func & FA.safe);
-static assert(!(functionAttributes!func & FA.trusted)); // not @trusted
---------------------
  */
 enum FunctionAttribute : uint
 {
     /**
-     * These flags can be bitwise OR-ed together to represent complex attribute.
+     * These flags can be bitwise OR-ed together to represent a complex attribute.
      */
-    none     = 0,
-    pure_    = 0b00000001, /// ditto
-    nothrow_ = 0b00000010, /// ditto
-    ref_     = 0b00000100, /// ditto
-    property = 0b00001000, /// ditto
-    trusted  = 0b00010000, /// ditto
-    safe     = 0b00100000, /// ditto
-    nogc     = 0b01000000, /// ditto
+    none       = 0,
+    pure_      = 1 << 0,  /// ditto
+    nothrow_   = 1 << 1,  /// ditto
+    ref_       = 1 << 2,  /// ditto
+    property   = 1 << 3,  /// ditto
+    trusted    = 1 << 4,  /// ditto
+    safe       = 1 << 5,  /// ditto
+    nogc       = 1 << 6,  /// ditto
+    system     = 1 << 7,  /// ditto
+    const_     = 1 << 8,  /// ditto
+    immutable_ = 1 << 9,  /// ditto
+    inout_     = 1 << 10, /// ditto
+    shared_    = 1 << 11, /// ditto
 }
 
 /// ditto
 template functionAttributes(func...)
     if (func.length == 1 && isCallable!func)
 {
-    alias Func = Unqual!(FunctionTypeOf!func);
+    // @bug: workaround for opCall
+    alias FuncSym = Select!(is(typeof(__traits(getFunctionAttributes, func))),
+                            func, Unqual!(FunctionTypeOf!func));
 
-    enum uint functionAttributes =
-            demangleFunctionAttributes(mangledName!Func[1 .. $]).value;
+    enum FunctionAttribute functionAttributes =
+        extractAttribFlags!(__traits(getFunctionAttributes, FuncSym));
+}
+
+///
+unittest
+{
+    import std.traits : functionAttributes, FunctionAttribute;
+
+    alias FA = FunctionAttribute; // shorten the enum name
+
+    real func(real x) pure nothrow @safe
+    {
+        return x;
+    }
+    static assert(functionAttributes!func & FA.pure_);
+    static assert(functionAttributes!func & FA.safe);
+    static assert(!(functionAttributes!func & FA.trusted)); // not @trusted
 }
 
 unittest
 {
     alias FA = FunctionAttribute;
-    interface Set
-    {
-        int pureF() pure;
-        int nothrowF() nothrow;
-        ref int refF();
-        int propertyF() @property;
-        int trustedF() @trusted;
-        int safeF() @safe;
-    }
-    static assert(functionAttributes!(Set.pureF) == FA.pure_);
-    static assert(functionAttributes!(Set.nothrowF) == FA.nothrow_);
-    static assert(functionAttributes!(Set.refF) == FA.ref_);
-    static assert(functionAttributes!(Set.propertyF) == FA.property);
-    static assert(functionAttributes!(Set.trustedF) == FA.trusted);
-    static assert(functionAttributes!(Set.safeF) == FA.safe);
-    static assert(!(functionAttributes!(Set.safeF) & FA.trusted));
 
-    int pure_nothrow() pure nothrow { return 0; }
-    static ref int  static_ref_property() @property { return *(new int); }
-    ref int ref_property() @property { return *(new int); }
+    struct S
+    {
+        int noF() { return 0; }
+        int constF() const { return 0; }
+        int immutableF() immutable { return 0; }
+        int inoutF() inout { return 0; }
+        int sharedF() shared { return 0; }
+
+        int x;
+        ref int refF() { return x; }
+        int propertyF() @property { return 0; }
+        int nothrowF() nothrow { return 0; }
+        int nogcF() @nogc { return 0; }
+
+        int systemF() @system { return 0; }
+        int trustedF() @trusted { return 0; }
+        int safeF() @safe { return 0; }
+
+        int pureF() pure { return 0; }
+    }
+
+    static assert(functionAttributes!(S.noF) == FA.system);
+    static assert(functionAttributes!(typeof(S.noF)) == FA.system);
+
+    static assert(functionAttributes!(S.constF) == (FA.const_ | FA.system));
+    static assert(functionAttributes!(typeof(S.constF)) == (FA.const_ | FA.system));
+
+    static assert(functionAttributes!(S.immutableF) == (FA.immutable_ | FA.system));
+    static assert(functionAttributes!(typeof(S.immutableF)) == (FA.immutable_ | FA.system));
+
+    static assert(functionAttributes!(S.inoutF) == (FA.inout_ | FA.system));
+    static assert(functionAttributes!(typeof(S.inoutF)) == (FA.inout_ | FA.system));
+
+    static assert(functionAttributes!(S.sharedF) == (FA.shared_ | FA.system));
+    static assert(functionAttributes!(typeof(S.sharedF)) == (FA.shared_ | FA.system));
+
+    static assert(functionAttributes!(S.refF) == (FA.ref_ | FA.system));
+    static assert(functionAttributes!(typeof(S.refF)) == (FA.ref_ | FA.system));
+
+    static assert(functionAttributes!(S.propertyF) == (FA.property | FA.system));
+    static assert(functionAttributes!(typeof(&S.propertyF)) == (FA.property | FA.system));
+
+    static assert(functionAttributes!(S.nothrowF) == (FA.nothrow_ | FA.system));
+    static assert(functionAttributes!(typeof(S.nothrowF)) == (FA.nothrow_ | FA.system));
+
+    static assert(functionAttributes!(S.nogcF) == (FA.nogc | FA.system));
+    static assert(functionAttributes!(typeof(S.nogcF)) == (FA.nogc | FA.system));
+
+    static assert(functionAttributes!(S.systemF) == FA.system);
+    static assert(functionAttributes!(typeof(S.systemF)) == FA.system);
+
+    static assert(functionAttributes!(S.trustedF) == FA.trusted);
+    static assert(functionAttributes!(typeof(S.trustedF)) == FA.trusted);
+
+    static assert(functionAttributes!(S.safeF) == FA.safe);
+    static assert(functionAttributes!(typeof(S.safeF)) == FA.safe);
+
+    static assert(functionAttributes!(S.pureF) == (FA.pure_ | FA.system));
+    static assert(functionAttributes!(typeof(S.pureF)) == (FA.pure_ | FA.system));
+
+    int pure_nothrow() nothrow pure { return 0; }
     void safe_nothrow() @safe nothrow { }
-    static assert(functionAttributes!pure_nothrow == (FA.pure_ | FA.nothrow_));
-    static assert(functionAttributes!static_ref_property == (FA.ref_ | FA.property));
-    static assert(functionAttributes!ref_property == (FA.ref_ | FA.property));
-    static assert(functionAttributes!safe_nothrow == (FA.safe | FA.nothrow_));
+    static ref int static_ref_property() @property { return *(new int); }
+    ref int ref_property() @property { return *(new int); }
 
-    interface Test2
+    static assert(functionAttributes!(pure_nothrow) == (FA.pure_ | FA.nothrow_ | FA.system));
+    static assert(functionAttributes!(typeof(pure_nothrow)) == (FA.pure_ | FA.nothrow_ | FA.system));
+
+    static assert(functionAttributes!(safe_nothrow) == (FA.safe | FA.nothrow_));
+    static assert(functionAttributes!(typeof(safe_nothrow)) == (FA.safe | FA.nothrow_));
+
+    static assert(functionAttributes!(static_ref_property) == (FA.property | FA.ref_ | FA.system));
+    static assert(functionAttributes!(typeof(&static_ref_property)) == (FA.property | FA.ref_ | FA.system));
+
+    static assert(functionAttributes!(ref_property) == (FA.property | FA.ref_ | FA.system));
+    static assert(functionAttributes!(typeof(&ref_property)) == (FA.property | FA.ref_ | FA.system));
+
+    struct S2
     {
-        int pure_const() pure const;
-        int pure_sharedconst() pure shared const;
+        int pure_const() const pure { return 0; }
+        int pure_sharedconst() const shared pure { return 0; }
     }
-    static assert(functionAttributes!(Test2.pure_const) == FA.pure_);
-    static assert(functionAttributes!(Test2.pure_sharedconst) == FA.pure_);
 
-    static assert(functionAttributes!((int a) {}) == (FA.safe | FA.pure_ | FA.nothrow_ | FA.nogc));
+    static assert(functionAttributes!(S2.pure_const) == (FA.const_ | FA.pure_ | FA.system));
+    static assert(functionAttributes!(typeof(S2.pure_const)) == (FA.const_ | FA.pure_ | FA.system));
 
-    auto safeDel = delegate() @safe {};
-    static assert(functionAttributes!safeDel == (FA.safe | FA.pure_ | FA.nothrow_ | FA.nogc));
+    static assert(functionAttributes!(S2.pure_sharedconst) == (FA.const_ | FA.shared_ | FA.pure_ | FA.system));
+    static assert(functionAttributes!(typeof(S2.pure_sharedconst)) == (FA.const_ | FA.shared_ | FA.pure_ | FA.system));
 
-    auto trustedDel = delegate() @trusted {};
-    static assert(functionAttributes!trustedDel == (FA.trusted | FA.pure_ | FA.nothrow_ | FA.nogc));
+    static assert(functionAttributes!((int a) { }) == (FA.pure_ | FA.nothrow_ | FA.nogc | FA.safe));
+    static assert(functionAttributes!(typeof((int a) { })) == (FA.pure_ | FA.nothrow_ | FA.nogc | FA.safe));
 
-    auto systemDel = delegate() @system {};
-    static assert(functionAttributes!systemDel == (FA.pure_ | FA.nothrow_ | FA.nogc));
+    auto safeDel = delegate() @safe { };
+    static assert(functionAttributes!(safeDel) == (FA.pure_ | FA.nothrow_ | FA.nogc | FA.safe));
+    static assert(functionAttributes!(typeof(safeDel)) == (FA.pure_ | FA.nothrow_ | FA.nogc | FA.safe));
+
+    auto trustedDel = delegate() @trusted { };
+    static assert(functionAttributes!(trustedDel) == (FA.pure_ | FA.nothrow_ | FA.nogc | FA.trusted));
+    static assert(functionAttributes!(typeof(trustedDel)) == (FA.pure_ | FA.nothrow_ | FA.nogc | FA.trusted));
+
+    auto systemDel = delegate() @system { };
+    static assert(functionAttributes!(systemDel) == (FA.pure_ | FA.nothrow_ | FA.nogc | FA.system));
+    static assert(functionAttributes!(typeof(systemDel)) == (FA.pure_ | FA.nothrow_ | FA.nogc | FA.system));
+}
+
+private FunctionAttribute extractAttribFlags(Attribs...)()
+{
+    auto res = FunctionAttribute.none;
+
+    foreach (attrib; Attribs)
+    {
+        switch (attrib) with (FunctionAttribute)
+        {
+            case "pure":      res |= pure_; break;
+            case "nothrow":   res |= nothrow_; break;
+            case "ref":       res |= ref_; break;
+            case "@property": res |= property; break;
+            case "@trusted":  res |= trusted; break;
+            case "@safe":     res |= safe; break;
+            case "@nogc":     res |= nogc; break;
+            case "@system":   res |= system; break;
+            case "const":     res |= const_; break;
+            case "immutable": res |= immutable_; break;
+            case "inout":     res |= inout_; break;
+            case "shared":    res |= shared_; break;
+            default: assert(0, attrib);
+        }
+    }
+
+    return res;
 }
 
 
@@ -1834,14 +1931,24 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
             result ~= " pure";
         static if (attrs & FunctionAttribute.nothrow_)
             result ~= " nothrow";
-        static if (attrs & FunctionAttribute.nogc)
-            result ~= " @nogc";
         static if (attrs & FunctionAttribute.property)
             result ~= " @property";
         static if (attrs & FunctionAttribute.trusted)
             result ~= " @trusted";
         static if (attrs & FunctionAttribute.safe)
             result ~= " @safe";
+        static if (attrs & FunctionAttribute.nogc)
+            result ~= " @nogc";
+        static if (attrs & FunctionAttribute.system)
+            result ~= " @system";
+        static if (attrs & FunctionAttribute.const_)
+            result ~= " const";
+        static if (attrs & FunctionAttribute.immutable_)
+            result ~= " immutable";
+        static if (attrs & FunctionAttribute.inout_)
+            result ~= " inout";
+        static if (attrs & FunctionAttribute.shared_)
+            result ~= " shared";
 
         result ~= " SetFunctionAttributes;";
         return result;
@@ -1900,7 +2007,9 @@ unittest
             static assert(functionAttributes!T1 == FA.safe);
 
             // Add all known attributes, excluding conflicting ones.
-            enum allAttrs = reduce!"a | b"([EnumMembers!FA]) & ~FA.safe & ~FA.property;
+            enum allAttrs = reduce!"a | b"([EnumMembers!FA])
+                & ~FA.safe & ~FA.property & ~FA.const_ & ~FA.immutable_ & ~FA.inout_ & ~FA.shared_ & ~FA.system;
+
             alias T2 = SetFunctionAttributes!(T1, functionLinkage!T, allAttrs);
             static assert(functionAttributes!T2 == allAttrs);
 

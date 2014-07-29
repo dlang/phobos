@@ -3482,7 +3482,8 @@ private template DerivedFunctionType(T...)
         {
             alias R = Select!(is(R0 : R1), R0, R1);
             alias FX = FunctionTypeOf!(R function(P0));
-            alias FY = SetFunctionAttributes!(FX, functionLinkage!F0, FA0 | FA1);
+            // @system is default
+            alias FY = SetFunctionAttributes!(FX, functionLinkage!F0, (FA0 | FA1) & ~FA.system);
             alias DerivedFunctionType = DerivedFunctionType!(FY, T[2 .. $]);
         }
         else
