@@ -8,7 +8,7 @@
 
     Author:    Matthew Wilson, Kenji Hara
 
-    Histry:
+    History:
         Created      15th March 2003,
         Updated      25th April 2004,
 
