@@ -501,14 +501,14 @@ void remove(in char[] name) @trusted
             "Failed to remove file " ~ name);
 }
 
-version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name)
+version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name) @trusted
 {
     WIN32_FILE_ATTRIBUTE_DATA fad;
     enforce(GetFileAttributesExW(std.utf.toUTF16z(name), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), new FileException(name.idup));
     return fad;
 }
 
-version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh)
+version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure nothrow @nogc
 {
     ULARGE_INTEGER li;
     li.LowPart  = dwLow;
