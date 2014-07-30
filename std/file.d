@@ -346,9 +346,10 @@ enforce(chomp(readText("deleteme")) == "abc");
 ----
  */
 
-S readText(S = string)(in char[] name)
+S readText(S = string)(in char[] name) @safe if (isSomeString!S)
 {
-    auto result = cast(S) read(name);
+    static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
+    auto result = trustedCast(read(name));
     std.utf.validate(result);
     return result;
 }
