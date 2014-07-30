@@ -2364,7 +2364,7 @@ unittest
 
     SWithLength sWithLength;
     v = sWithLength;
-    assertNotThrown!VariantException(v.get!SWithLength().length);
+    assertNotThrown!VariantException(v.get!SWithLength.length);
     assertThrown!VariantException(v.length);
 }
 
