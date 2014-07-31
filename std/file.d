@@ -522,7 +522,7 @@ Get size of file $(D name) in bytes.
 
 Throws: $(D FileException) on error (e.g., file not found).
  */
-ulong getSize(in char[] name)
+ulong getSize(in char[] name) @trusted
 {
     version(Windows)
     {
