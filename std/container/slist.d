@@ -5,6 +5,8 @@ public import std.container.util;
 
 /**
    Implements a simple and fast singly-linked list.
+
+   $(D SList) uses reference semantics.
  */
 struct SList(T)
 {
@@ -15,6 +17,18 @@ struct SList(T)
         this(T a, Node* b) { _payload = a; _next = b; }
     }
     private Node * _root;
+
+    private void initialize() @safe nothrow pure
+    {
+        if (_root) return;
+        _root = new Node();
+    }
+
+    private ref inout(Node*) _first() @property @safe nothrow pure inout
+    {
+        assert(_root);
+        return _root._next;
+    }
 
     private static Node * findLastNode(Node * n)
     {
@@ -87,7 +101,11 @@ elements in $(D rhs).
     /// ditto
     bool opEquals(ref const SList rhs) const
     {
-        const(Node) * n1 = _root, n2 = rhs._root;
+        if (_root is rhs._root) return true;
+        if (_root is null) return rhs._root is null || rhs._first is null;
+        if (rhs._root is null) return _root is null || _first is null;
+
+        const(Node) * n1 = _first, n2 = rhs._first;
 
         for (;; n1 = n1._next, n2 = n2._next)
         {
@@ -151,7 +169,7 @@ Complexity: $(BIGOH 1)
      */
     @property bool empty() const
     {
-        return _root is null;
+        return _root is null || _first is null;
     }
 
 /**
@@ -173,7 +191,10 @@ Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
-        return Range(_root);
+        if (empty)
+            return Range(null);
+        else
+            return Range(_first);
     }
 
 /**
@@ -184,7 +205,7 @@ Complexity: $(BIGOH 1)
     @property ref T front()
     {
         assert(!empty, "SList.front: List is empty");
-        return _root._payload;
+        return _first._payload;
     }
 
     unittest
@@ -206,8 +227,8 @@ define $(D opBinary).
         if (empty) return toAdd;
         // TODO: optimize
         auto result = dup;
-        auto n = findLastNode(result._root);
-        n._next = toAdd._root;
+        auto n = findLastNode(result._first);
+        n._next = toAdd._first;
         return result;
     }
 
@@ -231,7 +252,7 @@ Complexity: $(BIGOH 1)
      */
     void clear()
     {
-        _root = null;
+        _first = null;
     }
 
 /**
@@ -247,6 +268,7 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
     size_t insertFront(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
+        initialize();
         size_t result;
         Node * n, newRoot;
         foreach (item; stuff)
@@ -258,8 +280,8 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
         }
         if (!n) return 0;
         // Last node points to the old root
-        n._next = _root;
-        _root = newRoot;
+        n._next = _first;
+        _first = newRoot;
         return result;
     }
 
@@ -267,8 +289,9 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
     size_t insertFront(Stuff)(Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        auto newRoot = new Node(stuff, _root);
-        _root = newRoot;
+        initialize();
+        auto newRoot = new Node(stuff, _first);
+        _first = newRoot;
         return 1;
     }
 
@@ -296,8 +319,8 @@ Complexity: $(BIGOH 1).
         import std.algorithm : move;
 
         assert(!empty, "SList.removeAny: List is empty");
-        auto result = move(_root._payload);
-        _root = _root._next;
+        auto result = move(_first._payload);
+        _first = _first._next;
         return result;
     }
     /// ditto
@@ -315,7 +338,7 @@ Complexity: $(BIGOH 1).
     void removeFront()
     {
         assert(!empty, "SList.removeFront: List is empty");
-        _root = _root._next;
+        _first = _first._next;
     }
 
     /// ditto
@@ -337,9 +360,9 @@ Complexity: $(BIGOH howMany * log(n)).
     size_t removeFront(size_t howMany)
     {
         size_t result;
-        while (_root && result < howMany)
+        while (_first && result < howMany)
         {
-            _root = _root._next;
+            _first = _first._next;
             ++result;
         }
         return result;
@@ -378,7 +401,7 @@ assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
 
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        if (!_root)
+        if (!_first)
         {
             enforce(!r._head);
             return insertFront(stuff);
@@ -387,7 +410,7 @@ assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
         auto n = findLastNode(r._head);
         SList tmp;
         auto result = tmp.insertFront(stuff);
-        n._next = tmp._root;
+        n._next = tmp._first;
         return result;
     }
 
@@ -423,9 +446,10 @@ $(D r) and $(D m) is the length of $(D stuff).
         }
         // insert here
         SList tmp;
-        tmp._root = orig._head._next;
+        tmp._root = new Node();
+        tmp._first = orig._head._next;
         auto result = tmp.insertFront(stuff);
-        orig._head._next = tmp._root;
+        orig._head._next = tmp._first;
         return result;
     }
 
@@ -441,20 +465,13 @@ Complexity: $(BIGOH n)
      */
     Range linearRemove(Range r)
     {
-        if (!_root)
+        if (!_first)
         {
             enforce(!r._head);
             return this[];
         }
-        if (_root == r._head)
-        {
-            clear();
-        }
-        else
-        {
-            auto n = findNode(_root, r._head);
-            n._next = null;
-        }
+        auto n = findNode(_root, r._head);
+        n._next = null;
         return Range(null);
     }
 
@@ -469,7 +486,7 @@ Complexity: $(BIGOH n)
     {
         auto orig = r.source;
         // We have something to remove here
-        if (orig._head == _root)
+        if (orig._head == _first)
         {
             // remove straight from the head of the list
             for (; !r.empty; r.popFront())
@@ -484,7 +501,7 @@ Complexity: $(BIGOH n)
             return orig;
         }
         // Remove from somewhere in the middle of the list
-        enforce(_root);
+        enforce(_first);
         auto n1 = findNode(_root, orig._head);
         auto n2 = findLastNode(orig._head, r.maxLength);
         n1._next = n2._next;
@@ -493,6 +510,22 @@ Complexity: $(BIGOH n)
 
 /// ditto
     alias stableLinearRemove = linearRemove;
+}
+
+unittest
+{
+    import std.algorithm : equal;
+
+    auto a = SList!int(5);
+    auto b = a;
+    auto r = a[];
+    a.insertFront(1);
+    b.insertFront(2);
+    assert(equal(a[], [2, 1, 5]));
+    assert(equal(b[], [2, 1, 5]));
+    r.front = 9;
+    assert(equal(a[], [2, 1, 9]));
+    assert(equal(b[], [2, 1, 9]));
 }
 
 unittest
