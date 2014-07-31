@@ -1134,8 +1134,8 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         else
            return new UTFException("Attempted to decode past the end of a string");
     }
-
-    assert(fst & 0x80);
+    if((fst & 0b1100_0000) != 0b1100_0000)
+        throw invalidUTF(); // starter must have at least 2 first bits set
     ubyte tmp = void;
     dchar d = fst; // upper control bits are masked out later
     fst <<= 1;
@@ -2019,6 +2019,14 @@ void validate(S)(in S str) @safe pure
     }
 }
 
+
+unittest // bugzilla 12923
+{
+  assertThrown((){
+    char[3]a=[167, 133, 175];
+    validate(a[]);
+  }());
+}
 
 /* =================== Conversion to UTF8 ======================= */
 
