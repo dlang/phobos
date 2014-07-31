@@ -1343,7 +1343,8 @@ Params:
 buf = Buffer used to store the resulting line data. buf is
 resized as necessary.
 terminator = Line terminator (by default, $(D '\n')). Use
-$(XREF ascii, newline) for portability.
+$(XREF ascii, newline) for portability (unless the file was opened in 
+text mode).
 
 Returns:
 0 for end of file, otherwise number of characters read
@@ -1693,7 +1694,8 @@ Char = Character type for each line, defaulting to $(D char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability.
+$(XREF ascii, newline) for portability (unless the file was opened in 
+text mode).
 
 Example:
 ----
@@ -1830,7 +1832,8 @@ Char = Character type for each line, defaulting to $(D immutable char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability.
+$(XREF ascii, newline) for portability (unless the file was opened in 
+text mode).
 
 Example:
 ----
@@ -2990,7 +2993,8 @@ if (isSomeString!S)
  *        $(D size_t) 0 for end of file, otherwise number of characters read
  * Params:
  *        buf = Buffer used to store the resulting line data. buf is resized as necessary.
- *        terminator = Line terminator (by default, $(D '\n')). Use $(XREF ascii, newline) for portability.
+ *        terminator = Line terminator (by default, $(D '\n')). Use $(XREF ascii, newline)
+ *        for portability (unless the file was opened in text mode).
  * Throws:
  *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
  * Example:
