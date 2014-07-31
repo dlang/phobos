@@ -279,7 +279,10 @@ $(ROOT)/%$(DOTOBJ): %.c
 $(LIB): $(OBJS) $(ALL_D_FILES) druntime_libs
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-$(ROOT)/libphobos2.so: $(LIBSO)
+$(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
+	ln -sf $(notdir $(LIBSO)) $@
+
+$(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): override PIC:=-fPIC
