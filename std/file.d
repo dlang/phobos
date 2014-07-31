@@ -317,7 +317,7 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
     assert(read(deleteme) == "1234");
 }
 
-version (linux) unittest
+version (linux) @safe unittest
 {
     // A file with "zero" length that doesn't have 0 length at all
     auto s = std.file.readText("/proc/sys/kernel/osrelease");
@@ -354,7 +354,7 @@ S readText(S = string)(in char[] name) @safe if (isSomeString!S)
     return result;
 }
 
-unittest
+@safe unittest
 {
     write(deleteme, "abc\n");
     scope(exit) { assert(exists(deleteme)); remove(deleteme); }
@@ -474,7 +474,7 @@ void rename(in char[] from, in char[] to) @trusted
         cenforce(core.stdc.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
 
-unittest
+@safe unittest
 {
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
@@ -946,7 +946,7 @@ bool exists(in char[] name) @trusted
     }
 }
 
-unittest
+@safe unittest
 {
     assert(exists("."));
     assert(!exists("this file does not exist"));
