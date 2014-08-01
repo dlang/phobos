@@ -1891,6 +1891,7 @@ $(XREF file,readText)
                 KeepTerminator kt, Terminator term, bool popFirstLine = false)
         {
             import std.conv : text;
+            import std.algorithm : sort;
 
             uint i;
             std.file.write(deleteme, txt);
