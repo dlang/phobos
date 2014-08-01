@@ -66,7 +66,8 @@ public:
         {
             throw new Exception("Queue is at capacity.");
         }
-        else {
+        else 
+        {
             // Set the next free index to the value of the item.
             pItems[pNextIndex] = item;
             // Increment the length of the queue to accurately
