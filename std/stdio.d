@@ -1680,8 +1680,8 @@ may throw $(D StdioException) on I/O error.
 Note:
 Each $(D front) will not persist after $(D
 popFront) is called, so the caller must copy its contents (e.g. by
-calling $(D to!string)) when retention is needed. If the caller needs 
-to retain a copy of every line, use the $(LREF byLineCopy) function 
+calling $(D to!string)) when retention is needed. If the caller needs
+to retain a copy of every line, use the $(LREF byLineCopy) function
 instead.
 
 Params:
@@ -1784,7 +1784,7 @@ the contents may well have changed).
         ByLineImpl!(Unqual!Char, Terminator) impl;
         bool gotFront;
         Char[] line;
-        
+
     public:
         this(File f, KeepTerminator kt, Terminator terminator)
         {
@@ -1805,7 +1805,7 @@ the contents may well have changed).
             }
             return line;
         }
-        
+
         void popFront()
         {
             impl.popFront();
@@ -1817,7 +1817,7 @@ the contents may well have changed).
 Returns an input range set up to read from the file handle one line
 at a time. Each line will be newly allocated.
 
-The element type for the range will be $(D Char[]). Range 
+The element type for the range will be $(D Char[]). Range
 primitives may throw $(D StdioException) on I/O error.
 
 Params:
@@ -1858,7 +1858,7 @@ $(XREF file,readText)
     {
         return ByLineCopy!(Char, Terminator)(this, keepTerminator, terminator);
     }
-    
+
     unittest
     {
         static assert(is(typeof(File("").byLine.front) == char[]));
@@ -1916,7 +1916,7 @@ $(XREF file,readText)
             // Issue 11830
             auto walkedLength = File(deleteme).byLine(kt, term).walkLength;
             assert(walkedLength == witness.length, text(walkedLength, " != ", witness.length));
-            
+
             // test persistent lines
             assert(File(deleteme).byLineCopy(kt, term).array.sort() == witness.dup.sort());
         }
@@ -4136,12 +4136,11 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 */
 version(linux)
 {
-    static import linux = std.c.linux.linux;
-    static import sock = std.c.linux.socket;
-    import core.stdc.string : memcpy;
-
     File openNetwork(string host, ushort port)
     {
+        static import linux = std.c.linux.linux;
+        static import sock = std.c.linux.socket;
+        import core.stdc.string : memcpy;
         import std.conv : to;
         import std.exception : enforce;
         import std.string : toStringz;

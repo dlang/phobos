@@ -14,9 +14,7 @@ module std.array;
 
 import core.memory, core.bitop;
 import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
-       std.range, std.string, std.traits, std.typecons, std.typetuple,
-       std.uni, std.utf;
-import core.stdc.string : memcpy;
+       std.range, std.string, std.traits, std.typecons, std.typetuple, std.utf;
 version(unittest) import core.exception, std.stdio;
 
 /**
@@ -1043,7 +1041,10 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         {
             assert(src.length == dest.length);
             if (!__ctfe)
+            {
+                import core.stdc.string : memcpy;
                 memcpy(dest.ptr, src.ptr, src.length * T.sizeof);
+            }
             else
             {
                 dest[] = src[];
@@ -1476,7 +1477,8 @@ if (isSomeString!S)
 
     foreach (i, dchar c ; s)
     {
-        if (std.uni.isWhite(c))
+        import std.uni : isWhite;
+        if (isWhite(c))
         {
             if (inword)
             {
@@ -2425,6 +2427,7 @@ if (isDynamicArray!A)
                 GC.qalloc(newlen * T.sizeof, blockAttribute!T);
             }();
             _data.capacity = bi.size / T.sizeof;
+            import core.stdc.string : memcpy;
             if (len)
                 ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
             _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
