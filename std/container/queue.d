@@ -6,7 +6,7 @@ import std.traits, std.exception;
  + first item added to the queue is the first
  + item to be dequeued (FIFO).
 +/
-@safe public struct Queue(T) 
+public struct Queue(T) 
 {
 private:
     int pLength;
@@ -22,9 +22,8 @@ public:
      + 
      + Params:
      +         capacity =    The number of items the queue is able to hold.
-     +         sizable  =    Whether the queue can be resized.
     +/
-    this(int capacity) pure 
+    this(int capacity)
     {
         // Check to ensure that capacity is valid.
         if (capacity < 0) 
@@ -56,7 +55,7 @@ public:
      + Params:
      +         item =    The item to add to the queue.
     +/
-    void enqueue(in T item) pure 
+    void enqueue(in T item)
     {
         // Ensure that we have space to add new items to
         // the queue.
@@ -87,11 +86,11 @@ public:
      + 
      + Returns: The item at the front of the queue.
     +/
-    T dequeue() pure 
+    T dequeue()
     {
         // Check to make sure that there are actually items in
         // the queue to be read.
-        if (isEmpty) 
+        if (empty) 
         {
             // If there aren't, raise an exception.
             throw new Exception("Queue is empty.");
@@ -124,7 +123,7 @@ public:
     +
     + Returns: The queue the item was added to.
     +/
-    ref Queue!T penqueue(in T item) pure 
+    ref Queue!T penqueue(in T item)
     {
         enqueue(item);
         return this;
@@ -135,22 +134,18 @@ public:
     +
     + Returns: The queue the item was removed from.
     +/
-    ref Queue!T pdequeue(out T item) pure 
+    ref Queue!T pdequeue(out T item)
     {
         item = dequeue();
         return this;
     }
 
 
-    bool opEquals(const Queue!T q) pure nothrow 
+    bool opEquals(const Queue!T q) nothrow 
     {
         // Make sure the queues are of the same
-        // length and capacity.
-        bool propEquals =
-            q.length == this.length &&
-            q.capacity == this.capacity;
-                
-        if (propEquals) 
+        // length and capacity.                
+        if (q.length == this.length && q.capacity == this.capacity)
         {
             // If they are the same length/capacity,
             // we can move on to checking their values.
@@ -192,7 +187,7 @@ public:
     }
 
     /++ Empties the queue. +/
-    void empty() 
+    void clear() 
     {
         this.pLength = 0;
         this.pCurrIndex = 0;
@@ -200,17 +195,17 @@ public:
     }
 
     /++ The number of items the queue is able to store. +/
-    @property const int capacity() pure nothrow 
+    @property const int capacity() nothrow 
     {
         return pItems.length;
     }
     /++ The number of items the queue currently holds. +/
-    @property const int length() pure nothrow 
+    @property const int length() nothrow 
     {
         return pLength;
     }
     /++ Whether the queue contains any items. +/
-    @property const bool isEmpty() pure nothrow 
+    @property const bool empty() nothrow 
     {
         return length == 0;
     }
