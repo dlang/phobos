@@ -602,6 +602,8 @@ private:
 
 unittest
 {
+    import std.file : deleteme;
+
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
     version(Windows) {
@@ -613,7 +615,8 @@ unittest
     } else version (linux) {
         // getpagesize() is not defined in the unix D headers so use the guess
     }
-    MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,
+    string test_file = std.file.deleteme ~ "-testing.txt";
+    MmFile mf = new MmFile(test_file,MmFile.Mode.readWriteNew,
             100*K,null,win);
     ubyte[] str = cast(ubyte[])"1234567890";
     ubyte[] data = cast(ubyte[])mf[0 .. 10];
@@ -630,7 +633,7 @@ unittest
     assert( data2.length == 79*K );
     assert( data2[$-1] == 'b' );
     delete mf;
-    std.file.remove("testing.txt");
+    std.file.remove(test_file);
     // Create anonymous mapping
     auto test = new MmFile(null, MmFile.Mode.readWriteNew, 1024*1024, null);
 }

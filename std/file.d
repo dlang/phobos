@@ -42,7 +42,7 @@ version (unittest)
 {
     import core.thread;
 
-    private @property string deleteme() @safe
+    @property string deleteme() @safe
     {
         static _deleteme = "deleteme.dmd.unittest.pid";
         static _first = true;
@@ -2507,19 +2507,21 @@ unittest
 
     buf = new void[10];
     (cast(byte[])buf)[] = 3;
-    if (exists("unittest_write.tmp")) remove("unittest_write.tmp");
-    write("unittest_write.tmp", buf);
-    void buf2[] = read("unittest_write.tmp");
+    string unit_file = deleteme ~ "-unittest_write.tmp";
+    if (exists(unit_file)) remove(unit_file);
+    write(unit_file, buf);
+    void buf2[] = read(unit_file);
     assert(buf == buf2);
 
-    copy("unittest_write.tmp", "unittest_write2.tmp");
-    buf2 = read("unittest_write2.tmp");
+    string unit2_file = deleteme ~ "-unittest_write2.tmp";
+    copy(unit_file, unit2_file);
+    buf2 = read(unit2_file);
     assert(buf == buf2);
 
-    remove("unittest_write.tmp");
-    assert(!exists("unittest_write.tmp"));
-    remove("unittest_write2.tmp");
-    assert(!exists("unittest_write2.tmp"));
+    remove(unit_file);
+    assert(!exists(unit_file));
+    remove(unit2_file);
+    assert(!exists(unit2_file));
 }
 
 /**
@@ -2815,7 +2817,12 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 
 unittest
 {
-    string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(getpid()); // needs to be relative
+    version(Android)
+        string testdir = deleteme; // This has to be an absolute path when
+                                   // called from a shared library on Android,
+                                   // ie an apk
+    else
+        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(getpid()); // needs to be relative
     mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
     write(buildPath(testdir, "somefile"), null);

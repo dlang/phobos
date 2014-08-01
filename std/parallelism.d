@@ -4164,12 +4164,15 @@ unittest
            ));
 
     {
-        auto file = File("tempDelMe.txt", "wb");
+        import std.file : deleteme;
+
+        string temp_file = std.file.deleteme ~ "-tempDelMe.txt";
+        auto file = File(temp_file, "wb");
         scope(exit)
         {
             file.close();
             import std.file;
-            remove("tempDelMe.txt");
+            remove(temp_file);
         }
 
         auto written = [[1.0, 2, 3], [4.0, 5, 6], [7.0, 8, 9]];
@@ -4178,7 +4181,7 @@ unittest
             file.writeln(join(to!(string[])(row), "\t"));
         }
 
-        file = File("tempDelMe.txt");
+        file = File(temp_file);
 
         void next(ref char[] buf)
         {
