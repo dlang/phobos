@@ -50,12 +50,15 @@ public:
         .destroy(pItems);
     }
 
-    /++ Adds an item to the end of the queue.
+    /++ Adds an item to the end of the queue and returns
+     + the container the item was added to.
      + 
      + Params:
      +         item =    The item to add to the queue.
+     + 
+     + Returns: The container the item was added to.
     +/
-    void enqueue(in T item)
+    ref Queue!T enqueue(in T item)
     {
         // Ensure that we have space to add new items to
         // the queue.
@@ -80,13 +83,15 @@ public:
                 // dequeued values.
                 ++pNextIndex %= capacity;
             }
+
+            return this;
         }
     }
     /++ Retrieves the item at the front of the queue.
      + 
      + Returns: The item at the front of the queue.
     +/
-    T dequeue()
+    ref Queue!T dequeue(out T item)
     {
         // Check to make sure that there are actually items in
         // the queue to be read.
@@ -114,29 +119,21 @@ public:
                 // the next item in the queue.
                 ++pCurrIndex %= capacity;
             }
-            // Return the retrieved values.
-            return rval;
+
+            item = rval;
+            return this;
         }
     }
-    /++ Adds an item to the end of the queue and
-    + returns the queue the item was added to.
-    +
-    + Returns: The queue the item was added to.
+    /++ Removes an item from the queue and returns the
+     + queue the item was removed from.
+     + 
+     + Returns: The queue the item was removed from.
     +/
-    ref Queue!T penqueue(in T item)
+    ref Queue!T dequeue()
     {
-        enqueue(item);
-        return this;
-    }
-    /++ Retrieves the item at the end of the
-    + queue and returns the queue it was removed
-    + from.
-    +
-    + Returns: The queue the item was removed from.
-    +/
-    ref Queue!T pdequeue(out T item)
-    {
-        item = dequeue();
+        T item;
+        this.dequeue(item);
+
         return this;
     }
 
@@ -260,7 +257,8 @@ public:
     assert(q.pCurrIndex == 0, inCurr);
     assert(q.pNextIndex == 0, inNext);
 
-    auto dq = q.dequeue();
+    int dq;
+    q.dequeue(dq);
     assert(q.pCurrIndex == 1, inCurr);
     assert(q.pNextIndex == 0, inNext);
 
@@ -271,11 +269,13 @@ public:
     assert(q.pCurrIndex == 1, inCurr);
     assert(q.pNextIndex == 1, inNext);
 
-    auto dq2 = q.dequeue();
+    int dq2;
+    q.dequeue(dq2);
     assert(q.pCurrIndex == 0, inCurr);
     assert(q.pNextIndex == 1, inNext);
 
-    auto dq3 = q.dequeue();
+    int dq3;
+    q.dequeue(dq3);
     assert(q.pCurrIndex == 1, inCurr);
     assert(q.pNextIndex == 1, inNext);
 
