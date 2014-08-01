@@ -259,10 +259,7 @@ private:
         {
             static if (is(typeof(*rhsPA == *zis)))
             {
-                // Work-around for bug 12164.
-                // Without the check for if selector is -1, this function always returns 0.
-                // TODO: Remove this once 12164 is fixed.
-                if (*rhsPA == *zis && selector != cast(OpID)-1)
+                if (*rhsPA == *zis)
                 {
                     return 0;
                 }
@@ -1719,12 +1716,6 @@ unittest
     assert(v1 != f2);
     assert(v2 != v1);
     assert(v2 == f2);
-
-    // TODO: Remove once 12164 is fixed.
-    // Verify our assumption that there is no -1 OpID.
-    // Could also use std.algorithm.canFind at compile-time, but that may create bloat.
-    foreach(member; EnumMembers!(Variant.OpID))
-        assert(member != cast(Variant.OpID)-1);
 }
 
 // Const parameters with opCall, issue 11361.
