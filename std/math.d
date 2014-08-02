@@ -4204,79 +4204,44 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     }
 }
 
+deprecated("isNaN is not defined for integer types")
+bool isNaN(X)(X x) @nogc @trusted pure nothrow
+    if (isIntegral!(X))
+{
+    return isNaN(cast(float)x);
+}
 
 unittest
 {
-    // CTFE-able tests
-    assert(isNaN(float.init));
-    assert(isNaN(-float.init));
-    assert(isNaN(float.nan));
-    assert(isNaN(-float.nan));
-    assert(!isNaN(float.infinity));
-    assert(!isNaN(-float.infinity));
-    assert(!isNaN(53.6f));
-    assert(!isNaN(-53.6f));
+    import std.typetuple;
 
-    assert(isNaN(double.init));
-    assert(isNaN(-double.init));
-    assert(isNaN(double.nan));
-    assert(isNaN(-double.nan));
-    assert(!isNaN(double.infinity));
-    assert(!isNaN(-double.infinity));
-    assert(!isNaN(53.6));
-    assert(!isNaN(-53.6));
+    foreach(T; TypeTuple!(float, double, real))
+    {
+        // CTFE-able tests
+        assert(isNaN(T.init));
+        assert(isNaN(-T.init));
+        assert(isNaN(T.nan));
+        assert(isNaN(-T.nan));
+        assert(!isNaN(T.infinity));
+        assert(!isNaN(-T.infinity));
+        assert(!isNaN(cast(T)53.6));
+        assert(!isNaN(cast(T)-53.6));
 
-    assert(isNaN(real.init));
-    assert(isNaN(-real.init));
-    assert(isNaN(real.nan));
-    assert(isNaN(-real.nan));
-    assert(!isNaN(real.infinity));
-    assert(!isNaN(-real.infinity));
-    assert(!isNaN(53.6L));
-    assert(!isNaN(-53.6L));
-
-    // Runtime tests
-    shared float f;
-    f = float.init;
-    assert(isNaN(f));
-    assert(isNaN(-f));
-    f = float.nan;
-    assert(isNaN(f));
-    assert(isNaN(-f));
-    f = float.infinity;
-    assert(!isNaN(f));
-    assert(!isNaN(-f));
-    f = 53.6f;
-    assert(!isNaN(f));
-    assert(!isNaN(-f));
-
-    shared double d;
-    d = double.init;
-    assert(isNaN(d));
-    assert(isNaN(-d));
-    d = double.nan;
-    assert(isNaN(d));
-    assert(isNaN(-d));
-    d = double.infinity;
-    assert(!isNaN(d));
-    assert(!isNaN(-d));
-    d = 53.6;
-    assert(!isNaN(d));
-    assert(!isNaN(-d));
-
-    shared real e;
-    e = real.init;
-    assert(isNaN(e));
-    assert(isNaN(-e));
-    e = real.nan;
-    assert(isNaN(e));
-    assert(isNaN(-e));
-    e = real.infinity;
-    assert(!isNaN(e));
-    assert(!isNaN(-e));
-    e = 53.6L;
-    assert(!isNaN(e));
-    assert(!isNaN(-e));
+        // Runtime tests
+        shared T f;
+        f = T.init;
+        assert(isNaN(f));
+        assert(isNaN(-f));
+        f = T.nan;
+        assert(isNaN(f));
+        assert(isNaN(-f));
+        f = T.infinity;
+        assert(!isNaN(f));
+        assert(!isNaN(-f));
+        f = cast(T)53.6;
+        assert(!isNaN(f));
+        assert(!isNaN(-f));
+    }
 }
 
 /*********************************
@@ -4311,6 +4276,12 @@ unittest
     assert(!isFinite(real.infinity));
 }
 
+deprecated("isFinite is not defined for integer types")
+int isFinite(X)(X x) @trusted pure nothrow @nogc
+    if (isIntegral!(X))
+{
+    return isFinite(cast(float)x);
+}
 
 /*********************************
  * Returns !=0 if x is normalized (not zero, subnormal, infinite, or $(NAN)).
@@ -4412,6 +4383,13 @@ unittest
         for (f = 1.0; !isSubnormal(f); f /= 2)
             assert(f != 0);
     }
+}
+
+deprecated("isSubnormal is not defined for integer types")
+int isSubnormal(X)(X x) @trusted pure nothrow @nogc
+    if (isIntegral!X)
+{
+    return isSubnormal(cast(double)x);
 }
 
 /*********************************
@@ -4595,6 +4573,14 @@ unittest
     assert(!signbit(real.max));
 }
 
+
+deprecated("signbit is not defined for integer types")
+int signbit(X)(X x) @nogc @trusted pure nothrow
+    if (isIntegral!X)
+{
+    return signbit(cast(float)x);
+}
+
 /*********************************
  * Return a value composed of to with from's sign bit.
  */
@@ -4653,6 +4639,13 @@ unittest
             }
         }
     }
+}
+
+deprecated("copysign : from can't be of integer type")
+R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
+    if (isIntegral!R)
+{
+    return copysign(to, cast(float)from);
 }
 
 /*********************************
