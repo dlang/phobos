@@ -38,13 +38,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w
+DFLAGS=-O -release -w -property
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w
+UDFLAGS=-O -w -property
 
 ## C compiler
 
