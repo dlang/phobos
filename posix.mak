@@ -92,7 +92,7 @@ STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 # Set DDOC, the documentation generator
 DDOC=$(DMD) -m$(MODEL) -w -c -o- -version=StdDdoc \
-    -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
@@ -176,20 +176,23 @@ MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint \
-        bitmanip compiler complex concurrency conv		\
-        cstream csv datetime demangle encoding exception	\
-        file format functional getopt json math mathspecial	\
-        mmfile numeric outbuffer parallelism path		\
-        process random range regex signals socket socketstream	\
-        stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf uuid variant xml zip zlib)
+		bitmanip compiler complex concurrency conv		\
+		cstream csv datetime demangle encoding exception	\
+		file format functional getopt json math mathspecial	\
+		mmfile numeric outbuffer parallelism path		\
+		process random range signals socket socketstream	\
+		stdint stdio stdiobase stream string syserror system traits		\
+		typecons typetuple uni uri utf uuid variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
+
+STD_REGEX_MODULES = $(addprefix std/regex/, generator ir package parser \
+		backtracking kickstart tests thompson)
 
 STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
 
 STD_CONTAINER_MODULES = $(addprefix std/container/, package array \
-        binaryheap dlist rbtree slist util)
+		binaryheap dlist rbtree slist util)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -216,7 +219,7 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
-    $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES)
+	$(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_REGEX_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -301,8 +304,8 @@ $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=32 BUILD=release
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=64 BUILD=release
 	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
-	    $(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
-	    -create -output $@
+		$(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
+		-create -output $@
 endif
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
