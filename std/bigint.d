@@ -322,7 +322,7 @@ public:
         static if (op == "%")
         {
             // x%y always has the same sign as x.
-            if (data.ulongLength() > 1)
+            if (data.ulongLength > 1)
                 return x;
             ulong u = absUnsign(x);
             ulong rem = u % data.peekUlong(0);
@@ -331,7 +331,7 @@ public:
         }
         else static if (op == "/")
         {
-            if (data.ulongLength() > 1)
+            if (data.ulongLength > 1)
                 return 0;
             return cast(T)(x / data.peekUlong(0));
         }
@@ -423,7 +423,7 @@ public:
     long toLong() pure nothrow const
     {
         return (sign ? -1 : 1) *
-          (data.ulongLength() == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
+          (data.ulongLength == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
           ? cast(long)(data.peekUlong(0))
           : long.max);
     }
@@ -432,7 +432,7 @@ public:
     int toInt() pure nothrow const
     {
         return (sign ? -1 : 1) *
-          (data.uintLength() == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
+          (data.uintLength == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
           ? cast(int)(data.peekUint(0))
           : int.max);
     }
@@ -440,13 +440,13 @@ public:
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
     @property size_t uintLength() pure nothrow const
     {
-        return data.uintLength();
+        return data.uintLength;
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
     @property size_t ulongLength() pure nothrow const
     {
-        return data.ulongLength();
+        return data.ulongLength;
     }
 
     /** Convert the BigInt to string, passing it to 'sink'.

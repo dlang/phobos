@@ -1332,7 +1332,7 @@ unittest
     auto app = appender!string();
     defaultGetoptFormatter(app, "Some Text", t.options);
 
-    string helpMsg = app.data();
+    string helpMsg = app.data;
     //writeln(helpMsg);
     assert(helpMsg.length);
     assert(helpMsg.count("\n") == 3, to!string(helpMsg.count("\n")) ~ " "
@@ -1357,7 +1357,7 @@ unittest
     auto app = appender!string();
     defaultGetoptFormatter(app, "Some Text", t.options);
 
-    string helpMsg = app.data();
+    string helpMsg = app.data;
     //writeln(helpMsg);
     assert(helpMsg.length);
     assert(helpMsg.count("\n") == 3, to!string(helpMsg.count("\n")) ~ " "
