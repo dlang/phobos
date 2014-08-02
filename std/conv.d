@@ -23,8 +23,7 @@ module std.conv;
 
 import core.checkedint, core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.range,
-    std.string, std.traits, std.typecons, std.typetuple, std.uni,
-    std.utf;
+    std.string, std.traits, std.typecons, std.typetuple, std.utf;
 import std.format;
 
 /* ************* Exceptions *************** */

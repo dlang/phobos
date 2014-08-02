@@ -25,7 +25,7 @@ module std.format;
 //debug=format;                // uncomment to turn on debugging printf's
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
-import std.algorithm, std.ascii, std.bitmanip, std.conv,
+import std.algorithm, std.ascii, std.conv,
     std.exception, std.range,
     std.system, std.traits, std.typetuple,
     std.utf;
@@ -733,6 +733,7 @@ struct FormatSpec(Char)
     {
         union
         {
+            import std.bitmanip : bitfields;
             mixin(bitfields!(
                         bool, "flDash", 1,
                         bool, "flZero", 1,

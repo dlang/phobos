@@ -15,8 +15,6 @@
  */
 module std.internal.digest.sha_SSSE3;
 
-import std.conv;
-
 version(D_PIC)
 {
     // Do not use (Bug9378).
@@ -708,4 +706,3 @@ version(USE_SSSE3)
         mixin(wrap(epilogue()));
     }
 }
-
