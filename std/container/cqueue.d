@@ -59,6 +59,17 @@ public:
      +         item =    The item to add to the queue.
      + 
      + Returns: The container the item was added to.
+     + 
+     + Example:
+     + ---
+     + auto q = CircularQueue!int(5);
+     + 
+     + assert(q.length == 0);
+     + 
+     + q.enqueue(100);
+     + 
+     + assert(q.length == 1);
+     + ---
     +/
     ref CircularQueue!T enqueue(T item)
     {
@@ -91,6 +102,17 @@ public:
     /++ Retrieves the item at the front of the queue.
      + 
      + Returns: The item at the front of the queue.
+     + 
+     + Example:
+     + ---
+     + auto q = CircularQueue!int(5);
+     + q.enqueue(100);
+     + 
+     + int val;
+     + q.dequeue(val);
+     + 
+     + assert(val == 100);
+     + ---
     +/
     ref CircularQueue!T dequeue(out T item)
     {
