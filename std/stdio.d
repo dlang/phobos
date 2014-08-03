@@ -2859,6 +2859,9 @@ void writeln(T...)(T args)
         auto w = .trustedStdout.lockingTextWriter();
         w.put(args[0]);
         w.put("\n");
+
+        // Issue 13241
+        .trustedStdout.flush();
     }
     else
     {
