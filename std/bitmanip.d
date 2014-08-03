@@ -545,21 +545,21 @@ struct BitArray
     enum bitsPerSizeT = size_t.sizeof * 8;
 
 private:
-    @property size_t fullWords() const pure nothrow
+    @property size_t fullWords() const @nogc pure nothrow
     {
         return len / bitsPerSizeT;
     }
     // Number of bits after the last full word
-    @property size_t endBits() const pure nothrow
+    @property size_t endBits() const @nogc pure nothrow
     {
         return len % bitsPerSizeT;
     }
     // Bit mask to extract the bits after the last full word
-    @property size_t endMask() const pure nothrow
+    @property size_t endMask() const @nogc pure nothrow
     {
         return (size_t(1) << endBits) - 1;
     }
-    static size_t lenToDim(size_t len) pure nothrow
+    static size_t lenToDim(size_t len) @nogc pure nothrow
     {
         return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
     }
@@ -568,7 +568,7 @@ public:
     /**********************************************
      * Gets the amount of native words backing this $(D BitArray).
      */
-    @property size_t dim() const pure  nothrow
+    @property size_t dim() const @nogc pure nothrow
     {
         return lenToDim(len);
     }
@@ -576,7 +576,7 @@ public:
     /**********************************************
      * Gets the amount of bits in the $(D BitArray).
      */
-    @property size_t length() const pure nothrow
+    @property size_t length() const @nogc pure nothrow
     {
         return len;
     }
@@ -587,7 +587,7 @@ public:
      * final word up to the next word boundary. i.e. D dynamic
      * array extension semantics are not followed.)
      */
-    @property size_t length(size_t newlen)
+    @property size_t length(size_t newlen) pure nothrow
     {
         if (newlen != len)
         {
@@ -610,7 +610,7 @@ public:
     /**********************************************
      * Gets the $(D i)'th bit in the $(D BitArray).
      */
-    bool opIndex(size_t i) const pure nothrow
+    bool opIndex(size_t i) const @nogc pure nothrow
     in
     {
         assert(i < len);
@@ -638,7 +638,7 @@ public:
     /**********************************************
      * Sets the $(D i)'th bit in the $(D BitArray).
      */
-    bool opIndexAssign(bool b, size_t i)
+    bool opIndexAssign(bool b, size_t i) @nogc pure nothrow
     in
     {
         assert(i < len);
@@ -655,7 +655,7 @@ public:
     /**********************************************
      * Duplicates the $(D BitArray) and its contents.
      */
-    @property BitArray dup() const
+    @property BitArray dup() const pure nothrow
     {
         BitArray ba;
 
@@ -784,7 +784,7 @@ public:
     /**********************************************
      * Reverses the bits of the $(D BitArray).
      */
-    @property BitArray reverse()
+    @property BitArray reverse() @nogc pure nothrow
     out (result)
     {
         assert(result == this);
@@ -828,7 +828,7 @@ public:
     /**********************************************
      * Sorts the $(D BitArray)'s elements.
      */
-    @property BitArray sort()
+    @property BitArray sort() @nogc pure nothrow
     out (result)
     {
         assert(result == this);
@@ -889,7 +889,7 @@ public:
     /***************************************
      * Support for operators == and != for $(D BitArray).
      */
-    bool opEquals(const ref BitArray a2) const
+    bool opEquals(const ref BitArray a2) const @nogc pure nothrow
     {
         if (this.length != a2.length)
             return false;
@@ -936,7 +936,7 @@ public:
     /***************************************
      * Supports comparison operators for $(D BitArray).
      */
-    int opCmp(BitArray a2) const
+    int opCmp(BitArray a2) const @nogc pure nothrow
     {
         auto lesser = this.length < a2.length ? &this : &a2;
         size_t fullWords = lesser.fullWords;
@@ -1037,7 +1037,7 @@ public:
     /***************************************
      * Support for hashing for $(D BitArray).
      */
-    size_t toHash() const pure nothrow
+    size_t toHash() const @nogc pure nothrow
     {
         size_t hash = 3557;
         auto fullBytes = len / 8;
@@ -1057,7 +1057,7 @@ public:
     /***************************************
      * Set this $(D BitArray) to the contents of $(D ba).
      */
-    void init(bool[] ba)
+    void init(bool[] ba) pure nothrow
     {
         length = ba.length;
         foreach (i, b; ba)
@@ -1075,7 +1075,7 @@ public:
      *
      * This is the inverse of $(D opCast).
      */
-    void init(void[] v, size_t numbits)
+    void init(void[] v, size_t numbits) pure nothrow
     in
     {
         assert(numbits <= v.length * 8);
@@ -1120,7 +1120,7 @@ public:
     /***************************************
      * Convert to $(D void[]).
      */
-    void[] opCast(T : void[])()
+    void[] opCast(T : void[])() @nogc pure nothrow
     {
         return cast(void[])ptr[0 .. dim];
     }
@@ -1128,7 +1128,7 @@ public:
     /***************************************
      * Convert to $(D size_t[]).
      */
-    size_t[] opCast(T : size_t[])()
+    size_t[] opCast(T : size_t[])() @nogc pure nothrow
     {
         return ptr[0 .. dim];
     }
@@ -1148,7 +1148,7 @@ public:
     /***************************************
      * Support for unary operator ~ for $(D BitArray).
      */
-    BitArray opCom() const
+    BitArray opCom() const pure nothrow
     {
         auto dim = this.dim;
 
@@ -1185,7 +1185,7 @@ public:
     /***************************************
      * Support for binary bitwise operators for $(D BitArray).
      */
-    BitArray opBinary(string op)(const BitArray e2) const
+    BitArray opBinary(string op)(const BitArray e2) const pure nothrow
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
@@ -1291,7 +1291,7 @@ public:
     /***************************************
      * Support for operator op= for $(D BitArray).
      */
-    BitArray opOpAssign(string op)(const BitArray e2)
+    BitArray opOpAssign(string op)(const BitArray e2) @nogc pure nothrow
         if (op == "-" || op == "&" || op == "|" || op == "^")
     in
     {
@@ -1416,7 +1416,7 @@ public:
      * concatenation semantics are not followed)
      */
 
-    BitArray opCatAssign(bool b)
+    BitArray opCatAssign(bool b) pure nothrow
     {
         length = len + 1;
         this[len - 1] = b;
@@ -1447,7 +1447,7 @@ public:
      * ditto
      */
 
-    BitArray opCatAssign(BitArray b)
+    BitArray opCatAssign(BitArray b) pure nothrow
     {
         auto istart = len;
         length = len + b.length;
@@ -1481,7 +1481,7 @@ public:
     /***************************************
      * Support for binary operator ~ for $(D BitArray).
      */
-    BitArray opCat(bool b) const
+    BitArray opCat(bool b) const pure nothrow
     {
         BitArray r;
 
@@ -1492,7 +1492,7 @@ public:
     }
 
     /** ditto */
-    BitArray opCat_r(bool b) const
+    BitArray opCat_r(bool b) const pure nothrow
     {
         BitArray r;
 
@@ -1504,7 +1504,7 @@ public:
     }
 
     /** ditto */
-    BitArray opCat(BitArray b) const
+    BitArray opCat(BitArray b) const pure nothrow
     {
         BitArray r;
 
@@ -1584,7 +1584,7 @@ public:
     /***************************************
      * Return a lazy range of the indices of set bits.
      */
-    @property auto bitsSet()
+    @property auto bitsSet() const nothrow
     {
         import std.algorithm : filter, map, joiner;
 
@@ -3450,7 +3450,7 @@ unittest
 Counts the number of trailing zeros in the binary representation of $(D value).
 For signed integers, the sign bit is included in the count.
 */
-private uint countTrailingZeros(T)(T value)
+private uint countTrailingZeros(T)(T value) @nogc pure nothrow
     if (isIntegral!T)
 {
     // bsf doesn't give the correct result for 0.
@@ -3512,7 +3512,7 @@ unittest
 Counts the number of set bits in the binary representation of $(D value).
 For signed integers, the sign bit is included in the count.
 */
-private uint countBitsSet(T)(T value)
+private uint countBitsSet(T)(T value) @nogc pure nothrow
     if (isIntegral!T)
 {
     // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -3592,6 +3592,8 @@ private struct BitsSet(T)
 {
     static assert(T.sizeof <= 8, "bitsSet assumes T is no more than 64-bit.");
 
+@nogc pure nothrow:
+
     this(T value, size_t startIndex = 0)
     {
         _value = value;
@@ -3639,7 +3641,7 @@ Range that iterates the indices of the set bits in $(D value).
 Index 0 corresponds to the least significant bit.
 For signed integers, the highest index corresponds to the sign bit.
 */
-auto bitsSet(T)(T value)
+auto bitsSet(T)(T value) @nogc pure nothrow
     if (isIntegral!T)
 {
     return BitsSet!T(value);
