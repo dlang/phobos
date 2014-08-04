@@ -932,14 +932,14 @@ public:
         }
         else
         {
-            if (is(typeof(T.max) : uint) && T.min == 0 && convertsTo!(uint))
+            if (is(typeof(T.max) : uint) && isUnsigned!T && convertsTo!(uint))
                 result = mixin("get!(uint) " ~ op ~ " other");
-            else if (is(typeof(T.max) : int) && T.min < 0 && convertsTo!(int))
+            else if (is(typeof(T.max) : int) && !isUnsigned!T && convertsTo!(int))
                 result = mixin("get!(int) " ~ op ~ " other");
-            else if (is(typeof(T.max) : ulong) && T.min == 0
+            else if (is(typeof(T.max) : ulong) && isUnsigned!T
                      && convertsTo!(ulong))
                 result = mixin("get!(ulong) " ~ op ~ " other");
-            else if (is(typeof(T.max) : long) && T.min < 0 && convertsTo!(long))
+            else if (is(typeof(T.max) : long) && !isUnsigned!T && convertsTo!(long))
                 result = mixin("get!(long) " ~ op ~ " other");
             else if (is(T : float) && convertsTo!(float))
                 result = mixin("get!(float) " ~ op ~ " other");
