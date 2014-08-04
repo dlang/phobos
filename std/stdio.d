@@ -2861,7 +2861,8 @@ void writeln(T...)(T args)
         w.put("\n");
 
         // Issue 13241
-        .trustedStdout.flush();
+        version(DIGITAL_MARS_STDIO)
+            .trustedStdout.flush();
     }
     else
     {
