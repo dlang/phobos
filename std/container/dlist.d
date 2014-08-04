@@ -268,6 +268,7 @@ Appends the contents of the argument $(D rhs) into $(D this).
     }
 
 /// ditto
+    deprecated("Please, use `dlist ~= dlist[];` instead.")
     DList opOpAssign(string op)(DList rhs)
     if (op == "~")
     {
