@@ -352,8 +352,8 @@ For more details about short options, refer also to the next section.
 $(B Bundling)
 
 Single-letter options can be bundled together, i.e. "-abc" is the same as
-$(D "-a -b -c"). By default, this confusing option is turned off. You can
-turn it on with the $(D std.getopt.config.bundling) directive:
+$(D "-a -b -c"). By default, this option is turned off. You can turn it on
+with the $(D std.getopt.config.bundling) directive:
 
 ---------
 bool foo, bar;
