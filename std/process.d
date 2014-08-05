@@ -398,12 +398,14 @@ private Pid spawnProcessImpl(in char[][] args,
             throw new ProcessException("Not a directory: " ~ cast(string)workDir);
     }
 
+    int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
+
     // Get the file descriptors of the streams.
     // These could potentially be invalid, but that is OK.  If so, later calls
     // to dup2() and close() will just silently fail without causing any harm.
-    auto stdinFD  = core.stdc.stdio.fileno(stdin.getFP());
-    auto stdoutFD = core.stdc.stdio.fileno(stdout.getFP());
-    auto stderrFD = core.stdc.stdio.fileno(stderr.getFP());
+    auto stdinFD  = getFD(stdin);
+    auto stdoutFD = getFD(stdout);
+    auto stderrFD = getFD(stderr);
 
     auto id = fork();
     if (id < 0)
@@ -466,11 +468,14 @@ private Pid spawnProcessImpl(in char[][] args,
     else
     {
         // Parent process:  Close streams and return.
-        if (stdinFD  > STDERR_FILENO && !(config & Config.retainStdin))
+        if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
+                                            && stdinFD  != getFD(std.stdio.stdin ))
             stdin.close();
-        if (stdoutFD > STDERR_FILENO && !(config & Config.retainStdout))
+        if (!(config & Config.retainStdout) && stdoutFD > STDERR_FILENO
+                                            && stdoutFD != getFD(std.stdio.stdout))
             stdout.close();
-        if (stderrFD > STDERR_FILENO && !(config & Config.retainStderr))
+        if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
+                                            && stderrFD != getFD(std.stdio.stderr))
             stderr.close();
         return new Pid(id);
     }
@@ -509,12 +514,14 @@ private Pid spawnProcessImpl(in char[] commandLine,
     startinfo.cb = startinfo.sizeof;
     startinfo.dwFlags = STARTF_USESTDHANDLES;
 
+    static int getFD(ref File f) { return f.isOpen ? f.fileno() : -1; }
+
     // Extract file descriptors and HANDLEs from the streams and make the
     // handles inheritable.
     static void prepareStream(ref File file, DWORD stdHandle, string which,
                               out int fileDescriptor, out HANDLE handle)
     {
-        fileDescriptor = file.isOpen ? file.fileno() : -1;
+        fileDescriptor = getFD(file);
         if (fileDescriptor < 0)   handle = GetStdHandle(stdHandle);
         else                      handle = file.windowsHandle;
 
@@ -550,11 +557,14 @@ private Pid spawnProcessImpl(in char[] commandLine,
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
-    if (stdinFD  > STDERR_FILENO && !(config & Config.retainStdin))
+    if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
+                                        && stdinFD  != getFD(std.stdio.stdin ))
         stdin.close();
-    if (stdoutFD > STDERR_FILENO && !(config & Config.retainStdout))
+    if (!(config & Config.retainStdout) && stdoutFD > STDERR_FILENO
+                                        && stdoutFD != getFD(std.stdio.stdout))
         stdout.close();
-    if (stderrFD > STDERR_FILENO && !(config & Config.retainStderr))
+    if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
+                                        && stderrFD != getFD(std.stdio.stderr))
         stderr.close();
 
     // close the thread handle in the process info structure
@@ -856,6 +866,29 @@ unittest // Specifying a bad working directory.
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
 }
 
+unittest // Reopening the standard streams (issue 13258)
+{
+    void fun()
+    {
+        spawnShell("echo foo").wait();
+        spawnShell("echo bar").wait();
+    }
+
+    auto tmpFile = uniqueTempPath();
+    scope(exit) if (exists(tmpFile)) remove(tmpFile);
+
+    {
+        auto oldOut = std.stdio.stdout;
+        scope(exit) std.stdio.stdout = oldOut;
+
+        std.stdio.stdout = File(tmpFile, "w");
+        fun();
+        std.stdio.stdout.close();
+    }
+
+    auto lines = readText(tmpFile).splitLines();
+    assert(lines == ["foo", "bar"]);
+}
 
 /**
 A variation on $(LREF spawnProcess) that runs the given _command through
