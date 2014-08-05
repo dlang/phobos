@@ -935,6 +935,49 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
     }
 }
 
+/**
+ * Calls the delegate with the value/values as an argument.
+ * Useful for slightly more functional coding style,
+ * allows defining filter lambdas inside
+ */
+auto call(alias dlg, T)(T value)
+    if (is(typeof(unaryFun!dlg(value))))
+{
+    alias Fun = unaryFun!dlg;
+    return Fun(value);
+}
+
+///
+unittest
+{
+    assert(2.call!(a => 2 * a) == 4);
+
+    static dg = (int x) => x * x * x + 2 * x * x +3 * x;
+    assert((1 + 2 * 3).call!dg == dg(1 + 2 * 3));
+}
+
+unittest
+{
+    assert(2.call!"2*a" == 4);
+}
+
+import std.typecons : Tuple;
+
+/// ditto
+auto call(alias dlg, Args)(Args args)
+    if (   is(Args == Tuple!T, T...)
+        && is(typeof(dlg(args.expand))))
+{
+    return dlg(args.expand);
+}
+
+///
+unittest
+{
+    import std.typecons : tuple;
+    assert(tuple(1, 2).call!((a, b) => a + b) == 3);
+}
+
 unittest {
     static int inc(ref uint num) {
         num++;
