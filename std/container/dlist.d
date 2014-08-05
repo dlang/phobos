@@ -244,12 +244,6 @@ argument $(D rhs).
         ret.insertBack(rhs);
         return ret;
     }
-    /// ditto
-    DList opBinary(string op)(DList rhs)
-    if (op == "~")
-    {
-        return ret ~ rhs[];
-    }
 
 /**
 Returns a new $(D DList) that's the concatenation of the argument $(D lhs)
@@ -274,6 +268,7 @@ Appends the contents of the argument $(D rhs) into $(D this).
     }
 
 /// ditto
+    deprecated("Please, use `dlist ~= dlist[];` instead.")
     DList opOpAssign(string op)(DList rhs)
     if (op == "~")
     {
