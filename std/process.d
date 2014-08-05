@@ -2117,8 +2117,9 @@ $(D "/bin/sh").
 */
 @property string userShell() @safe //TODO: nothrow
 {
-    version (Windows)    return environment.get("COMSPEC", "cmd.exe");
-    else version (Posix) return environment.get("SHELL", "/bin/sh");
+    version (Windows)      return environment.get("COMSPEC", "cmd.exe");
+    else version (Android) return environment.get("SHELL", "/system/bin/sh");
+    else version (Posix)   return environment.get("SHELL", "/bin/sh");
 }
 
 

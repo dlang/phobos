@@ -1950,11 +1950,12 @@ static if (is(sockaddr_un))
     unittest
     {
         import core.stdc.stdio : remove;
+        import std.file: deleteme;
 
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;
 
-        auto name = "unix-address-family-unittest-socket-name";
+        auto name = std.file.deleteme ~ "-unix-socket";
         auto address = new UnixAddress(name);
 
         auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);

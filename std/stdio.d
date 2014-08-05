@@ -1967,6 +1967,17 @@ $(XREF file,readText)
             auto file = File(deleteme, "w+");
             scope(success) std.file.remove(deleteme);
         }
+        else version(Android)
+        {
+            static import std.file;
+
+            /* the C function tmpfile doesn't work when called from a shared
+               library apk:
+               https://code.google.com/p/android/issues/detail?id=66815 */
+            auto deleteme = testFilename();
+            auto file = File(deleteme, "w+");
+            scope(success) std.file.remove(deleteme);
+        }
         else
             auto file = File.tmpfile();
         file.write("1\n2\n3\n");

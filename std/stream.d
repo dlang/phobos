@@ -1441,7 +1441,7 @@ class Stream : InputStream, OutputStream {
 
   unittest { // unit test for Issue 3363
     import std.stdio;
-    immutable fileName ="issue3363.txt"; 
+    immutable fileName = std.file.deleteme ~ "-issue3363.txt";
     auto w = File(fileName, "w");
     scope (exit) remove(fileName.ptr);
     w.write("one two three");
@@ -2147,7 +2147,8 @@ class File: Stream {
   unittest {
     File file = new File;
     int i = 666;
-    file.create("stream.$$$");
+    auto stream_file = std.file.deleteme ~ "-stream.$$$";
+    file.create(stream_file);
     // should be ok to write
     assert(file.writeable);
     file.writeLine("Testing stream.d:");
@@ -2163,7 +2164,7 @@ class File: Stream {
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
-    file.open("stream.$$$");
+    file.open(stream_file);
     // should be ok to read
     assert(file.readable);
     assert(file.available == file.size);
@@ -2189,7 +2190,7 @@ class File: Stream {
     // we must be at the end of file
     assert(file.eof);
     file.close();
-    file.open("stream.$$$",FileMode.OutNew | FileMode.In);
+    file.open(stream_file,FileMode.OutNew | FileMode.In);
     file.writeLine("Testing stream.d:");
     file.writeLine("Another line");
     file.writeLine("");
@@ -2214,7 +2215,7 @@ class File: Stream {
     assert( lines[2] == "");
     assert( lines[3] == "That was blank");
     file.close();
-    remove("stream.$$$");
+    remove(toStringz(stream_file));
   }
 }
 
@@ -2264,7 +2265,8 @@ class BufferedFile: BufferedStream {
   unittest {
     BufferedFile file = new BufferedFile;
     int i = 666;
-    file.create("stream.$$$");
+    auto stream_file = std.file.deleteme ~ "-stream.$$$";
+    file.create(stream_file);
     // should be ok to write
     assert(file.writeable);
     file.writeLine("Testing stream.d:");
@@ -2281,7 +2283,7 @@ class BufferedFile: BufferedStream {
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
-    file.open("stream.$$$");
+    file.open(stream_file);
     // should be ok to read
     assert(file.readable);
     // test getc/ungetc and size
@@ -2306,7 +2308,7 @@ class BufferedFile: BufferedStream {
     // we must be at the end of file
     assert(file.eof);
     file.close();
-    remove("stream.$$$");
+    remove(toStringz(stream_file));
   }
 
 }
@@ -2858,7 +2860,8 @@ class MmFileStream : TArrayStream!(MmFile) {
 }
 
 unittest {
-  MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,100,null);
+  auto test_file = std.file.deleteme ~ "-testing.txt";
+  MmFile mf = new MmFile(test_file,MmFile.Mode.readWriteNew,100,null);
   MmFileStream m;
   m = new MmFileStream (mf);
   m.writeString ("Hello, world");
@@ -2878,13 +2881,13 @@ unittest {
   m.writeString ("Foo foo foo foo foo foo foo");
   assert (m.position == 42);
   m.close();
-  mf = new MmFile("testing.txt");
+  mf = new MmFile(test_file);
   m = new MmFileStream (mf);
   assert (!m.writeable);
   char[] str = m.readString(12);
   assert (str == "Hello, wield");
   m.close();
-  std.file.remove("testing.txt");
+  std.file.remove(test_file);
 }
 
 
