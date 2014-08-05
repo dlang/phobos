@@ -60,7 +60,7 @@ elements in $(D rhs).
     bool opEquals()(ref const DList rhs) const
     if (is(typeof(front == front)))
     {
-        alias lhs = this;
+        const lhs = this;
         const lroot = lhs._root;
         const rroot = rhs._root;
 
