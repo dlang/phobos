@@ -678,7 +678,9 @@ unittest
 }
 
 
-// Return true if a and b have opposite sign.
+/**
+ * Return true if a and b have opposite sign.
+ */
 private bool oppositeSigns(T1, T2)(T1 a, T2 b)
 {
     return signbit(a) != signbit(b);
