@@ -99,6 +99,17 @@ public:
 
         return this;
     }
+    ///
+    unittest
+    {
+        auto q = CircularQueue!int(5);
+        assert(q.length == 0);
+
+        q.enqueue(100);
+
+        assert(q.length == 1);
+    }
+
     /++ Retrieves the item at the front of the queue.
      + 
      + Returns: The item at the front of the queue.
@@ -145,6 +156,18 @@ public:
         item = rval;
         return this;
     }
+    ///
+    unittest
+    {
+        auto q = CircularQueue!int(5);
+        enqueue(100);
+
+        int val;
+        q.dequeue(val);
+
+        assert(val == 100);
+    }
+
     /++ Removes an item from the queue and returns the
      + queue the item was removed from.
      + 
