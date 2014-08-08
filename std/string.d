@@ -1063,6 +1063,8 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
     then $(D -1) is returned.
 
     Params:
+	haystack = String to search for needles in.
+	needles = Strings to search for in haystack.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
@@ -1128,10 +1130,12 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     thrown.
 
     Params:
-        cs = Indicates whether the comparisons are case sensitive.
+	haystack = String to search for needles in.
+	needles = Strings to search for in haystack.
         startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
         the startIdx is greater equal the length of haystack the functions
         returns $(D -1).
+        cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
         in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
@@ -1211,6 +1215,8 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     then $(D -1) is returned.
 
     Params:
+	haystack = String to search for needles in.
+	needles = Strings to search for in haystack.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
@@ -1291,10 +1297,12 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     Params:
-        cs = Indicates whether the comparisons are case sensitive.
+	haystack = String to search for needles in.
+	needles = Strings to search for in haystack.
         stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
         the stopIdx is greater equal the length of haystack the functions
         returns $(D -1).
+        cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t stopIdx,
@@ -1376,6 +1384,8 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     element of $(D needles) $(D -1) is returned.
 
     Params:
+	haystack = String to search for needles in.
+	needles = Strings to search for in haystack.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1443,10 +1453,12 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     element of $(D needles) $(D -1) is returned.
 
     Params:
-        cs = Indicates whether the comparisons are case sensitive.
+	haystack = String to search for needles in.
+	needles = Strings to search for in haystack.
         startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
         the startIdx is greater equal the length of haystack the functions
         returns $(D -1).
+        cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t startIdx,
@@ -1522,6 +1534,8 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     $(D haystack) are element of $(D needles) $(D -1) is returned.
 
     Params:
+	haystack = String to search for needles in.
+	needles = Strings to search for in haystack.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1589,10 +1603,12 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     $(D haystack) are element of $(D needles) $(D -1) is returned.
 
     Params:
-        cs = Indicates whether the comparisons are case sensitive.
-        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx] If
+	haystack = String to search for needles in.
+	needles = Strings to search for in haystack.
+        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
         the stopIdx is greater equal the length of haystack the functions
         returns $(D -1).
+        cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t stopIdx,
