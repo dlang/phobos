@@ -1744,78 +1744,78 @@ public:
         }
     }
 
-    /**
-    A semi-lazy parallel map that can be used for pipelining.  The map
-    functions are evaluated for the first $(D bufSize) elements and stored in a
-    buffer and made available to $(D popFront).  Meanwhile, in the
-    background a second buffer of the same size is filled.  When the first
-    buffer is exhausted, it is swapped with the second buffer and filled while
-    the values from what was originally the second buffer are read.  This
-    implementation allows for elements to be written to the buffer without
-    the need for atomic operations or synchronization for each write, and
-    enables the mapping function to be evaluated efficiently in parallel.
-
-    $(D map) has more overhead than the simpler procedure used by $(D amap)
-    but avoids the need to keep all results in memory simultaneously and works
-    with non-random access ranges.
-
-    Params:
-
-    source = The input range to be mapped.  If $(D source) is not random
-    access it will be lazily buffered to an array of size $(D bufSize) before
-    the map function is evaluated.  (For an exception to this rule, see Notes.)
-
-    bufSize = The size of the buffer to store the evaluated elements.
-
-    workUnitSize = The number of elements to evaluate in a single
-    $(D Task).  Must be less than or equal to $(D bufSize), and
-    should be a fraction of $(D bufSize) such that all worker threads can be
-    used.  If the default of size_t.max is used, workUnitSize will be set to
-    the pool-wide default.
-
-    Returns:  An input range representing the results of the map.  This range
-              has a length iff $(D source) has a length.
-
-    Notes:
-
-    If a range returned by $(D map) or $(D asyncBuf) is used as an input to
-    $(D map), then as an optimization the copying from the output buffer
-    of the first range to the input buffer of the second range is elided, even
-    though the ranges returned by $(D map) and $(D asyncBuf) are non-random
-    access ranges.  This means that the $(D bufSize) parameter passed to the
-    current call to $(D map) will be ignored and the size of the buffer
-    will be the buffer size of $(D source).
-
-    Examples:
-    ---
-    // Pipeline reading a file, converting each line
-    // to a number, taking the logarithms of the numbers,
-    // and performing the additions necessary to find
-    // the sum of the logarithms.
-
-    auto lineRange = File("numberList.txt").byLine();
-    auto dupedLines = std.algorithm.map!"a.idup"(lineRange);
-    auto nums = taskPool.map!(to!double)(dupedLines);
-    auto logs = taskPool.map!log10(nums);
-
-    double sum = 0;
-    foreach(elem; logs)
-    {
-        sum += elem;
-    }
-    ---
-
-    $(B Exception Handling):
-
-    Any exceptions thrown while iterating over $(D source)
-    or computing the map function are re-thrown on a call to $(D popFront) or,
-    if thrown during construction, are simply allowed to propagate to the
-    caller.  In the case of exceptions thrown while computing the map function,
-    the exceptions are chained as in $(D TaskPool.amap).
-    */
+    ///
     template map(functions...)
     {
-        ///
+        /**
+        A semi-lazy parallel map that can be used for pipelining.  The map
+        functions are evaluated for the first $(D bufSize) elements and stored in a
+        buffer and made available to $(D popFront).  Meanwhile, in the
+        background a second buffer of the same size is filled.  When the first
+        buffer is exhausted, it is swapped with the second buffer and filled while
+        the values from what was originally the second buffer are read.  This
+        implementation allows for elements to be written to the buffer without
+        the need for atomic operations or synchronization for each write, and
+        enables the mapping function to be evaluated efficiently in parallel.
+
+        $(D map) has more overhead than the simpler procedure used by $(D amap)
+        but avoids the need to keep all results in memory simultaneously and works
+        with non-random access ranges.
+
+        Params:
+
+        source = The input range to be mapped.  If $(D source) is not random
+        access it will be lazily buffered to an array of size $(D bufSize) before
+        the map function is evaluated.  (For an exception to this rule, see Notes.)
+
+        bufSize = The size of the buffer to store the evaluated elements.
+
+        workUnitSize = The number of elements to evaluate in a single
+        $(D Task).  Must be less than or equal to $(D bufSize), and
+        should be a fraction of $(D bufSize) such that all worker threads can be
+        used.  If the default of size_t.max is used, workUnitSize will be set to
+        the pool-wide default.
+
+        Returns:  An input range representing the results of the map.  This range
+                  has a length iff $(D source) has a length.
+
+        Notes:
+
+        If a range returned by $(D map) or $(D asyncBuf) is used as an input to
+        $(D map), then as an optimization the copying from the output buffer
+        of the first range to the input buffer of the second range is elided, even
+        though the ranges returned by $(D map) and $(D asyncBuf) are non-random
+        access ranges.  This means that the $(D bufSize) parameter passed to the
+        current call to $(D map) will be ignored and the size of the buffer
+        will be the buffer size of $(D source).
+
+        Examples:
+        ---
+        // Pipeline reading a file, converting each line
+        // to a number, taking the logarithms of the numbers,
+        // and performing the additions necessary to find
+        // the sum of the logarithms.
+
+        auto lineRange = File("numberList.txt").byLine();
+        auto dupedLines = std.algorithm.map!"a.idup"(lineRange);
+        auto nums = taskPool.map!(to!double)(dupedLines);
+        auto logs = taskPool.map!log10(nums);
+
+        double sum = 0;
+        foreach(elem; logs)
+        {
+            sum += elem;
+        }
+        ---
+
+        $(B Exception Handling):
+
+        Any exceptions thrown while iterating over $(D source)
+        or computing the map function are re-thrown on a call to $(D popFront) or,
+        if thrown during construction, are simply allowed to propagate to the
+        caller.  In the case of exceptions thrown while computing the map function,
+        the exceptions are chained as in $(D TaskPool.amap).
+        */
         auto
         map(S)(S source, size_t bufSize = 100, size_t workUnitSize = size_t.max)
         if(isInputRange!S)
