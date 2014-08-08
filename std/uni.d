@@ -7861,39 +7861,19 @@ else
 
 // trusted -> avoid bounds check
 @trusted pure nothrow
-ushort indexLookup(alias trie)(dchar c)
 {
-    return trie[c];
-}
+    // hide template instances behind functions (Bugzilla 13232)
+    ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
+    ushort toLowerSimpleIndex(dchar c) { return toLowerSimpleIndexTrie[c]; }
+    dchar toLowerTab(size_t idx) { return toLowerTable[idx]; }
 
-alias toLowerIndex = indexLookup!toLowerIndexTrie;
-alias toLowerSimpleIndex = indexLookup!toLowerSimpleIndexTrie;
+    ushort toTitleIndex(dchar c) { return toTitleIndexTrie[c]; }
+    ushort toTitleSimpleIndex(dchar c) { return toTitleSimpleIndexTrie[c]; }
+    dchar toTitleTab(size_t idx) { return toTitleTable[idx]; }
 
-// trusted -> avoid bounds check
-@trusted pure nothrow
-dchar toLowerTab(size_t idx)
-{
-    return toLowerTable[idx];
-}
-
-alias toTitleIndex = indexLookup!toTitleIndexTrie;
-alias toTitleSimpleIndex = indexLookup!toTitleSimpleIndexTrie;
-
-// trusted -> avoid bounds check
-@trusted pure nothrow
-dchar toTitleTab(size_t idx)
-{
-    return toTitleTable[idx];
-}
-
-alias toUpperIndex = indexLookup!toUpperIndexTrie;
-alias toUpperSimpleIndex = indexLookup!toUpperSimpleIndexTrie;
-
-// trusted -> avoid bounds check
-@trusted pure nothrow
-dchar toUpperTab(size_t idx)
-{
-    return toUpperTable[idx];
+    ushort toUpperIndex(dchar c) { return toUpperIndexTrie[c]; }
+    ushort toUpperSimpleIndex(dchar c) { return toUpperSimpleIndexTrie[c]; }
+    dchar toUpperTab(size_t idx) { return toUpperTable[idx]; }
 }
 
 public:
@@ -9005,4 +8985,3 @@ private:
 }
 
 }// version(!std_uni_bootstrap)
-
