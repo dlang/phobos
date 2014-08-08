@@ -2496,7 +2496,7 @@ version(Posix) unittest
     mkdirRecurse(d);
     version(Android) string link_cmd = "ln -s ";
     else string link_cmd = "ln -sf ";
-    std.process.system(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
+    std.process.executeShell(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
     enforce(!exists(deleteme));
 }

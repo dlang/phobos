@@ -2166,7 +2166,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 @property int thisProcessID() @trusted //TODO: @safe nothrow
 {
     version (Windows)    return GetCurrentProcessId();
-    else version (Posix) return getpid();
+    else version (Posix) return core.sys.posix.unistd.getpid();
 }
 
 
@@ -3016,8 +3016,8 @@ version (unittest)
 /**
    Execute $(D command) in a _command shell.
 
-   $(RED This function is scheduled for deprecation.  Please use
-   $(LREF spawnShell) or $(LREF executeShell) instead.)
+   $(RED Deprecated. Please use $(LREF executeShell) instead.
+         This function will be removed in August 2015.)
 
    Returns: If $(D command) is null, returns nonzero if the _command
    interpreter is found, and zero otherwise. If $(D command) is not
@@ -3032,7 +3032,7 @@ version (unittest)
    system) automatically extracts the exit status.
 
 */
-
+deprecated("Please use executeShell instead")
 int system(string command)
 {
     if (!command.ptr) return std.c.process.system(null);
@@ -3082,6 +3082,7 @@ private void toAStringz(in string[] a, const(char)**az)
 alias P_WAIT = std.c.process._P_WAIT;
 alias P_NOWAIT = std.c.process._P_NOWAIT;
 
+deprecated("Please use spawnProcess instead")
 int spawnvp(int mode, string pathname, string[] argv)
 {
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
@@ -3104,6 +3105,8 @@ version (Posix)
 {
 private import core.sys.posix.unistd;
 private import core.sys.posix.sys.wait;
+
+deprecated("Please use spawnProcess instead")
 int _spawnvp(int mode, in char *pathname, in char **argv)
 {
     int retval = 0;
@@ -3272,14 +3275,15 @@ else
  * Returns the process ID of the calling process, which is guaranteed to be
  * unique on the system. This call is always successful.
  *
- * $(RED This function is scheduled for deprecation.  Please use
- * $(LREF thisProcessID) instead.)
+ * $(RED Deprecated.  Please use $(LREF thisProcessID) instead.
+ *       This function will be removed in August 2015.)
  *
  * Example:
  * ---
  * writefln("Current process id: %s", getpid());
  * ---
  */
+deprecated("Please use thisProcessID instead")
 alias getpid = core.thread.getpid;
 
 /**
@@ -3287,8 +3291,8 @@ alias getpid = core.thread.getpid;
    the process could not be started or exits with an error code,
    throws ErrnoException.
 
-   $(RED This function is scheduled for deprecation.  Please use
-   $(LREF executeShell) instead.)
+   $(RED Deprecated.  Please use $(LREF executeShell) instead.
+         This function will be removed in August 2015.)
 
    Example:
 
@@ -3303,6 +3307,7 @@ alias getpid = core.thread.getpid;
    ... use f ...
    ----
 */
+deprecated("Please use executeShell instead")
 string shell(string cmd)
 {
     version(Windows)
@@ -3340,7 +3345,7 @@ string shell(string cmd)
         static assert(0, "shell not implemented for this OS.");
 }
 
-unittest
+deprecated unittest
 {
     auto x = shell("echo wyda");
     // @@@ This fails on wine
@@ -3359,10 +3364,12 @@ Gets the value of environment variable $(D name) as a string. Calls
 $(LINK2 std_c_stdlib.html#_getenv, std.c.stdlib._getenv)
 internally.
 
-   $(RED This function is scheduled for deprecation.  Please use
-   $(LREF environment.get) instead.)
+$(RED Deprecated. Please use $(LREF environment.opIndex) or
+      $(LREF environment.get) instead.  This function will be
+      removed in August 2015.)
 */
 
+deprecated("Please use environment.opIndex or environment.get instead")
 string getenv(in char[] name)
 {
     // Cache the last call's result
@@ -3381,11 +3388,13 @@ overwrite) is false, returns normally. Otherwise, it throws an
 exception. Calls $(LINK2 std_c_stdlib.html#_setenv,
 std.c.stdlib._setenv) internally.
 
-   $(RED This function is scheduled for deprecation.  Please use
-   $(LREF environment.opIndexAssign) instead.)
+$(RED Deprecated. Please use $(LREF environment.opIndexAssign) instead.
+      This function will be removed in August 2015.)
 */
-version(StdDdoc) void setenv(in char[] name, in char[] value, bool overwrite);
-else version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
+version(StdDdoc) deprecated void setenv(in char[] name, in char[] value, bool overwrite);
+else version(Posix)
+    deprecated("Please use environment.opIndexAssign instead.")
+    void setenv(in char[] name, in char[] value, bool overwrite)
 {
     errnoEnforce(
         std.c.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
@@ -3395,16 +3404,18 @@ else version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
 Removes variable $(D name) from the environment. Calls $(LINK2
 std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally.
 
-   $(RED This function is scheduled for deprecation.  Please use
-   $(LREF environment.remove) instead.)
+$(RED Deprecated. Please use $(LREF environment.remove) instead.
+      This function will be removed in August 2015.)
 */
-version(StdDdoc) void unsetenv(in char[] name);
-else version(Posix) void unsetenv(in char[] name)
+version(StdDdoc) deprecated void unsetenv(in char[] name);
+else version(Posix)
+    deprecated("Please use environment.remove instead")
+    void unsetenv(in char[] name)
 {
     errnoEnforce(std.c.stdlib.unsetenv(toStringz(name)) == 0);
 }
 
-version (Posix) unittest
+version (Posix) deprecated unittest
 {
     setenv("wyda", "geeba", true);
     assert(getenv("wyda") == "geeba");
