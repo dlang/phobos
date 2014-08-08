@@ -1623,7 +1623,7 @@ unittest
  * of randomness.
  *
  * $(D uniform01) offers a faster generation of random variates than
- * the equivalent $(D uniform!"[)"(0.0, 1.0)) and so may be preferred
+ * the equivalent $(D uniform!"[$(RPAREN)"(0.0, 1.0)) and so may be preferred
  * for some applications.
  */
 T uniform01(T = double)()
