@@ -109,51 +109,55 @@ void main(string[] args)
  Depending on the type of the pointer being bound, $(D getopt)
  recognizes the following kinds of options:
 
- $(OL $(LI $(I Boolean options). A lone argument sets the option to $(D true).
- Additionally $(B true) or $(B false) can be set within the option separated with
- an "=" sign:
+ $(OL
+    $(LI $(I Boolean options). A lone argument sets the option to $(D true).
+    Additionally $(B true) or $(B false) can be set within the option separated
+    with an "=" sign:
 
 ---------
   bool verbose = false, debugging = true;
   getopt(args, "verbose", &verbose, "debug", &debugging);
 ---------
 
- To set $(D verbose) to $(D true), invoke the program with either $(D
- --verbose) or $(D --verbose=true).
+    To set $(D verbose) to $(D true), invoke the program with either
+    $(D --verbose) or $(D --verbose=true).
 
- To set $(D debugging) to $(D false), invoke the program with $(D --debugging=false).
-
- )$(LI $(I Numeric options.) If an option is bound to a numeric type, a
- number is expected as the next option, or right within the option
- separated with an "=" sign:
+    To set $(D debugging) to $(D false), invoke the program with
+    $(D --debugging=false).
+    )
+    
+    $(LI $(I Numeric options.) If an option is bound to a numeric type, a
+    number is expected as the next option, or right within the option separated
+    with an "=" sign:
 
 ---------
   uint timeout;
   getopt(args, "timeout", &timeout);
 ---------
 
-To set $(D timeout) to $(D 5), invoke the program with either $(D
---timeout=5) or $(D --timeout 5).)
+    To set $(D timeout) to $(D 5), invoke the program with either
+    $(D --timeout=5) or $(D --timeout 5).
+    )
 
- $(UL $(LI $(I Incremental options.) If an option name has a "+" suffix and
- is bound to a numeric type, then the option's value tracks the number
- of times the option occurred on the command line:
+    $(LI $(I Incremental options.) If an option name has a "+" suffix and is
+    bound to a numeric type, then the option's value tracks the number of times
+    the option occurred on the command line:
 
 ---------
   uint paranoid;
   getopt(args, "paranoid+", &paranoid);
 ---------
 
- Invoking the program with "--paranoid --paranoid --paranoid" will set
- $(D paranoid) to 3. Note that an incremental option never
- expects a parameter, e.g. in the command line "--paranoid 42
- --paranoid", the "42" does not set $(D paranoid) to 42;
- instead, $(D paranoid) is set to 2 and "42" is not considered
- as part of the normal program arguments.)))
+    Invoking the program with "--paranoid --paranoid --paranoid" will set $(D
+    paranoid) to 3. Note that an incremental option never expects a parameter,
+    e.g. in the command line "--paranoid 42 --paranoid", the "42" does not set
+    $(D paranoid) to 42; instead, $(D paranoid) is set to 2 and "42" is not
+    considered as part of the normal program arguments.
+    )
 
- $(LI $(I Enum options.) If an option is bound to an enum, an enum symbol as a
- string is expected as the next option, or right within the option separated
- with an "=" sign:
+    $(LI $(I Enum options.) If an option is bound to an enum, an enum symbol as
+    a string is expected as the next option, or right within the option
+    separated with an "=" sign:
 
 ---------
   enum Color { no, yes };
@@ -161,36 +165,38 @@ To set $(D timeout) to $(D 5), invoke the program with either $(D
   getopt(args, "color", &color);
 ---------
 
-To set $(D color) to $(D Color.yes), invoke the program with either $(D
---color=yes) or $(D --color yes).)
+    To set $(D color) to $(D Color.yes), invoke the program with either
+    $(D --color=yes) or $(D --color yes).
+    )
 
- $(LI $(I String options.) If an option is bound to a string, a string
- is expected as the next option, or right within the option separated
- with an "=" sign:
+    $(LI $(I String options.) If an option is bound to a string, a string is
+    expected as the next option, or right within the option separated with an
+    "=" sign:
 
 ---------
 string outputFile;
 getopt(args, "output", &outputFile);
 ---------
 
- Invoking the program with "--output=myfile.txt" or "--output
- myfile.txt" will set $(D outputFile) to "myfile.txt". If you want to
- pass a string containing spaces, you need to use the quoting that is
- appropriate to your shell, e.g. --output='my file.txt'.)
+    Invoking the program with "--output=myfile.txt" or "--output myfile.txt"
+    will set $(D outputFile) to "myfile.txt". If you want to pass a string
+    containing spaces, you need to use the quoting that is appropriate to your
+    shell, e.g. --output='my file.txt'.
+    )
 
- $(LI $(I Array options.) If an option is bound to an array, a new
- element is appended to the array each time the option occurs:
+    $(LI $(I Array options.) If an option is bound to an array, a new element
+    is appended to the array each time the option occurs:
 
 ---------
 string[] outputFiles;
 getopt(args, "output", &outputFiles);
 ---------
 
- Invoking the program with "--output=myfile.txt --output=yourfile.txt"
- or "--output myfile.txt --output yourfile.txt" will set $(D
- outputFiles) to [ "myfile.txt", "yourfile.txt" ].
+    Invoking the program with "--output=myfile.txt --output=yourfile.txt" or
+    "--output myfile.txt --output yourfile.txt" will set $(D outputFiles) to
+    $(D [ "myfile.txt", "yourfile.txt" ]).
 
- Alternatively you can set $(LREF arraySep) as the element separator:
+    Alternatively you can set $(LREF arraySep) as the element separator:
 
 ---------
 string[] outputFiles;
@@ -198,22 +204,22 @@ arraySep = ",";  // defaults to "", separation by whitespace
 getopt(args, "output", &outputFiles);
 ---------
 
- With the above code you can invoke the program with
- "--output=myfile.txt,yourfile.txt", or "--output myfile.txt,yourfile.txt".)
+    With the above code you can invoke the program with
+    "--output=myfile.txt,yourfile.txt", or "--output myfile.txt,yourfile.txt".)
 
- $(LI $(I Hash options.) If an option is bound to an associative
- array, a string of the form "name=value" is expected as the next
- option, or right within the option separated with an "=" sign:
+    $(LI $(I Hash options.) If an option is bound to an associative array, a
+    string of the form "name=value" is expected as the next option, or right
+    within the option separated with an "=" sign:
 
 ---------
 double[string] tuningParms;
 getopt(args, "tune", &tuningParms);
 ---------
 
-Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
-set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].
+    Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will set
+    $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].
 
-Alternatively you can set $(LREF arraySep) as the element separator:
+    Alternatively you can set $(LREF arraySep) as the element separator:
 
 ---------
 double[string] tuningParms;
@@ -221,20 +227,26 @@ arraySep = ",";  // defaults to "", separation by whitespace
 getopt(args, "tune", &tuningParms);
 ---------
 
-With the above code you can invoke the program with
-"--tune=alpha=0.5,beta=0.6", or "--tune alpha=0.5,beta=0.6".
+    With the above code you can invoke the program with
+    "--tune=alpha=0.5,beta=0.6", or "--tune alpha=0.5,beta=0.6".
 
-In general, the keys and values can be of any parsable types.)
+    In general, the keys and values can be of any parsable types.
+    )
 
-$(LI $(I Callback options.) An option can be bound to a function or
-delegate with the signature $(D void function()), $(D void function(string option)),
-$(D void function(string option, string value)), or their delegate equivalents.
+    $(LI $(I Callback options.) An option can be bound to a function or
+    delegate with the signature $(D void function()), $(D void function(string
+    option)), $(D void function(string option, string value)), or their
+    delegate equivalents.
 
-$(UL $(LI If the callback doesn't take any arguments, the callback is invoked
-whenever the option is seen.) $(LI If the callback takes one string argument,
-the option string (without the leading dash(es)) is passed to the callback.
-After that, the option string is considered handled and removed from the
-options array.
+    $(UL
+        $(LI If the callback doesn't take any arguments, the callback is
+        invoked whenever the option is seen.
+        )
+        
+        $(LI If the callback takes one string argument, the option string
+        (without the leading dash(es)) is passed to the callback.  After that,
+        the option string is considered handled and removed from the options
+        array.
 
 ---------
 void main(string[] args)
@@ -256,11 +268,13 @@ void main(string[] args)
 }
 ---------
 
-)$(LI If the callback takes two string arguments, the
-option string is handled as an option with one argument, and parsed
-accordingly. The option and its value are passed to the
-callback. After that, whatever was passed to the callback is
-considered handled and removed from the list.
+        )
+        
+        $(LI If the callback takes two string arguments, the option string is
+        handled as an option with one argument, and parsed accordingly. The
+        option and its value are passed to the callback. After that, whatever
+        was passed to the callback is considered handled and removed from the
+        list.
 
 ---------
 void main(string[] args)
@@ -282,7 +296,9 @@ void main(string[] args)
   getopt(args, "verbosity", &myHandler);
 }
 ---------
-))))
+        )
+    ))
+)
 
 $(B Options with multiple names)
 
