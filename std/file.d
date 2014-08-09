@@ -522,7 +522,7 @@ Get size of file $(D name) in bytes.
 
 Throws: $(D FileException) on error (e.g., file not found).
  */
-ulong getSize(in char[] name)
+ulong getSize(in char[] name) @safe
 {
     version(Windows)
     {
@@ -531,8 +531,16 @@ ulong getSize(in char[] name)
     }
     else version(Posix)
     {
+        static auto trustedStat(in char* path, stat_t* buf) @trusted
+        {
+            return stat(path, buf);
+        }
+        static stat_t* ptrOfLocalVariable(ref stat_t buf) @trusted
+        {
+            return &buf;
+        }
         stat_t statbuf = void;
-        cenforce(stat(toStringz(name), &statbuf) == 0, name);
+        cenforce(trustedStat(toStringz(name), ptrOfLocalVariable(statbuf)) == 0, name);
         return statbuf.st_size;
     }
 }
