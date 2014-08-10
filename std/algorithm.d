@@ -16,7 +16,7 @@ $(MYREF until) )
 )
 $(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF cmp) $(MYREF equal) $(MYREF
 levenshteinDistance) $(MYREF levenshteinDistanceAndPath) $(MYREF max)
-$(MYREF min) $(MYREF mismatch) $(MYREF clamp) )
+$(MYREF min) $(MYREF mismatch) $(MYREF clamp) $(MYREF predSwitch) )
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF filter) $(MYREF filterBidirectional)
 $(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
@@ -190,6 +190,9 @@ $(TR $(TDNW $(LREF clamp)) $(TD $(D clamp(1, 3, 6)) returns $(D
 )
 $(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("oh hi",
 "ohayo")) returns $(D tuple(" hi", "ayo")).)
+)
+$(TR $(TDNW $(LREF predSwitch)) $(TD 2.predSwitch(1, "one", 2, "two", 3,
+"three") returns $(D "two").)
 )
 $(LEADINGROW Iteration
 )
@@ -13426,4 +13429,142 @@ unittest
 
     static assert(!__traits(compiles, "a".among!("a", 42)));
     static assert(!__traits(compiles, (Object.init).among!(42, "a")));
+}
+
+/**
+Returns one of a collection of expressions based on the value of the switch
+expression.
+
+$(D choices) needs to be composed of pairs of test expressions and return
+expressions. Each test-expression is compared with $(D switchExpression) using
+$(D pred)($(D switchExpression) is the first argument) and if that yields true
+- the return expression is returned.
+
+Both the test and the return expressions are lazily evaluated.
+
+Params:
+
+switchExpression = The first argument for the predicate.
+
+choices = Pairs of test expressions and return expressions. The test
+expressions will be the second argument for the predicate, and the return
+expression will be returned if the predicate yields true with $(D
+switchExpression) and the test expression as arguments.  May also have a
+default return expression, that needs to be the last expression without a test
+expression before it. A return expression may be of void type only if it
+always throws.
+
+Returns: The return expression associated with the first test expression that
+made the predicate yield true, or the default return expression if no test
+expression matched.
+
+Throws: If there is no default return expression and the predicate does not
+yield true with any test expression - $(D SwitchError) is thrown. $(D
+SwitchError) is also thrown if a void return expression was executed without
+throwing anything.
+*/
+auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choices)
+{
+    import core.exception : SwitchError;
+    alias predicate = binaryFun!(pred);
+
+    foreach (index, ChoiceType; R)
+    {
+        //The even places in `choices` are for the predicate.
+        static if (index % 2 == 1)
+        {
+            if (predicate(switchExpression, choices[index - 1]()))
+            {
+                static if (is(typeof(choices[index]()) == void))
+                {
+                    choices[index]();
+                    throw new SwitchError("Choices that return void should throw");
+                }
+                else
+                {
+                    return choices[index]();
+                }
+            }
+        }
+    }
+
+    //In case nothing matched:
+    static if (R.length % 2 == 1) //If there is a default return expression:
+    {
+        static if (is(typeof(choices[$ - 1]()) == void))
+        {
+            choices[$ - 1]();
+            throw new SwitchError("Choices that return void should throw");
+        }
+        else
+        {
+            return choices[$ - 1]();
+        }
+    }
+    else //If there is no default return expression:
+    {
+        throw new SwitchError("Input not matched by any pattern");
+    }
+}
+
+///
+unittest
+{
+    string res = 2.predSwitch!"a < b"(
+        1, "less than 1",
+        5, "less than 5",
+        10, "less than 10",
+        "greater or equal to 10");
+
+    assert(res == "less than 5");
+
+    //The arguments are lazy, which allows us to use predSwitch to create
+    //recursive functions:
+    int factorial(int n)
+    {
+        return n.predSwitch!"a <= b"(
+            -1, {throw new Exception("Can not calculate n! for n < 0");}(),
+            0, 1, // 0! = 1
+            n * factorial(n - 1) // n! = n * (n - 1)! for n >= 0
+            );
+    }
+    assert(factorial(3) == 6);
+
+    //Void return expressions are allowed if they always throw:
+    import std.exception : assertThrown;
+    assertThrown!Exception(factorial(-9));
+}
+
+unittest
+{
+    import core.exception : SwitchError;
+    import std.exception : assertThrown;
+
+    //Nothing matches - with default return expression:
+    assert(20.predSwitch!"a < b"(
+        1, "less than 1",
+        5, "less than 5",
+        10, "less than 10",
+        "greater or equal to 10") == "greater or equal to 10");
+
+    //Nothing matches - without default return expression:
+    assertThrown!SwitchError(20.predSwitch!"a < b"(
+        1, "less than 1",
+        5, "less than 5",
+        10, "less than 10",
+        ));
+
+    //Using the default predicate:
+    assert(2.predSwitch(
+                1, "one",
+                2, "two",
+                3, "three",
+                ) == "two");
+
+    //Void return expressions must always throw:
+    assertThrown!SwitchError(1.predSwitch(
+                0, "zero",
+                1, {}(), //A void return expression that doesn't throw
+                2, "two",
+                ));
 }
