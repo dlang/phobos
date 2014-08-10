@@ -3425,45 +3425,6 @@ version (Posix) deprecated unittest
     assert(getenv("wyda") is null);
 }
 
-/* ////////////////////////////////////////////////////////////////////////// */
-
-version(MainTest)
-{
-    int main(string[] args)
-    {
-        if(args.length < 2)
-        {
-            printf("Must supply executable (and optional arguments)\n");
-
-            return 1;
-        }
-        else
-        {
-            string[]    dummy_env;
-
-            dummy_env ~= "VAL0=value";
-            dummy_env ~= "VAL1=value";
-
-/+
-            foreach(string arg; args)
-            {
-                printf("%.*s\n", arg);
-            }
-+/
-
-//          int i = execv(args[1], args[1 .. args.length]);
-//          int i = execvp(args[1], args[1 .. args.length]);
-            int i = execvpe(args[1], args[1 .. args.length], dummy_env);
-
-            printf("exec??() has returned! Error code: %d; errno: %d\n", i, /* errno */-1);
-
-            return 0;
-        }
-    }
-}
-
-/* ////////////////////////////////////////////////////////////////////////// */
-
 
 version(StdDdoc)
 {
