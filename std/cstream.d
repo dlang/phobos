@@ -151,6 +151,7 @@ class CFile : Stream {
   // run a few tests
   unittest {
     import std.file : deleteme;
+    import std.string : toStringz;
 
     auto stream_file = toStringz(std.file.deleteme ~ "-stream.txt");
     FILE* f = fopen(stream_file,"w");
