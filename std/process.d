@@ -3169,26 +3169,107 @@ private
 
 /* ========================================================== */
 
-/**
- * Replace the current process by executing a command, $(D pathname), with
- * the arguments in $(D argv).
- *
- * $(RED These functions are scheduled for deprecation.  Please use
- * $(LREF spawnShell) instead (or, alternatively, the homonymous C
- * functions declared in $(D std.c.process).))
- *
- * Typically, the first element of $(D argv) is
- * the command being executed, i.e. $(D argv[0] == pathname). The 'p'
- * versions of $(D exec) search the PATH environment variable for $(D
- * pathname). The 'e' versions additionally take the new process'
- * environment variables as an array of strings of the form key=value.
- *
- * Does not return on success (the current process will have been
- * replaced). Returns -1 on failure with no indication of the
- * underlying error.
- */
+version (StdDdoc)
+{
+    /**
+    Replaces the current process by executing a command, $(D pathname), with
+    the arguments in $(D argv).
 
-int execv(in string pathname, in string[] argv)
+    $(RED Deprecated on Windows.  From August 2015, these functions will
+    only be available on POSIX platforms. The reason is that they never
+    did what the documentation claimed they did, nor is it technically
+    possible to implement such behaviour on Windows. See below for more
+    information.)
+
+    Typically, the first element of $(D argv) is
+    the command being executed, i.e. $(D argv[0] == pathname). The 'p'
+    versions of $(D exec) search the PATH environment variable for $(D
+    pathname). The 'e' versions additionally take the new process'
+    environment variables as an array of strings of the form key=value.
+
+    Does not return on success (the current process will have been
+    replaced). Returns -1 on failure with no indication of the
+    underlying error.
+
+    Windows_specific:
+    These functions are only supported on POSIX platforms, as the Windows
+    operating systems do not provide the ability to overwrite the current
+    process image with another. In single-threaded programs it is possible
+    to approximate the effect of $(D execv*) by using $(LREF spawnProcess)
+    and terminating the current process once the child process has returned.
+    For example:
+    ---
+    auto commandLine = [ "program", "arg1", "arg2" ];
+    version (Posix)
+    {
+        execv(commandLine[0], commandLine);
+        throw new Exception("Failed to execute program");
+    }
+    else version (Windows)
+    {
+        import core.stdc.stdlib: _exit;
+        _exit(wait(spawnProcess(commandLine)));
+    }
+    ---
+    This is, however, NOT equivalent to POSIX' $(D execv*).  For one thing, the
+    executed program is started as a separate process, with all this entails.
+    Secondly, in a multithreaded program, other threads will continue to do
+    work while the current thread is waiting for the child process to complete.
+
+    A better option may sometimes be to terminate the current program immediately
+    after spawning the child process.  This is the behaviour exhibited by the
+    $(LINK2 http://msdn.microsoft.com/en-us/library/431x4c1w.aspx,$(D __exec))
+    functions in Microsoft's C runtime library, and it is how D's now-deprecated
+    Windows $(D execv*) functions work. Example:
+    ---
+    auto commandLine = [ "program", "arg1", "arg2" ];
+    version (Posix)
+    {
+        execv(commandLine[0], commandLine);
+        throw new Exception("Failed to execute program");
+    }
+    else version (Windows)
+    {
+        spawnProcess(commandLine);
+        import core.stdc.stdlib: _exit;
+        _exit(0);
+    }
+    ---
+    */
+    int execv(in string pathname, in string[] argv);
+    ///ditto
+    int execve(in string pathname, in string[] argv, in string[] envp);
+    /// ditto
+    int execvp(in string pathname, in string[] argv);
+    /// ditto
+    int execvpe(in string pathname, in string[] argv, in string[] envp);
+}
+else
+{
+    private enum execvForwarderDefs = q{
+        int execv(in string pathname, in string[] argv)
+        {
+            return execv_(pathname, argv);
+        }
+        int execve(in string pathname, in string[] argv, in string[] envp)
+        {
+            return execve_(pathname, argv, envp);
+        }
+        int execvp(in string pathname, in string[] argv)
+        {
+            return execvp_(pathname, argv);
+        }
+        int execvpe(in string pathname, in string[] argv, in string[] envp)
+        {
+            return execvpe_(pathname, argv, envp);
+        }
+    };
+    version (Posix)        mixin (execvForwarderDefs);
+    else version (Windows) mixin ("deprecated {" ~ execvForwarderDefs ~ "}");
+    else static assert (false, "Unsupported platform");
+}
+
+private int execv_(in string pathname, in string[] argv)
 {
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
@@ -3197,8 +3278,7 @@ int execv(in string pathname, in string[] argv)
     return std.c.process.execv(toStringz(pathname), argv_);
 }
 
-/** ditto */
-int execve(in string pathname, in string[] argv, in string[] envp)
+private int execve_(in string pathname, in string[] argv, in string[] envp)
 {
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
     auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
@@ -3209,8 +3289,7 @@ int execve(in string pathname, in string[] argv, in string[] envp)
     return std.c.process.execve(toStringz(pathname), argv_, envp_);
 }
 
-/** ditto */
-int execvp(in string pathname, in string[] argv)
+private int execvp_(in string pathname, in string[] argv)
 {
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
@@ -3219,8 +3298,7 @@ int execvp(in string pathname, in string[] argv)
     return std.c.process.execvp(toStringz(pathname), argv_);
 }
 
-/** ditto */
-int execvpe(in string pathname, in string[] argv, in string[] envp)
+private int execvpe_(in string pathname, in string[] argv, in string[] envp)
 {
 version(Posix)
 {
