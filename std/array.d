@@ -1409,12 +1409,12 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 }
 
 /++
-    Returns whether $(D lhs) is a slice of $(D rhs).
+    Returns whether $(D part) is a slice of $(D whole).
   +/
 @trusted
-pure nothrow bool sliceOf(T)(in T[] lhs, in T[] rhs)
+pure nothrow bool isSliceOf(T)(in T[] part, in T[] whole)
 {
-    return rhs.ptr <= lhs.ptr && lhs.ptr + lhs.length <= rhs.ptr + rhs.length;
+    return whole.ptr <= part.ptr && part.ptr + part.length <= whole.ptr + whole.length;
 }
 
 @safe pure nothrow unittest
@@ -1428,16 +1428,16 @@ pure nothrow bool sliceOf(T)(in T[] lhs, in T[] rhs)
         T e = a[3 .. $];
         T f = null;
 
-        assert(sliceOf(a, a));
-        assert(sliceOf(b, a));
-        assert(sliceOf(a, b));
-        assert(sliceOf(c, a));
-        assert(!sliceOf(a, c));
-        assert(!sliceOf(d, c));
-        assert(!sliceOf(c, d));
-        assert(!sliceOf(d, e));
-        assert(!sliceOf(e, d));
-        assert(!sliceOf(f, a));
+        assert(isSliceOf(a, a));
+        assert(isSliceOf(b, a));
+        assert(isSliceOf(a, b));
+        assert(isSliceOf(c, a));
+        assert(!isSliceOf(a, c));
+        assert(!isSliceOf(d, c));
+        assert(!isSliceOf(c, d));
+        assert(!isSliceOf(d, e));
+        assert(!isSliceOf(e, d));
+        assert(!isSliceOf(f, a));
     }
 }
 
