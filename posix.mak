@@ -276,7 +276,7 @@ $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB): $(OBJS) $(ALL_D_FILES) druntime_libs
+$(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
@@ -286,7 +286,7 @@ $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): override PIC:=-fPIC
-$(LIBSO): $(OBJS) $(ALL_D_FILES) druntime_libs $(LIBCURL_STUB)
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO) $(LIBCURL_STUB)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) $(D_FILES) $(OBJS)
 
 # stub library with soname of the real libcurl.so (Bugzilla 10710)
@@ -319,7 +319,7 @@ $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 
 ifneq (linux,$(OS))
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) druntime_libs
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKCURL) -defaultlib= -debuglib=
 
 else
@@ -327,7 +327,7 @@ else
 UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) druntime_libs $(LIBCURL_STUB)
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LIBCURL_STUB)
 	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) -defaultlib= -debuglib=
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
@@ -368,11 +368,17 @@ endif
 	cp -r etc/* $(INSTALL_DIR)/src/phobos/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
-# Target druntime_libs produces $(DRUNTIME) and $(DRUNTIMESO). See
-# http://stackoverflow.com/q/7081284 on why this setup makes sense.
-.PHONY: druntime_libs
-druntime_libs:
+# This rule additionally produces $(DRUNTIMESO). Add a fake dependency
+# to always invoke druntime's make. Use FORCE instead of .PHONY to
+# avoid rebuilding phobos when $(DRUNTIME) didn't change.
+$(DRUNTIME): FORCE
 	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS)
+
+ifeq (,$(findstring win,$(OS)))
+$(DRUNTIMESO): $(DRUNTIME)
+endif
+
+FORCE:
 
 ###########################################################
 # html documentation
