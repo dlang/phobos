@@ -319,12 +319,16 @@ $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 
 ifneq (linux,$(OS))
 
+$(UT_D_OBJS): $(DRUNTIME)
+
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKCURL) -defaultlib= -debuglib=
 
 else
 
 UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
+
+$(UT_D_OBJS): $(DRUNTIMESO)
 
 $(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LIBCURL_STUB)
