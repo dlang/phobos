@@ -2283,6 +2283,8 @@ See below for examples of use.
 */
 abstract final class environment
 {
+    version (Windows) import core.sys.windows.windows;
+
 static:
     /**
     Retrieves the value of the environment variable with the given $(D name).
@@ -2386,7 +2388,7 @@ static:
     {
         version (Windows)
         {
-            import core.sys.windows.windows, std.utf;
+            import std.utf;
             SetEnvironmentVariableW(toUTF16z(name), null);
         }
         else version (Posix)
@@ -2434,7 +2436,7 @@ static:
         }
         else version (Windows)
         {
-            import core.sys.windows.windows, std.exception, std.utf;
+            import std.exception, std.utf;
             auto envBlock = GetEnvironmentStringsW();
             enforce(envBlock, "Failed to retrieve environment variables.");
             scope(exit) FreeEnvironmentStringsW(envBlock);
@@ -2473,7 +2475,7 @@ private:
     {
         version (Windows)
         {
-            import core.sys.windows.windows, std.utf;
+            import std.utf;
             const namez = toUTF16z(name);
             immutable len = varLength(namez);
             if (len == 0) return false;
