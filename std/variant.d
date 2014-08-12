@@ -2189,87 +2189,130 @@ unittest
 unittest
 {
     // http://d.puremagic.com/issues/show_bug.cgi?id=7069
+    Variant v;
+
     int i = 10;
-    Variant v = i;
-    assertNotThrown!VariantException(v.get!(int));
-    assertNotThrown!VariantException(v.get!(const(int)));
-    assertThrown!VariantException(v.get!(immutable(int)));
-    assertNotThrown!VariantException(v.get!(const(float)));
-    assert(v.get!(const(float)) == 10.0f);
+    v = i;
+    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    {
+        assert(v.get!(qual!int) == 10);
+        assert(v.get!(qual!float) == 10.0f);
+    }
+    foreach (qual; TypeTuple!(ImmutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!int));
+    }
 
     const(int) ci = 20;
     v = ci;
-    assertThrown!VariantException(v.get!(int));
-    assertNotThrown!VariantException(v.get!(const(int)));
-    assertThrown!VariantException(v.get!(immutable(int)));
-    assertNotThrown!VariantException(v.get!(const(float)));
-    assert(v.get!(const(float)) == 20.0f);
+    foreach (qual; TypeTuple!(ConstOf))
+    {
+        assert(v.get!(qual!int) == 20);
+        assert(v.get!(qual!float) == 20.0f);
+    }
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!int));
+        assertThrown!VariantException(v.get!(qual!float));
+    }
 
     immutable(int) ii = ci;
     v = ii;
-    assertThrown!VariantException(v.get!(int));
-    assertNotThrown!VariantException(v.get!(const(int)));
-    assertNotThrown!VariantException(v.get!(immutable(int)));
-    assertNotThrown!VariantException(v.get!(const(float)));
-    assertNotThrown!VariantException(v.get!(immutable(float)));
+    foreach (qual; TypeTuple!(ImmutableOf, ConstOf))
+    {
+        assert(v.get!(qual!int) == 20);
+        assert(v.get!(qual!float) == 20.0f);
+    }
+    foreach (qual; TypeTuple!(MutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!int));
+        assertThrown!VariantException(v.get!(qual!float));
+    }
 
     int[] ai = [1,2,3];
     v = ai;
-    assertNotThrown!VariantException(v.get!(int[]));
-    assertNotThrown!VariantException(v.get!(const(int[])));
-    assertNotThrown!VariantException(v.get!(const(int)[]));
-    assertThrown!VariantException(v.get!(immutable(int[])));
-    assertThrown!VariantException(v.get!(immutable(int)[]));
+    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    {
+        assert(v.get!(qual!(int[])) == [1,2,3]);
+        assert(v.get!(qual!(int)[]) == [1,2,3]);
+    }
+    foreach (qual; TypeTuple!(ImmutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!(int[])));
+        assertThrown!VariantException(v.get!(qual!(int)[]));
+    }
 
-    const(int[]) cai = [1,2,3];
+    const(int[]) cai = [4,5,6];
     v = cai;
-    assertThrown!VariantException(v.get!(int[]));
-    assertNotThrown!VariantException(v.get!(const(int[])));
-    assertNotThrown!VariantException(v.get!(const(int)[]));
-    assertThrown!VariantException(v.get!(immutable(int)[]));
-    assertThrown!VariantException(v.get!(immutable(int[])));
+    foreach (qual; TypeTuple!(ConstOf))
+    {
+        assert(v.get!(qual!(int[])) == [4,5,6]);
+        assert(v.get!(qual!(int)[]) == [4,5,6]);
+    }
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!(int[])));
+        assertThrown!VariantException(v.get!(qual!(int)[]));
+    }
 
-    immutable(int[]) iai = [1,2,3];
+    immutable(int[]) iai = [7,8,9];
     v = iai;
-    assertThrown!VariantException(v.get!(int[]));
-    assertNotThrown!VariantException(v.get!(immutable(int)[]));
-    // Bug ??? runtime error
-    //assertNotThrown!VariantException(v.get!(immutable(int[])));
-    assertNotThrown!VariantException(v.get!(const(int[])));
-    assertNotThrown!VariantException(v.get!(const(int)[]));
+    //assert(v.get!(immutable(int[])) == [7,8,9]);   // Bug ??? runtime error
+    assert(v.get!(immutable(int)[]) == [7,8,9]);
+    assert(v.get!(const(int[])) == [7,8,9]);
+    assert(v.get!(const(int)[]) == [7,8,9]);
+    foreach (qual; TypeTuple!(MutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!(int[])));
+        assertThrown!VariantException(v.get!(qual!(int)[]));
+    }
 
     class A {}
-    class B :A {}
+    class B : A {}
     B b = new B();
     v = b;
-    assertNotThrown!VariantException(v.get!(B));
-    assertNotThrown!VariantException(v.get!(const(B)));
-    assertNotThrown!VariantException(v.get!(A));
-    assertNotThrown!VariantException(v.get!(const(A)));
-    assertNotThrown!VariantException(v.get!(Object));
-    assertNotThrown!VariantException(v.get!(const(Object)));
-    assertThrown!VariantException(v.get!(immutable(B)));
+    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    {
+        assert(v.get!(qual!B) is b);
+        assert(v.get!(qual!A) is b);
+        assert(v.get!(qual!Object) is b);
+    }
+    foreach (qual; TypeTuple!(ImmutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!B));
+        assertThrown!VariantException(v.get!(qual!A));
+        assertThrown!VariantException(v.get!(qual!Object));
+    }
 
     const(B) cb = new B();
     v = cb;
-    assertThrown!VariantException(v.get!(B));
-    assertNotThrown!VariantException(v.get!(const(B)));
-    assertThrown!VariantException(v.get!(immutable(B)));
-    assertThrown!VariantException(v.get!(A));
-    assertNotThrown!VariantException(v.get!(const(A)));
-    assertThrown!VariantException(v.get!(Object));
-    assertNotThrown!VariantException(v.get!(const(Object)));
+    foreach (qual; TypeTuple!(ConstOf))
+    {
+        assert(v.get!(qual!B) is cb);
+        assert(v.get!(qual!A) is cb);
+        assert(v.get!(qual!Object) is cb);
+    }
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!B));
+        assertThrown!VariantException(v.get!(qual!A));
+        assertThrown!VariantException(v.get!(qual!Object));
+    }
 
     immutable(B) ib = new immutable(B)();
     v = ib;
-    assertThrown!VariantException(v.get!(B));
-    assertNotThrown!VariantException(v.get!(const(B)));
-    assertNotThrown!VariantException(v.get!(immutable(B)));
-    assertNotThrown!VariantException(v.get!(const(A)));
-    assertNotThrown!VariantException(v.get!(immutable(A)));
-    assertThrown!VariantException(v.get!(Object));
-    assertNotThrown!VariantException(v.get!(const(Object)));
-    assertNotThrown!VariantException(v.get!(immutable(Object)));
+    foreach (qual; TypeTuple!(ImmutableOf, ConstOf))
+    {
+        assert(v.get!(qual!B) is ib);
+        assert(v.get!(qual!A) is ib);
+        assert(v.get!(qual!Object) is ib);
+    }
+    foreach (qual; TypeTuple!(MutableOf))
+    {
+        assertThrown!VariantException(v.get!(qual!B));
+        assertThrown!VariantException(v.get!(qual!A));
+        assertThrown!VariantException(v.get!(qual!Object));
+    }
 }
 
 unittest
