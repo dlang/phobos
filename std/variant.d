@@ -297,14 +297,26 @@ private:
             alias UA = Unqual!A;
             alias MutaTypes = TypeTuple!(UA, ImplicitConversionTargets!UA);
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
+            alias SharedTypes = staticMap!(SharedOf, MutaTypes);
+            alias SharedConstTypes = staticMap!(SharedConstOf, MutaTypes);
             alias ImmuTypes  = staticMap!(ImmutableOf, MutaTypes);
 
             static if (is(A == immutable))
-                alias AllTypes = TypeTuple!(ImmuTypes, ConstTypes);
-            else static if (is(A == const))
-                alias AllTypes = ConstTypes;
-            else //static if (isMutable!A)
-                alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
+                alias AllTypes = TypeTuple!(ImmuTypes, ConstTypes, SharedConstTypes);
+            else static if (is(A == shared))
+            {
+                static if (is(A == const))
+                    alias AllTypes = SharedConstTypes;
+                else
+                    alias AllTypes = TypeTuple!(SharedTypes, SharedConstTypes);
+            }
+            else
+            {
+                static if (is(A == const))
+                    alias AllTypes = ConstTypes;
+                else
+                    alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
+            }
 
             foreach (T ; AllTypes)
             {
@@ -322,7 +334,10 @@ private:
                         *zat = *src;
                     }
                 }
-                else static if (is(T V == const(U), U) || is(T V == immutable(U), U))
+                else static if (is(T == const(U), U) ||
+                                is(T == shared(U), U) ||
+                                is(T == shared const(U), U) ||
+                                is(T == immutable(U), U))
                 {
                     auto zat = cast(U*) target;
                     if (src)
@@ -782,7 +797,10 @@ public:
         union Buf
         {
             TypeInfo info;
-            Unqual!T result;
+            static if (is(T == shared))
+                shared(Unqual!T) result;
+            else
+                Unqual!T result;
         }
         auto p = *cast(T**) &store;
         Buf buf = { typeid(T) };
@@ -2198,7 +2216,7 @@ unittest
         assert(v.get!(qual!int) == 10);
         assert(v.get!(qual!float) == 10.0f);
     }
-    foreach (qual; TypeTuple!(ImmutableOf))
+    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
     }
@@ -2210,7 +2228,7 @@ unittest
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf))
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2218,12 +2236,12 @@ unittest
 
     immutable(int) ii = ci;
     v = ii;
-    foreach (qual; TypeTuple!(ImmutableOf, ConstOf))
+    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; TypeTuple!(MutableOf))
+    foreach (qual; TypeTuple!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2236,7 +2254,7 @@ unittest
         assert(v.get!(qual!(int[])) == [1,2,3]);
         assert(v.get!(qual!(int)[]) == [1,2,3]);
     }
-    foreach (qual; TypeTuple!(ImmutableOf))
+    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2249,7 +2267,7 @@ unittest
         assert(v.get!(qual!(int[])) == [4,5,6]);
         assert(v.get!(qual!(int)[]) == [4,5,6]);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf))
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2261,6 +2279,8 @@ unittest
     assert(v.get!(immutable(int)[]) == [7,8,9]);
     assert(v.get!(const(int[])) == [7,8,9]);
     assert(v.get!(const(int)[]) == [7,8,9]);
+    //assert(v.get!(shared(const(int[]))) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
+    //assert(v.get!(shared(const(int))[]) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
     foreach (qual; TypeTuple!(MutableOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
@@ -2277,7 +2297,7 @@ unittest
         assert(v.get!(qual!A) is b);
         assert(v.get!(qual!Object) is b);
     }
-    foreach (qual; TypeTuple!(ImmutableOf))
+    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2292,7 +2312,7 @@ unittest
         assert(v.get!(qual!A) is cb);
         assert(v.get!(qual!Object) is cb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf))
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2301,13 +2321,43 @@ unittest
 
     immutable(B) ib = new immutable(B)();
     v = ib;
-    foreach (qual; TypeTuple!(ImmutableOf, ConstOf))
+    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is ib);
         assert(v.get!(qual!A) is ib);
         assert(v.get!(qual!Object) is ib);
     }
-    foreach (qual; TypeTuple!(MutableOf))
+    foreach (qual; TypeTuple!(MutableOf, SharedOf))
+    {
+        assertThrown!VariantException(v.get!(qual!B));
+        assertThrown!VariantException(v.get!(qual!A));
+        assertThrown!VariantException(v.get!(qual!Object));
+    }
+
+    shared(B) sb = new shared B();
+    v = sb;
+    foreach (qual; TypeTuple!(SharedOf, SharedConstOf))
+    {
+        assert(v.get!(qual!B) is sb);
+        assert(v.get!(qual!A) is sb);
+        assert(v.get!(qual!Object) is sb);
+    }
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, ConstOf))
+    {
+        assertThrown!VariantException(v.get!(qual!B));
+        assertThrown!VariantException(v.get!(qual!A));
+        assertThrown!VariantException(v.get!(qual!Object));
+    }
+
+    shared(const(B)) scb = new shared const B();
+    v = scb;
+    foreach (qual; TypeTuple!(SharedConstOf))
+    {
+        assert(v.get!(qual!B) is scb);
+        assert(v.get!(qual!A) is scb);
+        assert(v.get!(qual!Object) is scb);
+    }
+    foreach (qual; TypeTuple!(MutableOf, ConstOf, ImmutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
