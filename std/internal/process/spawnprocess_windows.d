@@ -16,7 +16,7 @@ version (Windows):
 version (Win32) version (DigitalMars) version = DMC_RUNTIME;
 version (DMC_RUNTIME) { } else
 {
-    enum
+    private enum
     {
         STDIN_FILENO  = 0,
         STDOUT_FILENO = 1,
@@ -30,18 +30,18 @@ commandLine must contain the entire command line, properly
 quoted/escaped as required by CreateProcessW().
 */
 version (Windows)
-private Pid spawnProcessImpl(in char[] commandLine,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             const string[string] env,
-                             Config config,
-                             in char[] workDir)
+Pid spawnProcessImpl(in char[] commandLine,
+                     File stdin,
+                     File stdout,
+                     File stderr,
+                     const string[string] env,
+                     Config config,
+                     in char[] workDir)
     @trusted
 {
     import core.exception, core.sys.windows.windows;
-    import std.stdio, std.utf;
-    import std.windows.syserror;
+    import std.stdio, std.utf, std.windows.syserror;
+    import std.process: ProcessException;
 
     if (commandLine.length == 0) throw new RangeError("Command line is empty");
     auto commandz = toUTFz!(wchar*)(commandLine);

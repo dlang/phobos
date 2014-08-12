@@ -1059,7 +1059,7 @@ Pipe pipe() @trusted //TODO: @safe
 else version (Windows)
 Pipe pipe() @trusted //TODO: @safe
 {
-    import core.sys.windows.windows, std.stdio;
+    import core.sys.windows.windows, std.windows.syserror, std.stdio;
 
     // use CreatePipe to create an anonymous pipe
     HANDLE readHandle;
@@ -1692,6 +1692,7 @@ class ProcessException : Exception
                                              string file = __FILE__,
                                              size_t line = __LINE__)
     {
+        import core.sys.windows.windows, std.windows.syserror;
         auto lastMsg = sysErrorString(GetLastError());
         auto msg = customMsg.empty ? lastMsg
                                    : customMsg ~ " (" ~ lastMsg ~ ')';
@@ -1727,7 +1728,11 @@ version (Windows) private immutable string shellSwitch = "/C";
 /// Returns the process ID number of the current process.
 @property int thisProcessID() @trusted //TODO: @safe nothrow
 {
-    version (Windows)    return GetCurrentProcessId();
+    version (Windows)
+    {
+        import core.sys.windows.windows: GetCurrentProcessId;
+        return GetCurrentProcessId();
+    }
     else version (Posix)
     {
         import core.sys.posix.unistd: getpid;
@@ -2436,7 +2441,7 @@ static:
         }
         else version (Windows)
         {
-            import std.exception, std.utf;
+            import std.exception, std.uni, std.utf;
             auto envBlock = GetEnvironmentStringsW();
             enforce(envBlock, "Failed to retrieve environment variables.");
             scope(exit) FreeEnvironmentStringsW(envBlock);
@@ -2475,7 +2480,7 @@ private:
     {
         version (Windows)
         {
-            import std.utf;
+            import std.conv, std.utf;
             const namez = toUTF16z(name);
             immutable len = varLength(namez);
             if (len == 0) return false;
@@ -2834,7 +2839,7 @@ version(Posix)
 }
 else version(Windows)
 {
-    import std.c.process, std.string;
+    import core.stdc.stdlib, std.c.process, std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
     auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
 
