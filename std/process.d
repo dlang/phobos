@@ -2550,7 +2550,7 @@ unittest
 }
 
 
-/+
+version (unittest) { } else {
 
 // =============================================================================
 // Everything below this line was part of the old std.process, and most of
@@ -2622,6 +2622,7 @@ version (unittest)
 deprecated("Please use executeShell instead")
 int system(string command)
 {
+    import std.string;
     if (!command.ptr) return std.c.process.system(null);
     const commandz = toStringz(command);
     immutable status = std.c.process.system(commandz);
@@ -2642,6 +2643,7 @@ int system(string command)
 
 private void toAStringz(in string[] a, const(char)**az)
 {
+    import std.string;
     foreach(string s; a)
     {
         *az++ = toStringz(s);
@@ -2672,6 +2674,7 @@ alias P_NOWAIT = std.c.process._P_NOWAIT;
 deprecated("Please use spawnProcess instead")
 int spawnvp(int mode, string pathname, string[] argv)
 {
+    import std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -2696,6 +2699,7 @@ private import core.sys.posix.sys.wait;
 deprecated("Please use spawnProcess instead")
 int _spawnvp(int mode, in char *pathname, in char **argv)
 {
+    import std.conv;
     int retval = 0;
     pid_t pid = fork();
 
@@ -2777,6 +2781,7 @@ private
 
 int execv(in string pathname, in string[] argv)
 {
+    import std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -2787,6 +2792,7 @@ int execv(in string pathname, in string[] argv)
 /** ditto */
 int execve(in string pathname, in string[] argv, in string[] envp)
 {
+    import std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
     auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
 
@@ -2799,6 +2805,7 @@ int execve(in string pathname, in string[] argv, in string[] envp)
 /** ditto */
 int execvp(in string pathname, in string[] argv)
 {
+    import std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -2811,6 +2818,7 @@ int execvpe(in string pathname, in string[] argv, in string[] envp)
 {
 version(Posix)
 {
+    import std.conv;
     // Is pathname rooted?
     if(pathname[0] == '/')
     {
@@ -2844,6 +2852,7 @@ version(Posix)
 }
 else version(Windows)
 {
+    import std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
     auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
 
@@ -2959,6 +2968,7 @@ $(RED Deprecated. Please use $(LREF environment.opIndex) or
 deprecated("Please use environment.opIndex or environment.get instead")
 string getenv(in char[] name)
 {
+    import std.string;
     // Cache the last call's result
     static string lastResult;
     auto p = core.stdc.stdlib.getenv(toStringz(name));
@@ -2983,6 +2993,7 @@ else version(Posix)
     deprecated("Please use environment.opIndexAssign instead.")
     void setenv(in char[] name, in char[] value, bool overwrite)
 {
+    import std.exception, std.string;
     errnoEnforce(
         std.c.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
 }
@@ -2999,6 +3010,7 @@ else version(Posix)
     deprecated("Please use environment.remove instead")
     void unsetenv(in char[] name)
 {
+    import std.exception, std.string;
     errnoEnforce(std.c.stdlib.unsetenv(toStringz(name)) == 0);
 }
 
@@ -3029,6 +3041,7 @@ version (Windows)
 
     void browse(string url)
     {
+        import std.utf;
         ShellExecuteW(null, "open", toUTF16z(url), null, null, SW_SHOWNORMAL);
     }
 }
@@ -3040,6 +3053,7 @@ else version (OSX)
 
     void browse(string url)
     {
+        import std.string;
         const(char)*[5] args;
 
         const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
@@ -3075,6 +3089,7 @@ else version (Posix)
 
     void browse(string url)
     {
+        import std.string;
         const(char)*[3] args;
 
         const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
@@ -3103,4 +3118,4 @@ else version (Posix)
 else
     static assert(0, "os not supported");
 
-+/
+}
