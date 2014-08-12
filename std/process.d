@@ -526,7 +526,7 @@ unittest
 version (Windows)
 unittest
 {
-    import std.file, std.string;
+    import std.conv, std.file, std.string;
     TestScript prog = "echo %0 %*";
     auto outputFn = uniqueTempPath();
     scope(exit) if (exists(outputFn)) remove(outputFn);
@@ -2070,14 +2070,14 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
 
 version(Windows) version(unittest)
 {
-    import core.sys.windows.windows;
-    import core.stdc.stddef;
-
+    import core.stdc.stddef: wchar_t;
     extern (Windows) wchar_t**  CommandLineToArgvW(wchar_t*, int*);
     extern (C) size_t wcslen(in wchar *);
 
     string[] parseCommandLine(string line)
     {
+        import core.stdc.wchar_, core.sys.windows.windows;
+        import std.algorithm, std.conv;
         LPWSTR lpCommandLine = (to!(wchar[])(line) ~ "\0"w).ptr;
         int numArgs;
         LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
@@ -2089,6 +2089,7 @@ version(Windows) version(unittest)
 
     unittest
     {
+        import std.conv;
         string[] testStrings = [
             `Hello`,
             `Hello, world`,
