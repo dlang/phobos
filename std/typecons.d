@@ -64,14 +64,22 @@ else
     alias RefT = T*;
 
 public:
+    // Deferred in case we get some language support for checking uniqueness.
+    version(None)
     /**
     Allows safe construction of $(D Unique). It creates the resource and 
     guarantees unique ownership of it (unless $(D T) publishes aliases of 
     $(D this)).
+    Note: Nested structs/classes cannot be created.
     Params:
     args = Arguments to pass to $(D T)'s constructor.
+    ---
+    static class C {}
+    auto u = Unique!(C).create(); 
+    ---
     */
-    static Unique!T create(A...)(A args)
+    static Unique!T create(A...)(auto ref A args)
+    if (__traits(compiles, new T(args)))
     {
         debug(Unique) writeln("Unique.create for ", T.stringof);
         Unique!T u;
@@ -112,9 +120,10 @@ public:
     a $(D Unique) of base type.
     Example:
     ---
-    class C {}
-    // Make u hold a new instance of C
-    Unique!Object u = Unique!(C).create();
+    class C : Object {}
+    
+    Unique!C uc = new C;
+    Unique!Object uo = uc.release;
     ---
     */
     this(U)(Unique!U u)
@@ -179,7 +188,9 @@ unittest
     Unique!S produce()
     {
         // Construct a unique instance of S on the heap
-        return Unique!(S).create(5);
+        Unique!S ut = new S(5);
+        // Implicit transfer of ownership
+        return ut;
     }
     // Borrow a unique resource by ref
     void increment(ref Unique!S ur)
