@@ -2550,7 +2550,6 @@ unittest
 }
 
 
-version (unittest) { } else {
 
 // =============================================================================
 // Everything below this line was part of the old std.process, and most of
@@ -2578,28 +2577,6 @@ Distributed under the Boost Software License, Version 1.0.
 */
 
 
-import core.stdc.stdlib;
-import std.c.stdlib;
-import core.stdc.errno;
-import core.thread;
-import std.c.process;
-import core.stdc.string;
-
-version (Windows)
-{
-    import std.format, std.random, std.file;
-}
-version (Posix)
-{
-    import core.sys.posix.stdlib;
-}
-version (unittest)
-{
-    import std.file, std.conv, std.random;
-}
-
-
-
 /**
    Execute $(D command) in a _command shell.
 
@@ -2622,7 +2599,7 @@ version (unittest)
 deprecated("Please use executeShell instead")
 int system(string command)
 {
-    import std.string;
+    import std.c.process, std.string;
     if (!command.ptr) return std.c.process.system(null);
     const commandz = toStringz(command);
     immutable status = std.c.process.system(commandz);
@@ -2667,14 +2644,14 @@ private void toAStringz(in string[] a, const(char)**az)
 //}
 
 // Incorporating idea (for spawnvp() on Posix) from Dave Fladebo
-
+import std.c.process: _P_WAIT, _P_NOWAIT;
 alias P_WAIT = std.c.process._P_WAIT;
 alias P_NOWAIT = std.c.process._P_NOWAIT;
 
 deprecated("Please use spawnProcess instead")
 int spawnvp(int mode, string pathname, string[] argv)
 {
-    import std.string;
+    import core.stdc.stdlib, std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -2685,6 +2662,7 @@ int spawnvp(int mode, string pathname, string[] argv)
     }
     else version (Windows)
     {
+        import std.c.process;
         return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
     }
     else
@@ -2693,12 +2671,12 @@ int spawnvp(int mode, string pathname, string[] argv)
 
 version (Posix)
 {
-private import core.sys.posix.unistd;
-private import core.sys.posix.sys.wait;
 
 deprecated("Please use spawnProcess instead")
 int _spawnvp(int mode, in char *pathname, in char **argv)
 {
+    import core.stdc.errno, core.stdc.string, core.sys.posix.unistd,
+           core.sys.posix.sys.wait;
     import std.conv;
     int retval = 0;
     pid_t pid = fork();
@@ -2750,6 +2728,8 @@ Lerror:
 }   // _spawnvp
 private
 {
+    import core.sys.posix.sys.wait: WIFSTOPPED, WIFSIGNALED, WTERMSIG,
+                                    WIFEXITED, WEXITSTATUS;
     alias stopped = WIFSTOPPED;
     alias signaled = WIFSIGNALED;
     alias termsig = WTERMSIG;
@@ -2781,7 +2761,7 @@ private
 
 int execv(in string pathname, in string[] argv)
 {
-    import std.string;
+    import core.stdc.stdlib, std.c.process, std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -2792,7 +2772,7 @@ int execv(in string pathname, in string[] argv)
 /** ditto */
 int execve(in string pathname, in string[] argv, in string[] envp)
 {
-    import std.string;
+    import core.stdc.stdlib, std.c.process, std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
     auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
 
@@ -2805,7 +2785,7 @@ int execve(in string pathname, in string[] argv, in string[] envp)
 /** ditto */
 int execvp(in string pathname, in string[] argv)
 {
-    import std.string;
+    import core.stdc.stdlib, std.c.process, std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -2818,7 +2798,7 @@ int execvpe(in string pathname, in string[] argv, in string[] envp)
 {
 version(Posix)
 {
-    import std.conv;
+    import core.stdc.stdlib, std.array, std.conv;
     // Is pathname rooted?
     if(pathname[0] == '/')
     {
@@ -2852,7 +2832,7 @@ version(Posix)
 }
 else version(Windows)
 {
-    import std.string;
+    import std.c.process, std.string;
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
     auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
 
@@ -2866,6 +2846,8 @@ else
     static assert(0);
 } // version
 }
+
+import core.thread;
 
 /**
  * Returns the process ID of the calling process, which is guaranteed to be
@@ -2908,6 +2890,7 @@ string shell(string cmd)
 {
     version(Windows)
     {
+        import std.array, std.exception, std.file, std.format, std.random;
         // Generate a random filename
         auto a = appender!string();
         foreach (ref e; 0 .. 8)
@@ -2926,6 +2909,7 @@ string shell(string cmd)
     }
     else version(Posix)
     {
+        import std.stdio;
         File f;
         f.popen(cmd, "r");
         char[] line;
@@ -2968,7 +2952,7 @@ $(RED Deprecated. Please use $(LREF environment.opIndex) or
 deprecated("Please use environment.opIndex or environment.get instead")
 string getenv(in char[] name)
 {
-    import std.string;
+    import core.stdc.stdlib, core.stdc.string, std.string;
     // Cache the last call's result
     static string lastResult;
     auto p = core.stdc.stdlib.getenv(toStringz(name));
@@ -2993,9 +2977,9 @@ else version(Posix)
     deprecated("Please use environment.opIndexAssign instead.")
     void setenv(in char[] name, in char[] value, bool overwrite)
 {
-    import std.exception, std.string;
+    import core.sys.posix.stdlib, std.exception, std.string;
     errnoEnforce(
-        std.c.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
+        core.sys.posix.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
 }
 
 /**
@@ -3010,7 +2994,7 @@ else version(Posix)
     deprecated("Please use environment.remove instead")
     void unsetenv(in char[] name)
 {
-    import std.exception, std.string;
+    import std.c.stdlib, std.exception, std.string;
     errnoEnforce(std.c.stdlib.unsetenv(toStringz(name)) == 0);
 }
 
@@ -3035,24 +3019,21 @@ version(StdDdoc)
 else
 version (Windows)
 {
-    import core.sys.windows.windows;
 
     pragma(lib,"shell32.lib");
 
     void browse(string url)
     {
-        import std.utf;
+        import core.sys.windows.windows, std.utf;
         ShellExecuteW(null, "open", toUTF16z(url), null, null, SW_SHOWNORMAL);
     }
 }
 else version (OSX)
 {
-    import core.stdc.stdio;
-    import core.stdc.string;
-    import core.sys.posix.unistd;
-
     void browse(string url)
     {
+        import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
+               core.sys.posix.unistd;
         import std.string;
         const(char)*[5] args;
 
@@ -3083,12 +3064,11 @@ else version (OSX)
 }
 else version (Posix)
 {
-    import core.stdc.stdio;
-    import core.stdc.string;
-    import core.sys.posix.unistd;
 
     void browse(string url)
     {
+        import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
+               core.sys.posix.unistd;
         import std.string;
         const(char)*[3] args;
 
@@ -3117,5 +3097,3 @@ else version (Posix)
 }
 else
     static assert(0, "os not supported");
-
-}
