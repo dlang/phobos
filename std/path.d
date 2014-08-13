@@ -924,12 +924,12 @@ unittest
     {
         auto buf = appender!(C1[])();
 
-        "file".setExt("ext").copy(&buf);
+        "file".withExtension("ext").copy(&buf);
         assert(buf.data == "file.ext");
     }
     ---
 */
-auto setExt(C1, C2)(C1[] path, C2 ext)
+auto withExtension(C1, C2)(C1[] path, C2 ext)
     if (isSomeChar!C1 &&
         isInputRange!C2 &&
         is(Unqual!C1 == Unqual!(ElementEncodingType!C2))
@@ -1003,35 +1003,35 @@ unittest
     scope(exit) buf.free();
 
     buf.length = 0;
-    "file".setExt("ext").copy(&buf);
+    "file".withExtension("ext").copy(&buf);
     assert(buf[] == "file.ext");
 
     buf.length = 0;
-    "file".setExt(".ext").copy(&buf);
+    "file".withExtension(".ext").copy(&buf);
     assert(buf[] == "file.ext");
 
     buf.length = 0;
-    "file.".setExt(".ext").copy(&buf);
+    "file.".withExtension(".ext").copy(&buf);
     assert(buf[] == "file.ext");
 
     buf.length = 0;
-    "file.".setExt("ext").copy(&buf);
+    "file.".withExtension("ext").copy(&buf);
     assert(buf[] == "file.ext");
 
     buf.length = 0;
-    "file.old".setExt("new").copy(&buf);
+    "file.old".withExtension("new").copy(&buf);
     assert(buf[] == "file.new");
 
     buf.length = 0;
-    "file".setExt("").copy(&buf);
+    "file".withExtension("").copy(&buf);
     assert(buf[] == "file");
 
     buf.length = 0;
-    "file.exe".setExt("").copy(&buf);
+    "file.exe".withExtension("").copy(&buf);
     assert(buf[] == "file");
 
     auto abuf = appender!(char[])();
-    "file".setExt("ext").copy(&abuf);
+    "file".withExtension("ext").copy(&abuf);
     assert(abuf.data == "file.ext");
 }
 
