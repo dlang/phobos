@@ -913,21 +913,6 @@ unittest
     $(LREF stripExtension) applied to path.
 
     The algorithm is lazy and does not allocate.
-
-    Examples:
-    ---
-    import std.path;
-    import std.array;
-    import std.algorithm;
-
-    void main()
-    {
-        auto buf = appender!(C1[])();
-
-        "file".withExtension("ext").copy(&buf);
-        assert(buf.data == "file.ext");
-    }
-    ---
 */
 auto withExtension(C1, C2)(C1[] path, C2 ext)
     if (isSomeChar!C1 &&
@@ -941,6 +926,18 @@ auto withExtension(C1, C2)(C1[] path, C2 ext)
         return chain(path, "", ext);
     else
         return chain(path, ".", ext);
+}
+
+///
+unittest
+{
+    import std.algorithm : copy;
+    import std.array : appender;
+
+    auto buf = appender!(char[])();
+
+    "file".withExtension("ext").copy(&buf);
+    assert(buf.data == "file.ext");
 }
 
 unittest
