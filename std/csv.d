@@ -105,29 +105,48 @@ class CSVException : Exception
     size_t row, col;
 
     this(string msg, string file = __FILE__, size_t line = __LINE__,
-         Throwable next = null)
+         Throwable next = null) @safe pure
     {
-        super(msg, file, line);
+        super(msg, file, line, next);
     }
 
     this(string msg, Throwable next, string file = __FILE__,
-         size_t line = __LINE__)
+         size_t line = __LINE__) @safe pure
     {
         super(msg, file, line, next);
     }
 
     this(string msg, size_t row, size_t col, Throwable next = null,
-         string file = __FILE__, size_t line = __LINE__)
+         string file = __FILE__, size_t line = __LINE__) @safe pure
     {
         super(msg, next, file, line);
         this.row = row;
         this.col = col;
     }
 
-    override string toString() {
+    override string toString() @safe pure 
+	{
         return "(Row: " ~ to!string(row) ~
               ", Col: " ~ to!string(col) ~ ") " ~ msg;
     }
+}
+
+@safe pure unittest
+{
+	auto e1 = new Exception("Foobar");
+	auto e2 = new CSVException("args", e1);
+	assert(e2.next is e1);
+
+	size_t r = 13;
+	size_t c = 37;
+
+	auto e3 = new CSVException("argv", r, c);
+	assert(e3.row == r);
+	assert(e3.col == c);
+
+	auto em = e3.toString();
+	assert(em.indexOf("13") != -1);
+	assert(em.indexOf("37") != -1);
 }
 
 /**
@@ -144,15 +163,24 @@ class IncompleteCellException : CSVException
     /// already been fed to the output range.
     dstring partialData;
 
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    this(string msg, string file = __FILE__, size_t line = __LINE__, 
+		Throwable next = null) @safe pure
     {
         super(msg, file, line);
     }
 
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, Throwable next, string file = __FILE__, size_t line =
+		__LINE__) @safe pure
     {
-        super(msg, file, line, next);
+        super(msg, next, file, line);
     }
+}
+
+@safe pure unittest
+{
+	auto e1 = new Exception("Foobar");
+	auto e2 = new IncompleteCellException("args", e1);
+	assert(e2.next is e1);
 }
 
 /**
@@ -177,15 +205,24 @@ class IncompleteCellException : CSVException
  */
 class HeaderMismatchException : CSVException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null)
+    this(string msg, string file = __FILE__, size_t line = __LINE__, 
+		Throwable next = null) @safe pure
     {
         super(msg, file, line);
     }
 
-    this(string msg, Throwable next, string file = __FILE__, size_t line = __LINE__)
+    this(string msg, Throwable next, string file = __FILE__, 
+		size_t line = __LINE__) @safe pure
     {
-        super(msg, file, line, next);
+        super(msg, next, file, line);
     }
+}
+
+@safe pure unittest
+{
+	auto e1 = new Exception("Foobar");
+	auto e2 = new HeaderMismatchException("args", e1);
+	assert(e2.next is e1);
 }
 
 /**
@@ -394,7 +431,7 @@ auto csvReader(Contents = string,
 }
 
 // Test standard iteration over input.
-unittest
+@safe pure unittest
 {
     string str = `one,"two ""quoted"""` ~ "\n\"three\nnew line\",\nfive,six";
     auto records = csvReader(str);
@@ -411,7 +448,7 @@ unittest
 }
 
 // Test newline on last record
-unittest
+@safe pure unittest
 {
     string str = "one,two\nthree,four\n";
     auto records = csvReader(str);
@@ -421,7 +458,7 @@ unittest
 }
 
 // Test shorter row length
-unittest
+@safe pure unittest
 {
     wstring str = "one,1\ntwo\nthree"w;
     struct Layout
@@ -450,7 +487,7 @@ unittest
 }
 
 // Test shorter row length exception
-unittest
+@safe pure unittest
 {
     struct A
     {
@@ -471,7 +508,7 @@ unittest
 
 
 // Test structure conversion interface with unicode.
-unittest
+@safe pure unittest
 {
     wstring str = "\U00010143Hello,65,63.63\nWorld,123,3673.562"w;
     struct Layout
@@ -503,7 +540,7 @@ unittest
 }
 
 // Test input conversion interface
-unittest
+@safe pure unittest
 {
     string str = `76,26,22`;
     int[] ans = [76,26,22];
@@ -600,7 +637,7 @@ unittest
 }
 
 // Test unchecked read
-unittest
+@safe pure unittest
 {
     string str = "one \"quoted\"";
     foreach(record; csvReader!(string,Malformed.ignore)(str))
@@ -624,7 +661,7 @@ unittest
 }
 
 // Test partial data returned
-unittest
+@safe pure unittest
 {
     string str = "\"one\nnew line";
 
@@ -641,7 +678,7 @@ unittest
 }
 
 // Test Windows line break
-unittest
+@safe pure unittest
 {
     string str = "one,two\r\nthree";
 
@@ -715,7 +752,7 @@ unittest
  * This struct is stored on the heap for when the structures
  * are passed around.
  */
-private struct Input(Range, Malformed ErrorLevel)
+private pure struct Input(Range, Malformed ErrorLevel)
 {
     Range range;
     size_t row, col;
@@ -733,7 +770,6 @@ private struct Input(Range, Malformed ErrorLevel)
  * Example for integer data:
  *
  * -------
- * string str = `76;^26^;22`;
  * int[] ans = [76,26,22];
  * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
  *       (str, ';', '^');
@@ -927,7 +963,7 @@ public:
     /**
      * Part of an input range as defined by $(XREF range, isInputRange).
      */
-    @property bool empty()
+    @property bool empty() @safe @nogc pure nothrow const
     {
         return _empty;
     }
@@ -1054,7 +1090,7 @@ public:
     }
 }
 
-unittest
+@safe pure unittest
 {
     string str = `76;^26^;22`;
     int[] ans = [76,26,22];
@@ -1123,7 +1159,7 @@ public:
     /**
      * Part of an input range as defined by $(XREF range, isInputRange).
      */
-    @property Contents front()
+    @property Contents front() @safe pure
     {
         assert(!empty);
         return curContentsoken;
@@ -1132,7 +1168,7 @@ public:
     /**
      * Part of an input range as defined by $(XREF range, isInputRange).
      */
-    @property bool empty()
+    @property bool empty() @safe pure nothrow @nogc const
     {
         return _empty;
     }
@@ -1417,7 +1453,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 }
 
 // Test csvNextToken on simplest form and correct format.
-unittest
+@safe pure unittest
 {
     string str = "\U00010143Hello,65,63.63\nWorld,123,3673.562";
 
@@ -1458,7 +1494,7 @@ unittest
 }
 
 // Test quoted tokens
-unittest
+@safe pure unittest
 {
     string str = `one,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix";
 
@@ -1499,7 +1535,7 @@ unittest
 }
 
 // Test empty data is pulled at end of record.
-unittest
+@safe pure unittest
 {
     string str = "one,";
     auto a = appender!(dchar[])();
@@ -1513,7 +1549,7 @@ unittest
 }
 
 // Test exceptions
-unittest
+@safe pure unittest
 {
     string str = "\"one\nnew line";
 
@@ -1556,7 +1592,7 @@ unittest
 }
 
 // Test modifying token delimiter
-unittest
+@safe pure unittest
 {
     string str = `one|two|/three "quoted"/|//`;
 
@@ -1584,7 +1620,7 @@ unittest
 }
 
 // Bugzilla 8908
-unittest
+@safe pure unittest
 {
     string csv = `  1.0, 2.0, 3.0
                     4.0, 5.0, 6.0`;
