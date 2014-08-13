@@ -3016,8 +3016,8 @@ version (unittest)
 /**
    Execute $(D command) in a _command shell.
 
-   $(RED Deprecated. Please use $(LREF executeShell) instead.
-         This function will be removed in August 2015.)
+   $(RED Deprecated. Please use $(LREF spawnShell) or $(LREF executeShell)
+         instead. This function will be removed in August 2015.)
 
    Returns: If $(D command) is null, returns nonzero if the _command
    interpreter is found, and zero otherwise. If $(D command) is not
@@ -3032,7 +3032,7 @@ version (unittest)
    system) automatically extracts the exit status.
 
 */
-deprecated("Please use executeShell instead")
+deprecated("Please use wait(spawnShell(command)) or executeShell(command) instead")
 int system(string command)
 {
     if (!command.ptr) return std.c.process.system(null);
