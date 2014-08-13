@@ -2623,7 +2623,7 @@ if (isDynamicArray!A)
     void toString()(scope void delegate(const(char)[]) sink)
     {
         import std.format : formattedWrite;
-        sink.formattedWrite("%s", data);
+        sink.formattedWrite("Appender!(" ~ A.stringof ~")(%s)", data);
     }
 }
 
@@ -2634,7 +2634,7 @@ unittest
     app.put(1);
     app.put(2);
     app.put(3);
-    assert("%s".format(app) == "%s".format([1,2,3]));
+    assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
 }
 
 //Calculates an efficient growth scheme based on the old capacity
