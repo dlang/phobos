@@ -3897,17 +3897,15 @@ unittest
     assert(equal(result, [1,2,3,4,5,6,7]));
 }
 
-// Temporarily disable this unittest due to issue 9131 on OSX/64.
-version = Issue9131;
-version(Issue9131) {} else
 unittest
 {
     struct TransientRange
     {
-        dchar[128] _buf;
+        dchar[] _buf;
         dstring[] _values;
         this(dstring[] values)
         {
+	    _buf.length = 128;
             _values = values;
         }
         @property bool empty()
