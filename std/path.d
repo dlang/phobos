@@ -935,41 +935,12 @@ auto withExtension(C1, C2)(C1[] path, C2 ext)
         is(Unqual!C1 == Unqual!(ElementEncodingType!C2))
        )
 {
-    struct ExtImpl
-    {
-        C1[] path;
-        C2 ext;
-        bool dot;
+    path = stripExtension(path);
 
-        @property bool empty()
-        {
-            return path.length == 0 && ext.empty;
-        }
-
-        @property auto front()
-        {
-            if (path.length)
-                return path[0];
-            if (!dot)
-                return '.';
-            return ext.front;
-        }
-
-        void popFront()
-        {
-            if (path.length)
-                path = path[1 .. $];
-            else if (!dot)
-                dot = true;
-            else
-                ext.popFront();
-        }
-    }
-
-    if (!ext.empty && ext.front == '.')
-        ext.popFront();
-
-    return ExtImpl(stripExtension(path), ext);
+    if (ext.empty || ext.front() == '.')
+        return chain(path, "", ext);
+    else
+        return chain(path, ".", ext);
 }
 
 unittest
