@@ -15,6 +15,7 @@ module std.array;
 import core.memory, core.bitop;
 import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
        std.range, std.string, std.traits, std.typecons, std.typetuple, std.utf;
+import std.format;
 version(unittest) import core.exception, std.stdio;
 
 /**
@@ -2618,6 +2619,13 @@ if (isDynamicArray!A)
     {
         /// Clear is not available for const/immutable data.
         @disable void clear();
+    }
+
+    static if (hasToString!(T, char))
+    {
+        string toString() {
+            return to!string(data);
+        }
     }
 }
 
