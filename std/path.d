@@ -946,16 +946,13 @@ auto withExtension(C1, C2)(C1[] path, C2 ext)
             return path.length == 0 && ext.empty;
         }
 
-        @property C1 front()
+        @property auto front()
         {
             if (path.length)
                 return path[0];
             if (!dot)
                 return '.';
-            static if (isArray!C2)
-                return ext[0];
-            else
-                return ext.front;
+            return ext.front;
         }
 
         void popFront()
@@ -965,27 +962,12 @@ auto withExtension(C1, C2)(C1[] path, C2 ext)
             else if (!dot)
                 dot = true;
             else
-            {
-                static if (isArray!C2)
-                    ext = ext[1 .. $];
-                else
-                    ext.popFront();
-            }
+                ext.popFront();
         }
     }
 
-    // Removing any leading '.' from ext
-    static if (isArray!C2)
-    {
-        // Avoid auto-decode behavior of std.array.front
-        if (ext.length && ext[0] == '.')
-            ext = ext[1 .. $];
-    }
-    else
-    {
-        if (!ext.empty && ext.front == '.')
-            ext.popFront();
-    }
+    if (!ext.empty && ext.front == '.')
+        ext.popFront();
 
     return ExtImpl(stripExtension(path), ext);
 }
