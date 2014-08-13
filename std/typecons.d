@@ -3938,6 +3938,17 @@ void func(int n) { }
  */
 mixin template Proxy(alias a)
 {
+    // Creates a union C of two argument type tuples A and B
+    // such that C.length == max(A.length, B.length) and C[0..A.length] == A
+    private template MergeArgs(A...)
+    {
+        template With(B...)
+        {
+            static if (A.length < B.length) alias With = TypeTuple!(A, B[A.length..$]);
+            else                            alias With = A;
+        }
+    }
+    
     auto ref opEquals(this X, B)(auto ref B b)
     {
         static if (is(immutable B == immutable typeof(this)))
@@ -3961,7 +3972,65 @@ mixin template Proxy(alias a)
             return a < b ? -1 : a > b ? +1 : 0;
     }
 
-    auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
+    // a has a non-template opCall
+    static if (is(typeof(__traits(getMember, a, "opCall")) == function))
+    {
+        // opCall may still be overloaded with templates.
+        // Abitlity to overload non-templates with templates 
+        // leads to some code duplication.
+        template opCall(T...)
+        {
+            auto ref opCall(this X, Args...)(auto ref Args args)
+            {
+                // IFTI resolution: underlying template may have parameters in the form
+                // (P1,P2,...,PX,Ps...). The best we can do is to substitute all that is passed,
+                // respecting explicitly specified args
+                alias A = MergeArgs!T.With!Args;
+
+                // Explicit .opCall since that's what we're forwarding here
+                static if (is(typeof(a.opCall(args))))
+                {
+                    // non-template or deduced
+                    return a.opCall(args);
+                }
+                else
+                {
+                    // template
+                    return a.opCall!A(args);
+                }
+            }
+        }                
+    }
+    else
+    // a has template opCall or a is otherwise callable
+    template opCall(T...)
+    {
+        auto ref opCall(this X, Args...)(auto ref Args args) 
+        {
+            // IFTI resolution: underlying template may have parameters in the form
+            // (P1,P2,...,PX,Ps...). The best we can do is to substitute all that is passed,
+            // respecting explicitly specified args.
+            alias A = MergeArgs!T.With!Args;
+
+            // non-template function or a template function/opCall 
+            // with arguments deduced from args
+            static if (is(typeof(a(args))))
+            {
+                return a(args);
+            }
+            else
+            // a is a template function
+            static if (is(typeof(a!A(args))))
+            {
+                return a!A(args);
+            }
+            else
+            // a must have template opCall
+            {
+                return a.opCall!A(args);
+            }
+        }
+    }
 
     auto ref opCast(T, this X)() { return cast(T)a; }
 
@@ -4012,8 +4081,32 @@ mixin template Proxy(alias a)
     {
         static if (is(typeof(__traits(getMember, a, name)) == function))
         {
-            // non template function
-            auto ref opDispatch(this X, Args...)(auto ref Args args) { return mixin("a."~name~"(args)"); }
+            // a.name may still be overloaded with templates.
+            // Abitlity to overload non-templates with templates 
+            // leads to some code duplication.
+            // Cannot extract opDispatch(T...) into special case
+            // due to other special cases (enums, fields, properties).
+            template opDispatch(T...)
+            {
+                auto ref opDispatch(this X, Args...)(auto ref Args args)
+                {
+                    // IFTI resolution: underlying template may have parameters in the form
+                    // (P1,P2,...,PX,Ps...). The best we can do is to substitute all that is passed,
+                    // respecting explicitly specified args.
+                    alias A = MergeArgs!T.With!Args;
+
+                    static if (is(typeof(mixin("a."~name~"(args)"))))
+                    {
+                        // non-template or deduced
+                        return mixin("a."~name~"(args)");
+                    }
+                    else
+                    {
+                        // template
+                        return mixin("a."~name~"!A(args)");
+                    }
+                }
+            }                
         }
         else static if (is(typeof({ enum x = mixin("a."~name); })))
         {
@@ -4031,7 +4124,15 @@ mixin template Proxy(alias a)
             // member template
             template opDispatch(T...)
             {
-                auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~"!T(args)"); }
+                auto ref opDispatch(this X, Args...)(auto ref Args args)
+                {
+                    // IFTI resolution: underlying template may have parameters in the form
+                    // (P1,P2,...,PX,Ps...). The best we can do is to substitute all that is passed,
+                    // respecting explicitly specified args.
+                    alias A = MergeArgs!T.With!Args;
+
+                    return mixin("a."~name~"!A(args)");
+                }
             }
         }
     }
@@ -4256,6 +4357,93 @@ unittest
     bool[Name] names;
     names[Name("a")] = true;
     bool* b = Name("a") in names;
+}
+unittest
+{
+    // bug11947
+    struct RealThing 
+    {
+        void variadic(T...)(T args) {}
+        int opCall(T...)(T args) { return 42; }
+    }
+
+    struct Impostor 
+    {
+        private RealThing p;
+        mixin Proxy!p;
+    }
+
+    Impostor impostor;
+    // variadic template method
+    static assert(is(typeof(impostor.variadic())));
+    static assert(is(typeof(impostor.variadic("hello"))));
+    static assert(is(typeof(impostor.variadic!int(42, "hello"))));
+    // variadic opCall
+    static assert(is(typeof(impostor())));
+    assert(impostor() == 42);
+    static assert(is(typeof(impostor("hello"))));
+    static assert(is(typeof(impostor.opCall!int(42, "hello"))));
+
+    struct NonTemplateOpCall 
+    {
+        int opCall(int i) { return i; }
+    }
+
+    struct NonTemplateOpCallImpostor
+    {
+        private NonTemplateOpCall p;
+        mixin Proxy!p;
+    }
+
+    NonTemplateOpCallImpostor ntoci;
+    assert(ntoci(42) == 42);
+    assert(ntoci.opCall(42) == 42);
+
+    struct FuncImpostor
+    {
+        static int foo(int i) { return i; }
+        mixin Proxy!foo;
+    }
+
+    FuncImpostor fi;
+    assert(fi(42) == 42);
+    static assert(!is(typeof(fi(42,43))));
+    static assert(!is(typeof(fi.opCall!string("hello"))));
+
+    struct TemplateFuncImpostor
+    {
+        static int foo(T...)(T args) { return 42; }
+        mixin Proxy!foo;
+    }
+
+    TemplateFuncImpostor tfi;
+    assert(tfi() == 42);
+    static assert(is(typeof(tfi(42))));
+    static assert(is(typeof(tfi(42, "hello"))));
+    static assert(is(typeof(tfi.opCall!int(42, "hello"))));
+
+    struct Sneaky
+    {
+        int opCall() { return 10; }
+        int opCall(T...)(T args) if (T.length) { return 42; }
+
+        int func() { return 10; }
+        int func(T...)(T args) if (T.length) { return 42; }
+    }
+
+    struct SneakyImpostor
+    {
+        private Sneaky p;
+        mixin Proxy!p;
+    }
+
+    SneakyImpostor si;
+    assert(si() == 10);
+    static assert(is(typeof(si(42))));
+    static assert(is(typeof(si.opCall!(int, string)(42, "hello"))));
+    assert(si.func() == 10);
+    static assert(is(typeof(si.func(42))));
+    static assert(is(typeof(si.func!int(42))));
 }
 
 /**
