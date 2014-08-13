@@ -2623,7 +2623,7 @@ if (isDynamicArray!A)
     void toString()(scope void delegate(const(char)[]) sink)
     {
         import std.format : formattedWrite;
-        sink.formattedWrite("Appender!(" ~ A.stringof ~")(%s)", data);
+        sink.formattedWrite(typeof(this).stringof ~ "(%s)", data);
     }
 }
 
