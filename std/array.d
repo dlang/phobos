@@ -15,7 +15,6 @@ module std.array;
 import core.memory, core.bitop;
 import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
        std.range, std.string, std.traits, std.typecons, std.typetuple, std.utf;
-import std.format;
 version(unittest) import core.exception, std.stdio;
 
 /**
@@ -2621,12 +2620,21 @@ if (isDynamicArray!A)
         @disable void clear();
     }
 
-    static if (hasToString!(T, char))
+    void toString()(scope void delegate(const(char)[]) sink)
     {
-        string toString() {
-            return to!string(data);
-        }
+        import std.format : formattedWrite;
+        sink.formattedWrite("%s", data);
     }
+}
+
+unittest
+{
+    import std.string : format;
+    auto app = appender!(int[])();
+    app.put(1);
+    app.put(2);
+    app.put(3);
+    assert("%s".format(app) == "%s".format([1,2,3]));
 }
 
 //Calculates an efficient growth scheme based on the old capacity
