@@ -948,7 +948,7 @@ unittest
     import std.array;
     import std.algorithm;
 
-    void test(C)(const(C)[] file, const(C)[] ext, string expectedResult)
+    void test(C1,C2)(const(C1)[] file, const(C2)[] ext, string expectedResult)
     {
         char[10] tmpbuf = void;
         auto buf = ScopeBuffer!char(tmpbuf);
@@ -959,29 +959,26 @@ unittest
         assert(buf[] == expectedResult);
     }
 
-    test("file", "ext", "file.ext");
-    test("file", ".ext", "file.ext");
-    test("file.", ".ext", "file.ext");
-    test("file.", "ext", "file.ext");
-    test("file.old", "new", "file.new");
-    test("file", "", "file");
-    test("file.exe", "", "file");
+    auto testData = [
+        ["file", "ext", "file.ext"],
+        ["file", ".ext", "file.ext"],
+        ["file.", ".ext", "file.ext"],
+        ["file.", "ext", "file.ext"],
+        ["file.old", "new", "file.new"],
+        ["file", "", "file"],
+        ["file.exe", "", "file"]
+    ];
 
-    test("file"w, "ext"w, "file.ext");
-    test("file"w, ".ext"w, "file.ext");
-    test("file."w, ".ext"w, "file.ext");
-    test("file."w, "ext"w, "file.ext");
-    test("file.old"w, "new"w, "file.new");
-    test("file"w, ""w, "file");
-    test("file.exe"w, ""w, "file");
-
-    test("file"d, "ext"d, "file.ext");
-    test("file"d, ".ext"d, "file.ext");
-    test("file."d, ".ext"d, "file.ext");
-    test("file."d, "ext"d, "file.ext");
-    test("file.old"d, "new"d, "file.new");
-    test("file"d, ""d, "file");
-    test("file.exe"d, ""d, "file");
+    foreach (S1; TypeTuple!(string, wstring, dstring))
+    {
+        foreach (S2; TypeTuple!(string, wstring, dstring))
+        {
+            foreach (testCase; testData)
+            {
+                test(testCase[0].to!S1, testCase[1].to!S2, testCase[2]);
+            }
+        }
+    }
 
     auto abuf = appender!(char[])();
     "file".withExtension("ext").copy(&abuf);
