@@ -948,7 +948,7 @@ unittest
     import std.array;
     import std.algorithm;
 
-    void test(const(char)[] file, const(char)[] ext, string expectedResult)
+    void test(C)(const(C)[] file, const(C)[] ext, string expectedResult)
     {
         char[10] tmpbuf = void;
         auto buf = ScopeBuffer!char(tmpbuf);
@@ -966,6 +966,22 @@ unittest
     test("file.old", "new", "file.new");
     test("file", "", "file");
     test("file.exe", "", "file");
+
+    test("file"w, "ext"w, "file.ext");
+    test("file"w, ".ext"w, "file.ext");
+    test("file."w, ".ext"w, "file.ext");
+    test("file."w, "ext"w, "file.ext");
+    test("file.old"w, "new"w, "file.new");
+    test("file"w, ""w, "file");
+    test("file.exe"w, ""w, "file");
+
+    test("file"d, "ext"d, "file.ext");
+    test("file"d, ".ext"d, "file.ext");
+    test("file."d, ".ext"d, "file.ext");
+    test("file."d, "ext"d, "file.ext");
+    test("file.old"d, "new"d, "file.new");
+    test("file"d, ""d, "file");
+    test("file.exe"d, ""d, "file");
 
     auto abuf = appender!(char[])();
     "file".withExtension("ext").copy(&abuf);
