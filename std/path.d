@@ -948,37 +948,24 @@ unittest
     import std.array;
     import std.algorithm;
 
-    char[10] tmpbuf = void;
-    auto buf = ScopeBuffer!char(tmpbuf);
-    scope(exit) buf.free();
+    void test(const(char)[] file, const(char)[] ext, string expectedResult)
+    {
+        char[10] tmpbuf = void;
+        auto buf = ScopeBuffer!char(tmpbuf);
+        scope(exit) buf.free();
 
-    buf.length = 0;
-    "file".withExtension("ext").copy(&buf);
-    assert(buf[] == "file.ext");
+        buf.length = 0;
+        file.withExtension(ext).copy(&buf);
+        assert(buf[] == expectedResult);
+    }
 
-    buf.length = 0;
-    "file".withExtension(".ext").copy(&buf);
-    assert(buf[] == "file.ext");
-
-    buf.length = 0;
-    "file.".withExtension(".ext").copy(&buf);
-    assert(buf[] == "file.ext");
-
-    buf.length = 0;
-    "file.".withExtension("ext").copy(&buf);
-    assert(buf[] == "file.ext");
-
-    buf.length = 0;
-    "file.old".withExtension("new").copy(&buf);
-    assert(buf[] == "file.new");
-
-    buf.length = 0;
-    "file".withExtension("").copy(&buf);
-    assert(buf[] == "file");
-
-    buf.length = 0;
-    "file.exe".withExtension("").copy(&buf);
-    assert(buf[] == "file");
+    test("file", "ext", "file.ext");
+    test("file", ".ext", "file.ext");
+    test("file.", ".ext", "file.ext");
+    test("file.", "ext", "file.ext");
+    test("file.old", "new", "file.new");
+    test("file", "", "file");
+    test("file.exe", "", "file");
 
     auto abuf = appender!(char[])();
     "file".withExtension("ext").copy(&abuf);
