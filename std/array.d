@@ -882,13 +882,6 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
     static assert(isRandomAccessRange!Wrapper);
 }
 
-/+
-Commented out until the insert which has been deprecated has been removed.
-I'd love to just remove it in favor of insertInPlace, but then code would then
-use this version of insert and silently break. So, it's here so that it can
-be used once insert has not only been deprecated but removed, but until then,
-it's commented out.
-
 /++
     Creates a new array which is a copy of $(D array) with $(D stuff) (which
     must be an input range or a single item) inserted at position $(D pos).
@@ -989,7 +982,6 @@ unittest
     testStr!(dstring, wstring)();
     testStr!(dstring, dstring)();
 }
-+/
 
 private void copyBackwards(T)(T[] src, T[] dest)
 {
