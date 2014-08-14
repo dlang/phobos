@@ -914,11 +914,8 @@ unittest
 
     The algorithm is lazy and does not allocate.
 */
-auto withExtension(C1, C2)(C1[] path, C2 ext)
-    if (isSomeChar!C1 &&
-        isInputRange!C2 &&
-        is(Unqual!C1 == Unqual!(ElementEncodingType!C2))
-       )
+auto withExtension(C1, C2)(C1[] path, C2[] ext)
+    if (isSomeChar!C1 && isSomeChar!C2)
 {
     path = stripExtension(path);
 
