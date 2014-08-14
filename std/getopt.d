@@ -484,7 +484,7 @@ enum config {
     required
 }
 
-/** The result of the $(D getoptX) function.
+/** The result of the $(D getopt) function.
 
 The $(D GetOptDRslt) contains two members. The first member is a boolean with
 the name $(D helpWanted). The second member is an array of $(D Option). The 
@@ -1295,7 +1295,7 @@ foreach(it; opt) {
 
 Params:
     text = The text to printed at the beginning of the help output.
-    opt = The $(D Option) extracted from the $(D getoptX) parameter.
+    opt = The $(D Option) extracted from the $(D getopt) parameter.
 */
 void defaultGetoptPrinter(string text, Option[] opt) 
 {
@@ -1311,7 +1311,7 @@ $(D defaultGetoptXPrinter).
 Params:
     output = The output range used to write the help information.
     text = The text to printed at the beginning of the help output.
-    opt = The $(D Option) extracted from the $(D getoptX) parameter.
+    opt = The $(D Option) extracted from the $(D getopt) parameter.
 */
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt) {
     import std.format : formattedWrite;
