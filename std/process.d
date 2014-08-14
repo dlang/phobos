@@ -3264,8 +3264,17 @@ else
             return execvpe_(pathname, argv, envp);
         }
     };
-    version (Posix)        mixin (execvForwarderDefs);
-    else version (Windows) mixin ("deprecated {" ~ execvForwarderDefs ~ "}");
+    version (Posix)
+    {
+        mixin (execvForwarderDefs);
+    }
+    else version (Windows)
+    {
+        private enum execvDeprecationMsg =
+            "Please consult the API documentation for more information: "
+            ~"http://dlang.org/phobos/std_process.html#.execv";
+        mixin (`deprecated ("`~execvDeprecationMsg~`") {` ~ execvForwarderDefs ~ `}`);
+    }
     else static assert (false, "Unsupported platform");
 }
 
