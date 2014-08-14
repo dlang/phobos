@@ -2619,6 +2619,22 @@ if (isDynamicArray!A)
         /// Clear is not available for const/immutable data.
         @disable void clear();
     }
+
+    void toString()(scope void delegate(const(char)[]) sink)
+    {
+        import std.format : formattedWrite;
+        sink.formattedWrite(typeof(this).stringof ~ "(%s)", data);
+    }
+}
+
+unittest
+{
+    import std.string : format;
+    auto app = appender!(int[])();
+    app.put(1);
+    app.put(2);
+    app.put(3);
+    assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
 }
 
 //Calculates an efficient growth scheme based on the old capacity
