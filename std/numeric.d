@@ -678,12 +678,22 @@ unittest
 }
 
 
-private:
-// Return true if a and b have opposite sign.
-bool oppositeSigns(T)(T a, T b)
+/**
+ * Return true if a and b have opposite sign.
+ */
+private bool oppositeSigns(T1, T2)(T1 a, T2 b)
 {
     return signbit(a) != signbit(b);
 }
+
+//regression control
+unittest
+{
+    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
+    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
+}
+ 
+ 
 
 public:
 
@@ -711,9 +721,10 @@ public:
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
-T findRoot(T, R)(scope R delegate(T) f, T a, T b)
+T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
+    scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
 {
-    auto r = findRoot(f, a, b, f(a), f(b), (T lo, T hi){ return false; });
+    auto r = findRoot(f, a, b, f(a), f(b), tolerance);
     // Return the first value if it is smaller or NaN
     return !(fabs(r[2]) > fabs(r[3])) ? r[0] : r[1];
 }
@@ -751,8 +762,8 @@ T findRoot(T, R)(scope R delegate(T) f, T a, T b)
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
  */
-Tuple!(T, T, R, R) findRoot(T,R)(scope R delegate(T) f, T ax, T bx, R fax, R fbx,
-    scope bool delegate(T lo, T hi) tolerance)
+Tuple!(T, T, R, R) findRoot(T,R)(scope R delegate(T) f, in T ax, in T bx, in R fax, in R fbx,
+    scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
 in {
     assert(!ax.isNaN && !bx.isNaN, "Limits must not be NaN");
     assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
