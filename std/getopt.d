@@ -580,6 +580,10 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     {
         // no more options to look for, potentially some arguments left
         foreach (i, a ; args[1 .. $]) {
+            if (endOfOptionsPred !is null && endOfOptionsPred(a))
+            {
+                break;
+            }
             if (!a.length || a[0] != optionChar)
             {
                 // not an option
@@ -620,6 +624,7 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
     bool ret = false;
     for (size_t i = 1; i < args.length; ) {
         auto a = args[i];
+        if (endOfOptionsPred !is null && endOfOptionsPred(a)) break;
         if (endOfOptions.length && a == endOfOptions) break;
         if (cfg.stopOnFirstNonOption && (!a.length || a[0] != optionChar))
         {
@@ -848,6 +853,47 @@ dchar optionChar = '-';
    empty string to $(D endOfOptions) effectively disables it.
  */
 string endOfOptions = "--";
+
+/**
+    A predicate that is called on each argument. When it returns $(D true),
+    that one and any following arguments are considered non-options, and
+    are not processed by getopt.
+
+    Defaults to $(D null), equivalent of a predicate that always returns
+    $(D false).
+
+    May be evaluated more than once per argument.
+
+    Examples:
+    ---
+    // stop on the first .d file
+    import std.getopt;
+    import std.algorithm: startsWith, endsWith;
+    string[] args = ["program", "file.o", "--option", "value.d", "file.d",
+        "--option"];
+    endOfOptionsPred = arg => !arg.startsWith(optionChar) &&
+        arg.endsWith(".d");
+    string s;
+    getopt(args, config.passThrough, "option", &s);
+    assert(s == "value.d");
+    assert(args == ["program", "file.o", "file.d", "--option"]);
+    ---
+ */
+bool delegate(string arg) endOfOptionsPred = null;
+
+unittest
+{
+    string[] args = ["program", "file.o", "--option", "value.d", "file.d",
+        "--option"];
+    auto endOfOptionsPredBackup = endOfOptionsPred;
+    scope(exit) endOfOptionsPred = endOfOptionsPredBackup;
+    endOfOptionsPred = arg => !arg.startsWith(optionChar) &&
+        arg.endsWith(".d");
+    string s;
+    getopt(args, config.passThrough, "option", &s);
+    assert(s == "value.d");
+    assert(args == ["program", "file.o", "file.d", "--option"]);
+}
 
 /**
    The assignment character used in options with parameters (default '=').
