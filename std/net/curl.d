@@ -2423,17 +2423,31 @@ struct HTTP
         @property void onReceive(size_t delegate(ubyte[]) callback);
 
         /**
-         * The event handler that gets called to inform of upload/download progress.
+         * Register an event handler that gets called to inform of
+         * upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(TABLE ,
+         *      $(DDOC_PARAM_ROW
+         *          $(DDOC_PARAM_ID $(DDOC_PARAM dlTotal))
+         *          $(DDOC_PARAM_DESC total bytes to download)
+         *          )
+         *      $(DDOC_PARAM_ROW
+         *          $(DDOC_PARAM_ID $(DDOC_PARAM dlNow))
+         *          $(DDOC_PARAM_DESC currently downloaded bytes)
+         *          )
+         *      $(DDOC_PARAM_ROW
+         *          $(DDOC_PARAM_ID $(DDOC_PARAM ulTotal))
+         *          $(DDOC_PARAM_DESC total bytes to upload)
+         *          )
+         *      $(DDOC_PARAM_ROW
+         *          $(DDOC_PARAM_ID $(DDOC_PARAM ulNow))
+         *          $(DDOC_PARAM_DESC currently uploaded bytes)
+         *          )
+         * )
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns: Return 0 to signal success, return non-zero to
+         * abort transfer.
          *
          * Example:
          * ----
