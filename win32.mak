@@ -38,7 +38,7 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w
+DFLAGS=-O -release -gs -w
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
