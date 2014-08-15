@@ -1798,7 +1798,7 @@ void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
-        swapAt(r, i, i + uniform(0, n - i, gen));
+        swapAt(r, i, uniform(i, n, gen));
     }
 }
 
