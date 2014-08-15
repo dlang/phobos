@@ -3418,15 +3418,12 @@ struct SMTP
         /**
          * The event handler that gets called to inform of upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns:
+         * Return 0 from the callback to signal success, return non-zero to
+         * abort transfer.
          */
         @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                                size_t ulTotal, size_t ulNow) callback);
