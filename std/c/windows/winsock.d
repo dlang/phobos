@@ -39,6 +39,8 @@ const int FIONBIO =       cast(int)(IOC_IN | ((uint.sizeof & IOCPARM_MASK) << 16
 enum NI_MAXHOST = 1025;
 enum NI_MAXSERV = 32;
 
+@nogc
+{
 int WSAStartup(ushort wVersionRequested, LPWSADATA lpWSAData);
 int WSACleanup();
 SOCKET socket(int af, int type, int protocol);
@@ -66,6 +68,7 @@ protoent* getprotobyname(const char* name);
 protoent* getprotobynumber(int number);
 servent* getservbyname(const char* name, const char* proto);
 servent* getservbyport(int port, const char* proto);
+}
 
 enum: int
 {
@@ -76,10 +79,13 @@ enum: int
     NI_DGRAM  =          0x10,
 }
 
+@nogc
+{
 int gethostname(const char* name, int namelen);
 int getaddrinfo(const(char)* nodename, const(char)* servname, const(addrinfo)* hints, addrinfo** res);
 void freeaddrinfo(addrinfo* ai);
 int getnameinfo(const(sockaddr)* sa, socklen_t salen, char* host, uint hostlen, char* serv, uint servlen, int flags);
+}
 
 enum WSABASEERR = 10000;
 
@@ -213,7 +219,7 @@ enum: int
     EAI_NONAME    = WSAHOST_NOT_FOUND,
 }
 
-int WSAGetLastError();
+int WSAGetLastError() @trusted @nogc;
 
 
 enum: int
@@ -345,7 +351,7 @@ struct fd_set_custom(uint SETSIZE)
 alias fd_set = fd_set_custom!FD_SETSIZE;
 
 // Removes.
-void FD_CLR(SOCKET fd, fd_set* set)
+void FD_CLR(SOCKET fd, fd_set* set) pure @nogc
 {
     uint c = set.fd_count;
     SOCKET* start = set.fd_array.ptr;
@@ -369,7 +375,7 @@ void FD_CLR(SOCKET fd, fd_set* set)
 
 
 // Tests.
-int FD_ISSET(SOCKET fd, const(fd_set)* set)
+int FD_ISSET(SOCKET fd, const(fd_set)* set) pure @nogc
 {
     const(SOCKET)* start = set.fd_array.ptr;
     const(SOCKET)* stop = start + set.fd_count;
@@ -384,7 +390,7 @@ int FD_ISSET(SOCKET fd, const(fd_set)* set)
 
 
 // Adds.
-void FD_SET(SOCKET fd, fd_set* set)
+void FD_SET(SOCKET fd, fd_set* set)	pure @nogc
 {
     uint c = set.fd_count;
     set.fd_array.ptr[c] = fd;
@@ -393,14 +399,14 @@ void FD_SET(SOCKET fd, fd_set* set)
 
 
 // Resets to zero.
-void FD_ZERO(fd_set* set)
+void FD_ZERO(fd_set* set) pure @nogc
 {
     set.fd_count = 0;
 }
 
 
 /// Creates a new $(D fd_set) with the specified capacity.
-fd_set* FD_CREATE(uint capacity)
+fd_set* FD_CREATE(uint capacity) pure
 {
     // Take into account alignment (SOCKET may be 64-bit and require 64-bit alignment on 64-bit systems)
     size_t size = (fd_set_custom!1).sizeof - SOCKET.sizeof + (SOCKET.sizeof * capacity);
@@ -461,6 +467,8 @@ struct in_addr6
 }
 +/
 
+@safe pure @nogc
+{
 
 version(BigEndian)
 {
@@ -507,6 +515,8 @@ uint ntohl(uint x)
 {
     return htonl(x);
 }
+
+} // @safe pure @nogc
 
 
 enum: int
@@ -696,7 +706,7 @@ struct hostent
     char** h_addr_list;
 
 
-    char* h_addr()
+    char* h_addr() @safe pure nothrow @nogc
     {
         return h_addr_list[0];
     }
