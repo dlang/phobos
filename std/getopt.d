@@ -485,14 +485,54 @@ enum config {
 }
 
 /** The result of the $(D getopt) function.
-
-The $(D GetOptDRslt) contains two members. The first member is a boolean with
-the name $(D helpWanted). The second member is an array of $(D Option). The 
-array is accessable by the name $(D options).
 */
 struct GetoptResult {
     bool helpWanted; /// Flag indicating if help was requested
     Option[] options; /// All possible options
+    /**
+        The index of the first argument that has not been looked at, because
+        getopt stopped processing due to $(LREF endOfOptions),
+        $(LREF endOfOptionsPred), or $(LREF .config.stopOnFirstNonOption).
+
+        Consequentially, $(D args[1 .. stoppedAt]) are unrecognized arguments
+        that have been passed through because of config.passThrough. And
+        $(D args[stoppedAt .. $]) are ignored arguments behind the point where
+        getopt stopped processing.
+    */
+    size_t stoppedAt;
+
+    unittest // --
+    {
+        string[] args = ["program", "--recognize", "--", "--recognize"];
+        bool b;
+        auto r = getopt(args, "recognize", &b);
+        assert(args == ["program", "--recognize"]);
+        assert(r.stoppedAt == 1);
+    }
+    ///
+    unittest // config.passThrough
+    {
+        string[] args = ["program", "--recognize", "--pass-through", "--",
+            "--recognize", "--pass-through"];
+        bool b;
+        auto r = getopt(args, config.passThrough, "recognize", &b);
+        assert(args == ["program", "--pass-through", "--recognize",
+            "--pass-through"]);
+        assert(r.stoppedAt == 2);
+        assert(args[1 .. r.stoppedAt] == ["--pass-through"]);
+        assert(args[r.stoppedAt .. $] == ["--recognize", "--pass-through"]);
+    }
+    unittest // config.stopOnFirstNonOption
+    {
+         string[] args = ["program", "--recognize", "--pass-through",
+            "nonoption", "--recognize", "--pass-through"];
+        bool b;
+        auto r = getopt(args, config.passThrough, config.stopOnFirstNonOption,
+            "recognize", &b);
+        assert(args == ["program", "--pass-through", "nonoption", "--recognize",
+            "--pass-through"]);
+        assert(r.stoppedAt == 2);
+    }
 }
 
 /** The result of the $(D getoptHelp) function.
@@ -579,21 +619,28 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     else
     {
         // no more options to look for, potentially some arguments left
+        rslt.stoppedAt = 0;
         foreach (i, a ; args[1 .. $]) {
             if (endOfOptionsPred !is null && endOfOptionsPred(a))
             {
+                rslt.stoppedAt = i + 1;
                 break;
             }
             if (!a.length || a[0] != optionChar)
             {
                 // not an option
-                if (cfg.stopOnFirstNonOption) break;
+                if (cfg.stopOnFirstNonOption)
+                {
+                    rslt.stoppedAt = i + 1;
+                    break;
+                }
                 continue;
             }
             if (endOfOptions.length && a == endOfOptions)
             {
                 // Consume the "--"
                 args = args.remove(i + 1);
+                rslt.stoppedAt = i + 1;
                 break;
             }
             if (!cfg.passThrough)
@@ -608,6 +655,8 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
                 args = args.remove(i + 1);
             }
         }
+
+        if (rslt.stoppedAt == 0) rslt.stoppedAt = args.length;
 
         Option helpOpt;
         helpOpt.optShort = "-h";
@@ -890,9 +939,10 @@ unittest
     endOfOptionsPred = arg => !arg.startsWith(optionChar) &&
         arg.endsWith(".d");
     string s;
-    getopt(args, config.passThrough, "option", &s);
+    auto r = getopt(args, config.passThrough, "option", &s);
     assert(s == "value.d");
     assert(args == ["program", "file.o", "file.d", "--option"]);
+    assert(r.stoppedAt == 2);
 }
 
 /**
