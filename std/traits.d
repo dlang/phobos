@@ -1253,7 +1253,7 @@ template functionAttributes(func...)
                             func, Unqual!(FunctionTypeOf!func));
 
     enum FunctionAttribute functionAttributes =
-        extractAttribFlags!(__traits(getFunctionAttributes, FuncSym));
+        extractAttribFlags!(__traits(getFunctionAttributes, FuncSym))();
 }
 
 ///
