@@ -1916,8 +1916,8 @@ public:
         $(LREF SysTime) which is less than a second).
 
         Params:
-            fracSec = The duration to set this $(LREF SysTime)'s fractional
-                      seconds to.
+            fracSecs = The duration to set this $(LREF SysTime)'s fractional
+                       seconds to.
 
         Throws:
             $(LREF DateTimeException) if the given duration is negative or if
