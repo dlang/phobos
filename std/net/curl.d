@@ -200,6 +200,29 @@ extern (C) void exit(int);
 // Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
 
+/**
+Macros:
+
+CALLBACK_PARAMS = $(TABLE ,
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM dlTotal))
+        $(DDOC_PARAM_DESC total bytes to download)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM dlNow))
+        $(DDOC_PARAM_DESC currently downloaded bytes)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM ulTotal))
+        $(DDOC_PARAM_DESC total bytes to upload)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM ulNow))
+        $(DDOC_PARAM_DESC currently uploaded bytes)
+        )
+)
+*/
+
 /** Connection type used when the URL should be used to auto detect the protocol.
   *
   * This struct is used as placeholder for the connection parameter when calling
@@ -2423,17 +2446,14 @@ struct HTTP
         @property void onReceive(size_t delegate(ubyte[]) callback);
 
         /**
-         * The event handler that gets called to inform of upload/download progress.
+         * Register an event handler that gets called to inform of
+         * upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns: Return 0 to signal success, return non-zero to
+         * abort transfer.
          *
          * Example:
          * ----
@@ -3062,15 +3082,12 @@ struct FTP
         /**
          * The event handler that gets called to inform of upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns:
+         * Return 0 from the callback to signal success, return non-zero to
+         * abort transfer.
          */
         @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                                size_t ulTotal, size_t ulNow) callback);
@@ -3401,15 +3418,12 @@ struct SMTP
         /**
          * The event handler that gets called to inform of upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns:
+         * Return 0 from the callback to signal success, return non-zero to
+         * abort transfer.
          */
         @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                                size_t ulTotal, size_t ulNow) callback);
