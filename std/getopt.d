@@ -579,23 +579,26 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     else
     {
         // no more options to look for, potentially some arguments left
-        foreach (i, a ; args[1 .. $]) {
+        for (size_t i = 1; i < args.length;)
+        {
+            auto a = args[i];
             if (!a.length || a[0] != optionChar)
             {
                 // not an option
                 if (cfg.stopOnFirstNonOption) break;
+                ++i;
                 continue;
             }
             if (endOfOptions.length && a == endOfOptions)
             {
                 // Consume the "--"
-                args = args.remove(i + 1);
+                args = args.remove(i);
                 break;
             }
             if (a == "--help" || a == "-h")
             {
                 rslt.helpWanted = true;
-                args = args.remove(i + 1);
+                args = args.remove(i);
                 continue;
             }
             if (!cfg.passThrough)
@@ -1282,6 +1285,23 @@ unittest // implicit help option without config.passThrough
     string[] args = ["program", "--help"];
     auto r = getopt(args);
     assert(r.helpWanted);
+}
+
+// Issue 13316 - std.getopt: implicit help option breaks the next argument
+unittest
+{
+    string[] args = ["program", "--help", "--", "something"];
+    getopt(args);
+    assert(args == ["program", "something"]);
+
+    args = ["program", "--help", "--"];
+    getopt(args);
+    assert(args == ["program"]);
+
+    bool b;
+    args = ["program", "--help", "nonoption", "--option"];
+    getopt(args, config.stopOnFirstNonOption, "option", &b);
+    assert(args == ["program", "nonoption", "--option"]);
 }
 
 /** This function prints the passed $(D Option) and text in an aligned manner. 
