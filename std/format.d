@@ -29,7 +29,7 @@ import std.algorithm, std.ascii, std.conv,
     std.exception, std.range,
     std.system, std.traits, std.typetuple,
     std.utf;
-version (Win64) {
+version (CRuntime_Microsoft) {
     import std.math : isnan, isInfinity;
 }
 version(unittest) {
@@ -41,7 +41,7 @@ version(unittest) {
     import std.string;
 }
 
-version (Win32) version (DigitalMars)
+version(CRuntime_DigitalMars)
 {
     version = DigitalMarsC;
 }
@@ -1598,7 +1598,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enforceFmt(std.algorithm.find("fgFGaAeEs", fs.spec).length,
         "floating");
 
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         double tval = val; // convert early to get "inf" in case of overflow
         string s;
@@ -3421,7 +3421,7 @@ unittest
         assert(stream.data == "1.67 -0XA.3D70A3D70A3D8P-3 nan",
                 stream.data);
     }
-    else version (Win64)
+    else version (CRuntime_Microsoft)
     {
         assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
                 stream.data);
@@ -3458,7 +3458,7 @@ unittest
 
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
-    version (Win64)
+    version (CRuntime_Microsoft)
         assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
     else version (Android)
     {
@@ -5147,7 +5147,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 {
                     sl = fbuf.length;
                     int n;
-                    version (Win64)
+                    version (CRuntime_Microsoft)
                     {
                         if (isnan(v)) // snprintf writes 1.#QNAN
                             n = snprintf(fbuf.ptr, sl, "nan");
@@ -5970,7 +5970,7 @@ unittest
     //else
     version (MinGW)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
-    else version (Win64)
+    else version (CRuntime_Microsoft)
         assert(s == "1.67 -0X1.47AE14P+0 nan", s);
     else version (Android)
     {

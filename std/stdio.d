@@ -26,18 +26,15 @@ import std.range;
 import std.traits : Unqual, isSomeChar, isAggregateType, isSomeString,
     isIntegral, isBoolean, ParameterTypeTuple;
 
-version (DigitalMars)
+version (CRuntime_Microsoft)
 {
-    version (Win32)
-    {
-        // Specific to the way Digital Mars C does stdio
-        version = DIGITAL_MARS_STDIO;
-        import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
-    }
-    else version (Win64)
-    {
-        version = MICROSOFT_STDIO;
-    }
+    version = MICROSOFT_STDIO;
+}
+else version (CRuntime_DigitalMars)
+{
+    // Specific to the way Digital Mars C does stdio
+    version = DIGITAL_MARS_STDIO;
+    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
 }
 
 version (Posix)

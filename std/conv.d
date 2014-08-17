@@ -2891,7 +2891,7 @@ unittest
     ld = parse!real(s2);
     assert(s2.empty);
     x = *cast(longdouble *)&ld;
-    version (Win64)
+    version (CRuntime_Microsoft)
         ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
     else version (Android)
         ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod

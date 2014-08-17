@@ -111,7 +111,7 @@ import std.internal.processinit;
 
 // When the DMC runtime is used, we have to use some custom functions
 // to convert between Windows file handles and FILE*s.
-version (Win32) version (DigitalMars) version = DMC_RUNTIME;
+version (Win32) version (CRuntime_DigitalMars) version = DMC_RUNTIME;
 
 
 // Some of the following should be moved to druntime.

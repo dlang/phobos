@@ -146,7 +146,7 @@ version(unittest)
 
         int ix;
         int iy;
-        version(Win64)
+        version(CRuntime_Microsoft)
             alias double real_t;
         else
             alias real real_t;
@@ -1966,7 +1966,7 @@ unittest
     assert(feqrel(exp2(0.5L), SQRT2) >= real.mant_dig -1);
     assert(exp2(8.0L) == 256.0);
     assert(exp2(-9.0L)== 1.0L/512.0);
-    version(Win64) {} else // aexp2/exp2f/exp2l not implemented
+    version(CRuntime_Microsoft) {} else // aexp2/exp2f/exp2l not implemented
     {
         assert( core.stdc.math.exp2f(0.0f) == 1 );
         assert( core.stdc.math.exp2 (0.0)  == 1 );
@@ -2343,15 +2343,47 @@ int ilogb(real x)  @trusted nothrow @nogc
             mov     EAX,8[RSP]          ;
             ret                         ;
 
-          Lzeronan:
+        Lzeronan:
             mov     EAX,0x80000000      ;
             fstp    ST(0)               ;
             ret                         ;
 
-          Linfinity:
+        Linfinity:
             mov     EAX,0x7FFFFFFF      ;
             fstp    ST(0)               ;
             ret                         ;
+        }
+    }
+    else version (CRuntime_Microsoft)
+    {
+        int res;
+        asm
+        {
+            naked                       ;
+            fld     real ptr [x]        ;
+            fxam                        ;
+            fstsw   AX                  ;
+            and     AH,0x45             ;
+            cmp     AH,0x40             ;
+            jz      Lzeronan            ;
+            cmp     AH,5                ;
+            jz      Linfinity           ;
+            cmp     AH,1                ;
+            jz      Lzeronan            ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            fistp   res                 ;
+            mov     EAX,res             ;
+            jmp     Ldone               ;
+
+        Lzeronan:
+            mov     EAX,0x80000000      ;
+            fstp    ST(0)               ;
+
+        Linfinity:
+            mov     EAX,0x7FFFFFFF      ;
+            fstp    ST(0)               ;
+        Ldone: ;
         }
     }
     else
@@ -2883,6 +2915,15 @@ real logb(real x) @trusted nothrow @nogc
             ret                         ;
         }
     }
+    else version (CRuntime_Microsoft)
+    {
+        asm
+        {
+            fld     x                   ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+        }
+    }
     else
         return core.stdc.math.logbl(x);
 }
@@ -2903,7 +2944,7 @@ real logb(real x) @trusted nothrow @nogc
  */
 real fmod(real x, real y) @trusted nothrow @nogc
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         return x % y;
     }
@@ -2924,7 +2965,7 @@ real fmod(real x, real y) @trusted nothrow @nogc
  */
 real modf(real x, ref real i) @trusted nothrow @nogc
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         i = trunc(x);
         return copysign(isInfinity(x) ? 0.0 : x - i, x);
@@ -2994,7 +3035,7 @@ unittest
  */
 real cbrt(real x) @trusted nothrow @nogc
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         version (INLINE_YL2X)
             return copysign(exp2(yl2x(fabs(x), 1.0L/3.0L)), x);
@@ -3148,6 +3189,24 @@ real ceil(real x) @trusted pure nothrow @nogc
             ret                         ;
         }
     }
+    else version(CRuntime_Microsoft)
+    {
+        short cw;
+        asm
+        {
+            fld     x                   ;
+            fstcw   cw                  ;
+            mov     AL,byte ptr cw+1    ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x08             ; // round to +infinity
+            mov     byte ptr cw+1,AL    ;
+            fldcw   cw                  ;
+            frndint                     ;
+            mov     byte ptr cw+1,DL    ;
+            fldcw   cw                  ;
+        }
+    }
     else
     {
         // Special cases.
@@ -3257,6 +3316,24 @@ real floor(real x) @trusted pure nothrow @nogc
             ret                         ;
         }
     }
+    else version(CRuntime_Microsoft)
+    {
+        short cw;
+        asm
+        {
+            fld     x                   ;
+            fstcw   cw                  ;
+            mov     AL,byte ptr cw+1    ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x04             ; // round to -infinity
+            mov     byte ptr cw+1,AL    ;
+            fldcw   cw                  ;
+            frndint                     ;
+            mov     byte ptr cw+1,DL    ;
+            fldcw   cw                  ;
+        }
+    }
     else
     {
         // Special cases.
@@ -3338,7 +3415,7 @@ unittest
  */
 real nearbyint(real x) @trusted nothrow @nogc
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         assert(0);      // not implemented in C library
     }
@@ -3521,7 +3598,7 @@ unittest
  */
 real round(real x) @trusted nothrow @nogc
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         auto old = FloatingPointControl.getControlState();
         FloatingPointControl.setControlState((old & ~FloatingPointControl.ROUNDING_MASK) | FloatingPointControl.roundToZero);
@@ -3583,6 +3660,24 @@ real trunc(real x) @trusted nothrow @nogc
             ret                         ;
         }
     }
+    else version(CRuntime_Microsoft)
+    {
+        short cw;
+        asm
+        {
+            fld     x                   ;
+            fstcw   cw                  ;
+            mov     AL,byte ptr cw+1    ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     byte ptr cw+1,AL    ;
+            fldcw   cw                  ;
+            frndint                     ;
+            mov     byte ptr cw+1,DL    ;
+            fldcw   cw                  ;
+        }
+    }
     else
         return core.stdc.math.truncl(x);
 }
@@ -3611,7 +3706,7 @@ real trunc(real x) @trusted nothrow @nogc
  */
 real remainder(real x, real y) @trusted nothrow @nogc
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         int n;
         return remquo(x, y, n);
