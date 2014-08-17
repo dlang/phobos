@@ -865,10 +865,11 @@ private template ReduceSeedType(E)
     {
         E e = E.init;
         static alias ReduceSeedType = Unqual!(typeof(fun(e, e)));
-        static assert(is(typeof({
-            ReduceSeedType s = e;
-            s = fun(s, e);
-        })), algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
+
+        //Check the Seed type is useable.
+        ReduceSeedType s = ReduceSeedType.init;
+        static assert(is(typeof({ReduceSeedType s = e;})) && is(typeof(s = fun(s, e))),
+            algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
     }
 }
 
@@ -1107,6 +1108,12 @@ unittest //12569
     //"Incompatable function/seed/element: all(alias pred = "a")/int/dchar"
     static assert(!is(typeof(reduce!all(1, "hello"))));
     static assert(!is(typeof(reduce!(all, all)(tuple(1, 1), "hello"))));
+}
+
+unittest //13304
+{
+    int[] data;
+    static assert(is(typeof(reduce!((a, b)=>a+b)(data))));
 }
 
 // sum
