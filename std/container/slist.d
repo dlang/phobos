@@ -12,16 +12,22 @@ struct SList(T)
 {
     private struct Node
     {
-        T _payload;
         Node * _next;
+        T _payload;
         this(T a, Node* b) { _payload = a; _next = b; }
     }
+    private struct NodeWithoutPayload
+    {
+        Node* _next;
+    }
+    static assert(NodeWithoutPayload._next.offsetof == Node._next.offsetof);
+
     private Node * _root;
 
-    private void initialize() @safe nothrow pure
+    private void initialize() @trusted nothrow pure
     {
         if (_root) return;
-        _root = new Node();
+        _root = cast (Node*) new NodeWithoutPayload();
     }
 
     private ref inout(Node*) _first() @property @safe nothrow pure inout
