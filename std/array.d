@@ -1919,13 +1919,6 @@ unittest
     }
 }
 
-/+
-Commented out until the replace which has been deprecated has been removed.
-I'd love to just remove it in favor of replaceInPlace, but then code would then
-use this version of replaceInPlace and silently break. So, it's here so that it
-can be used once replace has not only been deprecated but removed, but
-until then, it's commented out.
-
 /++
     Replaces elements from $(D array) with indices ranging from $(D from)
     (inclusive) to $(D to) (exclusive) with the range $(D stuff). Returns a new
@@ -2019,8 +2012,29 @@ unittest
     testStr!(dstring, string)();
     testStr!(dstring, wstring)();
     testStr!(dstring, dstring)();
+
+    enum s = "0123456789";
+    enum w = "⁰¹²³⁴⁵⁶⁷⁸⁹"w;
+    enum d = "⁰¹²³⁴⁵⁶⁷⁸⁹"d;
+
+    assert(replace(s, 0, 0, "***") == "***0123456789");
+    assert(replace(s, 10, 10, "***") == "0123456789***");
+    assert(replace(s, 3, 8, "1012") == "012101289");
+    assert(replace(s, 0, 5, "43210") == "4321056789");
+    assert(replace(s, 5, 10, "43210") == "0123443210");
+
+    assert(replace(w, 0, 0, "***"w) == "***⁰¹²³⁴⁵⁶⁷⁸⁹"w);
+    assert(replace(w, 10, 10, "***"w) == "⁰¹²³⁴⁵⁶⁷⁸⁹***"w);
+    assert(replace(w, 3, 8, "¹⁰¹²"w) == "⁰¹²¹⁰¹²⁸⁹"w);
+    assert(replace(w, 0, 5, "⁴³²¹⁰"w) == "⁴³²¹⁰⁵⁶⁷⁸⁹"w);
+    assert(replace(w, 5, 10, "⁴³²¹⁰"w) == "⁰¹²³⁴⁴³²¹⁰"w);
+
+    assert(replace(d, 0, 0, "***"d) == "***⁰¹²³⁴⁵⁶⁷⁸⁹"d);
+    assert(replace(d, 10, 10, "***"d) == "⁰¹²³⁴⁵⁶⁷⁸⁹***"d);
+    assert(replace(d, 3, 8, "¹⁰¹²"d) == "⁰¹²¹⁰¹²⁸⁹"d);
+    assert(replace(d, 0, 5, "⁴³²¹⁰"d) == "⁴³²¹⁰⁵⁶⁷⁸⁹"d);
+    assert(replace(d, 5, 10, "⁴³²¹⁰"d) == "⁰¹²³⁴⁴³²¹⁰"d);
 }
-+/
 
 /++
     Replaces elements from $(D array) with indices ranging from $(D from)
@@ -2070,15 +2084,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
              (is(T == const T) || is(T == immutable T))) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
 {
-    auto app = appender!(T[])();
-    app.put(array[0 .. from]);
-    app.put(stuff);
-    app.put(array[to .. $]);
-    array = app.data;
-
-    //This simplified version can be used once the old replace has been removed
-    //and the new one uncommented out.
-    //array = replace(array, from, to stuff);
+    array = replace(array, from, to, stuff);
 }
 
 //Verify Examples.
