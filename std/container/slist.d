@@ -14,7 +14,6 @@ struct SList(T)
     {
         Node * _next;
         T _payload;
-        this(T a, Node* b) { _payload = a; _next = b; }
     }
     private struct NodeWithoutPayload
     {
@@ -279,7 +278,7 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
         Node * n, newRoot;
         foreach (item; stuff)
         {
-            auto newNode = new Node(item, null);
+            auto newNode = new Node(null, item);
             (newRoot ? n._next : newRoot) = newNode;
             n = newNode;
             ++result;
@@ -296,7 +295,7 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
         initialize();
-        auto newRoot = new Node(stuff, _first);
+        auto newRoot = new Node(_first, stuff);
         _first = newRoot;
         return 1;
     }
