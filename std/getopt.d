@@ -592,16 +592,15 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
                 args = args.remove(i + 1);
                 break;
             }
-            if (!cfg.passThrough)
-            {
-                throw new GetOptException("Unrecognized option "~a);
-            }
-
             if (a == "--help" || a == "-h")
             {
                 rslt.helpWanted = true;
-
                 args = args.remove(i + 1);
+                continue;
+            }
+            if (!cfg.passThrough)
+            {
+                throw new GetOptException("Unrecognized option "~a);
             }
         }
 
@@ -1276,6 +1275,13 @@ unittest
     auto r = getopt(args, config.caseInsensitive, "help|f", "Some foo", &foo);
     assert(foo);
     assert(!r.helpWanted);
+}
+
+unittest // implicit help option without config.passThrough
+{
+    string[] args = ["program", "--help"];
+    auto r = getopt(args);
+    assert(r.helpWanted);
 }
 
 /** This function prints the passed $(D Option) and text in an aligned manner. 
