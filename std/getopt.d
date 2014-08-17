@@ -582,18 +582,18 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         for (size_t i = 1; i < args.length;)
         {
             auto a = args[i];
+            if (endOfOptions.length && a == endOfOptions)
+            {
+                // Consume the "--"
+                args = args.remove(i);
+                break;
+            }
             if (!a.length || a[0] != optionChar)
             {
                 // not an option
                 if (cfg.stopOnFirstNonOption) break;
                 ++i;
                 continue;
-            }
-            if (endOfOptions.length && a == endOfOptions)
-            {
-                // Consume the "--"
-                args = args.remove(i);
-                break;
             }
             if (a == "--help" || a == "-h")
             {
@@ -1302,6 +1302,19 @@ unittest
     args = ["program", "--help", "nonoption", "--option"];
     getopt(args, config.stopOnFirstNonOption, "option", &b);
     assert(args == ["program", "nonoption", "--option"]);
+}
+
+// Issue 13317 - std.getopt: endOfOptions broken when it doesn't look like an option
+unittest
+{
+    auto endOfOptionsBackup = endOfOptions;
+    scope(exit) endOfOptions = endOfOptionsBackup;
+    endOfOptions = "endofoptions";
+    string[] args = ["program", "endofoptions", "--option"];
+    bool b = false;
+    getopt(args, "option", &b);
+    assert(!b);
+    assert(args == ["program", "--option"]);
 }
 
 /** This function prints the passed $(D Option) and text in an aligned manner. 
