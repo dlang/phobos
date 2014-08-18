@@ -29438,6 +29438,7 @@ string windowsTZNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Kaliningrad Standard Time": return "Europe/Kaliningrad";
         case "Korea Standard Time": return "Asia/Seoul";
         case "Libya Standard Time": return "Africa/Tripoli";
+        case "Line Islands Standard Time": return "Africa/Bogota";
         case "Magadan Standard Time": return "Asia/Magadan";
         case "Mauritius Standard Time": return "Indian/Mauritius";
         case "Middle East Standard Time": return "Asia/Beirut";
