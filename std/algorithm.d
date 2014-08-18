@@ -481,12 +481,12 @@ private struct MapResult(alias fun, Range)
 
     static if (isBidirectionalRange!R)
     {
-        @property auto ref back()
+        @property auto ref back()()
         {
             return fun(_input.back);
         }
 
-        void popBack()
+        void popBack()()
         {
             _input.popBack();
         }
