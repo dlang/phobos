@@ -605,6 +605,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             {
                 throw new GetOptException("Unrecognized option "~a);
             }
+            ++i;
         }
 
         Option helpOpt;
