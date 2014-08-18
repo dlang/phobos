@@ -26510,11 +26510,11 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         static void testPZSuccess(string tzName)
         {
             scope(failure) writefln("TZName which threw: %s", tzName);
-
             TimeZone.getTimeZone(tzName);
         }
 
-        auto tzNames = getInstalledTZNames();
+        auto tzNames = sort(getInstalledTZNames());
+        assert(equal(tzNames, tzNames.uniq()));
 
         foreach(tzName; tzNames)
             assertNotThrown!DateTimeException(testPZSuccess(tzName));
@@ -28521,7 +28521,10 @@ version(StdDdoc)
 
         /++
             Returns a list of the names of the time zones installed on the
-            system.
+            system. The list returned by WindowsTimeZone contains the Windows
+            TZ names, not the TZ Database names. However,
+            $(D TimeZone.getinstalledTZNames) will return the TZ Database names
+            which are equivalent to the Windows TZ names.
           +/
         static string[] getInstalledTZNames() @safe;
 
@@ -28917,16 +28920,14 @@ else version(Posix)
     of the more exotic TZ Database names don't have corresponding Windows time
     zone names.
 
+    Returns null if the given time zone name cannot be converted.
+
     See_Also:
         $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
               Windows <-> TZ Database Name Conversion Table)
 
     Params:
         tzName = The TZ Database name to convert.
-
-    Throws:
-        $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
-        converted.
   +/
 string tzDatabaseNameToWindowsTZName(string tzName) @safe pure
 {
@@ -29036,24 +29037,14 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure
         case "Pacific/Honolulu": return "Hawaiian Standard Time";
         case "Pacific/Port_Moresby": return "West Pacific Standard Time";
         case "Pacific/Tongatapu": return "Tonga Standard Time";
-        default:
-            throw new DateTimeException(format("Could not find Windows time zone name for: %s.", tzName));
+        default: return null;
     }
 }
 
 version(Windows) unittest
 {
-    static void testTZSuccess(string tzName)
-    {
-        scope(failure) writefln("TZName which threw: %s", tzName);
-
-        tzDatabaseNameToWindowsTZName(tzName);
-    }
-
-    auto timeZones = TimeZone.getInstalledTZNames();
-
-    foreach(tzname; timeZones)
-        assertNotThrown!DateTimeException(testTZSuccess(tzname));
+    foreach(tzname; TimeZone.getInstalledTZNames())
+        assert(tzDatabaseNameToWindowsTZName(tzName) !is null, format("TZName which failed: %s", tZname));
 }
 
 
@@ -29061,16 +29052,14 @@ version(Windows) unittest
     Converts the given Windows time zone name to a corresponding TZ Database
     name.
 
+    Returns null if the given time zone name cannot be converted.
+
     See_Also:
         $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
               Windows <-> TZ Database Name Conversion Table)
 
     Params:
         tzName = The TZ Database name to convert.
-
-    Throws:
-        $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
-        converted.
   +/
 string windowsTZNameToTZDatabaseName(string tzName) @safe pure
 {
@@ -29183,24 +29172,14 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure
         case "West Asia Standard Time": return "Asia/Tashkent";
         case "West Pacific Standard Time": return "Pacific/Port_Moresby";
         case "Yakutsk Standard Time": return "Asia/Yakutsk";
-        default:
-            throw new DateTimeException(format("Could not find TZ Database name for: %s.", tzName));
+        default: return null;
     }
 }
 
 version(Windows) unittest
 {
-        static void testTZSuccess(string tzName)
-        {
-            scope(failure) writefln("TZName which threw: %s", tzName);
-
-            windowsTZNameToTZDatabaseName(tzName);
-        }
-
-        auto timeZones = WindowsTimeZone.getInstalledTZNames();
-
-        foreach(tzname; timeZones)
-            assertNotThrown!DateTimeException(testTZSuccess(tzname));
+    foreach(tzname; WindowsTimeZone.getInstalledTZNames())
+        assert(windowsTZNameToTZDatabaseName(tzName) !is null, format("TZName which failed: %s", tZname));
 }
 
 
