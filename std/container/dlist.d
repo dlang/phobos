@@ -362,7 +362,7 @@ $(D r) and $(D m) is the length of $(D stuff).
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
 
 /**
-Picks one value from the front of the container, removes it from the
+Picks one value from the back of the container, removes it from the
 container, and returns it.
 
 Precondition: $(D !empty)
