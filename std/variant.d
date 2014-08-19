@@ -555,7 +555,7 @@ private:
             break;
 
         case OpID.postblit:
-            static if (hasElaborateAssign!A)
+            static if (hasElaborateCopyConstructor!A)
             {
                 typeid(A).postblit(zis);
             }
@@ -631,7 +631,7 @@ public:
                     memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
                 else
                     memcpy(&store, &rhs, rhs.sizeof);
-                static if (hasElaborateAssign!T)
+                static if (hasElaborateCopyConstructor!T)
                 {
                     typeid(T).postblit(&store);
                 }
