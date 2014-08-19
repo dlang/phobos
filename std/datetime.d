@@ -28668,6 +28668,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Africa/Banjul": return "Greenwich Standard Time";
         case "Africa/Bissau": return "Greenwich Standard Time";
         case "Africa/Blantyre": return "South Africa Standard Time";
+        case "Africa/Bogota": return "Line Islands Standard Time";
         case "Africa/Brazzaville": return "W. Central Africa Standard Time";
         case "Africa/Bujumbura": return "South Africa Standard Time";
         case "Africa/Cairo": return "Egypt Standard Time";
