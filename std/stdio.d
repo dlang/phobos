@@ -1343,7 +1343,7 @@ Params:
 buf = Buffer used to store the resulting line data. buf is
 resized as necessary.
 terminator = Line terminator (by default, $(D '\n')). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Returns:
@@ -1694,7 +1694,7 @@ Char = Character type for each line, defaulting to $(D char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Example:
@@ -1832,7 +1832,7 @@ Char = Character type for each line, defaulting to $(D immutable char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Example:
@@ -2795,6 +2795,13 @@ void writeln(T...)(T args)
         auto w = .trustedStdout.lockingTextWriter();
         w.put(args[0]);
         w.put('\n');
+        version (DIGITAL_MARS_STDIO)
+        {
+            _iobuf* trustedCast(shared(_iobuf)* fp) @trusted { return cast(_iobuf*)fp; }
+            auto fp = trustedCast(.trustedStdout._p.handle);
+            if (fp._flag & _IOLBF)              // if line buffered output
+                .trustedStdout.flush();         // flush after '\n'
+        }
     }
     else
     {
