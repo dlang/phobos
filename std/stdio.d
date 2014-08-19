@@ -2794,7 +2794,7 @@ void writeln(T...)(T args)
         // Specialization for strings - a very frequent case
         auto w = .trustedStdout.lockingTextWriter();
         w.put(args[0]);
-        w.put("\n");
+        w.put('\n');
     }
     else
     {
