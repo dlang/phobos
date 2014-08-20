@@ -640,9 +640,9 @@ but relax the complexity constraint to linear.
 /**
 Picks one value in an unspecified position in the container, removes
 it from the container, and returns it. Implementations should pick the
-value that's the most advantageous for the container, but document the
-exact behavior. The stable version behaves the same, but guarantees that
-ranges iterating over the container are never invalidated.
+value that's the most advantageous for the container. The stable version
+behaves the same, but guarantees that ranges iterating over the container
+are never invalidated.
 
 Precondition: $(D !empty)
 

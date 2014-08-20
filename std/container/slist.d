@@ -282,8 +282,9 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
     alias stableInsertFront = insertFront;
 
 /**
-Picks one value from the front of the container, removes it from the
-container, and returns it.
+Picks one value in an unspecified position in the container, removes
+it from the container, and returns it. The stable version behaves the same,
+but guarantees that ranges iterating over the container are never invalidated.
 
 Precondition: $(D !empty)
 
