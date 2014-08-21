@@ -612,9 +612,9 @@ public:
     }
 
     /++
-        $(RED Deprecated. Please use the overload which takes a
+        $(RED Scheduled for deprecation. Please use the overload which takes a
               $(CXREF time, Duration) for the fractional seconds. This overload
-              will be removed in June 2015).
+              will be deprecated in 2.068).
 
         Params:
             dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
@@ -628,7 +628,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
       +/
-    deprecated("Please use the overload which takes a Duration instead of a FracSec.")
+    //deprecated("Please use the overload which takes a Duration instead of a FracSec.")
     this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
@@ -649,7 +649,7 @@ public:
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
     }
 
-    deprecated unittest
+    /+deprecated+/ unittest
     {
         static void test(DateTime dt,
                          FracSec fracSec,
@@ -1989,14 +1989,14 @@ public:
 
 
     /++
-        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
-              uses a $(CXREF time, Duration) to represent the fractional seconds
-              instead of a $(CXREF time, FracSec). This overload will be removed
-              in June 2015).
+        $(RED Scheduled for deprecation. Please use $(LREF fracSecs) instead of
+              fracSec. It uses a $(CXREF time, Duration) to represent the
+              fractional seconds instead of a $(CXREF time, FracSec). This
+              overload will be deprecated in 2.068).
 
         Fractional seconds past the second.
      +/
-    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
+    //deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property FracSec fracSec() @safe const nothrow
     {
         try
@@ -2014,7 +2014,7 @@ public:
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
-    deprecated unittest
+    /+deprecated+/ unittest
     {
         static void test(SysTime sysTime, FracSec expected, size_t line = __LINE__)
         {
@@ -2058,10 +2058,10 @@ public:
 
 
     /++
-        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
-              uses a $(CXREF time, Duration) to represent the fractional seconds
-              instead of a $(CXREF time, FracSec). This overload will be removed
-              in June 2015).
+        $(RED Scheduled for deprecation. Please use $(LREF fracSecs) instead of
+              fracSec. It uses a $(CXREF time, Duration) to represent the
+              fractional seconds instead of a $(CXREF time, FracSec). This
+              overload will be deprecated in 2.068).
 
         Fractional seconds past the second.
 
@@ -2072,7 +2072,7 @@ public:
         Throws:
             $(LREF DateTimeException) if $(D fracSec) is negative.
      +/
-    deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
+    //deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property void fracSec(FracSec fracSec) @safe
     {
         immutable fracHNSecs = fracSec.hnsecs;
@@ -2101,7 +2101,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    deprecated unittest
+    /+deprecated+/ unittest
     {
         foreach(fracSec; testFracSecs)
         {
