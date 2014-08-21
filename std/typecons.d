@@ -49,7 +49,7 @@ import std.typetuple : TypeTuple, allSatisfy;
 debug(Unique) import std.stdio;
 
 /**
-Encapsulates unique ownership of a resource.  Resource of type T is
+Encapsulates unique ownership of a resource.  Resource of type $(D T) is
 deleted at the end of the scope, unless it is transferred.  The
 transfer can be explicit, by calling $(D release), or implicit, when
 returning Unique from a function. The resource can be a polymorphic
@@ -57,23 +57,35 @@ class object, in which case Unique behaves polymorphically too.
 */
 struct Unique(T)
 {
+/** Represents a reference to $(D T). Resolves to $(D T*) if $(D T) is a value type. */
 static if (is(T:Object))
     alias RefT = T;
 else
     alias RefT = T*;
 
 public:
-/+ Doesn't work yet
+    // Deferred in case we get some language support for checking uniqueness.
+    version(None)
     /**
-    The safe constructor. It creates the resource and
-    guarantees unique ownership of it (unless the constructor
-    of $(D T) publishes aliases of $(D this)),
+    Allows safe construction of $(D Unique). It creates the resource and 
+    guarantees unique ownership of it (unless $(D T) publishes aliases of 
+    $(D this)).
+    Note: Nested structs/classes cannot be created.
+    Params:
+    args = Arguments to pass to $(D T)'s constructor.
+    ---
+    static class C {}
+    auto u = Unique!(C).create(); 
+    ---
     */
-    this(A...)(A args)
+    static Unique!T create(A...)(auto ref A args)
+    if (__traits(compiles, new T(args)))
     {
-        _p = new T(args);
+        debug(Unique) writeln("Unique.create for ", T.stringof);
+        Unique!T u;
+        u._p = new T(args);
+        return u;
     }
-+/
 
     /**
     Constructor that takes an rvalue.
@@ -81,7 +93,7 @@ public:
     isn't just a view on an lvalue (e.g., a cast).
     Typical usage:
     ----
-    Unique!(Foo) f = new Foo;
+    Unique!Foo f = new Foo;
     ----
     */
     this(RefT p)
@@ -101,43 +113,50 @@ public:
         p = null;
         assert(p is null);
     }
-/+ Doesn't work yet
     /**
-    Constructor that takes a Unique of a type that is convertible to our type:
-    Disallow construction from lvalue (force the use of release on the source Unique)
-    If the source is an rvalue, null its content, so the destructor doesn't delete it
+    Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
-    Typically used by the compiler to return $(D Unique) of derived type as $(D Unique)
-    of base type.
-
+    Typically used to transfer a $(D Unique) rvalue of derived type to 
+    a $(D Unique) of base type.
     Example:
-    ----
-    Unique!(Base) create()
-    {
-        Unique!(Derived) d = new Derived;
-        return d; // Implicit Derived->Base conversion
-    }
-    ----
+    ---
+    class C : Object {}
+    
+    Unique!C uc = new C;
+    Unique!Object uo = uc.release;
+    ---
     */
-    this(U)(ref Unique!(U) u) = null;
-    this(U)(Unique!(U) u)
+    this(U)(Unique!U u)
+    if (is(u.RefT:RefT))
     {
+        debug(Unique) writeln("Unique constructor converting from ", U.stringof);
         _p = u._p;
         u._p = null;
     }
-+/
-
+    
+    /// Transfer ownership from a $(D Unique) of a type that is convertible to our type.
+    void opAssign(U)(Unique!U u)
+    if (is(u.RefT:RefT))
+    {
+        debug(Unique) writeln("Unique opAssign converting from ", U.stringof);
+        // first delete any resource we own
+        destroy(this);
+        _p = u._p;
+        u._p = null;
+    }
+    
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
         if (_p !is null) delete _p;
         _p = null;
     }
-    bool isEmpty() const
+    /** Returns whether the resource exists. */
+    @property bool isEmpty() const
     {
         return _p is null;
     }
-    /** Returns a unique rvalue. Nullifies the current contents. */
+    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
     Unique release()
     {
         debug(Unique) writeln("Release");
@@ -156,6 +175,67 @@ public:
 
 private:
     RefT _p;
+}
+
+///
+unittest
+{
+    static struct S
+    {
+        int i;
+        this(int i){this.i = i;}
+    }
+    Unique!S produce()
+    {
+        // Construct a unique instance of S on the heap
+        Unique!S ut = new S(5);
+        // Implicit transfer of ownership
+        return ut;
+    }
+    // Borrow a unique resource by ref
+    void increment(ref Unique!S ur)
+    {
+        ur.i++;
+    }
+    void consume(Unique!S u2)
+    {
+        assert(u2.i == 6);
+        // Resource automatically deleted here
+    }
+    Unique!S u1;
+    assert(u1.isEmpty);
+    u1 = produce();
+    increment(u1);
+    assert(u1.i == 6);
+    //consume(u1); // Error: u1 is not copyable
+    // Transfer ownership of the resource
+    consume(u1.release);
+    assert(u1.isEmpty);
+}
+
+unittest
+{
+    // test conversion to base ref
+    int deleted = 0;
+    class C
+    {
+        ~this(){deleted++;}
+    }
+    // constructor conversion
+    Unique!Object u = Unique!C(new C);
+    static assert(!__traits(compiles, {u = new C;}));
+    assert(!u.isEmpty);
+    destroy(u);
+    assert(deleted == 1);
+    
+    Unique!C uc = new C;
+    static assert(!__traits(compiles, {Unique!Object uo = uc;}));
+    Unique!Object uo = new C;
+    // opAssign conversion, deleting uo resource first
+    uo = uc.release;
+    assert(uc.isEmpty);
+    assert(!uo.isEmpty);
+    assert(deleted == 2);
 }
 
 unittest
