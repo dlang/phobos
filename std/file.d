@@ -663,11 +663,11 @@ unittest
 version(StdDdoc) void getTimesWin(in char[] name,
                                   out SysTime fileCreationTime,
                                   out SysTime fileAccessTime,
-                                  out SysTime fileModificationTime);
+                                  out SysTime fileModificationTime) @safe;
 else version(Windows) void getTimesWin(in char[] name,
                                        out SysTime fileCreationTime,
                                        out SysTime fileAccessTime,
-                                       out SysTime fileModificationTime)
+                                       out SysTime fileModificationTime) @safe
 {
     with (getFileAttributesWin(name))
     {
