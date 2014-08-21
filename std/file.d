@@ -545,7 +545,7 @@ ulong getSize(in char[] name) @safe
     }
 }
 
-unittest
+@safe unittest
 {
     // create a file of size 1
     write(deleteme, "a");
