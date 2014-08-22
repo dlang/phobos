@@ -932,42 +932,46 @@ public:
     private VariantN opArithmetic(T, string op)(T other)
     {
         VariantN result;
-        static if (is(T == VariantN))
+        static if (isInstanceOf!(VariantN, T))
         {
-            if (convertsTo!(uint) && other.convertsTo!(uint))
-                result = mixin("get!(uint) " ~ op ~ " other.get!(uint)");
-            else if (convertsTo!(int) && other.convertsTo!(int))
-                result = mixin("get!(int) " ~ op ~ " other.get!(int)");
-            else if (convertsTo!(ulong) && other.convertsTo!(ulong))
-                result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
-            else if (convertsTo!(long) && other.convertsTo!(long))
-                result = mixin("get!(long) " ~ op ~ " other.get!(long)");
-            else if (convertsTo!(float) && other.convertsTo!(float))
-                result = mixin("get!(float) " ~ op ~ " other.get!(float)");
-            else if (convertsTo!(double) && other.convertsTo!(double))
-                result = mixin("get!(double) " ~ op ~ " other.get!(double)");
-            else
-                result = mixin("get!(real) " ~ op ~ " other.get!(real)");
+            string tryUseType(string tp) {
+                import std.string : format;
+                return q{
+                    static if (allowed!%s && T.allowed!%s)
+                        if (convertsTo!%s && other.convertsTo!%s)
+                            return VariantN(get!%s %s other.get!%s);
+                }.format(tp, tp, tp, tp, tp, op, tp);
+            }
+            mixin(tryUseType("uint"));
+            mixin(tryUseType("int"));
+            mixin(tryUseType("ulong"));
+            mixin(tryUseType("long"));
+            mixin(tryUseType("float"));
+            mixin(tryUseType("double"));
+            mixin(tryUseType("real"));
         }
         else
         {
-            if (is(typeof(T.max) : uint) && isUnsigned!T && convertsTo!(uint))
-                result = mixin("get!(uint) " ~ op ~ " other");
-            else if (is(typeof(T.max) : int) && !isUnsigned!T && convertsTo!(int))
-                result = mixin("get!(int) " ~ op ~ " other");
-            else if (is(typeof(T.max) : ulong) && isUnsigned!T
-                     && convertsTo!(ulong))
-                result = mixin("get!(ulong) " ~ op ~ " other");
-            else if (is(typeof(T.max) : long) && !isUnsigned!T && convertsTo!(long))
-                result = mixin("get!(long) " ~ op ~ " other");
-            else if (is(T : float) && convertsTo!(float))
-                result = mixin("get!(float) " ~ op ~ " other");
-            else if (is(T : double) && convertsTo!(double))
-                result = mixin("get!(double) " ~ op ~ " other");
-            else
-                result = mixin("get!(real) " ~ op ~ " other");
+            static if (allowed!T)
+                if (auto pv = peek!T) return VariantN(mixin("*pv " ~ op ~ " other"));
+            static if (allowed!uint && is(typeof(T.max) : uint) && isUnsigned!T)
+                if (convertsTo!uint) return VariantN(mixin("get!(uint) " ~ op ~ " other"));
+            static if (allowed!int && is(typeof(T.max) : int) && !isUnsigned!T)
+                if (convertsTo!int) return VariantN(mixin("get!(int) " ~ op ~ " other"));
+            static if (allowed!ulong && is(typeof(T.max) : ulong) && isUnsigned!T)
+                if (convertsTo!ulong) return VariantN(mixin("get!(ulong) " ~ op ~ " other"));
+            static if (allowed!long && is(typeof(T.max) : long) && !isUnsigned!T)
+                if (convertsTo!long) return VariantN(mixin("get!(long) " ~ op ~ " other"));
+            static if (allowed!float && is(T : float))
+                if (convertsTo!float) return VariantN(mixin("get!(float) " ~ op ~ " other"));
+            static if (allowed!double && is(T : double))
+                if (convertsTo!double) return VariantN(mixin("get!(double) " ~ op ~ " other"));
+            static if (allowed!real && is (T : real))
+                if (convertsTo!real) return VariantN(mixin("get!(real) " ~ op ~ " other"));
         }
-        return result;
+
+        static const ex = new Exception("No possible match found for VariantN "~op~" "~T.stringof);
+        throw ex;
     }
 
     private VariantN opLogic(T, string op)(T other)
@@ -1259,6 +1263,22 @@ unittest
     Variant v = elements;
     void[] returned = v.get!(void[]);
     assert(returned == elements);
+}
+
+// Issue #13352
+unittest
+{
+    alias TP = Algebraic!(long);
+    auto a = TP(1L);
+    auto b = TP(2L);
+    assert(!TP.allowed!ulong);
+    assert(a + b == 3L);
+    assert(a + 2 == 3L);
+    assert(1 + b == 3L);
+
+    alias TP2 = Algebraic!(long, string);
+    auto c = TP2(3L);
+    assert(a + c == 4L);
 }
 
 // Issue #13354
