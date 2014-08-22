@@ -970,7 +970,7 @@ public:
                 if (convertsTo!real) return VariantN(mixin("get!(real) " ~ op ~ " other"));
         }
 
-        static const ex = new Exception("No possible match found for VariantN "~op~" "~T.stringof);
+        static const ex = new VariantException("No possible match found for VariantN "~op~" "~T.stringof);
         throw ex;
     }
 
