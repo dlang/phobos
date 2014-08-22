@@ -1707,7 +1707,7 @@ unittest
 /++
     Swaps the endianness of the given integral value or character.
   +/
-T swapEndian(T)(T val) @safe pure nothrow
+T swapEndian(T)(T val) @safe pure nothrow @nogc
     if(isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     static if(val.sizeof == 1)
@@ -1724,18 +1724,18 @@ T swapEndian(T)(T val) @safe pure nothrow
         static assert(0, T.stringof ~ " unsupported by swapEndian.");
 }
 
-private ushort swapEndianImpl(ushort val) @safe pure nothrow
+private ushort swapEndianImpl(ushort val) @safe pure nothrow @nogc
 {
     return ((val & 0xff00U) >> 8) |
            ((val & 0x00ffU) << 8);
 }
 
-private uint swapEndianImpl(uint val) @trusted pure nothrow
+private uint swapEndianImpl(uint val) @trusted pure nothrow @nogc
 {
     return bswap(val);
 }
 
-private ulong swapEndianImpl(ulong val) @trusted pure nothrow
+private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 {
     immutable ulong res = bswap(cast(uint)val);
     return res << 32 | bswap(cast(uint)(val >> 32));
@@ -1827,7 +1827,7 @@ ubyte[8] swappedD = nativeToBigEndian(d);
 assert(d == bigEndianToNative!double(swappedD));
 --------------------
   +/
-auto nativeToBigEndian(T)(T val) @safe pure nothrow
+auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
     if(canSwapEndianness!T)
 {
     return nativeToBigEndianImpl(val);
@@ -1845,7 +1845,7 @@ unittest
     assert(d == bigEndianToNative!double(swappedD));
 }
 
-private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
+private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
     if(isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
@@ -1858,7 +1858,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
     return es.array;
 }
 
-private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
+private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
     if(isFloatOrDouble!T)
 {
     version(LittleEndian)
@@ -1959,7 +1959,7 @@ ubyte[4] swappedC = nativeToBigEndian(c);
 assert(c == bigEndianToNative!dchar(swappedC));
 --------------------
   +/
-T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
+T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     if(canSwapEndianness!T && n == T.sizeof)
 {
     return bigEndianToNativeImpl!(T, n)(val);
@@ -1977,7 +1977,7 @@ unittest
     assert(c == bigEndianToNative!dchar(swappedC));
 }
 
-private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
+private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     if((isIntegral!T || isSomeChar!T || isBoolean!T) &&
        n == T.sizeof)
 {
@@ -1992,7 +1992,7 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
     return retval;
 }
 
-private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
+private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     if(isFloatOrDouble!T && n == T.sizeof)
 {
     version(LittleEndian)
@@ -2022,7 +2022,7 @@ ubyte[8] swappedD = nativeToLittleEndian(d);
 assert(d == littleEndianToNative!double(swappedD));
 --------------------
   +/
-auto nativeToLittleEndian(T)(T val) @safe pure nothrow
+auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
     if(canSwapEndianness!T)
 {
     return nativeToLittleEndianImpl(val);
@@ -2040,7 +2040,7 @@ unittest
     assert(d == littleEndianToNative!double(swappedD));
 }
 
-private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
+private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
     if(isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
@@ -2053,7 +2053,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
     return es.array;
 }
 
-private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
+private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
     if(isFloatOrDouble!T)
 {
     version(BigEndian)
@@ -2127,7 +2127,7 @@ ubyte[4] swappedC = nativeToLittleEndian(c);
 assert(c == littleEndianToNative!dchar(swappedC));
 --------------------
   +/
-T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow
+T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     if(canSwapEndianness!T && n == T.sizeof)
 {
     return littleEndianToNativeImpl!T(val);
@@ -2145,7 +2145,7 @@ unittest
     assert(c == littleEndianToNative!dchar(swappedC));
 }
 
-private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
+private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     if((isIntegral!T || isSomeChar!T || isBoolean!T) &&
        n == T.sizeof)
 {
@@ -2160,7 +2160,7 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
     return retval;
 }
 
-private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
+private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     if(((isFloatOrDouble!T) &&
        n == T.sizeof))
 {
@@ -2170,7 +2170,7 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
         return floatEndianImpl!(n, false)(val);
 }
 
-private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow
+private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow @nogc
     if(isFloatOrDouble!T)
 {
     EndianSwapper!T es = void;
@@ -2182,7 +2182,7 @@ private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow
     return es.array;
 }
 
-private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothrow
+private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothrow @nogc
     if(n == 4 || n == 8)
 {
     static if(n == 4)       EndianSwapper!float es = void;
