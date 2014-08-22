@@ -527,6 +527,12 @@ private:
         return buff;
     }
 +/
+    // Implement toHash so that BigInt works properly as an AA key.
+    size_t toHash() const @trusted nothrow
+    {
+        return data.toHash() + sign;
+    }
+
 private:
     void negate() @safe pure nothrow
     {
@@ -547,12 +553,6 @@ private:
     {
         if (isZero())
             throw new Error("BigInt division by zero");
-    }
-
-    // Implement toHash so that BigInt works properly as an AA key.
-    size_t toHash() const @trusted nothrow
-    {
-        return data.toHash() + sign;
     }
 }
 
