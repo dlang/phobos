@@ -585,14 +585,20 @@ public:
         opAssign(value);
     }
 
-    this(this)
+    static if (!AllowedTypes.length || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes))
     {
-        fptr(OpID.postblit, &store, null);
+        this(this)
+        {
+            fptr(OpID.postblit, &store, null);
+        }
     }
 
-    ~this()
+    static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
     {
-        fptr(OpID.destruct, &store, null);
+        ~this()
+        {
+            fptr(OpID.destruct, &store, null);
+        }
     }
 
     /** Assigns a $(D_PARAM VariantN) from a generic
@@ -2423,6 +2429,36 @@ unittest
         assert(S.cnt == 1);
     }
     assert(S.cnt == 0);
+}
+
+unittest
+{
+    // Bugzilla 13300
+    static struct S
+    {
+        this(this) {}
+        ~this() {}
+    }
+
+    static assert( hasElaborateCopyConstructor!(Variant));
+    static assert(!hasElaborateCopyConstructor!(Algebraic!bool));
+    static assert( hasElaborateCopyConstructor!(Algebraic!S));
+    static assert( hasElaborateCopyConstructor!(Algebraic!(bool, S)));
+
+    static assert( hasElaborateDestructor!(Variant));
+    static assert(!hasElaborateDestructor!(Algebraic!bool));
+    static assert( hasElaborateDestructor!(Algebraic!S));
+    static assert( hasElaborateDestructor!(Algebraic!(bool, S)));
+
+    import std.array;
+    alias Algebraic!bool Value;
+
+    static struct T
+    {
+        Value value;
+        @disable this();
+    }
+    auto a = appender!(T[]);
 }
 
 unittest
