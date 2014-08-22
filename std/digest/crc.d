@@ -158,7 +158,7 @@ struct CRC32
          * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
          * $(D const(ubyte)[]).
          */
-        @trusted pure nothrow void put(scope const(ubyte)[] data...)
+        void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
         {
             foreach (val; data)
                 _state = (_state >> 8) ^ crc32_table[cast(ubyte)_state ^ val];
@@ -182,7 +182,7 @@ struct CRC32
          *
          * Generic code which deals with different Digest types should always call start though.
          */
-        @trusted pure nothrow void start()
+        void start() @safe pure nothrow @nogc
         {
             this = CRC32.init;
         }
@@ -198,7 +198,7 @@ struct CRC32
          * Returns the finished CRC32 hash. This also calls $(LREF start) to
          * reset the internal state.
          */
-        @trusted pure nothrow ubyte[4] finish()
+        ubyte[4] finish() @safe pure nothrow @nogc
         {
             auto tmp = peek();
             start();
@@ -217,7 +217,7 @@ struct CRC32
          * Works like $(D finish) but does not reset the internal state, so it's possible
          * to continue putting data into this CRC32 after a call to peek.
          */
-        @trusted pure nothrow ubyte[4] peek() const
+        ubyte[4] peek() const @safe pure nothrow @nogc
         {
             //Complement, LSB first / Little Endian, see http://rosettacode.org/wiki/CRC-32
             return nativeToLittleEndian(~_state);
