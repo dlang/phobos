@@ -452,7 +452,7 @@ $(D r) and $(D m) is the length of $(D stuff).
         }
         // insert here
         SList tmp;
-        tmp._root = new Node();
+        tmp.initialize();
         tmp._first = orig._head._next;
         auto result = tmp.insertFront(stuff);
         orig._head._next = tmp._first;
