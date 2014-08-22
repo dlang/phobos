@@ -1872,6 +1872,7 @@ time and computes all matches of length 1.
  */
     this(Range s, Range t, F lambda) {
         enforce(lambda > 0);
+        this.gram = 0;
         this.lambda = lambda;
         this.lambda2 = lambda * lambda; // for efficiency only
 
