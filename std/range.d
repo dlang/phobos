@@ -3469,7 +3469,7 @@ if (isInputRange!R)
             @property size_t length() const { return _n; }
             alias opDollar = length;
 
-            Take!R _takeExactly_Result_asTake()
+            @property Take!R _takeExactly_Result_asTake()
             {
                 return typeof(return)(_input, _n);
             }
