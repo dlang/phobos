@@ -570,21 +570,25 @@ ulong getSize(in char[] name) @safe
  +/
 void getTimes(in char[] name,
               out SysTime accessTime,
-              out SysTime modificationTime)
+              out SysTime modificationTime) @safe
 {
     version(Windows)
     {
         with (getFileAttributesWin(name))
         {
-            accessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-            modificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+            accessTime = FILETIMEToSysTime(&ftLastAccessTime);
+            modificationTime = FILETIMEToSysTime(&ftLastWriteTime);
         }
     }
     else version(Posix)
     {
+        static auto trustedStat(in char* path, ref stat_t buf) @trusted
+        {
+            return stat(path, &buf);
+        }
         stat_t statbuf = void;
 
-        cenforce(stat(toStringz(name), &statbuf) == 0, name);
+        cenforce(trustedStat(toStringz(name), statbuf) == 0, name);
 
         accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
