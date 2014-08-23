@@ -457,6 +457,7 @@ html : $(DOCS)
 ######################################################
 
 $(ZLIB): $(SRC_ZLIB)
+	$(MAKE) -v
 	cd etc\c\zlib
 	$(MAKE) -f win$(MODEL).mak zlib$(MODEL).lib "CC=\$(CC)"\"" "LIB=\$(AR)"\"" "VCDIR=$(VCDIR)"
 	cd ..\..\..
