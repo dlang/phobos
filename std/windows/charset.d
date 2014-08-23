@@ -24,6 +24,8 @@ private import std.windows.syserror;
 private import std.utf;
 private import std.string;
 
+import std.internal.cstring;
+
 /******************************************
  * Converts the UTF-8 string s into a null-terminated string in a Windows
  * 8-bit character set.
@@ -48,13 +50,13 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
         {
             char[] result;
             int readLen;
-            auto ws = std.utf.toUTF16z(s);
-            result.length = WideCharToMultiByte(codePage, 0, ws, -1, null, 0,
+            auto wsTmp = s.tempCStringW();
+            result.length = WideCharToMultiByte(codePage, 0, wsTmp, -1, null, 0,
                     null, null);
 
             if (result.length)
             {
-                readLen = WideCharToMultiByte(codePage, 0, ws, -1, result.ptr,
+                readLen = WideCharToMultiByte(codePage, 0, wsTmp, -1, result.ptr,
                         to!int(result.length), null, null);
             }
 

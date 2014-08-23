@@ -26,6 +26,8 @@ private import std.path;
 private import std.string;
 import std.conv, std.exception, std.stdio;
 
+import std.internal.cstring;
+
 //debug = MMFILE;
 
 version (Windows)
@@ -220,8 +222,7 @@ class MmFile
 
             if (filename.ptr)
             {
-                auto namez = std.utf.toUTF16z(filename);
-                hFile = CreateFileW(namez,
+                hFile = CreateFileW(filename.tempCStringW(),
                         dwDesiredAccess2,
                         dwShareMode,
                         null,
@@ -275,7 +276,6 @@ class MmFile
         }
         else version (Posix)
         {
-            auto namez = toStringz(filename);
             void* p;
             int oflag;
             int fmode;
@@ -317,7 +317,7 @@ class MmFile
 
             if (filename.length)
             {
-                fd = .open(namez, oflag, fmode);
+                fd = .open(filename.tempCString(), oflag, fmode);
                 errnoEnforce(fd != -1, "Could not open file "~filename);
 
                 stat_t statbuf;

@@ -52,6 +52,8 @@ import core.time : dur, Duration;
 import std.algorithm : max;
 import std.exception : assumeUnique, enforce, collectException;
 
+import std.internal.cstring;
+
 
 @safe:
 
@@ -496,7 +498,7 @@ class Protocol
     bool getProtocolByName(in char[] name) @trusted nothrow
     {
         protoent* proto;
-        proto = getprotobyname(toStringz(name));
+        proto = getprotobyname(name.tempCString());
         if(!proto)
             return false;
         populate(proto);
@@ -599,7 +601,7 @@ class Service
     bool getServiceByName(in char[] name, in char[] protocolName = null) @trusted nothrow
     {
         servent* serv;
-        serv = getservbyname(toStringz(name), protocolName !is null ? toStringz(protocolName) : null);
+        serv = getservbyname(name.tempCString(), protocolName.tempCString());
         if(!serv)
             return false;
         populate(serv);
@@ -611,7 +613,7 @@ class Service
     bool getServiceByPort(ushort port, in char[] protocolName = null) @trusted nothrow
     {
         servent* serv;
-        serv = getservbyport(port, protocolName !is null ? toStringz(protocolName) : null);
+        serv = getservbyport(port, protocolName.tempCString());
         if(!serv)
             return false;
         populate(serv);
@@ -807,12 +809,12 @@ class InternetHost
                 hostent* he;
                 ubyte[256] buffer_v = void;
                 auto buffer = buffer_v[];
-                auto param_z = std.string.toStringz(param);
+                auto param_zTmp = param.tempCString();
                 while (true)
                 {
                     he = &he_v;
                     int errno;
-                    if (gethostbyname_r(param_z, he, buffer.ptr, buffer.length, &he, &errno) == ERANGE)
+                    if (gethostbyname_r(param_zTmp, he, buffer.ptr, buffer.length, &he, &errno) == ERANGE)
                         buffer.length = buffer.length * 2;
                     else
                         break;
@@ -822,7 +824,7 @@ class InternetHost
         else
         {
             return getHost!q{
-                auto he = gethostbyname(toStringz(param));
+                auto he = gethostbyname(param.tempCString());
             }(name);
         }
     }
@@ -851,7 +853,7 @@ class InternetHost
     bool getHostByAddr(in char[] addr) @trusted
     {
         return getHost!q{
-            auto x = inet_addr(std.string.toStringz(param));
+            auto x = inet_addr(param.tempCString());
             enforce(x != INADDR_NONE,
                 new SocketParameterException("Invalid IPv4 address"));
             auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
@@ -1026,8 +1028,8 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
         addrinfo* ai_res;
 
         int ret = getaddrinfoPointer(
-            node is null ? null : std.string.toStringz(node),
-            service is null ? null : std.string.toStringz(service),
+            node.tempCString(),
+            service.tempCString(),
             hints, &ai_res);
         enforce(ret == 0, new SocketOSException("getaddrinfo error", ret, &formatGaiError));
         scope(exit) freeaddrinfoPointer(ai_res);
@@ -1674,7 +1676,7 @@ public:
      */
     static uint parse(in char[] addr) @trusted nothrow
     {
-        return ntohl(inet_addr(std.string.toStringz(addr)));
+        return ntohl(inet_addr(addr.tempCString()));
     }
 
     /**
@@ -1969,7 +1971,7 @@ static if (is(sockaddr_un))
         scope(exit) listener.close();
 
         listener.bind(address);
-        scope(exit) () @trusted { remove(toStringz(name)); } ();
+        scope(exit) () @trusted { remove(name.tempCString()); } ();
 
         listener.listen(1);
 
@@ -2605,7 +2607,7 @@ public:
     this(AddressFamily af, SocketType type, in char[] protocolName) @trusted
     {
         protoent* proto;
-        proto = getprotobyname(toStringz(protocolName));
+        proto = getprotobyname(protocolName.tempCString());
         if(!proto)
             throw new SocketOSException("Unable to find the protocol");
         this(af, type, cast(ProtocolType)proto.p_proto);

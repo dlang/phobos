@@ -28887,10 +28887,12 @@ else version(Posix)
 {
     void setTZEnvVar(string tzDatabaseName) @trusted nothrow
     {
+        import std.internal.cstring : tempCString;
+
         try
         {
-            immutable value = buildNormalizedPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName).toStringz();
-            setenv("TZ", value, 1);
+            immutable value = buildNormalizedPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName);
+            setenv("TZ", value.tempCString(), 1);
             tzset();
         }
         catch(Exception e)
