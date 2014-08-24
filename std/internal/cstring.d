@@ -161,6 +161,14 @@ nothrow @nogc unittest
     assert("abc".tempCString!wchar().buffPtr.asArray == "abc"w);
 }
 
+// Test for Issue 13367: ensure there is no memory corruption
+nothrow @nogc unittest
+{
+    @property str(C)() { C[300] arr = 'a'; return arr; }
+    assert(str!char.tempCString!wchar().asArray == str!wchar);
+    assert(str!char.tempCString!dchar().asArray == str!dchar);
+}
+
 version(Windows)
     alias tempCStringW = tempCString!(wchar, char);
 
@@ -294,7 +302,7 @@ body
     if(overflow)
         onOutOfMemoryError();
 
-    auto ptr = cast(T*) tryRawAllocate(count);
+    auto ptr = cast(T*) tryRawAllocate(buffBytes);
     if(!ptr)
         onOutOfMemoryError();
 
