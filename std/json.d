@@ -1060,6 +1060,11 @@ unittest
     foreach (i; 0..9)
         jobj[text("key", i)] = JSONValue(text("value", i));
     assert(jobj.object.length == 10);
+
+    // No array alias
+    auto jarr2 = jarr ~ [1,2,3];
+    jarr2[0] = 999;
+    assert(jarr[0] == JSONValue(10));
 }
 
 unittest
