@@ -439,7 +439,7 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
  * For complex numbers, abs(z) = sqrt( $(POWER z.re, 2) + $(POWER z.im, 2) )
  * = hypot(z.re, z.im).
  */
-Num abs(Num)(Num x) @safe pure nothrow @nogc
+Num abs(Num)(Num x) @safe pure nothrow
     if (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) &&
             !(is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
                     || is(Num* : const(ireal*))))
