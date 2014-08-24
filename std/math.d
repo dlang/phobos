@@ -6141,6 +6141,7 @@ unittest
    approxEqual) evaluates to $(D true) for each pair of elements.
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
+@safe pure nothrow @nogc
 {
     import std.range;
     static if (isInputRange!T)
@@ -6197,6 +6198,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
    Returns $(D approxEqual(lhs, rhs, 1e-2, 1e-5)).
  */
 bool approxEqual(T, U)(T lhs, U rhs)
+@safe pure nothrow @nogc
 {
     return approxEqual(lhs, rhs, 1e-2, 1e-5);
 }
