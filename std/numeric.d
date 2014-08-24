@@ -42,6 +42,8 @@ import std.complex;
 import core.bitop;
 import core.exception;
 
+@safe pure nothrow @nogc:
+
 version(unittest)
 {
     import std.stdio;
@@ -2400,7 +2402,8 @@ private:
     //
     // Also, this is unsafe because the memSpace buffer will be cast
     // to immutable.
-    public this(lookup_t[] memSpace) {  // Public b/c of bug 4636.
+    public this(lookup_t[] memSpace) @trusted {  // Public b/c of bug 4636
+        // @trusted because of the cast(immutable) at the end of the function.
         immutable size = memSpace.length / 2;
 
         /* Create a lookup table of all negative sine values at a resolution of
