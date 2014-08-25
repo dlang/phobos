@@ -1236,7 +1236,7 @@ public:
         DWORD   cchRequired =   ExpandEnvironmentStringsW(srcTmp, null, 0);
         wchar[]  newValue   =   new wchar[cchRequired];
 
-        immutable DWORD count = enforceEx!Win32Exception(
+        immutable DWORD count = enforce!Win32Exception(
             ExpandEnvironmentStringsW(srcTmp, newValue.ptr, to!DWORD(newValue.length)),
             "Failed to expand environment variables");
 

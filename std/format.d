@@ -3287,7 +3287,7 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, val, f);
-    enforceEx!AssertError(
+    enforce!AssertError(
             w.data == expected,
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
@@ -3297,7 +3297,7 @@ void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, str
 {
     auto w = appender!string();
     formattedWrite(w, fmt, val);
-    enforceEx!AssertError(
+    enforce!AssertError(
             w.data == expected,
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
@@ -3312,7 +3312,7 @@ void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = _
     {
         if(w.data == cur) return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             false,
             text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
@@ -3326,7 +3326,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
     {
         if(w.data == cur) return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             false,
             text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
@@ -3916,7 +3916,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
     formattedWrite(w, fmt, val);
 
     auto input = w.data;
-    enforceEx!AssertError(
+    enforce!AssertError(
             input == formatted,
             input, fn, ln);
 
@@ -3944,7 +3944,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
         //    assert(aa2.values[i] == aa2[key]);
         return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             val == val2,
             input, fn, ln);
 }
@@ -3961,7 +3961,7 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
     {
         if(input == cur) return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             false,
             input,
             fn,
@@ -3991,7 +3991,7 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
         //    assert(aa2.values[i] == aa2[key]);
         return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             val == val2,
             input, fn, ln);
 }
