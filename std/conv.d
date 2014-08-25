@@ -1375,7 +1375,7 @@ T toImpl(T, S)(S value)
     static if (isStaticArray!T)
     {
         auto res = to!(E[])(value);
-        enforceEx!ConvException(T.length == res.length,
+        enforce!ConvException(T.length == res.length,
             format("Length mismatch when converting to static array: %s vs %s", T.length, res.length));
         return res[0 .. T.length];
     }
@@ -4886,10 +4886,10 @@ unittest
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
-    enforceEx!ConvException(chunk.length >= typeSize,
+    enforce!ConvException(chunk.length >= typeSize,
         format("emplace: Chunk size too small: %s < %s size = %s",
         chunk.length, typeName, typeSize));
-    enforceEx!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
+    enforce!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
         format("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
         chunk.ptr, typeAlignment, typeName));
 }

@@ -27347,7 +27347,7 @@ public:
     this(Duration utcOffset, string stdName = "") @safe immutable pure
     {
         //FIXME This probably needs to be changed to something like (-12 - 13).
-        enforceEx!DateTimeException(abs(utcOffset) < dur!"minutes"(1440),
+        enforce!DateTimeException(abs(utcOffset) < dur!"minutes"(1440),
                                     "Offset from UTC must be within range (-24:00 - 24:00).");
 
         super("", stdName, "");
@@ -27403,7 +27403,7 @@ private:
     static string toISOString(Duration utcOffset) @safe pure
     {
         immutable absOffset = abs(utcOffset);
-        enforceEx!DateTimeException(absOffset < dur!"minutes"(1440),
+        enforce!DateTimeException(absOffset < dur!"minutes"(1440),
                                     "Offset from UTC must be within range (-24:00 - 24:00).");
         int hours;
         int minutes;

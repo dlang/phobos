@@ -118,7 +118,7 @@ struct JSONValue
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
     @property inout(string) str() inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.STRING,
+        enforce!JSONException(type == JSON_TYPE.STRING,
                                 "JSONValue is not a string");
         return store.str;
     }
@@ -133,7 +133,7 @@ struct JSONValue
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.INTEGER).
     @property inout(long) integer() inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.INTEGER,
+        enforce!JSONException(type == JSON_TYPE.INTEGER,
                                 "JSONValue is not an integer");
         return store.integer;
     }
@@ -148,7 +148,7 @@ struct JSONValue
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.UINTEGER).
     @property inout(ulong) uinteger() inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.UINTEGER,
+        enforce!JSONException(type == JSON_TYPE.UINTEGER,
                                 "JSONValue is not an unsigned integer");
         return store.uinteger;
     }
@@ -163,7 +163,7 @@ struct JSONValue
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.FLOAT).
     @property inout(double) floating() inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.FLOAT,
+        enforce!JSONException(type == JSON_TYPE.FLOAT,
                                 "JSONValue is not a floating type");
         return store.floating;
     }
@@ -178,7 +178,7 @@ struct JSONValue
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.OBJECT).
     @property ref inout(JSONValue[string]) object() inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+        enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
         return store.object;
     }
@@ -193,7 +193,7 @@ struct JSONValue
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.ARRAY).
     @property ref inout(JSONValue[]) array() inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+        enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
         return store.array;
     }
@@ -333,7 +333,7 @@ struct JSONValue
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
     ref inout(JSONValue) opIndex(size_t i) inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+        enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
         return store.array[i];
     }
@@ -342,15 +342,15 @@ struct JSONValue
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
     ref inout(JSONValue) opIndex(string k) inout
     {
-        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+        enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
-        return *enforceEx!JSONException(k in store.object,
+        return *enforce!JSONException(k in store.object,
                                         "Key not found: " ~ k);
     }
 
     auto opBinaryRight(string op : "in")(string k) const
     {
-        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+        enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
         return k in store.object;
     }
@@ -358,7 +358,7 @@ struct JSONValue
     /// Implements the foreach $(D opApply) interface for json arrays.
     int opApply(int delegate(size_t index, ref JSONValue) dg)
     {
-        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+        enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
         int result;
 
@@ -375,7 +375,7 @@ struct JSONValue
     /// Implements the foreach $(D opApply) interface for json objects.
     int opApply(int delegate(string key, ref JSONValue) dg)
     {
-        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+        enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
         int result;
 
