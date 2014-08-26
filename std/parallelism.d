@@ -532,9 +532,9 @@ struct Task(alias fun, Args...)
         enforce(this.pool !is null, "Job not submitted yet.");
     }
 
-    private this(Args args)
+    static if(Args.length > 0)
     {
-        static if(args.length > 0)
+        private this(Args args)
         {
             _args = args;
         }
