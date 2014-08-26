@@ -760,10 +760,29 @@ version(Windows) unittest
  +/
 void setTimes(in char[] name,
               SysTime accessTime,
-              SysTime modificationTime)
+              SysTime modificationTime) @safe
 {
     version(Windows)
     {
+        static auto trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+                                       SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
+                                       DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
+        {
+            return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
+                               lpSecurityAttributes, dwCreationDisposition,
+                               dwFlagsAndAttributes, hTemplateFile);
+
+        }
+        static auto trustedCloseHandle(HANDLE hObject) @trusted
+        {
+            return CloseHandle(hObject);
+        }
+        static auto trustedSetFileTime(HANDLE hFile, in FILETIME *lpCreationTime,
+                                       in ref FILETIME lpLastAccessTime, in ref FILETIME lpLastWriteTime) @trusted
+        {
+            return SetFileTime(hFile, lpCreationTime, &lpLastAccessTime, &lpLastWriteTime);
+        }
+
         const ta = SysTimeToFILETIME(accessTime);
         const tm = SysTimeToFILETIME(modificationTime);
         alias defaults =
@@ -775,23 +794,27 @@ void setTimes(in char[] name,
                          FILE_ATTRIBUTE_DIRECTORY |
                          FILE_FLAG_BACKUP_SEMANTICS,
                          HANDLE.init);
-        auto h = CreateFileW(name.tempCStringW(), defaults);
+        auto h = trustedCreateFileW(name, defaults);
 
         cenforce(h != INVALID_HANDLE_VALUE, name);
 
         scope(exit)
-            cenforce(CloseHandle(h), name);
+            cenforce(trustedCloseHandle(h), name);
 
-        cenforce(SetFileTime(h, null, &ta, &tm), name);
+        cenforce(trustedSetFileTime(h, null, ta, tm), name);
     }
     else version(Posix)
     {
+        static auto trustedUtimes(in char[] path, const ref timeval[2] times) @trusted
+        {
+            return utimes(path.tempCString(), times);
+        }
         timeval[2] t = void;
 
         t[0] = accessTime.toTimeVal();
         t[1] = modificationTime.toTimeVal();
 
-        cenforce(utimes(name.tempCString(), t) == 0, name);
+        cenforce(trustedUtimes(name, t) == 0, name);
     }
 }
 
