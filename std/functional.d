@@ -321,7 +321,8 @@ template not(alias pred)
 }
 
 /**
-Partially evaluates $(D fun) by tying its first argument to a particular value.
+$(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially 
+applies) $(D_PARAM fun) by tying its first argument to $(D_PARAM arg).
 
 Example:
 
