@@ -826,12 +826,17 @@ unittest
     Throws:
         $(D FileException) if the given file does not exist.
 +/
-SysTime timeLastModified(in char[] name)
+SysTime timeLastModified(in char[] name) @safe
 {
     version(Windows)
     {
-        SysTime dummy = void;
-        SysTime ftm = void;
+        static auto trustedVoidInit() @trusted
+        {
+            SysTime ret = void;
+            return ret;
+        }
+        SysTime dummy = trustedVoidInit();
+        SysTime ftm = trustedVoidInit();
 
         getTimesWin(name, dummy, dummy, ftm);
 
@@ -839,9 +844,13 @@ SysTime timeLastModified(in char[] name)
     }
     else version(Posix)
     {
+        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        {
+            return stat(path.tempCString(), &buf);
+        }
         stat_t statbuf = void;
 
-        cenforce(stat(name.tempCString(), &statbuf) == 0, name);
+        cenforce(trustedStat(name, statbuf) == 0, name);
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
