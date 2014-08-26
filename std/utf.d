@@ -1071,7 +1071,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
     /* Dchar bitmask for different numbers of UTF-8 code units.
      */
-    enum bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
+    alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
     static if (is(S : const char[]))
         auto pstr = str.ptr + index;
@@ -3192,7 +3192,7 @@ auto ref byDchar(R)(R r)
 
                     /* Dchar bitmask for different numbers of UTF-8 code units.
                      */
-                    enum uint[4] bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
+                    alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
                     foreach (i; TypeTuple!(1, 2, 3))
                     {
