@@ -446,9 +446,12 @@ template Tuple(Specs...)
         /**
          * Constructor taking one value for each field.
          */
-        this(Types values)
+        static if (Types.length > 0)
         {
-            field[] = values[];
+            this(Types values)
+            {
+                field[] = values[];
+            }
         }
 
         /**
