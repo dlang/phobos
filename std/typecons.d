@@ -700,8 +700,6 @@ private enum bool isPrintable(T) =
         formattedWrite(w, "%s", T.init);
     }));
 
-private alias Identity(alias T) = T;
-
 /**
     Return a copy of a Tuple with its fields in reverse order.
  */
