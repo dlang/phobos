@@ -4118,6 +4118,8 @@ mixin template Proxy(alias a)
         }
     }
 
+    import std.traits : isArray;
+
     static if (isArray!(typeof(a)))
     {
         auto opDollar() const { return a.length; }
