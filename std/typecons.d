@@ -1132,20 +1132,23 @@ risks usually associated with $(D cast).
  */
 template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
 {
-    static if (!is(T == const U, U) && !is(T == immutable U, U))
+    static if (is(T == const U, U) || is(T == immutable U, U))
     {
-        alias Rebindable = T;
-    }
-    else static if (isDynamicArray!T)
-    {
-        alias Rebindable = const(ElementEncodingType!T)[];
+        static if (isDynamicArray!T)
+        {
+            alias Rebindable = const(ElementEncodingType!T)[];
+        }
+        else
+        {
+            struct Rebindable
+            {
+                mixin RebindableCommon!(T, U, Rebindable);
+            }
+        }
     }
     else
     {
-        struct Rebindable
-        {
-            mixin RebindableCommon!(T, U, Rebindable);
-        }
+        alias Rebindable = T;
     }
 }
 
@@ -1262,19 +1265,19 @@ unittest
 template UnqualRef(T)
     if (is(T == class) || is(T == interface))
 {
-    static if (!is(T == const U, U)
-        && !is(T == immutable U, U)
-        && !is(T == shared U, U)
-        && !is(T == const shared U, U))
-    {
-        alias UnqualRef = T;
-    }
-    else
+    static if (is(T == const U, U)
+        || is(T == immutable U, U)
+        || is(T == shared U, U)
+        || is(T == const shared U, U))
     {
         struct UnqualRef
         {
             mixin RebindableCommon!(T, U, UnqualRef);
         }
+    }
+    else
+    {
+        alias UnqualRef = T;
     }
 }
 
