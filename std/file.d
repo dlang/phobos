@@ -830,13 +830,8 @@ SysTime timeLastModified(in char[] name) @safe
 {
     version(Windows)
     {
-        static auto trustedVoidInit() @trusted
-        {
-            SysTime ret = void;
-            return ret;
-        }
-        SysTime dummy = trustedVoidInit();
-        SysTime ftm = trustedVoidInit();
+        SysTime dummy;
+        SysTime ftm;
 
         getTimesWin(name, dummy, dummy, ftm);
 
