@@ -983,8 +983,9 @@ bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target)
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
-        const m = cast(void*) source,
-              b = cast(void*) &target, e = b + target.sizeof;
+        const m = *cast(void**) &source;
+        const b = cast(void*) &target;
+        const e = b + target.sizeof;
         return b <= m && m < e;
     }
     else static if (is(S == struct) || is(S == union))
@@ -1016,8 +1017,9 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
-        const m = cast(void*) source,
-              b = cast(void*) &target, e = b + target.sizeof;
+        const m = *cast(void**) &source;
+        const b = cast(void*) &target;
+        const e = b + target.sizeof;
         return b <= m && m < e;
     }
     else static if (is(S == struct) || is(S == union))
@@ -1365,6 +1367,21 @@ unittest //alias this test
     assert( doesPointTo(s, j));
     assert( doesPointTo(cast(int*)s, i));
     assert(!doesPointTo(cast(int*)s, j));
+}
+unittest //more alias this opCast
+{
+    void* p;
+    class A
+    {
+        void* opCast(T)() if (is(T == void*))
+        {
+            return p;
+        }
+        alias foo = opCast!(void*);
+        alias foo this;
+    }
+    assert(!doesPointTo(A.init, p));
+    assert(!mayPointTo(A.init, p));
 }
 
 /*********************
