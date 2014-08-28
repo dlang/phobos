@@ -13229,6 +13229,7 @@ auto cartesianProduct(RR...)(RR ranges)
                 copy.ranges[i] = r.save;
                 copy.current[i] = current[i].save;
             }
+            copy.empty = this.empty;
             return copy;
         }
     }
@@ -13259,6 +13260,13 @@ unittest
     auto cprod = cartesianProduct([0,0], [1,1], [2,2]);
     assert(!cprod.empty);
     assert(cprod.init.empty);
+}
+
+unittest
+{
+    // Issue 13393
+    import std.string : format;
+    auto result = format("%s", [cartesianProduct([0],[0],[0])].joiner);
 }
 
 /// ditto
