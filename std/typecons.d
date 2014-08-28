@@ -1061,35 +1061,37 @@ private mixin template RebindableCommon(T, U, alias This)
         U stripped;
     }
 
-    void opAssign(T another) @trusted pure nothrow
+    @trusted pure nothrow @nogc
     {
-        stripped = cast(U) another;
-    }
+        void opAssign(T another)
+        {
+            stripped = cast(U) another;
+        }
 
-    void opAssign(typeof(this) another) @trusted pure nothrow
-    {
-        stripped = another.stripped;
-    }
-
-    static if (is(T == const U) && is(T == const shared U))
-    {
-        // safely assign immutable to const / const shared
-        void opAssign(This!(immutable U) another) @trusted pure nothrow
+        void opAssign(typeof(this) another)
         {
             stripped = another.stripped;
         }
-    }
 
-    this(T initializer) @safe pure nothrow
-    {
-        opAssign(initializer);
-    }
+        static if (is(T == const U) && is(T == const shared U))
+        {
+            // safely assign immutable to const / const shared
+            void opAssign(This!(immutable U) another)
+            {
+                stripped = another.stripped;
+            }
+        }
 
-    @property ref inout(T) get() @trusted inout pure nothrow
-    {
-        return original;
-    }
+        this(T initializer)
+        {
+            opAssign(initializer);
+        }
 
+        @property ref inout(T) get() inout
+        {
+            return original;
+        }
+    }
 
     alias get this;
 }
