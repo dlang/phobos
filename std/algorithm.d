@@ -13265,8 +13265,7 @@ unittest
 unittest
 {
     // Issue 13393
-    import std.string : format;
-    auto result = format("%s", [cartesianProduct([0],[0],[0])].joiner);
+    assert(!cartesianProduct([0],[0],[0]).save.empty);
 }
 
 /// ditto
