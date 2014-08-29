@@ -5744,7 +5744,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         return _done;
     }
 
-    @property ElementType!Range front()
+    @property auto ref front()
     {
         assert(!empty);
         return _input.front;
@@ -5842,6 +5842,14 @@ unittest // bugzilla 13171
     auto a = [1, 2, 3, 4];
     assert(equal(refRange(&a).until(3, OpenRight.no), [1, 2, 3]));
     assert(a == [4]);
+}
+
+unittest // Issue 10460
+{
+    auto a = [1, 2, 3, 4];
+    foreach (ref e; a.until(3))
+        e = 0;
+    assert(equal(a, [0, 0, 3, 4]));
 }
 
 /**
@@ -12007,7 +12015,7 @@ public:
         adjustPosition();
     }
 
-    @property ElementType!(R1) front()
+    @property auto ref front()
     {
         assert(!empty);
         return r1.front;
@@ -12043,12 +12051,25 @@ unittest
     static assert(isForwardRange!(typeof(setDifference(a, b))));
 }
 
+unittest // Issue 10460
+{
+    int[] a = [1, 2, 3, 4, 5];
+    int[] b = [2, 4];
+    foreach (ref e; setDifference(a, b))
+        e = 0;
+    assert(equal(a, [0, 2, 0, 4, 0]));
+}
+
 /**
 Lazily computes the symmetric difference of $(D r1) and $(D r2),
 i.e. the elements that are present in exactly one of $(D r1) and $(D
 r2). The two ranges are assumed to be sorted by $(D less), and the
 output is also sorted by $(D less). The element types of the two
 ranges must have a common type.
+
+If both arguments are ranges of L-values of the same type then
+$(D SetSymmetricDifference) will also be a range of L-values of
+that type.
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
     if (isInputRange!(R1) && isInputRange!(R2))
@@ -12103,15 +12124,12 @@ public:
         adjustPosition();
     }
 
-    @property ElementType!(R1) front()
+    @property auto ref front()
     {
         assert(!empty);
-        if (r2.empty || !r1.empty && comp(r1.front, r2.front))
-        {
-            return r1.front;
-        }
-        assert(r1.empty || comp(r2.front, r1.front));
-        return r2.front;
+        bool chooseR1 = r2.empty || !r1.empty && comp(r1.front, r2.front);
+        assert(chooseR1 || r1.empty || comp(r2.front, r1.front));
+        return chooseR1 ? r1.front : r2.front;
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
@@ -12145,6 +12163,21 @@ unittest
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
     static assert(isForwardRange!(typeof(setSymmetricDifference(a, b))));
+}
+
+unittest // Issue 10460
+{
+    int[] a = [1, 2];
+    double[] b = [2.0, 3.0];
+    int[] c = [2, 3];
+
+    alias R1 = typeof(setSymmetricDifference(a, b));
+    static assert(is(ElementType!R1 == double));
+    static assert(!hasLvalueElements!R1);
+
+    alias R2 = typeof(setSymmetricDifference(a, c));
+    static assert(is(ElementType!R2 == int));
+    static assert(hasLvalueElements!R2);
 }
 
 // Internal random array generators
