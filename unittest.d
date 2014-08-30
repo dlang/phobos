@@ -72,7 +72,7 @@ int main(char[][] args)
     auto r = regex("");                 // regex
     uint ranseed = std.random.unpredictableSeed;
     thisTid;
-    int a[];
+    int[] a;
     a.reverse;                          // adi
     a.sort;                             // qsort
     Clock.currTime();                   // datetime

@@ -9649,7 +9649,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     // sort using delegate
-    int a[] = new int[100];
+    auto a = new int[100];
     auto rnd = Random(unpredictableSeed);
     foreach (ref e; a) {
         e = uniform(-100, 100, rnd);
@@ -9934,7 +9934,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     auto rnd = Random(1);
-    int a[] = new int[uniform(100, 200, rnd)];
+    auto a = new int[uniform(100, 200, rnd)];
     foreach (ref e; a) {
         e = uniform(-100, 100, rnd);
     }
@@ -10787,7 +10787,7 @@ unittest
     auto lowEnt = ([ 1.0, 0, 0 ]).dup,
          midEnt = ([ 0.1, 0.1, 0.8 ]).dup,
         highEnt = ([ 0.31, 0.29, 0.4 ]).dup;
-    double arr[][] = new double[][3];
+    auto arr = new double[][3];
     arr[0] = midEnt;
     arr[1] = lowEnt;
     arr[2] = highEnt;
@@ -10819,7 +10819,7 @@ unittest
     auto lowEnt = ([ 1.0, 0, 0 ]).dup,
         midEnt = ([ 0.1, 0.1, 0.8 ]).dup,
         highEnt = ([ 0.31, 0.29, 0.4 ]).dup;
-    double arr[][] = new double[][3];
+    auto arr = new double[][3];
     arr[0] = midEnt;
     arr[1] = lowEnt;
     arr[2] = highEnt;
