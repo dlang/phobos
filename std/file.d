@@ -905,15 +905,15 @@ else
 }
 --------------------
 +/
-SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
+SysTime timeLastModified(in char[] name, SysTime returnIfMissing) @safe
 {
     version(Windows)
     {
         if(!exists(name))
             return returnIfMissing;
 
-        SysTime dummy = void;
-        SysTime ftm = void;
+        SysTime dummy;
+        SysTime ftm;
 
         getTimesWin(name, dummy, dummy, ftm);
 
@@ -921,9 +921,13 @@ SysTime timeLastModified(in char[] name, SysTime returnIfMissing)
     }
     else version(Posix)
     {
+        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        {
+            return stat(path.tempCString(), &buf);
+        }
         stat_t statbuf = void;
 
-        return stat(name.tempCString(), &statbuf) != 0 ?
+        return trustedStat(name, statbuf) != 0 ?
                returnIfMissing :
                SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
