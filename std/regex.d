@@ -3336,7 +3336,7 @@ template BacktrackingMatcher(bool CTregex)
         }
 
         //lookup next match, fill matches with indices into input
-        bool match(Group!DataIndex matches[])
+        bool match(Group!DataIndex[] matches)
         {
             debug(std_regex_matcher)
             {
@@ -6688,7 +6688,7 @@ unittest
         string flags;
     }
 
-    enum TestVectors tv[] = [
+    enum TestVectors[] tv = [
         TestVectors(  "a\\b",       "a",  "y",    "$&",    "a" ),
         TestVectors(  "(a)b\\1",   "abaab","y",    "$&",    "aba" ),
         TestVectors(  "()b\\1",     "aaab", "y",    "$&",    "b" ),

@@ -2864,11 +2864,11 @@ unittest
     {
         static if(real.mant_dig == 64)
         {
-            ushort value[5];
+            ushort[5] value;
         }
         else static if(real.mant_dig == 53)
         {
-            ushort value[4];
+            ushort[4] value;
         }
         else
             static assert(false, "Not implemented");

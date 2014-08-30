@@ -2555,7 +2555,7 @@ unittest
     string unit_file = deleteme ~ "-unittest_write.tmp";
     if (exists(unit_file)) remove(unit_file);
     write(unit_file, buf);
-    void buf2[] = read(unit_file);
+    void[] buf2 = read(unit_file);
     assert(buf == buf2);
 
     string unit2_file = deleteme ~ "-unittest_write2.tmp";

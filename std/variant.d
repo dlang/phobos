@@ -197,7 +197,7 @@ private:
         ubyte[size] store;
         // conservatively mark the region as pointers
         static if (size >= (void*).sizeof)
-            void* p[size / (void*).sizeof];
+            void*[size / (void*).sizeof] p;
     }
 
     // internals
