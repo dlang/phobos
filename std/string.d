@@ -8,6 +8,10 @@ $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *_string) types
 are preferable because they don't exhibit undesired aliasing, thus
 making code more robust.
 
+A number of common operations on strings are also found in the 
+Unicode $(LINK2 std_uni.html, $(D std.uni)), and array 
+$(LINK2 std_array.html, $(D std.array)) modules.
+
 Macros: WIKI = Phobos/StdString
 
 Copyright: Copyright Digital Mars 2007-.
