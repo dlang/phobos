@@ -1589,8 +1589,8 @@ public:
         import std.algorithm : filter, map, joiner;
 
         return iota(dim).
-               filter!(i => ptr[i]).
-               map!(i => BitsSet!size_t(ptr[i], i * bitsPerSizeT)).
+               filter!(i => ptr[i])().
+               map!(i => BitsSet!size_t(ptr[i], i * bitsPerSizeT))().
                joiner();
     }
 

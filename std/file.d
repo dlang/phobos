@@ -2020,7 +2020,7 @@ else version(Windows)
 
         this(string path)
         {
-            if(!path.exists)
+            if(!path.exists())
                 throw new FileException(path, "File does not exist");
 
             _name = path;

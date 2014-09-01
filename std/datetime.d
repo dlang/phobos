@@ -27811,16 +27811,16 @@ assert(tz.dstName == "PDT");
     {
         name = strip(name);
 
-        enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
+        enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
         immutable file = buildNormalizedPath(tzDatabaseDir, name);
 
-        enforce(file.exists, new DateTimeException(format("File %s does not exist.", file)));
+        enforce(file.exists(), new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
 
         auto tzFile = File(file);
-        immutable gmtZone = file.representation.canFind("GMT");
+        immutable gmtZone = file.representation().canFind("GMT");
 
         try
         {
@@ -28128,7 +28128,7 @@ assert(tz.dstName == "PDT");
         else version(Windows)
             subName = replace(strip(subName), "/", dirSeparator);
 
-        enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
+        enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
         auto timezones = appender!(string[])();
