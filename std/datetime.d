@@ -29987,7 +29987,7 @@ else version(Windows)
                                 throwLaterThanMax();
                             else if(st.wSecond == max.second)
                             {
-                                if(st.wMilliseconds > max.fracSecs.total!"msecs")
+                                if(st.wMilliseconds > max.fracSec.msecs)
                                     throwLaterThanMax();
                             }
                         }
@@ -30029,7 +30029,7 @@ else version(Windows)
         st.wHour = dt.hour;
         st.wMinute = dt.minute;
         st.wSecond = dt.second;
-        st.wMilliseconds = cast(ushort)sysTime.fracSecs.total!"msecs";
+        st.wMilliseconds = cast(ushort)sysTime.fracSec.msecs;
 
         return st;
     }
