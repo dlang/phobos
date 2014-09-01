@@ -26216,12 +26216,14 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             {
                 auto tzName = windowsTZNameToTZDatabaseName(winName);
 
-                if(tzName.startsWith(subName))
+                version(unittest)
+                    assert(tzName !is null, format("TZName which is missing: %s", winName));
+
+                if(tzName !is null && tzName.startsWith(subName))
                     retval.put(tzName);
             }
 
             sort(retval.data);
-
             return retval.data;
         }
     }
@@ -26231,11 +26233,13 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         static void testPZSuccess(string tzName)
         {
             scope(failure) writefln("TZName which threw: %s", tzName);
-
             TimeZone.getTimeZone(tzName);
         }
 
         auto tzNames = getInstalledTZNames();
+        // This was not previously tested, and it's currently failing, so I'm
+        // leaving it commented out until I can sort it out.
+        //assert(equal(tzNames, tzNames.uniq()));
 
         foreach(tzName; tzNames)
             assertNotThrown!DateTimeException(testPZSuccess(tzName));
@@ -28242,7 +28246,10 @@ version(StdDdoc)
 
         /++
             Returns a list of the names of the time zones installed on the
-            system.
+            system. The list returned by WindowsTimeZone contains the Windows
+            TZ names, not the TZ Database names. However,
+            $(D TimeZone.getinstalledTZNames) will return the TZ Database names
+            which are equivalent to the Windows TZ names.
           +/
         static string[] getInstalledTZNames() @safe;
 
@@ -28638,143 +28645,457 @@ else version(Posix)
     of the more exotic TZ Database names don't have corresponding Windows time
     zone names.
 
+    Returns null if the given time zone name cannot be converted.
+
     See_Also:
         $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
               Windows <-> TZ Database Name Conversion Table)
 
     Params:
         tzName = The TZ Database name to convert.
-
-    Throws:
-        $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
-        converted.
   +/
-string tzDatabaseNameToWindowsTZName(string tzName) @safe pure
+string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
 {
     switch(tzName)
     {
-        //Most of these come from the link in the documentation, but a few have
-        //been added because they were found in the Windows registry.
+        case "Africa/Abidjan": return "Greenwich Standard Time";
+        case "Africa/Accra": return "Greenwich Standard Time";
+        case "Africa/Addis_Ababa": return "E. Africa Standard Time";
+        case "Africa/Algiers": return "W. Central Africa Standard Time";
+        case "Africa/Asmera": return "E. Africa Standard Time";
+        case "Africa/Bamako": return "Greenwich Standard Time";
+        case "Africa/Bangui": return "W. Central Africa Standard Time";
+        case "Africa/Banjul": return "Greenwich Standard Time";
+        case "Africa/Bissau": return "Greenwich Standard Time";
+        case "Africa/Blantyre": return "South Africa Standard Time";
+        case "Africa/Bogota": return "Line Islands Standard Time";
+        case "Africa/Brazzaville": return "W. Central Africa Standard Time";
+        case "Africa/Bujumbura": return "South Africa Standard Time";
         case "Africa/Cairo": return "Egypt Standard Time";
         case "Africa/Casablanca": return "Morocco Standard Time";
+        case "Africa/Ceuta": return "Romance Standard Time";
+        case "Africa/Conakry": return "Greenwich Standard Time";
+        case "Africa/Dakar": return "Greenwich Standard Time";
+        case "Africa/Dar_es_Salaam": return "E. Africa Standard Time";
+        case "Africa/Djibouti": return "E. Africa Standard Time";
+        case "Africa/Douala": return "W. Central Africa Standard Time";
+        case "Africa/El_Aaiun": return "Morocco Standard Time";
+        case "Africa/Freetown": return "Greenwich Standard Time";
+        case "Africa/Gaborone": return "South Africa Standard Time";
+        case "Africa/Harare": return "South Africa Standard Time";
         case "Africa/Johannesburg": return "South Africa Standard Time";
+        case "Africa/Juba": return "E. Africa Standard Time";
+        case "Africa/Kampala": return "E. Africa Standard Time";
+        case "Africa/Khartoum": return "E. Africa Standard Time";
+        case "Africa/Kigali": return "South Africa Standard Time";
+        case "Africa/Kinshasa": return "W. Central Africa Standard Time";
         case "Africa/Lagos": return "W. Central Africa Standard Time";
+        case "Africa/Libreville": return "W. Central Africa Standard Time";
+        case "Africa/Lome": return "Greenwich Standard Time";
+        case "Africa/Luanda": return "W. Central Africa Standard Time";
+        case "Africa/Lubumbashi": return "South Africa Standard Time";
+        case "Africa/Lusaka": return "South Africa Standard Time";
+        case "Africa/Malabo": return "W. Central Africa Standard Time";
+        case "Africa/Maputo": return "South Africa Standard Time";
+        case "Africa/Maseru": return "South Africa Standard Time";
+        case "Africa/Mbabane": return "South Africa Standard Time";
+        case "Africa/Mogadishu": return "E. Africa Standard Time";
+        case "Africa/Monrovia": return "Greenwich Standard Time";
         case "Africa/Nairobi": return "E. Africa Standard Time";
+        case "Africa/Ndjamena": return "W. Central Africa Standard Time";
+        case "Africa/Niamey": return "W. Central Africa Standard Time";
+        case "Africa/Nouakchott": return "Greenwich Standard Time";
+        case "Africa/Ouagadougou": return "Greenwich Standard Time";
+        case "Africa/Porto-Novo": return "W. Central Africa Standard Time";
+        case "Africa/Sao_Tome": return "Greenwich Standard Time";
         case "Africa/Tripoli": return "Libya Standard Time";
+        case "Africa/Tunis": return "W. Central Africa Standard Time";
         case "Africa/Windhoek": return "Namibia Standard Time";
         case "America/Anchorage": return "Alaskan Standard Time";
+        case "America/Anguilla": return "SA Western Standard Time";
+        case "America/Antigua": return "SA Western Standard Time";
+        case "America/Araguaina": return "SA Eastern Standard Time";
+        case "America/Argentina/La_Rioja": return "Argentina Standard Time";
+        case "America/Argentina/Rio_Gallegos": return "Argentina Standard Time";
+        case "America/Argentina/Salta": return "Argentina Standard Time";
+        case "America/Argentina/San_Juan": return "Argentina Standard Time";
+        case "America/Argentina/San_Luis": return "Argentina Standard Time";
+        case "America/Argentina/Tucuman": return "Argentina Standard Time";
+        case "America/Argentina/Ushuaia": return "Argentina Standard Time";
+        case "America/Aruba": return "SA Western Standard Time";
         case "America/Asuncion": return "Paraguay Standard Time";
         case "America/Bahia": return "Bahia Standard Time";
+        case "America/Bahia_Banderas": return "Central Standard Time (Mexico)";
+        case "America/Barbados": return "SA Western Standard Time";
+        case "America/Belem": return "SA Eastern Standard Time";
+        case "America/Belize": return "Central America Standard Time";
+        case "America/Blanc-Sablon": return "SA Western Standard Time";
+        case "America/Boa_Vista": return "SA Western Standard Time";
         case "America/Bogota": return "SA Pacific Standard Time";
+        case "America/Boise": return "Mountain Standard Time";
         case "America/Buenos_Aires": return "Argentina Standard Time";
+        case "America/Cambridge_Bay": return "Mountain Standard Time";
+        case "America/Campo_Grande": return "Central Brazilian Standard Time";
+        case "America/Cancun": return "Central Standard Time (Mexico)";
         case "America/Caracas": return "Venezuela Standard Time";
+        case "America/Catamarca": return "Argentina Standard Time";
         case "America/Cayenne": return "SA Eastern Standard Time";
+        case "America/Cayman": return "SA Pacific Standard Time";
         case "America/Chicago": return "Central Standard Time";
         case "America/Chihuahua": return "Mountain Standard Time (Mexico)";
+        case "America/Coral_Harbour": return "SA Pacific Standard Time";
+        case "America/Cordoba": return "Argentina Standard Time";
+        case "America/Costa_Rica": return "Central America Standard Time";
+        case "America/Creston": return "US Mountain Standard Time";
         case "America/Cuiaba": return "Central Brazilian Standard Time";
+        case "America/Curacao": return "SA Western Standard Time";
+        case "America/Danmarkshavn": return "UTC";
+        case "America/Dawson": return "Pacific Standard Time";
+        case "America/Dawson_Creek": return "US Mountain Standard Time";
         case "America/Denver": return "Mountain Standard Time";
+        case "America/Detroit": return "Eastern Standard Time";
+        case "America/Dominica": return "SA Western Standard Time";
+        case "America/Edmonton": return "Mountain Standard Time";
+        case "America/Eirunepe": return "SA Pacific Standard Time";
+        case "America/El_Salvador": return "Central America Standard Time";
+        case "America/Fortaleza": return "SA Eastern Standard Time";
+        case "America/Glace_Bay": return "Atlantic Standard Time";
         case "America/Godthab": return "Greenland Standard Time";
+        case "America/Goose_Bay": return "Atlantic Standard Time";
+        case "America/Grand_Turk": return "Eastern Standard Time";
+        case "America/Grenada": return "SA Western Standard Time";
+        case "America/Guadeloupe": return "SA Western Standard Time";
         case "America/Guatemala": return "Central America Standard Time";
+        case "America/Guayaquil": return "SA Pacific Standard Time";
+        case "America/Guyana": return "SA Western Standard Time";
         case "America/Halifax": return "Atlantic Standard Time";
+        case "America/Havana": return "Eastern Standard Time";
+        case "America/Hermosillo": return "US Mountain Standard Time";
+        case "America/Indiana/Knox": return "Central Standard Time";
+        case "America/Indiana/Marengo": return "US Eastern Standard Time";
+        case "America/Indiana/Petersburg": return "Eastern Standard Time";
+        case "America/Indiana/Tell_City": return "Central Standard Time";
+        case "America/Indiana/Vevay": return "US Eastern Standard Time";
+        case "America/Indiana/Vincennes": return "Eastern Standard Time";
+        case "America/Indiana/Winamac": return "Eastern Standard Time";
+        case "America/Indianapolis": return "US Eastern Standard Time";
+        case "America/Inuvik": return "Mountain Standard Time";
+        case "America/Iqaluit": return "Eastern Standard Time";
+        case "America/Jamaica": return "SA Pacific Standard Time";
+        case "America/Jujuy": return "Argentina Standard Time";
+        case "America/Juneau": return "Alaskan Standard Time";
+        case "America/Kentucky/Monticello": return "Eastern Standard Time";
+        case "America/Kralendijk": return "SA Western Standard Time";
         case "America/La_Paz": return "SA Western Standard Time";
+        case "America/Lima": return "SA Pacific Standard Time";
         case "America/Los_Angeles": return "Pacific Standard Time";
+        case "America/Louisville": return "Eastern Standard Time";
+        case "America/Lower_Princes": return "SA Western Standard Time";
+        case "America/Maceio": return "SA Eastern Standard Time";
+        case "America/Managua": return "Central America Standard Time";
+        case "America/Manaus": return "SA Western Standard Time";
+        case "America/Marigot": return "SA Western Standard Time";
+        case "America/Martinique": return "SA Western Standard Time";
+        case "America/Matamoros": return "Central Standard Time";
+        case "America/Mazatlan": return "Mountain Standard Time (Mexico)";
+        case "America/Mendoza": return "Argentina Standard Time";
+        case "America/Menominee": return "Central Standard Time";
+        case "America/Merida": return "Central Standard Time (Mexico)";
         case "America/Mexico_City": return "Central Standard Time (Mexico)";
+        case "America/Moncton": return "Atlantic Standard Time";
+        case "America/Monterrey": return "Central Standard Time (Mexico)";
         case "America/Montevideo": return "Montevideo Standard Time";
+        case "America/Montreal": return "Eastern Standard Time";
+        case "America/Montserrat": return "SA Western Standard Time";
+        case "America/Nassau": return "Eastern Standard Time";
         case "America/New_York": return "Eastern Standard Time";
+        case "America/Nipigon": return "Eastern Standard Time";
+        case "America/Nome": return "Alaskan Standard Time";
+        case "America/Noronha": return "UTC-02";
+        case "America/North_Dakota/Beulah": return "Central Standard Time";
+        case "America/North_Dakota/Center": return "Central Standard Time";
+        case "America/North_Dakota/New_Salem": return "Central Standard Time";
+        case "America/Ojinaga": return "Mountain Standard Time";
+        case "America/Panama": return "SA Pacific Standard Time";
+        case "America/Pangnirtung": return "Eastern Standard Time";
+        case "America/Paramaribo": return "SA Eastern Standard Time";
         case "America/Phoenix": return "US Mountain Standard Time";
+        case "America/Port-au-Prince": return "Eastern Standard Time";
+        case "America/Port_of_Spain": return "SA Western Standard Time";
+        case "America/Porto_Velho": return "SA Western Standard Time";
+        case "America/Puerto_Rico": return "SA Western Standard Time";
+        case "America/Rainy_River": return "Central Standard Time";
+        case "America/Rankin_Inlet": return "Central Standard Time";
+        case "America/Recife": return "SA Eastern Standard Time";
         case "America/Regina": return "Canada Central Standard Time";
+        case "America/Resolute": return "Central Standard Time";
+        case "America/Rio_Branco": return "SA Pacific Standard Time";
         case "America/Santa_Isabel": return "Pacific Standard Time (Mexico)";
+        case "America/Santarem": return "SA Eastern Standard Time";
         case "America/Santiago": return "Pacific SA Standard Time";
+        case "America/Santo_Domingo": return "SA Western Standard Time";
         case "America/Sao_Paulo": return "E. South America Standard Time";
+        case "America/Scoresbysund": return "Azores Standard Time";
+        case "America/Sitka": return "Alaskan Standard Time";
+        case "America/St_Barthelemy": return "SA Western Standard Time";
         case "America/St_Johns": return "Newfoundland Standard Time";
+        case "America/St_Kitts": return "SA Western Standard Time";
+        case "America/St_Lucia": return "SA Western Standard Time";
+        case "America/St_Thomas": return "SA Western Standard Time";
+        case "America/St_Vincent": return "SA Western Standard Time";
+        case "America/Swift_Current": return "Canada Central Standard Time";
+        case "America/Tegucigalpa": return "Central America Standard Time";
+        case "America/Thule": return "Atlantic Standard Time";
+        case "America/Thunder_Bay": return "Eastern Standard Time";
+        case "America/Tijuana": return "Pacific Standard Time";
+        case "America/Toronto": return "Eastern Standard Time";
+        case "America/Tortola": return "SA Western Standard Time";
+        case "America/Vancouver": return "Pacific Standard Time";
+        case "America/Whitehorse": return "Pacific Standard Time";
+        case "America/Winnipeg": return "Central Standard Time";
+        case "America/Yakutat": return "Alaskan Standard Time";
+        case "America/Yellowknife": return "Mountain Standard Time";
+        case "Antarctica/Casey": return "W. Australia Standard Time";
+        case "Antarctica/Davis": return "SE Asia Standard Time";
+        case "Antarctica/DumontDUrville": return "West Pacific Standard Time";
+        case "Antarctica/Macquarie": return "Central Pacific Standard Time";
+        case "Antarctica/Mawson": return "West Asia Standard Time";
+        case "Antarctica/McMurdo": return "New Zealand Standard Time";
+        case "Antarctica/Palmer": return "Pacific SA Standard Time";
+        case "Antarctica/Rothera": return "SA Eastern Standard Time";
+        case "Antarctica/Syowa": return "E. Africa Standard Time";
+        case "Antarctica/Vostok": return "Central Asia Standard Time";
+        case "Arctic/Longyearbyen": return "W. Europe Standard Time";
+        case "Asia/Aden": return "Arab Standard Time";
         case "Asia/Almaty": return "Central Asia Standard Time";
         case "Asia/Amman": return "Jordan Standard Time";
+        case "Asia/Anadyr": return "Magadan Standard Time";
+        case "Asia/Aqtau": return "West Asia Standard Time";
+        case "Asia/Aqtobe": return "West Asia Standard Time";
+        case "Asia/Ashgabat": return "West Asia Standard Time";
         case "Asia/Baghdad": return "Arabic Standard Time";
+        case "Asia/Bahrain": return "Arab Standard Time";
         case "Asia/Baku": return "Azerbaijan Standard Time";
         case "Asia/Bangkok": return "SE Asia Standard Time";
         case "Asia/Beirut": return "Middle East Standard Time";
+        case "Asia/Bishkek": return "Central Asia Standard Time";
+        case "Asia/Brunei": return "Singapore Standard Time";
         case "Asia/Calcutta": return "India Standard Time";
+        case "Asia/Chita": return "Yakutsk Standard Time";
+        case "Asia/Choibalsan": return "Ulaanbaatar Standard Time";
         case "Asia/Colombo": return "Sri Lanka Standard Time";
         case "Asia/Damascus": return "Syria Standard Time";
         case "Asia/Dhaka": return "Bangladesh Standard Time";
+        case "Asia/Dili": return "Tokyo Standard Time";
         case "Asia/Dubai": return "Arabian Standard Time";
+        case "Asia/Dushanbe": return "West Asia Standard Time";
+        case "Asia/Hong_Kong": return "China Standard Time";
+        case "Asia/Hovd": return "SE Asia Standard Time";
         case "Asia/Irkutsk": return "North Asia East Standard Time";
+        case "Asia/Jakarta": return "SE Asia Standard Time";
+        case "Asia/Jayapura": return "Tokyo Standard Time";
         case "Asia/Jerusalem": return "Israel Standard Time";
         case "Asia/Kabul": return "Afghanistan Standard Time";
-        case "Asia/Kamchatka": return "Kamchatka Standard Time";
+        case "Asia/Kamchatka": return "Magadan Standard Time";
         case "Asia/Karachi": return "Pakistan Standard Time";
         case "Asia/Katmandu": return "Nepal Standard Time";
+        case "Asia/Khandyga": return "Yakutsk Standard Time";
         case "Asia/Krasnoyarsk": return "North Asia Standard Time";
+        case "Asia/Kuala_Lumpur": return "Singapore Standard Time";
+        case "Asia/Kuching": return "Singapore Standard Time";
+        case "Asia/Kuwait": return "Arab Standard Time";
+        case "Asia/Macau": return "China Standard Time";
         case "Asia/Magadan": return "Magadan Standard Time";
+        case "Asia/Makassar": return "Singapore Standard Time";
+        case "Asia/Manila": return "Singapore Standard Time";
+        case "Asia/Muscat": return "Arabian Standard Time";
+        case "Asia/Nicosia": return "GTB Standard Time";
+        case "Asia/Novokuznetsk": return "N. Central Asia Standard Time";
         case "Asia/Novosibirsk": return "N. Central Asia Standard Time";
+        case "Asia/Omsk": return "N. Central Asia Standard Time";
+        case "Asia/Oral": return "West Asia Standard Time";
+        case "Asia/Phnom_Penh": return "SE Asia Standard Time";
+        case "Asia/Pontianak": return "SE Asia Standard Time";
+        case "Asia/Pyongyang": return "Korea Standard Time";
+        case "Asia/Qatar": return "Arab Standard Time";
+        case "Asia/Qyzylorda": return "Central Asia Standard Time";
         case "Asia/Rangoon": return "Myanmar Standard Time";
         case "Asia/Riyadh": return "Arab Standard Time";
+        case "Asia/Saigon": return "SE Asia Standard Time";
+        case "Asia/Sakhalin": return "Vladivostok Standard Time";
+        case "Asia/Samarkand": return "West Asia Standard Time";
         case "Asia/Seoul": return "Korea Standard Time";
         case "Asia/Shanghai": return "China Standard Time";
         case "Asia/Singapore": return "Singapore Standard Time";
+        case "Asia/Srednekolymsk": return "Magadan Standard Time";
         case "Asia/Taipei": return "Taipei Standard Time";
         case "Asia/Tashkent": return "West Asia Standard Time";
         case "Asia/Tbilisi": return "Georgian Standard Time";
         case "Asia/Tehran": return "Iran Standard Time";
+        case "Asia/Thimphu": return "Bangladesh Standard Time";
         case "Asia/Tokyo": return "Tokyo Standard Time";
         case "Asia/Ulaanbaatar": return "Ulaanbaatar Standard Time";
+        case "Asia/Urumqi": return "Central Asia Standard Time";
+        case "Asia/Ust-Nera": return "Vladivostok Standard Time";
+        case "Asia/Vientiane": return "SE Asia Standard Time";
         case "Asia/Vladivostok": return "Vladivostok Standard Time";
         case "Asia/Yakutsk": return "Yakutsk Standard Time";
         case "Asia/Yekaterinburg": return "Ekaterinburg Standard Time";
         case "Asia/Yerevan": return "Caucasus Standard Time";
         case "Atlantic/Azores": return "Azores Standard Time";
+        case "Atlantic/Bermuda": return "Atlantic Standard Time";
+        case "Atlantic/Canary": return "GMT Standard Time";
         case "Atlantic/Cape_Verde": return "Cape Verde Standard Time";
+        case "Atlantic/Faeroe": return "GMT Standard Time";
+        case "Atlantic/Madeira": return "GMT Standard Time";
         case "Atlantic/Reykjavik": return "Greenwich Standard Time";
+        case "Atlantic/South_Georgia": return "UTC-02";
+        case "Atlantic/St_Helena": return "Greenwich Standard Time";
+        case "Atlantic/Stanley": return "SA Eastern Standard Time";
         case "Australia/Adelaide": return "Cen. Australia Standard Time";
         case "Australia/Brisbane": return "E. Australia Standard Time";
+        case "Australia/Broken_Hill": return "Cen. Australia Standard Time";
+        case "Australia/Currie": return "Tasmania Standard Time";
         case "Australia/Darwin": return "AUS Central Standard Time";
         case "Australia/Hobart": return "Tasmania Standard Time";
+        case "Australia/Lindeman": return "E. Australia Standard Time";
+        case "Australia/Melbourne": return "AUS Eastern Standard Time";
         case "Australia/Perth": return "W. Australia Standard Time";
         case "Australia/Sydney": return "AUS Eastern Standard Time";
-        case "Etc/GMT-12": return "UTC+12";
+        case "CST6CDT": return "Central Standard Time";
+        case "EST5EDT": return "Eastern Standard Time";
         case "Etc/GMT": return "UTC";
+        case "Etc/GMT+1": return "Cape Verde Standard Time";
+        case "Etc/GMT+10": return "Hawaiian Standard Time";
         case "Etc/GMT+11": return "UTC-11";
         case "Etc/GMT+12": return "Dateline Standard Time";
-        case "Etc/GMT+2": return "Mid-Atlantic Standard Time";
-        case "Etc/GMT+5": return "US Eastern Standard Time";
+        case "Etc/GMT+2": return "UTC-02";
+        case "Etc/GMT+3": return "SA Eastern Standard Time";
+        case "Etc/GMT+4": return "SA Western Standard Time";
+        case "Etc/GMT+5": return "SA Pacific Standard Time";
+        case "Etc/GMT+6": return "Central America Standard Time";
+        case "Etc/GMT+7": return "US Mountain Standard Time";
+        case "Etc/GMT-1": return "W. Central Africa Standard Time";
+        case "Etc/GMT-10": return "West Pacific Standard Time";
+        case "Etc/GMT-11": return "Central Pacific Standard Time";
+        case "Etc/GMT-12": return "UTC+12";
+        case "Etc/GMT-13": return "Tonga Standard Time";
+        case "Etc/GMT-2": return "South Africa Standard Time";
+        case "Etc/GMT-3": return "E. Africa Standard Time";
+        case "Etc/GMT-4": return "Arabian Standard Time";
+        case "Etc/GMT-5": return "West Asia Standard Time";
+        case "Etc/GMT-6": return "Central Asia Standard Time";
+        case "Etc/GMT-7": return "SE Asia Standard Time";
+        case "Etc/GMT-8": return "Singapore Standard Time";
+        case "Etc/GMT-9": return "Tokyo Standard Time";
+        case "Europe/Amsterdam": return "W. Europe Standard Time";
+        case "Europe/Andorra": return "W. Europe Standard Time";
+        case "Europe/Athens": return "GTB Standard Time";
+        case "Europe/Belgrade": return "Central Europe Standard Time";
         case "Europe/Berlin": return "W. Europe Standard Time";
+        case "Europe/Bratislava": return "Central Europe Standard Time";
+        case "Europe/Brussels": return "Romance Standard Time";
+        case "Europe/Bucharest": return "GTB Standard Time";
         case "Europe/Budapest": return "Central Europe Standard Time";
-        //This should probably be Turkey Standard Time, but GTB Standard Time
-        //has been around longer and therefore will work on more systems.
-        case "Europe/Istanbul": return "GTB Standard Time";
+        case "Europe/Busingen": return "W. Europe Standard Time";
+        case "Europe/Chisinau": return "GTB Standard Time";
+        case "Europe/Copenhagen": return "Romance Standard Time";
+        case "Europe/Dublin": return "GMT Standard Time";
+        case "Europe/Gibraltar": return "W. Europe Standard Time";
+        case "Europe/Guernsey": return "GMT Standard Time";
+        case "Europe/Helsinki": return "FLE Standard Time";
+        case "Europe/Isle_of_Man": return "GMT Standard Time";
+        case "Europe/Istanbul": return "Turkey Standard Time";
+        case "Europe/Jersey": return "GMT Standard Time";
         case "Europe/Kaliningrad": return "Kaliningrad Standard Time";
         case "Europe/Kiev": return "FLE Standard Time";
+        case "Europe/Lisbon": return "GMT Standard Time";
+        case "Europe/Ljubljana": return "Central Europe Standard Time";
         case "Europe/London": return "GMT Standard Time";
-        case "Europe/Minsk": return "E. Europe Standard Time";
+        case "Europe/Luxembourg": return "W. Europe Standard Time";
+        case "Europe/Madrid": return "Romance Standard Time";
+        case "Europe/Malta": return "W. Europe Standard Time";
+        case "Europe/Mariehamn": return "FLE Standard Time";
+        case "Europe/Minsk": return "Kaliningrad Standard Time";
+        case "Europe/Monaco": return "W. Europe Standard Time";
         case "Europe/Moscow": return "Russian Standard Time";
+        case "Europe/Oslo": return "W. Europe Standard Time";
         case "Europe/Paris": return "Romance Standard Time";
+        case "Europe/Podgorica": return "Central Europe Standard Time";
+        case "Europe/Prague": return "Central Europe Standard Time";
+        case "Europe/Riga": return "FLE Standard Time";
+        case "Europe/Rome": return "W. Europe Standard Time";
+        case "Europe/Samara": return "Russian Standard Time";
+        case "Europe/San_Marino": return "W. Europe Standard Time";
+        case "Europe/Sarajevo": return "Central European Standard Time";
+        case "Europe/Simferopol": return "Russian Standard Time";
+        case "Europe/Skopje": return "Central European Standard Time";
+        case "Europe/Sofia": return "FLE Standard Time";
+        case "Europe/Stockholm": return "W. Europe Standard Time";
+        case "Europe/Tallinn": return "FLE Standard Time";
+        case "Europe/Tirane": return "Central Europe Standard Time";
+        case "Europe/Uzhgorod": return "FLE Standard Time";
+        case "Europe/Vaduz": return "W. Europe Standard Time";
+        case "Europe/Vatican": return "W. Europe Standard Time";
+        case "Europe/Vienna": return "W. Europe Standard Time";
+        case "Europe/Vilnius": return "FLE Standard Time";
+        case "Europe/Volgograd": return "Russian Standard Time";
         case "Europe/Warsaw": return "Central European Standard Time";
+        case "Europe/Zagreb": return "Central European Standard Time";
+        case "Europe/Zaporozhye": return "FLE Standard Time";
+        case "Europe/Zurich": return "W. Europe Standard Time";
+        case "Indian/Antananarivo": return "E. Africa Standard Time";
+        case "Indian/Chagos": return "Central Asia Standard Time";
+        case "Indian/Christmas": return "SE Asia Standard Time";
+        case "Indian/Cocos": return "Myanmar Standard Time";
+        case "Indian/Comoro": return "E. Africa Standard Time";
+        case "Indian/Kerguelen": return "West Asia Standard Time";
+        case "Indian/Mahe": return "Mauritius Standard Time";
+        case "Indian/Maldives": return "West Asia Standard Time";
         case "Indian/Mauritius": return "Mauritius Standard Time";
+        case "Indian/Mayotte": return "E. Africa Standard Time";
+        case "Indian/Reunion": return "Mauritius Standard Time";
+        case "MST7MDT": return "Mountain Standard Time";
+        case "PST8PDT": return "Pacific Standard Time";
         case "Pacific/Apia": return "Samoa Standard Time";
         case "Pacific/Auckland": return "New Zealand Standard Time";
+        case "Pacific/Efate": return "Central Pacific Standard Time";
+        case "Pacific/Enderbury": return "Tonga Standard Time";
+        case "Pacific/Fakaofo": return "Tonga Standard Time";
         case "Pacific/Fiji": return "Fiji Standard Time";
+        case "Pacific/Funafuti": return "UTC+12";
+        case "Pacific/Galapagos": return "Central America Standard Time";
         case "Pacific/Guadalcanal": return "Central Pacific Standard Time";
+        case "Pacific/Guam": return "West Pacific Standard Time";
         case "Pacific/Honolulu": return "Hawaiian Standard Time";
+        case "Pacific/Johnston": return "Hawaiian Standard Time";
+        case "Pacific/Kosrae": return "Central Pacific Standard Time";
+        case "Pacific/Kwajalein": return "UTC+12";
+        case "Pacific/Majuro": return "UTC+12";
+        case "Pacific/Midway": return "UTC-11";
+        case "Pacific/Nauru": return "UTC+12";
+        case "Pacific/Niue": return "UTC-11";
+        case "Pacific/Noumea": return "Central Pacific Standard Time";
+        case "Pacific/Pago_Pago": return "UTC-11";
+        case "Pacific/Palau": return "Tokyo Standard Time";
+        case "Pacific/Ponape": return "Central Pacific Standard Time";
         case "Pacific/Port_Moresby": return "West Pacific Standard Time";
+        case "Pacific/Rarotonga": return "Hawaiian Standard Time";
+        case "Pacific/Saipan": return "West Pacific Standard Time";
+        case "Pacific/Tahiti": return "Hawaiian Standard Time";
+        case "Pacific/Tarawa": return "UTC+12";
         case "Pacific/Tongatapu": return "Tonga Standard Time";
-        default:
-            throw new DateTimeException(format("Could not find Windows time zone name for: %s.", tzName));
+        case "Pacific/Truk": return "West Pacific Standard Time";
+        case "Pacific/Wake": return "UTC+12";
+        case "Pacific/Wallis": return "UTC+12";
+        default: return null;
     }
 }
 
 version(Windows) unittest
 {
-    static void testTZSuccess(string tzName)
-    {
-        scope(failure) writefln("TZName which threw: %s", tzName);
-
-        tzDatabaseNameToWindowsTZName(tzName);
-    }
-
-    auto timeZones = TimeZone.getInstalledTZNames();
-
-    foreach(tzname; timeZones)
-        assertNotThrown!DateTimeException(testTZSuccess(tzname));
+    foreach(tzName; TimeZone.getInstalledTZNames())
+        assert(tzDatabaseNameToWindowsTZName(tzName) !is null, format("TZName which failed: %s", tzName));
 }
 
 
@@ -28782,23 +29103,19 @@ version(Windows) unittest
     Converts the given Windows time zone name to a corresponding TZ Database
     name.
 
+    Returns null if the given time zone name cannot be converted.
+
     See_Also:
         $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
               Windows <-> TZ Database Name Conversion Table)
 
     Params:
         tzName = The TZ Database name to convert.
-
-    Throws:
-        $(LREF DateTimeException) if the given $(D_PARAM tzName) cannot be
-        converted.
   +/
-string windowsTZNameToTZDatabaseName(string tzName) @safe pure
+string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
 {
     switch(tzName)
     {
-        //Most of these come from the link in the documentation, but a few have
-        //been added because they were found in the Windows registry.
         case "AUS Central Standard Time": return "Australia/Darwin";
         case "AUS Eastern Standard Time": return "Australia/Sydney";
         case "Afghanistan Standard Time": return "Asia/Kabul";
@@ -28807,7 +29124,6 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure
         case "Arabian Standard Time": return "Asia/Dubai";
         case "Arabic Standard Time": return "Asia/Baghdad";
         case "Argentina Standard Time": return "America/Buenos_Aires";
-        case "Armenian Standard Time": return "Asia/Yerevan";
         case "Atlantic Standard Time": return "America/Halifax";
         case "Azerbaijan Standard Time": return "Asia/Baku";
         case "Azores Standard Time": return "Atlantic/Azores";
@@ -28829,6 +29145,9 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure
         case "Dateline Standard Time": return "Etc/GMT+12";
         case "E. Africa Standard Time": return "Africa/Nairobi";
         case "E. Australia Standard Time": return "Australia/Brisbane";
+        // This doesn't appear to be in the current stuff from MS, but the autotester
+        // is failing without it (probably because its time zone data hasn't been
+        // updated recently enough).
         case "E. Europe Standard Time": return "Europe/Minsk";
         case "E. South America Standard Time": return "America/Sao_Paulo";
         case "Eastern Standard Time": return "America/New_York";
@@ -28837,7 +29156,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure
         case "FLE Standard Time": return "Europe/Kiev";
         case "Fiji Standard Time": return "Pacific/Fiji";
         case "GMT Standard Time": return "Europe/London";
-        case "GTB Standard Time": return "Europe/Istanbul";
+        case "GTB Standard Time": return "Europe/Athens";
         case "Georgian Standard Time": return "Asia/Tbilisi";
         case "Greenland Standard Time": return "America/Godthab";
         case "Greenwich Standard Time": return "Atlantic/Reykjavik";
@@ -28847,13 +29166,18 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure
         case "Israel Standard Time": return "Asia/Jerusalem";
         case "Jordan Standard Time": return "Asia/Amman";
         case "Kaliningrad Standard Time": return "Europe/Kaliningrad";
+        // Same as with E. Europe Standard Time.
         case "Kamchatka Standard Time": return "Asia/Kamchatka";
         case "Korea Standard Time": return "Asia/Seoul";
         case "Libya Standard Time": return "Africa/Tripoli";
+        case "Line Islands Standard Time": return "Africa/Bogota";
         case "Magadan Standard Time": return "Asia/Magadan";
         case "Mauritius Standard Time": return "Indian/Mauritius";
+        // Same as with E. Europe Standard Time.
         case "Mexico Standard Time": return "America/Mexico_City";
+        // Same as with E. Europe Standard Time.
         case "Mexico Standard Time 2": return "America/Chihuahua";
+        // Same as with E. Europe Standard Time.
         case "Mid-Atlantic Standard Time": return "Etc/GMT+2";
         case "Middle East Standard Time": return "Asia/Beirut";
         case "Montevideo Standard Time": return "America/Montevideo";
@@ -28889,7 +29213,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure
         case "Tokyo Standard Time": return "Asia/Tokyo";
         case "Tonga Standard Time": return "Pacific/Tongatapu";
         case "Turkey Standard Time": return "Europe/Istanbul";
-        case "US Eastern Standard Time": return "Etc/GMT+5";
+        case "US Eastern Standard Time": return "America/Indianapolis";
         case "US Mountain Standard Time": return "America/Phoenix";
         case "UTC": return "Etc/GMT";
         case "UTC+12": return "Etc/GMT-12";
@@ -28904,24 +29228,14 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure
         case "West Asia Standard Time": return "Asia/Tashkent";
         case "West Pacific Standard Time": return "Pacific/Port_Moresby";
         case "Yakutsk Standard Time": return "Asia/Yakutsk";
-        default:
-            throw new DateTimeException(format("Could not find TZ Database name for: %s.", tzName));
+        default: return null;
     }
 }
 
 version(Windows) unittest
 {
-        static void testTZSuccess(string tzName)
-        {
-            scope(failure) writefln("TZName which threw: %s", tzName);
-
-            windowsTZNameToTZDatabaseName(tzName);
-        }
-
-        auto timeZones = WindowsTimeZone.getInstalledTZNames();
-
-        foreach(tzname; timeZones)
-            assertNotThrown!DateTimeException(testTZSuccess(tzname));
+    foreach(tzName; WindowsTimeZone.getInstalledTZNames())
+        assert(windowsTZNameToTZDatabaseName(tzName) !is null, format("TZName which failed: %s", tzName));
 }
 
 
@@ -32509,3 +32823,149 @@ unittest
     static assert(!hasUnsharedAliasing!DateTime);
     static assert(!hasUnsharedAliasing!SysTime);
 }
+
+
+
+// This script is for regenerating tzDatabaseNameToWindowsTZName and
+// windowsTZNameToTZDatabaseName from
+// http://unicode.org/cldr/data/common/supplemental/windowsZones.xml
+
+/+
+#!/bin/rdmd
+
+import std.algorithm;
+import std.array;
+import std.conv;
+import std.datetime;
+import std.exception;
+import std.path;
+import std.stdio;
+import std.string;
+
+int main(string[] args)
+{
+    if(args.length != 4 || args[1].baseName != "windowsZones.xml")
+    {
+        stderr.writeln("genTZs.d windowsZones.xml <nix2WinFile> <win2NixFile>");
+        return -1;
+    }
+
+    string[][string] win2Nix;
+    string[][string] nix2Win;
+    immutable f1 = `<mapZone other="`;
+    immutable f2 = `type="`;
+
+    auto file = File(args[1]);
+    foreach(line; file.byLine())
+    {
+        line = line.find(f1);
+        if(line.empty)
+            continue;
+        line = line[f1.length .. $];
+        auto next = line.find('"');
+        auto win = to!string(line[0 .. $ - next.length]);
+        line = next.find(f2);
+        line = line[f2.length .. $];
+        next = line.find('"');
+        auto nixes = to!string(line[0 .. $ - next.length]).split();
+
+        if(auto l = win in win2Nix)
+            *l ~= nixes;
+        else
+            win2Nix[win] = nixes;
+        foreach(nix; nixes)
+        {
+            if(auto w = nix in nix2Win)
+                *w ~= win;
+            else
+                nix2Win[nix] = [win];
+        }
+    }
+
+    foreach(nix; nix2Win.byKey())
+    {
+        auto wins = nix2Win[nix];
+        nix2Win[nix] = wins.sort().uniq().array();
+    }
+
+    foreach(win; win2Nix.byKey())
+    {
+        auto nixes = win2Nix[win];
+        win2Nix[win] = nixes.sort().uniq().array();
+    }
+
+    // AFAIK, there should be no cases of a TZ Database time zone converting to
+    // multiple windows time zones.
+    foreach(nix, wins; nix2Win)
+        enforce(wins.length == 1, format("%s -> %s", nix, wins));
+
+    // We'll try to eliminate multiples by favoring a conversion if it's already
+    // in Phobos, but if it's new, then the correct one will have to be chosen
+    // manually from the results.
+    string[] haveMultiple;
+    foreach(win, nixes; win2Nix)
+    {
+        if(nixes.length > 1)
+            haveMultiple ~= win;
+    }
+    bool[string] haveConflicts;
+    foreach(win; haveMultiple)
+    {
+        if(auto curr = windowsTZNameToTZDatabaseName(win))
+        {
+            if(auto other = curr in nix2Win)
+            {
+                if((*other)[0] == win)
+                {
+                    win2Nix[win] = [curr];
+                    continue;
+                }
+            }
+        }
+        haveConflicts[win] = true;
+        writefln("Warning: %s -> %s", win, win2Nix[win]);
+    }
+
+
+    string[] nix2WinLines = [
+        `string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc`,
+        `{`,
+        `    switch(tzName)`,
+        `    {`];
+
+    foreach(nix; nix2Win.keys.sort())
+        nix2WinLines ~= format(`        case "%s": return "%s";`, nix, nix2Win[nix][0]);
+
+    nix2WinLines ~= [
+        `        default: return null;`,
+        `    }`,
+        `}`];
+
+
+    string[] win2NixLines = [
+        `string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc`,
+        `{`,
+        `    switch(tzName)`,
+        `    {`];
+    foreach(win; win2Nix.keys.sort())
+    {
+        immutable hasMultiple = cast(bool)(win in haveConflicts);
+        foreach(nix; win2Nix[win])
+            win2NixLines ~= format(`        case "%s": return "%s";%s`, win, nix, hasMultiple ? " FIXME" : "");
+    }
+
+    win2NixLines ~= [
+        `        default: return null;`,
+        `    }`,
+        `}`];
+
+
+    auto nix2WinFile = args[2];
+    std.file.write(nix2WinFile, nix2WinLines.join("\n"));
+
+    auto win2NixFile = args[3];
+    std.file.write(win2NixFile, win2NixLines.join("\n"));
+
+    return 0;
+}
++/
