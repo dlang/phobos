@@ -2749,7 +2749,7 @@ pure nothrow @nogc unittest
   {
     char[5] s;
     int i;
-    foreach (c; "hello".byCodeUnit.byCodeUnit())
+    foreach (c; "hello".byCodeUnit().byCodeUnit())
     {
         s[i++] = c;
     }
@@ -2758,7 +2758,7 @@ pure nothrow @nogc unittest
   {
     wchar[5] s;
     int i;
-    foreach (c; "hello"w.byCodeUnit.byCodeUnit())
+    foreach (c; "hello"w.byCodeUnit().byCodeUnit())
     {
         s[i++] = c;
     }
@@ -2767,7 +2767,7 @@ pure nothrow @nogc unittest
   {
     dchar[5] s;
     int i;
-    foreach (c; "hello"d.byCodeUnit.byCodeUnit())
+    foreach (c; "hello"d.byCodeUnit().byCodeUnit())
     {
         s[i++] = c;
     }
@@ -2788,7 +2788,7 @@ pure nothrow @nogc unittest
     assert(s[1] == 'E');
   }
   {
-    auto r = "hello".byCodeUnit.byCodeUnit();
+    auto r = "hello".byCodeUnit().byCodeUnit();
     assert(isForwardRange!(typeof(r)));
     auto s = r.save;
     r.popFront();
@@ -2824,7 +2824,7 @@ auto byChar(R)(R r) if (isNarrowString!R)
     }
     else
     {
-        return r.byCodeUnit.byChar();
+        return r.byCodeUnit().byChar();
     }
 }
 
@@ -2839,7 +2839,7 @@ auto byWchar(R)(R r) if (isNarrowString!R)
     }
     else
     {
-        return r.byCodeUnit.byWchar();
+        return r.byCodeUnit().byWchar();
     }
 }
 
@@ -2848,7 +2848,7 @@ auto byDchar(R)(R r) if (isNarrowString!R)
 {
     alias tchar = Unqual!(ElementEncodingType!R);
 
-    return r.byCodeUnit.byDchar();
+    return r.byCodeUnit().byDchar();
 }
 
 

@@ -1530,7 +1530,7 @@ Returns the $(D FILE*) corresponding to this object.
 /**
 Returns the file number corresponding to this object.
  */
-    /*version(Posix) */int fileno() const @trusted
+    /*version(Posix) */@property int fileno() const @trusted
     {
         import std.exception : enforce;
 
