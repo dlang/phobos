@@ -10052,15 +10052,13 @@ unittest
 //
 unittest
 {
-    import std.stdio: writefln;
-
     int[] values = [1, 4, 9, 16, 25];
 
     int count = 0;
     auto newValues = values.filter!(a => a < 10)
-                           .tee!(a => count++, No.pipeOnPop)
-                           .map!(a => a + 1)
-                           .filter!(a => a < 10);
+        .tee!(a => count++, No.pipeOnPop)
+        .map!(a => a + 1)
+        .filter!(a => a < 10);
 
     auto val = newValues.front;
     assert(count == 1);
@@ -10074,19 +10072,16 @@ unittest
     newValues.front;
     assert(count == 2);
 
-    auto printValues = values.filter!(a => a < 10)
-        .tee!(a => writefln("pre-map: %d", a))
+    int[] preMap = new int[](3), postMap = [];
+    auto mappedValues = values.filter!(a => a < 10)
+        //Note the two different ways of using tee
+        .tee(preMap)
         .map!(a => a + 1)
-        .tee!(a => writefln("post-map: %d", a))
+        .tee!(a => postMap ~= a)
         .filter!(a => a < 10);
-    assert(equal(printValues, [2, 5]));
-    // Outputs (order due to range evaluation):
-    //   post-map: 2
-    //   pre-map: 1
-    //   post-map: 5
-    //   pre-map: 4
-    //   post-map: 10
-    //   pre-map: 9
+    assert(equal(mappedValues, [2, 5]));
+    assert(equal(preMap, [1, 4, 9]));
+    assert(equal(postMap, [2, 5, 10]));
 }
 
 //
