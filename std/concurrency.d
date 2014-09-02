@@ -69,6 +69,7 @@ private
     import std.algorithm;
     import std.datetime;
     import std.exception;
+    import std.format;
     import std.range;
     import std.string;
     import std.traits;
@@ -321,6 +322,27 @@ private:
 
 
     MessageBox  mbox;
+
+public:
+
+    /// Generate a convenient string for identifying this Tid.
+    public string toString() {
+	// HELPME: This should be changed to not allocate.  I'm not versed on
+	// avoiding the GC.
+	if (mbox.receiveThread) {
+	    auto writer = appender!string();
+	    formattedWrite(writer, "Tid(0x%x)", mbox.receiveThread.toHash());
+	    return writer.data;
+	} else {
+	    return "Tid(NOT STARTED)";
+	}
+    }
+
+    /// Get the Thread that is receiving messages for this Tid
+    Thread receiveThread() {
+	return mbox.receiveThread;
+    }
+
 }
 
 
@@ -484,6 +506,7 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
     {
         mbox  = spawnTid.mbox;
         owner = ownerTid;
+	mbox.receiveThread = Thread.getThis;
         fn( args );
     }
 
@@ -1447,6 +1470,14 @@ private
         size_t      m_localMsgs;
         size_t      m_maxMsgs;
         bool        m_closed;
+
+    public:
+	/// Reference to the thread receiving messages from this MessageBox.
+	/// Note that this is invalid until spawn() or spawnLinked() is
+	/// called.
+	Thread receiveThread;
+
+
     }
 
 
