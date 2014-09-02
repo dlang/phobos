@@ -513,7 +513,7 @@ private Pid spawnProcessImpl(in char[] commandLine,
     startinfo.cb = startinfo.sizeof;
     startinfo.dwFlags = STARTF_USESTDHANDLES;
 
-    static int getFD(ref File f) { return f.isOpen ? f.fileno() : -1; }
+    static int getFD(ref File f) { return f.isOpen ? f.fileno : -1; }
 
     // Extract file descriptors and HANDLEs from the streams and make the
     // handles inheritable.
