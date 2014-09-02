@@ -6164,7 +6164,7 @@ unchanged and return $(D false).
 bool skipOver(alias pred = "a == b", R, E)(ref R r, E e)
 if (is(typeof(binaryFun!pred(r.front, e))))
 {
-    if (!binaryFun!pred(r.front, e))
+    if (r.empty || !binaryFun!pred(r.front, e))
         return false;
     r.popFront();
     return true;
@@ -6183,6 +6183,9 @@ unittest {
     assert(r == ["abc", "def", "hij"]);
     assert(skipOver!((a, b) => a.equal(b))(r, e));
     assert(r == ["def", "hij"]);
+
+    auto s2 = "";
+    assert(!s2.skipOver('a'));
 }
 
 /* (Not yet documented.)
