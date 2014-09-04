@@ -92,17 +92,17 @@ private template createAccessors(
             static assert(len == 1);
             enum result =
             // getter
-                "@property @safe bool " ~ name ~ "() pure nothrow const { return "
+                "@property bool " ~ name ~ "() @safe pure nothrow @nogc const { return "
                 ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
-                ~"@property @safe void " ~ name ~ "(bool v) pure nothrow {"
+                ~"@property void " ~ name ~ "(bool v) @safe pure nothrow @nogc { "
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
         }
         else
         {
             // getter
-            enum result = "@property @safe "~T.stringof~" "~name~"() pure nothrow const { auto result = "
+            enum result = "@property "~T.stringof~" "~name~"() @safe pure nothrow @nogc const { auto result = "
                 ~"("~store~" & "
                 ~ myToString(maskAllElse) ~ ") >>"
                 ~ myToString(offset) ~ ";"
@@ -112,7 +112,7 @@ private template createAccessors(
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
-                ~"@property @safe void "~name~"("~T.stringof~" v) pure nothrow { "
+                ~"@property void "~name~"("~T.stringof~" v) @safe pure nothrow @nogc { "
                 ~"assert(v >= "~name~`_min, "Value is smaller than the minimum value of bitfield '`~name~`'"); `
                 ~"assert(v <= "~name~`_max, "Value is greater than the maximum value of bitfield '`~name~`'"); `
                 ~store~" = cast(typeof("~store~"))"
@@ -215,6 +215,7 @@ template bitfields(T...)
     enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
 }
 
+@safe pure nothrow @nogc
 unittest
 {
     // Degenerate bitfields (#8474 / #11160) tests mixed with range tests
