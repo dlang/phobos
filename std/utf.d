@@ -2881,8 +2881,6 @@ auto ref byChar(R)(R r)
 
         static struct byCharImpl
         {
-        pure nothrow @nogc:
-
             this(ref typeof(r2) r)
             {
                 this.r = r;
@@ -3042,8 +3040,6 @@ auto ref byWchar(R)(R r)
 
         static struct byWcharImpl
         {
-        pure nothrow @nogc:
-
             this(ref typeof(r2) r)
             {
                 this.r = r;
@@ -3166,8 +3162,6 @@ auto ref byDchar(R)(R r)
     {
         static struct byDcharImpl
         {
-        pure nothrow @nogc:
-
             this(ref R r)
             {
                 this.r = r;
@@ -3271,8 +3265,6 @@ auto ref byDchar(R)(R r)
     {
         static struct byDcharImpl
         {
-        pure nothrow @nogc:
-
             this(ref R r)
             {
                 this.r = r;
@@ -3501,3 +3493,38 @@ pure nothrow @nogc unittest
   }
 }
 
+// test pure, @safe, nothrow, @nogc correctness of byChar/byWchar/byDchar,
+// which needs to support ranges with and without those attributes
+
+pure @safe nothrow @nogc unittest
+{
+    dchar[5] s = "hello"d;
+    foreach (c; s[].byChar())  { }
+    foreach (c; s[].byWchar()) { }
+    foreach (c; s[].byDchar()) { }
+}
+
+version(unittest)
+int impureVariable;
+
+@system unittest
+{
+    static struct ImpureThrowingSystemRange(Char)
+    {
+        @property bool empty() const { return true; }
+        @property Char front() const { return Char.init; }
+        void popFront()
+        {
+            impureVariable++;
+            throw new Exception("only for testing nothrow");
+        }
+    }
+
+    foreach (Char; TypeTuple!(char, wchar, dchar))
+    {
+        ImpureThrowingSystemRange!Char range;
+        foreach (c; range.byChar())  { }
+        foreach (c; range.byWchar()) { }
+        foreach (c; range.byDchar()) { }
+    }
+}
