@@ -3245,7 +3245,7 @@ string tempDir() @trusted
     {
         version(Windows)
         {
-            wchar[MAX_PATH] buf;
+            wchar[MAX_PATH + 1] buf;
             DWORD len = GetTempPathW(buf.length, buf.ptr);
             if (len) cache = toUTF8(buf[0 .. len]);
         }
