@@ -163,8 +163,14 @@ public:
         else static if (op=="/")
         {
             assert(y!=0, "Division by zero");
-            static assert(!is(T == long) && !is(T == ulong));
-            data = BigUint.divInt(data, cast(uint)u);
+            static if (T.sizeof <= uint.sizeof)
+            {
+                data = BigUint.divInt(data, cast(uint)u);
+            }
+            else
+            {
+                data = BigUint.divInt(data, u);
+            }
             sign = data.isZero() ? false : sign ^ (y < 0);
         }
         else static if (op=="%")
@@ -993,4 +999,35 @@ unittest // 11583
 {
     BigInt x = 0;
     assert((x > 0) == false);
+}
+
+unittest // 13391
+{
+    BigInt x1 = "123456789";
+    BigInt x2 = "123456789123456789";
+    BigInt x3 = "123456789123456789123456789";
+
+    import std.typetuple : TypeTuple;
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assert((x1 * T.max) / T.max == x1);
+        assert((x2 * T.max) / T.max == x2);
+        assert((x3 * T.max) / T.max == x3);
+    }
+
+    assert(x1 / -123456789 == -1);
+    assert(x1 / 123456789U == 1);
+    assert(x1 / -123456789L == -1);
+    assert(x1 / 123456789UL == 1);
+    assert(x2 / -123456789123456789L == -1);
+    assert(x2 / 123456789123456789UL == 1);
+
+    assert(x1 / uint.max == 0);
+    assert(x1 / ulong.max == 0);
+    assert(x2 / ulong.max == 0);
+
+    x1 /= 123456789UL;
+    assert(x1 == 1);
+    x2 /= 123456789123456789UL;
+    assert(x2 == 1);
 }
