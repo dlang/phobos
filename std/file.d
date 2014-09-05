@@ -1153,7 +1153,7 @@ assert(!attrIsDir(getAttributes("/etc/fonts/fonts.conf")));
 assert(!attrIsDir(getLinkAttributes("/etc/fonts/fonts.conf")));
 --------------------
   +/
-bool attrIsDir(uint attributes) nothrow
+bool attrIsDir(uint attributes) @safe pure nothrow @nogc
 {
     version(Windows)
     {
@@ -1277,7 +1277,7 @@ assert(attrIsFile(getAttributes("/etc/fonts/fonts.conf")));
 assert(attrIsFile(getLinkAttributes("/etc/fonts/fonts.conf")));
 --------------------
   +/
-bool attrIsFile(uint attributes) nothrow
+bool attrIsFile(uint attributes) @safe pure nothrow @nogc
 {
     version(Windows)
     {
@@ -1431,7 +1431,7 @@ assert(!getAttributes("/tmp/alink").isSymlink);
 assert(getLinkAttributes("/tmp/alink").isSymlink);
 --------------------
   +/
-bool attrIsSymlink(uint attributes) nothrow
+bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
 {
     version(Windows)
         return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
