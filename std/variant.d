@@ -437,34 +437,30 @@ private:
             }
 
         case OpID.index:
-            // Added allowed!(...) prompted by a bug report by Chris
-            // Nicholson-Sauls.
-            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
+            auto result = cast(Variant*) parm;
+            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void))
             {
                 // array type; input and output are the same VariantN
-                auto result = cast(VariantN*) parm;
                 size_t index = result.convertsTo!(int)
                     ? result.get!(int) : result.get!(size_t);
                 *result = (*zis)[index];
                 break;
             }
-            else static if (isAssociativeArray!(A)
-                    && allowed!(typeof(A.init.values[0])))
+            else static if (isAssociativeArray!(A))
             {
-                auto result = cast(VariantN*) parm;
                 *result = (*zis)[result.get!(typeof(A.init.keys[0]))];
                 break;
             }
             else
             {
-                throw new VariantException(typeid(A), typeid(void[]));
+                throw new VariantException(typeid(A), result[0].type);
             }
 
         case OpID.indexAssign:
+            // array type; result comes first, index comes second
+            auto args = cast(Variant*) parm;
             static if (isArray!(A) && is(typeof((*zis)[0] = (*zis)[0])))
             {
-                // array type; result comes first, index comes second
-                auto args = cast(VariantN*) parm;
                 size_t index = args[1].convertsTo!(int)
                     ? args[1].get!(int) : args[1].get!(size_t);
                 (*zis)[index] = args[0].get!(typeof((*zis)[0]));
@@ -472,14 +468,13 @@ private:
             }
             else static if (isAssociativeArray!(A))
             {
-                auto args = cast(VariantN*) parm;
                 (*zis)[args[1].get!(typeof(A.init.keys[0]))]
                     = args[0].get!(typeof(A.init.values[0]));
                 break;
             }
             else
             {
-                throw new VariantException(typeid(A), typeid(void[]));
+                throw new VariantException(typeid(A), args[0].type);
             }
 
         case OpID.catAssign:
@@ -1141,9 +1136,9 @@ public:
      * assert(a[5] == 50); // fails, a[5] is still 42
      * ----
      */
-    VariantN opIndex(K)(K i)
+    Variant opIndex(K)(K i)
     {
-        auto result = VariantN(i);
+        auto result = Variant(i);
         fptr(OpID.index, &store, &result) == 0 || assert(false);
         return result;
     }
@@ -1158,9 +1153,9 @@ public:
     }
 
     /// ditto
-    VariantN opIndexAssign(T, N)(T value, N i)
+    Variant opIndexAssign(T, N)(T value, N i)
     {
-        VariantN[2] args = [ VariantN(value), VariantN(i) ];
+        Variant[2] args = [ Variant(value), Variant(i) ];
         fptr(OpID.indexAssign, &store, &args) == 0 || assert(false);
         return args[0];
     }
@@ -1265,6 +1260,25 @@ unittest
     void[] returned = v.get!(void[]);
     assert(returned == elements);
 }
+
+// Issue #13354
+unittest
+{
+    alias A = Algebraic!(string[]);
+    A a = ["a", "b"];
+    assert(a[0] == "a");
+    assert(a[1] == "b");
+    a[1] = "c";
+    assert(a[1] == "c");
+
+    alias AA = Algebraic!(int[string]);
+    AA aa = ["a": 1, "b": 2];
+    assert(aa["a"] == 1);
+    assert(aa["b"] == 2);
+    aa["b"] = 3;
+    assert(aa["b"] == 3);
+}
+
 
 /**
  * Algebraic data type restricted to a closed set of possible
