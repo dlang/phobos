@@ -3245,7 +3245,8 @@ string tempDir() @trusted
     {
         version(Windows)
         {
-            wchar[MAX_PATH + 1] buf;
+            // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992(v=vs.85).aspx
+            wchar[MAX_PATH + 2] buf;
             DWORD len = GetTempPathW(buf.length, buf.ptr);
             if (len) cache = toUTF8(buf[0 .. len]);
         }
