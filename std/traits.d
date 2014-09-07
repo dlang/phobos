@@ -5449,9 +5449,12 @@ enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
 
 unittest
 {
-    alias __vector(float[4]) SimdVec;
-    static assert(isSIMDVector!(__vector(float[4])));
-    static assert(isSIMDVector!SimdVec);
+    static if (is(__vector(float[4])))
+    {
+        alias __vector(float[4]) SimdVec;
+        static assert(isSIMDVector!(__vector(float[4])));
+        static assert(isSIMDVector!SimdVec);
+    }
     static assert(!isSIMDVector!uint);
     static assert(!isSIMDVector!(float[4]));
 }
