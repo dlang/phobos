@@ -1654,18 +1654,21 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
     char[512] buf;
 
-    immutable n = snprintf(buf.ptr, buf.length,
-                           sprintfSpec.ptr,
-                           fs.width,
-                           // negative precision is same as no precision specified
-                           fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
-                           tval);
+    immutable n = ()@trusted{
+        return snprintf(buf.ptr, buf.length,
+                        sprintfSpec.ptr,
+                        fs.width,
+                        // negative precision is same as no precision specified
+                        fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
+                        tval);
+    }();
+
     enforceFmt(n >= 0,
         "floating point formatting failure");
-    put(w, buf[0 .. strlen(buf.ptr)]);
+    put(w, buf[0 .. min(n, buf.length-1)]);
 }
 
-/*@safe pure */unittest
+@safe /*pure */unittest
 {
     foreach (T; TypeTuple!(float, double, real))
     {
