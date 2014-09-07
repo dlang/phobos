@@ -37,11 +37,7 @@ import core.vararg, core.stdc.stdlib, core.stdc.string,
 public import std.algorithm : startsWith, endsWith, cmp, count;
 public import std.array : join, split;
 
-version(Windows) extern (C)
-{
-    size_t wcslen(in wchar *);
-    int wcscmp(in wchar *, in wchar *);
-}
+version(Windows) import core.stdc.wchar_ : wcslen, wcscmp;
 
 version(unittest) import std.algorithm : filter;
 
