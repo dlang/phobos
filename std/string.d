@@ -3446,7 +3446,7 @@ size_t countchars(S, S1)(S s, in S1 pattern) @safe pure @nogc if (isSomeString!S
  * Return string that is s with all characters removed that match pattern.
  */
 
-S removechars(S)(S s, in S pattern) @safe pure @nogc if (isSomeString!S)
+S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
 {
     Unqual!(typeof(s[0]))[] r;
     bool changed = false;
@@ -3473,7 +3473,7 @@ S removechars(S)(S s, in S pattern) @safe pure @nogc if (isSomeString!S)
         return s;
 }
 
-@safe pure @nogc unittest
+@safe pure unittest
 {
     debug(string) printf("std.string.removechars.unittest\n");
 
@@ -3534,7 +3534,7 @@ S squeeze(S)(S s, in S pattern = null)
     return changed ? ((r is null) ? s[0 .. lasti] : cast(S) r) : s;
 }
 
-@trusted pure @nogc unittest
+@trusted pure unittest
 {
     debug(string) printf("std.string.squeeze.unittest\n");
 
