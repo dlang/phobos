@@ -6370,6 +6370,9 @@ unittest
     static assert(mangledName!removeDummyEnvelope ==
             "_D3std6traits19removeDummyEnvelopeFAyaZAya");
     int x;
+  static if (is(typeof({ return x; }) : int delegate() pure))   // issue 9148
+    static assert(mangledName!((int a) { return a+x; }) == "DFNaNbNiNfiZi");  // pure nothrow @safe @nogc
+  else
     static assert(mangledName!((int a) { return a+x; }) == "DFNbNiNfiZi");  // nothrow @safe @nnogc
 }
 
