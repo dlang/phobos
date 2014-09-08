@@ -2127,7 +2127,7 @@ Example:
 void main()
 {
     // Read standard input 4KB at a time
-    foreach (ubyte[] buffer; stdin.byChunk(new ubyte[1024 * 4096]))
+    foreach (ubyte[] buffer; stdin.byChunk(new ubyte[4096]))
     {
         ... use buffer ...
     }
