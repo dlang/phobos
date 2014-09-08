@@ -1021,21 +1021,29 @@ bool exists(in char[] name) @trusted nothrow @nogc
 
  Throws: $(D FileException) on error.
   +/
-uint getAttributes(in char[] name)
+uint getAttributes(in char[] name) @safe
 {
     version(Windows)
     {
-        immutable result = GetFileAttributesW(name.tempCStringW());
+        static auto trustedGetFileAttributesW(in char[] fileName) @trusted
+        {
+            return GetFileAttributesW(fileName.tempCStringW());
+        }
+        immutable result = trustedGetFileAttributesW(name);
 
-        enforce(result != uint.max, new FileException(name.idup));
+        cenforce(result != INVALID_FILE_ATTRIBUTES, name);
 
         return result;
     }
     else version(Posix)
     {
+        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
+        {
+            return stat(path.tempCString(), &buf);
+        }
         stat_t statbuf = void;
 
-        cenforce(stat(name.tempCString(), &statbuf) == 0, name);
+        cenforce(trustedStat(name, statbuf) == 0, name);
 
         return statbuf.st_mode;
     }
