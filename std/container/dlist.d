@@ -480,7 +480,11 @@ Complexity: $(BIGOH 1)
         assert(r._first, "Remove: Range is empty");
 
         connect(r._first._prev, r._last._next);
-        return Range(r._last._next, _last);
+        auto after = r._last._next;
+        if (after is _root)
+            return Range(null, null);
+        else
+            return Range(after, _last);
     }
 
     /// ditto
@@ -806,4 +810,13 @@ unittest //13076
     DList!int list;
     assert(list.empty);
     list.clear();
+}
+
+unittest //13425
+{
+    auto list = DList!int([1,2,3,4,5]);
+    auto r = list[].drop(4); // r is a view of the last element of list
+    assert(r.front == 5 && r.walkLength == 1);
+    r = list.linearRemove(r.take(1));
+    assert(r.empty); // fails
 }
