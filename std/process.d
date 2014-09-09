@@ -2313,7 +2313,7 @@ unittest
         },
         {
             args    : ["foo bar", "hello"],
-            windows : `"foo bar" ^"hello^"`,
+            windows : `"foo bar" hello`,
             posix   : `'foo bar' 'hello'`
         },
         {
@@ -2323,7 +2323,7 @@ unittest
         },
         {
             args    : ["foo bar", "hello", "world"],
-            windows : `"foo bar" ^"hello^" ^"world^"`,
+            windows : `"foo bar" hello world`,
             posix   : `'foo bar' 'hello' 'world'`
         },
         {
@@ -2445,10 +2445,12 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
     // * http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx
     // * http://blogs.msdn.com/b/oldnewthing/archive/2010/09/17/10063629.aspx
 
-    // Calculate the total string size.
+    // Check if the string needs to be escaped,
+    // and calculate the total string size.
 
     // Trailing backslashes must be escaped
     bool escaping = true;
+    bool needEscape = false;
     // Result size = input size + 2 for surrounding quotes + 1 for the
     // backslash for each escaped character.
     size_t size = 1 + arg.length + 1;
@@ -2457,6 +2459,7 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
     {
         if (c == '"')
         {
+            needEscape = true;
             escaping = true;
             size++;
         }
@@ -2467,8 +2470,24 @@ private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
                 size++;
         }
         else
+        {
+            if (c == ' ' || c == '\t')
+                needEscape = true;
             escaping = false;
+        }
     }
+
+    // Empty arguments need to be specified as ""
+    if (!arg.length)
+        needEscape = true;
+    else
+    // Arguments ending with digits need to be escaped,
+    // to disambiguate with 1>file redirection syntax
+    if (std.ascii.isDigit(arg[$-1]))
+        needEscape = true;
+
+    if (!needEscape)
+        return allocator(arg.length)[] = arg;
 
     // Construct result string.
 
@@ -2524,7 +2543,7 @@ version(Windows) version(unittest)
             `C:\Program Files\`,
         ];
 
-        enum CHARS = `_x\" *&^`; // _ is placeholder for nothing
+        enum CHARS = `_x\" *&^` ~ "\t"; // _ is placeholder for nothing
         foreach (c1; CHARS)
         foreach (c2; CHARS)
         foreach (c3; CHARS)
