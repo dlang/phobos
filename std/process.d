@@ -2674,7 +2674,7 @@ unittest
         }
 
         // generate filename
-        string fn = "test_";
+        string fn;
         foreach (l; 0..uniform(1, 10))
         {
             dchar c;
@@ -2697,6 +2697,7 @@ unittest
 
             fn ~= c;
         }
+        fn = fn[0..$/2] ~ "_testfile_" ~ fn[$/2..$];
 
         test(args, fn);
     }
