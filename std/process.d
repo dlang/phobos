@@ -386,7 +386,7 @@ private Pid spawnProcessImpl(in char[][] args,
     // can be propagated as exceptions before forking.
     int workDirFD = 0;
     scope(exit) if (workDirFD > 0) close(workDirFD);
-    if (workDir)
+    if (workDir.length)
     {
         import core.sys.posix.fcntl;
         workDirFD = open(workDir.tempCString(), O_RDONLY);
@@ -552,7 +552,7 @@ private Pid spawnProcessImpl(in char[] commandLine,
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
-                        envz, workDir.tempCStringW(), &startinfo, &pi))
+                        envz, workDir.length ? workDir.tempCStringW() : null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
@@ -863,6 +863,15 @@ unittest // Specifying a bad working directory.
     std.file.write(directory, "foo");
     scope(exit) remove(directory);
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+}
+
+unittest // Specifying empty working directory.
+{
+    TestScript prog = "";
+
+    string directory = "";
+    assert(directory && !directory.length);
+    spawnProcess([prog.path], null, Config.none, directory).wait();
 }
 
 unittest // Reopening the standard streams (issue 13258)
