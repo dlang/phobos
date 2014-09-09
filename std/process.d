@@ -1539,11 +1539,11 @@ Pipe pipe() @trusted //TODO: @safe
 struct Pipe
 {
     /// The read end of the pipe.
-    @property File readEnd() @trusted /*TODO: @safe nothrow*/ { return _read; }
+    @property File readEnd() @safe nothrow { return _read; }
 
 
     /// The write end of the pipe.
-    @property File writeEnd() @trusted /*TODO: @safe nothrow*/ { return _write; }
+    @property File writeEnd() @safe nothrow { return _write; }
 
 
     /**
@@ -1556,8 +1556,11 @@ struct Pipe
     Note that if either end of the pipe has been passed to a child process,
     it will only be closed in the parent process.  (What happens in the
     child process is platform dependent.)
+
+    Throws:
+    $(XREF exception,ErrnoException) if an error occurs.
     */
-    void close() @trusted //TODO: @safe nothrow
+    void close() @safe
     {
         _read.close();
         _write.close();
@@ -1645,7 +1648,7 @@ ProcessPipes pipeProcess(in char[][] args,
                          const string[string] env = null,
                          Config config = Config.none,
                          in char[] workDir = null)
-    @trusted //TODO: @safe
+    @safe
 {
     return pipeProcessImpl!spawnProcess(args, redirect, env, config, workDir);
 }
@@ -1656,7 +1659,7 @@ ProcessPipes pipeProcess(in char[] program,
                          const string[string] env = null,
                          Config config = Config.none,
                          in char[] workDir = null)
-    @trusted
+    @safe
 {
     return pipeProcessImpl!spawnProcess(program, redirect, env, config, workDir);
 }
@@ -1877,7 +1880,7 @@ struct ProcessPipes
     $(OBJECTREF Error) if the child process' standard input stream hasn't
     been redirected.
     */
-    @property File stdin() @trusted //TODO: @safe nothrow
+    @property File stdin() @safe nothrow
     {
         if ((_redirectFlags & Redirect.stdin) == 0)
             throw new Error("Child process' standard input stream hasn't "
@@ -1893,7 +1896,7 @@ struct ProcessPipes
     $(OBJECTREF Error) if the child process' standard output stream hasn't
     been redirected.
     */
-    @property File stdout() @trusted //TODO: @safe nothrow
+    @property File stdout() @safe nothrow
     {
         if ((_redirectFlags & Redirect.stdout) == 0)
             throw new Error("Child process' standard output stream hasn't "
@@ -1909,7 +1912,7 @@ struct ProcessPipes
     $(OBJECTREF Error) if the child process' standard error stream hasn't
     been redirected.
     */
-    @property File stderr() @trusted //TODO: @safe nothrow
+    @property File stderr() @safe nothrow
     {
         if ((_redirectFlags & Redirect.stderr) == 0)
             throw new Error("Child process' standard error stream hasn't "
@@ -2147,7 +2150,7 @@ On POSIX, $(D userShell) returns the contents of the SHELL environment
 variable, if it exists and is non-empty.  Otherwise, it returns
 $(D "/bin/sh").
 */
-@property string userShell() @safe //TODO: nothrow
+@property string userShell() @safe
 {
     version (Windows)      return environment.get("COMSPEC", "cmd.exe");
     else version (Android) return environment.get("SHELL", "/system/bin/sh");
@@ -2162,7 +2165,7 @@ version (Windows) private immutable string shellSwitch = "/C";
 
 
 /// Returns the process ID number of the current process.
-@property int thisProcessID() @trusted //TODO: @safe nothrow
+@property int thisProcessID() @trusted nothrow //TODO: @safe
 {
     version (Windows)    return GetCurrentProcessId();
     else version (Posix) return core.sys.posix.unistd.getpid();
@@ -2273,8 +2276,7 @@ Throws:
 $(OBJECTREF Exception) if any part of the command line contains unescapable
 characters (NUL on all platforms, as well as CR and LF on Windows).
 */
-string escapeShellCommand(in char[][] args...)
-    //TODO: @safe pure nothrow
+string escapeShellCommand(in char[][] args...) @safe pure
 {
     if (args.empty)
         return null;
@@ -2340,8 +2342,7 @@ unittest
             assert(escapeShellCommand(test.args) == test.posix  );
 }
 
-private string escapeShellCommandString(string command)
-    //TODO: @safe pure nothrow
+private string escapeShellCommandString(string command) @safe pure
 {
     version (Windows)
         return escapeWindowsShellCommand(command);
@@ -2349,8 +2350,7 @@ private string escapeShellCommandString(string command)
         return command;
 }
 
-private string escapeWindowsShellCommand(in char[] command)
-    //TODO: @safe pure nothrow (prevented by Appender)
+private string escapeWindowsShellCommand(in char[] command) @safe pure
 {
     auto result = appender!string();
     result.reserve(command.length);
@@ -2721,7 +2721,9 @@ static:
     ---
 
     Throws:
-    $(OBJECTREF Exception) if the environment variable does not exist.
+    $(OBJECTREF Exception) if the environment variable does not exist,
+    or $(XREF utf,UTFException) if the variable contains invalid UTF-16
+    characters (Windows only).
 
     See_also:
     $(LREF environment.get), which doesn't throw on failure.
@@ -2753,8 +2755,12 @@ static:
         // empty.
     }
     ---
+
+    Throws:
+    $(XREF utf,UTFException) if the variable contains invalid UTF-16
+    characters (Windows only).
     */
-    string get(in char[] name, string defaultValue = null) @safe //TODO: nothrow
+    string get(in char[] name, string defaultValue = null) @safe
     {
         string value;
         auto found = getImpl(name, value);
@@ -2885,7 +2891,7 @@ private:
     }
 
     // Retrieves the environment variable, returns false on failure.
-    bool getImpl(in char[] name, out string value) @trusted //TODO: nothrow
+    bool getImpl(in char[] name, out string value) @trusted
     {
         version (Windows)
         {

@@ -375,7 +375,7 @@ Throws: $(D ErrnoException) if the file could not be opened.
         detach();
     }
 
-    this(this) @safe
+    this(this) @safe nothrow
     {
         if (!_p) return;
         assert(_p.refs);
