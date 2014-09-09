@@ -384,8 +384,8 @@ private Pid spawnProcessImpl(in char[][] args,
     // We use open in the parent and fchdir in the child
     // so that most errors (directory doesn't exist, not a directory)
     // can be propagated as exceptions before forking.
-    int workDirFD = 0;
-    scope(exit) if (workDirFD > 0) close(workDirFD);
+    int workDirFD = -1;
+    scope(exit) if (workDirFD >= 0) close(workDirFD);
     if (workDir.length)
     {
         import core.sys.posix.fcntl;
@@ -416,7 +416,7 @@ private Pid spawnProcessImpl(in char[][] args,
         // Child process
 
         // Set the working directory.
-        if (workDirFD)
+        if (workDirFD >= 0)
         {
             if (fchdir(workDirFD) < 0)
             {
