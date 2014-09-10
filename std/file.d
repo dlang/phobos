@@ -1715,7 +1715,7 @@ version(Posix) unittest
 
 
 /****************************************************
- * Get current directory.
+ * Get the current working directory.
  * Throws: $(D FileException) on error.
  */
 version(Windows) string getcwd()
