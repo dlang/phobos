@@ -6008,9 +6008,24 @@ bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
 if (isInputRange!R &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
-    return doesThisStart.empty
-        ? false
-        : binaryFun!pred(doesThisStart.front, withThis);
+    if (doesThisStart.empty) return false;
+
+    alias EE = ElementEncodingType!R;
+
+    static if (is(typeof(pred) : string))
+        enum isDefaultPred= pred == "a == b";
+    else
+        enum isDefaultPred = false;
+
+    static if ( isDefaultPred && isNarrowString!R && isSomeChar!E && E.sizeof <= EE.sizeof)
+    {
+        import std.utf : canSearchInCodeUnits;
+        return doesThisStart[0] == withThis && canSearchInCodeUnits!EE(withThis);
+    }
+    else
+    {
+        return binaryFun!pred(doesThisStart.front, withThis);
+    }
 }
 
 ///
@@ -6118,6 +6133,15 @@ unittest
         //Non-default pred
         assert(startsWith!("a%10 == b%10")(arr, [10, 11]));
         assert(!startsWith!("a%10 == b%10")(arr, [10, 12]));
+    }
+}
+
+nothrow unittest
+{
+    foreach (s; TypeTuple!("hello!"c, "hello!"w))
+    {
+        assert ( startsWith(s, 'h'));
+        assert (!startsWith(s, 'a'));
     }
 }
 
@@ -6318,9 +6342,24 @@ bool endsWith(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
 if (isBidirectionalRange!R &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
-    return doesThisEnd.empty
-        ? false
-        : binaryFun!pred(doesThisEnd.back, withThis);
+    if (doesThisEnd.empty) return false;
+
+    alias EE = ElementEncodingType!R;
+
+    static if (is(typeof(pred) : string))
+        enum isDefaultPred= pred == "a == b";
+    else
+        enum isDefaultPred = false;
+
+    static if ( isDefaultPred && isNarrowString!R && isSomeChar!E && E.sizeof <= EE.sizeof)
+    {
+        import std.utf : canSearchInCodeUnits;
+        return doesThisEnd[$-1] == withThis && canSearchInCodeUnits!EE(withThis);
+    }
+    else
+    {
+        return binaryFun!pred(doesThisEnd.back, withThis);
+    }
 }
 
 ///
@@ -6419,6 +6458,15 @@ unittest
         //Non-default pred
         assert(endsWith!("a%10 == b%10")(arr, [14, 15]));
         assert(!endsWith!("a%10 == b%10")(arr, [15, 14]));
+    }
+}
+
+nothrow unittest
+{
+    foreach (s; TypeTuple!("hello!"c, "hello!"w))
+    {
+        assert ( endsWith(s, '!'));
+        assert (!endsWith(s, 'a'));
     }
 }
 
