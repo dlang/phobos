@@ -937,10 +937,10 @@ public:
             string tryUseType(string tp) {
                 import std.string : format;
                 return q{
-                    static if (allowed!%s && T.allowed!%s)
-                        if (convertsTo!%s && other.convertsTo!%s)
-                            return VariantN(get!%s %s other.get!%s);
-                }.format(tp, tp, tp, tp, tp, op, tp);
+                    static if (allowed!%1$s && T.allowed!%1$s)
+                        if (convertsTo!%1$s && other.convertsTo!%1$s)
+                            return VariantN(get!%1$s %2$s other.get!%1$s);
+                }.format(tp, op);
             }
             mixin(tryUseType("uint"));
             mixin(tryUseType("int"));
