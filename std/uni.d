@@ -4678,7 +4678,15 @@ template Utf8Matcher()
     char truncate()(char ch) pure @safe
     {
         ch -= 0x80;
-        return ch < 0x40 ? ch : (badEncoding(), cast(char)0);
+        if (ch < 0x40)
+        {
+            return ch;
+        }
+        else
+        {
+            badEncoding();
+            return cast(char)0;
+        }
     }
 
     static auto encode(size_t sz)(dchar ch)
@@ -4839,7 +4847,10 @@ template Utf8Matcher()
         {
             import std.typecons;
             if(inp.length < size)
-                return badEncoding(), false;
+            {
+                badEncoding();
+                return false;
+            }
             char[size] needle = void;
             needle[0] = leadMask!size & inp[0];
             foreach(i; staticIota!(1, size))
@@ -4880,7 +4891,13 @@ template Utf8Matcher()
             else
             {
                 static assert(mode == Mode.skipOnMatch);
-                return tab!size[needle] && (inp.popFrontN(size), true);
+                if (tab!size[needle])
+                {
+                    inp.popFrontN(size);
+                    return true;
+                }
+                else
+                    return false;
             }
         }
     }
@@ -4961,8 +4978,19 @@ template Utf16Matcher()
             assert(!inp.empty);
             auto ch = inp[0];
             static if(sizeFlags & 1)
-                return ch < 0x80 ? ascii[ch] && (inp.popFront(), true)
-                    : lookupUni!mode(inp);
+            {
+                if (ch < 0x80)
+                {
+                  if (ascii[ch])
+                  {
+                      inp.popFront();
+                      return true;
+                  }
+                  else
+                      return false;
+                }
+                return lookupUni!mode(inp);
+            }
             else
                 return lookupUni!mode(inp);
         }
@@ -4976,8 +5004,15 @@ template Utf16Matcher()
                 assert(!inp.empty);
                 auto ch = inp[0];
                 static if(sizeFlags & 1)
-                    return ch < 0x80 ? (inp.popFront(), ascii[ch])
-                        : lookupUni!mode(inp);
+                {
+                    if (ch < 0x80)
+                    {
+                        inp.popFront();
+                        return ascii[ch];
+                    }
+                    else
+                        return lookupUni!mode(inp);
+                }
                 else
                     return lookupUni!mode(inp);
             }
@@ -5057,7 +5092,15 @@ template Utf16Matcher()
                     static if(mode == Mode.alwaysSkip)
                         inp.popFront();
                     static if(mode == Mode.skipOnMatch)
-                        return bmp[ch] && (inp.popFront(), true);
+                    {
+                        if (bmp[ch])
+                        {
+                            inp.popFront();
+                            return true;
+                        }
+                        else
+                            return false;
+                    }
                     else
                         return bmp[ch];
                 }
@@ -5078,7 +5121,15 @@ template Utf16Matcher()
                     static if(mode == Mode.alwaysSkip)
                         inp.popFrontN(2);
                     static if(mode == Mode.skipOnMatch)
-                        return uni[needle] && (inp.popFrontN(2), true);
+                    {
+                        if (uni[needle])
+                        {
+                            inp.popFrontN(2);
+                            return true;
+                        }
+                        else
+                            return false;
+                    }
                     else
                         return uni[needle];
                 }
