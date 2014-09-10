@@ -1,14 +1,70 @@
 // Written in the D programming language.
 
 /**
-String handling functions. Objects of types $(D _string), $(D
-wstring), and $(D dstring) are value types and cannot be mutated
-element-by-element. For using mutation during building strings, use
-$(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *_string) types
-are preferable because they don't exhibit undesired aliasing, thus
+<script type="text/javascript">inhibitQuickIndex = 1</script>
+
+$(BOOKTABLE ,
+$(TR $(TH Category) $(TH Functions) )
+$(TR $(TDNW Searching)
+    $(TD $(MYREF indexOf) $(MYREF lastIndexOf) $(MYREF indexOfAny)
+    $(MYREF lastIndexOfAny) $(MYREF indexOfNeither) $(MYREF lastIndexOfNeither)
+    $(XREF _algorithm, startsWith) $(XREF _algorithm, endsWith)
+    $(MYREF inPattern) $(MYREF column)
+    $(LINK2 std_algorithm.html, std.algorithm search functions)
+    )
+)
+
+$(TR $(TDNW Comparison)
+    $(TD $(XREF _algorithm, cmp)
+    $(MYREF isNumeric) $(MYREF countchars)
+    $(LINK2 std_uni.html, std.uni comparison functions )
+    $(LINK2 std_ascii.html, std.ascii comparison functions )
+    )
+)
+
+$(TR $(TDNW Mutation)
+    $(TD $(MYREF toLower) $(MYREF toLowerInPlace) $(MYREF toUpper)
+    $(MYREF toUpperInPlace) $(MYREF capitalize) $(MYREF removechars)
+    $(MYREF squeeze) $(MYREF munch) $(XREF _range, retro)
+    )
+)
+
+$(TR $(TDNW Pruning and Filling)
+    $(TD $(MYREF stripLeft) $(MYREF stripRight) $(MYREF strip) $(MYREF chomp)
+    $(MYREF chompPrefix) $(MYREF chop) $(MYREF leftJustify) $(MYREF rightJustify)
+    $(MYREF center) $(MYREF detab) $(MYREF entab) $(MYREF wrap)
+    $(MYREF outdent) $(LINK2 std_array.html#popFront, popFront)
+    $(XREF _array, front) $(XREF _array, popBack) $(XREF _array, back)
+    )
+)
+
+$(TR $(TDNW Substitution)
+    $(TD $(MYREF translate) $(MYREF soundex) $(MYREF abbrev) $(MYREF succ)
+    $(MYREF tr)
+    )
+)
+
+$(TR $(TDNW Miscellaneous)
+    $(TD $(MYREF fromStringz) $(MYREF toStringz) $(MYREF splitLines)
+    $(MYREF representation) $(MYREF assumeUTF)
+    )
+)
+)
+
+This module presents String handling functions.
+Objects of types $(D _string), $(D wstring), and $(D dstring) are value types
+and cannot be mutated element-by-element. For using mutation during building
+strings, use $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D xxxstring)
+types are preferable because they don't exhibit undesired aliasing, thus
 making code more robust.
 
+Not all functions for D _string handling are in this module. Functions related
+to Unicode and ASCII are found in $(LINK2 std_uni.html, std.uni) and
+$(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
+wider generality than just strings can be found in std.algorithm and std.range.
+
 Macros: WIKI = Phobos/StdString
+MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
 
 Copyright: Copyright Digital Mars 2007-.
 
@@ -1059,8 +1115,8 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
     then $(D -1) is returned.
 
     Params:
-	haystack = String to search for needles in.
-	needles = Strings to search for in haystack.
+    haystack = String to search for needles in.
+    needles = Strings to search for in haystack.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
@@ -1126,8 +1182,8 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     thrown.
 
     Params:
-	haystack = String to search for needles in.
-	needles = Strings to search for in haystack.
+    haystack = String to search for needles in.
+    needles = Strings to search for in haystack.
         startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
         the startIdx is greater equal the length of haystack the functions
         returns $(D -1).
@@ -1211,8 +1267,8 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     then $(D -1) is returned.
 
     Params:
-	haystack = String to search for needles in.
-	needles = Strings to search for in haystack.
+    haystack = String to search for needles in.
+    needles = Strings to search for in haystack.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
@@ -1293,8 +1349,8 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     Params:
-	haystack = String to search for needles in.
-	needles = Strings to search for in haystack.
+    haystack = String to search for needles in.
+    needles = Strings to search for in haystack.
         stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
         the stopIdx is greater equal the length of haystack the functions
         returns $(D -1).
@@ -1380,8 +1436,8 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     element of $(D needles) $(D -1) is returned.
 
     Params:
-	haystack = String to search for needles in.
-	needles = Strings to search for in haystack.
+    haystack = String to search for needles in.
+    needles = Strings to search for in haystack.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1449,8 +1505,8 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     element of $(D needles) $(D -1) is returned.
 
     Params:
-	haystack = String to search for needles in.
-	needles = Strings to search for in haystack.
+    haystack = String to search for needles in.
+    needles = Strings to search for in haystack.
         startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
         the startIdx is greater equal the length of haystack the functions
         returns $(D -1).
@@ -1530,8 +1586,8 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     $(D haystack) are element of $(D needles) $(D -1) is returned.
 
     Params:
-	haystack = String to search for needles in.
-	needles = Strings to search for in haystack.
+    haystack = String to search for needles in.
+    needles = Strings to search for in haystack.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1599,8 +1655,8 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     $(D haystack) are element of $(D needles) $(D -1) is returned.
 
     Params:
-	haystack = String to search for needles in.
-	needles = Strings to search for in haystack.
+    haystack = String to search for needles in.
+    needles = Strings to search for in haystack.
         stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
         the stopIdx is greater equal the length of haystack the functions
         returns $(D -1).
@@ -3651,6 +3707,15 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
         }
     }
     return s;
+}
+
+///
+@safe pure unittest
+{
+    assert(succ("1") == "2");
+    assert(succ("9") == "10");
+    assert(succ("999") == "1000");
+    assert(succ("zz99") == "aaa00");
 }
 
 @safe pure unittest
