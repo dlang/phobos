@@ -1351,32 +1351,37 @@ unittest
 }
 
 /**
-Returns $(D true) iff $(D R) supports the $(D moveFront) primitive,
-as well as $(D moveBack) and $(D moveAt) if it's a bidirectional or
-random access range.  These may be explicitly implemented, or may work
-via the default behavior of the module level functions $(D moveFront)
-and friends.
+Returns $(D true) iff $(D R) is an input range that supports the
+$(D moveFront) primitive, as well as $(D moveBack) and $(D moveAt) if it's a
+bidirectional or random access range. These may be explicitly implemented, or
+may work via the default behavior of the module level functions $(D moveFront)
+and friends. The following code should compile for any range
+with mobile elements.
+
+----
+alias E = ElementType!R;
+R r;
+static assert(isInputRange!R);
+static assert(is(typeof(moveFront(r)) == E));
+static if (isBidirectionalRange!R)
+    static assert(is(typeof(moveBack(r)) == E));
+static if (isRandomAccessRange!R)
+    static assert(is(typeof(moveAt(r, 0)) == E));
+----
  */
 template hasMobileElements(R)
 {
-    enum bool hasMobileElements = is(typeof(
+    enum bool hasMobileElements = isInputRange!R && is(typeof(
     (inout int = 0)
     {
+        alias E = ElementType!R;
         R r = R.init;
-        return moveFront(r);
-    }))
-    && (!isBidirectionalRange!R || is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        return moveBack(r);
-    })))
-    && (!isRandomAccessRange!R || is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        return moveAt(r, 0);
-    })));
+        static assert(is(typeof(moveFront(r)) == E));
+        static if (isBidirectionalRange!R)
+            static assert(is(typeof(moveBack(r)) == E));
+        static if (isRandomAccessRange!R)
+            static assert(is(typeof(moveAt(r, 0)) == E));
+    }));
 }
 
 ///
@@ -1392,6 +1397,11 @@ unittest
     static assert( hasMobileElements!(int[]));
     static assert( hasMobileElements!(inout(int)[]));
     static assert( hasMobileElements!(typeof(iota(1000))));
+
+    static assert( hasMobileElements!( string));
+    static assert( hasMobileElements!(dstring));
+    static assert( hasMobileElements!( char[]));
+    static assert( hasMobileElements!(dchar[]));
 }
 
 /**
@@ -1544,23 +1554,27 @@ unittest
 }
 
 /**
-Returns $(D true) if $(D R) is a forward range and has swappable
+Returns $(D true) if $(D R) is an input range and has swappable
 elements. The following code should compile for any range
 with swappable elements.
 
 ----
 R r;
-static assert(isForwardRange!(R));   // range is forward
-swap(r.front, r.front);              // can swap elements of the range
+static assert(isInputRange!R);
+swap(r.front, r.front);
+static if (isBidirectionalRange!R) swap(r.back, r.front);
+static if (isRandomAccessRange!R) swap(r[], r.front);
 ----
  */
 template hasSwappableElements(R)
 {
-    enum bool hasSwappableElements = isForwardRange!R && is(typeof(
+    enum bool hasSwappableElements = isInputRange!R && is(typeof(
     (inout int = 0)
     {
         R r = R.init;
-        swap(r.front, r.front);             // can swap elements of the range
+        swap(r.front, r.front);
+        static if (isBidirectionalRange!R) swap(r.back, r.front);
+        static if (isRandomAccessRange!R) swap(r[0], r.front);
     }));
 }
 
@@ -1571,29 +1585,35 @@ unittest
     static assert(!hasSwappableElements!(const(int)[]));
     static assert(!hasSwappableElements!(inout(int)[]));
     static assert( hasSwappableElements!(int[]));
+
+    static assert(!hasSwappableElements!( string));
+    static assert(!hasSwappableElements!(dstring));
+    static assert(!hasSwappableElements!( char[]));
+    static assert( hasSwappableElements!(dchar[]));
 }
 
 /**
-Returns $(D true) if $(D R) is a forward range and has mutable
+Returns $(D true) if $(D R) is an input range and has mutable
 elements. The following code should compile for any range
 with assignable elements.
 
 ----
 R r;
-static assert(isForwardRange!R);  // range is forward
-auto e = r.front;
-r.front = e;                      // can assign elements of the range
+static assert(isInputRange!R);
+r.front = r.front;
+static if (isBidirectionalRange!R) r.back = r.front;
+static if (isRandomAccessRange!R) r[0] = r.front;
 ----
  */
 template hasAssignableElements(R)
 {
-    enum bool hasAssignableElements = isForwardRange!R && is(typeof(
+    enum bool hasAssignableElements = isInputRange!R && is(typeof(
     (inout int = 0)
     {
         R r = R.init;
-        static assert(isForwardRange!(R)); // range is forward
-        auto e = r.front;
-        r.front = e;                       // can assign elements of the range
+        r.front = r.front;
+        static if (isBidirectionalRange!R) r.back = r.front;
+        static if (isRandomAccessRange!R) r[0] = r.front;
     }));
 }
 
@@ -1604,20 +1624,37 @@ unittest
     static assert(!hasAssignableElements!(const(int)[]));
     static assert( hasAssignableElements!(int[]));
     static assert(!hasAssignableElements!(inout(int)[]));
+
+    static assert(!hasAssignableElements!( string));
+    static assert(!hasAssignableElements!(dstring));
+    static assert(!hasAssignableElements!( char[]));
+    static assert( hasAssignableElements!(dchar[]));
 }
 
 /**
-Tests whether $(D R) has lvalue elements.  These are defined as elements that
-can be passed by reference and have their address taken.
+Tests whether the range $(D R) has lvalue elements. These are defined as
+elements that can be passed by reference and have their address taken.
+The following code should compile for any range with lvalue elements.
+----
+void passByRef(ref ElementType!R stuff);
+...
+static assert(isInputRange!R);
+passByRef(r.front);
+static if (isBidirectionalRange!R) passByRef(r.back);
+static if (isRandomAccessRange!R) passByRef(r[0]);
+----
 */
 template hasLvalueElements(R)
 {
-    enum bool hasLvalueElements = is(typeof(
+    enum bool hasLvalueElements = isInputRange!R && is(typeof(
     (inout int = 0)
     {
-        void checkRef(ref ElementType!R stuff) {}
+        void checkRef(ref ElementType!R stuff);
         R r = R.init;
-        static assert(is(typeof(checkRef(r.front))));
+
+        checkRef(r.front);
+        static if (isBidirectionalRange!R) checkRef(r.back);
+        static if (isRandomAccessRange!R) checkRef(r[0]);
     }));
 }
 
@@ -1629,6 +1666,11 @@ unittest
     static assert( hasLvalueElements!(inout(int)[]));
     static assert( hasLvalueElements!(immutable(int)[]));
     static assert(!hasLvalueElements!(typeof(iota(3))));
+
+    static assert(!hasLvalueElements!( string));
+    static assert( hasLvalueElements!(dstring));
+    static assert(!hasLvalueElements!( char[]));
+    static assert( hasLvalueElements!(dchar[]));
 
     auto c = chain([1, 2, 3], [4, 5, 6]);
     static assert( hasLvalueElements!(typeof(c)));
