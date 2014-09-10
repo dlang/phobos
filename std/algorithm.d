@@ -3688,6 +3688,12 @@ unittest
     ], "+-");
 
     assert(equal(u, "+-abc+-+-def+-"));
+
+    // Issue 13441: only(x) as separator
+    string[][] lines = [null];
+    lines
+        .joiner(only("b"))
+        .array();
 }
 
 unittest

@@ -7451,6 +7451,7 @@ private struct OnlyResult(T, size_t arity)
     private this(Values...)(auto ref Values values)
     {
         this.data = [values];
+        this.backIndex = arity;
     }
 
     bool empty() @property
@@ -7529,7 +7530,7 @@ private struct OnlyResult(T, size_t arity)
     }
 
     private size_t frontIndex = 0;
-    private size_t backIndex = arity;
+    private size_t backIndex = 0;
 
     // @@@BUG@@@ 10643
     version(none)
@@ -7554,6 +7555,12 @@ private struct OnlyResult(T, size_t arity : 1)
     void popFront() { assert(!_empty); _empty = true; }
     void popBack() { assert(!_empty); _empty = true; }
     alias opDollar = length;
+
+    private this()(auto ref T value)
+    {
+        this._value = value;
+        this._empty = false;
+    }
 
     T opIndex(size_t i)
     {
@@ -7585,7 +7592,7 @@ private struct OnlyResult(T, size_t arity : 1)
     }
 
     private Unqual!T _value;
-    private bool _empty = false;
+    private bool _empty = true;
 }
 
 // Specialize for the empty range
@@ -7727,6 +7734,7 @@ unittest
     assert(imm.front == 1);
     assert(imm.back == 1);
     assert(!imm.empty);
+    assert(imm.init.empty); // Issue 13441
     assert(imm.length == 1);
     assert(equal(imm, imm[]));
     assert(equal(imm, imm[0..1]));
@@ -7811,6 +7819,8 @@ unittest
     auto imm = only!(immutable int, immutable int)(42, 24);
     alias Imm = typeof(imm);
     static assert(is(ElementType!Imm == immutable(int)));
+    assert(!imm.empty);
+    assert(imm.init.empty); // Issue 13441
     assert(imm.front == 42);
     imm.popFront();
     assert(imm.front == 24);
