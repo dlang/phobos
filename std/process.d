@@ -2589,7 +2589,19 @@ string escapeShellFileName(in char[] fileName) @trusted pure nothrow
     // preparation - see below.
 
     version (Windows)
+    {
+        // If a file starts with &, it can cause cmd.exe to misinterpret
+        // the file name as the stream redirection syntax:
+        //     command > "&foo.txt"
+        // gets interpreted as
+        //     command >&foo.txt
+        // Prepend .\ to disambiguate.
+
+        if (fileName.length && fileName[0] == '&')
+            return cast(string)(`".\` ~ fileName ~ '"');
+
         return cast(string)('"' ~ fileName ~ '"');
+    }
     else
         return escapePosixArgument(fileName);
 }
