@@ -2103,12 +2103,29 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(NAN)) $(TD $(PLUSMN)$(NAN)) $(TD int.min))
  *      )
  */
+
 real frexp(real value, out int exp) @trusted pure nothrow @nogc
+{ return frexpImpl(value, exp); }
+
+///ditto
+double frexp(double value, out int exp) @trusted pure nothrow @nogc
+{ return frexpImpl(value, exp); }
+
+///ditto
+float frexp(float value, out int exp) @trusted pure nothrow @nogc
+{ return frexpImpl(value, exp); }
+
+
+private T frexpImpl(T)(T value, out int exp) @trusted pure nothrow @nogc
+if(isFloatingPoint!T)
 {
     ushort* vu = cast(ushort*)&value;
-    long* vl = cast(long*)&value;
+    static if(is(Unqual!T == float))
+        int* vi = cast(int*)&value;
+    else
+        long* vl = cast(long*)&value;
     int ex;
-    alias F = floatTraits!(real);
+    alias F = floatTraits!T;
 
     ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
     static if (F.realFormat == RealFormat.ieeeExtended)
@@ -2145,7 +2162,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
 
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
-            exp = ex - F.EXPBIAS - real.mant_dig + 1;
+            exp = ex - F.EXPBIAS - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
         }
         return value;
@@ -2187,7 +2204,7 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
             // subnormal
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
-            exp = ex - F.EXPBIAS - real.mant_dig + 1;
+            exp = ex - F.EXPBIAS - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
         }
@@ -2227,9 +2244,49 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
             // subnormal
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
-            exp = ((ex - F.EXPBIAS)>> 4) - real.mant_dig + 1;
+            exp = ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+        }
+        return value;
+    } 
+    else static if (F.realFormat == RealFormat.ieeeSingle)
+    {
+        if (ex) // If exponent is non-zero
+        {
+            if (ex == F.EXPMASK)   // infinity or NaN
+            {
+                if (*vi == 0x7F80_0000)  // positive infinity
+                {
+                    exp = int.max;
+                }
+                else if (*vi == 0xFF80_0000) // negative infinity
+                    exp = int.min;
+                else
+                { // NaN
+                    *vi |= 0x0040_0000;  // convert NaNS to NaNQ
+                    exp = int.min;
+                }
+            }
+            else
+            {
+                exp = (ex - F.EXPBIAS) >> 7;
+                vu[F.EXPPOS_SHORT] = cast(ushort)((0x807F & vu[F.EXPPOS_SHORT]) | 0x3F00);
+            }
+        }
+        else if (!(*vi & 0x7FFF_FFFF))
+        {
+            // value is +-0.0
+            exp = 0;
+        }
+        else
+        {
+            // subnormal
+            value *= F.RECIP_EPSILON;
+            ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+            exp = ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1;
+            vu[F.EXPPOS_SHORT] =
+                cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3F00);
         }
         return value;
     }
@@ -2242,62 +2299,64 @@ real frexp(real value, out int exp) @trusted pure nothrow @nogc
 
 unittest
 {
-    static real[3][] vals =     // x,frexp,exp
-        [
-         [0.0,   0.0,    0],
-         [-0.0,  -0.0,   0],
-         [1.0,   .5,     1],
-         [-1.0,  -.5,    1],
-         [2.0,   .5,     2],
-         [double.min_normal/2.0, .5, -1022],
-         [real.infinity,real.infinity,int.max],
-         [-real.infinity,-real.infinity,int.min],
-         [real.nan,real.nan,int.min],
-         [-real.nan,-real.nan,int.min],
-         ];
+    import std.typetuple, std.typecons;
 
-    int i;
-
-    for (i = 0; i < vals.length; i++)
+    foreach (T; TypeTuple!(real, double, float))
     {
-        real x = vals[i][0];
-        real e = vals[i][1];
-        int exp = cast(int)vals[i][2];
-        int eptr;
-        real v = frexp(x, eptr);
-        assert(isIdentical(e, v));
-        assert(exp == eptr);
+        Tuple!(T, T, int)[] vals =     // x,frexp,exp
+            [
+             tuple(T(0.0),  T( 0.0 ), 0),
+             tuple(T(-0.0), T( -0.0), 0),
+             tuple(T(1.0),  T( .5  ), 1),
+             tuple(T(-1.0), T( -.5 ), 1),
+             tuple(T(2.0),  T( .5  ), 2),
+             tuple(T(float.min_normal/2.0f), T(.5), -126),
+             tuple(T.infinity, T.infinity, int.max),
+             tuple(-T.infinity, -T.infinity, int.min),
+             tuple(T.nan, T.nan, int.min),
+             tuple(-T.nan, -T.nan, int.min),
+             ];
 
-    }
-
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
-    {
-        static real[3][] extendedvals = [ // x,frexp,exp
-                                          [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
-                                          [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
-                                          [real.min_normal,  .5,     -16381],
-                                          [real.min_normal/2.0L, .5,     -16382]    // subnormal
-                                           ];
-
-        for (i = 0; i < extendedvals.length; i++)
+        foreach(elem; vals)
         {
-            real x = extendedvals[i][0];
-            real e = extendedvals[i][1];
-            int exp = cast(int)extendedvals[i][2];
+            T x = elem[0];
+            T e = elem[1];
+            int exp = elem[2];
             int eptr;
-            real v = frexp(x, eptr);
+            T v = frexp(x, eptr);
             assert(isIdentical(e, v));
             assert(exp == eptr);
 
         }
+
+        static if (floatTraits!(T).realFormat == RealFormat.ieeeExtended)
+        {
+            static T[3][] extendedvals = [ // x,frexp,exp
+                [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
+                [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
+                [T.min_normal,  .5,     -16381],
+                [T.min_normal/2.0L, .5,     -16382]    // subnormal
+            ];
+            foreach(elem; extendedvals)
+            {
+                T x = elem[0];
+                T e = elem[1];
+                int exp = cast(int)elem[2];
+                int eptr;
+                T v = frexp(x, eptr);
+                assert(isIdentical(e, v));
+                assert(exp == eptr);
+
+            }
+        }        
     }
 }
 
 unittest
 {
     int exp;
-    real mantissa = frexp(123.456, exp);
-    assert(equalsDigit(mantissa * pow(2.0L, cast(real)exp), 123.456, 19));
+    real mantissa = frexp(123.456L, exp);
+    assert(equalsDigit(mantissa * pow(2.0L, cast(real)exp), 123.456L, 19));
 
     assert(frexp(-real.nan, exp) && exp == int.min);
     assert(frexp(real.nan, exp) && exp == int.min);
