@@ -1389,10 +1389,11 @@ unittest //more alias this opCast
  */
 class ErrnoException : Exception
 {
-    uint errno;                 // operating system error code
+    final @property uint errno() { return _errno; } /// Operating system error code.
+    private uint _errno;
     this(string msg, string file = null, size_t line = 0) @trusted
     {
-        errno = .errno;
+        _errno = .errno;
         version (linux)
         {
             char[1024] buf = void;
