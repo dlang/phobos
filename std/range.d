@@ -9982,7 +9982,6 @@ unittest
     [4, 5, 6].map!(x => x * 2).copy(NullSink());
 }
 
-
 /++
   Implements a "tee" style pipe, wrapping an input range so that elements
   of the range can be passed to a provided function or $(LREF OutputRange)
@@ -10231,4 +10230,288 @@ unittest
         auto appResult = txt.tee(appSink).array;
         assert(equal(txt, appResult) && equal(appResult, appSink.data));
     }
+}
+
+/** This range handles exceptions originating in ranges.
+
+Whenever an exception occurs in a range it is propagated all the way through a
+possible range chain. A single exception can therefore make the complete range
+chain useless. $(D handle) can be used to handle a specific exception
+$(D T), such that the processing of the range is not interrupted.  The caught
+exception is passed to the user defined exception handler $(D handler).
+Whenever a exception occurs the element is dropped from the input range.
+
+See_Also:
+    $(LREF thrownIf)
+*/
+auto handle(E : Throwable, alias handler, IRange)(IRange input)
+    if(isInputRange!IRange)
+{
+    static struct ExceptionHandler(IRange, E : Throwable, alias handler)
+    {
+        import std.typecons : Rebindable;
+
+        IRange input;
+
+        static if(is(ElementType!IRange == class))
+            Rebindable!(ElementType!IRange) frontElement;
+        else
+            Unqual!(ElementType!IRange) frontElement;
+
+        bool empty;
+
+        static if (hasLength!IRange)
+        {
+            @property auto length()
+            {
+                do
+                {
+                    try
+                    {
+                        return input.length;
+                    }
+                    catch(E exception)
+                    {
+                        handler(exception);
+                        continue;
+                    }
+                } while(false);
+            }
+        }
+
+        @property auto front()
+        {
+            return this.frontElement;
+		}
+
+		void popFront()
+		{
+            while (!this.input.empty)
+            {
+                try
+                {
+                    this.input.popFront();
+                    this.getFront();
+                    return;
+                }
+                catch(E exception)
+                {
+                    handler(exception);
+                }
+            }
+            this.empty = true;
+        }
+
+        private void getFront()
+        {
+            while(!this.input.empty)
+            {
+                try
+                {
+                    this.frontElement = this.input.front;
+                    this.empty = false;
+                    return;
+                }
+                catch(E exception)
+                {
+                    handler(exception);
+                    this.popFront();
+                }
+            }
+            this.empty = true;
+        }
+    }
+
+    auto ret = ExceptionHandler!(IRange, E, handler)(input);
+    ret.getFront();
+    return ret;
+}
+
+///
+unittest
+{
+    import std.conv;
+
+    auto s = "12,1337z32,54,2,7,9,1z,6,8";
+    auto r = s.splitter(',')
+        .map!(a => to!int(a))
+        .handle!(ConvException, a => {})
+        .array;
+
+    assert(r == [12,54,2,7,9,6,8], to!string(r));
+}
+
+version(unittest) {
+    private final class CC
+    {
+        int a;
+        this(int a) { this.a = a; }
+    }
+}
+
+unittest
+{
+    import std.conv;
+
+    bool hasThrown = false;
+
+    void delegate(ConvException) handler = (ConvException e) {
+        hasThrown = true;
+    };
+
+    auto s = "12,1337,32,54,2,7,9,1z,6,8";
+    int[] r = s.splitter(',')
+        .map!(a => to!int(a))
+        .handle!(ConvException, handler).array();
+
+    assert(hasThrown);
+
+    hasThrown = false;
+    CC[] rc = s.splitter(',')
+        .map!(a => new CC(to!int(a)))
+        .handle!(ConvException, handler).array();
+
+    assert(hasThrown);
+
+    assert(equal!"a == b.a"(r,rc));
+}
+
+unittest
+{
+    import std.conv;
+
+    bool hasThrown = false;
+
+    void delegate(ConvException) handler = (ConvException e) {
+        hasThrown = true;
+    };
+
+    auto s = "12,1337,32,54,2,7,9,1z,6,8";
+    int[] r = s.splitter(',')
+        .map!(a => to!int(a))
+        .handle!(ConvException, handler).array();
+    assert(hasThrown);
+
+    hasThrown = false;
+    CC[] rc = s.splitter(',')
+        .map!(a => new CC(to!int(a)))
+        .handle!(ConvException, handler).array();
+
+    assert(hasThrown);
+    assert(equal!"a == b.a"(r,rc));
+}
+
+unittest
+{
+    import std.conv;
+
+    bool hasThrown = false;
+
+    void delegate(ConvException) handler = (ConvException e) {
+        hasThrown = true;
+    };
+
+    auto s = "12,1337,32,54,2,7,9,1z,6,8u";
+    int[] r;
+
+    r = s.splitter(',')
+        .map!(a => to!int(a))
+        .handle!(ConvException, handler).array();
+
+    assert(hasThrown);
+    assert(r == [12,1337,32,54,2,7,9,6]);
+}
+
+unittest {
+    import std.conv;
+
+    bool hasThrown = false;
+
+    void delegate(ConvException) handler = (ConvException e) {
+        hasThrown = true;
+    };
+
+    auto s = "12,54,2,7,9,1z,6z,8";
+    auto r = s.splitter(',')
+        .map!(a => to!int(a))
+        .handle!(ConvException, handler).array();
+
+    assert(r == [12,54,2,7,9,8], to!string(r));
+    assert(hasThrown);
+
+    hasThrown = false;
+    CC[] rc = s.splitter(',')
+        .map!(a => new CC(to!int(a)))
+        .handle!(ConvException, handler).array();
+
+    assert(hasThrown);
+    assert(equal!"a == b.a"(r,rc));
+}
+
+unittest {
+    import std.conv;
+
+    bool hasThrown = false;
+
+    void delegate(ConvException) handler = (ConvException e) {
+        hasThrown = true;
+    };
+
+    auto s = "12a,54b,2c,7d,9e,1z,6z,8h";
+    auto r = s.splitter(',')
+        .map!(a => to!int(a))
+        .handle!(ConvException, handler).array();
+
+    assert(r == [], to!string(r));
+    assert(hasThrown);
+
+    hasThrown = false;
+    CC[] rc = s.splitter(',')
+        .map!(a => new CC(to!int(a)))
+        .handle!(ConvException, handler).array();
+
+    assert(hasThrown);
+    assert(equal!"a == b.a"(r,rc));
+}
+
+unittest {
+    import std.conv;
+
+    struct PopFrontThrow(T)
+    {
+        int cnt = 0;
+
+        @property bool empty() { return cnt > 5; }
+
+        @property T front()
+        {
+            static if(is(T == CC))
+                return new CC(1337);
+            else
+                return 1337;
+        }
+
+        @property void popFront()
+        {
+            ++cnt;
+            throw new Exception("Still lower than 5");
+        }
+    }
+
+    PopFrontThrow!int input;
+    bool hasThrown = false;
+    int[] r = input
+        .handle!(Exception, (Exception a) => hasThrown = true)
+        .array;
+    assert(r == [1337], to!string(r));
+    assert(hasThrown, to!string(r) ~ " " ~ to!string(hasThrown));
+
+    PopFrontThrow!CC input2;
+    hasThrown = false;
+    CC[] rc = input2
+        .handle!(Exception, (Exception a) => hasThrown = true)
+        .array;
+    assert(hasThrown, to!string(r) ~ " " ~ to!string(hasThrown));
+
+    assert(equal!"a == b.a"(r,rc));
 }
