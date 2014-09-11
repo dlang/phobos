@@ -931,10 +931,10 @@ public:
 
     private VariantN opArithmetic(T, string op)(T other)
     {
-        VariantN result;
         static if (isInstanceOf!(VariantN, T))
         {
-            string tryUseType(string tp) {
+            string tryUseType(string tp)
+            {
                 import std.string : format;
                 return q{
                     static if (allowed!%1$s && T.allowed!%1$s)
@@ -942,6 +942,7 @@ public:
                             return VariantN(get!%1$s %2$s other.get!%1$s);
                 }.format(tp, op);
             }
+
             mixin(tryUseType("uint"));
             mixin(tryUseType("int"));
             mixin(tryUseType("ulong"));
