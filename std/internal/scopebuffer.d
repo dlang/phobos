@@ -92,9 +92,8 @@ textbuf = doSomething(textbuf, args);
  * exceptions, otherwise when ScopeBuffer.free() is called, memory may get corrupted.
  */
  
-@nogc:
 
-@system
+@system @nogc
 struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
           if (isAssignable!T &&
               !hasElaborateDestructor!T &&
@@ -369,7 +368,7 @@ scope(exit) sp.free();
 ---
  */
 
-auto scopeBuffer(T)(T[] tmpbuf)
+auto scopeBuffer(T)(T[] tmpbuf) @nogc
 {
     return ScopeBuffer!T(tmpbuf);
 }
