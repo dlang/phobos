@@ -91,6 +91,8 @@ textbuf = doSomething(textbuf, args);
  * Additionally, the code between passing and returning the instance must not throw
  * exceptions, otherwise when ScopeBuffer.free() is called, memory may get corrupted.
  */
+ 
+@nogc:
 
 @system
 struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
