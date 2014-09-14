@@ -335,6 +335,8 @@ struct JSONValue
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
+        enforceEx!JSONException(i < store.array.length,
+                                "JSONValue array index is out of range");
         return store.array[i];
     }
 
@@ -346,6 +348,66 @@ struct JSONValue
                                 "JSONValue is not an object");
         return *enforce!JSONException(k in store.object,
                                         "Key not found: " ~ k);
+    }
+
+    void opIndexAssign(T)(T arg, size_t i)
+    {
+        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+                                "JSONValue is not an array");
+        enforceEx!JSONException(i < store.array.length,
+                                "JSONValue array index is out of range");
+        store.array[i] = arg;
+    }
+
+    void opIndexAssign(T)(T arg, string k)
+    {
+        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
+                                "JSONValue is not an object");
+        store.object[k] = arg;
+    }
+
+    JSONValue opBinary(string op : "~", T)(T arg)
+    {
+        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+                                "JSONValue is not an array");
+        static if(isArray!T)
+        {
+            JSONValue newArray = JSONValue(this.store.array.dup);
+            newArray.store.array ~= JSONValue(arg).store.array;
+            return newArray;
+        }
+        else static if(is(T : JSONValue))
+        {
+            enforceEx!JSONException(arg.type == JSON_TYPE.ARRAY,
+                                    "JSONValue is not an array");
+            JSONValue newArray = JSONValue(this.store.array.dup);
+            newArray.store.array ~= arg.store.array;
+            return newArray;
+        }
+        else
+        {
+            static assert(false, "argument is not an array or a JSONValue array");
+        }
+    }
+
+    void opOpAssign(string op : "~", T)(T arg)
+    {
+        enforceEx!JSONException(type == JSON_TYPE.ARRAY,
+                                "JSONValue is not an array");
+        static if(isArray!T)
+        {
+            store.array ~= JSONValue(arg).store.array;
+        }
+        else static if(is(T : JSONValue))
+        {
+            enforceEx!JSONException(arg.type == JSON_TYPE.ARRAY,
+                                    "JSONValue is not an array");
+            store.array ~= arg.store.array;
+        }
+        else
+        {
+            static assert(false, "argument is not an array or a JSONValue array");
+        }
     }
 
     auto opBinaryRight(string op : "in")(string k) const
@@ -995,6 +1057,26 @@ unittest
     foreach (i; 0..9)
         jobj.object[text("key", i)] = JSONValue(text("value", i));
     assert(jobj.object.length == 10);
+}
+
+unittest
+{
+    // Adding new json element without array() / object() access
+
+    JSONValue jarr = JSONValue([10]);
+    foreach (i; 0..9)
+        jarr ~= [JSONValue(i)];
+    assert(jarr.array.length == 10);
+
+    JSONValue jobj = JSONValue(["key" : JSONValue("value")]);
+    foreach (i; 0..9)
+        jobj[text("key", i)] = JSONValue(text("value", i));
+    assert(jobj.object.length == 10);
+
+    // No array alias
+    auto jarr2 = jarr ~ [1,2,3];
+    jarr2[0] = 999;
+    assert(jarr[0] == JSONValue(10));
 }
 
 unittest
