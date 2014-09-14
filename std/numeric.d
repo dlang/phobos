@@ -12,7 +12,7 @@ WIKI = Phobos/StdNumeric
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
-                   Don Clugston, Robert Jacques
+                   Don Clugston, Robert Jacques, Ilya Yaroshenko (summation)
 Source:    $(PHOBOSSRC std/_numeric.d)
 */
 /*
@@ -1367,6 +1367,244 @@ unittest
     assert(approxEqual(
                 cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25),
                 0.01));
+}
+
+
+/**
+Computes sum of range.
+*/
+//TODO: CTFE for Precise. Needs CTFEScopeBuffer.
+template fsum(SummationType, Summation summation = Summation.Precise)
+    if(isMutable!SummationType)
+{
+    static assert(
+        __traits(compiles, 
+        {
+            SummationType a = 0.0, b, c; 
+            c = a + b; 
+            c = a - b;
+            static if(summation != Summation.Pairwise)
+            {
+                a += b;
+                a -= b;
+            }
+        }), summation.stringof~" isn't implemented for "~SummationType.stringof);
+
+
+
+    SummationType fsum(Range)(Range r)
+        if(
+            isInputRange!Range && 
+            isImplicitlyConvertible!(Unqual!(ForeachType!Range), SummationType) &&
+            !isInfinite!Range &&
+            (
+                summation != Summation.Pairwise || 
+                hasLength!Range && hasSlicing!Range
+            )
+        )
+    {
+        import std.internal.math.summation;
+        
+        static if(summation == Summation.Naive)
+            return sumNaive!(Range, SummationType)(r, SummationType(0.0));
+        else static if(summation == Summation.Pairwise)
+            return sumPairwise!(Range, SummationType)(r);
+        else static if(summation == Summation.Kahan)
+            return sumKahan!(Range, SummationType)(r);
+        else static if(summation == Summation.KBN)
+            return sumKBN!(Range, SummationType)(r);
+        else static if(summation == Summation.KB2)
+            return sumKB2!(Range, SummationType)(r);
+        else static if(summation == Summation.Precise)
+        {
+            static if(isFloatingPoint!SummationType)
+            {
+                Summator!SummationType sum = 0;
+                foreach(e; r)
+                {
+                    sum.put(e);
+                }
+                return sum.sum;
+            }
+            else 
+            {
+                import std.complex : Complex;
+                static if(is(SummationType : Complex!F , F))
+                {
+                    static if(isForwardRange!Range)
+                    {
+                        auto s = r.save;
+                        Summator!F sum = 0;
+                        foreach(e; r)
+                        {
+                            sum.put(e.re);
+                        }
+                        F sumRe = sum.sum;
+                        sum = 0;
+                        foreach(e; s)
+                        {
+                            sum.put(e.im);
+                        }
+                        return SummationType(sumRe, sum.sum);
+                    }
+                    else
+                    {
+                        Summator!F sumRe = 0, sumIm = 0;
+                        foreach(e; r)
+                        {
+                            sumRe.put(e.re);
+                            sumIm.put(e.im);
+                        }
+                        return SummationType(sumRe.sum, sumIm.sum);
+                    }
+                }
+                else static assert(0, "Precise summation isn't implemented for "~SummationType.stringof);
+            }
+        }
+        else static assert(0);
+    }
+}
+
+///ditto
+template fsum(Summation summation = Summation.Precise)
+{
+    Unqual!(ForeachType!Range) fsum(Range)(Range r)
+    {
+        return .fsum!(typeof(return), summation)(r);
+    }
+}
+
+///
+unittest 
+{
+    import std.math, std.algorithm, std.range;
+    auto ar = 1000
+        .iota
+        .map!(n => 1.7.pow(n+1) - 1.7.pow(n))
+        .chain([-(1.7.pow(1000))]);
+
+    //Summation.Precise is default
+    assert(ar.fsum  ==  -1.0);
+    assert(ar.retro.fsum  ==  -1.0);
+}
+
+///
+unittest {
+    auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
+    const r = 20000;
+    assert(r != ar.fsum!(Summation.Naive));
+    assert(r != ar.fsum!(Summation.Pairwise));
+    assert(r != ar.fsum!(Summation.Kahan));
+    assert(r == ar.fsum!(Summation.KBN));
+    assert(r == ar.fsum!(Summation.KB2));
+    assert(r == ar.fsum); //Summation.Precise
+}
+
+/**
+$(D Naive), $(D Pairwise) and $(D Kahan) algorithms can be used for summation user defined types.
+*/
+unittest 
+{
+    static struct Quaternion(F) 
+        if(isFloatingPoint!F)
+    {
+        F[3] array;
+
+        /// + and - operator overloading
+        Quaternion opBinary(string op)(auto ref Quaternion rhs) const
+        if(op == "+" || op == "-")
+        {
+            Quaternion ret = void;
+            foreach(i, ref e; ret.array)
+                mixin("e = array[i] "~op~" rhs.array[i];");
+            return ret;
+        }
+
+        /// += and -= operator overloading
+        Quaternion opOpAssign(string op)(auto ref Quaternion rhs)
+        if(op == "+" || op == "-")
+        {
+            Quaternion ret = void;
+            foreach(i, ref e; array)
+                mixin("e "~op~"= rhs.array[i];");
+            return this;
+        }
+
+        ///constructor with single FP argument
+        this(F f) 
+        {
+            array[] = f;
+        }
+    }
+
+    Quaternion!double q, p, r;
+    q.array = [0, 1, 2];
+    p.array = [3, 4, 5];
+    r.array = [3, 5, 7];
+
+    assert(r == [p, q].fsum!(Summation.Naive));
+    assert(r == [p, q].fsum!(Summation.Pairwise));
+    assert(r == [p, q].fsum!(Summation.Kahan));
+}
+
+/**
+Data type for summation can be specified.
+*/
+unittest {
+    static assert(is(typeof([1, 3, 2].fsum!double) == double));
+    static assert(is(typeof([1.0,2.0].fsum!(float, Summation.KBN)) == float));
+}
+
+/**
+All summation algorithms available for complex numbers.
+*/
+unittest 
+{
+    import std.complex;
+    Complex!double[] ar = [complex(1.0, 2), complex(2, 3), complex(3, 4), complex(4, 5)];
+    Complex!double r = complex(10, 14);
+    assert(r == ar.fsum);
+}
+
+
+/**
+Summation algorithms for ranges of floating point numbers or $(D Complex).
+*/
+enum Summation
+{
+    /**
+    Naive summation algorithm. 
+    */
+    Naive,
+
+    /**
+    $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
+    */
+    Pairwise,
+   
+    /**
+    $(LUCKY Kahan summation) algorithm.
+    */
+    Kahan,
+   
+    /**
+    $(LUCKY Kahan-Babuška-Neumaier summation algorithm). $(D КBN) gives more accurate results then $(D Kahan).
+    */
+    KBN,
+   
+    /**
+    $(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
+    */
+    KB2,
+   
+    /**
+    Full precision summation algorithm.
+    Returns the value of the sum, rounded to the nearest representable
+    floating-point number using the $(LUCKY round-half-to-even rule).
+    */
+    Precise,
+
+
 }
 
 /**

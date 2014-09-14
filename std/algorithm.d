@@ -1169,9 +1169,15 @@ if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
     static if (isFloatingPoint!E)
     {
         static if (hasLength!R && hasSlicing!R)
-            return seed + sumPairwise!E(r);
+        {
+            import std.internal.math.summation : sumPairwise;
+            return seed + sumPairwise!(R, E)(r);
+        }
         else
-            return sumKahan!E(seed, r);
+        {
+            import std.internal.math.summation : sumKahan;
+            return sumKahan!(R, E)(r, seed);
+        }
     }
     else
     {
@@ -1179,33 +1185,6 @@ if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
     }
 }
 
-// Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
-private auto sumPairwise(Result, R)(R r)
-{
-    static assert (isFloatingPoint!Result);
-    switch (r.length)
-    {
-    case 0: return cast(Result) 0;
-    case 1: return cast(Result) r.front;
-    case 2: return cast(Result) r[0] + cast(Result) r[1];
-    default: return sumPairwise!Result(r[0 .. $ / 2]) + sumPairwise!Result(r[$ / 2 .. $]);
-    }
-}
-
-// Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
-private auto sumKahan(Result, R)(Result result, R r)
-{
-    static assert (isFloatingPoint!Result && isMutable!Result);
-    Result c = 0;
-    for (; !r.empty; r.popFront())
-    {
-        auto y = r.front - c;
-        auto t = result + y;
-        c = (t - result) - y;
-        result = t;
-    }
-    return result;
-}
 
 /// Ditto
 @safe pure nothrow unittest

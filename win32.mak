@@ -204,7 +204,8 @@ SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+	std\internal\math\gammafunction.d std\internal\math\errorfunction.d \
+	std\internal\math\summation.d
 
 SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 

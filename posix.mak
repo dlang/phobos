@@ -210,7 +210,7 @@ time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction) $(addprefix std/internal/, \
+	gammafunction errorfunction summation) $(addprefix std/internal/, \
 	cstring processinit unicode_tables scopebuffer\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm)
 
