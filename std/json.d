@@ -372,7 +372,7 @@ struct JSONValue
                                 "JSONValue is not an array");
         static if(isArray!T)
         {
-            JSONValue newArray = this;
+            JSONValue newArray = JSONValue(this.store.array.dup);
             newArray.store.array ~= JSONValue(arg).store.array;
             return newArray;
         }
@@ -380,7 +380,7 @@ struct JSONValue
         {
             enforceEx!JSONException(arg.type == JSON_TYPE.ARRAY,
                                     "JSONValue is not an array");
-            JSONValue newArray = this;
+            JSONValue newArray = JSONValue(this.store.array.dup);
             newArray.store.array ~= arg.store.array;
             return newArray;
         }
