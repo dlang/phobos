@@ -777,7 +777,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS)
+	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -797,6 +797,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_NET)
 	zip32 -u phobos $(SRC_STD_DIGEST)
 	zip32 -u phobos $(SRC_STD_CONTAINER)
+	zip32 -u phobos $(SRC_STD_REGEX)
 
 phobos.zip : zip
 
