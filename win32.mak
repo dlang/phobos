@@ -113,27 +113,27 @@ SRC_STD_2_HEAVY= std\range.d
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\bitmanip.d std\typecons.d \
-    std\uni.d std\base64.d std\ascii.d \
-    std\demangle.d std\uri.d std\mmfile.d std\getopt.d
+	std\bitmanip.d std\typecons.d \
+	std\uni.d std\base64.d std\ascii.d \
+	std\demangle.d std\uri.d std\mmfile.d std\getopt.d
 
 SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
-    std\encoding.d std\xml.d \
-    std\random.d \
-    std\exception.d \
-    std\compiler.d \
-    std\system.d std\concurrency.d
+	std\encoding.d std\xml.d \
+	std\random.d \
+	std\exception.d \
+	std\compiler.d \
+	std\system.d std\concurrency.d
 
 SRC_STD_3b= std\datetime.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
-    std\digest\ripemd.d std\digest\digest.d
-    
+	std\digest\ripemd.d std\digest\digest.d
+	
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
-    std\container\dlist.d std\container\rbtree.d std\container\slist.d \
-    std\container\util.d std\container\package.d
-    
+	std\container\dlist.d std\container\rbtree.d std\container\slist.d \
+	std\container\util.d std\container\package.d
+	
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_5_HEAVY= std\algorithm.d
@@ -144,8 +144,7 @@ SRC_STD_6= std\variant.d \
 	std\conv.d std\zip.d std\cstream.d \
 	$(SRC_STD_CONTAINER)
 
-SRC_STD_REST= std\regex.d \
-	std\stdint.d \
+SRC_STD_REST= std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
@@ -173,8 +172,12 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d \
 	std\exception.d std\ascii.d
+
+SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
+	std\regex\internal\tests.d std\regex\internal\backtracking.d \
+	std\regex\internal\thompson.d std\regex\internal\kickstart.d \
+	std\regex\internal\generator.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -213,6 +216,7 @@ SRC_ETC=
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
 SRC_TO_COMPILE_NOT_STD= \
+	$(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
@@ -460,7 +464,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -cov=0  -unittest -main -run std\zip.d
 	$(DMD) -cov=92 -unittest -main -run std\cstream.d
-	$(DMD) -cov=77 -unittest -main -run std\regex.d
+	$(DMD) -cov=77 -unittest -main -run std\regex\tests.d
 	$(DMD) -cov=92 -unittest -main -run std\json.d
 	$(DMD) -cov=87 -unittest -main -run std\parallelism.d
 	$(DMD) -cov=50 -unittest -main -run std\mathspecial.d
@@ -658,8 +662,8 @@ $(DOC)\std_random.html : $(STDDOC) std\random.d
 $(DOC)\std_range.html : $(STDDOC) std\range.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range.d
 
-$(DOC)\std_regex.html : $(STDDOC) std\regex.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex.d
+$(DOC)\std_regex.html : $(STDDOC) std\regex\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex\package.d
 
 $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d
