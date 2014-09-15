@@ -175,10 +175,12 @@ Constructor taking a number of items
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
         auto p = cast(T*) malloc(T.sizeof * values.length);
-        if (hasIndirections!T && p)
+        static if (hasIndirections!T)
         {
-            GC.addRange(p, T.sizeof * values.length);
+            if (p)
+                GC.addRange(p, T.sizeof * values.length);
         }
+
         foreach (i, e; values)
         {
             emplace(p + i, e);
