@@ -2117,7 +2117,7 @@ float frexp(float value, out int exp) @trusted pure nothrow @nogc
 
 
 private T frexpImpl(T)(T value, out int exp) @trusted pure nothrow @nogc
-if(isFloatingPoint!T)
+    if(isFloatingPoint!T)
 {
     ushort* vu = cast(ushort*)&value;
     static if(is(Unqual!T == float))
