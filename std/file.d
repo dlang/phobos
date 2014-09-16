@@ -1116,7 +1116,7 @@ assert(!"/etc/fonts/fonts.conf".isDir);
 assert("/usr/share/include".isDir);
 --------------------
   +/
-@property bool isDir(in char[] name)
+@property bool isDir(in char[] name) @safe
 {
     version(Windows)
     {
@@ -1128,7 +1128,7 @@ assert("/usr/share/include".isDir);
     }
 }
 
-unittest
+@safe unittest
 {
     version(Windows)
     {
