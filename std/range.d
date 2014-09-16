@@ -10072,12 +10072,17 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
         it with the type of $(D inputRange.front).
     */
     static if (is(typeof(fun) == void))
+        alias _fun = fun!(typeof(inputRange.front));
+    else
+        alias _fun = fun;
+
+    static if (isFunctionPointer!_fun || isDelegate!_fun)
     {
-        return tee!pipeOnPop(inputRange, fun!(typeof(inputRange.front)));
+        return tee!pipeOnPop(inputRange, _fun);
     }
     else
     {
-        return tee!pipeOnPop(inputRange, fun);
+        return tee!pipeOnPop(inputRange, &_fun);
     }
 }
 
@@ -10231,4 +10236,13 @@ unittest
         auto appResult = txt.tee(appSink).array;
         assert(equal(txt, appResult) && equal(appResult, appSink.data));
     }
+}
+
+unittest
+{
+    // Issue 13483
+    static void func1(T)(T x) {}
+    void func2(int x) {}
+
+    auto r = [1, 2, 3, 4].tee!func1.tee!func2;
 }
