@@ -1066,7 +1066,7 @@ uint getAttributes(in char[] name) @safe
     Throws:
         $(D FileException) on error.
  +/
-uint getLinkAttributes(in char[] name)
+uint getLinkAttributes(in char[] name) @safe
 {
     version(Windows)
     {
@@ -1074,8 +1074,12 @@ uint getLinkAttributes(in char[] name)
     }
     else version(Posix)
     {
+        static auto trustedLstat(in char[] path, ref stat_t buf) @trusted
+        {
+            return lstat(path.tempCString(), &buf);
+        }
         stat_t lstatbuf = void;
-        cenforce(lstat(name.tempCString(), &lstatbuf) == 0, name);
+        cenforce(trustedLstat(name, lstatbuf) == 0, name);
         return lstatbuf.st_mode;
     }
 }
