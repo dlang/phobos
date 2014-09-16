@@ -2105,7 +2105,7 @@ unittest
  */
 
 
-private T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
+T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
     if(isFloatingPoint!T)
 {
     ushort* vu = cast(ushort*)&value;
