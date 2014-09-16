@@ -1177,7 +1177,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
     }
 }
 
-unittest
+@safe unittest
 {
     version(Windows)
     {
@@ -1301,7 +1301,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     }
 }
 
-unittest
+@safe unittest
 {
     version(Windows)
     {
