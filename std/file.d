@@ -1237,7 +1237,7 @@ assert("/etc/fonts/fonts.conf".isFile);
 assert(!"/usr/share/include".isFile);
 --------------------
   +/
-@property bool isFile(in char[] name)
+@property bool isFile(in char[] name) @safe
 {
     version(Windows)
         return !name.isDir;
@@ -1245,7 +1245,7 @@ assert(!"/usr/share/include".isFile);
         return (getAttributes(name) & S_IFMT) == S_IFREG;
 }
 
-unittest
+@safe unittest
 {
     version(Windows)
     {
@@ -1346,7 +1346,7 @@ unittest
     Throws:
         $(D FileException) if the given file does not exist.
   +/
-@property bool isSymlink(C)(const(C)[] name)
+@property bool isSymlink(C)(const(C)[] name) @safe
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1354,7 +1354,7 @@ unittest
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
 
-unittest
+@safe unittest
 {
     version(Windows)
     {
@@ -1383,6 +1383,10 @@ unittest
     }
     else version(Posix)
     {
+        static auto trustedSymlink(string path1, string path2) @trusted
+        {
+            return core.sys.posix.unistd.symlink(path1.ptr, path2.ptr);
+        }
         if(system_directory.exists)
         {
             assert(!system_directory.isSymlink);
@@ -1390,7 +1394,7 @@ unittest
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            core.sys.posix.unistd.symlink(system_directory, symfile.ptr);
+            trustedSymlink(system_directory, symfile);
 
             assert(symfile.isSymlink);
             assert(!attrIsSymlink(getAttributes(symfile)));
@@ -1410,7 +1414,7 @@ unittest
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            core.sys.posix.unistd.symlink(system_file, symfile.ptr);
+            trustedSymlink(system_file, symfile);
 
             assert(symfile.isSymlink);
             assert(!attrIsSymlink(getAttributes(symfile)));
