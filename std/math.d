@@ -2104,19 +2104,8 @@ unittest
  *      )
  */
 
-real frexp(real value, out int exp) @trusted pure nothrow @nogc
-{ return frexpImpl(value, exp); }
 
-///ditto
-double frexp(double value, out int exp) @trusted pure nothrow @nogc
-{ return frexpImpl(value, exp); }
-
-///ditto
-float frexp(float value, out int exp) @trusted pure nothrow @nogc
-{ return frexpImpl(value, exp); }
-
-
-private T frexpImpl(T)(T value, out int exp) @trusted pure nothrow @nogc
+private T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
     if(isFloatingPoint!T)
 {
     ushort* vu = cast(ushort*)&value;
