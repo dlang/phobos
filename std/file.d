@@ -2049,7 +2049,9 @@ else version(Windows)
 
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
-            size_t clength = std.string.wcslen(fd.cFileName.ptr);
+            import core.stdc.wchar_ : wcslen;
+
+            size_t clength = wcslen(fd.cFileName.ptr);
             _name = std.utf.toUTF8(fd.cFileName[0 .. clength]);
             _name = buildPath(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
             _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
@@ -2649,6 +2651,8 @@ private struct DirIteratorImpl
 
         bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
         {
+            import core.stdc.wchar_ : wcscmp;
+
             if(fetch)
             {
                 if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
@@ -2657,8 +2661,8 @@ private struct DirIteratorImpl
                     return false;
                 }
             }
-            while( std.string.wcscmp(findinfo.cFileName.ptr, ".") == 0
-                    || std.string.wcscmp(findinfo.cFileName.ptr, "..") == 0)
+            while( wcscmp(findinfo.cFileName.ptr, ".") == 0
+                    || wcscmp(findinfo.cFileName.ptr, "..") == 0)
                 if(FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();

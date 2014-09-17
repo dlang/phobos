@@ -882,7 +882,9 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 // another set of tests just to cover the new API
 @system unittest
 {
-    import std.conv;
+    import std.conv : to;
+    import std.algorithm : map, equal;
+
     foreach(String; TypeTuple!(string, wstring, const(dchar)[]))
     {
         auto str1 = "blah-bleh".to!String();
@@ -1366,6 +1368,8 @@ public:
     ///Forward range primitives.
     @property Range front()
     {
+        import std.algorithm : min;
+
         assert(!empty && _offset <= _match.pre.length
                 && _match.pre.length <= _input.length);
         return _input[_offset .. min($, _match.pre.length)];
