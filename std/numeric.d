@@ -653,7 +653,7 @@ template secantMethod(alias fun)
         auto fxn = unaryFun!(fun)(xn_1), d = xn_1 - xn;
         typeof(fxn) fxn_1;
         xn = xn_1;
-        while (!approxEqual(d, 0) && isfinite(d)) {
+        while (!approxEqual(d, 0) && isFinite(d)) {
             xn_1 = xn;
             xn -= d;
             fxn_1 = fxn;
@@ -1439,6 +1439,7 @@ result is greater than or equal to $(D max).
  */
 ElementType!Range entropy(Range)(Range r) if (isInputRange!Range)
 {
+    import core.stdc.tgmath : log2;
     Unqual!(typeof(return)) result = 0.0;
     foreach (e; r)
     {
@@ -1453,6 +1454,7 @@ ElementType!Range entropy(Range, F)(Range r, F max)
 if (isInputRange!Range
         && !is(CommonType!(ElementType!Range, F) == void))
 {
+    import core.stdc.tgmath : log2;
     typeof(return) result = 0.0;
     foreach (e; r)
     {
@@ -1488,6 +1490,7 @@ CommonType!(ElementType!Range1, ElementType!Range2)
 kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
+    import core.stdc.tgmath : log2;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     FPTemporary!(typeof(return)) result = 0;
@@ -1533,6 +1536,7 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!Range1 && isInputRange!Range2
             && is(CommonType!(ElementType!Range1, ElementType!Range2)))
 {
+    import core.stdc.tgmath : log2;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     FPTemporary!(typeof(return)) result = 0;
@@ -1561,6 +1565,7 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
            && is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
                            >= F.init) : bool))
 {
+    import core.stdc.tgmath : log2;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     FPTemporary!(typeof(return)) result = 0;
