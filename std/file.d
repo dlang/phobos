@@ -1385,7 +1385,7 @@ unittest
     {
         static auto trustedSymlink(string path1, string path2) @trusted
         {
-            return core.sys.posix.unistd.symlink(path1.ptr, path2.ptr);
+            return core.sys.posix.unistd.symlink(toStringz(path1), path2.ptr);
         }
         if(system_directory.exists)
         {
