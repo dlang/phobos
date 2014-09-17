@@ -4645,6 +4645,9 @@ unittest
     assert(isInfinity(e));
 }
 
+
+
+version(OSX) version(X86) version = BUG_13457;
 /*********************************
  * Is the binary representation of x identical to y?
  *
@@ -4673,6 +4676,39 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
         ushort* pye = cast(ushort *)&y;
         return pxe[4] == pye[4] && pxs[0] == pys[0];
     }
+}
+
+///ditto
+bool isIdentical(double x, double y) @trusted pure nothrow @nogc
+{
+    // We're doing a bitwise comparison so the endianness is irrelevant.
+    long*   pxs = cast(long *)&x;
+    long*   pys = cast(long *)&y;
+    return pxs[0] == pys[0];
+}
+
+///ditto
+bool isIdentical(float x, float y) @trusted pure nothrow @nogc
+{
+    version(BUG_13457)
+    {
+        return isIdentical(double(x), double(y)); //BUG 13457 
+    }
+    else
+    {
+        // We're doing a bitwise comparison so the endianness is irrelevant.
+        int*   pxs = cast(int *)&x;
+        int*   pys = cast(int *)&y;
+        return pxs[0] == pys[0];
+    }
+
+}
+
+//BUG_13457 check
+unittest {
+    float fn1 = NaN(0xABC);
+    float fn2 = NaN(0xABC);
+    assert(isIdentical(fn1, fn2));
 }
 
 /*********************************
@@ -5234,6 +5270,9 @@ unittest
     assert( nextUp(double.max) == double.infinity );
 
     float fn = NaN(0xABC);
+    assert(fn.isNaN);
+    assert(nextUp(fn).isNaN);
+    assert(isIdentical(cast(real)nextUp(fn), cast(real)fn));
     assert(isIdentical(nextUp(fn), fn));
     float f = -float.min_normal*(1-float.epsilon);
     float f1 = -float.min_normal;
@@ -5736,13 +5775,13 @@ unittest
     assert(pow(two, dinf) == double.infinity);
     assert(isIdentical(pow(0.2f, dinf), +0.0));
     assert(pow(0.99999999L, rninf) == real.infinity);
-    assert(isIdentical(pow(1.000000001, rninf), +0.0));
+    assert(isIdentical(pow(1.000000001, rninf), +0.0L));
     assert(pow(dinf, 0.001) == dinf);
     assert(isIdentical(pow(dinf, -0.001), +0.0));
     assert(pow(rninf, 3.0L) == rninf);
     assert(pow(rninf, 2.0L) == real.infinity);
-    assert(isIdentical(pow(rninf, -3.0), -0.0));
-    assert(isIdentical(pow(rninf, -2.0), +0.0));
+    assert(isIdentical(pow(rninf, -3.0), -0.0L));
+    assert(isIdentical(pow(rninf, -2.0), +0.0L));
 
     // @@@BUG@@@ somewhere
     version(OSX) {} else assert(isNaN(pow(one, dinf)));
@@ -6097,7 +6136,9 @@ public:
  *      x =     the value to evaluate.
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */
-real poly(real x, const real[] A) @trusted pure nothrow @nogc
+// Allow user defined types like BigInt and Complex
+typeof(T1.init + T2.init) poly(T1, T2)(T1 x, in T2[] A)
+@trusted @nogc pure nothrow
 in
 {
     assert(A.length > 0);
@@ -6105,8 +6146,16 @@ in
 body
 {
     version (D_InlineAsm_X86)
+        enum InlineAsm_X86 = true;
+    else
+        enum InlineAsm_X86 = false;
+
+    // X86 asm for real.
+    if(InlineAsm_X86 && is(Unqual!T2 == real) && is(typeof(return) == real))
     {
-        version (Windows)
+        static if(!is(Unqual!T1 == real))
+            return poly(cast(real)x, A);
+        else version (Windows)
         {
         // BUG: This code assumes a frame pointer in EBP.
             asm // assembler by W. Bright
@@ -6255,7 +6304,7 @@ body
     else
     {
         ptrdiff_t i = A.length - 1;
-        real r = A[i];
+        typeof(return) r = A[i];
         while (--i >= 0)
         {
             r *= x;
@@ -6265,14 +6314,45 @@ body
     }
 }
 
+
+//ditto
+auto poly(T, Range)(T x, Range A)
+if(!isArray!Range)
+in
+{
+    assert(!A.empty);
+}
+body
+{
+    import std.range : isBidirectionalRange, ElementType;
+    static assert(isBidirectionalRange!Range, Range.stringof~" is not  bidirectional range");
+    alias R = typeof(Unqual!T.init + Unqual!(ElementType!Range).init);
+    
+    R r = cast(R) A.back;
+    A.popBack;
+    foreach_reverse(elem; A)
+    {
+        r *= x;
+        r += elem;
+    }
+    return r;
+}
+
+
 unittest
 {
+    import std.algorithm : map;
+    
     debug (math) printf("math.poly.unittest\n");
     real x = 3.1;
-    static real[] pp = [56.1, 32.7, 6];
-
+    static real[] pp = [56.1, 32.7, 6];    
     assert( poly(x, pp) == (56.1L + (32.7L + 6L * x) * x) );
+    
+    double x2 = 3.1;
+    assert( poly(x2, [56.1, 32.7, 6.0][].map!(a => a)) == poly(x2, [56.1, 32.7, 6.0][]));
 }
+
+
 
 /**
    Computes whether $(D lhs) is approximately equal to $(D rhs)

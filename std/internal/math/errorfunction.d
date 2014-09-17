@@ -230,13 +230,13 @@ unittest {
     // The DMC implementation of erfc() fails this next test (just)
     assert(feqrel(erfc(4.1L),0.67000276540848983727e-8L)>=real.mant_dig-5);
 
-    assert(isIdentical(erf(0.0),0.0));
-    assert(isIdentical(erf(-0.0),-0.0));
+    assert(isIdentical(erf(0.0),0.0L));
+    assert(isIdentical(erf(-0.0),-0.0L));
     assert(erf(real.infinity) == 1.0);
     assert(erf(-real.infinity) == -1.0);
     assert(isIdentical(erf(NaN(0xDEF)),NaN(0xDEF)));
     assert(isIdentical(erfc(NaN(0xDEF)),NaN(0xDEF)));
-    assert(isIdentical(erfc(real.infinity),0.0));
+    assert(isIdentical(erfc(real.infinity),0.0L));
     assert(erfc(-real.infinity) == 2.0);
     assert(erfc(0) == 1.0);
 }
