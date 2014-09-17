@@ -669,6 +669,8 @@ struct Input(Char)
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
     import std.conv;
+    import std.algorithm : map, equal;
+
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
     enforce(fnd < dict.length && equal(dict[fnd].name, name),
         text("no submatch named ", name));
