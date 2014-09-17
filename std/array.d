@@ -1632,7 +1632,6 @@ unittest
     }
 }
 
-
 /++
    Concatenates all of the ranges in $(D ror) together into one array using
    $(D sep) as the separator if present.
@@ -1684,6 +1683,55 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 }
 
 /// Ditto
+ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
+    if(isInputRange!RoR &&
+       isInputRange!(Unqual!(ElementType!RoR)) &&
+       is(E : ElementType!(ElementType!RoR)))
+{
+    alias RetType = typeof(return);
+    alias RetTypeElement = Unqual!(ElementType!(RetType));
+    alias RoRElem = ElementType!RoR;
+
+    if (ror.empty)
+        return RetType.init;
+
+    auto result = appender!RetType();
+
+    static if(isForwardRange!RoR &&
+              (isNarrowString!RetType || hasLength!RoRElem))
+    {
+        // Reserve appender length if it can be computed.
+        //immutable sepArrLength = sepArr.length;
+        size_t resultLen = 0;
+        static if ((is(E == wchar) || is(E == dchar))
+                && !is(RetTypeElement == dchar))
+        {
+            RetTypeElement[4] encodeSpace;
+            immutable sepArrLength = encode(encodeSpace, sep);
+        }
+        else
+        {
+            immutable sepArrLength = 1;
+        }
+        for (auto temp = ror.save; !temp.empty; temp.popFront())
+            resultLen += temp.front.length + sepArrLength;
+
+        resultLen -= sepArrLength;
+        result.reserve(resultLen);
+        version(unittest) scope(exit) assert(result.data.length == resultLen);
+    }
+
+    put(result, ror.front);
+    ror.popFront();
+    for (; !ror.empty; ror.popFront())
+    {
+        put(result, sep);
+        put(result, ror.front);
+    }
+    return result.data;
+}
+
+/// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if(isInputRange!RoR &&
        isInputRange!(Unqual!(ElementType!RoR)))
@@ -1721,6 +1769,25 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     assert(arr.join() == "applebanana");
 }
 
+@safe pure unittest
+{
+    assert(join(["hello", "silly", "world"], ' ') == "hello silly world");
+
+    foreach (T; TypeTuple!(string,wstring,dstring))
+    {
+        foreach (S; TypeTuple!(char,wchar,dchar))
+        {
+            auto arr = to!(T[])(["hello", "silly", "world"]);
+            auto jarr = arr.join(to!S(' '));
+            auto arr2 = to!T("hello silly world");
+            assert(jarr == arr2);
+        }
+    }
+
+    const string[] arr = ["apple", "banana"];
+    assert(arr.join(',') == "apple,banana");
+}
+
 unittest
 {
     debug(std_array) printf("array.join.unittest\n");
@@ -1745,7 +1812,10 @@ unittest
         foreach(S; TypeTuple!(string, wstring, dstring))
         {
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
+            assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
+            assert(join(filteredWordsArr, to!(ElementType!(S))(',')) == "日本語,paul,jerry");
             assert(join(filteredWordsArr, to!S(", ")) == "日本語, paul, jerry");
+            assert(join(filteredWordsArr, to!(ElementType!(S))(',')) == "日本語,paul,jerry");
             assert(join(filteredLenWordsArr, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filter!"true"(words), to!S(", ")) == "日本語, paul, jerry");
             assert(join(words, to!S(", ")) == "日本語, paul, jerry");
