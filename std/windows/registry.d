@@ -41,7 +41,7 @@ version (Windows):
 import std.array;
 import std.system : Endian, endian;
 import std.exception;
-import std.c.windows.windows;
+import core.sys.windows.windows;
 import std.windows.syserror;
 import std.conv;
 import std.utf : toUTF8, toUTF16;

@@ -5,8 +5,8 @@
  *       current standards. It will remain until we have a suitable replacement,
  *       but be aware that it will not remain long term.)
  *
- * The std.cstream module bridges std.c.stdio (or std.stdio) and std.stream.
- * Both std.c.stdio and std.stream are publicly imported by std.cstream.
+ * The std.cstream module bridges core.stdc.stdio (or std.stdio) and std.stream.
+ * Both core.stdc.stdio and std.stream are publicly imported by std.cstream.
  *
  * Macros:
  *      WIKI=Phobos/StdCstream
@@ -23,8 +23,8 @@
  */
 module std.cstream;
 
+public import core.stdc.stdio;
 public import std.stream;
-public import std.c.stdio;
 version(unittest) import std.stdio;
 
 import std.algorithm;
@@ -103,7 +103,7 @@ class CFile : Stream {
    * Ditto
    */
   override char ungetc(char c) {
-    return cast(char)std.c.stdio.ungetc(c,cfile);
+    return cast(char)core.stdc.stdio.ungetc(c,cfile);
   }
 
   /**
@@ -227,24 +227,24 @@ class CFile : Stream {
 }
 
 /**
- * CFile wrapper of std.c.stdio.stdin (not seekable).
+ * CFile wrapper of core.stdc.stdio.stdin (not seekable).
  */
 __gshared CFile din;
 
 /**
- * CFile wrapper of std.c.stdio.stdout (not seekable).
+ * CFile wrapper of core.stdc.stdio.stdout (not seekable).
  */
 __gshared CFile dout;
 
 /**
- * CFile wrapper of std.c.stdio.stderr (not seekable).
+ * CFile wrapper of core.stdc.stdio.stderr (not seekable).
  */
 __gshared CFile derr;
 
 shared static this() {
   // open standard I/O devices
-  din = new CFile(std.c.stdio.stdin,FileMode.In);
-  dout = new CFile(std.c.stdio.stdout,FileMode.Out);
-  derr = new CFile(std.c.stdio.stderr,FileMode.Out);
+  din = new CFile(core.stdc.stdio.stdin,FileMode.In);
+  dout = new CFile(core.stdc.stdio.stdout,FileMode.Out);
+  derr = new CFile(core.stdc.stdio.stderr,FileMode.Out);
 }
 

@@ -56,9 +56,9 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.random;
 
-import std.algorithm, std.c.time, std.conv, std.exception,
+import std.algorithm, std.conv, std.exception,
        std.math, std.numeric, std.range, std.traits,
-       core.thread, core.time;
+       core.stdc.time, core.thread, core.time;
 import std.string : format;
 
 version(unittest) import std.typetuple;

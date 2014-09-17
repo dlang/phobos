@@ -2324,7 +2324,7 @@ pure nothrow
 
 version(unittest)
 {
-    import std.c.stdio;
+    import core.stdc.stdio;
 }
 
 unittest

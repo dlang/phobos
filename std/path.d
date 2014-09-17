@@ -1186,7 +1186,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
     if (isSomeChar!C)
 {
-    import std.c.stdlib;
+    import core.stdc.stdlib;
     auto paths2 = new const(C)[][](paths.length);
         //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
 

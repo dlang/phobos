@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Standard I/O functions that extend $(B std.c.stdio).  $(B std.c.stdio)
+Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
 is $(D_PARAM public)ally imported when importing $(B std.stdio).
 
 Source: $(PHOBOSSRC std/_stdio.d)
@@ -18,7 +18,7 @@ module std.stdio;
 
 public import core.stdc.stdio, std.string : KeepTerminator;
 import core.vararg;
-static import std.c.stdio;
+static import core.stdc.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
     core.stdc.string, core.stdc.wchar_, core.exception;
@@ -34,7 +34,7 @@ else version (CRuntime_DigitalMars)
 {
     // Specific to the way Digital Mars C does stdio
     version = DIGITAL_MARS_STDIO;
-    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+    import core.stdc.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
 }
 
 version (Posix)
@@ -636,7 +636,7 @@ Throws: $(D ErrnoException) on error.
                 return;
             }
         }
-        //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
+        //fprintf(core.stdc.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
         errnoEnforce(.fclose(_p.handle) == 0,
                 "Could not close file `"~_name~"'");
     }
@@ -1521,7 +1521,7 @@ Returns the $(D FILE*) corresponding to this object.
 
     unittest
     {
-        assert(stdout.getFP() == std.c.stdio.stdout);
+        assert(stdout.getFP() == core.stdc.stdio.stdout);
     }
 
 /**
@@ -3165,7 +3165,7 @@ private FILE* fopen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
 version (Posix)
 {
     /***********************************
-     * Convenience function that forwards to $(D std.c.stdio.popen)
+     * Convenience function that forwards to $(D core.stdc.stdio.popen)
      * with appropriately-constructed C-style strings.
      */
     FILE* popen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
@@ -3177,7 +3177,7 @@ version (Posix)
 }
 
 /*
- * Convenience function that forwards to $(D std.c.stdio.fwrite)
+ * Convenience function that forwards to $(D core.stdc.stdio.fwrite)
  * and throws an exception upon error
  */
 private void binaryWrite(T)(FILE* f, T obj)
@@ -4076,14 +4076,17 @@ version(linux)
 {
     File openNetwork(string host, ushort port)
     {
-        static import linux = std.c.linux.linux;
-        static import sock = std.c.linux.socket;
+        static import sock = core.sys.posix.sys.socket;
+        static import core.sys.posix.unistd;
         import core.stdc.string : memcpy;
+        import core.sys.posix.arpa.inet : htons;
+        import core.sys.posix.netdb : gethostbyname;
+        import core.sys.posix.netinet.in_ : sockaddr_in;
         import std.conv : to;
         import std.exception : enforce;
         import std.internal.cstring : tempCString;
 
-        auto h = enforce( sock.gethostbyname(host.tempCString()),
+        auto h = enforce( gethostbyname(host.tempCString()),
             new StdioException("gethostbyname"));
 
         int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
@@ -4091,17 +4094,16 @@ version(linux)
 
         scope(failure)
         {
-            linux.close(s); // want to make sure it doesn't dangle if
-                            // something throws. Upon normal exit, the
-                            // File struct's reference counting takes
-                            // care of closing, so we don't need to
-                            // worry about success
+            // want to make sure it doesn't dangle if something throws. Upon
+            // normal exit, the File struct's reference counting takes care of
+            // closing, so we don't need to worry about success
+            core.sys.posix.unistd.close(s);
         }
 
-        sock.sockaddr_in addr;
+        sockaddr_in addr;
 
         addr.sin_family = sock.AF_INET;
-        addr.sin_port = sock.htons(port);
+        addr.sin_port = htons(port);
         core.stdc.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
 
         enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
