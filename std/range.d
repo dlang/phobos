@@ -5534,6 +5534,15 @@ Fibonacci sequence, there are two initial values (and therefore a
 state size of 2) because computing the next Fibonacci value needs the
 past two values.
 
+The signature of this function should be:
+----
+auto fun(R)(R state, size_t n)
+----
+where $(D n) will be the index of the current value, and $(D state) will be an
+opaque state vector that can be indexed with array-indexing notation
+$(D state[i]), where valid values of $(D i) range from $(D (n - 1)) to
+$(D (n - State.length)).
+
 If the function is passed in string form, the state has name $(D "a")
 and the zero-based index in the recurrence has name $(D "n"). The
 given string must return the desired value for $(D a[n]) given $(D a[n
