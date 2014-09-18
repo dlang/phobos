@@ -5550,16 +5550,6 @@ given string must return the desired value for $(D a[n]) given $(D a[n
 state size is dictated by the number of arguments passed to the call
 to $(D recurrence). The $(D Recurrence) struct itself takes care of
 managing the recurrence's state and shifting it appropriately.
-
-Example:
-----
-// a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
-auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
-// print the first 10 Fibonacci numbers
-foreach (e; take(fib, 10)) { writeln(e); }
-// print the first 10 factorials
-foreach (e; take(recurrence!("a[n-1] * n")(1), 10)) { writeln(e); }
-----
  */
 struct Recurrence(alias fun, StateType, size_t stateSize)
 {
@@ -5591,6 +5581,25 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
     }
 
     enum bool empty = false;
+}
+
+///
+unittest
+{
+    import std.algorithm : equal;
+
+    // The Fibonacci sequence
+    // a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
+    auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
+
+    // Verify the first 10 of the Fibonacci series
+    assert(fib.take(10).equal([1, 1, 2, 3, 5, 8, 13, 21, 34, 55]));
+
+    // The first 10 factorials
+    auto fac = recurrence!("a[n-1] * n")(1);
+    assert(take(fac, 10).equal([
+        1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880
+    ]));
 }
 
 /// Ditto
