@@ -5588,18 +5588,24 @@ unittest
 {
     import std.algorithm : equal;
 
-    // The Fibonacci sequence
+    // The Fibonacci numbers, using function in string form:
     // a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
-
-    // Verify the first 10 of the Fibonacci series
     assert(fib.take(10).equal([1, 1, 2, 3, 5, 8, 13, 21, 34, 55]));
 
-    // The first 10 factorials
-    auto fac = recurrence!("a[n-1] * n")(1);
+    // The factorials, using function in lambda form:
+    auto fac = recurrence!((a,n) => a[n-1] * n)(1);
     assert(take(fac, 10).equal([
         1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880
     ]));
+
+    // The triangular numbers, using function in explicit form:
+    static size_t genTriangular(R)(R state, size_t n)
+    {
+        return state[n-1] + n;
+    }
+    auto tri = recurrence!genTriangular(0);
+    assert(take(tri, 10).equal([0, 1, 3, 6, 10, 15, 21, 28, 36, 45]));
 }
 
 /// Ditto
