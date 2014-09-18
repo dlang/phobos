@@ -1091,16 +1091,24 @@ uint getLinkAttributes(in char[] name) @safe
     Throws:
         $(D FileException) if the given file does not exist.
  +/
-void setAttributes(in char[] name, uint attributes)
+void setAttributes(in char[] name, uint attributes) @safe
 {
     version (Windows)
     {
-        cenforce(SetFileAttributesW(name.tempCStringW(), attributes), name);
+        static auto trustedSetFileAttributesW(in char[] fileName, uint dwFileAttributes) @trusted
+        {
+            return SetFileAttributesW(fileName.tempCStringW(), dwFileAttributes);
+        }
+        cenforce(trustedSetFileAttributesW(name, attributes), name);
     }
     else version (Posix)
     {
+        static auto trustedChmod(in char[] path, mode_t mode) @trusted
+        {
+            return chmod(path.tempCString(), mode);
+        }
         assert(attributes <= mode_t.max);
-        cenforce(!chmod(name.tempCString(), cast(mode_t)attributes), name);
+        cenforce(!trustedChmod(name, cast(mode_t)attributes), name);
     }
 }
 
