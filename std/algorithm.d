@@ -11477,6 +11477,9 @@ unittest
 /++
 Convenience function. Like find, but only returns whether or not the search
 was successful.
+
+See_Also:
+$(XREF algorithm, among) for checking a range against multiple possibilities.
  +/
 template canFind(alias pred="a == b")
 {
@@ -13718,7 +13721,8 @@ is not _among $(D values). The predicate $(D pred) is used to
 compare values, and uses equality by default.
 
 See_Also:
-$(XREF algorithm, find) for finding a value in a range.
+$(XREF algorithm, find) and $(XREF algorithm, canFind) for finding a value in a
+range.
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)
     (Value value, Values values)
