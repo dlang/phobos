@@ -2164,6 +2164,15 @@ unittest
     assert(equal(r, [3L, 2L, 1L]));
 }
 
+// Issue 12662
+@nogc unittest
+{
+    int[3] src = [1,2,3];
+    int[] data = src[];
+    foreach_reverse (x; data) {}
+    foreach (x; data.retro) {}
+}
+
 
 /**
 Iterates range $(D r) with stride $(D n). If the range is a
