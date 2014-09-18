@@ -5104,7 +5104,7 @@ unittest
 {
     int[] a = [ 1, 2, 3 ];
     string[] b = [ "a", "b", "c" ];
-    sort!("a[0] > b[0]")(zip(a, b));
+    sort!((c, d) => c[0] > d[0])(zip(a, b));
     assert(a == [ 3, 2, 1 ]);
     assert(b == [ "c", "b", "a" ]);
 }
