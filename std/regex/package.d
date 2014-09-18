@@ -284,7 +284,7 @@ import std.exception, std.traits, std.range;
     assert(nc.equal(["name", "var"]));
     assert(nc[0] == "name");
     assert(nc[1..$].equal(["var"]));
-
+    ----
 +/
 public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
 
