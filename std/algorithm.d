@@ -13311,6 +13311,8 @@ When there are more than two ranges, the above conditions apply to each
 adjacent pair of ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
+    if (!allSatisfy!(isForwardRange, R1, R2) ||
+        anySatisfy!(isInfinite, R1, R2))
 {
     static if (isInfinite!R1 && isInfinite!R2)
     {
@@ -13539,9 +13541,17 @@ unittest
     }
 }
 
+// Issue 13091
+pure nothrow @safe @nogc unittest
+{
+    import std.algorithm: cartesianProduct;
+    int[1] a = [1];
+    foreach (t; cartesianProduct(a[], a[])) {}
+}
+
 /// ditto
 auto cartesianProduct(RR...)(RR ranges)
-    if (ranges.length > 2 &&
+    if (ranges.length >= 2 &&
     	allSatisfy!(isForwardRange, RR) &&
         !anySatisfy!(isInfinite, RR))
 {
@@ -13680,7 +13690,8 @@ unittest
     assert(canFind(N4, tuple(10, 31, 7, 12)));
 }
 
-/// Issue 9878
+// Issue 9878
+///
 unittest
 {
     auto A = [ 1, 2, 3 ];
