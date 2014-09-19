@@ -1821,6 +1821,14 @@ unittest
     assert(join(f([f([1, 2]), f([41, 42])]), f([5, 6])) == [1, 2, 5, 6, 41, 42]);
 }
 
+// Issue 10683
+unittest
+{
+    import std.typecons : tuple;
+    assert([[tuple(1)]].join == [tuple(1)]);
+    assert([[tuple("x")]].join == [tuple("x")]);
+}
+
 
 /++
     Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
