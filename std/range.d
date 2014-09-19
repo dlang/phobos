@@ -5534,6 +5534,15 @@ Fibonacci sequence, there are two initial values (and therefore a
 state size of 2) because computing the next Fibonacci value needs the
 past two values.
 
+The signature of this function should be:
+----
+auto fun(R)(R state, size_t n)
+----
+where $(D n) will be the index of the current value, and $(D state) will be an
+opaque state vector that can be indexed with array-indexing notation
+$(D state[i]), where valid values of $(D i) range from $(D (n - 1)) to
+$(D (n - State.length)).
+
 If the function is passed in string form, the state has name $(D "a")
 and the zero-based index in the recurrence has name $(D "n"). The
 given string must return the desired value for $(D a[n]) given $(D a[n
@@ -5541,16 +5550,6 @@ given string must return the desired value for $(D a[n]) given $(D a[n
 state size is dictated by the number of arguments passed to the call
 to $(D recurrence). The $(D Recurrence) struct itself takes care of
 managing the recurrence's state and shifting it appropriately.
-
-Example:
-----
-// a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
-auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
-// print the first 10 Fibonacci numbers
-foreach (e; take(fib, 10)) { writeln(e); }
-// print the first 10 factorials
-foreach (e; take(recurrence!("a[n-1] * n")(1), 10)) { writeln(e); }
-----
  */
 struct Recurrence(alias fun, StateType, size_t stateSize)
 {
@@ -5582,6 +5581,31 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
     }
 
     enum bool empty = false;
+}
+
+///
+unittest
+{
+    import std.algorithm : equal;
+
+    // The Fibonacci numbers, using function in string form:
+    // a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
+    auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
+    assert(fib.take(10).equal([1, 1, 2, 3, 5, 8, 13, 21, 34, 55]));
+
+    // The factorials, using function in lambda form:
+    auto fac = recurrence!((a,n) => a[n-1] * n)(1);
+    assert(take(fac, 10).equal([
+        1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880
+    ]));
+
+    // The triangular numbers, using function in explicit form:
+    static size_t genTriangular(R)(R state, size_t n)
+    {
+        return state[n-1] + n;
+    }
+    auto tri = recurrence!genTriangular(0);
+    assert(take(tri, 10).equal([0, 1, 3, 6, 10, 15, 21, 28, 36, 45]));
 }
 
 /// Ditto
