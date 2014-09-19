@@ -628,7 +628,16 @@ on very many factors.
  */
 template FPTemporary(F) if (isFloatingPoint!F)
 {
-    alias FPTemporary = real;
+    version(X86)
+        //Is SSE2 available ?
+        static if(__traits(compiles, {__vector(double[2]) a,b,c; a = b + c; }))
+            //SSE2 100% available
+            alias FPTemporary = Unqual!F; 
+        else
+            // ?
+            alias FPTemporary = real;     
+    else
+        alias FPTemporary = Unqual!F;
 }
 
 /**
