@@ -40,6 +40,7 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
+deprecated("Please use std.typecons instead. This module will be removed in March 2015.")
 module std.typelist;
 version(unittest) {
     import std.typetuple;
