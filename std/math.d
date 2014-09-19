@@ -130,14 +130,14 @@ version(unittest)
         if (signbit(x) != signbit(y))
             return 0;
 
-        if (isinf(x) && isinf(y))
+        if (isInfinity(x) && isInfinity(y))
             return 1;
-        if (isinf(x) || isinf(y))
+        if (isInfinity(x) || isInfinity(y))
             return 0;
 
-        if (isnan(x) && isnan(y))
+        if (isNaN(x) && isNaN(y))
             return 1;
-        if (isnan(x) || isnan(y))
+        if (isNaN(x) || isNaN(y))
             return 0;
 
         char[30] bufx;
