@@ -2897,6 +2897,13 @@ static:
 
                 start = i+1;
                 while (envBlock[i] != '\0') ++i;
+
+                // Ignore variables with empty names. These are used internally
+                // by Windows to keep track of each drive's individual current
+                // directory.
+                if (!name.length)
+                    continue;
+
                 // Just like in POSIX systems, environment variables may be
                 // defined more than once in an environment block on Windows,
                 // and it is just as much of a security issue there.  Moreso,
@@ -2986,13 +2993,22 @@ unittest
         // Wine has some bugs related to environment variables:
         //  - Wine allows the existence of an env. variable with the name
         //    "\0", but GetEnvironmentVariable refuses to retrieve it.
+        //    As of 2.067 we filter these out anyway (see comment in toAA).
         //  - If an env. variable has zero length, i.e. is "\0",
         //    GetEnvironmentVariable should return 1.  Instead it returns
         //    0, indicating the variable doesn't exist.
-        version (Windows) if (n.length == 0 || v.length == 0) continue;
+        version (Windows) if (v.length == 0) continue;
 
         assert (v == environment[n]);
     }
+
+    // ... and back again.
+    foreach (n, v; aa)
+        environment[n] = v;
+
+    // Complete the roundtrip
+    auto aa2 = environment.toAA();
+    assert(aa == aa2);
 }
 
 
