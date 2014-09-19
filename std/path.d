@@ -1986,16 +1986,15 @@ unittest
     Throws:
     $(D Exception) if the specified _base directory is not absolute.
 */
-string absolutePath(string path, lazy string base = getcwd())
+inout(char)[] absolutePath(inout(char)[] path, lazy const(char)[] base = getcwd())
     @safe pure
 {
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
-    immutable baseVar = base;
+    const baseVar = base;
     if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
     return buildPath(baseVar, path);
 }
-
 
 unittest
 {
@@ -2021,7 +2020,13 @@ unittest
     assertThrown(absolutePath("bar", "foo"));
 }
 
-
+unittest
+{
+    // Issue 12083
+    char[] path = ".".dup;
+    auto abs = path.absolutePath;
+    assert(abs == getcwd() ~ dirSeparator ~ ".");
+}
 
 
 /** Translates $(D path) into a relative _path.
