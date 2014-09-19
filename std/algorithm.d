@@ -13687,7 +13687,8 @@ unittest
     assert(canFind(N4, tuple(10, 31, 7, 12)));
 }
 
-/// Issue 9878
+// Issue 9878
+///
 unittest
 {
     auto A = [ 1, 2, 3 ];
