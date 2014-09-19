@@ -2617,7 +2617,19 @@ string escapeShellFileName(in char[] fileName) @trusted pure nothrow
     // preparation - see below.
 
     version (Windows)
+    {
+        // If a file starts with &, it can cause cmd.exe to misinterpret
+        // the file name as the stream redirection syntax:
+        //     command > "&foo.txt"
+        // gets interpreted as
+        //     command >&foo.txt
+        // Prepend .\ to disambiguate.
+
+        if (fileName.length && fileName[0] == '&')
+            return cast(string)(`".\` ~ fileName ~ '"');
+
         return cast(string)('"' ~ fileName ~ '"');
+    }
     else
         return escapePosixArgument(fileName);
 }
@@ -2641,7 +2653,7 @@ unittest
     // rdmd --main -unittest -version=unittest_burnin process.d
 
     auto helper = absolutePath("std_process_unittest_helper");
-    assert(shell(helper ~ " hello").split("\0")[1..$] == ["hello"], "Helper malfunction");
+    assert(executeShell(helper ~ " hello").output.split("\0")[1..$] == ["hello"], "Helper malfunction");
 
     void test(string[] s, string fn)
     {
@@ -2650,19 +2662,23 @@ unittest
 
         e = escapeShellCommand(helper ~ s);
         {
-            scope(failure) writefln("shell() failed.\nExpected:\t%s\nEncoded:\t%s", s, [e]);
-            g = shell(e).split("\0")[1..$];
+            scope(failure) writefln("executeShell() failed.\nExpected:\t%s\nEncoded:\t%s", s, [e]);
+            auto result = executeShell(e);
+            assert(result.status == 0, "std_process_unittest_helper failed");
+            g = result.output.split("\0")[1..$];
         }
-        assert(s == g, format("shell() test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
+        assert(s == g, format("executeShell() test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
 
         e = escapeShellCommand(helper ~ s) ~ ">" ~ escapeShellFileName(fn);
         {
-            scope(failure) writefln("system() failed.\nExpected:\t%s\nFilename:\t%s\nEncoded:\t%s", s, [fn], [e]);
-            system(e);
+            scope(failure) writefln("executeShell() with redirect failed.\nExpected:\t%s\nFilename:\t%s\nEncoded:\t%s", s, [fn], [e]);
+            auto result = executeShell(e);
+            assert(result.status == 0, "std_process_unittest_helper failed");
+            assert(!result.output.length, "No output expected, got:\n" ~ result.output);
             g = readText(fn).split("\0")[1..$];
         }
         remove(fn);
-        assert(s == g, format("system() test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
+        assert(s == g, format("executeShell() with redirect test failed.\nExpected:\t%s\nGot:\t\t%s\nEncoded:\t%s", s, g, [e]));
     }
 
     while (true)
@@ -2698,7 +2714,7 @@ unittest
         }
 
         // generate filename
-        string fn = "test_";
+        string fn;
         foreach (l; 0..uniform(1, 10))
         {
             dchar c;
@@ -2721,6 +2737,7 @@ unittest
 
             fn ~= c;
         }
+        fn = fn[0..$/2] ~ "_testfile_" ~ fn[$/2..$];
 
         test(args, fn);
     }
