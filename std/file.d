@@ -1346,7 +1346,7 @@ unittest
     Throws:
         $(D FileException) if the given file does not exist.
   +/
-@property bool isSymlink(C)(const(C)[] name) @safe
+@property bool isSymlink(in char[] name) @safe
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1354,7 +1354,7 @@ unittest
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
 
-@safe unittest
+unittest
 {
     version(Windows)
     {
@@ -1383,10 +1383,6 @@ unittest
     }
     else version(Posix)
     {
-        static auto trustedSymlink(string path1, string path2) @trusted
-        {
-            return core.sys.posix.unistd.symlink(toStringz(path1), path2.ptr);
-        }
         if(system_directory.exists)
         {
             assert(!system_directory.isSymlink);
@@ -1394,7 +1390,7 @@ unittest
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            trustedSymlink(system_directory, symfile);
+            core.sys.posix.unistd.symlink(system_directory, symfile.ptr);
 
             assert(symfile.isSymlink);
             assert(!attrIsSymlink(getAttributes(symfile)));
@@ -1414,7 +1410,7 @@ unittest
             immutable symfile = deleteme ~ "_slink\0";
             scope(exit) if(symfile.exists) symfile.remove();
 
-            trustedSymlink(system_file, symfile);
+            core.sys.posix.unistd.symlink(system_file, symfile.ptr);
 
             assert(symfile.isSymlink);
             assert(!attrIsSymlink(getAttributes(symfile)));
@@ -1427,6 +1423,8 @@ unittest
             assert(!attrIsFile(getLinkAttributes(symfile)));
         }
     }
+
+    static assert(__traits(compiles, () @safe { return "dummy".isSymlink; }));
 }
 
 
