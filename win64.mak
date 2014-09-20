@@ -6,6 +6,10 @@
 #		Same as make unittest
 #	make phobos64.lib
 #		Build phobos64.lib
+#	make VCBIN_SUBDIR=\x86_amd64
+#		Cross-compile phobos64.lib using 32-bit C++ compiler.
+#	make MODEL=32mscoff VCBIN_SUBDIR=
+#		Build phobos32mscoff.lib
 #	make clean
 #		Delete unneeded files created by build process
 #	make unittest
@@ -26,9 +30,17 @@ CP=cp
 
 DIR=\dmd2
 
-## Visual C directories
-VCDIR=\Program Files (x86)\Microsoft Visual Studio 10.0\VC
+## Visual C settings
+VC=10
+VCDIR=\Program Files (x86)\Microsoft Visual Studio $(VC).0\VC
+VCBIN_SUBDIR=\amd64
+VCBIN_DIR=$(VCDIR)\bin$(VCBIN_SUBDIR)
+CC="$(VCBIN_DIR)\cl"
+#LD="$(VCBIN_DIR)\link"
+AR="$(VCBIN_DIR)\lib"
+
 SDKDIR=\Program Files (x86)\Microsoft SDKs\Windows\v7.0A
+MAKE=make
 
 ## Flags for VC compiler
 
@@ -45,12 +57,6 @@ DFLAGS=-m$(MODEL) -O -release -w
 
 UDFLAGS=-g -m$(MODEL) -O -w
 
-## C compiler, linker, librarian
-
-CC="$(VCDIR)\bin\amd64\cl"
-LD="$(VCDIR)\bin\amd64\link"
-AR="$(VCDIR)\bin\amd64\lib"
-MAKE=make
 
 ## D compiler
 
