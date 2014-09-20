@@ -112,6 +112,8 @@ else version(D_InlineAsm_X86_64)
 version(unittest)
 {
     import core.stdc.stdio;
+    import std.exception;
+    import std.typetuple;
 
     static if(real.sizeof > double.sizeof)
         enum uint useDigits = 16;
@@ -4308,12 +4310,16 @@ unittest
 
 
 /*********************************
- * Returns !=0 if e is a NaN.
+ * Returns $(D true) if $(D x) is a NaN.
  */
 
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
+    if(__ctfe)
+    {
+        return x != x;
+    }
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -4356,11 +4362,9 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 
 unittest
 {
-    import std.typetuple;
-
     foreach(T; TypeTuple!(float, double, real))
     {
-        // CTFE-able tests
+        assertCTFEable!({
         assert(isNaN(T.init));
         assert(isNaN(-T.init));
         assert(isNaN(T.nan));
@@ -4369,73 +4373,62 @@ unittest
         assert(!isNaN(-T.infinity));
         assert(!isNaN(cast(T)53.6));
         assert(!isNaN(cast(T)-53.6));
-
-        // Runtime tests
-        shared T f;
-        f = T.init;
-        assert(isNaN(f));
-        assert(isNaN(-f));
-        f = T.nan;
-        assert(isNaN(f));
-        assert(isNaN(-f));
-        f = T.infinity;
-        assert(!isNaN(f));
-        assert(!isNaN(-f));
-        f = cast(T)53.6;
-        assert(!isNaN(f));
-        assert(!isNaN(-f));
+        });
     }
 }
 
 /*********************************
- * Returns !=0 if e is finite (not infinite or $(NAN)).
+ * Returns $(D true) if $(D x) is finite (not infinite or $(NAN)).
  */
 
-int isFinite(X)(X e) @trusted pure nothrow @nogc
+bool isFinite(X)(X x) @trusted pure nothrow @nogc
+    if (isFloatingPoint!(X))
 {
+    if(__ctfe)
+    {
+        return x - x == 0;
+    }
     alias F = floatTraits!(X);
-    ushort* pe = cast(ushort *)&e;
+    ushort* pe = cast(ushort *)&x;
     return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
 
 unittest
 {
-    assert(isFinite(1.23f));
-    assert(isFinite(float.max));
-    assert(isFinite(float.min_normal));
-    assert(!isFinite(float.nan));
-    assert(!isFinite(float.infinity));
-
-    assert(isFinite(1.23));
-    assert(isFinite(double.max));
-    assert(isFinite(double.min_normal));
-    assert(!isFinite(double.nan));
-    assert(!isFinite(double.infinity));
-
-    assert(isFinite(1.23L));
-    assert(isFinite(real.max));
-    assert(isFinite(real.min_normal));
-    assert(!isFinite(real.nan));
-    assert(!isFinite(real.infinity));
+    foreach(T; TypeTuple!(float, double, real))
+    {
+        assertCTFEable!({
+        assert(isFinite(T(1.23)));
+        assert(isFinite(T.max));
+        assert(isFinite(T.min_normal));
+        assert(!isFinite(T.nan));
+        assert(!isFinite(T.infinity));
+        });
+    }
 }
 
 deprecated("isFinite is not defined for integer types")
-int isFinite(X)(X x) @trusted pure nothrow @nogc
+bool isFinite(X)(X x) @trusted pure nothrow @nogc
     if (isIntegral!(X))
 {
     return isFinite(cast(float)x);
 }
 
 /*********************************
- * Returns !=0 if x is normalized (not zero, subnormal, infinite, or $(NAN)).
+ * Returns $(D true) if $(D x) is normalized (not zero, subnormal, infinite, or $(NAN)).
  */
 
 /* Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
 
-int isNormal(X)(X x) @trusted pure nothrow @nogc
+bool isNormal(X)(X x) @trusted pure nothrow @nogc
 {
+    if(__ctfe)
+    {
+        return X.max >=  x &&  x >= X.min_normal ||
+               X.max >= -x && -x >= X.min_normal;
+    }
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -4452,21 +4445,16 @@ int isNormal(X)(X x) @trusted pure nothrow @nogc
 
 unittest
 {
-    float f = 3;
-    double d = 500;
-    real e = 10e+48;
-
-    assert(isNormal(f));
-    assert(isNormal(d));
-    assert(isNormal(e));
-    f = d = e = 0;
-    assert(!isNormal(f));
-    assert(!isNormal(d));
-    assert(!isNormal(e));
-    assert(!isNormal(real.infinity));
-    assert(isNormal(-real.max));
-    assert(!isNormal(real.min_normal/4));
-
+    foreach(T; TypeTuple!(float, double, real))
+    {
+        assertCTFEable!({
+        assert(isNormal(T(1.23)));
+        assert(!isNormal(T(0)));
+        assert(!isNormal(T.infinity));
+        assert(isNormal(-T.max));
+        assert(!isNormal(T.min_normal/4));
+        });
+    }
 }
 
 /*********************************
@@ -4478,8 +4466,12 @@ unittest
  * be converted to normal reals.
  */
 
-int isSubnormal(X)(X x) @trusted pure nothrow @nogc
+bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
+    if(__ctfe)
+    {
+        return x && x < X.min_normal && x > -X.min_normal;
+    }
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -4512,36 +4504,52 @@ int isSubnormal(X)(X x) @trusted pure nothrow @nogc
     }
     else
     {
-        static assert(false, "Not implemented for this architecture");
+        return x && x < X.min_normal && x > -X.min_normal;
     }
 }
 
 unittest
 {
-    import std.typetuple;
-
-    foreach (T; TypeTuple!(float, double, real))
+    foreach(T; TypeTuple!(float, double, real))
     {
-        T f;
-        for (f = 1.0; !isSubnormal(f); f /= 2)
+        assertCTFEable!({
+        assert(!isSubnormal( T.min_normal));
+        assert(!isSubnormal(-T.min_normal));
+        assert(!isSubnormal( T.min_normal*2));
+        assert(!isSubnormal(-T.min_normal*2));
+        assert( isSubnormal( T.min_normal/2));
+        assert( isSubnormal(-T.min_normal/2));
+        assert(!isSubnormal( T.infinity));
+        assert(!isSubnormal(-T.infinity));
+        assert(!isSubnormal( T.init));
+        assert(!isSubnormal( T.init));
+        assert(!isSubnormal( T(0)));
+        assert(!isSubnormal(-T(0)));
+        });
+
+        for (T f = 1.0; !isSubnormal(f); f /= 2)
             assert(f != 0);
     }
 }
 
 deprecated("isSubnormal is not defined for integer types")
-int isSubnormal(X)(X x) @trusted pure nothrow @nogc
+bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
     if (isIntegral!X)
 {
     return isSubnormal(cast(double)x);
 }
 
 /*********************************
- * Return !=0 if e is $(PLUSMN)$(INFIN).
+ * Return $(D true) if $(D x) is $(PLUSMN)$(INFIN).
  */
 
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
+    if(__ctfe)
+    {
+        return x == x && x - x;
+    }
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -4573,76 +4581,24 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     }
     else
     {
-        return (x - 1) == x;
+        return x == x && x - x;
     }
 }
 
 unittest
 {
-    // CTFE-able tests
-    assert(!isInfinity(float.init));
-    assert(!isInfinity(-float.init));
-    assert(!isInfinity(float.nan));
-    assert(!isInfinity(-float.nan));
-    assert(isInfinity(float.infinity));
-    assert(isInfinity(-float.infinity));
-    assert(isInfinity(-1.0f / 0.0f));
-
-    assert(!isInfinity(double.init));
-    assert(!isInfinity(-double.init));
-    assert(!isInfinity(double.nan));
-    assert(!isInfinity(-double.nan));
-    assert(isInfinity(double.infinity));
-    assert(isInfinity(-double.infinity));
-    assert(isInfinity(-1.0 / 0.0));
-
-    assert(!isInfinity(real.init));
-    assert(!isInfinity(-real.init));
-    assert(!isInfinity(real.nan));
-    assert(!isInfinity(-real.nan));
-    assert(isInfinity(real.infinity));
-    assert(isInfinity(-real.infinity));
-    assert(isInfinity(-1.0L / 0.0L));
-
-    // Runtime tests
-    shared float f;
-    f = float.init;
-    assert(!isInfinity(f));
-    assert(!isInfinity(-f));
-    f = float.nan;
-    assert(!isInfinity(f));
-    assert(!isInfinity(-f));
-    f = float.infinity;
-    assert(isInfinity(f));
-    assert(isInfinity(-f));
-    f = (-1.0f / 0.0f);
-    assert(isInfinity(f));
-
-    shared double d;
-    d = double.init;
-    assert(!isInfinity(d));
-    assert(!isInfinity(-d));
-    d = double.nan;
-    assert(!isInfinity(d));
-    assert(!isInfinity(-d));
-    d = double.infinity;
-    assert(isInfinity(d));
-    assert(isInfinity(-d));
-    d = (-1.0 / 0.0);
-    assert(isInfinity(d));
-
-    shared real e;
-    e = real.init;
-    assert(!isInfinity(e));
-    assert(!isInfinity(-e));
-    e = real.nan;
-    assert(!isInfinity(e));
-    assert(!isInfinity(-e));
-    e = real.infinity;
-    assert(isInfinity(e));
-    assert(isInfinity(-e));
-    e = (-1.0L / 0.0L);
-    assert(isInfinity(e));
+    foreach(T; TypeTuple!(float, double, real))
+    {
+        assertCTFEable!({
+        assert(!isInfinity(T.init));
+        assert(!isInfinity(-T.init));
+        assert(!isInfinity(T.nan));
+        assert(!isInfinity(-T.nan));
+        assert(isInfinity(T.infinity));
+        assert(isInfinity(-T.infinity));
+        assert(isInfinity(-T(1) / T(0)));
+        });
+    }
 }
 
 /*********************************
@@ -4750,8 +4706,6 @@ R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
 
 unittest
 {
-    import std.typetuple;
-
     foreach (X; TypeTuple!(float, double, real, int, long))
     {
         foreach (Y; TypeTuple!(float, double, real))
