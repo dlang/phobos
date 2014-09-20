@@ -1245,7 +1245,7 @@ assert("/etc/fonts/fonts.conf".isFile);
 assert(!"/usr/share/include".isFile);
 --------------------
   +/
-@property bool isFile(in char[] name)
+@property bool isFile(in char[] name) @safe
 {
     version(Windows)
         return !name.isDir;
@@ -1253,7 +1253,7 @@ assert(!"/usr/share/include".isFile);
         return (getAttributes(name) & S_IFMT) == S_IFREG;
 }
 
-unittest
+@safe unittest
 {
     version(Windows)
     {
@@ -1354,7 +1354,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     Throws:
         $(D FileException) if the given file does not exist.
   +/
-@property bool isSymlink(C)(const(C)[] name)
+@property bool isSymlink(in char[] name) @safe
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1431,6 +1431,8 @@ unittest
             assert(!attrIsFile(getLinkAttributes(symfile)));
         }
     }
+
+    static assert(__traits(compiles, () @safe { return "dummy".isSymlink; }));
 }
 
 
