@@ -5284,7 +5284,7 @@ Detect whether $(D T) is one of the built-in string types.
 The built-in string types are $(D Char[]), where $(D Char) is any of $(D char),
 $(D wchar) or $(D dchar), with or without qualifiers.
 
-Static arrays of characters (like $(D char[80]) are not considered
+Static arrays of characters (like $(D char[80])) are not considered
 built-in string types.
  */
 enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T;
