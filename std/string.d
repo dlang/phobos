@@ -4406,8 +4406,13 @@ string[string] abbrev(string[] values) @safe pure
 
 
 /******************************************
- * Compute column number after string if string starts in the
- * leftmost column, which is numbered starting from 0.
+ * Compute _column number at the end of the printed form of the string,
+ * assuming the string starts in the leftmost _column, which is numbered
+ * starting from 0.
+ *
+ * Tab characters are expanded into enough spaces to bring the _column number
+ * to the next multiple of tabsize, and carriage returns and newlines reset the
+ * running _column number back to 0.
  */
 
 size_t column(S)(S str, in size_t tabsize = 8) @safe pure @nogc if (isSomeString!S)
@@ -4435,6 +4440,30 @@ size_t column(S)(S str, in size_t tabsize = 8) @safe pure @nogc if (isSomeString
         }
     }
     return column;
+}
+
+///
+unittest
+{
+    assert(column("1234 ") == 5);
+
+    // Tab stops are set at 8 spaces by default; tab characters insert enough
+    // spaces to bring the column position to the next multiple of 8.
+    assert(column("\t") == 8);
+    assert(column("1\t") == 8);
+    assert(column("\t1") == 9);
+    assert(column("123\t") == 8);
+
+    // Other tab widths are possible by specifying it explicitly:
+    assert(column("\t", 4) == 4);
+    assert(column("1\t", 4) == 4);
+    assert(column("\t1", 4) == 5);
+    assert(column("123\t", 4) == 4);
+
+    // Newlines and carriage returns reset the column number.
+    assert(column("abc\n") == 0);
+    assert(column("abc\n1") == 1);
+    assert(column("abcdefg\r1234") == 4);
 }
 
 @safe @nogc unittest
