@@ -36,26 +36,24 @@ abstract class MultiLoggerBase : Logger
     */
     Array!MultiLoggerEntry logger;
 
-    void insertLogger(string name, Logger logger);
-    Logger removeLogger(string loggerName);
+    abstract void insertLogger(string name, Logger logger);
+    abstract Logger removeLogger(string loggerName);
 
     /* The override to pass the payload to all children of the
     $(D MultiLoggerBase).
     */
-    override void writeLogMsg(ref LogEntry payload) @trusted
+    override protected void writeLogMsg(ref LogEntry payload) @trusted
     {
-        foreach (it; logger)
+        //foreach (ref it; logger) BUG
+        for (size_t i = 0; i < this.logger.length; ++i) 
         {
-            /* The LogLevel of the Logger must be >= than the LogLevel of
-            the payload. Usually this is handled by the log functions. As
-            they are not called in this case, we have to handle it by hand
-            here.
+            auto it = this.logger[i];
+            /* We don't perform any checks here to avoid race conditions.
+            Instead the child will check on its own if its log level matches
+            and assume LogLevel.all for the globalLogLevel (since we already
+            know the message passes this test).
             */
-            const bool ll = payload.logLevel >= it.logger.logLevel;
-            if (ll)
-            {
-                it.logger.writeLogMsg(payload);
-            }
+            it.logger.forwardMsg(payload);
         }
     }
 }

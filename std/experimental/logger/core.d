@@ -154,64 +154,64 @@ import std.traits;
 import std.exception;
 import std.concurrency;
 import std.format;
+import core.atomic;
 import core.sync.mutex : Mutex;
 
-import std.experimental.logger.multilogger;
 import std.experimental.logger.filelogger;
-import std.experimental.logger.nulllogger;
 
-static this() {
-    __stdloggermutex = new Mutex;
+shared static this() {
+    __defaultLoggerMutex = new Mutex;
 }
 
-/** This compile time only function evaluates if the passed $(D LogLevel) is
-active. The previously described version statements are used to decide if the
+/** This template evaluates if the passed $(D LogLevel) is active.
+The previously described version statements are used to decide if the
 $(D LogLevel) is active. The version statements only influence the compile
 unit they are used with, therefore this function can only disable logging this
 specific compile unit.
 */
-pure bool isLoggingActive(LogLevel ll)() @safe nothrow @nogc
+template isLoggingActiveAt(LogLevel ll)
 {
-    static assert(__ctfe);
     version (StdLoggerDisableLogging)
     {
-        return false;
+        enum isLoggingActiveAt = false;
     }
     else
     {
         static if (ll == LogLevel.trace)
         {
-            version (StdLoggerDisableTrace) return false;
+            version (StdLoggerDisableTrace) enum isLoggingActiveAt = false;
         }
         else static if (ll == LogLevel.info)
         {
-            version (StdLoggerDisableInfo) return false;
+            version (StdLoggerDisableInfo) enum isLoggingActiveAt = false;
         }
         else static if (ll == LogLevel.warning)
         {
-            version (StdLoggerDisableWarning) return false;
+            version (StdLoggerDisableWarning) enum isLoggingActiveAt = false;
         }
         else static if (ll == LogLevel.error)
         {
-            version (StdLoggerDisableError) return false;
+            version (StdLoggerDisableError) enum isLoggingActiveAt = false;
         }
         else static if (ll == LogLevel.critical)
         {
-            version (StdLoggerDisableCritical) return false;
+            version (StdLoggerDisableCritical) enum isLoggingActiveAt = false;
         }
         else static if (ll == LogLevel.fatal)
         {
-            version (StdLoggerDisableFatal) return false;
+            version (StdLoggerDisableFatal) enum isLoggingActiveAt = false;
         }
-        return true;
+        // If `isLoggingActiveAt` didn't get defined above to false,
+        // we default it to true.
+        static if (!is(typeof(isLoggingActiveAt) == bool))
+        {
+            enum isLoggingActiveAt = true;
+        }
     }
 }
 
-/// Ditto
-pure bool isLoggingActive()() @safe nothrow @nogc
-{
-    return isLoggingActive!(LogLevel.all)();
-}
+/// This compile-time flag is $(D true) if logging is not statically disabled.
+enum isLoggingActive = isLoggingActiveAt!(LogLevel.all);
 
 /** This functions is used at runtime to determine if a $(D LogLevel) is
 active. The same previously defined version statements are used to disable
@@ -251,7 +251,7 @@ bool isLoggingEnabled()(LogLevel ll, LogLevel loggerLL,
 
 /* This function formates a $(D SysTime) into an $(D OutputRange).
 
-The $(D SysTime) is formatted simular to
+The $(D SysTime) is formatted similar to
 $(LREF std.datatime.DateTime.toISOExtString) expect the fractional second part.
 The sub second part is the upper three digest of the microsecond.
 */
@@ -287,30 +287,24 @@ void log(int line = __LINE__, string file = __FILE__,
     lazy bool condition, lazy A args) @trusted
     if (args.length > 1)
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel, condition))
-        {
-            stdlog.log!(line, file, funcName,prettyFuncName, moduleName)
-                (ll, args);
-        }
+        stdlog.log!(line, file, funcName, prettyFuncName, moduleName)
+            (ll, condition, args);
     }
 }
 
 /// Ditto
-void log(T)(const LogLevel ll, lazy bool condition, lazy T args,
+void log(T)(const LogLevel ll, lazy bool condition, lazy T arg,
     int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__)
     @trusted
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel, condition))
-        {
-            stdlog.log!T(ll, args, line, file, funcName,prettyFuncName,
-                moduleName);
-        }
+        stdlog.log!T(ll, condition, arg, line, file, funcName,
+                     prettyFuncName, moduleName);
     }
 }
 
@@ -334,29 +328,23 @@ void log(int line = __LINE__, string file = __FILE__,
     @trusted
     if (args.length > 1 && !is(Unqual!(A[0]) : bool))
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel))
-        {
-            stdlog.log!(line, file, funcName,prettyFuncName, moduleName)
-                (ll, args);
-        }
+        stdlog.log!(line, file, funcName, prettyFuncName, moduleName)
+            (ll, args);
     }
 }
 
 /// Ditto
-void log(T)(const LogLevel ll, lazy T args, int line = __LINE__,
+void log(T)(const LogLevel ll, lazy T arg, int line = __LINE__,
     string file = __FILE__, string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)
     @trusted
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel))
-        {
-            stdlog.log!T(ll, args, line, file, funcName,prettyFuncName,
-                moduleName);
-        }
+        stdlog.log!T(ll, arg, line, file, funcName, prettyFuncName,
+                     moduleName);
     }
 }
 
@@ -381,31 +369,23 @@ void log(int line = __LINE__, string file = __FILE__,
     @trusted
     if (args.length > 1)
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(stdlog.logLevel, stdlog.logLevel, globalLogLevel,
-                condition))
-        {
-            stdlog.log!(line, file, funcName,prettyFuncName, moduleName)
-                (args);
-        }
+        stdlog.log!(line, file, funcName, prettyFuncName, moduleName)
+            (condition, args);
     }
 }
 
 /// Ditto
-void log(T)(lazy bool condition, lazy T args, int line = __LINE__,
+void log(T)(lazy bool condition, lazy T arg, int line = __LINE__,
     string file = __FILE__, string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)
     @trusted
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(stdlog.logLevel, stdlog.logLevel, globalLogLevel,
-            condition))
-        {
-            stdlog.log!T(condition, args, line, file, funcName,prettyFuncName,
-                moduleName);
-        }
+        stdlog.log!T(condition, arg, line, file, funcName, prettyFuncName,
+                     moduleName);
     }
 }
 
@@ -429,28 +409,20 @@ void log(int line = __LINE__, string file = __FILE__,
     if (args.length > 1 && !is(Unqual!(A[0]) : bool)
          && !is(Unqual!(A[0]) == LogLevel))
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(stdlog.logLevel, stdlog.logLevel, globalLogLevel))
-        {
-            stdlog.log!(line, file, funcName,prettyFuncName,
-                moduleName)(args);
-        }
+        stdlog.log!(line, file, funcName, prettyFuncName, moduleName)(args);
     }
 }
 
-void log(T)(lazy T args, int line = __LINE__, string file = __FILE__,
+void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__)
     @trusted
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(stdlog.logLevel, stdlog.logLevel, globalLogLevel))
-        {
-            stdlog.log!T(args, line, file, funcName, prettyFuncName,
-                moduleName);
-        }
+        stdlog.log!T(arg, line, file, funcName, prettyFuncName, moduleName);
     }
 }
 
@@ -478,13 +450,10 @@ void logf(int line = __LINE__, string file = __FILE__,
     lazy bool condition, lazy string msg, lazy A args)
     @trusted
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel, condition))
-        {
-            stdlog.logf!(line, file, funcName,prettyFuncName, moduleName)
-                (ll, msg, args);
-        }
+        stdlog.logf!(line, file, funcName, prettyFuncName, moduleName)
+            (ll, condition, msg, args);
     }
 }
 
@@ -501,22 +470,18 @@ args = The data that should be logged.
 
 Examples:
 --------------------
-logf(LogLevel.warning, true, "Hello World %f", 3.1415);
+logf(LogLevel.warning, "Hello World %f", 3.1415);
 --------------------
 */
 void logf(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll, lazy string msg,
         lazy A args) @trusted
-    if (args.length == 0 || (args.length > 0 && !is(Unqual!(A[0]) : bool)))
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel))
-        {
-            stdlog.logf!(line, file, funcName,prettyFuncName, moduleName)
-                (ll, msg, args);
-        }
+        stdlog.logf!(line, file, funcName, prettyFuncName, moduleName)
+            (ll, msg, args);
     }
 }
 
@@ -542,14 +507,10 @@ void logf(int line = __LINE__, string file = __FILE__,
         lazy string msg, lazy A args)
     @trusted
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(stdlog.logLevel, stdlog.logLevel, globalLogLevel,
-                condition))
-        {
-            stdlog.logf!(line, file, funcName,prettyFuncName, moduleName)
-                (msg, args);
-        }
+        stdlog.logf!(line, file, funcName, prettyFuncName, moduleName)
+            (condition, msg, args);
     }
 }
 
@@ -573,13 +534,10 @@ void logf(int line = __LINE__, string file = __FILE__,
     string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
     @trusted
 {
-    static if (isLoggingActive())
+    static if (isLoggingActive)
     {
-        if (isLoggingEnabled(stdlog.logLevel, stdlog.logLevel, globalLogLevel))
-        {
-            stdlog.logf!(line, file, funcName,prettyFuncName,
-                moduleName)(msg, args);
-        }
+        stdlog.logf!(line, file, funcName,prettyFuncName, moduleName)
+            (msg, args);
     }
 }
 
@@ -618,13 +576,10 @@ template defaultLogFunction(LogLevel ll)
         string moduleName = __MODULE__, A...)(lazy A args) @trusted
         if (args.length > 0 && !is(Unqual!(A[0]) : bool))
     {
-        static if (isLoggingActive!ll)
+        static if (isLoggingActiveAt!ll)
         {
-            if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel))
-            {
-                stdlog.memLogFunctions!(ll).logImpl!(line, file,
-                       funcName, prettyFuncName, moduleName)(args);
-            }
+            stdlog.memLogFunctions!(ll).logImpl!(line, file, funcName,
+                   prettyFuncName, moduleName)(args);
         }
     }
 
@@ -654,14 +609,10 @@ template defaultLogFunction(LogLevel ll)
         string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
         @trusted
     {
-        static if (isLoggingActive!ll)
+        static if (isLoggingActiveAt!ll)
         {
-            if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel,
-                condition))
-            {
-                stdlog.memLogFunctions!(ll).logImpl!(line, file,
-                       funcName, prettyFuncName, moduleName)(args);
-            }
+            stdlog.memLogFunctions!(ll).logImpl!(line, file, funcName,
+                   prettyFuncName, moduleName)(condition, args);
         }
     }
 }
@@ -703,11 +654,11 @@ template defaultLogFunctionf(LogLevel ll)
 
     Examples:
     --------------------
-    trace("is number %d", 1);
-    info("is number %d", 2);
-    error("is number %d", 3);
-    critical("is number %d", 4);
-    fatal("is number %d", 5);
+    tracef("is number %d", 1);
+    infof("is number %d", 2);
+    errorf("is number %d", 3);
+    criticalf("is number %d", 4);
+    fatalf("is number %d", 5);
     --------------------
     */
     void defaultLogFunctionf(int line = __LINE__, string file = __FILE__,
@@ -716,13 +667,10 @@ template defaultLogFunctionf(LogLevel ll)
         string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
         @trusted
     {
-        static if (isLoggingActive!ll)
+        static if (isLoggingActiveAt!ll)
         {
-            if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel))
-            {
-                stdlog.memLogFunctions!(ll).logImplf!(line, file,
-                       funcName, prettyFuncName, moduleName)(msg, args);
-            }
+            stdlog.memLogFunctions!(ll).logImplf!(line, file, funcName,
+                   prettyFuncName, moduleName)(msg, args);
         }
     }
 
@@ -740,11 +688,11 @@ template defaultLogFunctionf(LogLevel ll)
 
     Examples:
     --------------------
-    trace("is number %d", 1);
-    info("is number %d", 2);
-    error("is number %d", 3);
-    critical("is number %d", 4);
-    fatal("is number %d", 5);
+    tracef(false, "is number %d", 1);
+    infof(false, "is number %d", 2);
+    errorf(true, "is number %d", 3);
+    criticalf(true, "is number %d", 4);
+    fatalf(someFunct(), "is number %d", 5);
     --------------------
     */
     void defaultLogFunctionf(int line = __LINE__, string file = __FILE__,
@@ -753,14 +701,10 @@ template defaultLogFunctionf(LogLevel ll)
         string moduleName = __MODULE__, A...)(lazy bool condition,
             lazy string msg, lazy A args) @trusted
     {
-        static if (isLoggingActive!ll)
+        static if (isLoggingActiveAt!ll)
         {
-            if (isLoggingEnabled(ll, stdlog.logLevel, globalLogLevel,
-                condition))
-            {
-                stdlog.memLogFunctions!(ll).logImplf!(line, file,
-                       funcName, prettyFuncName, moduleName)(msg, args);
-            }
+            stdlog.memLogFunctions!(ll).logImplf!(line, file, funcName,
+                   prettyFuncName, moduleName)(condition, msg, args);
         }
     }
 }
@@ -872,12 +816,13 @@ abstract class Logger
     creates a fatal handler. The fatal handler will throw an $(D Error) if a
     log call is made with a $(D LogLevel) $(D LogLevel.fatal).
     */
-    this(LogLevel lv) @safe
+    this(LogLevel lv)
     {
-        this.logLevel = lv;
-        this.fatalHandler = delegate() {
+        this.logLevel_ = lv;
+        this.fatalHandler_ = delegate() {
             throw new Error("A fatal log message was logged");
         };
+        this.mutex = new Mutex();
 
         this.msgAppender = appender!string();
     }
@@ -889,7 +834,7 @@ abstract class Logger
         payload = All information associated with call to log function.
     See_Also: beginLogMsg, logMsgPart, finishLogMsg
     */
-    void writeLogMsg(ref LogEntry payload);
+    abstract protected void writeLogMsg(ref LogEntry payload);
 
     /* The default implementation will use an $(D std.array.appender)
     internally to construct the message string. This means dynamic,
@@ -929,16 +874,13 @@ abstract class Logger
         }
     }
     ----------------
-
-    By default the implementation of these three methods in this base class is
-    not thread-safe.
     */
     protected void beginLogMsg(string file, int line, string funcName,
         string prettyFuncName, string moduleName, LogLevel logLevel,
         Tid threadId, SysTime timestamp, Logger logger)
         @trusted
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive)
         {
             header = LogEntry(file, line, funcName, prettyFuncName,
                 moduleName, logLevel, threadId, timestamp, null, logger);
@@ -948,7 +890,7 @@ abstract class Logger
     /** Logs a part of the log message. */
     protected void logMsgPart(const(char)[] msg)
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive)
         {
             msgAppender.put(msg);
         }
@@ -958,7 +900,7 @@ abstract class Logger
     $(D logMsgPart) follow. */
     protected void finishLogMsg()
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive)
         {
             header.msg = msgAppender.data;
             this.writeLogMsg(header);
@@ -980,15 +922,54 @@ abstract class Logger
     assert(f.logLevel == LogLevel.info);
     -----------
     */
-    @property final LogLevel logLevel() const pure nothrow @safe @nogc
+    @property final LogLevel logLevel() const pure @trusted @nogc
     {
-        return this.logLevel_;
+        return atomicLoad!(MemoryOrder.acq)(this.logLevel_);
     }
 
     /// Ditto
-    @property final void logLevel(const LogLevel lv) pure nothrow @safe @nogc
+    @property final void logLevel(const LogLevel lv) pure @safe @nogc
     {
-        this.logLevel_ = lv;
+        synchronized (mutex) this.logLevel_ = lv;
+    }
+
+    /** This $(D delegate) is called in case a log message with
+    $(D LogLevel.fatal) gets logged.
+
+    By default an $(D Error) will be thrown.
+    */
+    @property final void delegate() fatalHandler() const pure @safe @nogc
+    {
+        synchronized (mutex) return this.fatalHandler_;
+    }
+
+    /// Ditto
+    @property final void fatalHandler(void delegate() fh) pure @safe @nogc
+    {
+        synchronized (mutex) this.fatalHandler_ = fh;
+    }
+
+    /** This method allows forwarding log entries from one logger to another.
+
+    $(D forwardMsg) will ensure proper synchronization and then call
+    $(D writeLogMsg). This is an API for implementing your own loggers and
+    should not be called by normal user code. A notable difference from other
+    logging functions is that the $(D globalLogLevel) wont be evaluated again
+    since it is assumed that the caller already checked that.
+    */
+    final void forwardMsg(ref LogEntry payload)
+    {
+        static if (isLoggingActive) synchronized (mutex)
+        {
+            if (isLoggingEnabled(payload.logLevel, this.logLevel_,
+                                 LogLevel.all))
+            {
+                this.writeLogMsg(payload);
+
+                if (payload.logLevel == LogLevel.fatal)
+                    this.fatalHandler_();
+            }
+        }
     }
 
     /** This template provides the log functions for the $(D Logger) $(D class)
@@ -1027,7 +1008,7 @@ abstract class Logger
             string moduleName = __MODULE__, A...)(lazy A args) @trusted
             if (args.length == 0 || (args.length > 0 && !is(A[0] : bool)))
         {
-            static if(isLoggingActive!ll)
+            static if (isLoggingActiveAt!ll) synchronized (mutex)
             {
                 if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
                 {
@@ -1040,7 +1021,7 @@ abstract class Logger
                     this.finishLogMsg();
 
                     static if (ll == LogLevel.fatal)
-                        fatalHandler();
+                        this.fatalHandler_();
                 }
             }
         }
@@ -1073,9 +1054,10 @@ abstract class Logger
             string moduleName = __MODULE__, A...)(lazy bool condition,
                 lazy A args) @trusted
         {
-            static if(isLoggingActive!ll)
+            static if (isLoggingActiveAt!ll) synchronized (mutex)
             {
-                if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
+                if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel,
+                                     condition))
                 {
                     this.beginLogMsg(file, line, funcName, prettyFuncName,
                         moduleName, ll, thisTid, Clock.currTime, this);
@@ -1086,7 +1068,7 @@ abstract class Logger
                     this.finishLogMsg();
 
                     static if (ll == LogLevel.fatal)
-                        fatalHandler();
+                        this.fatalHandler_();
                 }
             }
         }
@@ -1107,11 +1089,11 @@ abstract class Logger
         Examples:
         --------------------
         auto s = new FileLogger(stderr);
-        s.trace("is number %d", 1);
-        s.info("is number %d", 2);
-        s.error("is number %d", 3);
-        s.critical("is number %d", 4);
-        s.fatal("is number %d", 5);
+        s.tracef(true, "is number %d", 1);
+        s.infof(true, "is number %d", 2);
+        s.errorf(false, "is number %d", 3);
+        s.criticalf(someFunc(), "is number %d", 4);
+        s.fatalf(true, "is number %d", 5);
         --------------------
         */
         void logImplf(int line = __LINE__, string file = __FILE__,
@@ -1120,9 +1102,10 @@ abstract class Logger
             string moduleName = __MODULE__, A...)(lazy bool condition,
                 lazy string msg, lazy A args) @trusted
         {
-            static if (isLoggingActive!ll)
+            static if (isLoggingActiveAt!ll) synchronized (mutex)
             {
-                if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
+                if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel,
+                                     condition))
                 {
                     this.beginLogMsg(file, line, funcName, prettyFuncName,
                         moduleName, ll, thisTid, Clock.currTime, this);
@@ -1133,7 +1116,7 @@ abstract class Logger
                     this.finishLogMsg();
 
                     static if (ll == LogLevel.fatal)
-                        fatalHandler();
+                        this.fatalHandler_();
                 }
             }
         }
@@ -1152,11 +1135,11 @@ abstract class Logger
         Examples:
         --------------------
         auto s = new FileLogger(stderr);
-        s.trace("is number %d", 1);
-        s.info("is number %d", 2);
-        s.error("is number %d", 3);
-        s.critical("is number %d", 4);
-        s.fatal("is number %d", 5);
+        s.tracef("is number %d", 1);
+        s.infof("is number %d", 2);
+        s.errorf("is number %d", 3);
+        s.criticalf("is number %d", 4);
+        s.fatalf("is number %d", 5);
         --------------------
         */
         void logImplf(int line = __LINE__, string file = __FILE__,
@@ -1165,7 +1148,7 @@ abstract class Logger
             string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
             @trusted
         {
-            static if (isLoggingActive!ll)
+            static if (isLoggingActiveAt!ll) synchronized (mutex)
             {
                 if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
                 {
@@ -1178,7 +1161,7 @@ abstract class Logger
                     this.finishLogMsg();
 
                     static if (ll == LogLevel.fatal)
-                        fatalHandler();
+                        this.fatalHandler_();
                 }
             }
         }
@@ -1228,14 +1211,14 @@ abstract class Logger
     l.log(1337);
     --------------------
     */
-    void log(int line = __LINE__, string file = __FILE__,
+    final void log(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
         lazy bool condition, lazy A args) @trusted
         if (args.length > 1)
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel, condition))
             {
@@ -1248,19 +1231,19 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (ll == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
 
     /// Ditto
-    void log(T)(const LogLevel ll, lazy bool condition, lazy T args,
+    final void log(T)(const LogLevel ll, lazy bool condition, lazy T args,
         int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__) @trusted
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel,
                 condition))
@@ -1273,7 +1256,7 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (ll == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
@@ -1299,14 +1282,14 @@ abstract class Logger
     s.log(LogLevel.fatal, 1337, "is number");
     --------------------
     */
-    void log(int line = __LINE__, string file = __FILE__,
+    final void log(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
         @trusted
         if (args.length > 1 && !is(Unqual!(A[0]) : bool))
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
             {
@@ -1319,18 +1302,18 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (ll == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
 
     /// Ditto
-    void log(T)(const LogLevel ll, lazy T args, int line = __LINE__,
+    final void log(T)(const LogLevel ll, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__) @trusted
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
             {
@@ -1342,7 +1325,7 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (ll == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
@@ -1369,14 +1352,14 @@ abstract class Logger
     s.log(false, 1337, "is number");
     --------------------
     */
-    void log(int line = __LINE__, string file = __FILE__,
+    final void log(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
         @trusted
         if (args.length > 1)
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(this.logLevel_, this.logLevel_,
                 globalLogLevel, condition))
@@ -1390,18 +1373,18 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (this.logLevel_ == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
 
     /// Ditto
-    void log(T)(lazy bool condition, lazy T args, int line = __LINE__,
+    final void log(T)(lazy bool condition, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__) @trusted
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel,
                 condition))
@@ -1414,7 +1397,7 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (this.logLevel_ == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
@@ -1439,7 +1422,7 @@ abstract class Logger
     s.log(1337, "is number");
     --------------------
     */
-    void log(int line = __LINE__, string file = __FILE__,
+    final void log(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy A args)
@@ -1448,7 +1431,7 @@ abstract class Logger
                 && !is(Unqual!(A[0]) : bool)
                 && !is(Unqual!(A[0]) == LogLevel))
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(this.logLevel_, this.logLevel_,
                 globalLogLevel))
@@ -1461,18 +1444,18 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (this.logLevel_ == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
 
     /// Ditto
-    void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
+    final void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__) @trusted
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel))
             {
@@ -1484,7 +1467,7 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (this.logLevel_ == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
@@ -1513,13 +1496,13 @@ abstract class Logger
     s.logf(LogLevel.fatal, true ,"%d %s", 1337, "is number");
     --------------------
     */
-    void logf(int line = __LINE__, string file = __FILE__,
+    final void logf(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
         lazy bool condition, lazy string msg, lazy A args) @trusted
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel, condition))
             {
@@ -1532,7 +1515,7 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (ll == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
@@ -1559,14 +1542,13 @@ abstract class Logger
     s.logf(LogLevel.fatal, "%d %s", 1337, "is number");
     --------------------
     */
-    void logf(int line = __LINE__, string file = __FILE__,
+    final void logf(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
             lazy string msg, lazy A args) @trusted
-        if (args.length == 0 || (args.length > 0 && !is(Unqual!(A[0]) : bool)))
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
             {
@@ -1579,7 +1561,7 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (ll == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
@@ -1607,13 +1589,13 @@ abstract class Logger
     s.logf(true ,"%d %s", 1337, "is number");
     --------------------
     */
-    void logf(int line = __LINE__, string file = __FILE__,
+    final void logf(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition,
             lazy string msg, lazy A args) @trusted
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel,
                 condition))
@@ -1627,7 +1609,7 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (this.logLevel_ == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
@@ -1652,13 +1634,13 @@ abstract class Logger
     s.logf("%d %s", 1337, "is number");
     --------------------
     */
-    void logf(int line = __LINE__, string file = __FILE__,
+    final void logf(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
         @trusted
     {
-        static if (isLoggingActive())
+        static if (isLoggingActive) synchronized (mutex)
         {
             if (isLoggingEnabled(this.logLevel_, this.logLevel_,
                 globalLogLevel))
@@ -1672,78 +1654,101 @@ abstract class Logger
                 this.finishLogMsg();
 
                 if (this.logLevel_ == LogLevel.fatal)
-                    fatalHandler();
+                    this.fatalHandler_();
             }
         }
     }
 
-    /** This member stores the $(D delegate) that is called in case of a log
-    message with $(D LogLevel.fatal) gets logged.
-
-    By default an $(D Error) will be thrown.
-    */
-    void delegate() fatalHandler;
-
-    private LogLevel logLevel_ = LogLevel.info;
+    private void delegate() fatalHandler_;
+    private shared LogLevel logLevel_ = LogLevel.info;
+    private Mutex mutex;
 
     protected Appender!string msgAppender;
     protected LogEntry header;
 }
 
-private Mutex __stdloggermutex;
+private __gshared Mutex __defaultLoggerMutex;
+private __gshared Logger __defaultLogger;
+private shared Logger __stdlog;
+private shared LogLevel __globalLogLevel = LogLevel.all;
 
-/** This method returns the default $(D Logger).
 
-The Logger is returned as a reference. This means it can be reassigned,
-thus changing the $(D stdlog). The default $(D Logger) must be thread-safe.
+/* This method returns the global default Logger. */
+private @property Logger defaultLoggerImpl() @trusted
+{
+    static __gshared ubyte[__traits(classInstanceSize, FileLogger)] buffer;
+
+    synchronized (__defaultLoggerMutex)
+    {
+        if (__defaultLogger is null)
+        {
+            __defaultLogger = emplace!FileLogger(buffer, stderr, LogLevel.all);
+        }
+    }
+    return __defaultLogger;
+}
+
+/** This property sets and gets the default $(D Logger).
 
 Example:
 -------------
 stdlog = new FileLogger(yourFile);
 -------------
 The example sets a new $(D StdioLogger) as new $(D stdlog).
-*/
-@property ref Logger stdlog() @trusted
-{
-    static __gshared bool once;
-    static __gshared Logger logger;
-    static __gshared ubyte[__traits(classInstanceSize, FileLogger)] buffer;
 
-    __stdloggermutex.lock();
-    scope(exit) __stdloggermutex.unlock();
-    if (!once)
+If at some point you want to use the original default logger again, you can
+use $(D stdlog = null;). This will put back the original.
+
+Note:
+While getting and setting $(D stdlog) is thread-safe, it has to be considered
+that the returned reference is only a current snapshot and in the following
+code, you must make sure no other thread reassigns to it between reading and
+writing $(D stdlog).
+-------------
+if (stdlog !is myLogger)
+    stdlog = new myLogger;
+-------------
+*/
+@property Logger stdlog() @trusted
+{
+    // If we have set up our own logger use that
+    if (auto logger = atomicLoad!(MemoryOrder.acq)(__stdlog))
     {
-        once = true;
-        logger = emplace!FileLogger(buffer, stderr, globalLogLevel());
+        return logger;
     }
-    return logger;
+    else
+    {
+        // Otherwise resort to the default logger
+        return defaultLoggerImpl;
+    }
 }
 
-private ref LogLevel globalLogLevelImpl() @trusted @nogc
+/// Ditto
+@property void stdlog(Logger logger) @trusted
 {
-    static __gshared LogLevel ll = LogLevel.all;
-    return ll;
+    atomicStore!(MemoryOrder.rel)(__stdlog, cast(shared) logger);
 }
 
 /** This methods get and set the global $(D LogLevel).
 
 Every log message with a $(D LogLevel) lower as the global $(D LogLevel)
 will be discarded before it reaches $(D writeLogMessage) method of any
-$(D Logger)
+$(D Logger).
+*/
+/* Implementation note:
+For any public logging call, the global log level shall only be queried once on
+entry. Otherwise when another threads changes the level, we wouls work with
+different levels at different spots in the code.
 */
 @property LogLevel globalLogLevel() @trusted @nogc
 {
-    return globalLogLevelImpl();
+    return atomicLoad!(MemoryOrder.acq)(__globalLogLevel);
 }
 
 /// Ditto
 @property void globalLogLevel(LogLevel ll) @trusted
 {
-    if (stdlog !is null)
-    {
-        stdlog.logLevel = ll;
-    }
-    globalLogLevelImpl = ll;
+    atomicStore!(MemoryOrder.rel)(__globalLogLevel, ll);
 }
 
 version (unittest)
@@ -1752,7 +1757,7 @@ version (unittest)
     import std.ascii;
     import std.random;
 
-    @trusted string randomString(size_t upto)
+    @trusted package string randomString(size_t upto)
     {
         auto app = Appender!string();
         foreach(_ ; 0 .. upto)
@@ -1771,7 +1776,7 @@ version (unittest)
 
 version (unittest)
 {
-    class TestLogger : Logger
+    package class TestLogger : Logger
     {
         int line = -1;
         string file = null;
@@ -1780,12 +1785,12 @@ version (unittest)
         string msg = null;
         LogLevel lvl;
 
-        this(const LogLevel lv = LogLevel.info) @safe
+        this(const LogLevel lv = LogLevel.info)
         {
             super(lv);
         }
 
-        override void writeLogMsg(ref LogEntry payload) @safe
+        override protected void writeLogMsg(ref LogEntry payload) @safe
         {
             this.line = payload.line;
             this.file = payload.file;
@@ -1796,7 +1801,7 @@ version (unittest)
         }
     }
 
-    void testFuncNames(Logger logger) {
+    private void testFuncNames(Logger logger) {
         string s = "I'm here";
         logger.log(s);
     }
@@ -1816,6 +1821,8 @@ unittest
 
 unittest
 {
+    import std.experimental.logger.multilogger;
+
     auto tl1 = new TestLogger;
     auto tl2 = new TestLogger;
 
@@ -1837,7 +1844,7 @@ unittest
     assertThrown!Exception(ml.removeLogger("one"));
 }
 
-@safe unittest
+unittest
 {
     bool errorThrown = false;
     auto tl = new TestLogger;
@@ -1997,7 +2004,7 @@ unittest // default logger
     string written = "this should be written to file";
 
     globalLogLevel = LogLevel.critical;
-    assert(l.logLevel == LogLevel.critical);
+    assert(globalLogLevel == LogLevel.critical);
 
     log(LogLevel.warning, notWritten);
     log(LogLevel.critical, written);
@@ -2047,7 +2054,7 @@ unittest
     file.close();
 }
 
-@safe unittest
+unittest
 {
     auto tl = new TestLogger(LogLevel.all);
     int l = __LINE__;
@@ -2063,7 +2070,7 @@ unittest
 }
 
 // testing possible log conditions
-@safe unittest
+unittest
 {
     auto oldunspecificLogger = stdlog;
 
@@ -2078,14 +2085,14 @@ unittest
     }
 
     int value = 0;
-    foreach(gll; [LogLevel.all, LogLevel.trace,
+    foreach(gll; [cast(LogLevel) LogLevel.all, LogLevel.trace,
             LogLevel.info, LogLevel.warning, LogLevel.error,
             LogLevel.critical, LogLevel.fatal, LogLevel.off])
     {
 
         globalLogLevel = gll;
 
-        foreach(ll; [LogLevel.all, LogLevel.trace,
+        foreach(ll; [cast(LogLevel) LogLevel.all, LogLevel.trace,
                 LogLevel.info, LogLevel.warning, LogLevel.error,
                 LogLevel.critical, LogLevel.fatal, LogLevel.off])
         {
@@ -2100,10 +2107,246 @@ unittest
                     {
                         foreach(prntf; [true, false])
                         {
-                            foreach(ll2; [LogLevel.all, LogLevel.trace,
+                            foreach(ll2; [cast(LogLevel) LogLevel.all, LogLevel.trace,
                                     LogLevel.info, LogLevel.warning,
                                     LogLevel.error, LogLevel.critical,
                                     LogLevel.fatal, LogLevel.off])
+                            {
+                                foreach(singleMulti; 0 .. 2)
+                                {
+                                    int lineCall;
+                                    mem.msg = "-1";
+                                    if (memOrG)
+                                    {
+                                        if (prntf)
+                                        {
+                                            if (cond)
+                                            {
+                                                if (singleMulti == 0)
+                                                {
+                                                    mem.logf(ll2, condValue, "%s",
+                                                        value);
+                                                    lineCall = __LINE__;
+                                                }
+                                                else
+                                                {
+                                                    mem.logf(ll2, condValue,
+                                                        "%d %d", value, value);
+                                                    lineCall = __LINE__;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (singleMulti == 0)
+                                                {
+                                                    mem.logf(ll2, "%s", value);
+                                                    lineCall = __LINE__;
+                                                }
+                                                else
+                                                {
+                                                    mem.logf(ll2, "%d %d",
+                                                        value, value);
+                                                    lineCall = __LINE__;
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (cond)
+                                            {
+                                                if (singleMulti == 0)
+                                                {
+                                                    mem.log(ll2, condValue,
+                                                        to!string(value));
+                                                    lineCall = __LINE__;
+                                                }
+                                                else
+                                                {
+                                                    mem.log(ll2, condValue,
+                                                        to!string(value), value);
+                                                    lineCall = __LINE__;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (singleMulti == 0)
+                                                {
+                                                    mem.log(ll2, to!string(value));
+                                                    lineCall = __LINE__;
+                                                }
+                                                else
+                                                {
+                                                    mem.log(ll2,
+                                                        to!string(value),
+                                                        value);
+                                                    lineCall = __LINE__;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (prntf)
+                                        {
+                                            if (cond)
+                                            {
+                                                if (singleMulti == 0)
+                                                {
+                                                    logf(ll2, condValue, "%s",
+                                                        value);
+                                                    lineCall = __LINE__;
+                                                }
+                                                else
+                                                {
+                                                    logf(ll2, condValue,
+                                                        "%s %d", value, value);
+                                                    lineCall = __LINE__;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (singleMulti == 0)
+                                                {
+                                                    logf(ll2, "%s", value);
+                                                    lineCall = __LINE__;
+                                                }
+                                                else
+                                                {
+                                                    logf(ll2, "%s %s", value,
+                                                        value);
+                                                    lineCall = __LINE__;
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (cond)
+                                            {
+                                                if (singleMulti == 0)
+                                                {
+                                                    log(ll2, condValue,
+                                                        to!string(value));
+                                                    lineCall = __LINE__;
+                                                }
+                                                else
+                                                {
+                                                    log(ll2, condValue, value,
+                                                        to!string(value));
+                                                    lineCall = __LINE__;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (singleMulti == 0)
+                                                {
+                                                    log(ll2, to!string(value));
+                                                    lineCall = __LINE__;
+                                                }
+                                                else
+                                                {
+                                                    log(ll2, value,
+                                                        to!string(value));
+                                                    lineCall = __LINE__;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    string valueStr = to!string(value);
+                                    ++value;
+
+                                    bool gllOff = (gll != LogLevel.off);
+                                    bool llOff = (ll != LogLevel.off);
+                                    bool condFalse = (cond ? condValue : true);
+                                    bool ll2VSgll = (ll2 >= gll);
+                                    bool ll2VSll = (ll2 >= ll);
+
+                                    bool shouldLog = gllOff && llOff && condFalse
+                                        && ll2VSgll && ll2VSll;
+
+                                    /*
+                                    writefln(
+                                        "go(%b) ll2o(%b) c(%b) lg(%b) ll(%b) s(%b)"
+                                        , gll != LogLevel.off, ll2 != LogLevel.off,
+                                        cond ? condValue : true,
+                                        ll2 >= gll, ll2 >= ll, shouldLog);
+                                    */
+
+
+                                    if (shouldLog)
+                                    {
+                                        assert(mem.msg.indexOf(valueStr) != -1,
+                                            format(
+                                            "lineCall(%d) gll(%u) ll(%u) ll2(%u) " ~
+                                            "cond(%b) condValue(%b)" ~
+                                            " memOrG(%b) shouldLog(%b) %s == %s" ~
+                                            " %b %b %b %b %b",
+                                            lineCall, gll, ll, ll2, cond,
+                                            condValue, memOrG, shouldLog, mem.msg,
+                                            valueStr, gllOff, llOff, condFalse,
+                                            ll2VSgll, ll2VSll
+                                        ));
+                                    }
+                                    else
+                                    {
+                                        assert(mem.msg.indexOf(valueStr),
+                                            format(
+                                            "lineCall(%d) gll(%u) ll(%u) ll2(%u) " ~
+                                            " cond(%b)condValue(%b)  memOrG(%b) " ~
+                                            "shouldLog(%b) %s != %s", gll,
+                                            lineCall, ll, ll2, cond, condValue,
+                                            memOrG, shouldLog, mem.msg, valueStr
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// more testing
+unittest
+{
+    auto oldunspecificLogger = stdlog;
+
+    auto mem = new TestLogger;
+    mem.fatalHandler = delegate() {};
+    stdlog = mem;
+
+    scope(exit)
+    {
+        stdlog = oldunspecificLogger;
+        globalLogLevel = LogLevel.all;
+    }
+
+    int value = 0;
+    foreach(gll; [cast(LogLevel) LogLevel.all, LogLevel.trace,
+            LogLevel.info, LogLevel.warning, LogLevel.error,
+            LogLevel.critical, LogLevel.fatal, LogLevel.off])
+    {
+
+        globalLogLevel = gll;
+
+        foreach(ll; [cast(LogLevel) LogLevel.all, LogLevel.trace,
+                LogLevel.info, LogLevel.warning, LogLevel.error,
+                LogLevel.critical, LogLevel.fatal, LogLevel.off])
+        {
+
+            mem.logLevel = ll;
+
+            foreach(cond; [true, false])
+            {
+                foreach(condValue; [true, false])
+                {
+                    foreach(memOrG; [true, false])
+                    {
+                        foreach(prntf; [true, false])
+                        {
+                            foreach(singleMulti; 0 .. 2)
                             {
                                 int lineCall;
                                 mem.msg = "-1";
@@ -2113,28 +2356,64 @@ unittest
                                     {
                                         if (cond)
                                         {
-                                            mem.logf(ll2, condValue, "%s",
-                                                value);
-                                            lineCall = __LINE__;
+                                            if (singleMulti == 0)
+                                            {
+                                                mem.logf(condValue, "%s",
+                                                    value);
+                                                lineCall = __LINE__;
+                                            }
+                                            else
+                                            {
+                                                mem.logf(condValue,
+                                                    "%d %d", value, value);
+                                                lineCall = __LINE__;
+                                            }
                                         }
                                         else
                                         {
-                                            mem.logf(ll2, "%s", value);
-                                            lineCall = __LINE__;
+                                            if (singleMulti == 0)
+                                            {
+                                                mem.logf("%s", value);
+                                                lineCall = __LINE__;
+                                            }
+                                            else
+                                            {
+                                                mem.logf("%d %d",
+                                                    value, value);
+                                                lineCall = __LINE__;
+                                            }
                                         }
                                     }
                                     else
                                     {
                                         if (cond)
                                         {
-                                            mem.log(ll2, condValue,
-                                                to!string(value));
-                                            lineCall = __LINE__;
+                                            if (singleMulti == 0)
+                                            {
+                                                mem.log(condValue,
+                                                    to!string(value));
+                                                lineCall = __LINE__;
+                                            }
+                                            else
+                                            {
+                                                mem.log(condValue,
+                                                    to!string(value), value);
+                                                lineCall = __LINE__;
+                                            }
                                         }
                                         else
                                         {
-                                            mem.log(ll2, to!string(value));
-                                            lineCall = __LINE__;
+                                            if (singleMulti == 0)
+                                            {
+                                                mem.log(to!string(value));
+                                                lineCall = __LINE__;
+                                            }
+                                            else
+                                            {
+                                                mem.log(to!string(value),
+                                                    value);
+                                                lineCall = __LINE__;
+                                            }
                                         }
                                     }
                                 }
@@ -2144,27 +2423,61 @@ unittest
                                     {
                                         if (cond)
                                         {
-                                            logf(ll2, condValue, "%s", value);
-                                            lineCall = __LINE__;
+                                            if (singleMulti == 0)
+                                            {
+                                                logf(condValue, "%s", value);
+                                                lineCall = __LINE__;
+                                            }
+                                            else
+                                            {
+                                                logf(condValue, "%s %d", value,
+                                                    value);
+                                                lineCall = __LINE__;
+                                            }
                                         }
                                         else
                                         {
-                                            logf(ll2, "%s", value);
-                                            lineCall = __LINE__;
+                                            if (singleMulti == 0)
+                                            {
+                                                logf("%s", value);
+                                                lineCall = __LINE__;
+                                            }
+                                            else
+                                            {
+                                                logf("%s %s", value, value);
+                                                lineCall = __LINE__;
+                                            }
                                         }
                                     }
                                     else
                                     {
                                         if (cond)
                                         {
-                                            log(ll2, condValue,
-                                                to!string(value));
-                                            lineCall = __LINE__;
+                                            if (singleMulti == 0)
+                                            {
+                                                log(condValue,
+                                                    to!string(value));
+                                                lineCall = __LINE__;
+                                            }
+                                            else
+                                            {
+                                                log(condValue, value,
+                                                    to!string(value));
+                                                lineCall = __LINE__;
+                                            }
                                         }
                                         else
                                         {
-                                            log(ll2, to!string(value));
-                                            lineCall = __LINE__;
+                                            if (singleMulti == 0)
+                                            {
+                                                log(to!string(value));
+                                                lineCall = __LINE__;
+                                            }
+                                            else
+                                            {
+                                                log(value, to!string(value));
+                                                lineCall = __LINE__;
+                                            }
                                         }
                                     }
                                 }
@@ -2174,12 +2487,11 @@ unittest
 
                                 bool gllOff = (gll != LogLevel.off);
                                 bool llOff = (ll != LogLevel.off);
+                                bool llVSgll = (ll >= gll);
                                 bool condFalse = (cond ? condValue : true);
-                                bool ll2VSgll = (ll2 >= gll);
-                                bool ll2VSll = (ll2 >= ll);
 
                                 bool shouldLog = gllOff && llOff && condFalse
-                                    && ll2VSgll && ll2VSll;
+                                    && llVSgll;
 
                                 /*
                                 writefln(
@@ -2192,24 +2504,25 @@ unittest
 
                                 if (shouldLog)
                                 {
-                                    assert(mem.msg == valueStr, format(
-                                        "lineCall(%d) gll(%u) ll(%u) ll2(%u) " ~
+                                    assert(mem.msg.indexOf(valueStr) != -1,
+                                        format(
+                                        "lineCall(%d) gll(%u) ll(%u) " ~
                                         "cond(%b) condValue(%b)" ~
                                         " memOrG(%b) shouldLog(%b) %s == %s" ~
-                                        " %b %b %b %b %b",
-                                        lineCall, gll, ll, ll2, cond,
+                                        " %b %b %b",
+                                        lineCall, gll, ll,  cond,
                                         condValue, memOrG, shouldLog, mem.msg,
-                                        valueStr, gllOff, llOff, condFalse,
-                                        ll2VSgll, ll2VSll
+                                        valueStr, gllOff, llOff, condFalse
                                     ));
                                 }
                                 else
                                 {
-                                    assert(mem.msg != valueStr, format(
-                                        "lineCall(%d) gll(%u) ll(%u) ll2(%u) " ~
+                                    assert(mem.msg.indexOf(valueStr),
+                                        format(
+                                        "lineCall(%d) gll(%u) ll(%u) " ~
                                         " cond(%b)condValue(%b)  memOrG(%b) " ~
                                         "shouldLog(%b) %s != %s", gll,
-                                        lineCall, ll, ll2, cond, condValue,
+                                        lineCall, ll, cond, condValue,
                                         memOrG, shouldLog, mem.msg, valueStr
                                     ));
                                 }
@@ -2223,9 +2536,11 @@ unittest
 }
 
 // testing more possible log conditions
-@safe unittest
+unittest
 {
+    bool fatalLog;
     auto mem = new TestLogger;
+    mem.fatalHandler = delegate() { fatalLog = true; };
     auto oldunspecificLogger = stdlog;
 
     stdlog = mem;
@@ -2235,14 +2550,14 @@ unittest
         globalLogLevel = LogLevel.all;
     }
 
-    foreach(gll; [LogLevel.all, LogLevel.trace,
+    foreach(gll; [cast(LogLevel) LogLevel.all, LogLevel.trace,
             LogLevel.info, LogLevel.warning, LogLevel.error,
             LogLevel.critical, LogLevel.fatal, LogLevel.off])
     {
 
         globalLogLevel = gll;
 
-        foreach(ll; [LogLevel.all, LogLevel.trace,
+        foreach(ll; [cast(LogLevel) LogLevel.all, LogLevel.trace,
                 LogLevel.info, LogLevel.warning, LogLevel.error,
                 LogLevel.critical, LogLevel.fatal, LogLevel.off])
         {
@@ -2294,7 +2609,7 @@ unittest
                 assert(test ? mem.line == line : true); line = -1;
 
                 llVSgll = ll >= globalLogLevel;
-                lVSll = LogLevel.trace >= ll;
+                lVSll = LogLevel.info >= ll;
                 test = llVSgll && gllVSll && lVSll && gllOff && llOff && cond;
 
                 mem.info(__LINE__); line = __LINE__;
@@ -2322,7 +2637,7 @@ unittest
                 assert(test ? mem.line == line : true); line = -1;
 
                 llVSgll = ll >= globalLogLevel;
-                lVSll = LogLevel.trace >= ll;
+                lVSll = LogLevel.warning >= ll;
                 test = llVSgll && gllVSll && lVSll && gllOff && llOff && cond;
 
                 mem.warning(__LINE__); line = __LINE__;
@@ -2350,7 +2665,7 @@ unittest
                 assert(test ? mem.line == line : true); line = -1;
 
                 llVSgll = ll >= globalLogLevel;
-                lVSll = LogLevel.trace >= ll;
+                lVSll = LogLevel.critical >= ll;
                 test = llVSgll && gllVSll && lVSll && gllOff && llOff && cond;
 
                 mem.critical(__LINE__); line = __LINE__;
@@ -2376,6 +2691,50 @@ unittest
 
                 criticalf(cond, "%d", __LINE__); line = __LINE__;
                 assert(test ? mem.line == line : true); line = -1;
+
+                llVSgll = ll >= globalLogLevel;
+                lVSll = LogLevel.fatal >= ll;
+                test = llVSgll && gllVSll && lVSll && gllOff && llOff && cond;
+
+                mem.fatal(__LINE__); line = __LINE__;
+                assert(test ? mem.line == line : true); line = -1;
+                assert(test ? fatalLog : true);
+                fatalLog = false;
+
+                fatal(__LINE__); line = __LINE__;
+                assert(test ? mem.line == line : true); line = -1;
+                assert(test ? fatalLog : true);
+                fatalLog = false;
+
+                mem.fatal(cond, __LINE__); line = __LINE__;
+                assert(test ? mem.line == line : true); line = -1;
+                assert(test ? fatalLog : true);
+                fatalLog = false;
+
+                fatal(cond, __LINE__); line = __LINE__;
+                assert(test ? mem.line == line : true); line = -1;
+                assert(test ? fatalLog : true);
+                fatalLog = false;
+
+                mem.fatalf("%d", __LINE__); line = __LINE__;
+                assert(test ? mem.line == line : true); line = -1;
+                assert(test ? fatalLog : true);
+                fatalLog = false;
+
+                fatalf("%d", __LINE__); line = __LINE__;
+                assert(test ? mem.line == line : true); line = -1;
+                assert(test ? fatalLog : true);
+                fatalLog = false;
+
+                mem.fatalf(cond, "%d", __LINE__); line = __LINE__;
+                assert(test ? mem.line == line : true); line = -1;
+                assert(test ? fatalLog : true);
+                fatalLog = false;
+
+                fatalf(cond, "%d", __LINE__); line = __LINE__;
+                assert(test ? mem.line == line : true); line = -1;
+                assert(test ? fatalLog : true);
+                fatalLog = false;
             }
 
         }
@@ -2405,6 +2764,8 @@ unittest
 // Issue #5
 unittest
 {
+    import std.experimental.logger.multilogger;
+
     auto oldunspecificLogger = stdlog;
 
     scope(exit)

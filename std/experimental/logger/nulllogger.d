@@ -16,13 +16,13 @@ class NullLogger : Logger
       lv = The $(D LogLevel) for the $(D MultiLogger). By default the $(D LogLevel)
       for $(D MultiLogger) is $(D LogLevel.info).
     */
-    this(const LogLevel lv = LogLevel.info) @safe
+    this(const LogLevel lv = LogLevel.info)
     {
         super(lv);
         this.fatalHandler = delegate() {};
     }
 
-    override void writeLogMsg(ref LogEntry payload) @safe @nogc
+    override protected void writeLogMsg(ref LogEntry payload) @safe @nogc
     {
     }
 }

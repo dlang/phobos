@@ -35,7 +35,6 @@ class FileLogger : Logger
         super(lv);
         this.filename = fn;
         this.file_.open(this.filename, "a");
-        this.mutex = new Mutex;
     }
 
     /** A constructor for the $(D FileLogger) Logger that takes a reference to
@@ -61,7 +60,6 @@ class FileLogger : Logger
     {
         super(lv);
         this.file_ = file;
-        this.mutex = new Mutex;
     }
 
     /** If the $(D FileLogger) is managing the $(D File) it logs to, this
@@ -77,7 +75,7 @@ class FileLogger : Logger
     without requiring heap allocated memory. Additionally, the $(D FileLogger)
     local mutex is logged to serialize the log calls.
     */
-    override void beginLogMsg(string file, int line, string funcName,
+    override protected void beginLogMsg(string file, int line, string funcName,
         string prettyFuncName, string moduleName, LogLevel logLevel,
         Tid threadId, SysTime timestamp, Logger logger)
         @trusted
@@ -85,7 +83,6 @@ class FileLogger : Logger
         ptrdiff_t fnIdx = file.lastIndexOf('/') + 1;
         ptrdiff_t funIdx = funcName.lastIndexOf('.') + 1;
 
-        this.mutex.lock();
         auto lt = this.file_.lockingTextWriter();
         systimeToISOString(lt, timestamp);
         formattedWrite(lt, ":%s:%s:%u ", file[fnIdx .. $],
@@ -95,7 +92,7 @@ class FileLogger : Logger
     /* This methods overrides the base class method and writes the parts of
     the log call directly to the file.
     */
-    override void logMsgPart(const(char)[] msg)
+    override protected void logMsgPart(const(char)[] msg)
     {
         formattedWrite(this.file_.lockingTextWriter(), "%s", msg);
     }
@@ -104,9 +101,8 @@ class FileLogger : Logger
     log call. This requires flushing the $(D File) and releasing the
     $(D FileLogger) local mutex.
     */
-    override void finishLogMsg()
+    override protected void finishLogMsg()
     {
-        scope(exit) this.mutex.unlock();
         this.file_.lockingTextWriter().put("\n");
         this.file_.flush();
     }
@@ -114,7 +110,7 @@ class FileLogger : Logger
     /* This methods overrides the base class method and delegates the
     $(D LogEntry) data to the actual implementation.
     */
-    override void writeLogMsg(ref LogEntry payload)
+    override protected void writeLogMsg(ref LogEntry payload)
     {
         this.beginLogMsg(payload.file, payload.line, payload.funcName,
             payload.prettyFuncName, payload.moduleName, payload.logLevel,
@@ -123,7 +119,6 @@ class FileLogger : Logger
         this.finishLogMsg();
     }
 
-    private Mutex mutex;
     private File file_;
     private string filename;
 }
