@@ -2907,44 +2907,27 @@ unittest
 
 
 /***********************************
- * If the first argument $(D args[0]) is a $(D FILE*), use
- * $(LINK2 std_format.html#format-string, the format specifier) in
- * $(D args[1]) to control the formatting of $(D
- * args[2..$]), and write the resulting string to $(D args[0]).
- * If $(D arg[0]) is not a $(D FILE*), the call is
- * equivalent to $(D writef(stdout, args)).
- *
+Writes formatted data to standard output (without a trailing newline).
 
-IMPORTANT:
+Params:
+args = The first argument $(D args[0]) should be the format string, specifying
+how to format the rest of the arguments. For a full description of the syntax
+of the format string and how it controls the formatting of the rest of the
+arguments, please refer to the documentation for $(XREF format,
+formattedWrite).
 
-New behavior starting with D 2.006: unlike previous versions,
-$(D writef) (and also $(D writefln)) only scans its first
-string argument for format specifiers, but not subsequent string
-arguments. This decision was made because the old behavior made it
-unduly hard to simply print string variables that occasionally
-embedded percent signs.
+Note: In older versions of Phobos, it used to be possible to write:
 
-Also new starting with 2.006 is support for positional
-parameters with
-$(LINK2 http://opengroup.org/onlinepubs/009695399/functions/printf.html,
-POSIX) syntax.
+------
+writef(stderr, "%s", "message");
+------
 
-Example:
+to print a message to $(D stderr). This syntax is no longer supported, and has
+been superceded by:
 
--------------------------
-writef("Date: %2$s %1$s", "October", 5); // "Date: 5 October"
-------------------------
-
-The positional and non-positional styles can be mixed in the same
-format string. (POSIX leaves this behavior undefined.) The internal
-counter for non-positional parameters tracks the popFront parameter after
-the largest positional parameter already used.
-
-New starting with 2.008: raw format specifiers. Using the "%r"
-specifier makes $(D writef) simply write the binary
-representation of the argument. Use "%-r" to write numbers in little
-endian format, "%+r" to write numbers in big endian format, and "%r"
-to write numbers in platform-native format.
+------
+stderr.writef("%s", "message");
+------
 
 */
 
