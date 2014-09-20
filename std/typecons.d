@@ -4461,11 +4461,11 @@ alias TypeInt2 = Typedef!int;
 // The two Typedefs are the same type.
 static assert(is(TypeInt1 == TypeInt2));
 
-alias TypeFloat1 = Typedef!(float, float.init, "a");
-alias TypeFloat2 = Typedef!(float, float.init, "b");
+alias MoneyEuros = Typedef!(float, float.init, "euros");
+alias MoneyDollars = Typedef!(float, float.init, "dollars");
 
 // The two Typedefs are _not_ the same type.
-static assert(!is(TypeFloat1 == TypeFloat2));
+static assert(!is(MoneyEuros == MoneyDollars));
 ----
 
 Note: If a library routine cannot handle the Typedef type,
