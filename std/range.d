@@ -190,6 +190,9 @@ $(BOOKTABLE ,
         $(TD Creates a _range that wraps a given _range, forwarding along
         its elements while also calling a provided function with each element.
     ))
+    $(TR $(TD $(D $(LREF enumerate)))
+        $(TD Iterates a _range with an attached index variable.
+    ))
 )
 
 These _range-construction tools are implemented using templates; but sometimes
@@ -7863,6 +7866,361 @@ unittest
     static struct Test { int* a; }
     immutable(Test) test;
     cast(void)only(test, test); // Works with mutable indirection
+}
+
+/**
+Iterate over $(D range) with an attached index variable.
+
+Each element is a $(XREF typecons, Tuple) containing the index
+and the element, in that order, where the index member is named $(D index)
+and the element member is named $(D value).
+
+The index starts at $(D start) and is incremented by one on every iteration.
+
+Bidirectionality is propagated only if $(D range) has length.
+
+Overflow:
+If $(D range) has length, then it is an error to pass a value for $(D start)
+so that $(D start + range.length) is bigger than $(D Enumerator.max), thus it is
+ensured that overflow cannot happen.
+
+If $(D range) does not have length, and $(D popFront) is called when
+$(D front.index == Enumerator.max), the index will overflow and
+continue from $(D Enumerator.min).
+
+Examples:
+Useful for using $(D foreach) with an index loop variable:
+----
+    import std.stdio : stdin, stdout;
+    import std.range : enumerate;
+
+    foreach (lineNum, line; stdin.byLine().enumerate(1))
+        stdout.writefln("line #%s: %s", lineNum, line);
+----
+*/
+auto enumerate(Enumerator = size_t, Range)(Range range, Enumerator start = 0)
+    if (isIntegral!Enumerator && isInputRange!Range)
+in
+{
+    static if (hasLength!Range)
+    {
+        // TODO: core.checkedint supports mixed signedness yet?
+        import core.checkedint : adds, addu;
+        import std.conv : ConvException, to;
+        import core.exception : RangeError;
+
+        alias LengthType = typeof(range.length);
+        bool overflow;
+        static if(isSigned!Enumerator && isSigned!LengthType)
+            auto result = adds(start, range.length, overflow);
+        else static if(isSigned!Enumerator)
+        {
+            Largest!(Enumerator, Signed!LengthType) signedLength;
+            try signedLength = to!(typeof(signedLength))(range.length);
+            catch(ConvException)
+                overflow = true;
+            catch(Exception)
+                assert(false);
+
+            auto result = adds(start, signedLength, overflow);
+        }
+        else
+        {
+            static if(isSigned!LengthType)
+                assert(range.length >= 0);
+            auto result = addu(start, range.length, overflow);
+        }
+
+        if (overflow || result > Enumerator.max)
+            throw new RangeError("overflow in `start + range.length`");
+    }
+}
+body
+{
+    // TODO: Relax isIntegral!Enumerator to allow user-defined integral types
+    static struct Result
+    {
+        import std.typecons : Tuple;
+
+        private:
+        alias ElemType = Tuple!(Enumerator, "index", ElementType!Range, "value");
+        Range range;
+        Enumerator index;
+
+        public:
+        ElemType front() @property
+        {
+            assert(!range.empty);
+            return typeof(return)(index, range.front);
+        }
+
+        static if (isInfinite!Range)
+            enum bool empty = false;
+        else
+        {
+            bool empty() @property
+            {
+                return range.empty;
+            }
+        }
+
+        void popFront()
+        {
+            assert(!range.empty);
+            range.popFront();
+            ++index; // When !hasLength!Range, overflow is expected
+        }
+
+        static if (isForwardRange!Range)
+        {
+            Result save() @property
+            {
+                return typeof(return)(range.save, index);
+            }
+        }
+
+        static if (hasLength!Range)
+        {
+            size_t length() @property
+            {
+                return range.length;
+            }
+
+            alias opDollar = length;
+
+            static if (isBidirectionalRange!Range)
+            {
+                ElemType back() @property
+                {
+                    assert(!range.empty);
+                    return typeof(return)(cast(Enumerator)(index + range.length - 1), range.back);
+                }
+
+                void popBack()
+                {
+                    assert(!range.empty);
+                    range.popBack();
+                }
+            }
+        }
+
+        static if (isRandomAccessRange!Range)
+        {
+             ElemType opIndex(size_t i)
+             {
+                return typeof(return)(cast(Enumerator)(index + i), range[i]);
+             }
+        }
+
+        static if (hasSlicing!Range)
+        {
+            static if (hasLength!Range)
+            {
+                Result opSlice(size_t i, size_t j)
+                {
+                    return typeof(return)(range[i .. j], cast(Enumerator)(index + i));
+                }
+            }
+            else
+            {
+                static struct DollarToken {}
+                enum opDollar = DollarToken.init;
+
+                Result opSlice(size_t i, DollarToken)
+                {
+                    return typeof(return)(range[i .. $], cast(Enumerator)(index + i));
+                }
+
+                auto opSlice(size_t i, size_t j)
+                {
+                    return this[i .. $].takeExactly(j - 1);
+                }
+            }
+        }
+    }
+
+    return Result(range, start);
+}
+
+/// Can start enumeration from a negative position:
+pure @safe nothrow unittest
+{
+    import std.array : assocArray;
+    import std.range : enumerate;
+
+    bool[int] aa = true.repeat(3).enumerate(-1).assocArray();
+    assert(aa[-1]);
+    assert(aa[0]);
+    assert(aa[1]);
+}
+
+pure @safe nothrow unittest
+{
+    import std.typecons : tuple;
+
+    static struct HasSlicing
+    {
+        typeof(this) front() @property { return typeof(this).init; }
+        bool empty() @property { return true; }
+        void popFront() {}
+
+        typeof(this) opSlice(size_t, size_t)
+        {
+            return typeof(this)();
+        }
+    }
+
+    foreach (DummyType; TypeTuple!(AllDummyRanges, HasSlicing))
+    {
+        alias R = typeof(enumerate(DummyType.init));
+        static assert(isInputRange!R);
+        static assert(isForwardRange!R == isForwardRange!DummyType);
+        static assert(isRandomAccessRange!R == isRandomAccessRange!DummyType);
+        static assert(!hasAssignableElements!R);
+
+        static if (hasLength!DummyType)
+        {
+            static assert(hasLength!R);
+            static assert(isBidirectionalRange!R ==
+                isBidirectionalRange!DummyType);
+        }
+
+        static assert(hasSlicing!R == hasSlicing!DummyType);
+    }
+
+    static immutable values = ["zero", "one", "two", "three"];
+    auto enumerated = values[].enumerate();
+    assert(!enumerated.empty);
+    assert(enumerated.front == tuple(0, "zero"));
+    assert(enumerated.back == tuple(3, "three"));
+
+    typeof(enumerated) saved = enumerated.save;
+    saved.popFront();
+    assert(enumerated.front == tuple(0, "zero"));
+    assert(saved.front == tuple(1, "one"));
+    assert(saved.length == enumerated.length - 1);
+    saved.popBack();
+    assert(enumerated.back == tuple(3, "three"));
+    assert(saved.back == tuple(2, "two"));
+    saved.popFront();
+    assert(saved.front == tuple(2, "two"));
+    assert(saved.back == tuple(2, "two"));
+    saved.popFront();
+    assert(saved.empty);
+
+    size_t control = 0;
+    foreach (i, v; enumerated)
+    {
+        static assert(is(typeof(i) == size_t));
+        static assert(is(typeof(v) == typeof(values[0])));
+        assert(i == control);
+        assert(v == values[i]);
+        assert(tuple(i, v) == enumerated[i]);
+        ++control;
+    }
+
+    assert(enumerated[0 .. $].front == tuple(0, "zero"));
+    assert(enumerated[$ - 1 .. $].front == tuple(3, "three"));
+
+    foreach(i; 0 .. 10)
+    {
+        auto shifted = values[0 .. 2].enumerate(i);
+        assert(shifted.front == tuple(i, "zero"));
+        assert(shifted[0] == shifted.front);
+
+        auto next = tuple(i + 1, "one");
+        assert(shifted[1] == next);
+        shifted.popFront();
+        assert(shifted.front == next);
+        shifted.popFront();
+        assert(shifted.empty);
+    }
+
+    foreach(T; TypeTuple!(ubyte, byte, uint, int))
+    {
+        auto inf = 42.repeat().enumerate(T.max);
+        alias Inf = typeof(inf);
+        static assert(isInfinite!Inf);
+        static assert(hasSlicing!Inf);
+
+        // test overflow
+        assert(inf.front == tuple(T.max, 42));
+        inf.popFront();
+        assert(inf.front == tuple(T.min, 42));
+
+        // test slicing
+        inf = inf[42 .. $];
+        assert(inf.front == tuple(T.min + 42, 42));
+        auto window = inf[0 .. 2];
+        assert(window.length == 1);
+        assert(window.front == inf.front);
+        window.popFront();
+        assert(window.empty);
+    }
+}
+
+pure @safe unittest
+{
+    static immutable int[] values = [0, 1, 2, 3, 4];
+    foreach(T; TypeTuple!(ubyte, ushort, uint, ulong))
+    {
+        auto enumerated = values.enumerate!T();
+        static assert(is(typeof(enumerated.front.index) == T));
+        assert(enumerated.equal(values[].zip(values)));
+
+        foreach(T i; 0 .. 5)
+        {
+            auto subset = values[cast(size_t)i .. $];
+            auto offsetEnumerated = subset.enumerate(i);
+            static assert(is(typeof(enumerated.front.index) == T));
+            assert(offsetEnumerated.equal(subset.zip(subset)));
+        }
+    }
+}
+
+version(none) // @@@BUG@@@ 10939
+{
+    // Re-enable (or remove) if 10939 is resolved.
+    /+pure+/ unittest // Impure because of std.conv.to
+    {
+        import core.exception : RangeError;
+        import std.exception : assertNotThrown, assertThrown;
+
+        static immutable values = [42];
+
+        static struct SignedLengthRange
+        {
+            immutable(int)[] _values = values;
+
+            int front() @property { assert(false); }
+            bool empty() @property { assert(false); }
+            void popFront() { assert(false); }
+
+            int length() @property
+            {
+                return cast(int)_values.length;
+            }
+        }
+
+        SignedLengthRange svalues;
+        foreach(Enumerator; TypeTuple!(ubyte, byte, ushort, short, uint, int, ulong, long))
+        {
+            assertThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max));
+            assertNotThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max - values.length));
+            assertThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max - values.length + 1));
+
+            assertThrown!RangeError(svalues.enumerate!Enumerator(Enumerator.max));
+            assertNotThrown!RangeError(svalues.enumerate!Enumerator(Enumerator.max - values.length));
+            assertThrown!RangeError(svalues.enumerate!Enumerator(Enumerator.max - values.length + 1));
+        }
+
+        foreach(Enumerator; TypeTuple!(byte, short, int))
+        {
+            assertThrown!RangeError(repeat(0, uint.max).enumerate!Enumerator());
+        }
+
+        assertNotThrown!RangeError(repeat(0, uint.max).enumerate!long());
+    }
 }
 
 /**
