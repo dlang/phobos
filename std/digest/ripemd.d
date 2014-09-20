@@ -89,7 +89,7 @@ unittest
 }
 
 //rotateLeft rotates x left n bits
-private nothrow pure uint rotateLeft(uint x, uint n)
+private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
 {
     // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
     // No assembler required.
@@ -108,7 +108,7 @@ struct RIPEMD160
         ulong _count; //number of bits, modulo 2^64
         ubyte[64] _buffer; // input buffer
 
-        enum ubyte[64] _padding =
+        static immutable ubyte[64] _padding =
         [
           0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -116,7 +116,7 @@ struct RIPEMD160
         ];
 
         // F, G, H, I and J are basic RIPEMD160 functions
-        static nothrow pure
+        static @safe pure nothrow @nogc
         {
             uint F(uint x, uint y, uint z) { return x ^ y ^ z; }
             uint G(uint x, uint y, uint z) { return (x & y) | (~x & z); }
@@ -131,35 +131,40 @@ struct RIPEMD160
          */
 
         /* the ten basic operations FF() through III() */
-        static nothrow pure void FF(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void FF(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += F(b, c, d) + x;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void GG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void GG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += G(b, c, d) + x + 0x5a827999UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void HH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void HH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += H(b, c, d) + x + 0x6ed9eba1UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void II(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void II(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += I(b, c, d) + x + 0x8f1bbcdcUL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void JJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void JJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += J(b, c, d) + x + 0xa953fd4eUL;
             a = rotateLeft(a, s) + e;
@@ -171,35 +176,40 @@ struct RIPEMD160
          * Rotation is separate from addition to prevent recomputation.
          */
 
-        static nothrow pure void FFF(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void FFF(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += F(b, c, d) + x;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void GGG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void GGG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += G(b, c, d) + x + 0x7a6d76e9UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void HHH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void HHH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += H(b, c, d) + x + 0x6d703ef3UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void III(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void III(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += I(b, c, d) + x + 0x5c4dd124UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void JJJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void JJJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += J(b, c, d) + x + 0x50a28be6UL;
             a = rotateLeft(a, s) + e;
@@ -210,7 +220,8 @@ struct RIPEMD160
          * RIPEMD160 basic transformation. Transforms state based on block.
          */
 
-        private nothrow pure void transform(const(ubyte[64])* block)
+        private void transform(const(ubyte[64])* block)
+            pure nothrow @nogc
         {
             uint aa = _state[0],
                  bb = _state[1],
@@ -444,7 +455,7 @@ struct RIPEMD160
          * dig.put(buf); //buffer
          * ----
          */
-        @trusted nothrow pure void put(scope const(ubyte)[] data...)
+        void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
         {
             uint i, index, partLen;
             auto inputLen = data.length;
@@ -496,7 +507,7 @@ struct RIPEMD160
          * digest.put(0);
          * --------
          */
-        @trusted nothrow pure void start()
+        void start() @safe pure nothrow @nogc
         {
             this = RIPEMD160.init;
         }
@@ -515,7 +526,7 @@ struct RIPEMD160
          * assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
          * --------
          */
-        @trusted nothrow pure ubyte[20] finish()
+        ubyte[20] finish() @trusted pure nothrow @nogc
         {
             ubyte[20] data = void;
             ubyte[8] bits = void;

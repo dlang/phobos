@@ -18,6 +18,7 @@ public import std.base64;
 public import std.compiler;
 public import std.concurrency;
 public import std.conv;
+public import std.container;
 public import std.cstream;
 public import std.datetime;
 public import std.demangle;
@@ -26,7 +27,6 @@ public import std.format;
 public import std.getopt;
 public import std.math;
 public import std.mathspecial;
-public import std.metastrings;
 public import std.mmfile;
 public import std.outbuffer;
 public import std.parallelism;
@@ -72,7 +72,7 @@ int main(char[][] args)
     auto r = regex("");                 // regex
     uint ranseed = std.random.unpredictableSeed;
     thisTid;
-    int a[];
+    int[] a;
     a.reverse;                          // adi
     a.sort;                             // qsort
     Clock.currTime();                   // datetime

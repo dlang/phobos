@@ -344,7 +344,7 @@ private:
  */
 @property Tid ownerTid()
 {
-    enforceEx!TidMissingException(owner.mbox !is null, "Error: Thread has no owner thread.");
+    enforce!TidMissingException(owner.mbox !is null, "Error: Thread has no owner thread.");
     return owner;
 }
 

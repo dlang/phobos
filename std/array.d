@@ -14,9 +14,7 @@ module std.array;
 
 import core.memory, core.bitop;
 import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
-       std.range, std.string, std.traits, std.typecons, std.typetuple,
-       std.uni, std.utf;
-import std.c.string : memcpy;
+       std.range, std.string, std.traits, std.typecons, std.typetuple, std.utf;
 version(unittest) import core.exception, std.stdio;
 
 /**
@@ -1043,7 +1041,10 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         {
             assert(src.length == dest.length);
             if (!__ctfe)
+            {
+                import core.stdc.string : memcpy;
                 memcpy(dest.ptr, src.ptr, src.length * T.sizeof);
+            }
             else
             {
                 dest[] = src[];
@@ -1476,7 +1477,8 @@ if (isSomeString!S)
 
     foreach (i, dchar c ; s)
     {
-        if (std.uni.isWhite(c))
+        import std.uni : isWhite;
+        if (isWhite(c))
         {
             if (inword)
             {
@@ -1630,7 +1632,6 @@ unittest
     }
 }
 
-
 /++
    Concatenates all of the ranges in $(D ror) together into one array using
    $(D sep) as the separator if present.
@@ -1682,6 +1683,55 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 }
 
 /// Ditto
+ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
+    if(isInputRange!RoR &&
+       isInputRange!(Unqual!(ElementType!RoR)) &&
+       is(E : ElementType!(ElementType!RoR)))
+{
+    alias RetType = typeof(return);
+    alias RetTypeElement = Unqual!(ElementType!(RetType));
+    alias RoRElem = ElementType!RoR;
+
+    if (ror.empty)
+        return RetType.init;
+
+    auto result = appender!RetType();
+
+    static if(isForwardRange!RoR &&
+              (isNarrowString!RetType || hasLength!RoRElem))
+    {
+        // Reserve appender length if it can be computed.
+        //immutable sepArrLength = sepArr.length;
+        size_t resultLen = 0;
+        static if ((is(E == wchar) || is(E == dchar))
+                && !is(RetTypeElement == dchar))
+        {
+            RetTypeElement[4] encodeSpace;
+            immutable sepArrLength = encode(encodeSpace, sep);
+        }
+        else
+        {
+            immutable sepArrLength = 1;
+        }
+        for (auto temp = ror.save; !temp.empty; temp.popFront())
+            resultLen += temp.front.length + sepArrLength;
+
+        resultLen -= sepArrLength;
+        result.reserve(resultLen);
+        version(unittest) scope(exit) assert(result.data.length == resultLen);
+    }
+
+    put(result, ror.front);
+    ror.popFront();
+    for (; !ror.empty; ror.popFront())
+    {
+        put(result, sep);
+        put(result, ror.front);
+    }
+    return result.data;
+}
+
+/// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if(isInputRange!RoR &&
        isInputRange!(Unqual!(ElementType!RoR)))
@@ -1719,6 +1769,25 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     assert(arr.join() == "applebanana");
 }
 
+@safe pure unittest
+{
+    assert(join(["hello", "silly", "world"], ' ') == "hello silly world");
+
+    foreach (T; TypeTuple!(string,wstring,dstring))
+    {
+        foreach (S; TypeTuple!(char,wchar,dchar))
+        {
+            auto arr = to!(T[])(["hello", "silly", "world"]);
+            auto jarr = arr.join(to!S(' '));
+            auto arr2 = to!T("hello silly world");
+            assert(jarr == arr2);
+        }
+    }
+
+    const string[] arr = ["apple", "banana"];
+    assert(arr.join(',') == "apple,banana");
+}
+
 unittest
 {
     debug(std_array) printf("array.join.unittest\n");
@@ -1743,7 +1812,10 @@ unittest
         foreach(S; TypeTuple!(string, wstring, dstring))
         {
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
+            assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
+            assert(join(filteredWordsArr, to!(ElementType!(S))(',')) == "日本語,paul,jerry");
             assert(join(filteredWordsArr, to!S(", ")) == "日本語, paul, jerry");
+            assert(join(filteredWordsArr, to!(ElementType!(S))(',')) == "日本語,paul,jerry");
             assert(join(filteredLenWordsArr, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filter!"true"(words), to!S(", ")) == "日本語, paul, jerry");
             assert(join(words, to!S(", ")) == "日本語, paul, jerry");
@@ -1917,13 +1989,6 @@ unittest
     }
 }
 
-/+
-Commented out until the replace which has been deprecated has been removed.
-I'd love to just remove it in favor of replaceInPlace, but then code would then
-use this version of replaceInPlace and silently break. So, it's here so that it
-can be used once replace has not only been deprecated but removed, but
-until then, it's commented out.
-
 /++
     Replaces elements from $(D array) with indices ranging from $(D from)
     (inclusive) to $(D to) (exclusive) with the range $(D stuff). Returns a new
@@ -2017,8 +2082,29 @@ unittest
     testStr!(dstring, string)();
     testStr!(dstring, wstring)();
     testStr!(dstring, dstring)();
+
+    enum s = "0123456789";
+    enum w = "⁰¹²³⁴⁵⁶⁷⁸⁹"w;
+    enum d = "⁰¹²³⁴⁵⁶⁷⁸⁹"d;
+
+    assert(replace(s, 0, 0, "***") == "***0123456789");
+    assert(replace(s, 10, 10, "***") == "0123456789***");
+    assert(replace(s, 3, 8, "1012") == "012101289");
+    assert(replace(s, 0, 5, "43210") == "4321056789");
+    assert(replace(s, 5, 10, "43210") == "0123443210");
+
+    assert(replace(w, 0, 0, "***"w) == "***⁰¹²³⁴⁵⁶⁷⁸⁹"w);
+    assert(replace(w, 10, 10, "***"w) == "⁰¹²³⁴⁵⁶⁷⁸⁹***"w);
+    assert(replace(w, 3, 8, "¹⁰¹²"w) == "⁰¹²¹⁰¹²⁸⁹"w);
+    assert(replace(w, 0, 5, "⁴³²¹⁰"w) == "⁴³²¹⁰⁵⁶⁷⁸⁹"w);
+    assert(replace(w, 5, 10, "⁴³²¹⁰"w) == "⁰¹²³⁴⁴³²¹⁰"w);
+
+    assert(replace(d, 0, 0, "***"d) == "***⁰¹²³⁴⁵⁶⁷⁸⁹"d);
+    assert(replace(d, 10, 10, "***"d) == "⁰¹²³⁴⁵⁶⁷⁸⁹***"d);
+    assert(replace(d, 3, 8, "¹⁰¹²"d) == "⁰¹²¹⁰¹²⁸⁹"d);
+    assert(replace(d, 0, 5, "⁴³²¹⁰"d) == "⁴³²¹⁰⁵⁶⁷⁸⁹"d);
+    assert(replace(d, 5, 10, "⁴³²¹⁰"d) == "⁰¹²³⁴⁴³²¹⁰"d);
 }
-+/
 
 /++
     Replaces elements from $(D array) with indices ranging from $(D from)
@@ -2068,15 +2154,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
              (is(T == const T) || is(T == immutable T))) ||
         isSomeString!(T[]) && is(ElementType!Range : dchar)))
 {
-    auto app = appender!(T[])();
-    app.put(array[0 .. from]);
-    app.put(stuff);
-    app.put(array[to .. $]);
-    array = app.data;
-
-    //This simplified version can be used once the old replace has been removed
-    //and the new one uncommented out.
-    //array = replace(array, from, to stuff);
+    array = replace(array, from, to, stuff);
 }
 
 //Verify Examples.
@@ -2275,8 +2353,10 @@ app2.put([ 4, 5, 6 ]);
 assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 ----
  */
-struct Appender(A : T[], T)
+struct Appender(A)
+if (isDynamicArray!A)
 {
+    private alias T = ElementEncodingType!A;
     private struct Data
     {
         size_t capacity;
@@ -2423,6 +2503,7 @@ struct Appender(A : T[], T)
                 GC.qalloc(newlen * T.sizeof, blockAttribute!T);
             }();
             _data.capacity = bi.size / T.sizeof;
+            import core.stdc.string : memcpy;
             if (len)
                 ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
             _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
@@ -2473,7 +2554,12 @@ struct Appender(A : T[], T)
             auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
             auto bigData = bigDataFun();
 
-            emplaceRef!T(bigData[len], item);
+            static if (is(Unqual!T == T))
+                alias uitem = item;
+            else
+                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item; }
+
+            emplaceRef!(Unqual!T)(bigData[len], uitem);
 
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
@@ -2609,6 +2695,22 @@ struct Appender(A : T[], T)
         /// Clear is not available for const/immutable data.
         @disable void clear();
     }
+
+    void toString()(scope void delegate(const(char)[]) sink)
+    {
+        import std.format : formattedWrite;
+        sink.formattedWrite(typeof(this).stringof ~ "(%s)", data);
+    }
+}
+
+unittest
+{
+    import std.string : format;
+    auto app = appender!(int[])();
+    app.put(1);
+    app.put(2);
+    app.put(3);
+    assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
 }
 
 //Calculates an efficient growth scheme based on the old capacity
@@ -2633,11 +2735,13 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
  * underlying appender implementation.  Any calls made to the appender also update
  * the pointer to the original array passed in.
  */
-struct RefAppender(A : T[], T)
+struct RefAppender(A)
+if (isDynamicArray!A)
 {
     private
     {
-        Appender!(A, T) impl;
+        alias T = ElementEncodingType!A;
+        Appender!A impl;
         T[] *arr;
     }
 
@@ -2653,7 +2757,7 @@ struct RefAppender(A : T[], T)
      */
     this(T[] *arr)
     {
-        impl = Appender!(A, T)(*arr);
+        impl = Appender!A(*arr);
         this.arr = arr;
     }
 
@@ -2664,7 +2768,7 @@ struct RefAppender(A : T[], T)
         mixin("return impl." ~ fn ~ "(args);");
     }
 
-    private alias AppenderType = Appender!(A, T);
+    private alias AppenderType = Appender!A;
 
     /**
      * Appends one item to the managed array.
@@ -2714,13 +2818,17 @@ struct RefAppender(A : T[], T)
     Convenience function that returns an $(D Appender!A) object initialized
     with $(D array).
  +/
-Appender!(E[]) appender(A : E[], E)()
+Appender!A appender(A)()
+if (isDynamicArray!A)
 {
-    return Appender!(E[])(null);
+    return Appender!A(null);
 }
 /// ditto
-Appender!(E[]) appender(A : E[], E)(A array)
+Appender!(E[]) appender(A : E[], E)(auto ref A array)
 {
+    static assert (!isStaticArray!A || __traits(isRef, array),
+        "Cannot create Appender from an rvalue static array");
+
     return Appender!(E[])(array);
 }
 
@@ -2939,7 +3047,8 @@ unittest
 }
 
 unittest
-{ //9528
+{
+    //9528
     const(E)[] fastCopy(E)(E[] src) {
             auto app = appender!(const(E)[])();
             foreach (i, e; src)
@@ -2955,15 +3064,16 @@ unittest
 }
 
 unittest
-{ //10753
+{
+    //10753
     struct Foo {
        immutable dchar d;
     }
     struct Bar {
        immutable int x;
     }
-   "12".map!Foo.array;
-   [1, 2].map!Bar.array;
+    "12".map!Foo.array;
+    [1, 2].map!Bar.array;
 }
 
 unittest
@@ -3025,6 +3135,53 @@ unittest // check against .clear UFCS hijacking
     static assert(!__traits(compiles, app.clear()));
     static assert(__traits(compiles, clear(app)),
         "Remove me when object.clear is removed!");
+}
+
+unittest
+{
+    static struct D//dynamic
+    {
+        int[] i;
+        alias i this;
+    }
+    static struct S//static
+    {
+        int[5] i;
+        alias i this;
+    }
+    static assert(!is(Appender!(char[5])));
+    static assert(!is(Appender!D));
+    static assert(!is(Appender!S));
+
+    enum int[5] a = [];
+    int[5] b;
+    D d;
+    S s;
+    int[5] foo(){return a;}
+
+    static assert(!is(typeof(appender(a))));
+    static assert( is(typeof(appender(b))));
+    static assert( is(typeof(appender(d))));
+    static assert( is(typeof(appender(s))));
+    static assert(!is(typeof(appender(foo()))));
+}
+
+unittest
+{
+    // Issue 13077
+    static class A {}
+
+    // reduced case
+    auto w = appender!(shared(A)[])();
+    w.put(new shared A());
+
+    // original case
+    import std.range;
+    InputRange!(shared A) foo()
+    {
+        return [new shared A].inputRangeObject;
+    }
+    auto res = foo.array;
 }
 
 /++

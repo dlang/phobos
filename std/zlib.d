@@ -67,8 +67,12 @@ class ZlibException : Exception
 
 uint adler32(uint adler, const(void)[] buf)
 {
-    return etc.c.zlib.adler32(adler, cast(ubyte *)buf.ptr,
-            to!uint(buf.length));
+    import std.range : chunks;
+    foreach(chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    {
+        adler = etc.c.zlib.adler32(adler, chunk.ptr, cast(uint)chunk.length);
+    }
+    return adler;
 }
 
 unittest
@@ -90,7 +94,12 @@ unittest
 
 uint crc32(uint crc, const(void)[] buf)
 {
-    return etc.c.zlib.crc32(crc, cast(ubyte *)buf.ptr, to!uint(buf.length));
+    import std.range : chunks;
+    foreach(chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    {
+        crc = etc.c.zlib.crc32(crc, chunk.ptr, cast(uint)chunk.length);
+    }
+    return crc;
 }
 
 unittest

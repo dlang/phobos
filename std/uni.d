@@ -2326,9 +2326,9 @@ public:
      * in form of open-right intervals.
      *
      * The formatting flag is applied individually to each value, for example:
-     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high) range of integrals)
-     * $(LI $(B %x) formats the intervals as a [low..high) range of lowercase hex characters)
-     * $(LI $(B %X) formats the intervals as a [low..high) range of uppercase hex characters)
+     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high$(RPAREN) range of integrals)
+     * $(LI $(B %x) formats the intervals as a [low..high$(RPAREN) range of lowercase hex characters)
+     * $(LI $(B %X) formats the intervals as a [low..high$(RPAREN) range of uppercase hex characters)
      */
     void toString(scope void delegate(const(char)[]) sink,
                   FormatSpec!char fmt) /* const */
@@ -2524,7 +2524,7 @@ public:
 
         The above outputs something along the lines of:
         ---
-        bool func(dchar ch)
+        bool func(dchar ch)  @safe pure nothrow @nogc
         {
             if(ch < 45)
             {
@@ -2622,7 +2622,7 @@ public:
             return result~indent~"}\n";
         }
 
-        string code = format("bool %s(dchar ch) @safe pure nothrow\n",
+        string code = format("bool %s(dchar ch) @safe pure nothrow @nogc\n",
             funcName.empty ? "function" : funcName);
         auto range = byInterval.array();
         // special case first bisection to be on ASCII vs beyond
@@ -4678,7 +4678,15 @@ template Utf8Matcher()
     char truncate()(char ch) pure @safe
     {
         ch -= 0x80;
-        return ch < 0x40 ? ch : (badEncoding(), cast(char)0);
+        if (ch < 0x40)
+        {
+            return ch;
+        }
+        else
+        {
+            badEncoding();
+            return cast(char)0;
+        }
     }
 
     static auto encode(size_t sz)(dchar ch)
@@ -4839,7 +4847,10 @@ template Utf8Matcher()
         {
             import std.typecons;
             if(inp.length < size)
-                return badEncoding(), false;
+            {
+                badEncoding();
+                return false;
+            }
             char[size] needle = void;
             needle[0] = leadMask!size & inp[0];
             foreach(i; staticIota!(1, size))
@@ -4880,7 +4891,13 @@ template Utf8Matcher()
             else
             {
                 static assert(mode == Mode.skipOnMatch);
-                return tab!size[needle] && (inp.popFrontN(size), true);
+                if (tab!size[needle])
+                {
+                    inp.popFrontN(size);
+                    return true;
+                }
+                else
+                    return false;
             }
         }
     }
@@ -4961,8 +4978,19 @@ template Utf16Matcher()
             assert(!inp.empty);
             auto ch = inp[0];
             static if(sizeFlags & 1)
-                return ch < 0x80 ? ascii[ch] && (inp.popFront(), true)
-                    : lookupUni!mode(inp);
+            {
+                if (ch < 0x80)
+                {
+                  if (ascii[ch])
+                  {
+                      inp.popFront();
+                      return true;
+                  }
+                  else
+                      return false;
+                }
+                return lookupUni!mode(inp);
+            }
             else
                 return lookupUni!mode(inp);
         }
@@ -4976,8 +5004,15 @@ template Utf16Matcher()
                 assert(!inp.empty);
                 auto ch = inp[0];
                 static if(sizeFlags & 1)
-                    return ch < 0x80 ? (inp.popFront(), ascii[ch])
-                        : lookupUni!mode(inp);
+                {
+                    if (ch < 0x80)
+                    {
+                        inp.popFront();
+                        return ascii[ch];
+                    }
+                    else
+                        return lookupUni!mode(inp);
+                }
                 else
                     return lookupUni!mode(inp);
             }
@@ -5057,7 +5092,15 @@ template Utf16Matcher()
                     static if(mode == Mode.alwaysSkip)
                         inp.popFront();
                     static if(mode == Mode.skipOnMatch)
-                        return bmp[ch] && (inp.popFront(), true);
+                    {
+                        if (bmp[ch])
+                        {
+                            inp.popFront();
+                            return true;
+                        }
+                        else
+                            return false;
+                    }
                     else
                         return bmp[ch];
                 }
@@ -5078,7 +5121,15 @@ template Utf16Matcher()
                     static if(mode == Mode.alwaysSkip)
                         inp.popFrontN(2);
                     static if(mode == Mode.skipOnMatch)
-                        return uni[needle] && (inp.popFrontN(2), true);
+                    {
+                        if (uni[needle])
+                        {
+                            inp.popFrontN(2);
+                            return true;
+                        }
+                        else
+                            return false;
+                    }
                     else
                         return uni[needle];
                 }
@@ -7847,7 +7898,7 @@ version(std_uni_bootstrap)
 {
     // old version used for bootstrapping of gen_uni.d that generates
     // up to date optimal versions of all of isXXX functions
-    @safe pure nothrow public bool isWhite(dchar c)
+    @safe pure nothrow @nogc public bool isWhite(dchar c)
     {
         return std.ascii.isWhite(c) ||
                c == lineSep || c == paraSep ||
@@ -7861,47 +7912,19 @@ else
 
 // trusted -> avoid bounds check
 @trusted pure nothrow
-ushort toLowerIndex(dchar c)
 {
-    alias trie = toLowerIndexTrie;
-    return trie[c];
-}
+    // hide template instances behind functions (Bugzilla 13232)
+    ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
+    ushort toLowerSimpleIndex(dchar c) { return toLowerSimpleIndexTrie[c]; }
+    dchar toLowerTab(size_t idx) { return toLowerTable[idx]; }
 
-// trusted -> avoid bounds check
-@trusted pure nothrow
-dchar toLowerTab(size_t idx)
-{
-    return toLowerTable[idx];
-}
+    ushort toTitleIndex(dchar c) { return toTitleIndexTrie[c]; }
+    ushort toTitleSimpleIndex(dchar c) { return toTitleSimpleIndexTrie[c]; }
+    dchar toTitleTab(size_t idx) { return toTitleTable[idx]; }
 
-// trusted -> avoid bounds check
-@trusted pure nothrow
-ushort toTitleIndex(dchar c)
-{
-    alias trie = toTitleIndexTrie;
-    return trie[c];
-}
-
-// trusted -> avoid bounds check
-@trusted pure nothrow
-dchar toTitleTab(size_t idx)
-{
-    return toTitleTable[idx];
-}
-
-// trusted -> avoid bounds check
-@trusted pure nothrow
-ushort toUpperIndex(dchar c)
-{
-    alias trie = toUpperIndexTrie;
-    return trie[c];
-}
-
-// trusted -> avoid bounds check
-@trusted pure nothrow
-dchar toUpperTab(size_t idx)
-{
-    return toUpperTable[idx];
+    ushort toUpperIndex(dchar c) { return toUpperIndexTrie[c]; }
+    ushort toUpperSimpleIndex(dchar c) { return toUpperSimpleIndexTrie[c]; }
+    dchar toUpperTab(size_t idx) { return toUpperTable[idx]; }
 }
 
 public:
@@ -7911,7 +7934,7 @@ public:
     (general Unicode category: Part of C0(tab, vertical tab, form feed,
     carriage return, and linefeed characters), Zs, Zl, Zp, and NEL(U+0085))
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 public bool isWhite(dchar c)
 {
     return isWhiteGen(c); // call pregenerated binary search
@@ -7997,8 +8020,8 @@ dchar toLower(dchar c)
             return c + 32;
         return c;
     }
-    size_t idx = toLowerIndex(c);
-    if(idx < MAX_SIMPLE_LOWER)
+    size_t idx = toLowerSimpleIndex(c);
+    if(idx != ushort.max)
     {
         return toLowerTab(idx);
     }
@@ -8019,8 +8042,8 @@ private dchar toTitlecase(dchar c)
             return c - 32;
         return c;
     }
-    size_t idx = toTitleIndex(c);
-    if(idx < MAX_SIMPLE_TITLE)
+    size_t idx = toTitleSimpleIndex(c);
+    if(idx != ushort.max)
     {
         return toTitleTab(idx);
     }
@@ -8454,6 +8477,15 @@ unittest
     // Test on wchar and dchar strings.
     assert(toLower("Some String"w) == "some string"w);
     assert(toLower("Some String"d) == "some string"d);
+
+    // bugzilla 12455
+    dchar c = 'İ'; // '\U0130' LATIN CAPITAL LETTER I WITH DOT ABOVE
+    assert(isUpper(c));
+    assert(toLower(c) == 'i');
+    // extend on 12455 reprot - check simple-case toUpper too
+    c = '\u1f87';
+    assert(isLower(c));
+    assert(toUpper(c) == '\u1F8F');
 }
 
 
@@ -8477,8 +8509,8 @@ dchar toUpper(dchar c)
             return c - 32;
         return c;
     }
-    size_t idx = toUpperIndex(c);
-    if(idx < MAX_SIMPLE_UPPER)
+    size_t idx = toUpperSimpleIndex(c);
+    if(idx != ushort.max)
     {
         return toUpperTab(idx);
     }
@@ -8492,10 +8524,12 @@ dchar toUpper(dchar c)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');
     assert(toUpper('δ') == 'Δ');
+    auto title = unicode.Titlecase_Letter;
     foreach(ch; unicode.lowerCase.byCodepoint)
     {
         dchar up = ch.toUpper();
-        assert(up == ch || isUpper(up), format("%s -> %s", ch, up));
+        assert(up == ch || isUpper(up) || title[up],
+            format("%x -> %x", ch, up));
     }
 }
 
@@ -8994,9 +9028,11 @@ private:
     auto toUpperIndexTrie() { static immutable res = asTrie(toUpperIndexTrieEntries); return res; }
     auto toLowerIndexTrie() { static immutable res = asTrie(toLowerIndexTrieEntries); return res; }
     auto toTitleIndexTrie() { static immutable res = asTrie(toTitleIndexTrieEntries); return res; }
-
+    //simple case conversion tables
+    auto toUpperSimpleIndexTrie() { static immutable res = asTrie(toUpperSimpleIndexTrieEntries); return res; }
+    auto toLowerSimpleIndexTrie() { static immutable res = asTrie(toLowerSimpleIndexTrieEntries); return res; }
+    auto toTitleSimpleIndexTrie() { static immutable res = asTrie(toTitleSimpleIndexTrieEntries); return res; }
 
 }
 
 }// version(!std_uni_bootstrap)
-

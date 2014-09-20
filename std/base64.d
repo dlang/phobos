@@ -1579,15 +1579,16 @@ unittest
 
     { // Encoder and Decoder
         {
-            std.file.write("testingEncoder", "\nf\nfo\nfoo\nfoob\nfooba\nfoobar");
+            string encode_file = std.file.deleteme ~ "-testingEncoder";
+            std.file.write(encode_file, "\nf\nfo\nfoo\nfoob\nfooba\nfoobar");
 
             auto witness = ["", "Zg==", "Zm8=", "Zm9v", "Zm9vYg==", "Zm9vYmE=", "Zm9vYmFy"];
-            auto f = File("testingEncoder");
+            auto f = File(encode_file);
             scope(exit)
             {
                 f.close();
                 assert(!f.isOpen);
-                std.file.remove("testingEncoder");
+                std.file.remove(encode_file);
             }
 
             size_t i;
@@ -1598,15 +1599,16 @@ unittest
         }
 
         {
-            std.file.write("testingDecoder", "\nZg==\nZm8=\nZm9v\nZm9vYg==\nZm9vYmE=\nZm9vYmFy");
+            string decode_file = std.file.deleteme ~ "-testingDecoder";
+            std.file.write(decode_file, "\nZg==\nZm8=\nZm9v\nZm9vYg==\nZm9vYmE=\nZm9vYmFy");
 
             auto witness = tv.keys.sort;
-            auto f = File("testingDecoder");
+            auto f = File(decode_file);
             scope(exit)
             {
                 f.close();
                 assert(!f.isOpen);
-                std.file.remove("testingDecoder");
+                std.file.remove(decode_file);
             }
 
             size_t i;

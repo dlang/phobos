@@ -286,17 +286,17 @@ else static assert (0);
 */
 auto baseName(R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        is(StringTypeOf!R))
 {
-    auto p1 = stripDrive(path);
+    auto p1 = stripDrive!(BaseOf!R)(path);
     if (p1.empty)
     {
-        version (Windows) if (isUNC(path))
+        version (Windows) if (isUNC!(BaseOf!R)(path))
         {
             return path[0..1];
         }
-        static if (isSomeString!R)
-            return null;
+        static if (is(StringTypeOf!R))
+            return StringTypeOf!R.init[];   // which is null
         else
             return p1; // which is empty
     }
@@ -379,6 +379,9 @@ unittest
 
     static assert (baseName("dir/file.ext") == "file.ext");
     static assert (baseName("dir/file.ext", ".ext") == "file");
+
+    static struct DirEntry { string s; alias s this; }
+    assert(baseName(DirEntry("dir/file.ext")) == "file.ext");
 }
 
 
@@ -388,9 +391,8 @@ unittest
     includes the drive letter if present.
 
     This function performs a memory allocation if and only if $(D path)
-    is mutable and does not have a directory (in which case a new mutable
-    string is needed to hold the returned current-directory symbol,
-    $(D ".")).
+    does not have a directory (in which case a new string is needed to
+    hold the returned current-directory symbol, $(D ".")).
 
     Examples:
     ---
@@ -617,12 +619,12 @@ unittest
 */
 auto stripDrive(R)(inout R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+        is(StringTypeOf!R))
 {
     version(Windows)
     {
-        if (hasDrive(path))      return path[2 .. path.length];
-        else if (isUNC(path))    return path[uncRootLength(path) .. path.length];
+        if (hasDrive!(BaseOf!R)(path))      return path[2 .. path.length];
+        else if (isUNC!(BaseOf!R)(path))    return path[uncRootLength!(BaseOf!R)(path) .. path.length];
     }
     return path;
 }
@@ -660,7 +662,7 @@ unittest
 */
 private ptrdiff_t extSeparatorPos(R)(const R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i]))
@@ -670,8 +672,6 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
     }
     return -1;
 }
-
-
 
 
 /** Returns the _extension part of a file name, including the dot.
@@ -690,13 +690,13 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
 */
 auto extension(R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        is(StringTypeOf!R))
 {
-    auto i = extSeparatorPos(path);
+    auto i = extSeparatorPos!(BaseOf!R)(path);
     if (i == -1)
     {
-        static if (isSomeString!R)
-            return null;
+        static if (is(StringTypeOf!R))
+            return StringTypeOf!R.init[];   // which is null
         else
             return path[0 .. 0];
     }
@@ -746,6 +746,9 @@ unittest
         foreach (i, c; `.ext2`)
             assert(s[i] == c);
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert (extension(DirEntry("file")).empty);
 }
 
 
@@ -1823,13 +1826,13 @@ unittest
     }
     ---
 */
-bool isRooted(R)(const R path)
+bool isRooted(R)(inout R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        is(StringTypeOf!R))
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
     version (Posix)         return false;
-    else version (Windows)  return isAbsolute(path);
+    else version (Windows)  return isAbsolute!(BaseOf!R)(path);
 }
 
 
@@ -1852,6 +1855,9 @@ unittest
 
     static assert (isRooted("/foo"));
     static assert (!isRooted("foo"));
+
+    static struct DirEntry { string s; alias s this; }
+    assert (!isRooted(DirEntry("foo")));
 }
 
 
@@ -1888,17 +1894,25 @@ unittest
     }
     ---
 */
-version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow @nogc
-    if (isSomeChar!C);
-
-else version (Windows) bool isAbsolute(R)(const R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+version (StdDdoc)
 {
-    return isDriveRoot(path) || isUNC(path);
+    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            is(StringTypeOf!R));
 }
-
-else version (Posix) alias isAbsolute = isRooted;
+else version (Windows)
+{
+    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            is(StringTypeOf!R))
+    {
+        return isDriveRoot!(BaseOf!R)(path) || isUNC!(BaseOf!R)(path);
+    }
+}
+else version (Posix)
+{
+    alias isAbsolute = isRooted;
+}
 
 
 unittest
@@ -1930,6 +1944,9 @@ unittest
         auto r = MockRange!(immutable(char))(`../foo`);
         assert(!r.isAbsolute());
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert(!isAbsolute(DirEntry("foo")));
 }
 
 
@@ -2554,7 +2571,7 @@ unittest
 */
 bool isValidFilename(R)(R filename)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isSomeString!R)
+        is(StringTypeOf!R))
 {
     import core.stdc.stdio;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
@@ -2622,6 +2639,9 @@ unittest
         auto r = MockRange!(immutable(char))(`dir/file.d`);
         assert(!isValidFilename(r));
     }
+
+    static struct DirEntry { string s; alias s this; }
+    assert(isValidFilename(DirEntry("file.ext")));
 }
 
 
@@ -2873,68 +2893,77 @@ string expandTilde(string inputPath)
         // Replaces the tilde from path with the path from the user database.
         static string expandFromDatabase(string path)
         {
-            assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
-            assert(path[0] == '~');
-
-            // Extract username, searching for path separator.
-            string username;
-            auto last_char = std.string.indexOf(path, dirSeparator[0]);
-
-            if (last_char == -1)
+            // Android doesn't really support this, as getpwnam_r
+            // isn't provided and getpwnam is basically just a stub
+            version(Android)
             {
-                username = path[1 .. $] ~ '\0';
-                last_char = username.length + 1;
+                return path;
             }
             else
             {
-                username = path[1 .. last_char] ~ '\0';
-            }
-            assert(last_char > 1);
+                assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
+                assert(path[0] == '~');
 
-            // Reserve C memory for the getpwnam_r() function.
-            passwd result;
-            int extra_memory_size = 5 * 1024;
-            void* extra_memory;
+                // Extract username, searching for path separator.
+                string username;
+                auto last_char = std.string.indexOf(path, dirSeparator[0]);
 
-            while (1)
-            {
-                extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
-                if (extra_memory == null)
-                    goto Lerror;
-
-                // Obtain info from database.
-                passwd *verify;
-                errno = 0;
-                if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
-                        &verify) == 0)
+                if (last_char == -1)
                 {
-                    // Failure if verify doesn't point at result.
-                    if (verify != &result)
-                        // username is not found, so return path[]
-                        goto Lnotfound;
-                    break;
+                    username = path[1 .. $] ~ '\0';
+                    last_char = username.length + 1;
+                }
+                else
+                {
+                    username = path[1 .. last_char] ~ '\0';
+                }
+                assert(last_char > 1);
+
+                // Reserve C memory for the getpwnam_r() function.
+                passwd result;
+                int extra_memory_size = 5 * 1024;
+                void* extra_memory;
+
+                while (1)
+                {
+                    extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
+                    if (extra_memory == null)
+                        goto Lerror;
+
+                    // Obtain info from database.
+                    passwd *verify;
+                    errno = 0;
+                    if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
+                            &verify) == 0)
+                    {
+                        // Failure if verify doesn't point at result.
+                        if (verify != &result)
+                            // username is not found, so return path[]
+                            goto Lnotfound;
+                        break;
+                    }
+
+                    if (errno != ERANGE)
+                        goto Lerror;
+
+                    // extra_memory isn't large enough
+                    core.stdc.stdlib.free(extra_memory);
+                    extra_memory_size *= 2;
                 }
 
-                if (errno != ERANGE)
-                    goto Lerror;
+                path = combineCPathWithDPath(result.pw_dir, path, last_char);
 
-                // extra_memory isn't large enough
+            Lnotfound:
                 core.stdc.stdlib.free(extra_memory);
-                extra_memory_size *= 2;
+                return path;
+
+            Lerror:
+                // Errors are going to be caused by running out of memory
+                if (extra_memory)
+                    core.stdc.stdlib.free(extra_memory);
+                onOutOfMemoryError();
+                return null;
             }
-
-            path = combineCPathWithDPath(result.pw_dir, path, last_char);
-
-        Lnotfound:
-            core.stdc.stdlib.free(extra_memory);
-            return path;
-
-        Lerror:
-            // Errors are going to be caused by running out of memory
-            if (extra_memory)
-                core.stdc.stdlib.free(extra_memory);
-            onOutOfMemoryError();
-            return null;
         }
 
         // Return early if there is no tilde in path.
@@ -2985,15 +3014,20 @@ unittest
         if (oldHome !is null) environment["HOME"] = oldHome;
         else environment.remove("HOME");
 
-        // Test user expansion for root. Are there unices without /root?
+        // Test user expansion for root, no /root on Android
         version (OSX)
+        {
             assert(expandTilde("~root") == "/var/root", expandTilde("~root"));
-        else
-            assert(expandTilde("~root") == "/root", expandTilde("~root"));
-        version (OSX)
             assert(expandTilde("~root/") == "/var/root/", expandTilde("~root/"));
+        }
+        else version (Android)
+        {
+        }
         else
+        {
+            assert(expandTilde("~root") == "/root", expandTilde("~root"));
             assert(expandTilde("~root/") == "/root/", expandTilde("~root/"));
+        }
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }
 }
@@ -3027,4 +3061,12 @@ version (unittest)
     }
 
     static assert( isRandomAccessRange!(MockRange!(const(char))) );
+}
+
+private template BaseOf(R)
+{
+    static if (isRandomAccessRange!R && isSomeChar!(ElementType!R))
+        alias BaseOf = R;
+    else
+        alias BaseOf = StringTypeOf!R;
 }

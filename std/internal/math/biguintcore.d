@@ -109,7 +109,7 @@ private:
     }
 public:
     // Length in uints
-    size_t uintLength() pure nothrow const
+    @property size_t uintLength() pure nothrow const
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -121,7 +121,7 @@ public:
             ((data[$-1] & 0xFFFF_FFFF_0000_0000L) ? 1 : 0);
         }
     }
-    size_t ulongLength() pure nothrow const
+    @property size_t ulongLength() pure nothrow const
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -594,6 +594,21 @@ public:
             result[] = x.data[];
             uint rem = multibyteDivAssign(result, y, 0);
         }
+        return BigUint(removeLeadingZeros(assumeUnique(result)));
+    }
+
+    static BigUint divInt(T)(BigUint x, T y) pure nothrow
+    if ( is(Unqual!T == ulong) )
+    {
+        if (y <= uint.max)
+            return divInt!uint(x, cast(uint)y);
+        if (x.data.length < 2)
+            return BigUint(ZERO);
+        uint hi = cast(uint)(y >>> 32);
+        uint lo = cast(uint)(y & 0xFFFF_FFFF);
+        immutable uint[2] z = [lo, hi];
+        BigDigit[] result = new BigDigit[x.data.length - z.length + 1];
+        divModInternal(result, null, x.data, z[]);
         return BigUint(removeLeadingZeros(assumeUnique(result)));
     }
 

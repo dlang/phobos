@@ -138,7 +138,7 @@ public import std.digest.digest;
  * Helper methods for encoding the buffer.
  * Can be removed if the optimizer can inline the methods from std.bitmanip.
  */
-private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow
+private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow @nogc
 {
     version(LittleEndian)
         immutable ulong res = (cast(ulong)  bswap(cast(uint) val)) << 32 | bswap(cast(uint) (val >> 32));
@@ -147,7 +147,7 @@ private ubyte[8] nativeToBigEndian(ulong val) @trusted pure nothrow
     return *cast(ubyte[8]*) &res;
 }
 
-private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow
+private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow @nogc
 {
     version(LittleEndian)
         immutable uint res = bswap(val);
@@ -156,7 +156,7 @@ private ubyte[4] nativeToBigEndian(uint val) @trusted pure nothrow
     return *cast(ubyte[4]*) &res;
 }
 
-private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow
+private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
 {
     version(LittleEndian)
     {
@@ -167,7 +167,7 @@ private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow
         return *cast(ulong*) &val;
 }
 
-private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow
+private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow @nogc
 {
     version(LittleEndian)
         return bswap(*cast(uint*) &val);
@@ -176,7 +176,7 @@ private uint bigEndianToNative(ubyte[4] val) @trusted pure nothrow
 }
 
 //rotateLeft rotates x left n bits
-private nothrow pure uint rotateLeft(uint x, uint n)
+private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
 {
     // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
     // No assembler required.
@@ -184,11 +184,11 @@ private nothrow pure uint rotateLeft(uint x, uint n)
 }
 
 //rotateRight rotates x right n bits
-private nothrow pure uint rotateRight(uint x, uint n)
+private uint rotateRight(uint x, uint n) @safe pure nothrow @nogc
 {
     return (x >> n) | (x << (32-n));
 }
-private nothrow pure ulong rotateRight(ulong x, uint n)
+private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
 {
     return (x >> n) | (x << (64-n));
 }
@@ -218,7 +218,7 @@ struct SHA(int blockSize, int digestSize)
     {
         version(USE_SSSE3)
         {
-            private __gshared immutable nothrow pure void function(uint[5]* state, const(ubyte[64])* block) transform;
+            private __gshared immutable pure nothrow @nogc void function(uint[5]* state, const(ubyte[64])* block) transform;
 
             shared static this()
             {
@@ -346,7 +346,7 @@ struct SHA(int blockSize, int digestSize)
         ulong[blockSize/512] count;
         ubyte[blockSize/8]   buffer; /* input buffer */
 
-        enum ubyte[128] padding =
+        static immutable ubyte[128] padding =
         [
           0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -360,7 +360,7 @@ struct SHA(int blockSize, int digestSize)
         /*
          * Basic SHA1/SHA2 functions.
          */
-        static pure nothrow
+        static @safe pure nothrow @nogc
         {
             /* All SHA1/SHA2 */
             T Ch(T)(T x, T y, T z) { return z ^ (x & (y ^ z)); }
@@ -385,46 +385,47 @@ struct SHA(int blockSize, int digestSize)
         /*
          * SHA1 basic transformation. Transforms state based on block.
          */
-        static nothrow pure void T_0_15(int i, const(ubyte[64])* input, ref uint[16] W, uint A, ref uint B, uint C, uint D,
-            uint E, ref uint T)
+        static void T_0_15(int i, const(ubyte[64])* input, ref uint[16] W, uint A, ref uint B, uint C, uint D,
+            uint E, ref uint T) pure nothrow @nogc
         {
             uint Wi = W[i] = bigEndianToNative(*cast(ubyte[4]*)&((*input)[i*4]));
             T = Ch(B, C, D) + E + rotateLeft(A, 5) + Wi + 0x5a827999;
             B = rotateLeft(B, 30);
         }
 
-        static nothrow pure void T_16_19(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E, ref uint T)
+        static void T_16_19(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E, ref uint T)
+            pure nothrow @nogc
         {
             W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
             T = Ch(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x5a827999;
             B = rotateLeft(B, 30);
         }
 
-        static nothrow pure void T_20_39(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
-            ref uint T)
+        static void T_20_39(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
+            ref uint T) pure nothrow @nogc
         {
             W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
             T = Parity(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x6ed9eba1;
             B = rotateLeft(B, 30);
         }
 
-        static nothrow pure void T_40_59(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
-            ref uint T)
+        static void T_40_59(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
+            ref uint T) pure nothrow @nogc
         {
             W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
             T = Maj(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0x8f1bbcdc;
             B = rotateLeft(B, 30);
         }
 
-        static nothrow pure void T_60_79(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
-            ref uint T)
+        static void T_60_79(int i, ref uint[16] W, uint A, ref uint B, uint C, uint D, uint E,
+            ref uint T) pure nothrow @nogc
         {
             W[i&15] = rotateLeft(W[(i-3)&15] ^ W[(i-8)&15] ^ W[(i-14)&15] ^ W[(i-16)&15], 1);
             T = Parity(B, C, D) + E + rotateLeft(A, 5) + W[i&15] + 0xca62c1d6;
             B = rotateLeft(B, 30);
         }
 
-        private static nothrow pure void transformX86(uint[5]* state, const(ubyte[64])* block)
+        private static void transformX86(uint[5]* state, const(ubyte[64])* block) pure nothrow @nogc
         {
             uint A, B, C, D, E, T;
             uint[16] W = void;
@@ -529,8 +530,9 @@ struct SHA(int blockSize, int digestSize)
         /*
          * SHA2 basic transformation. Transforms state based on block.
          */
-        static nothrow pure void T_SHA2_0_15(Word)(int i, const(ubyte[blockSize/8])* input, ref Word[16] W,
+        static void T_SHA2_0_15(Word)(int i, const(ubyte[blockSize/8])* input, ref Word[16] W,
             Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
+            pure nothrow @nogc
         {
             Word Wi = W[i] = bigEndianToNative(*cast(ubyte[Word.sizeof]*)&((*input)[i*Word.sizeof]));
             Word T1 = H + BigSigma1(E) + Ch(E, F, G) + K + Wi;
@@ -539,8 +541,9 @@ struct SHA(int blockSize, int digestSize)
             H = T1 + T2;
         }
 
-        static nothrow pure void T_SHA2_16_79(Word)(int i, ref Word[16] W,
+        static void T_SHA2_16_79(Word)(int i, ref Word[16] W,
             Word A, Word B, Word C, ref Word D, Word E, Word F, Word G, ref Word H, Word K)
+            pure nothrow @nogc
         {
             W[i&15] = SmSigma1(W[(i-2)&15]) + W[(i-7)&15] + SmSigma0(W[(i-15)&15]) + W[i&15];
             Word T1 = H + BigSigma1(E) + Ch(E, F, G) + K + W[i&15];
@@ -549,7 +552,8 @@ struct SHA(int blockSize, int digestSize)
             H = T1 + T2;
         }
 
-        private static nothrow pure void transformSHA2(Word)(Word[8]* state, const(ubyte[blockSize/8])* block)
+        private static void transformSHA2(Word)(Word[8]* state, const(ubyte[blockSize/8])* block)
+            pure nothrow @nogc
         {
             Word A, B, C, D, E, F, G, H;
             Word[16] W = void;
@@ -678,7 +682,7 @@ struct SHA(int blockSize, int digestSize)
          * digest.put(0);
          * --------
          */
-        @trusted nothrow pure void start()
+        void start() @safe pure nothrow @nogc
         {
             this = typeof(this).init;
         }
@@ -688,7 +692,7 @@ struct SHA(int blockSize, int digestSize)
          * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
          * $(D const(ubyte)[]).
          */
-        @trusted nothrow pure void put(scope const(ubyte)[] input...)
+        void put(scope const(ubyte)[] input...) @trusted pure nothrow @nogc
         {
             enum blockSizeInBytes = blockSize/8;
             uint i, index, partLen;
@@ -746,7 +750,7 @@ struct SHA(int blockSize, int digestSize)
          * Returns the finished SHA hash. This also calls $(LREF start) to
          * reset the internal state.
          */
-        @trusted nothrow pure ubyte[digestSize/8] finish()
+        ubyte[digestSize/8] finish() @trusted pure nothrow @nogc
         {
             static if(blockSize==512)
             {
@@ -754,7 +758,7 @@ struct SHA(int blockSize, int digestSize)
                 uint index, padLen;
 
                 /* Save number of bits */
-                ubyte bits[8] = nativeToBigEndian(count[0]);
+                ubyte[8] bits = nativeToBigEndian(count[0]);
 
                 /* Pad out to 56 mod 64. */
                 index = (cast(uint)count[0] >> 3) & (64 - 1);
@@ -778,7 +782,7 @@ struct SHA(int blockSize, int digestSize)
                 uint index, padLen;
 
                 /* Save number of bits */
-                ubyte bits[16];
+                ubyte[16] bits;
                 bits[ 0..8] = nativeToBigEndian(count[1]);
                 bits[8..16] = nativeToBigEndian(count[0]);
 

@@ -1333,7 +1333,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     {
         enforce(a < ResultType.max,
                 text("std.random.uniform(): invalid left bound ", a));
-        ResultType lower = a + 1;
+        ResultType lower = cast(ResultType) (a + 1);
     }
     else
     {
@@ -1399,10 +1399,38 @@ unittest
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
-        T init = uniform(lo, hi);
-        size_t i = 50;
-        while (--i && uniform(lo, hi) == init) {}
-        assert(i > 0);
+
+        // Try tests with each of the possible bounds
+        {
+            T init = uniform(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"[)"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"(]"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"()"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
+        {
+            T init = uniform!"[]"(lo, hi);
+            size_t i = 50;
+            while (--i && uniform(lo, hi) == init) {}
+            assert(i > 0);
+        }
 
         /* Test case with closed boundaries covering whole range
          * of integral type
@@ -1590,12 +1618,12 @@ unittest
 
 /**
  * Generates a uniformly-distributed floating point number of type
- * $(D T) in the range [0, 1).  If no random number generator is
+ * $(D T) in the range [0, 1$(RPAREN).  If no random number generator is
  * specified, the default RNG $(D rndGen) will be used as the source
  * of randomness.
  *
  * $(D uniform01) offers a faster generation of random variates than
- * the equivalent $(D uniform!"[)"(0.0, 1.0)) and so may be preferred
+ * the equivalent $(D uniform!"[$(RPAREN)"(0.0, 1.0)) and so may be preferred
  * for some applications.
  */
 T uniform01(T = double)()
@@ -1770,7 +1798,7 @@ void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
-        swapAt(r, i, i + uniform(0, n - i, gen));
+        swapAt(r, i, uniform(i, n, gen));
     }
 }
 

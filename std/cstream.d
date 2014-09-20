@@ -150,7 +150,11 @@ class CFile : Stream {
 
   // run a few tests
   unittest {
-    FILE* f = fopen("stream.txt","w");
+    import std.file : deleteme;
+    import std.internal.cstring : tempCString;
+
+    auto stream_file = (std.file.deleteme ~ "-stream.txt").tempCString();
+    FILE* f = fopen(stream_file,"w");
     assert(f !is null);
     CFile file = new CFile(f,FileMode.Out);
     int i = 666;
@@ -167,7 +171,7 @@ class CFile : Stream {
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
-    f = fopen("stream.txt","r");
+    f = fopen(stream_file,"r");
     file = new CFile(f,FileMode.In,true);
     // should be ok to read
     assert(file.readable);
@@ -192,7 +196,7 @@ class CFile : Stream {
       assert(file.position == 18 + 13 + 4);
     // we must be at the end of file
     file.close();
-    f = fopen("stream.txt","w+");
+    f = fopen(stream_file,"w+");
     file = new CFile(f,FileMode.In|FileMode.Out,true);
     file.writeLine("Testing stream.d:");
     file.writeLine("Another line");
@@ -218,7 +222,7 @@ class CFile : Stream {
     assert( lines[2] == "");
     assert( lines[3] == "That was blank");
     file.close();
-    remove("stream.txt");
+    remove(stream_file);
   }
 }
 

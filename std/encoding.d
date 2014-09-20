@@ -2787,7 +2787,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         {
             auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.decode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length * wchar.sizeof..$];
             return c;
         }
 
@@ -2800,7 +2800,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         {
             auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length * wchar.sizeof..$];
             return c;
         }
 
@@ -2809,6 +2809,23 @@ class EncodingSchemeUtf16Native : EncodingScheme
             return cast(immutable(ubyte)[])"\uFFFD"w;
         }
     }
+}
+unittest
+{
+    version(LittleEndian)
+    {
+        auto efrom = EncodingScheme.create("utf-16le");
+        ubyte[6] sample = [154,1, 155,1, 156,1];
+    }
+    version(BigEndian)
+    {
+        auto efrom = EncodingScheme.create("utf-16be");
+        ubyte[6] sample = [1,154, 1,155, 1,156];
+    }
+    const(ubyte)[] ub = cast(const(ubyte)[])sample;
+    dchar dc = efrom.safeDecode(ub);
+    assert(dc == 410);
+    assert(ub.length == 4);
 }
 
 /**
@@ -2865,7 +2882,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         {
             auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.decode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length * dchar.sizeof..$];
             return c;
         }
 
@@ -2878,7 +2895,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         {
             auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length * dchar.sizeof..$];
             return c;
         }
 
@@ -2887,6 +2904,23 @@ class EncodingSchemeUtf32Native : EncodingScheme
             return cast(immutable(ubyte)[])"\uFFFD"d;
         }
     }
+}
+unittest
+{
+    version(LittleEndian)
+    {
+        auto efrom = EncodingScheme.create("utf-32le");
+        ubyte[12] sample = [154,1,0,0, 155,1,0,0, 156,1,0,0];
+    }
+    version(BigEndian)
+    {
+        auto efrom = EncodingScheme.create("utf-32be");
+        ubyte[12] sample = [0,0,1,154, 0,0,1,155, 0,0,1,156];
+    }
+    const(ubyte)[] ub = cast(const(ubyte)[])sample;
+    dchar dc = efrom.safeDecode(ub);
+    assert(dc == 410);
+    assert(ub.length == 8);
 }
 
 //=============================================================================

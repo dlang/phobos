@@ -170,6 +170,8 @@ import std.traits;
 import std.typecons;
 import std.typetuple;
 
+import std.internal.cstring;
+
 public import etc.c.curl : CurlOption;
 
 version(unittest)
@@ -199,6 +201,29 @@ extern (C) void exit(int);
 
 // Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
+
+/**
+Macros:
+
+CALLBACK_PARAMS = $(TABLE ,
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM dlTotal))
+        $(DDOC_PARAM_DESC total bytes to download)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM dlNow))
+        $(DDOC_PARAM_DESC currently downloaded bytes)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM ulTotal))
+        $(DDOC_PARAM_DESC total bytes to upload)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM ulNow))
+        $(DDOC_PARAM_DESC currently uploaded bytes)
+        )
+)
+*/
 
 /** Connection type used when the URL should be used to auto detect the protocol.
   *
@@ -556,11 +581,11 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
         auto trimmed = url.findSplitAfter("ftp://")[1];
         auto t = trimmed.findSplitAfter("/");
         enum minDomainNameLength = 3;
-        enforceEx!CurlException(t[0].length > minDomainNameLength,
+        enforce!CurlException(t[0].length > minDomainNameLength,
                                 text("Invalid FTP URL for delete ", url));
         conn.url = t[0];
 
-        enforceEx!CurlException(!t[1].empty,
+        enforce!CurlException(!t[1].empty,
                                 text("No filename specified to delete for URL ", url));
         conn.addCommand("DELE " ~ t[1]);
         conn.perform();
@@ -782,7 +807,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
-    enforceEx!CurlException(statusLine.code / 100 == 2,
+    enforce!CurlException(statusLine.code / 100 == 2,
                             format("HTTP request returned status code %s",
                                    statusLine.code));
 
@@ -862,11 +887,11 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
 
         // The content has to be re-encoded to utf8
         auto scheme = EncodingScheme.create(encoding);
-        enforceEx!CurlException(scheme !is null,
+        enforce!CurlException(scheme !is null,
                                 format("Unknown encoding '%s'", encoding));
 
         auto strInfo = decodeString(content, scheme);
-        enforceEx!CurlException(strInfo[0] != size_t.max,
+        enforce!CurlException(strInfo[0] != size_t.max,
                                 format("Invalid encoding sequence for encoding '%s'",
                                        encoding));
 
@@ -959,13 +984,13 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
         @property @safe Char[] front()
         {
-            enforceEx!CurlException(currentValid, "Cannot call front() on empty range");
+            enforce!CurlException(currentValid, "Cannot call front() on empty range");
             return current;
         }
 
         void popFront()
         {
-            enforceEx!CurlException(currentValid, "Cannot call popFront() on empty range");
+            enforce!CurlException(currentValid, "Cannot call popFront() on empty range");
             if (lines.empty)
             {
                 currentValid = false;
@@ -1569,7 +1594,7 @@ private void _asyncDuplicateConnection(Conn, PostData)
     }
     else
     {
-        enforceEx!CurlException(postData is null,
+        enforce!CurlException(postData is null,
                                 "Cannot put ftp data using byLineAsync()");
         tid.send(cast(ulong)connDup.handle.handle);
         tid.send(HTTP.Method.undefined);
@@ -1954,7 +1979,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
         dchar dc = scheme.safeDecode(basesrc);
         if (dc == INVALID_SEQUENCE)
         {
-            enforceEx!CurlException(len != 4, "Invalid code sequence");
+            enforce!CurlException(len != 4, "Invalid code sequence");
             return false;
         }
         dst ~= dc;
@@ -2423,17 +2448,14 @@ struct HTTP
         @property void onReceive(size_t delegate(ubyte[]) callback);
 
         /**
-         * The event handler that gets called to inform of upload/download progress.
+         * Register an event handler that gets called to inform of
+         * upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns: Return 0 to signal success, return non-zero to
+         * abort transfer.
          *
          * Example:
          * ----
@@ -2480,7 +2502,7 @@ struct HTTP
             return setUserAgent(value);
         string nv = format("%s: %s", name, value);
         p.headersOut = curl_slist_append(p.headersOut,
-                                         cast(char*) toStringz(nv));
+                                         nv.tempCString().buffPtr);
         p.curl.set(CurlOption.httpheader, p.headersOut);
     }
 
@@ -2610,7 +2632,7 @@ struct HTTP
       */
     @property void postData(const(void)[] data)
     {
-        _postData(data, "application/octet-stream");
+        setPostData(data, "application/octet-stream");
     }
 
     /** Specifying data to post when not using the onSend callback.
@@ -2629,11 +2651,28 @@ struct HTTP
       */
     @property void postData(const(char)[] data)
     {
-        _postData(data, "text/plain");
+        setPostData(data, "text/plain");
     }
 
-    // Helper for postData property
-    private void _postData(const(void)[] data, string contentType)
+    /**
+     * Specify data to post when not using the onSend callback, with
+     * user-specified Content-Type.
+     * Params:
+     *	data = Data to post.
+     *	contentType = MIME type of the data, for example, "text/plain" or
+     *	    "application/octet-stream". See also:
+     *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
+     *      Internet media type) on Wikipedia.
+     *-----
+     * import std.net.curl;
+     * auto http = HTTP("http://onlineform.example.com");
+     * auto data = "app=login&username=bob&password=s00perS3kret";
+     * http.setPostData(data, "application/x-www-form-urlencoded");
+     * http.onReceive = (ubyte[] data) { return data.length; };
+     * http.perform();
+     *-----
+     */
+    void setPostData(const(void)[] data, string contentType)
     {
         // cannot use callback when specifying data directly so it is disabled here.
         p.curl.clear(CurlOption.readfunction);
@@ -3045,15 +3084,12 @@ struct FTP
         /**
          * The event handler that gets called to inform of upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns:
+         * Return 0 from the callback to signal success, return non-zero to
+         * abort transfer.
          */
         @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                                size_t ulTotal, size_t ulNow) callback);
@@ -3086,7 +3122,7 @@ struct FTP
     void addCommand(const(char)[] command)
     {
         p.commands = curl_slist_append(p.commands,
-                                       cast(char*) toStringz(command));
+                                       command.tempCString().buffPtr);
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
@@ -3220,7 +3256,7 @@ struct SMTP
         }
         else
         {
-            enforceEx!CurlException(lowered.startsWith("smtp://"),
+            enforce!CurlException(lowered.startsWith("smtp://"),
                                     "The url must be for the smtp protocol.");
         }
         p.curl.set(CurlOption.url, url);
@@ -3229,6 +3265,7 @@ struct SMTP
     private void initialize()
     {
         p.curl.initialize();
+        p.curl.set(CurlOption.upload, 1L);
         dataTimeout = _defaultDataTimeout;
         verifyPeer = true;
         verifyHost = true;
@@ -3383,15 +3420,12 @@ struct SMTP
         /**
          * The event handler that gets called to inform of upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns:
+         * Return 0 from the callback to signal success, return non-zero to
+         * abort transfer.
          */
         @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                                size_t ulTotal, size_t ulNow) callback);
@@ -3417,7 +3451,7 @@ struct SMTP
         {
             recipients_list =
                 curl_slist_append(recipients_list,
-                                  cast(char*)toStringz(recipient));
+                                  recipient.tempCString().buffPtr);
         }
         p.curl.set(CurlOption.mail_rcpt, recipients_list);
     }
@@ -3494,7 +3528,7 @@ struct Curl
     shared static this()
     {
         // initialize early to prevent thread races
-        enforceEx!CurlException(!curl_global_init(CurlGlobal.all),
+        enforce!CurlException(!curl_global_init(CurlGlobal.all),
                                 "Couldn't initialize libcurl");
     }
 
@@ -3527,9 +3561,9 @@ struct Curl
     */
     void initialize()
     {
-        enforceEx!CurlException(!handle, "Curl instance already initialized");
+        enforce!CurlException(!handle, "Curl instance already initialized");
         handle = curl_easy_init();
-        enforceEx!CurlException(handle, "Curl instance couldn't be initialized");
+        enforce!CurlException(handle, "Curl instance couldn't be initialized");
         stopped = false;
         set(CurlOption.nosignal, 1);
     }
@@ -3599,10 +3633,10 @@ struct Curl
 
     private void _check(CurlCode code)
     {
-        enforceEx!CurlTimeoutException(code != CurlError.operation_timedout,
+        enforce!CurlTimeoutException(code != CurlError.operation_timedout,
                                        errorString(code));
 
-        enforceEx!CurlException(code == CurlError.ok,
+        enforce!CurlException(code == CurlError.ok,
                                 errorString(code));
     }
 
@@ -3618,7 +3652,7 @@ struct Curl
     private void throwOnStopped(string message = null)
     {
         auto def = "Curl instance called after being cleaned up";
-        enforceEx!CurlException(!stopped,
+        enforce!CurlException(!stopped,
                                 message == null ? def : message);
     }
 
@@ -3654,7 +3688,7 @@ struct Curl
     void set(CurlOption option, const(char)[] value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, toStringz(value)));
+        _check(curl_easy_setopt(this.handle, option, value.tempCString().buffPtr));
     }
 
     /**
@@ -4069,7 +4103,7 @@ private struct Pool(Data)
 
     @safe Data pop()
     {
-        enforceEx!Exception(root != null, "pop() called on empty pool");
+        enforce!Exception(root != null, "pop() called on empty pool");
         auto d = root.data;
         auto n = root.next;
         root.next = freeList;
@@ -4216,7 +4250,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
                 // Could not decode an entire line. Save
                 // bytes left in data for next call to
                 // onReceive. Can be up to a max of 4 bytes.
-                enforceEx!CurlException(data.length <= 4,
+                enforce!CurlException(data.length <= 4,
                                         format(
                                         "Too many bytes left not decoded %s"~
                                         " > 4. Maybe the charset specified in"~

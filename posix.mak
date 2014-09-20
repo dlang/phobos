@@ -87,12 +87,12 @@ DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 # Set DDOC, the documentation generator
 DDOC=$(DMD) -m$(MODEL) -w -c -o- -version=StdDdoc \
-    -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
@@ -176,17 +176,23 @@ MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint \
-        bitmanip compiler complex concurrency container conv		\
-        cstream csv datetime demangle encoding exception	\
-        file format functional getopt json math mathspecial	\
-        metastrings mmfile numeric outbuffer parallelism path		\
-        process random range regex signals socket socketstream	\
-        stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf uuid variant xml zip zlib)
+		bitmanip compiler complex concurrency conv		\
+		cstream csv datetime demangle encoding exception	\
+		file format functional getopt json math mathspecial	\
+		mmfile numeric outbuffer parallelism path		\
+		process random range signals socket socketstream	\
+		stdint stdio stdiobase stream string syserror system traits		\
+		typecons typetuple uni uri utf uuid variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
+STD_REGEX_MODULES = $(addprefix std/regex/, package $(addprefix internal/, \
+	generator ir parser backtracking kickstart tests thompson))
+
 STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
+
+STD_CONTAINER_MODULES = $(addprefix std/container/, package array \
+		binaryheap dlist rbtree slist util)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -208,12 +214,12 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
-	processinit unicode_tables scopebuffer\
+	cstring processinit unicode_tables scopebuffer\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
-    $(STD_DIGEST_MODULES)
+	$(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_REGEX_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -246,18 +252,15 @@ MAKEFILE = $(firstword $(MAKEFILE_LIST))
 
 # Main target (builds the dll on linux, too)
 ifeq (linux,$(OS))
-all : $(BUILD) $(BUILD)_pic
-$(BUILD)_pic :
-	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=$(BUILD) PIC=1 dll
+all : lib dll
 else
-all : $(BUILD)
+all : lib
 endif
 
 install :
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
 
-$(BUILD) : $(LIB)
 unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
 
 depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
@@ -268,14 +271,16 @@ depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 # Patterns begin here
 ################################################################################
 
-$(ROOT)/%$(DOTOBJ) : %.c
+.PHONY: lib dll
+lib: $(LIB)
+dll: $(ROOT)/libphobos2.so
+
+$(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB) : $(OBJS) $(ALL_D_FILES) druntime_libs
+$(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
-
-dll : $(ROOT)/libphobos2.so
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 	ln -sf $(notdir $(LIBSO)) $@
@@ -283,7 +288,8 @@ $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
-$(LIBSO): $(OBJS) $(ALL_D_FILES) druntime_libs $(LIBCURL_STUB)
+$(LIBSO): override PIC:=-fPIC
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO) $(LIBCURL_STUB)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) $(D_FILES) $(OBJS)
 
 # stub library with soname of the real libcurl.so (Bugzilla 10710)
@@ -298,8 +304,8 @@ $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=32 BUILD=release
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=64 BUILD=release
 	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
-	    $(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
-	    -create -output $@
+		$(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
+		-create -output $@
 endif
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
@@ -316,15 +322,19 @@ $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 
 ifneq (linux,$(OS))
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) druntime_libs
+$(UT_D_OBJS): $(DRUNTIME)
+
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKCURL) -defaultlib= -debuglib=
 
 else
 
 UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
+$(UT_D_OBJS): $(DRUNTIMESO)
+
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) druntime_libs $(LIBCURL_STUB)
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LIBCURL_STUB)
 	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) -defaultlib= -debuglib=
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
@@ -351,23 +361,31 @@ clean :
 zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
-install2 : release
-	mkdir -p $(INSTALL_DIR)/lib
-	cp $(LIB) $(INSTALL_DIR)/lib/
+install2 : all
+	$(eval lib_dir=$(if $(filter $(OS),osx), lib, lib$(MODEL)))
+	mkdir -p $(INSTALL_DIR)/$(OS)/$(lib_dir)
+	cp $(LIB) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 ifneq (,$(findstring $(OS),linux))
-	cp -P $(LIBSO) $(ROOT)/$(SONAME) $(ROOT)/libphobos2.so $(INSTALL_DIR)/lib/
+	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
+	ln -sf $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
 endif
-	mkdir -p $(INSTALL_DIR)/import/etc
-	mkdir -p $(INSTALL_DIR)/import/std
-	cp -r std/* $(INSTALL_DIR)/import/std/
-	cp -r etc/* $(INSTALL_DIR)/import/etc/
+	mkdir -p $(INSTALL_DIR)/src/phobos/etc
+	mkdir -p $(INSTALL_DIR)/src/phobos/std
+	cp -r std/* $(INSTALL_DIR)/src/phobos/std/
+	cp -r etc/* $(INSTALL_DIR)/src/phobos/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
-# Target druntime_libs produces $(DRUNTIME) and $(DRUNTIMESO). See
-# http://stackoverflow.com/q/7081284 on why this setup makes sense.
-.PHONY: druntime_libs
-druntime_libs:
+# This rule additionally produces $(DRUNTIMESO). Add a fake dependency
+# to always invoke druntime's make. Use FORCE instead of .PHONY to
+# avoid rebuilding phobos when $(DRUNTIME) didn't change.
+$(DRUNTIME): FORCE
 	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS)
+
+ifeq (,$(findstring win,$(OS)))
+$(DRUNTIMESO): $(DRUNTIME)
+endif
+
+FORCE:
 
 ###########################################################
 # html documentation
@@ -391,6 +409,9 @@ $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
 
 $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_container_%.html : std/container/%.d $(STDDOC)
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<

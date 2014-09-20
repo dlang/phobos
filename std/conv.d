@@ -21,10 +21,9 @@ WIKI = Phobos/StdConv
 */
 module std.conv;
 
-import core.stdc.string;
+import core.checkedint, core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.range,
-    std.string, std.traits, std.typecons, std.typetuple, std.uni,
-    std.utf;
+    std.string, std.traits, std.typecons, std.typetuple, std.utf;
 import std.format;
 
 /* ************* Exceptions *************** */
@@ -1376,7 +1375,7 @@ T toImpl(T, S)(S value)
     static if (isStaticArray!T)
     {
         auto res = to!(E[])(value);
-        enforceEx!ConvException(T.length == res.length,
+        enforce!ConvException(T.length == res.length,
             format("Length mismatch when converting to static array: %s vs %s", T.length, res.length));
         return res[0 .. T.length];
     }
@@ -2188,10 +2187,13 @@ body
                 c -= 'a'-10-'0';
             }
         }
-        auto blah = cast(Target) (v * radix + c - '0');
-        if (blah < v)
+
+        bool overflow = false;
+        auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
+        if (overflow || nextv > Target.max)
             goto Loverflow;
-        v = blah;
+        v = cast(Target) nextv;
+
         atStart = false;
     }
     if (atStart)
@@ -2244,6 +2246,12 @@ Lerr:
     auto u = parse!uint(r, 16);
     assert(u == 42);
     assert(r.front == '!');
+}
+
+@safe pure unittest // bugzilla 13163
+{
+    foreach (s; ["fff", "123"])
+        assertThrown!ConvOverflowException(s.parse!ubyte(16));
 }
 
 Target parse(Target, Source)(ref Source s)
@@ -2777,7 +2785,7 @@ unittest
 //Tests for the double implementation
 unittest
 {
-    import core.stdc.stdlib;
+    import core.stdc.stdlib, std.math;
     static if(real.mant_dig == 53)
     {
         //Should be parsed exactly: 53 bit mantissa
@@ -2856,11 +2864,11 @@ unittest
     {
         static if(real.mant_dig == 64)
         {
-            ushort value[5];
+            ushort[5] value;
         }
         else static if(real.mant_dig == 53)
         {
-            ushort value[4];
+            ushort[4] value;
         }
         else
             static assert(false, "Not implemented");
@@ -2883,7 +2891,9 @@ unittest
     ld = parse!real(s2);
     assert(s2.empty);
     x = *cast(longdouble *)&ld;
-    version (Win64)
+    version (CRuntime_Microsoft)
+        ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+    else version (Android)
         ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
     else
         ld1 = strtold(s.ptr, null);
@@ -3817,15 +3827,28 @@ emplace, but takes its argument by ref (as opposed to "by pointer").
 This makes it easier to use, easier to be safe, and faster in a non-inline
 build.
 
-Furthermore, emplaceRef takes a type paremeter, which specifies the type we
-want to build. This helps to build qualified objects on mutable buffer,
-without breaking the type system with unsafe casts.
+Furthermore, emplaceRef optionally takes a type paremeter, which specifies
+the type we want to build. This helps to build qualified objects on mutable
+buffer, without breaking the type system with unsafe casts.
 +/
-package template emplaceRef(T)
+package ref UT emplaceRef(UT, Args...)(ref UT chunk, auto ref Args args)
+if (is(UT == Unqual!UT))
+{
+    return emplaceImpl!UT(chunk, args);
+}
+// ditto
+package ref UT emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
+if (is(UT == Unqual!T) && !is(T == UT))
+{
+    return emplaceImpl!T(chunk, args);
+}
+
+
+private template emplaceImpl(T)
 {
     alias UT = Unqual!T;
 
-    ref UT emplaceRef()(ref UT chunk)
+    ref UT emplaceImpl()(ref UT chunk)
     {
         static assert (is(typeof({static T i;})),
             format("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
@@ -3834,7 +3857,7 @@ package template emplaceRef(T)
     }
 
     static if (!is(T == struct))
-    ref UT emplaceRef(Arg)(ref UT chunk, auto ref Arg arg)
+    ref UT emplaceImpl(Arg)(ref UT chunk, auto ref Arg arg)
     {
         static assert(is(typeof({T t = arg;})),
             format("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
@@ -3858,7 +3881,7 @@ package template emplaceRef(T)
                         typeid(T).postblit(cast(void*)&chunk);
                 }
                 else
-                    .emplaceRef!T(chunk, cast(T)arg);
+                    .emplaceImpl!T(chunk, cast(T)arg);
             }
             else static if (is(Arg : E[]))
             {
@@ -3873,7 +3896,7 @@ package template emplaceRef(T)
                         typeid(T).postblit(cast(void*)&chunk);
                 }
                 else
-                    .emplaceRef!T(chunk, cast(E[])arg);
+                    .emplaceImpl!T(chunk, cast(E[])arg);
             }
             else static if (is(Arg : E))
             {
@@ -3891,9 +3914,9 @@ package template emplaceRef(T)
                 }
                 else
                     //Alias this. Coerce.
-                    .emplaceRef!T(chunk, cast(E)arg);
+                    .emplaceImpl!T(chunk, cast(E)arg);
             }
-            else static if (is(typeof(.emplaceRef!E(chunk[0], arg))))
+            else static if (is(typeof(.emplaceImpl!E(chunk[0], arg))))
             {
                 //Final case for everything else:
                 //Types that don't match (int to uint[2])
@@ -3902,7 +3925,7 @@ package template emplaceRef(T)
                     chunk[] = arg;
                 else
                     foreach(i; 0 .. N)
-                        .emplaceRef!E(chunk[i], arg);
+                        .emplaceImpl!E(chunk[i], arg);
             }
             else
                 static assert(0, format("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
@@ -3917,7 +3940,7 @@ package template emplaceRef(T)
     }
     // ditto
     static if (is(T == struct))
-    ref UT emplaceRef(Args...)(ref UT chunk, auto ref Args args)
+    ref UT emplaceImpl(Args...)(ref UT chunk, auto ref Args args)
     {
         static if (Args.length == 1 && is(Args[0] : T) &&
             is (typeof({T t = args[0];})) //Check for legal postblit
@@ -3937,7 +3960,7 @@ package template emplaceRef(T)
             }
             else
                 //Alias this. Coerce to type T.
-                .emplaceRef!T(chunk, cast(T)args[0]);
+                .emplaceImpl!T(chunk, cast(T)args[0]);
         }
         else static if (is(typeof(chunk.__ctor(args))))
         {
@@ -3961,9 +3984,9 @@ package template emplaceRef(T)
                 alias Field = typeof(field);
                 alias UField = Unqual!Field;
                 static if (is(Field == UField))
-                    .emplaceRef!Field(field, args[i]);
+                    .emplaceImpl!Field(field, args[i]);
                 else
-                    .emplaceRef!Field(*cast(Unqual!Field*)&field, args[i]);
+                    .emplaceImpl!Field(*cast(Unqual!Field*)&field, args[i]);
             }
         }
         else
@@ -3997,7 +4020,7 @@ ref T emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
 {
     static assert (is(typeof({T t = T.opCall(args);})),
         format("%s.opCall does not return adequate data for construction.", T.stringof));
-    return emplaceRef!T(chunk, chunk.opCall(args));
+    return emplaceImpl!T(chunk, chunk.opCall(args));
 }
 
 
@@ -4012,7 +4035,7 @@ as $(D chunk)).
  */
 T* emplace(T)(T* chunk) @safe pure nothrow
 {
-    emplaceRef!T(*chunk);
+    emplaceImpl!T(*chunk);
     return chunk;
 }
 
@@ -4030,14 +4053,14 @@ as $(D chunk)).
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
 if (!is(T == struct) && Args.length == 1)
 {
-    emplaceRef!T(*chunk, args);
+    emplaceImpl!T(*chunk, args);
     return chunk;
 }
 /// ditto
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
 if (is(T == struct))
 {
-    emplaceRef!T(*chunk, args);
+    emplaceImpl!T(*chunk, args);
     return chunk;
 }
 
@@ -4852,12 +4875,21 @@ unittest //Constness
     emplaceRef!(IS[2])(ss, iss[]);
 }
 
+unittest
+{
+    int i;
+    emplaceRef(i);
+    emplaceRef!int(i);
+    emplaceRef(i, 5);
+    emplaceRef!int(i, 5);
+}
+
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
-    enforceEx!ConvException(chunk.length >= typeSize,
+    enforce!ConvException(chunk.length >= typeSize,
         format("emplace: Chunk size too small: %s < %s size = %s",
         chunk.length, typeName, typeSize));
-    enforceEx!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
+    enforce!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
         format("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
         chunk.ptr, typeAlignment, typeName));
 }
