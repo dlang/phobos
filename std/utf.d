@@ -2713,6 +2713,16 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
         void popFront()                      { r = r[1 .. $]; }
         auto ref opIndex(size_t index) inout { return r[index]; }
 
+        @property auto ref back() const
+        {
+            return r[$ - 1];
+        }
+
+        void popBack()
+        {
+            r = r[0 .. $-1];
+        }
+
         auto opSlice(size_t lower, size_t upper)
         {
             return r[lower..upper];
@@ -2789,10 +2799,26 @@ pure nothrow @nogc unittest
     }
     {
         auto r = "hello".byCodeUnit().byCodeUnit();
-        assert(isForwardRange!(typeof(r)));
+        static assert(isForwardRange!(typeof(r)));
         auto s = r.save;
         r.popFront();
         assert(s.front == 'h');
+    }
+    {
+        auto r = "hello".byCodeUnit();
+        static assert(isBidirectionalRange!(typeof(r)));
+        auto ret = r.retro;
+        assert(ret.front == 'o');
+        ret.popFront();
+        assert(ret.front == 'l');
+    }
+    {
+        auto r = "κόσμε"w.byCodeUnit();
+        static assert(isBidirectionalRange!(typeof(r)));
+        auto ret = r.retro;
+        assert(ret.front == 'ε');
+        ret.popFront();
+        assert(ret.front == 'μ');
     }
 }
 
