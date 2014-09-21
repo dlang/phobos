@@ -455,7 +455,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         {
             // leftover spec?
             enforceFmt(fmt.length == 0,
-                text("Orphan format specifier: %", fmt));
+                text("Orphan format specifier: %", spec.spec));
             break;
         }
         if (spec.width == spec.DYNAMIC)
