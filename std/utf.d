@@ -2713,6 +2713,16 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
         void popFront()                      { r = r[1 .. $]; }
         auto ref opIndex(size_t index) inout { return r[index]; }
 
+        @property auto ref back() const
+        {
+            return r[$ - 1];
+        }
+
+        void popBack()
+        {
+            r = r[0 .. $-1];
+        }
+
         auto opSlice(size_t lower, size_t upper)
         {
             return r[lower..upper];
@@ -2746,54 +2756,70 @@ auto ref byCodeUnit(R)(R r)
 
 pure nothrow @nogc unittest
 {
-  {
-    char[5] s;
-    int i;
-    foreach (c; "hello".byCodeUnit().byCodeUnit())
     {
-        s[i++] = c;
+        char[5] s;
+        int i;
+        foreach (c; "hello".byCodeUnit().byCodeUnit())
+        {
+            s[i++] = c;
+        }
+        assert(s == "hello");
     }
-    assert(s == "hello");
-  }
-  {
-    wchar[5] s;
-    int i;
-    foreach (c; "hello"w.byCodeUnit().byCodeUnit())
     {
-        s[i++] = c;
+        wchar[5] s;
+        int i;
+        foreach (c; "hello"w.byCodeUnit().byCodeUnit())
+        {
+            s[i++] = c;
+        }
+        assert(s == "hello"w);
     }
-    assert(s == "hello"w);
-  }
-  {
-    dchar[5] s;
-    int i;
-    foreach (c; "hello"d.byCodeUnit().byCodeUnit())
     {
-        s[i++] = c;
+        dchar[5] s;
+        int i;
+        foreach (c; "hello"d.byCodeUnit().byCodeUnit())
+        {
+            s[i++] = c;
+        }
+        assert(s == "hello"d);
     }
-    assert(s == "hello"d);
-  }
-  {
-    auto r = "hello".byCodeUnit();
-    assert(r.length == 5);
-    assert(r[3] == 'l');
-    assert(r[2..4][1] == 'l');
-  }
-  {
-    char[5] buff = "hello";
-    auto s = buff[].byCodeUnit();
-    s.front = 'H';
-    assert(s.front == 'H');
-    s[1] = 'E';
-    assert(s[1] == 'E');
-  }
-  {
-    auto r = "hello".byCodeUnit().byCodeUnit();
-    assert(isForwardRange!(typeof(r)));
-    auto s = r.save;
-    r.popFront();
-    assert(s.front == 'h');
-  }
+    {
+        auto r = "hello".byCodeUnit();
+        assert(r.length == 5);
+        assert(r[3] == 'l');
+        assert(r[2..4][1] == 'l');
+    }
+    {
+        char[5] buff = "hello";
+        auto s = buff[].byCodeUnit();
+        s.front = 'H';
+        assert(s.front == 'H');
+        s[1] = 'E';
+        assert(s[1] == 'E');
+    }
+    {
+        auto r = "hello".byCodeUnit().byCodeUnit();
+        static assert(isForwardRange!(typeof(r)));
+        auto s = r.save;
+        r.popFront();
+        assert(s.front == 'h');
+    }
+    {
+        auto r = "hello".byCodeUnit();
+        static assert(isBidirectionalRange!(typeof(r)));
+        auto ret = r.retro;
+        assert(ret.front == 'o');
+        ret.popFront();
+        assert(ret.front == 'l');
+    }
+    {
+        auto r = "κόσμε"w.byCodeUnit();
+        static assert(isBidirectionalRange!(typeof(r)));
+        auto ret = r.retro;
+        assert(ret.front == 'ε');
+        ret.popFront();
+        assert(ret.front == 'μ');
+    }
 }
 
 /****************************
