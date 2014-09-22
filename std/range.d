@@ -5725,7 +5725,7 @@ auto sequence(alias fun, State...)(State args)
     return Return(tuple(args));
 }
 
-///
+/// Odd numbers, using function in string form:
 unittest
 {
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
@@ -5734,6 +5734,42 @@ unittest
     assert(odds.front == 3);
     odds.popFront();
     assert(odds.front == 5);
+}
+
+/// Triangular numbers, using function in lambda form:
+unittest
+{
+    auto tri = sequence!((a,n) => n*(n+1)/2)();
+
+    // Note random access
+    assert(tri[0] == 0);
+    assert(tri[3] == 6);
+    assert(tri[1] == 1);
+    assert(tri[4] == 10);
+    assert(tri[2] == 3);
+}
+
+/// Fibonacci numbers, using function in explicit form:
+unittest
+{
+    import std.math : pow, round, sqrt;
+    static ulong computeFib(S)(S state, size_t n)
+    {
+        // Binet's formula
+        return cast(ulong)(round((pow(state[0], n+1) - pow(state[1], n+1)) /
+                                 state[2]));
+    }
+    auto fib = sequence!computeFib(
+        (1.0 + sqrt(5.0)) / 2.0,    // Golden Ratio
+        (1.0 - sqrt(5.0)) / 2.0,    // Conjugate of Golden Ratio
+        sqrt(5.0));
+
+    // Note random access with [] operator
+    assert(fib[1] == 1);
+    assert(fib[4] == 5);
+    assert(fib[3] == 3);
+    assert(fib[2] == 2);
+    assert(fib[9] == 55);
 }
 
 unittest
