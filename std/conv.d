@@ -1070,7 +1070,8 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 {
     // Conversion representing associative array with string
     int[string] a = ["0":1, "1":2];
-    assert(to!string(a) == `["0":1, "1":2]`);
+    assert(to!string(a) == `["0":1, "1":2]` || 
+           to!string(a) == `["1":2, "0":1]`);
 }
 
 unittest
