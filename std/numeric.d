@@ -1447,6 +1447,44 @@ unittest
 }
 
 /**
+Computes accurate sum of binary logarithms of input range $(D r).
+ */
+ElementType!Range sumOfLog2s(Range)(Range r) 
+    if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
+{
+    long exp = 0;
+    Unqual!(typeof(return)) x = 1; 
+    foreach(e; r)
+    {
+        if(e < 0)
+            return typeof(return).nan;
+        int lexp = void;
+        x *= frexp(e, lexp);
+        exp += lexp;
+        if(x < 0.5) 
+        {
+            x *= 2;
+            exp--;
+        }
+    }
+    return exp + log2(x); 
+}
+
+unittest
+{
+    assert(sumOfLog2s(new double[0]) == 0);
+    assert(sumOfLog2s([0.0L]) == -real.infinity);
+    assert(sumOfLog2s([-0.0L]) == -real.infinity);
+    assert(sumOfLog2s([2.0L]) == 1);
+    assert(sumOfLog2s([-2.0L]).isNaN);
+    assert(sumOfLog2s([real.nan]).isNaN);
+    assert(sumOfLog2s([-real.nan]).isNaN);
+    assert(sumOfLog2s([real.infinity]) == real.infinity);
+    assert(sumOfLog2s([-real.infinity]).isNaN);
+    assert(sumOfLog2s([ 0.25, 0.25, 0.25, 0.125 ]) == -9);
+}
+
+/**
 Computes $(LUCKY _entropy) of input range $(D r) in bits. This
 function assumes (without checking) that the values in $(D r) are all
 in $(D [0, 1]). For the entropy to be meaningful, often $(D r) should
