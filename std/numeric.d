@@ -1454,14 +1454,14 @@ ElementType!Range sumOfLog2s(Range)(Range r)
 {
     long exp = 0;
     Unqual!(typeof(return)) x = 1; 
-    foreach(e; r)
+    foreach (e; r)
     {
-        if(e < 0)
+        if (e < 0)
             return typeof(return).nan;
         int lexp = void;
         x *= frexp(e, lexp);
         exp += lexp;
-        if(x < 0.5) 
+        if (x < 0.5) 
         {
             x *= 2;
             exp--;
