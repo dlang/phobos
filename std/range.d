@@ -10460,10 +10460,10 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
         when using either as an $(LREF OutputRange). Since a template
         has no type, typeof(template) will always return void.
         If it's a template lambda, it's first necessary to instantiate
-        it with the type of $(D inputRange.front).
+        it with $(D ElementType!R1).
     */
     static if (is(typeof(fun) == void))
-        alias _fun = fun!(typeof(inputRange.front));
+        alias _fun = fun!(ElementType!R1);
     else
         alias _fun = fun;
 
