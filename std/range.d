@@ -6975,17 +6975,41 @@ unittest
 }
 
 // Used by implementation of chunkBy.
-private struct ChunkByChunkImpl(alias attrFun, Range)
+private struct ChunkByChunkImpl(alias equivFun, Range)
 {
-    alias attr = unaryFun!attrFun;
-    alias AttrType = typeof(attr(r.front));
+    alias equiv = binaryFun!equivFun;
 
     private Range r;
-    private AttrType curAttr;
 
-    @property bool empty()
+    /* For forward ranges, using .save is more reliable than blindly assuming
+     * that the current value of .front will persist past a .popFront. However,
+     * if Range is only an input range, then we have no choice but to save the
+     * value of .front. */
+    static if (isForwardRange!Range)
     {
-        return r.empty || curAttr != attr(r.front);
+        private Range prev;
+        this(Range _r, Range _prev)
+        {
+            r = _r.save;
+            prev = _prev.save;
+        }
+        @property bool empty()
+        {
+            return r.empty || !equiv(prev.front, r.front);
+        }
+    }
+    else
+    {
+        private ElementType!Range prev;
+        this(Range _r, ElementType!Range _prev)
+        {
+            r = _r;
+            prev = _prev;
+        }
+        @property bool empty()
+        {
+            return r.empty || !equiv(prev, r.front);
+        }
     }
 
     @property ElementType!Range front() { return r.front; }
@@ -7005,26 +7029,43 @@ private struct ChunkByChunkImpl(alias attrFun, Range)
     {
         @property typeof(this) save()
         {
-            typeof(this) copy = this;
+            typeof(this) copy;
             copy.r = r.save;
+            copy.prev = prev.save;
             return copy;
         }
     }
 }
 
 // Implementation of chunkBy.
-private struct ChunkByImpl(alias attrFun, Range)
+private struct ChunkByImpl(alias equivFun, Range)
 {
-    alias attr = unaryFun!attrFun;
-    alias AttrType = typeof(attr(r.front));
+    alias equiv = binaryFun!equivFun;
 
     private Range r;
-    private AttrType lastAttr;
+
+    /* For forward ranges, using .save is more reliable than blindly assuming
+     * that the current value of .front will persist past a .popFront. However,
+     * if Range is only an input range, then we have no choice but to save the
+     * value of .front. */
+    static if (isForwardRange!Range)
+    {
+        private Range _prev;
+        void savePrev() { _prev = r.save; }
+        @property ElementType!Range prev() { return _prev.front; }
+    }
+    else
+    {
+        private ElementType!Range _prev;
+        void savePrev() { _prev = r.front; }
+        alias prev = _prev;
+    }
+
     this(Range _r)
     {
         r = _r;
         if (!empty)
-            lastAttr = attr(r.front);
+            savePrev();
     }
     @property bool empty() { return r.empty; }
 
@@ -7036,66 +7077,108 @@ private struct ChunkByImpl(alias attrFun, Range)
     }
     body
     {
-        return ChunkByChunkImpl!(attrFun, Range)(r, lastAttr);
+        return ChunkByChunkImpl!(equivFun, Range)(r, _prev);
     }
+
     void popFront()
     {
-        //assert(!r.empty);
-        while (!r.empty && attr(r.front) == lastAttr)
+        while (!r.empty && equiv(prev, r.front))
             r.popFront();
         if (!r.empty)
-            lastAttr = attr(r.front);
+            savePrev();
     }
+
     static if (isForwardRange!Range)
     {
         @property typeof(this) save()
         {
-            typeof(this) copy = this;
+            typeof(this) copy;
             copy.r = r.save;
+            copy._prev = _prev.save;
             return copy;
         }
     }
 }
 
 // Needed in sig constraints of chunkBy.
+private import std.functional : binaryFun;
 private import std.functional : unaryFun;
 
 /**
- * Chunks an input range by equivalent elements.
+ * Chunks an input range into subranges of equivalent adjacent elements.
  *
- * This function takes an input range, and splits it up into subranges that
- * contain equivalent adjacent elements, where equivalence is defined by having
- * the same value of $(D attrFun(e)) for each element $(D e).
+ * Equivalence is defined by the predicate $(D equiv), which can be either
+ * binary or unary. In the binary form, two _range elements $(D a) and $(D b)
+ * are considered equivalent if $(D equiv(a,b)) is true. In unary form, two
+ * elements are considered equivalent if $(D equiv(a) == equiv(b)) is true.
  *
- * Note that equivalent elements separated by an intervening non-equivalent
- * element will appear in separate subranges; this function only considers
- * adjacent equivalence.
- *
- * This is similar to $(XREF algorithm,std.algorithm.group), but the latter
- * can't be used when the individual elements in each group must be iterable in
- * the result.
- *
- * Parameters:
- *  attrFun = The function for determining equivalence. The return value must
- *      be comparable using $(D ==).
+ * Params:
+ *  equiv = Predicate for determining equivalence.
  *  r = The range to be chunked.
  *
- * Returns: A range of ranges in which all elements in a given subrange share
- * the same attribute with each other.
+ * Returns: A range of ranges in which all elements in a given subrange are
+ * equivalent under the given predicate.
+ *
+ * Notes:
+ *
+ * Equivalent elements separated by an intervening non-equivalent element will
+ * appear in separate subranges; this function only considers adjacent
+ * equivalence. Elements in the subranges will always appear in the same order
+ * they appear in the original range.
+ *
+ * Being an equivalence relation, the binary form of $(D equiv) is assumed to
+ * be reflexive (i.e., $(D equiv(a,a)) must be true). If not, unexpected
+ * results may be produced.
+ *
+ * See_also:
+ * $(XREF algorithm,group), which collapses adjacent equivalent elements into a
+ * single element.
  */
-auto chunkBy(alias attrFun, Range)(Range r)
-    if (isInputRange!Range &&
-        is(typeof(
-            unaryFun!attrFun(ElementType!Range.init) ==
-            unaryFun!attrFun(ElementType!Range.init)
-        )))
+auto chunkBy(alias equiv, Range)(Range r)
+    if (isInputRange!Range)
 {
-    return ChunkByImpl!(attrFun, Range)(r);
+    static if (is(typeof(binaryFun!equiv(ElementType!Range.init,
+                                         ElementType!Range.init)) : bool))
+        return ChunkByImpl!(equiv, Range)(r);
+    else static if (is(typeof(
+            unaryFun!equiv(ElementType!Range.init) ==
+            unaryFun!equiv(ElementType!Range.init))))
+        return ChunkByImpl!((a,b) => equiv(a) == equiv(b), Range)(r);
+    else
+        static assert(0, "chunkBy expects either a binary predicate or "~
+                         "a unary predicate on range elements of type: "~
+                         ElementType!Range.stringof);
 }
 
-///
+/// Showing usage with binary predicate:
+unittest
+{
+    // Grouping by particular attribute of each element:
+    auto data = [
+        [1, 1],
+        [1, 2],
+        [2, 2],
+        [2, 3]
+    ];
+
+    auto r1 = data.chunkBy!((a,b) => a[0] == b[0]);
+    assert(r1.equal!equal([
+        [[1, 1], [1, 2]],
+        [[2, 2], [2, 3]]
+    ]));
+
+    auto r2 = data.chunkBy!((a,b) => a[1] == b[1]);
+    assert(r2.equal!equal([
+        [[1, 1]],
+        [[1, 2], [2, 2]],
+        [[2, 3]]
+    ]));
+}
+
+/// Showing usage with unary predicate:
 pure @safe nothrow unittest
 {
+    // Grouping by particular attribute of each element:
     auto range =
     [
         [1, 1],
