@@ -798,7 +798,7 @@ private:
 }
 
 // Issue 8895
-/+@safe+/ unittest //@@@13508@@@ for safety
+@safe unittest
 {
     auto a = make!(DList!int)(1,2,3,4);
     auto b = make!(DList!int)(1,2,3,4);
