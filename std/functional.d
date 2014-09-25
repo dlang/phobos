@@ -49,6 +49,11 @@ template unaryFun(alias fun, string parmName = "a")
             return mixin(fun);
         }
     }
+    else static if (is(typeof(fun.opCall) == function))
+    {
+        // Issue 9906
+        alias unaryFun = fun.opCall;
+    }
     else
     {
         alias unaryFun = fun;
@@ -75,6 +80,14 @@ unittest
 
     int num = 41;
     assert(unaryFun!("a + 1", true)(num) == 42);
+
+    // Issue 9906
+    struct Seen
+    {
+        static bool opCall(int n) { return true; }
+    }
+    static assert(is(typeof(unaryFun!Seen)));
+    assert(unaryFun!Seen(1));
 }
 
 /**
@@ -110,6 +123,11 @@ template binaryFun(alias fun, string parm1Name = "a",
             return mixin(fun);
         }
     }
+    else static if (is(typeof(fun.opCall) == function))
+    {
+        // Issue 9906
+        alias binaryFun = fun.opCall;
+    }
     else
     {
         alias binaryFun = fun;
@@ -131,6 +149,14 @@ unittest
     assert(binaryFun!("a + b")(41, 1) == 42);
     //@@BUG
     //assert(binaryFun!("return a + b;")(41, 1) == 42);
+
+    // Issue 9906
+    struct Seen
+    {
+        static bool opCall(int x, int y) { return true; }
+    }
+    static assert(is(typeof(binaryFun!Seen)));
+    assert(binaryFun!Seen(1,1));
 }
 
 private template safeOp(string S)
