@@ -833,7 +833,8 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
                         {
                             return memcmp(s1, s2, n);
                         }
-                        if (trustedMemcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                        if (trustedMemcmp(&s[i + 1], &sub[1], 
+                                (sub.length - 1) * Char1.sizeof) == 0)
                             return i;
                     }
                 }
@@ -925,6 +926,22 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         }
     }
     });
+}
+
+@safe pure unittest // issue13529
+{
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+        foreach (T; TypeTuple!(string, wstring, dstring))
+        {
+            enum typeStr = S.stringof ~ " " ~ T.stringof;
+            auto idx = lastIndexOf(to!T("Hällö Wörldö ö"),to!S("ö ö"));
+            assert(idx != -1, to!string(idx) ~ " " ~ typeStr);
+
+            idx = lastIndexOf(to!T("Hällö Wörldö ö"),to!S("ö öd"));
+            assert(idx == -1, to!string(idx) ~ " " ~ typeStr);
+        }
+    }
 }
 
 /++
