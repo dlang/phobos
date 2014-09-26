@@ -2568,7 +2568,7 @@ struct HTTP
         return p.status;
     }
 
-    // Set the active cookie string e.g. "name1=value1;name2=value2"
+    /// Set the active cookie string e.g. "name1=value1;name2=value2"
     void setCookie(const(char)[] cookie)
     {
         p.curl.set(CurlOption.cookie, cookie);
