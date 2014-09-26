@@ -1474,8 +1474,7 @@ void chdir(in char[] pathname) @safe
         {
             return SetCurrentDirectoryW(path.tempCStringW());
         }
-        cenforce(trustedSetCurrentDirectoryW(pathname),
-                pathname);
+        cenforce(trustedSetCurrentDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
@@ -1483,8 +1482,7 @@ void chdir(in char[] pathname) @safe
         {
             return core.sys.posix.unistd.chdir(path.tempCString());
         }
-        cenforce(trustedChdir(pathname) == 0,
-                pathname);
+        cenforce(trustedChdir(pathname) == 0, pathname);
     }
 }
 
