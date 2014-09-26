@@ -1466,17 +1466,23 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
  * Change directory to $(D pathname).
  * Throws: $(D FileException) on error.
  */
-void chdir(in char[] pathname)
+void chdir(in char[] pathname) @safe
 {
     version(Windows)
     {
-        enforce(SetCurrentDirectoryW(pathname.tempCStringW()),
-                new FileException(pathname.idup));
+        static auto trustedSetCurrentDirectoryW(in char[] path) @trusted
+        {
+            return SetCurrentDirectoryW(path.tempCStringW());
+        }
+        cenforce(trustedSetCurrentDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.chdir(pathname.tempCString()) == 0,
-                pathname);
+        static auto trustedChdir(in char[] path) @trusted
+        {
+            return core.sys.posix.unistd.chdir(path.tempCString());
+        }
+        cenforce(trustedChdir(pathname) == 0, pathname);
     }
 }
 
