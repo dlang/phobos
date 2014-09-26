@@ -4351,7 +4351,8 @@ string[string] abbrev(string[] values) @safe pure
     string[string] result;
 
     // Make a copy when sorting so we follow COW principles.
-    values = values.dup.sort;   // @@@BUG@@@ not CTFEable
+    values = values.dup;
+    sort(values);
 
     size_t values_length = values.length;
     size_t lasti = values_length;
@@ -4394,9 +4395,8 @@ string[string] abbrev(string[] values) @safe pure
 {
     debug(string) printf("string.abbrev.unittest\n");
 
-    // @@@BUG@@@ Built-in arr.sort is not CTFEable
-    //assertCTFEable!(
-    //{
+    assertCTFEable!(
+    {
     string[] values;
     values ~= "hello";
     values ~= "hello";
@@ -4406,7 +4406,7 @@ string[string] abbrev(string[] values) @safe pure
 
     r = abbrev(values);
     auto keys = r.keys.dup;
-    keys.sort;
+    sort(keys);
 
     assert(keys.length == 4);
     assert(keys[0] == "he");
@@ -4418,7 +4418,7 @@ string[string] abbrev(string[] values) @safe pure
     assert(r[keys[1]] == "hello");
     assert(r[keys[2]] == "hello");
     assert(r[keys[3]] == "hello");
-    //});
+    });
 }
 
 
