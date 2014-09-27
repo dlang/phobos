@@ -47,8 +47,8 @@ version(unittest)
     import std.stdio;
 }
 /// Format flags for CustomFloat.
-public enum CustomFloatFlags {
-
+public enum CustomFloatFlags
+{
     /// Adds a sign bit to allow for signed numbers.
     signed = 1,
 
@@ -95,10 +95,13 @@ public enum CustomFloatFlags {
 }
 
 // 64-bit version of core.bitop.bsr
-private int bsr64(ulong value) {
-    union Ulong {
+private int bsr64(ulong value)
+{
+    union Ulong
+    {
         ulong raw;
-        struct {
+        struct
+        {
             uint low;
             uint high;
         }
@@ -161,209 +164,249 @@ private template CustomFloatParams(uint precision, uint exponentWidth, CustomFlo
  * ----
  */
 template CustomFloat(uint bits)
-if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
+    if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
 {
     alias CustomFloat = CustomFloat!(CustomFloatParams!(bits));
 }
+
 /// ditto
 template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags = CustomFloatFlags.ieee)
-if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
+    if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
 {
     alias CustomFloat = CustomFloat!(CustomFloatParams!(precision, exponentWidth, flags));
 }
+
 /// ditto
-struct CustomFloat(
-    uint                precision,  // fraction bits (23 for float)
-    uint                exponentWidth,  // exponent bits (8 for float)  Exponent width
-    CustomFloatFlags    flags,
-    uint                bias)
-    if(( (flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
-       precision + exponentWidth > 0)
+struct CustomFloat(uint             precision,  // fraction bits (23 for float)
+                   uint             exponentWidth,  // exponent bits (8 for float)  Exponent width
+                   CustomFloatFlags flags,
+                   uint             bias)
+    if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
+        precision + exponentWidth > 0)
 {
-    private:
-        // get the correct unsigned bitfield type to support > 32 bits
-        template uType(uint bits) {
-            static if(bits <= size_t.sizeof*8)  alias uType = size_t;
-            else                                alias uType = ulong ;
-        }
+private:
+    // get the correct unsigned bitfield type to support > 32 bits
+    template uType(uint bits)
+    {
+        static if(bits <= size_t.sizeof*8)  alias uType = size_t;
+        else                                alias uType = ulong ;
+    }
 
-        // get the correct signed   bitfield type to support > 32 bits
-        template sType(uint bits) {
-            static if(bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
-            else                                    alias sType = long;
-        }
+    // get the correct signed   bitfield type to support > 32 bits
+    template sType(uint bits)
+    {
+        static if(bits <= ptrdiff_t.sizeof*8-1) alias sType = ptrdiff_t;
+        else                                    alias sType = long;
+    }
 
-        alias T_sig = uType!precision;
-        alias T_exp = uType!exponentWidth;
-        alias T_signed_exp = sType!exponentWidth;
+    alias T_sig = uType!precision;
+    alias T_exp = uType!exponentWidth;
+    alias T_signed_exp = sType!exponentWidth;
 
-        alias Flags = CustomFloatFlags;
+    alias Flags = CustomFloatFlags;
 
-        // Facilitate converting numeric types to custom float
-        union ToBinary(F)
+    // Facilitate converting numeric types to custom float
+    union ToBinary(F)
         if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
+    {
+        F set;
+
+        // If on Linux or Mac, where 80-bit reals are padded, ignore the
+        // padding.
+        CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
+
+        // Convert F to the correct binary type.
+        static typeof(get) opCall(F value)
         {
-            F set;
-
-            // If on Linux or Mac, where 80-bit reals are padded, ignore the
-            // padding.
-            CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
-
-            // Convert F to the correct binary type.
-            static typeof(get) opCall(F value) {
-                ToBinary r;
-                r.set = value;
-                return r.get;
-            }
-            alias get this;
+            ToBinary r;
+            r.set = value;
+            return r.get;
         }
+        alias get this;
+    }
 
-        // Perform IEEE rounding with round to nearest detection
-        void roundedShift(T,U)(ref T sig, U shift) {
-            if( sig << (T.sizeof*8 - shift) == cast(T) 1uL << (T.sizeof*8 - 1) ) {
-                // round to even
-                sig >>= shift;
-                sig  += sig & 1;
-            } else {
-                sig >>= shift - 1;
-                sig  += sig & 1;
-                // Perform standard rounding
-                sig >>= 1;
-            }
+    // Perform IEEE rounding with round to nearest detection
+    void roundedShift(T,U)(ref T sig, U shift)
+    {
+        if (sig << (T.sizeof*8 - shift) == cast(T) 1uL << (T.sizeof*8 - 1))
+        {
+            // round to even
+            sig >>= shift;
+            sig  += sig & 1;
         }
+        else
+        {
+            sig >>= shift - 1;
+            sig  += sig & 1;
+            // Perform standard rounding
+            sig >>= 1;
+        }
+    }
 
-        // Convert the current value to signed exponent, normalized form
-        void toNormalized(T,U)(ref T sig, ref U exp) {
-            sig = significand;
-            auto shift = (T.sizeof*8) - precision;
-            exp = exponent;
-            static if(flags&(Flags.infinity|Flags.nan)) {
-                // Handle inf or nan
-                if(exp == exponent_max) {
-                    exp = exp.max;
-                    sig <<= shift;
-                    static if(flags&Flags.storeNormalized) {
-                        // Save inf/nan in denormalized format
-                        sig >>= 1;
-                        sig  += cast(T) 1uL << (T.sizeof*8 - 1);
-                    }
-                    return;
+    // Convert the current value to signed exponent, normalized form
+    void toNormalized(T,U)(ref T sig, ref U exp)
+    {
+        sig = significand;
+        auto shift = (T.sizeof*8) - precision;
+        exp = exponent;
+        static if (flags&(Flags.infinity|Flags.nan))
+        {
+            // Handle inf or nan
+            if (exp == exponent_max)
+            {
+                exp = exp.max;
+                sig <<= shift;
+                static if (flags&Flags.storeNormalized)
+                {
+                    // Save inf/nan in denormalized format
+                    sig >>= 1;
+                    sig  += cast(T) 1uL << (T.sizeof*8 - 1);
                 }
-            }
-            if( (~flags&Flags.storeNormalized) ||
-               // Convert denormalized form to normalized form
-                ((flags&Flags.allowDenorm)&&(exp==0)) ){
-                if(sig > 0) {
-                    auto shift2 = precision - bsr64(sig);
-                    exp  -= shift2-1;
-                    shift += shift2;
-                } else {                                // value = 0.0
-                    exp = exp.min;
-                    return;
-                }
-            }
-            sig <<= shift;
-            exp -= bias;
-        }
-
-        // Set the current value from signed exponent, normalized form
-        void fromNormalized(T,U)(ref T sig, ref U exp) {
-            auto shift = (T.sizeof*8) - precision;
-            if(exp == exp.max) {
-                // infinity or nan
-                exp = exponent_max;
-                static if(flags & Flags.storeNormalized) sig <<= 1;
-                // convert back to normalized form
-                static if(~flags & Flags.infinity)
-                // No infinity support?
-                    enforce(sig != 0,"Infinity floating point value assigned to a "
-                            ~ typeof(this).stringof~" (no infinity support).");
-                static if(~flags & Flags.nan)                           // No NaN support?
-                    enforce(sig == 0,"NaN floating point value assigned to a " ~
-                            typeof(this).stringof~" (no nan support).");
-                sig >>= shift;
                 return;
             }
-            if(exp == exp.min){     // 0.0
-                 exp = 0;
-                 sig = 0;
-                 return;
+        }
+        if ((~flags&Flags.storeNormalized) ||
+            // Convert denormalized form to normalized form
+            ((flags&Flags.allowDenorm) && exp==0))
+        {
+            if(sig > 0)
+            {
+                auto shift2 = precision - bsr64(sig);
+                exp  -= shift2-1;
+                shift += shift2;
             }
+            else                                // value = 0.0
+            {
+                exp = exp.min;
+                return;
+            }
+        }
+        sig <<= shift;
+        exp -= bias;
+    }
 
-            exp += bias;
-            if( exp <= 0 ) {
-                static if( ( flags&Flags.allowDenorm) ||
-                          // Convert from normalized form to denormalized
-                           (~flags&Flags.storeNormalized) ) {
-                    shift += -exp;
-                    roundedShift(sig,1);
-                    sig   += cast(T) 1uL << (T.sizeof*8 - 1);
-                    // Add the leading 1
-                    exp    = 0;
-                } else enforce( (flags&Flags.storeNormalized) && exp == 0,
+    // Set the current value from signed exponent, normalized form
+    void fromNormalized(T,U)(ref T sig, ref U exp)
+    {
+        auto shift = (T.sizeof*8) - precision;
+        if (exp == exp.max)
+        {
+            // infinity or nan
+            exp = exponent_max;
+            static if (flags & Flags.storeNormalized)
+                sig <<= 1;
+
+            // convert back to normalized form
+            static if (~flags & Flags.infinity)
+                // No infinity support?
+                enforce(sig != 0, "Infinity floating point value assigned to a "
+                        ~ typeof(this).stringof~" (no infinity support).");
+
+            static if (~flags & Flags.nan)  // No NaN support?
+                enforce(sig == 0,"NaN floating point value assigned to a " ~
+                        typeof(this).stringof~" (no nan support).");
+            sig >>= shift;
+            return;
+        }
+        if (exp == exp.min)     // 0.0
+        {
+             exp = 0;
+             sig = 0;
+             return;
+        }
+
+        exp += bias;
+        if (exp <= 0)
+        {
+            static if ((flags&Flags.allowDenorm) ||
+                       // Convert from normalized form to denormalized
+                       (~flags&Flags.storeNormalized))
+            {
+                shift += -exp;
+                roundedShift(sig,1);
+                sig   += cast(T) 1uL << (T.sizeof*8 - 1);
+                // Add the leading 1
+                exp    = 0;
+            }
+            else
+                enforce((flags&Flags.storeNormalized) && exp == 0,
                     "Underflow occured assigning to a " ~
                     typeof(this).stringof ~ " (no denormal support).");
-            } else {
-                static if(~flags&Flags.storeNormalized) {
-                     // Convert from normalized form to denormalized
-                    roundedShift(sig,1);
-                    sig  += cast(T) 1uL << (T.sizeof*8 - 1);
-                     // Add the leading 1
-                }
-            }
-
-            if(shift > 0)
-                roundedShift(sig,shift);
-            if(sig > significand_max) {
-                // handle significand overflow (should only be 1 bit)
-                static if(~flags&Flags.storeNormalized) {
-                    sig >>= 1;
-                } else
-                    sig &= significand_max;
-                exp++;
-            }
-            static if((flags&Flags.allowDenormZeroOnly)==Flags.allowDenormZeroOnly) {
-                // disallow non-zero denormals
-                if(exp == 0) {
-                    sig <<= 1;
-                    if(sig > significand_max && (sig&significand_max) > 0 )
-                        // Check and round to even
-                        exp++;
-                    sig = 0;
-                }
-            }
-
-            if(exp >= exponent_max ) {
-                static if( flags&(Flags.infinity|Flags.nan) ) {
-                    sig         = 0;
-                    exp         = exponent_max;
-                    static if(~flags&(Flags.infinity))
-                        enforce( false, "Overflow occured assigning to a " ~
-                            typeof(this).stringof~" (no infinity support).");
-                } else
-                    enforce( exp == exponent_max, "Overflow occured assigning to a "
-                        ~ typeof(this).stringof~" (no infinity support).");
+        }
+        else
+        {
+            static if (~flags&Flags.storeNormalized)
+            {
+                // Convert from normalized form to denormalized
+                roundedShift(sig,1);
+                sig  += cast(T) 1uL << (T.sizeof*8 - 1);
+                // Add the leading 1
             }
         }
 
-    public:
-        static if( precision == 64 ) { // CustomFloat!80 support hack
-            ulong significand;
-            enum ulong significand_max = ulong.max;
-            mixin(bitfields!(
-                T_exp , "exponent", exponentWidth,
-                bool  , "sign"    , flags & flags.signed ));
-
-        } else {
-            mixin(bitfields!(
-                T_sig, "significand", precision,
-                T_exp, "exponent"   , exponentWidth,
-                bool , "sign"       , flags & flags.signed ));
+        if (shift > 0)
+            roundedShift(sig,shift);
+        if (sig > significand_max)
+        {
+            // handle significand overflow (should only be 1 bit)
+            static if (~flags&Flags.storeNormalized)
+            {
+                sig >>= 1;
+            }
+            else
+                sig &= significand_max;
+            exp++;
         }
+        static if ((flags&Flags.allowDenormZeroOnly)==Flags.allowDenormZeroOnly)
+        {
+            // disallow non-zero denormals
+            if (exp == 0)
+            {
+                sig <<= 1;
+                if (sig > significand_max && (sig&significand_max) > 0)
+                    // Check and round to even
+                    exp++;
+                sig = 0;
+            }
+        }
+
+        if (exp >= exponent_max)
+        {
+            static if (flags&(Flags.infinity|Flags.nan))
+            {
+                sig         = 0;
+                exp         = exponent_max;
+                static if (~flags&(Flags.infinity))
+                    enforce(false, "Overflow occured assigning to a " ~
+                        typeof(this).stringof~" (no infinity support).");
+            }
+            else
+                enforce(exp == exponent_max, "Overflow occured assigning to a "
+                    ~ typeof(this).stringof~" (no infinity support).");
+        }
+    }
+
+public:
+    static if (precision == 64) // CustomFloat!80 support hack
+    {
+        ulong significand;
+        enum ulong significand_max = ulong.max;
+        mixin(bitfields!(
+            T_exp , "exponent", exponentWidth,
+            bool  , "sign"    , flags & flags.signed ));
+    }
+    else
+    {
+        mixin(bitfields!(
+            T_sig, "significand", precision,
+            T_exp, "exponent"   , exponentWidth,
+            bool , "sign"       , flags & flags.signed ));
+    }
 
     /// Returns: infinity value
     static if (flags & Flags.infinity)
-        static @property CustomFloat infinity() {
+        static @property CustomFloat infinity()
+        {
             CustomFloat value;
             static if (flags & Flags.signed)
             value.sign          = 0;
@@ -374,7 +417,8 @@ struct CustomFloat(
 
     /// Returns: NaN value
     static if (flags & Flags.nan)
-        static @property CustomFloat nan() {
+        static @property CustomFloat nan()
+        {
             CustomFloat value;
             static if (flags & Flags.signed)
             value.sign          = 0;
@@ -384,29 +428,34 @@ struct CustomFloat(
         }
 
     /// Returns: number of decimal digits of precision
-    static @property size_t dig(){
+    static @property size_t dig()
+    {
         auto shiftcnt =  precision - ((flags&Flags.storeNormalized) != 0);
         auto x = (shiftcnt == 64) ? 0 : 1uL << shiftcnt;
         return cast(size_t) log10(x);
     }
 
     /// Returns: smallest increment to the value 1
-    static @property CustomFloat epsilon() {
-            CustomFloat value;
-            static if (flags & Flags.signed)
-            value.sign       = 0;
-            T_signed_exp exp = -precision;
-            T_sig        sig = 0;
-            value.fromNormalized(sig,exp);
-            if(exp == 0 && sig == 0) { // underflowed to zero
-                static if((flags&Flags.allowDenorm) || (~flags&Flags.storeNormalized))
-                    sig = 1;
-                else
-                    sig = cast(T) 1uL << (precision - 1);
-            }
-            value.exponent     = cast(value.T_exp) exp;
-            value.significand  = cast(value.T_sig) sig;
-            return value;
+    static @property CustomFloat epsilon()
+    {
+        CustomFloat value;
+        static if (flags & Flags.signed)
+        value.sign       = 0;
+        T_signed_exp exp = -precision;
+        T_sig        sig = 0;
+
+        value.fromNormalized(sig,exp);
+        if (exp == 0 && sig == 0) // underflowed to zero
+        {
+            static if ((flags&Flags.allowDenorm) ||
+                       (~flags&Flags.storeNormalized))
+                sig = 1;
+            else
+                sig = cast(T) 1uL << (precision - 1);
+        }
+        value.exponent     = cast(value.T_exp) exp;
+        value.significand  = cast(value.T_sig) sig;
+        return value;
     }
 
     /// the number of bits in mantissa
@@ -425,39 +474,44 @@ struct CustomFloat(
     enum min_exp = cast(T_signed_exp)-bias +1+ ((flags&Flags.allowDenorm)!=0);
 
     /// Returns: largest representable value that's not infinity
-    static @property CustomFloat max() {
-            CustomFloat value;
-            static if (flags & Flags.signed)
-            value.sign        = 0;
-            value.exponent    = exponent_max - ((flags&(flags.infinity|flags.nan)) != 0);
-            value.significand = significand_max;
-            return value;
+    static @property CustomFloat max()
+    {
+        CustomFloat value;
+        static if (flags & Flags.signed)
+        value.sign        = 0;
+        value.exponent    = exponent_max - ((flags&(flags.infinity|flags.nan)) != 0);
+        value.significand = significand_max;
+        return value;
     }
 
     /// Returns: smallest representable normalized value that's not 0
     static @property CustomFloat min_normal() {
-            CustomFloat value;
-            static if (flags & Flags.signed)
-            value.sign        = 0;
-            value.exponent    = 1;
-            static if(flags&Flags.storeNormalized)
-                value.significand = 0;
-            else
-                value.significand = cast(T_sig) 1uL << (precision - 1);
-            return value;
+        CustomFloat value;
+        static if (flags & Flags.signed)
+        value.sign        = 0;
+        value.exponent    = 1;
+        static if(flags&Flags.storeNormalized)
+            value.significand = 0;
+        else
+            value.significand = cast(T_sig) 1uL << (precision - 1);
+        return value;
     }
 
     /// Returns: real part
-    @property CustomFloat re()   { return this;              }
+    @property CustomFloat re() { return this; }
 
     /// Returns: imaginary part
-    static @property CustomFloat im()   { return CustomFloat(0.0f); }
+    static @property CustomFloat im() { return CustomFloat(0.0f); }
 
     /// Initialize from any $(D real) compatible type.
-    this(F)(F input) if (__traits(compiles, cast(real)input )) { this = input; }
+    this(F)(F input) if (__traits(compiles, cast(real)input ))
+    {
+        this = input;
+    }
 
     /// Self assignment
-    void opAssign(F:CustomFloat)(F input) {
+    void opAssign(F:CustomFloat)(F input)
+    {
         static if (flags & Flags.signed)
         sign        = input.sign;
         exponent    = input.exponent;
@@ -466,12 +520,13 @@ struct CustomFloat(
 
     /// Assigns from any $(D real) compatible type.
     void opAssign(F)(F input)
-        if (__traits(compiles, cast(real)input ))
+        if (__traits(compiles, cast(real)input))
     {
+        static if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
+            auto value = ToBinary!(Unqual!F)(input);
+        else
+            auto value = ToBinary!(real    )(input);
 
-        static if( staticIndexOf!(Unqual!F, float, double, real) >= 0 )
-                auto value = ToBinary!(Unqual!F)(input);
-        else    auto value = ToBinary!(real    )(input);
         // Assign the sign bit
         static if (~flags & Flags.signed)
             enforce( (!value.sign)^((flags&flags.negativeUnsigned)>0) ,
@@ -480,18 +535,17 @@ struct CustomFloat(
         else
             sign = value.sign;
 
-        CommonType!(T_signed_exp ,value.T_signed_exp ) exp = value.exponent;
-        CommonType!(T_sig,        value.T_sig        ) sig = value.significand;
+        CommonType!(T_signed_exp ,value.T_signed_exp) exp = value.exponent;
+        CommonType!(T_sig,        value.T_sig       ) sig = value.significand;
 
         value.toNormalized(sig,exp);
         fromNormalized(sig,exp);
 
-
         assert(exp <= exponent_max,    text(typeof(this).stringof ~
-            " exponent too large: "   ,exp," > ",exponent_max,   "\t",input,"\t",sig) );
+            " exponent too large: "   ,exp," > ",exponent_max,   "\t",input,"\t",sig));
         assert(sig <= significand_max, text(typeof(this).stringof ~
             " significand too large: ",sig," > ",significand_max,
-            "\t",input,"\t",exp," ",exponent_max) );
+            "\t",input,"\t",exp," ",exponent_max));
         exponent    = cast(T_exp) exp;
         significand = cast(T_sig) sig;
     }
@@ -502,9 +556,12 @@ struct CustomFloat(
     {
         ToBinary!F result;
 
-        static if (flags&Flags.signed) result.sign = sign;
-        else                           result.sign = (flags&flags.negativeUnsigned) > 0;
-        CommonType!(T_signed_exp ,result.get.T_signed_exp ) exp = exponent;             // Assign the exponent and fraction
+        static if (flags&Flags.signed)
+            result.sign = sign;
+        else
+            result.sign = (flags&flags.negativeUnsigned) > 0;
+
+        CommonType!(T_signed_exp ,result.get.T_signed_exp ) exp = exponent; // Assign the exponent and fraction
         CommonType!(T_sig,        result.get.T_sig        ) sig = significand;
 
         toNormalized(sig,exp);
@@ -515,39 +572,52 @@ struct CustomFloat(
         result.significand  = cast(result.get.T_sig) sig;
         return result.set;
     }
+
     ///ditto
     T opCast(T)() if (__traits(compiles, get!T )) { return get!T; }
 
     /// Convert the CustomFloat to a real and perform the relavent operator on the result
-    real opUnary(string op)() if( __traits(compiles, mixin(op~`(get!real)`)) || op=="++" || op=="--" ){
-        static if(op=="++" || op=="--") {
+    real opUnary(string op)()
+        if (__traits(compiles, mixin(op~`(get!real)`)) || op=="++" || op=="--")
+    {
+        static if (op=="++" || op=="--")
+        {
             auto result = get!real;
             this = mixin(op~`result`);
             return result;
-        } else
+        }
+        else
             return mixin(op~`get!real`);
     }
 
     /// ditto
-    real opBinary(string op,T)(T b) if( __traits(compiles, mixin(`get!real`~op~`b`)  )  ) {
+    real opBinary(string op,T)(T b)
+        if (__traits(compiles, mixin(`get!real`~op~`b`)))
+    {
         return mixin(`get!real`~op~`b`);
     }
 
     /// ditto
-    real opBinaryRight(string op,T)(T a) if( __traits(compiles, mixin(`a`~op~`get!real`) )  &&
-                                            !__traits(compiles, mixin(`get!real`~op~`b`) )  ) {
+    real opBinaryRight(string op,T)(T a)
+        if ( __traits(compiles, mixin(`a`~op~`get!real`)) &&
+            !__traits(compiles, mixin(`get!real`~op~`b`)))
+    {
         return mixin(`a`~op~`get!real`);
     }
 
     /// ditto
-    int opCmp(T)(auto ref T b) if(__traits(compiles, cast(real)b )  ) {
+    int opCmp(T)(auto ref T b)
+        if (__traits(compiles, cast(real)b))
+    {
         auto x = get!real;
         auto y = cast(real) b;
         return  (x>=y)-(x<=y);
     }
 
     /// ditto
-    void opOpAssign(string op, T)(auto ref T b) if ( __traits(compiles, mixin(`get!real`~op~`cast(real)b`))) {
+    void opOpAssign(string op, T)(auto ref T b)
+        if (__traits(compiles, mixin(`get!real`~op~`cast(real)b`)))
+    {
         return mixin(`this = this `~op~` cast(real)b`);
     }
 
@@ -626,7 +696,8 @@ Finally, there is no guarantee that using $(D FPTemporary!F) will
 always be fastest, as the speed of floating-point calculations depends
 on very many factors.
  */
-template FPTemporary(F) if (isFloatingPoint!F)
+template FPTemporary(F)
+    if (isFloatingPoint!F)
 {
     alias FPTemporary = real;
 }
@@ -640,7 +711,8 @@ or $(D real).
 Example:
 
 ----
-float f(float x) {
+float f(float x)
+{
     return cos(x) - x*x*x;
 }
 auto x = secantMethod!(f)(0f, 1f);
@@ -649,11 +721,14 @@ assert(approxEqual(x, 0.865474));
 */
 template secantMethod(alias fun)
 {
-    Num secantMethod(Num)(Num xn_1, Num xn) {
+    Num secantMethod(Num)(Num xn_1, Num xn)
+    {
         auto fxn = unaryFun!(fun)(xn_1), d = xn_1 - xn;
         typeof(fxn) fxn_1;
+
         xn = xn_1;
-        while (!approxEqual(d, 0) && isfinite(d)) {
+        while (!approxEqual(d, 0) && isfinite(d))
+        {
             xn_1 = xn;
             xn -= d;
             fxn_1 = fxn;
@@ -667,7 +742,8 @@ template secantMethod(alias fun)
 unittest
 {
     scope(failure) stderr.writeln("Failure testing secantMethod");
-    float f(float x) {
+    float f(float x)
+    {
         return cos(x) - x*x*x;
     }
     immutable x = secantMethod!(f)(0f, 1f);
@@ -692,7 +768,6 @@ unittest
     static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
     static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
 }
- 
  
 
 public:
@@ -764,23 +839,29 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
  */
 Tuple!(T, T, R, R) findRoot(T,R)(scope R delegate(T) f, in T ax, in T bx, in R fax, in R fbx,
     scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
-in {
+in
+{
     assert(!ax.isNaN && !bx.isNaN, "Limits must not be NaN");
     assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
 }
-body {
-// Author: Don Clugston. This code is (heavily) modified from TOMS748 (www.netlib.org).
-// The changes to improve the worst-cast performance are entirely original.
+body
+{
+    // Author: Don Clugston. This code is (heavily) modified from TOMS748
+    // (www.netlib.org).  The changes to improve the worst-cast performance are
+    // entirely original.
 
     T a, b, d;  // [a..b] is our current bracket. d is the third best guess.
     R fa, fb, fd; // Values of f at a, b, d.
     bool done = false; // Has a root been found?
 
     // Allow ax and bx to be provided in reverse order
-    if (ax <= bx) {
+    if (ax <= bx)
+    {
         a = ax; fa = fax;
         b = bx; fb = fbx;
-    } else {
+    }
+    else
+    {
         a = bx; fa = fbx;
         b = ax; fb = fax;
     }
@@ -789,7 +870,8 @@ body {
     void bracket(T c)
     {
         R fc = f(c);
-        if (fc == 0 || fc.isNaN) { // Exact solution, or NaN
+        if (fc == 0 || fc.isNaN) // Exact solution, or NaN
+        {
             a = c;
             fa = fc;
             d = c;
@@ -797,13 +879,17 @@ body {
             done = true;
             return;
         }
+
         // Determine new enclosing interval
-        if (signbit(fa) != signbit(fc)) {
+        if (signbit(fa) != signbit(fc))
+        {
             d = b;
             fd = fb;
             b = c;
             fb = fc;
-        } else {
+        }
+        else
+        {
             d = a;
             fd = fa;
             a = c;
@@ -817,7 +903,8 @@ body {
     */
     static T secant_interpolate(T a, T b, R fa, R fb)
     {
-        if (( ((a - b) == a) && b!=0) || (a!=0 && ((b - a) == b))) {
+        if (( ((a - b) == a) && b!=0) || (a!=0 && ((b - a) == b)))
+        {
             // Catastrophic cancellation
             if (a == 0) 
                 a = copysign(T(0), b);
@@ -855,7 +942,8 @@ body {
         T c = oppositeSigns(a2, fa) ? a  : b;
 
         // start the safeguarded newton steps.
-        foreach (int i; 0..numsteps) {
+        foreach (int i; 0..numsteps)
+        {
             immutable T pc = a0 + (a1 + a2 * (c - b))*(c - a);
             immutable T pdc = a1 + a2*((2 * c) - (a + b));
             if (pdc == 0) 
@@ -867,29 +955,38 @@ body {
     }
 
     // On the first iteration we take a secant step:
-    if (fa == 0 || fa.isNaN) {
+    if (fa == 0 || fa.isNaN)
+    {
         done = true;
         b = a;
         fb = fa;
-    } else if (fb == 0 || fb.isNaN) {
+    }
+    else if (fb == 0 || fb.isNaN)
+    {
         done = true;
         a = b;
         fa = fb;
-    } else {
+    }
+    else
+    {
         bracket(secant_interpolate(a, b, fa, fb));
     }
+
     // Starting with the second iteration, higher-order interpolation can
     // be used.
     int itnum = 1;   // Iteration number
     int baditer = 1; // Num bisections to take if an iteration is bad.
     T c, e;  // e is our fourth best guess
     R fe;
+
 whileloop:
-    while(!done && (b != nextUp(a)) && !tolerance(a, b)) {
+    while (!done && (b != nextUp(a)) && !tolerance(a, b))
+    {
         T a0 = a, b0 = b; // record the brackets
 
         // Do two higher-order (cubic or parabolic) interpolation steps.
-        foreach (int QQ; 0..2) {
+        foreach (int QQ; 0..2)
+        {
             // Cubic inverse interpolation requires that
             // all four function values fa, fb, fd, and fe are distinct;
             // otherwise use quadratic interpolation.
@@ -898,7 +995,8 @@ whileloop:
             // The first time, cubic interpolation is impossible.
             if (itnum<2) distinct = false;
             bool ok = distinct;
-            if (distinct) {
+            if (distinct)
+            {
                 // Cubic inverse interpolation of f(x) at a, b, d, and e
                 immutable q11 = (d - e) * fd / (fe - fd);
                 immutable q21 = (b - d) * fb / (fd - fb);
@@ -911,25 +1009,32 @@ whileloop:
                 immutable d32 = (d31 - q21) * fd / (fd - fa);
                 immutable q33 = (d32 - q22) * fa / (fe - fa);
                 c = a + (q31 + q32 + q33);
-                if (c.isNaN || (c <= a) || (c >= b)) {
+                if (c.isNaN || (c <= a) || (c >= b))
+                {
                     // DAC: If the interpolation predicts a or b, it's
                     // probable that it's the actual root. Only allow this if
                     // we're already close to the root.
-                    if (c == a && a - b != a) {
+                    if (c == a && a - b != a)
+                    {
                         c = nextUp(a);
                     }
-                    else if (c == b && a - b != -b) {
+                    else if (c == b && a - b != -b)
+                    {
                         c = nextDown(b);
-                    } else {
+                    }
+                    else
+                    {
                         ok = false;
                     }
                 }
             }
-            if (!ok) {
+            if (!ok)
+            {
                 // DAC: Alefeld doesn't explain why the number of newton steps
                 // should vary.
                 c = newtonQuadratic(distinct ? 3 : 2);
-                if(c.isNaN || (c <= a) || (c >= b)) {
+                if (c.isNaN || (c <= a) || (c >= b))
+                {
                     // Failure, try a secant step:
                     c = secant_interpolate(a, b, fa, fb);
                 }
@@ -938,29 +1043,37 @@ whileloop:
             e = d;
             fe = fd;
             bracket(c);
-            if( done || ( b == nextUp(a)) || tolerance(a, b))
+            if (done || ( b == nextUp(a)) || tolerance(a, b))
                 break whileloop;
             if (itnum == 2)
                 continue whileloop;
         }
+
         // Now we take a double-length secant step:
         T u;
         R fu;
-        if(fabs(fa) < fabs(fb)) {
+        if (fabs(fa) < fabs(fb))
+        {
             u = a;
             fu = fa;
-        } else {
+        }
+        else
+        {
             u = b;
             fu = fb;
         }
         c = u - 2 * (fu / (fb - fa)) * (b - a);
+
         // DAC: If the secant predicts a value equal to an endpoint, it's
         // probably false.
-        if(c==a || c==b || c.isNaN || fabs(c - u) > (b - a) / 2) {
-            if ((a-b) == a || (b-a) == b) {
-                if ( (a>0 && b<0) || (a<0 && b>0) ) 
+        if (c==a || c==b || c.isNaN || fabs(c - u) > (b - a) / 2)
+        {
+            if ((a-b) == a || (b-a) == b)
+            {
+                if ((a>0 && b<0) || (a<0 && b>0)) 
                     c = 0;
-                else {
+                else
+                {
                     if (a==0) 
                         c = ieeeMean(copysign(T(0), b), b);
                     else if (b==0) 
@@ -968,14 +1081,16 @@ whileloop:
                     else 
                         c = ieeeMean(a, b);
                 }
-            } else {
+            }
+            else
+            {
                 c = a + (b - a) / 2;
             }
         }
         e = d;
         fe = fd;
         bracket(c);
-        if(done || (b == nextUp(a)) || tolerance(a, b))
+        if (done || (b == nextUp(a)) || tolerance(a, b))
             break;
 
         // IMPROVE THE WORST-CASE PERFORMANCE
@@ -984,25 +1099,30 @@ whileloop:
         // yet, or if we don't yet know what the exponent is,
         // perform a binary chop.
 
-        if( (a==0 || b==0 ||
+        if ((a==0 || b==0 ||
             (fabs(a) >= T(0.5) * fabs(b) && fabs(b) >= T(0.5) * fabs(a)))
-            &&  (b - a) < T(0.25) * (b0 - a0))  {
-                baditer = 1;
-                continue;
-            }
+            &&  (b - a) < T(0.25) * (b0 - a0))
+        {
+            baditer = 1;
+            continue;
+        }
+
         // DAC: If this happens on consecutive iterations, we probably have a
         // pathological function. Perform a number of bisections equal to the
         // total number of consecutive bad iterations.
 
         if ((b - a) < T(0.25) * (b0 - a0)) 
             baditer = 1;
-        foreach (int QQ; 0..baditer) {
+        foreach (int QQ; 0..baditer)
+        {
             e = d;
             fe = fd;
 
             T w;
-            if ((a>0 && b<0) ||(a<0 && b>0)) w = 0;
-            else {
+            if ((a>0 && b<0) || (a<0 && b>0))
+                w = 0;
+            else
+            {
                 T usea = a;
                 T useb = b;
                 if (a == 0) 
@@ -1023,7 +1143,8 @@ unittest
     int numProblems = 0;
     int numCalls;
 
-    void testFindRoot(real delegate(real) f, real x1, real x2) {
+    void testFindRoot(real delegate(real) f, real x1, real x2)
+    {
         numCalls=0;
         ++numProblems;
         assert(!x1.isNaN && !x2.isNaN);
@@ -1033,13 +1154,15 @@ unittest
 
         auto flo = f(result[0]);
         auto fhi = f(result[1]);
-        if (flo!=0) {
+        if (flo!=0)
+        {
             assert(oppositeSigns(flo, fhi));
         }
     }
 
     // Test functions
-    real cubicfn (real x) {
+    real cubicfn(real x)
+    {
         ++numCalls;
         if (x>float.max) 
             x = float.max;
@@ -1065,7 +1188,8 @@ unittest
 
     int powercalls = 0;
 
-    real power(real x) {
+    real power(real x)
+    {
         ++powercalls;
         ++numCalls;
         return pow(x, n) + double.min_normal;
@@ -1081,7 +1205,8 @@ unittest
     // I get: 231 (0.48/bit).
     // IE this is 10X faster in Alefeld's worst case
     numProblems=0;
-    foreach(k; power_nvals) {
+    foreach (k; power_nvals)
+    {
         n = k;
         //testFindRoot(&power, -1, 10);
     }
@@ -1091,7 +1216,8 @@ unittest
     // Tests from Alefeld paper
 
     int [9] alefeldSums;
-    real alefeld0(real x){
+    real alefeld0(real x)
+    {
         ++alefeldSums[0];
         ++numCalls;
         real q =  sin(x) - x/2;
@@ -1099,61 +1225,68 @@ unittest
             q+=(2*i-5.0)*(2*i-5.0)/((x-i*i)*(x-i*i)*(x-i*i));
         return q;
     }
-   real alefeld1(real x) {
+    real alefeld1(real x)
+    {
         ++numCalls;
-       ++alefeldSums[1];
-       return ale_a*x + exp(ale_b * x);
-   }
-   real alefeld2(real x) {
+        ++alefeldSums[1];
+        return ale_a*x + exp(ale_b * x);
+    }
+    real alefeld2(real x)
+    {
         ++numCalls;
-       ++alefeldSums[2];
-       return pow(x, n) - ale_a;
-   }
-   real alefeld3(real x) {
+        ++alefeldSums[2];
+        return pow(x, n) - ale_a;
+    }
+    real alefeld3(real x)
+    {
         ++numCalls;
-       ++alefeldSums[3];
-       return (1.0 +pow(1.0L-n, 2))*x - pow(1.0L-n*x, 2);
-   }
-   real alefeld4(real x) {
+        ++alefeldSums[3];
+        return (1.0 +pow(1.0L-n, 2))*x - pow(1.0L-n*x, 2);
+    }
+    real alefeld4(real x)
+    {
         ++numCalls;
-       ++alefeldSums[4];
-       return x*x - pow(1-x, n);
-   }
+        ++alefeldSums[4];
+        return x*x - pow(1-x, n);
+    }
+    real alefeld5(real x)
+    {
+        ++numCalls;
+        ++alefeldSums[5];
+        return (1+pow(1.0L-n, 4))*x - pow(1.0L-n*x, 4);
+    }
+    real alefeld6(real x)
+    {
+        ++numCalls;
+        ++alefeldSums[6];
+        return exp(-n*x)*(x-1.01L) + pow(x, n);
+    }
+    real alefeld7(real x)
+    {
+        ++numCalls;
+        ++alefeldSums[7];
+        return (n*x-1)/((n-1)*x);
+    }
 
-   real alefeld5(real x) {
-        ++numCalls;
-       ++alefeldSums[5];
-       return (1+pow(1.0L-n, 4))*x - pow(1.0L-n*x, 4);
-   }
+    numProblems=0;
+    //testFindRoot(&alefeld0, PI_2, PI);
+    for (n=1; n<=10; ++n)
+    {
+        //testFindRoot(&alefeld0, n*n+1e-9L, (n+1)*(n+1)-1e-9L);
+    }
+    ale_a = -40; ale_b = -1;
+    //testFindRoot(&alefeld1, -9, 31);
+    ale_a = -100; ale_b = -2;
+    //testFindRoot(&alefeld1, -9, 31);
+    ale_a = -200; ale_b = -3;
+    //testFindRoot(&alefeld1, -9, 31);
+    int [] nvals_3 = [1, 2, 5, 10, 15, 20];
+    int [] nvals_5 = [1, 2, 4, 5, 8, 15, 20];
+    int [] nvals_6 = [1, 5, 10, 15, 20];
+    int [] nvals_7 = [2, 5, 15, 20];
 
-   real alefeld6(real x) {
-        ++numCalls;
-       ++alefeldSums[6];
-       return exp(-n*x)*(x-1.01L) + pow(x, n);
-   }
-
-   real alefeld7(real x) {
-        ++numCalls;
-       ++alefeldSums[7];
-       return (n*x-1)/((n-1)*x);
-   }
-   numProblems=0;
-   //testFindRoot(&alefeld0, PI_2, PI);
-   for (n=1; n<=10; ++n) {
-       //testFindRoot(&alefeld0, n*n+1e-9L, (n+1)*(n+1)-1e-9L);
-   }
-   ale_a = -40; ale_b = -1;
-   //testFindRoot(&alefeld1, -9, 31);
-   ale_a = -100; ale_b = -2;
-   //testFindRoot(&alefeld1, -9, 31);
-   ale_a = -200; ale_b = -3;
-   //testFindRoot(&alefeld1, -9, 31);
-   int [] nvals_3 = [1, 2, 5, 10, 15, 20];
-   int [] nvals_5 = [1, 2, 4, 5, 8, 15, 20];
-   int [] nvals_6 = [1, 5, 10, 15, 20];
-   int [] nvals_7 = [2, 5, 15, 20];
-
-    for(int i=4; i<12; i+=2) {
+    for (int i=4; i<12; i+=2)
+    {
        n = i;
        ale_a = 0.2;
        //testFindRoot(&alefeld2, 0, 5);
@@ -1161,27 +1294,34 @@ unittest
        //testFindRoot(&alefeld2, 0.95, 4.05);
        //testFindRoot(&alefeld2, 0, 1.5);
     }
-    foreach(i; nvals_3) {
+    foreach (i; nvals_3)
+    {
         n=i;
         //testFindRoot(&alefeld3, 0, 1);
     }
-    foreach(i; nvals_3) {
+    foreach (i; nvals_3)
+    {
         n=i;
         //testFindRoot(&alefeld4, 0, 1);
     }
-    foreach(i; nvals_5) {
+    foreach (i; nvals_5)
+    {
         n=i;
         //testFindRoot(&alefeld5, 0, 1);
     }
-    foreach(i; nvals_6) {
+    foreach (i; nvals_6)
+    {
         n=i;
         //testFindRoot(&alefeld6, 0, 1);
     }
-    foreach(i; nvals_7) {
+    foreach (i; nvals_7)
+    {
         n=i;
         //testFindRoot(&alefeld7, 0.01L, 1);
     }
-    real worstcase(real x) { ++numCalls;
+    real worstcase(real x)
+    {
+        ++numCalls;
         return x<0.3*real.max? -0.999e-3 : 1.0;
     }
     //testFindRoot(&worstcase, -real.max, real.max);
@@ -1192,7 +1332,8 @@ unittest
 
 /*
    int grandtotal=0;
-   foreach(calls; alefeldSums) {
+   foreach (calls; alefeldSums)
+   {
        grandtotal+=calls;
    }
    grandtotal-=2*numProblems;
@@ -1269,7 +1410,7 @@ iteration.
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 dotProduct(Range1, Range2)(Range1 a, Range2 b)
     if (isInputRange!(Range1) && isInputRange!(Range2) &&
-            !(isArray!(Range1) && isArray!(Range2)))
+        !(isArray!(Range1) && isArray!(Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
@@ -1315,7 +1456,8 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
         sum1 += avec[15] * bvec[15];
     }
 
-    for (; avec != smallblock_endp; avec += 4, bvec += 4) {
+    for (; avec != smallblock_endp; avec += 4, bvec += 4)
+    {
         sum0 += avec[0] * bvec[0];
         sum1 += avec[1] * bvec[1];
         sum0 += avec[2] * bvec[2];
@@ -1396,7 +1538,8 @@ positive. $(D normalize) assumes that is the case without checking it.
 Returns: $(D true) if normalization completed normally, $(D false) if
 all elements in $(D range) were zero or if $(D range) is empty.
  */
-bool normalize(R)(R range, ElementType!(R) sum = 1) if (isForwardRange!(R))
+bool normalize(R)(R range, ElementType!(R) sum = 1)
+    if (isForwardRange!(R))
 {
     ElementType!(R) s = 0;
     // Step 1: Compute sum and length of the range
@@ -1430,7 +1573,8 @@ bool normalize(R)(R range, ElementType!(R) sum = 1) if (isForwardRange!(R))
     // The path most traveled
     assert(s >= 0);
     auto f = sum / s;
-    foreach (ref e; range) e *= f;
+    foreach (ref e; range)
+        e *= f;
     return true;
 }
 
@@ -1454,14 +1598,14 @@ ElementType!Range sumOfLog2s(Range)(Range r)
 {
     long exp = 0;
     Unqual!(typeof(return)) x = 1; 
-    foreach(e; r)
+    foreach (e; r)
     {
-        if(e < 0)
+        if (e < 0)
             return typeof(return).nan;
         int lexp = void;
         x *= frexp(e, lexp);
         exp += lexp;
-        if(x < 0.5) 
+        if (x < 0.5) 
         {
             x *= 2;
             exp--;
@@ -1505,8 +1649,8 @@ ElementType!Range entropy(Range)(Range r) if (isInputRange!Range)
 
 /// Ditto
 ElementType!Range entropy(Range, F)(Range r, F max)
-if (isInputRange!Range
-        && !is(CommonType!(ElementType!Range, F) == void))
+if (isInputRange!Range &&
+    !is(CommonType!(ElementType!Range, F) == void))
 {
     typeof(return) result = 0.0;
     foreach (e; r)
@@ -1585,8 +1729,8 @@ or equal to $(D limit).
  */
 CommonType!(ElementType!Range1, ElementType!Range2)
 jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!Range1 && isInputRange!Range2
-            && is(CommonType!(ElementType!Range1, ElementType!Range2)))
+    if (isInputRange!Range1 && isInputRange!Range2 &&
+        is(CommonType!(ElementType!Range1, ElementType!Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
@@ -1612,8 +1756,8 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
 /// Ditto
 CommonType!(ElementType!Range1, ElementType!Range2)
 jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
-   if (isInputRange!Range1 && isInputRange!Range2
-           && is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
+   if (isInputRange!Range1 && isInputRange!Range2 &&
+       is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
                            >= F.init) : bool))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
@@ -1770,11 +1914,12 @@ t.length)) extra bytes of memory and $(BIGOH s.length * t.length) time
 to complete.
  */
 F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
-    if (isRandomAccessRange!(R1) && hasLength!(R1)
-            && isRandomAccessRange!(R2) && hasLength!(R2))
+    if (isRandomAccessRange!(R1) && hasLength!(R1) &&
+        isRandomAccessRange!(R2) && hasLength!(R2))
 {
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
+
     immutable tl1 = t.length + 1;
     auto dpvi = enforce(cast(F*) malloc(F.sizeof * 2 * t.length));
     auto dpvi1 = dpvi + t.length;
@@ -1801,8 +1946,8 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
             }
             immutable j1 = j + 1;
             if (j1 == t.length) break;
-            dpvi1[j1] = dpsij + lambda * (dpvi1[j] + dpvi[j1])
-                - lambda2 * dpvi[j];
+            dpvi1[j1] = dpsij + lambda * (dpvi1[j] + dpvi[j1]) -
+                        lambda2 * dpvi[j];
             j = j1;
         }
         swap(dpvi, dpvi1);
@@ -1851,16 +1996,17 @@ gapWeightedSimilarity(t, t, lambda)). In that case, they can be passed
 as $(D sSelfSim) and $(D tSelfSim), respectively.
  */
 Select!(isFloatingPoint!(F), F, double)
-gapWeightedSimilarityNormalized
-(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda,
-        F sSelfSim = F.init, F tSelfSim = F.init)
-    if (isRandomAccessRange!(R1) && hasLength!(R1)
-            && isRandomAccessRange!(R2) && hasLength!(R2))
+gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
+        (R1 s, R2 t, F lambda, F sSelfSim = F.init, F tSelfSim = F.init)
+    if (isRandomAccessRange!(R1) && hasLength!(R1) &&
+        isRandomAccessRange!(R2) && hasLength!(R2))
 {
     static bool uncomputed(F n)
     {
-        static if (isFloatingPoint!(F)) return isnan(n);
-        else return n == n.init;
+        static if (isFloatingPoint!(F))
+            return isnan(n);
+        else
+            return n == n.init;
     }
     if (uncomputed(sSelfSim))
         sSelfSim = gapWeightedSimilarity!(comp)(s, s, lambda);
@@ -1868,8 +2014,9 @@ gapWeightedSimilarityNormalized
     if (uncomputed(tSelfSim))
         tSelfSim = gapWeightedSimilarity!(comp)(t, t, lambda);
     if (tSelfSim == 0) return 0;
-    return gapWeightedSimilarity!(comp)(s, t, lambda)
-        / sqrt(cast(typeof(return)) sSelfSim * tSelfSim);
+
+    return gapWeightedSimilarity!(comp)(s, t, lambda) /
+           sqrt(cast(typeof(return)) sSelfSim * tSelfSim);
 }
 
 unittest
@@ -1915,7 +2062,7 @@ struct GapWeightedSimilarityIncremental(Range, F = double)
 private:
     Range s, t;
     F currentValue = 0;
-    F * kl;
+    F* kl;
     size_t gram = void;
     F lambda = void, lambda2 = void;
 
@@ -1925,7 +2072,8 @@ Constructs an object given two ranges $(D s) and $(D t) and a penalty
 $(D lambda). Constructor completes in $(BIGOH s.length * t.length)
 time and computes all matches of length 1.
  */
-    this(Range s, Range t, F lambda) {
+    this(Range s, Range t, F lambda)
+    {
         enforce(lambda > 0);
         this.gram = 0;
         this.lambda = lambda;
@@ -1938,12 +2086,14 @@ time and computes all matches of length 1.
         size_t k0len;
         scope(exit) free(k0);
         currentValue = 0;
-        foreach (i, si; s) {
-            foreach (j; 0 .. t.length) {
+        foreach (i, si; s)
+        {
+            foreach (j; 0 .. t.length)
+            {
                 if (si != t[j]) continue;
-                k0 = cast(typeof(k0))
-                    realloc(k0, ++k0len * (*k0).sizeof);
-                with (k0[k0len - 1]) {
+                k0 = cast(typeof(k0)) realloc(k0, ++k0len * (*k0).sizeof);
+                with (k0[k0len - 1])
+                {
                     field[0] = i;
                     field[1] = j;
                 }
@@ -1969,26 +2119,29 @@ time and computes all matches of length 1.
         kl = errnoEnforce(cast(F *) malloc(s.length * t.length * F.sizeof));
 
         kl[0 .. s.length * t.length] = 0;
-        foreach (pos; 0 .. k0len) {
-            with (k0[pos]) {
+        foreach (pos; 0 .. k0len)
+        {
+            with (k0[pos])
+            {
                 kl[(field[0] - iMin) * t.length + field[1] -jMin] = lambda2;
             }
         }
     }
 
-/**
-Returns $(D this).
- */
+    /**
+    Returns: $(D this).
+     */
     ref GapWeightedSimilarityIncremental opSlice()
     {
         return this;
     }
 
-/**
-Computes the match of the popFront length. Completes in $(BIGOH s.length *
-t.length) time.
- */
-    void popFront() {
+    /**
+    Computes the match of the popFront length. Completes in $(BIGOH s.length *
+    t.length) time.
+     */
+    void popFront()
+    {
         // This is a large source of optimization: if similarity at
         // the gram-1 level was 0, then we can safely assume
         // similarity at the gram level is 0 as well.
@@ -2031,14 +2184,16 @@ t.length) time.
         {
             Si_1[0 .. t.length] = 0;
             kl[0 .. min(t.length, maxPerimeter + 1)] = 0;
-            foreach (i; 1 .. min(s.length, maxPerimeter + 1)) {
+            foreach (i; 1 .. min(s.length, maxPerimeter + 1))
+            {
                 auto kli = kl + i * t.length;
                 assert(s.length > i);
                 const si = s[i];
                 auto kl_1i_1 = kl_1 + (i - 1) * t.length;
                 kli[0] = 0;
                 F lastS = 0;
-                foreach (j; 1 .. min(maxPerimeter - i + 1, t.length)) {
+                foreach (j; 1 .. min(maxPerimeter - i + 1, t.length))
+                {
                     immutable j_1 = j - 1;
                     immutable tmp = kl_1i_1[j_1]
                         + lambda * (Si_1[j] + lastS)
@@ -2046,9 +2201,12 @@ t.length) time.
                     kl_1i_1[j_1] = float.nan;
                     Si_1[j_1] = lastS;
                     lastS = tmp;
-                    if (si == t[j]) {
+                    if (si == t[j])
+                    {
                         currentValue += kli[j] = lambda2 * lastS;
-                    } else {
+                    }
+                    else
+                    {
                         kli[j] = 0;
                     }
                 }
@@ -2060,18 +2218,20 @@ t.length) time.
         }
     }
 
-/**
-Returns the gapped similarity at the current match length (initially
-1, grows with each call to $(D popFront)).
- */
+    /**
+    Returns: The gapped similarity at the current match length (initially
+    1, grows with each call to $(D popFront)).
+    */
     @property F front() { return currentValue; }
 
-/**
-Returns whether there are more matches.
- */
-    @property bool empty() {
+    /**
+    Returns: Whether there are more matches.
+     */
+    @property bool empty()
+    {
         if (currentValue) return false;
-        if (kl) {
+        if (kl)
+        {
             free(kl);
             kl = null;
         }
@@ -2161,14 +2321,20 @@ unittest
 Computes the greatest common divisor of $(D a) and $(D b) by using
 Euclid's algorithm.
  */
-T gcd(T)(T a, T b) {
-    static if (is(T == const) || is(T == immutable)) {
+T gcd(T)(T a, T b)
+{
+    static if (is(T == const) || is(T == immutable))
+    {
         return gcd!(Unqual!T)(a, b);
-    } else {
-        static if (T.min < 0) {
+    }
+    else
+    {
+        static if (T.min < 0)
+        {
             enforce(a >= 0 && b >=0);
         }
-        while (b) {
+        while (b)
+        {
             auto t = b;
             b = a % b;
             a = t;
@@ -2177,7 +2343,8 @@ T gcd(T)(T a, T b) {
     }
 }
 
-unittest {
+unittest
+{
     assert(gcd(2 * 5 * 7 * 7, 5 * 7 * 11) == 5 * 7);
     const int a = 5 * 13 * 23 * 23, b = 13 * 59;
     assert(gcd(a, b) == 13);
@@ -2257,28 +2424,36 @@ private alias lookup_t = float;
  * References:
  * $(WEB en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm)
  */
-final class Fft {
+final class Fft
+{
 private:
     immutable lookup_t[][] negSinLookup;
 
-    void enforceSize(R)(R range) const {
+    void enforceSize(R)(R range) const
+    {
         enforce(range.length <= size, text(
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }
 
     void fftImpl(Ret, R)(Stride!R range, Ret buf) const
-    in {
+    in
+    {
         assert(range.length >= 4);
         assert(isPowerOfTwo(range.length));
-    } body {
+    }
+    body
+    {
         auto recurseRange = range;
         recurseRange.doubleSteps();
 
-        if(buf.length > 4) {
+        if(buf.length > 4)
+        {
             fftImpl(recurseRange, buf[0..$ / 2]);
             recurseRange.popHalf();
             fftImpl(recurseRange, buf[$ / 2..$]);
-        } else {
+        }
+        else
+        {
             // Do this here instead of in another recursion to save on
             // recursion overhead.
             slowFourier2(recurseRange, buf[0..$ / 2]);
@@ -2295,63 +2470,80 @@ private:
     // by making the odd terms into the imaginary components of our new FFT,
     // and then using symmetry to recombine them.
     void fftImplPureReal(Ret, R)(R range, Ret buf) const
-    in {
+    in
+    {
         assert(range.length >= 4);
         assert(isPowerOfTwo(range.length));
-    } body {
+    }
+    body
+    {
         alias E = ElementType!R;
 
         // Converts odd indices of range to the imaginary components of
         // a range half the size.  The even indices become the real components.
-        static if(isArray!R && isFloatingPoint!E) {
+        static if(isArray!R && isFloatingPoint!E)
+        {
             // Then the memory layout of complex numbers provides a dirt
             // cheap way to convert.  This is a common case, so take advantage.
             auto oddsImag = cast(Complex!E[]) range;
-        } else {
+        }
+        else
+        {
             // General case:  Use a higher order range.  We can assume
             // source.length is even because it has to be a power of 2.
-            static struct OddToImaginary {
+            static struct OddToImaginary
+            {
                 R source;
                 alias C = Complex!(CommonType!(E, typeof(buf[0].re)));
 
-                @property {
-                    C front() {
+                @property
+                {
+                    C front()
+                    {
                         return C(source[0], source[1]);
                     }
 
-                    C back() {
+                    C back()
+                    {
                         immutable n = source.length;
                         return C(source[n - 2], source[n - 1]);
                     }
 
-                    typeof(this) save() {
+                    typeof(this) save()
+                    {
                         return typeof(this)(source.save);
                     }
 
-                    bool empty() {
+                    bool empty()
+                    {
                         return source.empty;
                     }
 
-                    size_t length() {
+                    size_t length()
+                    {
                         return source.length / 2;
                     }
                 }
 
-                void popFront() {
+                void popFront()
+                {
                     source.popFront();
                     source.popFront();
                 }
 
-                void popBack() {
+                void popBack()
+                {
                     source.popBack();
                     source.popBack();
                 }
 
-                C opIndex(size_t index) {
+                C opIndex(size_t index)
+                {
                     return C(source[index * 2], source[index * 2 + 1]);
                 }
 
-                typeof(this) opSlice(size_t lower, size_t upper) {
+                typeof(this) opSlice(size_t lower, size_t upper)
+                {
                     return typeof(this)(source[lower * 2..upper * 2]);
                 }
             }
@@ -2368,7 +2560,8 @@ private:
         evenFft[0].im = 0;
         // evenFft[0].re is already right b/c it's aliased with buf[0].re.
 
-        foreach(k; 1..halfN / 2 + 1) {
+        foreach (k; 1..halfN / 2 + 1)
+        {
             immutable bufk = buf[k];
             immutable bufnk = buf[buf.length / 2 - k];
             evenFft[k].re = 0.5 * (bufk.re + bufnk.re);
@@ -2386,9 +2579,12 @@ private:
     }
 
     void butterfly(R)(R buf) const
-    in {
+    in
+    {
         assert(isPowerOfTwo(buf.length));
-    } body {
+    }
+    body
+    {
         immutable n = buf.length;
         immutable localLookup = negSinLookup[bsf(n)];
         assert(localLookup.length == n);
@@ -2396,11 +2592,13 @@ private:
         immutable cosMask = n - 1;
         immutable cosAdd = n / 4 * 3;
 
-        lookup_t negSinFromLookup(size_t index) pure nothrow {
+        lookup_t negSinFromLookup(size_t index) pure nothrow
+        {
             return localLookup[index];
         }
 
-        lookup_t cosFromLookup(size_t index) pure nothrow {
+        lookup_t cosFromLookup(size_t index) pure nothrow
+        {
             // cos is just -sin shifted by PI * 3 / 2.
             return localLookup[(index + cosAdd) & cosMask];
         }
@@ -2410,7 +2608,8 @@ private:
         // This loop is unrolled and the two iterations are interleaved
         // relative to the textbook FFT to increase ILP.  This gives roughly 5%
         // speedups on DMD.
-        for(size_t k = 0; k < halfLen; k += 2) {
+        for (size_t k = 0; k < halfLen; k += 2)
+        {
             immutable cosTwiddle1 = cosFromLookup(k);
             immutable sinTwiddle1 = negSinFromLookup(k);
             immutable cosTwiddle2 = cosFromLookup(k + 1);
@@ -2455,7 +2654,8 @@ private:
     //
     // Also, this is unsafe because the memSpace buffer will be cast
     // to immutable.
-    public this(lookup_t[] memSpace) {  // Public b/c of bug 4636.
+    public this(lookup_t[] memSpace)  // Public b/c of bug 4636.
+    {
         immutable size = memSpace.length / 2;
 
         /* Create a lookup table of all negative sine values at a resolution of
@@ -2463,7 +2663,8 @@ private:
          * inefficient, but having all the lookups be next to each other in
          * memory at every level of iteration is a huge win performance-wise.
          */
-        if(size == 0) {
+        if(size == 0)
+        {
             return;
         }
 
@@ -2476,30 +2677,32 @@ private:
 
         auto lastRow = table[$ - 1];
         lastRow[0] = 0;  // -sin(0) == 0.
-        foreach(ptrdiff_t i; 1..size) {
+        foreach (ptrdiff_t i; 1..size)
+        {
             // The hard coded cases are for improved accuracy and to prevent
             // annoying non-zeroness when stuff should be zero.
 
-            if(i == size / 4) {
+            if (i == size / 4)
                 lastRow[i] = -1;  // -sin(pi / 2) == -1.
-            } else if(i == size / 2) {
+            else if (i == size / 2)
                 lastRow[i] = 0;   // -sin(pi) == 0.
-            } else if(i == size * 3 / 4) {
+            else if (i == size * 3 / 4)
                 lastRow[i] = 1;  // -sin(pi * 3 / 2) == 1
-            } else {
+            else
                 lastRow[i] = -sin(i * 2.0L * PI / size);
-            }
         }
 
         // Fill in all the other rows with strided versions.
-        foreach(i; 1..table.length - 1) {
+        foreach (i; 1..table.length - 1)
+        {
             immutable strideLength = size / (2 ^^ i);
             auto strided = Stride!(lookup_t[])(lastRow, strideLength);
             table[i] = memSpace[$ - strided.length..$];
             memSpace = memSpace[0..$ - strided.length];
 
             size_t copyIndex;
-            foreach(elem; strided) {
+            foreach (elem; strided)
+            {
                 table[i][copyIndex++] = elem;
             }
         }
@@ -2512,14 +2715,16 @@ public:
      * power of two sizes of $(D size) or smaller.  $(D size) must be a
      * power of two.
      */
-    this(size_t size) {
+    this(size_t size)
+    {
         // Allocate all twiddle factor buffers in one contiguous block so that,
         // when one is done being used, the next one is next in cache.
         auto memSpace = uninitializedArray!(lookup_t[])(2 * size);
         this(memSpace);
     }
 
-    @property size_t size() const {
+    @property size_t size() const
+    {
         return (negSinLookup is null) ? 0 : negSinLookup[$ - 1].length;
     }
 
@@ -2540,10 +2745,12 @@ public:
      *              i.e., output[j] := sum[ exp(-2 PI i j k / N) input[k] ].
      */
     Complex!F[] fft(F = double, R)(R range) const
-    if(isFloatingPoint!F && isRandomAccessRange!R) {
+        if (isFloatingPoint!F && isRandomAccessRange!R)
+    {
         enforceSize(range);
         Complex!F[] ret;
-        if(range.length == 0) {
+        if (range.length == 0)
+        {
             return ret;
         }
 
@@ -2561,33 +2768,44 @@ public:
      * property that can be both read and written and are floating point numbers.
      */
     void fft(Ret, R)(R range, Ret buf) const
-    if(isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret) {
+        if(isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    {
         enforce(buf.length == range.length);
         enforceSize(range);
 
-        if(range.length == 0) {
+        if (range.length == 0)
+        {
             return;
-        } else if(range.length == 1) {
+        }
+        else if (range.length == 1)
+        {
             buf[0] = range[0];
             return;
-        } else if(range.length == 2) {
+        }
+        else if (range.length == 2)
+        {
             slowFourier2(range, buf);
             return;
-        } else {
+        }
+        else
+        {
             alias E = ElementType!R;
-            static if(is(E : real)) {
+            static if (is(E : real))
+            {
                 return fftImplPureReal(range, buf);
-            } else {
-                static if(is(R : Stride!R)) {
+            }
+            else
+            {
+                static if (is(R : Stride!R))
                     return fftImpl(range, buf);
-                } else {
+                else
                     return fftImpl(Stride!R(range, 1), buf);
-                }
             }
         }
     }
 
-    /**Computes the inverse Fourier transform of a range.  The range must be a
+    /**
+     * Computes the inverse Fourier transform of a range.  The range must be a
      * random access range with slicing, have a length equal to the size
      * provided at construction of this object, and contain elements that are
      * either of type std.complex.Complex or have essentially
@@ -2599,10 +2817,12 @@ public:
      *              output[j] := (1 / N) sum[ exp(+2 PI i j k / N) input[k] ].
      */
     Complex!F[] inverseFft(F = double, R)(R range) const
-    if(isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F) {
+        if (isRandomAccessRange!R && isComplexLike!(ElementType!R) && isFloatingPoint!F)
+    {
         enforceSize(range);
         Complex!F[] ret;
-        if(range.length == 0) {
+        if (range.length == 0)
+        {
             return ret;
         }
 
@@ -2613,19 +2833,22 @@ public:
         return ret;
     }
 
-    /**Inverse FFT that allows a user-supplied buffer to be provided.  The buffer
+    /**
+     * Inverse FFT that allows a user-supplied buffer to be provided.  The buffer
      * must be a random access range with slicing, and its elements
      * must be some complex-like type.
      */
     void inverseFft(Ret, R)(R range, Ret buf) const
-    if(isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret) {
+        if (isRandomAccessRange!Ret && isComplexLike!(ElementType!Ret) && hasSlicing!Ret)
+    {
         enforceSize(range);
 
         auto swapped = map!swapRealImag(range);
         fft(swapped,  buf);
 
         immutable lenNeg1 = 1.0 / buf.length;
-        foreach(ref elem; buf) {
+        foreach (ref elem; buf)
+        {
             auto temp = elem.re * lenNeg1;
             elem.re = elem.im * lenNeg1;
             elem.im = temp;
@@ -2639,7 +2862,8 @@ public:
 private enum string MakeLocalFft = q{
     auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
                      [0..2 * range.length];
-    if(!lookupBuf.ptr) {
+    if (!lookupBuf.ptr)
+    {
         throw new OutOfMemoryError(__FILE__, __LINE__);
     }
     scope(exit) free(cast(void*) lookupBuf.ptr);
@@ -2654,30 +2878,35 @@ private enum string MakeLocalFft = q{
  *        as the Fft object is deterministically destroyed before these
  *        functions return.
  */
-Complex!F[] fft(F = double, R)(R range) {
+Complex!F[] fft(F = double, R)(R range)
+{
     mixin(MakeLocalFft);
     return fftObj.fft!(F, R)(range);
 }
 
 /// ditto
-void fft(Ret, R)(R range, Ret buf) {
+void fft(Ret, R)(R range, Ret buf)
+{
     mixin(MakeLocalFft);
     return fftObj.fft!(Ret, R)(range, buf);
 }
 
 /// ditto
-Complex!F[] inverseFft(F = double, R)(R range) {
+Complex!F[] inverseFft(F = double, R)(R range)
+{
     mixin(MakeLocalFft);
     return fftObj.inverseFft!(F, R)(range);
 }
 
 /// ditto
-void inverseFft(Ret, R)(R range, Ret buf) {
+void inverseFft(Ret, R)(R range, Ret buf)
+{
     mixin(MakeLocalFft);
     return fftObj.inverseFft!(Ret, R)(range, buf);
 }
 
-unittest {
+unittest
+{
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);
@@ -2745,7 +2974,8 @@ unittest {
 
 // Swaps the real and imaginary parts of a complex number.  This is useful
 // for inverse FFTs.
-C swapRealImag(C)(C input) {
+C swapRealImag(C)(C input)
+{
     return C(input.im, input.re);
 }
 
@@ -2753,65 +2983,80 @@ private:
 // The reasons I couldn't use std.algorithm were b/c its stride length isn't
 // modifiable on the fly and because range has grown some performance hacks
 // for powers of 2.
-struct Stride(R) {
+struct Stride(R)
+{
     Unqual!R range;
     size_t _nSteps;
     size_t _length;
     alias E = ElementType!(R);
 
-    this(R range, size_t nStepsIn) {
+    this(R range, size_t nStepsIn)
+    {
         this.range = range;
        _nSteps = nStepsIn;
        _length = (range.length + _nSteps - 1) / nSteps;
     }
 
-    size_t length() const @property {
+    size_t length() const @property
+    {
         return _length;
     }
 
-    typeof(this) save() @property {
+    typeof(this) save() @property
+    {
         auto ret = this;
         ret.range = ret.range.save;
         return ret;
     }
 
-    E opIndex(size_t index) {
+    E opIndex(size_t index)
+    {
         return range[index * _nSteps];
     }
 
-    E front() @property {
+    E front() @property
+    {
         return range[0];
     }
 
-    void popFront() {
-        if(range.length >= _nSteps) {
+    void popFront()
+    {
+        if (range.length >= _nSteps)
+        {
             range = range[_nSteps..range.length];
             _length--;
-        } else {
+        }
+        else
+        {
             range = range[0..0];
             _length = 0;
         }
     }
 
     // Pops half the range's stride.
-    void popHalf() {
+    void popHalf()
+    {
         range = range[_nSteps / 2..range.length];
     }
 
-    bool empty() const @property {
+    bool empty() const @property
+    {
         return length == 0;
     }
 
-    size_t nSteps() const @property {
+    size_t nSteps() const @property
+    {
         return _nSteps;
     }
 
-    void doubleSteps() {
+    void doubleSteps()
+    {
         _nSteps *= 2;
         _length /= 2;
     }
 
-    size_t nSteps(size_t newVal) @property {
+    size_t nSteps(size_t newVal) @property
+    {
         _nSteps = newVal;
 
         // Using >> bsf(nSteps) is a few cycles faster than / nSteps.
@@ -2823,7 +3068,8 @@ struct Stride(R) {
 // Hard-coded base case for FFT of size 2.  This is actually a TON faster than
 // using a generic slow DFT.  This seems to be the best base case.  (Size 1
 // can be coded inline as buf[0] = range[0]).
-void slowFourier2(Ret, R)(R range, Ret buf) {
+void slowFourier2(Ret, R)(R range, Ret buf)
+{
     assert(range.length == 2);
     assert(buf.length == 2);
     buf[0] = range[0] + range[1];
@@ -2832,7 +3078,8 @@ void slowFourier2(Ret, R)(R range, Ret buf) {
 
 // Hard-coded base case for FFT of size 4.  Doesn't work as well as the size
 // 2 case.
-void slowFourier4(Ret, R)(R range, Ret buf) {
+void slowFourier4(Ret, R)(R range, Ret buf)
+{
     alias C = ElementType!Ret;
 
     assert(range.length == 4);
@@ -2843,25 +3090,30 @@ void slowFourier4(Ret, R)(R range, Ret buf) {
     buf[3] = range[0] + range[1] * C(0, 1) - range[2] - range[3] * C(0, 1);
 }
 
-bool isPowerOfTwo(size_t num) {
+bool isPowerOfTwo(size_t num)
+{
     return bsr(num) == bsf(num);
 }
 
-size_t roundDownToPowerOf2(size_t num) {
+size_t roundDownToPowerOf2(size_t num)
+{
     return num & (1 << bsr(num));
 }
 
-unittest {
+unittest
+{
     assert(roundDownToPowerOf2(7) == 4);
     assert(roundDownToPowerOf2(4) == 4);
 }
 
-template isComplexLike(T) {
+template isComplexLike(T)
+{
     enum bool isComplexLike = is(typeof(T.init.re)) &&
         is(typeof(T.init.im));
 }
 
-unittest {
+unittest
+{
     static assert(isComplexLike!(Complex!double));
     static assert(!isComplexLike!(uint));
 }
