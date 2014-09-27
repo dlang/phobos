@@ -26,15 +26,10 @@ import std.traits, std.typetuple;
 Transforms a string representing an expression into a unary
 function. The string must either use symbol name $(D a) as
 the parameter or provide the symbol via the $(D parmName) argument.
-If $(D fun) is not a string, $(D unaryFun) aliases itself away to
-$(D fun).
-
-Example:
-
-----
-alias unaryFun!("(a & 1) == 0") isEven;
-assert(isEven(2) && !isEven(1));
-----
+If $(D fun) is not a string, but is an associative array, $(D unaryFun)
+turns it into a function that maps keys to values. If it is an array,
+$(D unaryFun) turns it into a function that maps array indices to elements.
+Otherwise, $(D unaryFun) aliases itself away to $(D fun).
 */
 
 template unaryFun(alias fun, string parmName = "a")
@@ -58,6 +53,30 @@ template unaryFun(alias fun, string parmName = "a")
     {
         alias unaryFun = fun;
     }
+}
+
+///
+unittest
+{
+    // Strings are compiled into functions:
+    alias isEven = unaryFun!("(a & 1) == 0");
+    assert(isEven(2) && !isEven(1));
+
+    // Associative arrays become mapping functions:
+    alias numValues = unaryFun!([
+        "zero": 0, "one": 1, "two": 2, "three": 3
+    ]);
+    assert(numValues("zero") == 0);
+    assert(numValues("one") == 1);
+    assert(numValues("two") == 2);
+    assert(numValues("three") == 3);
+
+    // Arrays become indexing functions:
+    alias numNames = unaryFun!(["zero", "one", "two", "three"]);
+    assert(numNames(0) == "zero");
+    assert(numNames(1) == "one");
+    assert(numNames(2) == "two");
+    assert(numNames(3) == "three");
 }
 
 /+ Undocumented, will be removed December 2014+/
@@ -91,21 +110,11 @@ unittest
 }
 
 /**
-Transforms a string representing an expression into a Boolean binary
-predicate. The string must either use symbol names $(D a) and $(D b)
-as the parameters or provide the symbols via the $(D parm1Name) and
-$(D parm2Name) arguments.
+Transforms a string representing an expression into a binary function. The
+string must either use symbol names $(D a) and $(D b) as the parameters or
+provide the symbols via the $(D parm1Name) and $(D parm2Name) arguments.
 If $(D fun) is not a string, $(D binaryFun) aliases itself away to
 $(D fun).
-
-   Example:
-
-----
-alias less = binaryFun!("a < b");
-assert(less(1, 2) && !less(2, 1));
-alias greater = binaryFun!("a > b");
-assert(!greater("1", "2") && greater("2", "1"));
-----
 */
 
 template binaryFun(alias fun, string parm1Name = "a",
@@ -134,12 +143,17 @@ template binaryFun(alias fun, string parm1Name = "a",
     }
 }
 
+///
 unittest
 {
-    alias less = binaryFun!(q{a < b});
+    alias less = binaryFun!("a < b");
     assert(less(1, 2) && !less(2, 1));
-    assert(less("1", "2") && !less("2", "1"));
+    alias greater = binaryFun!("a > b");
+    assert(!greater("1", "2") && greater("2", "1"));
+}
 
+unittest
+{
     static int f1(int a, string b) { return a + 1; }
     static assert(is(typeof(binaryFun!(f1)(1, "2")) == int));
     assert(binaryFun!(f1)(41, "a") == 42);
