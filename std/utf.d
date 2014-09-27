@@ -2725,7 +2725,7 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
 
         auto opSlice(size_t lower, size_t upper)
         {
-            return r[lower..upper];
+            return ByCodeUnitImpl(r[lower..upper]);
         }
 
         @property size_t length() const
@@ -2806,6 +2806,7 @@ pure nothrow @nogc unittest
     }
     {
         auto r = "hello".byCodeUnit();
+        static assert(hasSlicing!(typeof(r)));
         static assert(isBidirectionalRange!(typeof(r)));
         auto ret = r.retro;
         assert(ret.front == 'o');
@@ -2814,6 +2815,7 @@ pure nothrow @nogc unittest
     }
     {
         auto r = "κόσμε"w.byCodeUnit();
+        static assert(hasSlicing!(typeof(r)));
         static assert(isBidirectionalRange!(typeof(r)));
         auto ret = r.retro;
         assert(ret.front == 'ε');
