@@ -6039,7 +6039,7 @@ unittest
 
     immutable int k;
     WrapMutability!(typeof(k), ulong) l;
-    static assert(is(typeof(l) == immutable(string)));
+    static assert(is(typeof(l) == immutable(ulong)));
 }
 
 /**
