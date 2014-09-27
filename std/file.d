@@ -1499,7 +1499,7 @@ void mkdir(in char[] pathname) @safe
         {
             return CreateDirectoryW(path.tempCStringW(), null);
         }
-        cenforce(trustedCreateDirectoryW(pathname), pathname);
+        wenforce(trustedCreateDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
