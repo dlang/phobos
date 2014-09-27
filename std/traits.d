@@ -32,6 +32,7 @@
  *           $(LREF isNested)
  *           $(LREF hasNested)
  *           $(LREF FieldTypeTuple)
+ *           $(LREF FieldNameTuple)
  *           $(LREF RepresentationTypeTuple)
  *           $(LREF hasAliasing)
  *           $(LREF hasIndirections)
