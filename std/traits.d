@@ -2173,6 +2173,57 @@ unittest
 }
 
 
+//Required for FieldNameTuple
+private enum NameOf(alias T) = T.stringof;
+
+/**
+ * Get as an expression tuple the names of the fields of a struct, class, or
+ * union. This consists of the fields that take up memory space, excluding the
+ * hidden fields like the virtual function table pointer or a context pointer
+ * for nested types. If $(D T) isn't a struct, class, or union returns an
+ * expression tuple with an empty string.
+ */
+template FieldNameTuple(T)
+{
+    static if (is(T == struct) || is(T == union))
+        alias FieldNameTuple = staticMap!(NameOf, T.tupleof[0 .. $ - isNested!T]);
+    else static if (is(T == class))
+        alias FieldNameTuple = staticMap!(NameOf, T.tupleof);
+    else
+        alias FieldNameTuple = TypeTuple!"";
+}
+
+///
+unittest
+{
+    struct S { int x; float y; }
+    static assert(FieldNameTuple!S == TypeTuple!("x", "y"));
+    static assert(FieldNameTuple!int == TypeTuple!"");
+}
+
+unittest
+{
+    static assert(FieldNameTuple!int == TypeTuple!"");
+
+    static struct StaticStruct1 { }
+    static assert(is(FieldNameTuple!StaticStruct1 == TypeTuple!()));
+
+    static struct StaticStruct2 { int a, b; }
+    static assert(FieldNameTuple!StaticStruct2 == TypeTuple!("a", "b"));
+
+    int i;
+
+    struct NestedStruct1 { void f() { ++i; } }
+    static assert(is(FieldNameTuple!NestedStruct1 == TypeTuple!()));
+
+    struct NestedStruct2 { int a; void f() { ++i; } }
+    static assert(FieldNameTuple!NestedStruct2 == TypeTuple!"a");
+
+    class NestedClass { int a; void f() { ++i; } }
+    static assert(FieldNameTuple!NestedClass == TypeTuple!"a");
+}
+
+
 // // FieldOffsetsTuple
 // private template FieldOffsetsTupleImpl(size_t n, T...)
 // {
