@@ -3848,7 +3848,15 @@ private:
     }
     else version (ARM)
     {
-        // TODO: Fill this in for VFP.
+        // ARM FPSCR is a 32bit register
+        enum : int
+        {
+            INEXACT_MASK   = 0x1000,
+            UNDERFLOW_MASK = 0x0800,
+            OVERFLOW_MASK  = 0x0400,
+            DIVBYZERO_MASK = 0x0200,
+            INVALID_MASK   = 0x0100
+        }
     }
     else version(SPARC)
     {
