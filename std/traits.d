@@ -109,6 +109,7 @@
  * ))
  * $(TR $(TD General Types) $(TD
  *           $(LREF Unqual)
+ *           $(LREF WrapMutability)
  *           $(LREF ForeachType)
  *           $(LREF OriginalType)
  *           $(LREF PointerTarget)
@@ -6010,6 +6011,35 @@ unittest
     static assert(is(ModifyTypePreservingSTC!(Intify, shared inout       real) == shared inout       int));
     static assert(is(ModifyTypePreservingSTC!(Intify, shared inout const real) == shared inout const int));
     static assert(is(ModifyTypePreservingSTC!(Intify,          immutable real) ==          immutable int));
+}
+
+/**
+ * Return $(D WrapT) wrapped with the mutability of $(D RefT).
+ */
+template WrapMutability(RefT, WrapT)
+{
+    static if (is(RefT == const))
+        alias WrapMutability = const(WrapT);
+    else static if (is(RefT == immutable))
+        alias WrapMutability = immutable(WrapT);
+    else
+        alias WrapMutability = WrapT;
+}
+
+///
+unittest
+{
+    int i;
+    WrapMutability!(typeof(i), byte) b;
+    static assert(is(typeof(b) == byte));
+
+    const int j;
+    WrapMutability!(typeof(j), string) s;
+    static assert(is(typeof(s) == const(string)));
+
+    immutable int k;
+    WrapMutability!(typeof(k), ulong) l;
+    static assert(is(typeof(l) == immutable(string)));
 }
 
 /**
