@@ -73,8 +73,9 @@ int main(char[][] args)
     uint ranseed = std.random.unpredictableSeed;
     thisTid;
     int[] a;
-    a.reverse;                          // adi
-    a.sort;                             // qsort
+    import std.algorithm : sort, reverse;
+    reverse(a);                         // adi
+    sort(a);                            // qsort
     Clock.currTime();                   // datetime
     Exception e = new ReadException(""); // stream
     din.eof();                           // cstream
@@ -96,7 +97,7 @@ int main(char[][] args)
     x[0] = 3;
     x[1] = 45;
     x[2] = -1;
-    x.sort;
+    sort(x[]);
     assert(x[0] == -1);
     assert(x[1] == 3);
     assert(x[2] == 45);
