@@ -1775,9 +1775,11 @@ unittest
         auto b = a.dup;
         auto gen = RandomGen(unpredictableSeed);
         randomShuffle(a, gen);
-        assert(a.sort == b);
+        sort(a);
+        assert(a == b);
         randomShuffle(a);
-        assert(a.sort == b);
+        sort(a);
+        assert(a == b);
     }
 }
 
@@ -1818,10 +1820,12 @@ unittest
         auto gen = RandomGen(unpredictableSeed);
         partialShuffle(a, 5, gen);
         assert(a[5 .. $] == b[5 .. $]);
-        assert(a[0 .. 5].sort == b[0 .. 5]);
+        sort(a[0 .. 5]);
+        assert(a[0 .. 5] == b[0 .. 5]);
         partialShuffle(a, 6);
         assert(a[6 .. $] == b[6 .. $]);
-        assert(a[0 .. 6].sort == b[0 .. 6]);
+        sort(a[0 .. 6]);
+        assert(a[0 .. 6] == b[0 .. 6]);
     }
 }
 
