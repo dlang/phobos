@@ -936,7 +936,8 @@ body
 {
     if (str[index] < codeUnitLimit!S)
         return str[index++];
-    return decodeImpl!true(str, index);
+    else
+        return decodeImpl!true(str, index);
 }
 
 dchar decode(S)(auto ref S str, ref size_t index) @trusted pure
@@ -953,7 +954,8 @@ body
 {
     if (str[index] < codeUnitLimit!S)
         return str[index++];
-    return decodeImpl!true(str, index);
+    else
+        return decodeImpl!true(str, index);
 }
 
 /++
@@ -991,18 +993,20 @@ body
         numCodeUnits = 1;
         return fst;
     }
+    else
+    {
+        //@@@BUG@@@ 8521 forces canIndex to be done outside of decodeImpl, which
+        //is undesirable, since not all overloads of decodeImpl need it. So, it
+        //should be moved back into decodeImpl once bug# 8521 has been fixed.
+        enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
+        immutable retval = decodeImpl!canIndex(str, numCodeUnits);
 
-    //@@@BUG@@@ 8521 forces canIndex to be done outside of decodeImpl, which
-    //is undesirable, since not all overloads of decodeImpl need it. So, it
-    //should be moved back into decodeImpl once bug# 8521 has been fixed.
-    enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
-    immutable retval = decodeImpl!canIndex(str, numCodeUnits);
+        // The other range types were already popped by decodeImpl.
+        static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+            str = str[numCodeUnits .. str.length];
 
-    // The other range types were already popped by decodeImpl.
-    static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
-        str = str[numCodeUnits .. str.length];
-
-    return retval;
+        return retval;
+    }
 }
 
 dchar decodeFront(S)(ref S str, out size_t numCodeUnits) @trusted pure
@@ -1024,10 +1028,12 @@ body
         str = str[1 .. $];
         return retval;
     }
-
-    immutable retval = decodeImpl!true(str, numCodeUnits);
-    str = str[numCodeUnits .. $];
-    return retval;
+    else
+    {
+        immutable retval = decodeImpl!true(str, numCodeUnits);
+        str = str[numCodeUnits .. $];
+        return retval;
+    }
 }
 
 /++ Ditto +/
