@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+$(SCRIPT inhibitQuickIndex = 1;)
 
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions) )
@@ -833,7 +833,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
                         {
                             return memcmp(s1, s2, n);
                         }
-                        if (trustedMemcmp(&s[i + 1], &sub[1], 
+                        if (trustedMemcmp(&s[i + 1], &sub[1],
                                 (sub.length - 1) * Char1.sizeof) == 0)
                             return i;
                     }

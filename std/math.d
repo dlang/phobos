@@ -1,6 +1,56 @@
 // Written in the D programming language.
 
 /**
+$(SCRIPT inhibitQuickIndex = 1;)
+
+$(BOOKTABLE ,
+$(TR $(TH Category) $(TH Members) )
+$(TR $(TDNW Constants) $(TD
+    $(MYREF E) $(MYREF PI) $(MYREF PI_2) $(MYREF PI_4) $(MYREF M_1_PI)
+    $(MYREF M_2_PI) $(MYREF M_2_SQRTPI) $(MYREF LN10) $(MYREF LN2)
+    $(MYREF LOG2) $(MYREF LOG2E) $(MYREF LOG2T) $(MYREF LOG10E)
+    $(MYREF SQRT2) $(MYREF SQRT1_2)
+))
+$(TR $(TDNW Classics) $(TD
+ $(MYREF abs) $(MYREF fabs) $(MYREF sqrt) $(MYREF cbrt) $(MYREF hypot) $(MYREF poly)
+))
+$(TR $(TDNW Trigonometry) $(TD
+    $(MYREF sin) $(MYREF cos) $(MYREF tan) $(MYREF asin) $(MYREF acos)
+    $(MYREF atan) $(MYREF atan2) $(MYREF sinh) $(MYREF cosh) $(MYREF tanh)
+    $(MYREF asinh) $(MYREF acosh) $(MYREF atanh) $(MYREF expi)
+))
+$(TR $(TDNW Rounding) $(TD
+    $(MYREF ceil) $(MYREF floor) $(MYREF round) $(MYREF lround)
+    $(MYREF trunc) $(MYREF rint) $(MYREF lrint) $(MYREF nearbyint)
+    $(MYREF rndtol)
+))
+$(TR $(TDNW Exponentiation & Logarithms) $(TD
+    $(MYREF pow) $(MYREF exp) $(MYREF exp2) $(MYREF expm1) $(MYREF ldexp)
+    $(MYREF frexp) $(MYREF log) $(MYREF log2) $(MYREF log10) $(MYREF logb)
+    $(MYREF ilogb) $(MYREF log1p) $(MYREF scalbn)
+))
+$(TR $(TDNW Modulus) $(TD
+    $(MYREF fmod) $(MYREF modf) $(MYREF remainder)
+))
+$(TR $(TDNW Floating-point operations) $(TD
+    $(MYREF approxEqual) $(MYREF feqrel) $(MYREF fdim) $(MYREF fmax)
+    $(MYREF fmin) $(MYREF fma) $(MYREF nextDown) $(MYREF nextUp)
+    $(MYREF nextafter) $(MYREF NaN) $(MYREF getNaNPayload)
+))
+$(TR $(TDNW Introspection) $(TD
+    $(MYREF isFinite) $(MYREF isIdentical) $(MYREF isInfinity) $(MYREF isNaN)
+    $(MYREF isNormal) $(MYREF isSubnormal) $(MYREF signbit) $(MYREF sgn)
+    $(MYREF copysign)
+))
+$(TR $(TDNW Complex Numbers) $(TD
+  $(MYREF abs) $(MYREF conj) $(MYREF sin) $(MYREF cos) $(MYREF expi)
+))
+$(TR $(TDNW Hardware Control) $(TD
+    $(MYREF IeeeFlags) $(MYREF FloatingPointControl)
+))
+)
+
+
  * Elementary mathematical functions
  *
  * Contains the elementary mathematical functions (powers, roots,
@@ -29,6 +79,7 @@
  *
  * Macros:
  *      WIKI = Phobos/StdMath
+ *      MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
  *
  *      TABLE_SV = <table border=1 cellpadding=4 cellspacing=0>
  *              <caption>Special Values</caption>
@@ -2238,7 +2289,7 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
         return value;
-    } 
+    }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
         if (ex) // If exponent is non-zero
@@ -2337,7 +2388,7 @@ unittest
                 assert(exp == eptr);
 
             }
-        }        
+        }
     }
 }
 
