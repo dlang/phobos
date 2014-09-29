@@ -55,8 +55,8 @@ version (StdDdoc)
         wenforce(DeleteFileA("junk.tmp"), "DeleteFile failed");
         --------------------
      +/
-    T wenforce(T, string file = __FILE__, size_t line = __LINE__)
-        (T value, lazy string msg = null);
+    T wenforce(T)(T value, lazy const(char)[] msg = null,
+        string file = __FILE__, size_t line = __LINE__);
 }
 else:
 
@@ -138,11 +138,11 @@ class WindowsException : Exception
 }
 
 
-T wenforce(T)(T value, lazy string msg = null,
+T wenforce(T)(T value, lazy const(char)[] msg = null,
     string file = __FILE__, size_t line = __LINE__)
 {
     if (!value)
-        throw new WindowsException(GetLastError(), msg, file, line);
+        throw new WindowsException(GetLastError(), msg.idup, file, line);
     return value;
 }
 
