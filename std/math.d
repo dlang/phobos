@@ -602,7 +602,7 @@ real tan(real x) @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
-    asm
+    asm pure nothrow @nogc
     {
         fld     x[EBP]                  ; // load theta
         fxam                            ; // test for oddball values
@@ -638,19 +638,19 @@ Lret: {}
     {
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld     real ptr [RCX]  ; // load theta
             }
         }
         else
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld     x[RBP]          ; // load theta
             }
         }
-    asm
+    asm pure nothrow @nogc
     {
         fxam                            ; // test for oddball values
         fstsw   AX                      ;
@@ -977,7 +977,7 @@ real atan2(real y, real x) @trusted pure nothrow @nogc
     {
         version (Win64)
         {
-            asm {
+            asm pure nothrow @nogc {
                 naked;
                 fld real ptr [RDX]; // y
                 fld real ptr [RCX]; // x
@@ -987,7 +987,7 @@ real atan2(real y, real x) @trusted pure nothrow @nogc
         }
         else
         {
-            asm {
+            asm pure nothrow @nogc {
                 fld y;
                 fld x;
                 fpatan;
@@ -1501,7 +1501,7 @@ real expm1(real x) @trusted pure nothrow @nogc
     version(D_InlineAsm_X86)
     {
         enum PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC); // always a multiple of 4
-        asm
+        asm pure nothrow @nogc
         {
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -1572,13 +1572,13 @@ L_largenegative:
     }
     else version(D_InlineAsm_X86_64)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked;
         }
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld   real ptr [RCX];  // x
                 mov   AX,[RCX+8];      // AX = exponent and sign
@@ -1586,13 +1586,13 @@ L_largenegative:
         }
         else
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld   real ptr [RSP+8];  // x
                 mov   AX,[RSP+8+8];      // AX = exponent and sign
             }
         }
-        asm
+        asm pure nothrow @nogc
         {
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -1733,7 +1733,7 @@ real exp2(real x) @nogc @trusted pure nothrow
     {
         enum PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC); // always a multiple of 4
 
-        asm
+        asm pure nothrow @nogc
         {
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -1817,13 +1817,13 @@ L_was_nan:
     }
     else version(D_InlineAsm_X86_64)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked;
         }
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld   real ptr [RCX];  // x
                 mov   AX,[RCX+8];      // AX = exponent and sign
@@ -1831,13 +1831,13 @@ L_was_nan:
         }
         else
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld   real ptr [RSP+8];  // x
                 mov   AX,[RSP+8+8];      // AX = exponent and sign
             }
         }
-        asm
+        asm pure nothrow @nogc
         {
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -2054,7 +2054,7 @@ creal expi(real y) @trusted pure nothrow @nogc
     {
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 naked;
                 fld     real ptr [ECX];
@@ -2065,7 +2065,7 @@ creal expi(real y) @trusted pure nothrow @nogc
         }
         else
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld y;
                 fsincos;
@@ -2238,7 +2238,7 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
         return value;
-    } 
+    }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
         if (ex) // If exponent is non-zero
@@ -2337,7 +2337,7 @@ unittest
                 assert(exp == eptr);
 
             }
-        }        
+        }
     }
 }
 
@@ -2372,7 +2372,7 @@ int ilogb(real x)  @trusted nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -2405,7 +2405,7 @@ int ilogb(real x)  @trusted nothrow @nogc
     else version (CRuntime_Microsoft)
     {
         int res;
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [x]        ;
@@ -2954,7 +2954,7 @@ real logb(real x) @trusted nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -2965,7 +2965,7 @@ real logb(real x) @trusted nothrow @nogc
     }
     else version (CRuntime_Microsoft)
     {
-        asm
+        asm pure nothrow @nogc
         {
             fld     x                   ;
             fxtract                     ;
@@ -3037,10 +3037,10 @@ real modf(real x, ref real i) @trusted nothrow @nogc
 real scalbn(real x, int n) @trusted nothrow @nogc
 {
     version(InlineAsm_X86_Any) {
-        // scalbnl is not supported on DMD-Windows, so use asm.
+        // scalbnl is not supported on DMD-Windows, so use asm pure nothrow @nogc.
         version (Win64)
         {
-            asm {
+            asm pure nothrow @nogc {
                 naked                           ;
                 mov     16[RSP],RCX             ;
                 fild    word ptr 16[RSP]        ;
@@ -3052,7 +3052,7 @@ real scalbn(real x, int n) @trusted nothrow @nogc
         }
         else
         {
-            asm {
+            asm pure nothrow @nogc {
                 fild n;
                 fld x;
                 fscale;
@@ -3220,7 +3220,7 @@ real ceil(real x) @trusted pure nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -3240,7 +3240,7 @@ real ceil(real x) @trusted pure nothrow @nogc
     else version(CRuntime_Microsoft)
     {
         short cw;
-        asm
+        asm pure nothrow @nogc
         {
             fld     x                   ;
             fstcw   cw                  ;
@@ -3347,7 +3347,7 @@ real floor(real x) @trusted pure nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -3367,7 +3367,7 @@ real floor(real x) @trusted pure nothrow @nogc
     else version(CRuntime_Microsoft)
     {
         short cw;
-        asm
+        asm pure nothrow @nogc
         {
             fld     x                   ;
             fstcw   cw                  ;
@@ -3497,7 +3497,7 @@ long lrint(real x) @trusted pure nothrow @nogc
     {
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 naked;
                 fld     real ptr [RCX];
@@ -3509,7 +3509,7 @@ long lrint(real x) @trusted pure nothrow @nogc
         else
         {
             long n;
-            asm
+            asm pure nothrow @nogc
             {
                 fld x;
                 fistp n;
@@ -3691,7 +3691,7 @@ real trunc(real x) @trusted nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -3711,7 +3711,7 @@ real trunc(real x) @trusted nothrow @nogc
     else version(CRuntime_Microsoft)
     {
         short cw;
-        asm
+        asm pure nothrow @nogc
         {
             fld     x                   ;
             fstcw   cw                  ;
@@ -3878,7 +3878,7 @@ private:
     {
         version(D_InlineAsm_X86)
         {
-            asm
+            asm pure nothrow @nogc
             {
                  fstsw AX;
                  // NOTE: If compiler supports SSE2, need to OR the result with
@@ -3889,7 +3889,7 @@ private:
         }
         else version(D_InlineAsm_X86_64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                  fstsw AX;
                  // NOTE: If compiler supports SSE2, need to OR the result with
@@ -3902,7 +3902,7 @@ private:
         {
            /*
                int retval;
-               asm { st %fsr, retval; }
+               asm pure nothrow @nogc { st %fsr, retval; }
                return retval;
             */
            assert(0, "Not yet supported");
@@ -3918,7 +3918,7 @@ private:
     {
         version(InlineAsm_X86_Any)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fnclex;
             }
@@ -3927,9 +3927,9 @@ private:
         {
             /* SPARC:
               int tmpval;
-              asm { st %fsr, tmpval; }
+              asm pure nothrow @nogc { st %fsr, tmpval; }
               tmpval &=0xFFFF_FC00;
-              asm { ld tmpval, %fsr; }
+              asm pure nothrow @nogc { ld tmpval, %fsr; }
             */
            assert(0, "Not yet supported");
         }
@@ -4210,7 +4210,7 @@ private:
     {
         version (InlineAsm_X86_Any)
         {
-            asm
+            asm nothrow @nogc
             {
                 fclex;
             }
@@ -4225,7 +4225,7 @@ private:
         version (D_InlineAsm_X86)
         {
             short cont;
-            asm
+            asm nothrow @nogc
             {
                 xor EAX, EAX;
                 fstcw cont;
@@ -4236,7 +4236,7 @@ private:
         version (D_InlineAsm_X86_64)
         {
             short cont;
-            asm
+            asm nothrow @nogc
             {
                 xor RAX, RAX;
                 fstcw cont;
@@ -4254,7 +4254,7 @@ private:
         {
             version (Win64)
             {
-                asm
+                asm nothrow @nogc
                 {
                     naked;
                     mov     8[RSP],RCX;
@@ -4265,7 +4265,7 @@ private:
             }
             else
             {
-                asm
+                asm nothrow @nogc
                 {
                     fclex;
                     fldcw newState;
@@ -6117,7 +6117,7 @@ body
         version (Windows)
         {
         // BUG: This code assumes a frame pointer in EBP.
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6145,7 +6145,7 @@ body
         }
         else version (linux)
         {
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6173,7 +6173,7 @@ body
         }
         else version (OSX)
         {
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6201,7 +6201,7 @@ body
         }
         else version (FreeBSD)
         {
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6229,7 +6229,7 @@ body
         }
         else version (Android)
         {
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
