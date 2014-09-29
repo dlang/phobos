@@ -1489,7 +1489,8 @@ void chdir(in char[] pathname) @safe
 /****************************************************
 Make directory $(D pathname).
 
-Throws: $(D FileException) on error.
+Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
+        if an error occured.
  */
 void mkdir(in char[] pathname) @safe
 {
