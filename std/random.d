@@ -547,7 +547,7 @@ Parameter for the generator.
     enum UIntType min = 0;
     /// Largest generated value.
     enum UIntType max =
-        w == UIntType.sizeof * 8 ? UIntType.max : (1u << w) - 1;
+        w == UIntType.sizeof * 8 ? UIntType.max : (1uL << w) - 1;
     /// The default seed value.
     enum UIntType defaultSeed = 5489u;
 
