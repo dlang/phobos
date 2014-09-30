@@ -4351,6 +4351,157 @@ unittest //12007
     auto AB = cartesianProduct(A,B);
 }
 
+/++
+Given callable ($(XREF straits, isCallable)) $(D fun), create as a range
+whose front is defined by successive calls to $(D fun()).
+This is especially useful to call function with global side effects (random
+functions), or to create ranges expressed as a single delegate, rather than
+an entire $(D front)/$(D popFront)/$(D empty) structure.
+
+$(D fun) maybe be passed either a template alias parameter (existing
+function, delegate, struct type defining static $(D opCall)... ) or
+a run-time value argument (delegate, function object... ).
+
+The result range models an InputRange ($(XREF range, isInputRange).
+
+The resulting range will call $(D fun()) on every call to $(D front),
+and only when $(D front) is called, regardless of how the range is
+iterated. It is advised to
+compose with either $(XREF algorithm,cache) or $(XREF array,array), or
+to use in a (by-value) foreach loop.
++/
+auto generate(Fun)(Fun fun)
+if (isCallable!fun)
+{
+    return Generator!(true, Fun)(fun);
+}
+///
+auto generate(alias fun)()
+if (isCallable!fun)
+{
+    return Generator!(false, fun)();
+}
+
+private struct Generator(bool runtime, Fun...)
+{
+    static assert(Fun.length == 1);
+    static assert(isInputRange!Generator);
+
+private:
+    static if (runtime)
+        Fun[0] fun;
+    else
+        alias fun = Fun[0];
+
+public:
+    enum empty = false;
+
+    auto ref front() @property
+    {
+        return fun();
+    }
+
+    void popFront()
+    {
+    }
+}
+
+///
+unittest
+{
+    //Simulate a game of Risk.
+    //Defenders get 2 dices. Attackers get 3.
+    //The higest and second highest rolls are compared. Ties favor the defenders.
+
+    import std.random, std.typecons, std.algorithm;
+
+    void cmpAndSwap(ref int a, ref int b)
+    {
+        if (a < b) swap(a, b);
+    }
+
+    //rolls a 6 sided die
+    int rollDie()
+    {
+        return uniform!"[]"(1, 6);
+    }
+
+    //rolls the defenders' dices
+    auto defenderRoll()
+    {
+        int a = rollDie(), b = rollDie();
+        cmpAndSwap(a, b);
+        return tuple(a, b);
+    }
+
+    //rolls the attackers' dices
+    auto attackerRoll()
+    {
+        int a = rollDie(), b = rollDie(), c = rollDie();
+        cmpAndSwap(a, b); cmpAndSwap(b, c); cmpAndSwap(a, b);
+        return tuple(a, b, c);
+    }
+
+    //Simulate 5000 fights
+    int defenders, attackers;
+    foreach ( roll ; zip(generate!defenderRoll(), generate!attackerRoll()).take(5000) )
+    {
+        auto dRoll = roll[0], aRoll = roll[1];
+        if (dRoll[0] >= aRoll[0]) ++ defenders; else ++attackers;
+        if (dRoll[1] >= aRoll[1]) ++ defenders; else ++attackers;
+    }
+
+    //Attackers' advantage!
+    assert(attackers > defenders);
+}
+
+///
+unittest
+{
+    int i = 1;
+    auto powersOfTwo = generate!(() => i *= 2)().take(10);
+    assert(equal(powersOfTwo, iota(1, 11).map!"2^^a"()));
+}
+
+///
+unittest
+{
+    //Returns a run-time delegate
+    auto infiniteIota(T)(T low, T high)
+    {
+        import std.algorithm : cache;
+        T i = high;
+        return (){if (i == high) i = low; return i++;};
+    }
+    //adapted as a range.
+    assert(equal(generate(infiniteIota(1, 4)).take(10), [1, 2, 3, 1, 2, 3, 1, 2, 3, 1]));
+}
+
+unittest
+{
+    import std.algorithm;
+
+    struct StaticOpCall
+    {
+        static ubyte opCall() { return 5 ; }
+    }
+
+    assert(equal(generate!StaticOpCall().take(10), repeat(5).take(10)));
+}
+
+unittest
+{
+    import std.algorithm;
+
+    struct OpCall
+    {
+        ubyte opCall() { return 5 ; }
+    }
+
+    OpCall op;
+    assert(equal(generate(op).take(10), repeat(5).take(10)));
+}
+
 /**
 Repeats the given forward range ad infinitum. If the original range is
 infinite (fact that would make $(D Cycle) the identity application),
