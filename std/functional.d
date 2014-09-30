@@ -26,10 +26,7 @@ import std.traits, std.typetuple;
 Transforms a string representing an expression into a unary
 function. The string must either use symbol name $(D a) as
 the parameter or provide the symbol via the $(D parmName) argument.
-If $(D fun) is not a string, but is an associative array, $(D unaryFun)
-turns it into a function that maps keys to values. If it is an array,
-$(D unaryFun) turns it into a function that maps array indices to elements.
-Otherwise, $(D unaryFun) aliases itself away to $(D fun).
+If $(D fun) is not a string, $(D unaryFun) aliases itself away to $(D fun).
 */
 
 template unaryFun(alias fun, string parmName = "a")
@@ -61,22 +58,6 @@ unittest
     // Strings are compiled into functions:
     alias isEven = unaryFun!("(a & 1) == 0");
     assert(isEven(2) && !isEven(1));
-
-    // Associative arrays become mapping functions:
-    alias numValues = unaryFun!([
-        "zero": 0, "one": 1, "two": 2, "three": 3
-    ]);
-    assert(numValues("zero") == 0);
-    assert(numValues("one") == 1);
-    assert(numValues("two") == 2);
-    assert(numValues("three") == 3);
-
-    // Arrays become indexing functions:
-    alias numNames = unaryFun!(["zero", "one", "two", "three"]);
-    assert(numNames(0) == "zero");
-    assert(numNames(1) == "one");
-    assert(numNames(2) == "two");
-    assert(numNames(3) == "three");
 }
 
 /+ Undocumented, will be removed December 2014+/
