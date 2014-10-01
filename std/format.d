@@ -3197,18 +3197,6 @@ unittest
 }
 
 /*
-   Formatting a $(D typedef) is deprecated but still kept around for a while.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == typedef))
-{
-    static if (is(T U == typedef))
-    {
-        formatValue(w, cast(U) val, f);
-    }
-}
-
-/*
   Formats an object of type 'D' according to 'f' and writes it to
   'w'. The pointer 'arg' is assumed to point to an object of type
   'D'. The untyped signature is for the sake of taking this function's
@@ -3636,12 +3624,6 @@ unittest
     stream.clear(); formattedWrite(stream, "%.*d", -3, 7);
     //writeln(stream.data);
     assert(stream.data == "7");
-
-//  assert(false);
-//   typedef int myint;
-//   myint m = -7;
-//   stream.clear(); formattedWrite(stream, "", m);
-//   assert(stream.data == "-7");
 
     stream.clear(); formattedWrite(stream, "%s", "abc"c);
     assert(stream.data == "abc");
@@ -6139,11 +6121,6 @@ unittest
 
     r = std.string.format("%.*d", -3, 7);
     assert(r == "7");
-
-    //typedef int myint;
-    //myint m = -7;
-    //r = std.string.format(m);
-    //assert(r == "-7");
 
     r = std.string.format("abc"c);
     assert(r == "abc");

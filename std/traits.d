@@ -2291,10 +2291,6 @@ template RepresentationTypeTuple(T)
                 //    RepresentationTypes;
                 alias Impl = Impl!(FieldTypeTuple!(T[0]), T[1 .. $]);
             }
-            else static if (is(T[0] U == typedef))
-            {
-                alias Impl = Impl!(FieldTypeTuple!U, T[1 .. $]);
-            }
             else
             {
                 alias Impl = TypeTuple!(T[0], Impl!(T[1 .. $]));
@@ -2305,10 +2301,6 @@ template RepresentationTypeTuple(T)
     static if (is(T == struct) || is(T == union) || is(T == class))
     {
         alias RepresentationTypeTuple = Impl!(FieldTypeTuple!T);
-    }
-    else static if (is(T U == typedef))
-    {
-        alias RepresentationTypeTuple = RepresentationTypeTuple!U;
     }
     else
     {
@@ -2500,9 +2492,6 @@ unittest
     static assert(!hasRawAliasing!S12);
     static assert( hasRawAliasing!S13);
 
-    //typedef int* S8;
-    //static assert(hasRawAliasing!S8);
-
     enum S9 { a }
     static assert(!hasRawAliasing!S9);
 
@@ -2639,11 +2628,6 @@ unittest
     static assert(!hasRawUnsharedAliasing!(shared(const(void delegate() shared const))));
     static assert(!hasRawUnsharedAliasing!(void function()));
 
-    //typedef int* S11;
-    //typedef shared int* S12;
-    //static assert( hasRawUnsharedAliasing!S11);
-    //static assert( hasRawUnsharedAliasing!S12);
-
     enum S13 { a }
     static assert(!hasRawUnsharedAliasing!S13);
 
@@ -2729,10 +2713,6 @@ private template hasObjects(T...)
     {
         enum hasObjects = false;
     }
-    else static if (is(T[0] U == typedef))
-    {
-        enum hasObjects = hasObjects!(U, T[1 .. $]);
-    }
     else static if (is(T[0] == struct))
     {
         enum hasObjects = hasObjects!(
@@ -2755,10 +2735,6 @@ private template hasUnsharedObjects(T...)
     static if (T.length == 0)
     {
         enum hasUnsharedObjects = false;
-    }
-    else static if (is(T[0] U == typedef))
-    {
-        enum hasUnsharedObjects = hasUnsharedObjects!(U, T[1 .. $]);
     }
     else static if (is(T[0] == struct))
     {
@@ -6042,42 +6018,28 @@ unittest
 
 
 /**
-Strips off all $(D typedef)s (including $(D enum) ones) from type $(D T).
-
-Example:
---------------------
-enum E : int { a }
-typedef E F;
-typedef const F G;
-static assert(is(OriginalType!G == const int));
---------------------
+ * Strips off all $(D enum)s from type $(D T).
  */
 template OriginalType(T)
 {
     template Impl(T)
     {
-             static if (is(T U == typedef)) alias Impl = OriginalType!U;
-        else static if (is(T U ==    enum)) alias Impl = OriginalType!U;
-        else                                alias Impl =              T;
+        static if (is(T U == enum)) alias Impl = OriginalType!U;
+        else                        alias Impl =              T;
     }
 
     alias OriginalType = ModifyTypePreservingSTC!(Impl, T);
 }
 
+///
 unittest
 {
-    //typedef real T;
-    //typedef T    U;
-    //enum V : U { a }
-    //static assert(is(OriginalType!T == real));
-    //static assert(is(OriginalType!U == real));
-    //static assert(is(OriginalType!V == real));
     enum E : real { a }
     enum F : E    { a = E.a }
-    //typedef const F G;
+    alias G = const(F);
     static assert(is(OriginalType!E == real));
     static assert(is(OriginalType!F == real));
-    //static assert(is(OriginalType!G == const real));
+    static assert(is(OriginalType!G == const real));
 }
 
 /**
@@ -6357,11 +6319,6 @@ private string removeDummyEnvelope(string s)
 
 unittest
 {
-    //typedef int MyInt;
-    //MyInt test() { return 0; }
-    //static assert(mangledName!MyInt[$ - 7 .. $] == "T5MyInt"); // XXX depends on bug 4237
-    //static assert(mangledName!test[$ - 7 .. $] == "T5MyInt");
-
     class C { int value() @property { return 0; } }
     static assert(mangledName!int == int.mangleof);
     static assert(mangledName!C == C.mangleof);
