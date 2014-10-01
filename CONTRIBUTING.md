@@ -4,6 +4,7 @@ Guidelines for Contributing
 Welcome to the D community and thanks for your interest in contributing!
 
 ## [How to contribute pull requests?](http://wiki.dlang.org/Pull_Requests)
+## [How to build dmd/druntime/phobos/docs?](http://wiki.dlang.org/Building_DMD)
 
 More Links
 ----------
