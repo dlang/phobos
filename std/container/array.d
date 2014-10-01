@@ -223,7 +223,7 @@ Defines the container's primary range, which is a random-access range.
         private Array _outer;
         private size_t _a, _b;
 
-        private this(ref Array data, size_t a, size_t b)
+        inout private this(inout ref Array data, size_t a, size_t b)
         {
             _outer = data;
             _a = a;
@@ -246,13 +246,13 @@ Defines the container's primary range, which is a random-access range.
         }
         alias opDollar = length;
 
-        @property ref T front()
+        @property ref inout(T) front() inout
         {
             version (assert) if (empty) throw new RangeError();
             return _outer[_a];
         }
 
-        @property ref T back()
+        @property ref inout(T) back() inout
         {
             version (assert) if (empty) throw new RangeError();
             return _outer[_b - 1];
@@ -288,18 +288,18 @@ Defines the container's primary range, which is a random-access range.
             return move(_outer._data._payload[_a + i]);
         }
 
-        ref T opIndex(size_t i)
+        ref inout(T) opIndex(size_t i) inout
         {
             version (assert) if (_a + i >= _b) throw new RangeError();
             return _outer[_a + i];
         }
 
-        typeof(this) opSlice()
+        inout(typeof(this)) opSlice() inout
         {
             return typeof(this)(_outer, _a, _b);
         }
 
-        typeof(this) opSlice(size_t i, size_t j)
+        inout(typeof(this)) opSlice(size_t i, size_t j) inout
         {
             version (assert) if (i > j || _a + j > _b) throw new RangeError();
             return typeof(this)(_outer, _a + i, _a + j);
@@ -427,9 +427,9 @@ forward order.
 
 Complexity: $(BIGOH 1)
      */
-    Range opSlice()
+    Range opSlice() inout
     {
-        return Range(this, 0, length);
+        return inout(Range)(this, 0, length);
     }
 
 /**
@@ -440,10 +440,10 @@ Precondition: $(D a <= b && b <= length)
 
 Complexity: $(BIGOH 1)
      */
-    Range opSlice(size_t i, size_t j)
+    Range opSlice(size_t i, size_t j) inout
     {
         version (assert) if (i > j || j > length) throw new RangeError();
-        return Range(this, i, j);
+        return inout(Range)(this, i, j);
     }
 
 /**
@@ -453,14 +453,14 @@ Precondition: $(D !empty)
 
 Complexity: $(BIGOH 1)
      */
-    @property ref T front()
+    @property ref inout(T) front() inout
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[0];
     }
 
     /// ditto
-    @property ref T back()
+    @property ref inout(T) back() inout
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[$ - 1];
@@ -473,7 +473,7 @@ Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
      */
-    ref T opIndex(size_t i)
+    ref inout(T) opIndex(size_t i) inout
     {
         version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
         return _data._payload[i];
@@ -849,6 +849,21 @@ unittest
 {
     auto a = Array!int(1, 2, 3);
     assert(a.length == 3);
+}
+
+unittest
+{
+    const Array!int a = [1, 2];
+    assert(a[0] == 1);
+    assert(a.front == 1);
+    assert(a.back == 2);
+    auto r = a[];
+    size_t i;
+    foreach (e; r)
+    {
+        assert(e == i + 1);
+        i++;
+    }
 }
 
 unittest
