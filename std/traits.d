@@ -2291,10 +2291,6 @@ template RepresentationTypeTuple(T)
                 //    RepresentationTypes;
                 alias Impl = Impl!(FieldTypeTuple!(T[0]), T[1 .. $]);
             }
-            else static if (is(T[0] U == typedef))
-            {
-                alias Impl = Impl!(FieldTypeTuple!U, T[1 .. $]);
-            }
             else
             {
                 alias Impl = TypeTuple!(T[0], Impl!(T[1 .. $]));
@@ -2305,10 +2301,6 @@ template RepresentationTypeTuple(T)
     static if (is(T == struct) || is(T == union) || is(T == class))
     {
         alias RepresentationTypeTuple = Impl!(FieldTypeTuple!T);
-    }
-    else static if (is(T U == typedef))
-    {
-        alias RepresentationTypeTuple = RepresentationTypeTuple!U;
     }
     else
     {
@@ -2729,10 +2721,6 @@ private template hasObjects(T...)
     {
         enum hasObjects = false;
     }
-    else static if (is(T[0] U == typedef))
-    {
-        enum hasObjects = hasObjects!(U, T[1 .. $]);
-    }
     else static if (is(T[0] == struct))
     {
         enum hasObjects = hasObjects!(
@@ -2755,10 +2743,6 @@ private template hasUnsharedObjects(T...)
     static if (T.length == 0)
     {
         enum hasUnsharedObjects = false;
-    }
-    else static if (is(T[0] U == typedef))
-    {
-        enum hasUnsharedObjects = hasUnsharedObjects!(U, T[1 .. $]);
     }
     else static if (is(T[0] == struct))
     {
@@ -6056,9 +6040,8 @@ template OriginalType(T)
 {
     template Impl(T)
     {
-             static if (is(T U == typedef)) alias Impl = OriginalType!U;
-        else static if (is(T U ==    enum)) alias Impl = OriginalType!U;
-        else                                alias Impl =              T;
+        static if (is(T U == enum)) alias Impl = OriginalType!U;
+        else                        alias Impl =              T;
     }
 
     alias OriginalType = ModifyTypePreservingSTC!(Impl, T);

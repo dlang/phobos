@@ -3197,18 +3197,6 @@ unittest
 }
 
 /*
-   Formatting a $(D typedef) is deprecated but still kept around for a while.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == typedef))
-{
-    static if (is(T U == typedef))
-    {
-        formatValue(w, cast(U) val, f);
-    }
-}
-
-/*
   Formats an object of type 'D' according to 'f' and writes it to
   'w'. The pointer 'arg' is assumed to point to an object of type
   'D'. The untyped signature is for the sake of taking this function's
