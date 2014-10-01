@@ -2492,9 +2492,6 @@ unittest
     static assert(!hasRawAliasing!S12);
     static assert( hasRawAliasing!S13);
 
-    //typedef int* S8;
-    //static assert(hasRawAliasing!S8);
-
     enum S9 { a }
     static assert(!hasRawAliasing!S9);
 
@@ -2630,11 +2627,6 @@ unittest
     static assert(!hasRawUnsharedAliasing!(shared(const(void delegate() shared))));
     static assert(!hasRawUnsharedAliasing!(shared(const(void delegate() shared const))));
     static assert(!hasRawUnsharedAliasing!(void function()));
-
-    //typedef int* S11;
-    //typedef shared int* S12;
-    //static assert( hasRawUnsharedAliasing!S11);
-    //static assert( hasRawUnsharedAliasing!S12);
 
     enum S13 { a }
     static assert(!hasRawUnsharedAliasing!S13);
@@ -6026,15 +6018,7 @@ unittest
 
 
 /**
-Strips off all $(D typedef)s (including $(D enum) ones) from type $(D T).
-
-Example:
---------------------
-enum E : int { a }
-typedef E F;
-typedef const F G;
-static assert(is(OriginalType!G == const int));
---------------------
+ * Strips off all $(D enum)s from type $(D T).
  */
 template OriginalType(T)
 {
@@ -6047,20 +6031,15 @@ template OriginalType(T)
     alias OriginalType = ModifyTypePreservingSTC!(Impl, T);
 }
 
+///
 unittest
 {
-    //typedef real T;
-    //typedef T    U;
-    //enum V : U { a }
-    //static assert(is(OriginalType!T == real));
-    //static assert(is(OriginalType!U == real));
-    //static assert(is(OriginalType!V == real));
     enum E : real { a }
     enum F : E    { a = E.a }
-    //typedef const F G;
+    alias G = const(F);
     static assert(is(OriginalType!E == real));
     static assert(is(OriginalType!F == real));
-    //static assert(is(OriginalType!G == const real));
+    static assert(is(OriginalType!G == const real));
 }
 
 /**
@@ -6340,11 +6319,6 @@ private string removeDummyEnvelope(string s)
 
 unittest
 {
-    //typedef int MyInt;
-    //MyInt test() { return 0; }
-    //static assert(mangledName!MyInt[$ - 7 .. $] == "T5MyInt"); // XXX depends on bug 4237
-    //static assert(mangledName!test[$ - 7 .. $] == "T5MyInt");
-
     class C { int value() @property { return 0; } }
     static assert(mangledName!int == int.mangleof);
     static assert(mangledName!C == C.mangleof);
