@@ -854,9 +854,15 @@ unittest
 unittest
 {
     const Array!int a = [1, 2];
+
     assert(a[0] == 1);
     assert(a.front == 1);
     assert(a.back == 2);
+
+    static assert(!__traits(compiles, { a[0] = 1; }));
+    static assert(!__traits(compiles, { a.front = 1; }));
+    static assert(!__traits(compiles, { a.back = 1; }));
+
     auto r = a[];
     size_t i;
     foreach (e; r)
