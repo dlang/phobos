@@ -4860,11 +4860,27 @@ auto eraseFront(T,S)(T str, S front)
     return str;
 }
 
+/// Ditto
+auto eraseFront(T)(T str, dchar front)
+    if (isSomeString!T)
+{
+	auto strD = str.byDchar();
+    if (!strD.empty && strD.front == front)
+    {
+        return str[codeLength!(ElementEncodingType!T)(front) .. $];
+    }
+
+    return str;
+}
+
 ///
 @safe pure @nogc unittest
 {
     string rslt = eraseFront("Hello World", "Hello ");
     assert(rslt == "World");
+
+    rslt = eraseFront("Hello World", 'H');
+    assert(rslt == "ello World");
 }
 
 @safe pure unittest
@@ -4881,6 +4897,8 @@ auto eraseFront(T,S)(T str, S front)
             assert(rslt == "World", to!string(rslt));
             rslt = eraseFront(to!T("Hällö Wörld"), to!S("ö öö"));
             assert(rslt == "Hällö Wörld", to!string(rslt));
+            rslt = eraseFront(to!T("Ällö Wörld"), 'Ä');
+            assert(rslt == "llö Wörld", to!string(rslt));
 
             rslt = eraseFront(to!T(`さいごの果実`), to!S("さい"));
             assert(rslt == "ごの果実", to!string(rslt));
@@ -4888,6 +4906,8 @@ auto eraseFront(T,S)(T str, S front)
             assert(rslt == "チと科学者", to!string(rslt));
             rslt = eraseFront(to!T(`ミツバチと科学者`), to!S("ツバ"));
             assert(rslt == "ミツバチと科学者", to!string(rslt));
+            rslt = eraseFront(to!T(`ミツバチと科学者`), 'ミ');
+            assert(rslt == "ツバチと科学者", to!string(rslt));
         }
     }
 }
@@ -4908,11 +4928,26 @@ auto eraseBack(T,S)(T str, S back)
     return str;
 }
 
+/// Ditto
+auto eraseBack(T)(T str, dchar back)
+    if (isSomeString!T)
+{
+    if (str.endsWith(back))
+    {
+        return str[0 .. $ - codeLength!(ElementEncodingType!T)(back)];
+    }
+
+    return str;
+}
+
 ///
-@safe pure @nogc unittest
+@safe pure unittest
 {
     string rslt = eraseBack("Hello World", "orld");
     assert(rslt == "Hello W");
+
+    rslt = eraseBack("Hello World", 'd');
+    assert(rslt == "Hello Worl");
 }
 
 @safe pure unittest
@@ -4929,6 +4964,11 @@ auto eraseBack(T,S)(T str, S back)
             assert(rslt == "Hällö ", to!string(rslt));
             rslt = eraseBack(to!T("Hällö Wörld"), to!S("Wärld"));
             assert(rslt == "Hällö Wörld", to!string(rslt));
+            rslt = eraseBack(to!T("Hällö Wörlü"), 'ü');
+            assert(rslt == "Hällö Wörl", to!string(rslt));
+
+            rslt = eraseBack(to!T("Hällö Wörlß"), 'ß');
+            assert(rslt == "Hällö Wörl", to!string(rslt));
 
             rslt = eraseBack(to!T(`さいごの果実`), to!S("の果実"));
             assert(rslt == "さいご", to!string(rslt));
@@ -4936,6 +4976,8 @@ auto eraseBack(T,S)(T str, S back)
             assert(rslt == "ミツバチと", to!string(rslt));
             rslt = eraseBack(to!T(`ミツバチと科学者`), to!S("と科学者"));
             assert(rslt == "ミツバチ", to!string(rslt));
+            rslt = eraseBack(to!T(`ミツバチと科学者`), '者');
+            assert(rslt == "ミツバチと科学者", to!string(rslt));
         }
     }
 }
@@ -4951,7 +4993,7 @@ of $(D toRemove).
 If $(D toRemove) is not present in $(D str), $(D str) will be returned.
 */
 auto eraseFirst(T,S)(T str, S toRemove)
-    if (isSomeString!T && isSomeString!S)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
 {
     auto idx = str.indexOf(toRemove);
     if (idx != -1)
@@ -4967,6 +5009,9 @@ auto eraseFirst(T,S)(T str, S toRemove)
 {
     string rslt = eraseFirst("Hello Worlld", "ll");
     assert(rslt == "Heo Worlld");
+
+    rslt = eraseFirst("Hello Worlld", 'l');
+    assert(rslt == "Heo Word");
 }
 
 @safe pure unittest
@@ -5000,7 +5045,7 @@ of $(D toRemove).
 If $(D toRemove) is not present in $(D str), $(D str) will be returned.
 */
 auto eraseLast(T,S)(T str, S toRemove)
-    if (isSomeString!T && isSomeString!S)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
 {
     auto idx = str.lastIndexOf(toRemove);
     if (idx != -1)
@@ -5016,6 +5061,9 @@ auto eraseLast(T,S)(T str, S toRemove)
 {
     string rslt = eraseLast("Hello Worlld", "ll");
     assert(rslt == "Hello Word");
+
+    rslt = eraseLast("Hello Worlld", 'o');
+    assert(rslt == "Hello Wrlld");
 }
 
 @safe pure unittest
@@ -5040,6 +5088,10 @@ auto eraseLast(T,S)(T str, S toRemove)
             assert(rslt == "Hällö Wörldö ö", to!string(rslt) ~ " " ~
                 to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
 
+            rslt = eraseLast(to!T("Hällö Wörldö ö"), 'r');
+            assert(rslt == "Hällö Wöldö ö", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
             rslt = eraseLast(to!T(`さいごの果実`), to!S("ごの"));
             assert(rslt == "さい果実", to!string(rslt) ~ " " ~
                 to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
@@ -5050,6 +5102,10 @@ auto eraseLast(T,S)(T str, S toRemove)
 
             rslt = eraseLast(to!T(`ミツバチと科学者`), to!S("バチ"));
             assert(rslt == "ミツと科学者", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T(`ミツバチと科チ学者`), 'チ');
+            assert(rslt == "ミツバチと科学者", to!string(rslt) ~ " " ~
                 to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
         }
     }
