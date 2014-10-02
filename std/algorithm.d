@@ -201,6 +201,12 @@ $(TR $(TDNW $(LREF predSwitch)) $(TD 2.predSwitch(1, "one", 2, "two", 3,
 )
 $(LEADINGROW Iteration
 )
+$(TR $(TDNW $(LREF cache)) $(TD Eagerly evaluates and caches
+another range's $(D front).)
+)
+$(TR $(TDNW $(LREF cacheBidirectional)) $(TD As above, but also
+provides $(D back) and $(D popBack).)
+)
 $(TR $(TDNW $(LREF filter)) $(TD $(D filter!"a > 0"([1, -1, 2,
 0, -3])) iterates over elements $(D 1) and $(D 2).)
 )
