@@ -829,6 +829,36 @@ if (isBidirectionalRange!Range)
     assert(counter == iota(-4, 5).length);
 }
 
+/++
+Tip: $(D cache) is eager when evaluating elements. If calling front on the
+underlying range has a side effect, it will be observeable before calling
+front on the actual cached range.
+
+Furtermore, care should be taken composing $(D cache) with $(XREF range,take).
+By placing $(D take) before $(D cache), then $(D cache) will be "aware"
+of when the range ends, and correctly stop caching elements when needed.
+If calling front has no side effect though, placing $(D take) after $(D cache)
+may yield a faster range.
+
+Either way, the resulting ranges will be equivalent, but maybe not at the
+same cost or side effects.
++/
+@safe unittest
+{
+    import std.range;
+    int i = 0;
+
+    auto r = iota(0, 4).tee!((a){i = a;}, No.pipeOnPop);
+    auto r1 = r.take(3).cache();
+    auto r2 = r.cache().take(3);
+
+    assert(equal(r1, [0, 1, 2]));
+    assert(i == 2); //The last "seen" element was 2. The data in cache has been cleared.
+
+    assert(equal(r2, [0, 1, 2]));
+    assert(i == 3); //cache has accessed 3. It is still stored internally by cache.
+}
+
 @safe unittest
 {
     auto a = [1, 2, 3, 4];
