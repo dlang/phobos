@@ -55,8 +55,8 @@ version (StdDdoc)
         wenforce(DeleteFileA("junk.tmp"), "DeleteFile failed");
         --------------------
      +/
-    T wenforce(T)(T value, lazy const(char)[] msg = null,
-        string file = __FILE__, size_t line = __LINE__);
+    T wenforce(T, S)(T value, lazy S msg = null,
+        string file = __FILE__, size_t line = __LINE__) if (isSomeString!S);
 }
 else:
 
@@ -64,6 +64,7 @@ version (Windows):
 
 import std.windows.charset;
 import std.array : appender;
+import std.conv : to;
 import std.format : formattedWrite;
 import core.sys.windows.windows;
 
@@ -138,11 +139,11 @@ class WindowsException : Exception
 }
 
 
-T wenforce(T)(T value, lazy const(char)[] msg = null,
-    string file = __FILE__, size_t line = __LINE__)
+T wenforce(T, S)(T value, lazy S msg = null,
+    string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
 {
     if (!value)
-        throw new WindowsException(GetLastError(), msg.idup, file, line);
+        throw new WindowsException(GetLastError(), to!string(msg), file, line);
     return value;
 }
 
