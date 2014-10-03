@@ -94,7 +94,7 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
         FORMAT_MESSAGE_IGNORE_INSERTS,
         null,
         code,
-        0,
+        langId,
         cast(LPWSTR)&lpMsgBuf,
         0,
         null);
