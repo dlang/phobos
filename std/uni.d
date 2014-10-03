@@ -6249,7 +6249,7 @@ enum controlSwitch = `
 // TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
 // kill unrolled switches
 
-private static bool isRegionalIndicator(dchar ch)
+private static bool isRegionalIndicator(dchar ch) @safe
 {
     return ch >= '\U0001F1E6' && ch <= '\U0001F1FF';
 }
