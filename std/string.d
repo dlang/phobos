@@ -5164,11 +5164,15 @@ auto eraseFirstN(T,S)(T str, int cnt, S toRemove)
             assert(rslt == "Hel Wörlö W", to!string(rslt));
             rslt = eraseFirstN(to!T("Hellö Wörlö W"), 2, to!S("lö"));
             assert(rslt == "Hel Wör W", to!string(rslt));
+            rslt = eraseFirstN(to!T("Hellö Wörlö W"), 2, 'ö');
+            assert(rslt == "Hell Wrlö W", to!string(rslt));
 
             rslt = eraseFirstN(to!T(`ごのさいごの果実`), 1, to!S("ごの"));
             assert(rslt == "さいごの果実", to!string(rslt));
             rslt = eraseFirstN(to!T(`ごのさいごの果実`), 2, to!S("ごの"));
             assert(rslt == "さい果実", to!string(rslt));
+            rslt = eraseFirstN(to!T(`ごのさいごの果の実`), 2, 'の');
+            assert(rslt == "ごさいご果の実", to!string(rslt));
         }
     }
 }
@@ -5180,7 +5184,7 @@ of $(D toRemove).
 If $(D toRemove) is not present in $(D str), $(D str) will be returned.
 */
 auto eraseLastN(T,S)(T str, int cnt, S toRemove)
-    if (isSomeString!T && isSomeString!S)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
 {
     alias RetType = ElementEncodingType!(T);
     auto idx = str.lastIndexOf(toRemove);
@@ -5228,6 +5232,9 @@ auto eraseLastN(T,S)(T str, int cnt, S toRemove)
 {
     string rslt = eraseLastN("Hello Worlld ll", 2, "ll");
     assert(rslt == "Hello Word ");
+
+    rslt = eraseLastN("Hello Worlld ll", 2, 'l');
+    assert(rslt == "Hello Worlld ");
 }
 
 @safe pure unittest
@@ -5236,6 +5243,9 @@ auto eraseLastN(T,S)(T str, int cnt, S toRemove)
     assert(rslt == "Heloo", rslt);
 
     string rslt2 = eraseLastN("Helolo", 2, "l");
+    assert(rslt2 == "Heoo", rslt2);
+
+    rslt2 = eraseLastN("Helolo", 2, 'l');
     assert(rslt2 == "Heoo", rslt2);
 }
 
@@ -5249,11 +5259,15 @@ auto eraseLastN(T,S)(T str, int cnt, S toRemove)
             assert(rslt == "Hellö Wör W", to!string(rslt));
             rslt = eraseLastN(to!T("Hel Wör W"), 2, to!S("lö"));
             assert(rslt == "Hel Wör W", to!string(rslt));
+            rslt = eraseLastN(to!T("Hellö Wörlö W"), 2, 'ö');
+            assert(rslt == "Hellö Wrl W", to!string(rslt));
 
             rslt = eraseLastN(to!T(`ごのさいごの果実`), 1, to!S("ごの"));
             assert(rslt == "ごのさい果実", to!string(rslt));
             rslt = eraseLastN(to!T(`ごのさいごの果実`), 2, to!S("ごの"));
             assert(rslt == "さい果実", to!string(rslt));
+            rslt = eraseLastN(to!T(`のごのさいごの果実`), 2, 'の');
+            assert(rslt == "のごさいご果実", to!string(rslt));
         }
     }
 }
