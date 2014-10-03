@@ -14,6 +14,7 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.syserror;
+import std.traits : isSomeString;
 
 version (StdDdoc)
 {
