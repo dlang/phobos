@@ -1820,6 +1820,22 @@ private mixin template Protocol()
     }
 
     /**
+       Set the user name and password for proxy authentication.
+
+       Params:
+       username = the username
+       password = the password
+    */
+    void setProxyAuthentication(const(char)[] username, const(char)[] password)
+    {
+        p.curl.set(CurlOption.proxyuserpwd,
+            format("%s:%s",
+                username.replace(":", "%3A"),
+                password.replace(":", "%3A"))
+        );
+    }
+
+    /**
      * The event handler that gets called when data is needed for sending. The
      * length of the $(D void[]) specifies the maximum number of bytes that can
      * be sent.
@@ -2389,6 +2405,15 @@ struct HTTP
         */
         void setAuthentication(const(char)[] username, const(char)[] password,
                                const(char)[] domain = "");
+
+        /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
 
         /**
          * The event handler that gets called when data is needed for sending. The
@@ -3052,6 +3077,15 @@ struct FTP
                                const(char)[] domain = "");
 
         /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
+
+        /**
          * The event handler that gets called when data is needed for sending. The
          * length of the $(D void[]) specifies the maximum number of bytes that can
          * be sent.
@@ -3388,6 +3422,15 @@ struct SMTP
         */
         void setAuthentication(const(char)[] username, const(char)[] password,
                                const(char)[] domain = "");
+
+        /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
 
         /**
          * The event handler that gets called when data is needed for sending. The
