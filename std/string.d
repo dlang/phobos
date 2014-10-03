@@ -4976,8 +4976,8 @@ auto eraseBack(T)(T str, dchar back)
             assert(rslt == "ミツバチと", to!string(rslt));
             rslt = eraseBack(to!T(`ミツバチと科学者`), to!S("と科学者"));
             assert(rslt == "ミツバチ", to!string(rslt));
-            rslt = eraseBack(to!T(`ミツバチと科学者`), '者');
-            assert(rslt == "ミツバチと科学者", to!string(rslt));
+            rslt = eraseBack(to!T("ミツバチと科学者"), '者');
+            assert(rslt == "ミツバチと科学", to!string(rslt));
         }
     }
 }
@@ -5011,7 +5011,7 @@ auto eraseFirst(T,S)(T str, S toRemove)
     assert(rslt == "Heo Worlld");
 
     rslt = eraseFirst("Hello Worlld", 'l');
-    assert(rslt == "Heo Word");
+    assert(rslt == "Helo Worlld");
 }
 
 @safe pure unittest
@@ -5117,7 +5117,7 @@ of $(D toRemove).
 If $(D toRemove) is not present in $(D str), $(D str) will be returned.
 */
 auto eraseFirstN(T,S)(T str, int cnt, S toRemove)
-    if (isSomeString!T && isSomeString!S)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
 {
     auto idx = str.indexOf(toRemove);
     if (idx != -1)
@@ -5149,6 +5149,9 @@ auto eraseFirstN(T,S)(T str, int cnt, S toRemove)
 {
     string rslt = eraseFirstN("Hello Worlld ll", 2, "ll");
     assert(rslt == "Heo Word ll");
+
+    rslt = eraseFirstN("Hello Worlld ll", 2, 'l');
+    assert(rslt == "Heo Worlld ll");
 }
 
 @safe pure unittest
