@@ -22,6 +22,35 @@ module std.functional;
 
 import std.traits, std.typetuple;
 
+private template needOpCallAlias(alias fun)
+{
+    /* Determine whether or not unaryFun and binaryFun need to alias to fun or
+     * fun.opCall. Basically, fun is a function object if fun(...) compiles. We
+     * want is(unaryFun!fun) (resp., is(binaryFun!fun)) to be true if fun is
+     * any function object. There are 4 possible cases:
+     *
+     *  1) fun is the type of a function object with static opCall;
+     *  2) fun is an instance of a function object with static opCall;
+     *  3) fun is the type of a function object with non-static opCall;
+     *  4) fun is an instance of a function object with non-static opCall.
+     *
+     * In case (1), is(unaryFun!fun) should compile, but does not if unaryFun
+     * aliases itself to fun, because typeof(fun) is an error when fun itself
+     * is a type. So it must be aliased to fun.opCall instead. All other cases
+     * should be aliased to fun directly.
+     */
+    static if (is(typeof(fun.opCall) == function))
+    {
+        import std.traits : ParameterTypeTuple;
+
+        enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, () {
+            return fun(ParameterTypeTuple!fun.init);
+        });
+    }
+    else
+        enum needOpCallAlias = false;
+}
+
 /**
 Transforms a string representing an expression into a unary
 function. The string must either use symbol name $(D a) as
@@ -41,7 +70,7 @@ template unaryFun(alias fun, string parmName = "a")
             return mixin(fun);
         }
     }
-    else static if (is(typeof(fun.opCall) == function))
+    else static if (needOpCallAlias!fun)
     {
         // Issue 9906
         alias unaryFun = fun.opCall;
@@ -86,8 +115,27 @@ unittest
     {
         static bool opCall(int n) { return true; }
     }
-    static assert(is(typeof(unaryFun!Seen)));
+    static assert(needOpCallAlias!Seen);
+    static assert(is(typeof(unaryFun!Seen(1))));
     assert(unaryFun!Seen(1));
+
+    Seen s;
+    static assert(!needOpCallAlias!s);
+    static assert(is(typeof(unaryFun!s(1))));
+    assert(unaryFun!s(1));
+
+    struct FuncObj
+    {
+        bool opCall(int n) { return true; }
+    }
+    FuncObj fo;
+    static assert(!needOpCallAlias!fo);
+    static assert(is(typeof(unaryFun!fo)));
+    assert(unaryFun!fo(1));
+
+    // Function object with non-static opCall can only be called with an
+    // instance, not with merely the type.
+    static assert(!is(typeof(unaryFun!FuncObj)));
 }
 
 /**
@@ -113,7 +161,7 @@ template binaryFun(alias fun, string parm1Name = "a",
             return mixin(fun);
         }
     }
-    else static if (is(typeof(fun.opCall) == function))
+    else static if (needOpCallAlias!fun)
     {
         // Issue 9906
         alias binaryFun = fun.opCall;
@@ -152,6 +200,19 @@ unittest
     }
     static assert(is(typeof(binaryFun!Seen)));
     assert(binaryFun!Seen(1,1));
+
+    struct FuncObj
+    {
+        bool opCall(int x, int y) { return true; }
+    }
+    FuncObj fo;
+    static assert(!needOpCallAlias!fo);
+    static assert(is(typeof(binaryFun!fo)));
+    assert(unaryFun!fo(1,1));
+
+    // Function object with non-static opCall can only be called with an
+    // instance, not with merely the type.
+    static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
 private template safeOp(string S)
