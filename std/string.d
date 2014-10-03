@@ -35,6 +35,8 @@ $(TR $(TDNW Pruning and Filling)
     $(MYREF center) $(MYREF detab) $(MYREF entab) $(MYREF wrap)
     $(MYREF outdent) $(LINK2 std_array.html#popFront, popFront)
     $(XREF _array, front) $(XREF _array, popBack) $(XREF _array, back)
+    $(MYREF eraseFront) $(MYREF eraseBack) $(MYREF eraseFirst)
+    $(MYREF eraseFirstN) $(MYREF eraseBack) $(MYREF eraseBackN)
     )
 )
 
@@ -4864,7 +4866,7 @@ auto eraseFront(T,S)(T str, S front)
 auto eraseFront(T)(T str, dchar front)
     if (isSomeString!T)
 {
-	auto strD = str.byDchar();
+    auto strD = str.byDchar();
     if (!strD.empty && strD.front == front)
     {
         return str[codeLength!(ElementEncodingType!T)(front) .. $];
