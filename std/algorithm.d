@@ -877,6 +877,19 @@ unittest
     auto d = c[0 .. 1];
 }
 
+unittest
+{
+    static struct Range
+    {
+        bool initialized = false;
+        bool front() @property {return initialized = true;}
+        void popFront() {initialized = false;}
+        enum empty = false;
+    }
+    auto r = Range().cache();
+    assert(r.source.initialized == true);
+}
+
 private struct Cache(R, bool bidir)
 {
     import core.exception : RangeError;
@@ -901,9 +914,9 @@ private struct Cache(R, bool bidir)
         source = range;
         if (!range.empty)
         {
-             caches[0] = range.front;
+             caches[0] = source.front;
              static if (bidir)
-                 caches[1] = range.back;
+                 caches[1] = source.back;
         }
     }
 
