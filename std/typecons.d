@@ -1252,7 +1252,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 
 unittest
 {
-    interface CI { const int foo(); }
+    interface CI { int foo() const; }
     class C : CI {
       int foo() const { return 42; }
       @property int bar() const { return 23; }
@@ -4300,13 +4300,13 @@ unittest
     {
         int field;
 
-        @property const int val1(){ return field; }
-        @property void val1(int n){ field = n; }
+        @property int val1() const { return field; }
+        @property void val1(int n) { field = n; }
 
-        @property ref int val2(){ return field; }
+        @property ref int val2() { return field; }
 
-        const int func(int x, int y){ return x; }
-        void func1(ref int a){ a = 9; }
+        int func(int x, int y) const { return x; }
+        void func1(ref int a) { a = 9; }
 
         T ifti1(T)(T t) { return t; }
         void ifti2(Args...)(Args args) { }

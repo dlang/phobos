@@ -1108,7 +1108,7 @@ struct FormatSpec(Char)
         return false;
     }
 
-    private const string getCurFmtStr()
+    private string getCurFmtStr() const
     {
         auto w = appender!string();
         auto f = FormatSpec!Char("%s"); // for stringnize
@@ -2044,11 +2044,11 @@ unittest
     struct Range
     {
         string value;
-        const @property bool empty(){ return !value.length; }
-        const @property dchar front(){ return value.front; }
-        void popFront(){ value.popFront(); }
+        @property bool empty() const { return !value.length; }
+        @property dchar front() const { return value.front; }
+        void popFront() { value.popFront(); }
 
-        const @property size_t length(){ return value.length; }
+        @property size_t length() const { return value.length; }
     }
     immutable table =
     [
