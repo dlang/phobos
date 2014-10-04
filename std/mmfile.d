@@ -221,7 +221,7 @@ class MmFile
                 assert(0);
             }
 
-            if (filename.ptr)
+            if (filename)
             {
                 hFile = CreateFileW(filename.tempCStringW(),
                         dwDesiredAccess2,
@@ -233,8 +233,8 @@ class MmFile
                 wenforce(hFile != INVALID_HANDLE_VALUE, "CreateFileW");
             }
             else
-                hFile = null;
-            scope(failure) if (hFile) CloseHandle(hFile);
+                hFile = INVALID_HANDLE_VALUE;
+            scope(failure) if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
 
             int hi = cast(int)(size>>32);
             hFileMap = CreateFileMappingW(hFile, null, flProtect,
@@ -242,10 +242,12 @@ class MmFile
             wenforce(hFileMap, "CreateFileMapping");
             scope(failure) CloseHandle(hFileMap);
 
-            if (size == 0)
+            if (size == 0 && filename)
             {
                 uint sizehi;
-                uint sizelow = GetFileSize(hFile,&sizehi);
+                uint sizelow = GetFileSize(hFile, &sizehi);
+                wenforce(sizelow != INVALID_FILE_SIZE || GetLastError() != ERROR_SUCCESS,
+                    "GetFileSize");
                 size = (cast(ulong)sizehi << 32) + sizelow;
             }
             this.size = size;
