@@ -435,7 +435,7 @@ version(unittest)
         }
 
         ref const(Inner[string]) func( ref Inner var1, lazy scope string var2 );
-        inout Inner inoutFunc(inout Inner);
+        Inner inoutFunc(inout Inner) inout;
         shared(const(Inner[string])[]) data;
         const Inner delegate(double, string) @safe nothrow deleg;
         inout(int) delegate(inout int) inout inoutDeleg;
