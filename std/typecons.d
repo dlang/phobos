@@ -4206,6 +4206,11 @@ mixin template Proxy(alias a)
     {
         alias opDollar = a.opDollar;
     }
+
+    size_t toHash() const nothrow @trusted
+    {
+        return typeid(typeof(a)).getHash(cast(const void*)&a);
+    }
 }
 unittest
 {
