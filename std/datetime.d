@@ -58,7 +58,7 @@
     time as a $(LREF SysTime). To print it, $(D toString) is
     sufficient, but if using $(D toISOString), $(D toISOExtString), or
     $(D toSimpleString), use the corresponding $(D fromISOString),
-    $(D fromISOExtString), or $(D fromISOExtString) to create a
+    $(D fromISOExtString), or $(D fromSimpleString) to create a
     $(LREF SysTime) from the string.
 
 --------------------
