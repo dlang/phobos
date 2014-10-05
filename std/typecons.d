@@ -1478,6 +1478,20 @@ Constructor initializing $(D this) with $(D value).
         _isNull = false;
     }
 
+    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    {
+        import std.format: formatValue;
+
+        if (isNull())
+        {
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(_value, fmt);
+        }
+    }
+
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
@@ -1757,6 +1771,42 @@ unittest
     import std.datetime;
     Nullable!SysTime time = SysTime(0);
 }
+unittest
+{
+    import std.conv: to;
+
+    // Bugzilla 10915
+    Appender!string buffer;
+
+    Nullable!int ni;
+    assert(ni.to!string() == "Nullable.null");
+
+    struct Test { string s; }
+    alias NullableTest = Nullable!Test;
+
+    NullableTest nt = Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    NullableTest ntn = Test("null");
+    assert(ntn.to!string() == `Test("null")`);
+
+    class TestToString
+    {
+        double d;
+
+        this (double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    Nullable!TestToString ntts = new TestToString(2.5);
+    assert(ntts.to!string() == "2.5");
+}
 
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
@@ -1777,12 +1827,35 @@ Constructor initializing $(D this) with $(D value).
         _value = value;
     }
 
+    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    {
+        import std.format: formatValue;
+
+        if (isNull())
+        {
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(_value, fmt);
+        }
+    }
+
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
     @property bool isNull() const
     {
-        return _value == nullValue;
+        //Need to use 'is' if T is a nullable type and
+        //nullValue is null, or it's a compiler error
+        static if (is(CommonType!(T, typeof(null)) == T) && nullValue is null)
+        {
+            return _value is nullValue;
+        }
+        else
+        {
+            return _value == nullValue;
+        }
     }
 
 /**
@@ -1911,6 +1984,43 @@ unittest
         c = a;
     }
 }
+unittest
+{
+    import std.conv: to;
+
+    // Bugzilla 10915
+    Nullable!(int, 1) ni = 1;
+    assert(ni.to!string() == "Nullable.null");
+
+    struct Test { string s; }
+    alias NullableTest = Nullable!(Test, Test("null"));
+
+    NullableTest nt = Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    NullableTest ntn = Test("null");
+    assert(ntn.to!string() == "Nullable.null");
+
+    class TestToString
+    {
+        double d;
+
+        this(double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    alias NullableTestToString = Nullable!(TestToString, null);
+
+    NullableTestToString ntts = new TestToString(2.5);
+    assert(ntts.to!string() == "2.5");
+}
+
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
@@ -1928,6 +2038,20 @@ Constructor binding $(D this) with $(D value).
     this(T* value) @safe pure nothrow
     {
         _value = value;
+    }
+
+    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    {
+        import std.format: formatValue;
+
+        if (isNull())
+        {
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(*_value, fmt);
+        }
     }
 
 /**
@@ -2083,6 +2207,40 @@ unittest
         c = a;
     }
 }
+unittest
+{
+    import std.conv: to;
+
+    // Bugzilla 10915
+    NullableRef!int nri;
+    assert(nri.to!string() == "Nullable.null");
+
+    struct Test 
+    { 
+        string s; 
+    }
+    NullableRef!Test nt = new Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    class TestToString
+    {
+        double d;
+
+        this(double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    TestToString tts = new TestToString(2.5);
+    NullableRef!TestToString ntts = &tts;
+    assert(ntts.to!string() == "2.5");
+}
+
 
 /**
 $(D BlackHole!Base) is a subclass of $(D Base) which automatically implements
