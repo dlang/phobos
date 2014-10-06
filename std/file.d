@@ -1592,19 +1592,26 @@ unittest
 /****************************************************
 Remove directory $(D pathname).
 
-Throws: $(D FileException) on error.
- */
-void rmdir(in char[] pathname)
+Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
+        if an error occured.
+  */
+void rmdir(in char[] pathname) @safe
 {
     version(Windows)
     {
-        cenforce(RemoveDirectoryW(pathname.tempCStringW()),
-                pathname);
+        static auto trustedRemoveDirectoryW(in char[] path) @trusted
+        {
+            return RemoveDirectoryW(path.tempCStringW());
+        }
+        wenforce(trustedRemoveDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.rmdir(pathname.tempCString()) == 0,
-                pathname);
+        static auto trustedRmdir(in char[] path) @trusted
+        {
+            return core.sys.posix.unistd.rmdir(path.tempCString());
+        }
+        cenforce(trustedRmdir(pathname) == 0, pathname);
     }
 }
 
