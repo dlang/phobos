@@ -1489,19 +1489,26 @@ void chdir(in char[] pathname) @safe
 /****************************************************
 Make directory $(D pathname).
 
-Throws: $(D FileException) on error.
+Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
+        if an error occured.
  */
-void mkdir(in char[] pathname)
+void mkdir(in char[] pathname) @safe
 {
     version(Windows)
     {
-        enforce(CreateDirectoryW(pathname.tempCStringW(), null),
-                new FileException(pathname.idup));
+        static auto trustedCreateDirectoryW(in char[] path) @trusted
+        {
+            return CreateDirectoryW(path.tempCStringW(), null);
+        }
+        wenforce(trustedCreateDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0,
-                 pathname);
+        static auto trustedMkdir(in char[] path, mode_t mode) @trusted
+        {
+            return core.sys.posix.sys.stat.mkdir(path.tempCString(), mode);
+        }
+        cenforce(trustedMkdir(pathname, octal!777) == 0, pathname);
     }
 }
 
