@@ -4523,14 +4523,14 @@ private struct GroupByImpl(alias equivFun, Range)
     static if (isForwardRange!Range)
     {
         private Range _prev;
-        void savePrev() { _prev = r.save; }
-        @property ElementType!Range prev() { return _prev.front; }
+        private void savePrev() { _prev = r.save; }
+        private @property ElementType!Range prev() { return _prev.front; }
     }
     else
     {
         private ElementType!Range _prev;
-        void savePrev() { _prev = r.front; }
-        alias prev = _prev;
+        private void savePrev() { _prev = r.front; }
+        private alias prev = _prev;
     }
 
     this(Range _r)
@@ -4554,10 +4554,15 @@ private struct GroupByImpl(alias equivFun, Range)
 
     void popFront()
     {
-        while (!r.empty && equiv(prev, r.front))
+        while (!r.empty)
+        {
+            if (!equiv(prev, r.front))
+            {
+                savePrev();
+                return;
+            }
             r.popFront();
-        if (!r.empty)
-            savePrev();
+        }
     }
 
     static if (isForwardRange!Range)
