@@ -1340,7 +1340,7 @@ Params:
 buf = Buffer used to store the resulting line data. buf is
 resized as necessary.
 terminator = Line terminator (by default, $(D '\n')). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Returns:
@@ -1691,7 +1691,7 @@ Char = Character type for each line, defaulting to $(D char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Example:
@@ -1701,10 +1701,10 @@ import std.algorithm, std.stdio, std.string;
 void main()
 {
     auto file = File("file.txt"); // Open for reading
-    const wordCount = file.byLine()                  // Read lines
-                          .map!split                 // Split into words
-                          .map!(a => a.length)       // Count words per line
-                          .reduce!((a, b) => a + b); // Total word count
+    const wordCount = file.byLine()            // Read lines
+                          .map!split           // Split into words
+                          .map!(a => a.length) // Count words per line
+                          .sum();              // Total word count
     writeln(wordCount);
 }
 ----
@@ -1829,7 +1829,7 @@ Char = Character type for each line, defaulting to $(D immutable char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Example:
