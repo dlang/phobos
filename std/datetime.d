@@ -33027,10 +33027,11 @@ version(unittest)
                                    : TimeZone.getTimeZone("America/Denver");
         immutable ot = otherTZ.utcToTZ(0);
 
-        auto diffs = [0, lt, ot];
-        auto diffAA = [0 : Rebindable!(immutable TimeZone)(UTC()),
-                       lt : Rebindable!(immutable TimeZone)(LocalTime()),
-                       ot : Rebindable!(immutable TimeZone)(otherTZ)];
+        auto diffs = [0L, lt, ot];
+        auto diffAA = [0L : Rebindable!(immutable TimeZone)(UTC())];
+        diffAA[lt] = Rebindable!(immutable TimeZone)(LocalTime());
+        diffAA[ot] = Rebindable!(immutable TimeZone)(otherTZ);
+
         sort(diffs);
         testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
 
