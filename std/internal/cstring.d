@@ -105,7 +105,7 @@ if(isSomeChar!To && isSomeChar!From)
 
     private:
         To* _ptr;
-        To[256] _buff;
+        To[256] _buff = void;
     }
 
     // TODO: Don't stack allocate uninitialized array to
@@ -249,13 +249,13 @@ if(isSomeChar!To && isSomeChar!From)
 pure nothrow @nogc unittest
 {
     const str = "abc-ЭЮЯ";
-    wchar[100] wsbuff;
+    wchar[100] wsbuff = void;
     assert(copyEncoded(str, wsbuff) == "abc-ЭЮЯ"w);
 }
 
 pure nothrow @nogc unittest
 {
-    wchar[100] wsbuff;
+    wchar[100] wsbuff = void;
     assert(copyEncoded("abc-ЭЮЯ"w, wsbuff) == "abc-ЭЮЯ"w);
 }
 
@@ -264,16 +264,16 @@ pure unittest
     import std.range;
 
     const str = "abc-ЭЮЯ";
-    char[100] sbuff;
+    char[100] sbuff = void;
 
     {
-        wchar[100] wsbuff;
+        wchar[100] wsbuff = void;
         const strW = toUTF16(str);
         assert(copyEncoded(str, wsbuff[0 .. strW.length]) == strW);
         assert(copyEncoded(strW, sbuff[0 .. str.length]) == str);
     }
     {
-        dchar[100] dsbuff;
+        dchar[100] dsbuff = void;
         const strD = toUTF32(str);
         assert(copyEncoded(str, dsbuff[0 .. walkLength(str)]) == strD);
         assert(copyEncoded(strD, sbuff[0 .. str.length]) == str);
