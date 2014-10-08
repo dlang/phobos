@@ -115,7 +115,7 @@ SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\ut
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 	std\bitmanip.d std\typecons.d \
 	std\uni.d std\base64.d std\ascii.d \
-	std\demangle.d std\uri.d std\mmfile.d std\getopt.d
+	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
 SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
@@ -129,11 +129,11 @@ SRC_STD_3b= std\datetime.d
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
 	std\digest\ripemd.d std\digest\digest.d
-	
+
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
 	std\container\dlist.d std\container\rbtree.d std\container\slist.d \
 	std\container\util.d std\container\package.d
-	
+
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_5_HEAVY= std\algorithm.d
@@ -160,7 +160,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
-	std\mmfile.d \
+	std\metastrings.d std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
