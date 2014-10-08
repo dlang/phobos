@@ -1632,15 +1632,18 @@ void rmdir(in char[] pathname)
         $(D FileException) on error (which includes if the symlink already
         exists).
   +/
-version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link);
-else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link)
+version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe;
+else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe
 {
-    cenforce(core.sys.posix.unistd.symlink(original.tempCString(),
-                                           link.tempCString()) == 0,
-             link);
+    static auto trustedSymlink(const(C1)[] path1, const(C2)[] path2) @trusted
+    {
+        return core.sys.posix.unistd.symlink(path1.tempCString(),
+                                             path2.tempCString());
+    }
+    cenforce(trustedSymlink(original, link) == 0, link);
 }
 
-version(Posix) unittest
+version(Posix) @safe unittest
 {
     if(system_directory.exists)
     {
