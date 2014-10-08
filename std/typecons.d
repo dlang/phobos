@@ -1461,7 +1461,7 @@ void foo(Nullable!(immutable int[4]) items = DefaultNullable)
 }
 */
 enum DefaultNullable = DefaultNullableImpl.init;
-private alias DefaultNullableImpl = Typedef!(byte, 0, "Test");
+private alias DefaultNullableImpl = Typedef!(byte, 0, "std.typecons.DefaultNullable");
 
 /**
 Defines a value paired with a distinctive "null" state that denotes
