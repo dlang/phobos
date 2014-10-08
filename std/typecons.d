@@ -1448,6 +1448,22 @@ unittest
 }
 
 /**
+A specifier that signals that the Nullable it is passed
+to is to be initialized to its default "null" state.
+This is useful for default initializing a Nullable in a 
+function's parameter list.
+
+Example:
+
+void foo(Nullable!(immutable int[4]) items = DefaultNullable) 
+{
+    //items is in its "null" state here
+}
+*/
+enum DefaultNullable = DefaultNullableImpl.init;
+private alias DefaultNullableImpl = Typedef!(byte, 0, "Test");
+
+/**
 Defines a value paired with a distinctive "null" state that denotes
 the absence of a value. If default constructed, a $(D
 Nullable!T) object starts in the null state. Assigning it renders it
@@ -1476,6 +1492,10 @@ Constructor initializing $(D this) with $(D value).
     {
         _value = value;
         _isNull = false;
+    }
+
+    this(DefaultNullableImpl)
+    {
     }
 
 /**
@@ -1757,6 +1777,14 @@ unittest
     import std.datetime;
     Nullable!SysTime time = SysTime(0);
 }
+unittest
+{
+    // Bugzilla 9636
+    Nullable!int n = DefaultNullable;
+    assert(n.isNull());
+    assert(__traits(compiles, { void foo(Nullable!int ni = DefaultNullable) {}}));
+    assert(!__traits(compiles, { Nullable!int ni = 1; ni = DefaultNullable; }));
+}
 
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
@@ -1775,6 +1803,10 @@ Constructor initializing $(D this) with $(D value).
     this(T value)
     {
         _value = value;
+    }
+
+    this(DefaultNullableImpl)
+    {
     }
 
 /**
@@ -1911,6 +1943,16 @@ unittest
         c = a;
     }
 }
+unittest
+{
+    // Bugzilla 9636
+    struct Test { string s; }
+    alias NullableTest = Nullable!(Test, Test("null"));
+    NullableTest n = DefaultNullable;
+    assert(n.isNull());
+    assert(__traits(compiles, { void foo(NullableTest nt = DefaultNullable) {}}));
+    assert(!__traits(compiles, { NullableTest nt = Test(""); nt = DefaultNullable; }));
+}
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
@@ -1928,6 +1970,10 @@ Constructor binding $(D this) with $(D value).
     this(T* value) @safe pure nothrow
     {
         _value = value;
+    }
+
+    this(DefaultNullableImpl)
+    {
     }
 
 /**
@@ -2082,6 +2128,14 @@ unittest
         S c;
         c = a;
     }
+}
+unittest
+{
+    // Bugzilla 9636
+    NullableRef!int n = DefaultNullable;
+    assert(n.isNull());
+    assert(__traits(compiles, { void foo(NullableRef!int ni = DefaultNullable) {}}));
+    assert(!__traits(compiles, { NullableRef!int ni = new int(1); nt = DefaultNullable; }));
 }
 
 /**
