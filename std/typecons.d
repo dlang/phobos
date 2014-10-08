@@ -1460,8 +1460,8 @@ void foo(Nullable!(immutable int[4]) items = DefaultNullable)
     //items is in its "null" state here
 }
 */
-enum DefaultNullable = DefaultNullableImpl.init;
-private alias DefaultNullableImpl = Typedef!(byte, 0, "std.typecons.DefaultNullable");
+enum defaultNullable = DefaultNullable.init;
+private struct DefaultNullable {}
 
 /**
 Defines a value paired with a distinctive "null" state that denotes
@@ -1494,7 +1494,7 @@ Constructor initializing $(D this) with $(D value).
         _isNull = false;
     }
 
-    this(DefaultNullableImpl)
+    this(DefaultNullable)
     {
     }
 
@@ -1780,10 +1780,10 @@ unittest
 unittest
 {
     // Bugzilla 9636
-    Nullable!int n = DefaultNullable;
+    Nullable!int n = defaultNullable;
     assert(n.isNull());
-    assert(__traits(compiles, { void foo(Nullable!int ni = DefaultNullable) {}}));
-    assert(!__traits(compiles, { Nullable!int ni = 1; ni = DefaultNullable; }));
+    assert(__traits(compiles, { void foo(Nullable!int ni = defaultNullable) {}}));
+    assert(!__traits(compiles, { Nullable!int ni = 1; ni = defaultNullable; }));
 }
 
 /**
@@ -1805,7 +1805,7 @@ Constructor initializing $(D this) with $(D value).
         _value = value;
     }
 
-    this(DefaultNullableImpl)
+    this(DefaultNullable)
     {
     }
 
@@ -1948,10 +1948,10 @@ unittest
     // Bugzilla 9636
     struct Test { string s; }
     alias NullableTest = Nullable!(Test, Test("null"));
-    NullableTest n = DefaultNullable;
+    NullableTest n = defaultNullable;
     assert(n.isNull());
-    assert(__traits(compiles, { void foo(NullableTest nt = DefaultNullable) {}}));
-    assert(!__traits(compiles, { NullableTest nt = Test(""); nt = DefaultNullable; }));
+    assert(__traits(compiles, { void foo(NullableTest nt = defaultNullable) {}}));
+    assert(!__traits(compiles, { NullableTest nt = Test(""); nt = defaultNullable; }));
 }
 
 /**
@@ -1972,7 +1972,7 @@ Constructor binding $(D this) with $(D value).
         _value = value;
     }
 
-    this(DefaultNullableImpl)
+    this(DefaultNullable)
     {
     }
 
@@ -2132,10 +2132,10 @@ unittest
 unittest
 {
     // Bugzilla 9636
-    NullableRef!int n = DefaultNullable;
+    NullableRef!int n = defaultNullable;
     assert(n.isNull());
-    assert(__traits(compiles, { void foo(NullableRef!int ni = DefaultNullable) {}}));
-    assert(!__traits(compiles, { NullableRef!int ni = new int(1); nt = DefaultNullable; }));
+    assert(__traits(compiles, { void foo(NullableRef!int ni = defaultNullable) {}}));
+    assert(!__traits(compiles, { NullableRef!int ni = new int(1); nt = defaultNullable; }));
 }
 
 /**
