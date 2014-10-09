@@ -1,4 +1,3 @@
-
 /**
  * C's &lt;process.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com

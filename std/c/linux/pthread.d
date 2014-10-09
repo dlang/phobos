@@ -2,7 +2,7 @@
  * www.digitalmars.com
  * Placed into public domain.
  */
-
+deprecated("Please use core.sys.posix.pthread instead.")
 module std.c.linux.pthread;
 
 import std.c.linux.linux;

@@ -1,4 +1,3 @@
-
 /* Written by Walter Bright.
  * www.digitalmars.com
  * Placed into public domain.
@@ -9,7 +8,7 @@
 /* These are all the globals defined by the linux C runtime library.
  * Put them separate so they'll be externed - do not link in linuxextern.o
  */
-
+deprecated("Please remove the import.")
 module std.c.linux.linuxextern;
 
 // No longer needed since "extern" storage class
