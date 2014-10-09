@@ -1698,16 +1698,22 @@ version(Posix) @safe unittest
     Throws:
         $(D FileException) on error.
   +/
-version(StdDdoc) string readLink(C)(const(C)[] link);
-else version(Posix) string readLink(C)(const(C)[] link)
+version(StdDdoc) string readLink(C)(const(C)[] link) @safe;
+else version(Posix) string readLink(C)(const(C)[] link) @safe
 {
+    static auto trustedReadlink(const(C)[] path, char[] buf) @trusted
+    {
+        return core.sys.posix.unistd.readlink(path.tempCString(), buf.ptr, buf.length);
+    }
+    static auto trustedAssumeUnique(ref C[] array) @trusted
+    {
+        return assumeUnique(array);
+    }
+
     enum bufferLen = 2048;
     enum maxCodeUnits = 6;
     char[bufferLen] buffer;
-    auto linkTmp = link.tempCString();
-    auto size = core.sys.posix.unistd.readlink(linkTmp,
-                                               buffer.ptr,
-                                               buffer.length);
+    auto size = trustedReadlink(link, buffer);
     cenforce(size != -1, link);
 
     if(size <= bufferLen - maxCodeUnits)
@@ -1717,15 +1723,13 @@ else version(Posix) string readLink(C)(const(C)[] link)
 
     foreach(i; 0 .. 10)
     {
-        size = core.sys.posix.unistd.readlink(linkTmp,
-                                              dynamicBuffer.ptr,
-                                              dynamicBuffer.length);
+        size = trustedReadlink(link, dynamicBuffer);
         cenforce(size != -1, link);
 
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
             dynamicBuffer.length = size;
-            return assumeUnique(dynamicBuffer);
+            return trustedAssumeUnique(dynamicBuffer);
         }
 
         dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
@@ -1734,7 +1738,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
     throw new FileException(to!string(link), "Path is too long to read.");
 }
 
-version(Posix) unittest
+version(Posix) @safe unittest
 {
     foreach(file; [system_directory, system_file])
     {
