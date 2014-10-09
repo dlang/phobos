@@ -8,7 +8,7 @@
 
 module std.c.process;
 
-private import std.c.stddef;
+private import core.stdc.stddef;
 
 extern (C):
 

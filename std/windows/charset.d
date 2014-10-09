@@ -19,7 +19,7 @@ module std.windows.charset;
 version (Windows):
 
 private import std.conv;
-private import std.c.windows.windows;
+private import core.sys.windows.windows;
 private import std.windows.syserror;
 private import std.utf;
 private import std.string;

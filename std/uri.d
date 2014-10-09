@@ -32,7 +32,7 @@ debug(uri) private import std.stdio;
 /* ====================== URI Functions ================ */
 
 private import std.ascii;
-private import std.c.stdlib;
+private import core.stdc.stdlib;
 private import std.utf;
 private import std.traits : isSomeChar;
 import core.exception : OutOfMemoryError;

@@ -4,7 +4,7 @@ version (Windows):
 pragma(lib,"uuid");
 
 import core.atomic;
-import std.c.windows.windows;
+import core.sys.windows.windows;
 import std.string;
 
 alias WCHAR OLECHAR;

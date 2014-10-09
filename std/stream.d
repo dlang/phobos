@@ -389,7 +389,7 @@ interface OutputStream {
 
 // not really abstract, but its instances will do nothing useful
 class Stream : InputStream, OutputStream {
-  private import std.string, std.digest.crc, std.c.stdlib, std.c.stdio;
+  private import std.string, std.digest.crc, core.stdc.stdlib, core.stdc.stdio;
 
   // stream abilities
   bool readable = false;        /// Indicates whether this stream can be read from.
@@ -1913,7 +1913,7 @@ enum FileMode {
 }
 
 version (Windows) {
-  private import std.c.windows.windows;
+  private import core.sys.windows.windows;
   extern (Windows) {
     void FlushFileBuffers(HANDLE hFile);
     DWORD  GetFileType(HANDLE hFile);

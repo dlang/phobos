@@ -18,7 +18,7 @@ module std.stdio;
 
 public import core.stdc.stdio, std.string : KeepTerminator;
 import core.vararg;
-static import std.c.stdio;
+static import core.stdc.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
     core.stdc.string, core.stdc.wchar_, core.exception;
@@ -34,7 +34,8 @@ else version (CRuntime_DigitalMars)
 {
     // Specific to the way Digital Mars C does stdio
     version = DIGITAL_MARS_STDIO;
-    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+    import core.stdc.stdio : /*__fhnd_info, */FHND_WCHAR, FHND_TEXT;
+    private extern shared ubyte[_NFILE] __fhnd_info;    // copied from std.c.stdio
 }
 
 version (Posix)
@@ -636,7 +637,7 @@ Throws: $(D ErrnoException) on error.
                 return;
             }
         }
-        //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
+        //fprintf(core.stdc.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
         errnoEnforce(.fclose(_p.handle) == 0,
                 "Could not close file `"~_name~"'");
     }
@@ -1521,7 +1522,7 @@ Returns the $(D FILE*) corresponding to this object.
 
     unittest
     {
-        assert(stdout.getFP() == std.c.stdio.stdout);
+        assert(stdout.getFP() == core.stdc.stdio.stdout);
     }
 
 /**
@@ -3165,7 +3166,7 @@ private FILE* fopen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
 version (Posix)
 {
     /***********************************
-     * Convenience function that forwards to $(D std.c.stdio.popen)
+     * Convenience function that forwards to $(D core.stdc.stdio.popen)
      * with appropriately-constructed C-style strings.
      */
     FILE* popen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
@@ -3177,7 +3178,7 @@ version (Posix)
 }
 
 /*
- * Convenience function that forwards to $(D std.c.stdio.fwrite)
+ * Convenience function that forwards to $(D core.stdc.stdio.fwrite)
  * and throws an exception upon error
  */
 private void binaryWrite(T)(FILE* f, T obj)
