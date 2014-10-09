@@ -4696,8 +4696,6 @@ version(unittest)
 //     assert(td[TD(c)] == 6);
 // }
 
-
-version(unittest){void main(){}}
 /**
 Allocates a $(D class) object right inside the current scope,
 therefore avoiding the overhead of $(D new). This facility is unsafe;
