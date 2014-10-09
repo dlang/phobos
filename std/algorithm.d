@@ -4445,6 +4445,321 @@ unittest
     }
 }
 
+
+// Used by implementation of groupBy.
+private struct GroupByChunkImpl(alias equivFun, Range)
+{
+    alias equiv = binaryFun!equivFun;
+
+    private Range r;
+
+    /* For forward ranges, using .save is more reliable than blindly assuming
+     * that the current value of .front will persist past a .popFront. However,
+     * if Range is only an input range, then we have no choice but to save the
+     * value of .front. */
+    static if (isForwardRange!Range)
+    {
+        private Range prev;
+        this(Range _r, Range _prev)
+        {
+            r = _r.save;
+            prev = _prev.save;
+        }
+        @property bool empty()
+        {
+            return r.empty || !equiv(prev.front, r.front);
+        }
+    }
+    else
+    {
+        private ElementType!Range prev;
+        this(Range _r, ElementType!Range _prev)
+        {
+            r = _r;
+            prev = _prev;
+        }
+        @property bool empty()
+        {
+            return r.empty || !equiv(prev, r.front);
+        }
+    }
+
+    @property ElementType!Range front() { return r.front; }
+
+    void popFront()
+    in
+    {
+        import core.exception : RangeError;
+        if (r.empty) throw new RangeError();
+    }
+    body
+    {
+        r.popFront();
+    }
+
+    static if (isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            typeof(this) copy;
+            copy.r = r.save;
+            copy.prev = prev.save;
+            return copy;
+        }
+    }
+}
+
+// Implementation of groupBy.
+private struct GroupByImpl(alias equivFun, Range)
+{
+    alias equiv = binaryFun!equivFun;
+
+    private Range r;
+
+    /* For forward ranges, using .save is more reliable than blindly assuming
+     * that the current value of .front will persist past a .popFront. However,
+     * if Range is only an input range, then we have no choice but to save the
+     * value of .front. */
+    static if (isForwardRange!Range)
+    {
+        private Range _prev;
+        private void savePrev() { _prev = r.save; }
+        private @property ElementType!Range prev() { return _prev.front; }
+    }
+    else
+    {
+        private ElementType!Range _prev;
+        private void savePrev() { _prev = r.front; }
+        private alias prev = _prev;
+    }
+
+    this(Range _r)
+    {
+        r = _r;
+        if (!empty)
+            savePrev();
+    }
+    @property bool empty() { return r.empty; }
+
+    @property auto front()
+    in
+    {
+        import core.exception : RangeError;
+        if (r.empty) throw new RangeError();
+    }
+    body
+    {
+        return GroupByChunkImpl!(equivFun, Range)(r, _prev);
+    }
+
+    void popFront()
+    {
+        while (!r.empty)
+        {
+            if (!equiv(prev, r.front))
+            {
+                savePrev();
+                return;
+            }
+            r.popFront();
+        }
+    }
+
+    static if (isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            typeof(this) copy;
+            copy.r = r.save;
+            copy._prev = _prev.save;
+            return copy;
+        }
+    }
+}
+
+/**
+ * Chunks an input range into subranges of equivalent adjacent elements.
+ *
+ * Equivalence is defined by the predicate $(D equiv), which can be either
+ * binary or unary. In the binary form, two _range elements $(D a) and $(D b)
+ * are considered equivalent if $(D equiv(a,b)) is true. In unary form, two
+ * elements are considered equivalent if $(D equiv(a) == equiv(b)) is true.
+ *
+ * Params:
+ *  equiv = Predicate for determining equivalence.
+ *  r = The range to be chunked.
+ *
+ * Returns: A range of ranges in which all elements in a given subrange are
+ * equivalent under the given predicate.
+ *
+ * Notes:
+ *
+ * Equivalent elements separated by an intervening non-equivalent element will
+ * appear in separate subranges; this function only considers adjacent
+ * equivalence. Elements in the subranges will always appear in the same order
+ * they appear in the original range.
+ *
+ * Being an equivalence relation, the binary form of $(D equiv) is assumed to
+ * be reflexive (i.e., $(D equiv(a,a)) must be true). If not, unexpected
+ * results may be produced.
+ *
+ * See_also:
+ * $(XREF algorithm,group), which collapses adjacent equivalent elements into a
+ * single element.
+ */
+auto groupBy(alias equiv, Range)(Range r)
+    if (isInputRange!Range)
+{
+    static if (is(typeof(binaryFun!equiv(ElementType!Range.init,
+                                         ElementType!Range.init)) : bool))
+        return GroupByImpl!(equiv, Range)(r);
+    else static if (is(typeof(
+            unaryFun!equiv(ElementType!Range.init) ==
+            unaryFun!equiv(ElementType!Range.init))))
+        return GroupByImpl!((a,b) => equiv(a) == equiv(b), Range)(r);
+    else
+        static assert(0, "groupBy expects either a binary predicate or "~
+                         "a unary predicate on range elements of type: "~
+                         ElementType!Range.stringof);
+}
+
+/// Showing usage with binary predicate:
+unittest
+{
+    // Grouping by particular attribute of each element:
+    auto data = [
+        [1, 1],
+        [1, 2],
+        [2, 2],
+        [2, 3]
+    ];
+
+    auto r1 = data.groupBy!((a,b) => a[0] == b[0]);
+    assert(r1.equal!equal([
+        [[1, 1], [1, 2]],
+        [[2, 2], [2, 3]]
+    ]));
+
+    auto r2 = data.groupBy!((a,b) => a[1] == b[1]);
+    assert(r2.equal!equal([
+        [[1, 1]],
+        [[1, 2], [2, 2]],
+        [[2, 3]]
+    ]));
+}
+
+/// Showing usage with unary predicate:
+pure @safe nothrow unittest
+{
+    // Grouping by particular attribute of each element:
+    auto range =
+    [
+        [1, 1],
+        [1, 1],
+        [1, 2],
+        [2, 2],
+        [2, 3],
+        [2, 3],
+        [3, 3]
+    ];
+
+    auto byX = groupBy!(a => a[0])(range);
+    auto expected1 =
+    [
+        [[1, 1], [1, 1], [1, 2]],
+        [[2, 2], [2, 3], [2, 3]],
+        [[3, 3]]
+    ];
+    foreach (e; byX)
+    {
+        assert(!expected1.empty);
+        assert(e.equal(expected1.front));
+        expected1.popFront();
+    }
+
+    auto byY = groupBy!(a => a[1])(range);
+    auto expected2 =
+    [
+        [[1, 1], [1, 1]],
+        [[1, 2], [2, 2]],
+        [[2, 3], [2, 3], [3, 3]]
+    ];
+    foreach (e; byY)
+    {
+        assert(!expected2.empty);
+        assert(e.equal(expected2.front));
+        expected2.popFront();
+    }
+}
+
+pure @safe nothrow unittest
+{
+    struct Item { int x, y; }
+
+    // Force R to have only an input range API with reference semantics, so
+    // that we're not unknowingly making use of array semantics outside of the
+    // range API.
+    class RefInputRange(R)
+    {
+        R data;
+        this(R _data) pure @safe nothrow { data = _data; }
+        @property bool empty() pure @safe nothrow { return data.empty; }
+        @property auto front() pure @safe nothrow { return data.front; }
+        void popFront() pure @safe nothrow { data.popFront(); }
+    }
+    auto refInputRange(R)(R range) { return new RefInputRange!R(range); }
+
+    {
+        auto arr = [ Item(1,2), Item(1,3), Item(2,3) ];
+        static assert(isForwardRange!(typeof(arr)));
+
+        auto byX = groupBy!(a => a.x)(arr);
+        static assert(isForwardRange!(typeof(byX)));
+
+        auto byX_subrange1 = byX.front.save;
+        auto byX_subrange2 = byX.front.save;
+        static assert(isForwardRange!(typeof(byX_subrange1)));
+        static assert(isForwardRange!(typeof(byX_subrange2)));
+
+        byX.popFront();
+        assert(byX_subrange1.equal([ Item(1,2), Item(1,3) ]));
+        byX_subrange1.popFront();
+        assert(byX_subrange1.equal([ Item(1,3) ]));
+        assert(byX_subrange2.equal([ Item(1,2), Item(1,3) ]));
+
+        auto byY = groupBy!(a => a.y)(arr);
+        static assert(isForwardRange!(typeof(byY)));
+
+        auto byY2 = byY.save;
+        static assert(is(typeof(byY) == typeof(byY2)));
+        byY.popFront();
+        assert(byY.front.equal([ Item(1,3), Item(2,3) ]));
+        assert(byY2.front.equal([ Item(1,2) ]));
+    }
+
+    // Test non-forward input ranges.
+    {
+        auto range = refInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
+        auto byX = groupBy!(a => a.x)(range);
+        assert(byX.front.equal([ Item(1,1), Item(1,2) ]));
+        byX.popFront();
+        assert(byX.front.equal([ Item(2,2) ]));
+        byX.popFront();
+        assert(byX.empty);
+        assert(range.empty);
+
+        range = refInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
+        auto byY = groupBy!(a => a.y)(range);
+        assert(byY.front.equal([ Item(1,1) ]));
+        byY.popFront();
+        assert(byY.front.equal([ Item(1,2), Item(2,2) ]));
+        byY.popFront();
+        assert(byY.empty);
+        assert(range.empty);
+    }
+}
+
+
 // overwriteAdjacent
 /*
 Reduces $(D r) by shifting it to the left until no adjacent elements
