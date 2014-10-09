@@ -2274,12 +2274,16 @@ else version(Posix)
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
          +/
-        void _ensureStatDone()
+        void _ensureStatDone() @safe
         {
+            static auto trustedStat(in char[] path, stat_t* buf) @trusted
+            {
+                return stat(path.tempCString(), buf);
+            }
             if(_didStat)
                 return;
 
-            enforce(stat(_name.tempCString(), &_statBuf) == 0,
+            enforce(trustedStat(_name, &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
