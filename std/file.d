@@ -1878,7 +1878,7 @@ else version (FreeBSD)
         static assert(0, "thisExePath is not supported on this platform");
 }
 
-unittest
+@safe unittest
 {
     auto path = thisExePath();
 
