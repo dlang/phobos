@@ -26179,7 +26179,39 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         version(Posix)
             return PosixTimeZone.getTimeZone(name);
         else version(Windows)
-            return WindowsTimeZone.getTimeZone(tzDatabaseNameToWindowsTZName(name));
+        {
+            if(auto windowsTZName = tzDatabaseNameToWindowsTZName(name))
+            {
+                try
+                    return WindowsTimeZone.getTimeZone(windowsTZName);
+                catch(DateTimeException dte)
+                {
+                    if(auto oldName = _getOldName(windowsTZName))
+                        return WindowsTimeZone.getTimeZone(oldName);
+                    throw dte;
+                }
+            }
+            else
+                throw new DateTimeException(format("%s does not have an equivalent Windows time zone.", name));
+        }
+    }
+
+    // The purpose of this is to handle the case where a Windows time zone is
+    // new and exists on an up-to-date Windows box but does not exist on Windows
+    // boxes which have not been properly updated. The "date added" is included
+    // on the theory that we'll be able to remove them at some point in the
+    // the future once enough time has passed, and that way, we know how much
+    // time has passed.
+    private static string _getOldName(string windowsTZName) @safe pure nothrow
+    {
+        switch(windowsTZName)
+        {
+            case "Belarus Standard Time": return "Kaliningrad Standard Time"; // Added 2014-10-08
+            case "Russia Time Zone 10": return "Magadan Standard Time"; // Added 2014-10-08
+            case "Russia Time Zone 11": return "Magadan Standard Time"; // Added 2014-10-08
+            case "Russia Time Zone 3": return "Russian Standard Time"; // Added 2014-10-08
+            default: return null;
+        }
     }
 
     //Since reading in the time zone files could be expensive, most unit tests
@@ -28949,7 +28981,6 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Africa/Banjul": return "Greenwich Standard Time";
         case "Africa/Bissau": return "Greenwich Standard Time";
         case "Africa/Blantyre": return "South Africa Standard Time";
-        case "Africa/Bogota": return "Line Islands Standard Time";
         case "Africa/Brazzaville": return "W. Central Africa Standard Time";
         case "Africa/Bujumbura": return "South Africa Standard Time";
         case "Africa/Cairo": return "Egypt Standard Time";
@@ -29043,7 +29074,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "America/Glace_Bay": return "Atlantic Standard Time";
         case "America/Godthab": return "Greenland Standard Time";
         case "America/Goose_Bay": return "Atlantic Standard Time";
-        case "America/Grand_Turk": return "Eastern Standard Time";
+        case "America/Grand_Turk": return "SA Western Standard Time";
         case "America/Grenada": return "SA Western Standard Time";
         case "America/Guadeloupe": return "SA Western Standard Time";
         case "America/Guatemala": return "Central America Standard Time";
@@ -29150,7 +29181,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Aden": return "Arab Standard Time";
         case "Asia/Almaty": return "Central Asia Standard Time";
         case "Asia/Amman": return "Jordan Standard Time";
-        case "Asia/Anadyr": return "Magadan Standard Time";
+        case "Asia/Anadyr": return "Russia Time Zone 11";
         case "Asia/Aqtau": return "West Asia Standard Time";
         case "Asia/Aqtobe": return "West Asia Standard Time";
         case "Asia/Ashgabat": return "West Asia Standard Time";
@@ -29162,7 +29193,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Bishkek": return "Central Asia Standard Time";
         case "Asia/Brunei": return "Singapore Standard Time";
         case "Asia/Calcutta": return "India Standard Time";
-        case "Asia/Chita": return "Yakutsk Standard Time";
+        case "Asia/Chita": return "North Asia East Standard Time";
         case "Asia/Choibalsan": return "Ulaanbaatar Standard Time";
         case "Asia/Colombo": return "Sri Lanka Standard Time";
         case "Asia/Damascus": return "Syria Standard Time";
@@ -29177,7 +29208,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Jayapura": return "Tokyo Standard Time";
         case "Asia/Jerusalem": return "Israel Standard Time";
         case "Asia/Kabul": return "Afghanistan Standard Time";
-        case "Asia/Kamchatka": return "Magadan Standard Time";
+        case "Asia/Kamchatka": return "Russia Time Zone 11";
         case "Asia/Karachi": return "Pakistan Standard Time";
         case "Asia/Katmandu": return "Nepal Standard Time";
         case "Asia/Khandyga": return "Yakutsk Standard Time";
@@ -29191,7 +29222,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Manila": return "Singapore Standard Time";
         case "Asia/Muscat": return "Arabian Standard Time";
         case "Asia/Nicosia": return "GTB Standard Time";
-        case "Asia/Novokuznetsk": return "N. Central Asia Standard Time";
+        case "Asia/Novokuznetsk": return "North Asia Standard Time";
         case "Asia/Novosibirsk": return "N. Central Asia Standard Time";
         case "Asia/Omsk": return "N. Central Asia Standard Time";
         case "Asia/Oral": return "West Asia Standard Time";
@@ -29208,7 +29239,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Seoul": return "Korea Standard Time";
         case "Asia/Shanghai": return "China Standard Time";
         case "Asia/Singapore": return "Singapore Standard Time";
-        case "Asia/Srednekolymsk": return "Magadan Standard Time";
+        case "Asia/Srednekolymsk": return "Russia Time Zone 10";
         case "Asia/Taipei": return "Taipei Standard Time";
         case "Asia/Tashkent": return "West Asia Standard Time";
         case "Asia/Tbilisi": return "Georgian Standard Time";
@@ -29261,6 +29292,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Etc/GMT-11": return "Central Pacific Standard Time";
         case "Etc/GMT-12": return "UTC+12";
         case "Etc/GMT-13": return "Tonga Standard Time";
+        case "Etc/GMT-14": return "Line Islands Standard Time";
         case "Etc/GMT-2": return "South Africa Standard Time";
         case "Etc/GMT-3": return "E. Africa Standard Time";
         case "Etc/GMT-4": return "Arabian Standard Time";
@@ -29297,7 +29329,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Europe/Madrid": return "Romance Standard Time";
         case "Europe/Malta": return "W. Europe Standard Time";
         case "Europe/Mariehamn": return "FLE Standard Time";
-        case "Europe/Minsk": return "Kaliningrad Standard Time";
+        case "Europe/Minsk": return "Belarus Standard Time";
         case "Europe/Monaco": return "W. Europe Standard Time";
         case "Europe/Moscow": return "Russian Standard Time";
         case "Europe/Oslo": return "W. Europe Standard Time";
@@ -29306,7 +29338,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Europe/Prague": return "Central Europe Standard Time";
         case "Europe/Riga": return "FLE Standard Time";
         case "Europe/Rome": return "W. Europe Standard Time";
-        case "Europe/Samara": return "Russian Standard Time";
+        case "Europe/Samara": return "Russia Time Zone 3";
         case "Europe/San_Marino": return "W. Europe Standard Time";
         case "Europe/Sarajevo": return "Central European Standard Time";
         case "Europe/Simferopol": return "Russian Standard Time";
@@ -29350,6 +29382,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Pacific/Guam": return "West Pacific Standard Time";
         case "Pacific/Honolulu": return "Hawaiian Standard Time";
         case "Pacific/Johnston": return "Hawaiian Standard Time";
+        case "Pacific/Kiritimati": return "Line Islands Standard Time";
         case "Pacific/Kosrae": return "Central Pacific Standard Time";
         case "Pacific/Kwajalein": return "UTC+12";
         case "Pacific/Majuro": return "UTC+12";
@@ -29410,6 +29443,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Azores Standard Time": return "Atlantic/Azores";
         case "Bahia Standard Time": return "America/Bahia";
         case "Bangladesh Standard Time": return "Asia/Dhaka";
+        case "Belarus Standard Time": return "Europe/Minsk";
         case "Canada Central Standard Time": return "America/Regina";
         case "Cape Verde Standard Time": return "Atlantic/Cape_Verde";
         case "Caucasus Standard Time": return "Asia/Yerevan";
@@ -29451,7 +29485,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Kamchatka Standard Time": return "Asia/Kamchatka";
         case "Korea Standard Time": return "Asia/Seoul";
         case "Libya Standard Time": return "Africa/Tripoli";
-        case "Line Islands Standard Time": return "Africa/Bogota";
+        case "Line Islands Standard Time": return "Pacific/Kiritimati";
         case "Magadan Standard Time": return "Asia/Magadan";
         case "Mauritius Standard Time": return "Indian/Mauritius";
         // Same as with E. Europe Standard Time.
@@ -29479,6 +29513,9 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Pakistan Standard Time": return "Asia/Karachi";
         case "Paraguay Standard Time": return "America/Asuncion";
         case "Romance Standard Time": return "Europe/Paris";
+        case "Russia Time Zone 10": return "Asia/Srednekolymsk";
+        case "Russia Time Zone 11": return "Asia/Anadyr";
+        case "Russia Time Zone 3": return "Europe/Samara";
         case "Russian Standard Time": return "Europe/Moscow";
         case "SA Eastern Standard Time": return "America/Cayenne";
         case "SA Pacific Standard Time": return "America/Bogota";
