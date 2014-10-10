@@ -125,7 +125,7 @@ void main(string[] args)
     To set $(D debugging) to $(D false), invoke the program with
     $(D --debugging=false).
     )
-    
+
     $(LI $(I Numeric options.) If an option is bound to a numeric type, a
     number is expected as the next option, or right within the option separated
     with an "=" sign:
@@ -242,7 +242,7 @@ getopt(args, "tune", &tuningParms);
         $(LI If the callback doesn't take any arguments, the callback is
         invoked whenever the option is seen.
         )
-        
+
         $(LI If the callback takes one string argument, the option string
         (without the leading dash(es)) is passed to the callback.  After that,
         the option string is considered handled and removed from the options
@@ -269,7 +269,7 @@ void main(string[] args)
 ---------
 
         )
-        
+
         $(LI If the callback takes two string arguments, the option string is
         handled as an option with one argument, and parsed accordingly. The
         option and its value are passed to the callback. After that, whatever
@@ -418,7 +418,7 @@ $(D args) after $(D getopt) returns.
 $(D Help Information Generation)
 
 If an option string is followed by another string, this string serves as an
-description for this option. The function $(D getopt) returns a struct of type 
+description for this option. The function $(D getopt) returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
 as well a bool indicating if information about these options where required by
 the passed arguments.
@@ -449,10 +449,10 @@ unittest
 
     bool foo;
     bool bar;
-    auto rslt = getopt(args, "foo|f" "Some information about foo.", &foo, "bar|b", 
+    auto rslt = getopt(args, "foo|f" "Some information about foo.", &foo, "bar|b",
         "Some help message about bar.", &bar);
 
-    if (rslt.helpWanted) 
+    if (rslt.helpWanted)
     {
         defaultGetoptPrinter("Some information about the program.",
             rslt.options);
@@ -487,7 +487,7 @@ enum config {
 /** The result of the $(D getoptX) function.
 
 The $(D GetOptDRslt) contains two members. The first member is a boolean with
-the name $(D helpWanted). The second member is an array of $(D Option). The 
+the name $(D helpWanted). The second member is an array of $(D Option). The
 array is accessable by the name $(D options).
 */
 struct GetoptResult {
@@ -509,14 +509,14 @@ pure Option splitAndGet(string opt) @trusted nothrow
 {
     auto sp = split(opt, "|");
     Option ret;
-    if (sp.length > 1) 
+    if (sp.length > 1)
     {
-        ret.optShort = "-" ~ (sp[0].length < sp[1].length ? 
+        ret.optShort = "-" ~ (sp[0].length < sp[1].length ?
             sp[0] : sp[1]);
-        ret.optLong = "--" ~ (sp[0].length > sp[1].length ? 
+        ret.optLong = "--" ~ (sp[0].length > sp[1].length ?
             sp[0] : sp[1]);
-    } 
-    else 
+    }
+    else
     {
         ret.optLong = "--" ~ sp[0];
     }
@@ -524,7 +524,7 @@ pure Option splitAndGet(string opt) @trusted nothrow
     return ret;
 }
 
-private void getoptImpl(T...)(ref string[] args, ref configuration cfg, 
+private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         ref GetoptResult rslt, T opts)
 {
     static if (opts.length)
@@ -568,7 +568,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 
             if (cfg.required && !optWasHandled)
             {
-                throw new GetOptException("Required option " ~ option ~ 
+                throw new GetOptException("Required option " ~ option ~
                     "was not supplied");
             }
             cfg.required = false;
@@ -1219,7 +1219,7 @@ unittest // same bug as 7693 only for bool
     assert(foo);
 }
 
-unittest 
+unittest
 {
     bool foo;
     auto args = ["prog", "--foo"];
@@ -1243,8 +1243,8 @@ unittest
     bool foo;
     bool bar;
     auto args = ["prog", "-b", "--foo", "-z"];
-    getopt(args, config.caseInsensitive, config.required, "foo|f" "Some foo", 
-        &foo, config.caseSensitive, "bar|b", "Some bar", &bar, 
+    getopt(args, config.caseInsensitive, config.required, "foo|f" "Some foo",
+        &foo, config.caseSensitive, "bar|b", "Some bar", &bar,
         config.passThrough);
     assert(foo);
     assert(bar);
@@ -1256,7 +1256,7 @@ unittest
     bool bar;
     auto args = ["prog", "-b", "-z"];
     assertThrown(getopt(args, config.caseInsensitive, config.required, "foo|f",
-        "Some foo", &foo, config.caseSensitive, "bar|b", "Some bar", &bar, 
+        "Some foo", &foo, config.caseSensitive, "bar|b", "Some bar", &bar,
         config.passThrough));
 }
 
@@ -1265,8 +1265,8 @@ unittest
     bool foo;
     bool bar;
     auto args = ["prog", "--foo", "-z"];
-    assertNotThrown(getopt(args, config.caseInsensitive, config.required, 
-        "foo|f", "Some foo", &foo, config.caseSensitive, "bar|b", "Some bar", 
+    assertNotThrown(getopt(args, config.caseInsensitive, config.required,
+        "foo|f", "Some foo", &foo, config.caseSensitive, "bar|b", "Some bar",
         &bar, config.passThrough));
     assert(foo);
     assert(!bar);
@@ -1318,12 +1318,12 @@ unittest
     assert(args == ["program", "--option"]);
 }
 
-/** This function prints the passed $(D Option) and text in an aligned manner. 
+/** This function prints the passed $(D Option) and text in an aligned manner.
 
 The passed text will be printed first, followed by a newline. Than the short
 and long version of every option will be printed. The short and long version
 will be aligned to the longest option of every $(D Option) passed. If a help
-message is present it will be printed after the long version of the 
+message is present it will be printed after the long version of the
 $(D Option).
 
 ------------
@@ -1337,7 +1337,7 @@ Params:
     text = The text to printed at the beginning of the help output.
     opt = The $(D Option) extracted from the $(D getoptX) parameter.
 */
-void defaultGetoptPrinter(string text, Option[] opt) 
+void defaultGetoptPrinter(string text, Option[] opt)
 {
     import std.stdio : stdout;
 
@@ -1345,7 +1345,7 @@ void defaultGetoptPrinter(string text, Option[] opt)
 }
 
 /** This function writes the passed text and $(D Option) into an output range
-in the manner, described in the documentation of function 
+in the manner, described in the documentation of function
 $(D defaultGetoptXPrinter).
 
 Params:
@@ -1360,10 +1360,10 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt) {
 
     size_t ls, ll;
     bool hasRequired = false;
-    foreach (it; opt) 
+    foreach (it; opt)
     {
-        ls = max(ls, it.optShort.length);    
-        ll = max(ll, it.optLong.length);    
+        ls = max(ls, it.optShort.length);
+        ll = max(ll, it.optLong.length);
 
         hasRequired = hasRequired || it.required;
     }
@@ -1372,7 +1372,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt) {
 
     string re = " Required: ";
 
-    foreach (it; opt) 
+    foreach (it; opt)
     {
         output.formattedWrite("%*s %*s%*s%s\n", ls, it.optShort, ll, it.optLong,
             hasRequired ? re.length : 1, it.required ? re : " ", it.help);
@@ -1398,7 +1398,7 @@ unittest
     assert(helpMsg.indexOf("-h") != -1);
     assert(helpMsg.indexOf("--help") != -1);
     assert(helpMsg.indexOf("Help") != -1);
-    
+
     string wanted = "Some Text\n-f  --foo Help\n-h --help This help "
         ~ "information.\n";
     assert(wanted == helpMsg);
@@ -1424,8 +1424,8 @@ unittest
     assert(helpMsg.indexOf("-h") != -1);
     assert(helpMsg.indexOf("--help") != -1);
     assert(helpMsg.indexOf("Help") != -1);
-    
-    string wanted = "Some Text\n-f  --foo Required: Help\n-h --help " 
+
+    string wanted = "Some Text\n-f  --foo Required: Help\n-h --help "
         "          This help information.\n";
     assert(wanted == helpMsg, helpMsg ~ wanted);
 }
