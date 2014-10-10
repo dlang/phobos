@@ -381,25 +381,42 @@ unittest
 
 /**
 Negates predicate $(D pred).
-
-Example:
-----
-string a = "   Hello, world!";
-assert(find!(not!isWhite)(a) == "Hello, world!");
-----
  */
 template not(alias pred)
 {
     auto not(T...)(T args)
-    if (is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
+    if (is(typeof(!pred(args))) || is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
     {
-        static if (T.length == 1)
+        static if (is(typeof(!pred(args))))
+            return !pred(args);
+        else static if (T.length == 1)
             return !unaryFun!pred(args);
         else static if (T.length == 2)
             return !binaryFun!pred(args);
         else
-            static assert(false, "not implemented for multiple arguments");
+            static assert(0);
     }
+}
+
+///
+unittest
+{
+    import std.functional;
+    import std.algorithm : find;
+    import std.uni : isWhite;
+    string a = "   Hello, world!";
+    assert(find!(not!isWhite)(a) == "Hello, world!");
+}
+
+unittest
+{
+    assert(not!"a != 5"(5));
+    assert(not!"a != b"(5, 5));
+
+    assert(not!(() => false)());
+    assert(not!(a => a != 5)(5));
+    assert(not!((a, b) => a != b)(5, 5));
+    assert(not!((a, b, c) => a * b * c != 125 )(5, 5, 5));
 }
 
 /**
