@@ -67,15 +67,15 @@ public:
     // Deferred in case we get some language support for checking uniqueness.
     version(None)
     /**
-    Allows safe construction of $(D Unique). It creates the resource and 
-    guarantees unique ownership of it (unless $(D T) publishes aliases of 
+    Allows safe construction of $(D Unique). It creates the resource and
+    guarantees unique ownership of it (unless $(D T) publishes aliases of
     $(D this)).
     Note: Nested structs/classes cannot be created.
     Params:
     args = Arguments to pass to $(D T)'s constructor.
     ---
     static class C {}
-    auto u = Unique!(C).create(); 
+    auto u = Unique!(C).create();
     ---
     */
     static Unique!T create(A...)(auto ref A args)
@@ -116,12 +116,12 @@ public:
     /**
     Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
-    Typically used to transfer a $(D Unique) rvalue of derived type to 
+    Typically used to transfer a $(D Unique) rvalue of derived type to
     a $(D Unique) of base type.
     Example:
     ---
     class C : Object {}
-    
+
     Unique!C uc = new C;
     Unique!Object uo = uc.release;
     ---
@@ -133,7 +133,7 @@ public:
         _p = u._p;
         u._p = null;
     }
-    
+
     /// Transfer ownership from a $(D Unique) of a type that is convertible to our type.
     void opAssign(U)(Unique!U u)
     if (is(u.RefT:RefT))
@@ -144,7 +144,7 @@ public:
         _p = u._p;
         u._p = null;
     }
-    
+
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
@@ -227,7 +227,7 @@ unittest
     assert(!u.isEmpty);
     destroy(u);
     assert(deleted == 1);
-    
+
     Unique!C uc = new C;
     static assert(!__traits(compiles, {Unique!Object uo = uc;}));
     Unique!Object uo = new C;
