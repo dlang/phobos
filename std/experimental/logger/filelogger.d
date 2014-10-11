@@ -63,8 +63,7 @@ class FileLogger : Logger
     }
 
     /** If the $(D FileLogger) is managing the $(D File) it logs to, this
-    method will return a reference to this File. Otherwise a default
-    initialized $(D File) reference will be returned.
+    method will return a reference to this File.
     */
     @property File file()
     {
@@ -117,6 +116,14 @@ class FileLogger : Logger
             payload.threadId, payload.timestamp, payload.logger);
         this.logMsgPart(payload.msg);
         this.finishLogMsg();
+    }
+
+    /** If the $(D FileLogger) was constructed with a filename, this method
+    returns this filename. Otherwise an empty $(D string) is returned.
+    */
+    string getFilename()
+    {
+        return this.filename;
     }
 
     private File file_;

@@ -1829,7 +1829,6 @@ unittest
     auto ml = new MultiLogger();
     ml.insertLogger("one", tl1);
     ml.insertLogger("two", tl2);
-    assertThrown!Exception(ml.insertLogger("one", tl1));
 
     string msg = "Hello Logger World";
     ml.log(msg);
@@ -1841,7 +1840,8 @@ unittest
 
     ml.removeLogger("one");
     ml.removeLogger("two");
-    assertThrown!Exception(ml.removeLogger("one"));
+    auto n = ml.removeLogger("one");
+	assert(n is null);
 }
 
 unittest
