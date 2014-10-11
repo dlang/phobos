@@ -617,7 +617,7 @@ unittest
 }
 
 /**
-Tests whether all given items satisfy a template predicate, i.e. evaluates to
+Tests whether any given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
 Evaluation is $(I not) short-circuited if a true result is encountered; the
