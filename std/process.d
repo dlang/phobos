@@ -3058,7 +3058,6 @@ Distributed under the Boost Software License, Version 1.0.
 
 
 import core.stdc.stdlib;
-import std.c.stdlib;
 import core.stdc.errno;
 import core.thread;
 import std.c.process;
@@ -3091,7 +3090,7 @@ version (unittest)
    in turn signal an error in command's execution).
 
    Note: On Unix systems, the homonym C function (which is accessible
-   to D programs as $(LINK2 std_c_process.html, std.c._system))
+   to D programs as $(LINK2 std_c_process.html, std.c._process))
    returns a code in the same format as $(LUCKY waitpid, waitpid),
    meaning that C programs must use the $(D WEXITSTATUS) macro to
    extract the actual exit code from the $(D system) call. D's $(D
@@ -3513,8 +3512,7 @@ deprecated unittest
 
 /**
 Gets the value of environment variable $(D name) as a string. Calls
-$(LINK2 std_c_stdlib.html#_getenv, std.c.stdlib._getenv)
-internally.
+$(D core.stdc.stdlib._getenv) internally.
 
 $(RED Deprecated. Please use $(LREF environment.opIndex) or
       $(LREF environment.get) instead.  This function will be
@@ -3537,8 +3535,7 @@ string getenv(in char[] name) nothrow
 Sets the value of environment variable $(D name) to $(D value). If the
 value was written, or the variable was already present and $(D
 overwrite) is false, returns normally. Otherwise, it throws an
-exception. Calls $(LINK2 std_c_stdlib.html#_setenv,
-std.c.stdlib._setenv) internally.
+exception. Calls $(D core.sys.posix.stdlib._setenv) internally.
 
 $(RED Deprecated. Please use $(LREF environment.opIndexAssign) instead.
       This function will be removed in August 2015.)
@@ -3549,12 +3546,12 @@ else version(Posix)
     void setenv(in char[] name, in char[] value, bool overwrite)
 {
     errnoEnforce(
-        std.c.stdlib.setenv(name.tempCString(), value.tempCString(), overwrite) == 0);
+        core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), overwrite) == 0);
 }
 
 /**
-Removes variable $(D name) from the environment. Calls $(LINK2
-std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally.
+Removes variable $(D name) from the environment. Calls $(D
+core.sys.posix.stdlib._unsetenv) internally.
 
 $(RED Deprecated. Please use $(LREF environment.remove) instead.
       This function will be removed in August 2015.)
@@ -3564,7 +3561,7 @@ else version(Posix)
     deprecated("Please use environment.remove instead")
     void unsetenv(in char[] name)
 {
-    errnoEnforce(std.c.stdlib.unsetenv(name.tempCString()) == 0);
+    errnoEnforce(core.sys.posix.stdlib.unsetenv(name.tempCString()) == 0);
 }
 
 version (Posix) deprecated unittest

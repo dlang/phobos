@@ -45,7 +45,7 @@
 
 module std.socket;
 
-import core.stdc.stdint, core.stdc.string, std.string, std.c.stdlib, std.conv;
+import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.conv;
 
 import core.stdc.config;
 import core.time : dur, Duration;
@@ -62,7 +62,7 @@ version(Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    private import std.c.windows.windows, std.c.windows.winsock, std.windows.syserror;
+    private import core.sys.windows.windows, std.c.windows.winsock, std.windows.syserror;
     private alias _ctimeval = std.c.windows.winsock.timeval;
     private alias _clinger = std.c.windows.winsock.linger;
 

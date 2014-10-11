@@ -1,4 +1,3 @@
-
 /**
  * C's &lt;process.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
@@ -9,7 +8,7 @@
 
 module std.c.process;
 
-private import std.c.stddef;
+private import core.stdc.stddef;
 
 extern (C):
 

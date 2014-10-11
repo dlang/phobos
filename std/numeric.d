@@ -34,7 +34,7 @@ import std.exception;
 import std.random;
 import std.string;
 import std.range;
-import std.c.stdlib;
+import core.stdc.stdlib;
 import std.functional;
 import std.typetuple;
 import std.complex;

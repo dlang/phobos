@@ -21,9 +21,9 @@ private
     import core.memory;
     import std.algorithm;
     import std.string;
-    import std.c.stdio;
-    import std.c.stdlib;
-    import std.c.stdarg;
+    import core.stdc.stdio;
+    import core.stdc.stdlib;
+    import core.stdc.stdarg;
 }
 
 /*********************************************
