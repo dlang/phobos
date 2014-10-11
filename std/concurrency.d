@@ -325,17 +325,37 @@ private:
 
 public:
 
-    /// Generate a convenient string for identifying this Tid.
+    /**
+     * Generate a convenient string for identifying this Tid.  This is only
+     * useful to see if Tid's that are currently executing are the same or
+     * different, e.g. for logging and debugging.  It is potentially possible
+     * that a Tid executed in the future will have the same toString() output
+     * as another Tid that has already terminated.
+     * 
+     * Note that Tid's will eventually be capable of running on Fibers, and
+     * perhaps processes or other things.  This string scheme will change
+     * accordingly.
+     */
     void toString(scope void delegate(const(char)[]) sink)
     {
         if (mbox.receiveThread)
-            formattedWrite(sink, "Tid(0x%x)", mbox.receiveThread.toHash());
+            formattedWrite(sink, "Tid(thread:0x%x)", mbox.receiveThread.toHash());
         else
-            sink.put("Tid(NOT STARTED)");
+            sink.put("Tid(new)");
     }
 
-    /// Get the Thread that is receiving messages for this Tid
-    Thread receiveThread() {
+    /**
+     * Get the Thread that is receiving messages for this Tid.
+     *
+     * Note that Tid's will eventually be capable of running on Fibers, and
+     * perhaps processes or other things.  This Thread reference will be null
+     * for those cases.
+     *
+     * Returns:
+     *    Thread running this Tid, or null if this Tid has not been spawned.
+     */
+    Thread receiveThread()
+    {
         return mbox.receiveThread;
     }
 
@@ -1466,8 +1486,6 @@ private
         size_t      m_localMsgs;
         size_t      m_maxMsgs;
         bool        m_closed;
-
-    public:
 
         /// Reference to the thread receiving messages from this MessageBox.
         /// Note that this is invalid until spawn() or spawnLinked() is
