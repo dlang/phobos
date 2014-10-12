@@ -4578,7 +4578,7 @@ Cycle!R cycle(R)(R input)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 }
@@ -4602,7 +4602,7 @@ Cycle!R cycle(R)(ref R input, size_t index = 0)
     return Cycle!R(input, index);
 }
 
-unittest
+@safe unittest
 {
     static assert(isForwardRange!(Cycle!(uint[])));
 
