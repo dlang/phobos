@@ -3351,10 +3351,11 @@ unittest
     assert(s.equal(["a", "b", "c"]));
 }
 
-unittest
+@safe unittest
 {
     // Test by-reference separator
     class RefSep {
+    @safe:
         string _impl;
         this(string s) { _impl = s; }
         @property empty() { return _impl.empty; }
@@ -4928,12 +4929,7 @@ if (isInputRange!InputRange &&
             UEEType[is(UEEType == char) ? 4 : 2] buf;
 
             size_t len = encode(buf, needle);
-            //TODO: Make find!(R, R) @safe
-            R trustedFindRR(ref R haystack, UEEType[] needle) @trusted pure
-            {
-                return cast(R) std.algorithm.find(haystack, needle);
-            }
-            return trustedFindRR(haystack, buf[0 .. len]);
+            return find(haystack, buf[0 .. len]);
         }
         else
         {
@@ -4999,7 +4995,7 @@ if (isInputRange!InputRange &&
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -5017,7 +5013,7 @@ unittest
     assert(!find!("toLower(a) == b")(s, "hello").empty);
 }
 
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -5067,7 +5063,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     //CTFE
     static assert (find("abc", 'b') == "bc");
@@ -5084,7 +5080,7 @@ unittest
     static assert(find!((a,b)=>a==b)([1, 2, 3], 2));
 }
 
-unittest
+@safe unittest
 {
     import std.exception : assertCTFEable;
 
@@ -5106,7 +5102,7 @@ unittest
     assertCTFEable!dg;
 }
 
-unittest
+@safe unittest
 {
     // Bugzilla 11603
     enum Foo : ubyte { A }
@@ -5153,8 +5149,9 @@ if (isForwardRange!R1 && isForwardRange!R2
             Select!(haystack[0].sizeof == 1, ubyte[],
                 Select!(haystack[0].sizeof == 2, ushort[], uint[]));
         // Will use the array specialization
-        return cast(R1) .find!(pred, Representation, Representation)
-            (cast(Representation) haystack, cast(Representation) needle);
+        static TO force(TO, T)(T r) @trusted { return cast(TO)r; }
+        return force!R1(.find!(pred, Representation, Representation)
+            (force!Representation(haystack), force!Representation(needle)));
     }
     else
     {
@@ -5163,7 +5160,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -5172,7 +5169,7 @@ unittest
     assert([1, 2, 3, 4].find(SList!int(2, 3)[]) == [2, 3, 4]);
 }
 
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -5234,7 +5231,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     }
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // @@@BUG@@@ removing static below makes unittest fail
@@ -5319,7 +5316,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
     }
 }
 
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -5328,7 +5325,7 @@ unittest
 }
 
 //Bug# 8334
-unittest
+@safe unittest
 {
     auto haystack = [1, 2, 3, 4, 1, 9, 12, 42];
     auto needle = [12, 42, 27];
@@ -5410,7 +5407,7 @@ unittest
     return haystack;
 }
 
-unittest
+@safe unittest
 {
     // Test simpleMindedFind for the case where both haystack and needle have
     // length.
@@ -5419,6 +5416,7 @@ unittest
 
     struct CustomString
     {
+    @safe:
         string _impl;
 
         // This is what triggers issue 7992.
@@ -5500,7 +5498,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 4, 2, 3 ];
     assert(find(a, 4) == [ 4, 2, 3 ]);
@@ -5510,7 +5508,7 @@ unittest
     assert(find(a, 5, [ 1.2, 3.5 ], 2.0) == tuple([ 2, 3 ], 3));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -5571,7 +5569,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
