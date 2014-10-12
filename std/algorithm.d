@@ -5520,7 +5520,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find("abc", "bc").length == 2);
 }
 
-unittest
+@safe unittest
 {
     import std.string : toUpper;
 
@@ -5549,7 +5549,7 @@ unittest
     assert(find!(f)(s, "hello").length == 3);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -12109,7 +12109,7 @@ template canFind(alias pred="a == b")
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(canFind([0, 1, 2, 3], 2) == true);
     assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]));
@@ -12122,7 +12122,7 @@ unittest
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -12134,7 +12134,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     assert(equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 8]));
 }

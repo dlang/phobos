@@ -1114,7 +1114,7 @@ auto n = rnd.front;
 ----
 */
 
-@property uint unpredictableSeed()
+@property uint unpredictableSeed() @trusted
 {
     static bool seeded;
     static MinstdRand0 rand;
@@ -1128,7 +1128,7 @@ auto n = rnd.front;
     return cast(uint) (TickDuration.currSystemTick.length ^ rand.front);
 }
 
-unittest
+@safe unittest
 {
     // not much to test here
     auto a = unpredictableSeed;
