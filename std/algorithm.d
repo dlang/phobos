@@ -7503,7 +7503,7 @@ template equal(alias pred = "a == b")
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math : approxEqual;
     import std.algorithm : equal;
@@ -7528,7 +7528,7 @@ This can be very useful when the element type of a range is itself a
 range. In particular, $(D equal) can be its own predicate, allowing
 range of range (of range...) comparisons.
  +/
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
     import std.range : iota, chunks;
@@ -7538,7 +7538,7 @@ unittest
     ));
 }
 
-unittest
+@safe unittest
 {
     import std.math : approxEqual;
 
