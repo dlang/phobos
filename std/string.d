@@ -4984,23 +4984,23 @@ auto eraseBack(T)(T str, dchar back)
     }
 }
 
-auto eraseFirstLastImpl(T,S)(T str, S toRemove, ptrdiff_t idx) {
-    auto len = codeLength!(ElementEncodingType!T)(toRemove);
+auto eraseFirstLastImpl(T,S)(T str, S toErase, ptrdiff_t idx) {
+    auto len = codeLength!(ElementEncodingType!T)(toErase);
     return str[0 .. idx] ~ str[idx+len .. $];
 }
 
 /** This functions returns a copy of $(D str) without the first occurrence
-of $(D toRemove).
+of $(D toErase).
 
-If $(D toRemove) is not present in $(D str), $(D str) will be returned.
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
 */
-auto eraseFirst(T,S)(T str, S toRemove)
+auto eraseFirst(T,S)(T str, S toErase)
     if (isSomeString!T && (isSomeString!S || isSomeChar!S))
 {
-    auto idx = str.indexOf(toRemove);
+    auto idx = str.indexOf(toErase);
     if (idx != -1)
     {
-        return eraseFirstLastImpl(str, toRemove, idx);
+        return eraseFirstLastImpl(str, toErase, idx);
     }
 
     return str;
@@ -5042,17 +5042,17 @@ auto eraseFirst(T,S)(T str, S toRemove)
 }
 
 /** This functions returns a copy of $(D str) without the last occurrence
-of $(D toRemove).
+of $(D toErase).
 
-If $(D toRemove) is not present in $(D str), $(D str) will be returned.
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
 */
-auto eraseLast(T,S)(T str, S toRemove)
+auto eraseLast(T,S)(T str, S toErase)
     if (isSomeString!T && (isSomeString!S || isSomeChar!S))
 {
-    auto idx = str.lastIndexOf(toRemove);
+    auto idx = str.lastIndexOf(toErase);
     if (idx != -1)
     {
-        return eraseFirstLastImpl(str, toRemove, idx);
+        return eraseFirstLastImpl(str, toErase, idx);
     }
 
     return str;
@@ -5114,17 +5114,17 @@ auto eraseLast(T,S)(T str, S toRemove)
 }
 
 /** This functions returns a copy of $(D str) without the first N occurrence
-of $(D toRemove).
+of $(D toErase).
 
-If $(D toRemove) is not present in $(D str), $(D str) will be returned.
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
 */
-auto eraseFirstN(T,S)(T str, int cnt, S toRemove)
+auto eraseFirstN(T,S)(T str, int cnt, S toErase)
     if (isSomeString!T && (isSomeString!S || isSomeChar!S))
 {
-    auto idx = str.indexOf(toRemove);
+    auto idx = str.indexOf(toErase);
     if (idx != -1)
     {
-        auto len = codeLength!(ElementEncodingType!T)(toRemove);
+        auto len = codeLength!(ElementEncodingType!T)(toErase);
         auto ret = appender!T();
         ret.reserve(str.length - len);
         ptrdiff_t oldIdx = 0;
@@ -5133,7 +5133,7 @@ auto eraseFirstN(T,S)(T str, int cnt, S toRemove)
         {
             ret.put(str[oldIdx .. idx]);
             oldIdx = idx + len;
-            idx = str.indexOf(toRemove, oldIdx);
+            idx = str.indexOf(toErase, oldIdx);
             --cnt;
         }
         while(cnt != 0 && idx != -1);
@@ -5181,18 +5181,18 @@ auto eraseFirstN(T,S)(T str, int cnt, S toRemove)
 
 
 /** This functions returns a copy of $(D str) without the last N occurrence
-of $(D toRemove).
+of $(D toErase).
 
-If $(D toRemove) is not present in $(D str), $(D str) will be returned.
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
 */
-auto eraseLastN(T,S)(T str, int cnt, S toRemove)
+auto eraseLastN(T,S)(T str, int cnt, S toErase)
     if (isSomeString!T && (isSomeString!S || isSomeChar!S))
 {
     alias RetType = ElementEncodingType!(T);
-    auto idx = str.lastIndexOf(toRemove);
+    auto idx = str.lastIndexOf(toErase);
     if (idx != -1)
     {
-        auto len = codeLength!RetType(toRemove);
+        auto len = codeLength!RetType(toErase);
         auto ret = new Unqual!(RetType)[str.length - len];
         size_t retIdx = ret.length;
 
@@ -5210,7 +5210,7 @@ auto eraseLastN(T,S)(T str, int cnt, S toRemove)
             ret[dLow .. retIdx] = str[sLow .. oldIdx];
             retIdx = dLow;
             oldIdx = idx;
-            idx = str.lastIndexOf(toRemove, oldIdx);
+            idx = str.lastIndexOf(toErase, oldIdx);
             --cnt;
         }
         while (cnt != 0 && idx != -1);
@@ -5270,6 +5270,71 @@ auto eraseLastN(T,S)(T str, int cnt, S toRemove)
             assert(rslt == "さい果実", to!string(rslt));
             rslt = eraseLastN(to!T(`のごのさいごの果実`), 2, 'の');
             assert(rslt == "のごさいご果実", to!string(rslt));
+        }
+    }
+}
+
+/** This functions returns a copy of $(D str) without the Nth occurrence
+of $(D toErase).
+
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
+*/
+auto eraseNth(T,S)(T str, int cnt, S toErase)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
+{
+    import std.stdio : writefln;
+    alias RetType = ElementEncodingType!(T);
+    ptrdiff_t sliceIdx = 0;
+    auto len = codeLength!RetType(toErase);
+
+    do
+    {
+        sliceIdx = str.indexOf(toErase, sliceIdx);
+        if (sliceIdx == -1)
+        {
+            return str;
+        }
+
+        if(cnt == 1)
+        {
+            break;
+        }
+        else
+        {
+            sliceIdx += len;
+            --cnt;
+        }
+    }
+    while(cnt == 1);
+
+    auto ret = appender!T();
+    ret.reserve(str.length - len);
+
+    ret.put(str[0 .. sliceIdx]);
+    ret.put(str[sliceIdx + len .. $]);
+    return ret.data;
+}
+
+@safe pure unittest
+{
+    foreach(T; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            T rslt = eraseNth(to!T("Hellö Wörlö W"), 2, to!S("lö"));
+            assert(rslt == "Hellö Wör W", to!string(rslt));
+
+            rslt = eraseNth(to!T("Hellö Wörlö W"), 1, to!S("ö"));
+            assert(rslt == "Hell Wörlö W", to!string(rslt));
+
+            rslt = eraseNth(to!T(`ごのさいごの果実`), 1, to!S("ごの"));
+            assert(rslt == "さいごの果実", to!string(rslt));
+
+            rslt = eraseNth(to!T(`ごのさいごの果実`), 2, to!S("ごの"));
+            assert(rslt == "ごのさい果実", to!string(rslt));
+
+            rslt = eraseNth(to!T(`ごのさいごの果実`), 2, to!S("の"));
+            assert(rslt == "ごのさいご果実", to!string(rslt));
         }
     }
 }
