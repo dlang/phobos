@@ -446,7 +446,7 @@ template map(fun...) if (fun.length >= 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr1 = [ 1, 2, 3, 4 ];
     int[] arr2 = [ 5, 6 ];
@@ -459,7 +459,7 @@ Multiple functions can be passed to $(D map). In that case, the
 element type of $(D map) is a tuple containing one element for each
 function.
 */
-unittest
+@safe unittest
 {
     auto sums = [2, 4, 6, 8];
     auto products = [1, 4, 9, 16];
@@ -477,7 +477,7 @@ unittest
 You may alias $(D map) with some function(s) to a symbol and use
 it separately:
 */
-unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -593,7 +593,7 @@ private struct MapResult(alias fun, Range)
     }
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.functional : adjoin;
@@ -712,14 +712,15 @@ unittest
     static assert(!__traits(compiles, map!(nonvoidFun, voidFun)([1])));
     static assert(!__traits(compiles, map!(voidFun, nonvoidFun)([1])));
 }
-unittest
+
+@safe unittest
 {
     auto LL = iota(1L, 4L);
     auto m = map!"a*a"(LL);
     assert(equal(m, [1L, 4L, 9L]));
 }
 
-unittest
+@safe unittest
 {
     // Issue #10130 - map of iota with const step.
     const step = 2;
@@ -733,7 +734,7 @@ unittest
     static assert(__traits(compiles, map!(i => i)(iota(floatBegin, floatEnd, floatStep))));
 }
 
-unittest
+@safe unittest
 {
     //slicing infinites
     auto rr = iota(0, 5).cycle().map!"a * a"();
@@ -743,7 +744,7 @@ unittest
     assert(equal(rr[0 .. 5], [1, 4, 9, 16, 0]));
 }
 
-unittest
+@safe unittest
 {
     struct S {int* p;}
     auto m = immutable(S).init.repeat().map!"a".save;
@@ -788,7 +789,7 @@ if (isBidirectionalRange!Range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.stdio, std.range;
     import std.typecons : tuple;
