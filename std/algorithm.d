@@ -9109,7 +9109,7 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
 The simplest use of $(D bringToFront) is for rotating elements in a
 buffer. For example:
 */
-unittest
+@safe unittest
 {
     auto arr = [4, 5, 6, 7, 1, 2, 3];
     auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
@@ -9123,7 +9123,7 @@ range. This is very useful with forward ranges that cannot compute
 comfortably right-bounded subranges like $(D arr[0 .. 4]) above. In
 the example below, $(D r2) is a right subrange of $(D r1).
 */
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -9139,7 +9139,7 @@ unittest
 /**
 Elements can be swapped across ranges of different types:
 */
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -9150,7 +9150,7 @@ unittest
     assert(equal(vec, [ 5, 6, 7 ]));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
     import std.random : Random, unpredictableSeed, uniform;
