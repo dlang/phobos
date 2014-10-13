@@ -8195,7 +8195,7 @@ Range minPos(alias pred = "a < b", Range)(Range range)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and first occurs in position 3
@@ -8204,7 +8204,7 @@ unittest
     assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -8231,7 +8231,7 @@ unittest
                .equal([ 1, 2, 4, 1, 1, 2 ]));
 }
 
-unittest
+@safe unittest
 {
     //BUG 9299
     debug(std_algorithm) scope(success)
