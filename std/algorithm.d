@@ -8634,8 +8634,9 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     static if (isArray!Range1 && isArray!Range2 &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        immutable overlaps = source.ptr < target.ptr + target.length &&
-                             target.ptr < source.ptr + source.length;
+        immutable overlaps = () @trusted {
+            return source.ptr < target.ptr + target.length &&
+                   target.ptr < source.ptr + source.length; }();
 
         if (overlaps)
         {
@@ -8660,7 +8661,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 5 ];
     int[] b = [ 9, 8 ];
@@ -8674,7 +8675,7 @@ unittest
 As long as the target range elements support assignment from source
 range elements, different types of ranges are accepted.
 */
-unittest
+@safe unittest
 {
     float[] a = [ 1.0f, 5 ];
     double[] b = new double[a.length];
@@ -8687,7 +8688,7 @@ may want to use $(D copy(take(a, n), b)). To copy those elements from
 range $(D a) that satisfy predicate $(D pred) to range $(D b), you may
 want to use $(D copy(a.filter!(pred), b)).
 */
-unittest
+@safe unittest
 {
     int[] a = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
     auto b = new int[a.length];
@@ -8699,7 +8700,7 @@ unittest
 $(XREF range, retro) can be used to achieve behavior similar to
 $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward').
 */
-unittest
+@safe unittest
 {
     import std.algorithm, std.range;
     int[] src = [1, 2, 4];
@@ -8708,7 +8709,7 @@ unittest
     assert(dst == [0, 0, 1, 2, 4]);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
