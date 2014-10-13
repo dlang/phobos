@@ -7210,7 +7210,7 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
     auto r = findAdjacent(a);
@@ -7220,7 +7220,7 @@ unittest
 
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
@@ -7266,14 +7266,14 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
     int[] b = [ 3, 1, 2 ];
     assert(findAmong(a, b) == a[2 .. $]);
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ -1, 0, 2, 1, 2, 3, 4, 5 ];
