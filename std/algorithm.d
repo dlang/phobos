@@ -829,7 +829,7 @@ if (isBidirectionalRange!Range)
     assert(counter == iota(-4, 5).length);
 }
 
-unittest
+@safe unittest
 {
     auto a = [1, 2, 3, 4];
     assert(equal(a.map!"(a - 1)*a"().cache(),                      [ 0, 2, 6, 12]));
@@ -840,7 +840,7 @@ unittest
     assert(equal(r2, [2, 3, 4]));
 }
 
-unittest
+@safe unittest
 {
     //immutable test
     static struct S
@@ -864,21 +864,21 @@ unittest
     assert(equal(a.cacheBidirectional(), a));
 }
 
-unittest
+@safe unittest
 {
     char[][] stringbufs = ["hello".dup, "world".dup];
     auto strings = stringbufs.map!((a)=>a.idup)().cache();
     assert(strings.front is strings.front);
 }
 
-unittest
+@safe unittest
 {
     auto c = [1, 2, 3].cycle().cache();
     c = c[1 .. $];
     auto d = c[0 .. 1];
 }
 
-unittest
+@safe unittest
 {
     static struct Range
     {
@@ -1154,7 +1154,7 @@ Many aggregate range operations turn out to be solved with $(D reduce)
 quickly and easily. The example below illustrates $(D reduce)'s
 remarkable power and flexibility.
 */
-unittest
+@safe unittest
 {
     import std.math : approxEqual;
 
@@ -1207,7 +1207,7 @@ If two or more functions are passed, $(D reduce) returns a
 $(XREF typecons, Tuple) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
-unittest
+@safe unittest
 {
     import std.math : approxEqual, sqrt;
 
@@ -1286,7 +1286,7 @@ unittest
     assertThrown(reduce!"a + b"(oa));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -1297,7 +1297,7 @@ unittest
     r = reduce!"a + b"(a, c);
 }
 
-unittest
+@safe unittest
 {
     // Issue #10408 - Two-function reduce of a const array.
     const numbers = [10, 30, 20];
@@ -1307,7 +1307,7 @@ unittest
     assert(minmax == tuple(10, 30));
 }
 
-unittest
+@safe unittest
 {
     //10709
     enum foo = "a + 0.5 * b";
@@ -1353,7 +1353,7 @@ unittest
     enum b = foo();
 }
 
-unittest
+@safe unittest
 {
     //http://forum.dlang.org/thread/oghtttkopzjshsuflelk@forum.dlang.org
     //Seed is tuple of const.
@@ -1366,7 +1366,7 @@ unittest
     assert(minmaxElement([1, 2, 3])== tuple(1, 3));
 }
 
-unittest //12569
+@safe unittest //12569
 {
     import std.typecons: tuple;
     dchar c = 'a';
@@ -1386,7 +1386,7 @@ unittest //12569
     static assert(!is(typeof(reduce!(all, all)(tuple(1, 1), "hello"))));
 }
 
-unittest //13304
+@safe unittest //13304
 {
     int[] data;
     static assert(is(typeof(reduce!((a, b)=>a+b)(data))));
