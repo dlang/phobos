@@ -7439,7 +7439,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
 }
 
 ///
-unittest
+@safe unittest
 {
     auto s = "1 + (2 * (3 + 1 / 2)";
     assert(!balancedParens(s, '(', ')'));
