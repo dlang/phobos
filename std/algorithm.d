@@ -8544,7 +8544,7 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.uni : toUpper;
 
@@ -8574,7 +8574,7 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 }
 
 ///
-unittest
+@safe unittest
 {
     string a = "Saturday", b = "Sunday";
     auto p = levenshteinDistanceAndPath(a, b);
@@ -8582,7 +8582,7 @@ unittest
     assert(equal(p[1], "nrrnsnnn"));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
