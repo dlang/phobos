@@ -3042,7 +3042,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -3054,7 +3054,7 @@ unittest
     assert(equal(splitter(a, 0), [ [], [1] ]));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3114,7 +3114,7 @@ unittest
         }
     }
 }
-unittest
+@safe unittest
 {
     auto L = retro(iota(1L, 10L));
     auto s = splitter(L, 5L);
@@ -3291,7 +3291,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
     return Result(r, s);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -3332,7 +3332,7 @@ unittest
     assert(walkLength(words) == 5, text(walkLength(words)));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3345,7 +3345,7 @@ unittest
     assert(equal(sp6, ["", ""][]));
 }
 
-unittest
+@safe unittest
 {
     // Issue 10773
     auto s = splitter("abc", "");
@@ -3484,7 +3484,7 @@ private struct SplitterResult(alias isTerminator, Range)
     }
 }
 
-unittest
+@safe unittest
 {
     auto L = iota(1L, 10L);
     auto s = splitter(L, [5L, 6L]);
@@ -3495,7 +3495,7 @@ unittest
     assert(s.empty);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3528,7 +3528,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     struct Entry
     {
@@ -3551,7 +3551,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     import std.uni : isWhite;
 
@@ -3643,7 +3643,7 @@ if (isSomeChar!C)
     assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.string : strip;
@@ -3669,7 +3669,7 @@ unittest
     assert(dictionary["last"]== 4);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
     import std.string : split;
