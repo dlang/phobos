@@ -8269,7 +8269,7 @@ mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[]    x = [ 1,  5, 2, 7,   4, 3 ];
     double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
@@ -8278,7 +8278,7 @@ unittest
     assert(m[1] == y[3 .. $]);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
