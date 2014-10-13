@@ -1158,7 +1158,7 @@ Global random number generator used by various functions in this
 module whenever no generator is specified. It is allocated per-thread
 and initialized to an unpredictable value for each thread.
  */
-@property ref Random rndGen()
+@property ref Random rndGen() @safe
 {
     static Random result;
     static bool initialized;
@@ -1197,7 +1197,7 @@ auto uniform(string boundaries = "[)", T1, T2)
     return uniform!(boundaries, T1, T2, Random)(a, b, rndGen);
 }
 
-unittest
+@safe unittest
 {
     MinstdRand0 gen;
     foreach (i; 0 .. 20)
@@ -1383,7 +1383,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     return cast(ResultType)(lower + offset);
 }
 
-unittest
+@safe unittest
 {
     auto gen = Mt19937(unpredictableSeed);
     static assert(isForwardRange!(typeof(gen)));
@@ -1558,7 +1558,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
     return uniform!T(rndGen);
 }
 
-unittest
+@safe unittest
 {
     foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
@@ -1598,13 +1598,13 @@ if (is(E == enum))
 }
 
 ///
-unittest
+@safe unittest
 {
     enum Fruit { apple, mango, pear }
     auto randFruit = uniform!Fruit();
 }
 
-unittest
+@safe unittest
 {
     enum Fruit { Apple = 12, Mango = 29, Pear = 72 }
     foreach (_; 0 .. 100)
@@ -1684,7 +1684,7 @@ body
     assert(false);
 }
 
-unittest
+@safe unittest
 {
     import std.typetuple;
     foreach (UniformRNG; PseudoRngTypes)
@@ -1736,7 +1736,7 @@ F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
     return useThis;
 }
 
-unittest
+@safe unittest
 {
     static assert(is(CommonType!(double, int) == double));
     auto a = uniformDistribution(5);
