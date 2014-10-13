@@ -7311,7 +7311,7 @@ size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.uni : toLower;
 
@@ -7329,7 +7329,7 @@ unittest
     assert(count!("a > 1")(a) == 8);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -7350,7 +7350,7 @@ unittest
     assert(count!("a == '語'")("日本語"d) == 1);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) printf("algorithm.count.unittest\n");
     string s = "This is a fofofof list";
@@ -7394,7 +7394,7 @@ size_t count(alias pred = "true", R)(R haystack)
     return result;
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -7404,7 +7404,7 @@ unittest
 }
 
 // Issue 11253
-nothrow unittest
+@safe nothrow unittest
 {
     assert([1, 2, 3].count([2, 3]) == 1);
 }
