@@ -4422,14 +4422,14 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
         tuple(4, 3u), tuple(5, 1u) ][]));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -4629,7 +4629,7 @@ auto groupBy(alias equiv, Range)(Range r)
 }
 
 /// Showing usage with binary predicate:
-unittest
+@safe unittest
 {
     // Grouping by particular attribute of each element:
     auto data = [
