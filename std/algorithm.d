@@ -1603,14 +1603,14 @@ void fill(Range, Value)(Range range, Value filler)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4 ];
     fill(a, 5);
     assert(a == [ 5, 5, 5, 5 ]);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -1641,7 +1641,7 @@ unittest
         assert(value == filler);
 }
 
-unittest
+@safe unittest
 {
     //ER8638_1 IS_NOT self assignable
     static struct ER8638_1
@@ -1662,7 +1662,7 @@ unittest
     er8638_2.fill(5); //opSlice(T.init) case
 }
 
-unittest
+@safe unittest
 {
     {
         int[] a = [1, 2, 3];
@@ -1751,7 +1751,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = [ 8, 9 ];
@@ -1759,7 +1759,7 @@ unittest
     assert(a == [ 8, 9, 8, 9, 8 ]);
 }
 
-unittest
+@safe unittest
 {
     import std.exception : assertThrown;
 
