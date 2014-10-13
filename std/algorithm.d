@@ -5698,7 +5698,7 @@ Range1 find(Range1, alias pred, Range2)(
     return needle.beFound(haystack);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -5718,7 +5718,7 @@ unittest
     assert(find(b, boyerMooreFinder(a)).empty);
 }
 
-unittest
+@safe unittest
 {
     auto bm = boyerMooreFinder("for");
     auto match = find("Moor", bm);
@@ -5781,7 +5781,7 @@ if (isInputRange!InputRange)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto arr = [ 1, 2, 3, 4, 1 ];
     assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
@@ -5822,7 +5822,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-unittest
+@safe unittest
 {
     string s = "abcdef";
     assert(findSkip(s, "cd") && s == "ef");
