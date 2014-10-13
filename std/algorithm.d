@@ -10032,7 +10032,7 @@ void topN(alias less = "a < b",
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
     auto n = 4;
@@ -10040,7 +10040,7 @@ unittest
     assert(v[n] == 9);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -10088,7 +10088,7 @@ unittest
     foreach (e; idx[mid .. $]) assert((*e)[1] >= (*idx[mid])[1]);
 }
 
-unittest
+@safe unittest
 {
     import std.random : uniform;
 
