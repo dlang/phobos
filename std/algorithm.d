@@ -9470,7 +9470,7 @@ if (s == SwapStrategy.stable
     return result;
 }
 
-unittest
+@safe unittest
 {
     import std.exception : assertThrown;
 
@@ -9482,7 +9482,7 @@ unittest
     assertThrown(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -9526,7 +9526,7 @@ unittest
             == [0, 9, 8, 7, 4, 5]);
 }
 
-unittest
+@safe unittest
 {
     // Issue 11576
     auto arr = [1,2,3];
@@ -9535,7 +9535,7 @@ unittest
 
 }
 
-unittest
+@safe unittest
 {
     // Bug# 12889
     int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
@@ -9595,7 +9595,7 @@ if (isBidirectionalRange!Range
 }
 
 ///
-unittest
+@safe unittest
 {
     static immutable base = [1, 2, 3, 2, 4, 2, 5, 2];
 
@@ -9613,7 +9613,7 @@ unittest
     assert(remove!(a => a == 2)(arr) == [ 1, 3, 4, 5 ]);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
