@@ -7063,7 +7063,7 @@ if (isForwardRange!R1 && isInputRange!R2 &&
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 }
@@ -7123,7 +7123,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
         return commonPrefix!"a == b"(r1, r2);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.exception : assertThrown;
