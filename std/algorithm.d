@@ -6612,7 +6612,7 @@ if (isInputRange!R &&
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(startsWith("abc", ""));
     assert(startsWith("abc", "a"));
@@ -6627,7 +6627,7 @@ unittest
     assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
 
