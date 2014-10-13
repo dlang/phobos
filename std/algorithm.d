@@ -7670,7 +7670,7 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
                     }
                     return 0;
                 }()
-                : core.stdc.string.memcmp(r1.ptr, r2.ptr, len);
+                : () @trusted { return core.stdc.string.memcmp(r1.ptr, r2.ptr, len); }();
             if (result) return result;
         }
         else
@@ -7698,7 +7698,7 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
 }
 
 ///
-unittest
+@safe unittest
 {
     int result;
 
@@ -7797,7 +7797,7 @@ MinType!T min(T...)(T args)
     return cast(typeof(return)) (chooseA ? a : b);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -7882,7 +7882,7 @@ MaxType!T max(T...)(T args)
 }
 
 ///
-unittest
+@safe unittest
 {
     int a = 5;
     short b = 6;
@@ -7895,7 +7895,7 @@ unittest
     assert(e == 2);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -7943,7 +7943,7 @@ body
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(clamp(2, 1, 3) == 2);
     assert(clamp(0, 1, 3) == 1);
@@ -7954,7 +7954,7 @@ unittest
     assert(clamp(5, -1, 2u) == 2);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
