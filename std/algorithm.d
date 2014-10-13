@@ -6162,7 +6162,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(countUntil("hello world", "world") == 6);
     assert(countUntil("hello world", 'r') == 8);
@@ -6176,7 +6176,7 @@ unittest
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 }
 
-unittest
+@safe unittest
 {
     assert(countUntil("日本語", "") == 0);
     assert(countUntil("日本語"d, "") == 0);
@@ -6200,7 +6200,7 @@ unittest
     assert(r.save.countUntil(r3) == -1);
 }
 
-unittest
+@safe unittest
 {
     assert(countUntil("hello world", "world", "asd") == 6);
     assert(countUntil("hello world", "world", "ello") == 1);
@@ -6256,7 +6256,7 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.ascii : isDigit;
     import std.uni : isWhite;
@@ -6266,7 +6266,7 @@ unittest
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
 
-unittest
+@safe unittest
 {
     // References
     {
@@ -6414,14 +6414,14 @@ until(alias pred, Range)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
@@ -6442,7 +6442,7 @@ unittest // bugzilla 13171
     assert(a == [4]);
 }
 
-unittest // Issue 10460
+@safe unittest // Issue 10460
 {
     auto a = [1, 2, 3, 4];
     foreach (ref e; a.until(3))
