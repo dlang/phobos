@@ -9800,7 +9800,7 @@ Range partition(alias predicate,
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -9837,7 +9837,7 @@ unittest
     assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
 }
 
-unittest
+@safe unittest
 {
     static bool even(int a) { return (a & 1) == 0; }
 
@@ -9870,7 +9870,7 @@ bool isPartitioned(alias pred, Range)(Range r)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] r = [ 1, 3, 5, 7, 8, 2, 4, ];
     assert(isPartitioned!"a & 1"(r));
@@ -9940,7 +9940,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
     auto pieces = partition3(a, 4);
@@ -9949,7 +9949,7 @@ unittest
     assert(pieces[2] == [ 8, 7 ]);
 }
 
-unittest
+@safe unittest
 {
     import std.random : uniform;
 
