@@ -2621,7 +2621,7 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     lhs.proxySwap(rhs);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2646,7 +2646,7 @@ unittest
     static assert(!__traits(compiles, swap(imm1, imm2)));
 }
 
-unittest
+@safe unittest
 {
     static struct NoCopy
     {
@@ -2684,14 +2684,14 @@ unittest
     static assert(!__traits(compiles, swap(const1, const2)));
 }
 
-unittest
+@safe unittest
 {
     //Bug# 4789
     int[1] s = [1];
     swap(s, s);
 }
 
-unittest
+@safe unittest
 {
     static struct NoAssign
     {
@@ -2705,7 +2705,7 @@ unittest
     assert(s2.i == 1);
 }
 
-unittest
+@safe unittest
 {
     struct S
     {
@@ -2715,14 +2715,14 @@ unittest
     static assert(!__traits(compiles, swap(s, s)));
 }
 
-unittest
+@safe unittest
 {
     //11853
     alias T = Tuple!(int, double);
     static assert(isAssignable!T);
 }
 
-unittest
+@safe unittest
 {
     // 12024
     import std.datetime;
