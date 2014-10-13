@@ -8760,7 +8760,7 @@ swapRanges(Range1, Range2)(Range1 r1, Range2 r2)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 100, 101, 102, 103 ];
     int[] b = [ 0, 1, 2, 3 ];
@@ -8792,7 +8792,7 @@ if (isBidirectionalRange!Range && !isRandomAccessRange!Range
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [ 1, 2, 3 ];
     reverse(arr);
@@ -8812,7 +8812,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     }
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -8858,14 +8858,14 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
 }
 
 ///
-unittest
+@safe unittest
 {
     char[] arr = "hello\U00010143\u0100\U00010143".dup;
     reverse(arr);
     assert(arr == "\U00010143\u0100\U00010143olleh");
 }
 
-unittest
+@safe unittest
 {
     void test(string a, string b)
     {
