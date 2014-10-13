@@ -1975,7 +1975,7 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math : approxEqual;
 
@@ -2048,7 +2048,7 @@ private struct FilterResult(alias pred, Range)
     }
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2100,7 +2100,7 @@ unittest
     auto m = map!"a + 1"(filter!"a < 4"(arr));
 }
 
-unittest
+@safe unittest
 {
     int[] a = [ 3, 4 ];
     const aConst = a;
@@ -2118,7 +2118,7 @@ unittest
     auto m = map!"a + 1"(filter!"a < 4"(arr));
 }
 
-unittest
+@safe unittest
 {
     import std.functional : compose, pipe;
 
@@ -2128,7 +2128,7 @@ unittest
             [2,6,10]));
 }
 
-unittest
+@safe unittest
 {
     int x = 10;
     int underX(int a) { return a < x; }
@@ -2156,7 +2156,7 @@ template filterBidirectional(alias pred)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [ 1, 2, 3, 4, 5 ];
     auto small = filterBidirectional!("a < 3")(arr);
