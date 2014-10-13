@@ -3901,7 +3901,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -3973,11 +3973,12 @@ unittest
         .array();
 }
 
-unittest
+@safe unittest
 {
     // Transience correctness test
     struct TransientRange
     {
+    @safe:
         int[][] src;
         int[] buf;
 
@@ -4146,10 +4147,11 @@ unittest
     assert(!equal(js2, js));
 }
 
-unittest
+@safe unittest
 {
     struct TransientRange
     {
+    @safe:
         int[] _buf;
         int[][] _values;
         this(int[][] values)
@@ -4187,10 +4189,11 @@ unittest
     assert(equal(result, [1,2,3,4,5,6,7]));
 }
 
-unittest
+@safe unittest
 {
     struct TransientRange
     {
+    @safe:
         dchar[] _buf;
         dstring[] _values;
         this(dstring[] values)
