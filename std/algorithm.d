@@ -6739,7 +6739,7 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))))
 }
 
 ///
-unittest
+@safe unittest
 {
     auto s1 = "Hello world";
     assert(!skipOver(s1, "Ha"));
@@ -6769,7 +6769,7 @@ if (is(typeof(binaryFun!pred(r.front, e))))
 }
 
 ///
-unittest {
+@safe unittest {
     auto s1 = "Hello world";
     assert(!skipOver(s1, 'a'));
     assert(s1 == "Hello world");
@@ -6807,7 +6807,7 @@ void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
     }
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s1 = "Hello world";
@@ -6922,7 +6922,7 @@ if (isBidirectionalRange!R &&
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(endsWith("abc", ""));
     assert(!endsWith("abc", "b"));
@@ -6936,7 +6936,7 @@ unittest
     assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
 
