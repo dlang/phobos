@@ -2791,7 +2791,7 @@ template forward(args...)
 }
 
 ///
-unittest
+@safe unittest
 {
     class C
     {
@@ -2806,7 +2806,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
 
@@ -2823,7 +2823,7 @@ unittest
     assert(s == "HelloHello");
 }
 
-unittest
+@safe unittest
 {
     auto foo(TL...)(auto ref TL args)
     {
@@ -2854,7 +2854,7 @@ unittest
     assert(baz(S(), makeS(), n, s) == "LLRRRL");
 }
 
-unittest
+@safe unittest
 {
     ref int foo(ref int a) { return a; }
     ref int bar(Args)(auto ref Args args)
