@@ -5984,7 +5984,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = "Carl Sagan Memorial Station";
     auto r = findSplit(a, "Velikovsky");
@@ -6003,7 +6003,7 @@ unittest
     assert(r2[1] == " Memorial Station");
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
@@ -6030,7 +6030,7 @@ unittest
     assert(r1[1] == a[4 .. $]);
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto fwd = filter!"a > 0"(a);
