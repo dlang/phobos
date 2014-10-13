@@ -4259,7 +4259,7 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
@@ -4322,7 +4322,7 @@ private struct UniqResult(alias pred, Range)
     }
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
