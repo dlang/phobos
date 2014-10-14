@@ -2362,6 +2362,7 @@ auto capitalize(S)(auto ref S s)
     });
 }
 
+
 /++
     Split $(D s) into an array of lines according to the unicode standard using
     $(D '\r'), $(D '\n'), $(D "\r\n"), $(REF lineSep, std,uni),
@@ -5223,7 +5224,6 @@ body
     translate("hello world", transTable1, "low", buffer);
     assert(buffer.data == "h5 rd");
 }
-
 
 /***********************************************
  * See if character c is in the pattern.
