@@ -69,7 +69,7 @@ private:
  * Each instance of '@' in s is replaced by 0,1,...n-1. This is a helper
  * function for some of the asm routines.
  */
-string indexedLoopUnroll(int n, string s) pure
+string indexedLoopUnroll(int n, string s) pure @safe
 {
     string u;
     for (int i = 0; i<n; ++i) {
