@@ -10407,7 +10407,7 @@ template multiSort(less...) //if (less.length > 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     static struct Point { int x, y; }
     auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
@@ -10416,7 +10416,7 @@ unittest
     assert(pts1 == pts2);
 }
 
-unittest
+@safe unittest
 {
     static struct Point { int x, y; }
     auto pts1 = [ Point(5, 6), Point(1, 0), Point(5, 7), Point(1, 1), Point(1, 2), Point(0, 1) ];
@@ -10430,7 +10430,7 @@ unittest
     assert(equal(pts3, pts2));
 }
 
-unittest //issue 9160 (L-value only comparators)
+@safe unittest //issue 9160 (L-value only comparators)
 {
     static struct A
     {
@@ -10528,7 +10528,7 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
     }
 }
 
-unittest
+@safe unittest
 {
     import std.random : Random, uniform;
 
@@ -11451,7 +11451,7 @@ void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ];
     partialSort(a, 5);
@@ -11538,7 +11538,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [4, 3, 2, 1];
     assert(!isSorted(arr));
@@ -11548,7 +11548,7 @@ unittest
     assert(isSorted!("a > b")(arr));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
 
