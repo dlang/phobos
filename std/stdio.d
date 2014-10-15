@@ -74,6 +74,7 @@ version(Windows)
     extern (C) nothrow @nogc FILE* _wfopen(in wchar* filename, in wchar* mode);
 
     import core.sys.windows.windows : HANDLE;
+    import std.windows.syserror : wenforce;
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -953,14 +954,6 @@ Throws: $(D Exception) if the file is not opened.
             overlapped.hEvent = null;
             return F(windowsHandle, flags, 0, liLength.LowPart,
                 liLength.HighPart, &overlapped);
-        }
-
-        private static T wenforce(T)(T cond, string str)
-        {
-            import std.windows.syserror;
-
-            if (cond) return cond;
-            throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
         }
     }
     version(Posix)
