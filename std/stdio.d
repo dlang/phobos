@@ -25,7 +25,7 @@ import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
 import std.range;
 import std.traits : Unqual, isSomeChar, isAggregateType, isSomeString,
     isIntegral, isBoolean, ParameterTypeTuple;
-import std.exception : ErrnoException;
+import std.exception : ErrnoException, errnoEnforce;
 
 version (CRuntime_Microsoft)
 {
@@ -3346,7 +3346,7 @@ struct lines
             }
         }
         // can only reach when FGETC returned -1
-        if (!f.eof) throw new StdioException("Error in reading file"); // error occured
+        errnoEnforce(f.eof, "Error in reading file"); // error occured
         return result;
     }
 }
@@ -3538,7 +3538,7 @@ private struct ChunksImpl
             if (r != size)
             {
                 // error occured
-                if (!f.eof) throw new StdioException(null);
+                errnoEnforce(f.eof);
                 buffer.length = r;
             }
             static if (is(typeof(dg(tally, buffer)))) {
@@ -3596,18 +3596,6 @@ Initialize with a message and an error code. */
     this(string message, uint e = .errno, string file = __FILE__, int line = __LINE__)
     {
         super(e, message, file, line);
-    }
-
-/** Convenience functions that throw an $(D StdioException). */
-    static void opCall(string msg)
-    {
-        throw new StdioException(msg);
-    }
-
-/// ditto
-    static void opCall()
-    {
-        throw new StdioException(null, .errno);
     }
 }
 
@@ -3693,7 +3681,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                     if ((c2 = FGETWC(fp)) != -1 ||
                             c2 < 0xDC00 && c2 > 0xDFFF)
                     {
-                        StdioException("unpaired UTF-16 surrogate");
+                        throw new UnicodeException("unpaired UTF-16 surrogate", 0);
                     }
                     c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                 }
@@ -3701,8 +3689,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 app.put(cast(dchar)c);
             }
         }
-        if (ferror(fps))
-            StdioException();
+        errnoEnforce(!ferror(fps));
         buf = app.data;
         return buf.length;
     }
@@ -3732,8 +3719,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 
         }
 
-        if (ferror(fps))
-            StdioException();
+        errnoEnforce(!ferror(fps));
         buf = app.data;
         return buf.length;
     }
@@ -3831,8 +3817,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 
     }
 
-    if (ferror(fps))
-        StdioException();
+    errnoEnforce(!ferror(fps));
     buf = app.data;
     return buf.length;
 }
@@ -3868,15 +3853,14 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                         if ((c2 = FGETWC(fp)) != -1 ||
                                 c2 < 0xDC00 && c2 > 0xDFFF)
                         {
-                            StdioException("unpaired UTF-16 surrogate");
+                            throw new UnicodeException("unpaired UTF-16 surrogate", 0);
                         }
                         c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                     }
                     std.utf.encode(buf, c);
                 }
             }
-            if (ferror(fp))
-                StdioException();
+            errnoEnforce(!ferror(fp));
             return buf.length;
         }
         else version (Posix)
@@ -3891,8 +3875,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 if (c == terminator)
                     break;
             }
-            if (ferror(fps))
-                StdioException();
+            errnoEnforce(!ferror(fps));
             return buf.length;
         }
         else
@@ -3907,8 +3890,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     scope(exit) free(lineptr);
     if (s < 0)
     {
-        if (ferror(fps))
-            StdioException();
+        errnoEnforce(!ferror(fps));
         buf.length = 0;                // end of file
         return 0;
     }
@@ -3956,15 +3938,14 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                         if ((c2 = FGETWC(fp)) != -1 ||
                                 c2 < 0xDC00 && c2 > 0xDFFF)
                         {
-                            StdioException("unpaired UTF-16 surrogate");
+                            throw new UnicodeException("unpaired UTF-16 surrogate", 0);
                         }
                         c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                     }
                     std.utf.encode(buf, c);
                 }
             }
-            if (ferror(fp))
-                StdioException();
+            errnoEnforce(!ferror(fp));
             return buf.length;
         }
         else version (Posix)
@@ -3979,8 +3960,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 if (c == terminator)
                     break;
             }
-            if (ferror(fps))
-                StdioException();
+            errnoEnforce(!ferror(fps));
             return buf.length;
         }
         else
@@ -4019,8 +3999,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     }
 
   endGame:
-    if (ferror(fps))
-        StdioException();
+    errnoEnforce(!ferror(fps));
     return buf.length;
 }
 
@@ -4051,11 +4030,11 @@ version(linux)
         import std.exception : enforce;
         import std.internal.cstring : tempCString;
 
-        auto h = enforce( gethostbyname(host.tempCString()),
-            new StdioException("gethostbyname"));
+        auto h = errnoEnforce( gethostbyname(host.tempCString()),
+                              "gethostbyname");
 
         int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
-        enforce(s != -1, new StdioException("socket"));
+        errnoEnforce(s != -1, "socket");
 
         scope(failure)
         {
@@ -4071,8 +4050,8 @@ version(linux)
         addr.sin_port = htons(port);
         core.stdc.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
 
-        enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
-            new StdioException("Connect failed"));
+        errnoEnforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
+                         "connect");
 
         File f;
         f.fdopen(s, "w+", host ~ ":" ~ to!string(port));
