@@ -25,6 +25,7 @@ import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
 import std.range;
 import std.traits : Unqual, isSomeChar, isAggregateType, isSomeString,
     isIntegral, isBoolean, ParameterTypeTuple;
+import std.exception : ErrnoException;
 
 version (CRuntime_Microsoft)
 {
@@ -3588,42 +3589,13 @@ unittest
 /*********************
  * Thrown if I/O errors happen.
  */
-class StdioException : Exception
+class StdioException : ErrnoException
 {
-    /// Operating system error code.
-    uint errno;
-
 /**
 Initialize with a message and an error code. */
-    this(string message, uint e = .errno)
+    this(string message, uint e = .errno, string file = __FILE__, int line = __LINE__)
     {
-        import std.conv : to;
-
-        errno = e;
-        version (Posix)
-        {
-            import core.stdc.string : strerror_r;
-
-            char[256] buf = void;
-            version (linux)
-            {
-                auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
-            }
-            else
-            {
-                core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
-                auto s = buf.ptr;
-            }
-        }
-        else
-        {
-            auto s = core.stdc.string.strerror(errno);
-        }
-        auto sysmsg = to!string(s);
-        // If e is 0, we don't use the system error message.  (The message
-        // is "Success", which is rather pointless for an exception.)
-        super(e == 0 ? message
-                     : (message.ptr ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
+        super(e, message, file, line);
     }
 
 /** Convenience functions that throw an $(D StdioException). */
