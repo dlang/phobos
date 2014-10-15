@@ -149,22 +149,6 @@ class FileException : Exception
     }
 }
 
-private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
-{
-    if (!condition)
-    {
-      version (Windows)
-      {
-        throw new FileException(name, .GetLastError(), file, line);
-      }
-      else version (Posix)
-      {
-        throw new FileException(name, .errno, file, line);
-      }
-    }
-    return condition;
-}
-
 /* **********************************
  * Basic File operations.
  */
@@ -229,16 +213,16 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
                 HANDLE.init);
         auto h = trustedCreateFileW(name, defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(trustedCloseHandle(h), name);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) wenforce(trustedCloseHandle(h), name);
         auto size = trustedGetFileSize(h, null);
-        cenforce(size != INVALID_FILE_SIZE, name);
+        wenforce(size != INVALID_FILE_SIZE, name);
         size = min(upTo, size);
         auto buf = uninitializedArray!(ubyte[])(size);
         scope(failure) delete buf;
 
         DWORD numread = void;
-        cenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
+        wenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
                 && numread == size, name);
         return buf[0 .. size];
     }
@@ -279,11 +263,11 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
 
         immutable fd = trustedOpen(name,
                 core.sys.posix.fcntl.O_RDONLY);
-        cenforce(fd != -1, name);
+        errnoEnforce(fd != -1, name);
         scope(exit) core.sys.posix.unistd.close(fd);
 
         stat_t statbuf = void;
-        cenforce(trustedFstat(fd, trustedRef(statbuf)) == 0, name);
+        errnoEnforce(trustedFstat(fd, trustedRef(statbuf)) == 0, name);
 
         immutable initialAlloc = to!size_t(statbuf.st_size
             ? min(statbuf.st_size + 1, maxInitialAlloc)
@@ -296,7 +280,7 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
         {
             immutable actual = trustedRead(fd, trustedPtrAdd(result, size),
                     min(result.length, upTo) - size);
-            cenforce(actual != -1, name);
+            errnoEnforce(actual != -1, name);
             if (actual == 0) break;
             size += actual;
             if (size < result.length) continue;
@@ -389,10 +373,10 @@ void write(in char[] name, const void[] buffer) @trusted
                 HANDLE.init);
         auto h = CreateFileW(name.tempCStringW(), defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) wenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
+        wenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
                 && buffer.length == numwritten,
                 name);
     }
@@ -428,10 +412,10 @@ void append(in char[] name, in void[] buffer) @trusted
 
         auto h = CreateFileW(name.tempCStringW(), defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) wenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
+        wenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
                 && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
                 && buffer.length == numwritten,
                 name);
@@ -447,15 +431,15 @@ version(Posix) private void writeImpl(in char[] name,
 {
     immutable fd = core.sys.posix.fcntl.open(name.tempCString(),
             mode, octal!666);
-    cenforce(fd != -1, name);
+    errnoEnforce(fd != -1, name);
     {
         scope(failure) core.sys.posix.unistd.close(fd);
         immutable size = buffer.length;
-        cenforce(
+        errnoEnforce(
             core.sys.posix.unistd.write(fd, buffer.ptr, size) == size,
             name);
     }
-    cenforce(core.sys.posix.unistd.close(fd) == 0, name);
+    errnoEnforce(core.sys.posix.unistd.close(fd) == 0, name);
 }
 
 /***************************************************
@@ -467,13 +451,12 @@ void rename(in char[] from, in char[] to) @trusted
 {
     version(Windows)
     {
-        enforce(MoveFileExW(from.tempCStringW(), to.tempCStringW(), MOVEFILE_REPLACE_EXISTING),
-                new FileException(
-                    text("Attempting to rename file ", from, " to ",
-                            to)));
+        wenforce(MoveFileExW(from.tempCStringW(), to.tempCStringW(), MOVEFILE_REPLACE_EXISTING),
+                 text("Attempting to rename file ", from, " to ", to));
     }
     else version(Posix)
-        cenforce(core.stdc.stdio.rename(from.tempCString(), to.tempCString()) == 0, to);
+        errnoEnforce(core.stdc.stdio.rename(from.tempCString(), to.tempCString()) == 0,
+                     text("Attempting to rename file ", from, " to ", to));
 }
 
 @safe unittest
@@ -497,11 +480,13 @@ void remove(in char[] name) @trusted
 {
     version(Windows)
     {
-        cenforce(DeleteFileW(name.tempCStringW()), name);
+        wenforce(DeleteFileW(name.tempCStringW()), name);
     }
     else version(Posix)
-        cenforce(core.stdc.stdio.remove(name.tempCString()) == 0,
-            "Failed to remove file " ~ name);
+    {
+        errnoEnforce(core.stdc.stdio.remove(name.tempCString()) == 0,
+            name);
+    }
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name) @trusted
@@ -542,7 +527,7 @@ ulong getSize(in char[] name) @safe
             return &buf;
         }
         stat_t statbuf = void;
-        cenforce(trustedStat(name, ptrOfLocalVariable(statbuf)) == 0, name);
+        errnoEnforce(trustedStat(name, ptrOfLocalVariable(statbuf)) == 0, name);
         return statbuf.st_size;
     }
 }
@@ -590,7 +575,7 @@ void getTimes(in char[] name,
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        errnoEnforce(trustedStat(name, statbuf) == 0, name);
 
         accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -796,12 +781,12 @@ void setTimes(in char[] name,
                          HANDLE.init);
         auto h = trustedCreateFileW(name, defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
 
         scope(exit)
-            cenforce(trustedCloseHandle(h), name);
+            wenforce(trustedCloseHandle(h), name);
 
-        cenforce(trustedSetFileTime(h, null, ta, tm), name);
+        wenforce(trustedSetFileTime(h, null, ta, tm), name);
     }
     else version(Posix)
     {
@@ -814,7 +799,7 @@ void setTimes(in char[] name,
         t[0] = accessTime.toTimeVal();
         t[1] = modificationTime.toTimeVal();
 
-        cenforce(trustedUtimes(name, t) == 0, name);
+        errnoEnforce(trustedUtimes(name, t) == 0, name);
     }
 }
 
@@ -868,7 +853,7 @@ SysTime timeLastModified(in char[] name) @safe
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        errnoEnforce(trustedStat(name, statbuf) == 0, name);
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -1031,7 +1016,7 @@ uint getAttributes(in char[] name) @safe
         }
         immutable result = trustedGetFileAttributesW(name);
 
-        cenforce(result != INVALID_FILE_ATTRIBUTES, name);
+        wenforce(result != INVALID_FILE_ATTRIBUTES, name);
 
         return result;
     }
@@ -1043,7 +1028,7 @@ uint getAttributes(in char[] name) @safe
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        errnoEnforce(trustedStat(name, statbuf) == 0, name);
 
         return statbuf.st_mode;
     }
@@ -1079,7 +1064,7 @@ uint getLinkAttributes(in char[] name) @safe
             return lstat(path.tempCString(), &buf);
         }
         stat_t lstatbuf = void;
-        cenforce(trustedLstat(name, lstatbuf) == 0, name);
+        errnoEnforce(trustedLstat(name, lstatbuf) == 0, name);
         return lstatbuf.st_mode;
     }
 }
@@ -1099,7 +1084,7 @@ void setAttributes(in char[] name, uint attributes) @safe
         {
             return SetFileAttributesW(fileName.tempCStringW(), dwFileAttributes);
         }
-        cenforce(trustedSetFileAttributesW(name, attributes), name);
+        wenforce(trustedSetFileAttributesW(name, attributes), name);
     }
     else version (Posix)
     {
@@ -1108,7 +1093,7 @@ void setAttributes(in char[] name, uint attributes) @safe
             return chmod(path.tempCString(), mode);
         }
         assert(attributes <= mode_t.max);
-        cenforce(!trustedChmod(name, cast(mode_t)attributes), name);
+        errnoEnforce(!trustedChmod(name, cast(mode_t)attributes), name);
     }
 }
 
@@ -1474,7 +1459,7 @@ void chdir(in char[] pathname) @safe
         {
             return SetCurrentDirectoryW(path.tempCStringW());
         }
-        cenforce(trustedSetCurrentDirectoryW(pathname), pathname);
+        wenforce(trustedSetCurrentDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
@@ -1482,7 +1467,7 @@ void chdir(in char[] pathname) @safe
         {
             return core.sys.posix.unistd.chdir(path.tempCString());
         }
-        cenforce(trustedChdir(pathname) == 0, pathname);
+        errnoEnforce(trustedChdir(pathname) == 0, pathname);
     }
 }
 
@@ -1508,7 +1493,7 @@ void mkdir(in char[] pathname) @safe
         {
             return core.sys.posix.sys.stat.mkdir(path.tempCString(), mode);
         }
-        cenforce(trustedMkdir(pathname, octal!777) == 0, pathname);
+        errnoEnforce(trustedMkdir(pathname, octal!777) == 0, pathname);
     }
 }
 
@@ -1521,13 +1506,13 @@ private bool ensureDirExists(in char[] pathname)
     {
         if (CreateDirectoryW(pathname.tempCStringW(), null))
             return true;
-        cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
+        wenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname);
     }
     else version(Posix)
     {
         if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
             return true;
-        cenforce(errno == EEXIST, pathname);
+        errnoEnforce(errno == EEXIST, pathname);
     }
     enforce(pathname.isDir, new FileException(pathname.idup));
     return false;
@@ -1605,13 +1590,13 @@ void rmdir(in char[] pathname)
 {
     version(Windows)
     {
-        cenforce(RemoveDirectoryW(pathname.tempCStringW()),
-                pathname);
+        wenforce(RemoveDirectoryW(pathname.tempCStringW()),
+                 pathname);
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.rmdir(pathname.tempCString()) == 0,
-                pathname);
+        errnoEnforce(core.sys.posix.unistd.rmdir(pathname.tempCString()) == 0,
+                     pathname);
     }
 }
 
@@ -1640,7 +1625,7 @@ else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link)
         return core.sys.posix.unistd.symlink(path1.tempCString(),
                                              path2.tempCString());
     }
-    cenforce(trustedSymlink(original, link) == 0, link);
+    errnoEnforce(trustedSymlink(original, link) == 0, link);
 }
 
 version(Posix) @safe unittest
@@ -1708,7 +1693,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
     auto size = core.sys.posix.unistd.readlink(linkTmp,
                                                buffer.ptr,
                                                buffer.length);
-    cenforce(size != -1, link);
+    errnoEnforce(size != -1, link);
 
     if(size <= bufferLen - maxCodeUnits)
         return to!string(buffer[0 .. size]);
@@ -1720,7 +1705,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
         size = core.sys.posix.unistd.readlink(linkTmp,
                                               dynamicBuffer.ptr,
                                               dynamicBuffer.length);
-        cenforce(size != -1, link);
+        errnoEnforce(size != -1, link);
 
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
@@ -1766,7 +1751,7 @@ version(Windows) string getcwd()
     the buffer, in characters, including the null-terminating character.
     */
     wchar[4096] buffW = void; //enough for most common case
-    immutable n = cenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
+    immutable n = wenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
             "getcwd");
     // we can do it because toUTFX always produces a fresh string
     if(n < buffW.length)
@@ -1778,13 +1763,13 @@ version(Windows) string getcwd()
         auto ptr = cast(wchar*) malloc(wchar.sizeof * n);
         scope(exit) free(ptr);
         immutable n2 = GetCurrentDirectoryW(n, ptr);
-        cenforce(n2 && n2 < n, "getcwd");
+        wenforce(n2 && n2 < n, "getcwd");
         return toUTF8(ptr[0 .. n2]);
     }
 }
 else version (Posix) string getcwd()
 {
-    auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
+    auto p = errnoEnforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
     scope(exit) core.stdc.stdlib.free(p);
     return p[0 .. core.stdc.string.strlen(p)].idup;
@@ -2439,17 +2424,17 @@ void copy(in char[] from, in char[] to)
     else version(Posix)
     {
         immutable fd = core.sys.posix.fcntl.open(from.tempCString(), O_RDONLY);
-        cenforce(fd != -1, from);
+        errnoEnforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
 
         stat_t statbuf = void;
-        cenforce(fstat(fd, &statbuf) == 0, from);
-        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
+        errnoEnforce(fstat(fd, &statbuf) == 0, from);
+        //errnoEnforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
         auto tozTmp = to.tempCString();
         immutable fdw = core.sys.posix.fcntl.open(tozTmp,
                 O_CREAT | O_WRONLY | O_TRUNC, octal!666);
-        cenforce(fdw != -1, from);
+        errnoEnforce(fdw != -1, from);
         scope(failure) core.stdc.stdio.remove(tozTmp);
         {
             scope(failure) core.sys.posix.unistd.close(fdw);
@@ -2466,7 +2451,7 @@ void copy(in char[] from, in char[] to)
             for (auto size = statbuf.st_size; size; )
             {
                 immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
-                cenforce(
+                errnoEnforce(
                     core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
                     && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
                     from);
@@ -2475,13 +2460,13 @@ void copy(in char[] from, in char[] to)
             }
         }
 
-        cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
+        errnoEnforce(core.sys.posix.unistd.close(fdw) != -1, from);
 
         utimbuf utim = void;
         utim.actime = cast(time_t)statbuf.st_atime;
         utim.modtime = cast(time_t)statbuf.st_mtime;
 
-        cenforce(utime(tozTmp, &utim) != -1, from);
+        errnoEnforce(utime(tozTmp, &utim) != -1, from);
     }
 }
 
@@ -2662,7 +2647,7 @@ private struct DirIteratorImpl
             string search_pattern = buildPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
             HANDLE h = FindFirstFileW(search_pattern.tempCStringW(), &findinfo);
-            cenforce(h != INVALID_HANDLE_VALUE, directory);
+            wenforce(h != INVALID_HANDLE_VALUE, directory);
             _stack.put(DirHandle(directory, h));
             return toNext(false, &findinfo);
         }
@@ -2726,7 +2711,7 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            auto h = cenforce(opendir(directory.tempCString()), directory);
+            auto h = errnoEnforce(opendir(directory.tempCString()), directory);
             _stack.put(DirHandle(directory, h));
             return next();
         }
