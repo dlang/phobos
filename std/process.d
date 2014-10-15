@@ -281,7 +281,7 @@ A $(LREF Pid) object that corresponds to the spawned process.
 
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) on failure to pass one of the streams
+$(XREF exception,OSException) on failure to pass one of the streams
     to the child process (Windows only).$(BR)
 $(CXREF exception,RangeError) if $(D args) is empty.
 */
@@ -529,15 +529,10 @@ private Pid spawnProcessImpl(in char[] commandLine,
         {
             if (!(dwFlags & HANDLE_FLAG_INHERIT))
             {
-                if (!SetHandleInformation(handle,
+                wenforce(SetHandleInformation(handle,
                                           HANDLE_FLAG_INHERIT,
-                                          HANDLE_FLAG_INHERIT))
-                {
-                    throw new StdioException(
-                        "Failed to make "~which~" stream inheritable by child process ("
-                        ~sysErrorString(GetLastError()) ~ ')',
-                        0);
-                }
+                                          HANDLE_FLAG_INHERIT),
+                        "Failed to make "~which~" stream inheritable by child process");
             }
         }
     }
@@ -1491,22 +1486,19 @@ Returns:
 A $(LREF Pipe) object that corresponds to the created _pipe.
 
 Throws:
-$(XREF stdio,StdioException) on failure.
+$(XREF exception,OSException) on failure.
 */
 version (Posix)
 Pipe pipe() @trusted //TODO: @safe
 {
     int[2] fds;
-    if (core.sys.posix.unistd.pipe(fds) != 0)
-        throw new StdioException("Unable to create pipe");
+    errnoEnforce(core.sys.posix.unistd.pipe(fds) == 0);
     Pipe p;
-    auto readFP = fdopen(fds[0], "r");
-    if (readFP == null)
-        throw new StdioException("Cannot open read end of pipe");
+    auto readFP = errnoEnforce(fdopen(fds[0], "r"),
+        "Cannot open read end of pipe");
     p._read = File(readFP, null);
-    auto writeFP = fdopen(fds[1], "w");
-    if (writeFP == null)
-        throw new StdioException("Cannot open write end of pipe");
+    auto writeFP = errnoEnforce(fdopen(fds[1], "w"),
+        "Cannot open write end of pipe");
     p._write = File(writeFP, null);
     return p;
 }
@@ -1516,12 +1508,8 @@ Pipe pipe() @trusted //TODO: @safe
     // use CreatePipe to create an anonymous pipe
     HANDLE readHandle;
     HANDLE writeHandle;
-    if (!CreatePipe(&readHandle, &writeHandle, null, 0))
-    {
-        throw new StdioException(
-            "Error creating pipe (" ~ sysErrorString(GetLastError()) ~ ')',
-            0);
-    }
+    wenforce(CreatePipe(&readHandle, &writeHandle, null, 0),
+            "Error creating pipe");
 
     scope(failure)
     {
@@ -1529,18 +1517,10 @@ Pipe pipe() @trusted //TODO: @safe
         CloseHandle(writeHandle);
     }
 
-    try
-    {
-        Pipe p;
-        p._read .windowsHandleOpen(readHandle , "r");
-        p._write.windowsHandleOpen(writeHandle, "a");
-        return p;
-    }
-    catch (Exception e)
-    {
-        throw new StdioException("Error attaching pipe (" ~ e.msg ~ ")",
-            0);
-    }
+    Pipe p;
+    p._read .windowsHandleOpen(readHandle , "r");
+    p._write.windowsHandleOpen(writeHandle, "a");
+    return p;
 }
 
 
@@ -1636,7 +1616,8 @@ spawned process.
 
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) on failure to redirect any of the streams.$(BR)
+$(XREF exception,OSException) on failure to redirect any of the streams.$(BR)
+$(OBJECTREF Error) on conflicting redirection parameters.$(BR)
 
 Example:
 ---
@@ -1711,8 +1692,8 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
     if (redirectFlags & Redirect.stdout)
     {
         if ((redirectFlags & Redirect.stdoutToStderr) != 0)
-            throw new StdioException("Cannot create pipe for stdout AND "
-                                     ~"redirect it to stderr", 0);
+            throw new Error("Cannot create pipe for stdout AND "
+                                     ~"redirect it to stderr");
         auto p = pipe();
         childStdout = p.writeEnd;
         pipes._stdout = p.readEnd;
@@ -1725,8 +1706,8 @@ private ProcessPipes pipeProcessImpl(alias spawnFunc, Cmd)
     if (redirectFlags & Redirect.stderr)
     {
         if ((redirectFlags & Redirect.stderrToStdout) != 0)
-            throw new StdioException("Cannot create pipe for stderr AND "
-                                     ~"redirect it to stdout", 0);
+            throw new Error("Cannot create pipe for stderr AND "
+                                     ~"redirect it to stdout");
         auto p = pipe();
         childStderr = p.writeEnd;
         pipes._stderr = p.readEnd;
@@ -1852,10 +1833,10 @@ unittest
 unittest
 {
     TestScript prog = "exit 0";
-    assertThrown!StdioException(pipeProcess(
+    assertThrown!Error(pipeProcess(
         prog.path,
         Redirect.stdout | Redirect.stdoutToStderr));
-    assertThrown!StdioException(pipeProcess(
+    assertThrown!Error(pipeProcess(
         prog.path,
         Redirect.stderr | Redirect.stderrToStdout));
     auto p = pipeProcess(prog.path, Redirect.stdin);
@@ -1988,7 +1969,7 @@ value is the signal number.  (See $(LREF wait) for details.)
 
 Throws:
 $(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF stdio,StdioException) on failure to capture output.
+$(XREF exception,OSException) on failure to capture output.
 */
 auto execute(in char[][] args,
              const string[string] env = null,
