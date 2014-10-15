@@ -14,6 +14,8 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.syserror;
+
+import std.exception : OSException;
 import std.traits : isSomeString;
 
 version (StdDdoc)
@@ -38,10 +40,8 @@ version (StdDdoc)
      * http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
      * $(D GetLastError)) occur.
      */
-    class WindowsException : Exception
+    class WindowsException : OSException
     {
-        private alias DWORD = int;
-        final @property DWORD code(); /// $(D GetLastError)'s return value.
         @disable this(int dummy);
     }
 
@@ -114,17 +114,12 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
 }
 
 
-class WindowsException : Exception
+class WindowsException : OSException
 {
     import core.sys.windows.windows;
 
-    final @property DWORD code() { return _code; } /// $(D GetLastError)'s return value.
-    private DWORD _code;
-
     this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted
     {
-        _code = code;
-
         auto buf = appender!string();
 
         if (str)
@@ -136,7 +131,7 @@ class WindowsException : Exception
         auto success = putSysError(code, buf);
         formattedWrite(buf, success ? " (error %d)" : "Error %d", code);
 
-        super(buf.data, file, line);
+        super(code, buf.data, file, line);
     }
 }
 
