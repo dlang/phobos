@@ -56,8 +56,9 @@ version (StdDdoc)
         wenforce(DeleteFileA("junk.tmp"), "DeleteFile failed");
         --------------------
      +/
-    T wenforce(T, S)(T value, lazy S msg = null,
-        string file = __FILE__, size_t line = __LINE__) if (isSomeString!S);
+    T wenforce(T, S=string)(T value, lazy S msg = null,
+        string file = __FILE__, size_t line = __LINE__) @safe
+        if (isSomeString!S);
 }
 else:
 
@@ -140,8 +141,9 @@ class WindowsException : Exception
 }
 
 
-T wenforce(T, S)(T value, lazy S msg = null,
-    string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
+T wenforce(T, S=string)(T value, lazy S msg = null,
+    string file = __FILE__, size_t line = __LINE__) @safe
+    if (isSomeString!S)
 {
     if (!value)
         throw new WindowsException(GetLastError(), to!string(msg), file, line);
@@ -161,4 +163,13 @@ unittest
     assert(e.msg.startsWith("DeleteFile: "));
     // can't test the entire message, as it depends on Windows locale
     assert(e.msg.endsWith(" (error 2)"));
+}
+
+version(Windows)
+@safe
+unittest
+{
+    wenforce(true);
+    wenforce(true, "wstring"w);
+    wenforce(true, "dstring"d);
 }
