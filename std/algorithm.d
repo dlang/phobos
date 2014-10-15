@@ -12164,7 +12164,7 @@ template any(alias pred = "a")
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.ascii : isWhite;
     assert( all!(any!isWhite)(["a a", "b b"]));
@@ -12177,7 +12177,7 @@ evaluated to true or false in a conditional statement. $(D !any) can be a
 convenient way to quickly test that $(I none) of the elements of a range
 evaluate to true.
  +/
-unittest
+@safe unittest
 {
     int[3] vals1 = [0, 0, 0];
     assert(!any(vals1[])); //none of vals1 evaluate to true
@@ -12191,7 +12191,7 @@ unittest
     assert( all(vals3[]));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -12219,7 +12219,7 @@ template all(alias pred = "a")
 }
 
 ///
-unittest
+@safe unittest
 {
     assert( all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
@@ -12231,18 +12231,13 @@ evaluated to true or false in a conditional statement. This can be a
 convenient way to quickly evaluate that $(I _all) of the elements of a range
 are true.
  +/
-unittest
+@safe unittest
 {
     int[3] vals = [5, 3, 18];
     assert( all(vals[]));
 }
-unittest
-{
-    int x = 1;
-    assert(all!(a => a > x)([2, 3]));
-}
 
-unittest
+@safe unittest
 {
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
