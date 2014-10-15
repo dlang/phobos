@@ -42,7 +42,7 @@ version (StdDdoc)
      */
     class WindowsException : OSException
     {
-        @disable this(int dummy);
+        this(DWORD code, in char[] str=null, string file = null, size_t line = 0) @trusted;
     }
 
     /++
@@ -118,7 +118,7 @@ class WindowsException : OSException
 {
     import core.sys.windows.windows;
 
-    this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted
+    this(DWORD code, in char[] str=null, string file = null, size_t line = 0) @trusted
     {
         auto buf = appender!string();
 
