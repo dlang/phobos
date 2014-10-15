@@ -1502,18 +1502,18 @@ assert(std.algorithm.equal(rbt[], [5]));
             {
                 printTree(n.right, indent + 2);
                 for(int i = 0; i < indent; i++)
-                    write(".");
-                writeln(n.color == n.color.Black ? "B" : "R");
+                    debug write(".");
+                debug writeln(n.color == n.color.Black ? "B" : "R");
                 printTree(n.left, indent + 2);
             }
             else
             {
                 for(int i = 0; i < indent; i++)
-                    write(".");
-                writeln("N");
+                    debug write(".");
+                debug writeln("N");
             }
             if(indent is 0)
-                writeln();
+                debug writeln();
         }
 
         /*
