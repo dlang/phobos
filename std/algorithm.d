@@ -13471,7 +13471,7 @@ bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
 }
 
 ///
-unittest
+@safe unittest
 {
     // Step through even permutations of a sorted array in lexicographic order
     int[] a = [1,2,3];
@@ -13483,7 +13483,7 @@ unittest
     assert(a == [1,2,3]);
 }
 
-unittest
+@safe unittest
 {
     auto a3 = [ 1, 2, 3, 4 ];
     int count = 1;
@@ -13491,7 +13491,7 @@ unittest
     assert(count == 12);
 }
 
-unittest
+@safe unittest
 {
     // Test with non-default sorting order
     auto a = [ 3, 2, 1 ];
@@ -13504,7 +13504,7 @@ unittest
     assert(a == [ 3, 2, 1 ]);
 }
 
-unittest
+@safe unittest
 {
     // Test various cases of rollover
     auto a = [ 3, 1, 2 ];
@@ -13520,7 +13520,7 @@ unittest
 Even permutations are useful for generating coordinates of certain geometric
 shapes. Here's a non-trivial example:
 */
-unittest
+@safe unittest
 {
     import std.math : sqrt;
 
