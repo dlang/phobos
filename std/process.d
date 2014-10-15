@@ -3058,10 +3058,8 @@ Distributed under the Boost Software License, Version 1.0.
 
 
 import core.stdc.stdlib;
-import std.c.stdlib;
 import core.stdc.errno;
 import core.thread;
-import std.c.process;
 import core.stdc.string;
 
 version (Windows)
@@ -3091,7 +3089,7 @@ version (unittest)
    in turn signal an error in command's execution).
 
    Note: On Unix systems, the homonym C function (which is accessible
-   to D programs as $(LINK2 std_c_process.html, std.c._system))
+   to D programs as $(LINK2 core_stdc_stdlib.html, core.stdc.stdlib._system))
    returns a code in the same format as $(LUCKY waitpid, waitpid),
    meaning that C programs must use the $(D WEXITSTATUS) macro to
    extract the actual exit code from the $(D system) call. D's $(D
@@ -3101,8 +3099,8 @@ version (unittest)
 deprecated("Please use wait(spawnShell(command)) or executeShell(command) instead")
 int system(string command)
 {
-    if (!command.ptr) return std.c.process.system(null);
-    immutable status = std.c.process.system(command.tempCString());
+    if (!command.ptr) return core.stdc.stdlib.system(null);
+    immutable status = core.stdc.stdlib.system(command.tempCString());
     if (status == -1) return status;
     version (Posix)
     {
@@ -3138,14 +3136,16 @@ private void toAStringz(in string[] a, const(char)**az)
 //
 //      toAStringz(argv, argv_);
 //
-//      return std.c.process.spawnvp(mode, pathname.tempCString(), argv_);
+//      return spawnvp(mode, pathname.tempCString(), argv_);
 //    }
 //}
 
 // Incorporating idea (for spawnvp() on Posix) from Dave Fladebo
 
-alias P_WAIT = std.c.process._P_WAIT;
-alias P_NOWAIT = std.c.process._P_NOWAIT;
+enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY };
+version(Windows) extern(C) int spawnvp(int, in char *, in char **);
+alias P_WAIT = _P_WAIT;
+alias P_NOWAIT = _P_NOWAIT;
 
 deprecated("Please use spawnProcess instead")
 int spawnvp(int mode, string pathname, string[] argv)
@@ -3160,7 +3160,7 @@ int spawnvp(int mode, string pathname, string[] argv)
     }
     else version (Windows)
     {
-        return std.c.process.spawnvp(mode, pathname.tempCString(), argv_);
+        return spawnvp(mode, pathname.tempCString(), argv_);
     }
     else
         static assert(0, "spawnvp not implemented for this OS.");
@@ -3179,7 +3179,7 @@ int _spawnvp(int mode, in char *pathname, in char **argv)
 
     if(!pid)
     {   // child
-        std.c.process.execvp(pathname, argv);
+        core.sys.posix.unistd.execvp(pathname, argv);
         goto Lerror;
     }
     else if(pid > 0)
@@ -3343,13 +3343,22 @@ else
     else static assert (false, "Unsupported platform");
 }
 
+// Move these C declarations to druntime if we decide to keep the D wrappers
+extern(C)
+{
+    int execv(in char *, in char **);
+    int execve(in char *, in char **, in char **);
+    int execvp(in char *, in char **);
+    version(Windows) int execvpe(in char *, in char **, in char **);
+}
+
 private int execv_(in string pathname, in string[] argv)
 {
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
 
-    return std.c.process.execv(pathname.tempCString(), argv_);
+    return execv(pathname.tempCString(), argv_);
 }
 
 private int execve_(in string pathname, in string[] argv, in string[] envp)
@@ -3360,7 +3369,7 @@ private int execve_(in string pathname, in string[] argv, in string[] envp)
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
 
-    return std.c.process.execve(pathname.tempCString(), argv_, envp_);
+    return execve(pathname.tempCString(), argv_, envp_);
 }
 
 private int execvp_(in string pathname, in string[] argv)
@@ -3369,7 +3378,7 @@ private int execvp_(in string pathname, in string[] argv)
 
     toAStringz(argv, argv_);
 
-    return std.c.process.execvp(pathname.tempCString(), argv_);
+    return execvp(pathname.tempCString(), argv_);
 }
 
 private int execvpe_(in string pathname, in string[] argv, in string[] envp)
@@ -3415,7 +3424,7 @@ else version(Windows)
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
 
-    return std.c.process.execvpe(pathname.tempCString(), argv_, envp_);
+    return execvpe(pathname.tempCString(), argv_, envp_);
 }
 else
 {
@@ -3513,7 +3522,7 @@ deprecated unittest
 
 /**
 Gets the value of environment variable $(D name) as a string. Calls
-$(LINK2 std_c_stdlib.html#_getenv, std.c.stdlib._getenv)
+$(LINK2 core_stdc_stdlib.html#_getenv, core.stdc.stdlib._getenv)
 internally.
 
 $(RED Deprecated. Please use $(LREF environment.opIndex) or
@@ -3537,8 +3546,8 @@ string getenv(in char[] name) nothrow
 Sets the value of environment variable $(D name) to $(D value). If the
 value was written, or the variable was already present and $(D
 overwrite) is false, returns normally. Otherwise, it throws an
-exception. Calls $(LINK2 std_c_stdlib.html#_setenv,
-std.c.stdlib._setenv) internally.
+exception. Calls $(LINK2 core_sys_posix_stdlib.html#_setenv,
+core.sys.posix.stdlib._setenv) internally.
 
 $(RED Deprecated. Please use $(LREF environment.opIndexAssign) instead.
       This function will be removed in August 2015.)
@@ -3549,12 +3558,12 @@ else version(Posix)
     void setenv(in char[] name, in char[] value, bool overwrite)
 {
     errnoEnforce(
-        std.c.stdlib.setenv(name.tempCString(), value.tempCString(), overwrite) == 0);
+        core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), overwrite) == 0);
 }
 
 /**
 Removes variable $(D name) from the environment. Calls $(LINK2
-std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally.
+core_sys_posix_stdlib.html#_unsetenv, core.sys.posix.stdlib._unsetenv) internally.
 
 $(RED Deprecated. Please use $(LREF environment.remove) instead.
       This function will be removed in August 2015.)
@@ -3564,7 +3573,7 @@ else version(Posix)
     deprecated("Please use environment.remove instead")
     void unsetenv(in char[] name)
 {
-    errnoEnforce(std.c.stdlib.unsetenv(name.tempCString()) == 0);
+    errnoEnforce(core.sys.posix.stdlib.unsetenv(name.tempCString()) == 0);
 }
 
 version (Posix) deprecated unittest

@@ -32,7 +32,7 @@ import std.internal.cstring;
 
 version (Windows)
 {
-    private import std.c.windows.windows;
+    private import core.sys.windows.windows;
     private import std.utf;
     private import std.windows.syserror;
 }
@@ -594,7 +594,7 @@ unittest
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
     version(Windows) {
-        /+ these aren't defined in std.c.windows.windows so let's use default
+        /+ these aren't defined in core.sys.windows.windows so let's use default
          SYSTEM_INFO sysinfo;
          GetSystemInfo(&sysinfo);
          win = sysinfo.dwAllocationGranularity;

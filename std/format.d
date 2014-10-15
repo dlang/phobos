@@ -317,7 +317,7 @@ $(I FormatChar):
 
     Examples:
     -------------------------
-    import std.c.stdio;
+    import core.stdc.stdio;
     import std.format;
 
     void main()
@@ -2830,7 +2830,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
         {
             version (Windows)
             {
-                import std.c.windows.com : IUnknown;
+                import core.sys.windows.com : IUnknown;
                 static if (is(T : IUnknown))
                 {
                     formatValue(w, *cast(void**)&val, f);
@@ -2870,7 +2870,7 @@ unittest
     version (Windows)
     {
         import core.sys.windows.windows : HRESULT;
-        import std.c.windows.com : IUnknown, IID;
+        import core.sys.windows.com : IUnknown, IID;
 
         interface IUnknown2 : IUnknown { }
 
@@ -3391,7 +3391,7 @@ unittest
 
     stream.clear();
     formattedWrite(stream, "%g %A %s", 1.67, -1.28, float.nan);
-    // std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    // core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
 
     /* The host C library is used to format floats.  C99 doesn't
     * specify what the hex digit before the decimal point is for
@@ -3536,7 +3536,7 @@ unittest
     assert(stream.data == "0.00001000");
 
     //return;
-    //std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
 
     s = "helloworld";
     string r;
@@ -3721,7 +3721,7 @@ here:
 
     //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     //stream.clear(); formattedWrite(stream, "%s", aa.values);
-    //std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
     //assert(stream.data == "[[h,e,l,l,o],[b,e,t,t,y]]");
     //stream.clear(); formattedWrite(stream, "%s", aa);
     //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");

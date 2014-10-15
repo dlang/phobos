@@ -34,13 +34,13 @@ import std.exception;
 import std.random;
 import std.string;
 import std.range;
-import std.c.stdlib;
 import std.functional;
 import std.typetuple;
 import std.complex;
 
 import core.bitop;
 import core.exception;
+import core.stdc.stdlib;
 
 version(unittest)
 {
