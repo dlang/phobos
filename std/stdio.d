@@ -3170,16 +3170,6 @@ version (Posix)
     }
 }
 
-/*
- * Convenience function that forwards to $(D core.stdc.stdio.fwrite)
- * and throws an exception upon error
- */
-private void binaryWrite(T)(FILE* f, T obj)
-{
-    immutable result = fwrite(obj.ptr, obj[0].sizeof, obj.length, f);
-    if (result != obj.length) StdioException();
-}
-
 /**
  * Iterates through the lines of a file by using $(D foreach).
  *
