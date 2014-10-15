@@ -60,11 +60,8 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
                         to!int(result.length), null, null);
             }
 
-            if (!readLen || readLen != result.length)
-            {
-                throw new Exception("Couldn't convert string: " ~
-                        sysErrorString(GetLastError()));
-            }
+            wenforce(readLen && readLen == result.length,
+                    "Couldn't convert string");
 
             return result.ptr;
         }
@@ -105,11 +102,8 @@ string fromMBSz(immutable(char)* s, int codePage = 0)
                         to!int(result.length));
             }
 
-            if (!readLen || readLen != result.length)
-            {
-                throw new Exception("Couldn't convert string: " ~
-                    sysErrorString(GetLastError()));
-            }
+            wenforce(readLen && readLen == result.length,
+                    "Couldn't convert string");
 
             return std.utf.toUTF8(result[0 .. result.length-1]); // omit trailing null
         }
