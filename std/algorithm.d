@@ -12417,7 +12417,7 @@ SetUnion!(less, Rs) setUnion(alias less = "a < b", Rs...)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12532,7 +12532,7 @@ SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs range
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12542,7 +12542,7 @@ unittest
     assert(equal(setIntersection(a, b, c), [1, 4, 7]));
 }
 
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12643,7 +12643,7 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12651,7 +12651,7 @@ unittest
     static assert(isForwardRange!(typeof(setDifference(a, b))));
 }
 
-unittest // Issue 10460
+@safe unittest // Issue 10460
 {
     int[] a = [1, 2, 3, 4, 5];
     int[] b = [2, 4];
@@ -12757,7 +12757,7 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12765,7 +12765,7 @@ unittest
     static assert(isForwardRange!(typeof(setSymmetricDifference(a, b))));
 }
 
-unittest // Issue 10460
+@safe unittest // Issue 10460
 {
     int[] a = [1, 2];
     double[] b = [2.0, 3.0];
@@ -13219,7 +13219,7 @@ bool nextPermutation(alias less="a<b", BidirectionalRange)
 }
 
 ///
-unittest
+@safe unittest
 {
     // Step through all permutations of a sorted array in lexicographic order
     int[] a = [1,2,3];
@@ -13238,7 +13238,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     // Step through permutations of an array containing duplicate elements:
     int[] a = [1,1,2];
@@ -13250,7 +13250,7 @@ unittest
     assert(a == [1,1,2]);
 }
 
-unittest
+@safe unittest
 {
     // Boundary cases: arrays of 0 or 1 element.
     int[] a1 = [];
@@ -13262,7 +13262,7 @@ unittest
     assert(a2 == [1]);
 }
 
-unittest
+@safe unittest
 {
     auto a1 = [1, 2, 3, 4];
 
@@ -13339,7 +13339,7 @@ unittest
     assert(equal(a1, [1, 2, 3, 4]));
 }
 
-unittest
+@safe unittest
 {
     // Test with non-default sorting order
     int[] a = [3,2,1];
