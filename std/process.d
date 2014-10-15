@@ -2772,9 +2772,9 @@ static:
         }
         else version (Windows)
         {
-            enforce(
+            wenforce(
                 SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()),
-                sysErrorString(GetLastError())
+                "Failed to add environment variable"
             );
             return value;
         }
