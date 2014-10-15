@@ -1385,6 +1385,26 @@ unittest //more alias this opCast
 }
 
 /*********************
+ * Thrown if OS / C runtime errors occur.
+ * This class is subclassed by $(LREF ErrnoException) and
+ * $(LINK2 std_windows_syserror.html#.WindowsException,$(D WindowsException)).
+ */
+abstract class OSException : Exception
+{
+    /// Numeric error code.
+    immutable uint code;
+
+    // For FileException compatibility.
+    alias errno = code;
+
+    this(uint code, string msg, string file = null, size_t line = 0) @trusted
+    {
+        this.code = code;
+        super(msg, file, line);
+    }
+}
+
+/*********************
  * Thrown if errors that set $(D errno) occur.
  */
 class ErrnoException : Exception
