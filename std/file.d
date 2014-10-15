@@ -3131,6 +3131,10 @@ Example:
 auto a = slurp!(int, double)("filename", "%s, %s");
 ----
 
+Throws:
+$(D FileException) on I/O errors, or $(D Exception) on a badly-formatted
+line.
+
 Bugs:
 $(D slurp) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
 instead of UTF-8 (as it internally uses $(XREF stdio, File),
