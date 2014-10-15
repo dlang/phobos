@@ -1393,16 +1393,34 @@ class ErrnoException : OSException
     /// Creates an $(D ErrnoException) from the given code.
     this(uint code, in char[] msg, string file = null, size_t line = 0) @trusted
     {
-        version (linux)
-        {
-            char[1024] buf = void;
-            auto s = core.stdc.string.strerror_r(code, buf.ptr, buf.length);
-        }
+        if (!code)
+            super(code, msg.idup, file, line);
         else
         {
-            auto s = core.stdc.string.strerror(code);
+            import std.conv : to;
+
+            version (Posix)
+            {
+                import core.stdc.string : strerror_r;
+
+                char[1024] buf = void;
+                version (linux)
+                {
+                    auto s = core.stdc.string.strerror_r(code, buf.ptr, buf.length);
+                }
+                else
+                {
+                    core.stdc.string.strerror_r(code, buf.ptr, buf.length);
+                    auto s = buf.ptr;
+                }
+            }
+            else
+            {
+                auto s = core.stdc.string.strerror(code);
+            }
+
+            super(code, format("%s (%s)", msg, s[0..strlen(s)]), file, line);
         }
-        super(code, format("%s (%s)", msg, s[0..strlen(s)]), file, line);
     }
 
     /// Creates an $(D ErrnoException) using the C $(D errno).
