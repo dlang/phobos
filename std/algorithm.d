@@ -13932,7 +13932,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto N = sequence!"n"(0);         // the range of natural numbers
     auto N2 = cartesianProduct(N, N); // the range of all pairs of natural numbers
@@ -13945,7 +13945,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     auto B = [ 1, 2, 3 ];
     auto C = [ 4, 5, 6 ];
@@ -13958,7 +13958,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // Test cartesian product of two infinite ranges
     auto Even = sequence!"2*n"(0);
@@ -13977,7 +13977,7 @@ unittest
     assert(canFind(EvenOdd, tuple(42, 1)));
 }
 
-unittest
+@safe unittest
 {
     // Test cartesian product of an infinite input range and a finite forward
     // range.
@@ -14013,7 +14013,7 @@ unittest
     assert(!canFind(MN.take(100), tuple(100, 200)));
 }
 
-unittest
+@safe unittest
 {
     // Test cartesian product of two finite ranges.
     auto X = [1, 2, 3];
@@ -14037,7 +14037,7 @@ unittest
     // And therefore, by set comprehension, XY == Expected
 }
 
-unittest
+@safe unittest
 {
     auto N = sequence!"n"(0);
 
@@ -14199,7 +14199,7 @@ auto cartesianProduct(RR...)(RR ranges)
     return Result(ranges);
 }
 
-unittest
+@safe unittest
 {
     // Issue 10693: cartesian product of empty ranges should be empty.
     int[] a, b, c, d, e;
@@ -14215,7 +14215,7 @@ unittest
     foreach (_; cprod2) {} // should not crash
 }
 
-unittest
+@safe unittest
 {
     // .init value of cartesianProduct should be empty
     auto cprod = cartesianProduct([0,0], [1,1], [2,2]);
@@ -14223,7 +14223,7 @@ unittest
     assert(cprod.init.empty);
 }
 
-unittest
+@safe unittest
 {
     // Issue 13393
     assert(!cartesianProduct([0],[0],[0]).save.empty);
@@ -14246,7 +14246,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
     );
 }
 
-unittest
+@safe unittest
 {
     auto N = sequence!"n"(0);
     auto N3 = cartesianProduct(N, N, N);
@@ -14276,7 +14276,7 @@ unittest
 
 // Issue 9878
 ///
-unittest
+@safe unittest
 {
     auto A = [ 1, 2, 3 ];
     auto B = [ 'a', 'b', 'c' ];
