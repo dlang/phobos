@@ -516,25 +516,6 @@ unittest
     assertThrown(enforce(false, new Exception("this should be thrown")));
 }
 
-/++
-    If $(D !!value) is true, $(D value) is returned. Otherwise,
-    $(D new ErrnoException(msg)) is thrown. $(D ErrnoException) assumes that the
-    last operation set $(D errno) to an error code.
-
-    Example:
-    --------------------
-    auto f = errnoEnforce(fopen("data.txt"));
-    auto line = readln(f);
-    enforce(line.length); // expect a non-empty line
-    --------------------
- +/
-T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
-    (T value, lazy string msg = null)
-{
-    if (!value) throw new ErrnoException(msg, file, line);
-    return value;
-}
-
 
 /++
     If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
@@ -1407,24 +1388,75 @@ abstract class OSException : Exception
 /*********************
  * Thrown if errors that set $(D errno) occur.
  */
-class ErrnoException : Exception
+class ErrnoException : OSException
 {
-    final @property uint errno() { return _errno; } /// Operating system error code.
-    private uint _errno;
-    this(string msg, string file = null, size_t line = 0) @trusted
+    /// Creates an $(D ErrnoException) from the given code.
+    this(uint code, in char[] msg, string file = null, size_t line = 0) @trusted
     {
-        _errno = .errno;
         version (linux)
         {
             char[1024] buf = void;
-            auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
+            auto s = core.stdc.string.strerror_r(code, buf.ptr, buf.length);
         }
         else
         {
-            auto s = core.stdc.string.strerror(errno);
+            auto s = core.stdc.string.strerror(code);
         }
-        super(msg~" ("~to!string(s)~")", file, line);
+        super(code, format("%s (%s)", msg, s[0..strlen(s)]), file, line);
     }
+
+    /// Creates an $(D ErrnoException) using the C $(D errno).
+    this(in char[] msg, string file = null, size_t line = 0) @safe
+    {
+        this(.errno, msg, file, line);
+    }
+}
+
+/**
+    If $(D !!value) is true, $(D value) is returned.
+    Otherwise, $(D new ErrnoException(msg)) is thrown.
+    $(D errnoEnforce) assumes that the last operation set the C
+    $(D errno) appropriately.
+
+    Example:
+    --------------------
+    FILE* f = errnoEnforce(fopen("data.txt", "rb"), "fopen failed");
+    --------------------
+*/
+T errnoEnforce(T, S=string)(T value, lazy S msg = null,
+    string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
+{
+    if (!value)
+        throw new ErrnoException(to!(const(char)[])(msg), file, line);
+    return value;
+}
+
+// Maintain compatibility with existing code,
+// which still passes the file/line via template parameters.
+T errnoEnforce(T, string file, size_t line = __LINE__, S)
+    (T value, lazy string msg = null)
+{
+    return errnoEnforce(value, msg, file, line);
+}
+
+
+unittest
+{
+    import core.stdc.stdio;
+    auto e = collectException!ErrnoException(
+        fopen("unexisting.txt", "rb").errnoEnforce("fopen")
+    );
+    assert(e.code == ENOENT);
+    assert(e.msg.startsWith("fopen ("));
+    // can't test the entire message, as it depends on the C runtime implementation
+}
+
+@safe
+unittest
+{
+    errnoEnforce(true);
+    errnoEnforce(true, "wstring"w);
+    errnoEnforce(true, "dstring"d);
 }
 
 /++
