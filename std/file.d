@@ -89,65 +89,7 @@ version (Windows)
 // }}}
 
 
-/++
-    Exception thrown for file I/O errors.
- +/
-class FileException : Exception
-{
-    /++
-        OS error code.
-     +/
-    immutable uint errno;
-
-    /++
-        Constructor which takes an error message.
-
-        Params:
-            name = Name of file for which the error occurred.
-            msg  = Message describing the error.
-            file = The file where the error occurred.
-            line = The line where the error occurred.
-     +/
-    this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
-    {
-        if(msg.empty)
-            super(name.idup, file, line);
-        else
-            super(text(name, ": ", msg), file, line);
-
-        errno = 0;
-    }
-
-    /++
-        Constructor which takes the error number ($(LUCKY GetLastError)
-        in Windows, $(D_PARAM errno) in Posix).
-
-        Params:
-            name  = Name of file for which the error occurred.
-            errno = The error number.
-            file  = The file where the error occurred.
-                    Defaults to $(D __FILE__).
-            line  = The line where the error occurred.
-                    Defaults to $(D __LINE__).
-     +/
-    version(Windows) this(in char[] name,
-                          uint errno = .GetLastError(),
-                          string file = __FILE__,
-                          size_t line = __LINE__) @safe
-    {
-        this(name, sysErrorString(errno), file, line);
-        this.errno = errno;
-    }
-    else version(Posix) this(in char[] name,
-                             uint errno = .errno,
-                             string file = __FILE__,
-                             size_t line = __LINE__) @trusted
-    {
-        auto s = strerror(errno);
-        this(name, to!string(s), file, line);
-        this.errno = errno;
-    }
-}
+alias FileException = OSException;
 
 /* **********************************
  * Basic File operations.
@@ -492,7 +434,7 @@ void remove(in char[] name) @trusted
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name) @trusted
 {
     WIN32_FILE_ATTRIBUTE_DATA fad;
-    enforce(GetFileAttributesExW(name.tempCStringW(), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), new FileException(name.idup));
+    wenforce(GetFileAttributesExW(name.tempCStringW(), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), name);
     return fad;
 }
 
@@ -1507,14 +1449,16 @@ private bool ensureDirExists(in char[] pathname)
         if (CreateDirectoryW(pathname.tempCStringW(), null))
             return true;
         wenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname);
+        enum ERROR_DIRECTORY = 267;
+        enforce(pathname.isDir, new WindowsException(ERROR_DIRECTORY, pathname));
     }
     else version(Posix)
     {
         if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
             return true;
         errnoEnforce(errno == EEXIST, pathname);
+        enforce(pathname.isDir, new ErrnoException(ENOTDIR, pathname));
     }
-    enforce(pathname.isDir, new FileException(pathname.idup));
     return false;
 }
 
@@ -2043,9 +1987,6 @@ else version(Windows)
 
         this(string path)
         {
-            if(!path.exists())
-                throw new FileException(path, "File does not exist");
-
             _name = path;
 
             with (getFileAttributesWin(path))
@@ -2145,9 +2086,6 @@ else version(Posix)
 
         this(string path)
         {
-            if(!path.exists)
-                throw new FileException(path, "File does not exist");
-
             _name = path;
 
             _didLStat = false;
@@ -2417,9 +2355,8 @@ void copy(in char[] from, in char[] to)
 {
     version(Windows)
     {
-        immutable result = CopyFileW(from.tempCStringW(), to.tempCStringW(), false);
-        if (!result)
-            throw new FileException(to.idup);
+        wenforce(CopyFileW(from.tempCStringW(), to.tempCStringW(), false),
+            text("Attempting to copy file ", from, " to ", to));
     }
     else version(Posix)
     {
@@ -2508,9 +2445,6 @@ void rmdirRecurse(in char[] pathname)
  +/
 void rmdirRecurse(ref DirEntry de)
 {
-    if(!de.isDir)
-        throw new FileException(de.name, "Not a directory");
-
     if (de.isSymlink)
     {
         version (Windows)
