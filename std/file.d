@@ -1772,7 +1772,7 @@ else version (FreeBSD)
         while (true)
         {
             auto len = GetModuleFileNameW(null, buffer.ptr, cast(DWORD) buffer.length);
-            enforce(len, sysErrorString(GetLastError()));
+            wenforce(len);
             if (len != buffer.length)
                 return to!(string)(buffer[0 .. len]);
             buffer.length *= 2;
@@ -2202,7 +2202,7 @@ else version(Posix)
             if(_didStat)
                 return;
 
-            enforce(stat(_name.tempCString(), &_statBuf) == 0,
+            errnoEnforce(stat(_name.tempCString(), &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -2244,7 +2244,7 @@ else version(Posix)
 
             stat_t statbuf = void;
 
-            enforce(lstat(_name.tempCString(), &statbuf) == 0,
+            errnoEnforce(lstat(_name.tempCString(), &statbuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
 
             _lstatMode = statbuf.st_mode;
