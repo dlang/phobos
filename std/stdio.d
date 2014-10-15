@@ -356,7 +356,7 @@ objects referring to the same underlying file.
 The destructor automatically closes the file as soon as no $(D File)
 object refers to it anymore.
 
-Throws: $(D OSException) if the file could not be opened.
+Throws: $(XREF exception,OSException) if the file could not be opened.
  */
     this(string name, in char[] stdioOpenmode = "rb") @safe
     {
@@ -399,7 +399,7 @@ _open file $(D name) with mode $(D stdioOpenmode). The mode has the
 same semantics as in the C standard library $(WEB
 cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
 
-Throws: $(D OSException) in case of error.
+Throws: $(XREF exception,OSException) in case of error.
  */
     void open(string name, in char[] stdioOpenmode = "rb") @safe
     {
@@ -412,7 +412,7 @@ First calls $(D detach) (throwing on failure), and then runs a command
 by calling the C standard library function $(WEB
 opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
-Throws: $(D OSException) in case of error.
+Throws: $(XREF exception,OSException) in case of error.
  */
     version(Posix) void popen(string command, in char[] stdioOpenmode = "r") @safe
     {
@@ -429,7 +429,7 @@ First calls $(D detach) (throwing on failure), and then attempts to
 associate the given file descriptor with the $(D File). The mode must
 be compatible with the mode of the file descriptor.
 
-Throws: $(D OSException) in case of error.
+Throws: $(XREF exception,OSException) in case of error.
  */
     void fdopen(int fd, in char[] stdioOpenmode = "rb") @safe
     {
@@ -478,7 +478,7 @@ First calls $(D detach) (throwing on failure), and then attempts to
 associate the given Windows $(D HANDLE) with the $(D File). The mode must
 be compatible with the access attributes of the handle. Windows only.
 
-Throws: $(D OSException) in case of error.
+Throws: $(XREF exception,OSException) in case of error.
 */
     version(StdDdoc)
     void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode);
@@ -569,7 +569,7 @@ the file handle.
 /**
 Detaches from the underlying file. If the sole owner, calls $(D close).
 
-Throws: $(D OSException) on failure if closing the file.
+Throws: $(XREF exception,OSException) on failure if closing the file.
   */
     void detach() @safe
     {
@@ -608,7 +608,7 @@ File) object is empty. This is different from $(D detach) in that it
 always closes the file; consequently, all other $(D File) objects
 referring to the same handle will see a closed file henceforth.
 
-Throws: $(D OSException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
     void close() @trusted
     {
@@ -692,7 +692,8 @@ This will be shorter than $(D buffer) if EOF was reached before the buffer
 could be filled.
 
 Throws: $(D Exception) if $(D buffer) is empty.
-        $(D OSException) if the file is not opened or the call to $(D fread) fails.
+        $(XREF exception,OSException) if the file is not opened
+        or the call to $(D fread) fails.
 
 $(D rawRead) always reads in binary mode on Windows.
  */
@@ -747,7 +748,8 @@ error is thrown if the buffer could not be written in its entirety.
 
 $(D rawWrite) always writes in binary mode on Windows.
 
-Throws: $(D OSException) if the file is not opened or if the call to $(D fwrite) fails.
+Throws: $(XREF exception,OSException) if the file is not opened
+        or if the call to $(D fwrite) fails.
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -797,7 +799,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
 for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D OSException) if the call to $(D fseek) fails.
+        $(XREF exception,OSException) if the call to $(D fseek) fails.
  */
     void seek(long offset, int origin = SEEK_SET) @trusted
     {
@@ -855,7 +857,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
 managed file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D OSException) if the call to $(D ftell) fails.
+        $(XREF exception,OSException) if the call to $(D ftell) fails.
  */
     @property ulong tell() const @trusted
     {
@@ -908,7 +910,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
 the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D OSException) if the call to $(D setvbuf) fails.
+        $(XREF exception,OSException) if the call to $(D setvbuf) fails.
  */
     void setvbuf(size_t size, int mode = _IOFBF) @trusted
     {
@@ -924,7 +926,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
 _setvbuf) for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D OSException) if the call to $(D setvbuf) fails.
+        $(XREF exception,OSException) if the call to $(D setvbuf) fails.
 */
     void setvbuf(void[] buf, int mode = _IOFBF) @trusted
     {
@@ -1156,7 +1158,7 @@ Removes the lock over the specified file segment.
 Writes its arguments in text format to the file.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D OSException) on an error writing to the file.
+        $(XREF exception,OSException) on an error writing to the file.
 */
     void write(S...)(S args)
     {
@@ -1202,7 +1204,7 @@ Throws: $(D Exception) if the file is not opened.
 Writes its arguments in text format to the file, followed by a newline.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D OSException) on an error writing to the file.
+        $(XREF exception,OSException) on an error writing to the file.
 */
     void writeln(S...)(S args)
     {
@@ -1214,7 +1216,7 @@ Writes its arguments in text format to the file, according to the
 format in the first argument.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D OSException) on an error writing to the file.
+        $(XREF exception,OSException) on an error writing to the file.
 */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
@@ -1228,7 +1230,7 @@ Writes its arguments in text format to the file, according to the
 format in the first argument, followed by a newline.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D OSException) on an error writing to the file.
+        $(XREF exception,OSException) on an error writing to the file.
 */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
@@ -1257,7 +1259,8 @@ Returns:
     The line that was read, including the line terminator character.
 
 Throws:
-    $(D OSException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+    $(XREF exception,OSException) on I/O error, or
+    $(CXREF exception,UnicodeException) on Unicode conversion error.
 
 Example:
 ---
@@ -1340,8 +1343,8 @@ text mode).
 Returns:
 0 for end of file, otherwise number of characters read
 
-Throws: $(D OSException) on I/O error, or $(D UnicodeException) on Unicode
-conversion error.
+Throws: $(XREF exception,OSException) on I/O error, or
+        $(CXREF exception,UnicodeException) on Unicode conversion error.
 
 Example:
 ---
@@ -1671,7 +1674,7 @@ Returns an input range set up to read from the file handle one line
 at a time.
 
 The element type for the range will be $(D Char[]). Range primitives
-may throw $(D OSException) on I/O error.
+may throw $(XREF exception,OSException) on I/O error.
 
 Note:
 Each $(D front) will not persist after $(D
@@ -1816,7 +1819,7 @@ Returns an input range set up to read from the file handle one line
 at a time. Each line will be newly allocated.
 
 The element type for the range will be $(D Char[]). Range
-primitives may throw $(D OSException) on I/O error.
+primitives may throw $(XREF exception,OSException) on I/O error.
 
 Params:
 Char = Character type for each line, defaulting to $(D immutable char).
@@ -2095,7 +2098,7 @@ Returns an input range set up to read from the file handle a chunk at a
 time.
 
 The element type for the range will be $(D ubyte[]). Range primitives
-may throw $(D OSException) on I/O error.
+may throw $(XREF exception,OSException) on I/O error.
 
 Example:
 ---------
@@ -2151,7 +2154,7 @@ object and the appropriate buffer.
 
 Throws: If the user-provided size is zero or the user-provided buffer
 is empty, throws an $(D Exception). In case of an I/O error throws
-$(D OSException).
+$(XREF exception,OSException).
  */
     auto byChunk(size_t chunkSize)
     {
@@ -2728,7 +2731,7 @@ $(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
 string to $(D args[0]). A call without any arguments will fail to
 compile.
 
-Throws: In case of an I/O error, throws an $(D OSException).
+Throws: In case of an I/O error, throws an $(XREF exception,OSException).
  */
 void write(T...)(T args) if (!is(T[0] : File))
 {
@@ -3037,7 +3040,8 @@ unittest
  * Note:
  *        String terminators are not supported due to ambiguity with readln(buf) below.
  * Throws:
- *        $(D OSException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+ *        $(XREF exception,OSException) on I/O error, or
+ *        $(CXREF exception,UnicodeException) on Unicode conversion error.
  * Example:
  *        Reads $(D stdin) and writes it to $(D stdout).
 ---
@@ -3071,7 +3075,8 @@ if (isSomeString!S)
  *        terminator = Line terminator (by default, $(D '\n')). Use $(XREF ascii, newline)
  *        for portability (unless the file was opened in text mode).
  * Throws:
- *        $(D OSException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+ *        $(XREF exception,OSException) on I/O error, or
+ *        $(CXREF exception,UnicodeException) on Unicode conversion error.
  * Example:
  *        Reads $(D stdin) and writes it to $(D stdout).
 ---
@@ -3212,7 +3217,7 @@ Example:
   }
 ----
 
- In case of an I/O error, an $(D OSException) is thrown.
+ In case of an I/O error, an $(XREF exception,OSException) is thrown.
 
 See_Also:
 $(LREF byLine)
@@ -3478,7 +3483,7 @@ The content of $(D buffer) is reused across calls. In the
  except for the last one, in which case $(D buffer.length) may
  be less than 4096 (but always greater than zero).
 
- In case of an I/O error, an $(D OSException) is thrown.
+ In case of an I/O error, an $(XREF exception,OSException) is thrown.
 */
 auto chunks(File f, size_t size)
 {
