@@ -280,9 +280,8 @@ Returns:
 A $(LREF Pid) object that corresponds to the spawned process.
 
 Throws:
-$(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF exception,OSException) on failure to pass one of the streams
-    to the child process (Windows only).$(BR)
+$(XREF exception,OSException) on failure to start the process,
+    or pass one of the streams to the child process.$(BR)
 $(CXREF exception,RangeError) if $(D args) is empty.
 */
 Pid spawnProcess(in char[][] args,
@@ -361,14 +360,14 @@ private Pid spawnProcessImpl(in char[][] args,
     const(char)[] name = args[0];
     if (any!isDirSeparator(name))
     {
-        if (!isExecutable(name))
-            throw new ProcessException(text("Not an executable file: ", name));
+        enforce(isExecutable(name), new ErrnoException(ENOEXEC,
+            text("Not an executable file: ", name)));
     }
     else
     {
         name = searchPathFor(name);
-        if (name is null)
-            throw new ProcessException(text("Executable file not found: ", args[0]));
+        enforce(name, new ErrnoException(ENOENT,
+            text("Executable file not found: ", args[0])));
     }
 
     // Convert program name and arguments to C-style strings.
@@ -390,13 +389,12 @@ private Pid spawnProcessImpl(in char[][] args,
     {
         import core.sys.posix.fcntl;
         workDirFD = open(workDir.tempCString(), O_RDONLY);
-        if (workDirFD < 0)
-            throw ProcessException.newFromErrno("Failed to open working directory");
+        errnoEnforce(workDirFD >= 0, "Failed to open working directory");
         stat_t s;
-        if (fstat(workDirFD, &s) < 0)
-            throw ProcessException.newFromErrno("Failed to stat working directory");
-        if (!S_ISDIR(s.st_mode))
-            throw new ProcessException("Not a directory: " ~ cast(string)workDir);
+        errnoEnforce(fstat(workDirFD, &s) >= 0,
+            "Failed to stat working directory");
+        enforce(S_ISDIR(s.st_mode),
+            new ErrnoException(ENOTDIR, "Not a directory: " ~ workDir));
     }
 
     int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
@@ -409,8 +407,7 @@ private Pid spawnProcessImpl(in char[][] args,
     auto stderrFD = getFD(stderr);
 
     auto id = fork();
-    if (id < 0)
-        throw ProcessException.newFromErrno("Failed to spawn new process");
+    errnoEnforce(id >= 0, "Failed to spawn new process");
     if (id == 0)
     {
         // Child process
@@ -546,9 +543,9 @@ private Pid spawnProcessImpl(in char[] commandLine,
     DWORD dwCreationFlags =
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
-    if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
-                        envz, workDir.length ? workDir.tempCStringW() : null, &startinfo, &pi))
-        throw ProcessException.newFromLastError("Failed to spawn new process");
+    wenforce(CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
+                        envz, workDir.length ? workDir.tempCStringW() : null, &startinfo, &pi),
+             "Failed to spawn new process");
 
     // figure out if we should close any of the streams
     if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
@@ -831,8 +828,8 @@ unittest // Stream redirection in spawnProcess().
 
 unittest // Error handling in spawnProcess()
 {
-    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
+    assertThrown!OSException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
+    assertThrown!OSException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
 }
 
 unittest // Specifying a working directory.
@@ -853,11 +850,11 @@ unittest // Specifying a bad working directory.
     TestScript prog = "echo";
 
     auto directory = uniqueTempPath();
-    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+    assertThrown!OSException(spawnProcess([prog.path], null, Config.none, directory));
 
     std.file.write(directory, "foo");
     scope(exit) remove(directory);
-    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+    assertThrown!OSException(spawnProcess([prog.path], null, Config.none, directory));
 }
 
 unittest // Specifying empty working directory.
@@ -1132,18 +1129,13 @@ private:
             auto check = waitpid(_processID, &status, block ? 0 : WNOHANG);
             if (check == -1)
             {
-                if (errno == ECHILD)
-                {
-                    throw new ProcessException(
+                errnoEnforce(errno != ECHILD,
                         "Process does not exist or is not a child process.");
-                }
-                else
-                {
-                    // waitpid() was interrupted by a signal.  We simply
-                    // restart it.
-                    assert (errno == EINTR);
-                    continue;
-                }
+
+                // waitpid() was interrupted by a signal.  We simply
+                // restart it.
+                assert (errno == EINTR);
+                continue;
             }
             if (!block && check == 0) return 0;
             if (WIFEXITED(status))
@@ -1176,12 +1168,10 @@ private:
             assert (_handle != INVALID_HANDLE_VALUE);
             if (block)
             {
-                auto result = WaitForSingleObject(_handle, INFINITE);
-                if (result != WAIT_OBJECT_0)
-                    throw ProcessException.newFromLastError("Wait failed.");
+                wenforce(WaitForSingleObject(_handle, INFINITE) == WAIT_OBJECT_0,
+                        "Wait failed.");
             }
-            if (!GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode))
-                throw ProcessException.newFromLastError();
+            wenforce(GetExitCodeProcess(_handle, cast(LPDWORD)&_exitCode));
             if (!block && _exitCode == STILL_ACTIVE) return 0;
             CloseHandle(_handle);
             _handle = INVALID_HANDLE_VALUE;
@@ -1253,7 +1243,7 @@ Signal codes are defined in the $(D core.sys.posix.signal) module
 (which corresponds to the $(D signal.h) POSIX header).
 
 Throws:
-$(LREF ProcessException) on failure.
+$(XREF exception,OSException) on failure.
 
 Examples:
 See the $(LREF spawnProcess) documentation.
@@ -1308,7 +1298,7 @@ Returns:
 An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
 
 Throws:
-$(LREF ProcessException) on failure.
+$(XREF exception,OSException) on failure.
 
 Example:
 ---
@@ -1385,7 +1375,8 @@ assert (wait(pid) == -SIGKILL); // Negative return value on POSIX!
 ---
 
 Throws:
-$(LREF ProcessException) on error (e.g. if codeOrSignal is invalid).
+$(XREF exception,OSException) on error,
+    or $(OBJECTREF Exception) on invalid parameters.
     Note that failure to terminate the process is considered a "normal"
     outcome, not an error.$(BR)
 */
@@ -1404,19 +1395,17 @@ void kill(Pid pid, int codeOrSignal)
 {
     version (Windows)
     {
-        if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
+        enforce(codeOrSignal >= 0, "Invalid exit code");
         // On Windows, TerminateProcess() appears to terminate the
         // *current* process if it is passed an invalid handle...
-        if (pid.osHandle == INVALID_HANDLE_VALUE)
-            throw new ProcessException("Invalid process handle");
-        if (!TerminateProcess(pid.osHandle, codeOrSignal))
-            throw ProcessException.newFromLastError();
+        enforce(pid.osHandle != INVALID_HANDLE_VALUE,
+            "Invalid process handle");
+        wenforce(TerminateProcess(pid.osHandle, codeOrSignal));
     }
     else version (Posix)
     {
         import core.sys.posix.signal;
-        if (kill(pid.osHandle, codeOrSignal) == -1)
-            throw ProcessException.newFromErrno();
+        errnoEnforce(kill(pid.osHandle, codeOrSignal) != -1);
     }
 }
 
@@ -1444,13 +1433,13 @@ unittest // tryWait() and kill()
     Thread.sleep(dur!"seconds"(1));
     auto s = tryWait(pid);
     assert (!s.terminated && s.status == 0);
-    assertThrown!ProcessException(kill(pid, -123)); // Negative code not allowed.
+    assertThrown!Exception(kill(pid, -123)); // Negative code not allowed.
     version (Windows)    kill(pid, 123);
     else version (Posix) kill(pid, SIGKILL);
     do { s = tryWait(pid); } while (!s.terminated);
     version (Windows)    assert (s.status == 123);
     else version (Posix) assert (s.status == -SIGKILL);
-    assertThrown!ProcessException(kill(pid));
+    assertThrown!Exception(kill(pid));
 }
 
 
@@ -1615,8 +1604,8 @@ process, along with a $(LREF Pid) object that corresponds to the
 spawned process.
 
 Throws:
-$(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF exception,OSException) on failure to redirect any of the streams.$(BR)
+$(XREF exception,OSException) on failure to start the process,
+or redirect any of the streams.$(BR)
 $(OBJECTREF Error) on conflicting redirection parameters.$(BR)
 
 Example:
@@ -1968,8 +1957,8 @@ the return value will contain a negative number whose absolute
 value is the signal number.  (See $(LREF wait) for details.)
 
 Throws:
-$(LREF ProcessException) on failure to start the process.$(BR)
-$(XREF exception,OSException) on failure to capture output.
+$(XREF exception,OSException) on failure to start the process
+or capture output.
 */
 auto execute(in char[][] args,
              const string[string] env = null,
@@ -2085,49 +2074,7 @@ unittest
 }
 
 
-/// An exception that signals a problem with starting or waiting for a process.
-class ProcessException : Exception
-{
-    // Standard constructor.
-    this(string msg, string file = __FILE__, size_t line = __LINE__)
-    {
-        super(msg, file, line);
-    }
-
-    // Creates a new ProcessException based on errno.
-    static ProcessException newFromErrno(string customMsg = null,
-                                         string file = __FILE__,
-                                         size_t line = __LINE__)
-    {
-        import core.stdc.errno;
-        import core.stdc.string;
-        version (linux)
-        {
-            char[1024] buf;
-            auto errnoMsg = to!string(
-                core.stdc.string.strerror_r(errno, buf.ptr, buf.length));
-        }
-        else
-        {
-            auto errnoMsg = to!string(core.stdc.string.strerror(errno));
-        }
-        auto msg = customMsg.empty ? errnoMsg
-                                   : customMsg ~ " (" ~ errnoMsg ~ ')';
-        return new ProcessException(msg, file, line);
-    }
-
-    // Creates a new ProcessException based on GetLastError() (Windows only).
-    version (Windows)
-    static ProcessException newFromLastError(string customMsg = null,
-                                             string file = __FILE__,
-                                             size_t line = __LINE__)
-    {
-        auto lastMsg = sysErrorString(GetLastError());
-        auto msg = customMsg.empty ? lastMsg
-                                   : customMsg ~ " (" ~ lastMsg ~ ')';
-        return new ProcessException(msg, file, line);
-    }
-}
+alias ProcessException = OSException;
 
 
 /**
