@@ -114,7 +114,7 @@ void main()
 
 Returns: Untyped array of bytes _read.
 
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
 void[] read(in char[] name, size_t upTo = size_t.max) @safe
 {
@@ -262,7 +262,7 @@ validation will fail.
 
 Returns: Array of characters read.
 
-Throws: $(D FileException) on file error, $(D UTFException) on UTF
+Throws: $(XREF exception,OSException) on file error, $(D UTFException) on UTF
 decoding error.
 
 Example:
@@ -291,7 +291,7 @@ S readText(S = string)(in char[] name) @safe if (isSomeString!S)
 
 /*********************************************
 Write $(D buffer) to file $(D name).
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
 
 Example:
 
@@ -328,7 +328,7 @@ void write(in char[] name, const void[] buffer) @trusted
 
 /*********************************************
 Appends $(D buffer) to file $(D name).
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
 
 Example:
 
@@ -387,7 +387,7 @@ version(Posix) private void writeImpl(in char[] name,
 /***************************************************
  * Rename file $(D from) to $(D to).
  * If the target file exists, it is overwritten.
- * Throws: $(D FileException) on error.
+ * Throws: $(XREF exception,OSException) on error.
  */
 void rename(in char[] from, in char[] to) @trusted
 {
@@ -416,7 +416,7 @@ void rename(in char[] from, in char[] to) @trusted
 
 /***************************************************
 Delete file $(D name).
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
 void remove(in char[] name) @trusted
 {
@@ -449,7 +449,7 @@ version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure n
 /***************************************************
 Get size of file $(D name) in bytes.
 
-Throws: $(D FileException) on error (e.g., file not found).
+Throws: $(XREF exception,OSException) on error (e.g., file not found).
  */
 ulong getSize(in char[] name) @safe
 {
@@ -495,7 +495,7 @@ ulong getSize(in char[] name) @safe
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
  +/
 void getTimes(in char[] name,
               out SysTime accessTime,
@@ -591,7 +591,7 @@ unittest
         fileModificationTime = Time the file was last modified.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
  +/
 version(StdDdoc) void getTimesWin(in char[] name,
                                   out SysTime fileCreationTime,
@@ -683,7 +683,7 @@ version(Windows) unittest
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
  +/
 void setTimes(in char[] name,
               SysTime accessTime,
@@ -774,7 +774,7 @@ unittest
     Returns the time that the given file was last modified.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
 +/
 SysTime timeLastModified(in char[] name) @safe
 {
@@ -811,9 +811,9 @@ SysTime timeLastModified(in char[] name) @safe
     en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
     target) must be rebuilt from file $(D source) (i.e., $(D target) is
     older than $(D source) or does not exist), use the comparison
-    below. The code throws a $(D FileException) if $(D source) does not
-    exist (as it should). On the other hand, the $(D SysTime.min) default
-    makes a non-existing $(D target) seem infinitely old so the test
+    below. The code throws a $(XREF exception,OSException) if $(D source)
+    does not exist (as it should). On the other hand, the $(D SysTime.min)
+    default makes a non-existing $(D target) seem infinitely old so the test
     correctly prompts building it.
 
     Params:
@@ -946,7 +946,7 @@ bool exists(in char[] name) @trusted nothrow @nogc
  Params:
  name = The file to get the attributes of.
 
- Throws: $(D FileException) on error.
+ Throws: $(XREF exception,OSException) on error.
   +/
 uint getAttributes(in char[] name) @safe
 {
@@ -991,7 +991,7 @@ uint getAttributes(in char[] name) @safe
         name = The file to get the symbolic link attributes of.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
  +/
 uint getLinkAttributes(in char[] name) @safe
 {
@@ -1016,7 +1016,7 @@ uint getLinkAttributes(in char[] name) @safe
     Set the attributes of the given file.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
  +/
 void setAttributes(in char[] name, uint attributes) @safe
 {
@@ -1047,7 +1047,7 @@ void setAttributes(in char[] name, uint attributes) @safe
         name = The path to the file.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
 
 Examples:
 --------------------
@@ -1164,7 +1164,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
         name = The path to the file.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
 
 Examples:
 --------------------
@@ -1279,7 +1279,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         name = The path to the file.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
   +/
 @property bool isSymlink(in char[] name) @safe
 {
@@ -1391,7 +1391,7 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
 
 /****************************************************
  * Change directory to $(D pathname).
- * Throws: $(D FileException) on error.
+ * Throws: $(XREF exception,OSException) on error.
  */
 void chdir(in char[] pathname) @safe
 {
@@ -1416,8 +1416,7 @@ void chdir(in char[] pathname) @safe
 /****************************************************
 Make directory $(D pathname).
 
-Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
-        if an error occured.
+Throws: $(XREF exception,OSException) if an error occured.
  */
 void mkdir(in char[] pathname) @safe
 {
@@ -1465,7 +1464,7 @@ private bool ensureDirExists(in char[] pathname)
 /****************************************************
  * Make directory and all parent directories as needed.
  *
- * Throws: $(D FileException) on error.
+ * Throws: $(XREF exception,OSException) on error.
  */
 
 void mkdirRecurse(in char[] pathname)
@@ -1494,7 +1493,7 @@ unittest
 
         path = buildPath(basepath, "c");
         write(path, "");
-        assertThrown!FileException(mkdirRecurse(path));
+        assertThrown!OSException(mkdirRecurse(path));
 
         path = buildPath(basepath, "d");
         mkdirRecurse(path);
@@ -1503,7 +1502,7 @@ unittest
 
     version(Windows)
     {
-        assertThrown!FileException(mkdirRecurse(`1:\foobar`));
+        assertThrown!OSException(mkdirRecurse(`1:\foobar`));
     }
 
     // bug3570
@@ -1528,7 +1527,7 @@ unittest
 /****************************************************
 Remove directory $(D pathname).
 
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
 void rmdir(in char[] pathname)
 {
@@ -1558,8 +1557,8 @@ void rmdir(in char[] pathname)
         not the files being linked to or from.
 
     Throws:
-        $(D FileException) on error (which includes if the symlink already
-        exists).
+        $(XREF exception,OSException) on error (which includes if
+        the symlink already exists).
   +/
 version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe;
 else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe
@@ -1625,7 +1624,7 @@ version(Posix) @safe unittest
     working directory.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
   +/
 version(StdDdoc) string readLink(C)(const(C)[] link);
 else version(Posix) string readLink(C)(const(C)[] link)
@@ -1660,7 +1659,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
         dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
     }
 
-    throw new FileException(to!string(link), "Path is too long to read.");
+    throw new ErrnoException(ENAMETOOLONG, link);
 }
 
 version(Posix) unittest
@@ -1677,13 +1676,13 @@ version(Posix) unittest
         }
     }
 
-    assertThrown!FileException(readLink("/doesnotexist"));
+    assertThrown!OSException(readLink("/doesnotexist"));
 }
 
 
 /****************************************************
  * Get the current working directory.
- * Throws: $(D FileException) on error.
+ * Throws: $(XREF exception,OSException) on error.
  */
 version(Windows) string getcwd()
 {
@@ -1830,7 +1829,7 @@ version(StdDdoc)
                 path = The file (or directory) to get a DirEntry for.
 
             Throws:
-                $(D FileException) if the file does not exist.
+                $(XREF exception,OSException) if the file does not exist.
         +/
         this(string path);
 
@@ -2349,7 +2348,7 @@ unittest
 Copy file $(D from) to file $(D to). File timestamps are preserved.
 If the target file exists, it is overwritten.
 
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
 void copy(in char[] from, in char[] to)
 {
@@ -2425,8 +2424,8 @@ unittest
     recursively.
 
     Throws:
-        $(D FileException) if there is an error (including if the given
-        file is not a directory).
+        $(XREF exception,OSException) if there is an error
+        (including if the given file is not a directory).
  +/
 void rmdirRecurse(in char[] pathname)
 {
@@ -2440,8 +2439,8 @@ void rmdirRecurse(in char[] pathname)
     recursively.
 
     Throws:
-        $(D FileException) if there is an error (including if the given
-        file is not a directory).
+        $(XREF exception,OSException) if there is an error
+        (including if the given file is not a directory).
  +/
 void rmdirRecurse(ref DirEntry de)
 {
@@ -2784,7 +2783,7 @@ public:
                          iterated over.
 
     Throws:
-        $(D FileException) if the directory does not exist.
+        $(XREF exception,OSException) if the directory does not exist.
 
 Examples:
 --------------------
@@ -2894,7 +2893,7 @@ unittest
                          iterated over.
 
     Throws:
-        $(D FileException) if the directory does not exist.
+        $(XREF exception,OSException) if the directory does not exist.
 
 Examples:
 --------------------
@@ -2922,7 +2921,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
         name = The file (or directory) to get a DirEntry for.
 
     Throws:
-        $(D FileException) if the file does not exist.
+        $(XREF exception,OSException) if the file does not exist.
  +/
 deprecated("Please use DirEntry constructor directly instead.")
 DirEntry dirEntry(in char[] name)
@@ -3132,8 +3131,8 @@ auto a = slurp!(int, double)("filename", "%s, %s");
 ----
 
 Throws:
-$(D FileException) on I/O errors, or $(D Exception) on a badly-formatted
-line.
+$(XREF exception,OSException) on I/O errors, or
+$(D Exception) on a badly-formatted line.
 
 Bugs:
 $(D slurp) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
