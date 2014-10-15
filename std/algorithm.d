@@ -14259,9 +14259,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
     assert(canFind(N3, tuple(9, 3, 0)));
 }
 
-version(none)
-// This unittest causes `make -f posix.mak unittest` to run out of memory. Why?
-unittest
+@safe unittest
 {
     auto N = sequence!"n"(0);
     auto N4 = cartesianProduct(N, N, N, N);
