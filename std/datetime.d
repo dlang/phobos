@@ -8789,7 +8789,7 @@ private:
 
 /++
     Represents a date in the
-    $(WEB http://en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic Gregorian Calendar)
+    $(WEB en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic Gregorian Calendar)
     ranging from
     32,768 B.C. to 32,767 A.D. Positive years are A.D. Non-positive years are
     B.C.
@@ -30540,7 +30540,7 @@ unittest
 /++
     The given array of $(D char) or random-access range of $(D char) or
     $(D ubyte) is expected to be in the format specified in
-    $(WEB http://tools.ietf.org/html/rfc5322, RFC 5322) section 3.3 with the
+    $(WEB tools.ietf.org/html/rfc5322, RFC 5322) section 3.3 with the
     grammar rule $(I date-time). It is the date-time format commonly used in
     internet messages such as e-mail and HTTP. The corresponding
     $(LREF SysTime) will be returned.

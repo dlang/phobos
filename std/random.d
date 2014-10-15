@@ -39,7 +39,7 @@ WIKI = Phobos/StdRandom
 
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Joseph Rushton Wakeling 2012.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift randome generator)
            $(WEB braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
