@@ -25,7 +25,7 @@ import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
 import std.range;
 import std.traits : Unqual, isSomeChar, isAggregateType, isSomeString,
     isIntegral, isBoolean, ParameterTypeTuple;
-import std.exception : ErrnoException, errnoEnforce;
+import std.exception : OSException, errnoEnforce;
 
 version (CRuntime_Microsoft)
 {
@@ -3586,18 +3586,7 @@ unittest
     f.close();
 }
 
-/*********************
- * Thrown if I/O errors happen.
- */
-class StdioException : ErrnoException
-{
-/**
-Initialize with a message and an error code. */
-    this(string message, uint e = .errno, string file = __FILE__, int line = __LINE__)
-    {
-        super(e, message, file, line);
-    }
-}
+alias StdioException = OSException;
 
 extern(C) void std_stdio_static_this()
 {
