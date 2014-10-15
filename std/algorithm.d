@@ -14348,7 +14348,7 @@ template among(values...)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(3.among(1, 42, 24, 3, 2));
 
@@ -14365,13 +14365,13 @@ unittest
 Alternatively, $(D values) can be passed at compile-time, allowing for a more
 efficient search, but one that only supports matching on equality:
 */
-unittest
+@safe unittest
 {
     assert(3.among!(2, 3, 4));
     assert("bar".among!("foo", "bar", "baz") == 2);
 }
 
-unittest
+@safe unittest
 {
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);
@@ -14481,7 +14481,7 @@ auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choi
 }
 
 ///
-unittest
+@safe unittest
 {
     string res = 2.predSwitch!"a < b"(
         1, "less than 1",
