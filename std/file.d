@@ -286,7 +286,7 @@ S readText(S = string)(in char[] name) @safe if (isSomeString!S)
 {
     write(deleteme, "abc\n");
     scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    enforce(chomp(readText(deleteme)) == "abc");
+    assert(chomp(readText(deleteme)) == "abc");
 }
 
 /*********************************************
@@ -2480,21 +2480,21 @@ version(Windows) unittest
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
-    enforce(!exists(deleteme ~ ".dir"));
+    assert(!exists(deleteme ~ ".dir"));
 }
 
 version(Posix) unittest
 {
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
-    enforce(collectException(mkdir(d)));
+    assert(collectException(mkdir(d)));
     mkdirRecurse(d);
     core.sys.posix.unistd.symlink((deleteme~"/a/b/c\0").ptr,
             (deleteme~"/link\0").ptr);
     rmdirRecurse(deleteme~"/link");
-    enforce(exists(d));
+    assert(exists(d));
     rmdirRecurse(deleteme);
-    enforce(!exists(deleteme));
+    assert(!exists(deleteme));
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
@@ -2502,7 +2502,7 @@ version(Posix) unittest
     else string link_cmd = "ln -sf ";
     std.process.executeShell(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
-    enforce(!exists(deleteme));
+    assert(!exists(deleteme));
 }
 
 unittest
