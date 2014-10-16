@@ -1378,7 +1378,7 @@ abstract class OSException : Exception
     // For FileException compatibility.
     alias errno = code;
 
-    this(uint code, string msg, string file = null, size_t line = 0) @trusted
+    this(uint code, string msg, string file = __FILE__, size_t line = __LINE__) @trusted
     {
         this.code = code;
         super(msg, file, line);
@@ -1391,7 +1391,7 @@ abstract class OSException : Exception
 class ErrnoException : OSException
 {
     /// Creates an $(D ErrnoException) from the given code.
-    this(uint code, in char[] msg, string file = null, size_t line = 0) @trusted
+    this(uint code, in char[] msg, string file = __FILE__, size_t line = __LINE__) @trusted
     {
         if (!code)
             super(code, msg.idup, file, line);
@@ -1424,7 +1424,7 @@ class ErrnoException : OSException
     }
 
     /// Creates an $(D ErrnoException) using the C $(D errno).
-    this(in char[] msg, string file = null, size_t line = 0) @safe
+    this(in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe
     {
         this(.errno, msg, file, line);
     }
