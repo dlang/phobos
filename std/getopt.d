@@ -15,7 +15,7 @@ Macros:
 WIKI = Phobos/StdGetopt
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 Credits:   This module and its documentation are inspired by Perl's $(WEB
            perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of

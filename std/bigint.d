@@ -13,7 +13,7 @@
  *
  * For very large numbers, consider using the $(WEB gmplib.org, GMP library) instead.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Don Clugston
  * Source: $(PHOBOSSRC std/_bigint.d)
  */

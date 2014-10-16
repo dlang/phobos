@@ -27,7 +27,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
  * module.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * CTFE:
  * Digests do not work in CTFE

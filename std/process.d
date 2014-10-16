@@ -75,6 +75,8 @@ Authors:
     $(WEB thecybershadow.net, Vladimir Panteleev)
 Copyright:
     Copyright (c) 2013, the authors. All rights reserved.
+License:
+   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Source:
     $(PHOBOSSRC std/_process.d)
 Macros:
@@ -3043,7 +3045,7 @@ Macros:
 WIKI=Phobos/StdProcess
 
 Copyright: Copyright Digital Mars 2007 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
            $(WEB thecybershadow.net, Vladimir Panteleev)

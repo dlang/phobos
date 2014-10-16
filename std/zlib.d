@@ -1,16 +1,16 @@
 // Written in the D programming language.
 
 /**
- * Compress/decompress data using the $(LINK2 http://www._zlib.net, zlib library).
+ * Compress/decompress data using the $(WEB www.zlib.net, zlib library).
  *
  * References:
- *  $(LINK2 http://en.wikipedia.org/wiki/Zlib, Wikipedia)
+ *  $(WEB en.wikipedia.org/wiki/Zlib, Wikipedia)
  *
  * Macros:
  *  WIKI = Phobos/StdZlib
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_zlib.d)
  */

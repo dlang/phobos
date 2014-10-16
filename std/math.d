@@ -114,7 +114,7 @@ $(TR $(TDNW Hardware Control) $(TD
  *            reserves the right to distribute this material elsewhere under different
  *            copying permissions.  These modifications are distributed here under
  *            the following terms:
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright), Don Clugston,
  *            Conversion of CEPHES math library to D by Iain Buclaw
  * Source: $(PHOBOSSRC std/_math.d)

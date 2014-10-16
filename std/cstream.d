@@ -12,7 +12,7 @@
  *      WIKI=Phobos/StdCstream
  *
  * Copyright: Copyright Ben Hinkle 2007 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Ben Hinkle
  * Source:    $(PHOBOSSRC std/_cstream.d)
  */

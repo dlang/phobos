@@ -157,7 +157,7 @@
     $(P The following is a list of important Unicode notions
     and definitions. Any conventions used specifically in this
     module alone are marked as such. The descriptions are based on the formal
-    definition as found in $(WEB http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
+    definition as found in $(WEB www.unicode.org/versions/Unicode6.2.0/ch03.pdf,
     chapter three of The Unicode Standard Core Specification.)
     )
 
@@ -373,7 +373,7 @@
 
     $(P The recommended solution (see Unicode Implementation Guidelines)
     is using multi-stage tables that are an implementation of the
-    $(WEB http://en.wikipedia.org/wiki/Trie, Trie) data structure with integer
+    $(WEB en.wikipedia.org/wiki/Trie, Trie) data structure with integer
     keys and a fixed number of stages. For the remainder of the section
     this will be called a fixed trie. The following describes a particular
     implementation that is aimed for the speed of access at the expense
@@ -1960,7 +1960,7 @@ pure:
 
     $(P Memory usage is 8 bytes per each contiguous interval in a set.
     The value semantics are achieved by using the
-    $(WEB http://en.wikipedia.org/wiki/Copy-on-write, COW) technique
+    $(WEB en.wikipedia.org/wiki/Copy-on-write, COW) technique
     and thus it's $(RED not) safe to cast this type to $(D_KEYWORD shared).
     )
 
