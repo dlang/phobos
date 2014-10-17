@@ -805,7 +805,7 @@ auto adaptIntRange(T, F)(F[] src)
 }
 
 // repeat X times the bit-pattern in val assuming it's length is 'bits'
-size_t replicateBits(size_t times, size_t bits)(size_t val)
+size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @nogc
 {
     static if(times == 1)
         return val;
@@ -822,7 +822,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val)
         return replicateBits!(times/2, bits*2)((val<<bits) | val);
 }
 
-unittest // for replicate
+@safe pure unittest // for replicate
 {
     size_t m = 0b111;
     size_t m2 = 0b01;
