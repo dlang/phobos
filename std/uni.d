@@ -1598,13 +1598,13 @@ size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
 }
 
 //
-size_t floorPowerOf2(size_t arg) @safe pure nothrow
+size_t floorPowerOf2(size_t arg) @safe pure nothrow @nogc
 {
     assert(arg > 1); // else bsr is undefined
     return 1<<bsr(arg-1);
 }
 
-size_t ceilPowerOf2(size_t arg) @safe pure nothrow
+size_t ceilPowerOf2(size_t arg) @safe pure nothrow @nogc
 {
     assert(arg > 1); // else bsr is undefined
     return 1<<bsr(arg-1)+1;
