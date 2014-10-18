@@ -427,7 +427,7 @@ forward order.
 
 Complexity: $(BIGOH 1)
      */
-    Range opSlice() inout
+    inout(Range) opSlice() inout
     {
         return inout(Range)(this, 0, length);
     }
@@ -440,7 +440,7 @@ Precondition: $(D a <= b && b <= length)
 
 Complexity: $(BIGOH 1)
      */
-    Range opSlice(size_t i, size_t j) inout
+    inout(Range) opSlice(size_t i, size_t j) inout
     {
         version (assert) if (i > j || j > length) throw new RangeError();
         return inout(Range)(this, i, j);
