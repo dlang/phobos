@@ -822,14 +822,14 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
         return replicateBits!(times/2, bits*2)((val<<bits) | val);
 }
 
-@safe pure unittest // for replicate
+@safe pure nothrow @nogc unittest // for replicate
 {
     size_t m = 0b111;
     size_t m2 = 0b01;
     foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
     {
         assert(replicateBits!(i, 3)(m)+1 == (1<<(3*i)));
-        assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)"().reduce!"a+b"());
+        assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)"().sum());
     }
 }
 
