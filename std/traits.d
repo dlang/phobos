@@ -1055,7 +1055,9 @@ template ParameterIdentifierTuple(func...)
     {
         template Get(size_t i)
         {
-            static if (!isFunctionPointer!func && !isDelegate!func)
+            static if (!isFunctionPointer!func && !isDelegate!func
+                       // Unnamed parameters yield CT error.
+                       && is(typeof(__traits(identifier, PT[i..i+1]))x))
             {
                 enum Get = __traits(identifier, PT[i..i+1]);
             }
@@ -1089,8 +1091,8 @@ template ParameterIdentifierTuple(func...)
 unittest
 {
     import std.traits;
-    int foo(int num, string name);
-    static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
+    int foo(int num, string name, int);
+    static assert([ParameterIdentifierTuple!foo] == ["num", "name", ""]);
 }
 
 unittest
@@ -1141,7 +1143,11 @@ template ParameterDefaultValueTuple(func...)
     {
         template Get(size_t i)
         {
-            enum get = (PT[i..i+1] args) => args[0];
+            enum ParamName = ParameterIdentifierTuple!(func[0])[i];
+            static if (ParamName.length)
+                enum get = (PT[i..i+1]) => mixin(ParamName);
+            else // Unnamed parameter
+                enum get = (PT[i..i+1] __args) => __args[0];
             static if (is(typeof(get())))
                 enum Get = get();
             else
@@ -1180,7 +1186,7 @@ template ParameterDefaultValueTuple(func...)
 unittest
 {
     import std.traits;
-    int foo(int num, string name = "hello", int[] arr = [1,2,3]);
+    int foo(int num, string name = "hello", int[] = [1,2,3]);
     static assert(is(ParameterDefaultValueTuple!foo[0] == void));
     static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
     static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
