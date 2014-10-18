@@ -1092,7 +1092,7 @@ unittest
     }
 }
 
-size_t spaceFor(size_t _bits)(size_t new_len) pure nothrow
+size_t spaceFor(size_t _bits)(size_t new_len) @safe pure nothrow @nogc
 {
     enum bits = _bits == 1 ? 1 : ceilPowerOf2(_bits);// see PackedArrayView
     static if(bits > 8*size_t.sizeof)
