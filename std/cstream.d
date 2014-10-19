@@ -5,14 +5,14 @@
  *       current standards. It will remain until we have a suitable replacement,
  *       but be aware that it will not remain long term.)
  *
- * The std.cstream module bridges std.c.stdio (or std.stdio) and std.stream.
- * Both std.c.stdio and std.stream are publicly imported by std.cstream.
+ * The std.cstream module bridges core.stdc.stdio (or std.stdio) and std.stream.
+ * Both core.stdc.stdio and std.stream are publicly imported by std.cstream.
  *
  * Macros:
  *      WIKI=Phobos/StdCstream
  *
  * Copyright: Copyright Ben Hinkle 2007 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Ben Hinkle
  * Source:    $(PHOBOSSRC std/_cstream.d)
  */
@@ -23,8 +23,8 @@
  */
 module std.cstream;
 
+public import core.stdc.stdio;
 public import std.stream;
-public import std.c.stdio;
 version(unittest) import std.stdio;
 
 import std.algorithm;
@@ -103,7 +103,7 @@ class CFile : Stream {
    * Ditto
    */
   override char ungetc(char c) {
-    return cast(char)std.c.stdio.ungetc(c,cfile);
+    return cast(char)core.stdc.stdio.ungetc(c,cfile);
   }
 
   /**
@@ -150,7 +150,11 @@ class CFile : Stream {
 
   // run a few tests
   unittest {
-    FILE* f = fopen("stream.txt","w");
+    import std.file : deleteme;
+    import std.internal.cstring : tempCString;
+
+    auto stream_file = (std.file.deleteme ~ "-stream.txt").tempCString();
+    FILE* f = fopen(stream_file,"w");
     assert(f !is null);
     CFile file = new CFile(f,FileMode.Out);
     int i = 666;
@@ -167,7 +171,7 @@ class CFile : Stream {
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
-    f = fopen("stream.txt","r");
+    f = fopen(stream_file,"r");
     file = new CFile(f,FileMode.In,true);
     // should be ok to read
     assert(file.readable);
@@ -192,7 +196,7 @@ class CFile : Stream {
       assert(file.position == 18 + 13 + 4);
     // we must be at the end of file
     file.close();
-    f = fopen("stream.txt","w+");
+    f = fopen(stream_file,"w+");
     file = new CFile(f,FileMode.In|FileMode.Out,true);
     file.writeLine("Testing stream.d:");
     file.writeLine("Another line");
@@ -218,29 +222,29 @@ class CFile : Stream {
     assert( lines[2] == "");
     assert( lines[3] == "That was blank");
     file.close();
-    remove("stream.txt");
+    remove(stream_file);
   }
 }
 
 /**
- * CFile wrapper of std.c.stdio.stdin (not seekable).
+ * CFile wrapper of core.stdc.stdio.stdin (not seekable).
  */
 __gshared CFile din;
 
 /**
- * CFile wrapper of std.c.stdio.stdout (not seekable).
+ * CFile wrapper of core.stdc.stdio.stdout (not seekable).
  */
 __gshared CFile dout;
 
 /**
- * CFile wrapper of std.c.stdio.stderr (not seekable).
+ * CFile wrapper of core.stdc.stdio.stderr (not seekable).
  */
 __gshared CFile derr;
 
 shared static this() {
   // open standard I/O devices
-  din = new CFile(std.c.stdio.stdin,FileMode.In);
-  dout = new CFile(std.c.stdio.stdout,FileMode.Out);
-  derr = new CFile(std.c.stdio.stderr,FileMode.Out);
+  din = new CFile(core.stdc.stdio.stdin,FileMode.In);
+  dout = new CFile(core.stdc.stdio.stdout,FileMode.Out);
+  derr = new CFile(core.stdc.stdio.stderr,FileMode.Out);
 }
 

@@ -21,7 +21,7 @@
  *  WIKI = Phobos/StdTypeTuple
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
@@ -617,7 +617,7 @@ unittest
 }
 
 /**
-Tests whether all given items satisfy a template predicate, i.e. evaluates to
+Tests whether any given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
 Evaluation is $(I not) short-circuited if a true result is encountered; the

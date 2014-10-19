@@ -5,7 +5,7 @@
  * tests on them.  Then, it prints out the arguments passed to main().
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  *
  *          Copyright Digital Mars 2000 - 2009.
@@ -18,6 +18,7 @@ public import std.base64;
 public import std.compiler;
 public import std.concurrency;
 public import std.conv;
+public import std.container;
 public import std.cstream;
 public import std.datetime;
 public import std.demangle;
@@ -26,7 +27,6 @@ public import std.format;
 public import std.getopt;
 public import std.math;
 public import std.mathspecial;
-public import std.metastrings;
 public import std.mmfile;
 public import std.outbuffer;
 public import std.parallelism;
@@ -72,9 +72,10 @@ int main(char[][] args)
     auto r = regex("");                 // regex
     uint ranseed = std.random.unpredictableSeed;
     thisTid;
-    int a[];
-    a.reverse;                          // adi
-    a.sort;                             // qsort
+    int[] a;
+    import std.algorithm : sort, reverse;
+    reverse(a);                         // adi
+    sort(a);                            // qsort
     Clock.currTime();                   // datetime
     Exception e = new ReadException(""); // stream
     din.eof();                           // cstream
@@ -96,7 +97,7 @@ int main(char[][] args)
     x[0] = 3;
     x[1] = 45;
     x[2] = -1;
-    x.sort;
+    sort(x[]);
     assert(x[0] == -1);
     assert(x[1] == 3);
     assert(x[2] == 45);

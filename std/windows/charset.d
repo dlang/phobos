@@ -7,7 +7,7 @@
  *      WIKI = Phobos/StdWindowsCharset
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -19,10 +19,12 @@ module std.windows.charset;
 version (Windows):
 
 private import std.conv;
-private import std.c.windows.windows;
+private import core.sys.windows.windows;
 private import std.windows.syserror;
 private import std.utf;
 private import std.string;
+
+import std.internal.cstring;
 
 /******************************************
  * Converts the UTF-8 string s into a null-terminated string in a Windows
@@ -48,13 +50,13 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
         {
             char[] result;
             int readLen;
-            auto ws = std.utf.toUTF16z(s);
-            result.length = WideCharToMultiByte(codePage, 0, ws, -1, null, 0,
+            auto wsTmp = s.tempCStringW();
+            result.length = WideCharToMultiByte(codePage, 0, wsTmp, -1, null, 0,
                     null, null);
 
             if (result.length)
             {
-                readLen = WideCharToMultiByte(codePage, 0, ws, -1, result.ptr,
+                readLen = WideCharToMultiByte(codePage, 0, wsTmp, -1, result.ptr,
                         to!int(result.length), null, null);
             }
 

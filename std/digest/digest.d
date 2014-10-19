@@ -39,7 +39,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * In this simplest case, the template API can even be used without templates: Just use the "$(B x)" structs
  * directly.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  * Johannes Pfau
  *
@@ -64,8 +64,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  */
 module std.digest.digest;
 
-import std.exception, std.range, std.traits;
-import std.algorithm : copy;
+import std.range, std.traits;
 import std.typetuple : allSatisfy;
 public import std.ascii : LetterCase;
 
@@ -406,6 +405,7 @@ private template isDigestibleRange(Range)
 DigestType!Hash digest(Hash, Range)(auto ref Range range) if(!isArray!Range
     && isDigestibleRange!Range)
 {
+    import std.algorithm : copy;
     Hash hash;
     hash.start();
     copy(range, &hash);
@@ -742,6 +742,7 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
             result[i++] = hexDigits[u & 15];
         }
     }
+    import std.exception : assumeUnique;
     return assumeUnique(result);
 }
 

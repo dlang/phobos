@@ -1,16 +1,16 @@
 // Written in the D programming language.
 
 /**
- * Compress/decompress data using the $(LINK2 http://www._zlib.net, zlib library).
+ * Compress/decompress data using the $(WEB www.zlib.net, zlib library).
  *
  * References:
- *  $(LINK2 http://en.wikipedia.org/wiki/Zlib, Wikipedia)
+ *  $(WEB en.wikipedia.org/wiki/Zlib, Wikipedia)
  *
  * Macros:
  *  WIKI = Phobos/StdZlib
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_zlib.d)
  */
@@ -67,8 +67,12 @@ class ZlibException : Exception
 
 uint adler32(uint adler, const(void)[] buf)
 {
-    return etc.c.zlib.adler32(adler, cast(ubyte *)buf.ptr,
-            to!uint(buf.length));
+    import std.range : chunks;
+    foreach(chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    {
+        adler = etc.c.zlib.adler32(adler, chunk.ptr, cast(uint)chunk.length);
+    }
+    return adler;
 }
 
 unittest
@@ -90,7 +94,12 @@ unittest
 
 uint crc32(uint crc, const(void)[] buf)
 {
-    return etc.c.zlib.crc32(crc, cast(ubyte *)buf.ptr, to!uint(buf.length));
+    import std.range : chunks;
+    foreach(chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    {
+        crc = etc.c.zlib.crc32(crc, chunk.ptr, cast(uint)chunk.length);
+    }
+    return crc;
 }
 
 unittest

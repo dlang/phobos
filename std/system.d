@@ -35,6 +35,7 @@ immutable
         osx,       /// Mac OS X
         freeBSD,   /// FreeBSD
         solaris,   /// Solaris
+        android,   /// Android
         otherPosix /// Other Posix Systems
     }
 
@@ -44,6 +45,7 @@ immutable
     else version(linux)   OS os = OS.linux;
     else version(OSX)     OS os = OS.osx;
     else version(FreeBSD) OS os = OS.freeBSD;
+    else version(Android) OS os = OS.android;
     else version(Posix)   OS os = OS.otherPosix;
     else static assert(0, "Unknown OS.");
 

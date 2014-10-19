@@ -116,7 +116,7 @@ Macros:
     WIKI=Phobos/StdXml
 
 Copyright: Copyright Janice Caron 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
 Source:    $(PHOBOSSRC std/_xml.d)
 */
@@ -871,7 +871,7 @@ class Element : Item
      * You should rarely need to call this function. It exists so that Elements
      * can be used as associative array keys.
      */
-    override const size_t toHash()
+    override size_t toHash() const
     {
         size_t hash = tag.toHash();
         foreach(item;items) hash += item.toHash();
@@ -1271,14 +1271,14 @@ class Comment : Item
      * You should rarely need to call this function. It exists so that Comments
      * can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this comment
      */
-    override const string toString() { return "<!--" ~ content ~ "-->"; }
+    override string toString() const { return "<!--" ~ content ~ "-->"; }
 
-    override @property const bool isEmptyXML() { return false; } /// Returns false always
+    override @property bool isEmptyXML() const { return false; } /// Returns false always
 }
 
 /**
@@ -1350,14 +1350,14 @@ class CData : Item
      * You should rarely need to call this function. It exists so that CDatas
      * can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this CData section
      */
-    override const string toString() { return cdata ~ content ~ "]]>"; }
+    override string toString() const { return cdata ~ content ~ "]]>"; }
 
-    override @property const bool isEmptyXML() { return false; } /// Returns false always
+    override @property bool isEmptyXML() const { return false; } /// Returns false always
 }
 
 /**
@@ -1427,17 +1427,17 @@ class Text : Item
      * You should rarely need to call this function. It exists so that Texts
      * can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this Text section
      */
-    override const string toString() { return content; }
+    override string toString() const { return content; }
 
     /**
      * Returns true if the content is the empty string
      */
-    override @property const bool isEmptyXML() { return content.length == 0; }
+    override @property bool isEmptyXML() const { return content.length == 0; }
 }
 
 /**
@@ -1509,14 +1509,14 @@ class XMLInstruction : Item
      * You should rarely need to call this function. It exists so that
      * XmlInstructions can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this XmlInstruction
      */
-    override const string toString() { return "<!" ~ content ~ ">"; }
+    override string toString() const { return "<!" ~ content ~ ">"; }
 
-    override @property const bool isEmptyXML() { return false; } /// Returns false always
+    override @property bool isEmptyXML() const { return false; } /// Returns false always
 }
 
 /**
@@ -1588,14 +1588,14 @@ class ProcessingInstruction : Item
      * You should rarely need to call this function. It exists so that
      * ProcessingInstructions can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this ProcessingInstruction
      */
-    override const string toString() { return "<?" ~ content ~ "?>"; }
+    override string toString() const { return "<?" ~ content ~ "?>"; }
 
-    override @property const bool isEmptyXML() { return false; } /// Returns false always
+    override @property bool isEmptyXML() const { return false; } /// Returns false always
 }
 
 /**
@@ -1610,10 +1610,10 @@ abstract class Item
     abstract override int opCmp(Object o);
 
     /// Returns the hash of this item
-    abstract override const size_t toHash();
+    abstract override size_t toHash() const;
 
     /// Returns a string representation of this item
-    abstract override const string toString();
+    abstract override string toString() const;
 
     /**
      * Returns an indented string representation of this item
@@ -1621,14 +1621,14 @@ abstract class Item
      * Params:
      *      indent = number of spaces by which to indent child elements
      */
-    const string[] pretty(uint indent)
+    string[] pretty(uint indent) const
     {
         string s = strip(toString());
         return s.length == 0 ? [] : [ s ];
     }
 
     /// Returns true if the item represents empty XML text
-    abstract @property const bool isEmptyXML();
+    abstract @property bool isEmptyXML() const;
 }
 
 /**
@@ -1734,7 +1734,7 @@ class ElementParser
      * The Tag at the start of the element being parsed. You can read this to
      * determine the tag's name and attributes.
      */
-    const @property const(Tag) tag() { return tag_; }
+    @property const(Tag) tag() const { return tag_; }
 
     /**
      * Register a handler which will be called whenever a start tag is
@@ -2075,7 +2075,7 @@ class ElementParser
     /**
      * Returns that part of the element which has already been parsed
      */
-    override const string toString()
+    override string toString() const
     {
         assert(elementStart.length >= s.length);
         return elementStart[0 .. elementStart.length - s.length];
@@ -2810,7 +2810,7 @@ class CheckException : XMLException
         if (err !is null) err.complete(entire);
     }
 
-    override const string toString()
+    override string toString() const
     {
         string s;
         if (line != 0) s = format("Line %d, column %d: ",line,column);

@@ -13,7 +13,7 @@
  *
  * For very large numbers, consider using the $(WEB gmplib.org, GMP library) instead.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Don Clugston
  * Source: $(PHOBOSSRC std/_bigint.d)
  */
@@ -163,8 +163,14 @@ public:
         else static if (op=="/")
         {
             assert(y!=0, "Division by zero");
-            static assert(!is(T == long) && !is(T == ulong));
-            data = BigUint.divInt(data, cast(uint)u);
+            static if (T.sizeof <= uint.sizeof)
+            {
+                data = BigUint.divInt(data, cast(uint)u);
+            }
+            else
+            {
+                data = BigUint.divInt(data, u);
+            }
             sign = data.isZero() ? false : sign ^ (y < 0);
         }
         else static if (op=="%")
@@ -322,7 +328,7 @@ public:
         static if (op == "%")
         {
             // x%y always has the same sign as x.
-            if (data.ulongLength() > 1)
+            if (data.ulongLength > 1)
                 return x;
             ulong u = absUnsign(x);
             ulong rem = u % data.peekUlong(0);
@@ -331,7 +337,7 @@ public:
         }
         else static if (op == "/")
         {
-            if (data.ulongLength() > 1)
+            if (data.ulongLength > 1)
                 return 0;
             return cast(T)(x / data.peekUlong(0));
         }
@@ -423,7 +429,7 @@ public:
     long toLong() pure nothrow const
     {
         return (sign ? -1 : 1) *
-          (data.ulongLength() == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
+          (data.ulongLength == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
           ? cast(long)(data.peekUlong(0))
           : long.max);
     }
@@ -432,7 +438,7 @@ public:
     int toInt() pure nothrow const
     {
         return (sign ? -1 : 1) *
-          (data.uintLength() == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
+          (data.uintLength == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
           ? cast(int)(data.peekUint(0))
           : int.max);
     }
@@ -440,13 +446,13 @@ public:
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
     @property size_t uintLength() pure nothrow const
     {
-        return data.uintLength();
+        return data.uintLength;
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
     @property size_t ulongLength() pure nothrow const
     {
-        return data.ulongLength();
+        return data.ulongLength;
     }
 
     /** Convert the BigInt to string, passing it to 'sink'.
@@ -527,6 +533,12 @@ private:
         return buff;
     }
 +/
+    // Implement toHash so that BigInt works properly as an AA key.
+    size_t toHash() const @trusted nothrow
+    {
+        return data.toHash() + sign;
+    }
+
 private:
     void negate() @safe pure nothrow
     {
@@ -547,12 +559,6 @@ private:
     {
         if (isZero())
             throw new Error("BigInt division by zero");
-    }
-
-    // Implement toHash so that BigInt works properly as an AA key.
-    size_t toHash() const @trusted nothrow
-    {
-        return data.toHash() + sign;
     }
 }
 
@@ -993,4 +999,35 @@ unittest // 11583
 {
     BigInt x = 0;
     assert((x > 0) == false);
+}
+
+unittest // 13391
+{
+    BigInt x1 = "123456789";
+    BigInt x2 = "123456789123456789";
+    BigInt x3 = "123456789123456789123456789";
+
+    import std.typetuple : TypeTuple;
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assert((x1 * T.max) / T.max == x1);
+        assert((x2 * T.max) / T.max == x2);
+        assert((x3 * T.max) / T.max == x3);
+    }
+
+    assert(x1 / -123456789 == -1);
+    assert(x1 / 123456789U == 1);
+    assert(x1 / -123456789L == -1);
+    assert(x1 / 123456789UL == 1);
+    assert(x2 / -123456789123456789L == -1);
+    assert(x2 / 123456789123456789UL == 1);
+
+    assert(x1 / uint.max == 0);
+    assert(x1 / ulong.max == 0);
+    assert(x2 / ulong.max == 0);
+
+    x1 /= 123456789UL;
+    assert(x1 == 1);
+    x2 /= 123456789123456789UL;
+    assert(x2 == 1);
 }

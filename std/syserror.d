@@ -15,8 +15,8 @@ module std.syserror;
 deprecated("Please use std.windows.syserror.sysErrorString instead")
 class SysError
 {
-    private import std.c.stdio;
-    private import std.c.string;
+    private import core.stdc.stdio;
+    private import core.stdc.string;
     private import std.string;
 
     static string msg(uint errcode)

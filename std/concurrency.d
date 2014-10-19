@@ -17,7 +17,7 @@
  * import std.stdio;
  * import std.concurrency;
  *
- * void spawnedFunc(Tid tid)
+ * void spawnedFunc(Tid ownerTid)
  * {
  *     // Receive a message from the owner thread.
  *     receive(
@@ -26,16 +26,16 @@
  *
  *     // Send a message back to the owner thread
  *     // indicating success.
- *     send(tid, true);
+ *     send(ownerTid, true);
  * }
  *
  * void main()
  * {
  *     // Start spawnedFunc in a new thread.
- *     auto tid = spawn(&spawnedFunc, thisTid);
+ *     auto childTid = spawn(&spawnedFunc, thisTid);
  *
  *     // Send the number 42 to this new thread.
- *     send(tid, 42);
+ *     send(childTid, 42);
  *
  *     // Receive the result code.
  *     auto wasSuccessful = receiveOnly!(bool);
@@ -45,7 +45,7 @@
  * ---
  *
  * Copyright: Copyright Sean Kelly 2009 - 2010.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Sean Kelly, Alex Rønne Petersen
  * Source:    $(PHOBOSSRC std/_concurrency.d)
  */
@@ -344,7 +344,7 @@ private:
  */
 @property Tid ownerTid()
 {
-    enforceEx!TidMissingException(owner.mbox !is null, "Error: Thread has no owner thread.");
+    enforce!TidMissingException(owner.mbox !is null, "Error: Thread has no owner thread.");
     return owner;
 }
 

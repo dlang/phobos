@@ -5,7 +5,7 @@
  *      WIKI = Phobos/StdOutbuffer
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
  */
@@ -19,11 +19,11 @@ module std.outbuffer;
 private
 {
     import core.memory;
+    import core.stdc.stdarg;
+    import core.stdc.stdio;
+    import core.stdc.stdlib;
     import std.algorithm;
     import std.string;
-    import std.c.stdio;
-    import std.c.stdlib;
-    import std.c.stdarg;
 }
 
 /*********************************************
@@ -264,6 +264,8 @@ class OutBuffer
         char[128] buffer;
         int count;
 
+        // Can't use `tempCString()` here as it will result in compilation error:
+        // "cannot mix core.std.stdlib.alloca() and exception handling".
         auto f = toStringz(format);
         auto p = buffer.ptr;
         auto psize = buffer.length;

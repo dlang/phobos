@@ -45,7 +45,7 @@ class UTFException : Exception
     uint[4] sequence;
     size_t  len;
 
-    @safe pure nothrow
+    @safe pure nothrow @nogc
     UTFException setSequence(uint[] data...)
     {
         import std.algorithm;
@@ -102,7 +102,7 @@ class UTFException : Exception
     not allowed for interchange by the Unicode standard.
   +/
 @safe
-pure nothrow bool isValidDchar(dchar c)
+pure nothrow bool isValidDchar(dchar c) @nogc
 {
     /* Note: FFFE and FFFF are specifically permitted by the
      * Unicode standard for application internal use, but are not
@@ -936,7 +936,8 @@ body
 {
     if (str[index] < codeUnitLimit!S)
         return str[index++];
-    return decodeImpl!true(str, index);
+    else
+        return decodeImpl!true(str, index);
 }
 
 dchar decode(S)(auto ref S str, ref size_t index) @trusted pure
@@ -953,7 +954,8 @@ body
 {
     if (str[index] < codeUnitLimit!S)
         return str[index++];
-    return decodeImpl!true(str, index);
+    else
+        return decodeImpl!true(str, index);
 }
 
 /++
@@ -991,18 +993,20 @@ body
         numCodeUnits = 1;
         return fst;
     }
+    else
+    {
+        //@@@BUG@@@ 8521 forces canIndex to be done outside of decodeImpl, which
+        //is undesirable, since not all overloads of decodeImpl need it. So, it
+        //should be moved back into decodeImpl once bug# 8521 has been fixed.
+        enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
+        immutable retval = decodeImpl!canIndex(str, numCodeUnits);
 
-    //@@@BUG@@@ 8521 forces canIndex to be done outside of decodeImpl, which
-    //is undesirable, since not all overloads of decodeImpl need it. So, it
-    //should be moved back into decodeImpl once bug# 8521 has been fixed.
-    enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
-    immutable retval = decodeImpl!canIndex(str, numCodeUnits);
+        // The other range types were already popped by decodeImpl.
+        static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
+            str = str[numCodeUnits .. str.length];
 
-    // The other range types were already popped by decodeImpl.
-    static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
-        str = str[numCodeUnits .. str.length];
-
-    return retval;
+        return retval;
+    }
 }
 
 dchar decodeFront(S)(ref S str, out size_t numCodeUnits) @trusted pure
@@ -1024,10 +1028,12 @@ body
         str = str[1 .. $];
         return retval;
     }
-
-    immutable retval = decodeImpl!true(str, numCodeUnits);
-    str = str[numCodeUnits .. $];
-    return retval;
+    else
+    {
+        immutable retval = decodeImpl!true(str, numCodeUnits);
+        str = str[numCodeUnits .. $];
+        return retval;
+    }
 }
 
 /++ Ditto +/
@@ -1071,7 +1077,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
     /* Dchar bitmask for different numbers of UTF-8 code units.
      */
-    enum bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
+    alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
     static if (is(S : const char[]))
         auto pstr = str.ptr + index;
@@ -1134,8 +1140,8 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         else
            return new UTFException("Attempted to decode past the end of a string");
     }
-
-    assert(fst & 0x80);
+    if((fst & 0b1100_0000) != 0b1100_0000)
+        throw invalidUTF(); // starter must have at least 2 first bits set
     ubyte tmp = void;
     dchar d = fst; // upper control bits are masked out later
     fst <<= 1;
@@ -1857,7 +1863,7 @@ unittest
     Returns the number of code units that are required to encode the code point
     $(D c) when $(D C) is the character type used to encode it.
   +/
-ubyte codeLength(C)(dchar c) @safe pure nothrow
+ubyte codeLength(C)(dchar c) @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     static if (C.sizeof == 1)
@@ -1880,7 +1886,7 @@ ubyte codeLength(C)(dchar c) @safe pure nothrow
 }
 
 ///
-unittest
+pure nothrow @nogc unittest
 {
     assert(codeLength!char('a') == 1);
     assert(codeLength!wchar('a') == 1);
@@ -2020,12 +2026,20 @@ void validate(S)(in S str) @safe pure
 }
 
 
+unittest // bugzilla 12923
+{
+  assertThrown((){
+    char[3]a=[167, 133, 175];
+    validate(a[]);
+  }());
+}
+
 /* =================== Conversion to UTF8 ======================= */
 
 pure
 {
 
-char[] toUTF8(out char[4] buf, dchar c) nothrow @safe
+char[] toUTF8(out char[4] buf, dchar c) nothrow @nogc @safe
 in
 {
     assert(isValidDchar(c));
@@ -2129,7 +2143,7 @@ string toUTF8(in dchar[] s) @trusted
 
 /* =================== Conversion to UTF16 ======================= */
 
-wchar[] toUTF16(ref wchar[2] buf, dchar c) nothrow @safe
+wchar[] toUTF16(ref wchar[2] buf, dchar c) nothrow @nogc @safe
 in
 {
     assert(isValidDchar(c));
@@ -2560,13 +2574,13 @@ pure unittest
     Throws:
         $(D UTFException) if $(D str) is not well-formed.
   +/
-size_t count(C)(const(C)[] str) @trusted pure
+size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
     if (isSomeChar!C)
 {
     return walkLength(str);
 }
 
-unittest
+pure nothrow @nogc unittest
 {
     assertCTFEable!(
     {
@@ -2698,14 +2712,26 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
      */
     static struct ByCodeUnitImpl
     {
+    pure nothrow @nogc:
+
         @property bool empty() const         { return r.length == 0; }
         @property auto ref front() inout     { return r[0]; }
         void popFront()                      { r = r[1 .. $]; }
         auto ref opIndex(size_t index) inout { return r[index]; }
 
+        @property auto ref back() const
+        {
+            return r[$ - 1];
+        }
+
+        void popBack()
+        {
+            r = r[0 .. $-1];
+        }
+
         auto opSlice(size_t lower, size_t upper)
         {
-            return r[lower..upper];
+            return ByCodeUnitImpl(r[lower..upper]);
         }
 
         @property size_t length() const
@@ -2716,7 +2742,7 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
 
         @property auto save()
         {
-            return ByCodeUnitImpl(r.save());
+            return ByCodeUnitImpl(r.save);
         }
 
       private:
@@ -2734,55 +2760,74 @@ auto ref byCodeUnit(R)(R r)
     return r;
 }
 
-unittest
+pure nothrow @nogc unittest
 {
-  {
-    char[5] s;
-    int i;
-    foreach (c; "hello".byCodeUnit.byCodeUnit())
     {
-        s[i++] = c;
+        char[5] s;
+        int i;
+        foreach (c; "hello".byCodeUnit().byCodeUnit())
+        {
+            s[i++] = c;
+        }
+        assert(s == "hello");
     }
-    assert(s == "hello");
-  }
-  {
-    wchar[5] s;
-    int i;
-    foreach (c; "hello"w.byCodeUnit.byCodeUnit())
     {
-        s[i++] = c;
+        wchar[5] s;
+        int i;
+        foreach (c; "hello"w.byCodeUnit().byCodeUnit())
+        {
+            s[i++] = c;
+        }
+        assert(s == "hello"w);
     }
-    assert(s == "hello"w);
-  }
-  {
-    dchar[5] s;
-    int i;
-    foreach (c; "hello"d.byCodeUnit.byCodeUnit())
     {
-        s[i++] = c;
+        dchar[5] s;
+        int i;
+        foreach (c; "hello"d.byCodeUnit().byCodeUnit())
+        {
+            s[i++] = c;
+        }
+        assert(s == "hello"d);
     }
-    assert(s == "hello"d);
-  }
-  {
-    auto r = "hello".byCodeUnit();
-    assert(r.length == 5);
-    assert(r[3] == 'l');
-    assert(r[2..4][1] == 'l');
-  }
-  {
-    auto s = "hello".dup.byCodeUnit();
-    s.front = 'H';
-    assert(s.front == 'H');
-    s[1] = 'E';
-    assert(s[1] == 'E');
-  }
-  {
-    auto r = "hello".byCodeUnit.byCodeUnit();
-    assert(isForwardRange!(typeof(r)));
-    auto s = r.save;
-    r.popFront();
-    assert(s.front == 'h');
-  }
+    {
+        auto r = "hello".byCodeUnit();
+        assert(r.length == 5);
+        assert(r[3] == 'l');
+        assert(r[2..4][1] == 'l');
+    }
+    {
+        char[5] buff = "hello";
+        auto s = buff[].byCodeUnit();
+        s.front = 'H';
+        assert(s.front == 'H');
+        s[1] = 'E';
+        assert(s[1] == 'E');
+    }
+    {
+        auto r = "hello".byCodeUnit().byCodeUnit();
+        static assert(isForwardRange!(typeof(r)));
+        auto s = r.save;
+        r.popFront();
+        assert(s.front == 'h');
+    }
+    {
+        auto r = "hello".byCodeUnit();
+        static assert(hasSlicing!(typeof(r)));
+        static assert(isBidirectionalRange!(typeof(r)));
+        auto ret = r.retro;
+        assert(ret.front == 'o');
+        ret.popFront();
+        assert(ret.front == 'l');
+    }
+    {
+        auto r = "κόσμε"w.byCodeUnit();
+        static assert(hasSlicing!(typeof(r)));
+        static assert(isBidirectionalRange!(typeof(r)));
+        auto ret = r.retro;
+        assert(ret.front == 'ε');
+        ret.popFront();
+        assert(ret.front == 'μ');
+    }
 }
 
 /****************************
@@ -2813,7 +2858,7 @@ auto byChar(R)(R r) if (isNarrowString!R)
     }
     else
     {
-        return r.byCodeUnit.byChar();
+        return r.byCodeUnit().byChar();
     }
 }
 
@@ -2828,7 +2873,7 @@ auto byWchar(R)(R r) if (isNarrowString!R)
     }
     else
     {
-        return r.byCodeUnit.byWchar();
+        return r.byCodeUnit().byWchar();
     }
 }
 
@@ -2837,7 +2882,7 @@ auto byDchar(R)(R r) if (isNarrowString!R)
 {
     alias tchar = Unqual!(ElementEncodingType!R);
 
-    return r.byCodeUnit.byDchar();
+    return r.byCodeUnit().byDchar();
 }
 
 
@@ -2956,7 +3001,7 @@ auto ref byChar(R)(R r)
     }
 }
 
-unittest
+pure nothrow @nogc unittest
 {
   {
     char[5] s;
@@ -3098,7 +3143,7 @@ auto ref byWchar(R)(R r)
     }
 }
 
-unittest
+pure nothrow @nogc unittest
 {
   {
     wchar[11] s;
@@ -3165,7 +3210,7 @@ auto ref byDchar(R)(R r)
             {
                 if (haveData)
                     return frontChar;
-                dchar c = r.front();
+                dchar c = r.front;
                 if (c < 0x80)
                 {
                 }
@@ -3175,7 +3220,7 @@ auto ref byDchar(R)(R r)
 
                     /* Dchar bitmask for different numbers of UTF-8 code units.
                      */
-                    enum bitMask = [(1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1];
+                    alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
                     foreach (i; TypeTuple!(1, 2, 3))
                     {
@@ -3268,7 +3313,7 @@ auto ref byDchar(R)(R r)
             {
                 if (haveData)
                     return frontChar;
-                dchar c = r.front();
+                dchar c = r.front;
                 if (c < 0xD800)
                 {
                 }
@@ -3328,7 +3373,7 @@ auto ref byDchar(R)(R r)
 
 import std.stdio;
 
-unittest
+pure nothrow @nogc unittest
 {
   {
     dchar[9] s;
@@ -3482,3 +3527,38 @@ unittest
   }
 }
 
+// test pure, @safe, nothrow, @nogc correctness of byChar/byWchar/byDchar,
+// which needs to support ranges with and without those attributes
+
+pure @safe nothrow @nogc unittest
+{
+    dchar[5] s = "hello"d;
+    foreach (c; s[].byChar())  { }
+    foreach (c; s[].byWchar()) { }
+    foreach (c; s[].byDchar()) { }
+}
+
+version(unittest)
+int impureVariable;
+
+@system unittest
+{
+    static struct ImpureThrowingSystemRange(Char)
+    {
+        @property bool empty() const { return true; }
+        @property Char front() const { return Char.init; }
+        void popFront()
+        {
+            impureVariable++;
+            throw new Exception("only for testing nothrow");
+        }
+    }
+
+    foreach (Char; TypeTuple!(char, wchar, dchar))
+    {
+        ImpureThrowingSystemRange!Char range;
+        foreach (c; range.byChar())  { }
+        foreach (c; range.byWchar()) { }
+        foreach (c; range.byDchar()) { }
+    }
+}

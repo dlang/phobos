@@ -6,7 +6,7 @@
  *  WIKI=Phobos/StdMmfile
  *
  * Copyright: Copyright Digital Mars 2004 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *            Matthew Wilson
  * Source:    $(PHOBOSSRC std/_mmfile.d)
@@ -26,12 +26,15 @@ private import std.path;
 private import std.string;
 import std.conv, std.exception, std.stdio;
 
+import std.internal.cstring;
+
 //debug = MMFILE;
 
 version (Windows)
 {
-    private import std.c.windows.windows;
+    private import core.sys.windows.windows;
     private import std.utf;
+    private import std.windows.syserror;
 }
 else version (Posix)
 {
@@ -75,7 +78,7 @@ class MmFile
     version(linux) this(File file, Mode mode = Mode.read, ulong size = 0,
             void* address = null, size_t window = 0)
     {
-        this(file.fileno(), mode, size, address, window);
+        this(file.fileno, mode, size, address, window);
     }
 
     version(linux) private this(int fildes, Mode mode, ulong size,
@@ -218,64 +221,48 @@ class MmFile
                 assert(0);
             }
 
-            if (filename.ptr)
+            if (filename)
             {
-                auto namez = std.utf.toUTF16z(filename);
-                hFile = CreateFileW(namez,
+                hFile = CreateFileW(filename.tempCStringW(),
                         dwDesiredAccess2,
                         dwShareMode,
                         null,
                         dwCreationDisposition,
                         FILE_ATTRIBUTE_NORMAL,
                         cast(HANDLE)null);
+                wenforce(hFile != INVALID_HANDLE_VALUE, "CreateFileW");
             }
             else
-                hFile = null;
+                hFile = INVALID_HANDLE_VALUE;
+            scope(failure) if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
 
-            hFileMap = null;
-            if (hFile != INVALID_HANDLE_VALUE)
+            int hi = cast(int)(size>>32);
+            hFileMap = CreateFileMappingW(hFile, null, flProtect,
+                    hi, cast(uint)size, null);
+            wenforce(hFileMap, "CreateFileMapping");
+            scope(failure) CloseHandle(hFileMap);
+
+            if (size == 0 && filename)
             {
-                int hi = cast(int)(size>>32);
-                hFileMap = CreateFileMappingW(hFile, null, flProtect,
-                        hi, cast(uint)size, null);
+                uint sizehi;
+                uint sizelow = GetFileSize(hFile, &sizehi);
+                wenforce(sizelow != INVALID_FILE_SIZE || GetLastError() != ERROR_SUCCESS,
+                    "GetFileSize");
+                size = (cast(ulong)sizehi << 32) + sizelow;
             }
-            if (hFileMap != null)               // mapping didn't fail
-            {
+            this.size = size;
 
-                if (size == 0)
-                {
-                    uint sizehi;
-                    uint sizelow = GetFileSize(hFile,&sizehi);
-                    size = (cast(ulong)sizehi << 32) + sizelow;
-                }
-                this.size = size;
+            size_t initial_map = (window && 2*window<size)
+                ? 2*window : cast(size_t)size;
+            p = MapViewOfFileEx(hFileMap, dwDesiredAccess, 0, 0,
+                    initial_map, address);
+            wenforce(p, "MapViewOfFileEx");
+            data = p[0 .. initial_map];
 
-                size_t initial_map = (window && 2*window<size)
-                    ? 2*window : cast(size_t)size;
-                p = MapViewOfFileEx(hFileMap, dwDesiredAccess, 0, 0,
-                        initial_map, address);
-                if (p)
-                {
-                    data = p[0 .. initial_map];
-
-                    debug (MMFILE) printf("MmFile.this(): p = %p, size = %d\n", p, size);
-                    return;
-                }
-            }
-
-            if (hFileMap != null)
-                CloseHandle(hFileMap);
-            hFileMap = null;
-
-            if (hFile != INVALID_HANDLE_VALUE)
-                CloseHandle(hFile);
-            hFile = INVALID_HANDLE_VALUE;
-
-            errnoEnforce(false);
+            debug (MMFILE) printf("MmFile.this(): p = %p, size = %d\n", p, size);
         }
         else version (Posix)
         {
-            auto namez = toStringz(filename);
             void* p;
             int oflag;
             int fmode;
@@ -317,7 +304,7 @@ class MmFile
 
             if (filename.length)
             {
-                fd = .open(namez, oflag, fmode);
+                fd = .open(filename.tempCString(), oflag, fmode);
                 errnoEnforce(fd != -1, "Could not open file "~filename);
 
                 stat_t statbuf;
@@ -341,6 +328,7 @@ class MmFile
             else
             {
                 fd = -1;
+                version(linux) import core.sys.linux.sys.mman : MAP_ANON;                
                 flags |= MAP_ANON;
             }
             this.size = size;
@@ -370,11 +358,11 @@ class MmFile
         unmap();
         version (Windows)
         {
-            errnoEnforce(hFileMap == null || CloseHandle(hFileMap) == TRUE,
+            wenforce(hFileMap == null || CloseHandle(hFileMap) == TRUE,
                     "Could not close file handle");
             hFileMap = null;
 
-            errnoEnforce(!hFile || hFile == INVALID_HANDLE_VALUE
+            wenforce(!hFile || hFile == INVALID_HANDLE_VALUE
                     || CloseHandle(hFile) == TRUE,
                     "Could not close handle");
             hFile = INVALID_HANDLE_VALUE;
@@ -489,7 +477,7 @@ class MmFile
     {
         debug (MMFILE) printf("MmFile.unmap()\n");
         version(Windows) {
-            errnoEnforce(!data.ptr || UnmapViewOfFile(data.ptr) != FALSE);
+            wenforce(!data.ptr || UnmapViewOfFile(data.ptr) != FALSE, "UnmapViewOfFile");
         } else {
             errnoEnforce(!data.ptr || munmap(cast(void*)data, data.length) == 0,
                     "munmap failed");
@@ -507,7 +495,7 @@ class MmFile
         version(Windows) {
             uint hi = cast(uint)(start>>32);
             p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint)start, len, address);
-            errnoEnforce(p);
+            wenforce(p, "MapViewOfFileEx");
         } else {
             p = mmap(address, len, prot, flags, fd, cast(off_t)start);
             errnoEnforce(p != MAP_FAILED);
@@ -601,10 +589,12 @@ private:
 
 unittest
 {
+    import std.file : deleteme;
+
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
     version(Windows) {
-        /+ these aren't defined in std.c.windows.windows so let's use default
+        /+ these aren't defined in core.sys.windows.windows so let's use default
          SYSTEM_INFO sysinfo;
          GetSystemInfo(&sysinfo);
          win = sysinfo.dwAllocationGranularity;
@@ -612,7 +602,8 @@ unittest
     } else version (linux) {
         // getpagesize() is not defined in the unix D headers so use the guess
     }
-    MmFile mf = new MmFile("testing.txt",MmFile.Mode.readWriteNew,
+    string test_file = std.file.deleteme ~ "-testing.txt";
+    MmFile mf = new MmFile(test_file,MmFile.Mode.readWriteNew,
             100*K,null,win);
     ubyte[] str = cast(ubyte[])"1234567890";
     ubyte[] data = cast(ubyte[])mf[0 .. 10];
@@ -629,7 +620,7 @@ unittest
     assert( data2.length == 79*K );
     assert( data2[$-1] == 'b' );
     delete mf;
-    std.file.remove("testing.txt");
+    std.file.remove(test_file);
     // Create anonymous mapping
     auto test = new MmFile(null, MmFile.Mode.readWriteNew, 1024*1024, null);
 }

@@ -49,41 +49,51 @@ import std.typetuple : TypeTuple, allSatisfy;
 debug(Unique) import std.stdio;
 
 /**
-Encapsulates unique ownership of a resource.  Resource of type T is
+Encapsulates unique ownership of a resource.  Resource of type $(D T) is
 deleted at the end of the scope, unless it is transferred.  The
 transfer can be explicit, by calling $(D release), or implicit, when
 returning Unique from a function. The resource can be a polymorphic
 class object, in which case Unique behaves polymorphically too.
-
-Example:
 */
 struct Unique(T)
 {
+/** Represents a reference to $(D T). Resolves to $(D T*) if $(D T) is a value type. */
 static if (is(T:Object))
     alias RefT = T;
 else
     alias RefT = T*;
 
 public:
-/+ Doesn't work yet
+    // Deferred in case we get some language support for checking uniqueness.
+    version(None)
     /**
-    The safe constructor. It creates the resource and
-    guarantees unique ownership of it (unless the constructor
-    of $(D T) publishes aliases of $(D this)),
+    Allows safe construction of $(D Unique). It creates the resource and
+    guarantees unique ownership of it (unless $(D T) publishes aliases of
+    $(D this)).
+    Note: Nested structs/classes cannot be created.
+    Params:
+    args = Arguments to pass to $(D T)'s constructor.
+    ---
+    static class C {}
+    auto u = Unique!(C).create();
+    ---
     */
-    this(A...)(A args)
+    static Unique!T create(A...)(auto ref A args)
+    if (__traits(compiles, new T(args)))
     {
-        _p = new T(args);
+        debug(Unique) writeln("Unique.create for ", T.stringof);
+        Unique!T u;
+        u._p = new T(args);
+        return u;
     }
-+/
 
     /**
     Constructor that takes an rvalue.
     It will ensure uniqueness, as long as the rvalue
-    isn't just a view on an lvalue (e.g., a cast)
+    isn't just a view on an lvalue (e.g., a cast).
     Typical usage:
     ----
-    Unique!(Foo) f = new Foo;
+    Unique!Foo f = new Foo;
     ----
     */
     this(RefT p)
@@ -103,43 +113,50 @@ public:
         p = null;
         assert(p is null);
     }
-/+ Doesn't work yet
     /**
-    Constructor that takes a Unique of a type that is convertible to our type:
-    Disallow construction from lvalue (force the use of release on the source Unique)
-    If the source is an rvalue, null its content, so the destrutctor doesn't delete it
+    Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
-    Typically used by the compiler to return $(D Unique) of derived type as $(D Unique)
-    of base type.
-
+    Typically used to transfer a $(D Unique) rvalue of derived type to
+    a $(D Unique) of base type.
     Example:
-    ----
-    Unique!(Base) create()
-    {
-        Unique!(Derived) d = new Derived;
-        return d; // Implicit Derived->Base conversion
-    }
-    ----
+    ---
+    class C : Object {}
+
+    Unique!C uc = new C;
+    Unique!Object uo = uc.release;
+    ---
     */
-    this(U)(ref Unique!(U) u) = null;
-    this(U)(Unique!(U) u)
+    this(U)(Unique!U u)
+    if (is(u.RefT:RefT))
     {
+        debug(Unique) writeln("Unique constructor converting from ", U.stringof);
         _p = u._p;
         u._p = null;
     }
-+/
+
+    /// Transfer ownership from a $(D Unique) of a type that is convertible to our type.
+    void opAssign(U)(Unique!U u)
+    if (is(u.RefT:RefT))
+    {
+        debug(Unique) writeln("Unique opAssign converting from ", U.stringof);
+        // first delete any resource we own
+        destroy(this);
+        _p = u._p;
+        u._p = null;
+    }
 
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        delete _p;
+        if (_p !is null) delete _p;
         _p = null;
     }
-    bool isEmpty() const
+    /** Returns whether the resource exists. */
+    @property bool isEmpty() const
     {
         return _p is null;
     }
-    /** Returns a unique rvalue. Nullifies the current contents */
+    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
     Unique release()
     {
         debug(Unique) writeln("Release");
@@ -148,72 +165,130 @@ public:
         debug(Unique) writeln("return from Release");
         return u;
     }
-    /** Forwards member access to contents */
+    /** Forwards member access to contents. */
     RefT opDot() { return _p; }
 
-/+ doesn't work yet!
     /**
-    Postblit operator is undefined to prevent the cloning of $(D Unique) objects
+    Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
     */
-    this(this) = null;
- +/
+    @disable this(this);
 
 private:
     RefT _p;
 }
 
-/+ doesn't work yet
+///
 unittest
 {
-    writeln("Unique class");
+    static struct S
+    {
+        int i;
+        this(int i){this.i = i;}
+    }
+    Unique!S produce()
+    {
+        // Construct a unique instance of S on the heap
+        Unique!S ut = new S(5);
+        // Implicit transfer of ownership
+        return ut;
+    }
+    // Borrow a unique resource by ref
+    void increment(ref Unique!S ur)
+    {
+        ur.i++;
+    }
+    void consume(Unique!S u2)
+    {
+        assert(u2.i == 6);
+        // Resource automatically deleted here
+    }
+    Unique!S u1;
+    assert(u1.isEmpty);
+    u1 = produce();
+    increment(u1);
+    assert(u1.i == 6);
+    //consume(u1); // Error: u1 is not copyable
+    // Transfer ownership of the resource
+    consume(u1.release);
+    assert(u1.isEmpty);
+}
+
+unittest
+{
+    // test conversion to base ref
+    int deleted = 0;
+    class C
+    {
+        ~this(){deleted++;}
+    }
+    // constructor conversion
+    Unique!Object u = Unique!C(new C);
+    static assert(!__traits(compiles, {u = new C;}));
+    assert(!u.isEmpty);
+    destroy(u);
+    assert(deleted == 1);
+
+    Unique!C uc = new C;
+    static assert(!__traits(compiles, {Unique!Object uo = uc;}));
+    Unique!Object uo = new C;
+    // opAssign conversion, deleting uo resource first
+    uo = uc.release;
+    assert(uc.isEmpty);
+    assert(!uo.isEmpty);
+    assert(deleted == 2);
+}
+
+unittest
+{
+    debug(Unique) writeln("Unique class");
     class Bar
     {
-        ~this() { writefln("    Bar destructor"); }
+        ~this() { debug(Unique) writeln("    Bar destructor"); }
         int val() const { return 4; }
     }
     alias UBar = Unique!(Bar);
     UBar g(UBar u)
     {
-        return u;
+        debug(Unique) writeln("inside g");
+        return u.release;
     }
     auto ub = UBar(new Bar);
     assert(!ub.isEmpty);
     assert(ub.val == 4);
-    // should not compile
-    // auto ub3 = g(ub);
-    writeln("Calling g");
+    static assert(!__traits(compiles, {auto ub3 = g(ub);}));
+    debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
+    debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
 }
 
 unittest
 {
-    writeln("Unique struct");
+    debug(Unique) writeln("Unique struct");
     struct Foo
     {
-        ~this() { writefln("    Bar destructor"); }
+        ~this() { debug(Unique) writeln("    Foo destructor"); }
         int val() const { return 3; }
     }
     alias UFoo = Unique!(Foo);
 
     UFoo f(UFoo u)
     {
-        writeln("inside f");
-        return u;
+        debug(Unique) writeln("inside f");
+        return u.release;
     }
 
     auto uf = UFoo(new Foo);
     assert(!uf.isEmpty);
     assert(uf.val == 3);
-    // should not compile
-    // auto uf3 = f(uf);
-    writeln("Unique struct: calling f");
+    static assert(!__traits(compiles, {auto uf3 = f(uf);}));
+    debug(Unique) writeln("Unique struct: calling f");
     auto uf2 = f(uf.release);
+    debug(Unique) writeln("Unique struct: returned from f");
     assert(uf.isEmpty);
     assert(!uf2.isEmpty);
 }
-+/
 
 
 /**
@@ -393,6 +468,17 @@ template Tuple(Specs...)
         alias Types = staticMap!(extractType, fieldSpecs);
 
         /**
+         * The names of the tuple's components. Unnamed fields have empty names.
+         *
+         * Examples:
+         * ----
+         * alias Fields = Tuple!(int, "id", string, float);
+         * static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+         * ----
+         */
+        alias fieldNames = staticMap!(extractName, fieldSpecs);
+
+        /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
          * components. The result of $(D expand) acts as if the tuple components
          * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
@@ -435,9 +521,12 @@ template Tuple(Specs...)
         /**
          * Constructor taking one value for each field.
          */
-        this(Types values)
+        static if (Types.length > 0)
         {
-            field[] = values[];
+            this(Types values)
+            {
+                field[] = values[];
+            }
         }
 
         /**
@@ -560,6 +649,14 @@ template Tuple(Specs...)
             return *cast(typeof(return)*) &(field[from]);
         }
 
+        size_t toHash() const nothrow @trusted
+        {
+            size_t h = 0;
+            foreach (i, T; Types)
+                h += typeid(T).getHash(cast(const void*)&field[i]);
+            return h;
+        }
+
         /**
          * Converts to string.
          */
@@ -602,8 +699,6 @@ private enum bool isPrintable(T) =
         Appender!string w;
         formattedWrite(w, "%s", T.init);
     }));
-
-private alias Identity(alias T) = T;
 
 /**
     Return a copy of a Tuple with its fields in reverse order.
@@ -969,6 +1064,17 @@ unittest
     TISIS e = TISIS(ss);
 }
 
+// Bugzilla #9819
+unittest
+{
+    alias T = Tuple!(int, "x", double, "foo");
+    static assert(T.fieldNames[0] == "x");
+    static assert(T.fieldNames[1] == "foo");
+
+    alias Fields = Tuple!(int, "id", string, float);
+    static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+}
+
 /**
 Returns a $(D Tuple) object instantiated and initialized according to
 the arguments.
@@ -1021,6 +1127,50 @@ unittest
     static assert(!isTuple!(S));
 }
 
+// used by both Rebindable and UnqualRef
+private mixin template RebindableCommon(T, U, alias This)
+    if (is(T == class) || is(T == interface))
+{
+    private union
+    {
+        T original;
+        U stripped;
+    }
+
+    @trusted pure nothrow @nogc
+    {
+        void opAssign(T another)
+        {
+            stripped = cast(U) another;
+        }
+
+        void opAssign(typeof(this) another)
+        {
+            stripped = another.stripped;
+        }
+
+        static if (is(T == const U) && is(T == const shared U))
+        {
+            // safely assign immutable to const / const shared
+            void opAssign(This!(immutable U) another)
+            {
+                stripped = another.stripped;
+            }
+        }
+
+        this(T initializer)
+        {
+            opAssign(initializer);
+        }
+
+        @property ref inout(T) get() inout
+        {
+            return original;
+        }
+    }
+
+    alias get this;
+}
 
 /**
 $(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
@@ -1058,52 +1208,23 @@ risks usually associated with $(D cast).
  */
 template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
 {
-    static if (!is(T X == const U, U) && !is(T X == immutable U, U))
+    static if (is(T == const U, U) || is(T == immutable U, U))
     {
-        alias Rebindable = T;
-    }
-    else static if (isDynamicArray!T)
-    {
-        alias Rebindable = const(ElementEncodingType!T)[];
+        static if (isDynamicArray!T)
+        {
+            alias Rebindable = const(ElementEncodingType!T)[];
+        }
+        else
+        {
+            struct Rebindable
+            {
+                mixin RebindableCommon!(T, U, Rebindable);
+            }
+        }
     }
     else
     {
-        struct Rebindable
-        {
-            private union
-            {
-                T original;
-                U stripped;
-            }
-            void opAssign(T another) @trusted pure nothrow
-            {
-                stripped = cast(U) another;
-            }
-            void opAssign(Rebindable another) @trusted pure nothrow
-            {
-                stripped = another.stripped;
-            }
-            static if (is(T == const U))
-            {
-                // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another) @trusted pure nothrow
-                {
-                    stripped = another.stripped;
-                }
-            }
-
-            this(T initializer) @safe pure nothrow
-            {
-                opAssign(initializer);
-            }
-
-            @property ref inout(T) get() @trusted inout pure nothrow
-            {
-                return original;
-            }
-
-            alias get this;
-        }
+        alias Rebindable = T;
     }
 }
 
@@ -1131,7 +1252,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 
 unittest
 {
-    interface CI { const int foo(); }
+    interface CI { int foo() const; }
     class C : CI {
       int foo() const { return 42; }
       @property int bar() const { return 23; }
@@ -1211,6 +1332,61 @@ unittest
     static assert(!__traits(compiles, Rebindable!(int[1])));
     static assert(!__traits(compiles, Rebindable!(const int[1])));
 }
+
+/**
+    Similar to $(D Rebindable!(T)) but strips all qualifiers from the reference as
+    opposed to just constness / immutability. Primary intended use case is with
+    shared (having thread-local reference to shared class data)
+ */
+template UnqualRef(T)
+    if (is(T == class) || is(T == interface))
+{
+    static if (is(T == const U, U)
+        || is(T == immutable U, U)
+        || is(T == shared U, U)
+        || is(T == const shared U, U))
+    {
+        struct UnqualRef
+        {
+            mixin RebindableCommon!(T, U, UnqualRef);
+        }
+    }
+    else
+    {
+        alias UnqualRef = T;
+    }
+}
+
+///
+unittest
+{
+    class Data {}
+
+    static shared(Data) a;
+    static UnqualRef!(shared Data) b;
+
+    import core.thread;
+
+    auto thread = new core.thread.Thread({
+        a = new shared Data();
+        b = new shared Data();
+    });
+
+    thread.start();
+    thread.join();
+
+    assert(a !is null);
+    assert(b is null);
+}
+
+unittest
+{
+    class C { }
+    alias T = UnqualRef!(const shared C);
+    static assert (is(typeof(T.stripped) == C));
+}
+
+
 
 /**
   Order the provided members to minimize size while preserving alignment.
@@ -3457,7 +3633,8 @@ private template DerivedFunctionType(T...)
         {
             alias R = Select!(is(R0 : R1), R0, R1);
             alias FX = FunctionTypeOf!(R function(P0));
-            alias FY = SetFunctionAttributes!(FX, functionLinkage!F0, FA0 | FA1);
+            // @system is default
+            alias FY = SetFunctionAttributes!(FX, functionLinkage!F0, (FA0 | FA1) & ~FA.system);
             alias DerivedFunctionType = DerivedFunctionType!(FY, T[2 .. $]);
         }
         else
@@ -4005,10 +4182,13 @@ mixin template Proxy(alias a)
             // member template
             template opDispatch(T...)
             {
-                auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~"!T(args)"); }
+                enum targs = T.length ? "!T" : "";
+                auto ref opDispatch(this X, Args...)(auto ref Args args){ return mixin("a."~name~targs~"(args)"); }
             }
         }
     }
+
+    import std.traits : isArray;
 
     static if (isArray!(typeof(a)))
     {
@@ -4120,13 +4300,17 @@ unittest
     {
         int field;
 
-        @property const int val1(){ return field; }
-        @property void val1(int n){ field = n; }
+        @property int val1() const { return field; }
+        @property void val1(int n) { field = n; }
 
-        @property ref int val2(){ return field; }
+        @property ref int val2() { return field; }
 
-        const int func(int x, int y){ return x; }
-        void func1(ref int a){ a = 9; }
+        int func(int x, int y) const { return x; }
+        void func1(ref int a) { a = 9; }
+
+        T ifti1(T)(T t) { return t; }
+        void ifti2(Args...)(Args args) { }
+        void ifti3(T, Args...)(Args args) { }
 
         T opCast(T)(){ return T.init; }
 
@@ -4169,6 +4353,11 @@ unittest
     assert(h.func(2,4) == 2);
     h.func1(n);
     assert(n == 9);
+
+    // IFTI
+    assert(h.ifti1(4) == 4);
+    h.ifti2(4);
+    h.ifti3!int(4, 3);
 
     // bug5896 test
     assert(h.opCast!int() == 0);
@@ -4272,12 +4461,16 @@ alias TypeInt2 = Typedef!int;
 // The two Typedefs are the same type.
 static assert(is(TypeInt1 == TypeInt2));
 
-alias TypeFloat1 = Typedef!(float, float.init, "a");
-alias TypeFloat2 = Typedef!(float, float.init, "b");
+alias MoneyEuros = Typedef!(float, float.init, "euros");
+alias MoneyDollars = Typedef!(float, float.init, "dollars");
 
 // The two Typedefs are _not_ the same type.
-static assert(!is(TypeFloat1 == TypeFloat2));
+static assert(!is(MoneyEuros == MoneyDollars));
 ----
+
+Note: If a library routine cannot handle the Typedef type,
+you can use the $(D TypedefType) template to extract the
+type which the Typedef wraps.
  */
 struct Typedef(T, T init = T.init, string cookie=null)
 {
@@ -4294,6 +4487,44 @@ struct Typedef(T, T init = T.init, string cookie=null)
     }
 
     mixin Proxy!Typedef_payload;
+}
+
+/**
+Get the underlying type which a $(D Typedef) wraps.
+If $(D T) is not a $(D Typedef) it will alias itself to $(D T).
+*/
+template TypedefType(T)
+{
+    static if (is(T : Typedef!Arg, Arg))
+        alias TypedefType = Arg;
+    else
+        alias TypedefType = T;
+}
+
+///
+unittest
+{
+    import std.typecons: Typedef, TypedefType;
+    import std.conv: to;
+
+    alias MyInt = Typedef!int;
+    static assert(is(TypedefType!MyInt == int));
+
+    /// Instantiating with a non-Typedef will return that type
+    static assert(is(TypedefType!int == int));
+
+    string num = "5";
+
+    // extract the needed type
+    MyInt myInt = MyInt( num.to!(TypedefType!MyInt) );
+    assert(myInt == 5);
+
+    // cast to the underlying type to get the value that's being wrapped
+    int x = cast(TypedefType!MyInt)myInt;
+
+    alias MyIntInit = Typedef!(int, 42);
+    static assert(is(TypedefType!MyIntInit == int));
+    static assert(MyIntInit() == 42);
 }
 
 unittest

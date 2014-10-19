@@ -25,11 +25,11 @@ module std.format;
 //debug=format;                // uncomment to turn on debugging printf's
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
-import std.algorithm, std.ascii, std.bitmanip, std.conv,
+import std.algorithm, std.ascii, std.conv,
     std.exception, std.range,
     std.system, std.traits, std.typetuple,
     std.utf;
-version (Win64) {
+version (CRuntime_Microsoft) {
     import std.math : isnan, isInfinity;
 }
 version(unittest) {
@@ -41,7 +41,7 @@ version(unittest) {
     import std.string;
 }
 
-version (Win32) version (DigitalMars)
+version(CRuntime_DigitalMars)
 {
     version = DigitalMarsC;
 }
@@ -196,16 +196,16 @@ $(I FormatChar):
     <dt>$(I Width)
     <dd>
     Specifies the minimum field width.
-    If the width is a $(B *), the next argument, which must be
-    of type $(B int), is taken as the width.
+    If the width is a $(B *), an additional argument of type $(B int),
+    preceding the actual argument, is taken as the width.
     If the width is negative, it is as if the $(B -) was given
     as a $(I Flags) character.
 
     <dt>$(I Precision)
     <dd> Gives the precision for numeric conversions.
-    If the precision is a $(B *), the next argument, which must be
-    of type $(B int), is taken as the precision. If it is negative,
-    it is as if there was no $(I Precision).
+    If the precision is a $(B *), an additional argument of type $(B int),
+    preceding the actual argument, is taken as the precision.
+    If it is negative, it is as if there was no $(I Precision) specifier.
 
     <dt>$(I FormatChar)
     <dd>
@@ -317,7 +317,7 @@ $(I FormatChar):
 
     Examples:
     -------------------------
-    import std.c.stdio;
+    import core.stdc.stdio;
     import std.format;
 
     void main()
@@ -455,7 +455,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
         {
             // leftover spec?
             enforceFmt(fmt.length == 0,
-                text("Orphan format specifier: %", fmt));
+                text("Orphan format specifier: %", spec.spec));
             break;
         }
         if (spec.width == spec.DYNAMIC)
@@ -733,6 +733,7 @@ struct FormatSpec(Char)
     {
         union
         {
+            import std.bitmanip : bitfields;
             mixin(bitfields!(
                         bool, "flDash", 1,
                         bool, "flZero", 1,
@@ -1107,7 +1108,7 @@ struct FormatSpec(Char)
         return false;
     }
 
-    private const string getCurFmtStr()
+    private string getCurFmtStr() const
     {
         auto w = appender!string();
         auto f = FormatSpec!Char("%s"); // for stringnize
@@ -1597,7 +1598,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enforceFmt(std.algorithm.find("fgFGaAeEs", fs.spec).length,
         "floating");
 
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         double tval = val; // convert early to get "inf" in case of overflow
         string s;
@@ -1653,18 +1654,21 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
     char[512] buf;
 
-    immutable n = snprintf(buf.ptr, buf.length,
-                           sprintfSpec.ptr,
-                           fs.width,
-                           // negative precision is same as no precision specified
-                           fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
-                           tval);
+    immutable n = ()@trusted{
+        return snprintf(buf.ptr, buf.length,
+                        sprintfSpec.ptr,
+                        fs.width,
+                        // negative precision is same as no precision specified
+                        fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
+                        tval);
+    }();
+
     enforceFmt(n >= 0,
         "floating point formatting failure");
-    put(w, buf[0 .. strlen(buf.ptr)]);
+    put(w, buf[0 .. min(n, buf.length-1)]);
 }
 
-/*@safe pure */unittest
+@safe /*pure */unittest
 {
     foreach (T; TypeTuple!(float, double, real))
     {
@@ -1672,7 +1676,9 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         formatTest( to!(    const T)(5.5), "5.5" );
         formatTest( to!(immutable T)(5.5), "5.5" );
 
-        formatTest( T.nan, "nan" );
+        // bionic doesn't support lower-case string formatting of nan yet
+        version(Android) { formatTest( T.nan, "NaN" ); }
+        else { formatTest( T.nan, "nan" ); }
     }
 }
 
@@ -2038,11 +2044,11 @@ unittest
     struct Range
     {
         string value;
-        const @property bool empty(){ return !value.length; }
-        const @property dchar front(){ return value.front; }
-        void popFront(){ value.popFront(); }
+        @property bool empty() const { return !value.length; }
+        @property dchar front() const { return value.front; }
+        void popFront() { value.popFront(); }
 
-        const @property size_t length(){ return value.length; }
+        @property size_t length() const { return value.length; }
     }
     immutable table =
     [
@@ -2697,6 +2703,52 @@ if (is(T == class) && !is(T == enum))
     }
 }
 
+/++
+   $(D formatValue) allows to reuse existing format specifiers:
+ +/
+unittest
+{
+   import std.format;
+   import std.string : format;
+
+   struct Point
+   {
+       int x, y;
+
+       void toString(scope void delegate(const(char)[]) sink,
+                     FormatSpec!char fmt) const
+       {
+           sink("(");
+           sink.formatValue(x, fmt);
+           sink(",");
+           sink.formatValue(y, fmt);
+           sink(")");
+       }
+   }
+
+   auto p = Point(16,11);
+   assert(format("%03d", p) == "(016,011)");
+   assert(format("%02x", p) == "(10,0b)");
+}
+
+/++
+   The following code compares the use of $(D formatValue) and $(D formattedWrite).
+ +/
+unittest
+{
+   import std.format;
+   import std.array : appender;
+
+   auto writer1 = appender!string();
+   writer1.formattedWrite("%08b", 42);
+
+   auto writer2 = appender!string();
+   auto f = singleSpec("%08b");
+   writer2.formatValue(42, f);
+
+   assert(writer1.data == writer2.data && writer1.data == "00101010");
+}
+
 unittest
 {
     // class range (issue 5154)
@@ -2778,7 +2830,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
         {
             version (Windows)
             {
-                import std.c.windows.com : IUnknown;
+                import core.sys.windows.com : IUnknown;
                 static if (is(T : IUnknown))
                 {
                     formatValue(w, *cast(void**)&val, f);
@@ -2818,7 +2870,7 @@ unittest
     version (Windows)
     {
         import core.sys.windows.windows : HRESULT;
-        import std.c.windows.com : IUnknown, IID;
+        import core.sys.windows.com : IUnknown, IID;
 
         interface IUnknown2 : IUnknown { }
 
@@ -3145,18 +3197,6 @@ unittest
 }
 
 /*
-   Formatting a $(D typedef) is deprecated but still kept around for a while.
- */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == typedef))
-{
-    static if (is(T U == typedef))
-    {
-        formatValue(w, cast(U) val, f);
-    }
-}
-
-/*
   Formats an object of type 'D' according to 'f' and writes it to
   'w'. The pointer 'arg' is assumed to point to an object of type
   'D'. The untyped signature is for the sake of taking this function's
@@ -3238,7 +3278,7 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, val, f);
-    enforceEx!AssertError(
+    enforce!AssertError(
             w.data == expected,
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
@@ -3248,7 +3288,7 @@ void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, str
 {
     auto w = appender!string();
     formattedWrite(w, fmt, val);
-    enforceEx!AssertError(
+    enforce!AssertError(
             w.data == expected,
             text("expected = `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
@@ -3263,7 +3303,7 @@ void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = _
     {
         if(w.data == cur) return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             false,
             text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
@@ -3277,7 +3317,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
     {
         if(w.data == cur) return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             false,
             text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
@@ -3351,7 +3391,7 @@ unittest
 
     stream.clear();
     formattedWrite(stream, "%g %A %s", 1.67, -1.28, float.nan);
-    // std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    // core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
 
     /* The host C library is used to format floats.  C99 doesn't
     * specify what the hex digit before the decimal point is for
@@ -3372,10 +3412,17 @@ unittest
         assert(stream.data == "1.67 -0XA.3D70A3D70A3D8P-3 nan",
                 stream.data);
     }
-    else version (Win64)
+    else version (CRuntime_Microsoft)
     {
         assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
                 stream.data);
+    }
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers
+        // or lower-case string formatting of nan yet, but it was committed
+        // recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
     }
     else
     {
@@ -3402,8 +3449,14 @@ unittest
 
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
-    version (Win64)
+    version (CRuntime_Microsoft)
         assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers,
+        // but it was committed recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
+    }
     else
         assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
@@ -3483,7 +3536,7 @@ unittest
     assert(stream.data == "0.00001000");
 
     //return;
-    //std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
 
     s = "helloworld";
     string r;
@@ -3571,12 +3624,6 @@ unittest
     stream.clear(); formattedWrite(stream, "%.*d", -3, 7);
     //writeln(stream.data);
     assert(stream.data == "7");
-
-//  assert(false);
-//   typedef int myint;
-//   myint m = -7;
-//   stream.clear(); formattedWrite(stream, "", m);
-//   assert(stream.data == "-7");
 
     stream.clear(); formattedWrite(stream, "%s", "abc"c);
     assert(stream.data == "abc");
@@ -3674,7 +3721,7 @@ here:
 
     //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     //stream.clear(); formattedWrite(stream, "%s", aa.values);
-    //std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
+    //core.stdc.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
     //assert(stream.data == "[[h,e,l,l,o],[b,e,t,t,y]]");
     //stream.clear(); formattedWrite(stream, "%s", aa);
     //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
@@ -3854,7 +3901,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
     formattedWrite(w, fmt, val);
 
     auto input = w.data;
-    enforceEx!AssertError(
+    enforce!AssertError(
             input == formatted,
             input, fn, ln);
 
@@ -3882,7 +3929,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
         //    assert(aa2.values[i] == aa2[key]);
         return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             val == val2,
             input, fn, ln);
 }
@@ -3899,7 +3946,7 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
     {
         if(input == cur) return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             false,
             input,
             fn,
@@ -3929,7 +3976,7 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
         //    assert(aa2.values[i] == aa2[key]);
         return;
     }
-    enforceEx!AssertError(
+    enforce!AssertError(
             val == val2,
             input, fn, ln);
 }
@@ -5085,7 +5132,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 {
                     sl = fbuf.length;
                     int n;
-                    version (Win64)
+                    version (CRuntime_Microsoft)
                     {
                         if (isnan(v)) // snprintf writes 1.#QNAN
                             n = snprintf(fbuf.ptr, sl, "nan");
@@ -5908,8 +5955,15 @@ unittest
     //else
     version (MinGW)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
-    else version (Win64)
+    else version (CRuntime_Microsoft)
         assert(s == "1.67 -0X1.47AE14P+0 nan", s);
+    else version (Android)
+    {
+        // bionic doesn't support hex formatting of floating point numbers
+        // or lower-case string formatting of nan yet, but it was committed
+        // recently (April 2014):
+        // https://code.google.com/p/android/issues/detail?id=64886
+    }
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
@@ -6067,11 +6121,6 @@ unittest
 
     r = std.string.format("%.*d", -3, 7);
     assert(r == "7");
-
-    //typedef int myint;
-    //myint m = -7;
-    //r = std.string.format(m);
-    //assert(r == "-7");
 
     r = std.string.format("abc"c);
     assert(r == "abc");
