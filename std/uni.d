@@ -775,35 +775,6 @@ auto force(T, F)(F from)
     return from;
 }
 
-// cheap algorithm grease ;)
-auto adaptIntRange(T, F)(F[] src)
-{
-    //@@@BUG when in the 9 hells will map be copyable again?!
-    static struct ConvertIntegers
-    {
-        private F[] data;
-
-        @property T front()
-        {
-            return force!T(data.front);
-        }
-
-        void popFront(){ data.popFront(); }
-
-        @property bool empty()const { return data.empty; }
-
-        @property size_t length()const { return data.length; }
-
-        auto opSlice(size_t s, size_t e)
-        {
-            return ConvertIntegers(data[s..e]);
-        }
-
-        @property size_t opDollar(){   return data.length; }
-    }
-    return ConvertIntegers(src);
-}
-
 // repeat X times the bit-pattern in val assuming it's length is 'bits'
 size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @nogc
 {
