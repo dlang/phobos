@@ -1500,20 +1500,20 @@ assert(std.algorithm.equal(rbt[], [5]));
         {
             if(n !is null)
             {
-                printTree(n.right, indent + 2);
+                debug printTree(n.right, indent + 2);
                 for(int i = 0; i < indent; i++)
-                    debug write(".");
-                debug writeln(n.color == n.color.Black ? "B" : "R");
-                printTree(n.left, indent + 2);
+                    write(".");
+                writeln(n.color == n.color.Black ? "B" : "R");
+                debug printTree(n.left, indent + 2);
             }
             else
             {
                 for(int i = 0; i < indent; i++)
-                    debug write(".");
-                debug writeln("N");
+                    write(".");
+                writeln("N");
             }
             if(indent is 0)
-                debug writeln();
+                writeln();
         }
 
         /*
@@ -1553,8 +1553,8 @@ assert(std.algorithm.equal(rbt[], [5]));
                 int r = recurse(n.right, path ~ "R");
                 if(l != r)
                 {
-                    debug writeln("bad tree at:");
-                    printTree(n);
+                    writeln("bad tree at:");
+                    debug printTree(n);
                     throw new Exception("Node at path " ~ path ~ " has different number of black nodes on left and right paths");
                 }
                 return l + (n.color == n.color.Black ? 1 : 0);
@@ -1566,7 +1566,7 @@ assert(std.algorithm.equal(rbt[], [5]));
             }
             catch(Exception e)
             {
-                printTree(_end.left, 0);
+                debug printTree(_end.left, 0);
                 throw e;
             }
         }
@@ -1743,8 +1743,5 @@ unittest
 unittest
 {
     auto create() pure { return new RedBlackTree!(int, "a > b")(iota(5)); }
-    debug {} else
-    {
-        auto x = create();
-    }
+    auto x = create();
 }
