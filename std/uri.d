@@ -39,10 +39,10 @@ import core.exception : OutOfMemoryError;
 import std.exception : assumeUnique;
 
 // Extra imports
-private import std.algorithm: find, remove, countUntil;
-private import std.array;
-private import std.conv: to, text;
-private import std.string: indexOf, startsWith;
+import std.algorithm: find, remove, countUntil;
+import std.array;
+import std.conv: to, text;
+import std.string: indexOf, startsWith;
 
 
 class URIException : Exception
