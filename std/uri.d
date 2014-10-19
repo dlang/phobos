@@ -590,7 +590,8 @@ unittest
         string[][string]    _query;
 
 
-        static auto takeOpt(const(char)[] s) {
+        static pure auto takeOpt(const(char)[] s)
+        {
             Opt opt;
             switch(s)
             {
@@ -690,12 +691,12 @@ unittest
     }
 
     /// Get/set URI scheme
-    @property auto scheme() const
+    @property string scheme() const pure nothrow
     {
         return _scheme;
     }
     /// ditto
-    @property auto scheme(string src)
+    @property string scheme(string src) pure
     {
         if (src.empty)
         {
@@ -713,12 +714,12 @@ unittest
     }
 
     /// Get/set URI username
-    @property auto username() const
+    @property string username() const pure nothrow
     {
         return _username;
     }
     /// ditto
-    @property auto username(string u)
+    @property string username(string u) pure nothrow
     {
         return _username = u;
     }
@@ -732,12 +733,12 @@ unittest
     }
 
     /// Get/set URI password
-    @property auto password() const
+    @property string password() const pure nothrow
     {
         return _password;
     }
     /// ditto
-    @property auto password(string p)
+    @property string password(string p) pure nothrow
     {
         return _password = p;
     }
@@ -751,12 +752,13 @@ unittest
     }
 
     /// Get/set URI host
-    @property auto host() const
+    @property string host() const pure nothrow
     {
         return _host;
     }
     /// ditto
-    @property auto host(string h) {
+    @property string host(string h) pure nothrow
+    {
         return _host = h;
     }
     ///
@@ -769,12 +771,12 @@ unittest
     }
 
     /// Get/set URI fragment
-    @property auto fragment() const
+    @property string fragment() const pure nothrow
     {
         return _fragment;
     }
     /// ditto
-    @property auto fragment(string f)
+    @property string fragment(string f) pure nothrow
     {
         return _fragment = f;
     }
@@ -789,12 +791,12 @@ unittest
 
     /// Get/set URI port.
     /// Returns $(B 0) if port not set
-    @property auto port() const
+    @property ushort port() const pure nothrow
     {
         return _port;
     }
     /// ditto
-    @property auto port(ushort p)
+    @property ushort port(ushort p) pure nothrow
     {
         return _port = p;
     }
@@ -808,12 +810,12 @@ unittest
     }
 
     /// Get/set URI path.
-    @property auto path() const
+    @property string path() const pure nothrow
     {
         return _path;
     }
     /// ditto
-    @property auto path(string p)
+    @property string path(string p) pure nothrow
     {
         return _path = p;
     }
@@ -842,7 +844,7 @@ unittest
     //}
 
     /// Get/set URI query as string representation.
-    @property auto query() const
+    @property string query() const pure
     {
         auto tmp = appender!string;
         foreach (key, values; _query)
@@ -867,9 +869,9 @@ unittest
         return tmp.data;
     }
     /// ditto
-    @property auto query(string q)
+    @property string query(string q) pure
     {
-        _query.clear();
+        _query = (string[][string]).init;
 
         foreach (pairs; split(q, "&"))
         {
@@ -880,7 +882,6 @@ unittest
                 _query[(kv[0])] ~= kv.length > 1 ? kv[1] : "";
             }
         }
-
         return query;
     }
     ///
@@ -894,7 +895,7 @@ unittest
     }
 
     /// GetU URI encoded query as string representation.
-    @property auto queryEncoded() const
+    @property string queryEncoded() const
     {
         auto tmp = appender!string;
         foreach (key, values; _query)
@@ -923,7 +924,7 @@ unittest
     }
 
     /// Get/set URI userInfo
-    @property string userInfo() const
+    @property string userInfo() const pure nothrow
     {
         auto tmp = appender!string;
         tmp.put(_username);
@@ -935,7 +936,7 @@ unittest
         return tmp.data;
     }
     /// ditto
-    @property string userInfo(string src)
+    @property string userInfo(string src) pure
     {
         auto passIdx = src.indexOf(':');
         if ( passIdx >= 0 )
@@ -959,7 +960,7 @@ unittest
     }
 
     /// Get/set URI resource info
-    @property string resource() const
+    @property string resource() const pure nothrow
     {
         auto tmp = appender!string;
         tmp.put(_host);
@@ -971,7 +972,7 @@ unittest
         return tmp.data;
     }
     /// ditto
-    @property string resource(string src)
+    @property string resource(string src) pure
     {
         auto portIdx = src.indexOf(':');
         if ( portIdx >= 0 )
@@ -999,7 +1000,7 @@ unittest
     }
 
     /// Get/set
-    @property string authority() const
+    @property string authority() const pure nothrow
     {
         auto tmp = appender!string;
         tmp.put(userInfo);
@@ -1014,7 +1015,7 @@ unittest
         return tmp.data;
     }
     /// ditto
-    @property string authority(string src)
+    @property string authority(string src) pure
     {
         auto atIdx = src.indexOf('@');
         if ( atIdx >= 0 ) {
@@ -1035,7 +1036,7 @@ unittest
     }
 
     /// Returns $(B true) if key present in query
-    bool has(string key)
+    bool has(string key) const pure nothrow
     {
         return (key in _query) !is null;
     }
@@ -1047,14 +1048,14 @@ unittest
     }
 
     /// Returns all values for $(B key)
-    auto all(string key)
+    string[] all(string key) const pure
     {
         auto tmp = key in _query;
         if (tmp is null)
         {
             throw new URIException(text("Key '", key, "' not exists"));
         }
-        return *tmp;
+        return (*tmp).dup;
     }
     ///
     unittest
@@ -1072,7 +1073,7 @@ unittest
     }
 
     /// Insert one or more values with name $(B key)
-    void insert(string key, string val)
+    void insert(string key, string val) pure nothrow
     {
         _query[key] ~= val;
     }
@@ -1086,7 +1087,7 @@ unittest
     }
 
     /// Remove all values with name $(B key)
-    void remove(string key)
+    void remove(string key) pure nothrow
     {
         _query.remove(key);
     }
@@ -1099,7 +1100,7 @@ unittest
     }
 
     /// Get query value with name $(B key), throw exception for non exists keys
-    string opIndex(string key)
+    string opIndex(string key) const pure
     {
         auto tmp = key in _query;
         if (tmp is null)
@@ -1125,7 +1126,7 @@ unittest
     }
 
     /// Set query value with name $(B key), if some values by this key are defined, replaces first value
-    void opIndexAssign(string val, string key)
+    pure void opIndexAssign(string val, string key)
     {
         auto tmp = key in _query;
         if (tmp is null)
@@ -1154,7 +1155,7 @@ unittest
     }
 
     /// clears URI
-    void clear()
+    void clear() pure nothrow
     {
         _scheme.length   = 0;
         _fragment.length = 0;
@@ -1163,11 +1164,11 @@ unittest
         _password.length = 0;
         _path.length     = 0;
         _port            = 0;
-        _query.clear();
+        _query           = (string[][string]).init;
     }
 
     /// To string representation
-    string toString() const
+    string toString() const pure
     {
         auto tmp = appender!string();
         auto opt = takeOpt(_scheme);
