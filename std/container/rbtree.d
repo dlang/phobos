@@ -491,6 +491,9 @@ struct RBNode(V)
                 _parent.right = null;
         }
 
+        // clean references to help GC - Bugzilla 12915
+        _left = _right = _parent = null;
+
         return ret;
     }
 
