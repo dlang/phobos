@@ -68,7 +68,7 @@ class MmFile
      * Open memory mapped file filename for reading.
      * File is closed when the object instance is deleted.
      * Throws:
-     *  std.file.FileException
+     *  $(XREF exception,OSException)
      */
     this(string filename)
     {
@@ -164,7 +164,7 @@ class MmFile
      *      with 0 meaning map the entire file. The window size must be a
      *      multiple of the memory allocation page size.
      * Throws:
-     *  std.file.FileException
+     *  $(XREF exception,OSException)
      */
     this(string filename, Mode mode, ulong size, void* address,
             size_t window = 0)

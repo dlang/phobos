@@ -374,6 +374,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_net_curl.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
+	$(DOC)\std_windows_syserror.html \
 	$(DOC)\std_c_fenv.html \
 	$(DOC)\std_c_locale.html \
 	$(DOC)\std_c_math.html \
@@ -726,6 +727,9 @@ $(DOC)\std_windows_charset.html : $(STDDOC) std\windows\charset.d
 
 $(DOC)\std_windows_registry.html : $(STDDOC) std\windows\registry.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_windows_registry.html $(STDDOC) std\windows\registry.d
+
+$(DOC)\std_windows_syserror.html : $(STDDOC) std\windows\syserror.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_windows_syserror.html $(STDDOC) std\windows\syserror.d
 
 $(DOC)\std_c_fenv.html : $(STDDOC) std\c\fenv.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_c_fenv.html $(STDDOC) std\c\fenv.d

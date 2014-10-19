@@ -25,6 +25,7 @@ import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
 import std.range;
 import std.traits : Unqual, isSomeChar, isAggregateType, isSomeString,
     isIntegral, isBoolean, ParameterTypeTuple;
+import std.exception : OSException, errnoEnforce;
 
 version (CRuntime_Microsoft)
 {
@@ -74,6 +75,7 @@ version(Windows)
     extern (C) nothrow @nogc FILE* _wfopen(in wchar* filename, in wchar* mode);
 
     import core.sys.windows.windows : HANDLE;
+    import std.windows.syserror : wenforce;
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -354,7 +356,7 @@ objects referring to the same underlying file.
 The destructor automatically closes the file as soon as no $(D File)
 object refers to it anymore.
 
-Throws: $(D ErrnoException) if the file could not be opened.
+Throws: $(XREF exception,OSException) if the file could not be opened.
  */
     this(string name, in char[] stdioOpenmode = "rb") @safe
     {
@@ -397,7 +399,7 @@ _open file $(D name) with mode $(D stdioOpenmode). The mode has the
 same semantics as in the C standard library $(WEB
 cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
 
-Throws: $(D ErrnoException) in case of error.
+Throws: $(XREF exception,OSException) in case of error.
  */
     void open(string name, in char[] stdioOpenmode = "rb") @safe
     {
@@ -410,7 +412,7 @@ First calls $(D detach) (throwing on failure), and then runs a command
 by calling the C standard library function $(WEB
 opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
-Throws: $(D ErrnoException) in case of error.
+Throws: $(XREF exception,OSException) in case of error.
  */
     version(Posix) void popen(string command, in char[] stdioOpenmode = "r") @safe
     {
@@ -427,7 +429,7 @@ First calls $(D detach) (throwing on failure), and then attempts to
 associate the given file descriptor with the $(D File). The mode must
 be compatible with the mode of the file descriptor.
 
-Throws: $(D ErrnoException) in case of error.
+Throws: $(XREF exception,OSException) in case of error.
  */
     void fdopen(int fd, in char[] stdioOpenmode = "rb") @safe
     {
@@ -476,7 +478,7 @@ First calls $(D detach) (throwing on failure), and then attempts to
 associate the given Windows $(D HANDLE) with the $(D File). The mode must
 be compatible with the access attributes of the handle. Windows only.
 
-Throws: $(D ErrnoException) in case of error.
+Throws: $(XREF exception,OSException) in case of error.
 */
     version(StdDdoc)
     void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode);
@@ -567,7 +569,7 @@ the file handle.
 /**
 Detaches from the underlying file. If the sole owner, calls $(D close).
 
-Throws: $(D ErrnoException) on failure if closing the file.
+Throws: $(XREF exception,OSException) on failure if closing the file.
   */
     void detach() @safe
     {
@@ -606,7 +608,7 @@ File) object is empty. This is different from $(D detach) in that it
 always closes the file; consequently, all other $(D File) objects
 referring to the same handle will see a closed file henceforth.
 
-Throws: $(D ErrnoException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
     void close() @trusted
     {
@@ -690,7 +692,8 @@ This will be shorter than $(D buffer) if EOF was reached before the buffer
 could be filled.
 
 Throws: $(D Exception) if $(D buffer) is empty.
-        $(D ErrnoException) if the file is not opened or the call to $(D fread) fails.
+        $(XREF exception,OSException) if the file is not opened
+        or the call to $(D fread) fails.
 
 $(D rawRead) always reads in binary mode on Windows.
  */
@@ -745,7 +748,8 @@ error is thrown if the buffer could not be written in its entirety.
 
 $(D rawWrite) always writes in binary mode on Windows.
 
-Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwrite) fails.
+Throws: $(XREF exception,OSException) if the file is not opened
+        or if the call to $(D fwrite) fails.
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -795,7 +799,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek)
 for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) if the call to $(D fseek) fails.
+        $(XREF exception,OSException) if the call to $(D fseek) fails.
  */
     void seek(long offset, int origin = SEEK_SET) @trusted
     {
@@ -853,7 +857,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
 managed file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) if the call to $(D ftell) fails.
+        $(XREF exception,OSException) if the call to $(D ftell) fails.
  */
     @property ulong tell() const @trusted
     {
@@ -906,7 +910,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
 the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) if the call to $(D setvbuf) fails.
+        $(XREF exception,OSException) if the call to $(D setvbuf) fails.
  */
     void setvbuf(size_t size, int mode = _IOFBF) @trusted
     {
@@ -922,7 +926,7 @@ Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
 _setvbuf) for the file handle.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) if the call to $(D setvbuf) fails.
+        $(XREF exception,OSException) if the call to $(D setvbuf) fails.
 */
     void setvbuf(void[] buf, int mode = _IOFBF) @trusted
     {
@@ -953,14 +957,6 @@ Throws: $(D Exception) if the file is not opened.
             overlapped.hEvent = null;
             return F(windowsHandle, flags, 0, liLength.LowPart,
                 liLength.HighPart, &overlapped);
-        }
-
-        private static T wenforce(T)(T cond, string str)
-        {
-            import std.windows.syserror;
-
-            if (cond) return cond;
-            throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
         }
     }
     version(Posix)
@@ -1162,7 +1158,7 @@ Removes the lock over the specified file segment.
 Writes its arguments in text format to the file.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
+        $(XREF exception,OSException) on an error writing to the file.
 */
     void write(S...)(S args)
     {
@@ -1208,7 +1204,7 @@ Throws: $(D Exception) if the file is not opened.
 Writes its arguments in text format to the file, followed by a newline.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
+        $(XREF exception,OSException) on an error writing to the file.
 */
     void writeln(S...)(S args)
     {
@@ -1220,7 +1216,7 @@ Writes its arguments in text format to the file, according to the
 format in the first argument.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
+        $(XREF exception,OSException) on an error writing to the file.
 */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
@@ -1234,7 +1230,7 @@ Writes its arguments in text format to the file, according to the
 format in the first argument, followed by a newline.
 
 Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
+        $(XREF exception,OSException) on an error writing to the file.
 */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
@@ -1263,7 +1259,8 @@ Returns:
     The line that was read, including the line terminator character.
 
 Throws:
-    $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+    $(XREF exception,OSException) on I/O error, or
+    $(CXREF exception,UnicodeException) on Unicode conversion error.
 
 Example:
 ---
@@ -1346,8 +1343,8 @@ text mode).
 Returns:
 0 for end of file, otherwise number of characters read
 
-Throws: $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode
-conversion error.
+Throws: $(XREF exception,OSException) on I/O error, or
+        $(CXREF exception,UnicodeException) on Unicode conversion error.
 
 Example:
 ---
@@ -1677,7 +1674,7 @@ Returns an input range set up to read from the file handle one line
 at a time.
 
 The element type for the range will be $(D Char[]). Range primitives
-may throw $(D StdioException) on I/O error.
+may throw $(XREF exception,OSException) on I/O error.
 
 Note:
 Each $(D front) will not persist after $(D
@@ -1822,7 +1819,7 @@ Returns an input range set up to read from the file handle one line
 at a time. Each line will be newly allocated.
 
 The element type for the range will be $(D Char[]). Range
-primitives may throw $(D StdioException) on I/O error.
+primitives may throw $(XREF exception,OSException) on I/O error.
 
 Params:
 Char = Character type for each line, defaulting to $(D immutable char).
@@ -2101,7 +2098,7 @@ Returns an input range set up to read from the file handle a chunk at a
 time.
 
 The element type for the range will be $(D ubyte[]). Range primitives
-may throw $(D StdioException) on I/O error.
+may throw $(XREF exception,OSException) on I/O error.
 
 Example:
 ---------
@@ -2157,7 +2154,7 @@ object and the appropriate buffer.
 
 Throws: If the user-provided size is zero or the user-provided buffer
 is empty, throws an $(D Exception). In case of an I/O error throws
-$(D StdioException).
+$(XREF exception,OSException).
  */
     auto byChunk(size_t chunkSize)
     {
@@ -2734,7 +2731,7 @@ $(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
 string to $(D args[0]). A call without any arguments will fail to
 compile.
 
-Throws: In case of an I/O error, throws an $(D StdioException).
+Throws: In case of an I/O error, throws an $(XREF exception,OSException).
  */
 void write(T...)(T args) if (!is(T[0] : File))
 {
@@ -3043,7 +3040,8 @@ unittest
  * Note:
  *        String terminators are not supported due to ambiguity with readln(buf) below.
  * Throws:
- *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+ *        $(XREF exception,OSException) on I/O error, or
+ *        $(CXREF exception,UnicodeException) on Unicode conversion error.
  * Example:
  *        Reads $(D stdin) and writes it to $(D stdout).
 ---
@@ -3077,7 +3075,8 @@ if (isSomeString!S)
  *        terminator = Line terminator (by default, $(D '\n')). Use $(XREF ascii, newline)
  *        for portability (unless the file was opened in text mode).
  * Throws:
- *        $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode conversion error.
+ *        $(XREF exception,OSException) on I/O error, or
+ *        $(CXREF exception,UnicodeException) on Unicode conversion error.
  * Example:
  *        Reads $(D stdin) and writes it to $(D stdout).
 ---
@@ -3176,16 +3175,6 @@ version (Posix)
     }
 }
 
-/*
- * Convenience function that forwards to $(D core.stdc.stdio.fwrite)
- * and throws an exception upon error
- */
-private void binaryWrite(T)(FILE* f, T obj)
-{
-    immutable result = fwrite(obj.ptr, obj[0].sizeof, obj.length, f);
-    if (result != obj.length) StdioException();
-}
-
 /**
  * Iterates through the lines of a file by using $(D foreach).
  *
@@ -3228,7 +3217,7 @@ Example:
   }
 ----
 
- In case of an I/O error, an $(D StdioException) is thrown.
+ In case of an I/O error, an $(XREF exception,OSException) is thrown.
 
 See_Also:
 $(LREF byLine)
@@ -3258,7 +3247,7 @@ struct lines
 //     static lines opCall(string fName, dchar terminator = '\n')
 //     {
 //         auto f = enforce(fopen(fName),
-//             new StdioException("Cannot open file `"~fName~"' for reading"));
+//             new OSException("Cannot open file `"~fName~"' for reading"));
 //         auto result = lines(f, terminator);
 //         result.fileName = fName;
 //         return result;
@@ -3268,7 +3257,7 @@ struct lines
     {
 //         scope(exit) {
 //             if (fileName.length && fclose(f))
-//                 StdioException("Could not close file `"~fileName~"'");
+//                 OSException("Could not close file `"~fileName~"'");
 //         }
         alias Parms = ParameterTypeTuple!(dg);
         static if (isSomeString!(Parms[$ - 1]))
@@ -3352,7 +3341,7 @@ struct lines
             }
         }
         // can only reach when FGETC returned -1
-        if (!f.eof) throw new StdioException("Error in reading file"); // error occured
+        errnoEnforce(f.eof, "Error in reading file"); // error occured
         return result;
     }
 }
@@ -3494,7 +3483,7 @@ The content of $(D buffer) is reused across calls. In the
  except for the last one, in which case $(D buffer.length) may
  be less than 4096 (but always greater than zero).
 
- In case of an I/O error, an $(D StdioException) is thrown.
+ In case of an I/O error, an $(XREF exception,OSException) is thrown.
 */
 auto chunks(File f, size_t size)
 {
@@ -3520,7 +3509,7 @@ private struct ChunksImpl
 //     static chunks opCall(string fName, size_t size)
 //     {
 //         auto f = enforce(fopen(fName),
-//             new StdioException("Cannot open file `"~fName~"' for reading"));
+//             new OSException("Cannot open file `"~fName~"' for reading"));
 //         auto result = chunks(f, size);
 //         result.fileName  = fName;
 //         return result;
@@ -3544,7 +3533,7 @@ private struct ChunksImpl
             if (r != size)
             {
                 // error occured
-                if (!f.eof) throw new StdioException(null);
+                errnoEnforce(f.eof);
                 buffer.length = r;
             }
             static if (is(typeof(dg(tally, buffer)))) {
@@ -3592,59 +3581,7 @@ unittest
     f.close();
 }
 
-/*********************
- * Thrown if I/O errors happen.
- */
-class StdioException : Exception
-{
-    /// Operating system error code.
-    uint errno;
-
-/**
-Initialize with a message and an error code. */
-    this(string message, uint e = .errno)
-    {
-        import std.conv : to;
-
-        errno = e;
-        version (Posix)
-        {
-            import core.stdc.string : strerror_r;
-
-            char[256] buf = void;
-            version (linux)
-            {
-                auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
-            }
-            else
-            {
-                core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
-                auto s = buf.ptr;
-            }
-        }
-        else
-        {
-            auto s = core.stdc.string.strerror(errno);
-        }
-        auto sysmsg = to!string(s);
-        // If e is 0, we don't use the system error message.  (The message
-        // is "Success", which is rather pointless for an exception.)
-        super(e == 0 ? message
-                     : (message.ptr ? message ~ " (" ~ sysmsg ~ ")" : sysmsg));
-    }
-
-/** Convenience functions that throw an $(D StdioException). */
-    static void opCall(string msg)
-    {
-        throw new StdioException(msg);
-    }
-
-/// ditto
-    static void opCall()
-    {
-        throw new StdioException(null, .errno);
-    }
-}
+alias StdioException = OSException;
 
 extern(C) void std_stdio_static_this()
 {
@@ -3728,7 +3665,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                     if ((c2 = FGETWC(fp)) != -1 ||
                             c2 < 0xDC00 && c2 > 0xDFFF)
                     {
-                        StdioException("unpaired UTF-16 surrogate");
+                        throw new UnicodeException("unpaired UTF-16 surrogate", 0);
                     }
                     c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                 }
@@ -3736,8 +3673,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 app.put(cast(dchar)c);
             }
         }
-        if (ferror(fps))
-            StdioException();
+        errnoEnforce(!ferror(fps));
         buf = app.data;
         return buf.length;
     }
@@ -3767,8 +3703,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 
         }
 
-        if (ferror(fps))
-            StdioException();
+        errnoEnforce(!ferror(fps));
         buf = app.data;
         return buf.length;
     }
@@ -3866,8 +3801,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 
     }
 
-    if (ferror(fps))
-        StdioException();
+    errnoEnforce(!ferror(fps));
     buf = app.data;
     return buf.length;
 }
@@ -3903,15 +3837,14 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                         if ((c2 = FGETWC(fp)) != -1 ||
                                 c2 < 0xDC00 && c2 > 0xDFFF)
                         {
-                            StdioException("unpaired UTF-16 surrogate");
+                            throw new UnicodeException("unpaired UTF-16 surrogate", 0);
                         }
                         c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                     }
                     std.utf.encode(buf, c);
                 }
             }
-            if (ferror(fp))
-                StdioException();
+            errnoEnforce(!ferror(fp));
             return buf.length;
         }
         else version (Posix)
@@ -3926,8 +3859,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 if (c == terminator)
                     break;
             }
-            if (ferror(fps))
-                StdioException();
+            errnoEnforce(!ferror(fps));
             return buf.length;
         }
         else
@@ -3942,8 +3874,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     scope(exit) free(lineptr);
     if (s < 0)
     {
-        if (ferror(fps))
-            StdioException();
+        errnoEnforce(!ferror(fps));
         buf.length = 0;                // end of file
         return 0;
     }
@@ -3991,15 +3922,14 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                         if ((c2 = FGETWC(fp)) != -1 ||
                                 c2 < 0xDC00 && c2 > 0xDFFF)
                         {
-                            StdioException("unpaired UTF-16 surrogate");
+                            throw new UnicodeException("unpaired UTF-16 surrogate", 0);
                         }
                         c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                     }
                     std.utf.encode(buf, c);
                 }
             }
-            if (ferror(fp))
-                StdioException();
+            errnoEnforce(!ferror(fp));
             return buf.length;
         }
         else version (Posix)
@@ -4014,8 +3944,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 if (c == terminator)
                     break;
             }
-            if (ferror(fps))
-                StdioException();
+            errnoEnforce(!ferror(fps));
             return buf.length;
         }
         else
@@ -4054,8 +3983,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     }
 
   endGame:
-    if (ferror(fps))
-        StdioException();
+    errnoEnforce(!ferror(fps));
     return buf.length;
 }
 
@@ -4086,11 +4014,11 @@ version(linux)
         import std.exception : enforce;
         import std.internal.cstring : tempCString;
 
-        auto h = enforce( gethostbyname(host.tempCString()),
-            new StdioException("gethostbyname"));
+        auto h = errnoEnforce( gethostbyname(host.tempCString()),
+                              "gethostbyname");
 
         int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
-        enforce(s != -1, new StdioException("socket"));
+        errnoEnforce(s != -1, "socket");
 
         scope(failure)
         {
@@ -4106,8 +4034,8 @@ version(linux)
         addr.sin_port = htons(port);
         core.stdc.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
 
-        enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
-            new StdioException("Connect failed"));
+        errnoEnforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
+                         "connect");
 
         File f;
         f.fdopen(s, "w+", host ~ ":" ~ to!string(port));

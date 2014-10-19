@@ -89,81 +89,7 @@ version (Windows)
 // }}}
 
 
-/++
-    Exception thrown for file I/O errors.
- +/
-class FileException : Exception
-{
-    /++
-        OS error code.
-     +/
-    immutable uint errno;
-
-    /++
-        Constructor which takes an error message.
-
-        Params:
-            name = Name of file for which the error occurred.
-            msg  = Message describing the error.
-            file = The file where the error occurred.
-            line = The line where the error occurred.
-     +/
-    this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
-    {
-        if(msg.empty)
-            super(name.idup, file, line);
-        else
-            super(text(name, ": ", msg), file, line);
-
-        errno = 0;
-    }
-
-    /++
-        Constructor which takes the error number ($(LUCKY GetLastError)
-        in Windows, $(D_PARAM errno) in Posix).
-
-        Params:
-            name  = Name of file for which the error occurred.
-            errno = The error number.
-            file  = The file where the error occurred.
-                    Defaults to $(D __FILE__).
-            line  = The line where the error occurred.
-                    Defaults to $(D __LINE__).
-     +/
-    version(Windows) this(in char[] name,
-                          uint errno = .GetLastError(),
-                          string file = __FILE__,
-                          size_t line = __LINE__) @safe
-    {
-        this(name, sysErrorString(errno), file, line);
-        this.errno = errno;
-    }
-    else version(Posix) this(in char[] name,
-                             uint errno = .errno,
-                             string file = __FILE__,
-                             size_t line = __LINE__) @trusted
-    {
-        auto s = strerror(errno);
-        this(name, to!string(s), file, line);
-        this.errno = errno;
-    }
-}
-
-private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
-{
-    if (!condition)
-    {
-      version (Windows)
-      {
-        throw new FileException(name, .GetLastError(), file, line);
-      }
-      else version (Posix)
-      {
-        throw new FileException(name, .errno, file, line);
-      }
-    }
-    return condition;
-}
+alias FileException = OSException;
 
 /* **********************************
  * Basic File operations.
@@ -188,7 +114,7 @@ void main()
 
 Returns: Untyped array of bytes _read.
 
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
 void[] read(in char[] name, size_t upTo = size_t.max) @safe
 {
@@ -229,16 +155,16 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
                 HANDLE.init);
         auto h = trustedCreateFileW(name, defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(trustedCloseHandle(h), name);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) wenforce(trustedCloseHandle(h), name);
         auto size = trustedGetFileSize(h, null);
-        cenforce(size != INVALID_FILE_SIZE, name);
+        wenforce(size != INVALID_FILE_SIZE, name);
         size = min(upTo, size);
         auto buf = uninitializedArray!(ubyte[])(size);
         scope(failure) delete buf;
 
         DWORD numread = void;
-        cenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
+        wenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
                 && numread == size, name);
         return buf[0 .. size];
     }
@@ -279,11 +205,11 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
 
         immutable fd = trustedOpen(name,
                 core.sys.posix.fcntl.O_RDONLY);
-        cenforce(fd != -1, name);
+        errnoEnforce(fd != -1, name);
         scope(exit) core.sys.posix.unistd.close(fd);
 
         stat_t statbuf = void;
-        cenforce(trustedFstat(fd, trustedRef(statbuf)) == 0, name);
+        errnoEnforce(trustedFstat(fd, trustedRef(statbuf)) == 0, name);
 
         immutable initialAlloc = to!size_t(statbuf.st_size
             ? min(statbuf.st_size + 1, maxInitialAlloc)
@@ -296,7 +222,7 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
         {
             immutable actual = trustedRead(fd, trustedPtrAdd(result, size),
                     min(result.length, upTo) - size);
-            cenforce(actual != -1, name);
+            errnoEnforce(actual != -1, name);
             if (actual == 0) break;
             size += actual;
             if (size < result.length) continue;
@@ -336,7 +262,7 @@ validation will fail.
 
 Returns: Array of characters read.
 
-Throws: $(D FileException) on file error, $(D UTFException) on UTF
+Throws: $(XREF exception,OSException) on file error, $(D UTFException) on UTF
 decoding error.
 
 Example:
@@ -360,12 +286,12 @@ S readText(S = string)(in char[] name) @safe if (isSomeString!S)
 {
     write(deleteme, "abc\n");
     scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-    enforce(chomp(readText(deleteme)) == "abc");
+    assert(chomp(readText(deleteme)) == "abc");
 }
 
 /*********************************************
 Write $(D buffer) to file $(D name).
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
 
 Example:
 
@@ -389,10 +315,10 @@ void write(in char[] name, const void[] buffer) @trusted
                 HANDLE.init);
         auto h = CreateFileW(name.tempCStringW(), defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) wenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
+        wenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
                 && buffer.length == numwritten,
                 name);
     }
@@ -402,7 +328,7 @@ void write(in char[] name, const void[] buffer) @trusted
 
 /*********************************************
 Appends $(D buffer) to file $(D name).
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
 
 Example:
 
@@ -428,10 +354,10 @@ void append(in char[] name, in void[] buffer) @trusted
 
         auto h = CreateFileW(name.tempCStringW(), defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
+        scope(exit) wenforce(CloseHandle(h), name);
         DWORD numwritten;
-        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
+        wenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
                 && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
                 && buffer.length == numwritten,
                 name);
@@ -447,33 +373,32 @@ version(Posix) private void writeImpl(in char[] name,
 {
     immutable fd = core.sys.posix.fcntl.open(name.tempCString(),
             mode, octal!666);
-    cenforce(fd != -1, name);
+    errnoEnforce(fd != -1, name);
     {
         scope(failure) core.sys.posix.unistd.close(fd);
         immutable size = buffer.length;
-        cenforce(
+        errnoEnforce(
             core.sys.posix.unistd.write(fd, buffer.ptr, size) == size,
             name);
     }
-    cenforce(core.sys.posix.unistd.close(fd) == 0, name);
+    errnoEnforce(core.sys.posix.unistd.close(fd) == 0, name);
 }
 
 /***************************************************
  * Rename file $(D from) to $(D to).
  * If the target file exists, it is overwritten.
- * Throws: $(D FileException) on error.
+ * Throws: $(XREF exception,OSException) on error.
  */
 void rename(in char[] from, in char[] to) @trusted
 {
     version(Windows)
     {
-        enforce(MoveFileExW(from.tempCStringW(), to.tempCStringW(), MOVEFILE_REPLACE_EXISTING),
-                new FileException(
-                    text("Attempting to rename file ", from, " to ",
-                            to)));
+        wenforce(MoveFileExW(from.tempCStringW(), to.tempCStringW(), MOVEFILE_REPLACE_EXISTING),
+                 text("Attempting to rename file ", from, " to ", to));
     }
     else version(Posix)
-        cenforce(core.stdc.stdio.rename(from.tempCString(), to.tempCString()) == 0, to);
+        errnoEnforce(core.stdc.stdio.rename(from.tempCString(), to.tempCString()) == 0,
+                     text("Attempting to rename file ", from, " to ", to));
 }
 
 @safe unittest
@@ -491,23 +416,25 @@ void rename(in char[] from, in char[] to) @trusted
 
 /***************************************************
 Delete file $(D name).
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
 void remove(in char[] name) @trusted
 {
     version(Windows)
     {
-        cenforce(DeleteFileW(name.tempCStringW()), name);
+        wenforce(DeleteFileW(name.tempCStringW()), name);
     }
     else version(Posix)
-        cenforce(core.stdc.stdio.remove(name.tempCString()) == 0,
-            "Failed to remove file " ~ name);
+    {
+        errnoEnforce(core.stdc.stdio.remove(name.tempCString()) == 0,
+            name);
+    }
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name) @trusted
 {
     WIN32_FILE_ATTRIBUTE_DATA fad;
-    enforce(GetFileAttributesExW(name.tempCStringW(), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), new FileException(name.idup));
+    wenforce(GetFileAttributesExW(name.tempCStringW(), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), name);
     return fad;
 }
 
@@ -522,7 +449,7 @@ version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure n
 /***************************************************
 Get size of file $(D name) in bytes.
 
-Throws: $(D FileException) on error (e.g., file not found).
+Throws: $(XREF exception,OSException) on error (e.g., file not found).
  */
 ulong getSize(in char[] name) @safe
 {
@@ -542,7 +469,7 @@ ulong getSize(in char[] name) @safe
             return &buf;
         }
         stat_t statbuf = void;
-        cenforce(trustedStat(name, ptrOfLocalVariable(statbuf)) == 0, name);
+        errnoEnforce(trustedStat(name, ptrOfLocalVariable(statbuf)) == 0, name);
         return statbuf.st_size;
     }
 }
@@ -568,7 +495,7 @@ ulong getSize(in char[] name) @safe
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
  +/
 void getTimes(in char[] name,
               out SysTime accessTime,
@@ -590,7 +517,7 @@ void getTimes(in char[] name,
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        errnoEnforce(trustedStat(name, statbuf) == 0, name);
 
         accessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         modificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -664,7 +591,7 @@ unittest
         fileModificationTime = Time the file was last modified.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
  +/
 version(StdDdoc) void getTimesWin(in char[] name,
                                   out SysTime fileCreationTime,
@@ -756,7 +683,7 @@ version(Windows) unittest
         modificationTime = Time the file/folder was last modified.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
  +/
 void setTimes(in char[] name,
               SysTime accessTime,
@@ -796,12 +723,12 @@ void setTimes(in char[] name,
                          HANDLE.init);
         auto h = trustedCreateFileW(name, defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
+        wenforce(h != INVALID_HANDLE_VALUE, name);
 
         scope(exit)
-            cenforce(trustedCloseHandle(h), name);
+            wenforce(trustedCloseHandle(h), name);
 
-        cenforce(trustedSetFileTime(h, null, ta, tm), name);
+        wenforce(trustedSetFileTime(h, null, ta, tm), name);
     }
     else version(Posix)
     {
@@ -814,7 +741,7 @@ void setTimes(in char[] name,
         t[0] = accessTime.toTimeVal();
         t[1] = modificationTime.toTimeVal();
 
-        cenforce(trustedUtimes(name, t) == 0, name);
+        errnoEnforce(trustedUtimes(name, t) == 0, name);
     }
 }
 
@@ -847,7 +774,7 @@ unittest
     Returns the time that the given file was last modified.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
 +/
 SysTime timeLastModified(in char[] name) @safe
 {
@@ -868,7 +795,7 @@ SysTime timeLastModified(in char[] name) @safe
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        errnoEnforce(trustedStat(name, statbuf) == 0, name);
 
         return SysTime(unixTimeToStdTime(statbuf.st_mtime));
     }
@@ -884,9 +811,9 @@ SysTime timeLastModified(in char[] name) @safe
     en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
     target) must be rebuilt from file $(D source) (i.e., $(D target) is
     older than $(D source) or does not exist), use the comparison
-    below. The code throws a $(D FileException) if $(D source) does not
-    exist (as it should). On the other hand, the $(D SysTime.min) default
-    makes a non-existing $(D target) seem infinitely old so the test
+    below. The code throws a $(XREF exception,OSException) if $(D source)
+    does not exist (as it should). On the other hand, the $(D SysTime.min)
+    default makes a non-existing $(D target) seem infinitely old so the test
     correctly prompts building it.
 
     Params:
@@ -1019,7 +946,7 @@ bool exists(in char[] name) @trusted nothrow @nogc
  Params:
  name = The file to get the attributes of.
 
- Throws: $(D FileException) on error.
+ Throws: $(XREF exception,OSException) on error.
   +/
 uint getAttributes(in char[] name) @safe
 {
@@ -1031,7 +958,7 @@ uint getAttributes(in char[] name) @safe
         }
         immutable result = trustedGetFileAttributesW(name);
 
-        cenforce(result != INVALID_FILE_ATTRIBUTES, name);
+        wenforce(result != INVALID_FILE_ATTRIBUTES, name);
 
         return result;
     }
@@ -1043,7 +970,7 @@ uint getAttributes(in char[] name) @safe
         }
         stat_t statbuf = void;
 
-        cenforce(trustedStat(name, statbuf) == 0, name);
+        errnoEnforce(trustedStat(name, statbuf) == 0, name);
 
         return statbuf.st_mode;
     }
@@ -1064,7 +991,7 @@ uint getAttributes(in char[] name) @safe
         name = The file to get the symbolic link attributes of.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
  +/
 uint getLinkAttributes(in char[] name) @safe
 {
@@ -1079,7 +1006,7 @@ uint getLinkAttributes(in char[] name) @safe
             return lstat(path.tempCString(), &buf);
         }
         stat_t lstatbuf = void;
-        cenforce(trustedLstat(name, lstatbuf) == 0, name);
+        errnoEnforce(trustedLstat(name, lstatbuf) == 0, name);
         return lstatbuf.st_mode;
     }
 }
@@ -1089,7 +1016,7 @@ uint getLinkAttributes(in char[] name) @safe
     Set the attributes of the given file.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
  +/
 void setAttributes(in char[] name, uint attributes) @safe
 {
@@ -1099,7 +1026,7 @@ void setAttributes(in char[] name, uint attributes) @safe
         {
             return SetFileAttributesW(fileName.tempCStringW(), dwFileAttributes);
         }
-        cenforce(trustedSetFileAttributesW(name, attributes), name);
+        wenforce(trustedSetFileAttributesW(name, attributes), name);
     }
     else version (Posix)
     {
@@ -1108,7 +1035,7 @@ void setAttributes(in char[] name, uint attributes) @safe
             return chmod(path.tempCString(), mode);
         }
         assert(attributes <= mode_t.max);
-        cenforce(!trustedChmod(name, cast(mode_t)attributes), name);
+        errnoEnforce(!trustedChmod(name, cast(mode_t)attributes), name);
     }
 }
 
@@ -1120,7 +1047,7 @@ void setAttributes(in char[] name, uint attributes) @safe
         name = The path to the file.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
 
 Examples:
 --------------------
@@ -1237,7 +1164,7 @@ bool attrIsDir(uint attributes) @safe pure nothrow @nogc
         name = The path to the file.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
 
 Examples:
 --------------------
@@ -1352,7 +1279,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         name = The path to the file.
 
     Throws:
-        $(D FileException) if the given file does not exist.
+        $(XREF exception,OSException) if the given file does not exist.
   +/
 @property bool isSymlink(in char[] name) @safe
 {
@@ -1464,7 +1391,7 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
 
 /****************************************************
  * Change directory to $(D pathname).
- * Throws: $(D FileException) on error.
+ * Throws: $(XREF exception,OSException) on error.
  */
 void chdir(in char[] pathname) @safe
 {
@@ -1474,7 +1401,7 @@ void chdir(in char[] pathname) @safe
         {
             return SetCurrentDirectoryW(path.tempCStringW());
         }
-        cenforce(trustedSetCurrentDirectoryW(pathname), pathname);
+        wenforce(trustedSetCurrentDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
@@ -1482,15 +1409,14 @@ void chdir(in char[] pathname) @safe
         {
             return core.sys.posix.unistd.chdir(path.tempCString());
         }
-        cenforce(trustedChdir(pathname) == 0, pathname);
+        errnoEnforce(trustedChdir(pathname) == 0, pathname);
     }
 }
 
 /****************************************************
 Make directory $(D pathname).
 
-Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
-        if an error occured.
+Throws: $(XREF exception,OSException) if an error occured.
  */
 void mkdir(in char[] pathname) @safe
 {
@@ -1508,7 +1434,7 @@ void mkdir(in char[] pathname) @safe
         {
             return core.sys.posix.sys.stat.mkdir(path.tempCString(), mode);
         }
-        cenforce(trustedMkdir(pathname, octal!777) == 0, pathname);
+        errnoEnforce(trustedMkdir(pathname, octal!777) == 0, pathname);
     }
 }
 
@@ -1521,22 +1447,24 @@ private bool ensureDirExists(in char[] pathname)
     {
         if (CreateDirectoryW(pathname.tempCStringW(), null))
             return true;
-        cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
+        wenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname);
+        enum ERROR_DIRECTORY = 267;
+        enforce(pathname.isDir, new WindowsException(ERROR_DIRECTORY, pathname));
     }
     else version(Posix)
     {
         if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
             return true;
-        cenforce(errno == EEXIST, pathname);
+        errnoEnforce(errno == EEXIST, pathname);
+        enforce(pathname.isDir, new ErrnoException(ENOTDIR, pathname));
     }
-    enforce(pathname.isDir, new FileException(pathname.idup));
     return false;
 }
 
 /****************************************************
  * Make directory and all parent directories as needed.
  *
- * Throws: $(D FileException) on error.
+ * Throws: $(XREF exception,OSException) on error.
  */
 
 void mkdirRecurse(in char[] pathname)
@@ -1565,7 +1493,7 @@ unittest
 
         path = buildPath(basepath, "c");
         write(path, "");
-        assertThrown!FileException(mkdirRecurse(path));
+        assertThrown!OSException(mkdirRecurse(path));
 
         path = buildPath(basepath, "d");
         mkdirRecurse(path);
@@ -1574,7 +1502,7 @@ unittest
 
     version(Windows)
     {
-        assertThrown!FileException(mkdirRecurse(`1:\foobar`));
+        assertThrown!OSException(mkdirRecurse(`1:\foobar`));
     }
 
     // bug3570
@@ -1599,19 +1527,19 @@ unittest
 /****************************************************
 Remove directory $(D pathname).
 
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
 void rmdir(in char[] pathname)
 {
     version(Windows)
     {
-        cenforce(RemoveDirectoryW(pathname.tempCStringW()),
-                pathname);
+        wenforce(RemoveDirectoryW(pathname.tempCStringW()),
+                 pathname);
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.unistd.rmdir(pathname.tempCString()) == 0,
-                pathname);
+        errnoEnforce(core.sys.posix.unistd.rmdir(pathname.tempCString()) == 0,
+                     pathname);
     }
 }
 
@@ -1629,8 +1557,8 @@ void rmdir(in char[] pathname)
         not the files being linked to or from.
 
     Throws:
-        $(D FileException) on error (which includes if the symlink already
-        exists).
+        $(XREF exception,OSException) on error (which includes if
+        the symlink already exists).
   +/
 version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe;
 else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe
@@ -1640,7 +1568,7 @@ else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link)
         return core.sys.posix.unistd.symlink(path1.tempCString(),
                                              path2.tempCString());
     }
-    cenforce(trustedSymlink(original, link) == 0, link);
+    errnoEnforce(trustedSymlink(original, link) == 0, link);
 }
 
 version(Posix) @safe unittest
@@ -1696,7 +1624,7 @@ version(Posix) @safe unittest
     working directory.
 
     Throws:
-        $(D FileException) on error.
+        $(XREF exception,OSException) on error.
   +/
 version(StdDdoc) string readLink(C)(const(C)[] link);
 else version(Posix) string readLink(C)(const(C)[] link)
@@ -1708,7 +1636,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
     auto size = core.sys.posix.unistd.readlink(linkTmp,
                                                buffer.ptr,
                                                buffer.length);
-    cenforce(size != -1, link);
+    errnoEnforce(size != -1, link);
 
     if(size <= bufferLen - maxCodeUnits)
         return to!string(buffer[0 .. size]);
@@ -1720,7 +1648,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
         size = core.sys.posix.unistd.readlink(linkTmp,
                                               dynamicBuffer.ptr,
                                               dynamicBuffer.length);
-        cenforce(size != -1, link);
+        errnoEnforce(size != -1, link);
 
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
@@ -1731,7 +1659,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
         dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
     }
 
-    throw new FileException(to!string(link), "Path is too long to read.");
+    throw new ErrnoException(ENAMETOOLONG, link);
 }
 
 version(Posix) unittest
@@ -1748,13 +1676,13 @@ version(Posix) unittest
         }
     }
 
-    assertThrown!FileException(readLink("/doesnotexist"));
+    assertThrown!OSException(readLink("/doesnotexist"));
 }
 
 
 /****************************************************
  * Get the current working directory.
- * Throws: $(D FileException) on error.
+ * Throws: $(XREF exception,OSException) on error.
  */
 version(Windows) string getcwd()
 {
@@ -1766,7 +1694,7 @@ version(Windows) string getcwd()
     the buffer, in characters, including the null-terminating character.
     */
     wchar[4096] buffW = void; //enough for most common case
-    immutable n = cenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
+    immutable n = wenforce(GetCurrentDirectoryW(to!DWORD(buffW.length), buffW.ptr),
             "getcwd");
     // we can do it because toUTFX always produces a fresh string
     if(n < buffW.length)
@@ -1778,13 +1706,13 @@ version(Windows) string getcwd()
         auto ptr = cast(wchar*) malloc(wchar.sizeof * n);
         scope(exit) free(ptr);
         immutable n2 = GetCurrentDirectoryW(n, ptr);
-        cenforce(n2 && n2 < n, "getcwd");
+        wenforce(n2 && n2 < n, "getcwd");
         return toUTF8(ptr[0 .. n2]);
     }
 }
 else version (Posix) string getcwd()
 {
-    auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
+    auto p = errnoEnforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
     scope(exit) core.stdc.stdlib.free(p);
     return p[0 .. core.stdc.string.strlen(p)].idup;
@@ -1843,7 +1771,7 @@ else version (FreeBSD)
         while (true)
         {
             auto len = GetModuleFileNameW(null, buffer.ptr, cast(DWORD) buffer.length);
-            enforce(len, sysErrorString(GetLastError()));
+            wenforce(len);
             if (len != buffer.length)
                 return to!(string)(buffer[0 .. len]);
             buffer.length *= 2;
@@ -1901,7 +1829,7 @@ version(StdDdoc)
                 path = The file (or directory) to get a DirEntry for.
 
             Throws:
-                $(D FileException) if the file does not exist.
+                $(XREF exception,OSException) if the file does not exist.
         +/
         this(string path);
 
@@ -2058,9 +1986,6 @@ else version(Windows)
 
         this(string path)
         {
-            if(!path.exists())
-                throw new FileException(path, "File does not exist");
-
             _name = path;
 
             with (getFileAttributesWin(path))
@@ -2160,9 +2085,6 @@ else version(Posix)
 
         this(string path)
         {
-            if(!path.exists)
-                throw new FileException(path, "File does not exist");
-
             _name = path;
 
             _didLStat = false;
@@ -2279,7 +2201,7 @@ else version(Posix)
             if(_didStat)
                 return;
 
-            enforce(stat(_name.tempCString(), &_statBuf) == 0,
+            errnoEnforce(stat(_name.tempCString(), &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -2321,7 +2243,7 @@ else version(Posix)
 
             stat_t statbuf = void;
 
-            enforce(lstat(_name.tempCString(), &statbuf) == 0,
+            errnoEnforce(lstat(_name.tempCString(), &statbuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
 
             _lstatMode = statbuf.st_mode;
@@ -2426,30 +2348,29 @@ unittest
 Copy file $(D from) to file $(D to). File timestamps are preserved.
 If the target file exists, it is overwritten.
 
-Throws: $(D FileException) on error.
+Throws: $(XREF exception,OSException) on error.
  */
 void copy(in char[] from, in char[] to)
 {
     version(Windows)
     {
-        immutable result = CopyFileW(from.tempCStringW(), to.tempCStringW(), false);
-        if (!result)
-            throw new FileException(to.idup);
+        wenforce(CopyFileW(from.tempCStringW(), to.tempCStringW(), false),
+            text("Attempting to copy file ", from, " to ", to));
     }
     else version(Posix)
     {
         immutable fd = core.sys.posix.fcntl.open(from.tempCString(), O_RDONLY);
-        cenforce(fd != -1, from);
+        errnoEnforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
 
         stat_t statbuf = void;
-        cenforce(fstat(fd, &statbuf) == 0, from);
-        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
+        errnoEnforce(fstat(fd, &statbuf) == 0, from);
+        //errnoEnforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
         auto tozTmp = to.tempCString();
         immutable fdw = core.sys.posix.fcntl.open(tozTmp,
                 O_CREAT | O_WRONLY | O_TRUNC, octal!666);
-        cenforce(fdw != -1, from);
+        errnoEnforce(fdw != -1, from);
         scope(failure) core.stdc.stdio.remove(tozTmp);
         {
             scope(failure) core.sys.posix.unistd.close(fdw);
@@ -2466,7 +2387,7 @@ void copy(in char[] from, in char[] to)
             for (auto size = statbuf.st_size; size; )
             {
                 immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
-                cenforce(
+                errnoEnforce(
                     core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
                     && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
                     from);
@@ -2475,13 +2396,13 @@ void copy(in char[] from, in char[] to)
             }
         }
 
-        cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
+        errnoEnforce(core.sys.posix.unistd.close(fdw) != -1, from);
 
         utimbuf utim = void;
         utim.actime = cast(time_t)statbuf.st_atime;
         utim.modtime = cast(time_t)statbuf.st_mtime;
 
-        cenforce(utime(tozTmp, &utim) != -1, from);
+        errnoEnforce(utime(tozTmp, &utim) != -1, from);
     }
 }
 
@@ -2503,8 +2424,8 @@ unittest
     recursively.
 
     Throws:
-        $(D FileException) if there is an error (including if the given
-        file is not a directory).
+        $(XREF exception,OSException) if there is an error
+        (including if the given file is not a directory).
  +/
 void rmdirRecurse(in char[] pathname)
 {
@@ -2518,14 +2439,11 @@ void rmdirRecurse(in char[] pathname)
     recursively.
 
     Throws:
-        $(D FileException) if there is an error (including if the given
-        file is not a directory).
+        $(XREF exception,OSException) if there is an error
+        (including if the given file is not a directory).
  +/
 void rmdirRecurse(ref DirEntry de)
 {
-    if(!de.isDir)
-        throw new FileException(de.name, "Not a directory");
-
     if (de.isSymlink)
     {
         version (Windows)
@@ -2561,21 +2479,21 @@ version(Windows) unittest
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
-    enforce(!exists(deleteme ~ ".dir"));
+    assert(!exists(deleteme ~ ".dir"));
 }
 
 version(Posix) unittest
 {
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
-    enforce(collectException(mkdir(d)));
+    assert(collectException(mkdir(d)));
     mkdirRecurse(d);
     core.sys.posix.unistd.symlink((deleteme~"/a/b/c\0").ptr,
             (deleteme~"/link\0").ptr);
     rmdirRecurse(deleteme~"/link");
-    enforce(exists(d));
+    assert(exists(d));
     rmdirRecurse(deleteme);
-    enforce(!exists(deleteme));
+    assert(!exists(deleteme));
 
     d = deleteme~"/a/b/c/d/e/f/g";
     mkdirRecurse(d);
@@ -2583,7 +2501,7 @@ version(Posix) unittest
     else string link_cmd = "ln -sf ";
     std.process.executeShell(link_cmd~deleteme~"/a/b/c "~deleteme~"/link");
     rmdirRecurse(deleteme);
-    enforce(!exists(deleteme));
+    assert(!exists(deleteme));
 }
 
 unittest
@@ -2662,7 +2580,7 @@ private struct DirIteratorImpl
             string search_pattern = buildPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
             HANDLE h = FindFirstFileW(search_pattern.tempCStringW(), &findinfo);
-            cenforce(h != INVALID_HANDLE_VALUE, directory);
+            wenforce(h != INVALID_HANDLE_VALUE, directory);
             _stack.put(DirHandle(directory, h));
             return toNext(false, &findinfo);
         }
@@ -2726,7 +2644,7 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            auto h = cenforce(opendir(directory.tempCString()), directory);
+            auto h = errnoEnforce(opendir(directory.tempCString()), directory);
             _stack.put(DirHandle(directory, h));
             return next();
         }
@@ -2865,7 +2783,7 @@ public:
                          iterated over.
 
     Throws:
-        $(D FileException) if the directory does not exist.
+        $(XREF exception,OSException) if the directory does not exist.
 
 Examples:
 --------------------
@@ -2975,7 +2893,7 @@ unittest
                          iterated over.
 
     Throws:
-        $(D FileException) if the directory does not exist.
+        $(XREF exception,OSException) if the directory does not exist.
 
 Examples:
 --------------------
@@ -3003,7 +2921,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
         name = The file (or directory) to get a DirEntry for.
 
     Throws:
-        $(D FileException) if the file does not exist.
+        $(XREF exception,OSException) if the file does not exist.
  +/
 deprecated("Please use DirEntry constructor directly instead.")
 DirEntry dirEntry(in char[] name)
@@ -3211,6 +3129,10 @@ Example:
 // double.
 auto a = slurp!(int, double)("filename", "%s, %s");
 ----
+
+Throws:
+$(XREF exception,OSException) on I/O errors, or
+$(D Exception) on a badly-formatted line.
 
 Bugs:
 $(D slurp) expects file names to be encoded in $(B CP_ACP) on $(I Windows)

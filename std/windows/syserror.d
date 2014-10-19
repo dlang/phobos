@@ -14,6 +14,8 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.syserror;
+
+import std.exception : OSException;
 import std.traits : isSomeString;
 
 version (StdDdoc)
@@ -38,11 +40,9 @@ version (StdDdoc)
      * http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
      * $(D GetLastError)) occur.
      */
-    class WindowsException : Exception
+    class WindowsException : OSException
     {
-        private alias DWORD = int;
-        final @property DWORD code(); /// $(D GetLastError)'s return value.
-        @disable this(int dummy);
+        this(DWORD code, in char[] str=null, string file = __FILE__, size_t line = __LINE__) @trusted;
     }
 
     /++
@@ -56,8 +56,9 @@ version (StdDdoc)
         wenforce(DeleteFileA("junk.tmp"), "DeleteFile failed");
         --------------------
      +/
-    T wenforce(T, S)(T value, lazy S msg = null,
-        string file = __FILE__, size_t line = __LINE__) if (isSomeString!S);
+    T wenforce(T, S=string)(T value, lazy S msg = null,
+        string file = __FILE__, size_t line = __LINE__) @safe
+        if (isSomeString!S);
 }
 else:
 
@@ -113,17 +114,12 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
 }
 
 
-class WindowsException : Exception
+class WindowsException : OSException
 {
     import core.sys.windows.windows;
 
-    final @property DWORD code() { return _code; } /// $(D GetLastError)'s return value.
-    private DWORD _code;
-
-    this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted
+    this(DWORD code, in char[] str=null, string file = __FILE__, size_t line = __LINE__) @trusted
     {
-        _code = code;
-
         auto buf = appender!string();
 
         if (str)
@@ -135,13 +131,14 @@ class WindowsException : Exception
         auto success = putSysError(code, buf);
         formattedWrite(buf, success ? " (error %d)" : "Error %d", code);
 
-        super(buf.data, file, line);
+        super(code, buf.data, file, line);
     }
 }
 
 
-T wenforce(T, S)(T value, lazy S msg = null,
-    string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
+T wenforce(T, S=string)(T value, lazy S msg = null,
+    string file = __FILE__, size_t line = __LINE__) @safe
+    if (isSomeString!S)
 {
     if (!value)
         throw new WindowsException(GetLastError(), to!string(msg), file, line);
@@ -161,4 +158,13 @@ unittest
     assert(e.msg.startsWith("DeleteFile: "));
     // can't test the entire message, as it depends on Windows locale
     assert(e.msg.endsWith(" (error 2)"));
+}
+
+version(Windows)
+@safe
+unittest
+{
+    wenforce(true);
+    wenforce(true, "wstring"w);
+    wenforce(true, "dstring"d);
 }

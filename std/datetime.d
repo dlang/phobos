@@ -26510,7 +26510,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             subName = The first part of the time zones desired.
 
         Throws:
-            $(D FileException) on Posix systems if it fails to read from disk.
+            $(D OSException) on Posix systems if it fails to read from disk.
             $(LREF DateTimeException) on Windows systems if it fails to read the
             registry.
       +/
@@ -27826,7 +27826,7 @@ public:
 
         Throws:
             $(LREF DateTimeException) if the given time zone could not be found or
-            $(D FileException) if the TZ Database file could not be opened.
+            $(D OSException) if the TZ Database file could not be opened.
 
         Examples:
 --------------------
@@ -28151,7 +28151,7 @@ assert(tz.dstName == "PDT");
                             located.
 
         Throws:
-            $(D FileException) if it fails to read from disk.
+            $(D OSException) if it fails to read from disk.
       +/
     static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
