@@ -4578,7 +4578,7 @@ Cycle!R cycle(R)(R input)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 }
@@ -4602,7 +4602,7 @@ Cycle!R cycle(R)(ref R input, size_t index = 0)
     return Cycle!R(input, index);
 }
 
-unittest
+@safe unittest
 {
     static assert(isForwardRange!(Cycle!(uint[])));
 
@@ -5726,7 +5726,7 @@ auto sequence(alias fun, State...)(State args)
 }
 
 /// Odd numbers, using function in string form:
-unittest
+@safe unittest
 {
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
     assert(odds.front == 1);
@@ -5737,7 +5737,7 @@ unittest
 }
 
 /// Triangular numbers, using function in lambda form:
-unittest
+@safe unittest
 {
     auto tri = sequence!((a,n) => n*(n+1)/2)();
 
@@ -5750,7 +5750,7 @@ unittest
 }
 
 /// Fibonacci numbers, using function in explicit form:
-unittest
+@safe unittest
 {
     import std.math : pow, round, sqrt;
     static ulong computeFib(S)(S state, size_t n)
@@ -5772,7 +5772,7 @@ unittest
     assert(fib[9] == 55);
 }
 
-unittest
+@safe unittest
 {
     import std.typecons : Tuple, tuple;
     auto y = Sequence!("a[0] + n * a[1]", Tuple!(int, int))(tuple(0, 4));
