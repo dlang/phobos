@@ -579,8 +579,8 @@ unittest
 
 /** URI struct
  */
- struct URI
- {
+struct URI
+{
     private
     {
         struct Opt
@@ -588,14 +588,14 @@ unittest
             bool  reqDSlash;
             bool  reqAuthority;
         }
-        string              _scheme;
-        string              _fragment;
-        string              _host;
-        string              _username;
-        string              _password;
-        string              _path;
-        ushort              _port;
-        string[][string]    _query;
+        string      _scheme;
+        string      _fragment;
+        string      _host;
+        string      _username;
+        string      _password;
+        string      _path;
+        ushort      _port;
+        URIQuery    _query;
 
 
         static pure auto takeOpt(const(char)[] s)
@@ -631,10 +631,10 @@ unittest
     }
 
     ///Allows assign string to uri
-    auto opAssign(string uri)
+    void opAssign(string uri)
     {
         clear();
-        string src = decode(uri);
+        string src = uri;
 
         enforceURI(src.length != 0, "URI string is empty");
 
@@ -685,7 +685,7 @@ unittest
             query = src[qIdx + 1 .. $];
             src   = src[0 .. qIdx];
         }
-        _path  = src;
+        path  = src;
     }
     ///
     unittest
@@ -818,9 +818,9 @@ unittest
         return _path;
     }
     /// ditto
-    @property string path(string p) pure nothrow
+    @property string path(string p)
     {
-        return _path = p;
+        return _path = decode(p);
     }
     ///
     unittest
@@ -846,84 +846,10 @@ unittest
     //  return tmp.data;
     //}
 
-    /// Get/set URI query as string representation.
-    @property string query() const pure
+    /// Reference to URIQuery
+    @property ref URIQuery query() pure
     {
-        auto tmp = appender!string;
-        foreach (key, values; _query)
-        {
-            if (!key.length)
-            {
-                continue;
-            }
-
-            if (!tmp.data.empty)
-            {
-                tmp.put("&");
-            }
-
-            foreach (value; values)
-            {
-                tmp.put(key);
-                tmp.put('=');
-                tmp.put(value);
-            }
-        }
-        return tmp.data;
-    }
-    /// ditto
-    @property string query(string q) pure
-    {
-        _query = (string[][string]).init;
-
-        foreach (pairs; split(q, "&"))
-        {
-            auto kv = split(pairs, "=");
-
-            if (kv.length && kv[0].length)
-            {
-                _query[(kv[0])] ~= kv.length > 1 ? kv[1] : "";
-            }
-        }
-        return query;
-    }
-    ///
-    unittest
-    {
-        URI u = "http://dlang.org/?x=1";
-        assert(u.query == "x=1");
-        u.query = "z=2&y=4";
-        assert(u["z"] == "2");
-        assert(u["y"] == "4");
-    }
-
-    /// GetU URI encoded query as string representation.
-    @property string queryEncoded() const
-    {
-        auto tmp = appender!string;
-        foreach (key, values; _query)
-        {
-            if (!key.length)
-            {
-                continue;
-            }
-            if (!tmp.data.empty)
-            {
-                tmp.put("&");
-            }
-            foreach (value; values)
-            {
-                tmp.put(encode(key));
-                tmp.put('=');
-                tmp.put(encode(value));
-            }
-        }
-        return tmp.data;
-    }
-    unittest
-    {
-        URI u = "http://dlang.org/?%D0%B8%D0%BC%D1%8F=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5";
-        assert(u.queryEncoded == "%D0%B8%D0%BC%D1%8F=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5");
+        return _query;
     }
 
     /// Get/set URI userInfo
@@ -959,7 +885,7 @@ unittest
         URI u = "http://dlang.org/";
         assert(u.userInfo == "");
         u.userInfo = "anon:1234";
-        assert(u.toString() == "http://anon:1234@dlang.org/");
+        assert(u.toString == "http://anon:1234@dlang.org/");
     }
 
     /// Get/set URI resource info
@@ -1037,119 +963,6 @@ unittest
         assert(u.toString() == "mailto:non-exists@dlang.org");
     }
 
-    /// Returns $(B true) if key present in query
-    bool has(string key) const pure nothrow
-    {
-        return (key in _query) !is null;
-    }
-    unittest
-    {
-        URI u = "http://dlang.org/?x=1";
-        assert(u.has("x") == true);
-        assert(u.has("z") == false);
-    }
-
-    /// Returns all values for $(B key)
-    string[] all(string key) const pure
-    {
-        auto tmp = key in _query;
-        enforceURI(tmp !is null, text("Key '", key, "' not exists"));
-        return (*tmp).dup;
-    }
-    ///
-    unittest
-    {
-        URI u = "http://dlang.org/?x=1&x=a";
-        assert(u.all("x") == ["1","a"]);
-        try
-        {
-            assert(u.all("z") == []);
-        }
-        catch(Exception e)
-        {
-            assert(e.msg == "URI Exception: Key 'z' not exists");
-        }
-    }
-
-    /// Insert one or more values with name $(B key)
-    void insert(string key, string val) pure nothrow
-    {
-        _query[key] ~= val;
-    }
-    ///
-    unittest
-    {
-        URI u = "http://dlang.org/";
-        u.insert("x", "1");
-        u.insert("x", "2");
-        assert(u.all("x") == ["1","2"]);
-    }
-
-    /// Remove all values with name $(B key)
-    void remove(string key) pure nothrow
-    {
-        _query.remove(key);
-    }
-    ///
-    unittest
-    {
-        URI u = "http://dlang.org/?x=1&x=a";
-        u.remove("x");
-        assert(u.toString() == "http://dlang.org/");
-    }
-
-    /// Get query value with name $(B key), throw exception for non exists keys
-    string opIndex(string key) const pure
-    {
-        auto tmp = key in _query;
-        enforceURI(tmp !is null, text("Key '", key, "' not exists"));
-        return (*tmp)[$ - 1];
-    }
-    ///
-    unittest
-    {
-        URI u = "http://dlang.org/?x=1";
-        assert(u["x"] == "1");
-
-        try
-        {
-            assert(u["z"] == "");
-        }
-        catch(Exception e)
-        {
-            assert(e.msg == "URI Exception: Key 'z' not exists");
-        }
-    }
-
-    /// Set query value with name $(B key), if some values by this key are defined, replaces first value
-    pure void opIndexAssign(string val, string key)
-    {
-        auto tmp = key in _query;
-        if (tmp is null)
-        {
-            _query[key] = [val];
-        }
-        else
-        {
-            _query[key][$ - 1] = val;
-        }
-    }
-    ///
-    unittest
-    {
-        URI u = "http://dlang.org/?x=1&x=2&y=3";
-        u["x"] = "3";          // Replace last "x" value
-        u["y"] = "1";          // Replace "y" value
-        u["z"] = "0";          // Add "z" value
-
-        assert(u["x"] == "3");
-        assert(u.all("x") == ["1","3"]);
-        assert(u["y"] == "1");
-        assert(u.all("y") == ["1"]);
-        assert(u["z"] == "0");
-        assert(u.all("z") == ["0"]);
-    }
-
     /// clears URI
     void clear() pure nothrow
     {
@@ -1160,7 +973,7 @@ unittest
         _password.length = 0;
         _path.length     = 0;
         _port            = 0;
-        _query           = (string[][string]).init;
+        _query.clear();
     }
 
     /// To string representation
@@ -1171,7 +984,7 @@ unittest
         tmp.put(_scheme);
         tmp.put(":");
         auto a = authority;
-        auto q = query;
+        auto q = _query.toString;
         if (a.length)
         {
             if (opt.reqDSlash)
@@ -1199,9 +1012,8 @@ unittest
     ///
     unittest
     {
-        auto s = "http://en.wikipedia.org/wiki/D_%28programming_language%29";
-        URI  e = s;
-        assert(e.toString() == "http://en.wikipedia.org/wiki/D_(programming_language)");
+        URI  u = "http://en.wikipedia.org/wiki/D_%28programming_language%29";
+        assert(u.toString == "http://en.wikipedia.org/wiki/D_(programming_language)");
     }
 
     /// To encoded string representation
@@ -1218,7 +1030,6 @@ unittest
         assert(e.toString() == "http://ru.wikipedia.org/wiki/D_(язык_программирования)");
         assert(e.toEncoded() == s);
     }
-
     /// TODO: campare operator
 }
 ///
@@ -1235,6 +1046,227 @@ unittest
     assert(u.host == "hostname");
     assert(u.port == 1234);
     assert(u.path == "/path");
-    assert(u.query == "query=string");
+    assert(u.query.toString == "query=string");
+    assert(u.query["query"] == "string");
+    //assert(u.query.get("query") == "string");
     assert(u.fragment == "_fragment_");
+}
+
+struct URIQuery
+{
+    private
+    {
+        string[][string]    _data;
+    }
+
+    /// Create URIQuery from string
+    this(string uri)
+    {
+        opAssign(uri);
+    }
+    ///
+    void opAssign(string q)
+    {
+        clear();
+
+        foreach (pairs; split(q, "&"))
+        {
+            auto kv = split(pairs, "=");
+
+            if (kv.length && kv[0].length)
+            {
+                insert(kv[0], kv.length > 1 ? kv[1] : "");
+            }
+        }
+    }
+
+    /// Returns $(B true) if key present in query
+    bool has(string key) const pure nothrow
+    {
+        return (key in _data) !is null;
+    }
+    unittest
+    {
+        URIQuery q = "x=1";
+        assert(q.has("x") == true);
+        assert(q.has("z") == false);
+    }
+
+    /// Returns all values for $(B key)
+    string[] all(string key) const pure nothrow
+    {
+        string[] result;
+        auto tmp = key in _data;
+        //enforceURI(, text("Key '", key, "' not exists"));
+        if (tmp !is null)
+        {
+            result = (*tmp).dup;
+        }
+        return result;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1&x=a";
+        assert(q.all("x") == ["1","a"]);
+        //try
+        //{
+            assert(q.all("z") == []);
+        //}
+        //catch(Exception e)
+        //{
+        //    assert(e.msg == "URI Exception: Key 'z' not exists");
+        //}
+    }
+
+    /// Get query value with name $(B key), returns fallback for non exists keys
+    string get(string key, string fallback = "") const pure nothrow
+    {
+        auto tmp = key in _data;
+        return tmp !is null ? (*tmp)[$ - 1] : fallback;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1";
+        assert(q.get("x") == "1");
+        assert(q.get("z", "8") == "8");
+    }
+
+    /// Insert one or more values with name $(B key)
+    void insert(string key, string val)
+    {
+        _data[decode(key)] ~= decode(val);
+    }
+    ///
+    unittest
+    {
+        URIQuery q;
+        q.insert("x", "1");
+        q.insert("x", "2");
+        assert(q.all("x") == ["1","2"]);
+    }
+
+    /// Remove all values with name $(B key)
+    void remove(string key) pure nothrow
+    {
+        _data.remove(key);
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1&x=a&y=5";
+        q.remove("x");
+        assert(q.toString == "y=5");
+    }
+
+    /// Get query value with name $(B key), throw exception for non exists keys
+    string opIndex(string key) const pure
+    {
+        auto val = get(key, null);
+        enforceURI(val !is null, text("Key '", key, "' not exists"));
+        return val;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1";
+        assert(q["x"] == "1");
+
+        try
+        {
+            assert(q["z"] == "");
+        }
+        catch(Exception e)
+        {
+            assert(e.msg == "URI Exception: Key 'z' not exists");
+        }
+    }
+
+    /// Set query value with name $(B key), if some values by this key are defined, replaces first value
+    void opIndexAssign(string val, string key) pure
+    {
+        auto tmp = key in _data;
+        if (tmp is null)
+        {
+            _data[key] = [val];
+        }
+        else
+        {
+            _data[key][$ - 1] = val;
+        }
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1&x=2&y=3";
+        q["x"] = "3";          // Replace last "x" value
+        q["y"] = "1";          // Replace "y" value
+        q["z"] = "0";          // Add "z" value
+
+        assert(q["x"] == "3");
+        assert(q.all("x") == ["1","3"]);
+        assert(q["y"] == "1");
+        assert(q.all("y") == ["1"]);
+        assert(q["z"] == "0");
+        assert(q.all("z") == ["0"]);
+    }
+
+    void clear() pure nothrow
+    {
+        _data = (string[][string]).init;
+    }
+
+    string toString() const pure
+    {
+        auto tmp = appender!string;
+        foreach (key, values; _data)
+        {
+            if (!key.length)
+            {
+                continue;
+            }
+
+            if (!tmp.data.empty)
+            {
+                tmp.put("&");
+            }
+
+            foreach (value; values)
+            {
+                tmp.put(key);
+                tmp.put('=');
+                tmp.put(value);
+            }
+        }
+        return tmp.data;
+    }
+
+    string toEncoded() const
+    {
+        auto tmp = appender!string;
+        foreach (key, values; _data)
+        {
+            if (!key.length)
+            {
+                continue;
+            }
+            if (!tmp.data.empty)
+            {
+                tmp.put("&");
+            }
+            foreach (value; values)
+            {
+                tmp.put(encode(key));
+                tmp.put('=');
+                tmp.put(encode(value));
+            }
+        }
+        return tmp.data;
+    }
+    unittest
+    {
+        URIQuery q = "%D0%B8%D0%BC%D1%8F=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5";
+        assert(q.toEncoded == "%D0%B8%D0%BC%D1%8F=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5");
+    }
 }
