@@ -1745,6 +1745,6 @@ unittest
     auto create() pure { return new RedBlackTree!(int, "a > b")(iota(5)); }
     debug {} else
     {
-        auto x = create1();
+        auto x = create();
     }
 }
