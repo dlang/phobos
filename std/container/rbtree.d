@@ -1553,7 +1553,7 @@ assert(std.algorithm.equal(rbt[], [5]));
                 int r = recurse(n.right, path ~ "R");
                 if(l != r)
                 {
-                    writeln("bad tree at:");
+                    debug writeln("bad tree at:");
                     printTree(n);
                     throw new Exception("Node at path " ~ path ~ " has different number of black nodes on left and right paths");
                 }
@@ -1738,4 +1738,13 @@ unittest
     auto rt4 = redBlackTree!string("hello", "hello");
     assert(rt4.length == 1);
     assert(array(rt4[]) == ["hello"]);
+}
+
+unittest
+{
+    auto create() pure { return new RedBlackTree!(int, "a > b")(iota(5)); }
+    debug {} else
+    {
+        auto x = create1();
+    }
 }
