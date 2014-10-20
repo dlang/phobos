@@ -1129,11 +1129,23 @@ struct URIQuery
         assert(q.all("z") == []);
     }
 
-    /// Get query value with name $(B key), returns fallback for non exists keys
-    string get(string key, lazy string fallback = "") const pure
+    /// Returns key list
+    string[] keys() const pure nothrow
+    {
+        return _data.keys;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1&x=a";
+        assert(q.keys == ["x"]);
+    }
+
+    /// Get query value with name $(B key), returns defVal for non exists keys
+    string get(string key, lazy string defVal = "") const pure
     {
         auto tmp = key in _data;
-        return tmp !is null ? (*tmp)[$ - 1] : fallback;
+        return tmp !is null ? (*tmp)[$ - 1] : defVal;
     }
     ///
     unittest
@@ -1291,9 +1303,8 @@ struct URIQuery
     ///
     unittest
     {
-        import std.stdio;
         URIQuery q = "%D0%B8%D0%BC%D1%8F=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5";
-        writeln(q);
+        assert(q["имя"] == "значение");
         assert(q.toEncoded == "%D0%B8%D0%BC%D1%8F=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5");
     }
 }
