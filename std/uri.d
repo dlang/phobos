@@ -865,7 +865,7 @@ struct URI
         return tmp.data;
     }
     /// ditto
-    @property string userInfo(string src) pure
+    @property void userInfo(string src) pure
     {
         auto passIdx = src.indexOf(':');
         if ( passIdx >= 0 )
@@ -877,7 +877,6 @@ struct URI
         {
             _username = src;
         }
-        return userInfo;
     }
     ///
     unittest
@@ -901,7 +900,7 @@ struct URI
         return tmp.data;
     }
     /// ditto
-    @property string resource(string src) pure
+    @property void resource(string src) pure
     {
         auto portIdx = src.indexOf(':');
         if ( portIdx >= 0 )
@@ -916,7 +915,6 @@ struct URI
         {
             _host = src;
         }
-        return resource;
     }
     ///
     unittest
@@ -943,7 +941,7 @@ struct URI
         return tmp.data;
     }
     /// ditto
-    @property string authority(string src) pure
+    @property void authority(string src) pure
     {
         auto atIdx = src.indexOf('@');
         if ( atIdx >= 0 ) {
@@ -952,7 +950,6 @@ struct URI
         } else {
             resource = src;
         }
-        return authority;
     }
     ///
     unittest
@@ -1214,7 +1211,7 @@ struct URIQuery
 
     void clear() pure nothrow
     {
-        _data = (string[][string]).init;
+        _data = null;
     }
 
     string toString() const pure
