@@ -1500,11 +1500,11 @@ assert(std.algorithm.equal(rbt[], [5]));
         {
             if(n !is null)
             {
-                debug printTree(n.right, indent + 2);
+                printTree(n.right, indent + 2);
                 for(int i = 0; i < indent; i++)
                     write(".");
                 writeln(n.color == n.color.Black ? "B" : "R");
-                debug printTree(n.left, indent + 2);
+                printTree(n.left, indent + 2);
             }
             else
             {
