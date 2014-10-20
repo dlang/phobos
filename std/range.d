@@ -4515,19 +4515,24 @@ struct Cycle(R)
     if (isStaticArray!R)
 {
     private alias ElementType = typeof(R.init[0]);
-    private ElementType* _ptr;
+    private R* _elements;
     private size_t _index;
 
 nothrow:
-    this(ref R input, size_t index = 0)
+    this(ref R input, size_t index = 0) @trusted
     {
-        _ptr = input.ptr;
+        this(cast(R*)input, index);
+    }
+
+    this(R* input, size_t index = 0)
+    {
+        _elements = input;
         _index = index % R.length;
     }
 
     @property ref inout(ElementType) front() inout
     {
-        return _ptr[_index];
+        return (*_elements)[_index];
     }
 
     enum bool empty = false;
@@ -4541,7 +4546,7 @@ nothrow:
 
     ref inout(ElementType) opIndex(size_t n) inout
     {
-        return _ptr[(n + _index) % R.length];
+        return (*_elements)[(n + _index) % R.length];
     }
 
     @property inout(Cycle) save() inout
@@ -4563,10 +4568,10 @@ nothrow:
         return this[i .. $].takeExactly(j - i);
     }
 
-    inout(typeof(this)) opSlice(size_t i, DollarToken) inout
+    inout(typeof(this)) opSlice(size_t i, DollarToken) inout @trusted
     {
         // cast: Issue 12177 workaround
-        return cast(typeof(return))Cycle(*cast(R*)_ptr, _index + i);
+        return cast(typeof(return))Cycle(cast(R*)_elements, _index + i);
     }
 }
 
@@ -4665,12 +4670,12 @@ Cycle!R cycle(R)(ref R input, size_t index = 0)
     }
 }
 
-unittest // For static arrays.
+@safe unittest // For static arrays, by ref
 {
     int[3] a = [ 1, 2, 3 ];
     static assert(isStaticArray!(typeof(a)));
     auto c = cycle(a);
-    assert(a.ptr == c._ptr);
+    assert(a.ptr == c._elements.ptr);
     assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
     static assert(isForwardRange!(typeof(c)));
 
@@ -4681,7 +4686,25 @@ unittest // For static arrays.
     static assert(is(typeof(cConst[1 .. $]) == const(C)));
 }
 
-unittest // For infinite ranges
+/+ Not usable until escape analysis is implemented to show that &a never escapes
+@safe unittest // For static arrays, by pointer
+{
+    int[3] a = [ 1, 2, 3 ];
+    static assert(isStaticArray!(typeof(a)));
+    auto c = cycle(&a);
+    assert(a.ptr == c._elements.ptr);
+    assert(equal(take(cycle(&a), 5), [ 1, 2, 3, 1, 2 ][]));
+    static assert(isForwardRange!(typeof(c)));
+
+    // Test qualifiers on slicing.
+    alias C = typeof(c);
+    static assert(is(typeof(c[1 .. $]) == C));
+    const cConst = c;
+    static assert(is(typeof(cConst[1 .. $]) == const(C)));
+}
++/
+
+@safe unittest // For infinite ranges
 {
     struct InfRange
     {
@@ -4695,7 +4718,7 @@ unittest // For infinite ranges
     assert (c == i);
 }
 
-unittest
+@safe unittest
 {
     int[5] arr = [0, 1, 2, 3, 4];
     auto cleS = cycle(arr);   //Static
@@ -4717,7 +4740,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     int[1] arr = [0];
     auto cleS = cycle(arr);
@@ -4732,7 +4755,7 @@ unittest //10845
     assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
 
-unittest // 12177
+@safe unittest // 12177
 {
     auto a = recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0");
 }
