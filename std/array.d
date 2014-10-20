@@ -1017,14 +1017,6 @@ private void copyBackwards(T)(T[] src, T[] dest)
     Inserts $(D stuff) (which must be an input range or any number of
     implicitly convertible items) in $(D array) at position $(D pos).
 
-    Example:
-    ---
-    int[] a = [ 1, 2, 3, 4 ];
-    a.insertInPlace(2, [ 1, 2 ]);
-    assert(a == [ 1, 2, 1, 2, 3, 4 ]);
-    a.insertInPlace(3, 10u, 11);
-    assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
-    ---
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     if(!isSomeString!(T[])
@@ -1094,7 +1086,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     }
 }
 
-/++ Ditto +/
+/// Ditto
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     if(isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 {
@@ -1169,6 +1161,16 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     }
 }
 
+///
+@safe pure unittest
+{
+    int[] a = [ 1, 2, 3, 4 ];
+    a.insertInPlace(2, [ 1, 2 ]);
+    assert(a == [ 1, 2, 1, 2, 3, 4 ]);
+    a.insertInPlace(3, 10u, 11);
+    assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
+}
+
 //constraint helpers
 private template isInputRangeWithLengthOrConvertible(E)
 {
@@ -1196,17 +1198,6 @@ private template isInputRangeOrConvertible(E)
         enum isInputRangeOrConvertible =
             (isInputRange!R && is(ElementType!R : E))  || is(R : E);
     }
-}
-
-
-//Verify Example.
-@safe unittest
-{
-    int[] a = [ 1, 2, 3, 4 ];
-    a.insertInPlace(2, [ 1, 2 ]);
-    assert(a == [ 1, 2, 1, 2, 3, 4 ]);
-    a.insertInPlace(3, 10u, 11);
-    assert(a == [ 1, 2, 1, 10, 11, 2, 3, 4]);
 }
 
 unittest
@@ -1923,6 +1914,13 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
     return app.data;
 }
 
+///
+unittest
+{
+    assert("Hello Wörld".replace("o Wö", "o Wo") == "Hello World");
+    assert("Hello Wörld".replace("l", "h") == "Hehho Wörhd");
+}
+
 /++
     Same as above, but outputs the result via OutputRange $(D sink).
     If no match is found the original array is transferred to $(D sink) as is.
@@ -1957,21 +1955,24 @@ unittest
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        auto s = to!S("This is a foo foo list");
-        auto from = to!S("foo");
-        auto into = to!S("silly");
-        S r;
-        int i;
+        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+        {
+            auto s = to!S("This is a foo foo list");
+            auto from = to!T("foo");
+            auto into = to!S("silly");
+            S r;
+            int i;
 
-        r = replace(s, from, into);
-        i = cmp(r, "This is a silly silly list");
-        assert(i == 0);
+            r = replace(s, from, into);
+            i = cmp(r, "This is a silly silly list");
+            assert(i == 0);
 
-        r = replace(s, to!S(""), into);
-        i = cmp(r, "This is a foo foo list");
-        assert(i == 0);
+            r = replace(s, to!S(""), into);
+            i = cmp(r, "This is a foo foo list");
+            assert(i == 0);
 
-        assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
+            assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
+        }
     }
 
     immutable s = "This is a foo foo list";
@@ -2001,14 +2002,6 @@ unittest
     Replaces elements from $(D array) with indices ranging from $(D from)
     (inclusive) to $(D to) (exclusive) with the range $(D stuff). Returns a new
     array without changing the contents of $(D subject).
-
-    Examples:
-    --------------------
-    auto a = [ 1, 2, 3, 4 ];
-    auto b = a.replace(1, 3, [ 9, 9, 9 ]);
-    assert(a == [ 1, 2, 3, 4 ]);
-    assert(b == [ 1, 9, 9, 9, 4 ]);
-    --------------------
  +/
 T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
     if(isInputRange!Range &&
@@ -2038,7 +2031,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
     }
 }
 
-//Verify Examples.
+///
 unittest
 {
     auto a = [ 1, 2, 3, 4 ];
@@ -2118,13 +2111,6 @@ unittest
     Replaces elements from $(D array) with indices ranging from $(D from)
     (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands or
     shrinks the array as needed.
-
-    Example:
-    ---
-    int[] a = [ 1, 2, 3, 4 ];
-    a.replaceInPlace(1, 3, [ 9, 9, 9 ]);
-    assert(a == [ 1, 9, 9, 9, 4 ]);
-    ---
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
     if(isDynamicArray!Range &&
@@ -2155,6 +2141,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
     }
 }
 
+/// Ditto
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
     if(isInputRange!Range &&
        ((!isDynamicArray!Range && is(ElementType!Range : T)) ||
@@ -2165,7 +2152,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
     array = replace(array, from, to, stuff);
 }
 
-//Verify Examples.
+///
 unittest
 {
     int[] a = [1, 4, 5];
@@ -2346,20 +2333,6 @@ unittest
 Implements an output range that appends data to an array. This is
 recommended over $(D a ~= data) when appending many elements because it is more
 efficient.
-
-Example:
-----
-auto app = appender!string();
-string b = "abcdefg";
-foreach (char c; b) app.put(c);
-assert(app.data == "abcdefg");
-
-int[] a = [ 1, 2 ];
-auto app2 = appender(a);
-app2.put(3);
-app2.put([ 4, 5, 6 ]);
-assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
-----
  */
 struct Appender(A)
 if (isDynamicArray!A)
@@ -2709,6 +2682,21 @@ if (isDynamicArray!A)
         import std.format : formattedWrite;
         sink.formattedWrite(typeof(this).stringof ~ "(%s)", data);
     }
+}
+
+///
+unittest{
+    auto app = appender!string();
+    string b = "abcdefg";
+    foreach (char c; b)
+        app.put(c);
+    assert(app.data == "abcdefg");
+
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(a);
+    app2.put(3);
+    app2.put([ 4, 5, 6 ]);
+    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
 unittest
