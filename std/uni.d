@@ -807,7 +807,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 // multiple arrays squashed into one memory block
 struct MultiArray(Types...)
 {
-    this(size_t[] sizes...)
+    this(size_t[] sizes...) @safe pure nothrow
     {
         size_t full_size;
         foreach(i, v; Types)
