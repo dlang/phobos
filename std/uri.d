@@ -1181,7 +1181,7 @@ struct URIQuery
     }
 
     /// Set query value with name $(B key), if some values by this key are defined, replaces first value
-    void opIndexAssign(string val, string key) pure
+    void opIndexAssign(string val, string key)
     {
         auto k = decode(key);
         auto v = decode(val):
@@ -1193,8 +1193,7 @@ struct URIQuery
         else
         {
             _data[k][$ - 1] = v;
-        }
-    }
+        }    }
     ///
     unittest
     {
