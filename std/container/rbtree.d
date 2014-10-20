@@ -1606,7 +1606,7 @@ assert(std.algorithm.equal(rbt[], [5]));
 }
 
 //Verify Example for removeKey.
-unittest
+pure unittest
 {
     auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
     rbt.removeKey(1, 4, 7);
@@ -1616,7 +1616,7 @@ unittest
 }
 
 //Tests for removeKey
-unittest
+pure unittest
 {
     {
         auto rbt = redBlackTree(["hello", "world", "foo", "bar"]);
@@ -1645,7 +1645,7 @@ unittest
     }
 }
 
-unittest
+pure unittest
 {
     void test(T)()
     {
@@ -1697,7 +1697,7 @@ auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
 }
 
 ///
-unittest
+pure unittest
 {
     auto rbt1 = redBlackTree(0, 1, 5, 7);
     auto rbt2 = redBlackTree!string("hello", "world");
@@ -1707,7 +1707,7 @@ unittest
 }
 
 //Combinations not in examples.
-unittest
+pure unittest
 {
     auto rbt1 = redBlackTree!(true, string)("hello", "hello");
     auto rbt2 = redBlackTree!((a, b){return a < b;}, double)(5.1, 2.3);
@@ -1715,13 +1715,13 @@ unittest
 }
 
 //Range construction.
-unittest
+pure unittest
 {
     auto rbt = new RedBlackTree!(int, "a > b")(iota(5));
     assert(equal(rbt[], [4, 3, 2, 1, 0]));
 }
 
-unittest
+pure unittest
 {
     auto rt1 = redBlackTree(5, 4, 3, 2, 1);
     assert(rt1.length == 5);
@@ -1738,10 +1738,4 @@ unittest
     auto rt4 = redBlackTree!string("hello", "hello");
     assert(rt4.length == 1);
     assert(array(rt4[]) == ["hello"]);
-}
-
-unittest
-{
-    auto create() pure { return new RedBlackTree!(int, "a > b")(iota(5)); }
-    auto x = create();
 }
