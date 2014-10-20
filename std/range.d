@@ -4681,7 +4681,7 @@ unittest // For static arrays.
     static assert(is(typeof(cConst[1 .. $]) == const(C)));
 }
 
-unittest // For infinite ranges
+@safe unittest // For infinite ranges
 {
     struct InfRange
     {
@@ -4695,12 +4695,10 @@ unittest // For infinite ranges
     assert (c == i);
 }
 
-unittest
+@safe unittest
 {
     int[5] arr = [0, 1, 2, 3, 4];
-    auto cleS = cycle(arr);   //Static
     auto cleD = cycle(arr[]); //Dynamic
-    assert(equal(cleS[5 .. 10], arr[]));
     assert(equal(cleD[5 .. 10], arr[]));
 
     //n is a multiple of 5 worth about 3/4 of size_t.max
@@ -4710,10 +4708,26 @@ unittest
     //Test index overflow
     foreach (_ ; 0 .. 10)
     {
-        cleS = cleS[n .. $];
         cleD = cleD[n .. $];
-        assert(equal(cleS[5 .. 10], arr[]));
         assert(equal(cleD[5 .. 10], arr[]));
+    }
+}
+
+unittest
+{
+    int[5] arr = [0, 1, 2, 3, 4];
+    auto cleS = cycle(arr);   //Static
+    assert(equal(cleS[5 .. 10], arr[]));
+
+    //n is a multiple of 5 worth about 3/4 of size_t.max
+    auto n = size_t.max/4 + size_t.max/2;
+    n -= n % 5;
+
+    //Test index overflow
+    foreach (_ ; 0 .. 10)
+    {
+        cleS = cleS[n .. $];
+        assert(equal(cleS[5 .. 10], arr[]));
     }
 }
 
@@ -4732,7 +4746,7 @@ unittest //10845
     assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
 
-unittest // 12177
+@safe unittest // 12177
 {
     auto a = recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0");
 }
