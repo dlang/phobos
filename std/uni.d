@@ -809,6 +809,7 @@ struct MultiArray(Types...)
 {
     this(size_t[] sizes...) @safe pure nothrow
     {
+        assert(dim == sizes.length);
         size_t full_size;
         foreach(i, v; Types)
         {
