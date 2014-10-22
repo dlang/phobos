@@ -540,7 +540,7 @@ template isInputRange(R)
     }));
 }
 
-unittest
+@safe unittest
 {
     struct A {}
     struct B
@@ -599,7 +599,7 @@ package void doPut(R, E)(ref R r, auto ref E e)
     }
 }
 
-unittest
+@safe unittest
 {
     static assert (!isNativeOutputRange!(int,     int));
     static assert ( isNativeOutputRange!(int[],   int));
@@ -1050,7 +1050,7 @@ package template isNativeOutputRange(R, E)
     }));
 }
 //
-unittest
+@safe unittest
 {
     int[] r = new int[](4);
     static assert(isInputRange!(int[]));
@@ -1080,7 +1080,7 @@ template isOutputRange(R, E)
 }
 
 ///
-unittest
+@safe unittest
 {
     void myprint(in char[] s) { }
     static assert(isOutputRange!(typeof(&myprint), char));
@@ -1090,7 +1090,7 @@ unittest
     static assert( isOutputRange!(dchar[], dchar));
 }
 
-unittest
+@safe unittest
 {
     import std.stdio : writeln;
 
@@ -1109,7 +1109,7 @@ unittest
     static assert(!isOutputRange!(inout(int)[], int));
 }
 
-unittest
+@safe unittest
 {
     // 6973
     static assert(isOutputRange!(OutputRange!int, int));
@@ -1152,7 +1152,7 @@ template isForwardRange(R)
     }));
 }
 
-unittest
+@safe unittest
 {
     static assert(!isForwardRange!(int));
     static assert( isForwardRange!(int[]));
@@ -1195,7 +1195,7 @@ template isBidirectionalRange(R)
     }));
 }
 
-unittest
+@safe unittest
 {
     struct A {}
     struct B
@@ -1286,7 +1286,7 @@ template isRandomAccessRange(R)
     }));
 }
 
-unittest
+@safe unittest
 {
     struct A {}
     struct B
@@ -1324,7 +1324,7 @@ unittest
     static assert( isRandomAccessRange!(inout(int)[]));
 }
 
-unittest
+@safe unittest
 {
     // Test fix for bug 6935.
     struct R
@@ -1388,7 +1388,7 @@ template hasMobileElements(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     static struct HasPostblit
     {
@@ -1424,7 +1424,7 @@ template ElementType(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     // Standard arrays: returns the type of the elements of the array
     static assert(is(ElementType!(int[]) == int));
@@ -1442,14 +1442,14 @@ unittest
     static assert(is(ElementType!(typeof(range)) == int));
 }
 
-unittest
+@safe unittest
 {
     static assert(is(ElementType!(byte[]) == byte));
     static assert(is(ElementType!(wchar[]) == dchar)); // rvalue
     static assert(is(ElementType!(wstring) == dchar));
 }
 
-unittest
+@safe unittest
 {
     enum XYZ : string { a = "foo" }
     auto x = XYZ.a.front;
@@ -1464,7 +1464,7 @@ unittest
     static assert(is(ElementType!(inout(int[])) == inout(int)));
 }
 
-unittest
+@safe unittest
 {
     static assert(is(ElementType!(int[5]) == int));
     static assert(is(ElementType!(int[0]) == int));
@@ -1472,7 +1472,7 @@ unittest
     static assert(is(ElementType!(char[0]) == dchar));
 }
 
-unittest //11336
+@safe unittest //11336
 {
     static struct S
     {
@@ -1481,7 +1481,7 @@ unittest //11336
     static assert(is(ElementType!(S[]) == S));
 }
 
-unittest // 11401
+@safe unittest // 11401
 {
     // ElementType should also work for non-@propety 'front'
     struct E { ushort id; }
@@ -1508,7 +1508,7 @@ template ElementEncodingType(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     // internally the range stores the encoded type
     static assert(is(ElementEncodingType!(char[])  == char));
@@ -1521,7 +1521,7 @@ unittest
     static assert(is(ElementEncodingType!(typeof(range)) == int));
 }
 
-unittest
+@safe unittest
 {
     static assert(is(ElementEncodingType!(wchar[]) == wchar));
     static assert(is(ElementEncodingType!(dchar[]) == dchar));
@@ -1530,7 +1530,7 @@ unittest
     static assert(is(ElementEncodingType!(int[])  == int));
 }
 
-unittest
+@safe unittest
 {
     enum XYZ : string { a = "foo" }
     auto x = XYZ.a.front;
@@ -1548,7 +1548,7 @@ unittest
     static assert(is(ElementEncodingType!(inout char[]) : inout(char)));
 }
 
-unittest
+@safe unittest
 {
     static assert(is(ElementEncodingType!(int[5]) == int));
     static assert(is(ElementEncodingType!(int[0]) == int));
@@ -1582,7 +1582,7 @@ template hasSwappableElements(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(!hasSwappableElements!(const int[]));
     static assert(!hasSwappableElements!(const(int)[]));
@@ -1621,7 +1621,7 @@ template hasAssignableElements(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(!hasAssignableElements!(const int[]));
     static assert(!hasAssignableElements!(const(int)[]));
@@ -1662,7 +1662,7 @@ template hasLvalueElements(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert( hasLvalueElements!(int[]));
     static assert( hasLvalueElements!(const(int)[]));
@@ -1679,7 +1679,7 @@ unittest
     static assert( hasLvalueElements!(typeof(c)));
 }
 
-unittest
+@safe unittest
 {
     // bugfix 6336
     struct S { immutable int value; }
@@ -1713,7 +1713,7 @@ template hasLength(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(!hasLength!(char[]));
     static assert( hasLength!(int[]));
@@ -1751,7 +1751,7 @@ template isInfinite(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(!isInfinite!(int[]));
     static assert( isInfinite!(Repeat!(int)));
@@ -1841,7 +1841,7 @@ template hasSlicing(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert( hasSlicing!(int[]));
     static assert( hasSlicing!(const(int)[]));
@@ -1934,7 +1934,7 @@ auto walkLength(Range)(Range range, const size_t upTo)
     }
 }
 
-unittest
+@safe unittest
 {
     //hasLength Range
     int[] a = [ 1, 2, 3 ];
@@ -2076,7 +2076,7 @@ if (isBidirectionalRange!(Unqual!Range))
 
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
@@ -2084,7 +2084,7 @@ unittest
     assert(retro(retro(a)) is a);
 }
 
-unittest
+@safe unittest
 {
     static assert(isBidirectionalRange!(typeof(retro("hello"))));
     int[] a;
@@ -2109,7 +2109,7 @@ unittest
    auto r = retro(foo);
 }
 
-unittest
+@safe unittest
 {
     foreach(DummyType; AllDummyRanges) {
         static if (!isBidirectionalRange!DummyType) {
@@ -2160,7 +2160,8 @@ unittest
         }
     }
 }
-unittest
+
+@safe unittest
 {
     auto LL = iota(1L, 4L);
     auto r = retro(LL);
@@ -2168,7 +2169,7 @@ unittest
 }
 
 // Issue 12662
-@nogc unittest
+@safe @nogc unittest
 {
     int[3] src = [1,2,3];
     int[] data = src[];
@@ -2400,7 +2401,7 @@ if (isInputRange!(Unqual!Range))
     }
 }
 
-unittest
+@safe unittest
 {
     static assert(isRandomAccessRange!(typeof(stride([1, 2, 3], 2))));
     void test(size_t n, int[] input, int[] witness)
@@ -2523,7 +2524,8 @@ unittest
         }
     }
 }
-unittest
+
+@safe unittest
 {
     auto LL = iota(1L, 10L);
     auto s = stride(LL, 3);
@@ -2871,7 +2873,7 @@ if (Ranges.length > 0 &&
     }
 }
 
-unittest
+@safe unittest
 {
     {
         int[] arr1 = [ 1, 2, 3, 4 ];
@@ -2963,7 +2965,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     class Foo{}
     immutable(Foo)[] a;
@@ -3080,7 +3082,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 10, 20, 30, 40 ];
@@ -3109,7 +3111,7 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     assert(equal(radial(a), [ 3, 4, 2, 5, 1 ]));
@@ -3117,7 +3119,7 @@ unittest
     assert(equal(radial(a), [ 2, 3, 1, 4 ]));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
     import std.exception : enforce;
@@ -3154,7 +3156,8 @@ unittest
     // immutable int[] immi = [ 1, 2 ];
     // static assert(is(typeof(radial(immi))));
 }
-unittest
+
+@safe unittest
 {
     auto LL = iota(1L, 6L);
     auto r = radial(LL);
@@ -3354,7 +3357,7 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     auto s = take(arr1, 5);
@@ -3377,7 +3380,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     return Take!R(input, n);
 }
 
-unittest
+@safe unittest
 {
     int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     auto s = take(arr1, 5);
@@ -3435,7 +3438,7 @@ unittest
     static assert(is(Take!(typeof(myRepeat))));
 }
 
-unittest
+@safe unittest
 {
     // Check that one can declare variables of all Take types,
     // and that they match the return type of the corresponding
@@ -3452,7 +3455,7 @@ unittest
     t3 = take(t2, 1);
 }
 
-unittest
+@safe unittest
 {
     alias R1 = typeof(repeat(1));
     alias R2 = typeof(cycle([1]));
@@ -3462,14 +3465,14 @@ unittest
     static assert(isBidirectionalRange!TR2);
 }
 
-unittest //12731
+@safe unittest //12731
 {
     auto a = repeat(1);
     auto s = a[1 .. 5];
     s = s[1 .. 3];
 }
 
-unittest //13151
+@safe unittest //13151
 {
     auto r = take(repeat(1, 4), 3);
     assert(r.take(2).equal(repeat(1, 2)));
@@ -3564,7 +3567,7 @@ if (isInputRange!R)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4, 5 ];
 
@@ -3576,7 +3579,7 @@ unittest
     assert(b.back == 3);
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4, 5 ];
     auto b = takeExactly(a, 3);
@@ -3592,7 +3595,7 @@ unittest
     assert(equal(takeExactly(e, 3), [1, 2, 3]));
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4, 5 ];
     //Test that take and takeExactly are the same for ranges which define length
@@ -3651,7 +3654,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     alias DummyType = DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward);
     auto te = takeExactly(DummyType(), 5);
@@ -3708,7 +3711,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto s = takeOne([42, 43, 44]);
     static assert(isRandomAccessRange!(typeof(s)));
@@ -3736,14 +3739,14 @@ auto takeNone(R)()
 }
 
 ///
-unittest
+@safe unittest
 {
     auto range = takeNone!(int[])();
     assert(range.length == 0);
     assert(range.empty);
 }
 
-unittest
+@safe unittest
 {
     enum ctfe = takeNone!(int[])();
     static assert(ctfe.length == 0);
@@ -3781,14 +3784,14 @@ auto takeNone(R)(R range)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(takeNone([42, 27, 19]).empty);
     assert(takeNone("dlang.org").empty);
     assert(takeNone(filter!"true"([42, 27, 19])).empty);
 }
 
-unittest
+@safe unittest
 {
     struct Dummy
     {
@@ -3934,7 +3937,7 @@ R dropBack(R)(R range, size_t n)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
     assert("hello world".drop(6) == "world");
@@ -3942,7 +3945,7 @@ unittest
     assert("hello world".take(6).drop(3).equal("lo "));
 }
 
-unittest
+@safe unittest
 {
     assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
     assert("hello world".dropBack(6) == "hello");
@@ -3950,7 +3953,7 @@ unittest
     assert("hello world".drop(4).dropBack(4).equal("o w"));
 }
 
-unittest
+@safe unittest
 {
     import std.container : DList;
 
@@ -3960,13 +3963,13 @@ unittest
     assert(a[].equal(a[].take(2)));
 }
 
-unittest
+@safe unittest
 {
     assert(drop("", 5).empty);
     assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
 }
 
-unittest
+@safe unittest
 {
     import std.container : DList;
 
@@ -4004,7 +4007,7 @@ R dropBackExactly(R)(R range, size_t n)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [1, 2, 3];
     assert(a.dropExactly(2) == [3]);
@@ -4044,7 +4047,7 @@ R dropBackOne(R)(R range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.container : DList;
 
@@ -4145,7 +4148,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popFrontN(2);
@@ -4155,7 +4158,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     auto LL = iota(1L, 7L);
     auto r = popFrontN(LL, 2);
@@ -4164,7 +4167,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popBackN(2);
@@ -4174,7 +4177,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     auto LL = iota(1L, 7L);
     auto r = popBackN(LL, 2);
@@ -4231,7 +4234,7 @@ void popBackExactly(Range)(ref Range r, size_t n)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [1, 2, 3];
     a.popFrontExactly(1);
@@ -4299,12 +4302,12 @@ public:
 Repeat!T repeat(T)(T value) { return Repeat!T(value); }
 
 ///
-unittest
+@safe unittest
 {
     assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
 }
 
-unittest
+@safe unittest
 {
     auto  r = repeat(5);
     alias R = typeof(r);
@@ -4331,12 +4334,12 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(equal(5.repeat(4), 5.repeat().take(4)));
 }
 
-unittest //12007
+@safe unittest //12007
 {
     static class C{}
     Repeat!(immutable int) ri;
@@ -5117,7 +5120,7 @@ auto zip(Ranges...)(Ranges ranges)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3 ];
     string[] b = [ "a", "b", "c" ];
@@ -5260,7 +5263,7 @@ unittest
     +/
 }
 
-unittest
+@safe unittest
 {
     auto a = [5,4,3,2,1];
     auto b = [3,1,2,5,6];
@@ -5806,7 +5809,7 @@ auto sequence(alias fun, State...)(State args)
     }
 }
 
-unittest
+@safe unittest
 {
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
     static assert(hasSlicing!(typeof(odds)));
@@ -6090,7 +6093,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 }
 
 ///
-unittest
+@safe unittest
 {
    import std.math : approxEqual;
    auto r = iota(0, 10, 1);
@@ -6103,6 +6106,14 @@ unittest
 }
 
 unittest
+{
+    int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto r1 = iota(a.ptr, a.ptr + a.length, 1);
+    assert(r1.front == a.ptr);
+    assert(r1.back == a.ptr + a.length - 1);
+}
+
+@safe unittest
 {
     import std.math : approxEqual, nextUp, nextDown;
 
@@ -6148,11 +6159,6 @@ unittest
     assert(r[2] == 6);
     rSlice = r[1..3];
     assert(equal(rSlice, [3, 6]));
-
-    int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    auto r1 = iota(a.ptr, a.ptr + a.length, 1);
-    assert(r1.front == a.ptr);
-    assert(r1.back == a.ptr + a.length - 1);
 
     auto rf = iota(0.0, 0.5, 0.1);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
@@ -6226,13 +6232,13 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     auto idx = new size_t[100];
     copy(iota(0, idx.length), idx);
 }
 
-unittest
+@safe unittest
 {
     foreach(range; TypeTuple!(iota(2, 27, 4),
                               iota(3, 9),
@@ -6248,7 +6254,10 @@ unittest
         const s2 = cRange[0 .. 3];
         const l = cRange.length;
     }
+}
 
+unittest
+{
     //The ptr stuff can't be done at compile time, so we unfortunately end
     //up with some code duplication here.
     auto arr = [0, 5, 3, 5, 5, 7, 9, 2, 0, 42, 7, 6];
@@ -6511,7 +6520,7 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 }
 
 ///
-unittest
+@safe unittest
 {
    int[][] x = new int[][2];
    x[0] = [1, 2];
@@ -6520,7 +6529,8 @@ unittest
    assert(equal(ror, [ 1, 3 ][]));
 }
 
-unittest {
+@safe unittest
+{
     static assert(is(FrontTransversal!(immutable int[][])));
 
     foreach(DummyType; AllDummyRanges) {
@@ -6802,7 +6812,7 @@ Transversal!(RangeOfRanges, opt) transversal
 }
 
 ///
-unittest
+@safe unittest
 {
    int[][] x = new int[][2];
    x[0] = [1, 2];
@@ -6811,7 +6821,7 @@ unittest
    assert(equal(ror, [ 2, 4 ][]));
 }
 
-unittest
+@safe unittest
 {
     int[][] x = new int[][2];
     x[0] = [ 1, 2 ];
@@ -6925,7 +6935,7 @@ private:
     RangeOfRanges _input;
 }
 
-unittest
+@safe unittest
 {
     // Boundary case: transpose of empty range should be empty
     int[][] ror = [];
@@ -6945,7 +6955,7 @@ Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
 }
 
 /// Example
-unittest
+@safe unittest
 {
     int[][] ror = [
         [1, 2, 3],
@@ -6960,7 +6970,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     int[][] x = new int[][2];
     x[0] = [1, 2];
@@ -6976,7 +6986,7 @@ unittest
 }
 
 // Issue 8764
-unittest
+@safe unittest
 {
     ulong[1] t0 = [ 123 ];
 
@@ -7201,7 +7211,7 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
 }
 
 ///
-unittest
+@safe unittest
 {
     auto source = [1, 2, 3, 4, 5];
     auto indices = [4, 3, 1, 2, 0, 4];
@@ -7210,7 +7220,7 @@ unittest
     assert(equal(retro(ind), [5, 1, 3, 2, 4, 5]));
 }
 
-unittest
+@safe unittest
 {
     {
         auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
@@ -7228,7 +7238,7 @@ unittest
     assert(ind[5] == 6);
 }
 
-unittest
+@safe unittest
 {
     foreach(DummyType; AllDummyRanges)
     {
@@ -7450,7 +7460,7 @@ if (isForwardRange!Source)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto chunks = chunks(source, 4);
@@ -7463,7 +7473,7 @@ unittest
     assert(equal(retro(array(chunks)), array(retro(chunks))));
 }
 
-unittest
+@safe unittest
 {
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto chunks = chunks(source, 4);
@@ -7478,7 +7488,7 @@ unittest
     static assert(isRandomAccessRange!(typeof(chunks)));
 }
 
-unittest
+@safe unittest
 {
     //Extra toying with slicing and indexing.
     auto chunks1 = [0, 0, 1, 1, 2, 2, 3, 3, 4].chunks(2);
@@ -7738,7 +7748,7 @@ auto only(Values...)(auto ref Values values)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.uni;
     assert(equal(only('♡'), "♡"));
@@ -7762,7 +7772,7 @@ version(unittest)
 }
 
 // Tests the zero-element result
-unittest
+@safe unittest
 {
     auto emptyRange = only();
 
@@ -7782,7 +7792,7 @@ unittest
 }
 
 // Tests the single-element result
-unittest
+@safe unittest
 {
     import std.typecons : tuple;
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
@@ -7830,7 +7840,7 @@ unittest
 }
 
 // Tests multiple-element results
-unittest
+@safe unittest
 {
     static assert(!__traits(compiles, only(1, "1")));
 
@@ -8293,7 +8303,7 @@ ElementType!R moveFront(R)(R r)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3 ];
     assert(moveFront(a) == 1);
@@ -8310,7 +8320,7 @@ unittest
     assert(moveFront(r) == 43);
 }
 
-unittest
+@safe unittest
 {
     struct R
     {
@@ -8341,7 +8351,7 @@ ElementType!R moveBack(R)(R r)
 }
 
 ///
-unittest
+@safe unittest
 {
     struct TestRange
     {
@@ -8379,7 +8389,7 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [1,2,3,4];
     foreach(idx, it; a)
@@ -8388,7 +8398,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
@@ -9384,7 +9394,7 @@ No copy of the original range is ever made. If the underlying range is
 changed concurrently with its corresponding $(D SortedRange) in ways
 that break its sortedness, $(D SortedRange) will work erratically.
 */
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
@@ -9393,7 +9403,7 @@ unittest
     assert(!r.contains(42));  // passes although it shouldn't
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 10, 20, 30, 30, 30, 40, 40, 50, 60 ];
     auto r = assumeSorted(a).trisect(30);
@@ -9407,7 +9417,7 @@ unittest
     assert(equal(r[2], [ 40, 40, 50, 60 ]));
 }
 
-unittest
+@safe unittest
 {
     auto a = [ "A", "AG", "B", "E", "F" ];
     auto r = assumeSorted!"cmp(a,b) < 0"(a).trisect("B"w);
@@ -9420,7 +9430,7 @@ unittest
     assert(equal(r[2], [ "AG", "B", "E", "F" ]));
 }
 
-unittest
+@safe unittest
 {
     static void test(SearchPolicy pol)()
     {
@@ -9454,7 +9464,7 @@ unittest
     test!(SearchPolicy.binarySearch)();
 }
 
-unittest
+@safe unittest
 {
     // Check for small arrays
     int[] a;
@@ -9467,7 +9477,7 @@ unittest
     r = assumeSorted(a);
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
@@ -9476,7 +9486,7 @@ unittest
     assert(!r.contains(42));            // passes although it shouldn't
 }
 
-unittest
+@safe unittest
 {
     immutable(int)[] arr = [ 1, 2, 3 ];
     auto s = assumeSorted(arr);
@@ -9519,7 +9529,7 @@ if (isInputRange!(Unqual!R))
     return SortedRange!(Unqual!R, pred)(r);
 }
 
-unittest
+@safe unittest
 {
     static assert(isRandomAccessRange!(SortedRange!(int[])));
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
@@ -9533,7 +9543,7 @@ unittest
     assert(equal(p, [ 0, 1, 2, 3, 4, 5, 6]));
 }
 
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).upperBound(3);
@@ -9542,7 +9552,7 @@ unittest
     assert(equal(p, [ 5, 6 ]));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -9561,7 +9571,7 @@ unittest
     assert(equal(p, [ 3, 3, 3]));
 }
 
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     if (a.length)
@@ -9572,7 +9582,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 5, 7, 34, 345, 677 ];
     auto r = assumeSorted(a);
@@ -9580,6 +9590,10 @@ unittest
     r = assumeSorted(a);
     a = [ 1 ];
     r = assumeSorted(a);
+}
+
+unittest
+{
     bool ok = true;
     try
     {
@@ -10368,7 +10382,7 @@ auto refRange(R)(R* range)
 
 /*****************************************************************************/
 
-unittest    // bug 9060
+@safe unittest    // bug 9060
 {
     // fix for std.algorithm
     auto r = map!(x => 0)([1]);
@@ -10417,7 +10431,7 @@ struct NullSink
     void put(E)(E){}
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm;
     [4, 5, 6].map!(x => x * 2).copy(NullSink());
@@ -10528,7 +10542,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 }
 
 //
-unittest
+@safe unittest
 {
     // Pass-through
     int[] values = [1, 4, 9, 16, 25];
@@ -10549,7 +10563,7 @@ unittest
 }
 
 //
-unittest
+@safe unittest
 {
     int[] values = [1, 4, 9, 16, 25];
 
@@ -10584,7 +10598,7 @@ unittest
 }
 
 //
-unittest
+@safe unittest
 {
     char[] txt = "Line one, Line 2".dup;
 
@@ -10604,7 +10618,7 @@ unittest
     assert(shiftedCount == 3);
 }
 
-unittest
+@safe unittest
 {
     // Manually stride to test different pipe behavior.
     void testRange(Range)(Range r)
@@ -10641,7 +10655,7 @@ unittest
     assert(frontCount == 9);
 }
 
-unittest
+@safe unittest
 {
     //Test diverting elements to an OutputRange
     string txt = "abcdefghijklmnopqrstuvwxyz";
@@ -10679,7 +10693,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // Issue 13483
     static void func1(T)(T x) {}
