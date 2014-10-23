@@ -375,13 +375,6 @@ struct JSONValue
         store.array[i] = arg;
     }
 
-    void opIndexAssign(T)(T arg, string k)
-    {
-        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
-                                "JSONValue is not an object");
-        store.object[k] = arg;
-    }
-
     JSONValue opBinary(string op : "~", T)(T arg)
     {
         enforceEx!JSONException(type == JSON_TYPE.ARRAY,
