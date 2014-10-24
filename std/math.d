@@ -6420,11 +6420,11 @@ unittest
 }
 
 // Included for backwards compatibility with Phobos1
-alias isnan = isNaN;
-alias isfinite = isFinite;
-alias isnormal = isNormal;
-alias issubnormal = isSubnormal;
-alias isinf = isInfinity;
+deprecated("Phobos1 math functions are deprecated, use isNaN") alias isnan = isNaN;
+deprecated("Phobos1 math functions are deprecated, use isFinite ") alias isfinite = isFinite;
+deprecated("Phobos1 math functions are deprecated, use isNormal ") alias isnormal = isNormal;
+deprecated("Phobos1 math functions are deprecated, use isSubnormal ") alias issubnormal = isSubnormal;
+deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf = isInfinity;
 
 /* **********************************
  * Building block functions, they
