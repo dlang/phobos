@@ -8698,48 +8698,59 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
     int[] a = [ 1, 5 ];
     int[] b = [ 9, 8 ];
-    int[] c = new int[a.length + b.length + 10];
-    auto d = copy(b, copy(a, c));
-    assert(c[0 .. a.length + b.length] == a ~ b);
-    assert(d.length == 10);
+    int[] buf = new int[a.length + b.length + 10];
+    auto rem = copy(a, buf);    // copy a into buf
+    rem = copy(b, rem);         // copy b into remainder of buf
+    assert(buf[0 .. a.length + b.length] == [1, 5, 9, 8]);
+    assert(rem.length == 10);   // unused slots in buf
 }
 
 /**
 As long as the target range elements support assignment from source
-range elements, different types of ranges are accepted.
+range elements, different types of ranges are accepted:
 */
 @safe unittest
 {
-    float[] a = [ 1.0f, 5 ];
-    double[] b = new double[a.length];
-    auto d = copy(a, b);
+    float[] src = [ 1.0f, 5 ];
+    double[] dest = new double[src.length];
+    copy(src, dest);
 }
 
 /**
-To copy at most $(D n) elements from range $(D a) to range $(D b), you
-may want to use $(D copy(take(a, n), b)). To copy those elements from
-range $(D a) that satisfy predicate $(D pred) to range $(D b), you may
-want to use $(D copy(a.filter!(pred), b)).
+To _copy at most $(D n) elements from a range, you may want to use 
+$(XREF range, take):
 */
 @safe unittest
 {
-    int[] a = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
-    auto b = new int[a.length];
-    auto c = copy(a.filter!(a => (a & 1) == 1), b);
-    assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
+    int[] src = [ 1, 5, 8, 9, 10 ];
+    auto dest = new int[3];
+    copy(take(src, dest.length), dest);
+    assert(dest[0 .. $] == [ 1, 5, 8 ]);
+}
+
+/**
+To _copy just those elements from a range that satisfy a predicate you 
+may want to use $(LREF filter):
+*/
+@safe unittest
+{
+    int[] src = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
+    auto dest = new int[src.length];
+    auto rem = copy(src.filter!(a => (a & 1) == 1), dest);
+    assert(dest[0 .. $ - rem.length] == [ 1, 5, 9, 1 ]);
 }
 
 /**
 $(XREF range, retro) can be used to achieve behavior similar to
-$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward').
+$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 */
 @safe unittest
 {
     import std.algorithm, std.range;
     int[] src = [1, 2, 4];
-    int[] dst = [0, 0, 0, 0, 0];
-    copy(src.retro, dst.retro);
-    assert(dst == [0, 0, 1, 2, 4]);
+    int[] dest = [0, 0, 0, 0, 0];
+    copy(src.retro, dest.retro);
+    assert(dest == [0, 0, 1, 2, 4]);
 }
 
 @safe unittest
