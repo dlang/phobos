@@ -1504,7 +1504,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    FPTemporary!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
+    Unqual!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front, t2 = b.front;
@@ -1689,7 +1689,7 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    FPTemporary!(typeof(return)) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
@@ -1734,7 +1734,7 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    FPTemporary!(typeof(return)) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
@@ -1762,7 +1762,7 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    FPTemporary!(typeof(return)) result = 0;
+    Unqual!(typeof(return)) result = 0;
     limit *= 2;
     for (; !a.empty; a.popFront(), b.popFront())
     {

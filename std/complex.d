@@ -283,21 +283,19 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if (op == "/" && isNumeric!R)
     {
-        typeof(return) w;
-        alias Tmp = FPTemporary!(typeof(w.re));
-
+        typeof(return) w = void;
         if (fabs(re) < fabs(im))
         {
-            Tmp ratio = re/im;
-            Tmp rdivd = r/(re*ratio + im);
+            immutable ratio = re/im;
+            immutable rdivd = r/(re*ratio + im);
 
             w.re = rdivd*ratio;
             w.im = -rdivd;
         }
         else
         {
-            Tmp ratio = im/re;
-            Tmp rdivd = r/(re + im*ratio);
+            immutable ratio = im/re;
+            immutable rdivd = r/(re + im*ratio);
 
             w.re = rdivd;
             w.im = -rdivd*ratio;
@@ -310,7 +308,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
         if (op == "^^" && isNumeric!R)
     {
-        FPTemporary!(CommonType!(T, R)) ab = void, ar = void;
+        Unqual!(CommonType!(T, R)) ab = void, ar = void;
 
         if (lhs >= 0)
         {
@@ -357,19 +355,19 @@ struct Complex(T)  if (isFloatingPoint!T)
     {
         if (fabs(z.re) < fabs(z.im))
         {
-            FPTemporary!T ratio = z.re/z.im;
-            FPTemporary!T denom = z.re*ratio + z.im;
+            immutable ratio = z.re/z.im;
+            immutable denom = z.re*ratio + z.im;
 
-            auto temp = (re*ratio + im)/denom;
+            immutable temp = (re*ratio + im)/denom;
             im = (im*ratio - re)/denom;
             re = temp;
         }
         else
         {
-            FPTemporary!T ratio = z.im/z.re;
-            FPTemporary!T denom = z.re + z.im*ratio;
+            immutable ratio = z.im/z.re;
+            immutable denom = z.re + z.im*ratio;
 
-            auto temp = (re + im*ratio)/denom;
+            immutable temp = (re + im*ratio)/denom;
             im = (im - re*ratio)/denom;
             re = temp;
         }
@@ -380,10 +378,10 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        FPTemporary!T r = abs(this);
-        FPTemporary!T t = arg(this);
-        FPTemporary!T ab = r^^z.re * exp(-t*z.im);
-        FPTemporary!T ar = t*z.re + log(r)*z.im;
+        immutable r = abs(this);
+        immutable t = arg(this);
+        immutable ab = r^^z.re * exp(-t*z.im);
+        immutable ar = t*z.re + log(r)*z.im;
 
         re = ab*std.math.cos(ar);
         im = ab*std.math.sin(ar);
@@ -411,8 +409,8 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
-        FPTemporary!T ab = abs(this)^^r;
-        FPTemporary!T ar = arg(this)*r;
+        immutable ab = abs(this)^^r;
+        immutable ar = arg(this)*r;
         re = ab*std.math.cos(ar);
         im = ab*std.math.sin(ar);
         return this;
