@@ -2715,7 +2715,7 @@ Target parse(Target, Source)(ref Source p)
 
 unittest
 {
-    import std.math : isnan, fabs;
+    import std.math : isNaN, fabs;
 
     // Compare reals with given precision
     bool feq(in real rx, in real ry, in real precision = 0.000001L)
@@ -2723,10 +2723,10 @@ unittest
         if (rx == ry)
             return 1;
 
-        if (isnan(rx))
-            return cast(bool)isnan(ry);
+        if (isNaN(rx))
+            return cast(bool)isNaN(ry);
 
-        if (isnan(ry))
+        if (isNaN(ry))
             return 0;
 
         return cast(bool)(fabs(rx - ry) <= precision);
@@ -2754,7 +2754,7 @@ unittest
         assert(to!Float("0") is 0.0);
         assert(to!Float("-0") is -0.0);
 
-        assert(isnan(to!Float("nan")));
+        assert(isNaN(to!Float("nan")));
 
         assertThrown!ConvException(to!Float("\x00"));
     }
