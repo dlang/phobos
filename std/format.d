@@ -30,7 +30,7 @@ import std.algorithm, std.ascii, std.conv,
     std.system, std.traits, std.typetuple,
     std.utf;
 version (CRuntime_Microsoft) {
-    import std.math : isnan, isInfinity;
+    import std.math : isNaN, isInfinity;
 }
 version(unittest) {
     import std.math;
@@ -615,7 +615,7 @@ unittest
     assert(s.empty);
     assert(approxEqual(x, 1.2));
     assert(approxEqual(y, 3.4));
-    assert(isnan(z));
+    assert(isNaN(z));
 }
 
 template FormatSpec(Char)
@@ -1602,7 +1602,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     {
         double tval = val; // convert early to get "inf" in case of overflow
         string s;
-        if (isnan(tval))
+        if (isNaN(tval))
             s = "nan"; // snprintf writes 1.#QNAN
         else if (isInfinity(tval))
             s = val >= 0 ? "inf" : "-inf"; // snprintf writes 1.#INF
@@ -5134,7 +5134,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                     int n;
                     version (CRuntime_Microsoft)
                     {
-                        if (isnan(v)) // snprintf writes 1.#QNAN
+                        if (isNaN(v)) // snprintf writes 1.#QNAN
                             n = snprintf(fbuf.ptr, sl, "nan");
                         else if(isInfinity(v)) // snprintf writes 1.#INF
                             n = snprintf(fbuf.ptr, sl, v < 0 ? "-inf" : "inf");

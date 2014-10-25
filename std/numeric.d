@@ -727,7 +727,7 @@ template secantMethod(alias fun)
         typeof(fxn) fxn_1;
 
         xn = xn_1;
-        while (!approxEqual(d, 0) && isfinite(d))
+        while (!approxEqual(d, 0) && isFinite(d))
         {
             xn_1 = xn;
             xn -= d;
@@ -1808,7 +1808,7 @@ unittest
 //         immutable i = cast(uint) (table.length
 //                 * ((x - left) / (right - left)));
 //         assert(i < n);
-//         if (isnan(table[i])) {
+//         if (isNaN(table[i])) {
 //             // initialize it
 //             auto x1 = left + i * (right - left) / n;
 //             auto x2 = left + (i + 1) * (right - left) / n;
@@ -2004,7 +2004,7 @@ gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
     static bool uncomputed(F n)
     {
         static if (isFloatingPoint!(F))
-            return isnan(n);
+            return isNaN(n);
         else
             return n == n.init;
     }
