@@ -18,25 +18,14 @@ if (!is(Unqual!T == bool))
     // This structure is not copyable.
     private struct Payload
     {
-        size_t _capacity;
-        T[] _payload;
-
-        // Convenience constructor
-        this(T[] p) { _capacity = p.length; _payload = p; }
+        private size_t _capacity;
+        private T[] _payload;
 
         // Destructor releases array memory
         ~this()
         {
-            //Warning: destroy will also destroy class instances.
-            //The hasElaborateDestructor protects us here.
-            static if (hasElaborateDestructor!T)
-                foreach (ref e; _payload)
-                    .destroy(e);
-
-            static if (hasIndirections!T)
-                GC.removeRange(_payload.ptr);
-
-            free(_payload.ptr);
+            length = 0;
+            capacity = 0;
         }
 
         this(this)
@@ -59,87 +48,255 @@ if (!is(Unqual!T == bool))
         //     return result;
         // }
 
-        // length
+        // Returns the number of elements in the Array.
         @property size_t length() const
         {
             return _payload.length;
         }
 
-        // length
+        // Sets the number of elements in the Array.
+        // The length of the Array can never be more than the capacity.
+        // Note: Reducing the length will remove items
+        // from the end of the Array.
         @property void length(size_t newLength)
         {
-            if (length >= newLength)
-            {
-                // shorten
-                static if (hasElaborateDestructor!T)
-                    foreach (ref e; _payload.ptr[newLength .. _payload.length])
-                        .destroy(e);
-
-                _payload = _payload.ptr[0 .. newLength];
-                return;
-            }
-            // enlarge
-            auto startEmplace = length;
-            _payload = (cast(T*) realloc(_payload.ptr,
-                            T.sizeof * newLength))[0 .. newLength];
-            initializeAll(_payload.ptr[startEmplace .. length]);
+            if (newLength > capacity)
+                capacity = newLength; // enlarge
+            if (newLength < length)
+                removeAt(newLength, length - newLength); // shorten
+            _payload = _payload.ptr[0 .. newLength];
         }
 
-        // capacity
+        // Returns the capacity of the Array.
         @property size_t capacity() const
         {
             return _capacity;
         }
 
-        // reserve
-        void reserve(size_t elements)
+        // Set the capacity of the Array.
+        // The capacity is the maximum size of the Array before it
+        // must be resized.
+        // The capacity cannot be less than the Array length.
+        // Setting capacity to 0 will free the Array any other value
+        // will cause a resize.
+        @property void capacity(size_t value)
         {
-            if (elements <= capacity) return;
-            immutable sz = elements * T.sizeof;
-            static if (hasIndirections!T)       // should use hasPointers instead
+            immutable isGrowing = value > capacity();
+            
+            if (value == 0)
             {
-                /* Because of the transactional nature of this
-                 * relative to the garbage collector, ensure no
-                 * threading bugs by using malloc/copy/free rather
-                 * than realloc.
-                 */
-                immutable oldLength = length;
-                auto newPayload =
-                    enforce(cast(T*) malloc(sz))[0 .. oldLength];
-                // copy old data over to new array
-                memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
-                // Zero out unused capacity to prevent gc from seeing
-                // false pointers
-                memset(newPayload.ptr + oldLength,
-                        0,
-                        (elements - oldLength) * T.sizeof);
-                GC.addRange(newPayload.ptr, sz);
-                GC.removeRange(_payload.ptr);
-                free(_payload.ptr);
-                _payload = newPayload;
+                // 1. Try to free the Array.
+                if (capacity() > 0)
+                {
+                    assert(_payload.ptr);
+                    static if (hasIndirections!T)
+                        GC.removeRange(_payload.ptr);
+                    free(_payload.ptr);
+                    _payload = null;
+                }
+                else
+                {
+                    // Ignore, we tried to set the capacity to 0, but it was already 0.
+                }
             }
             else
             {
-                /* These can't have pointers, so no need to zero
-                 * unused region
-                 */
-                auto newPayload =
-                    enforce(cast(T*) realloc(_payload.ptr, sz))[0 .. length];
-                _payload = newPayload;
+                immutable sz = value * T.sizeof;
+                immutable len = length;
+                
+                if (capacity() == 0)
+                {
+                    // 2. Allocate an Array
+                    auto pl = enforce(cast(T*) malloc(sz))[0 .. value];
+                    // Zero out unused capacity to prevent gc from seeing false pointers
+                    initializeAll(pl.ptr[0 .. value]);
+                    static if (hasIndirections!T)
+                        GC.addRange(pl.ptr, sz);
+                    _payload = pl.ptr[0 .. len];
+                }
+                else
+                {
+                    // 3. Resize the Array
+                    static if (hasIndirections!T)       // should use hasPointers instead
+                    {
+                        /* Because of the transactional nature of this
+                         * relative to the garbage collector, ensure no
+                         * threading bugs by using malloc/copy/free rather
+                         * than realloc.
+                         */
+                        auto pl = enforce(cast(T*) malloc(sz))[0 .. value];
+                        // copy old data over to new Array
+                        memcpy(pl.ptr, _payload.ptr, T.sizeof * len);
+                        
+                        // Zero out unused capacity to prevent gc from seeing false pointers
+                        if (isGrowing)
+                            initializeAll(pl.ptr[len .. value]);
+                        
+                        GC.addRange(pl.ptr, sz);
+                        GC.removeRange(_payload.ptr);
+                        free(_payload.ptr);
+                        _payload = pl.ptr[0 .. len];
+                    }
+                    else
+                    {
+                        /* These can't have pointers, so no need to zero
+                         * unused region
+                         */
+                        auto pl = enforce(cast(T*) realloc(_payload.ptr, sz))[0 .. value];
+                        if (isGrowing)
+                            initializeAll(pl.ptr[len .. value]);
+                        _payload = pl.ptr[0 .. len];
+                    }
+                }
             }
-            _capacity = elements;
+            
+            _capacity = value;
+        }
+        
+        // Requests the Array to change its capacity to at least howMuch.
+        // If howMuch is greater than the current capacity the Array is
+        // resized, otherwise no action is taken and the capactity
+        // remains unchanged.
+        void reserve(size_t howMuch)
+        {
+            immutable cap = capacity;
+            
+            if (howMuch > cap)
+            {
+                size_t sz = (cap == 0) ? 4 : (cap * 3 / 2); // grow rule 1/3
+                if (sz < howMuch)
+                    sz = howMuch;
+                capacity = sz;
+                
+                assert(capacity > length && _payload.ptr);
+            }
+        }
+        
+        // Requests the Array to reduce its capacity to howMuch.
+        // If the Array length is greater than howMuch the length
+        // will be truncated, before the capacity is reduced.
+        void shrink(size_t howMuch)
+        {
+            immutable cap = capacity;
+            
+            if (howMuch < cap)
+            {
+                length = cap;
+                capacity = cap;
+                
+                assert(capacity == length && _payload.ptr);
+            }
+        }
+        
+        // Remove one entry at the specified index.
+        // An entry will be destroyed it appropriately.
+        
+        // Complexity: $(BIGOH n)
+        void removeAt(size_t index)
+        {
+            enforce(index >= 0 && index <= length);
+            static if (is(T == struct) && hasElaborateDestructor!T)
+                .destroy(_payload[index]); // Destroy this guy
+            
+            _payload = _payload.ptr[0 .. _payload.length - 1];
+            if (index < length)
+            {
+                // Move elements over by one slot
+                memmove(_payload.ptr + index,
+                        _payload.ptr + index + 1,
+                        T.sizeof * (length - index));
+                
+                // Zero out unused capacity to prevent gc from seeing false pointers
+                _payload[length] = T.init;
+            }
+        }
+        
+        // Remove a range of entries starting at the specified index.
+        // An entry will be destroyed appropriately.
+        //
+        // Complexity: $(BIGOH n)
+        void removeAt(size_t index, size_t howMany)
+        {
+            enforce(index >= 0 && howMany > 0);
+            enforce(index + howMany >= 0);
+            enforce(index + howMany <= length);
+            
+            static if (is(T == struct) && hasElaborateDestructor!T)
+            {
+                foreach (immutable n; index .. index + howMany)
+                    .destroy(_payload[n]); // Destroy this guy
+            }
+            
+            immutable tailCount = length - (index + howMany);
+            if (tailCount > 0)
+            {
+                memmove(_payload.ptr + index,
+                        _payload.ptr + (index + howMany),
+                        T.sizeof * tailCount);
+                initializeAll(_payload.ptr[(length - howMany) .. (length - howMany) + howMany]);
+            }
+            else
+            {
+                initializeAll(_payload.ptr[index .. index + howMany]);
+            }
+            
+            _payload = _payload.ptr[0 .. _payload.length - howMany];
+        }
+
+        // Insert an entry at the specified index.
+        //
+        // Returns the number of entries inserted into the Array.
+        //
+        // Complexity: $(BIGOH n)
+        size_t insertAt(Stuff)(size_t index, Stuff stuff)
+            if (isImplicitlyConvertible!(Stuff, T))
+        {
+            enforce(index <= length);
+            reserve(length + 1);
+            // Move elements over by one slot
+            memmove(_payload.ptr + index + 1,
+                    _payload.ptr + index,
+                    T.sizeof * (length - index));
+            
+            emplace(_payload.ptr + index, stuff);
+            _payload = _payload.ptr[0 .. _payload.length + 1];
+            return 1;
+        }
+        
+        // Insert a range of entries at the specified index.
+        //
+        // Returns the number of entries inserted into the Array.
+        //
+        // Complexity: $(BIGOH n + m)
+        size_t insertAt(Stuff)(size_t index, Stuff stuff)
+            if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+        {
+            enforce(index <= length);
+            
+            // Can find the length in advance
+            auto extra = walkLength(stuff);
+            if (!extra) return 0;
+            reserve(length + extra);
+            // Move elements over by extra slots
+            memmove(_payload.ptr + index + extra,
+                    _payload.ptr + index,
+                    T.sizeof * (length - index));
+            
+            foreach (p; _payload.ptr + index .. _payload.ptr + index + extra)
+            {
+                emplace(p, stuff.front);
+                stuff.popFront();
+            }
+            _payload = _payload.ptr[0 .. _payload.length + extra];
+            return extra;
         }
 
         // Insert one item
         size_t insertBack(Stuff)(Stuff stuff)
         if (isImplicitlyConvertible!(Stuff, T))
         {
-            if (_capacity == length)
-            {
-                reserve(1 + capacity * 3 / 2);
-            }
-            assert(capacity > length && _payload.ptr);
-            emplace(_payload.ptr + _payload.length, stuff);
+            reserve(length + 1);
+            emplace(_payload.ptr + length, stuff);
             _payload = _payload.ptr[0 .. _payload.length + 1];
             return 1;
         }
@@ -148,22 +305,7 @@ if (!is(Unqual!T == bool))
         size_t insertBack(Stuff)(Stuff stuff)
         if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
         {
-            static if (hasLength!Stuff)
-            {
-                immutable oldLength = length;
-                reserve(oldLength + stuff.length);
-            }
-            size_t result;
-            foreach (item; stuff)
-            {
-                insertBack(item);
-                ++result;
-            }
-            static if (hasLength!Stuff)
-            {
-                assert(length == oldLength + stuff.length);
-            }
-            return result;
+            return insertAt(length, stuff);
         }
     }
     private alias Data = RefCounted!(Payload, RefCountedAutoInitialize.no);
@@ -174,19 +316,8 @@ Constructor taking a number of items
      */
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
-        auto p = cast(T*) malloc(T.sizeof * values.length);
-        static if (hasIndirections!T)
-        {
-            if (p)
-                GC.addRange(p, T.sizeof * values.length);
-        }
-
-        foreach (i, e; values)
-        {
-            emplace(p + i, e);
-            assert(p[i] == e);
-        }
-        _data = Data(p[0 .. values.length]);
+        _data.refCountedStore.ensureInitialized();
+        _data.insertAt(0, values);
     }
 
 /**
@@ -195,7 +326,8 @@ Constructor taking an input range
     this(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T) && !is(Stuff == T[]))
     {
-        insertBack(stuff);
+        _data.refCountedStore.ensureInitialized();
+        _data.insertAt(0, stuff);
     }
 
 
@@ -364,7 +496,7 @@ Complexity: $(BIGOH 1)
      */
     @property bool empty() const
     {
-        return !_data.refCountedStore.isInitialized || _data._payload.empty;
+        return length == 0;
     }
 
 /**
@@ -374,7 +506,7 @@ Complexity: $(BIGOH 1).
      */
     @property size_t length() const
     {
-        return _data.refCountedStore.isInitialized ? _data._payload.length : 0;
+        return _data.refCountedStore.isInitialized ? _data.length : 0;
     }
 
     /// ditto
@@ -391,7 +523,7 @@ Complexity: $(BIGOH 1)
      */
     @property size_t capacity()
     {
-        return _data.refCountedStore.isInitialized ? _data._capacity : 0;
+        return _data.refCountedStore.isInitialized ? _data.capacity : 0;
     }
 
 /**
@@ -403,22 +535,9 @@ Complexity: $(BIGOH 1)
      */
     void reserve(size_t elements)
     {
-        if (!_data.refCountedStore.isInitialized)
-        {
-            if (!elements) return;
-            immutable sz = elements * T.sizeof;
-            auto p = enforce(malloc(sz));
-            static if (hasIndirections!T)
-            {
-                GC.addRange(p, sz);
-            }
-            _data = Data(cast(T[]) p[0 .. 0]);
-            _data._capacity = elements;
-        }
-        else
-        {
-            _data.reserve(elements);
-        }
+        _data.refCountedStore.ensureInitialized();
+        if (elements > _data.capacity)
+            _data.capacity = elements;
     }
 
 /**
@@ -650,10 +769,7 @@ Complexity: $(BIGOH log(n)).
     void removeBack()
     {
         enforce(!empty);
-        static if (hasElaborateDestructor!T)
-            .destroy(_data._payload[$ - 1]);
-
-        _data._payload = _data._payload[0 .. $ - 1];
+        _data.removeAt(length - 1);
     }
     /// ditto
     alias stableRemoveBack = removeBack;
@@ -674,11 +790,8 @@ Complexity: $(BIGOH howMany).
     size_t removeBack(size_t howMany)
     {
         if (howMany > length) howMany = length;
-        static if (hasElaborateDestructor!T)
-            foreach (ref e; _data._payload[$ - howMany .. $])
-                .destroy(e);
-
-        _data._payload = _data._payload[0 .. $ - howMany];
+        immutable index = length - howMany;
+        _data.removeAt(index, howMany);
         return howMany;
     }
     /// ditto
@@ -696,69 +809,22 @@ Returns: The number of values inserted.
 Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
-    if (isImplicitlyConvertible!(Stuff, T))
+            if (isImplicitlyConvertible!(Stuff, T) ||
+                isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
-        enforce(r._outer._data is _data && r._a <= length);
-        reserve(length + 1);
-        assert(_data.refCountedStore.isInitialized);
-        // Move elements over by one slot
-        memmove(_data._payload.ptr + r._a + 1,
-                _data._payload.ptr + r._a,
-                T.sizeof * (length - r._a));
-        emplace(_data._payload.ptr + r._a, stuff);
-        _data._payload = _data._payload.ptr[0 .. _data._payload.length + 1];
-        return 1;
-    }
-
-    /// ditto
-    size_t insertBefore(Stuff)(Range r, Stuff stuff)
-    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
-    {
-        enforce(r._outer._data is _data && r._a <= length);
-        static if (isForwardRange!Stuff)
-        {
-            // Can find the length in advance
-            auto extra = walkLength(stuff);
-            if (!extra) return 0;
-            reserve(length + extra);
-            assert(_data.refCountedStore.isInitialized);
-            // Move elements over by extra slots
-            memmove(_data._payload.ptr + r._a + extra,
-                    _data._payload.ptr + r._a,
-                    T.sizeof * (length - r._a));
-            foreach (p; _data._payload.ptr + r._a ..
-                    _data._payload.ptr + r._a + extra)
-            {
-                emplace(p, stuff.front);
-                stuff.popFront();
-            }
-            _data._payload =
-                _data._payload.ptr[0 .. _data._payload.length + extra];
-            return extra;
-        }
-        else
-        {
-            enforce(_data);
-            immutable offset = r._a;
-            enforce(offset <= length);
-            auto result = insertBack(stuff);
-            bringToFront(this[offset .. length - result],
-                    this[length - result .. length]);
-            return result;
-        }
+        enforce(r._outer._data is _data);
+        _data.refCountedStore.ensureInitialized();
+        return _data.insertAt(r._a, stuff);
     }
 
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
+        if (isImplicitlyConvertible!(Stuff, T) ||
+            isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         enforce(r._outer._data is _data);
-        // TODO: optimize
-        immutable offset = r._b;
-        enforce(offset <= length);
-        auto result = insertBack(stuff);
-        bringToFront(this[offset .. length - result],
-                this[length - result .. length]);
-        return result;
+        _data.refCountedStore.ensureInitialized();
+        return _data.insertAt(r._b, stuff);
     }
 
     /// ditto
@@ -817,14 +883,13 @@ $(D r)
     {
         enforce(r._outer._data is _data);
         enforce(_data.refCountedStore.isInitialized);
-        enforce(r._a <= r._b && r._b <= length);
-        immutable offset1 = r._a;
-        immutable offset2 = r._b;
-        immutable tailLength = length - offset2;
-        // Use copy here, not a[] = b[] because the ranges may overlap
-        copy(this[offset2 .. length], this[offset1 .. offset1 + tailLength]);
-        length = offset1 + tailLength;
-        return this[length - tailLength .. length];
+        
+        immutable index = r._a;
+        immutable howMany = r._b - r._a;
+        
+        _data.removeAt(index, howMany);
+        assert(index <= length);
+        return this[index .. length];
     }
 }
 
@@ -1198,6 +1263,20 @@ unittest //6998-2
     assert(c.i == 42); //fails
 }
 
+unittest // 13619
+{
+    Array!int arr; // empty Array
+    arr.length = 10;
+    arr ~= 1; // runtime error (assertion: capacity < length !)
+}
+
+unittest // 13619 - 2
+{
+    Array!int arr; // empty Array
+    arr.length = 10; // a contains 10 default ints
+    arr.length = 9; // Remove one, should have capacity > 0
+    assert(arr.capacity > 0);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
@@ -1218,7 +1297,7 @@ if (is(Unqual!T == bool))
     }
     private RefCounted!(Data, RefCountedAutoInitialize.no) _store;
 
-    private @property ref size_t[] data()
+    private @property size_t[] data()
     {
         assert(_store.refCountedStore.isInitialized);
         return _store._backend._payload;
