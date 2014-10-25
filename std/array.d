@@ -3129,8 +3129,6 @@ unittest // check against .clear UFCS hijacking
 {
     Appender!string app;
     static assert(!__traits(compiles, app.clear()));
-    static assert(__traits(compiles, clear(app)),
-        "Remove me when object.clear is removed!");
 }
 
 unittest
