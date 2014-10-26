@@ -21,8 +21,8 @@ predSwitch))
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF cache) $(MYREF cacheBidirectional)
 $(MYREF filter) $(MYREF filterBidirectional)
-$(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
-splitter) $(MYREF sum) $(MYREF uniq) )
+$(MYREF group) $(MYREF groupBy) $(MYREF joiner) $(MYREF map) $(MYREF reduce)
+$(MYREF splitter) $(MYREF sum) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF multiSort) $(MYREF nextPermutation)
@@ -217,6 +217,11 @@ increase in cost.)
 $(TR $(TDNW $(LREF group)) $(TD $(D group([5, 2, 2, 3, 3]))
 returns a range containing the tuples $(D tuple(5, 1)),
 $(D tuple(2, 2)), and $(D tuple(3, 2)).)
+)
+$(TR $(TDNW $(LREF groupBy)) $(TD $(D groupBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
+returns a range containing 3 subranges: the first with just $(D [1, 1]); the
+second with the elements $(D [1, 2]) and $(D [2, 2]); and the third with just
+$(D [2, 1]).)
 )
 $(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
 "world!"], "; ")) returns a range that iterates over the characters $(D
