@@ -1342,7 +1342,10 @@ private:
 
         override void wait()
         {
-            switchContext();
+            scope(exit) notified = false;
+
+            while( !notified )
+                switchContext();
         }
 
         override bool wait( Duration period )
