@@ -156,28 +156,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         sink("i");
     }
 
-    /*
-     * Explicitly undocumented. It will be removed in October 2014.
-     * Please use $(XREF string,format) instead.
-     */
-    deprecated("Please use std.string.format instead.")
-    string toString(scope void delegate(const(char)[]) sink,
-                    string formatSpec = "%s")
-        const
-    {
-        if (sink == null)
-        {
-            import std.exception : assumeUnique;
-            char[] buf;
-            buf.reserve(100);
-            formattedWrite((const(char)[] s) { buf ~= s; }, formatSpec, this);
-            return assumeUnique(buf);
-        }
-
-        formattedWrite(sink, formatSpec, this);
-        return null;
-    }
-
 @safe pure nothrow @nogc:
 
     this(R : T)(Complex!R z)
@@ -631,25 +609,6 @@ unittest
     z = c;
     assert (z == c);
     assert (z.re == 2.0  &&  z.im == 2.0);
-}
-
-deprecated unittest
-{
-    // Convert to string.
-
-    // Using default format specifier
-    auto z1 = Complex!real(0.123456789, 0.123456789);
-    char[] s1;
-    z1.toString((const(char)[] c) { s1 ~= c; });
-    assert (s1 == "0.123457+0.123457i");
-    assert (s1 == z1.toString());
-
-    // Using custom format specifier
-    auto z2 = conj(z1);
-    char[] s2;
-    z2.toString((const(char)[] c) { s2 ~= c; }, "%.8e");
-    assert (s2 == "1.23456789e-01-1.23456789e-01i");
-    assert (s2 == z2.toString(null, "%.8e"));
 }
 
 

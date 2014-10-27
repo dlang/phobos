@@ -3001,18 +3001,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     return filter!f(DirIterator(path, mode, followSymlink));
 }
 
-/++
-    $(RED Deprecated. It will be removed in July 2014.
-         Please use $(LREF DirEntry) constructor directly instead.)
-
-    Returns a DirEntry for the given file (or directory).
-
-    Params:
-        name = The file (or directory) to get a DirEntry for.
-
-    Throws:
-        $(D FileException) if the file does not exist.
- +/
+// Explicitly undocumented. It will be removed in July 2015.
 deprecated("Please use DirEntry constructor directly instead.")
 DirEntry dirEntry(in char[] name)
 {
