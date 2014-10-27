@@ -853,6 +853,13 @@ unittest
 
 unittest
 {
+    // REG https://issues.dlang.org/show_bug.cgi?id=13621
+    import std.container : Array, BinaryHeap;
+    alias Heap = BinaryHeap!(Array!int);
+}
+
+unittest
+{
     Array!int a;
     a.reserve(1000);
     assert(a.length == 0);
