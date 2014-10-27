@@ -3341,55 +3341,6 @@ unittest
     });
 }
 
-// Explicitly undocumented. It will be removed in July 2014.
-deprecated("Please use std.string.format instead.") alias xformat = format;
-
-deprecated unittest
-{
-    debug(string) printf("std.string.xformat.unittest\n");
-
-    assertCTFEable!(
-    {
-//  assert(xformat(null) == "");
-    assert(xformat("foo") == "foo");
-    assert(xformat("foo%%") == "foo%");
-    assert(xformat("foo%s", 'C') == "fooC");
-    assert(xformat("%s foo", "bar") == "bar foo");
-    assert(xformat("%s foo %s", "bar", "abc") == "bar foo abc");
-    assert(xformat("foo %d", -123) == "foo -123");
-    assert(xformat("foo %d", 123) == "foo 123");
-
-    assertThrown!FormatException(xformat("foo %s"));
-    assertThrown!FormatException(xformat("foo %s", 123, 456));
-    });
-}
-
-// Explicitly undocumented. It will be removed in July 2014.
-deprecated("Please use std.string.sformat instead.") alias xsformat = sformat;
-
-deprecated unittest
-{
-    debug(string) printf("std.string.xsformat.unittest\n");
-
-    assertCTFEable!(
-    {
-    char[10] buf;
-
-    assert(xsformat(buf[], "foo") == "foo");
-    assert(xsformat(buf[], "foo%%") == "foo%");
-    assert(xsformat(buf[], "foo%s", 'C') == "fooC");
-    assert(xsformat(buf[], "%s foo", "bar") == "bar foo");
-    assertThrown!RangeError(xsformat(buf[], "%s foo %s", "bar", "abc"));
-    assert(xsformat(buf[], "foo %d", -123) == "foo -123");
-    assert(xsformat(buf[], "foo %d", 123) == "foo 123");
-
-    assertThrown!FormatException(xsformat(buf[], "foo %s"));
-    assertThrown!FormatException(xsformat(buf[], "foo %s", 123, 456));
-
-    assert(xsformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
-    });
-}
-
 
 /***********************************************
  * See if character c is in the pattern.

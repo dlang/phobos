@@ -1279,20 +1279,6 @@ public:
         return value;
     }
 
-    //Explicitly undocumented. It will be removed in July 2014.
-    deprecated("Please use value_DWORD instead.")
-    uint value_DWORD_LITTLEENDIAN()
-    {
-        return value_DWORD;
-    }
-
-    //Explicitly undocumented. It will be removed in July 2014.
-    deprecated("Please use value_DWORD instead.")
-    uint value_DWORD_BIGENDIAN()
-    {
-        return value_DWORD;
-    }
-
     /**
         Obtains the value as a 64-bit unsigned integer, ordered correctly
         according to the current architecture.
