@@ -2599,32 +2599,32 @@ struct Cycle(R)
     private size_t _index;
 
 nothrow:
-    this(ref R input, size_t index = 0)
+    this(ref R input, size_t index = 0) @safe
     {
         _ptr = input.ptr;
         _index = index % R.length;
     }
 
-    @property ref inout(ElementType) front() inout
+    @property ref inout(ElementType) front() inout @system
     {
         return _ptr[_index];
     }
 
     enum bool empty = false;
 
-    void popFront()
+    void popFront() @safe
     {
         ++_index;
         if (_index >= R.length)
             _index = 0;
     }
 
-    ref inout(ElementType) opIndex(size_t n) inout
+    ref inout(ElementType) opIndex(size_t n) inout @system
     {
         return _ptr[(n + _index) % R.length];
     }
 
-    @property inout(Cycle) save() inout
+    @property inout(Cycle) save() inout @safe
     {
         return this;
     }
@@ -2632,7 +2632,7 @@ nothrow:
     private static struct DollarToken {}
     enum opDollar = DollarToken.init;
 
-    auto opSlice(size_t i, size_t j)
+    auto opSlice(size_t i, size_t j) @system
     in
     {
         import core.exception : RangeError;
@@ -2643,7 +2643,7 @@ nothrow:
         return this[i .. $].takeExactly(j - i);
     }
 
-    inout(typeof(this)) opSlice(size_t i, DollarToken) inout
+    inout(typeof(this)) opSlice(size_t i, DollarToken) inout @system
     {
         // cast: Issue 12177 workaround
         return cast(typeof(return))Cycle(*cast(R*)_ptr, _index + i);
