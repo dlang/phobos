@@ -1354,6 +1354,106 @@ template isRandomAccessRange(R)
 }
 
 /**
+Returns $(D true) if $(D R) is an associative range. A associative range
+is a range that can index a key to get a value (domain and range).This code should compile
+for any associtave range.
+----
+R r = R.init;
+static assert(isForwardRange!(typeof(r.byKey)));
+static assert(isForwardRange!(typeof(r.byValue)));
+auto k=r.byKey.front;
+auto v=r.byValue.front;
+v=r[k];
+auto vptr=k in r;
+v=*vptr;
+----
+$(D R) must have a $(D byKey) property that returns a forward range of
+the key type.
+$(D R) must have a $(D byValue) property that returns a forward range of
+the value type.
+$(D byKey) and $(D byValue) must be aligned when iterating.(the nth element
+of one must corrisond to the nth element of the other)
+$(D R) must be able to index a key and return a value
+$(D R) must be able to return a pointer with the $(D in) operatation.
+ */
+template isAssociativeRange(R)
+{
+    enum bool isAssociativeRange = is(typeof(
+    (inout int=0)
+    {
+        R r = R.init;
+        static assert(isInputRange!(typeof(r.byKey)));
+        static assert(isInputRange!(typeof(r.byValue)));
+        auto k=r.byKey.front;
+        auto v=r.byValue.front;
+        v=r[k];
+        auto vptr=k in r;
+        v=*vptr;
+    }));
+}
+
+@safe unittest{
+    static assert(isAssociativeRange!(int[float]));
+    static assert(!isAssociativeRange!(int[]));
+    struct Empty
+    {
+    }
+    static assert(!isAssociativeRange!Empty);
+    struct TestRange
+    {
+        float[] byKey;
+        uint[] byValue;
+        uint opIndex(float);
+        const (uint)* opBinaryRight(string op)(float) if(op=="in");
+    }
+    static assert(isAssociativeRange!TestRange);
+}
+
+/**
+A lazy associative range is a associative range that dynamicly generates values
+based on keys(mathamatical function) or a regular associative range.The following 
+code or the code of a regular associative range should compile for a lazy 
+associative range.
+----
+R r=R.init;
+alias key_t=R.KeyType;
+alias value_t=R.ValueType;
+key_t k=key_t.init;
+value_t v=r[k];
+----
+Where $(D KeyType) is a alias to the key type.
+$(D ValueType) is a alias the the value type.
+$(D R) must be able to index a key and return a value.
+ */
+template isLazyAssociativeRange(R)
+{
+    enum bool isLazyAssociativeRange = isAssociativeRange!R || is(typeof(
+    (inout int=0)
+    {
+        R r=R.init;
+        alias key_t=R.KeyType;
+        alias value_t=R.ValueType;
+        key_t k=key_t.init;
+        value_t v=r[k];
+    }));
+}
+
+@safe unittest{
+    static assert(!isLazyAssociativeRange!int);
+    static assert(isLazyAssociativeRange!(int[float]));
+    struct Empty
+    {
+    }
+    static assert(!isLazyAssociativeRange!(Empty));
+    struct TestRange
+    {
+        alias KeyType=int;
+        alias ValueType=float;
+        float opIndex(int);
+    }
+    static assert(isLazyAssociativeRange!(TestRange));
+}
+/**
 Returns $(D true) iff $(D R) is an input range that supports the
 $(D moveFront) primitive, as well as $(D moveBack) and $(D moveAt) if it's a
 bidirectional or random access range. These may be explicitly implemented, or
@@ -1493,6 +1593,73 @@ template ElementType(R)
 }
 
 /**
+Returns the element key type of the associative range $(D R).
+ */
+template ElementKeyType(R) if(isAssociativeRange!R)
+{
+    alias ElementKeyType = typeof(R.init.byKey.init.front.init);
+}
+
+/**
+ditto
+ */
+template ElementKeyType(R) if(isLazyAssociativeRange!R && !isAssociativeRange!R)
+{
+    alias ElementKeyType = R.KeyType;
+}
+
+template ElementKeyType(R) if(!isLazyAssociativeRange!R)
+{
+    alias ElementKeyType = void;
+}
+
+@safe unittest
+{
+    static assert(is(ElementKeyType!int == void));
+    static assert(is(ElementKeyType!(int[float]) == float));
+    struct TestRange
+    {
+        alias KeyType=int;
+        alias ValueType=float;
+        float opIndex(int);//float[int]
+    }
+    static assert(is(ElementKeyType!TestRange == int));
+}
+
+/**
+Returns the element value type of the associative range $(D R).
+ */
+template ElementValueType(R) if(isAssociativeRange!R)
+{
+    alias ElementValueType = typeof(R.init.byValue.init.front.init);
+}
+/**
+ditto
+ */
+template ElementValueType(R) if(isLazyAssociativeRange!R && !isAssociativeRange!R)
+{
+    alias ElementValueType = R.ValueType;
+}
+
+template ElementValueType(R) if(!isLazyAssociativeRange!R)
+{
+    alias ElementValueType = void;
+}
+
+@safe unittest
+{
+    static assert(is(ElementValueType!int == void));
+    static assert(is(ElementValueType!(int[float]) == int));
+    struct TestRange
+    {
+        alias KeyType=int;
+        alias ValueType=float;
+        float opIndex(int);//float[int]
+    }
+    static assert(is(ElementValueType!TestRange == float));
+}
+
+/**
 The encoding element type of $(D R). For narrow strings ($(D char[]),
 $(D wchar[]) and their qualified variants including $(D string) and
 $(D wstring)), $(D ElementEncodingType) is the character type of the
@@ -1569,9 +1736,9 @@ static if (isBidirectionalRange!R) swap(r.back, r.front);
 static if (isRandomAccessRange!R) swap(r[], r.front);
 ----
  */
-template hasSwappableElements(R)
+template hasSwappableElements(R) if(isInputRange!R)
 {
-    enum bool hasSwappableElements = isInputRange!R && is(typeof(
+    enum bool hasSwappableElements = is(typeof(
     (inout int = 0)
     {
         R r = R.init;
@@ -1579,6 +1746,25 @@ template hasSwappableElements(R)
         static if (isBidirectionalRange!R) swap(r.back, r.front);
         static if (isRandomAccessRange!R) swap(r[0], r.front);
     }));
+}
+/**
+Equivalent for associative arrays 
+ */
+template hasSwappableElements(R) if(isLazyAssociativeRange!R)
+{
+    enum bool hasSwappableElements = is(typeof(
+    (inout int = 0)
+    {
+        R r = R.init;
+        auto k = (ElementKeyType!R).init;
+        swap(r[k],r[k]);
+        static if(isAssociativeRange!R) swap(*(k in r),r[k]);
+    }));
+}
+
+template hasSwappableElements(R) if(!isInputRange!R && !isLazyAssociativeRange!R)
+{
+    enum bool hasSwappableElements = false;
 }
 
 ///
@@ -1595,6 +1781,13 @@ template hasSwappableElements(R)
     static assert( hasSwappableElements!(dchar[]));
 }
 
+@safe unittest{
+    static assert(hasSwappableElements!(int[float]));
+    static assert(!hasSwappableElements!(const(int)[float]));
+    static assert(hasSwappableElements!(int[const float]));
+    static assert(!hasSwappableElements!int);
+}
+
 /**
 Returns $(D true) if $(D R) is an input range and has mutable
 elements. The following code should compile for any range
@@ -1608,9 +1801,9 @@ static if (isBidirectionalRange!R) r.back = r.front;
 static if (isRandomAccessRange!R) r[0] = r.front;
 ----
  */
-template hasAssignableElements(R)
+template hasAssignableElements(R) if(isInputRange!R)
 {
-    enum bool hasAssignableElements = isInputRange!R && is(typeof(
+    enum bool hasAssignableElements = is(typeof(
     (inout int = 0)
     {
         R r = R.init;
@@ -1618,6 +1811,23 @@ template hasAssignableElements(R)
         static if (isBidirectionalRange!R) r.back = r.front;
         static if (isRandomAccessRange!R) r[0] = r.front;
     }));
+}
+
+template hasAssignableElements(R) if(isLazyAssociativeRange!R)
+{
+    enum bool hasAssignableElements = is(typeof(
+    (inout int = 0)
+    {
+        R r = R.init;
+        auto k=ElementKeyType!(R).init;
+        r[k]=r[k];
+        static if(isAssociativeRange!R) *(k in r) = r[k];
+    }));
+}
+
+template hasAssignableElements(R) if(!isInputRange!R && !isLazyAssociativeRange!R)
+{
+    enum bool hasAssignableElements = false;
 }
 
 ///
@@ -1634,6 +1844,12 @@ template hasAssignableElements(R)
     static assert( hasAssignableElements!(dchar[]));
 }
 
+@safe unittest{
+    static assert(hasAssignableElements!(int[float]));
+    static assert(!hasAssignableElements!(const(int)[float]));
+    static assert(!hasAssignableElements!int);
+}
+
 /**
 Tests whether the range $(D R) has lvalue elements. These are defined as
 elements that can be passed by reference and have their address taken.
@@ -1647,9 +1863,9 @@ static if (isBidirectionalRange!R) passByRef(r.back);
 static if (isRandomAccessRange!R) passByRef(r[0]);
 ----
 */
-template hasLvalueElements(R)
+template hasLvalueElements(R) if(isInputRange!R)
 {
-    enum bool hasLvalueElements = isInputRange!R && is(typeof(
+    enum bool hasLvalueElements = is(typeof(
     (inout int = 0)
     {
         void checkRef(ref ElementType!R stuff);
@@ -1659,6 +1875,24 @@ template hasLvalueElements(R)
         static if (isBidirectionalRange!R) checkRef(r.back);
         static if (isRandomAccessRange!R) checkRef(r[0]);
     }));
+}
+
+template hasLvalueElements(R) if(isLazyAssociativeRange!R)
+{
+    enum bool hasLvalueElements =  is(typeof(
+    (inout int = 0)
+    {
+        void checkRef(ref ElementValueType!R stuff);
+        R r = R.init;
+        auto k = ElementKeyType!(R).init;
+        checkRef(r[k]);
+        static if(isAssociativeRange!R) checkRef(*(k in r));
+    }));
+}
+
+template hasLvalueElements(R) if(!isInputRange!R && !isLazyAssociativeRange!R)
+{
+    enum bool hasLvalueElements = false;
 }
 
 ///
@@ -1685,6 +1919,12 @@ template hasLvalueElements(R)
     struct S { immutable int value; }
     static assert( isInputRange!(S[]));
     static assert( hasLvalueElements!(S[]));
+}
+
+@safe unittest{
+    static assert(hasLvalueElements!(int[float]));
+    static assert(!hasLvalueElements!(const(int)[float]));//bug?
+    static assert(!hasLvalueElements!int);
 }
 
 /**
