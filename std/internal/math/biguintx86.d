@@ -138,13 +138,13 @@ uint multibyteAddSub(char op)(uint[] dest, const uint [] src1, const uint []
 L_unrolled:
         shr AL, 1; // get carry from EAX
     }
-        mixin(" asm {"
+    mixin(" asm {"
         ~ indexedLoopUnroll( 8,
         "mov EAX, [@*4-8*4+EDX+ECX*4];"
         ~ ( op == '+' ? "adc" : "sbb" ) ~ " EAX, [@*4-8*4+ESI+ECX*4];"
         ~ "mov [@*4-8*4+EDI+ECX*4], EAX;")
         ~ "}");
-asm {
+    asm {
         setc AL; // save carry
         add ECX, 8;
         ja L_unrolled;
@@ -155,12 +155,12 @@ L2:     // Do the residual 1..7 ints.
 L_residual:
         shr AL, 1; // get carry from EAX
     }
-        mixin(" asm {"
+    mixin(" asm {"
         ~ indexedLoopUnroll( 1,
         "mov EAX, [@*4+EDX+ECX*4];"
         ~ ( op == '+' ? "adc" : "sbb" ) ~ " EAX, [@*4+ESI+ECX*4];"
         ~ "mov [@*4+EDI+ECX*4], EAX;") ~ "}");
-asm {
+    asm {
         setc AL; // save carry
         add ECX, 1;
         jnz L_residual;
@@ -293,7 +293,7 @@ L_last:
         pop EDI;
         pop ESI;
         ret 4*4;
-     }
+    }
 }
 
 /** dest[#] = src[#] >> numbits
@@ -381,7 +381,7 @@ L_length1:
         psllq MM1, MM3;
         movd [EDI], MM1;
         jmp L_alldone;
-   }
+    }
 }
 
 void multibyteShr(uint [] dest, const uint [] src, uint numbits) pure
@@ -465,7 +465,7 @@ L_length1:
         movd    [EDI +4*EBX], MM1;
         jmp L_alldone;
 
-   }
+    }
 }
 
 /** dest[#] = src[#] >> numbits
@@ -515,7 +515,7 @@ L_last:
         pop EDI;
         pop ESI;
         ret 4*4;
-     }
+    }
 }
 
 unittest
@@ -617,7 +617,7 @@ L_odd:
         pop EDI;
         pop ESI;
         ret 5*4;
-     }
+    }
 }
 
 unittest
@@ -653,8 +653,8 @@ string asmMulAdd_innerloop(string OP, string M_ADDRESS) pure {
         // The first member of 'dest' which will be modified is [EDI+4*EBX].
         // EAX must already contain the first member of 'src', [ESI+4*EBX].
 
-version(D_PIC) { bool using_PIC = true; } else { bool using_PIC=false; }
-return "asm {
+    version(D_PIC) { bool using_PIC = true; } else { bool using_PIC = false; }
+    return "
         // Entry point for even length
         add EBX, 1;
         mov EBP, ECX; // carry
@@ -683,9 +683,9 @@ L1:
         mov ECX, zero;
         mov EAX, [ESI+4*EBX];
         adc ECX, EDX;
-                " ~
-    (using_PIC ? "" : "   mov storagenop, EDX; ") // make #uops in loop a multiple of 3, can't do this in PIC mode.
-        ~ "
+" ~
+        (using_PIC ? "" : "   mov storagenop, EDX; ") // make #uops in loop a multiple of 3, can't do this in PIC mode.
+~ "
         mul int ptr [" ~ M_ADDRESS ~ "];
         " ~ OP ~ " [-4+EDI+4*EBX], EBP;
         mov EBP, zero;
@@ -698,12 +698,13 @@ L1:
         jl L1;
 L_done: " ~ OP ~ " [-8+EDI+4*EBX], ECX;
         adc EBP, 0;
-                }";
+";
                 // final carry is now in EBP
 }
 
-string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure {
-return "asm {
+string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure
+{
+    return "
         mul int ptr [" ~M_ADDRESS ~"];
         mov EBP, zero;
         add ECX, EAX;
@@ -713,7 +714,7 @@ return "asm {
         add EBX, 2;
         jl L1;
         jmp L_done;
-                }";
+";
 }
 
 
@@ -771,19 +772,19 @@ uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
         mov EAX, [ESI+4*EBX];
         test EBX, 1;
         jnz L_enter_odd;
-}
-                // Main loop, with entry point for even length
-mixin(asmMulAdd_innerloop(OP, "ESP+LASTPARAM"));
-asm {
+    }
+    // Main loop, with entry point for even length
+    mixin("asm {" ~ asmMulAdd_innerloop(OP, "ESP+LASTPARAM") ~ "}");
+    asm {
         mov EAX, EBP; // get final carry
         pop EBP;
         pop EBX;
         pop EDI;
         pop ESI;
         ret 5*4;
-}
+    }
 L_enter_odd:
-    mixin(asmMulAdd_enter_odd(OP, "ESP+LASTPARAM"));
+    mixin("asm {" ~ asmMulAdd_enter_odd(OP, "ESP+LASTPARAM") ~ "}");
 }
 
 unittest
@@ -860,10 +861,10 @@ outer_loop:
         mov EAX, [ESI+4*EBX];
         test EBX, 1;
         jnz L_enter_odd;
-                }
-        // -- Inner loop, with even entry point
-        mixin(asmMulAdd_innerloop("add", "ESP"));
-asm {
+    }
+    // -- Inner loop, with even entry point
+    mixin("asm {" ~ asmMulAdd_innerloop("add", "ESP") ~ "}");
+    asm {
         mov [-4+EDI+4*EBX], EBP;
         add EDI, 4;
         cmp EDI, [ESP + LASTPARAM + 4*0]; // is EDI = &dest[$]?
@@ -881,9 +882,9 @@ outer_done:
         pop EDI;
         pop ESI;
         ret 6*4;
-}
+    }
 L_enter_odd:
-    mixin(asmMulAdd_enter_odd("add", "ESP"));
+    mixin("asm {" ~ asmMulAdd_enter_odd("add", "ESP") ~ "}");
 }
 
 /**  dest[#] /= divisor.
@@ -1024,35 +1025,35 @@ void multibyteAddDiagonalSquares(uint [] dest, const uint [] src) pure
            improve it by moving the mov EAX after the adc [EDI], EAX. Probably not worthwhile.
     */
     enum { LASTPARAM = 4*5 } // 4* pushes + return address.
- asm {
-    naked;
-    push ESI;
-    push EDI;
-    push EBX;
-        push ECX;
-    mov EDI, [ESP + LASTPARAM + 4*3]; //dest.ptr;
-    mov EBX, [ESP + LASTPARAM + 4*0]; //src.length;
-    mov ESI, [ESP + LASTPARAM + 4*1]; //src.ptr;
-    lea EDI, [EDI + 8*EBX];      // EDI = end of dest
-    lea ESI, [ESI + 4*EBX];      // ESI = end of src
-    neg EBX;                     // count UP to zero.
-    xor ECX, ECX;             // initial carry = 0.
+    asm {
+        naked;
+        push ESI;
+        push EDI;
+        push EBX;
+            push ECX;
+        mov EDI, [ESP + LASTPARAM + 4*3]; //dest.ptr;
+        mov EBX, [ESP + LASTPARAM + 4*0]; //src.length;
+        mov ESI, [ESP + LASTPARAM + 4*1]; //src.ptr;
+        lea EDI, [EDI + 8*EBX];      // EDI = end of dest
+        lea ESI, [ESI + 4*EBX];      // ESI = end of src
+        neg EBX;                     // count UP to zero.
+        xor ECX, ECX;             // initial carry = 0.
 L1:
-    mov EAX, [ESI + 4*EBX];
-    mul EAX, EAX;
-    shr CL, 1;                 // get carry
-    adc [EDI + 8*EBX], EAX;
-    adc [EDI + 8*EBX + 4], EDX;
-    setc CL;                   // save carry
-    inc EBX;
-    jnz L1;
+        mov EAX, [ESI + 4*EBX];
+        mul EAX, EAX;
+        shr CL, 1;                 // get carry
+        adc [EDI + 8*EBX], EAX;
+        adc [EDI + 8*EBX + 4], EDX;
+        setc CL;                   // save carry
+        inc EBX;
+        jnz L1;
 
         pop ECX;
         pop EBX;
         pop EDI;
         pop ESI;
         ret 4*4;
- }
+    }
 }
 
 unittest
@@ -1155,7 +1156,7 @@ outer_loop:
         jnz L_enter_odd;
     }
     // -- Inner loop, with even entry point
-    mixin(asmMulAdd_innerloop("add", "ESP"));
+    mixin("asm {" ~ asmMulAdd_innerloop("add", "ESP") ~ "}");
     asm {
         mov [-4+EDI+4*EBX], EBP;
         add EDI, 4;
@@ -1191,8 +1192,8 @@ length_is_3:
         pop ESI;
         ret 4*4;
     }
-    L_enter_odd:
-        mixin(asmMulAdd_enter_odd("add", "ESP"));
+L_enter_odd:
+    mixin("asm {" ~ asmMulAdd_enter_odd("add", "ESP") ~ "}");
 }
 
 unittest
