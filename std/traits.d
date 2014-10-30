@@ -73,7 +73,7 @@
  *           $(LREF AssocArrayTypeOf)
  *           $(LREF BuiltinTypeOf)
  * ))-->
- * $(TR $(TD IsSomething) $(TD
+ * $(TR $(TD Categories of types) $(TD
  *           $(LREF isBoolean)
  *           $(LREF isIntegral)
  *           $(LREF isFloatingPoint)
@@ -93,7 +93,7 @@
  *           $(LREF isPointer)
  *           $(LREF isAggregateType)
  * ))
- * $(TR $(TD xxx) $(TD
+ * $(TR $(TD Type behaviours) $(TD
  *           $(LREF isIterable)
  *           $(LREF isMutable)
  *           $(LREF isInstanceOf)
