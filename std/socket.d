@@ -62,9 +62,9 @@ version(Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    private import core.sys.windows.windows, std.c.windows.winsock, std.windows.syserror;
-    private alias _ctimeval = std.c.windows.winsock.timeval;
-    private alias _clinger = std.c.windows.winsock.linger;
+    private import core.sys.windows.windows, core.sys.windows.winsock2, std.windows.syserror;
+    private alias _ctimeval = core.sys.windows.winsock2.timeval;
+    private alias _clinger = core.sys.windows.winsock2.linger;
 
     enum socket_t : SOCKET { INVALID_SOCKET }
     private const int _SOCKET_ERROR = SOCKET_ERROR;
