@@ -1,8 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Templates with which to extract information about types and symbols at
- * compile time.
+ * Templates which extract information about types and symbols at compile time.
  *
  * <script type="text/javascript">inhibitQuickIndex = 1</script>
  *
