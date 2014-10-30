@@ -13403,6 +13403,33 @@ bool nextPermutation(alias less="a<b", BidirectionalRange)
     assert(a == [3,2,1]);
 }
 
+// Accept static arrays too.
+/// ditto
+bool nextPermutation(alias less="a<b", StaticArray)(ref StaticArray arr)
+    if (is(StaticArray == T[n], T, size_t n))
+{
+    auto slice = arr[];
+    return slice.nextPermutation!less();
+}
+
+// Issue 13594
+unittest
+{
+    int[3] a = [1, 2, 3];
+    assert(a.nextPermutation());
+    assert(a == [1, 3, 2]);
+    assert(a.nextPermutation());
+    assert(a == [2, 1, 3]);
+    assert(a.nextPermutation());
+    assert(a == [2, 3, 1]);
+    assert(a.nextPermutation());
+    assert(a == [3, 1, 2]);
+    assert(a.nextPermutation());
+    assert(a == [3, 2, 1]);
+    assert(!a.nextPermutation());
+    assert(a == [1, 2, 3]);
+}
+
 // nextEvenPermutation
 /**
  * Permutes $(D range) in-place to the next lexicographically greater $(I even)
