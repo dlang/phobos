@@ -13631,6 +13631,27 @@ shapes. Here's a non-trivial example:
     assert(n == 60);
 }
 
+// Accept static arrays too.
+/// ditto
+bool nextEvenPermutation(alias less="a<b", StaticArray)(ref StaticArray arr)
+    if (is(StaticArray == T[n], T, size_t n))
+{
+    auto slice = arr[];
+    return slice.nextEvenPermutation!less();
+}
+
+// Issue 13594
+unittest
+{
+    int[3] a = [1, 2, 3];
+    assert(a.nextEvenPermutation());
+    assert(a == [2, 3, 1]);
+    assert(a.nextEvenPermutation());
+    assert(a == [3, 1, 2]);
+    assert(!a.nextEvenPermutation());
+    assert(a == [1, 2, 3]);
+}
+
 // Used in castSwitch to find the first choice that overshadows the last choice
 // in a tuple.
 private template indexOfFirstOvershadowingChoiceOnLast(choices...)
