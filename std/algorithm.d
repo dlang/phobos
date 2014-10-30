@@ -13310,79 +13310,86 @@ bool nextPermutation(alias less="a<b", BidirectionalRange)
 
 @safe unittest
 {
-    auto a1 = [1, 2, 3, 4];
+    void test(A)(A arr)
+    {
+        assert(nextPermutation(arr));
+        assert(arr == [1, 2, 4, 3]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [1, 2, 4, 3]));
+        assert(nextPermutation(arr));
+        assert(arr == [1, 3, 2, 4]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [1, 3, 2, 4]));
+        assert(nextPermutation(arr));
+        assert(arr == [1, 3, 4, 2]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [1, 3, 4, 2]));
+        assert(nextPermutation(arr));
+        assert(arr == [1, 4, 2, 3]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [1, 4, 2, 3]));
+        assert(nextPermutation(arr));
+        assert(arr == [1, 4, 3, 2]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [1, 4, 3, 2]));
+        assert(nextPermutation(arr));
+        assert(arr == [2, 1, 3, 4]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [2, 1, 3, 4]));
+        assert(nextPermutation(arr));
+        assert(arr == [2, 1, 4, 3]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [2, 1, 4, 3]));
+        assert(nextPermutation(arr));
+        assert(arr == [2, 3, 1, 4]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [2, 3, 1, 4]));
+        assert(nextPermutation(arr));
+        assert(arr == [2, 3, 4, 1]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [2, 3, 4, 1]));
+        assert(nextPermutation(arr));
+        assert(arr == [2, 4, 1, 3]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [2, 4, 1, 3]));
+        assert(nextPermutation(arr));
+        assert(arr == [2, 4, 3, 1]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [2, 4, 3, 1]));
+        assert(nextPermutation(arr));
+        assert(arr == [3, 1, 2, 4]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [3, 1, 2, 4]));
+        assert(nextPermutation(arr));
+        assert(arr == [3, 1, 4, 2]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [3, 1, 4, 2]));
+        assert(nextPermutation(arr));
+        assert(arr == [3, 2, 1, 4]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [3, 2, 1, 4]));
+        assert(nextPermutation(arr));
+        assert(arr == [3, 2, 4, 1]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [3, 2, 4, 1]));
+        assert(nextPermutation(arr));
+        assert(arr == [3, 4, 1, 2]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [3, 4, 1, 2]));
+        assert(nextPermutation(arr));
+        assert(arr == [3, 4, 2, 1]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [3, 4, 2, 1]));
+        assert(nextPermutation(arr));
+        assert(arr == [4, 1, 2, 3]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [4, 1, 2, 3]));
+        assert(nextPermutation(arr));
+        assert(arr == [4, 1, 3, 2]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [4, 1, 3, 2]));
+        assert(nextPermutation(arr));
+        assert(arr == [4, 2, 1, 3]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [4, 2, 1, 3]));
+        assert(nextPermutation(arr));
+        assert(arr == [4, 2, 3, 1]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [4, 2, 3, 1]));
+        assert(nextPermutation(arr));
+        assert(arr == [4, 3, 1, 2]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [4, 3, 1, 2]));
+        assert(nextPermutation(arr));
+        assert(arr == [4, 3, 2, 1]);
 
-    assert(nextPermutation(a1));
-    assert(equal(a1, [4, 3, 2, 1]));
+        assert(!nextPermutation(arr));
+        assert(arr == [1, 2, 3, 4]);
+    }
 
-    assert(!nextPermutation(a1));
-    assert(equal(a1, [1, 2, 3, 4]));
+    int[] a1 = [1, 2, 3, 4];
+    int[4] a2 = [1, 2, 3, 4]; // Issue 13594
+
+    test(a1);
+    test(a2);
 }
 
 @safe unittest
@@ -13410,24 +13417,6 @@ bool nextPermutation(alias less="a<b", StaticArray)(ref StaticArray arr)
 {
     auto slice = arr[];
     return slice.nextPermutation!less();
-}
-
-// Issue 13594
-unittest
-{
-    int[3] a = [1, 2, 3];
-    assert(a.nextPermutation());
-    assert(a == [1, 3, 2]);
-    assert(a.nextPermutation());
-    assert(a == [2, 1, 3]);
-    assert(a.nextPermutation());
-    assert(a == [2, 3, 1]);
-    assert(a.nextPermutation());
-    assert(a == [3, 1, 2]);
-    assert(a.nextPermutation());
-    assert(a == [3, 2, 1]);
-    assert(!a.nextPermutation());
-    assert(a == [1, 2, 3]);
 }
 
 // nextEvenPermutation
@@ -13579,14 +13568,19 @@ bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
 
 @safe unittest
 {
-    // Test various cases of rollover
-    auto a = [ 3, 1, 2 ];
-    assert(nextEvenPermutation(a) == false);
-    assert(a == [ 1, 2, 3 ]);
+    void test(A)()
+    {
+        // Test various cases of rollover
+        A a = [ 3, 1, 2 ];
+        assert(nextEvenPermutation(a) == false);
+        assert(a == [ 1, 2, 3 ]);
 
-    auto b = [ 3, 2, 1 ];
-    assert(nextEvenPermutation(b) == false);
-    assert(b == [ 1, 3, 2 ]);
+        A b = [ 3, 2, 1 ];
+        assert(nextEvenPermutation(b) == false);
+        assert(b == [ 1, 3, 2 ]);
+    }
+    test!(int[])();
+    test!(int[3])(); // Issue 13594
 }
 
 /**
@@ -13638,18 +13632,6 @@ bool nextEvenPermutation(alias less="a<b", StaticArray)(ref StaticArray arr)
 {
     auto slice = arr[];
     return slice.nextEvenPermutation!less();
-}
-
-// Issue 13594
-unittest
-{
-    int[3] a = [1, 2, 3];
-    assert(a.nextEvenPermutation());
-    assert(a == [2, 3, 1]);
-    assert(a.nextEvenPermutation());
-    assert(a == [3, 1, 2]);
-    assert(!a.nextEvenPermutation());
-    assert(a == [1, 2, 3]);
 }
 
 // Used in castSwitch to find the first choice that overshadows the last choice
