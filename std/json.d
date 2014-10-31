@@ -37,15 +37,15 @@ JSON type enumeration
 enum JSON_TYPE : byte
 {
     /// Indicates the type of a $(D JSONValue).
-    STRING,
+    NULL,
+    STRING,  /// ditto
     INTEGER, /// ditto
     UINTEGER,/// ditto
     FLOAT,   /// ditto
     OBJECT,  /// ditto
     ARRAY,   /// ditto
     TRUE,    /// ditto
-    FALSE,   /// ditto
-    NULL     /// ditto
+    FALSE    /// ditto
 }
 
 /**
@@ -349,6 +349,22 @@ struct JSONValue
         return *enforce!JSONException(k in store.object,
                                         "Key not found: " ~ k);
     }
+    
+    /// Operator sets $(D value) for element of JSON object by $(D key)
+    /// If JSON value is null, then operator initializes it with object and then
+    /// sets $(D value) for it.
+    /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
+    /// or $(D JSON_TYPE.NULL).
+    void opIndexAssign(T)(auto ref T value, string key)
+    {
+        enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
+                                "JSONValue must be object or null");
+        
+        if(type == JSON_TYPE.NULL)
+            this = (JSONValue[string]).init;
+        
+        store.object[key] = value;
+    }
 
     void opIndexAssign(T)(T arg, size_t i)
     {
@@ -357,13 +373,6 @@ struct JSONValue
         enforceEx!JSONException(i < store.array.length,
                                 "JSONValue array index is out of range");
         store.array[i] = arg;
-    }
-
-    void opIndexAssign(T)(T arg, string k)
-    {
-        enforceEx!JSONException(type == JSON_TYPE.OBJECT,
-                                "JSONValue is not an object");
-        store.object[k] = arg;
     }
 
     JSONValue opBinary(string op : "~", T)(T arg)
@@ -1189,4 +1198,34 @@ deprecated unittest
 
     jv.type = JSON_TYPE.TRUE;
     assert(jv.type == JSON_TYPE.TRUE);
+}
+
+unittest
+{
+    // Bugzilla 12969
+    
+    JSONValue jv;
+    jv["int"] = 123;
+    
+    assert(jv.type == JSON_TYPE.OBJECT);
+    assert("int" in jv);
+    assert(jv["int"].integer == 123);
+    
+    jv["array"] = [1, 2, 3, 4, 5];
+    
+    assert(jv["array"].type == JSON_TYPE.ARRAY);
+    assert(jv["array"][2].integer == 3);
+    
+    jv["str"] = "D language";
+    assert(jv["str"].type == JSON_TYPE.STRING);
+    assert(jv["str"].str == "D language");
+    
+    jv["bool"] = false;
+    assert(jv["bool"].type == JSON_TYPE.FALSE);
+    
+    assert(jv.object.length == 4);
+    
+    jv = [5, 4, 3, 2, 1];
+    assert( jv.type == JSON_TYPE.ARRAY );
+    assert( jv[3].integer == 2 );
 }
