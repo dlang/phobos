@@ -13228,7 +13228,7 @@ do
  * permutation; otherwise returns true.
  */
 bool nextPermutation(alias less="a<b", BidirectionalRange)
-                    (ref BidirectionalRange range)
+                    (BidirectionalRange range)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
 {
@@ -13403,6 +13403,14 @@ bool nextPermutation(alias less="a<b", BidirectionalRange)
     assert(a == [3,2,1]);
 }
 
+// Issue 13594
+@safe unittest
+{
+    int[3] a = [1,2,3];
+    assert(nextPermutation(a[]));
+    assert(a == [1,3,2]);
+}
+
 // nextEvenPermutation
 /**
  * Permutes $(D range) in-place to the next lexicographically greater $(I even)
@@ -13466,7 +13474,7 @@ do
  * permutation; otherwise returns true.
  */
 bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
-                        (ref BidirectionalRange range)
+                        (BidirectionalRange range)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
 {
@@ -13560,6 +13568,14 @@ bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
     auto b = [ 3, 2, 1 ];
     assert(nextEvenPermutation(b) == false);
     assert(b == [ 1, 3, 2 ]);
+}
+
+@safe unittest
+{
+    // Issue 13594
+    int[3] a = [1,2,3];
+    assert(nextEvenPermutation(a[]));
+    assert(a == [2,3,1]);
 }
 
 /**
