@@ -220,7 +220,7 @@ unit and can therefore not disable logging in other compile units.
 pure bool isLoggingEnabled()(LogLevel ll) @safe nothrow @nogc
 */
 bool isLoggingEnabled()(LogLevel ll, LogLevel loggerLL,
-    LogLevel globalLL, lazy bool condition = true) @trusted
+    LogLevel globalLL, lazy bool condition = true) @safe
 {
     switch (ll)
     {
@@ -284,7 +284,7 @@ log(LogLevel.warning, true, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll,
-    lazy bool condition, lazy A args) @trusted
+    lazy bool condition, lazy A args) @safe
     if (args.length > 1)
 {
     static if (isLoggingActive)
@@ -299,7 +299,7 @@ void log(T)(const LogLevel ll, lazy bool condition, lazy T arg,
     int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__)
-    @trusted
+    @safe
 {
     static if (isLoggingActive)
     {
@@ -325,7 +325,7 @@ log(LogLevel.warning, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
-    @trusted
+    @safe
     if (args.length > 1 && !is(Unqual!(A[0]) : bool))
 {
     static if (isLoggingActive)
@@ -339,7 +339,7 @@ void log(int line = __LINE__, string file = __FILE__,
 void log(T)(const LogLevel ll, lazy T arg, int line = __LINE__,
     string file = __FILE__, string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)
-    @trusted
+    @safe
 {
     static if (isLoggingActive)
     {
@@ -366,7 +366,7 @@ log(true, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-    @trusted
+    @safe
     if (args.length > 1)
 {
     static if (isLoggingActive)
@@ -380,7 +380,7 @@ void log(int line = __LINE__, string file = __FILE__,
 void log(T)(lazy bool condition, lazy T arg, int line = __LINE__,
     string file = __FILE__, string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)
-    @trusted
+    @safe
 {
     static if (isLoggingActive)
     {
@@ -405,7 +405,7 @@ log("Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy A args)
-    @trusted
+    @safe
     if (args.length > 1 && !is(Unqual!(A[0]) : bool)
          && !is(Unqual!(A[0]) == LogLevel))
 {
@@ -418,7 +418,7 @@ void log(int line = __LINE__, string file = __FILE__,
 void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__)
-    @trusted
+    @safe
 {
     static if (isLoggingActive)
     {
@@ -448,7 +448,7 @@ void logf(int line = __LINE__, string file = __FILE__,
     string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll,
     lazy bool condition, lazy string msg, lazy A args)
-    @trusted
+    @safe
 {
     static if (isLoggingActive)
     {
@@ -476,7 +476,7 @@ logf(LogLevel.warning, "Hello World %f", 3.1415);
 void logf(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll, lazy string msg,
-        lazy A args) @trusted
+        lazy A args) @safe
 {
     static if (isLoggingActive)
     {
@@ -505,7 +505,7 @@ void logf(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy bool condition,
         lazy string msg, lazy A args)
-    @trusted
+    @safe
 {
     static if (isLoggingActive)
     {
@@ -532,7 +532,7 @@ void logf(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
-    @trusted
+    @safe
 {
     static if (isLoggingActive)
     {
@@ -573,7 +573,7 @@ template defaultLogFunction(LogLevel ll)
     void defaultLogFunction(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__, A...)(lazy A args) @trusted
+        string moduleName = __MODULE__, A...)(lazy A args) @safe
         if (args.length > 0 && !is(Unqual!(A[0]) : bool))
     {
         static if (isLoggingActiveAt!ll)
@@ -607,7 +607,7 @@ template defaultLogFunction(LogLevel ll)
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-        @trusted
+        @safe
     {
         static if (isLoggingActiveAt!ll)
         {
@@ -665,7 +665,7 @@ template defaultLogFunctionf(LogLevel ll)
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
-        @trusted
+        @safe
     {
         static if (isLoggingActiveAt!ll)
         {
@@ -699,7 +699,7 @@ template defaultLogFunctionf(LogLevel ll)
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition,
-            lazy string msg, lazy A args) @trusted
+            lazy string msg, lazy A args) @safe
     {
         static if (isLoggingActiveAt!ll)
         {
@@ -724,16 +724,28 @@ alias fatalf = defaultLogFunctionf!(LogLevel.fatal);
 
 private struct MsgRange
 {
+    import std.traits : isSomeString, isSomeChar;
+
     private Logger log;
 
-    this(Logger log)
+    private char[] buffer;
+
+    this(Logger log) @safe
     {
         this.log = log;
     }
 
-    void put(const(char)[] msg)
+    void put(T)(T msg) @safe
+        if (isSomeString!T)
     {
         log.logMsgPart(msg);
+    }
+
+    void put(dchar elem) @safe
+    {
+        import std.utf : encode;
+        encode(this.buffer, elem);
+        log.logMsgPart(this.buffer);
     }
 }
 
@@ -743,7 +755,17 @@ private void formatString(A...)(MsgRange oRange, A args)
 
     foreach (arg; args)
     {
-        std.format.formattedWrite!(MsgRange,char)(oRange, "%s", arg);
+        std.format.formattedWrite(oRange, "%s", arg);
+    }
+}
+
+unittest
+{
+    void dummy() @safe
+    {
+        MsgRange dst;
+        auto w = appender!string();
+        formatString(dst, "aaa", "bbb");
     }
 }
 
@@ -816,13 +838,14 @@ abstract class Logger
     creates a fatal handler. The fatal handler will throw an $(D Error) if a
     log call is made with a $(D LogLevel) $(D LogLevel.fatal).
     */
-    this(LogLevel lv)
+    this(LogLevel lv) @safe
     {
         this.logLevel_ = lv;
         this.fatalHandler_ = delegate() {
             throw new Error("A fatal log message was logged");
         };
-        this.mutex = new Mutex();
+        // TODO: remove lambda hack after relevant druntime PR gets merged
+        this.mutex = () @trusted { return new Mutex(); } ();
 
         this.msgAppender = appender!string();
     }
@@ -834,7 +857,7 @@ abstract class Logger
         payload = All information associated with call to log function.
     See_Also: beginLogMsg, logMsgPart, finishLogMsg
     */
-    abstract protected void writeLogMsg(ref LogEntry payload);
+    abstract protected void writeLogMsg(ref LogEntry payload) @safe;
 
     /* The default implementation will use an $(D std.array.appender)
     internally to construct the message string. This means dynamic,
@@ -878,7 +901,7 @@ abstract class Logger
     protected void beginLogMsg(string file, int line, string funcName,
         string prettyFuncName, string moduleName, LogLevel logLevel,
         Tid threadId, SysTime timestamp, Logger logger)
-        @trusted
+        @safe
     {
         static if (isLoggingActive)
         {
@@ -888,7 +911,7 @@ abstract class Logger
     }
 
     /** Logs a part of the log message. */
-    protected void logMsgPart(const(char)[] msg)
+    protected void logMsgPart(const(char)[] msg) @safe
     {
         static if (isLoggingActive)
         {
@@ -898,7 +921,7 @@ abstract class Logger
 
     /** Signals that the message has been written and no more calls to
     $(D logMsgPart) follow. */
-    protected void finishLogMsg()
+    protected void finishLogMsg() @safe
     {
         static if (isLoggingActive)
         {
@@ -922,9 +945,9 @@ abstract class Logger
     assert(f.logLevel == LogLevel.info);
     -----------
     */
-    @property final LogLevel logLevel() const pure @trusted @nogc
+    @property final LogLevel logLevel() const pure @safe @nogc
     {
-        return atomicLoad!(MemoryOrder.acq)(this.logLevel_);
+        return trustedLoad(this.logLevel_);
     }
 
     /// Ditto
@@ -944,7 +967,7 @@ abstract class Logger
     }
 
     /// Ditto
-    @property final void fatalHandler(void delegate() fh) pure @safe @nogc
+    @property final void fatalHandler(void delegate() @safe fh) pure @safe @nogc
     {
         synchronized (mutex) this.fatalHandler_ = fh;
     }
@@ -957,7 +980,7 @@ abstract class Logger
     logging functions is that the $(D globalLogLevel) wont be evaluated again
     since it is assumed that the caller already checked that.
     */
-    final void forwardMsg(ref LogEntry payload)
+    final void forwardMsg(ref LogEntry payload) @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1005,7 +1028,7 @@ abstract class Logger
         void logImpl(int line = __LINE__, string file = __FILE__,
             string funcName = __FUNCTION__,
             string prettyFuncName = __PRETTY_FUNCTION__,
-            string moduleName = __MODULE__, A...)(lazy A args) @trusted
+            string moduleName = __MODULE__, A...)(lazy A args) @safe
             if (args.length == 0 || (args.length > 0 && !is(A[0] : bool)))
         {
             static if (isLoggingActiveAt!ll) synchronized (mutex)
@@ -1052,7 +1075,7 @@ abstract class Logger
             string funcName = __FUNCTION__,
             string prettyFuncName = __PRETTY_FUNCTION__,
             string moduleName = __MODULE__, A...)(lazy bool condition,
-                lazy A args) @trusted
+                lazy A args) @safe
         {
             static if (isLoggingActiveAt!ll) synchronized (mutex)
             {
@@ -1100,7 +1123,7 @@ abstract class Logger
             string funcName = __FUNCTION__,
             string prettyFuncName = __PRETTY_FUNCTION__,
             string moduleName = __MODULE__, A...)(lazy bool condition,
-                lazy string msg, lazy A args) @trusted
+                lazy string msg, lazy A args) @safe
         {
             static if (isLoggingActiveAt!ll) synchronized (mutex)
             {
@@ -1146,7 +1169,7 @@ abstract class Logger
             string funcName = __FUNCTION__,
             string prettyFuncName = __PRETTY_FUNCTION__,
             string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
-            @trusted
+            @safe
         {
             static if (isLoggingActiveAt!ll) synchronized (mutex)
             {
@@ -1215,7 +1238,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
-        lazy bool condition, lazy A args) @trusted
+        lazy bool condition, lazy A args) @safe
         if (args.length > 1)
     {
         static if (isLoggingActive) synchronized (mutex)
@@ -1241,7 +1264,7 @@ abstract class Logger
         int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__) @trusted
+        string moduleName = __MODULE__) @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1286,7 +1309,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
-        @trusted
+        @safe
         if (args.length > 1 && !is(Unqual!(A[0]) : bool))
     {
         static if (isLoggingActive) synchronized (mutex)
@@ -1311,7 +1334,7 @@ abstract class Logger
     final void log(T)(const LogLevel ll, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__) @trusted
+        string moduleName = __MODULE__) @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1356,7 +1379,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-        @trusted
+        @safe
         if (args.length > 1)
     {
         static if (isLoggingActive) synchronized (mutex)
@@ -1382,7 +1405,7 @@ abstract class Logger
     final void log(T)(lazy bool condition, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__) @trusted
+        string moduleName = __MODULE__) @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1426,7 +1449,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy A args)
-        @trusted
+        @safe
         if (args.length > 1
                 && !is(Unqual!(A[0]) : bool)
                 && !is(Unqual!(A[0]) == LogLevel))
@@ -1453,7 +1476,7 @@ abstract class Logger
     final void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
-        string moduleName = __MODULE__) @trusted
+        string moduleName = __MODULE__) @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1500,7 +1523,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
-        lazy bool condition, lazy string msg, lazy A args) @trusted
+        lazy bool condition, lazy string msg, lazy A args) @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1546,7 +1569,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
-            lazy string msg, lazy A args) @trusted
+            lazy string msg, lazy A args) @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1593,7 +1616,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition,
-            lazy string msg, lazy A args) @trusted
+            lazy string msg, lazy A args) @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1638,7 +1661,7 @@ abstract class Logger
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
-        @trusted
+        @safe
     {
         static if (isLoggingActive) synchronized (mutex)
         {
@@ -1659,7 +1682,7 @@ abstract class Logger
         }
     }
 
-    private void delegate() fatalHandler_;
+    private void delegate() @safe fatalHandler_;
     private shared LogLevel logLevel_ = LogLevel.info;
     private Mutex mutex;
 
@@ -1673,13 +1696,17 @@ private shared Logger __stdlog;
 private shared LogLevel __globalLogLevel = LogLevel.all;
 
 
-/* This method returns the global default Logger. */
+/* This method returns the global default Logger.
+ * Marked @trusted because of excessive reliance on __gshared data
+ */
 private @property Logger defaultLoggerImpl() @trusted
 {
-    static __gshared ubyte[__traits(classInstanceSize, FileLogger)] buffer;
+    static __gshared ubyte[__traits(classInstanceSize, FileLogger)] _buffer;
 
     synchronized (__defaultLoggerMutex)
     {
+        auto buffer = cast(ubyte[]) _buffer;
+
         if (__defaultLogger is null)
         {
             __defaultLogger = emplace!FileLogger(buffer, stderr, LogLevel.all);
@@ -1709,10 +1736,15 @@ if (stdlog !is myLogger)
     stdlog = new myLogger;
 -------------
 */
-@property Logger stdlog() @trusted
+@property Logger stdlog() @safe
 {
+    static auto trustedLoad(ref shared Logger logger) @trusted
+    {
+        return atomicLoad!(MemoryOrder.acq)(logger);
+    }
+
     // If we have set up our own logger use that
-    if (auto logger = atomicLoad!(MemoryOrder.acq)(__stdlog))
+    if (auto logger = trustedLoad(__stdlog))
     {
         return logger;
     }
@@ -1740,15 +1772,15 @@ For any public logging call, the global log level shall only be queried once on
 entry. Otherwise when another threads changes the level, we wouls work with
 different levels at different spots in the code.
 */
-@property LogLevel globalLogLevel() @trusted @nogc
+@property LogLevel globalLogLevel() @safe @nogc
 {
-    return atomicLoad!(MemoryOrder.acq)(__globalLogLevel);
+    return trustedLoad(__globalLogLevel);
 }
 
 /// Ditto
-@property void globalLogLevel(LogLevel ll) @trusted
+@property void globalLogLevel(LogLevel ll) @safe
 {
-    atomicStore!(MemoryOrder.rel)(__globalLogLevel, ll);
+    trustedStore(__globalLogLevel, ll);
 }
 
 version (unittest)
@@ -1785,7 +1817,7 @@ version (unittest)
         string msg = null;
         LogLevel lvl;
 
-        this(const LogLevel lv = LogLevel.info)
+        this(const LogLevel lv = LogLevel.info) @safe
         {
             super(lv);
         }
@@ -2801,4 +2833,16 @@ unittest
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
+}
+
+// Workaround for atomics not allowed in @safe code
+private auto trustedLoad(T)(ref shared T value) @trusted
+{
+    return atomicLoad!(MemoryOrder.acq)(value);
+}
+
+// ditto
+private void trustedStore(T)(ref shared T dst, ref T src) @trusted
+{
+    atomicStore!(MemoryOrder.rel)(dst, src);
 }

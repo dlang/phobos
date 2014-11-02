@@ -35,7 +35,7 @@ class MultiLogger : Logger
     auto l1 = new MultiLogger(LogLevel.trace);
     -------------
     */
-    this(const LogLevel lv = LogLevel.info)
+    this(const LogLevel lv = LogLevel.info) @safe
     {
         super(lv);
     }
@@ -53,7 +53,7 @@ class MultiLogger : Logger
         name = The name of the $(D Logger) to insert.
         newLogger = The $(D Logger) to insert.
     */
-    void insertLogger(string name, Logger newLogger)
+    void insertLogger(string name, Logger newLogger) @safe
     {
         this.logger ~= MultiLoggerEntry(name, newLogger);
     }
@@ -67,7 +67,7 @@ class MultiLogger : Logger
 
     Returns: The removed $(D Logger).
     */
-    Logger removeLogger(in char[] toRemove)
+    Logger removeLogger(in char[] toRemove) @safe
     {
         for (size_t i = 0; i < this.logger.length; ++i)
         {
@@ -86,7 +86,7 @@ class MultiLogger : Logger
     /* The override to pass the payload to all children of the
     $(D MultiLoggerBase).
     */
-    override protected void writeLogMsg(ref LogEntry payload) @trusted
+    override protected void writeLogMsg(ref LogEntry payload) @safe
     {
         for (size_t i = 0; i < this.logger.length; ++i)
         {
@@ -101,6 +101,7 @@ class MultiLogger : Logger
     }
 }
 
+@safe
 unittest
 {
     import std.experimental.logger.nulllogger;
@@ -122,6 +123,7 @@ unittest
     assert(n is null);
 }
 
+@safe
 unittest
 {
     auto a = new MultiLogger;
@@ -181,6 +183,7 @@ unittest
     assert(line.indexOf(iMsg) != -1, line ~ ":" ~ tMsg);
 }
 
+@safe
 unittest
 {
     auto dl = stdlog;

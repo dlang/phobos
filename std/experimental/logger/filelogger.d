@@ -29,7 +29,7 @@ class FileLogger : Logger
     auto l2 = new FileLogger("logFile", "loggerName", LogLevel.fatal);
     -------------
     */
-    @trusted this(in string fn, const LogLevel lv = LogLevel.info)
+    this(in string fn, const LogLevel lv = LogLevel.info) @safe
     {
         import std.exception : enforce;
         super(lv);
@@ -56,7 +56,7 @@ class FileLogger : Logger
     auto l2 = new FileLogger(&file, "LoggerName", LogLevel.fatal);
     -------------
     */
-    this(File file, const LogLevel lv = LogLevel.info)
+    this(File file, const LogLevel lv = LogLevel.info) @safe
     {
         super(lv);
         this.file_ = file;
@@ -77,7 +77,7 @@ class FileLogger : Logger
     override protected void beginLogMsg(string file, int line, string funcName,
         string prettyFuncName, string moduleName, LogLevel logLevel,
         Tid threadId, SysTime timestamp, Logger logger)
-        @trusted
+        @safe
     {
         ptrdiff_t fnIdx = file.lastIndexOf('/') + 1;
         ptrdiff_t funIdx = funcName.lastIndexOf('.') + 1;

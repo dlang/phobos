@@ -317,7 +317,7 @@ class TidMissingException : Exception
 struct Tid
 {
 private:
-    this( MessageBox m )
+    this( MessageBox m ) @safe
     {
         mbox = m;
     }
@@ -346,7 +346,7 @@ public:
 /**
  * Returns the caller's Tid.
  */
-@property Tid thisTid()
+@property Tid thisTid() @safe
 {
     if( thisInfo.ident != Tid.init )
         return thisInfo.ident;
@@ -1769,7 +1769,7 @@ private
      */
     class MessageBox
     {
-        this()
+        this() @trusted /* TODO: make @safe after relevant druntime PR gets merged */
         {
             m_lock      = new Mutex;
             m_closed    = false;

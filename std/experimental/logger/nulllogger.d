@@ -16,7 +16,7 @@ class NullLogger : Logger
       lv = The $(D LogLevel) for the $(D MultiLogger). By default the $(D LogLevel)
       for $(D MultiLogger) is $(D LogLevel.info).
     */
-    this(const LogLevel lv = LogLevel.info)
+    this(const LogLevel lv = LogLevel.info) @safe
     {
         super(lv);
         this.fatalHandler = delegate() {};
@@ -28,6 +28,7 @@ class NullLogger : Logger
 }
 
 ///
+@safe
 unittest
 {
     auto nl1 = new NullLogger(LogLevel.all);
