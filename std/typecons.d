@@ -4207,19 +4207,9 @@ mixin template Proxy(alias a)
         alias opDollar = a.opDollar;
     }
 
-    static if(is(typeof(this) == class))
+    hash_t toHash() const nothrow @trusted
     {
-        override hash_t toHash() const nothrow @trusted
-        {
-            return typeid(typeof(a)).getHash(cast(const void*)&a);
-        }
-    }
-    else
-    {
-        hash_t toHash() const nothrow @trusted
-        {
-            return typeid(typeof(a)).getHash(cast(const void*)&a);
-        }
+        return typeid(typeof(a)).getHash(cast(const void*)&a);
     }
 }
 unittest
@@ -4663,38 +4653,32 @@ unittest // about toHash
         assert(TD(MyStruct(20)) !in td);
         assert(td[TD(MyStruct(10))] == 4);
     }
-}
-version(unittest)
-{
-    struct MyStruct2
+
     {
-        int x;
-        hash_t toHash() const { return x; }
-        bool opEquals(ref const MyStruct2 r) const { return r.x == x; }
-    }
-    // when MyStruct2 is inside of the unittest block below, a compile error occurs.
-    //> std\typecons.d(4490): Error: cannot access frame pointer of std.typecons.__unittestL4634_69.MyStruct2
-    //> std\typecons.d(4674): Error: index is not a type or an expression
-    unittest
-    {
+        static struct MyStruct2
+        {
+            int x;
+            hash_t toHash() const { return x; }
+            bool opEquals(ref const MyStruct2 r) const { return r.x == x; }
+        }
+
         alias TD = Typedef!MyStruct2;
         int[TD] td;
         td[TD(MyStruct2(50))] = 5;
         assert(td[TD(MyStruct2(50))] == 5);
     }
-}
 
-// SEGV
-// unittest
-// {
-//     class MyClass{}
-//     alias TD = Typedef!MyClass;
-//     int[TD] td;
-//     auto c = new MyClass;
-//     td[TD(c)] = 6; //<-----------------
-//     assert(TD(new MyClass) !in td);
-//     assert(td[TD(c)] == 6);
-// }
+    // SEGV
+    // {
+    //     class MyClass{}
+    //     alias TD = Typedef!MyClass;
+    //     int[TD] td;
+    //     auto c = new MyClass;
+    //     td[TD(c)] = 6; //<-----------------
+    //     assert(TD(new MyClass) !in td);
+    //     assert(td[TD(c)] == 6);
+    // }
+}
 
 /**
 Allocates a $(D class) object right inside the current scope,
