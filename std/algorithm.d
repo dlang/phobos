@@ -4298,6 +4298,10 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 {
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
+
+    // Filter duplicates in-place using copy
+    arr.length -= arr.uniq().copy(arr).length;
+    assert(arr == [ 1, 2, 3, 4, 5 ]);
 }
 
 private struct UniqResult(alias pred, Range)
