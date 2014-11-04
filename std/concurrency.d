@@ -334,7 +334,7 @@ public:
      */
     void toString(scope void delegate(const(char)[]) sink)
     {
-        formattedWrite(sink, "Tid(%x)", mbox.toHash());
+        formattedWrite(sink, "Tid(%x)", &mbox);
     }
 
 }
