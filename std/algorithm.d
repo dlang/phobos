@@ -4549,11 +4549,15 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 
 
 // Used by implementation of groupBy.
-private struct GroupByChunkImpl(alias equivFun, Range)
+private struct GroupByChunkImpl(alias pred, bool isEquivRelation, Range)
 {
-    alias equiv = binaryFun!equivFun;
+    alias fun = binaryFun!pred;
 
     private Range r;
+    static if (!isEquivRelation)
+        private bool first = true;
+    else
+        private enum first = false;
 
     /* For forward ranges, using .save is more reliable than blindly assuming
      * that the current value of .front will persist past a .popFront. However,
@@ -4567,9 +4571,10 @@ private struct GroupByChunkImpl(alias equivFun, Range)
             r = _r.save;
             prev = _prev.save;
         }
+        private void savePrev() { prev = r.save; }
         @property bool empty()
         {
-            return r.empty || !equiv(prev.front, r.front);
+            return r.empty || (!first && !fun(prev.front, r.front));
         }
     }
     else
@@ -4580,9 +4585,10 @@ private struct GroupByChunkImpl(alias equivFun, Range)
             r = _r;
             prev = _prev;
         }
+        private void savePrev() { prev = r.front; }
         @property bool empty()
         {
-            return r.empty || !equiv(prev, r.front);
+            return r.empty || (!first && !fun(prev, r.front));
         }
     }
 
@@ -4596,6 +4602,14 @@ private struct GroupByChunkImpl(alias equivFun, Range)
     }
     body
     {
+        // If this is a non-equivalence relation, we cannot assume transitivity
+        // so we have to update .prev at every step.
+        static if (!isEquivRelation)
+        {
+            savePrev();
+            first = false;
+        }
+
         r.popFront();
     }
 
@@ -4612,9 +4626,9 @@ private struct GroupByChunkImpl(alias equivFun, Range)
 }
 
 // Implementation of groupBy.
-private struct GroupByImpl(alias equivFun, Range)
+private struct GroupByImpl(alias pred, bool isEquivRelation, Range)
 {
-    alias equiv = binaryFun!equivFun;
+    alias fun = binaryFun!pred;
 
     private Range r;
 
@@ -4651,19 +4665,32 @@ private struct GroupByImpl(alias equivFun, Range)
     }
     body
     {
-        return GroupByChunkImpl!(equivFun, Range)(r, _prev);
+        return GroupByChunkImpl!(pred, isEquivRelation, Range)(r, _prev);
     }
 
     void popFront()
     {
         while (!r.empty)
         {
-            if (!equiv(prev, r.front))
+            static if (isEquivRelation)
             {
-                savePrev();
-                return;
+                if (!fun(prev, r.front))
+                {
+                    savePrev();
+                    break;
+                }
+                r.popFront();
             }
-            r.popFront();
+            else
+            {
+                // For non-equivalence relations, we cannot assume transitivity
+                // so we must update prev each time.
+                savePrev();
+                r.popFront();
+
+                if (!r.empty && !fun(prev, r.front))
+                    break;
+            }
         }
     }
 
@@ -4682,13 +4709,31 @@ private struct GroupByImpl(alias equivFun, Range)
 /**
  * Chunks an input range into subranges of equivalent adjacent elements.
  *
- * Equivalence is defined by the predicate $(D equiv), which can be either
+ * Equivalence is defined by the predicate $(D pred), which can be either
  * binary or unary. In the binary form, two _range elements $(D a) and $(D b)
- * are considered equivalent if $(D equiv(a,b)) is true. In unary form, two
- * elements are considered equivalent if $(D equiv(a) == equiv(b)) is true.
+ * are considered equivalent if $(D pred(a,b)) is true. In unary form, two
+ * elements are considered equivalent if $(D pred(a) == pred(b)) is true.
+ *
+ * The optional parameter $(D isEquivRelation), which defaults to false for
+ * binary predicates if not specified, specifies whether $(D pred) is an
+ * equivalence relation, that is, whether it is reflexive ($(D pred(x,x)) is
+ * always true), symmetric ($(D pred(x,y) == pred(y,x))), and transitive ($(D
+ * pred(x,y) && pred(y,z)) implies $(D pred(x,z))). When this is the case, $(D
+ * groupBy) can take advantage of these three properties for a slight
+ * performance improvement.
+ *
+ * Note that it is not an error to specify $(D isEquivRelation) as false even
+ * when $(D pred) is an equivalence relation; the resulting range will just be
+ * slightly slower than it could be. However, if $(D isEquivRelation) is
+ * specified as true yet $(D pred) is actually $(I not) an equivalence
+ * relation, the behaviour of the resulting range is undefined.
+ *
+ * Unary predicates always imply $(D isEquivRelation) is true, since they are
+ * internally converted to the binary equivalence relation $(D pred(a) ==
+ * pred(b)).
  *
  * Params:
- *  equiv = Predicate for determining equivalence.
+ *  pred = Predicate for determining equivalence.
  *  r = The range to be chunked.
  *
  * Returns: A range of ranges in which all elements in a given subrange are
@@ -4701,24 +4746,27 @@ private struct GroupByImpl(alias equivFun, Range)
  * equivalence. Elements in the subranges will always appear in the same order
  * they appear in the original range.
  *
- * Being an equivalence relation, the binary form of $(D equiv) is assumed to
- * be reflexive (i.e., $(D equiv(a,a)) must be true). If not, unexpected
- * results may be produced.
- *
  * See_also:
  * $(XREF algorithm,group), which collapses adjacent equivalent elements into a
  * single element.
  */
-auto groupBy(alias equiv, Range)(Range r)
+auto groupBy(alias pred, Range)(Range r)
     if (isInputRange!Range)
 {
-    static if (is(typeof(binaryFun!equiv(ElementType!Range.init,
+    return groupBy!(pred, false, Range)(r);
+}
+
+/// ditto
+auto groupBy(alias pred, bool isEquivRelation, Range)(Range r)
+    if (isInputRange!Range)
+{
+    static if (is(typeof(binaryFun!pred(ElementType!Range.init,
                                          ElementType!Range.init)) : bool))
-        return GroupByImpl!(equiv, Range)(r);
+        return GroupByImpl!(pred, isEquivRelation, Range)(r);
     else static if (is(typeof(
-            unaryFun!equiv(ElementType!Range.init) ==
-            unaryFun!equiv(ElementType!Range.init))))
-        return GroupByImpl!((a,b) => equiv(a) == equiv(b), Range)(r);
+            unaryFun!pred(ElementType!Range.init) ==
+            unaryFun!pred(ElementType!Range.init))))
+        return GroupByImpl!((a,b) => pred(a) == pred(b), true, Range)(r);
     else
         static assert(0, "groupBy expects either a binary predicate or "~
                          "a unary predicate on range elements of type: "~
@@ -4736,17 +4784,26 @@ auto groupBy(alias equiv, Range)(Range r)
         [2, 3]
     ];
 
-    auto r1 = data.groupBy!((a,b) => a[0] == b[0]);
+    auto r1 = data.groupBy!((a,b) => a[0] == b[0], true);
     assert(r1.equal!equal([
         [[1, 1], [1, 2]],
         [[2, 2], [2, 3]]
     ]));
 
-    auto r2 = data.groupBy!((a,b) => a[1] == b[1]);
+    auto r2 = data.groupBy!((a,b) => a[1] == b[1], true);
     assert(r2.equal!equal([
         [[1, 1]],
         [[1, 2], [2, 2]],
         [[2, 3]]
+    ]));
+
+    // Grouping by maximum adjacent difference:
+    import std.math : abs;
+    auto r3 = [1, 3, 2, 5, 4, 9, 10].groupBy!((a, b) => abs(a-b) < 3);
+    assert(r3.equal!equal([
+        [1, 3, 2],
+        [5, 4],
+        [9, 10]
     ]));
 }
 
@@ -4859,6 +4916,18 @@ pure @safe nothrow unittest
         assert(byY.empty);
         assert(range.empty);
     }
+}
+
+// Issue 13595
+unittest
+{
+    auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].groupBy!((x, y) => ((x*y) % 3) == 0);
+    assert(r.equal!equal([
+        [1],
+        [2, 3, 4],
+        [5, 6, 7],
+        [8, 9]
+    ]));
 }
 
 
