@@ -4548,8 +4548,18 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 }
 
 
+// Used by groupBy.
+/**
+ * Specifies whether a predicate is an equivalence relation.
+ */
+enum IsEquivRelation : bool
+{
+    no,  /// Predicate is not an equivalence relation
+    yes, /// Predicate is an equivalence relation
+}
+
 // Used by implementation of groupBy.
-private struct GroupByChunkImpl(alias pred, bool isEquivRelation, Range)
+private struct GroupByChunkImpl(alias pred, IsEquivRelation isEquivRelation, Range)
 {
     alias fun = binaryFun!pred;
 
@@ -4626,7 +4636,7 @@ private struct GroupByChunkImpl(alias pred, bool isEquivRelation, Range)
 }
 
 // Implementation of groupBy.
-private struct GroupByImpl(alias pred, bool isEquivRelation, Range)
+private struct GroupByImpl(alias pred, IsEquivRelation isEquivRelation, Range)
 {
     alias fun = binaryFun!pred;
 
@@ -4714,21 +4724,21 @@ private struct GroupByImpl(alias pred, bool isEquivRelation, Range)
  * are considered equivalent if $(D pred(a,b)) is true. In unary form, two
  * elements are considered equivalent if $(D pred(a) == pred(b)) is true.
  *
- * The optional parameter $(D isEquivRelation), which defaults to false for
- * binary predicates if not specified, specifies whether $(D pred) is an
- * equivalence relation, that is, whether it is reflexive ($(D pred(x,x)) is
- * always true), symmetric ($(D pred(x,y) == pred(y,x))), and transitive ($(D
- * pred(x,y) && pred(y,z)) implies $(D pred(x,z))). When this is the case, $(D
- * groupBy) can take advantage of these three properties for a slight
- * performance improvement.
+ * The optional parameter $(D isEquivRelation), which defaults to
+ * $(D IsEquivRelation.no) for binary predicates if not specified, specifies
+ * whether $(D pred) is an equivalence relation, that is, whether it is
+ * reflexive ($(D pred(x,x)) is always true), symmetric ($(D pred(x,y) ==
+ * pred(y,x))), and transitive ($(D pred(x,y) && pred(y,z)) implies
+ * $(D pred(x,z))). When this is the case, $(D groupBy) can take advantage of
+ * these three properties for a slight performance improvement.
  *
- * Note that it is not an error to specify $(D isEquivRelation) as false even
- * when $(D pred) is an equivalence relation; the resulting range will just be
- * slightly slower than it could be. However, if $(D isEquivRelation) is
- * specified as true yet $(D pred) is actually $(I not) an equivalence
- * relation, the behaviour of the resulting range is undefined.
+ * Note that it is not an error to specify $(D IsEquivRelation.no) even when
+ * $(D pred) is an equivalence relation; the resulting range will just be
+ * slightly slower than it could be. However, if $(D IsEquivRelation.yes) is
+ * specified yet $(D pred) is actually $(I not) an equivalence relation, the
+ * behaviour of the resulting range is undefined.
  *
- * Unary predicates always imply $(D isEquivRelation) is true, since they are
+ * Unary predicates always imply $(D isEquivRelation.yes), since they are
  * internally converted to the binary equivalence relation $(D pred(a) ==
  * pred(b)).
  *
@@ -4753,11 +4763,11 @@ private struct GroupByImpl(alias pred, bool isEquivRelation, Range)
 auto groupBy(alias pred, Range)(Range r)
     if (isInputRange!Range)
 {
-    return groupBy!(pred, false, Range)(r);
+    return groupBy!(pred, IsEquivRelation.no, Range)(r);
 }
 
 /// ditto
-auto groupBy(alias pred, bool isEquivRelation, Range)(Range r)
+auto groupBy(alias pred, IsEquivRelation isEquivRelation, Range)(Range r)
     if (isInputRange!Range)
 {
     static if (is(typeof(binaryFun!pred(ElementType!Range.init,
@@ -4766,7 +4776,7 @@ auto groupBy(alias pred, bool isEquivRelation, Range)(Range r)
     else static if (is(typeof(
             unaryFun!pred(ElementType!Range.init) ==
             unaryFun!pred(ElementType!Range.init))))
-        return GroupByImpl!((a,b) => pred(a) == pred(b), true, Range)(r);
+        return GroupByImpl!((a,b) => pred(a) == pred(b), IsEquivRelation.yes, Range)(r);
     else
         static assert(0, "groupBy expects either a binary predicate or "~
                          "a unary predicate on range elements of type: "~
@@ -4784,13 +4794,13 @@ auto groupBy(alias pred, bool isEquivRelation, Range)(Range r)
         [2, 3]
     ];
 
-    auto r1 = data.groupBy!((a,b) => a[0] == b[0], true);
+    auto r1 = data.groupBy!((a,b) => a[0] == b[0], IsEquivRelation.yes);
     assert(r1.equal!equal([
         [[1, 1], [1, 2]],
         [[2, 2], [2, 3]]
     ]));
 
-    auto r2 = data.groupBy!((a,b) => a[1] == b[1], true);
+    auto r2 = data.groupBy!((a,b) => a[1] == b[1], IsEquivRelation.yes);
     assert(r2.equal!equal([
         [[1, 1]],
         [[1, 2], [2, 2]],
