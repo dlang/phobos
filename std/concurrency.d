@@ -69,7 +69,6 @@ private
     import std.algorithm;
     import std.datetime;
     import std.exception;
-    import std.format;
     import std.range;
     import std.string;
     import std.traits;
@@ -334,6 +333,7 @@ public:
      */
     void toString(scope void delegate(const(char)[]) sink)
     {
+        import std.format;
         formattedWrite(sink, "Tid(%x)", &mbox);
     }
 
