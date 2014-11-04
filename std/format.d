@@ -1805,7 +1805,7 @@ unittest
         formatTest( to!(immutable T)(5.5), "5.5" );
 
         // bionic doesn't support lower-case string formatting of nan yet
-        version(Android) { formatTest( T.nan, "NaN" ); }
+        version(CRuntime_Bionic) { formatTest( T.nan, "NaN" ); }
         else { formatTest( T.nan, "nan" ); }
     }
 }
@@ -3711,7 +3711,7 @@ unittest
     * specify what the hex digit before the decimal point is for
     * %A.  */
 
-    version (linux)
+    version (CRuntime_Glibc)
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
                 stream.data);
@@ -3732,7 +3732,7 @@ unittest
             || stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", // MSVCRT 14+ (VS 2015)
                 stream.data);
     }
-    else version (Android)
+    else version (CRuntime_Bionic)
     {
         // bionic doesn't support hex formatting of floating point numbers
         // or lower-case string formatting of nan yet, but it was committed
@@ -3767,7 +3767,7 @@ unittest
     version (CRuntime_Microsoft)
         assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2"
             || stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB860000000P+2"); // MSVCRT 14+ (VS 2015)
-    else version (Android)
+    else version (CRuntime_Bionic)
     {
         // bionic doesn't support hex formatting of floating point numbers,
         // but it was committed recently (April 2014):
@@ -6250,7 +6250,7 @@ unittest
     else version (CRuntime_Microsoft)
         assert(s == "1.67 -0X1.47AE14P+0 nan"
             || s == "1.67 -0X1.47AE147AE147BP+0 nan", s); // MSVCRT 14+ (VS 2015)
-    else version (Android)
+    else version (CRuntime_Bionic)
     {
         // bionic doesn't support hex formatting of floating point numbers
         // or lower-case string formatting of nan yet, but it was committed

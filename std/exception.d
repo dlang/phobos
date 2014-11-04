@@ -1418,7 +1418,7 @@ class ErrnoException : Exception
     this(string msg, string file = null, size_t line = 0) @trusted
     {
         _errno = .errno;
-        version (linux)
+        version (CRuntime_Glibc)
         {
             char[1024] buf = void;
             auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);

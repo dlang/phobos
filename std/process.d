@@ -2181,7 +2181,7 @@ class ProcessException : Exception
     {
         import core.stdc.errno;
         import core.stdc.string;
-        version (linux)
+        version (CRuntime_Glibc)
         {
             char[1024] buf;
             auto errnoMsg = to!string(

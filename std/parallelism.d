@@ -156,15 +156,6 @@ else version(Solaris)
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
-else version(Android)
-{
-    import core.sys.posix.unistd;
-
-    shared static this()
-    {
-        totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
-    }
-}
 else version(useSysctlbyname)
 {
     extern(C) int sysctlbyname(

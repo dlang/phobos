@@ -169,7 +169,7 @@ string formatSocketError(int err) @trusted
     {
         char[80] buf;
         const(char)* cs;
-        version (linux)
+        version (CRuntime_Glibc)
         {
             cs = strerror_r(err, buf.ptr, buf.length);
         }
@@ -197,7 +197,7 @@ string formatSocketError(int err) @trusted
             else
                 return "Socket error " ~ to!string(err);
         }
-        else version (Android)
+        else version (CRuntime_Bionic)
         {
             auto errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
@@ -403,37 +403,18 @@ enum SocketType: int
 /**
  * Protocol
  */
-version(Android)
+enum ProtocolType: int
 {
-    // no GGP on Android
-    enum ProtocolType: int
-    {
-        IP =    IPPROTO_IP,         /// Internet Protocol version 4
-        ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
-        IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
-        TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
-        PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
-        UDP =   IPPROTO_UDP,        /// User Datagram Protocol
-        IDP =   IPPROTO_IDP,        /// Xerox NS protocol
-        RAW =   IPPROTO_RAW,        /// Raw IP packets
-        IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
-    }
-}
-else
-{
-    enum ProtocolType: int
-    {
-        IP =    IPPROTO_IP,         /// Internet Protocol version 4
-        ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
-        IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
-        GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
-        TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
-        PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
-        UDP =   IPPROTO_UDP,        /// User Datagram Protocol
-        IDP =   IPPROTO_IDP,        /// Xerox NS protocol
-        RAW =   IPPROTO_RAW,        /// Raw IP packets
-        IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
-    }
+    IP =    IPPROTO_IP,         /// Internet Protocol version 4
+    ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
+    IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
+    GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
+    TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
+    PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
+    UDP =   IPPROTO_UDP,        /// User Datagram Protocol
+    IDP =   IPPROTO_IDP,        /// Xerox NS protocol
+    RAW =   IPPROTO_RAW,        /// Raw IP packets
+    IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
 }
 
 
@@ -517,7 +498,7 @@ class Protocol
 
 unittest
 {
-    // getprotobyname,number are unimplemented on Android
+    // getprotobyname,number are unimplemented in bionic
     softUnittest({
         Protocol proto = new Protocol;
         assert(proto.getProtocolByType(ProtocolType.TCP));
@@ -2454,39 +2435,19 @@ unittest // Issue 14012, 14013
 }
 
 /// The level at which a socket option is defined:
-version(Android)
+enum SocketOptionLevel: int
 {
-    // no GGP on Android
-    enum SocketOptionLevel: int
-    {
-        SOCKET =  SOL_SOCKET,               /// Socket level
-        IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
-        ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
-        IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
-        TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
-        PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
-        UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
-        IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
-        RAW =     ProtocolType.RAW,         /// Raw IP packet level
-        IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
-    }
-}
-else
-{
-    enum SocketOptionLevel: int
-    {
-        SOCKET =  SOL_SOCKET,               /// Socket level
-        IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
-        ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
-        IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
-        GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
-        TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
-        PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
-        UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
-        IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
-        RAW =     ProtocolType.RAW,         /// Raw IP packet level
-        IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
-    }
+    SOCKET =  SOL_SOCKET,               /// Socket level
+    IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
+    ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
+    IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
+    GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
+    TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
+    PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
+    UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
+    IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
+    RAW =     ProtocolType.RAW,         /// Raw IP packet level
+    IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
 }
 
 /// _Linger information for use with SocketOption.LINGER.

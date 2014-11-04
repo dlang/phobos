@@ -1896,10 +1896,6 @@ else version (FreeBSD)
         // Only Solaris 10 and later
         return readLink(format("/proc/%d/path/a.out", getpid()));
     }
-    else version (Android)
-    {
-        return readLink("/proc/self/exe");
-    }
     else
         static assert(0, "thisExePath is not supported on this platform");
 }
