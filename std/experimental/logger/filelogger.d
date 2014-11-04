@@ -52,8 +52,8 @@ class FileLogger : Logger
     Example:
     -------------
     auto file = File("logFile.log", "w");
-    auto l1 = new FileLogger(&file, "LoggerName");
-    auto l2 = new FileLogger(&file, "LoggerName", LogLevel.fatal);
+    auto l1 = new FileLogger(file, "LoggerName");
+    auto l2 = new FileLogger(file, "LoggerName", LogLevel.fatal);
     -------------
     */
     this(File file, const LogLevel lv = LogLevel.info) @safe

@@ -28,8 +28,7 @@ class NullLogger : Logger
 }
 
 ///
-@safe
-unittest
+@safe unittest
 {
     auto nl1 = new NullLogger(LogLevel.all);
     nl1.info("You will never read this.");

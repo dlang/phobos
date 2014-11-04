@@ -160,7 +160,7 @@ import core.sync.mutex : Mutex;
 import std.experimental.logger.filelogger;
 
 shared static this() {
-    __defaultLoggerMutex = new Mutex;
+    stdLoggerDefaultLoggerMutex = new Mutex;
 }
 
 /** This template evaluates if the passed $(D LogLevel) is active.
@@ -272,9 +272,9 @@ be greater or equal to the $(D LogLevel) of the $(D stdlog) and the
 $(D defaultLogLevel) additionally the condition passed must be $(D true).
 
 Params:
-ll = The $(D LogLevel) used by this log call.
-condition = The condition must be $(D true) for the data to be logged.
-args = The data that should be logged.
+  ll = The $(D LogLevel) used by this log call.
+  condition = The condition must be $(D true) for the data to be logged.
+  args = The data that should be logged.
 
 Examples:
 --------------------
@@ -314,8 +314,8 @@ In order for the data to be processed the $(D LogLevel) of the log call must
 be greater or equal to the $(D LogLevel) of the $(D stdlog).
 
 Params:
-ll = The $(D LogLevel) used by this log call.
-args = The data that should be logged.
+  ll = The $(D LogLevel) used by this log call.
+  args = The data that should be logged.
 
 Examples:
 --------------------
@@ -355,8 +355,8 @@ $(D stdlog) must be greater or equal to the $(D defaultLogLevel)
 add the condition passed must be $(D true).
 
 Params:
-condition = The condition must be $(D true) for the data to be logged.
-args = The data that should be logged.
+  condition = The condition must be $(D true) for the data to be logged.
+  args = The data that should be logged.
 
 Examples:
 --------------------
@@ -395,7 +395,7 @@ In order for the data to be processed the $(D LogLevel) of the
 $(D stdlog) must be greater or equal to the $(D defaultLogLevel).
 
 Params:
-args = The data that should be logged.
+  args = The data that should be logged.
 
 Examples:
 --------------------
@@ -433,10 +433,10 @@ be greater or equal to the $(D LogLevel) of the $(D stdlog) and the
 $(D defaultLogLevel) additionally the condition passed must be $(D true).
 
 Params:
-ll = The $(D LogLevel) used by this log call.
-condition = The condition must be $(D true) for the data to be logged.
-msg = The $(D printf)-style string.
-args = The data that should be logged.
+  ll = The $(D LogLevel) used by this log call.
+  condition = The condition must be $(D true) for the data to be logged.
+  msg = The $(D printf)-style string.
+  args = The data that should be logged.
 
 Examples:
 --------------------
@@ -464,9 +464,9 @@ be greater or equal to the $(D LogLevel) of the $(D stdlog) and the
 $(D defaultLogLevel).
 
 Params:
-ll = The $(D LogLevel) used by this log call.
-msg = The $(D printf)-style string.
-args = The data that should be logged.
+  ll = The $(D LogLevel) used by this log call.
+  msg = The $(D printf)-style string.
+  args = The data that should be logged.
 
 Examples:
 --------------------
@@ -492,9 +492,9 @@ be greater or equal to the $(D defaultLogLevel) additionally the condition
 passed must be $(D true).
 
 Params:
-condition = The condition must be $(D true) for the data to be logged.
-msg = The $(D printf)-style string.
-args = The data that should be logged.
+  condition = The condition must be $(D true) for the data to be logged.
+  msg = The $(D printf)-style string.
+  args = The data that should be logged.
 
 Examples:
 --------------------
@@ -520,8 +520,8 @@ In order for the data to be processed the $(D LogLevel) of the log call must
 be greater or equal to the $(D defaultLogLevel).
 
 Params:
-msg = The $(D printf)-style string.
-args = The data that should be logged.
+  msg = The $(D printf)-style string.
+  args = The data that should be logged.
 
 Examples:
 --------------------
@@ -559,7 +559,7 @@ template defaultLogFunction(LogLevel ll)
     must be greater or equal than the global $(D LogLevel).
 
     Params:
-    args = The data that should be logged.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -591,8 +591,8 @@ template defaultLogFunction(LogLevel ll)
     condition passed must be $(D true).
 
     Params:
-    condition = The condition must be $(D true) for the data to be logged.
-    args = The data that should be logged.
+      condition = The condition must be $(D true) for the data to be logged.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -649,8 +649,8 @@ template defaultLogFunctionf(LogLevel ll)
     must be greater or equal than the global $(D LogLevel).
 
     Params:
-    msg = The $(D printf)-style string.
-    args = The data that should be logged.
+      msg = The $(D printf)-style string.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -682,9 +682,9 @@ template defaultLogFunctionf(LogLevel ll)
     must be greater or equal than the global $(D LogLevel).
 
     Params:
-     condition = The condition must be $(D true) for the data to be logged.
-    msg = The $(D printf)-style string.
-    args = The data that should be logged.
+      condition = The condition must be $(D true) for the data to be logged.
+      msg = The $(D printf)-style string.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -854,7 +854,8 @@ abstract class Logger
     $(D MultiLogger) and $(D ArrayLogger).
 
     Params:
-        payload = All information associated with call to log function.
+      payload = All information associated with call to log function.
+
     See_Also: beginLogMsg, logMsgPart, finishLogMsg
     */
     abstract protected void writeLogMsg(ref LogEntry payload) @safe;
@@ -1013,7 +1014,7 @@ abstract class Logger
         and must be greater or equal than the global $(D LogLevel).
 
         Params:
-        args = The data that should be logged.
+          args = The data that should be logged.
 
         Examples:
         --------------------
@@ -1058,8 +1059,8 @@ abstract class Logger
         condition passed must be $(D true).
 
         Params:
-        condition = The condition must be $(D true) for the data to be logged.
-        args = The data that should be logged.
+          condition = The condition must be $(D true) for the data to be logged.
+          args = The data that should be logged.
 
         Examples:
         --------------------
@@ -1105,9 +1106,9 @@ abstract class Logger
            the passed condition must be $(D true).
 
         Params:
-         condition = The condition must be $(D true) for the data to be logged.
-        msg = The $(D printf)-style string.
-        args = The data that should be logged.
+          condition = The condition must be $(D true) for the data to be logged.
+          msg = The $(D printf)-style string.
+          args = The data that should be logged.
 
         Examples:
         --------------------
@@ -1152,8 +1153,8 @@ abstract class Logger
         must be greater or equal than the global $(D LogLevel).
 
         Params:
-        msg = The $(D printf)-style string.
-        args = The data that should be logged.
+          msg = The $(D printf)-style string.
+          args = The data that should be logged.
 
         Examples:
         --------------------
@@ -1222,9 +1223,9 @@ abstract class Logger
     of the Logger must be greater or equal to the global $(D LogLevel).
 
     Params:
-    args = The data that should be logged.
-    condition = The condition must be $(D true) for the data to be logged.
-    args = The data that is to be logged.
+      args = The data that should be logged.
+      condition = The condition must be $(D true) for the data to be logged.
+      args = The data that is to be logged.
 
     Returns: The logger used by the logging function as reference.
 
@@ -1292,8 +1293,8 @@ abstract class Logger
     and must be greater or equal than the global $(D LogLevel).
 
     Params:
-    ll = The specific $(D LogLevel) used for logging the log message.
-    args = The data that should be logged.
+      ll = The specific $(D LogLevel) used for logging the log message.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -1362,8 +1363,8 @@ abstract class Logger
     $(D LogLevel) and the condition must be $(D true).
 
     Params:
-    condition = The condition must be $(D true) for the data to be logged.
-    args = The data that should be logged.
+      condition = The condition must be $(D true) for the data to be logged.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -1433,7 +1434,7 @@ abstract class Logger
     $(D LogLevel).
 
     Params:
-    args = The data that should be logged.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -1504,10 +1505,10 @@ abstract class Logger
     condition must be $(D true).
 
     Params:
-    ll = The specific $(D LogLevel) used for logging the log message.
-    condition = The condition must be $(D true) for the data to be logged.
-    msg = The format string used for this log call.
-    args = The data that should be logged.
+      ll = The specific $(D LogLevel) used for logging the log message.
+      condition = The condition must be $(D true) for the data to be logged.
+      msg = The format string used for this log call.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -1551,9 +1552,9 @@ abstract class Logger
     and must be greater or equal than the global $(D LogLevel).
 
     Params:
-    ll = The specific $(D LogLevel) used for logging the log message.
-    msg = The format string used for this log call.
-    args = The data that should be logged.
+      ll = The specific $(D LogLevel) used for logging the log message.
+      msg = The format string used for this log call.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -1598,9 +1599,9 @@ abstract class Logger
     $(D LogLevel) and the condition must be $(D true).
 
     Params:
-    condition = The condition must be $(D true) for the data to be logged.
-    msg = The format string used for this log call.
-    args = The data that should be logged.
+      condition = The condition must be $(D true) for the data to be logged.
+      msg = The format string used for this log call.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -1644,8 +1645,8 @@ abstract class Logger
     must be greater or equal to the global $(D LogLevel).
 
     Params:
-    msg = The format string used for this log call.
-    args = The data that should be logged.
+      msg = The format string used for this log call.
+      args = The data that should be logged.
 
     Examples:
     --------------------
@@ -1690,10 +1691,10 @@ abstract class Logger
     protected LogEntry header;
 }
 
-private __gshared Mutex __defaultLoggerMutex;
-private __gshared Logger __defaultLogger;
-private shared Logger __stdlog;
-private shared LogLevel __globalLogLevel = LogLevel.all;
+private __gshared Mutex stdLoggerDefaultLoggerMutex;
+private __gshared Logger stdLoggerDefaultLogger;
+private shared Logger stdLoggerStdLog;
+private shared LogLevel stdLoggerGlobalLogLevel = LogLevel.all;
 
 
 /* This method returns the global default Logger.
@@ -1703,16 +1704,16 @@ private @property Logger defaultLoggerImpl() @trusted
 {
     static __gshared ubyte[__traits(classInstanceSize, FileLogger)] _buffer;
 
-    synchronized (__defaultLoggerMutex)
+    synchronized (stdLoggerDefaultLoggerMutex)
     {
         auto buffer = cast(ubyte[]) _buffer;
 
-        if (__defaultLogger is null)
+        if (stdLoggerDefaultLogger is null)
         {
-            __defaultLogger = emplace!FileLogger(buffer, stderr, LogLevel.all);
+            stdLoggerDefaultLogger = emplace!FileLogger(buffer, stderr, LogLevel.all);
         }
     }
-    return __defaultLogger;
+    return stdLoggerDefaultLogger;
 }
 
 /** This property sets and gets the default $(D Logger).
@@ -1744,7 +1745,7 @@ if (stdlog !is myLogger)
     }
 
     // If we have set up our own logger use that
-    if (auto logger = trustedLoad(__stdlog))
+    if (auto logger = trustedLoad(stdLoggerStdLog))
     {
         return logger;
     }
@@ -1758,7 +1759,7 @@ if (stdlog !is myLogger)
 /// Ditto
 @property void stdlog(Logger logger) @trusted
 {
-    atomicStore!(MemoryOrder.rel)(__stdlog, cast(shared) logger);
+    atomicStore!(MemoryOrder.rel)(stdLoggerStdLog, cast(shared) logger);
 }
 
 /** This methods get and set the global $(D LogLevel).
@@ -1774,13 +1775,13 @@ different levels at different spots in the code.
 */
 @property LogLevel globalLogLevel() @safe @nogc
 {
-    return trustedLoad(__globalLogLevel);
+    return trustedLoad(stdLoggerGlobalLogLevel);
 }
 
 /// Ditto
 @property void globalLogLevel(LogLevel ll) @safe
 {
-    trustedStore(__globalLogLevel, ll);
+    trustedStore(stdLoggerGlobalLogLevel, ll);
 }
 
 version (unittest)
@@ -1873,7 +1874,7 @@ unittest
     ml.removeLogger("one");
     ml.removeLogger("two");
     auto n = ml.removeLogger("one");
-	assert(n is null);
+    assert(n is null);
 }
 
 unittest

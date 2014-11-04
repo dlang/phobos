@@ -1,6 +1,6 @@
 module std.experimental.logger.multilogger;
 
-import std.array : insertInPlace, popBack;
+import std.array : back, insertInPlace, popBack;
 import std.experimental.logger.core;
 import std.experimental.logger.filelogger;
 import std.stdio : stdout;
@@ -14,13 +14,14 @@ struct MultiLoggerEntry
     Logger logger; /// The stored $(D Logger)
 }
 
-/** MultiLogger logs to multiple $(D Logger). The $(D Logger) are stored in an
-$(D std.container.Multi) in there order of insertion.
+/** MultiLogger logs to multiple $(D Logger). The $(D Logger)s are stored in an
+$(D Logger[]) in there order of insertion.
 
-Every data logged to this $(D MultiLogger) will be distributed to all the
-$(D Logger) inserted into inserted it. The $(D MultiLogger) can hold multiple
-$(D Logger) with the same name. If the method $(D removeLogger) is used to
-remove a $(D Logger) only the first occurrence with that name will be removed.
+Every data logged to this $(D MultiLogger) will be distributed to all the $(D
+Logger)s inserted into inserted it. This $(D MultiLogger) implementation can
+hold multiple $(D Logger)s with the same name. If the method $(D removeLogger)
+is used to remove a $(D Logger) only the first occurrence with that name will
+be removed.
 */
 class MultiLogger : Logger
 {
@@ -50,8 +51,8 @@ class MultiLogger : Logger
     /** This method inserts a new Logger into the $(D MultiLogger).
 
     Params:
-        name = The name of the $(D Logger) to insert.
-        newLogger = The $(D Logger) to insert.
+      name = The name of the $(D Logger) to insert.
+      newLogger = The $(D Logger) to insert.
     */
     void insertLogger(string name, Logger newLogger) @safe
     {
@@ -61,7 +62,7 @@ class MultiLogger : Logger
     /** This method removes a Logger from the $(D MultiLogger).
 
     Params:
-        toRemove = The name of the $(D Logger) to remove. If the $(D Logger)
+      toRemove = The name of the $(D Logger) to remove. If the $(D Logger)
         is not found $(D null) will be returned. Only the first occurrence of
         a $(D Logger) with the given name will be removed.
 
@@ -69,11 +70,13 @@ class MultiLogger : Logger
     */
     Logger removeLogger(in char[] toRemove) @safe
     {
+        import std.algorithm : copy;
         for (size_t i = 0; i < this.logger.length; ++i)
         {
             if (this.logger[i].name == toRemove) {
                 Logger ret = this.logger[i].logger;
-                this.logger[i .. $-1] = this.logger[i+1 .. $];
+                //this.logger[i .. $-1] = this.logger[i+1 .. $];
+                this.logger[i] = this.logger.back();
                 this.logger.popBack();
 
                 return ret;
@@ -88,9 +91,11 @@ class MultiLogger : Logger
     */
     override protected void writeLogMsg(ref LogEntry payload) @safe
     {
-        for (size_t i = 0; i < this.logger.length; ++i)
+        //for (size_t i = 0; i < this.logger.length; ++i)
+        //{
+            //auto it = this.logger[i];
+        foreach(it; this.logger)
         {
-            auto it = this.logger[i];
             /* We don't perform any checks here to avoid race conditions.
             Instead the child will check on its own if its log level matches
             and assume LogLevel.all for the globalLogLevel (since we already
@@ -101,8 +106,7 @@ class MultiLogger : Logger
     }
 }
 
-@safe
-unittest
+@safe unittest
 {
     import std.experimental.logger.nulllogger;
     import std.exception : assertThrown;
@@ -123,8 +127,7 @@ unittest
     assert(n is null);
 }
 
-@safe
-unittest
+@safe unittest
 {
     auto a = new MultiLogger;
     auto n0 = new TestLogger;
@@ -183,8 +186,7 @@ unittest
     assert(line.indexOf(iMsg) != -1, line ~ ":" ~ tMsg);
 }
 
-@safe
-unittest
+@safe unittest
 {
     auto dl = stdlog;
     assert(dl !is null);
