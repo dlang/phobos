@@ -15,7 +15,7 @@
 module std.complex;
 
 
-import std.format, std.math, std.numeric, std.traits;
+import std.math, std.traits;
 
 
 /** Helper function that returns a _complex number with the specified
@@ -104,6 +104,8 @@ unittest
 */
 struct Complex(T)  if (isFloatingPoint!T)
 {
+    import std.format : FormatSpec;
+
     /** The real part of the number. */
     T re;
 
@@ -150,6 +152,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     void toString(Char)(scope void delegate(const(Char)[]) sink,
                         FormatSpec!Char formatSpec) const
     {
+        import std.format : formatValue;
         formatValue(sink, re, formatSpec);
         if (signbit(im) == 0) sink("+");
         formatValue(sink, im, formatSpec);
@@ -857,6 +860,7 @@ unittest
 unittest
 {
     // Test wide string formatting
+    import std.format;
     wstring wformat(T)(string format, Complex!T c)
     {
         import std.array : appender;
