@@ -665,8 +665,6 @@ feature provided by $(D Range.put). $(D put(r, e)) is prefered.
  +/
 void put(R, E)(ref R r, E e)
 {
-    @property ref E[] EArrayInit(); //@@@9186@@@: Can't use (E[]).init
-
     //First level: simply straight up put.
     static if (is(typeof(doPut(r, e))))
     {
