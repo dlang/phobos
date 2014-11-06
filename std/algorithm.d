@@ -4663,7 +4663,14 @@ private struct GroupByImpl(alias pred, IsEquivRelation isEquivRelation, Range)
     {
         r = _r;
         if (!empty)
+        {
+            // Check reflexivity if predicate is claimed to be an equivalence
+            // relation.
+            assert(!isEquivRelation || pred(r.front, r.front),
+                   "predicate " ~ pred.stringof ~ " is claimed to be "~
+                   "equivalence relation yet isn't reflexive");
             savePrev();
+        }
     }
     @property bool empty() { return r.empty; }
 
