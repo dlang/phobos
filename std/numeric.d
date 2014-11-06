@@ -23,20 +23,14 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.numeric;
 
-import std.algorithm;
 import std.array;
-import std.bitmanip;
+import std.complex : Complex;
 import std.conv;
-import std.typecons;
-import std.math;
-import std.traits;
 import std.exception;
-import std.random;
-import std.string;
-import std.range;
-import std.functional;
-import std.typetuple;
-import std.complex;
+import std.math;
+import std.range : ElementType, hasLength, hasSlicing, isInputRange, isForwardRange, isRandomAccessRange;
+import std.traits;
+import std.typecons;
 
 import core.bitop;
 import core.exception;
@@ -184,6 +178,8 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
     if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
         precision + exponentWidth > 0)
 {
+    import std.bitmanip;
+    import std.typetuple;
 private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
@@ -213,6 +209,7 @@ private:
 
         // If on Linux or Mac, where 80-bit reals are padded, ignore the
         // padding.
+        import std.algorithm : min;
         CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
 
         // Convert F to the correct binary type.
@@ -721,6 +718,7 @@ assert(approxEqual(x, 0.865474));
 */
 template secantMethod(alias fun)
 {
+    import std.functional : unaryFun;
     Num secantMethod(Num)(Num xn_1, Num xn)
     {
         auto fxn = unaryFun!(fun)(xn_1), d = xn_1 - xn;
@@ -1917,6 +1915,9 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
     if (isRandomAccessRange!(R1) && hasLength!(R1) &&
         isRandomAccessRange!(R2) && hasLength!(R2))
 {
+    import std.functional : binaryFun;
+    import std.algorithm : swap;
+
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
 
@@ -2142,6 +2143,8 @@ time and computes all matches of length 1.
      */
     void popFront()
     {
+        import std.algorithm : swap;
+
         // This is a large source of optimization: if similarity at
         // the gram-1 level was 0, then we can safely assume
         // similarity at the gram level is 0 as well.
@@ -2426,6 +2429,7 @@ private alias lookup_t = float;
  */
 final class Fft
 {
+    import std.algorithm : map;
 private:
     immutable lookup_t[][] negSinLookup;
 
@@ -2907,6 +2911,8 @@ void inverseFft(Ret, R)(R range, Ret buf)
 
 unittest
 {
+    import std.algorithm;
+    import std.range;
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);
