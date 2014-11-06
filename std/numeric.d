@@ -24,11 +24,11 @@ Distributed under the Boost Software License, Version 1.0.
 module std.numeric;
 
 import std.array;
-import std.complex : Complex;
+import std.complex;
 import std.conv;
 import std.exception;
 import std.math;
-import std.range : ElementType, hasLength, hasSlicing, isInputRange, isForwardRange, isRandomAccessRange;
+import std.range.constraints;
 import std.traits;
 import std.typecons;
 
@@ -1385,7 +1385,7 @@ euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    typeof(return) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         auto t = a.front - b.front;
@@ -1403,7 +1403,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     limit *= limit;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    typeof(return) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; ; a.popFront(), b.popFront())
     {
         if (a.empty)
@@ -1420,12 +1420,16 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 
 unittest
 {
-    double[] a = [ 1.0, 2.0, ];
-    double[] b = [ 4.0, 6.0, ];
-    assert(euclideanDistance(a, b) == 5);
-    assert(euclideanDistance(a, b, 5) == 5);
-    assert(euclideanDistance(a, b, 4) == 5);
-    assert(euclideanDistance(a, b, 2) == 3);
+    import std.typetuple;
+    foreach(T; TypeTuple!(double, const double, immutable double))
+    {
+        T[] a = [ 1.0, 2.0, ];
+        T[] b = [ 4.0, 6.0, ];
+        assert(euclideanDistance(a, b) == 5);
+        assert(euclideanDistance(a, b, 5) == 5);
+        assert(euclideanDistance(a, b, 4) == 5);
+        assert(euclideanDistance(a, b, 2) == 3);        
+    }
 }
 
 /**
@@ -1441,7 +1445,7 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    typeof(return) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         result += a.front * b.front;
@@ -1451,13 +1455,13 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
 }
 
 /// Ditto
-Unqual!(CommonType!(F1, F2))
+CommonType!(F1, F2)
 dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 {
     immutable n = avector.length;
     assert(n == bvector.length);
     auto avec = avector.ptr, bvec = bvector.ptr;
-    typeof(return) sum0 = 0, sum1 = 0;
+    Unqual!(typeof(return)) sum0 = 0, sum1 = 0;
 
     const all_endp = avec + n;
     const smallblock_endp = avec + (n & ~3);
@@ -1506,10 +1510,14 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
 unittest
 {
-    double[] a = [ 1.0, 2.0, ];
-    double[] b = [ 4.0, 6.0, ];
-    assert(dotProduct(a, b) == 16);
-    assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+    import std.typetuple;
+    foreach(T; TypeTuple!(double, const double, immutable double))
+    {
+        T[] a = [ 1.0, 2.0, ];
+        T[] b = [ 4.0, 6.0, ];
+        assert(dotProduct(a, b) == 16);
+        assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+    }
 
     // Make sure the unrolled loop codepath gets tested.
     static const x =
@@ -1546,13 +1554,15 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 
 unittest
 {
-    double[] a = [ 1.0, 2.0, ];
-    double[] b = [ 4.0, 3.0, ];
-    // writeln(cosineSimilarity(a, b));
-    // writeln(10.0 / sqrt(5.0 * 25));
-    assert(approxEqual(
-                cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25),
-                0.01));
+    import std.typetuple;
+    foreach(T; TypeTuple!(double, const double, immutable double))
+    {
+        T[] a = [ 1.0, 2.0, ];
+        T[] b = [ 4.0, 3.0, ];
+        assert(approxEqual(
+                    cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25),
+                    0.01));
+    }
 }
 
 /**
@@ -1679,7 +1689,7 @@ ElementType!Range entropy(Range, F)(Range r, F max)
 if (isInputRange!Range &&
     !is(CommonType!(ElementType!Range, F) == void))
 {
-    typeof(return) result = 0.0;
+    Unqual!(typeof(return)) result = 0.0;
     foreach (e; r)
     {
         if (!e) continue;
@@ -1691,11 +1701,15 @@ if (isInputRange!Range &&
 
 unittest
 {
-    double[] p = [ 0.0, 0, 0, 1 ];
-    assert(entropy(p) == 0);
-    p = [ 0.25, 0.25, 0.25, 0.25 ];
-    assert(entropy(p) == 2);
-    assert(entropy(p, 1) == 1);
+    import std.typetuple;
+    foreach(T; TypeTuple!(double, const double, immutable double))
+    {
+        T[] p = [ 0.0, 0, 0, 1 ];
+        assert(entropy(p) == 0);
+        p = [ 0.25, 0.25, 0.25, 0.25 ];
+        assert(entropy(p) == 2);
+        assert(entropy(p, 1) == 1);
+    }
 }
 
 /**
