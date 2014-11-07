@@ -1750,28 +1750,28 @@ if (isNativeOutputRange!(R, E))
     {
         if (c <= 0x7F)
         {
-            doPut(range, cast(char) c);
+            put(range, cast(char) c);
             return 1;
         }
         if (c <= 0x7FF)
         {
-            doPut(range, cast(char)(0xC0 | (c >> 6)));
-            doPut(range, cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xC0 | (c >> 6)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 2;
         }
         if (c <= 0xFFFF)
         {
-            doPut(range, cast(char)(0xE0 | (c >> 12)));
-            doPut(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            doPut(range, cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xE0 | (c >> 12)));
+            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 3;
         }
         if (c <= 0x10FFFF)
         {
-            doPut(range, cast(char)(0xF0 | (c >> 18)));
-            doPut(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
-            doPut(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            doPut(range, cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xF0 | (c >> 18)));
+            put(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
+            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 4;
         }
         else
@@ -1783,16 +1783,16 @@ if (isNativeOutputRange!(R, E))
     {
         if (c <= 0xFFFF)
         {
-            range.doPut(cast(wchar) c);
+            range.put(cast(wchar) c);
             return 1;
         }
-        range.doPut(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
-        range.doPut(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
+        range.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
+        range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
     else static if (is(Unqual!E == dchar))
     {
-        range.doPut(c);
+        range.put(c);
         return 1;
     }
     else

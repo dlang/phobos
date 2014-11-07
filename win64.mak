@@ -108,8 +108,6 @@ SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
 	std\string.d std\format.d \
 	std\file.d
 
-SRC_STD_2_HEAVY= std\range.d
-
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_math=std\math.d
@@ -156,7 +154,7 @@ SRC_STD_7= \
 	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
+SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_math) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_3c) $(SRC_STD_4) \
 	$(SRC_STD_5_HEAVY) \
@@ -189,13 +187,16 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\range.d std\stdiobase.d std\parallelism.d \
+	std\stdiobase.d std\parallelism.d \
 	std\exception.d std\ascii.d
 
 SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
 	std\regex\internal\tests.d std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d std\regex\internal\kickstart.d \
 	std\regex\internal\generator.d
+
+SRC_STD_RANGE= std\range\package.d std\range\constraints.d \
+	std\range\interfaces.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -247,6 +248,7 @@ SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_ETC_C)
 
 SRC_TO_COMPILE= $(SRC_STD_ALL) \
+	$(SRC_STD_RANGE) \
 	$(SRC_TO_COMPILE_NOT_STD)
 
 SRC_ZLIB= \
@@ -348,7 +350,9 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
-	$(DOC)\std_range.html \
+	$(DOC)\std_range_package.html \
+	$(DOC)\std_range_constraints.html \
+	$(DOC)\std_range_interfaces.html \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
@@ -417,7 +421,7 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittestM.obj $(SRC_STD_math)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3.obj $(SRC_STD_3)
@@ -571,6 +575,15 @@ $(DOC)\std_container_util.html : $(STDDOC) std\container\util.d
 $(DOC)\std_container_package.html : $(STDDOC) std\container\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_package.html $(STDDOC) std\container\package.d
 
+$(DOC)\std_range_package.html : $(STDDOC) std\range\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_package.html $(STDDOC) std\range\package.d
+
+$(DOC)\std_range_constraints.html : $(STDDOC) std\range\constraints.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_constraints.html $(STDDOC) std\range\constraints.d
+
+$(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_interfaces.html $(STDDOC) std\range\interfaces.d
+
 $(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
 
@@ -631,8 +644,8 @@ $(DOC)\std_process.html : $(STDDOC) std\process.d
 $(DOC)\std_random.html : $(STDDOC) std\random.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
 
-$(DOC)\std_range.html : $(STDDOC) std\range.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range.d
+$(DOC)\std_range.html : $(STDDOC) std\range\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range\package.d
 
 $(DOC)\std_regex.html : $(STDDOC) std\regex\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex\package.d
@@ -777,7 +790,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX)
+	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -798,6 +811,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_DIGEST)
 	zip32 -u phobos $(SRC_STD_CONTAINER)
 	zip32 -u phobos $(SRC_STD_REGEX)
+	zip32 -u phobos $(SRC_STD_RANGE)
 
 phobos.zip : zip
 
