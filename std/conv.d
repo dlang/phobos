@@ -5065,12 +5065,12 @@ auto unsigned(T)(T x) if (isIntegral!T)
 ///
 unittest
 {
-    int s = 42;
+    immutable int s = 42;
     auto u1 = unsigned(s); //not qualified
     static assert(is(typeof(u1) == uint));
     Unsigned!(typeof(s)) u2 = unsigned(s); //same qualification
-    static assert(is(typeof(u2) == uint));
-    immutable u3 = unsigned(s); //totally qualified
+    static assert(is(typeof(u2) == immutable uint));
+    immutable u3 = unsigned(s); //explicitly qualified
 }
 
 unittest
@@ -5139,12 +5139,12 @@ auto signed(T)(T x) if (isIntegral!T)
 ///
 unittest
 {
-    uint u = 42;
+    immutable uint u = 42;
     auto s1 = signed(u); //not qualified
     static assert(is(typeof(s1) == int));
     Signed!(typeof(u)) s2 = signed(u); //same qualification
-    static assert(is(typeof(s2) == int));
-    immutable s3 = signed(u); //totally qualified
+    static assert(is(typeof(s2) == immutable int));
+    immutable s3 = signed(u); //explicitly qualified
 }
 
 unittest
