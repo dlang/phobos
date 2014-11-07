@@ -760,14 +760,6 @@ private bool oppositeSigns(T1, T2)(T1 a, T2 b)
     return signbit(a) != signbit(b);
 }
 
-//regression control
-unittest
-{
-    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
-    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
-}
- 
-
 public:
 
 /**  Find a real root of a real function f(x) via bracketing.
@@ -794,12 +786,23 @@ public:
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
-T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
-    scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
+T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
+    scope DT tolerance) //= (T a, T b) => false)
+    if(
+        isFloatingPoint!T &&
+        is(typeof(tolerance(T.init, T.init)) : bool) &&
+        is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
+    )
 {
     auto r = findRoot(f, a, b, f(a), f(b), tolerance);
     // Return the first value if it is smaller or NaN
     return !(fabs(r[2]) > fabs(r[3])) ? r[0] : r[1];
+}
+
+///ditto
+T findRoot(T, DF)(scope DF f, in T a, in T b)
+{
+    return findRoot(f, a, b, (T a, T b) => false);
 }
 
 /** Find root of a real function f(x) by bracketing, allowing the
@@ -835,8 +838,13 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
  */
-Tuple!(T, T, R, R) findRoot(T,R)(scope R delegate(T) f, in T ax, in T bx, in R fax, in R fbx,
-    scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
+Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
+    scope DT tolerance) // = (T a, T b) => false)
+    if(
+        isFloatingPoint!T &&
+        is(typeof(tolerance(T.init, T.init)) : bool) &&
+        is(typeof(f(T.init)) == R) && isFloatingPoint!R
+    )
 in
 {
     assert(!ax.isNaN && !bx.isNaN, "Limits must not be NaN");
@@ -1136,15 +1144,36 @@ whileloop:
     return Tuple!(T, T, R, R)(a, b, fa, fb);
 }
 
+///ditto
+Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
+{
+    return findRoot(f, ax, bx, fax, fbx, (T a, T b) => false);
+}
+
+///ditto
+T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
+    scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
+{
+    return findRoot!(T, R delegate(T), bool delegate(T lo, T hi))(f, a, b, tolerance);
+}
+
+//regression control
 unittest
+{
+    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
+    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
+    static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
+}
+
+nothrow unittest
 {
     int numProblems = 0;
     int numCalls;
 
-    void testFindRoot(real delegate(real) f, real x1, real x2)
+    void testFindRoot(real delegate(real) @nogc @safe nothrow pure f , real x1, real x2) @nogc @safe nothrow pure
     {
-        numCalls=0;
-        ++numProblems;
+        //numCalls=0;
+        //++numProblems;
         assert(!x1.isNaN && !x2.isNaN);
         assert(signbit(x1) != signbit(x2));
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
@@ -1159,9 +1188,9 @@ unittest
     }
 
     // Test functions
-    real cubicfn(real x)
+    real cubicfn(real x) @nogc @safe nothrow pure
     {
-        ++numCalls;
+        //++numCalls;
         if (x>float.max) 
             x = float.max;
         if (x<-double.max) 
