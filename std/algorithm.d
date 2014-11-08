@@ -3779,6 +3779,9 @@ Lazily joins a range of ranges with a separator. The separator itself
 is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
 
+See_also:
+$(XREF range,chain), which chains a sequence of ranges with compatible elements
+into a single range.
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR)
