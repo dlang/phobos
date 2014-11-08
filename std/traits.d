@@ -117,7 +117,6 @@
  *           $(LREF Signed)
  *           $(LREF Unqual)
  *           $(LREF Unsigned)
- *           $(LREF unsigned)
  *           $(LREF ValueType)
  * ))
  * $(TR $(TD Misc) $(TD

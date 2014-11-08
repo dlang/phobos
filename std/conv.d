@@ -5049,7 +5049,7 @@ unittest
 
 
 /**
-    Returns the corresponding unsigned value for $(D x) (e.g. if $(D x) has type
+    Returns the corresponding _unsigned value for $(D x) (e.g. if $(D x) has type
     $(D int), it returns $(D cast(uint) x)). The advantage compared to the cast
     is that you do not need to rewrite the cast if $(D x) later changes type
     (e.g from $(D int) to $(D long)).
@@ -5065,10 +5065,12 @@ auto unsigned(T)(T x) if (isIntegral!T)
 ///
 unittest
 {
-    uint s = 42;
+    immutable int s = 42;
     auto u1 = unsigned(s); //not qualified
+    static assert(is(typeof(u1) == uint));
     Unsigned!(typeof(s)) u2 = unsigned(s); //same qualification
-    immutable u3 = unsigned(s); //totally qualified
+    static assert(is(typeof(u2) == immutable uint));
+    immutable u3 = unsigned(s); //explicitly qualified
 }
 
 unittest
@@ -5121,7 +5123,7 @@ unittest
 
 
 /**
-    Returns the corresponding signed value for $(D x) (e.g. if $(D x) has type
+    Returns the corresponding _signed value for $(D x) (e.g. if $(D x) has type
     $(D uint), it returns $(D cast(int) x)). The advantage compared to the cast
     is that you do not need to rewrite the cast if $(D x) later changes type
     (e.g from $(D uint) to $(D ulong)).
@@ -5137,10 +5139,12 @@ auto signed(T)(T x) if (isIntegral!T)
 ///
 unittest
 {
-    uint u = 42;
-    auto s1 = unsigned(u); //not qualified
-    Unsigned!(typeof(u)) s2 = unsigned(u); //same qualification
-    immutable s3 = unsigned(u); //totally qualified
+    immutable uint u = 42;
+    auto s1 = signed(u); //not qualified
+    static assert(is(typeof(s1) == int));
+    Signed!(typeof(u)) s2 = signed(u); //same qualification
+    static assert(is(typeof(s2) == immutable int));
+    immutable s3 = signed(u); //explicitly qualified
 }
 
 unittest
