@@ -21,10 +21,9 @@ WIKI = Phobos/StdConv
 */
 module std.conv;
 
-import core.checkedint, core.stdc.string;
-import std.algorithm, std.array, std.ascii, std.exception, std.range,
-    std.string, std.traits, std.typecons, std.typetuple, std.utf;
-import std.format;
+public import std.ascii : LetterCase;
+
+import std.exception, std.range, std.traits, std.typetuple;
 
 /* ************* Exceptions *************** */
 
@@ -835,6 +834,7 @@ T toImpl(T, S)(S value)
     }
     else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
     {
+        import core.stdc.string : memcpy;
         // Converting void array to string
         alias Char = Unqual!(ElementEncodingType!T);
         auto raw = cast(const(ubyte)[]) value;
@@ -848,6 +848,7 @@ T toImpl(T, S)(S value)
     }
     else static if (isPointer!S && is(S : const(char)*))
     {
+        import core.stdc.string : strlen;
         // It is unsafe because we cannot guarantee that the pointer is null terminated.
         return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
     }
@@ -1375,6 +1376,7 @@ T toImpl(T, S)(S value)
 
     static if (isStaticArray!T)
     {
+        import std.string : format;
         auto res = to!(E[])(value);
         enforce!ConvException(T.length == res.length,
             format("Length mismatch when converting to static array: %s vs %s", T.length, res.length));
@@ -1837,20 +1839,20 @@ unittest
 
 Target parse(Target, Source)(ref Source s)
     if (isInputRange!Source &&
-        !isExactSomeString!Source &&
         isSomeChar!(ElementType!Source) &&
         is(Unqual!Target == bool))
 {
+    import std.ascii : toLower;
     if (!s.empty)
     {
-        auto c1 = std.ascii.toLower(s.front);
+        auto c1 = toLower(s.front);
         bool result = (c1 == 't');
         if (result || c1 == 'f')
         {
             s.popFront();
             foreach (c; result ? "rue" : "alse")
             {
-                if (s.empty || std.ascii.toLower(s.front) != c)
+                if (s.empty || toLower(s.front) != c)
                     goto Lerr;
                 s.popFront();
             }
@@ -2160,6 +2162,7 @@ in
 }
 body
 {
+    import core.checkedint : mulu, addu;
     if (radix == 10)
         return parse!Target(s);
 
@@ -2259,6 +2262,7 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Target == enum))
 {
+    import std.algorithm : startsWith;
     Target result;
     size_t longest_match = 0;
 
@@ -2316,6 +2320,8 @@ Target parse(Target, Source)(ref Source p)
     if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
         isFloatingPoint!Target && !is(Target == enum))
 {
+    import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
+
     static import core.stdc.math/* : HUGE_VAL*/;
 
     static immutable real[14] negtab =
@@ -2343,7 +2349,7 @@ Target parse(Target, Source)(ref Source p)
         sign++;
         p.popFront();
         enforce(!p.empty, bailOut());
-        if (std.ascii.toLower(p.front) == 'i')
+        if (toLower(p.front) == 'i')
             goto case 'i';
         enforce(!p.empty, bailOut());
         break;
@@ -2354,11 +2360,11 @@ Target parse(Target, Source)(ref Source p)
     case 'i': case 'I':
         p.popFront();
         enforce(!p.empty, bailOut());
-        if (std.ascii.toLower(p.front) == 'n')
+        if (toLower(p.front) == 'n')
         {
             p.popFront();
             enforce(!p.empty, bailOut());
-            if (std.ascii.toLower(p.front) == 'f')
+            if (toLower(p.front) == 'f')
             {
                 // 'inf'
                 p.popFront();
@@ -2401,7 +2407,7 @@ Target parse(Target, Source)(ref Source p)
             while (isHexDigit(i))
             {
                 anydigits = 1;
-                i = std.ascii.isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
+                i = isAlpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
                 if (ndigits < 16)
                 {
                     msdec = msdec * 16 + i;
@@ -2587,14 +2593,14 @@ Target parse(Target, Source)(ref Source p)
     }
     else // not hex
     {
-        if (std.ascii.toUpper(p.front) == 'N' && !startsWithZero)
+        if (toUpper(p.front) == 'N' && !startsWithZero)
         {
             // nan
             p.popFront();
-            enforce(!p.empty && std.ascii.toUpper(p.front) == 'A',
+            enforce(!p.empty && toUpper(p.front) == 'A',
                    new ConvException("error converting input to floating point"));
             p.popFront();
-            enforce(!p.empty && std.ascii.toUpper(p.front) == 'N',
+            enforce(!p.empty && toUpper(p.front) == 'N',
                    new ConvException("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();
@@ -3010,23 +3016,6 @@ Target parse(Target, Source)(ref Source s)
     return result;
 }
 
-// string to bool conversions
-Target parse(Target, Source)(ref Source s)
-    if (isExactSomeString!Source &&
-        is(Unqual!Target == bool))
-{
-    if (s.length >= 4 && icmp(s[0 .. 4], "true") == 0)
-    {
-        s = s[4 .. $];
-        return true;
-    }
-    if (s.length >= 5 && icmp(s[0 .. 5], "false") == 0)
-    {
-        s = s[5 .. $];
-        return false;
-    }
-    throw parseError("bool should be case-insensitive 'true' or 'false'");
-}
 
 /*
     Tests for to!bool and parse!bool
@@ -3054,17 +3043,20 @@ Target parse(Target, Source)(ref Source s)
     assert(b == true);
 }
 
-// string to null literal conversions
+// input range to null literal conversions
 Target parse(Target, Source)(ref Source s)
-    if (isExactSomeString!Source &&
+    if (isInputRange!Source &&
+        isSomeChar!(ElementType!Source) &&
         is(Unqual!Target == typeof(null)))
 {
-    if (s.length >= 4 && icmp(s[0 .. 4], "null") == 0)
+    import std.ascii : toLower;
+    foreach (c; "null")
     {
-        s = s[4 .. $];
-        return null;
+        if (s.empty || toLower(s.front) != c)
+            throw parseError("null should be case-insensitive 'null'");
+        s.popFront();
     }
-    throw parseError("null should be case-insensitive 'null'");
+    return null;
 }
 
 @safe pure unittest
@@ -3089,12 +3081,13 @@ Target parse(Target, Source)(ref Source s)
 //Used internally by parse Array/AA, to remove ascii whites
 package void skipWS(R)(ref R r)
 {
+    import std.ascii : isWhite;
     static if (isSomeString!R)
     {
         //Implementation inspired from stripLeft.
         foreach (i, dchar c; r)
         {
-            if (!std.ascii.isWhite(c))
+            if (!isWhite(c))
             {
                 r = r[i .. $];
                 return;
@@ -3105,7 +3098,7 @@ package void skipWS(R)(ref R r)
     }
     else
     {
-        for (; !r.empty && std.ascii.isWhite(r.front); r.popFront())
+        for (; !r.empty && isWhite(r.front); r.popFront())
         {}
     }
 }
@@ -3365,6 +3358,7 @@ private dchar parseEscape(Source)(ref Source s)
 
     dchar getHexDigit()(ref Source s_ = s)  // workaround
     {
+        import std.ascii : isAlpha, isHexDigit;
         if (s_.empty)
             throw parseError("Unterminated escape sequence");
         s_.popFront();
@@ -3373,7 +3367,7 @@ private dchar parseEscape(Source)(ref Source s)
         dchar c = s_.front;
         if (!isHexDigit(c))
             throw parseError("Hex digit is missing");
-        return std.ascii.isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
+        return isAlpha(c) ? ((c & ~0x20) - ('A' - 10)) : c - '0';
     }
 
     dchar result;
@@ -3877,6 +3871,7 @@ private template emplaceImpl(T)
                     chunk = arg;
                 else static if (is(UArg == UT))
                 {
+                    import core.stdc.string : memcpy;
                     memcpy(&chunk, &arg, T.sizeof);
                     static if (hasElaborateCopyConstructor!T)
                         typeid(T).postblit(cast(void*)&chunk);
@@ -3891,6 +3886,7 @@ private template emplaceImpl(T)
                     chunk[] = arg[];
                 else static if (is(Unqual!(ElementEncodingType!Arg) == UE))
                 {
+                    import core.stdc.string : memcpy;
                     assert(N == chunk.length, "Array length missmatch in emplace");
                     memcpy(cast(void*)&chunk, arg.ptr, T.sizeof);
                     static if (hasElaborateCopyConstructor!T)
@@ -3906,6 +3902,7 @@ private template emplaceImpl(T)
                     chunk[] = arg;
                 else static if (is(UArg == Unqual!E))
                 {
+                    import core.stdc.string : memcpy;
                     //Note: We copy everything, and then postblit just once.
                     //This is as exception safe as what druntime can provide us.
                     foreach(i; 0 .. N)
@@ -3954,6 +3951,7 @@ private template emplaceImpl(T)
                     chunk = args[0];
                 else
                 {
+                    import core.stdc.string : memcpy;
                     memcpy(&chunk, &args[0], T.sizeof);
                     static if (hasElaborateCopyConstructor!T)
                         typeid(T).postblit(&chunk);
@@ -4011,6 +4009,7 @@ private ref T emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
         chunk = T.init;
     else
     {
+        import core.stdc.string : memcpy;
         static immutable T init = T.init;
         memcpy(&chunk, &init, T.sizeof);
     }
@@ -4703,6 +4702,7 @@ unittest
 
 unittest //@@@9559@@@
 {
+    import std.typecons : Nullable;
     alias I = Nullable!int;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
     auto asArray = std.array.array(ints);
