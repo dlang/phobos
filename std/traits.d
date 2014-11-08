@@ -147,10 +147,8 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.traits;
-import std.typetuple;
 
-// FIXME @@@bug@@@ 12961
-import std.conv;
+import std.typetuple;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Functions
@@ -536,7 +534,7 @@ unittest
 private template fqnType(T,
     bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
-    import std.string;
+    import std.string : format;
 
     // Convenience tags
     enum {
@@ -563,8 +561,6 @@ private template fqnType(T,
 
     string parametersTypeString(T)() @property
     {
-        import std.array, std.algorithm, std.range;
-
         alias parameters   = ParameterTypeTuple!(T);
         alias parameterStC = ParameterStorageClassTuple!(T);
 
@@ -582,6 +578,9 @@ private template fqnType(T,
 
         static if (parameters.length)
         {
+            import std.algorithm : map;
+            import std.range : join, zip;
+
             string result = join(
                 map!(a => format("%s%s", a[0], a[1]))(
                     zip([staticMap!(storageClassesString, parameterStC)],
