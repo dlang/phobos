@@ -4717,6 +4717,41 @@ unittest
     static assert(!__traits(compiles, lvalueOf!byte = 128));
 }
 
+/+
+Given a type $(D T), $(D lvalueInit) represents a unique instance of $(D T)
+initialized to $(D T.init). $(D lvalueInit) is always immutable, regardless
+of $(D T)'s qualifiers.
+
+$(D lvalueInit) is useful when one needs a reference the $(D .init) value,
+without creating duplicate static instances, or temporaries that would require
+destruction.
++/
+package template lvalueInit(T)
+{
+    //static if (is(T == immutable(T)))
+    //    static lvalueInit = T.init;
+    //else
+    //    alias lvalueInit = .lvalueInit!(immutable(T));
+    static lvalueInit = immutable(T).init;
+}
+
+//
+unittest
+{
+    import core.stdc.string;
+    struct S
+    {
+        this() @disable;
+        this(this) @disable;
+        void opAssign(    S) {assert(0);}
+        void opAssign(ref S) {assert(0);}
+        int i = 777;
+    }
+
+    S s = void;
+    memcpy(&s, &lvalueInit!S, S.sizeof);
+    assert(s.i == 777);
+}
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // SomethingTypeOf
