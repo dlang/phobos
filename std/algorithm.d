@@ -416,8 +416,8 @@ $(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
 
 Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
-returns a range of which elements are obtained by applying $(D fun(x))
-left to right for all $(D x) in $(D range). The original ranges are
+returns a range of which elements are obtained by applying $(D fun(a))
+left to right for all elements $(D a) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
 */
 template map(fun...) if (fun.length >= 1)
