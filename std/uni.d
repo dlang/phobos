@@ -1858,6 +1858,9 @@ public struct CodepointInterval
 pure:
     uint[2] _tuple;
     alias _tuple this;
+
+@safe pure nothrow @nogc:
+
     this(uint low, uint high)
     {
         _tuple[0] = low;
@@ -3014,7 +3017,7 @@ private:
 }
 
 // pedantic version for ctfe, and aligned-access only architectures
-@trusted uint safeRead24(const ubyte* ptr, size_t idx) pure nothrow
+@trusted uint safeRead24(const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
     version(LittleEndian)
@@ -3026,7 +3029,7 @@ private:
 }
 
 // ditto
-@trusted void safeWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow
+@trusted void safeWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
     version(LittleEndian)
@@ -3044,7 +3047,7 @@ private:
 }
 
 // unaligned x86-like read/write functions
-@trusted uint unalignedRead24(const ubyte* ptr, size_t idx) pure nothrow
+@trusted uint unalignedRead24(const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     uint* src = cast(uint*)(ptr+3*idx);
     version(LittleEndian)
@@ -3054,7 +3057,7 @@ private:
 }
 
 // ditto
-@trusted void unalignedWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow
+@trusted void unalignedWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     uint* dest = cast(uint*)(cast(ubyte*)ptr + 3*idx);
     version(LittleEndian)
@@ -3063,7 +3066,7 @@ private:
         *dest = (val<<8) | (*dest & 0xFF);
 }
 
-uint read24(const ubyte* ptr, size_t idx) pure nothrow
+uint read24(const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     static if(hasUnalignedReads)
         return __ctfe ? safeRead24(ptr, idx) : unalignedRead24(ptr, idx);
@@ -3071,7 +3074,7 @@ uint read24(const ubyte* ptr, size_t idx) pure nothrow
         return safeRead24(ptr, idx);
 }
 
-void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
+void write24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     static if(hasUnalignedReads)
         return __ctfe ? safeWrite24(ptr, val, idx) : unalignedWrite24(ptr, val, idx);
@@ -4599,7 +4602,7 @@ enum Mode {
     alwaysSkip,
     neverSkip,
     skipOnMatch
-};
+}
 
 mixin template ForwardStrings()
 {
@@ -6655,7 +6658,7 @@ public:
     }
 
     /// Gets a $(CODEPOINT) at the given index in this cluster.
-    dchar opIndex(size_t index) const  pure nothrow
+    dchar opIndex(size_t index) const pure nothrow @nogc
     {
         assert(index < length);
         return read24(isBig ? ptr_ : small_.ptr, index);
@@ -6678,7 +6681,7 @@ public:
         assert(!g.valid);
         ---
     +/
-    void opIndexAssign(dchar ch, size_t index)  pure nothrow
+    void opIndexAssign(dchar ch, size_t index) pure nothrow @nogc
     {
         assert(index < length);
         write24(isBig ? ptr_ : small_.ptr, ch, index);
@@ -6690,19 +6693,19 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    @system auto opSlice(size_t a, size_t b) pure nothrow
+    @system auto opSlice(size_t a, size_t b) pure nothrow @nogc
     {
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    @system auto opSlice() pure nothrow
+    @system auto opSlice() pure nothrow @nogc
     {
         return sliceOverIndexed(0, length, &this);
     }
 
     /// Grapheme cluster length in $(CODEPOINTS).
-    @property size_t length() const  pure nothrow
+    @property size_t length() const pure nothrow @nogc
     {
         return isBig ? len_ : slen_ & 0x7F;
     }
@@ -6845,13 +6848,13 @@ private:
         setBig();
     }
 
-    void setBig(){ slen_ |= small_flag; }
+    void setBig() pure nothrow @nogc { slen_ |= small_flag; }
 
-    @property size_t smallLength() pure nothrow
+    @property size_t smallLength() const pure nothrow @nogc
     {
         return slen_ & small_mask;
     }
-    @property ubyte isBig() const  pure nothrow
+    @property ubyte isBig() const pure nothrow @nogc
     {
         return slen_ & small_flag;
     }
@@ -7322,7 +7325,7 @@ enum {
     assert(compose('\u0308', 'A') == dchar.init);
     ---
 +/
-public dchar compose(dchar first, dchar second)
+public dchar compose(dchar first, dchar second) pure nothrow
 {
     import std.internal.unicode_comp;
     size_t packed = compositionJumpTrie[first];
@@ -7412,14 +7415,14 @@ enum jamoNCount = jamoVCount * jamoTCount;
 enum jamoSCount = jamoLCount * jamoNCount;
 
 // Tests if $(D ch) is a Hangul leading consonant jamo.
-bool isJamoL(dchar ch)
+bool isJamoL(dchar ch) pure nothrow @nogc
 {
     // first cmp rejects ~ 1M code points above leading jamo range
     return ch < jamoLBase+jamoLCount && ch >= jamoLBase;
 }
 
 // Tests if $(D ch) is a Hangul vowel jamo.
-bool isJamoT(dchar ch)
+bool isJamoT(dchar ch) pure nothrow @nogc
 {
     // first cmp rejects ~ 1M code points above trailing jamo range
     // Note: ch == jamoTBase doesn't indicate trailing jamo (TIndex must be > 0)
@@ -7427,20 +7430,20 @@ bool isJamoT(dchar ch)
 }
 
 // Tests if $(D ch) is a Hangul trailnig consonant jamo.
-bool isJamoV(dchar ch)
+bool isJamoV(dchar ch) pure nothrow @nogc
 {
     // first cmp rejects ~ 1M code points above vowel range
     return  ch < jamoVBase+jamoVCount && ch >= jamoVBase;
 }
 
-int hangulSyllableIndex(dchar ch)
+int hangulSyllableIndex(dchar ch) pure nothrow @nogc
 {
     int idxS = cast(int)ch - jamoSBase;
     return idxS >= 0 && idxS < jamoSCount ? idxS : -1;
 }
 
 // internal helper: compose hangul syllables leaving dchar.init in holes
-void hangulRecompose(dchar[] seq)
+void hangulRecompose(dchar[] seq) pure nothrow @nogc
 {
     for(size_t idx = 0; idx + 1 < seq.length; )
     {
@@ -7517,7 +7520,7 @@ Grapheme decomposeHangul(dchar ch)
     assert(composeJamo('A', '\u1171') == dchar.init);
     ---
 +/
-dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init)
+dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc
 {
     if(!isJamoL(lead))
         return dchar.init;
@@ -7707,7 +7710,7 @@ unittest
 }
 
 // canonically recompose given slice of code points, works in-place and mutates data
-private size_t recompose(size_t start, dchar[] input, ubyte[] ccc)
+private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 {
     assert(input.length == ccc.length);
     int accumCC = -1;// so that it's out of 0..255 range
@@ -7883,7 +7886,7 @@ else
 {
 
 // trusted -> avoid bounds check
-@trusted pure nothrow
+@trusted pure nothrow @nogc
 {
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
@@ -7915,7 +7918,7 @@ public bool isWhite(dchar c)
 /++
     Return whether $(D c) is a Unicode lowercase $(CHARACTER).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isLower(dchar c)
 {
     if(std.ascii.isASCII(c))
@@ -7946,7 +7949,7 @@ bool isLower(dchar c)
 /++
     Return whether $(D c) is a Unicode uppercase $(CHARACTER).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isUpper(dchar c)
 {
     if(std.ascii.isASCII(c))
@@ -7980,7 +7983,7 @@ bool isUpper(dchar c)
     Warning: certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toLower which takes full string instead.
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 dchar toLower(dchar c)
 {
      // optimize ASCII case
@@ -8002,7 +8005,7 @@ dchar toLower(dchar c)
 
 //TODO: Hidden for now, needs better API.
 //Other transforms could use better API as well, but this one is a new primitive.
-@safe pure nothrow
+@safe pure nothrow @nogc
 private dchar toTitlecase(dchar c)
 {
     // optimize ASCII case
@@ -8072,7 +8075,7 @@ unittest //12428
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
-private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure
+private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
 {
     if (c <= 0x7F)
     {
@@ -8138,7 +8141,7 @@ private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
     return idx;
 }
 
-private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure
+private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
 {
     buf[idx] = c;
     idx++;
@@ -8469,7 +8472,7 @@ unittest
     Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 dchar toUpper(dchar c)
 {
     // optimize ASCII case
@@ -8615,7 +8618,7 @@ unittest
     Returns whether $(D c) is a Unicode alphabetic $(CHARACTER)
     (general Unicode category: Alphabetic).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isAlpha(dchar c)
 {
     // optimization
@@ -8650,7 +8653,7 @@ bool isAlpha(dchar c)
     Returns whether $(D c) is a Unicode mark
     (general Unicode category: Mn, Me, Mc).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isMark(dchar c)
 {
     return markTrie[c];
@@ -8669,7 +8672,7 @@ bool isMark(dchar c)
     Returns whether $(D c) is a Unicode numerical $(CHARACTER)
     (general Unicode category: Nd, Nl, No).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isNumber(dchar c)
 {
     return numberTrie[c];
@@ -8689,7 +8692,7 @@ bool isNumber(dchar c)
     Returns whether $(D c) is a Unicode punctuation $(CHARACTER)
     (general Unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isPunctuation(dchar c)
 {
     return punctuationTrie[c];
@@ -8712,7 +8715,7 @@ unittest
     Returns whether $(D c) is a Unicode symbol $(CHARACTER)
     (general Unicode category: Sm, Sc, Sk, So).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSymbol(dchar c)
 {
    return symbolTrie[c];
@@ -8735,7 +8738,7 @@ unittest
     Note: This doesn't include '\n', '\r', \t' and other non-space $(CHARACTER).
     For commonly used less strict semantics see $(LREF isWhite).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSpace(dchar c)
 {
     return isSpaceGen(c);
@@ -8757,7 +8760,7 @@ unittest
     (general Unicode category: L, M, N, P, S, Zs).
 
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isGraphical(dchar c)
 {
     return graphicalTrie[c];
@@ -8779,7 +8782,7 @@ unittest
     Returns whether $(D c) is a Unicode control $(CHARACTER)
     (general Unicode category: Cc).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isControl(dchar c)
 {
     return isControlGen(c);
@@ -8802,7 +8805,7 @@ unittest
     Returns whether $(D c) is a Unicode formatting $(CHARACTER)
     (general Unicode category: Cf).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isFormat(dchar c)
 {
     return isFormatGen(c);
@@ -8823,7 +8826,7 @@ unittest
     Returns whether $(D c) is a Unicode Private Use $(CODEPOINT)
     (general Unicode category: Co).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isPrivateUse(dchar c)
 {
     return (0x00_E000 <= c && c <= 0x00_F8FF)
@@ -8835,7 +8838,7 @@ bool isPrivateUse(dchar c)
     Returns whether $(D c) is a Unicode surrogate $(CODEPOINT)
     (general Unicode category: Cs).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSurrogate(dchar c)
 {
     return (0xD800 <= c && c <= 0xDFFF);
@@ -8844,7 +8847,7 @@ bool isSurrogate(dchar c)
 /++
     Returns whether $(D c) is a Unicode high surrogate (lead surrogate).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSurrogateHi(dchar c)
 {
     return (0xD800 <= c && c <= 0xDBFF);
@@ -8853,7 +8856,7 @@ bool isSurrogateHi(dchar c)
 /++
     Returns whether $(D c) is a Unicode low surrogate (trail surrogate).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSurrogateLo(dchar c)
 {
     return (0xDC00 <= c && c <= 0xDFFF);
@@ -8864,7 +8867,7 @@ bool isSurrogateLo(dchar c)
     a $(CODEPOINT) with no assigned abstract character.
     (general Unicode category: Cn)
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isNonCharacter(dchar c)
 {
     return nonCharacterTrie[c];
@@ -8891,7 +8894,7 @@ private:
     return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
 }
 
-@safe pure nothrow @property
+@safe pure nothrow @nogc @property
 {
     // It's important to use auto return here, so that the compiler
     // only runs semantic on the return type if the function gets
