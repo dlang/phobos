@@ -51,7 +51,6 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.encoding;
 
-import std.string;
 import std.traits;
 import std.range;
 
@@ -2125,6 +2124,8 @@ class UnrecognizedEncodingException : EncodingException
 /** Abstract base class of all encoding schemes */
 abstract class EncodingScheme
 {
+    import std.uni : toLower;
+    
     /**
      * Registers a subclass of EncodingScheme.
      *
@@ -2167,7 +2168,7 @@ abstract class EncodingScheme
      */
     static EncodingScheme create(string encodingName)
     {
-        auto p = std.string.toLower(encodingName) in supported;
+        auto p = toLower(encodingName) in supported;
         if (p is null)
             throw new EncodingException("Unrecognized Encoding: "~encodingName);
         string className = *p;
