@@ -12,10 +12,11 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-import core.memory, core.bitop;
-import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
-       std.range, std.string, std.traits, std.typecons, std.typetuple, std.utf;
-version(unittest) import core.exception, std.stdio;
+import std.range;
+import std.traits;
+import std.typetuple;
+import std.functional;
+import std.algorithm; // FIXME (see alias below)
 
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the
@@ -38,6 +39,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     alias E = ForeachType!Range;
     static if (hasLength!Range)
     {
+        import std.conv : emplaceRef;
         if(r.length == 0) return null;
 
         static auto trustedAllocateArray(size_t n) @trusted nothrow
@@ -74,6 +76,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
 @safe pure nothrow unittest
 {
+    import std.algorithm : equal;
     struct Foo
     {
         int a;
@@ -84,6 +87,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
 @system unittest
 {
+    import std.algorithm : equal;
     struct Foo
     {
         int a;
@@ -122,12 +126,15 @@ the input.
 */
 ElementType!String[] array(String)(String str) if (isNarrowString!String)
 {
-    return to!(typeof(return))(str);
+    import std.utf : toUTF32;
+    return cast(typeof(return)) str.toUTF32;
 }
 
 unittest
 {
-    static struct TestArray { int x; string toString() { return .to!string(x); } }
+    import std.conv : to;
+
+    static struct TestArray { int x; string toString() { return to!string(x); } }
 
     static struct OpAssign
     {
@@ -165,7 +172,7 @@ unittest
     {
         int x;
         this(int y) { x = y; }
-        override string toString() const { return .to!string(x); }
+        override string toString() const { return to!string(x); }
     }
     auto c = array([new C(1), new C(2)][]);
     //writeln(c);
@@ -226,6 +233,7 @@ unittest
 // Bugzilla 10220
 unittest
 {
+    import std.exception;
     import std.algorithm : equal;
     import std.range : repeat;
 
@@ -254,12 +262,15 @@ unittest
 /**
 Returns a newly allocated associative array out of elements of the input range,
 which must be a range of tuples (Key, Value).
+See also: $(XREF typecons, Tuple)
  */
 
 auto assocArray(Range)(Range r)
-    if (isInputRange!Range && isTuple!(ElementType!Range) &&
+    if (isInputRange!Range &&
         ElementType!Range.length == 2)
 {
+    import std.typecons : isTuple;
+    static assert(isTuple!(ElementType!Range), "assocArray: argument must be a range of tuples");
     alias KeyType = ElementType!Range.Types[0];
     alias ValueType = ElementType!Range.Types[1];
     ValueType[KeyType] aa;
@@ -271,6 +282,7 @@ auto assocArray(Range)(Range r)
 ///
 /*@safe*/ pure /*nothrow*/ unittest
 {
+    import std.typecons;
     auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"]));
     assert(is(typeof(a) == string[int]));
     assert(a == [0:"a", 1:"b", 2:"c"]);
@@ -283,6 +295,7 @@ auto assocArray(Range)(Range r)
 /// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
 unittest
 {
+    import std.typecons;
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
     static assert( __traits(compiles, [ tuple("foo", "bar") ].assocArray()));
@@ -290,6 +303,7 @@ unittest
 
 private template blockAttribute(T)
 {
+    import core.memory;
     static if (hasIndirections!(T) || is(T == void))
     {
         enum blockAttribute = 0;
@@ -301,7 +315,8 @@ private template blockAttribute(T)
 }
 version(unittest)
 {
-    static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
+    import core.memory : UGC = GC;
+    static assert(!(blockAttribute!void & UGC.BlkAttr.NO_SCAN));
 }
 
 // Returns the number of dimensions in an array T.
@@ -339,8 +354,8 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     alias toSize_t(E) = size_t;
 
     static assert(allSatisfy!(isSize_t, I),
-        format("Argument types in %s are not all convertible to size_t: %s",
-        I.stringof, Filter!(templateNot!(isSize_t), I).stringof));
+        "Argument types in "~I.stringof~" are not all convertible to size_t: "
+        ~Filter!(templateNot!(isSize_t), I).stringof);
 
     //Eagerlly transform non-size_t into size_t to avoid template bloat
     alias ST = staticMap!(toSize_t, I);
@@ -374,9 +389,8 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     alias toSize_t(E) = size_t;
 
     static assert(allSatisfy!(isSize_t, I),
-        format("Argument types in %s are not all convertible to size_t: %s",
-        I.stringof, Filter!(templateNot!(isSize_t), I).stringof));
-
+        "Argument types in "~I.stringof~" are not all convertible to size_t: "
+        ~Filter!(templateNot!(isSize_t), I).stringof);
     //Eagerlly transform non-size_t into size_t to avoid template bloat
     alias ST = staticMap!(toSize_t, I);
 
@@ -400,7 +414,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 {
     static assert(I.length <= nDimensions!T,
-        format("%s dimensions specified for a %s dimensional array.", I.length, nDimensions!T));
+        I.length.stringof~"dimensions specified for a "~nDimensions!T.stringof~" dimensional array.");
 
     alias E = ElementEncodingType!T;
 
@@ -437,6 +451,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         else
         {
             import core.stdc.string : memset;
+            import core.memory;
             auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E);
             static if (minimallyInitialized && hasIndirections!E)
                 memset(ptr, 0, size * E.sizeof);
@@ -608,7 +623,7 @@ if (isNarrowString!(C[]))
         }
         else
         {
-             import core.bitop;
+             import core.bitop : bsr;
              auto msbs = 7 - bsr(~c);
              if((msbs < 2) | (msbs > 6))
              {
@@ -761,6 +776,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 
 @property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
+    import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     size_t i = 0;
     return decode(a, i);
@@ -801,6 +817,7 @@ dchar).
 // Specialization for strings
 @property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
 {
+    import std.utf : decode;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     size_t i = a.length - std.utf.strideBack(a, a.length);
     return decode(a, i);
@@ -840,6 +857,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 {
     static void test(L, R)(L l, R r)
     {
+        import std.stdio;
         scope(failure) writeln("Types: L %s  R %s", L.stringof, R.stringof);
 
         assert(overlap(l, r) == [ 100, 12 ]);
@@ -908,6 +926,7 @@ T[] insert(T, Range)(T[] array, size_t pos, Range stuff)
 {
     static if(hasLength!Range && is(ElementEncodingType!Range : T))
     {
+        import std.algorithm : copy;
         auto retval = new Unqual!(T)[](array.length + stuff.length);
         retval[0 .. pos] = array[0 .. pos];
         copy(stuff, retval[pos .. pos + stuff.length]);
@@ -945,6 +964,11 @@ unittest
 
 unittest
 {
+    import core.exception;
+    import std.conv : to;
+    import std.exception;
+    import std.algorithm;
+
     auto a = [1, 2, 3, 4];
     assert(a.insert(0, [6, 7]) == [6, 7, 1, 2, 3, 4]);
     assert(a.insert(2, [6, 7]) == [1, 2, 6, 7, 3, 4]);
@@ -1025,6 +1049,8 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
         import core.stdc.string;
+        import std.conv : emplaceRef;
+
         auto trustedAllocateArray(size_t n) @trusted nothrow
         {
             return uninitializedArray!(T[])(n);
@@ -1034,7 +1060,6 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
             assert(src.length == dest.length);
             if (!__ctfe)
             {
-                import core.stdc.string : memcpy;
                 memcpy(dest.ptr, src.ptr, src.length * T.sizeof);
             }
             else
@@ -1093,6 +1118,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     static if(is(Unqual!T == T)
         && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
     {
+        import std.utf : codeLength;
         // mutable, can do in place
         //helper function: re-encode dchar to Ts and store at *ptr
         static T* putDChar(T* ptr, dchar ch)
@@ -1104,6 +1130,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
             }
             else
             {
+                import std.utf : encode;
                 T[dchar.sizeof/T.sizeof] buf;
                 size_t len = encode(buf, ch);
                 final switch(len)
@@ -1147,7 +1174,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
                     ptr = putDChar(ptr, ch);
             }
         }
-        assert(ptr == array.ptr + pos + to_insert, text(ptr - array.ptr, " vs ", pos + to_insert ));
+        assert(ptr == array.ptr + pos + to_insert, "(ptr == array.ptr + pos + to_insert) is false");
     }
     else
     {
@@ -1202,6 +1229,12 @@ private template isInputRangeOrConvertible(E)
 
 unittest
 {
+    import core.exception;
+    import std.conv : to;
+    import std.exception;
+    import std.algorithm;
+
+
     bool test(T, U, V)(T orig, size_t pos, U toInsert, V result,
                string file = __FILE__, size_t line = __LINE__)
     {
@@ -1290,6 +1323,7 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
     // insertInPlace interop with postblit
     struct Int
     {
@@ -1322,6 +1356,7 @@ unittest
 
 @safe unittest
 {
+    import std.exception;
     assertCTFEable!(
     {
         int[] a = [1, 2];
@@ -1333,6 +1368,7 @@ unittest
 
 unittest // bugzilla 6874
 {
+    import core.memory;
     // allocate some space
     byte[] a;
     a.length = 1;
@@ -1436,6 +1472,8 @@ if (isInputRange!S && !isDynamicArray!S)
 
 unittest
 {
+    import std.conv : to;
+
     debug(std_array) printf("array.replicate.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
@@ -1493,6 +1531,10 @@ if (isSomeString!S)
 
 unittest
 {
+    import std.conv : to;
+    import std.string;
+    import std.typecons;
+
     static auto makeEntry(S)(string l, string[] r)
     {return tuple(l.to!S(), r.to!(S[])());}
 
@@ -1521,6 +1563,7 @@ unittest
 
 unittest //safety, purity, ctfe ...
 {
+    import std.exception;
     void dg() @safe pure {
         assert(split("hello world"c) == ["hello"c, "world"c]);
         assert(split("hello world"w) == ["hello"w, "world"w]);
@@ -1543,37 +1586,29 @@ See also: $(XREF algorithm, splitter) for the lazy version of this operator.
 auto split(R, E)(R r, E delim)
 if (isForwardRange!R && is(typeof(ElementType!R.init == E.init)))
 {
-    auto spl = std.algorithm.splitter(r, delim);
-    alias S = typeof(spl.front.init); // "Slice_t"
-    auto app = appender!(S[])();
-    foreach (e; spl)
-        app.put(e);
-    return app.data;
+    import std.algorithm : splitter;
+    return r.splitter(delim).array;
 }
+///ditto
 auto split(R1, R2)(R1 r, R2 delim)
 if (isForwardRange!R1 && isForwardRange!R2 && is(typeof(ElementType!R1.init == ElementType!R2.init)))
 {
-    auto spl = std.algorithm.splitter(r, delim);
-    alias S = typeof(spl.front.init); // "Slice_t"
-    auto app = appender!(S[])();
-    foreach (e; spl)
-        app.put(e);
-    return app.data;
+    import std.algorithm : splitter;
+    return r.splitter(delim).array;
 }
 ///ditto
 auto split(alias isTerminator, R)(R r)
 if (isForwardRange!R && is(typeof(unaryFun!isTerminator(r.front))))
 {
-    auto spl = std.algorithm.splitter!isTerminator(r);
-    alias S = typeof(spl.front.init); // "Slice_t"
-    auto app = appender!(S[])();
-    foreach (e; spl)
-        app.put(e);
-    return app.data;
+    import std.algorithm : splitter;
+    return r.splitter!isTerminator.array;
 }
 
 unittest
 {
+    import std.conv;
+    import std.algorithm : cmp;
+
     debug(std_array) printf("array.split\n");
     foreach (S; TypeTuple!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
@@ -1644,7 +1679,10 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     // and makes sure it has the same string encoding for string types.
     static if (isSomeString!RetType &&
                !is(Unqual!(ElementEncodingType!RetType) == Unqual!(ElementEncodingType!R)))
+    {
+        import std.conv : to;
         auto sepArr = to!RetType(sep);
+    }
     else static if (!isArray!R)
         auto sepArr = array(sep);
     else
@@ -1697,6 +1735,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
         static if ((is(E == wchar) || is(E == dchar))
                 && !is(RetTypeElement == dchar))
         {
+            import std.utf : encode;
             RetTypeElement[4] encodeSpace;
             immutable sepArrLength = encode(encodeSpace, sep);
         }
@@ -1736,6 +1775,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     auto result = appender!RetType();
     static if(isForwardRange!RoR && (hasLength!R || isNarrowString!R))
     {
+        import std.algorithm : reduce;
         // Reserve appender length if it can be computed.
         immutable resultLen = reduce!("a + b.length")(cast(size_t) 0, ror.save);
         result.reserve(resultLen);
@@ -1762,6 +1802,8 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 
 @safe pure unittest
 {
+    import std.conv : to;
+
     assert(join(["hello", "silly", "world"], ' ') == "hello silly world");
 
     foreach (T; TypeTuple!(string,wstring,dstring))
@@ -1781,6 +1823,9 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 
 unittest
 {
+    import std.conv : to;
+    import std.algorithm;
+
     debug(std_array) printf("array.join.unittest\n");
 
     foreach(R; TypeTuple!(string, wstring, dstring))
@@ -1885,6 +1930,7 @@ unittest
 // Issue 10683
 unittest
 {
+    import std.range : join;
     import std.typecons : tuple;
     assert([[tuple(1)]].join == [tuple(1)]);
     assert([[tuple("x")]].join == [tuple("x")]);
@@ -1951,6 +1997,9 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
 unittest
 {
+    import std.conv : to;
+    import std.algorithm : cmp;
+
     debug(std_array) printf("array.replace.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
@@ -1981,6 +2030,9 @@ unittest
 
 unittest
 {
+    import std.conv : to;
+    import std.algorithm : skipOver;
+
     struct CheckOutput(C)
     {
         C[] desired;
@@ -2010,6 +2062,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 {
     static if(hasLength!Range && is(ElementEncodingType!Range : T))
     {
+        import std.algorithm : copy;
         assert(from <= to);
         immutable sliceLen = to - from;
         auto retval = new Unqual!(T)[](subject.length - sliceLen + stuff.length);
@@ -2042,6 +2095,12 @@ unittest
 
 unittest
 {
+    import core.exception;
+    import std.conv : to;
+    import std.exception;
+    import std.algorithm;
+
+
     auto a = [ 1, 2, 3, 4 ];
     assert(replace(a, 0, 0, [5, 6, 7]) == [5, 6, 7, 1, 2, 3, 4]);
     assert(replace(a, 0, 2, cast(int[])[]) == [3, 4]);
@@ -2118,6 +2177,9 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
        !is(T == const T) &&
        !is(T == immutable T))
 {
+    import std.algorithm : remove;
+    import std.typecons : tuple;
+
     if (overlap(array, stuff).length)
     {
         // use slower/conservative method
@@ -2175,6 +2237,12 @@ unittest
 
 unittest
 {
+    import core.exception;
+    import std.conv : to;
+    import std.exception;
+    import std.algorithm;
+
+
     bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
                string file = __FILE__, size_t line = __LINE__)
     {
@@ -2262,6 +2330,9 @@ if (isDynamicArray!(E[]) &&
 
 unittest
 {
+    import std.conv : to;
+    import std.algorithm : cmp;
+
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
     foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
@@ -2318,6 +2389,7 @@ body
 
 unittest
 {
+    import std.algorithm : cmp;
     debug(std_array) printf("array.replaceSlice.unittest\n");
 
     string s = "hello";
@@ -2337,6 +2409,8 @@ efficient.
 struct Appender(A)
 if (isDynamicArray!A)
 {
+    import core.memory;
+
     private alias T = ElementEncodingType!A;
     private struct Data
     {
@@ -2523,12 +2597,15 @@ if (isDynamicArray!A)
              * - std.utf.encode
              */
             // must do some transcoding around here
+            import std.utf : encode;
             Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
-            auto len = std.utf.encode(encoded, item);
+            auto len = encode(encoded, item);
             put(encoded[0 .. len]);
         }
         else
         {
+            import std.conv : emplaceRef;
+    
             ensureAddable(1);
             immutable len = _data.arr.length;
 
@@ -2594,6 +2671,7 @@ if (isDynamicArray!A)
             }
             else
             {
+                import std.conv : emplaceRef;
                 foreach (ref it ; bigData[len .. newlen])
                 {
                     emplaceRef!T(it, items.front);
@@ -2662,6 +2740,7 @@ if (isDynamicArray!A)
          */
         void shrinkTo(size_t newlength) @safe pure
         {
+            import std.exception : enforce;
             if (_data)
             {
                 enforce(newlength <= _data.arr.length);
@@ -2716,6 +2795,7 @@ unittest
 //ret sugLen: A suggested growth.
 private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
 {
+    import core.bitop : bsr;
     import std.algorithm : max;
     if(curLen == 0)
         return max(reqLen,8);
@@ -2831,6 +2911,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 @safe pure nothrow unittest
 {
+    import std.exception;
     {
         auto app = appender!(char[])();
         string b = "abcdefg";
@@ -2983,6 +3064,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 unittest
 {
+    import std.typecons;
+    import std.algorithm;
     //10690
     [tuple(1)].filter!(t => true).array; // No error
     [tuple("A")].filter!(t => true).array; // error
@@ -3062,6 +3145,7 @@ unittest
 
 unittest
 {
+    import std.algorithm : map;
     //10753
     struct Foo {
        immutable dchar d;
@@ -3109,6 +3193,7 @@ unittest
 
 unittest //Test large allocations (for GC.extend)
 {
+    import std.algorithm : equal;
     Appender!(char[]) app;
     app.reserve(1); //cover reserve on non-initialized
     foreach(_; 0 .. 100_000)
@@ -3193,6 +3278,7 @@ RefAppender!(E[]) appender(A : E[]*, E)(A array)
 
 unittest
 {
+    import std.exception;
     {
         auto arr = new char[0];
         auto app = appender(&arr);
@@ -3274,11 +3360,13 @@ use yet.
  */
 struct SimpleSlice(T)
 {
+    import core.memory;
+
     private T * _b, _e;
 
     this(U...)(U values)
     {
-        _b = cast(T*) core.memory.GC.malloc(U.length * T.sizeof);
+        _b = cast(T*) GC.malloc(U.length * T.sizeof);
         _e = _b + U.length;
         foreach (i, Unused; U) _b[i] = values[i];
     }
@@ -3295,6 +3383,7 @@ struct SimpleSlice(T)
         }
         else
         {
+            import std.exception : enforce;
             // assign another slice to this
             enforce(anotherSlice.length == length);
             auto p = _b;
@@ -3376,6 +3465,7 @@ struct SimpleSlice(T)
 /// Ditto
     SimpleSliceLvalue!T opSlice(size_t x, size_t y)
     {
+        import std.exception : enforce;
         enforce(x <= y && y <= length);
         typeof(return) result = { _b + x, _b + y };
         return result;
@@ -3396,7 +3486,7 @@ struct SimpleSlice(T)
         void length(size_t newLength)
         {
             immutable oldLength = length;
-            _b = cast(T*) core.memory.GC.realloc(_b, newLength * T.sizeof);
+            _b = cast(T*) GC.realloc(_b, newLength * T.sizeof);
             _e = _b + newLength;
             this[oldLength .. $] = T.init;
         }
@@ -3408,7 +3498,7 @@ struct SimpleSlice(T)
         immutable newLen = length + another.length;
         typeof(return) result = void;
         result._b = cast(T*)
-            core.memory.GC.malloc(newLen * T.sizeof);
+            GC.malloc(newLen * T.sizeof);
         result._e = result._b + newLen;
         result[0 .. this.length] = this;
         result[this.length .. result.length] = another;
@@ -3441,6 +3531,7 @@ struct SimpleSliceLvalue(T)
         }
         else
         {
+            import std.exception : enforce;
             // assign another slice to this
             enforce(anotherSlice.length == length);
             auto p = _b;

@@ -7715,7 +7715,7 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
                     }
                     return 0;
                 }()
-                : () @trusted { return core.stdc.string.memcmp(r1.ptr, r2.ptr, len); }();
+                : () @trusted { return memcmp(r1.ptr, r2.ptr, len); }();
             if (result) return result;
         }
         else
