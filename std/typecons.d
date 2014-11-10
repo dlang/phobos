@@ -2423,7 +2423,7 @@ string generateLogger(C, alias fun)() @property
     string stmt;
 
     stmt ~= q{ struct Importer { import std.stdio; } };
-    stmt ~= `Importer.writeln$(LPAREN)"Log: ` ~ qname ~ `(", args, ")"$(RPAREN);`;
+    stmt ~= `Importer.writeln("Log: ` ~ qname ~ `(", args, ")");`;
     static if (!__traits(isAbstractFunction, fun))
     {
         static if (is(ReturnType!fun == void))
@@ -2485,7 +2485,7 @@ class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
 
 /*
  * Code-generating stuffs are encupsulated in this helper template so that
- * namespace pollusion, which can cause name confliction with Base's public
+ * namespace pollution, which can cause name confliction with Base's public
  * members, should be minimized.
  */
 private template AutoImplement_Helper(string myName, string baseName,
@@ -2496,30 +2496,15 @@ private static:
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-    // this would be deprecated by std.typelist.Filter
-    template staticFilter(alias pred, lst...)
-    {
-        static if (lst.length > 0)
-        {
-            alias tail = staticFilter!(pred, lst[1 .. $]);
-            //
-            static if (pred!(lst[0]))
-                alias staticFilter = TypeTuple!(lst[0], tail);
-            else
-                alias staticFilter = tail;
-        }
-        else
-            alias staticFilter = TypeTuple!();
-    }
-
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
         template Impl(names...)
         {
+            import std.typetuple : Filter;
             static if (names.length > 0)
             {
-                alias methods = staticFilter!(pred, MemberFunctionsTuple!(C, names[0]));
+                alias methods = Filter!(pred, MemberFunctionsTuple!(C, names[0]));
                 alias next = Impl!(names[1 .. $]);
 
                 static if (methods.length > 0)
