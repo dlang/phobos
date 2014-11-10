@@ -138,17 +138,19 @@ unittest
     $(D index) defaults to $(D 0) if none is passed.
 
     Returns:
-        The number of bytes in the UTF-8 sequence.
+        The number of bytes in the UTF-8 sequence, a value between 1 and 4.
 
     Throws:
-        May throw a $(D UTFException) if $(D str[index]) is not the start of a
-        valid UTF-8 sequence.
+        Throws a $(D UTFException) if $(D str[index]) indicates an invalid
+        sequence length greater than 4.
+        Throws a $(D UTFException) if $(D str[index]) is a continuation byte.
 
     Notes:
         $(D stride) will only analyze the first $(D str[index]) element. It
         will not fully verify the validity of UTF-8 sequence, nor even verify
         the presence of the sequence: it will not actually guarantee that
-        $(D index + stride(str, index) <= str.length).
+        $(D index + stride(str, index) <= str.length). It will also not
+        guarantee that the first element is a valid UTF-8 code unit.
   +/
 uint stride(S)(auto ref S str, size_t index)
     if (is(S : const char[]) ||
@@ -186,7 +188,7 @@ body
 {
     import core.bitop : bsr;
     immutable msbs = 7 - bsr(~c);
-    if (msbs < 2 || msbs > 6)
+    if (msbs < 2 || msbs > 4)
         throw new UTFException("Invalid UTF-8 sequence", index);
     return msbs;
 }
@@ -256,6 +258,20 @@ unittest
         static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
     }
     });
+}
+
+unittest // invalid start bytes
+{
+    import std.exception: assertThrown;
+    immutable char[] invalidStartBytes = [
+        0b1111_1000, // indicating a sequence length of 5
+        0b1111_1100, // 6
+        0b1111_1110, // 7
+        0b1111_1111, // 8
+        0b1000_0000, // continuation byte
+    ];
+    foreach(c; invalidStartBytes)
+        assertThrown!UTFException(stride([c]));
 }
 
 
