@@ -1580,7 +1580,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import core.stdc.stdio : snprintf;
     import std.system : Endian;
-    import std.algorithm : find;
+    import std.algorithm : find, min;
     FormatSpec!Char fs = f; // fs is copy for change its values.
     FloatingPointTypeOf!T val = obj;
 
