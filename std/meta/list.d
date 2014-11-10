@@ -1,14 +1,16 @@
 // Written in the D programming language.
 
 /**
- * Templates with which to manipulate type tuples (also known as type lists).
+ * Templates with which to manipulate
+ * $(LINK2 ../template.html#TemplateArgumentList, $(I TemplateArgumentList))s.
+ * Such lists are known as type lists when they only contain types.
  *
- * Some operations on type tuples are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th type from the
- * type tuple. TL[$(I lwr) .. $(I upr)] returns a new type
- * list that is a slice of the old one.
+ * Some operations on template argument lists are built in to the language,
+ * such as $(D Args[$(I n)]) which gets the $(I n)th element from the
+ * _list. $(D Args[$(I lwr) .. $(I upr)]) returns a new
+ * _list that is a slice of the old one. This is analogous to array slicing syntax.
  *
- * Several templates in this module use or operate on eponymous templates that
+ * Several templates in this module use or operate on enum templates that
  * take a single argument and evaluate to a boolean constant. Such templates
  * are referred to as $(I template predicates).
  *
@@ -18,29 +20,26 @@
  *      Modern C++ Design),
  *   Andrei Alexandrescu (Addison-Wesley Professional, 2001)
  * Macros:
- *  WIKI = Phobos/StdTypeTuple
+ *  WIKI = Phobos/StdMeta
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_typetuple.d)
+ * Source:    $(PHOBOSSRC std/meta/_list.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module std.typetuple;
+module std.meta.list;
 
 /**
- * Creates a typetuple out of a sequence of zero or more types.
+ * Aliases the given compile-time list of template arguments.
  */
-template TypeTuple(TList...)
-{
-    alias TypeTuple = TList;
-}
+alias TypeTuple(Args...) = Args;
 
 ///
 unittest
@@ -52,9 +51,19 @@ unittest
     {
         return td[0] + cast(int)td[1];
     }
+    assert(foo(2, 3.5) == 5);
 }
 
 ///
+unittest
+{
+    alias numbers = TypeTuple!(1, 2, 3);
+    static int[3] arr = [numbers];
+    
+    assert(arr == [1, 2, 3]);
+}
+
+/// Lists do not nest:
 unittest
 {
     alias TL = TypeTuple!(int, double);
@@ -64,8 +73,8 @@ unittest
 }
 
 /**
- * Returns the index of the first occurrence of type T in the
- * sequence of zero or more types TList.
+ * Returns the index of the first occurrence of T in the
+ * sequence of zero or more elements TList.
  * If not found, -1 is returned.
  */
 template staticIndexOf(T, TList...)
@@ -82,7 +91,7 @@ template staticIndexOf(alias T, TList...)
 ///
 unittest
 {
-    import std.typetuple;
+    import std.meta.list;
     import std.stdio;
 
     void foo()
@@ -147,7 +156,7 @@ unittest
 alias IndexOf = staticIndexOf;
 
 /**
- * Returns a typetuple created from TList with the first occurrence,
+ * Returns a list created from TList with the first occurrence,
  * if any, of T removed.
  */
 template Erase(T, TList...)
@@ -205,7 +214,7 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all occurrences,
+ * Returns a list created from TList with all occurrences,
  * if any, of T removed.
  */
 template EraseAll(T, TList...)
@@ -265,8 +274,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all duplicate
- * types removed.
+ * Returns a list created from TList with all duplicate
+ * elements removed.
  */
 template NoDuplicates(TList...)
 {
@@ -296,8 +305,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the first occurrence
- * of type T, if found, replaced with type U.
+ * Returns a list created from TList with the first occurrence
+ * of T, if found, replaced with U.
  */
 template Replace(T, U, TList...)
 {
@@ -376,8 +385,8 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
- * of type T, if found, replaced with type U.
+ * Returns a list created from TList with each occurrence
+ * of T, if found, replaced with U.
  */
 template ReplaceAll(T, U, TList...)
 {
@@ -456,7 +465,7 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns a list created from TList with the order reversed.
  */
 template Reverse(TList...)
 {
@@ -509,7 +518,7 @@ unittest
 }
 
 /**
- * Returns the typetuple TList with the types sorted so that the most
+ * Returns the list TList with the types sorted so that the most
  * derived types come first.
  */
 template DerivedToFront(TList...)
@@ -652,8 +661,8 @@ unittest
 
 
 /**
- * Filters a $(D TypeTuple) using a template predicate. Returns a
- * $(D TypeTuple) of the elements which satisfy the predicate.
+ * Filters a list using a template predicate. Returns a
+ * list of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
 {
