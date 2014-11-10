@@ -650,13 +650,9 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 +/
 module std.uni;
 
-static import std.ascii;
-import std.traits, std.range, std.algorithm, std.conv,
-    std.typetuple, std.exception, core.stdc.stdlib;
-import std.array; //@@BUG UFCS doesn't work with 'local' imports
-import core.bitop;
+import core.stdc.stdlib;
+import std.traits, std.typetuple, std.range;
 
-import std.typecons;
 
 // debug = std_uni;
 
@@ -698,6 +694,7 @@ public enum dchar paraSep = '\u2029'; /// Constant $(CODEPOINT) (0x2029) - parag
 // test the intro example
 unittest
 {
+    import std.algorithm : find;
     // initialize code point sets using script/block or property name
     // set contains code points from both scripts.
     auto set = unicode("Cyrillic") | unicode("Armenian");
@@ -795,6 +792,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 
 @safe pure nothrow @nogc unittest // for replicate
 {
+    import std.algorithm : sum;
     size_t m = 0b111;
     size_t m2 = 0b01;
     foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
@@ -931,6 +929,7 @@ private:
 
 unittest
 {
+    import std.conv;
     enum dg = (){
         // sizes are:
         // lvl0: 3, lvl1 : 2, lvl2: 1
@@ -1003,6 +1002,8 @@ unittest
 
 unittest
 {// more bitpacking tests
+    import std.conv;
+
     alias Bitty =
       MultiArray!(BitPacked!(size_t, 3)
                 , BitPacked!(size_t, 4)
@@ -1504,8 +1505,12 @@ private import std.math : pow;
 
 string genUnrolledSwitchSearch(size_t size)
 {
+    import std.conv : to;
+    import core.bitop : bsr;
     assert(isPowerOf2(size));
-    string code = `auto power = bsr(m)+1;
+    string code = `
+    import core.bitop : bsr;
+    auto power = bsr(m)+1;
     switch(power){`;
     size_t i = bsr(size);
     foreach_reverse(val; 0..bsr(size))
@@ -1572,12 +1577,14 @@ size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
 //
 size_t floorPowerOf2(size_t arg) @safe pure nothrow @nogc
 {
+    import core.bitop : bsr;
     assert(arg > 1); // else bsr is undefined
     return 1<<bsr(arg-1);
 }
 
 size_t ceilPowerOf2(size_t arg) @safe pure nothrow @nogc
 {
+    import core.bitop : bsr;
     assert(arg > 1); // else bsr is undefined
     return 1<<bsr(arg-1)+1;
 }
@@ -1733,12 +1740,14 @@ unittest
 
     static T[] alloc(T)(size_t size)
     {
+        import std.exception : enforce;
         auto ptr = cast(T*)enforce(malloc(T.sizeof*size), "out of memory on C heap");
         return ptr[0..size];
     }
 
     static T[] realloc(T)(T[] arr, size_t size)
     {
+        import std.exception : enforce;
         if(!size)
         {
             destroy(arr);
@@ -1996,6 +2005,7 @@ public:
     private static fromIntervals()(uint[] intervals...) pure
     in
     {
+        import std.conv : text;
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
         for (uint i = 0; i < intervals.length; i += 2)
         {
@@ -2030,6 +2040,7 @@ public:
     this()(uint[] intervals...)
     in
     {
+        import std.conv : text;
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
         for (uint i = 0; i < intervals.length; i += 2)
         {
@@ -2350,6 +2361,7 @@ public:
 
     unittest
     {
+        import std.exception : assertThrown;
         import std.string : format;
         assertThrown!FormatException(format("%a", unicode.ASCII));
     }
@@ -2518,7 +2530,8 @@ public:
     */
     string toSourceCode(string funcName="")
     {
-        import std.string;
+        import std.string : format;
+        import std.algorithm : countUntil;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
         {
@@ -2716,6 +2729,7 @@ private:
     // to make sure invariants hold
     void sanitize()
     {
+        import std.algorithm : sort, SwapStrategy, max;
         if (data.length == 0)
             return;
         alias Ival = CodepointInterval;
@@ -3287,6 +3301,7 @@ private:
 
 @trusted unittest// Uint24 tests //@@@BUG@@ iota is system ?!
 {
+    import std.conv;
     void funcRef(T)(ref T u24)
     {
         u24.length = 2;
@@ -3374,6 +3389,7 @@ version(unittest)
 
 @trusted unittest// core set primitives test
 {
+    import std.conv;
     foreach(CodeList; AllSets)
     {
         CodeList a;
@@ -3491,6 +3507,7 @@ version(unittest)
 
 @trusted unittest
 {   // full set operations
+    import std.conv;
     foreach(CodeList; AllSets)
     {
         CodeList a, b, c, d;
@@ -3595,6 +3612,7 @@ version(unittest)
 @system:
 unittest// vs single dchar
 {
+    import std.conv;
     CodepointSet a = CodepointSet(10, 100, 120, 200);
     assert(a - 'A' == CodepointSet(10, 65, 66, 100, 120, 200), text(a - 'A'));
     assert((a & 'B') == CodepointSet(66, 67));
@@ -3602,6 +3620,7 @@ unittest// vs single dchar
 
 unittest// iteration & opIndex
 {
+    import std.conv;
     import std.typecons;
     foreach(CodeList; TypeTuple!(InversionList!(ReallocPolicy)))
     {
@@ -3643,6 +3662,7 @@ unittest// iteration & opIndex
 // debug helper to get a shortened array dump
 auto arrayRepr(T)(T x)
 {
+    import std.conv : text;
     if(x.length > 32)
     {
         return text(x[0..16],"~...~", x[x.length-16..x.length]);
@@ -3685,6 +3705,8 @@ template mapTrieIndex(Prefix...)
 @trusted struct TrieBuilder(Value, Key, Args...)
     if(isBitPackableType!Value && isValidArgsForTrie!(Key, Args))
 {
+    import std.exception : enforce;
+
 private:
     // last index is not stored in table, it is used as an offset to values in a block.
     static if(is(Value == bool))// always pack bool
@@ -3940,6 +3962,7 @@ public:
     */
     void putValue(Key key, Value v)
     {
+        import std.conv : text;
         auto idx = getIndex(key);
         enforce(idx >= curIndex, text(errMsg, " ", idx));
         putAt(idx, v);
@@ -4405,6 +4428,7 @@ public template buildTrie(Value, Key, Args...)
             && is(typeof(Range.init.front[0]) : Value)
             && is(typeof(Range.init.front[1]) : Key))
     {
+        import std.algorithm : multiSort;
         alias Comps = GetComparators!(Prefix.length);
         if(unsorted)
             multiSort!(Comps)(range);
@@ -5329,6 +5353,7 @@ package auto units(C)(C[] s)
 // cover decode fail cases of Matcher
 unittest
 {
+    import std.exception : collectException;
     import std.string : format;
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
@@ -5536,6 +5561,7 @@ template Sequence(size_t start, size_t end)
 //---- TRIE TESTS ----
 unittest
 {
+    import std.conv;
     static trieStats(TRIE)(TRIE t)
     {
         version(std_uni_stats)
@@ -5678,11 +5704,12 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 
 @trusted int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
 {
-    alias low = std.ascii.toLower;
+    import std.ascii : toLower;
+    import std.algorithm : cmp;
     return cmp(
-        a.map!(x => low(x))()
+        a.map!(x => toLower(x))()
         .filter!(x => !isWhite(x) && x != '-' && x != '_')(),
-        b.map!(x => low(x))()
+        b.map!(x => toLower(x))()
         .filter!(x => !isWhite(x) && x != '-' && x != '_')()
     );
 }
@@ -5717,6 +5744,7 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
 
 @safe uint decompressFrom(const(ubyte)[] arr, ref size_t idx) pure
 {
+    import std.exception : enforce;
     uint first = arr[idx++];
     if(!(first & 0x80)) // no top bit -> [0..127]
         return first;
@@ -5951,6 +5979,7 @@ else
 // CTFE-only helper for checking property names at compile-time
 @safe bool isPrettyPropertyName(C)(in C[] name)
 {
+    import std.algorithm : find;
     auto names = [
         "L", "Letter",
         "LC", "Cased Letter",
@@ -5979,6 +6008,7 @@ template SetSearcher(alias table, string kind)
     static auto opCall(C)(in C[] name)
         if(is(C : dchar))
     {
+        import std.conv : to;
         CodepointSet set;
         if(loadUnicodeSet!table(name, set))
             return set;
@@ -6154,6 +6184,7 @@ private:
 
     static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
     {
+        import std.conv : to;
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
             || (name.length > 2 && ucmp(name[0..2],"In") == 0
@@ -6170,6 +6201,7 @@ private:
 
 unittest
 {
+    import std.exception : collectException;
     auto ascii = unicode.ASCII;
     assert(ascii['A']);
     assert(ascii['~']);
@@ -6474,6 +6506,7 @@ auto byGrapheme(Range)(Range range)
 ///
 unittest
 {
+    import std.conv;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -6497,6 +6530,8 @@ private static struct InputRangeString
 
 unittest
 {
+    import std.conv;
+
     assert("".byGrapheme.walkLength == 0);
 
     auto reverse = "le\u0308on";
@@ -6597,6 +6632,8 @@ unittest
 
 unittest
 {
+    import std.conv;
+
     assert("".byGrapheme.byCodePoint.equal(""));
 
     string text = "noe\u0308l";
@@ -6643,6 +6680,8 @@ unittest
 +/
 @trusted struct Grapheme
 {
+    import std.exception : enforce;
+
 public:
     this(C)(in C[] chars...)
         if(is(C : dchar))
@@ -6908,6 +6947,8 @@ unittest
 
 unittest
 {
+    import std.conv;
+
     // not valid clusters (but it just a test)
     auto g  = Grapheme('a', 'b', 'c', 'd', 'e');
     assert(g[0] == 'a');
@@ -7031,6 +7072,7 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     @trusted pure /*TODO nothrow*/
 {
+    import std.algorithm : skipOver;
     alias fTable = fullCaseTable;
     size_t idx = fullCaseTrie[lhs];
     // fullCaseTrie is packed index table
@@ -7123,6 +7165,8 @@ int icmp(S1, S2)(S1 str1, S2 str2)
 
 unittest
 {
+    import std.conv;
+    import std.exception : assertCTFEable;
     assertCTFEable!(
     {
     foreach(cfunc; TypeTuple!(icmp, sicmp))
@@ -7240,6 +7284,8 @@ package auto simpleCaseFoldings(dchar ch)
 
 unittest
 {
+    import std.exception : assertCTFEable;
+    import std.algorithm : canFind;
     assertCTFEable!((){
         auto r = simpleCaseFoldings('Э').array;
         assert(r.length == 2);
@@ -7535,6 +7581,8 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
 
 unittest
 {
+    import std.conv;
+
     static void testDecomp(UnicodeDecomposition T)(dchar ch, string r)
     {
         Grapheme g = decompose!T(ch);
@@ -7606,6 +7654,8 @@ enum {
 +/
 inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 {
+    import std.algorithm : sort, SwapStrategy;
+
     auto anchors = splitNormalized!norm(input);
     if(anchors[0] == input.length && anchors[1] == input.length)
         return input;
@@ -7654,6 +7704,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             (zip(ccc[firstNonStable..$], decomposed[firstNonStable..$]));
         static if(norm == NFC || norm == NFKC)
         {
+            import std.algorithm : countUntil;
             size_t idx = 0;
             auto first = countUntil(ccc, 0);
             if(first >= 0) // no starters?? no recomposition
@@ -7673,6 +7724,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             app.put(decomposed);
         else
         {
+            import std.algorithm : remove;
             auto clean = remove!("a == dchar.init", SwapStrategy.stable)(decomposed);
             app.put(decomposed[0 .. clean.length]);
         }
@@ -7691,6 +7743,8 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 
 unittest
 {
+    import std.conv;
+
     assert(normalize!NFD("abc\uF904def") == "abc\u6ED1def", text(normalize!NFD("abc\uF904def")));
     assert(normalize!NFKD("2¹⁰") == "210", normalize!NFKD("2¹⁰"));
     assert(normalize!NFD("Äffin") == "A\u0308ffin");
@@ -7875,7 +7929,8 @@ version(std_uni_bootstrap)
     // up to date optimal versions of all of isXXX functions
     @safe pure nothrow @nogc public bool isWhite(dchar c)
     {
-        return std.ascii.isWhite(c) ||
+        import std.ascii : isWhite;
+        return isWhite(c) ||
                c == lineSep || c == paraSep ||
                c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
                (c >= '\u2000' && c <= '\u200A') ||
@@ -7921,28 +7976,30 @@ public bool isWhite(dchar c)
 @safe pure nothrow @nogc
 bool isLower(dchar c)
 {
-    if(std.ascii.isASCII(c))
-        return std.ascii.isLower(c);
+    import std.ascii : isLower, isASCII;
+    if(isASCII(c))
+        return isLower(c);
     return lowerCaseTrie[c];
 }
 
 @safe unittest
 {
+    import std.ascii : isLower;
     foreach(v; 0..0x80)
-        assert(std.ascii.isLower(v) == isLower(v));
-    assert(isLower('я'));
-    assert(isLower('й'));
-    assert(!isLower('Ж'));
+        assert(isLower(v) == .isLower(v));
+    assert(.isLower('я'));
+    assert(.isLower('й'));
+    assert(!.isLower('Ж'));
     // Greek HETA
-    assert(!isLower('\u0370'));
-    assert(isLower('\u0371'));
-    assert(!isLower('\u039C')); // capital MU
-    assert(isLower('\u03B2')); // beta
+    assert(!.isLower('\u0370'));
+    assert(.isLower('\u0371'));
+    assert(!.isLower('\u039C')); // capital MU
+    assert(.isLower('\u03B2')); // beta
     // from extended Greek
-    assert(!isLower('\u1F18'));
-    assert(isLower('\u1F00'));
+    assert(!.isLower('\u1F18'));
+    assert(.isLower('\u1F00'));
     foreach(v; unicode.lowerCase.byCodepoint)
-        assert(isLower(v) && !isUpper(v));
+        assert(.isLower(v) && !isUpper(v));
 }
 
 
@@ -7952,15 +8009,17 @@ bool isLower(dchar c)
 @safe pure nothrow @nogc
 bool isUpper(dchar c)
 {
-    if(std.ascii.isASCII(c))
-        return std.ascii.isUpper(c);
+    import std.ascii : isUpper, isASCII;
+    if(isASCII(c))
+        return isUpper(c);
     return upperCaseTrie[c];
 }
 
 @safe unittest
 {
+    import std.ascii : isLower;
     foreach(v; 0..0x80)
-        assert(std.ascii.isLower(v) == isLower(v));
+        assert(isLower(v) == .isLower(v));
     assert(!isUpper('й'));
     assert(isUpper('Ж'));
     // Greek HETA
@@ -7972,7 +8031,7 @@ bool isUpper(dchar c)
     assert(!isUpper('\u1F00'));
     assert(isUpper('\u1F18'));
     foreach(v; unicode.upperCase.byCodepoint)
-        assert(isUpper(v) && !isLower(v));
+        assert(isUpper(v) && !.isLower(v));
 }
 
 
@@ -8416,6 +8475,7 @@ unittest
 
 unittest
 {
+    import std.algorithm : cmp;
     string s1 = "FoL";
     string s2 = toLower(s1);
     assert(cmp(s2, "fol") == 0, s2);
@@ -8531,6 +8591,8 @@ S toUpper(S)(S s) @trusted pure
 
 unittest
 {
+    import std.algorithm : cmp;
+
     string s1 = "FoL";
     string s2;
     char[] s3;
