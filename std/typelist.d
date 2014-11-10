@@ -54,7 +54,7 @@ version(unittest) {
  * $(D TypeList)s are passed to other templates as alias parameters
  * To create an empty list use $(D TypeList!())
  *
- * $(D TypeList) efines several "methods":
+ * $(D TypeList) defines several "methods":
  *
  * $(D_PARAM toTuple), $(D_PARAM head), $(D_PARAM tail), $(D_PARAM length), $(D_PARAM isEmpty)
  *
