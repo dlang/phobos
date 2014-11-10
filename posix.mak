@@ -88,7 +88,7 @@ WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(EXTRA_DOCUMENTABLES))
-STDDOC = $(DOCSRC)/std.ddoc
+STDDOC = $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 # Set DDOC, the documentation generator
 DDOC=$(DMD) -m$(MODEL) -w -c -o- -version=StdDdoc \
