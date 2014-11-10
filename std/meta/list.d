@@ -1,9 +1,6 @@
 // Written in the D programming language.
 
 /**
- * $(RED Deprecated. This module will be delisted in March 2017.
- * Please use $(LINK2 std_meta_list.html, std.meta.list) instead).
- * 
  * Templates with which to manipulate type tuples (also known as type lists).
  *
  * Some operations on type tuples are built in to the language,
@@ -35,7 +32,6 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-deprecated("Please use std.meta.list instead.")
 module std.typetuple;
 
 /**
