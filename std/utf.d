@@ -2789,7 +2789,7 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
         void popFront()                      { r = r[1 .. $]; }
         auto ref opIndex(size_t index) inout { return r[index]; }
 
-        @property auto ref back() const
+        @property auto ref back() inout
         {
             return r[$ - 1];
         }
@@ -2818,6 +2818,8 @@ auto byCodeUnit(R)(R r) if (isNarrowString!R)
       private:
         R r;
     }
+
+    static assert(isRandomAccessRange!ByCodeUnitImpl);
 
     return ByCodeUnitImpl(r);
 }
