@@ -63,7 +63,6 @@ public import std.digest.digest;
 version(unittest)
     import std.exception;
 
-import std.bitmanip;
 
 ///
 unittest
@@ -219,6 +218,7 @@ struct CRC32
          */
         ubyte[4] peek() const @safe pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
             //Complement, LSB first / Little Endian, see http://rosettacode.org/wiki/CRC-32
             return nativeToLittleEndian(~_state);
         }

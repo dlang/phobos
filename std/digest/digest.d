@@ -64,9 +64,10 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  */
 module std.digest.digest;
 
-import std.range, std.traits;
+import std.traits;
 import std.typetuple : allSatisfy;
 public import std.ascii : LetterCase;
+
 
 ///
 unittest
@@ -280,6 +281,7 @@ unittest
  */
 template isDigest(T)
 {
+    import std.range : isOutputRange;
     enum bool isDigest = isOutputRange!(T, const(ubyte)[]) && isOutputRange!(T, ubyte) &&
         is(T == struct) &&
         is(typeof(
@@ -387,6 +389,7 @@ unittest
 private template isDigestibleRange(Range)
 {
     import std.digest.md;
+    import std.range : isInputRange, ElementType;
     enum bool isDigestibleRange = isInputRange!Range && is(typeof(
           {
           MD5 ha; //Could use any conformant hash
@@ -416,6 +419,7 @@ DigestType!Hash digest(Hash, Range)(auto ref Range range) if(!isArray!Range
 unittest
 {
     import std.digest.md;
+    import std.range : repeat;
     auto testRange = repeat!ubyte(cast(ubyte)'a', 100);
     auto md5 = digest!MD5(testRange);
 }
@@ -472,6 +476,7 @@ char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Rang
 unittest
 {
     import std.digest.md;
+    import std.range : repeat;
     auto testRange = repeat!ubyte(cast(ubyte)'a', 100);
     assert(hexDigest!MD5(testRange) == "36A92CC94A9E0FA21F625F8BFB007ADF");
 }
@@ -627,6 +632,7 @@ unittest
 
 unittest
 {
+    import std.range : isOutputRange;
     assert(!isDigest!(Digest));
     assert(isOutputRange!(Digest, ubyte));
 }
@@ -736,6 +742,7 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
     }
     else
     {
+        import std.range : retro;
         foreach(u; retro(digest))
         {
             result[i++] = hexDigits[u >> 4];

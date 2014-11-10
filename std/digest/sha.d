@@ -119,9 +119,7 @@ else version(D_InlineAsm_X86_64)
     private version = USE_SSSE3;
 }
 
-import std.ascii : hexDigits;
-import std.exception : assumeUnique;
-import core.bitop : bswap;
+version(LittleEndian) import core.bitop : bswap;
 version(USE_SSSE3) import core.cpuid : hasSSSE3Support = ssse3;
 version(USE_SSSE3) import std.internal.digest.sha_SSSE3 : transformSSSE3;
 
@@ -160,8 +158,8 @@ private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
 {
     version(LittleEndian)
     {
-        static import std.bitmanip;
-        return std.bitmanip.bigEndianToNative!ulong(val);
+        import std.bitmanip : bigEndianToNative;
+        return bigEndianToNative!ulong(val);
     }
     else
         return *cast(ulong*) &val;

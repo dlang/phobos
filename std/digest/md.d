@@ -46,8 +46,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  */
 module std.digest.md;
 
-import std.bitmanip, std.exception, std.string;
-
 public import std.digest.digest;
 
 ///
@@ -362,6 +360,8 @@ struct MD5
           */
         ubyte[16] finish() @trusted pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
+
             ubyte[16] data = void;
             ubyte[8] bits = void;
             uint index, padLen;

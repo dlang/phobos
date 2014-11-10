@@ -47,8 +47,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
 
 module std.digest.ripemd;
 
-import std.bitmanip, std.exception, std.string;
-
 public import std.digest.digest;
 
 ///
@@ -528,6 +526,8 @@ struct RIPEMD160
          */
         ubyte[20] finish() @trusted pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
+
             ubyte[20] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
