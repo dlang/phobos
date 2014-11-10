@@ -27,9 +27,7 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import core.bitop;
-import std.format;
 import std.range;
-import std.string;
 import std.system;
 import std.traits;
 
@@ -541,6 +539,8 @@ unittest
 
 struct BitArray
 {
+    import std.format : FormatSpec;
+
     size_t len;
     size_t* ptr;
     enum bitsPerSizeT = size_t.sizeof * 8;
@@ -1571,6 +1571,8 @@ public:
     ///
     unittest
     {
+        import std.string : format;
+
         debug(bitarray) printf("BitArray.toString unittest\n");
         BitArray b;
         b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
@@ -1677,6 +1679,8 @@ public:
 
 unittest
 {
+    import std.string : format;
+
     BitArray b;
 
     b.init([]);
@@ -3410,7 +3414,7 @@ unittest
 
 unittest
 {
-    import std.string;
+    import std.string : format;
 
     foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
     {
