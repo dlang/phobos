@@ -816,7 +816,6 @@ slice, returns that slice. Otherwise, returns the null slice.
 */
 inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 {
-    import std.algorithm : min, max;
     alias U = inout(T);
     static U* max(U* a, U* b) nothrow { return a > b ? a : b; }
     static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
@@ -2717,6 +2716,7 @@ unittest
 //ret sugLen: A suggested growth.
 private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
 {
+    import std.algorithm : max;
     if(curLen == 0)
         return max(reqLen,8);
     ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);
