@@ -692,7 +692,7 @@ unittest
 {
     import std.conv : to;
     import std.typecons : tuple;
-    import std.typetyple;
+    import std.typetuple;
 
     static struct PutC(C)
     {
