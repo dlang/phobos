@@ -651,7 +651,10 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 module std.uni;
 
 import core.stdc.stdlib;
-import std.traits, std.typetuple, std.range;
+import std.traits, std.typetuple;
+// FIXME
+// import std.range.constraints;
+import std.range; // : empty, back, front, popBack, popFront, save, isOutputRange, isInputRange, isRandomAccessRange, isForwardRange, isBidirectionalRange, hasLength, walkLength, ElementType, put;
 
 
 // debug = std_uni;
@@ -792,7 +795,8 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 
 @safe pure nothrow @nogc unittest // for replicate
 {
-    import std.algorithm : sum;
+    import std.algorithm : sum, map;
+    import std.range : iota;
     size_t m = 0b111;
     size_t m2 = 0b01;
     foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
@@ -1507,6 +1511,7 @@ string genUnrolledSwitchSearch(size_t size)
 {
     import std.conv : to;
     import core.bitop : bsr;
+    import std.array : replace;
     assert(isPowerOf2(size));
     string code = `
     import core.bitop : bsr;
@@ -1616,6 +1621,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
 unittest
 {
+    import std.range;
     auto stdLowerBound(T)(T[] range, T needle)
     {
         return assumeSorted(range).lowerBound(needle).length;
@@ -1625,14 +1631,14 @@ unittest
     assert(arr.length == MAX/5-1);
     foreach(i; 0..MAX+5)
     {
-        auto std = stdLowerBound(arr, i);
-        assert(std == sharLowerBound(arr, i));
-        assert(std == sharSwitchLowerBound(arr, i));
+        auto st = stdLowerBound(arr, i);
+        assert(st == sharLowerBound(arr, i));
+        assert(st == sharSwitchLowerBound(arr, i));
     }
     arr = [];
-    auto std = stdLowerBound(arr, 33);
-    assert(std == sharLowerBound(arr, 33));
-    assert(std == sharSwitchLowerBound(arr, 33));
+    auto st = stdLowerBound(arr, 33);
+    assert(st == sharLowerBound(arr, 33));
+    assert(st == sharSwitchLowerBound(arr, 33));
 }
 //============================================================================
 
@@ -1643,6 +1649,7 @@ unittest
 @trusted size_t genericReplace(Policy=void, T, Range)
     (ref T dest, size_t from, size_t to, Range stuff)
 {
+    import std.algorithm : copy;
     size_t delta = to - from;
     size_t stuff_end = from+stuff.length;
     if(stuff.length > delta)
@@ -1956,6 +1963,8 @@ pure:
 */
 @trusted public struct InversionList(SP=GcPolicy)
 {
+    import std.range : assumeSorted;
+
 public:
 
     /**
@@ -1992,6 +2001,8 @@ public:
     //helper function that avoids sanity check to be CTFE-friendly
     private static fromIntervals(Range)(Range intervals) pure
     {
+        import std.algorithm : map;
+        import std.range : roundRobin;
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
         InversionList set;
@@ -2527,6 +2538,7 @@ public:
     */
     string toSourceCode(string funcName="")
     {
+        import std.array : array;
         import std.string : format;
         import std.algorithm : countUntil;
         enum maxBinary = 3;
@@ -2789,6 +2801,7 @@ private:
     }
     body
     {
+        import std.range : assumeSorted, SearchPolicy;
         auto range = assumeSorted(data[]);
         size_t pos;
         size_t a_idx = hint + range[hint..$].lowerBound!(SearchPolicy.gallop)(a).length;
@@ -2969,6 +2982,7 @@ private:
 {
     // test examples
     import std.algorithm, std.typecons;
+    import std.range : iota;
     auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
     set.byInterval.equalS([tuple('A', 'E'), tuple('a', 'e')]);
     set = unicode.ASCII;
@@ -3107,6 +3121,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     this(Range)(Range range)
         if(isInputRange!Range && hasLength!Range)
     {
+        import std.algorithm : copy;
         length = range.length;
         copy(range, data[0..$-1]);
     }
@@ -3114,6 +3129,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     this(Range)(Range range)
         if(isForwardRange!Range && !hasLength!Range)
     {
+        import std.algorithm : copy;
         auto len = walkLength(range.save);
         length = len;
         copy(range, data[0..$-1]);
@@ -3151,6 +3167,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     //+ an extra slot for ref-count
     @property void length(size_t len)
     {
+        import std.algorithm : min, copy;
         if(len == 0)
         {
             if(!empty)
@@ -3283,6 +3300,7 @@ private:
     }
     body
     {
+        import std.algorithm : copy;
         // dec shared ref-count
         refCount = count - 1;
         // copy to the new chunk of RAM
@@ -3298,7 +3316,9 @@ private:
 
 @trusted unittest// Uint24 tests //@@@BUG@@ iota is system ?!
 {
+    import std.algorithm;
     import std.conv;
+    import std.range;
     void funcRef(T)(ref T u24)
     {
         u24.length = 2;
@@ -4274,6 +4294,7 @@ public template codepointTrie(T, sizes...)
 
 unittest // codepointTrie example
 {
+    import std.algorithm;
     // pick characters from the Greek script
     auto set = unicode.Greek;
 
@@ -4469,6 +4490,7 @@ public template buildTrie(Value, Key, Args...)
     */
     auto buildTrie(Key, Value)(Value[Key] map, Value filler=Value.init)
     {
+        import std.range : zip, array;
         auto range = array(zip(map.values, map.keys));
         return buildTrie(range, filler, true); // sort it
     }
@@ -4701,6 +4723,7 @@ template Utf8Matcher()
 
     auto build(Set)(Set set)
     {
+        import std.algorithm : map;
         auto ascii = set & unicode.ASCII;
         auto utf8_2 = set & CodepointSet(0x80, 0x800);
         auto utf8_3 = set & CodepointSet(0x800, 0x1_0000);
@@ -4952,6 +4975,7 @@ template Utf16Matcher()
 
     auto build(Set)(Set set)
     {
+        import std.algorithm : map;
         auto ascii = set & unicode.ASCII;
         auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
             - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
@@ -5301,6 +5325,7 @@ package auto units(C)(C[] s)
 
 @safe unittest
 {
+    import std.range;
     static bool testAll(Matcher, Range)(ref Matcher m, ref Range r)
     {
         bool t = m.test(r);
@@ -5352,6 +5377,7 @@ unittest
 {
     import std.exception : collectException;
     import std.string : format;
+    import std.algorithm;
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
     //decode failure cases UTF-8
@@ -5559,6 +5585,8 @@ template Sequence(size_t start, size_t end)
 unittest
 {
     import std.conv;
+    import std.algorithm;
+    import std.range;
     static trieStats(TRIE)(TRIE t)
     {
         version(std_uni_stats)
@@ -5702,13 +5730,16 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 @trusted int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
 {
     import std.ascii : toLower;
-    import std.algorithm : cmp;
+    import std.algorithm : cmp, map, filter;
+    static bool pred(dchar c) {return !c.isWhite && c != '-' && c != '_';}
     return cmp(
-        a.map!(x => toLower(x))()
-        .filter!(x => !isWhite(x) && x != '-' && x != '_')(),
-        b.map!(x => toLower(x))()
-        .filter!(x => !isWhite(x) && x != '-' && x != '_')()
-    );
+        a.map!toLower.filter!pred,
+        b.map!toLower.filter!pred);
+}
+
+unittest
+{
+    assert(!comparePropertyName("foo-bar", "fooBar"));
 }
 
 bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
@@ -5776,6 +5807,7 @@ package ubyte[] compressIntervals(Range)(Range intervals)
 
 unittest
 {
+    import std.typecons;
     auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
     ubyte[] enc = [cast(ubyte)80, 47, 1, (0b1_00<<5) | (1<<2), 0];
     assert(compressIntervals(run) == enc);
@@ -5856,6 +5888,8 @@ else
 // helper for looking up code point sets
 @trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name) pure
 {
+    import std.range : assumeSorted;
+    import std.algorithm : map;
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
         (table.map!"a.name"());
     size_t idx = range.lowerBound(name).length;
@@ -6504,6 +6538,7 @@ auto byGrapheme(Range)(Range range)
 unittest
 {
     import std.conv;
+    import std.range;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -6528,7 +6563,7 @@ private static struct InputRangeString
 unittest
 {
     import std.conv;
-
+    import std.range;
     assert("".byGrapheme.walkLength == 0);
 
     auto reverse = "le\u0308on";
@@ -6614,6 +6649,7 @@ Range byCodePoint(Range)(Range range)
 unittest
 {
     import std.conv : text;
+    import std.range;
 
     string s = "noe\u0308l"; // noël
 
@@ -6630,7 +6666,7 @@ unittest
 unittest
 {
     import std.conv;
-
+    import std.algorithm;
     assert("".byGrapheme.byCodePoint.equal(""));
 
     string text = "noe\u0308l";
@@ -6945,6 +6981,8 @@ unittest
 unittest
 {
     import std.conv;
+    import std.algorithm;
+    import std.range;
 
     // not valid clusters (but it just a test)
     auto g  = Grapheme('a', 'b', 'c', 'd', 'e');
@@ -7164,6 +7202,7 @@ unittest
 {
     import std.conv;
     import std.exception : assertCTFEable;
+    import std.algorithm;
     assertCTFEable!(
     {
     foreach(cfunc; TypeTuple!(icmp, sicmp))
@@ -7283,6 +7322,7 @@ unittest
 {
     import std.exception : assertCTFEable;
     import std.algorithm : canFind;
+    import std.array;
     assertCTFEable!((){
         auto r = simpleCaseFoldings('Э').array;
         assert(r.length == 2);
@@ -7371,6 +7411,8 @@ enum {
 public dchar compose(dchar first, dchar second)
 {
     import std.internal.unicode_comp;
+    import std.algorithm : map;
+    import std.range : assumeSorted;
     size_t packed = compositionJumpTrie[first];
     if(packed == ushort.max)
         return dchar.init;
@@ -7413,6 +7455,7 @@ public dchar compose(dchar first, dchar second)
 public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 {
     import std.internal.unicode_decomp;
+    import std.algorithm : until;
     static if(decompType == Canonical)
     {
         alias table = decompCanonTable;
@@ -7652,6 +7695,8 @@ enum {
 inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 {
     import std.algorithm : sort, SwapStrategy;
+    import std.range : zip;
+    import std.array : appender;
 
     auto anchors = splitNormalized!norm(input);
     if(anchors[0] == input.length && anchors[1] == input.length)
@@ -7818,6 +7863,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc)
 // the rest of input starting with stable code point
 private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 {
+    import std.typecons : tuple;
     auto result = input;
     ubyte lastCC = 0;
 
@@ -7847,6 +7893,7 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 {
     import std.utf : codeLength;
+    import std.typecons : tuple;
 
     auto br = input[0..idx];
     size_t region_start = 0;// default
@@ -8088,6 +8135,8 @@ private alias LowerTriple = TypeTuple!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTa
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pure
     if(isSomeString!S)
 {
+    import std.array : appender;
+
     foreach(i, dchar cOuter; s)
     {
         ushort idx = indexFn(cOuter);
@@ -8122,6 +8171,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pur
 
 unittest //12428
 {
+    import std.array;
     auto s = "abcdefghij".replicate(300);
     s = s[0..10];
 
