@@ -1746,7 +1746,7 @@ T toImpl(T, S)(S value)
         if (Member == value)
             return Member;
     }
-
+    import std.string : format;
     throw new ConvException(format("Value (%s) does not match any member value of enum '%s'", value, T.stringof));
 }
 
@@ -4887,6 +4887,7 @@ unittest
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
+    import std.string : format;
     enforce!ConvException(chunk.length >= typeSize,
         format("emplace: Chunk size too small: %s < %s size = %s",
         chunk.length, typeName, typeSize));
