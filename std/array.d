@@ -2716,6 +2716,7 @@ unittest
 //ret sugLen: A suggested growth.
 private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
 {
+    import std.algorithm : max;
     if(curLen == 0)
         return max(reqLen,8);
     ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);

@@ -1580,6 +1580,7 @@ unittest
 {
     import std.string;
     import std.conv;
+    import core.exception;
     //Basic behaviour - all versions.
     assert("1".to!int().ifThrown(0) == 1);
     assert("x".to!int().ifThrown(0) == 0);

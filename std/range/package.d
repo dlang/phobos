@@ -159,7 +159,7 @@ import std.typetuple;
 
 version(unittest)
 {
-    import std.algorithm : equal, filter, filterBidirectional, findSplitBefore, group, joiner, map, sort, swap, until, copy;
+    import std.algorithm; // : equal, filter, filterBidirectional, findSplitBefore, group, joiner, map, sort, swap, until, copy;
 }
 
 /**
@@ -8177,4 +8177,9 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     void func2(int x) {}
 
     auto r = [1, 2, 3, 4].tee!func1.tee!func2;
+}
+
+version(unittest) 
+{
+    mixin(dummyRanges);
 }

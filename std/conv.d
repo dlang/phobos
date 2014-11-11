@@ -1865,6 +1865,7 @@ Lerr:
 
 unittest
 {
+    import std.algorithm : equal;
     struct InputString
     {
         string _s;
@@ -4702,6 +4703,7 @@ unittest
 
 unittest //@@@9559@@@
 {
+    import std.algorithm : map;
     import std.typecons : Nullable;
     alias I = Nullable!int;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
@@ -5014,6 +5016,7 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal, map;
     // Check fix for http://d.puremagic.com/issues/show_bug.cgi?id=2971
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
 }

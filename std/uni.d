@@ -6542,6 +6542,7 @@ unittest
 {
     import std.conv;
     import std.range;
+    import std.algorithm;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -6567,6 +6568,7 @@ unittest
 {
     import std.conv;
     import std.range;
+    import std.algorithm;
     assert("".byGrapheme.walkLength == 0);
 
     auto reverse = "le\u0308on";

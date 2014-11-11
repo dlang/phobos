@@ -153,6 +153,7 @@ unittest
 {
     import std.exception;
     import std.string;
+    import std.algorithm : startsWith, endsWith;
 
     auto e = collectException!WindowsException(
         DeleteFileA("unexisting.txt").wenforce("DeleteFile")

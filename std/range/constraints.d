@@ -122,7 +122,7 @@ import std.traits;
 // tested individually, without needing to link to std.range.
 enum dummyRanges = q{
     // Used with the dummy ranges for testing higher order ranges.
-    enum RangeType
+    private enum RangeType
     {
         Input,
         Forward,
@@ -130,13 +130,13 @@ enum dummyRanges = q{
         Random
     }
 
-    enum Length
+    private enum Length
     {
         Yes,
         No
     }
 
-    enum ReturnBy
+    private enum ReturnBy
     {
         Reference,
         Value
@@ -145,7 +145,7 @@ enum dummyRanges = q{
     // Range that's useful for testing other higher order ranges,
     // can be parametrized with attributes.  It just dumbs down an array of
     // numbers 1..10.
-    struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
+    private struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
     {
         // These enums are so that the template params are visible outside
         // this instantiation.
@@ -269,9 +269,9 @@ enum dummyRanges = q{
         }
     }
 
-    enum dummyLength = 10;
+    private enum dummyLength = 10;
 
-    alias AllDummyRanges = TypeTuple!(
+    private alias AllDummyRanges = TypeTuple!(
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
@@ -291,8 +291,6 @@ enum dummyRanges = q{
 version(unittest)
 {
     import std.typetuple;
-
-    mixin(dummyRanges);
 
     // Tests whether forward, bidirectional and random access properties are
     // propagated properly from the base range(s) R to the higher order range
@@ -694,6 +692,7 @@ unittest
 {
     import std.conv : to;
     import std.typecons : tuple;
+    import std.typetuple;
 
     static struct PutC(C)
     {
@@ -790,6 +789,7 @@ unittest
 unittest
 {
     import std.format;
+    import std.typetuple;
     struct PutC(C)
     {
         void put(C){}
@@ -2097,10 +2097,14 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
     }
 }
 
+version(unittest)
+{
+    import std.typecons;
+    mixin(dummyRanges);    
+}
+
 @safe unittest
 {
-    import std.typetuple;
-
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
         assert(moveFront(d) == 1);
