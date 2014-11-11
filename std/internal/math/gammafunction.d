@@ -1503,7 +1503,6 @@ done:
     return y;
 }
 
-version(unittest) import core.stdc.stdio;
 unittest {
     // Exact values
     assert(digamma(1)== -EULERGAMMA);
