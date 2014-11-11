@@ -292,8 +292,6 @@ version(unittest)
 {
     import std.typetuple;
 
-    mixin(dummyRanges);
-
     // Tests whether forward, bidirectional and random access properties are
     // propagated properly from the base range(s) R to the higher order range
     // H.  Useful in combination with DummyRange for testing several higher
@@ -694,6 +692,7 @@ unittest
 {
     import std.conv : to;
     import std.typecons : tuple;
+    import std.typetyple;
 
     static struct PutC(C)
     {
@@ -790,6 +789,7 @@ unittest
 unittest
 {
     import std.format;
+    import std.typetuple;
     struct PutC(C)
     {
         void put(C){}
@@ -2100,6 +2100,8 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 @safe unittest
 {
     import std.typetuple;
+
+    mixin(dummyRanges);
 
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
