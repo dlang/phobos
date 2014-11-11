@@ -457,6 +457,8 @@ unittest {
 	import std.algorithm : equal;
 	import std.array;
 
+    mixin(dummyRanges);
+
     static void testEquality(R)(iInputRange r1, R r2) {
         assert(equal(r1, r2));
     }

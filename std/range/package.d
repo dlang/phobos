@@ -8178,3 +8178,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
     auto r = [1, 2, 3, 4].tee!func1.tee!func2;
 }
+
+version(unittest) 
+{
+    mixin(dummyRanges);
+}

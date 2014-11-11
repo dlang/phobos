@@ -122,7 +122,7 @@ import std.traits;
 // tested individually, without needing to link to std.range.
 enum dummyRanges = q{
     // Used with the dummy ranges for testing higher order ranges.
-    enum RangeType
+    private enum RangeType
     {
         Input,
         Forward,
@@ -130,13 +130,13 @@ enum dummyRanges = q{
         Random
     }
 
-    enum Length
+    private enum Length
     {
         Yes,
         No
     }
 
-    enum ReturnBy
+    private enum ReturnBy
     {
         Reference,
         Value
@@ -145,7 +145,7 @@ enum dummyRanges = q{
     // Range that's useful for testing other higher order ranges,
     // can be parametrized with attributes.  It just dumbs down an array of
     // numbers 1..10.
-    struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
+    private struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
     {
         // These enums are so that the template params are visible outside
         // this instantiation.
@@ -269,9 +269,9 @@ enum dummyRanges = q{
         }
     }
 
-    enum dummyLength = 10;
+    private enum dummyLength = 10;
 
-    alias AllDummyRanges = TypeTuple!(
+    private alias AllDummyRanges = TypeTuple!(
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
