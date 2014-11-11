@@ -416,8 +416,8 @@ $(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
 
 Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
-returns a range of which elements are obtained by applying $(D fun(x))
-left to right for all $(D x) in $(D range). The original ranges are
+returns a range of which elements are obtained by applying $(D fun(a))
+left to right for all elements $(D a) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
 */
 template map(fun...) if (fun.length >= 1)
@@ -3779,6 +3779,9 @@ Lazily joins a range of ranges with a separator. The separator itself
 is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
 
+See_also:
+$(XREF range,chain), which chains a sequence of ranges with compatible elements
+into a single range.
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR)
