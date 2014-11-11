@@ -2602,7 +2602,7 @@ need not be assignable at all to be swapped.
 If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
-its fields must also all be (recursivelly) mutable.
+its fields must also all be (recursively) mutable.
 */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
