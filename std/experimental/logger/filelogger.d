@@ -65,7 +65,7 @@ class FileLogger : Logger
     /** If the $(D FileLogger) is managing the $(D File) it logs to, this
     method will return a reference to this File.
     */
-    @property File file()
+    @property File file() @safe
     {
         return this.file_;
     }

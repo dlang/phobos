@@ -299,7 +299,6 @@ void log(T)(const LogLevel ll, lazy bool condition, lazy T arg,
     int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__)
-    @safe
 {
     static if (isLoggingActive)
     {
@@ -325,7 +324,6 @@ log(LogLevel.warning, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
-    @safe
     if (args.length > 1 && !is(Unqual!(A[0]) : bool))
 {
     static if (isLoggingActive)
@@ -339,7 +337,6 @@ void log(int line = __LINE__, string file = __FILE__,
 void log(T)(const LogLevel ll, lazy T arg, int line = __LINE__,
     string file = __FILE__, string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)
-    @safe
 {
     static if (isLoggingActive)
     {
@@ -366,7 +363,6 @@ log(true, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-    @safe
     if (args.length > 1)
 {
     static if (isLoggingActive)
@@ -380,7 +376,6 @@ void log(int line = __LINE__, string file = __FILE__,
 void log(T)(lazy bool condition, lazy T arg, int line = __LINE__,
     string file = __FILE__, string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)
-    @safe
 {
     static if (isLoggingActive)
     {
@@ -405,7 +400,6 @@ log("Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy A args)
-    @safe
     if (args.length > 1 && !is(Unqual!(A[0]) : bool)
          && !is(Unqual!(A[0]) == LogLevel))
 {
@@ -418,7 +412,6 @@ void log(int line = __LINE__, string file = __FILE__,
 void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__)
-    @safe
 {
     static if (isLoggingActive)
     {
@@ -448,7 +441,6 @@ void logf(int line = __LINE__, string file = __FILE__,
     string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll,
     lazy bool condition, lazy string msg, lazy A args)
-    @safe
 {
     static if (isLoggingActive)
     {
@@ -476,7 +468,7 @@ logf(LogLevel.warning, "Hello World %f", 3.1415);
 void logf(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll, lazy string msg,
-        lazy A args) @safe
+        lazy A args)
 {
     static if (isLoggingActive)
     {
@@ -505,7 +497,6 @@ void logf(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy bool condition,
         lazy string msg, lazy A args)
-    @safe
 {
     static if (isLoggingActive)
     {
@@ -532,7 +523,6 @@ void logf(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__,
     string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
-    @safe
 {
     static if (isLoggingActive)
     {
@@ -1029,7 +1019,7 @@ abstract class Logger
         void logImpl(int line = __LINE__, string file = __FILE__,
             string funcName = __FUNCTION__,
             string prettyFuncName = __PRETTY_FUNCTION__,
-            string moduleName = __MODULE__, A...)(lazy A args) @safe
+            string moduleName = __MODULE__, A...)(lazy A args)
             if (args.length == 0 || (args.length > 0 && !is(A[0] : bool)))
         {
             static if (isLoggingActiveAt!ll) synchronized (mutex)
@@ -1834,24 +1824,26 @@ version (unittest)
         }
     }
 
-    private void testFuncNames(Logger logger) {
+    private void testFuncNames(Logger logger) @safe
+    {
         string s = "I'm here";
         logger.log(s);
     }
 }
 
-
+@safe
 unittest
 {
     auto tl1 = new TestLogger();
     testFuncNames(tl1);
     assert(tl1.func == "std.experimental.logger.core.testFuncNames", tl1.func);
     assert(tl1.prettyFunc ==
-        "void std.experimental.logger.core.testFuncNames(Logger logger)",
+        "void std.experimental.logger.core.testFuncNames(Logger logger) @safe",
         tl1.prettyFunc);
     assert(tl1.msg == "I'm here", tl1.msg);
 }
 
+@safe
 unittest
 {
     import std.experimental.logger.multilogger;
@@ -1877,6 +1869,7 @@ unittest
     assert(n is null);
 }
 
+@safe
 unittest
 {
     bool errorThrown = false;
@@ -1889,6 +1882,7 @@ unittest
     assert(errorThrown);
 }
 
+@safe
 unittest
 {
     auto l = new TestLogger(LogLevel.info);
@@ -1928,14 +1922,18 @@ unittest
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.info);
 
-    assertThrown!Throwable(l.logf(LogLevel.fatal, msg, "Yet"));
-    lineNumber = __LINE__ - 1;
+    () @trusted {
+        assertThrown!Throwable(l.logf(LogLevel.fatal, msg, "Yet"));
+    } ();
+    lineNumber = __LINE__ - 2;
     assert(l.msg == msg.format("Yet"));
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.info);
 
-    assertThrown!Throwable(l.logf(LogLevel.fatal, true, msg, "Yet"));
-    lineNumber = __LINE__ - 1;
+    () @trusted {
+        assertThrown!Throwable(l.logf(LogLevel.fatal, true, msg, "Yet"));
+    } ();
+    lineNumber = __LINE__ - 2;
     assert(l.msg == msg.format("Yet"));
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.info);
@@ -2000,14 +1998,18 @@ unittest
     assert(l.logLevel == LogLevel.info);
 
     msg = "%s Another message";
-    assertThrown!Throwable(logf(LogLevel.fatal, msg, "Yet"));
-    lineNumber = __LINE__ - 1;
+    () @trusted {    
+        assertThrown!Throwable(logf(LogLevel.fatal, msg, "Yet"));
+    } ();
+    lineNumber = __LINE__ - 2;
     assert(l.msg == msg.format("Yet"));
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.info);
 
-    assertThrown!Throwable(logf(LogLevel.fatal, true, msg, "Yet"));
-    lineNumber = __LINE__ - 1;
+    () @trusted {
+        assertThrown!Throwable(logf(LogLevel.fatal, true, msg, "Yet"));
+    } ();
+    lineNumber = __LINE__ - 2;
     assert(l.msg == msg.format("Yet"));
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.info);
@@ -2087,6 +2089,7 @@ unittest
     file.close();
 }
 
+@safe
 unittest
 {
     auto tl = new TestLogger(LogLevel.all);
@@ -2103,6 +2106,7 @@ unittest
 }
 
 // testing possible log conditions
+@safe
 unittest
 {
     auto oldunspecificLogger = stdlog;
@@ -2342,6 +2346,7 @@ unittest
 }
 
 // more testing
+@safe
 unittest
 {
     auto oldunspecificLogger = stdlog;
@@ -2569,6 +2574,7 @@ unittest
 }
 
 // testing more possible log conditions
+@safe
 unittest
 {
     bool fatalLog;
@@ -2775,6 +2781,7 @@ unittest
 }
 
 // Issue #5
+@safe
 unittest
 {
     auto oldunspecificLogger = stdlog;
@@ -2795,6 +2802,7 @@ unittest
 }
 
 // Issue #5
+@safe
 unittest
 {
     import std.experimental.logger.multilogger;
@@ -2828,12 +2836,28 @@ unittest
     assertThrown!Throwable(tl.fatal("fatal"));
 }
 
+@safe
 unittest
 {
     auto dl = cast(FileLogger)stdlog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
+}
+
+// log objects with non-safe toString
+unittest
+{
+    struct Test
+    {
+        string toString() @system
+        {
+            return "test";
+        }
+    }
+
+    auto tl = new TestLogger();
+    tl.info(Test.init);
 }
 
 // Workaround for atomics not allowed in @safe code
