@@ -142,9 +142,8 @@ unittest
         (as per $(WEB tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
 
     Throws:
-        Throws a $(D UTFException) if $(D str[index]) indicates an invalid
-        sequence length greater than 4.
-        Throws a $(D UTFException) if $(D str[index]) is a continuation byte.
+        May throw a $(D UTFException) if $(D str[index]) is not the start of a
+        valid UTF-8 sequence.
 
     Notes:
         $(D stride) will only analyze the first $(D str[index]) element. It
