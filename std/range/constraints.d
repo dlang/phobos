@@ -288,36 +288,6 @@ enum dummyRanges = q{
 
 };
 
-version(unittest)
-{
-    import std.typetuple;
-
-    mixin(dummyRanges);
-
-    // Tests whether forward, bidirectional and random access properties are
-    // propagated properly from the base range(s) R to the higher order range
-    // H.  Useful in combination with DummyRange for testing several higher
-    // order ranges.
-    template propagatesRangeType(H, R...) {
-        static if(allSatisfy!(isRandomAccessRange, R)) {
-           enum bool propagatesRangeType = isRandomAccessRange!H;
-        } else static if(allSatisfy!(isBidirectionalRange, R)) {
-            enum bool propagatesRangeType = isBidirectionalRange!H;
-        } else static if(allSatisfy!(isForwardRange, R)) {
-            enum bool propagatesRangeType = isForwardRange!H;
-        } else {
-            enum bool propagatesRangeType = isInputRange!H;
-        }
-    }
-
-    template propagatesLength(H, R...) {
-        static if(allSatisfy!(hasLength, R)) {
-            enum bool propagatesLength = hasLength!H;
-        } else {
-            enum bool propagatesLength = !hasLength!H;
-        }
-    }
-}
 
 /**
 Returns $(D true) if $(D R) is an input range. An input range must
@@ -694,6 +664,7 @@ unittest
 {
     import std.conv : to;
     import std.typecons : tuple;
+    import std.typetyple;
 
     static struct PutC(C)
     {
@@ -790,6 +761,7 @@ unittest
 unittest
 {
     import std.format;
+    import std.typetuple;
     struct PutC(C)
     {
         void put(C){}
@@ -2100,6 +2072,32 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 @safe unittest
 {
     import std.typetuple;
+
+    // Tests whether forward, bidirectional and random access properties are
+    // propagated properly from the base range(s) R to the higher order range
+    // H.  Useful in combination with DummyRange for testing several higher
+    // order ranges.
+    template propagatesRangeType(H, R...) {
+        static if(allSatisfy!(isRandomAccessRange, R)) {
+           enum bool propagatesRangeType = isRandomAccessRange!H;
+        } else static if(allSatisfy!(isBidirectionalRange, R)) {
+            enum bool propagatesRangeType = isBidirectionalRange!H;
+        } else static if(allSatisfy!(isForwardRange, R)) {
+            enum bool propagatesRangeType = isForwardRange!H;
+        } else {
+            enum bool propagatesRangeType = isInputRange!H;
+        }
+    }
+
+    template propagatesLength(H, R...) {
+        static if(allSatisfy!(hasLength, R)) {
+            enum bool propagatesLength = hasLength!H;
+        } else {
+            enum bool propagatesLength = !hasLength!H;
+        }
+    }
+
+    mixin(dummyRanges);
 
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
