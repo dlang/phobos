@@ -2097,12 +2097,14 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
     }
 }
 
+version(unittest)
+{
+    import std.typecons;
+    mixin(dummyRanges);    
+}
+
 @safe unittest
 {
-    import std.typetuple;
-
-    mixin(dummyRanges);
-
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
         assert(moveFront(d) == 1);
