@@ -159,7 +159,7 @@ import std.typetuple;
 
 version(unittest)
 {
-    import std.algorithm : equal, filter, filterBidirectional, findSplitBefore, group, joiner, map, sort, swap, until, copy;
+    import std.algorithm; // : equal, filter, filterBidirectional, findSplitBefore, group, joiner, map, sort, swap, until, copy;
 }
 
 /**
