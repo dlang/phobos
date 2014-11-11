@@ -149,8 +149,7 @@ unittest
         $(D stride) will only analyze the first $(D str[index]) element. It
         will not fully verify the validity of UTF-8 sequence, nor even verify
         the presence of the sequence: it will not actually guarantee that
-        $(D index + stride(str, index) <= str.length). It will also not
-        guarantee that the first element is a valid UTF-8 code unit.
+        $(D index + stride(str, index) <= str.length).
   +/
 uint stride(S)(auto ref S str, size_t index)
     if (is(S : const char[]) ||
