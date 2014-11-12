@@ -57,7 +57,8 @@ version (StdDdoc)
         --------------------
      +/
     T wenforce(T, S)(T value, lazy S msg = null,
-        string file = __FILE__, size_t line = __LINE__) if (isSomeString!S);
+        string file = __FILE__, size_t line = __LINE__) @safe
+        if (isSomeString!S);
 }
 else:
 
