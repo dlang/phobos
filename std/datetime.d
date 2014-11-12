@@ -111,9 +111,7 @@ import core.exception;
 import core.stdc.time;
 
 import std.exception;
-// FIXME
-// import std.range.constraints;
-import std.range; //: empty, back, front, popBack, popFront, save, hasSwappableElements, hasAssignableElements, isInfinite, isOutputRange, isInputRange, isRandomAccessRange, isForwardRange, isBidirectionalRange, hasLength, walkLength, ElementType, put, hasSlicing;
+import std.range.constraints;
 import std.traits;
 // FIXME
 import std.functional; //: unaryFun;
