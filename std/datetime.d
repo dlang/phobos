@@ -28792,6 +28792,8 @@ else version(Windows)
 
         static string[] getInstalledTZNames() @trusted
         {
+            import std.algorithm : sort;
+            
             auto timezones = appender!(string[])();
 
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
