@@ -835,7 +835,7 @@ template memoize(alias fun, uint maxSize)
             import core.memory;
 
             enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
-            memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, ))[0 .. maxSize];
+            memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
             enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
             initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
         }
