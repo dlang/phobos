@@ -102,6 +102,10 @@ import std.range;
 import std.traits;
 import std.typetuple;
 
+//public imports for backward compatibility
+public import std.algorithm : startsWith, endsWith, cmp, count;
+public import std.array : join, split;
+
 /* ************* Exceptions *************** */
 
 /++
