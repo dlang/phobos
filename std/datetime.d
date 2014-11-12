@@ -26622,6 +26622,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             return PosixTimeZone.getInstalledTZNames(subName);
         else version(Windows)
         {
+            import std.array : appender;
             import std.algorithm : startsWith, sort;
             auto windowsNames = WindowsTimeZone.getInstalledTZNames();
             auto retval = appender!(string[])();
@@ -28287,6 +28288,7 @@ assert(tz.dstName == "PDT");
             subName = strip(subName);
         else version(Windows)
         {
+            import std.array : replace;
             import std.path : dirSeparator;
             subName = replace(strip(subName), "/", dirSeparator);
         }
@@ -28718,6 +28720,9 @@ else version(Windows)
     {
         import std.string : format;
         import std.conv : to;
+        import std.algorithm : sort;
+        import std.array : appender;
+
     public:
 
         @property override bool hasDST() @safe const nothrow
@@ -28789,9 +28794,7 @@ else version(Windows)
         }
 
         static string[] getInstalledTZNames() @trusted
-        {
-            import std.algorithm : sort;
-            
+        {            
             auto timezones = appender!(string[])();
 
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
