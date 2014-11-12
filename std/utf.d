@@ -138,7 +138,8 @@ unittest
     $(D index) defaults to $(D 0) if none is passed.
 
     Returns:
-        The number of bytes in the UTF-8 sequence.
+        The number of bytes in the UTF-8 sequence, a value between 1 and 4
+        (as per $(WEB tools.ietf.org/html/rfc3629#section-3, RFC 3629$(COMMA) section 3)).
 
     Throws:
         May throw a $(D UTFException) if $(D str[index]) is not the start of a
@@ -186,7 +187,7 @@ body
 {
     import core.bitop : bsr;
     immutable msbs = 7 - bsr(~c);
-    if (msbs < 2 || msbs > 6)
+    if (msbs < 2 || msbs > 4)
         throw new UTFException("Invalid UTF-8 sequence", index);
     return msbs;
 }
@@ -256,6 +257,20 @@ unittest
         static assert((functionAttributes!({ stride(str);    }) & FunctionAttribute.pure_) != 0);
     }
     });
+}
+
+unittest // invalid start bytes
+{
+    import std.exception: assertThrown;
+    immutable char[] invalidStartBytes = [
+        0b1111_1000, // indicating a sequence length of 5
+        0b1111_1100, // 6
+        0b1111_1110, // 7
+        0b1111_1111, // 8
+        0b1000_0000, // continuation byte
+    ];
+    foreach(c; invalidStartBytes)
+        assertThrown!UTFException(stride([c]));
 }
 
 
