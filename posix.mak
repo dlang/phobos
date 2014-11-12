@@ -217,7 +217,8 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
 	cstring processinit unicode_tables scopebuffer\
-	unicode_comp unicode_decomp unicode_grapheme unicode_norm)
+	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
+	$(addprefix std/internal/test/, dummyrange)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
