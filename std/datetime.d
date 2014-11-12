@@ -17369,7 +17369,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
        dur!"days"(5903));
 --------------------
       +/
-    @property typeof(end - begin) length() const pure nothrow
+    @property auto length() const pure nothrow
     {
         return _end - _begin;
     }
