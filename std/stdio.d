@@ -2608,15 +2608,15 @@ enum LockType
 struct LockingTextReader
 {
     private File _f;
-    private dchar _crt;
+    private dchar _front;
 
     this(File f)
     {
         import std.exception : enforce;
-
         enforce(f.isOpen);
         _f = f;
         FLOCK(_f._p.handle);
+        readFront();
     }
 
     this(this)
@@ -2633,47 +2633,81 @@ struct LockingTextReader
     void opAssign(LockingTextReader r)
     {
         import std.algorithm : swap;
-
         swap(this, r);
     }
 
     @property bool empty()
     {
-        import std.exception : enforce;
-
-        if (!_f.isOpen || _f.eof) return true;
-        if (_crt == _crt.init)
-        {
-            _crt = FGETC(cast(_iobuf*) _f._p.handle);
-            if (_crt == -1)
-            {
-                .destroy(_f);
-                return true;
-            }
-            else
-            {
-                enforce(ungetc(_crt, cast(FILE*) _f._p.handle) == _crt);
-            }
-        }
-        return false;
+        return !_f.isOpen || _f.eof;
     }
 
     @property dchar front()
     {
         version(assert) if (empty) throw new RangeError();
-        return _crt;
+        return _front;
+    }
+
+    /* Read a utf8 sequence from the file, removing the chars from the stream.
+    Returns an empty result when at EOF. */
+    private char[] takeFront(ref char[4] buf)
+    {
+        import std.utf : stride, UTFException;
+        {
+            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
+            if (c == EOF)
+                return buf[0 .. 0];
+            buf[0] = cast(char) c;
+        }
+        immutable seqLen = stride(buf[]);
+        foreach(ref u; buf[1 .. seqLen])
+        {
+            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
+            if (c == EOF) // incomplete sequence
+                throw new UTFException("Invalid UTF-8 sequence");
+            u = cast(char) c;
+        }
+        return buf[0 .. seqLen];
+    }
+
+    /* Read a utf8 sequence from the file into _front, putting the chars back so
+    that they can be read again.
+    Destroys/closes the file when at EOF. */
+    private void readFront()
+    {
+        import std.exception : enforce;
+        import std.utf : decodeFront;
+
+        char[4] buf;
+        auto chars = takeFront(buf);
+
+        if (chars.empty)
+        {
+            .destroy(_f);
+            assert(empty);
+            return;
+        }
+
+        auto s = chars;
+        _front = decodeFront(s);
+
+        // Put everything back.
+        foreach(immutable i; 0 .. chars.length)
+        {
+            immutable c = chars[$ - 1 - i];
+            enforce(ungetc(c, cast(FILE*) _f._p.handle) == c);
+        }
     }
 
     void popFront()
     {
         version(assert) if (empty) throw new RangeError();
-        if (FGETC(cast(_iobuf*) _f._p.handle) == -1)
-        {
-            import std.exception : enforce;
 
-            enforce(_f.eof);
-        }
-        _crt = _crt.init;
+        // Pop the current front.
+        char[4] buf;
+        takeFront(buf);
+
+        // Read the next front, leaving the chars on the stream.
+        readFront();
     }
 
     // void unget(dchar c)
@@ -2699,6 +2733,37 @@ unittest
     f.readf("%d ", &x);
     assert(x == 3);
     //pragma(msg, "--- todo: readf ---");
+}
+
+unittest // bugzilla 13686
+{
+    static import std.file;
+    import std.algorithm : equal;
+
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "Тест");
+    scope(exit) std.file.remove(deleteme);
+
+    string s;
+    File(deleteme).readf("%s", &s);
+    assert(s == "Тест");
+
+    auto ltr = LockingTextReader(File(deleteme));
+    assert(equal(ltr, "Тест"));
+}
+
+unittest // bugzilla 12320
+{
+    static import std.file;
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "ab");
+    scope(exit) std.file.remove(deleteme);
+    auto ltr = LockingTextReader(File(deleteme));
+    assert(ltr.front == 'a');
+    ltr.popFront();
+    assert(ltr.front == 'b');
+    ltr.popFront();
+    assert(ltr.empty);
 }
 
 /**
