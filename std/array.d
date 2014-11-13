@@ -2318,14 +2318,43 @@ if (isDynamicArray!(E[]) &&
     isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
     if (from.empty) return subject;
-    auto balance = std.algorithm.find(subject, from.save);
-    if (balance.empty) return subject;
+    static if(isSomeString!(E[]))
+    {
+        import std.string : indexOf;
+        auto idx = subject.indexOf(from);
+    }
+    else
+        auto idx = subject.countUntil(from);
+    if (idx == -1)
+        return subject;
+
     auto app = appender!(E[])();
-    app.put(subject[0 .. subject.length - balance.length]);
-    app.put(to.save);
-    app.put(balance[from.length .. $]);
+    app.put(subject[0 .. idx]);
+    app.put(to);
+
+    static if(isSomeString!(E[]) && isSomeString!R1)
+    {
+        import std.utf : codeLength;
+        auto fromLength = codeLength!(Unqual!E, R1)(from);
+    }
+    else
+        auto fromLength = from.length;
+
+    app.put(subject[idx + fromLength .. $]);
 
     return app.data;
+}
+
+///
+unittest
+{
+    auto a = [1, 2, 2, 3, 4, 5];
+    auto b = a.replaceFirst([2], [1337]);
+    assert(b == [1, 1337, 2, 3, 4, 5]);
+
+    auto s = "This is a foo foo list";
+    auto r = s.replaceFirst("foo", "silly");
+    assert(r == "This is a silly foo list");
 }
 
 unittest
@@ -2338,22 +2367,31 @@ unittest
     foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        alias T = Unqual!S;
+        foreach(T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+                              const(char[]), immutable(char[])))
+        {
+            auto s = to!S("This is a foo foo list");
+            auto s2 = to!S("Thüs is a ßöö foo list");
+            auto from = to!T("foo");
+            auto from2 = to!T("ßöö");
+            auto into = to!T("silly");
+            auto into2 = to!T("sälly");
 
-        auto s = to!S("This is a foo foo list");
-        auto from = to!T("foo");
-        auto into = to!T("silly");
+            S r1 = replaceFirst(s, from, into);
+            assert(cmp(r1, "This is a silly foo list") == 0);
 
-        S r1 = replaceFirst(s, from, into);
-        assert(cmp(r1, "This is a silly foo list") == 0);
+            S r11 = replaceFirst(s2, from2, into2);
+            assert(cmp(r11, "Thüs is a sälly foo list") == 0,
+                to!string(r11) ~ " : " ~ S.stringof ~ " " ~ T.stringof);
 
-        S r2 = replaceFirst(r1, from, into);
-        assert(cmp(r2, "This is a silly silly list") == 0);
+            S r2 = replaceFirst(r1, from, into);
+            assert(cmp(r2, "This is a silly silly list") == 0);
 
-        S r3 = replaceFirst(s, to!T(""), into);
-        assert(cmp(r3, "This is a foo foo list") == 0);
+            S r3 = replaceFirst(s, to!T(""), into);
+            assert(cmp(r3, "This is a foo foo list") == 0);
 
-        assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
+            assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
+        }
     }
 }
 
@@ -2605,7 +2643,7 @@ if (isDynamicArray!A)
         else
         {
             import std.conv : emplaceRef;
-    
+
             ensureAddable(1);
             immutable len = _data.arr.length;
 
