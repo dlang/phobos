@@ -2419,8 +2419,8 @@ public:
         {
             import std.utf : toUTFz;
             timeInfo.tm_gmtoff = cast(int)convert!("hnsecs", "seconds")(adjTime - _stdTime);
-            auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName).dup;
-            timeInfo.tm_zone = zone.toUTFz!(const(char)*)();
+            auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName);
+            timeInfo.tm_zone = zone.toUTFz!(char*)();
         }
 
         return timeInfo;
@@ -28794,7 +28794,7 @@ else version(Windows)
         }
 
         static string[] getInstalledTZNames() @trusted
-        {            
+        {
             auto timezones = appender!(string[])();
 
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
@@ -31474,7 +31474,7 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
     import std.string : format;
     import std.algorithm : countUntil;
 
-    auto tstrings = timeStrings.dup;
+    auto tstrings = timeStrings;
     immutable indexOfLHS = countUntil(tstrings, lhs);
     immutable indexOfRHS = countUntil(tstrings, rhs);
 
@@ -31537,7 +31537,7 @@ template CmpTimeUnits(string lhs, string rhs)
 private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
 {
     import std.algorithm : countUntil;
-    auto tstrings = timeStrings.dup;
+    auto tstrings = timeStrings;
     immutable indexOfLHS = countUntil(tstrings, lhs);
     immutable indexOfRHS = countUntil(tstrings, rhs);
 
@@ -32407,7 +32407,7 @@ template nextSmallerTimeUnits(string units)
        timeStrings.front != units)
 {
     import std.algorithm : countUntil;
-    enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings.dup, units) - 1];
+    enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings, units) - 1];
 }
 
 unittest
@@ -32433,7 +32433,7 @@ template nextLargerTimeUnits(string units)
        timeStrings.back != units)
 {
     import std.algorithm : countUntil;
-    enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings.dup, units) + 1];
+    enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings, units) + 1];
 }
 
 unittest
