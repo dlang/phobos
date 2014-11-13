@@ -37,13 +37,7 @@ COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
 module std.internal.cstring;
 
 
-static import core.stdc.stdlib;
-static import core.checkedint;
-import core.exception;
-
 import std.traits;
-import std.utf;
-
 
 version(unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc
@@ -84,6 +78,9 @@ See $(RED WARNING) in $(B Examples) section.
 auto tempCString(To = char, From)(in From[] str) nothrow @nogc
 if(isSomeChar!To && isSomeChar!From)
 {
+    import core.checkedint : addu;
+    import core.exception : onOutOfMemoryError;
+
     enum useStack = cast(To*) -1;
 
     static struct Res
@@ -121,7 +118,7 @@ if(isSomeChar!To && isSomeChar!From)
     // Note: res._ptr can't point to res._buff as structs are movable.
 
     bool overflow = false;
-    const totalCount = core.checkedint.addu(maxLength!To(str), 1, overflow);
+    const totalCount = addu(maxLength!To(str), 1, overflow);
     if(overflow)
         onOutOfMemoryError();
     const needAllocate = totalCount > res._buff.length;
@@ -231,6 +228,7 @@ if(isSomeChar!To && isSomeChar!From)
     }
     else
     {
+        import std.utf : byChar, byWchar, byDchar;
         alias GenericTuple(Args...) = Args;
         alias byFunc = GenericTuple!(byChar, byWchar, null, byDchar)[To.sizeof - 1];
 
@@ -262,6 +260,7 @@ pure nothrow @nogc unittest
 pure unittest
 {
     import std.range;
+    import std.utf : toUTF16, toUTF32;
 
     const str = "abc-ЭЮЯ";
     char[100] sbuff;
@@ -297,8 +296,11 @@ if(T.alignof <= mallocAlignment)
 in { assert(count); }
 body
 {
+    import core.exception : onOutOfMemoryError;
+    import core.checkedint: mulu;
+
     bool overflow = false;
-    const buffBytes = core.checkedint.mulu(T.sizeof, count, overflow);
+    const buffBytes = mulu(T.sizeof, count, overflow);
     if(overflow)
         onOutOfMemoryError();
 
@@ -313,6 +315,7 @@ void* tryRawAllocate(in size_t count) nothrow @nogc
 in { assert(count); }
 body
 {
+    import core.stdc.stdlib: malloc;
     // Workaround snn @@@BUG11646@@@
     version(DigitalMars) version(Win32)
         if(count > 0xD5550000) return null;
@@ -320,10 +323,11 @@ body
     // FIXME: `malloc` must be checked on every C runtime for
     // possible bugs and workarounded if necessary.
 
-    return core.stdc.stdlib.malloc(count);
+    return malloc(count);
 }
 
 void rawFree(void* ptr) nothrow @nogc
 {
-    core.stdc.stdlib.free(ptr);
+    import core.stdc.stdlib: free;
+    free(ptr);
 }
