@@ -5070,7 +5070,7 @@ if (isInputRange!InputRange &&
     auto r = find(lst[], 5);
     assert(equal(r, SList!int(5, 7, 3)[]));
     assert(find([1, 2, 3, 5], 4).empty);
-    assert(equal(find!"a>b"("hello", 'k'), "llo"));
+    assert(equal(find!"a > b"("hello", 'k'), "llo"));
 }
 
 @safe pure nothrow unittest
@@ -7322,8 +7322,8 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
     int[] b = [ 1, 2, 3 ];
     assert(findAmong(a, b) == [2, 1, 2, 3, 4, 5 ]);
     assert(findAmong(b, [ 4, 6, 7 ][]).empty);
-    assert(findAmong!("a==b")(a, b).length == a.length - 2);
-    assert(findAmong!("a==b")(b, [ 4, 6, 7 ][]).empty);
+    assert(findAmong!("a == b")(a, b).length == a.length - 2);
+    assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
 }
 
 // count
@@ -7600,13 +7600,13 @@ range of range (of range...) comparisons.
     assert(!equal("hello", "world"));
 
     // same strings, but "explicit non default" comparison (to test the non optimized array comparison)
-    assert( equal!("a==b")("æøå", "æøå")); //UTF8 vs UTF8
-    assert(!equal!("a==b")("???", "æøå")); //UTF8 vs UTF8
-    assert( equal!("a==b")("æøå"w, "æøå"d)); //UTF16 vs UTF32
-    assert(!equal!("a==b")("???"w, "æøå"d));//UTF16 vs UTF32
-    assert( equal!("a==b")("æøå"d, "æøå"d)); //UTF32 vs UTF32
-    assert(!equal!("a==b")("???"d, "æøå"d));//UTF32 vs UTF32
-    assert(!equal!("a==b")("hello", "world"));
+    assert( equal!("a == b")("æøå", "æøå")); //UTF8 vs UTF8
+    assert(!equal!("a == b")("???", "æøå")); //UTF8 vs UTF8
+    assert( equal!("a == b")("æøå"w, "æøå"d)); //UTF16 vs UTF32
+    assert(!equal!("a == b")("???"w, "æøå"d));//UTF16 vs UTF32
+    assert( equal!("a == b")("æøå"d, "æøå"d)); //UTF32 vs UTF32
+    assert(!equal!("a == b")("???"d, "æøå"d));//UTF32 vs UTF32
+    assert(!equal!("a == b")("hello", "world"));
 
     //Array of string
     assert(equal(["hello", "world"], ["hello", "world"]));
@@ -11314,7 +11314,7 @@ unittest
 
 unittest
 {//bugzilla 4584
-    assert(isSorted!"a<b"(sort!("a<b", SwapStrategy.stable)(
+    assert(isSorted!"a < b"(sort!("a < b", SwapStrategy.stable)(
        [83, 42, 85, 86, 87, 22, 89, 30, 91, 46, 93, 94, 95, 6,
          97, 14, 33, 10, 101, 102, 103, 26, 105, 106, 107, 6]
     )));
@@ -13234,7 +13234,7 @@ do
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
  */
-bool nextPermutation(alias less="a<b", BidirectionalRange)
+bool nextPermutation(alias less="a < b", BidirectionalRange)
                     (BidirectionalRange range)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
@@ -13480,7 +13480,7 @@ do
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
  */
-bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
+bool nextEvenPermutation(alias less="a < b", BidirectionalRange)
                         (BidirectionalRange range)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
