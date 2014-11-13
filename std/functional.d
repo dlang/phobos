@@ -62,8 +62,11 @@ template unaryFun(alias fun, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
-        import std.traits, std.typecons, std.typetuple;
-        import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+        static if (!fun._ctfeMatchUnary(parmName))
+        {
+            import std.traits, std.typecons, std.typetuple;
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;            
+        }
         auto unaryFun(ElementType)(auto ref ElementType __a)
         {
             mixin("alias " ~ parmName ~ " = __a ;");
@@ -151,8 +154,12 @@ template binaryFun(alias fun, string parm1Name = "a",
 {
     static if (is(typeof(fun) : string))
     {
-        import std.traits, std.typecons, std.typetuple;
-        import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+        static if (!_ctfeMatchBinary(fun, parm1Name, parm2Name))
+        {
+            // import half of phobos.
+            import std.traits, std.typecons, std.typetuple;
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+        }
         auto binaryFun(ElementType1, ElementType2)
             (auto ref ElementType1 __a, auto ref ElementType2 __b)
         {
@@ -179,6 +186,62 @@ unittest
     assert(less(1, 2) && !less(2, 1));
     alias greater = binaryFun!("a > b");
     assert(!greater("1", "2") && greater("2", "1"));
+}
+
+//CTFE
+private bool _ctfeSkipOp(ref string op)
+{
+    import std.ascii : isASCII, isAlphaNum;
+    immutable oldLength = op.length;
+    while(op.length)
+    {
+        immutable front = op[0];
+        if(front.isASCII && !(front.isAlphaNum || front == '_' || front == '.'))
+            op = op[1..$];
+        else
+            break;
+    }
+    return oldLength != op.length;
+}
+
+private bool _ctfeSkipInteger(ref string op)
+{
+    import std.ascii : isDigit;
+    immutable oldLength = op.length;
+    while (op.length && op[0].isDigit)
+    {
+        immutable front = op[0];
+        if(front.isDigit)
+            op = op[1..$];
+        else
+            break;
+    }
+    return oldLength != op.length;
+}
+
+private bool _ctfeSkipName(ref string op, string name)
+{
+    if (op.length >= name.length && op[0..name.length] == name)
+    {
+        op = op[name.length..$];
+        return true;
+    }
+    return false;
+}
+
+private bool _ctfeMatchBinary(string fun, string name1, string name2)
+{
+    fun._ctfeSkipOp;
+    while ((fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger == 1)
+        && fun._ctfeSkipOp) {}
+    return fun.length == 0;
+}
+
+private bool _ctfeMatchUnary(string fun, string name)
+{
+    fun._ctfeSkipOp;
+    while(fun._ctfeSkipName(name) != fun._ctfeSkipInteger && fun._ctfeSkipOp) {}
+    return fun.length == 0;
 }
 
 unittest
@@ -215,8 +278,9 @@ unittest
     static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
-private template safeOp(string S)
-    if (is(typeof(mixin("0 "~S~" 0")) == bool))
+//undocumented
+template safeOp(string S)
+    if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
 {
     private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
         if (isIntegral!ElementType1 && isIntegral!ElementType2)
@@ -225,7 +289,7 @@ private template safeOp(string S)
         return mixin("cast(T)a "~S~" cast(T)b");
     }
 
-    private bool safeOp(T0, T1)(T0 a, T1 b) pure
+    bool safeOp(T0, T1)(auto ref T0 a, auto ref T1 b)
     {
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
@@ -256,16 +320,27 @@ private template safeOp(string S)
     }
 }
 
+unittest //check user defined types
+{
+    import std.algorithm : equal;
+    struct Foo
+    {
+        int a;
+        auto opEquals(Foo foo)
+        {
+            return a == foo.a;
+        }
+    }
+    assert(safeOp!"!="(Foo(1), Foo(2)));
+}
+
 /**
    Predicate that returns $(D_PARAM a < b).
    Correctly compares signed and unsigned integers, ie. -1 < 2U.
 */
-bool lessThan(T0, T1)(T0 a, T1 b)
-{
-  return safeOp!"<"(a, b);
-}
+alias lessThan = safeOp!"<";
 
-unittest
+pure @safe @nogc nothrow unittest
 {
     assert(lessThan(2, 3));
     assert(lessThan(2U, 3U));
@@ -283,10 +358,7 @@ unittest
    Predicate that returns $(D_PARAM a > b).
    Correctly compares signed and unsigned integers, ie. 2U > -1.
 */
-bool greaterThan(T0, T1)(T0 a, T1 b)
-{
-  return safeOp!">"(a, b);
-}
+alias greaterThan = safeOp!">";
 
 unittest
 {
@@ -306,10 +378,7 @@ unittest
    Predicate that returns $(D_PARAM a == b).
    Correctly compares signed and unsigned integers, ie. !(-1 == ~0U).
 */
-bool equalTo(T0, T1)(T0 a, T1 b)
-{
-  return safeOp!"=="(a, b);
-}
+alias equalTo = safeOp!"==";
 
 unittest
 {
@@ -361,7 +430,7 @@ unittest
 template binaryReverseArgs(alias pred)
 {
     auto binaryReverseArgs(ElementType1, ElementType2)
-            (ElementType1 a, ElementType2 b)
+            (auto ref ElementType1 a, auto ref ElementType2 b)
     {
         return pred(b, a);
     }
@@ -384,7 +453,7 @@ Negates predicate $(D pred).
  */
 template not(alias pred)
 {
-    auto not(T...)(T args)
+    auto not(T...)(auto ref T args)
     if (is(typeof(!pred(args))) || is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
     {
         static if (is(typeof(!pred(args))))
