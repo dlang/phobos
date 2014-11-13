@@ -348,10 +348,16 @@ public:
  */
 @property Tid thisTid() @safe
 {
-    if( thisInfo.ident != Tid.init )
+    // TODO: remove when concurrency is safe
+    auto trus = delegate() @trusted
+    {
+        if( thisInfo.ident != Tid.init )
+            return thisInfo.ident;
+        thisInfo.ident = Tid( new MessageBox );
         return thisInfo.ident;
-    thisInfo.ident = Tid( new MessageBox );
-    return thisInfo.ident;
+    };
+
+    return trus();
 }
 
 /**
@@ -1769,7 +1775,7 @@ private
      */
     class MessageBox
     {
-        this() @safe
+        this() @trusted /* TODO: make @safe after relevant druntime PR gets merged */
         {
             m_lock      = new Mutex;
             m_closed    = false;

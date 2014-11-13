@@ -1,9 +1,7 @@
 module std.experimental.logger.multilogger;
 
-import std.array : back, insertInPlace, popBack;
 import std.experimental.logger.core;
 import std.experimental.logger.filelogger;
-import std.stdio : stdout;
 
 /** This Element is stored inside the $(D MultiLogger) and associates a
 $(D Logger) to a $(D string).
@@ -71,11 +69,12 @@ class MultiLogger : Logger
     Logger removeLogger(in char[] toRemove) @safe
     {
         import std.algorithm : copy;
+        import std.range.interfaces : back, popBack;
         for (size_t i = 0; i < this.logger.length; ++i)
         {
-            if (this.logger[i].name == toRemove) {
+            if (this.logger[i].name == toRemove) 
+            {
                 Logger ret = this.logger[i].logger;
-                //this.logger[i .. $-1] = this.logger[i+1 .. $];
                 this.logger[i] = this.logger.back();
                 this.logger.popBack();
 
@@ -91,10 +90,7 @@ class MultiLogger : Logger
     */
     override protected void writeLogMsg(ref LogEntry payload) @safe
     {
-        //for (size_t i = 0; i < this.logger.length; ++i)
-        //{
-            //auto it = this.logger[i];
-        foreach(it; this.logger)
+        foreach (it; this.logger)
         {
             /* We don't perform any checks here to avoid race conditions.
             Instead the child will check on its own if its log level matches
@@ -188,7 +184,7 @@ unittest
 
 @safe unittest
 {
-    auto dl = stdlog;
+    auto dl = sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);

@@ -13,8 +13,8 @@ class NullLogger : Logger
     Independent of the parameter this Logger will never log a message.
 
     Params:
-      lv = The $(D LogLevel) for the $(D MultiLogger). By default the $(D LogLevel)
-      for $(D MultiLogger) is $(D LogLevel.info).
+      lv = The $(D LogLevel) for the $(D NullLogger). By default the $(D LogLevel)
+      for $(D NullLogger) is $(D LogLevel.info).
     */
     this(const LogLevel lv = LogLevel.info) @safe
     {

@@ -1,12 +1,7 @@
 module std.experimental.logger.filelogger;
 
 import std.stdio;
-import std.string;
-import std.datetime : SysTime;
-import std.concurrency;
 import std.experimental.logger.core;
-
-import core.sync.mutex;
 
 /** This $(D Logger) implementation writes log messages to the associated
 file. The name of the file has to be passed on construction time. If the file
@@ -15,6 +10,9 @@ is already present new log messages will be append at its end.
 class FileLogger : Logger
 {
     import std.format : formattedWrite;
+    import std.datetime : SysTime;
+    import std.concurrency : Tid;
+
     /** A constructor for the $(D FileLogger) Logger.
 
     Params:
@@ -79,6 +77,7 @@ class FileLogger : Logger
         Tid threadId, SysTime timestamp, Logger logger)
         @safe
     {
+        import std.string : lastIndexOf;
         ptrdiff_t fnIdx = file.lastIndexOf('/') + 1;
         ptrdiff_t funIdx = funcName.lastIndexOf('.') + 1;
 
@@ -192,7 +191,7 @@ unittest
 
 unittest
 {
-    auto dl = stdlog;
+    auto dl = sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
