@@ -12,11 +12,13 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-import std.range;
 import std.traits;
 import std.typetuple;
 import std.functional;
 import std.algorithm; // FIXME (see alias below)
+
+import std.range.constraints;
+public import std.range.constraints : save, empty, popFront, popBack, front, back;
 
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the
@@ -114,6 +116,7 @@ unittest
 
 unittest
 {
+    import std.range;
     static struct S{int* p;}
     auto a = array(immutable(S).init.repeat(5));
 }
@@ -282,6 +285,7 @@ auto assocArray(Range)(Range r)
 ///
 /*@safe*/ pure /*nothrow*/ unittest
 {
+    import std.range;
     import std.typecons;
     auto a = assocArray(zip([0, 1, 2], ["a", "b", "c"]));
     assert(is(typeof(a) == string[int]));
@@ -534,293 +538,6 @@ nothrow unittest
     }
     auto a3 = minimallyInitializedArray!(S3[][])(2, 2);
     enum b3 = minimallyInitializedArray!(S3[][])(2, 2);
-}
-
-/**
-Implements the range interface primitive $(D empty) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.empty) is
-equivalent to $(D empty(array)).
- */
-
-@property bool empty(T)(in T[] a) @safe pure nothrow
-{
-    return !a.length;
-}
-
-///
-@safe pure nothrow unittest
-{
-    auto a = [ 1, 2, 3 ];
-    assert(!a.empty);
-    assert(a[3 .. $].empty);
-}
-
-/**
-Implements the range interface primitive $(D save) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.save) is
-equivalent to $(D save(array)). The function does not duplicate the
-content of the array, it simply returns its argument.
- */
-
-@property T[] save(T)(T[] a) @safe pure nothrow
-{
-    return a;
-}
-
-///
-@safe pure nothrow unittest
-{
-    auto a = [ 1, 2, 3 ];
-    auto b = a.save;
-    assert(b is a);
-}
-/**
-Implements the range interface primitive $(D popFront) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.popFront) is
-equivalent to $(D popFront(array)). For $(GLOSSARY narrow strings),
-$(D popFront) automatically advances to the next $(GLOSSARY code
-point).
-*/
-
-void popFront(T)(ref T[] a) @safe pure nothrow
-if (!isNarrowString!(T[]) && !is(T[] == void[]))
-{
-    assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
-    a = a[1 .. $];
-}
-
-///
-@safe pure nothrow unittest
-{
-    auto a = [ 1, 2, 3 ];
-    a.popFront();
-    assert(a == [ 2, 3 ]);
-}
-
-version(unittest)
-{
-    static assert(!is(typeof({          int[4] a; popFront(a); })));
-    static assert(!is(typeof({ immutable int[] a; popFront(a); })));
-    static assert(!is(typeof({          void[] a; popFront(a); })));
-}
-
-// Specialization for narrow strings. The necessity of
-void popFront(C)(ref C[] str) @trusted pure nothrow
-if (isNarrowString!(C[]))
-{
-    assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
-
-    static if(is(Unqual!C == char))
-    {
-        immutable c = str[0];
-        if(c < 0x80)
-        {
-            //ptr is used to avoid unnnecessary bounds checking.
-            str = str.ptr[1 .. str.length];
-        }
-        else
-        {
-             import core.bitop : bsr;
-             auto msbs = 7 - bsr(~c);
-             if((msbs < 2) | (msbs > 6))
-             {
-                 //Invalid UTF-8
-                 msbs = 1;
-             }
-             str = str[msbs .. $];
-        }
-    }
-    else static if(is(Unqual!C == wchar))
-    {
-        immutable u = str[0];
-        str = str[1 + (u >= 0xD800 && u <= 0xDBFF) .. $];
-    }
-    else static assert(0, "Bad template constraint.");
-}
-
-@safe pure unittest
-{
-    foreach(S; TypeTuple!(string, wstring, dstring))
-    {
-        S s = "\xC2\xA9hello";
-        s.popFront();
-        assert(s == "hello");
-
-        S str = "hello\U00010143\u0100\U00010143";
-        foreach(dchar c; ['h', 'e', 'l', 'l', 'o', '\U00010143', '\u0100', '\U00010143'])
-        {
-            assert(str.front == c);
-            str.popFront();
-        }
-        assert(str.empty);
-
-        static assert(!is(typeof({          immutable S a; popFront(a); })));
-        static assert(!is(typeof({ typeof(S.init[0])[4] a; popFront(a); })));
-    }
-
-    C[] _eatString(C)(C[] str)
-    {
-        while(!str.empty)
-            str.popFront();
-
-        return str;
-    }
-    enum checkCTFE = _eatString("ウェブサイト@La_Verité.com");
-    static assert(checkCTFE.empty);
-    enum checkCTFEW = _eatString("ウェブサイト@La_Verité.com"w);
-    static assert(checkCTFEW.empty);
-}
-
-/**
-Implements the range interface primitive $(D popBack) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.popBack) is
-equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
-popFront) automatically eliminates the last $(GLOSSARY code point).
-*/
-
-void popBack(T)(ref T[] a) @safe pure nothrow
-if (!isNarrowString!(T[]) && !is(T[] == void[]))
-{
-    assert(a.length);
-    a = a[0 .. $ - 1];
-}
-
-///
-@safe pure nothrow unittest
-{
-    auto a = [ 1, 2, 3 ];
-    a.popBack();
-    assert(a == [ 1, 2 ]);
-}
-
-version(unittest)
-{
-    static assert(!is(typeof({ immutable int[] a; popBack(a); })));
-    static assert(!is(typeof({          int[4] a; popBack(a); })));
-    static assert(!is(typeof({          void[] a; popBack(a); })));
-}
-
-// Specialization for arrays of char
-void popBack(T)(ref T[] a) @safe pure
-if (isNarrowString!(T[]))
-{
-    assert(a.length, "Attempting to popBack() past the front of an array of " ~ T.stringof);
-    a = a[0 .. $ - std.utf.strideBack(a, $)];
-}
-
-@safe pure unittest
-{
-    foreach(S; TypeTuple!(string, wstring, dstring))
-    {
-        S s = "hello\xE2\x89\xA0";
-        s.popBack();
-        assert(s == "hello");
-        S s3 = "\xE2\x89\xA0";
-        auto c = s3.back;
-        assert(c == cast(dchar)'\u2260');
-        s3.popBack();
-        assert(s3 == "");
-
-        S str = "\U00010143\u0100\U00010143hello";
-        foreach(dchar ch; ['o', 'l', 'l', 'e', 'h', '\U00010143', '\u0100', '\U00010143'])
-        {
-            assert(str.back == ch);
-            str.popBack();
-        }
-        assert(str.empty);
-
-        static assert(!is(typeof({          immutable S a; popBack(a); })));
-        static assert(!is(typeof({ typeof(S.init[0])[4] a; popBack(a); })));
-    }
-}
-
-/**
-Implements the range interface primitive $(D front) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.front) is
-equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
-front) automatically returns the first $(GLOSSARY code point) as a $(D
-dchar).
-*/
-@property ref T front(T)(T[] a) @safe pure nothrow
-if (!isNarrowString!(T[]) && !is(T[] == void[]))
-{
-    assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
-    return a[0];
-}
-
-///
-@safe pure nothrow unittest
-{
-    int[] a = [ 1, 2, 3 ];
-    assert(a.front == 1);
-}
-
-@safe pure nothrow unittest
-{
-    auto a = [ 1, 2 ];
-    a.front = 4;
-    assert(a.front == 4);
-    assert(a == [ 4, 2 ]);
-
-    immutable b = [ 1, 2 ];
-    assert(b.front == 1);
-
-    int[2] c = [ 1, 2 ];
-    assert(c.front == 1);
-}
-
-@property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
-{
-    import std.utf : decode;
-    assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
-    size_t i = 0;
-    return decode(a, i);
-}
-
-/**
-Implements the range interface primitive $(D back) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.back) is
-equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
-back) automatically returns the last $(GLOSSARY code point) as a $(D
-dchar).
-*/
-@property ref T back(T)(T[] a) @safe pure nothrow if (!isNarrowString!(T[]))
-{
-    assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
-    return a[$ - 1];
-}
-
-///
-@safe pure nothrow unittest
-{
-    int[] a = [ 1, 2, 3 ];
-    assert(a.back == 3);
-    a.back += 4;
-    assert(a.back == 7);
-}
-
-@safe pure nothrow unittest
-{
-    immutable b = [ 1, 2, 3 ];
-    assert(b.back == 3);
-
-    int[3] c = [ 1, 2, 3 ];
-    assert(c.back == 3);
-}
-
-// Specialization for strings
-@property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
-{
-    import std.utf : decode;
-    assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
-    size_t i = a.length - std.utf.strideBack(a, a.length);
-    return decode(a, i);
 }
 
 // overlap
@@ -1467,6 +1184,7 @@ ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
 ElementType!S[] replicate(S)(S s, size_t n)
 if (isInputRange!S && !isDynamicArray!S)
 {
+    import std.range : repeat;
     return join(std.range.repeat(s, n));
 }
 
@@ -1825,6 +1543,7 @@ unittest
 {
     import std.conv : to;
     import std.algorithm;
+    import std.range;
 
     debug(std_array) printf("array.join.unittest\n");
 
@@ -3073,6 +2792,7 @@ unittest
 
 unittest
 {
+    import std.range;
     //Coverage for put(Range)
     struct S1
     {
@@ -3193,6 +2913,7 @@ unittest
 
 unittest //Test large allocations (for GC.extend)
 {
+    import std.range;
     import std.algorithm : equal;
     Appender!(char[]) app;
     app.reserve(1); //cover reserve on non-initialized
