@@ -2036,8 +2036,9 @@ if (isDynamicArray!(E[]) &&
     isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
     isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
+    import std.algorithm : countUntil;
     if (from.empty) return subject;
-    static if(isSomeString!(E[]))
+    static if (isSomeString!(E[]))
     {
         import std.string : indexOf;
         immutable idx = subject.indexOf(from);
@@ -2054,7 +2055,7 @@ if (isDynamicArray!(E[]) &&
     app.put(subject[0 .. idx]);
     app.put(to);
 
-    static if(isSomeString!(E[]) && isSomeString!R1)
+    static if (isSomeString!(E[]) && isSomeString!R1)
     {
         import std.utf : codeLength;
         immutable fromLength = codeLength!(Unqual!E, R1)(from);
@@ -2086,10 +2087,10 @@ unittest
 
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
         {
             auto s = to!S("This is a foo foo list");
@@ -2123,6 +2124,106 @@ unittest
     auto res = ["a", "a"];
     assert(replace(res, "a", "b") == ["b", "b"]);
     assert(replaceFirst(res, "a", "b") == ["b", "a"]);
+}
+
+/++
+    Replaces the last occurrence of $(D from) with $(D to) in $(D a). Returns a
+    new array without changing the contents of $(D subject), or the original
+    array if no match is found.
+ +/
+E[] replaceLast(E, R1, R2)(E[] subject, R1 from , R2 to)
+if (isDynamicArray!(E[]) &&
+    isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
+    isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
+{
+    import std.range : retro;
+    if (from.empty) return subject;
+    static if (isSomeString!(E[]))
+    {
+        import std.string : lastIndexOf;
+        auto idx = subject.lastIndexOf(from);
+    }
+    else
+    {
+        import std.algorithm : countUntil;
+        auto idx = retro(subject).countUntil(retro(from));
+    }
+
+    if (idx == -1)
+        return subject;
+
+    static if (isSomeString!(E[]) && isSomeString!R1)
+    {
+        import std.utf : codeLength;
+        auto fromLength = codeLength!(Unqual!E, R1)(from);
+    }
+    else
+        auto fromLength = from.length;
+
+    auto app = appender!(E[])();
+    static if (isSomeString!(E[]))
+        app.put(subject[0 .. idx]);
+    else
+        app.put(subject[0 .. $ - idx - fromLength]);
+
+    app.put(to);
+
+    static if (isSomeString!(E[]))
+        app.put(subject[idx+fromLength .. $]);
+    else
+        app.put(subject[$ - idx .. $]);
+
+    return app.data;
+}
+
+///
+unittest
+{
+    auto a = [1, 2, 2, 3, 4, 5];
+    auto b = a.replaceLast([2], [1337]);
+    assert(b == [1, 2, 1337, 3, 4, 5]);
+
+    auto s = "This is a foo foo list";
+    auto r = s.replaceLast("foo", "silly");
+    assert(r == "This is a foo silly list", r);
+}
+
+unittest
+{
+    import std.conv : to;
+    import std.algorithm : cmp;
+
+    debug(std_array) printf("array.replaceLast.unittest\n");
+
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+                          const(char[]), immutable(char[])))
+    {
+        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+                              const(char[]), immutable(char[])))
+        {
+            auto s = to!S("This is a foo foo list");
+            auto s2 = to!S("Thüs is a ßöö ßöö list");
+            auto from = to!T("foo");
+            auto from2 = to!T("ßöö");
+            auto into = to!T("silly");
+            auto into2 = to!T("sälly");
+
+            S r1 = replaceLast(s, from, into);
+            assert(cmp(r1, "This is a foo silly list") == 0, to!string(r1));
+
+            S r11 = replaceLast(s2, from2, into2);
+            assert(cmp(r11, "Thüs is a ßöö sälly list") == 0,
+                to!string(r11) ~ " : " ~ S.stringof ~ " " ~ T.stringof);
+
+            S r2 = replaceLast(r1, from, into);
+            assert(cmp(r2, "This is a silly silly list") == 0);
+
+            S r3 = replaceLast(s, to!T(""), into);
+            assert(cmp(r3, "This is a foo foo list") == 0);
+
+            assert(replaceLast(r3, to!T("won't find"), to!T("whatever")) is r3);
+        }
+    }
 }
 
 /++
