@@ -26,15 +26,13 @@ module std.bitmanip;
 
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
-import core.bitop;
-import std.range;
+import std.range.constraints;
 import std.system;
 import std.traits;
 
 version(unittest)
 {
     import std.stdio;
-    import std.typetuple;
 }
 
 
@@ -540,6 +538,7 @@ unittest
 struct BitArray
 {
     import std.format : FormatSpec;
+    import core.bitop: bts, btr, bsf, bt;
 
     size_t len;
     size_t* ptr;
@@ -1590,6 +1589,7 @@ public:
     @property auto bitsSet() const nothrow
     {
         import std.algorithm : filter, map, joiner;
+        import std.range : iota;
 
         return iota(dim).
                filter!(i => ptr[i])().
@@ -1617,6 +1617,7 @@ public:
     unittest
     {
         import std.algorithm : equal;
+        import std.range : iota;
 
         debug(bitarray) printf("BitArray.bitsSet unittest\n");
         BitArray b;
@@ -1737,17 +1738,20 @@ private ushort swapEndianImpl(ushort val) @safe pure nothrow @nogc
 
 private uint swapEndianImpl(uint val) @trusted pure nothrow @nogc
 {
+    import core.bitop: bswap;
     return bswap(val);
 }
 
 private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 {
+    import core.bitop: bswap;
     immutable ulong res = bswap(cast(uint)val);
     return res << 32 | bswap(cast(uint)(val >> 32));
 }
 
 unittest
 {
+    import std.typetuple;
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
@@ -1874,6 +1878,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 
 unittest
 {
+    import std.typetuple;
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
@@ -2069,6 +2074,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 
 unittest
 {
+    import std.typetuple;
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar/*,
                           float, double*/))
@@ -2209,6 +2215,7 @@ private template isFloatOrDouble(T)
 
 unittest
 {
+    import std.typetuple;
     foreach(T; TypeTuple!(float, double))
     {
         static assert(isFloatOrDouble!(T));
@@ -2237,6 +2244,7 @@ private template canSwapEndianness(T)
 
 unittest
 {
+    import std.typetuple;
     foreach(T; TypeTuple!(bool, ubyte, byte, ushort, short, uint, int, ulong,
                           long, char, wchar, dchar, float, double))
     {
@@ -3271,6 +3279,7 @@ void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
 //Verify Example.
 unittest
 {
+    import std.array;
     auto buffer = appender!(const ubyte[])();
     buffer.append!ushort(261);
     assert(buffer.data == [1, 5]);
@@ -3284,6 +3293,7 @@ unittest
 
 unittest
 {
+    import std.array;
     {
         //bool
         auto buffer = appender!(const ubyte[])();
@@ -3415,7 +3425,8 @@ unittest
 unittest
 {
     import std.string : format;
-
+    import std.array;
+    import std.typetuple;
     foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
     {
         auto toWrite = appender!(ubyte[])();
@@ -3458,6 +3469,7 @@ For signed integers, the sign bit is included in the count.
 private uint countTrailingZeros(T)(T value) @nogc pure nothrow
     if (isIntegral!T)
 {
+    import core.bitop : bsf;
     // bsf doesn't give the correct result for 0.
     if (!value)
         return 8 * T.sizeof;
@@ -3489,6 +3501,7 @@ unittest
 
 unittest
 {
+    import std.typetuple;
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countTrailingZeros(cast(T)0) == 8 * T.sizeof);
@@ -3569,6 +3582,7 @@ unittest
 
 unittest
 {
+    import std.typetuple;
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countBitsSet(cast(T)0) == 0);
@@ -3656,6 +3670,7 @@ auto bitsSet(T)(T value) @nogc pure nothrow
 unittest
 {
     import std.algorithm : equal;
+    import std.range : iota;
 
     assert(bitsSet(1).equal([0]));
     assert(bitsSet(5).equal([0, 2]));
@@ -3666,7 +3681,9 @@ unittest
 unittest
 {
     import std.algorithm : equal;
+    import std.range: iota;
 
+    import std.typetuple;
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(bitsSet(cast(T)0).empty);
