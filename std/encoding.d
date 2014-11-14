@@ -52,7 +52,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.encoding;
 
 import std.traits;
-import std.range;
+import std.range.constraints;
 
 unittest
 {
@@ -1799,8 +1799,10 @@ if (isNativeOutputRange!(R, E))
         static assert(0);
     }
 }
+
 unittest
 {
+    import std.array;
     Appender!(char[]) r;
     assert(encode!(char)('T', r) == 1);
     assert(encode!(wchar)('T', r) == 1);
@@ -2040,6 +2042,7 @@ body
 
 unittest
 {
+    import std.range;
     import std.typetuple;
     {
         import std.conv : to;
