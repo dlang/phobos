@@ -15,7 +15,7 @@ module std.array;
 import std.traits;
 import std.typetuple;
 import std.functional;
-import std.algorithm; // FIXME (see alias below)
+static import std.algorithm; // FIXME, remove with alias of splitter
 
 import std.range.constraints;
 public import std.range.constraints : save, empty, popFront, popBack, front, back;
@@ -1294,7 +1294,7 @@ unittest //safety, purity, ctfe ...
 /++
 Alias for $(XREF algorithm, splitter).
  +/
-alias splitter = std.algorithm.splitter;
+deprecated("Please use std.algorithm.splitter instead.") alias splitter = std.algorithm.splitter;
 
 /++
 Eagerly splits $(D s) into an array, using $(D delim) as the delimiter.
@@ -2040,10 +2040,13 @@ if (isDynamicArray!(E[]) &&
     static if(isSomeString!(E[]))
     {
         import std.string : indexOf;
-        auto idx = subject.indexOf(from);
+        immutable idx = subject.indexOf(from);
     }
     else
-        auto idx = subject.countUntil(from);
+    {
+        import std.algorithm : countUntil;
+        immutable idx = subject.countUntil(from);
+    }
     if (idx == -1)
         return subject;
 
@@ -2054,10 +2057,10 @@ if (isDynamicArray!(E[]) &&
     static if(isSomeString!(E[]) && isSomeString!R1)
     {
         import std.utf : codeLength;
-        auto fromLength = codeLength!(Unqual!E, R1)(from);
+        immutable fromLength = codeLength!(Unqual!E, R1)(from);
     }
     else
-        auto fromLength = from.length;
+        immutable fromLength = from.length;
 
     app.put(subject[idx + fromLength .. $]);
 
