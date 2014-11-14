@@ -32,13 +32,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.getopt;
 
-private import std.array, std.string, std.conv, std.traits, std.bitmanip,
-    std.algorithm, std.ascii, std.exception, std.typetuple, std.typecons;
-
-version (unittest)
-{
-    import std.stdio; // for testing only
-}
+import std.traits;
 
 /**
  * Thrown on one of the following conditions:
@@ -432,6 +426,7 @@ parses foo but leaves "--bar" in $(D args). The double-dash itself is
 removed from the argument array.
 */
 GetoptResult getopt(T...)(ref string[] args, T opts) {
+    import std.exception : enforce;
     enforce(args.length,
             "Invalid arguments string passed: program name missing");
     configuration cfg;
@@ -507,6 +502,7 @@ struct Option {
 
 pure Option splitAndGet(string opt) @trusted nothrow
 {
+    import std.array : split;
     auto sp = split(opt, "|");
     Option ret;
     if (sp.length > 1)
@@ -527,6 +523,8 @@ pure Option splitAndGet(string opt) @trusted nothrow
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         ref GetoptResult rslt, T opts)
 {
+    import std.algorithm : remove;
+    import std.conv : to;
     static if (opts.length)
     {
         static if (is(typeof(opts[0]) : config))
@@ -619,6 +617,10 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 bool handleOption(R)(string option, R receiver, ref string[] args,
         ref configuration cfg, bool incremental)
 {
+    import std.range : splitter;
+    import std.algorithm : map;
+    import std.ascii : isAlpha;
+    import std.conv : text, to;
     // Scan arguments looking for a match for this option
     bool ret = false;
     for (size_t i = 1; i < args.length; ) {
@@ -678,6 +680,7 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
         }
         else
         {
+            import std.exception : enforce;
             // non-boolean option, which might include an argument
             //enum isCallbackWithOneParameter = is(typeof(receiver("")) : void);
             enum isCallbackWithLessThanTwoParameters =
@@ -751,10 +754,11 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
 
                 import std.range : only;
                 import std.typecons : Tuple, tuple;
+                import std.string : indexOf;
 
                 static Tuple!(K, V) getter(string input)
                 {
-                    auto j = std.string.indexOf(input, assignChar);
+                    auto j = indexOf(input, assignChar);
                     auto key = input[0 .. j];
                     auto value = input[j + 1 .. $];
                     return tuple(to!K(key), to!V(value));
@@ -785,6 +789,8 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
 // 5316 - arrays with arraySep
 unittest
 {
+    import std.conv;
+
     arraySep = ",";
     scope (exit) arraySep = "";
 
@@ -812,6 +818,8 @@ unittest
 // 5316 - associative arrays with arraySep
 unittest
 {
+    import std.conv;
+
     arraySep = ",";
     scope (exit) arraySep = "";
 
@@ -871,6 +879,7 @@ enum autoIncrementChar = '+';
 
 private struct configuration
 {
+    import std.bitmanip : bitfields;
     mixin(bitfields!(
                 bool, "caseSensitive",  1,
                 bool, "bundling", 1,
@@ -883,6 +892,9 @@ private struct configuration
 private bool optMatch(string arg, string optPattern, ref string value,
     configuration cfg)
 {
+    import std.uni : toUpper;
+    import std.string : indexOf;
+    import std.array : split;
     //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
     //scope(success) writeln("optMatch result: ", value);
     if (!arg.length || arg[0] != optionChar) return false;
@@ -892,7 +904,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     //writeln("isLong: ", isLong);
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
-    immutable eqPos = std.string.indexOf(arg, assignChar);
+    immutable eqPos = indexOf(arg, assignChar);
     if (isLong && eqPos >= 0)
     {
         // argument looks like --opt=value
@@ -922,7 +934,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
         if (arg == v || !cfg.caseSensitive && toUpper(arg) == toUpper(v))
             return true;
         if (cfg.bundling && !isLong && v.length == 1
-                && std.string.indexOf(arg, v) >= 0)
+                && indexOf(arg, v) >= 0)
         {
             //writeln("success");
             return true;
@@ -950,7 +962,9 @@ private void setConfig(ref configuration cfg, config option)
 
 unittest
 {
+    import std.conv;
     import std.math;
+
     uint paranoid = 2;
     string[] args = (["program.name",
                       "--paranoid", "--paranoid", "--paranoid"]).dup;
@@ -1183,6 +1197,9 @@ unittest
 
 unittest // 5228
 {
+    import std.exception;
+    import std.conv;
+
     auto args = ["prog", "--foo=bar"];
     int abc;
     assertThrown!GetOptException(getopt(args, "abc", &abc));
@@ -1193,6 +1210,8 @@ unittest // 5228
 
 unittest // From bugzilla 7693
 {
+    import std.exception;
+
     enum Foo {
         bar,
         baz
@@ -1211,6 +1230,8 @@ unittest // From bugzilla 7693
 
 unittest // same bug as 7693 only for bool
 {
+    import std.exception;
+
     auto args = ["prog", "--foo=truefoobar"];
     bool foo;
     assertThrown(getopt(args, "foo", &foo));
@@ -1252,6 +1273,8 @@ unittest
 
 unittest
 {
+    import std.exception;
+
     bool foo;
     bool bar;
     auto args = ["prog", "-b", "-z"];
@@ -1262,6 +1285,8 @@ unittest
 
 unittest
 {
+    import std.exception;
+
     bool foo;
     bool bar;
     auto args = ["prog", "--foo", "-z"];
@@ -1353,8 +1378,10 @@ Params:
     text = The text to printed at the beginning of the help output.
     opt = The $(D Option) extracted from the $(D getopt) parameter.
 */
-void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt) {
+void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
+{
     import std.format : formattedWrite;
+    import std.algorithm : min, max;
 
     output.formattedWrite("%s\n", text);
 
@@ -1381,6 +1408,10 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt) {
 
 unittest
 {
+    import std.conv;
+
+    import std.array;
+    import std.string;
     bool a;
     auto args = ["prog", "--foo"];
     auto t = getopt(args, "foo|f", "Help", &a);
@@ -1406,6 +1437,9 @@ unittest
 
 unittest
 {
+    import std.conv;
+    import std.string;
+    import std.array ;
     bool a;
     auto args = ["prog", "--foo"];
     auto t = getopt(args, config.required, "foo|f", "Help", &a);
