@@ -17,19 +17,10 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.json;
 
-import std.ascii;
 import std.conv;
-import std.range;
-import std.utf;
+import std.range.constraints;
+import std.array;
 import std.traits;
-import std.exception;
-
-private
-{
-    // Prevent conflicts from these generic names
-    alias UTFStride = std.utf.stride;
-    alias toUnicode = std.utf.decode;
-}
 
 /**
 JSON type enumeration
@@ -53,6 +44,8 @@ JSON value node
 */
 struct JSONValue
 {
+    import std.exception : enforceEx, enforce;
+
     union Store
     {
         string                          str;
@@ -479,6 +472,9 @@ Parses a serialized string and returns a tree of JSON values.
 */
 JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 {
+    import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
+    import std.utf : toUTF8;
+
     JSONValue root = void;
     root.type_tag = JSON_TYPE.NULL;
 
@@ -947,6 +943,7 @@ class JSONException : Exception
 
 unittest
 {
+    import std.exception;
     JSONValue jv = "123";
     assert(jv.type == JSON_TYPE.STRING);
     assertNotThrown(jv.str);
@@ -1090,6 +1087,8 @@ unittest
 
 unittest
 {
+    import std.exception;
+
     // An overly simple test suite, if it can parse a serializated string and
     // then use the resulting values tree to generate an identical
     // serialization, both the decoder and encoder works.
@@ -1179,6 +1178,7 @@ unittest {
 deprecated unittest
 {
     // Bugzilla 12332
+    import std.exception;
 
     JSONValue jv;
     jv.type = JSON_TYPE.INTEGER;
