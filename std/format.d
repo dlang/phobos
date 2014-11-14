@@ -25,7 +25,10 @@ module std.format;
 //debug=format;                // uncomment to turn on debugging printf's
 
 import core.vararg;
-import std.exception, std.range, std.traits, std.typetuple;
+import std.exception;
+import std.range.constraints;
+import std.traits;
+import std.typetuple;
 
 version(unittest) 
 {
@@ -530,6 +533,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 
 @safe pure unittest
 {
+    import std.array;
     auto w = appender!string();
     formattedWrite(w, "%s %d", "@safe/pure", 42);
     assert(w.data == "@safe/pure 42");
@@ -827,6 +831,7 @@ struct FormatSpec(Char)
 
     unittest
     {
+        import std.array;
         auto w = appender!(char[])();
         auto f = FormatSpec("abc%sdef%sghi");
         f.writeUpToNextSpec(w);
@@ -1114,6 +1119,7 @@ struct FormatSpec(Char)
 
     private string getCurFmtStr() const
     {
+        import std.array : appender;
         auto w = appender!string();
         auto f = FormatSpec!Char("%s"); // for stringnize
 
@@ -1142,6 +1148,7 @@ struct FormatSpec(Char)
     unittest
     {
         // issue 5237
+        import std.array;
         auto w = appender!string();
         auto f = FormatSpec!char("%.16f");
         f.writeUpToNextSpec(w); // dummy eating
@@ -1152,6 +1159,7 @@ struct FormatSpec(Char)
 
     private const(Char)[] headUpToNextSpec()
     {
+        import std.array : appender;
         auto w = appender!(typeof(return))();
         auto tr = trailing;
 
@@ -1196,6 +1204,7 @@ struct FormatSpec(Char)
 @safe pure unittest
 {
     //Test the example
+    import std.array;
     auto a = appender!(string)();
     auto fmt = "Number: %2.4e\nString: %s";
     auto f = FormatSpec!char(fmt);
@@ -1931,6 +1940,7 @@ if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 unittest    // Test for issue 8310
 {
+    import std.array : appender;
     FormatSpec!char f;
     auto w = appender!string();
 
@@ -2356,6 +2366,7 @@ void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(T == enum))
 {
     import std.utf : UTFException;
+    import std.array : appender;
 
     StringTypeOf!T str = val;   // bug 8015
 
@@ -2768,6 +2779,8 @@ unittest
 
 unittest
 {
+    import std.array : appender;
+    import std.range.interfaces;
     // class range (issue 5154)
     auto c = inputRangeObject([1,2,3,4]);
     formatTest( c, "[1, 2, 3, 4]" );
@@ -2868,6 +2881,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
 unittest
 {
     // interface
+    import std.range.interfaces;
     InputRange!int i = inputRangeObject([1,2,3,4]);
     formatTest( i, "[1, 2, 3, 4]" );
     assert(i.empty);
@@ -2999,6 +3013,7 @@ unittest
 
 unittest
 {
+    import std.array;
     // 7230
     static struct Bug7230
     {
@@ -3022,6 +3037,7 @@ unittest
 
 unittest
 {
+    import std.array;
     static struct S{ @disable this(this); }
     S s;
 
@@ -3130,6 +3146,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 @safe pure unittest
 {
     // pointer
+    import std.range;
     auto r = retro([1,2,3,4]);
     auto p = ()@trusted{ auto p = &r; return p; }();
     formatTest( p, "[4, 3, 2, 1]" );
@@ -3294,6 +3311,7 @@ private int getNthInt(A...)(uint index, A args)
 version(unittest)
 void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
+    import std.array : appender;
     import std.conv : text;
     FormatSpec!char f;
     auto w = appender!string();
@@ -3306,6 +3324,7 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
 version(unittest)
 void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
+    import std.array : appender;
     import std.conv : text;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
@@ -3318,6 +3337,7 @@ version(unittest)
 void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import std.conv : text;
+    import std.array : appender;
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, val, f);
@@ -3334,6 +3354,7 @@ version(unittest)
 void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import std.conv : text;
+    import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
     foreach(cur; expected)
@@ -3348,6 +3369,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
 unittest
 {
     import std.algorithm;
+    import std.array;
     auto stream = appender!string();
     formattedWrite(stream, "%s", 1.1);
     assert(stream.data == "1.1", stream.data);
@@ -3365,6 +3387,7 @@ unittest
 
 unittest
 {
+    import std.array;
     auto stream = appender!string();
     formattedWrite(stream, "%u", 42);
     assert(stream.data == "42", stream.data);
@@ -3373,6 +3396,7 @@ unittest
 unittest
 {
     // testing raw writes
+    import std.array;
     auto w = appender!(char[])();
     uint a = 0x02030405;
     formattedWrite(w, "%+r", a);
@@ -3387,6 +3411,7 @@ unittest
 unittest
 {
     // testing positional parameters
+    import std.array;
     auto w = appender!(char[])();
     formattedWrite(w,
             "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
@@ -3404,6 +3429,7 @@ unittest
 unittest
 {
     import std.conv : text, octal;
+    import std.array;
 
     debug(format) printf("std.format.format.unittest\n");
 
@@ -3872,6 +3898,8 @@ here:
 
 unittest
 {
+    import std.array;
+
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     if (false) writeln(aa.keys);
     assert(aa[3] == "hello");
@@ -3923,6 +3951,7 @@ unittest
 version(unittest)
 void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
+    import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
 
@@ -3963,6 +3992,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
 version(unittest)
 void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
+    import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
 
@@ -4362,7 +4392,10 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         auto app = result[];
     }
     else
+    {
+        import std.array : appender;
         auto app = appender!T();
+    }
     if (spec.trailing.empty)
     {
         for (; !input.empty; input.popFront())
@@ -6290,6 +6323,7 @@ unittest
 unittest
 {
     // bugzilla 3479
+    import std.array;
     auto stream = appender!(char[])();
     formattedWrite(stream, "%2$.*1$d", 12, 10);
     assert(stream.data == "000000000010", stream.data);
@@ -6298,6 +6332,7 @@ unittest
 unittest
 {
     // bug 6893
+    import std.array;
     enum E : ulong { A, B, C }
     auto stream = appender!(char[])();
     formattedWrite(stream, "%s", E.C);
