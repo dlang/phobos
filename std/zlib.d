@@ -23,7 +23,7 @@ module std.zlib;
 
 //debug=zlib;       // uncomment to turn on debugging printf's
 
-private import etc.c.zlib, std.conv;
+import etc.c.zlib;
 
 // Values for 'mode'
 
@@ -163,6 +163,7 @@ const(void)[] compress(const(void)[] buf)
 
 void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
 {
+    import std.conv : to;
     int err;
     ubyte[] destbuf;
 
@@ -267,6 +268,8 @@ enum HeaderFormat {
 
 class Compress
 {
+    import std.conv: to;
+
   private:
     z_stream zs;
     int level = Z_DEFAULT_COMPRESSION;
@@ -429,6 +432,8 @@ class Compress
 
 class UnCompress
 {
+    import std.conv: to;
+
   private:
     z_stream zs;
     int inited;
