@@ -1056,7 +1056,7 @@ struct ThreadInfo
      * default instance when info is requested for a thread not created by the
      * Scheduler.
      */
-    static @property ref thisInfo()
+    static @property ref thisInfo() nothrow
     {
         static ThreadInfo val;
         return val;
@@ -1157,7 +1157,7 @@ interface Scheduler
      * as when each logical thread is backed by a dedicated kernel thread,
      * this routine may be a no-op.
      */
-    void yield();
+    void yield() nothrow;
 
     /**
      * Returns an appropriate ThreadInfo instance.
@@ -1166,7 +1166,7 @@ interface Scheduler
      * is calling this routine or, if the calling thread was not create by
      * this scheduler, returns ThreadInfo.thisInfo instead.
      */
-    @property ref ThreadInfo thisInfo();
+    @property ref ThreadInfo thisInfo() nothrow;
 
     /**
      * Creates a Condition varialbe analog for signaling.
@@ -1183,7 +1183,7 @@ interface Scheduler
      *      cases a Scheduler may need to hold this reference and unlock the
      *      mutex before yielding execution to another logical thread.
      */
-    Condition newCondition( Mutex m );
+    Condition newCondition( Mutex m ) /*nothrow*/;
 }
 
 
@@ -1221,7 +1221,7 @@ class ThreadScheduler :
     /**
      * This scheduler does no explicit multiplexing, so this is a no-op.
      */
-    void yield()
+    void yield() nothrow
     {
         // no explicit yield needed
     }
@@ -1231,7 +1231,7 @@ class ThreadScheduler :
      * Returns ThreadInfo.thisInfo, since it is a thread-local instance of
      * ThreadInfo, which is the correct behavior for this scheduler.
      */
-    @property ref ThreadInfo thisInfo()
+    @property ref ThreadInfo thisInfo() nothrow
     {
         return ThreadInfo.thisInfo;
     }
@@ -1240,7 +1240,7 @@ class ThreadScheduler :
     /**
      * Creates a new Condition variable.  No custom behavior is needed here.
      */
-    Condition newCondition( Mutex m )
+    Condition newCondition( Mutex m ) /*nothrow*/
     {
         return new Condition( m );
     }
@@ -1271,7 +1271,7 @@ class FiberScheduler :
      * This created a new Fiber for the supplied op and adds it to the
      * dispatch list.
      */
-    void spawn( void delegate() op )
+    void spawn( void delegate() op ) nothrow
     {
         create( op );
         yield();
@@ -1282,7 +1282,7 @@ class FiberScheduler :
      * If the caller is a scheduled Fiber, this yields execution to another
      * scheduled Fiber.
      */
-    void yield()
+    void yield() nothrow
     {
         // NOTE: It's possible that we should test whether the calling Fiber
         //       is an InfoFiber before yielding, but I think it's reasonable
@@ -1299,7 +1299,7 @@ class FiberScheduler :
      * Fiber was created by this dispatcher, otherwise it returns
      * ThreadInfo.thisInfo.
      */
-    @property ref ThreadInfo thisInfo()
+    @property ref ThreadInfo thisInfo() nothrow
     {
         auto f = cast(InfoFiber) Fiber.getThis();
 
@@ -1312,7 +1312,7 @@ class FiberScheduler :
     /**
      * Returns a Condition analog that yields when wait or notify is called.
      */
-    Condition newCondition( Mutex m )
+    Condition newCondition( Mutex m ) /*nothrow*/
     {
         return new FiberCondition( m );
     }
@@ -1324,7 +1324,7 @@ private:
     {
         ThreadInfo info;
 
-        this( void delegate() op )
+        this( void delegate() op ) nothrow
         {
             super( op );
         }
@@ -1340,12 +1340,12 @@ private:
             notified = false;
         }
 
-        override void wait()
+        override void wait() nothrow
         {
             switchContext();
         }
 
-        override bool wait( Duration period )
+        override bool wait( Duration period ) nothrow
         {
             scope(exit) notified = false;
 
@@ -1358,21 +1358,23 @@ private:
             return notified;
         }
 
-        override void notify()
+        override void notify() nothrow
         {
             notified = true;
             switchContext();
         }
 
-        override void notifyAll()
+        override void notifyAll() nothrow
         {
             notified = true;
             switchContext();
         }
 
     private:
-        final void switchContext()
+        final void switchContext() nothrow
         {
+            // nothrow hack needed until lock/unlock are nothrow
+            scope (failure) assert(0);
             mutex.unlock();
             scope(exit) mutex.lock();
             yield();
@@ -1405,7 +1407,7 @@ private:
     }
 
 
-    final void create( void delegate() op )
+    final void create( void delegate() op ) nothrow
     {
         void wrap()
         {
@@ -1444,7 +1446,7 @@ __gshared Scheduler scheduler;
  * If the caller is a Fiber and is not a Generator, this function will call
  * scheduler.yield() or Fiber.yield(), as appropriate.
  */
-void yield()
+void yield() nothrow
 {
     auto fiber = Fiber.getThis();
     if (!(cast(IsGenerator) fiber))
