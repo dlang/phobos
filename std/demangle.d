@@ -20,9 +20,7 @@
  */
 module std.demangle;
 
-private import core.demangle;
-private import std.exception;
-
+/+
 private class MangleException : Exception
 {
     this()
@@ -30,6 +28,7 @@ private class MangleException : Exception
         super("MangleException");
     }
 }
++/
 
 /*****************************
  * Demangle D mangled names.
@@ -85,6 +84,8 @@ int main()
 
 string demangle(string name)
 {
-    auto ret = core.demangle.demangle(name);
+    import core.demangle : demangle;
+    import std.exception : assumeUnique;
+    auto ret = demangle(name);
     return assumeUnique(ret);
 }
