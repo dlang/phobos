@@ -251,7 +251,7 @@ private bool _ctfeSkipInteger(ref string op)
 {
     import std.ascii : isDigit;
     immutable oldLength = op.length;
-    while (op.length && op[0].isDigit)
+    while (op.length)
     {
         immutable front = op[0];
         if(front.isDigit)
