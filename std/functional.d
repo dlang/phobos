@@ -236,7 +236,7 @@ private bool _ctfeSkipOp(ref string op)
 {
     import std.ascii : isASCII, isAlphaNum;
     immutable oldLength = op.length;
-    while(op.length)
+    while (op.length)
     {
         immutable front = op[0];
         if(front.isASCII && !(front.isAlphaNum || front == '_' || front == '.'))
@@ -283,7 +283,7 @@ private bool _ctfeMatchBinary(string fun, string name1, string name2)
 private bool _ctfeMatchUnary(string fun, string name)
 {
     fun._ctfeSkipOp;
-    while(fun._ctfeSkipName(name) != fun._ctfeSkipInteger && fun._ctfeSkipOp) {}
+    while (fun._ctfeSkipName(name) != fun._ctfeSkipInteger && fun._ctfeSkipOp) {}
     return fun.length == 0;
 }
 
