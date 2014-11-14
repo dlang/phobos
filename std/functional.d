@@ -19,8 +19,10 @@ Distributed under the Boost Software License, Version 1.0.
          http://www.boost.org/LICENSE_1_0.txt)
 */
 module std.functional;
+//debug = std_functional;
 
 import std.traits, std.typetuple;
+
 
 private template needOpCallAlias(alias fun)
 {
@@ -65,7 +67,18 @@ template unaryFun(alias fun, string parmName = "a")
         static if (!fun._ctfeMatchUnary(parmName))
         {
             import std.traits, std.typecons, std.typetuple;
-            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;            
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+            debug(std_functional)
+            {
+                pragma(msg, "unaryFun => "~fun~": import std.*");
+            }
+        }
+        else
+        {
+            debug(std_functional)
+            {
+                pragma(msg, "unaryFun => "~fun);
+            }
         }
         auto unaryFun(ElementType)(auto ref ElementType __a)
         {
@@ -90,6 +103,14 @@ unittest
     // Strings are compiled into functions:
     alias isEven = unaryFun!("(a & 1) == 0");
     assert(isEven(2) && !isEven(1));
+}
+
+debug(std_functional) unittest
+{
+    alias sq0 = unaryFun!"sqrt(a)";
+    alias sq1 = unaryFun!"a.sqrt";
+    alias sq2 = unaryFun!".a+a";
+    alias sq3 = unaryFun!"_a+a";
 }
 
 /+ Undocumented, will be removed December 2014+/
@@ -159,6 +180,17 @@ template binaryFun(alias fun, string parm1Name = "a",
             // import half of phobos.
             import std.traits, std.typecons, std.typetuple;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+            debug(std_functional)
+            {
+                pragma(msg, "binaryFun => "~fun~": import std.*");
+            }
+        }
+        else
+        {
+            debug(std_functional)
+            {
+                pragma(msg, "binaryFun => "~fun);
+            }
         }
         auto binaryFun(ElementType1, ElementType2)
             (auto ref ElementType1 __a, auto ref ElementType2 __b)
@@ -188,7 +220,18 @@ unittest
     assert(!greater("1", "2") && greater("2", "1"));
 }
 
-//CTFE
+debug(std_functional) unittest
+{
+    alias bf0 = binaryFun!"b+sqrt(a)";
+    alias bf1 = binaryFun!"b+a.sqrt";
+    alias bf2 = binaryFun!"b+sqrt(a)";
+    alias bf3 = binaryFun!"b+a.sqrt";
+    alias bf4 = binaryFun!"a[b*2]";
+    alias bf5 = binaryFun!"a[b(a)**2]";
+    alias bf6 = binaryFun!"a_b";
+    alias bf7 = binaryFun!"a.b";
+}
+
 private bool _ctfeSkipOp(ref string op)
 {
     import std.ascii : isASCII, isAlphaNum;
@@ -454,7 +497,6 @@ Negates predicate $(D pred).
 template not(alias pred)
 {
     auto not(T...)(auto ref T args)
-    if (is(typeof(!pred(args))) || is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
     {
         static if (is(typeof(!pred(args))))
             return !pred(args);
