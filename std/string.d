@@ -98,7 +98,7 @@ void trustedPrintf(in char* str) @trusted nothrow @nogc
 
 public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 
-import std.range;
+import std.range.constraints;
 import std.traits;
 import std.typetuple;
 
@@ -1023,6 +1023,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
             {
                 import std.utf : strideBack;
                 import std.algorithm : findAmong;
+                import std.range : retro;
                 size_t n = haystack.retro.findAmong(needles).source.length;
                 if (n)
                 {
@@ -1898,6 +1899,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
 {
     import std.utf : decode;
     import std.uni : lineSep, paraSep;
+    import std.array : appender;
 
     size_t iStart = 0;
     size_t nextI = 0;
@@ -2127,6 +2129,7 @@ C[] strip(C)(C[] str) @safe pure
 @safe pure unittest
 {
     import std.exception;
+    import std.range;
     assertCTFEable!(
     {
     wstring s = " ";
@@ -2821,6 +2824,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
                                         const(C2)[] toRemove = null) @safe pure
     if (isSomeChar!C1 && isSomeChar!C2)
 {
+    import std.array : appender;
     auto buffer = appender!(C1[])();
     translateImpl(str, transTable, toRemove, buffer);
     return buffer.data;
@@ -2900,6 +2904,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                                            const(C2)[] toRemove = null) @safe pure
     if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
 {
+    import std.array : appender;
     auto buffer = appender!(C1[])();
     translateImpl(str, transTable, toRemove, buffer);
     return buffer.data;
@@ -2981,6 +2986,7 @@ void translate(C1, C2 = immutable char, Buffer)(C1[] str,
 ///
 @safe pure unittest
 {
+    import std.array : appender;
     dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
     auto buffer = appender!(dchar[])();
     translate("hello world", transTable1, null, buffer);
@@ -2998,6 +3004,7 @@ void translate(C1, C2 = immutable char, Buffer)(C1[] str,
 
 @safe pure unittest // issue 13018
 {
+    import std.array : appender;
     immutable dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
     auto buffer = appender!(dchar[])();
     translate("hello world", transTable1, null, buffer);
@@ -3213,6 +3220,7 @@ body
 ///
 @safe pure unittest
 {
+    import std.array : appender;
     auto buffer = appender!(char[])();
     auto transTable1 = makeTrans("eo5", "57q");
     translate("hello world", transTable1, null, buffer);
@@ -3272,6 +3280,7 @@ private void translateImplAscii(C = immutable char, Buffer)(in char[] str,
 string format(Char, Args...)(in Char[] fmt, Args args)
 {
     import std.format : formattedWrite, FormatException;
+    import std.array : appender;
     auto w = appender!string();
     auto n = formattedWrite(w, fmt, args);
     version (all)
@@ -3842,6 +3851,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 {
     import std.conv : conv_to = to;
     import std.utf : decode;
+    import std.array : appender;
 
     bool mod_c;
     bool mod_d;
