@@ -230,6 +230,7 @@ debug(std_functional) unittest
     alias bf5 = binaryFun!"a[b(a)**2]";
     alias bf6 = binaryFun!"a_b";
     alias bf7 = binaryFun!"a.b";
+    alias bf8 = binaryFun!"-a < -b";
 }
 
 private bool _ctfeSkipOp(ref string op)
