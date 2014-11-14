@@ -80,12 +80,8 @@
  */
 module std.csv;
 
-import std.algorithm;
-import std.array;
 import std.conv;
-import std.exception;
-import std.range;
-import std.string;
+import std.range.constraints;
 import std.traits;
 
 /**
@@ -133,6 +129,7 @@ class CSVException : Exception
 
 @safe pure unittest
 {
+    import std.string;
 	auto e1 = new Exception("Foobar");
 	auto e2 = new CSVException("args", e1);
 	assert(e2.next is e1);
@@ -319,7 +316,7 @@ enum Malformed
  */
 auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
-               if(isInputRange!Range && is(ElementType!Range == dchar)
+               if (isInputRange!Range && is(ElementType!Range == dchar)
                   && isSomeChar!(Separator)
                   && !is(Contents T : T[U], U : string))
 {
@@ -406,7 +403,7 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-               if(isInputRange!Range && is(ElementType!Range == dchar)
+               if (isInputRange!Range && is(ElementType!Range == dchar)
                   && isSomeChar!(Separator)
                   && isForwardRange!Header
                   && isSomeString!(ElementType!Header))
@@ -421,7 +418,7 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-               if(isInputRange!Range && is(ElementType!Range == dchar)
+               if (isInputRange!Range && is(ElementType!Range == dchar)
                   && isSomeChar!(Separator)
                   && is(Header : typeof(null)))
 {
@@ -489,6 +486,8 @@ auto csvReader(Contents = string,
 // Test shorter row length exception
 @safe pure unittest
 {
+    import std.exception;
+
     struct A
     {
         string a,b,c;
@@ -542,6 +541,7 @@ auto csvReader(Contents = string,
 // Test input conversion interface
 @safe pure unittest
 {
+    import std.algorithm;
     string str = `76,26,22`;
     int[] ans = [76,26,22];
     auto records = csvReader!int(str);
@@ -588,6 +588,8 @@ unittest
 // Test header interface
 unittest
 {
+    import std.algorithm;
+
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
     auto records = csvReader!int(str, ["b"]);
 
@@ -756,7 +758,7 @@ private pure struct Input(Range, Malformed ErrorLevel)
 {
     Range range;
     size_t row, col;
-    static if(ErrorLevel == Malformed.throwException)
+    static if (ErrorLevel == Malformed.throwException)
         size_t rowLength;
 }
 
@@ -781,7 +783,7 @@ private pure struct Input(Range, Malformed ErrorLevel)
  *
  */
 private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
-    if(isSomeChar!Separator && isInputRange!Range
+    if (isSomeChar!Separator && isInputRange!Range
        && is(ElementType!Range == dchar)
        && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
@@ -791,12 +793,12 @@ private:
     Separator _quote;
     size_t[] indices;
     bool _empty;
-    static if(is(Contents == struct) || is(Contents == class))
+    static if (is(Contents == struct) || is(Contents == class))
     {
         Contents recordContent;
         CsvRecord!(string, ErrorLevel, Range, Separator) recordRange;
     }
-    else static if(is(Contents T : T[U], U : string))
+    else static if (is(Contents T : T[U], U : string))
     {
         Contents recordContent;
         CsvRecord!(T, ErrorLevel, Range, Separator) recordRange;
@@ -882,7 +884,7 @@ public:
         {
             header ~= col;
             auto ptr = col in colToIndex;
-            if(ptr)
+            if (ptr)
                 *ptr = colIndex;
             colIndex++;
         }
@@ -894,26 +896,29 @@ public:
         foreach(h; colHeaders)
         {
             immutable index = colToIndex[h];
-            static if(ErrorLevel != Malformed.ignore)
-                if(index == size_t.max)
+            static if (ErrorLevel != Malformed.ignore)
+                if (index == size_t.max)
                     throw new HeaderMismatchException
                         ("Header not found: " ~ to!string(h));
             indices[i++] = index;
         }
 
-        static if(!is(Contents == struct) && !is(Contents == class))
+        static if (!is(Contents == struct) && !is(Contents == class))
         {
-            static if(is(Contents T : T[U], U : string))
+            static if (is(Contents T : T[U], U : string))
             {
+                import std.algorithm : sort;
                 sort(indices);
             }
-            else static if(ErrorLevel == Malformed.ignore)
+            else static if (ErrorLevel == Malformed.ignore)
             {
+                import std.algorithm : sort;
                 sort(indices);
             }
             else
             {
-                if(!isSorted(indices))
+                import std.algorithm : isSorted, findAdjacent;
+                if (!isSorted(indices))
                 {
                     auto ex = new HeaderMismatchException
                            ("Header in input does not match specified header.");
@@ -946,11 +951,11 @@ public:
     @property auto front()
     {
         assert(!empty);
-        static if(is(Contents == struct) || is(Contents == class))
+        static if (is(Contents == struct) || is(Contents == class))
         {
             return recordContent;
         }
-        else static if(is(Contents T : T[U], U : string))
+        else static if (is(Contents T : T[U], U : string))
         {
             return recordContent;
         }
@@ -984,25 +989,25 @@ public:
             recordRange.popFront();
         }
 
-        static if(ErrorLevel == Malformed.throwException)
-            if(_input.rowLength == 0)
+        static if (ErrorLevel == Malformed.throwException)
+            if (_input.rowLength == 0)
                 _input.rowLength = _input.col;
 
         _input.col = 0;
 
-        if(!_input.range.empty)
+        if (!_input.range.empty)
         {
-           if(_input.range.front == '\r')
+           if (_input.range.front == '\r')
            {
                _input.range.popFront();
-               if(_input.range.front == '\n')
+               if (_input.range.front == '\n')
                    _input.range.popFront();
            }
-           else if(_input.range.front == '\n')
+           else if (_input.range.front == '\n')
                _input.range.popFront();
         }
 
-        if(_input.range.empty)
+        if (_input.range.empty)
         {
             _empty = true;
             return;
@@ -1013,10 +1018,10 @@ public:
 
     private void prime()
     {
-        if(_empty)
+        if (_empty)
             return;
         _input.row++;
-        static if(is(Contents == struct) || is(Contents == class))
+        static if (is(Contents == struct) || is(Contents == class))
         {
             recordRange = typeof(recordRange)
                                  (_input, _separator, _quote, null);
@@ -1027,7 +1032,7 @@ public:
                                  (_input, _separator, _quote, indices);
         }
 
-        static if(is(Contents T : T[U], U : string))
+        static if (is(Contents T : T[U], U : string))
         {
             T[U] aa;
             try
@@ -1044,9 +1049,9 @@ public:
 
             recordContent = aa;
         }
-        else static if(is(Contents == struct) || is(Contents == class))
+        else static if (is(Contents == struct) || is(Contents == class))
         {
-            static if(is(Contents == class))
+            static if (is(Contents == class))
                 recordContent = new typeof(recordContent)();
             else
                 recordContent = typeof(recordContent).init;
@@ -1057,11 +1062,11 @@ public:
                 {
                     auto colData = recordRange.front;
                     scope(exit) colIndex++;
-                    if(indices.length > 0)
+                    if (indices.length > 0)
                     {
                         foreach(ti, ToType; FieldTypeTuple!(Contents))
                         {
-                            if(indices[ti] == colIndex)
+                            if (indices[ti] == colIndex)
                             {
                                 static if (!isSomeString!ToType) skipWS(colData);
                                 recordContent.tupleof[ti] = to!ToType(colData);
@@ -1072,7 +1077,7 @@ public:
                     {
                         foreach(ti, ToType; FieldTypeTuple!(Contents))
                         {
-                            if(ti == colIndex)
+                            if (ti == colIndex)
                             {
                                 static if (!isSomeString!ToType) skipWS(colData);
                                 recordContent.tupleof[ti] = to!ToType(colData);
@@ -1092,6 +1097,8 @@ public:
 
 @safe pure unittest
 {
+    import std.algorithm;
+
     string str = `76;^26^;22`;
     int[] ans = [76,26,22];
     auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
@@ -1108,8 +1115,9 @@ public:
  * requested $(D Contents) type is neither a structure or an associative array.
  */
 private struct CsvRecord(Contents, Malformed ErrorLevel, Range, Separator)
-    if(!is(Contents == class) && !is(Contents == struct))
+    if (!is(Contents == class) && !is(Contents == struct))
 {
+    import std.array : appender;
 private:
     Input!(Range, ErrorLevel)* _input;
     Separator _separator;
@@ -1141,12 +1149,12 @@ public:
         // how many will be skipped to get to the next header column
         size_t normalizer;
         foreach(ref c; _popCount) {
-            static if(ErrorLevel == Malformed.ignore)
+            static if (ErrorLevel == Malformed.ignore)
             {
                 // If we are not throwing exceptions
                 // a header may not exist, indices are sorted
                 // and will be size_t.max if not found.
-                if(c == size_t.max)
+                if (c == size_t.max)
                     break;
             }
             c -= normalizer;
@@ -1179,7 +1187,7 @@ public:
      */
     private bool recordEnd()
     {
-        if(_input.range.empty
+        if (_input.range.empty
            || _input.range.front == '\n'
            || _input.range.front == '\r')
         {
@@ -1200,28 +1208,30 @@ public:
      */
     void popFront()
     {
+        static if (ErrorLevel == Malformed.throwException)
+            import std.string : format;
         // Skip last of record when header is depleted.
-        if(_popCount.ptr && _popCount.empty)
+        if (_popCount.ptr && _popCount.empty)
             while(!recordEnd())
             {
                 prime(1);
             }
 
-        if(recordEnd())
+        if (recordEnd())
         {
             _empty = true;
-            static if(ErrorLevel == Malformed.throwException)
-                if(_input.rowLength != 0)
-                    if(_input.col != _input.rowLength)
+            static if (ErrorLevel == Malformed.throwException)
+                if (_input.rowLength != 0)
+                    if (_input.col != _input.rowLength)
                         throw new CSVException(
                            format("Row %s's length %s does not match "~
                                   "previous length of %s.", _input.row,
                                   _input.col, _input.rowLength));
             return;
         } else {
-            static if(ErrorLevel == Malformed.throwException)
-                if(_input.rowLength != 0)
-                    if(_input.col > _input.rowLength)
+            static if (ErrorLevel == Malformed.throwException)
+                if (_input.rowLength != 0)
+                    if (_input.col > _input.rowLength)
                         throw new CSVException(
                            format("Row %s's length %s does not match "~
                                   "previous length of %s.", _input.row,
@@ -1231,7 +1241,7 @@ public:
         // Separator is left on the end of input from the last call.
         // This cannot be moved to after the call to csvNextToken as
         // there may be an empty record after it.
-        if(_input.range.front == _separator)
+        if (_input.range.front == _separator)
             _input.range.popFront();
 
         _front.shrinkTo(0);
@@ -1248,7 +1258,7 @@ public:
         {
             _input.col++;
             _front.shrinkTo(0);
-            if(_input.range.front == _separator)
+            if (_input.range.front == _separator)
                 _input.range.popFront();
 
             try
@@ -1285,17 +1295,17 @@ public:
         }
 
         auto skipNum = _popCount.empty ? 0 : _popCount.front;
-        if(!_popCount.empty)
+        if (!_popCount.empty)
             _popCount.popFront();
 
-        if(skipNum == size_t.max) {
+        if (skipNum == size_t.max) {
             while(!recordEnd())
                 prime(1);
             _empty = true;
             return;
         }
 
-        if(skipNum)
+        if (skipNum)
             prime(skipNum);
 
         auto data = _front.data;
@@ -1355,21 +1365,21 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
                           (ref Range input, ref Output ans,
                            Separator sep, Separator quote,
                            bool startQuoted = false)
-                          if(isSomeChar!Separator && isInputRange!Range
+                          if (isSomeChar!Separator && isInputRange!Range
                              && is(ElementType!Range == dchar)
                              && isOutputRange!(Output, dchar))
 {
     bool quoted = startQuoted;
     bool escQuote;
-    if(input.empty)
+    if (input.empty)
         return;
 
-    if(input.front == '\n')
+    if (input.front == '\n')
         return;
-    if(input.front == '\r')
+    if (input.front == '\r')
         return;
 
-    if(input.front == quote)
+    if (input.front == quote)
     {
         quoted = true;
         input.popFront();
@@ -1378,25 +1388,25 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
     while(!input.empty)
     {
         assert(!(quoted && escQuote));
-        if(!quoted)
+        if (!quoted)
         {
             // When not quoted the token ends at sep
-            if(input.front == sep)
+            if (input.front == sep)
                 break;
-            if(input.front == '\r')
+            if (input.front == '\r')
                 break;
-            if(input.front == '\n')
+            if (input.front == '\n')
                 break;
         }
-        if(!quoted && !escQuote)
+        if (!quoted && !escQuote)
         {
-            if(input.front == quote)
+            if (input.front == quote)
             {
                 // Not quoted, but quote found
-                static if(ErrorLevel == Malformed.throwException)
+                static if (ErrorLevel == Malformed.throwException)
                     throw new IncompleteCellException(
                           "Quote located in unquoted token");
-                else static if(ErrorLevel == Malformed.ignore)
+                else static if (ErrorLevel == Malformed.ignore)
                     ans.put(quote);
             }
             else
@@ -1407,7 +1417,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
         }
         else
         {
-            if(input.front == quote)
+            if (input.front == quote)
             {
                 // Quoted, quote found
                 // By turning off quoted and turning on escQuote
@@ -1416,7 +1426,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
                 // quote or is followed by a non-quote (see outside else).
                 // They are mutually exclusive, but provide different
                 // information.
-                if(escQuote)
+                if (escQuote)
                 {
                     escQuote = false;
                     quoted = true;
@@ -1430,13 +1440,13 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
             else
             {
                 // Quoted, non-quote character
-                if(escQuote)
+                if (escQuote)
                 {
-                    static if(ErrorLevel == Malformed.throwException)
+                    static if (ErrorLevel == Malformed.throwException)
                         throw new IncompleteCellException(
                           "Content continues after end quote, " ~
                           "or needs to be escaped.");
-                    else static if(ErrorLevel == Malformed.ignore)
+                    else static if (ErrorLevel == Malformed.ignore)
                         break;
                 }
                 ans.put(input.front);
@@ -1445,8 +1455,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
         input.popFront();
     }
 
-    static if(ErrorLevel == Malformed.throwException)
-        if(quoted && (input.empty || input.front == '\n' || input.front == '\r'))
+    static if (ErrorLevel == Malformed.throwException)
+        if (quoted && (input.empty || input.front == '\n' || input.front == '\r'))
             throw new IncompleteCellException(
                   "Data continues on future lines or trailing quote");
 
@@ -1455,6 +1465,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test csvNextToken on simplest form and correct format.
 @safe pure unittest
 {
+    import std.array;
+
     string str = "\U00010143Hello,65,63.63\nWorld,123,3673.562";
 
     auto a = appender!(dchar[])();
@@ -1496,6 +1508,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test quoted tokens
 @safe pure unittest
 {
+    import std.array;
+
     string str = `one,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix";
 
     auto a = appender!(dchar[])();
@@ -1537,6 +1551,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test empty data is pulled at end of record.
 @safe pure unittest
 {
+    import std.array;
+
     string str = "one,";
     auto a = appender!(dchar[])();
     csvNextToken(str,a,',','"');
@@ -1551,6 +1567,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test exceptions
 @safe pure unittest
 {
+    import std.array;
+
     string str = "\"one\nnew line";
 
     typeof(appender!(dchar[])()) a;
@@ -1594,6 +1612,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test modifying token delimiter
 @safe pure unittest
 {
+    import std.array;
+
     string str = `one|two|/three "quoted"/|//`;
 
     auto a = appender!(dchar[])();
