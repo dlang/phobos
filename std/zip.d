@@ -32,13 +32,6 @@
  */
 module std.zip;
 
-import std.zlib;
-import std.datetime;
-import core.bitop;
-import std.conv;
-import std.algorithm;
-import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
-
 //debug=print;
 
 /** Thrown on error.
@@ -65,6 +58,9 @@ enum CompressionMethod : ushort
  */
 final class ArchiveMember
 {
+    import std.conv : to, octal;
+    import std.datetime : DosFileTime, SysTime, SysTimeToDosFileTime;
+
     /**
      * Read/Write: Usually the file name of the archive member; it is used to
      * index the archive directory for the member. Each member must have a unique
@@ -259,6 +255,12 @@ final class ArchiveMember
  */
 final class ZipArchive
 {
+    import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
+    import std.algorithm : max;
+    import std.conv : to;
+    import std.zlib : compress;
+    import std.datetime : DosFileTime;
+
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 
     private ubyte[] _data;
