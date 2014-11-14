@@ -80,12 +80,8 @@
  */
 module std.csv;
 
-import std.algorithm;
-import std.array;
 import std.conv;
-import std.exception;
-import std.range;
-import std.string;
+import std.range.constraints;
 import std.traits;
 
 /**
@@ -133,6 +129,7 @@ class CSVException : Exception
 
 @safe pure unittest
 {
+    import std.string;
 	auto e1 = new Exception("Foobar");
 	auto e2 = new CSVException("args", e1);
 	assert(e2.next is e1);
@@ -489,6 +486,8 @@ auto csvReader(Contents = string,
 // Test shorter row length exception
 @safe pure unittest
 {
+    import std.exception;
+
     struct A
     {
         string a,b,c;
@@ -542,6 +541,7 @@ auto csvReader(Contents = string,
 // Test input conversion interface
 @safe pure unittest
 {
+    import std.algorithm;
     string str = `76,26,22`;
     int[] ans = [76,26,22];
     auto records = csvReader!int(str);
@@ -588,6 +588,8 @@ unittest
 // Test header interface
 unittest
 {
+    import std.algorithm;
+
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
     auto records = csvReader!int(str, ["b"]);
 
@@ -905,14 +907,17 @@ public:
         {
             static if(is(Contents T : T[U], U : string))
             {
+                import std.algorithm : sort;
                 sort(indices);
             }
             else static if(ErrorLevel == Malformed.ignore)
             {
+                import std.algorithm : sort;
                 sort(indices);
             }
             else
             {
+                import std.algorithm : isSorted, findAdjacent;
                 if(!isSorted(indices))
                 {
                     auto ex = new HeaderMismatchException
@@ -1092,6 +1097,8 @@ public:
 
 @safe pure unittest
 {
+    import std.algorithm;
+
     string str = `76;^26^;22`;
     int[] ans = [76,26,22];
     auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
@@ -1110,6 +1117,7 @@ public:
 private struct CsvRecord(Contents, Malformed ErrorLevel, Range, Separator)
     if(!is(Contents == class) && !is(Contents == struct))
 {
+    import std.array : appender;
 private:
     Input!(Range, ErrorLevel)* _input;
     Separator _separator;
@@ -1200,6 +1208,8 @@ public:
      */
     void popFront()
     {
+        static if(ErrorLevel == Malformed.throwException)
+            import std.string : format;
         // Skip last of record when header is depleted.
         if(_popCount.ptr && _popCount.empty)
             while(!recordEnd())
@@ -1455,6 +1465,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test csvNextToken on simplest form and correct format.
 @safe pure unittest
 {
+    import std.array;
+
     string str = "\U00010143Hello,65,63.63\nWorld,123,3673.562";
 
     auto a = appender!(dchar[])();
@@ -1496,6 +1508,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test quoted tokens
 @safe pure unittest
 {
+    import std.array;
+
     string str = `one,two,"three ""quoted""","",` ~ "\"five\nnew line\"\nsix";
 
     auto a = appender!(dchar[])();
@@ -1537,6 +1551,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test empty data is pulled at end of record.
 @safe pure unittest
 {
+    import std.array;
+
     string str = "one,";
     auto a = appender!(dchar[])();
     csvNextToken(str,a,',','"');
@@ -1551,6 +1567,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test exceptions
 @safe pure unittest
 {
+    import std.array;
+
     string str = "\"one\nnew line";
 
     typeof(appender!(dchar[])()) a;
@@ -1594,6 +1612,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 // Test modifying token delimiter
 @safe pure unittest
 {
+    import std.array;
+
     string str = `one|two|/three "quoted"/|//`;
 
     auto a = appender!(dchar[])();
