@@ -20,7 +20,7 @@
  */
 module std.demangle;
 
-/++
+/+
 private class MangleException : Exception
 {
     this()
