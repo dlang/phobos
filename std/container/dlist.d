@@ -1,6 +1,8 @@
 module std.container.dlist;
 
-import std.exception, std.range, std.traits;
+import std.range.constraints;
+import std.traits;
+
 public import std.container.util;
 
 /+
@@ -39,9 +41,12 @@ The base DList Range. Contains Range primitives that don't depend on payload typ
  +/
 private struct DRange
 {
-    static assert(isBidirectionalRange!DRange);
-    static assert(is(ElementType!DRange == BaseNode*));
-
+    unittest
+    {
+        static assert(isBidirectionalRange!DRange);
+        static assert(is(ElementType!DRange == BaseNode*));       
+    }
+ 
 nothrow @safe pure:
     private BaseNode* _first;
     private BaseNode* _last;
@@ -115,6 +120,8 @@ $(D DList) uses reference semantics.
  */
 struct DList(T)
 {
+    import std.range : Take;
+
     /*
     A Node with a Payload. A PayNode.
      */
@@ -706,6 +713,7 @@ private:
 @safe unittest
 {
     import std.algorithm : equal;
+    import std.range : take;
 
     alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
@@ -894,6 +902,7 @@ private:
 
 @safe unittest //13425
 {
+    import std.range : drop, take;
     auto list = DList!int([1,2,3,4,5]);
     auto r = list[].drop(4); // r is a view of the last element of list
     assert(r.front == 5 && r.walkLength == 1);

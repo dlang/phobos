@@ -1,7 +1,5 @@
 module std.container.util;
 
-import std.algorithm;
-
 /**
 Returns an initialized object. This function is mainly for eliminating
 construction differences between structs and classes. It allows code to not
@@ -27,6 +25,8 @@ if (is(T == struct) || is(T == class))
 unittest
 {
     import std.container;
+    import std.algorithm : equal;
+    import std.algorithm : equal;
 
     auto arr = make!(Array!int)([4, 2, 3, 1]);
     assert(equal(arr[], [4, 2, 3, 1]));
@@ -42,6 +42,7 @@ unittest
 unittest
 {
     import std.container;
+    import std.algorithm : equal;
 
     auto arr1 = make!(Array!dchar)();
     assert(arr1.empty);
@@ -58,6 +59,7 @@ unittest
 unittest
 {
     import std.container;
+    import std.algorithm : equal;
 
     auto a = make!(DList!int)(1,2,3,4);
     auto b = make!(DList!int)(1,2,3,4);
@@ -95,6 +97,7 @@ unittest
 {
     import std.container.array, std.container.rbtree, std.container.slist;
     import std.range : iota;
+    import std.algorithm : equal;
 
     auto arr = make!Array(iota(5));
     assert(equal(arr[], [0, 1, 2, 3, 4]));
@@ -113,6 +116,8 @@ unittest
 unittest
 {
     import std.container.rbtree;
+    import std.algorithm : equal;
+
     auto rbtmin = make!(RedBlackTree, "a < b", false)(3, 2, 2, 1);
     assert(equal(rbtmin[], [1, 2, 3]));
 }

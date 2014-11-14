@@ -1,18 +1,13 @@
 module std.container.rbtree;
 
-import std.exception, std.algorithm, std.range, std.traits;
-import std.functional : binaryFun;
-import std.typetuple : allSatisfy;
+// FIXME
+import std.functional; // : binaryFun;
+
 public import std.container.util;
 
 version(unittest) version = RBDoChecks;
 
 //version = RBDoChecks;
-
-version(RBDoChecks)
-{
-    import std.stdio;
-}
 
 /*
  * Implementation for a Red Black node for use in a Red Black Tree (see below)
@@ -610,6 +605,11 @@ struct RBNode(V)
 final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     if(is(typeof(binaryFun!less(T.init, T.init))))
 {
+    import std.range.constraints;
+    import std.range : Take;
+    import std.typetuple : allSatisfy;
+    import std.traits;
+
     alias _less = binaryFun!less;
 
     // BUG: this must come first in the struct due to issue 2810
@@ -818,6 +818,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
+        import std.range.constraints;
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
         auto r = ts[];
@@ -826,8 +828,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             auto vals = [1, 2, 3, 4, 5];
         else
             auto vals = [5, 4, 3, 2, 1];
+        assert(equal(r, vals));
 
-        assert(std.algorithm.equal(r, vals));
         assert(r.front == vals.front);
         assert(r.back != r.front);
         auto oldfront = r.front;
@@ -910,13 +912,14 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
         auto ts2 = ts.dup;
         assert(ts2.length == 5);
-        assert(std.algorithm.equal(ts[], ts2[]));
+        assert(equal(ts[], ts2[]));
         ts2.insert(cast(Elem)6);
-        assert(!std.algorithm.equal(ts[], ts2[]));
+        assert(!equal(ts[], ts2[]));
         assert(ts.length == 5 && ts2.length == 6);
     }
 
@@ -975,6 +978,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      */
     override bool opEquals(Object rhs)
     {
+        import std.algorithm : equal;
         RedBlackTree that = cast(RedBlackTree)rhs;
         if (that is null) return false;
 
@@ -1207,6 +1211,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
         auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
         auto r = ts[];
@@ -1218,9 +1223,9 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         assert(ts.arrayEqual([1,5]));
 
         static if(less == "a < b")
-            assert(std.algorithm.equal(r2, [5]));
+            assert(equal(r2, [5]));
         else
-            assert(std.algorithm.equal(r2, [1]));
+            assert(equal(r2, [1]));
     }
 
     /++
@@ -1252,6 +1257,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
+        import std.range : take;
         auto ts = new RedBlackTree(1,2,3,4,5);
         auto r = ts[];
         r.popFront();
@@ -1260,17 +1267,17 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
         static if(less == "a < b")
         {
-            assert(std.algorithm.equal(r2, [2,3,4,5]));
+            assert(equal(r2, [2,3,4,5]));
             auto r3 = ts.remove(take(r, 2));
             assert(ts.arrayEqual([1,4,5]) && ts.length == 3);
-            assert(std.algorithm.equal(r3, [4,5]));
+            assert(equal(r3, [4,5]));
         }
         else
         {
-            assert(std.algorithm.equal(r2, [4,3,2,1]));
+            assert(equal(r2, [4,3,2,1]));
             auto r3 = ts.remove(take(r, 2));
             assert(ts.arrayEqual([5,2,1]) && ts.length == 3);
-            assert(std.algorithm.equal(r3, [2,1]));
+            assert(equal(r3, [2,1]));
         }
     }
 
@@ -1288,9 +1295,9 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 --------------------
 auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
 rbt.removeKey(1, 4, 7);
-assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
+assert(equal(rbt[], [0, 1, 1, 5]));
 rbt.removeKey(1, 1, 0);
-assert(std.algorithm.equal(rbt[], [5]));
+assert(equal(rbt[], [5]));
 --------------------
       +/
     size_t removeKey(U...)(U elems)
@@ -1332,6 +1339,7 @@ assert(std.algorithm.equal(rbt[], [5]));
            isImplicitlyConvertible!(ElementType!Stuff, Elem) &&
            !isDynamicArray!Stuff)
     {
+        import std.array : array;
         //We use array in case stuff is a Range from this RedBlackTree - either
         //directly or indirectly.
         return removeKey(array(stuff));
@@ -1345,6 +1353,8 @@ assert(std.algorithm.equal(rbt[], [5]));
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
+        import std.range : take;
         auto rbt = new RedBlackTree(5, 4, 3, 7, 2, 1, 7, 6, 2, 19, 45);
 
         //The cast(Elem) is because these tests are instantiated with a variety
@@ -1363,9 +1373,9 @@ assert(std.algorithm.equal(rbt[], [5]));
             assert(rbt.removeKey(take(rbt[], 3)) == 3 && rbt.length == 4);
 
             static if(less == "a < b")
-                assert(std.algorithm.equal(rbt[], [7,7,19,45]));
+                assert(equal(rbt[], [7,7,19,45]));
             else
-                assert(std.algorithm.equal(rbt[], [7,5,3,2]));
+                assert(equal(rbt[], [7,5,3,2]));
         }
         else
         {
@@ -1380,9 +1390,9 @@ assert(std.algorithm.equal(rbt[], [5]));
             assert(rbt.removeKey(take(rbt[], 3)) == 3 && rbt.length == 2);
 
             static if(less == "a < b")
-                assert(std.algorithm.equal(rbt[], [19,45]));
+                assert(equal(rbt[], [19,45]));
             else
-                assert(std.algorithm.equal(rbt[], [5,3]));
+                assert(equal(rbt[], [5,3]));
         }
     }
 
@@ -1473,6 +1483,7 @@ assert(std.algorithm.equal(rbt[], [5]));
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         auto rl = ts.lowerBound(3);
         auto ru = ts.upperBound(3);
@@ -1480,16 +1491,16 @@ assert(std.algorithm.equal(rbt[], [5]));
 
         static if(less == "a < b")
         {
-            assert(std.algorithm.equal(rl, [1,2]));
-            assert(std.algorithm.equal(ru, [4,5]));
+            assert(equal(rl, [1,2]));
+            assert(equal(ru, [4,5]));
         }
         else
         {
-            assert(std.algorithm.equal(rl, [5,4]));
-            assert(std.algorithm.equal(ru, [2,1]));
+            assert(equal(rl, [5,4]));
+            assert(equal(ru, [2,1]));
         }
 
-        assert(std.algorithm.equal(re, [3]));
+        assert(equal(re, [3]));
     }
 
     version(RBDoChecks)
@@ -1501,6 +1512,7 @@ assert(std.algorithm.equal(rbt[], [5]));
          */
         void printTree(Node n, int indent = 0)
         {
+            import std.stdio;
             if(n !is null)
             {
                 printTree(n.right, indent + 2);
@@ -1530,6 +1542,7 @@ assert(std.algorithm.equal(rbt[], [5]));
             //
             int recurse(Node n, string path)
             {
+                import std.stdio;
                 if(n is null)
                     return 1;
                 if(n.parent.left !is n && n.parent.right !is n)
@@ -1611,16 +1624,18 @@ assert(std.algorithm.equal(rbt[], [5]));
 //Verify Example for removeKey.
 pure unittest
 {
+    import std.algorithm : equal;
     auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
     rbt.removeKey(1, 4, 7);
-    assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
+    assert(equal(rbt[], [0, 1, 1, 5]));
     rbt.removeKey(1, 1, 0);
-    assert(std.algorithm.equal(rbt[], [5]));
+    assert(equal(rbt[], [5]));
 }
 
 //Tests for removeKey
 pure unittest
 {
+    import std.algorithm : equal;
     {
         auto rbt = redBlackTree(["hello", "world", "foo", "bar"]);
         assert(equal(rbt[], ["bar", "foo", "hello", "world"]));
@@ -1720,12 +1735,15 @@ pure unittest
 //Range construction.
 pure unittest
 {
+    import std.algorithm : equal;
+    import std.range : iota;
     auto rbt = new RedBlackTree!(int, "a > b")(iota(5));
     assert(equal(rbt[], [4, 3, 2, 1, 0]));
 }
 
 pure unittest
 {
+    import std.array : array;
     auto rt1 = redBlackTree(5, 4, 3, 2, 1);
     assert(rt1.length == 5);
     assert(array(rt1[]) == [1, 2, 3, 4, 5]);
