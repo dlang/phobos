@@ -652,9 +652,7 @@ module std.uni;
 
 import core.stdc.stdlib;
 import std.traits, std.typetuple;
-// FIXME
-// import std.range.constraints;
-import std.range; // : empty, back, front, popBack, popFront, save, isOutputRange, isInputRange, isRandomAccessRange, isForwardRange, isBidirectionalRange, hasLength, walkLength, ElementType, put;
+import std.range.constraints;
 
 
 // debug = std_uni;
