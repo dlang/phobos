@@ -20,7 +20,7 @@
    +/
 module std.utf;
 
-import std.range;      // walkLength
+import std.range.constraints;
 import std.traits;     // isSomeChar, isSomeString
 import std.typetuple;  // TypeTuple
 
@@ -2475,6 +2475,7 @@ private P toUTFzImpl(P, S)(S str) @safe pure
     //C[] -> immutable(C)*
     else
     {
+        import std.array : uninitializedArray;
         auto copy = uninitializedArray!(Unqual!OutChar[])(str.length + 1);
         copy[0 .. $ - 1] = str[];
         copy[$ - 1] = '\0';
@@ -2489,6 +2490,7 @@ private P toUTFzImpl(P, S)(S str) @safe pure
         !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
 {
+    import std.array : appender;
     auto retval = appender!(typeof(*P.init)[])();
 
     foreach (dchar c; str)
@@ -2655,7 +2657,6 @@ pure unittest
 size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
     if (isSomeChar!C)
 {
-    import std.range : walkLength;
     return walkLength(str);
 }
 
@@ -2849,6 +2850,7 @@ auto ref byCodeUnit(R)(R r)
 
 pure nothrow @nogc unittest
 {
+    import std.range;
     {
         char[5] s;
         int i;
