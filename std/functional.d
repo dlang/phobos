@@ -105,14 +105,6 @@ unittest
     assert(isEven(2) && !isEven(1));
 }
 
-debug(std_functional) unittest
-{
-    alias sq0 = unaryFun!"sqrt(a)";
-    alias sq1 = unaryFun!"a.sqrt";
-    alias sq2 = unaryFun!".a+a";
-    alias sq3 = unaryFun!"_a+a";
-}
-
 /+ Undocumented, will be removed December 2014+/
 deprecated("Parameter byRef is obsolete. Please call unaryFun!(fun, parmName) directly.")
 template unaryFun(alias fun, bool byRef, string parmName = "a")
@@ -175,7 +167,7 @@ template binaryFun(alias fun, string parm1Name = "a",
 {
     static if (is(typeof(fun) : string))
     {
-        static if (!_ctfeMatchBinary(fun, parm1Name, parm2Name))
+        static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
         {
             // import half of phobos.
             import std.traits, std.typecons, std.typetuple;
@@ -220,20 +212,7 @@ unittest
     assert(!greater("1", "2") && greater("2", "1"));
 }
 
-debug(std_functional) unittest
-{
-    alias bf0 = binaryFun!"b+sqrt(a)";
-    alias bf1 = binaryFun!"b+a.sqrt";
-    alias bf2 = binaryFun!"b+sqrt(a)";
-    alias bf3 = binaryFun!"b+a.sqrt";
-    alias bf4 = binaryFun!"a[b*2]";
-    alias bf5 = binaryFun!"a[b(a)**2]";
-    alias bf6 = binaryFun!"a_b";
-    alias bf7 = binaryFun!"a.b";
-    alias bf8 = binaryFun!"-a < -b";
-}
-
-private bool _ctfeSkipOp(ref string op)
+private uint _ctfeSkipOp(ref string op)
 {
     import std.ascii : isASCII, isAlphaNum;
     immutable oldLength = op.length;
@@ -248,7 +227,7 @@ private bool _ctfeSkipOp(ref string op)
     return oldLength != op.length;
 }
 
-private bool _ctfeSkipInteger(ref string op)
+private uint _ctfeSkipInteger(ref string op)
 {
     import std.ascii : isDigit;
     immutable oldLength = op.length;
@@ -263,7 +242,7 @@ private bool _ctfeSkipInteger(ref string op)
     return oldLength != op.length;
 }
 
-private bool _ctfeSkipName(ref string op, string name)
+private uint _ctfeSkipName(ref string op, string name)
 {
     if (op.length >= name.length && op[0..name.length] == name)
     {
@@ -273,19 +252,51 @@ private bool _ctfeSkipName(ref string op, string name)
     return false;
 }
 
-private bool _ctfeMatchBinary(string fun, string name1, string name2)
+private uint _ctfeMatchBinary(string fun, string name1, string name2)
 {
     fun._ctfeSkipOp;
-    while ((fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger == 1)
-        && fun._ctfeSkipOp) {}
+    for (;;) 
+    {
+        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger;
+        if (h != 1)
+            return false;
+        if(!fun._ctfeSkipOp)
+            break;
+    }
     return fun.length == 0;
 }
 
-private bool _ctfeMatchUnary(string fun, string name)
+private uint _ctfeMatchUnary(string fun, string name)
 {
     fun._ctfeSkipOp;
-    while (fun._ctfeSkipName(name) != fun._ctfeSkipInteger && fun._ctfeSkipOp) {}
+    for (;;) 
+    {
+        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger;
+        if (h != 1)
+            return false;
+        if(!fun._ctfeSkipOp)
+            break;
+    }
     return fun.length == 0;
+}
+
+unittest
+{
+    assert(!_ctfeMatchUnary("sqrt(Ю)", "Ю"));
+    assert(!_ctfeMatchUnary("Ю.sqrt", "Ю"));
+    assert(!_ctfeMatchUnary(".Ю+Ю", "Ю"));
+    assert(!_ctfeMatchUnary("_Ю+Ю", "Ю"));
+    assert(!_ctfeMatchUnary("ЮЮ", "Ю"));
+    assert(_ctfeMatchUnary("-~a[a(a**2+4)][100+8]", "Ю"));
+
+    assert(!_ctfeMatchBinary("Ч+sqrt(Ж)", "Ж", "Ч"));
+    assert(!_ctfeMatchBinary("b+a.sqrt", "a", "b"));
+    assert(_ctfeMatchBinary("a[b*2]", "a", "b"));
+    assert(_ctfeMatchBinary("a[b(a)**2]", "a", "b"));
+    assert(!_ctfeMatchBinary("a_b", "a", "b"));
+    assert(!_ctfeMatchBinary("a.b", "a", "b"));
+    assert(!_ctfeMatchBinary("ab", "a", "b"));
+    assert(_ctfeMatchBinary("-a < -b", "a", "b"));
 }
 
 unittest
