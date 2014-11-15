@@ -14,9 +14,7 @@
 */
 module std.complex;
 
-
-import std.math, std.traits;
-
+import std.traits;
 
 /** Helper function that returns a _complex number with the specified
     real and imaginary parts.
@@ -152,6 +150,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     void toString(Char)(scope void delegate(const(Char)[]) sink,
                         FormatSpec!Char formatSpec) const
     {
+        import std.math : signbit;
         import std.format : formatValue;
         formatValue(sink, re, formatSpec);
         if (signbit(im) == 0) sink("+");
@@ -264,6 +263,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if (op == "/" && isNumeric!R)
     {
+        import std.math : fabs;
         typeof(return) w = void;
         if (fabs(re) < fabs(im))
         {
@@ -289,6 +289,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
         if (op == "^^" && isNumeric!R)
     {
+        import std.math : log, exp, PI;
         Unqual!(CommonType!(T, R)) ab = void, ar = void;
 
         if (lhs >= 0)
@@ -334,6 +335,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "/" && is(C R == Complex!R))
     {
+        import std.math : fabs;
         if (fabs(z.re) < fabs(z.im))
         {
             immutable ratio = z.re/z.im;
@@ -359,6 +361,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
+        import std.math : exp, log;
         immutable r = abs(this);
         immutable t = arg(this);
         immutable ab = r^^z.re * exp(-t*z.im);
@@ -427,6 +430,9 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 unittest
 {
+    import std.math;
+    import std.complex;
+
     enum EPS = double.epsilon;
     auto c1 = complex(1.0, 1.0);
 
@@ -652,6 +658,7 @@ unittest
 /** Calculates the absolute value (or modulus) of a complex number. */
 T abs(T)(Complex!T z) @safe pure nothrow @nogc
 {
+    import std.math : hypot;
     return hypot(z.re, z.im);
 }
 
@@ -674,6 +681,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 
 unittest
 {
+    import std.math;
 	assert (sqAbs(complex(0.0)) == 0.0);
 	assert (sqAbs(complex(1.0)) == 1.0);
 	assert (sqAbs(complex(0.0, 1.0)) == 1.0);
@@ -691,6 +699,7 @@ T sqAbs(T)(T x) @safe pure nothrow @nogc
 
 unittest
 {
+    import std.math;
 	assert (sqAbs(0.0) == 0.0);
 	assert (sqAbs(-1.0) == 1.0);
 	assert (approxEqual(sqAbs(-3.0L), 9.0L));
@@ -701,11 +710,13 @@ unittest
 /** Calculates the argument (or phase) of a complex number. */
 T arg(T)(Complex!T z) @safe pure nothrow @nogc
 {
+    import std.math : atan2;
     return atan2(z.im, z.re);
 }
 
 unittest
 {
+    import std.math;
     assert (arg(complex(1.0)) == 0.0);
     assert (arg(complex(0.0L, 1.0L)) == PI_2);
     assert (arg(complex(1.0L, 1.0L)) == PI_4);
@@ -735,6 +746,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 
 unittest
 {
+    import std.math;
     auto z = fromPolar(std.math.sqrt(2.0), PI_4);
     assert (approxEqual(z.re, 1.0L, real.epsilon));
     assert (approxEqual(z.im, 1.0L, real.epsilon));
@@ -744,6 +756,7 @@ unittest
 /** Trigonometric functions. */
 Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
+    import std.math : expi, coshisinh;
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.im * csh.re, cs.re * csh.im);
@@ -759,12 +772,15 @@ unittest
 /// ditto
 Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 {
+    import std.math : expi, coshisinh;
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.re * csh.re, - cs.im * csh.im);
 }
 
 unittest{
+    import std.math;
+    import std.complex;
     assert(cos(complex(0.0)) == 1.0);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
     assert(cos(complex(0, 5.2L)) == cosh(5.2L));
@@ -797,6 +813,7 @@ unittest
 /** Square root. */
 Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
+    import std.math : fabs;
     typeof(return) c;
     real x,y,w,r;
 
