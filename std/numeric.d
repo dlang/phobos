@@ -23,18 +23,12 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.numeric;
 
-import std.array;
 import std.complex;
-import std.conv;
 import std.exception;
 import std.math;
 import std.range.constraints;
 import std.traits;
 import std.typecons;
-
-import core.bitop;
-import core.exception;
-import core.stdc.stdlib;
 
 version(unittest)
 {
@@ -118,6 +112,7 @@ private template CustomFloatParams(uint bits)
 
 private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
 {
+    import std.typetuple : TypeTuple;
     alias CustomFloatParams =
         TypeTuple!(
             precision,
@@ -519,6 +514,7 @@ public:
     void opAssign(F)(F input)
         if (__traits(compiles, cast(real)input))
     {
+        import std.conv: text;
         static if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
             auto value = ToBinary!(Unqual!F)(input);
         else
@@ -551,6 +547,8 @@ public:
     @property F get(F)()
         if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
     {
+        import std.conv: text;
+
         ToBinary!F result;
 
         static if (flags&Flags.signed)
@@ -619,7 +617,15 @@ public:
     }
 
     /// ditto
-    string toString() { return to!string(get!real); }
+    template toString()
+    {
+        import std.format : FormatSpec, formatValue;
+        // Needs to be a template because of DMD @@BUG@@ 13737.
+        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        {
+            sink.formatValue(get!real, fmt);
+        }
+    }
 }
 
 unittest
@@ -655,7 +661,13 @@ unittest
         assert(x.get!float == 1 / 16.0F);
         assert(x.get!double == 1 / 16.0);
     }
+}
 
+unittest
+{
+    import std.conv;
+    CustomFloat!(5, 10) y = CustomFloat!(5, 10)(0.125);
+    assert(y.to!string == "0.125");
 }
 
 /**
@@ -1157,14 +1169,6 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
     return findRoot!(T, R delegate(T), bool delegate(T lo, T hi))(f, a, b, tolerance);
 }
 
-//regression control
-unittest
-{
-    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
-    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
-    static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
-}
-
 nothrow unittest
 {
     int numProblems = 0;
@@ -1370,6 +1374,14 @@ nothrow unittest
    printf("POWER TOTAL = %d avg = %f ", powercalls,
         (1.0*powercalls)/powerProblems);
 */
+}
+
+//regression control
+unittest
+{
+    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
+    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
+    static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
 }
 
 /**
@@ -1960,6 +1972,7 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
 {
     import std.functional : binaryFun;
     import std.algorithm : swap;
+    import core.stdc.stdlib;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
@@ -2103,6 +2116,8 @@ optimizations.
 struct GapWeightedSimilarityIncremental(Range, F = double)
     if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
+    import core.stdc.stdlib;
+
 private:
     Range s, t;
     F currentValue = 0;
@@ -2296,6 +2311,7 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 
 unittest
 {
+    import std.conv: text;
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
     auto simIter = gapWeightedSimilarityIncremental(s, t, 1.0);
@@ -2473,11 +2489,15 @@ private alias lookup_t = float;
 final class Fft
 {
     import std.algorithm : map;
+    import core.bitop : bsf;
+    import std.array : uninitializedArray;
+
 private:
     immutable lookup_t[][] negSinLookup;
 
     void enforceSize(R)(R range) const
     {
+        import std.conv: text;
         enforce(range.length <= size, text(
             "FFT size mismatch.  Expected ", size, ", got ", range.length));
     }
@@ -2907,6 +2927,8 @@ public:
 // memory owned by the object is deterministically destroyed at the end of that
 // scope.
 private enum string MakeLocalFft = q{
+    import core.stdc.stdlib;
+    import core.exception : OutOfMemoryError;
     auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
                      [0..2 * range.length];
     if (!lookupBuf.ptr)
@@ -2956,6 +2978,7 @@ unittest
 {
     import std.algorithm;
     import std.range;
+    import std.conv;
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);
@@ -3034,6 +3057,7 @@ private:
 // for powers of 2.
 struct Stride(R)
 {
+    import core.bitop : bsf;
     Unqual!R range;
     size_t _nSteps;
     size_t _length;
@@ -3141,11 +3165,13 @@ void slowFourier4(Ret, R)(R range, Ret buf)
 
 bool isPowerOfTwo(size_t num)
 {
+    import core.bitop : bsf, bsr;
     return bsr(num) == bsf(num);
 }
 
 size_t roundDownToPowerOf2(size_t num)
 {
+    import core.bitop : bsr;
     return num & (1 << bsr(num));
 }
 
