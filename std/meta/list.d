@@ -44,7 +44,7 @@ alias TypeTuple(Args...) = Args;
 ///
 unittest
 {
-    import std.typetuple;
+    import std.meta.list;
     alias TL = TypeTuple!(int, double);
 
     int foo(TL td)  // same as int foo(int, double);
@@ -91,15 +91,8 @@ template staticIndexOf(alias T, TList...)
 ///
 unittest
 {
-    import std.meta.list;
-    import std.stdio;
-
-    void foo()
-    {
-        writefln("The index of long is %s",
-                 staticIndexOf!(long, TypeTuple!(int, long, double)));
-        // prints: The index of long is 1
-    }
+    alias Types = TypeTuple!(int, long, double);
+    static assert(staticIndexOf!(long, Types) == 1);
 }
 
 // [internal]
@@ -152,7 +145,7 @@ unittest
     static assert(staticIndexOf!("void", 0, void, "void") == 2);
 }
 
-/// Kept for backwards compatibility
+/// Kept for backwards compatibility.
 alias IndexOf = staticIndexOf;
 
 /**
