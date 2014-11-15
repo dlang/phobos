@@ -27,7 +27,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
  * to specify decreasing order for the correct result. The $(LREF crcHexString) alias can also
  * be used for this purpose.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * Authors:   Pavel "EvilOne" Minayev, Alex Rønne Petersen, Johannes Pfau
  *
@@ -63,7 +63,6 @@ public import std.digest.digest;
 version(unittest)
     import std.exception;
 
-import std.bitmanip;
 
 ///
 unittest
@@ -219,6 +218,7 @@ struct CRC32
          */
         ubyte[4] peek() const @safe pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
             //Complement, LSB first / Little Endian, see http://rosettacode.org/wiki/CRC-32
             return nativeToLittleEndian(~_state);
         }

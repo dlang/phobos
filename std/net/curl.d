@@ -139,7 +139,7 @@ MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco,
 Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
-License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
 Credits: The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
@@ -1769,7 +1769,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether SSL peer certificates should be verified.
-        See: $(WEB http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
+        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
     */
     @property void verifyPeer(bool on)
     {
@@ -1777,7 +1777,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether the host within an SSL certificate should be verified.
-        See: $(WEB http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
+        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
     */
     @property void verifyHost(bool on)
     {
@@ -1817,6 +1817,22 @@ private mixin template Protocol()
         http.onReceive = (ubyte[] data) { return data.length; };
         http.setAuthentication("myuser", "mypassword");
         http.perform();
+    }
+
+    /**
+       Set the user name and password for proxy authentication.
+
+       Params:
+       username = the username
+       password = the password
+    */
+    void setProxyAuthentication(const(char)[] username, const(char)[] password)
+    {
+        p.curl.set(CurlOption.proxyuserpwd,
+            format("%s:%s",
+                username.replace(":", "%3A"),
+                password.replace(":", "%3A"))
+        );
     }
 
     /**
@@ -2389,6 +2405,15 @@ struct HTTP
         */
         void setAuthentication(const(char)[] username, const(char)[] password,
                                const(char)[] domain = "");
+
+        /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
 
         /**
          * The event handler that gets called when data is needed for sending. The
@@ -3052,6 +3077,15 @@ struct FTP
                                const(char)[] domain = "");
 
         /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
+
+        /**
          * The event handler that gets called when data is needed for sending. The
          * length of the $(D void[]) specifies the maximum number of bytes that can
          * be sent.
@@ -3388,6 +3422,15 @@ struct SMTP
         */
         void setAuthentication(const(char)[] username, const(char)[] password,
                                const(char)[] domain = "");
+
+        /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
 
         /**
          * The event handler that gets called when data is needed for sending. The

@@ -491,6 +491,9 @@ struct RBNode(V)
                 _parent.right = null;
         }
 
+        // clean references to help GC - Bugzilla 12915
+        _left = _right = _parent = null;
+
         return ret;
     }
 
@@ -1554,7 +1557,7 @@ assert(std.algorithm.equal(rbt[], [5]));
                 if(l != r)
                 {
                     writeln("bad tree at:");
-                    printTree(n);
+                    debug printTree(n);
                     throw new Exception("Node at path " ~ path ~ " has different number of black nodes on left and right paths");
                 }
                 return l + (n.color == n.color.Black ? 1 : 0);
@@ -1566,7 +1569,7 @@ assert(std.algorithm.equal(rbt[], [5]));
             }
             catch(Exception e)
             {
-                printTree(_end.left, 0);
+                debug printTree(_end.left, 0);
                 throw e;
             }
         }
@@ -1606,7 +1609,7 @@ assert(std.algorithm.equal(rbt[], [5]));
 }
 
 //Verify Example for removeKey.
-unittest
+pure unittest
 {
     auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
     rbt.removeKey(1, 4, 7);
@@ -1616,7 +1619,7 @@ unittest
 }
 
 //Tests for removeKey
-unittest
+pure unittest
 {
     {
         auto rbt = redBlackTree(["hello", "world", "foo", "bar"]);
@@ -1645,7 +1648,7 @@ unittest
     }
 }
 
-unittest
+pure unittest
 {
     void test(T)()
     {
@@ -1697,7 +1700,7 @@ auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
 }
 
 ///
-unittest
+pure unittest
 {
     auto rbt1 = redBlackTree(0, 1, 5, 7);
     auto rbt2 = redBlackTree!string("hello", "world");
@@ -1707,7 +1710,7 @@ unittest
 }
 
 //Combinations not in examples.
-unittest
+pure unittest
 {
     auto rbt1 = redBlackTree!(true, string)("hello", "hello");
     auto rbt2 = redBlackTree!((a, b){return a < b;}, double)(5.1, 2.3);
@@ -1715,13 +1718,13 @@ unittest
 }
 
 //Range construction.
-unittest
+pure unittest
 {
     auto rbt = new RedBlackTree!(int, "a > b")(iota(5));
     assert(equal(rbt[], [4, 3, 2, 1, 0]));
 }
 
-unittest
+pure unittest
 {
     auto rt1 = redBlackTree(5, 4, 3, 2, 1);
     assert(rt1.length == 5);

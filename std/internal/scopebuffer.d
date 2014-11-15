@@ -10,7 +10,6 @@ module std.internal.scopebuffer;
 
 //debug=ScopeBuffer;
 
-private import core.exception;
 private import core.stdc.stdlib : realloc;
 private import std.traits;
 
@@ -100,6 +99,8 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
               !hasElaborateAssign!T)
 {
     import core.stdc.string : memcpy;
+    import core.exception : onOutOfMemoryError;
+
 
     /**************************
      * Initialize with buf to use as scratch buffer space.
@@ -272,7 +273,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
         newsize |= wasResized;
         void *newBuf = realloc((bufLen & wasResized) ? buf : null, newsize * T.sizeof);
         if (!newBuf)
-            core.exception.onOutOfMemoryError();
+            onOutOfMemoryError();
         if (!(bufLen & wasResized))
         {
             memcpy(newBuf, buf, used * T.sizeof);

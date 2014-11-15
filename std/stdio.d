@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Standard I/O functions that extend $(B std.c.stdio).  $(B std.c.stdio)
+Standard I/O functions that extend $(B core.stdc.stdio).  $(B core.stdc.stdio)
 is $(D_PARAM public)ally imported when importing $(B std.stdio).
 
 Source: $(PHOBOSSRC std/_stdio.d)
@@ -18,7 +18,7 @@ module std.stdio;
 
 public import core.stdc.stdio, std.string : KeepTerminator;
 import core.vararg;
-static import std.c.stdio;
+static import core.stdc.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
     core.stdc.string, core.stdc.wchar_, core.exception;
@@ -34,7 +34,7 @@ else version (CRuntime_DigitalMars)
 {
     // Specific to the way Digital Mars C does stdio
     version = DIGITAL_MARS_STDIO;
-    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+    import core.stdc.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
 }
 
 version (Posix)
@@ -636,7 +636,7 @@ Throws: $(D ErrnoException) on error.
                 return;
             }
         }
-        //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
+        //fprintf(core.stdc.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
         errnoEnforce(.fclose(_p.handle) == 0,
                 "Could not close file `"~_name~"'");
     }
@@ -1340,7 +1340,7 @@ Params:
 buf = Buffer used to store the resulting line data. buf is
 resized as necessary.
 terminator = Line terminator (by default, $(D '\n')). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Returns:
@@ -1521,7 +1521,7 @@ Returns the $(D FILE*) corresponding to this object.
 
     unittest
     {
-        assert(stdout.getFP() == std.c.stdio.stdout);
+        assert(stdout.getFP() == core.stdc.stdio.stdout);
     }
 
 /**
@@ -1691,7 +1691,7 @@ Char = Character type for each line, defaulting to $(D char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Example:
@@ -1701,10 +1701,10 @@ import std.algorithm, std.stdio, std.string;
 void main()
 {
     auto file = File("file.txt"); // Open for reading
-    const wordCount = file.byLine()                  // Read lines
-                          .map!split                 // Split into words
-                          .map!(a => a.length)       // Count words per line
-                          .reduce!((a, b) => a + b); // Total word count
+    const wordCount = file.byLine()            // Read lines
+                          .map!split           // Split into words
+                          .map!(a => a.length) // Count words per line
+                          .sum();              // Total word count
     writeln(wordCount);
 }
 ----
@@ -1829,7 +1829,7 @@ Char = Character type for each line, defaulting to $(D immutable char).
 keepTerminator = Use $(D KeepTerminator.yes) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
-$(XREF ascii, newline) for portability (unless the file was opened in 
+$(XREF ascii, newline) for portability (unless the file was opened in
 text mode).
 
 Example:
@@ -2608,15 +2608,15 @@ enum LockType
 struct LockingTextReader
 {
     private File _f;
-    private dchar _crt;
+    private dchar _front;
 
     this(File f)
     {
         import std.exception : enforce;
-
         enforce(f.isOpen);
         _f = f;
         FLOCK(_f._p.handle);
+        readFront();
     }
 
     this(this)
@@ -2633,47 +2633,81 @@ struct LockingTextReader
     void opAssign(LockingTextReader r)
     {
         import std.algorithm : swap;
-
         swap(this, r);
     }
 
     @property bool empty()
     {
-        import std.exception : enforce;
-
-        if (!_f.isOpen || _f.eof) return true;
-        if (_crt == _crt.init)
-        {
-            _crt = FGETC(cast(_iobuf*) _f._p.handle);
-            if (_crt == -1)
-            {
-                .destroy(_f);
-                return true;
-            }
-            else
-            {
-                enforce(ungetc(_crt, cast(FILE*) _f._p.handle) == _crt);
-            }
-        }
-        return false;
+        return !_f.isOpen || _f.eof;
     }
 
     @property dchar front()
     {
         version(assert) if (empty) throw new RangeError();
-        return _crt;
+        return _front;
+    }
+
+    /* Read a utf8 sequence from the file, removing the chars from the stream.
+    Returns an empty result when at EOF. */
+    private char[] takeFront(ref char[4] buf)
+    {
+        import std.utf : stride, UTFException;
+        {
+            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
+            if (c == EOF)
+                return buf[0 .. 0];
+            buf[0] = cast(char) c;
+        }
+        immutable seqLen = stride(buf[]);
+        foreach(ref u; buf[1 .. seqLen])
+        {
+            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
+            if (c == EOF) // incomplete sequence
+                throw new UTFException("Invalid UTF-8 sequence");
+            u = cast(char) c;
+        }
+        return buf[0 .. seqLen];
+    }
+
+    /* Read a utf8 sequence from the file into _front, putting the chars back so
+    that they can be read again.
+    Destroys/closes the file when at EOF. */
+    private void readFront()
+    {
+        import std.exception : enforce;
+        import std.utf : decodeFront;
+
+        char[4] buf;
+        auto chars = takeFront(buf);
+
+        if (chars.empty)
+        {
+            .destroy(_f);
+            assert(empty);
+            return;
+        }
+
+        auto s = chars;
+        _front = decodeFront(s);
+
+        // Put everything back.
+        foreach(immutable i; 0 .. chars.length)
+        {
+            immutable c = chars[$ - 1 - i];
+            enforce(ungetc(c, cast(FILE*) _f._p.handle) == c);
+        }
     }
 
     void popFront()
     {
         version(assert) if (empty) throw new RangeError();
-        if (FGETC(cast(_iobuf*) _f._p.handle) == -1)
-        {
-            import std.exception : enforce;
 
-            enforce(_f.eof);
-        }
-        _crt = _crt.init;
+        // Pop the current front.
+        char[4] buf;
+        takeFront(buf);
+
+        // Read the next front, leaving the chars on the stream.
+        readFront();
     }
 
     // void unget(dchar c)
@@ -2699,6 +2733,37 @@ unittest
     f.readf("%d ", &x);
     assert(x == 3);
     //pragma(msg, "--- todo: readf ---");
+}
+
+unittest // bugzilla 13686
+{
+    static import std.file;
+    import std.algorithm : equal;
+
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "Тест");
+    scope(exit) std.file.remove(deleteme);
+
+    string s;
+    File(deleteme).readf("%s", &s);
+    assert(s == "Тест");
+
+    auto ltr = LockingTextReader(File(deleteme));
+    assert(equal(ltr, "Тест"));
+}
+
+unittest // bugzilla 12320
+{
+    static import std.file;
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "ab");
+    scope(exit) std.file.remove(deleteme);
+    auto ltr = LockingTextReader(File(deleteme));
+    assert(ltr.front == 'a');
+    ltr.popFront();
+    assert(ltr.front == 'b');
+    ltr.popFront();
+    assert(ltr.empty);
 }
 
 /**
@@ -3165,7 +3230,7 @@ private FILE* fopen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
 version (Posix)
 {
     /***********************************
-     * Convenience function that forwards to $(D std.c.stdio.popen)
+     * Convenience function that forwards to $(D core.stdc.stdio.popen)
      * with appropriately-constructed C-style strings.
      */
     FILE* popen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
@@ -3177,7 +3242,7 @@ version (Posix)
 }
 
 /*
- * Convenience function that forwards to $(D std.c.stdio.fwrite)
+ * Convenience function that forwards to $(D core.stdc.stdio.fwrite)
  * and throws an exception upon error
  */
 private void binaryWrite(T)(FILE* f, T obj)
@@ -4076,14 +4141,17 @@ version(linux)
 {
     File openNetwork(string host, ushort port)
     {
-        static import linux = std.c.linux.linux;
-        static import sock = std.c.linux.socket;
+        static import sock = core.sys.posix.sys.socket;
+        static import core.sys.posix.unistd;
         import core.stdc.string : memcpy;
+        import core.sys.posix.arpa.inet : htons;
+        import core.sys.posix.netdb : gethostbyname;
+        import core.sys.posix.netinet.in_ : sockaddr_in;
         import std.conv : to;
         import std.exception : enforce;
         import std.internal.cstring : tempCString;
 
-        auto h = enforce( sock.gethostbyname(host.tempCString()),
+        auto h = enforce( gethostbyname(host.tempCString()),
             new StdioException("gethostbyname"));
 
         int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
@@ -4091,17 +4159,16 @@ version(linux)
 
         scope(failure)
         {
-            linux.close(s); // want to make sure it doesn't dangle if
-                            // something throws. Upon normal exit, the
-                            // File struct's reference counting takes
-                            // care of closing, so we don't need to
-                            // worry about success
+            // want to make sure it doesn't dangle if something throws. Upon
+            // normal exit, the File struct's reference counting takes care of
+            // closing, so we don't need to worry about success
+            core.sys.posix.unistd.close(s);
         }
 
-        sock.sockaddr_in addr;
+        sockaddr_in addr;
 
         addr.sin_family = sock.AF_INET;
-        addr.sin_port = sock.htons(port);
+        addr.sin_port = htons(port);
         core.stdc.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
 
         enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,

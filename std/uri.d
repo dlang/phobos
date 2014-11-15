@@ -15,7 +15,7 @@
  *  WIKI = Phobos/StdUri
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_uri.d)
  */
@@ -32,7 +32,7 @@ debug(uri) private import std.stdio;
 /* ====================== URI Functions ================ */
 
 private import std.ascii;
-private import std.c.stdlib;
+private import core.stdc.stdlib;
 private import std.utf;
 private import std.traits : isSomeChar;
 import core.exception : OutOfMemoryError;

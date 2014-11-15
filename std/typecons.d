@@ -67,15 +67,15 @@ public:
     // Deferred in case we get some language support for checking uniqueness.
     version(None)
     /**
-    Allows safe construction of $(D Unique). It creates the resource and 
-    guarantees unique ownership of it (unless $(D T) publishes aliases of 
+    Allows safe construction of $(D Unique). It creates the resource and
+    guarantees unique ownership of it (unless $(D T) publishes aliases of
     $(D this)).
     Note: Nested structs/classes cannot be created.
     Params:
     args = Arguments to pass to $(D T)'s constructor.
     ---
     static class C {}
-    auto u = Unique!(C).create(); 
+    auto u = Unique!(C).create();
     ---
     */
     static Unique!T create(A...)(auto ref A args)
@@ -116,12 +116,12 @@ public:
     /**
     Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
-    Typically used to transfer a $(D Unique) rvalue of derived type to 
+    Typically used to transfer a $(D Unique) rvalue of derived type to
     a $(D Unique) of base type.
     Example:
     ---
     class C : Object {}
-    
+
     Unique!C uc = new C;
     Unique!Object uo = uc.release;
     ---
@@ -133,7 +133,7 @@ public:
         _p = u._p;
         u._p = null;
     }
-    
+
     /// Transfer ownership from a $(D Unique) of a type that is convertible to our type.
     void opAssign(U)(Unique!U u)
     if (is(u.RefT:RefT))
@@ -144,7 +144,7 @@ public:
         _p = u._p;
         u._p = null;
     }
-    
+
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
@@ -227,7 +227,7 @@ unittest
     assert(!u.isEmpty);
     destroy(u);
     assert(deleted == 1);
-    
+
     Unique!C uc = new C;
     static assert(!__traits(compiles, {Unique!Object uo = uc;}));
     Unique!Object uo = new C;
@@ -1252,7 +1252,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 
 unittest
 {
-    interface CI { const int foo(); }
+    interface CI { int foo() const; }
     class C : CI {
       int foo() const { return 42; }
       @property int bar() const { return 23; }
@@ -1476,6 +1476,20 @@ Constructor initializing $(D this) with $(D value).
     {
         _value = value;
         _isNull = false;
+    }
+
+    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    {
+        import std.format: formatValue;
+
+        if (isNull())
+        {
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(_value, fmt);
+        }
     }
 
 /**
@@ -1757,6 +1771,42 @@ unittest
     import std.datetime;
     Nullable!SysTime time = SysTime(0);
 }
+unittest
+{
+    import std.conv: to;
+
+    // Bugzilla 10915
+    Appender!string buffer;
+
+    Nullable!int ni;
+    assert(ni.to!string() == "Nullable.null");
+
+    struct Test { string s; }
+    alias NullableTest = Nullable!Test;
+
+    NullableTest nt = Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    NullableTest ntn = Test("null");
+    assert(ntn.to!string() == `Test("null")`);
+
+    class TestToString
+    {
+        double d;
+
+        this (double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    Nullable!TestToString ntts = new TestToString(2.5);
+    assert(ntts.to!string() == "2.5");
+}
 
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
@@ -1777,12 +1827,35 @@ Constructor initializing $(D this) with $(D value).
         _value = value;
     }
 
+    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    {
+        import std.format: formatValue;
+
+        if (isNull())
+        {
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(_value, fmt);
+        }
+    }
+
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
     @property bool isNull() const
     {
-        return _value == nullValue;
+        //Need to use 'is' if T is a nullable type and
+        //nullValue is null, or it's a compiler error
+        static if (is(CommonType!(T, typeof(null)) == T) && nullValue is null)
+        {
+            return _value is nullValue;
+        }
+        else
+        {
+            return _value == nullValue;
+        }
     }
 
 /**
@@ -1911,6 +1984,43 @@ unittest
         c = a;
     }
 }
+unittest
+{
+    import std.conv: to;
+
+    // Bugzilla 10915
+    Nullable!(int, 1) ni = 1;
+    assert(ni.to!string() == "Nullable.null");
+
+    struct Test { string s; }
+    alias NullableTest = Nullable!(Test, Test("null"));
+
+    NullableTest nt = Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    NullableTest ntn = Test("null");
+    assert(ntn.to!string() == "Nullable.null");
+
+    class TestToString
+    {
+        double d;
+
+        this(double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    alias NullableTestToString = Nullable!(TestToString, null);
+
+    NullableTestToString ntts = new TestToString(2.5);
+    assert(ntts.to!string() == "2.5");
+}
+
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
@@ -1928,6 +2038,20 @@ Constructor binding $(D this) with $(D value).
     this(T* value) @safe pure nothrow
     {
         _value = value;
+    }
+
+    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    {
+        import std.format: formatValue;
+
+        if (isNull())
+        {
+            sink.formatValue("Nullable.null", fmt);
+        }
+        else
+        {
+            sink.formatValue(*_value, fmt);
+        }
     }
 
 /**
@@ -2083,6 +2207,40 @@ unittest
         c = a;
     }
 }
+unittest
+{
+    import std.conv: to;
+
+    // Bugzilla 10915
+    NullableRef!int nri;
+    assert(nri.to!string() == "Nullable.null");
+
+    struct Test 
+    { 
+        string s; 
+    }
+    NullableRef!Test nt = new Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    class TestToString
+    {
+        double d;
+
+        this(double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    TestToString tts = new TestToString(2.5);
+    NullableRef!TestToString ntts = &tts;
+    assert(ntts.to!string() == "2.5");
+}
+
 
 /**
 $(D BlackHole!Base) is a subclass of $(D Base) which automatically implements
@@ -2265,7 +2423,7 @@ string generateLogger(C, alias fun)() @property
     string stmt;
 
     stmt ~= q{ struct Importer { import std.stdio; } };
-    stmt ~= `Importer.writeln$(LPAREN)"Log: ` ~ qname ~ `(", args, ")"$(RPAREN);`;
+    stmt ~= `Importer.writeln("Log: ` ~ qname ~ `(", args, ")");`;
     static if (!__traits(isAbstractFunction, fun))
     {
         static if (is(ReturnType!fun == void))
@@ -2327,7 +2485,7 @@ class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
 
 /*
  * Code-generating stuffs are encupsulated in this helper template so that
- * namespace pollusion, which can cause name confliction with Base's public
+ * namespace pollution, which can cause name confliction with Base's public
  * members, should be minimized.
  */
 private template AutoImplement_Helper(string myName, string baseName,
@@ -2338,30 +2496,15 @@ private static:
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-    // this would be deprecated by std.typelist.Filter
-    template staticFilter(alias pred, lst...)
-    {
-        static if (lst.length > 0)
-        {
-            alias tail = staticFilter!(pred, lst[1 .. $]);
-            //
-            static if (pred!(lst[0]))
-                alias staticFilter = TypeTuple!(lst[0], tail);
-            else
-                alias staticFilter = tail;
-        }
-        else
-            alias staticFilter = TypeTuple!();
-    }
-
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
         template Impl(names...)
         {
+            import std.typetuple : Filter;
             static if (names.length > 0)
             {
-                alias methods = staticFilter!(pred, MemberFunctionsTuple!(C, names[0]));
+                alias methods = Filter!(pred, MemberFunctionsTuple!(C, names[0]));
                 alias next = Impl!(names[1 .. $]);
 
                 static if (methods.length > 0)
@@ -4305,13 +4448,13 @@ unittest
     {
         int field;
 
-        @property const int val1(){ return field; }
-        @property void val1(int n){ field = n; }
+        @property int val1() const { return field; }
+        @property void val1(int n) { field = n; }
 
-        @property ref int val2(){ return field; }
+        @property ref int val2() { return field; }
 
-        const int func(int x, int y){ return x; }
-        void func1(ref int a){ a = 9; }
+        int func(int x, int y) const { return x; }
+        void func1(ref int a) { a = 9; }
 
         T ifti1(T)(T t) { return t; }
         void ifti2(Args...)(Args args) { }

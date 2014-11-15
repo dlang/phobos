@@ -22,19 +22,40 @@ module std.functional;
 
 import std.traits, std.typetuple;
 
+private template needOpCallAlias(alias fun)
+{
+    /* Determine whether or not unaryFun and binaryFun need to alias to fun or
+     * fun.opCall. Basically, fun is a function object if fun(...) compiles. We
+     * want is(unaryFun!fun) (resp., is(binaryFun!fun)) to be true if fun is
+     * any function object. There are 4 possible cases:
+     *
+     *  1) fun is the type of a function object with static opCall;
+     *  2) fun is an instance of a function object with static opCall;
+     *  3) fun is the type of a function object with non-static opCall;
+     *  4) fun is an instance of a function object with non-static opCall.
+     *
+     * In case (1), is(unaryFun!fun) should compile, but does not if unaryFun
+     * aliases itself to fun, because typeof(fun) is an error when fun itself
+     * is a type. So it must be aliased to fun.opCall instead. All other cases
+     * should be aliased to fun directly.
+     */
+    static if (is(typeof(fun.opCall) == function))
+    {
+        import std.traits : ParameterTypeTuple;
+
+        enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, () {
+            return fun(ParameterTypeTuple!fun.init);
+        });
+    }
+    else
+        enum needOpCallAlias = false;
+}
+
 /**
 Transforms a string representing an expression into a unary
 function. The string must either use symbol name $(D a) as
 the parameter or provide the symbol via the $(D parmName) argument.
-If $(D fun) is not a string, $(D unaryFun) aliases itself away to
-$(D fun).
-
-Example:
-
-----
-alias unaryFun!("(a & 1) == 0") isEven;
-assert(isEven(2) && !isEven(1));
-----
+If $(D fun) is not a string, $(D unaryFun) aliases itself away to $(D fun).
 */
 
 template unaryFun(alias fun, string parmName = "a")
@@ -49,10 +70,23 @@ template unaryFun(alias fun, string parmName = "a")
             return mixin(fun);
         }
     }
+    else static if (needOpCallAlias!fun)
+    {
+        // Issue 9906
+        alias unaryFun = fun.opCall;
+    }
     else
     {
         alias unaryFun = fun;
     }
+}
+
+///
+unittest
+{
+    // Strings are compiled into functions:
+    alias isEven = unaryFun!("(a & 1) == 0");
+    assert(isEven(2) && !isEven(1));
 }
 
 /+ Undocumented, will be removed December 2014+/
@@ -75,24 +109,41 @@ unittest
 
     int num = 41;
     assert(unaryFun!("a + 1", true)(num) == 42);
+
+    // Issue 9906
+    struct Seen
+    {
+        static bool opCall(int n) { return true; }
+    }
+    static assert(needOpCallAlias!Seen);
+    static assert(is(typeof(unaryFun!Seen(1))));
+    assert(unaryFun!Seen(1));
+
+    Seen s;
+    static assert(!needOpCallAlias!s);
+    static assert(is(typeof(unaryFun!s(1))));
+    assert(unaryFun!s(1));
+
+    struct FuncObj
+    {
+        bool opCall(int n) { return true; }
+    }
+    FuncObj fo;
+    static assert(!needOpCallAlias!fo);
+    static assert(is(typeof(unaryFun!fo)));
+    assert(unaryFun!fo(1));
+
+    // Function object with non-static opCall can only be called with an
+    // instance, not with merely the type.
+    static assert(!is(typeof(unaryFun!FuncObj)));
 }
 
 /**
-Transforms a string representing an expression into a Boolean binary
-predicate. The string must either use symbol names $(D a) and $(D b)
-as the parameters or provide the symbols via the $(D parm1Name) and
-$(D parm2Name) arguments.
+Transforms a string representing an expression into a binary function. The
+string must either use symbol names $(D a) and $(D b) as the parameters or
+provide the symbols via the $(D parm1Name) and $(D parm2Name) arguments.
 If $(D fun) is not a string, $(D binaryFun) aliases itself away to
 $(D fun).
-
-   Example:
-
-----
-alias less = binaryFun!("a < b");
-assert(less(1, 2) && !less(2, 1));
-alias greater = binaryFun!("a > b");
-assert(!greater("1", "2") && greater("2", "1"));
-----
 */
 
 template binaryFun(alias fun, string parm1Name = "a",
@@ -110,18 +161,28 @@ template binaryFun(alias fun, string parm1Name = "a",
             return mixin(fun);
         }
     }
+    else static if (needOpCallAlias!fun)
+    {
+        // Issue 9906
+        alias binaryFun = fun.opCall;
+    }
     else
     {
         alias binaryFun = fun;
     }
 }
 
+///
 unittest
 {
-    alias less = binaryFun!(q{a < b});
+    alias less = binaryFun!("a < b");
     assert(less(1, 2) && !less(2, 1));
-    assert(less("1", "2") && !less("2", "1"));
+    alias greater = binaryFun!("a > b");
+    assert(!greater("1", "2") && greater("2", "1"));
+}
 
+unittest
+{
     static int f1(int a, string b) { return a + 1; }
     static assert(is(typeof(binaryFun!(f1)(1, "2")) == int));
     assert(binaryFun!(f1)(41, "a") == 42);
@@ -131,6 +192,27 @@ unittest
     assert(binaryFun!("a + b")(41, 1) == 42);
     //@@BUG
     //assert(binaryFun!("return a + b;")(41, 1) == 42);
+
+    // Issue 9906
+    struct Seen
+    {
+        static bool opCall(int x, int y) { return true; }
+    }
+    static assert(is(typeof(binaryFun!Seen)));
+    assert(binaryFun!Seen(1,1));
+
+    struct FuncObj
+    {
+        bool opCall(int x, int y) { return true; }
+    }
+    FuncObj fo;
+    static assert(!needOpCallAlias!fo);
+    static assert(is(typeof(binaryFun!fo)));
+    assert(unaryFun!fo(1,1));
+
+    // Function object with non-static opCall can only be called with an
+    // instance, not with merely the type.
+    static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
 private template safeOp(string S)
@@ -299,29 +381,46 @@ unittest
 
 /**
 Negates predicate $(D pred).
-
-Example:
-----
-string a = "   Hello, world!";
-assert(find!(not!isWhite)(a) == "Hello, world!");
-----
  */
 template not(alias pred)
 {
     auto not(T...)(T args)
-    if (is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
+    if (is(typeof(!pred(args))) || is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
     {
-        static if (T.length == 1)
+        static if (is(typeof(!pred(args))))
+            return !pred(args);
+        else static if (T.length == 1)
             return !unaryFun!pred(args);
         else static if (T.length == 2)
             return !binaryFun!pred(args);
         else
-            static assert(false, "not implemented for multiple arguments");
+            static assert(0);
     }
 }
 
+///
+unittest
+{
+    import std.functional;
+    import std.algorithm : find;
+    import std.uni : isWhite;
+    string a = "   Hello, world!";
+    assert(find!(not!isWhite)(a) == "Hello, world!");
+}
+
+unittest
+{
+    assert(not!"a != 5"(5));
+    assert(not!"a != b"(5, 5));
+
+    assert(not!(() => false)());
+    assert(not!(a => a != 5)(5));
+    assert(not!((a, b) => a != b)(5, 5));
+    assert(not!((a, b, c) => a * b * c != 125 )(5, 5, 5));
+}
+
 /**
-$(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially 
+$(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially
 applies) $(D_PARAM fun) by tying its first argument to $(D_PARAM arg).
 
 Example:
@@ -702,76 +801,124 @@ Technically the memoized function should be pure because $(D memoize) assumes it
 always return the same result for a given tuple of arguments. However, $(D memoize) does not
 enforce that because sometimes it
 is useful to memoize an impure function, too.
-
-To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
-For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
-
-Example:
-----
-ulong fib(ulong n)
-{
-    alias mfib = memoize!fib;
-    return n < 2 ? 1 : mfib(n - 2) + mfib(n - 1);
-}
-...
-assert(fib(10) == 89);
-----
-
-To improve the speed of the factorial function,
-
-Example:
-----
-ulong fact(ulong n)
-{
-    alias mfact = memoize!fact;
-    return n < 2 ? 1 : n * mfact(n - 1);
-}
-...
-assert(fact(10) == 3628800);
-----
-
-This memoizes all values of $(D fact) up to the largest argument. To only cache the final
-result, move $(D memoize) outside the function as shown below.
-
-Example:
-----
-ulong factImpl(ulong n)
-{
-    return n < 2 ? 1 : n * factImpl(n - 1);
-}
-alias fact = memoize!factImpl;
-...
-assert(fact(10) == 3628800);
-----
-
-The $(D maxSize) parameter is a cutoff for the cache size. If upon a miss the length of the hash
-table is found to be $(D maxSize), the table is simply cleared.
-
-Example:
-----
-// Memoize no more than 128 values of transmogrify
-alias fastTransmogrify = memoize!(transmogrify, 128);
-----
 */
-template memoize(alias fun, uint maxSize = uint.max)
+template memoize(alias fun)
 {
-    private alias Args = ParameterTypeTuple!fun;
-    ReturnType!fun memoize(Args args)
+    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
+
+    ReturnType!fun memoize(ParameterTypeTuple!fun args)
     {
-        import std.typecons : Tuple, tuple;
+        alias Args = ParameterTypeTuple!fun;
+        import std.typecons : Tuple;
+
         static ReturnType!fun[Tuple!Args] memo;
         auto t = Tuple!Args(args);
-        auto p = t in memo;
-        if (p) return *p;
-        static if (maxSize != uint.max)
-        {
-            if (memo.length >= maxSize) memo = null;
-        }
-        auto r = fun(args);
-        //writeln("Inserting result ", typeof(r).stringof, "(", r, ") for parameters ", t);
-        memo[t] = r;
-        return r;
+        if (auto p = t in memo)
+            return *p;
+        return memo[t] = fun(args);
     }
+}
+
+/// ditto
+template memoize(alias fun, uint maxSize)
+{
+    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
+    ReturnType!fun memoize(ParameterTypeTuple!fun args)
+    {
+        import std.typecons : tuple;
+        static struct Value { ParameterTypeTuple!fun args; ReturnType!fun res; }
+        static Value[] memo;
+        static size_t[] initialized;
+
+        if (!memo.length)
+        {
+            import core.memory;
+
+            enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
+            memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
+            enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
+            initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
+        }
+
+        import core.bitop : bts;
+        import std.conv : emplace;
+
+        size_t hash;
+        foreach (ref arg; args)
+            hash = hashOf(arg, hash);
+        // cuckoo hashing
+        immutable idx1 = hash % maxSize;
+        if (!bts(initialized.ptr, idx1))
+            return emplace(&memo[idx1], args, fun(args)).res;
+        else if (memo[idx1].args == args)
+            return memo[idx1].res;
+        // FNV prime
+        immutable idx2 = (hash * 16777619) % maxSize;
+        if (!bts(initialized.ptr, idx2))
+            emplace(&memo[idx2], memo[idx1]);
+        else if (memo[idx2].args == args)
+            return memo[idx2].res;
+        else if (idx1 != idx2)
+            memo[idx2] = memo[idx1];
+
+        memo[idx1] = Value(args, fun(args));
+        return memo[idx1].res;
+    }
+}
+
+/**
+ * To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
+ * For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
+ */
+unittest
+{
+    ulong fib(ulong n)
+    {
+        return n < 2 ? 1 : memoize!fib(n - 2) + memoize!fib(n - 1);
+    }
+    assert(fib(10) == 89);
+}
+
+/**
+ * To improve the speed of the factorial function,
+ */
+unittest
+{
+    ulong fact(ulong n)
+    {
+        return n < 2 ? 1 : n * memoize!fact(n - 1);
+    }
+    assert(fact(10) == 3628800);
+}
+
+/**
+ * This memoizes all values of $(D fact) up to the largest argument. To only cache the final
+ * result, move $(D memoize) outside the function as shown below.
+ */
+unittest
+{
+    ulong factImpl(ulong n)
+    {
+        return n < 2 ? 1 : n * factImpl(n - 1);
+    }
+    alias fact = memoize!factImpl;
+    assert(fact(10) == 3628800);
+}
+
+/**
+ * When the $(D maxSize) parameter is specified, memoize will used
+ * a fixed size hash table to limit the number of cached entries.
+ */
+unittest
+{
+    ulong fact(ulong n)
+    {
+        // Memoize no more than 8 values
+        return n < 2 ? 1 : n * memoize!(fact, 8)(n - 1);
+    }
+    assert(fact(8) == 40320);
+    // using more entries than maxSize will overwrite existing entries
+    assert(fact(10) == 3628800);
 }
 
 unittest
@@ -813,6 +960,11 @@ unittest
     else
         return 1 + mLen2(s[1 .. $]);
     }
+
+    int _func(int x) { return 1; }
+    alias func = memoize!(_func, 10);
+    assert(func(int.init) == 1);
+    assert(func(int.init) == 1);
 }
 
 private struct DelegateFaker(F)
@@ -1027,4 +1179,3 @@ unittest {
         static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
     }
 }
-

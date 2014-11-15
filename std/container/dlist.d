@@ -57,8 +57,8 @@ nothrow @safe pure:
         this(n, n);
     }
 
-    @property const
-    bool empty()
+    @property
+    bool empty() const
     {
         assert((_first is null) == (_last is null), "DList.Range: Invalidated state");
         return !_first;

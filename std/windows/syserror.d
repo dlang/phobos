@@ -4,7 +4,7 @@
  * Convert Win32 error code to string.
  *
  * Copyright: Copyright Digital Mars 2006 - 2013.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Credits:   Based on code written by Regan Heath
  *
@@ -14,6 +14,7 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.syserror;
+import std.traits : isSomeString;
 
 version (StdDdoc)
 {
@@ -55,8 +56,9 @@ version (StdDdoc)
         wenforce(DeleteFileA("junk.tmp"), "DeleteFile failed");
         --------------------
      +/
-    T wenforce(T, string file = __FILE__, size_t line = __LINE__)
-        (T value, lazy string msg = null);
+    T wenforce(T, S)(T value, lazy S msg = null,
+        string file = __FILE__, size_t line = __LINE__) @safe
+        if (isSomeString!S);
 }
 else:
 
@@ -64,6 +66,7 @@ version (Windows):
 
 import std.windows.charset;
 import std.array : appender;
+import std.conv : to;
 import std.format : formattedWrite;
 import core.sys.windows.windows;
 
@@ -138,11 +141,11 @@ class WindowsException : Exception
 }
 
 
-T wenforce(T)(T value, lazy string msg = null,
-    string file = __FILE__, size_t line = __LINE__)
+T wenforce(T, S)(T value, lazy S msg = null,
+    string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
 {
     if (!value)
-        throw new WindowsException(GetLastError(), msg, file, line);
+        throw new WindowsException(GetLastError(), to!string(msg), file, line);
     return value;
 }
 
@@ -151,6 +154,7 @@ unittest
 {
     import std.exception;
     import std.string;
+    import std.algorithm : startsWith, endsWith;
 
     auto e = collectException!WindowsException(
         DeleteFileA("unexisting.txt").wenforce("DeleteFile")

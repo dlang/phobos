@@ -114,7 +114,7 @@ $(TR $(TDNW Hardware Control) $(TD
  *            reserves the right to distribute this material elsewhere under different
  *            copying permissions.  These modifications are distributed here under
  *            the following terms:
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright), Don Clugston,
  *            Conversion of CEPHES math library to D by Iain Buclaw
  * Source: $(PHOBOSSRC std/_math.d)
@@ -140,15 +140,10 @@ version(DigitalMars)
     version = INLINE_YL2X;        // x87 has opcodes for these
 }
 
-version (X86)
-{
-    version = X86_Any;
-}
-
-version (X86_64)
-{
-    version = X86_Any;
-}
+version (X86)    version = X86_Any;
+version (X86_64) version = X86_Any;
+version (PPC)    version = PPC_Any;
+version (PPC64)  version = PPC_Any;
 
 version(D_InlineAsm_X86)
 {
@@ -653,7 +648,7 @@ real tan(real x) @trusted pure nothrow @nogc
 {
     version(D_InlineAsm_X86)
     {
-    asm
+    asm pure nothrow @nogc
     {
         fld     x[EBP]                  ; // load theta
         fxam                            ; // test for oddball values
@@ -689,19 +684,19 @@ Lret: {}
     {
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld     real ptr [RCX]  ; // load theta
             }
         }
         else
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld     x[RBP]          ; // load theta
             }
         }
-    asm
+    asm pure nothrow @nogc
     {
         fxam                            ; // test for oddball values
         fstsw   AX                      ;
@@ -1028,7 +1023,7 @@ real atan2(real y, real x) @trusted pure nothrow @nogc
     {
         version (Win64)
         {
-            asm {
+            asm pure nothrow @nogc {
                 naked;
                 fld real ptr [RDX]; // y
                 fld real ptr [RCX]; // x
@@ -1038,7 +1033,7 @@ real atan2(real y, real x) @trusted pure nothrow @nogc
         }
         else
         {
-            asm {
+            asm pure nothrow @nogc {
                 fld y;
                 fld x;
                 fpatan;
@@ -1552,7 +1547,7 @@ real expm1(real x) @trusted pure nothrow @nogc
     version(D_InlineAsm_X86)
     {
         enum PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC); // always a multiple of 4
-        asm
+        asm pure nothrow @nogc
         {
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -1623,13 +1618,13 @@ L_largenegative:
     }
     else version(D_InlineAsm_X86_64)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked;
         }
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld   real ptr [RCX];  // x
                 mov   AX,[RCX+8];      // AX = exponent and sign
@@ -1637,13 +1632,13 @@ L_largenegative:
         }
         else
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld   real ptr [RSP+8];  // x
                 mov   AX,[RSP+8+8];      // AX = exponent and sign
             }
         }
-        asm
+        asm pure nothrow @nogc
         {
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -1784,7 +1779,7 @@ real exp2(real x) @nogc @trusted pure nothrow
     {
         enum PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC); // always a multiple of 4
 
-        asm
+        asm pure nothrow @nogc
         {
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -1868,13 +1863,13 @@ L_was_nan:
     }
     else version(D_InlineAsm_X86_64)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked;
         }
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld   real ptr [RCX];  // x
                 mov   AX,[RCX+8];      // AX = exponent and sign
@@ -1882,13 +1877,13 @@ L_was_nan:
         }
         else
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld   real ptr [RSP+8];  // x
                 mov   AX,[RSP+8+8];      // AX = exponent and sign
             }
         }
-        asm
+        asm pure nothrow @nogc
         {
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
@@ -2105,7 +2100,7 @@ creal expi(real y) @trusted pure nothrow @nogc
     {
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 naked;
                 fld     real ptr [ECX];
@@ -2116,7 +2111,7 @@ creal expi(real y) @trusted pure nothrow @nogc
         }
         else
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fld y;
                 fsincos;
@@ -2423,7 +2418,7 @@ int ilogb(real x)  @trusted nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -2456,7 +2451,7 @@ int ilogb(real x)  @trusted nothrow @nogc
     else version (CRuntime_Microsoft)
     {
         int res;
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [x]        ;
@@ -3005,7 +3000,7 @@ real logb(real x) @trusted nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -3016,7 +3011,7 @@ real logb(real x) @trusted nothrow @nogc
     }
     else version (CRuntime_Microsoft)
     {
-        asm
+        asm pure nothrow @nogc
         {
             fld     x                   ;
             fxtract                     ;
@@ -3088,10 +3083,10 @@ real modf(real x, ref real i) @trusted nothrow @nogc
 real scalbn(real x, int n) @trusted nothrow @nogc
 {
     version(InlineAsm_X86_Any) {
-        // scalbnl is not supported on DMD-Windows, so use asm.
+        // scalbnl is not supported on DMD-Windows, so use asm pure nothrow @nogc.
         version (Win64)
         {
-            asm {
+            asm pure nothrow @nogc {
                 naked                           ;
                 mov     16[RSP],RCX             ;
                 fild    word ptr 16[RSP]        ;
@@ -3103,7 +3098,7 @@ real scalbn(real x, int n) @trusted nothrow @nogc
         }
         else
         {
-            asm {
+            asm pure nothrow @nogc {
                 fild n;
                 fld x;
                 fscale;
@@ -3271,7 +3266,7 @@ real ceil(real x) @trusted pure nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -3291,7 +3286,7 @@ real ceil(real x) @trusted pure nothrow @nogc
     else version(CRuntime_Microsoft)
     {
         short cw;
-        asm
+        asm pure nothrow @nogc
         {
             fld     x                   ;
             fstcw   cw                  ;
@@ -3398,7 +3393,7 @@ real floor(real x) @trusted pure nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -3418,7 +3413,7 @@ real floor(real x) @trusted pure nothrow @nogc
     else version(CRuntime_Microsoft)
     {
         short cw;
-        asm
+        asm pure nothrow @nogc
         {
             fld     x                   ;
             fstcw   cw                  ;
@@ -3548,7 +3543,7 @@ long lrint(real x) @trusted pure nothrow @nogc
     {
         version (Win64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 naked;
                 fld     real ptr [RCX];
@@ -3560,7 +3555,7 @@ long lrint(real x) @trusted pure nothrow @nogc
         else
         {
             long n;
-            asm
+            asm pure nothrow @nogc
             {
                 fld x;
                 fistp n;
@@ -3742,7 +3737,7 @@ real trunc(real x) @trusted nothrow @nogc
 {
     version (Win64_DMD_InlineAsm)
     {
-        asm
+        asm pure nothrow @nogc
         {
             naked                       ;
             fld     real ptr [RCX]      ;
@@ -3762,7 +3757,7 @@ real trunc(real x) @trusted nothrow @nogc
     else version(CRuntime_Microsoft)
     {
         short cw;
-        asm
+        asm pure nothrow @nogc
         {
             fld     x                   ;
             fstcw   cw                  ;
@@ -3873,28 +3868,16 @@ private:
         // Don't bother about subnormals, they are not supported on most CPUs.
         //  SUBNORMAL_MASK = 0x02;
     }
-    else version (PPC)
+    else version (PPC_Any)
     {
         // PowerPC FPSCR is a 32-bit register.
         enum : int
         {
-            INEXACT_MASK   = 0x600,
-            UNDERFLOW_MASK = 0x010,
-            OVERFLOW_MASK  = 0x008,
-            DIVBYZERO_MASK = 0x020,
-            INVALID_MASK   = 0xF80 // PowerPC has five types of invalid exceptions.
-        }
-    }
-    else version (PPC64)
-    {
-        // PowerPC FPSCR is a 32-bit register.
-        enum : int
-        {
-            INEXACT_MASK   = 0x600,
-            UNDERFLOW_MASK = 0x010,
-            OVERFLOW_MASK  = 0x008,
-            DIVBYZERO_MASK = 0x020,
-            INVALID_MASK   = 0xF80 // PowerPC has five types of invalid exceptions.
+            INEXACT_MASK   = 0x02000000,
+            DIVBYZERO_MASK = 0x04000000,
+            UNDERFLOW_MASK = 0x08000000,
+            OVERFLOW_MASK  = 0x10000000,
+            INVALID_MASK   = 0x20000000 // Summary as PowerPC has five types of invalid exceptions.
         }
     }
     else version (ARM)
@@ -3929,7 +3912,7 @@ private:
     {
         version(D_InlineAsm_X86)
         {
-            asm
+            asm pure nothrow @nogc
             {
                  fstsw AX;
                  // NOTE: If compiler supports SSE2, need to OR the result with
@@ -3940,7 +3923,7 @@ private:
         }
         else version(D_InlineAsm_X86_64)
         {
-            asm
+            asm pure nothrow @nogc
             {
                  fstsw AX;
                  // NOTE: If compiler supports SSE2, need to OR the result with
@@ -3953,7 +3936,7 @@ private:
         {
            /*
                int retval;
-               asm { st %fsr, retval; }
+               asm pure nothrow @nogc { st %fsr, retval; }
                return retval;
             */
            assert(0, "Not yet supported");
@@ -3969,7 +3952,7 @@ private:
     {
         version(InlineAsm_X86_Any)
         {
-            asm
+            asm pure nothrow @nogc
             {
                 fnclex;
             }
@@ -3978,9 +3961,9 @@ private:
         {
             /* SPARC:
               int tmpval;
-              asm { st %fsr, tmpval; }
+              asm pure nothrow @nogc { st %fsr, tmpval; }
               tmpval &=0xFFFF_FC00;
-              asm { ld tmpval, %fsr; }
+              asm pure nothrow @nogc { ld tmpval, %fsr; }
             */
            assert(0, "Not yet supported");
         }
@@ -4090,6 +4073,16 @@ struct FloatingPointControl
             roundToZero    = 0xC00000
         }
     }
+    else version(PPC_Any)
+    {
+        enum : RoundingMode
+        {
+            roundToNearest = 0x00000000,
+            roundDown      = 0x00000003,
+            roundUp        = 0x00000002,
+            roundToZero    = 0x00000001
+        }
+    }
     else
     {
         enum : RoundingMode
@@ -4121,6 +4114,22 @@ struct FloatingPointControl
                                  | inexactException | subnormalException,
         }
     }
+    else version(PPC_Any)
+    {
+        enum : uint
+        {
+            inexactException      = 0x0008,
+            divByZeroException    = 0x0010,
+            underflowException    = 0x0020,
+            overflowException     = 0x0040,
+            invalidException      = 0x0080,
+            /// Severe = The overflow, division by zero, and invalid exceptions.
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else
     {
         enum : uint
@@ -4145,6 +4154,11 @@ private:
         enum uint EXCEPTION_MASK = 0x9F00;
         enum uint ROUNDING_MASK = 0xC00000;
     }
+    else version(PPC_Any)
+    {
+        enum uint EXCEPTION_MASK = 0x00F8;
+        enum uint ROUNDING_MASK = 0x0003;
+    }
     else version(X86)
     {
         enum ushort EXCEPTION_MASK = 0x3F;
@@ -4162,9 +4176,9 @@ public:
     /// Returns true if the current FPU supports exception trapping
     @property static bool hasExceptionTraps() @safe nothrow @nogc
     {
-        version(X86)
+        version(X86_Any)
             return true;
-        else version(X86_64)
+        else version(PPC_Any)
             return true;
         else version(ARM)
         {
@@ -4185,10 +4199,10 @@ public:
     {
         assert(hasExceptionTraps);
         initialize();
-        version(ARM)
-            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
-        else
+        version(X86_Any)
             setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+        else
+            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
     }
 
     /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
@@ -4196,10 +4210,10 @@ public:
     {
         assert(hasExceptionTraps);
         initialize();
-        version(ARM)
-            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
-        else
+        version(X86_Any)
             setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+        else
+            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
     }
 
     //// Change the floating-point hardware rounding mode
@@ -4213,10 +4227,10 @@ public:
     @property static uint enabledExceptions() @nogc
     {
         assert(hasExceptionTraps);
-        version(ARM)
-            return (getControlState() & EXCEPTION_MASK);
-        else
+        version(X86_Any)
             return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
+        else
+            return (getControlState() & EXCEPTION_MASK);
     }
 
     /// Return the currently active rounding mode
@@ -4242,6 +4256,10 @@ private:
     {
         alias ControlState = uint;
     }
+    else version(PPC_Any)
+    {
+        alias ControlState = uint;
+    }
     else
     {
         alias ControlState = ushort;
@@ -4261,7 +4279,7 @@ private:
     {
         version (InlineAsm_X86_Any)
         {
-            asm
+            asm nothrow @nogc
             {
                 fclex;
             }
@@ -4271,12 +4289,12 @@ private:
     }
 
     // Read from the control register
-    static ushort getControlState() @trusted nothrow @nogc
+    static ControlState getControlState() @trusted nothrow @nogc
     {
         version (D_InlineAsm_X86)
         {
             short cont;
-            asm
+            asm nothrow @nogc
             {
                 xor EAX, EAX;
                 fstcw cont;
@@ -4287,7 +4305,7 @@ private:
         version (D_InlineAsm_X86_64)
         {
             short cont;
-            asm
+            asm nothrow @nogc
             {
                 xor RAX, RAX;
                 fstcw cont;
@@ -4299,13 +4317,13 @@ private:
     }
 
     // Set the control register
-    static void setControlState(ushort newState) @trusted nothrow @nogc
+    static void setControlState(ControlState newState) @trusted nothrow @nogc
     {
         version (InlineAsm_X86_Any)
         {
             version (Win64)
             {
-                asm
+                asm nothrow @nogc
                 {
                     naked;
                     mov     8[RSP],RCX;
@@ -4316,7 +4334,7 @@ private:
             }
             else
             {
-                asm
+                asm nothrow @nogc
                 {
                     fclex;
                     fldcw newState;
@@ -6168,7 +6186,7 @@ body
         version (Windows)
         {
         // BUG: This code assumes a frame pointer in EBP.
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6196,7 +6214,7 @@ body
         }
         else version (linux)
         {
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6224,7 +6242,7 @@ body
         }
         else version (OSX)
         {
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6252,7 +6270,7 @@ body
         }
         else version (FreeBSD)
         {
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6280,7 +6298,7 @@ body
         }
         else version (Android)
         {
-            asm // assembler by W. Bright
+            asm pure nothrow @nogc // assembler by W. Bright
             {
                 // EDX = (A.length - 1) * real.sizeof
                 mov     ECX,A[EBP]              ; // ECX = A.length
@@ -6420,11 +6438,11 @@ unittest
 }
 
 // Included for backwards compatibility with Phobos1
-alias isnan = isNaN;
-alias isfinite = isFinite;
-alias isnormal = isNormal;
-alias issubnormal = isSubnormal;
-alias isinf = isInfinity;
+deprecated("Phobos1 math functions are deprecated, use isNaN") alias isnan = isNaN;
+deprecated("Phobos1 math functions are deprecated, use isFinite ") alias isfinite = isFinite;
+deprecated("Phobos1 math functions are deprecated, use isNormal ") alias isnormal = isNormal;
+deprecated("Phobos1 math functions are deprecated, use isSubnormal ") alias issubnormal = isSubnormal;
+deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf = isInfinity;
 
 /* **********************************
  * Building block functions, they

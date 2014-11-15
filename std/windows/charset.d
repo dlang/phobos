@@ -7,7 +7,7 @@
  *      WIKI = Phobos/StdWindowsCharset
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -19,7 +19,7 @@ module std.windows.charset;
 version (Windows):
 
 private import std.conv;
-private import std.c.windows.windows;
+private import core.sys.windows.windows;
 private import std.windows.syserror;
 private import std.utf;
 private import std.string;

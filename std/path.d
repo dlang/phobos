@@ -50,25 +50,10 @@
 module std.path;
 
 
-import std.algorithm;
-import std.array;
-import std.conv;
-import std.file: getcwd;
-import std.range;
-import std.string;
+// FIXME
+import std.file; //: getcwd;
+import std.range.constraints;
 import std.traits;
-
-version(Posix)
-{
-    import core.exception;
-    import core.stdc.errno;
-    import core.sys.posix.pwd;
-    import core.sys.posix.stdlib;
-    private import core.exception : onOutOfMemoryError;
-}
-
-
-
 
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
@@ -420,6 +405,7 @@ C[] dirName(C)(C[] path)
     //TODO: @safe (BUG 6169) pure nothrow (because of to())
     if (isSomeChar!C)
 {
+    import std.conv : to;
     if (path.empty) return to!(typeof(return))(".");
 
     auto p = rtrimDirSeparators(path);
@@ -924,6 +910,7 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure // TODO: nothrow (because of to())
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
+    import std.conv : to;
     auto i = extSeparatorPos(path);
     if (i == -1)
     {
@@ -1059,6 +1046,7 @@ unittest
 
 unittest // non-documented
 {
+    import std.range;
     // ir() wraps an array in a plain (i.e. non-forward) input range, so that
     // we can test both code paths
     InputRange!(C[]) ir(C)(C[][] p...) { return inputRangeObject(p); }
@@ -1186,7 +1174,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
     if (isSomeChar!C)
 {
-    import std.c.stdlib;
+    import core.stdc.stdlib;
     auto paths2 = new const(C)[][](paths.length);
         //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
 
@@ -1737,6 +1725,7 @@ unittest
     // equal2 verifies that the range is the same both ways, i.e.
     // through front/popFront and back/popBack.
     import std.range;
+    import std.algorithm;
     bool equal2(R1, R2)(R1 r1, R2 r2)
     {
         static assert (isBidirectionalRange!R1);
@@ -2384,6 +2373,7 @@ bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
 in
 {
     // Verify that pattern[] is valid
+    import std.algorithm : balancedParens;
     assert(balancedParens(pattern, '[', ']', 0));
     assert(balancedParens(pattern, '{', '}', 0));
 }
@@ -2573,7 +2563,7 @@ bool isValidFilename(R)(R filename)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
-    import core.stdc.stdio;
+    import core.stdc.stdio : FILENAME_MAX;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
     foreach (c; filename)
     {
@@ -2618,6 +2608,7 @@ bool isValidFilename(R)(R filename)
 
 unittest
 {
+    import std.conv;
     auto valid = ["foo"];
     auto invalid = ["", "foo\0bar", "foo/bar"];
     auto pfdep = [`foo\bar`, "*.txt"];
@@ -2846,6 +2837,9 @@ string expandTilde(string inputPath)
     {
         import core.stdc.string : strlen;
         import core.stdc.stdlib : getenv, malloc, free;
+        import core.exception : onOutOfMemoryError;
+        import core.sys.posix.pwd : passwd, getpwnam_r;
+        import core.stdc.errno : errno, ERANGE;
 
         /*  Joins a path from a C string to the remainder of path.
 

@@ -1489,19 +1489,26 @@ void chdir(in char[] pathname) @safe
 /****************************************************
 Make directory $(D pathname).
 
-Throws: $(D FileException) on error.
+Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
+        if an error occured.
  */
-void mkdir(in char[] pathname)
+void mkdir(in char[] pathname) @safe
 {
     version(Windows)
     {
-        enforce(CreateDirectoryW(pathname.tempCStringW(), null),
-                new FileException(pathname.idup));
+        static auto trustedCreateDirectoryW(in char[] path) @trusted
+        {
+            return CreateDirectoryW(path.tempCStringW(), null);
+        }
+        wenforce(trustedCreateDirectoryW(pathname), pathname);
     }
     else version(Posix)
     {
-        cenforce(core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0,
-                 pathname);
+        static auto trustedMkdir(in char[] path, mode_t mode) @trusted
+        {
+            return core.sys.posix.sys.stat.mkdir(path.tempCString(), mode);
+        }
+        cenforce(trustedMkdir(pathname, octal!777) == 0, pathname);
     }
 }
 
@@ -1625,15 +1632,18 @@ void rmdir(in char[] pathname)
         $(D FileException) on error (which includes if the symlink already
         exists).
   +/
-version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link);
-else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link)
+version(StdDdoc) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe;
+else version(Posix) void symlink(C1, C2)(const(C1)[] original, const(C2)[] link) @safe
 {
-    cenforce(core.sys.posix.unistd.symlink(original.tempCString(),
-                                           link.tempCString()) == 0,
-             link);
+    static auto trustedSymlink(const(C1)[] path1, const(C2)[] path2) @trusted
+    {
+        return core.sys.posix.unistd.symlink(path1.tempCString(),
+                                             path2.tempCString());
+    }
+    cenforce(trustedSymlink(original, link) == 0, link);
 }
 
-version(Posix) unittest
+version(Posix) @safe unittest
 {
     if(system_directory.exists)
     {
@@ -1688,16 +1698,22 @@ version(Posix) unittest
     Throws:
         $(D FileException) on error.
   +/
-version(StdDdoc) string readLink(C)(const(C)[] link);
-else version(Posix) string readLink(C)(const(C)[] link)
+version(StdDdoc) string readLink(C)(const(C)[] link) @safe;
+else version(Posix) string readLink(C)(const(C)[] link) @safe
 {
+    static auto trustedReadlink(const(C)[] path, char[] buf) @trusted
+    {
+        return core.sys.posix.unistd.readlink(path.tempCString(), buf.ptr, buf.length);
+    }
+    static auto trustedAssumeUnique(ref C[] array) @trusted
+    {
+        return assumeUnique(array);
+    }
+
     enum bufferLen = 2048;
     enum maxCodeUnits = 6;
     char[bufferLen] buffer;
-    auto linkTmp = link.tempCString();
-    auto size = core.sys.posix.unistd.readlink(linkTmp,
-                                               buffer.ptr,
-                                               buffer.length);
+    auto size = trustedReadlink(link, buffer);
     cenforce(size != -1, link);
 
     if(size <= bufferLen - maxCodeUnits)
@@ -1707,15 +1723,13 @@ else version(Posix) string readLink(C)(const(C)[] link)
 
     foreach(i; 0 .. 10)
     {
-        size = core.sys.posix.unistd.readlink(linkTmp,
-                                              dynamicBuffer.ptr,
-                                              dynamicBuffer.length);
+        size = trustedReadlink(link, dynamicBuffer);
         cenforce(size != -1, link);
 
         if(size <= dynamicBuffer.length - maxCodeUnits)
         {
             dynamicBuffer.length = size;
-            return assumeUnique(dynamicBuffer);
+            return trustedAssumeUnique(dynamicBuffer);
         }
 
         dynamicBuffer.length = dynamicBuffer.length * 3 / 2;
@@ -1724,7 +1738,7 @@ else version(Posix) string readLink(C)(const(C)[] link)
     throw new FileException(to!string(link), "Path is too long to read.");
 }
 
-version(Posix) unittest
+version(Posix) @safe unittest
 {
     foreach(file; [system_directory, system_file])
     {
@@ -1868,7 +1882,7 @@ else version (FreeBSD)
         static assert(0, "thisExePath is not supported on this platform");
 }
 
-unittest
+@safe unittest
 {
     auto path = thisExePath();
 
@@ -2264,12 +2278,16 @@ else version(Posix)
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
          +/
-        void _ensureStatDone()
+        void _ensureStatDone() @safe
         {
+            static auto trustedStat(in char[] path, stat_t* buf) @trusted
+            {
+                return stat(path.tempCString(), buf);
+            }
             if(_didStat)
                 return;
 
-            enforce(stat(_name.tempCString(), &_statBuf) == 0,
+            enforce(trustedStat(_name, &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -2983,18 +3001,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     return filter!f(DirIterator(path, mode, followSymlink));
 }
 
-/++
-    $(RED Deprecated. It will be removed in July 2014.
-         Please use $(LREF DirEntry) constructor directly instead.)
-
-    Returns a DirEntry for the given file (or directory).
-
-    Params:
-        name = The file (or directory) to get a DirEntry for.
-
-    Throws:
-        $(D FileException) if the file does not exist.
- +/
+// Explicitly undocumented. It will be removed in July 2015.
 deprecated("Please use DirEntry constructor directly instead.")
 DirEntry dirEntry(in char[] name)
 {

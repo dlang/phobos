@@ -31,7 +31,7 @@
  * ----
  *
  * Copyright: Copyright Bartosz Milewski 2008- 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski)
  * Source:    $(PHOBOSSRC std/_typelist.d)
  */

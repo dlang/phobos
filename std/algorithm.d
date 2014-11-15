@@ -21,8 +21,8 @@ predSwitch))
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF cache) $(MYREF cacheBidirectional)
 $(MYREF filter) $(MYREF filterBidirectional)
-$(MYREF group) $(MYREF joiner) $(MYREF map) $(MYREF reduce) $(MYREF
-splitter) $(MYREF sum) $(MYREF uniq) )
+$(MYREF group) $(MYREF groupBy) $(MYREF joiner) $(MYREF map) $(MYREF reduce)
+$(MYREF splitter) $(MYREF sum) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
 $(MYREF isSorted) $(MYREF makeIndex) $(MYREF multiSort) $(MYREF nextPermutation)
@@ -218,6 +218,11 @@ $(TR $(TDNW $(LREF group)) $(TD $(D group([5, 2, 2, 3, 3]))
 returns a range containing the tuples $(D tuple(5, 1)),
 $(D tuple(2, 2)), and $(D tuple(3, 2)).)
 )
+$(TR $(TDNW $(LREF groupBy)) $(TD $(D groupBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
+returns a range containing 3 subranges: the first with just $(D [1, 1]); the
+second with the elements $(D [1, 2]) and $(D [2, 2]); and the third with just
+$(D [2, 1]).)
+)
 $(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
 "world!"], "; ")) returns a range that iterates over the characters $(D
 "hello; world!"). No new string is created - the existing inputs are
@@ -411,8 +416,8 @@ $(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
 
 Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
-returns a range of which elements are obtained by applying $(D fun(x))
-left to right for all $(D x) in $(D range). The original ranges are
+returns a range of which elements are obtained by applying $(D fun(a))
+left to right for all elements $(D a) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
 */
 template map(fun...) if (fun.length >= 1)
@@ -446,7 +451,7 @@ template map(fun...) if (fun.length >= 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr1 = [ 1, 2, 3, 4 ];
     int[] arr2 = [ 5, 6 ];
@@ -459,7 +464,7 @@ Multiple functions can be passed to $(D map). In that case, the
 element type of $(D map) is a tuple containing one element for each
 function.
 */
-unittest
+@safe unittest
 {
     auto sums = [2, 4, 6, 8];
     auto products = [1, 4, 9, 16];
@@ -477,7 +482,7 @@ unittest
 You may alias $(D map) with some function(s) to a symbol and use
 it separately:
 */
-unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -593,7 +598,7 @@ private struct MapResult(alias fun, Range)
     }
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.functional : adjoin;
@@ -712,14 +717,15 @@ unittest
     static assert(!__traits(compiles, map!(nonvoidFun, voidFun)([1])));
     static assert(!__traits(compiles, map!(voidFun, nonvoidFun)([1])));
 }
-unittest
+
+@safe unittest
 {
     auto LL = iota(1L, 4L);
     auto m = map!"a*a"(LL);
     assert(equal(m, [1L, 4L, 9L]));
 }
 
-unittest
+@safe unittest
 {
     // Issue #10130 - map of iota with const step.
     const step = 2;
@@ -733,7 +739,7 @@ unittest
     static assert(__traits(compiles, map!(i => i)(iota(floatBegin, floatEnd, floatStep))));
 }
 
-unittest
+@safe unittest
 {
     //slicing infinites
     auto rr = iota(0, 5).cycle().map!"a * a"();
@@ -743,7 +749,7 @@ unittest
     assert(equal(rr[0 .. 5], [1, 4, 9, 16, 0]));
 }
 
-unittest
+@safe unittest
 {
     struct S {int* p;}
     auto m = immutable(S).init.repeat().map!"a".save;
@@ -788,7 +794,7 @@ if (isBidirectionalRange!Range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.stdio, std.range;
     import std.typecons : tuple;
@@ -828,7 +834,37 @@ unittest
     assert(counter == iota(-4, 5).length);
 }
 
-unittest
+/++
+Tip: $(D cache) is eager when evaluating elements. If calling front on the
+underlying range has a side effect, it will be observeable before calling
+front on the actual cached range.
+
+Furtermore, care should be taken composing $(D cache) with $(XREF range,take).
+By placing $(D take) before $(D cache), then $(D cache) will be "aware"
+of when the range ends, and correctly stop caching elements when needed.
+If calling front has no side effect though, placing $(D take) after $(D cache)
+may yield a faster range.
+
+Either way, the resulting ranges will be equivalent, but maybe not at the
+same cost or side effects.
++/
+@safe unittest
+{
+    import std.range;
+    int i = 0;
+
+    auto r = iota(0, 4).tee!((a){i = a;}, No.pipeOnPop);
+    auto r1 = r.take(3).cache();
+    auto r2 = r.cache().take(3);
+
+    assert(equal(r1, [0, 1, 2]));
+    assert(i == 2); //The last "seen" element was 2. The data in cache has been cleared.
+
+    assert(equal(r2, [0, 1, 2]));
+    assert(i == 3); //cache has accessed 3. It is still stored internally by cache.
+}
+
+@safe unittest
 {
     auto a = [1, 2, 3, 4];
     assert(equal(a.map!"(a - 1)*a"().cache(),                      [ 0, 2, 6, 12]));
@@ -839,7 +875,7 @@ unittest
     assert(equal(r2, [2, 3, 4]));
 }
 
-unittest
+@safe unittest
 {
     //immutable test
     static struct S
@@ -863,21 +899,21 @@ unittest
     assert(equal(a.cacheBidirectional(), a));
 }
 
-unittest
+@safe unittest
 {
     char[][] stringbufs = ["hello".dup, "world".dup];
     auto strings = stringbufs.map!((a)=>a.idup)().cache();
     assert(strings.front is strings.front);
 }
 
-unittest
+@safe unittest
 {
     auto c = [1, 2, 3].cycle().cache();
     c = c[1 .. $];
     auto d = c[0 .. 1];
 }
 
-unittest
+@safe unittest
 {
     static struct Range
     {
@@ -1153,7 +1189,7 @@ Many aggregate range operations turn out to be solved with $(D reduce)
 quickly and easily. The example below illustrates $(D reduce)'s
 remarkable power and flexibility.
 */
-unittest
+@safe unittest
 {
     import std.math : approxEqual;
 
@@ -1206,7 +1242,7 @@ If two or more functions are passed, $(D reduce) returns a
 $(XREF typecons, Tuple) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
-unittest
+@safe unittest
 {
     import std.math : approxEqual, sqrt;
 
@@ -1285,7 +1321,7 @@ unittest
     assertThrown(reduce!"a + b"(oa));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -1296,7 +1332,7 @@ unittest
     r = reduce!"a + b"(a, c);
 }
 
-unittest
+@safe unittest
 {
     // Issue #10408 - Two-function reduce of a const array.
     const numbers = [10, 30, 20];
@@ -1306,7 +1342,7 @@ unittest
     assert(minmax == tuple(10, 30));
 }
 
-unittest
+@safe unittest
 {
     //10709
     enum foo = "a + 0.5 * b";
@@ -1352,7 +1388,7 @@ unittest
     enum b = foo();
 }
 
-unittest
+@safe unittest
 {
     //http://forum.dlang.org/thread/oghtttkopzjshsuflelk@forum.dlang.org
     //Seed is tuple of const.
@@ -1365,7 +1401,7 @@ unittest
     assert(minmaxElement([1, 2, 3])== tuple(1, 3));
 }
 
-unittest //12569
+@safe unittest //12569
 {
     import std.typecons: tuple;
     dchar c = 'a';
@@ -1385,7 +1421,7 @@ unittest //12569
     static assert(!is(typeof(reduce!(all, all)(tuple(1, 1), "hello"))));
 }
 
-unittest //13304
+@safe unittest //13304
 {
     int[] data;
     static assert(is(typeof(reduce!((a, b)=>a+b)(data))));
@@ -1602,14 +1638,14 @@ void fill(Range, Value)(Range range, Value filler)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4 ];
     fill(a, 5);
     assert(a == [ 5, 5, 5, 5 ]);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -1640,7 +1676,7 @@ unittest
         assert(value == filler);
 }
 
-unittest
+@safe unittest
 {
     //ER8638_1 IS_NOT self assignable
     static struct ER8638_1
@@ -1661,7 +1697,7 @@ unittest
     er8638_2.fill(5); //opSlice(T.init) case
 }
 
-unittest
+@safe unittest
 {
     {
         int[] a = [1, 2, 3];
@@ -1750,7 +1786,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = [ 8, 9 ];
@@ -1758,7 +1794,7 @@ unittest
     assert(a == [ 8, 9, 8, 9, 8 ]);
 }
 
-unittest
+@safe unittest
 {
     import std.exception : assertThrown;
 
@@ -1974,7 +2010,7 @@ template filter(alias pred) if (is(typeof(unaryFun!pred)))
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math : approxEqual;
 
@@ -2047,7 +2083,7 @@ private struct FilterResult(alias pred, Range)
     }
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2099,7 +2135,7 @@ unittest
     auto m = map!"a + 1"(filter!"a < 4"(arr));
 }
 
-unittest
+@safe unittest
 {
     int[] a = [ 3, 4 ];
     const aConst = a;
@@ -2117,7 +2153,7 @@ unittest
     auto m = map!"a + 1"(filter!"a < 4"(arr));
 }
 
-unittest
+@safe unittest
 {
     import std.functional : compose, pipe;
 
@@ -2127,7 +2163,7 @@ unittest
             [2,6,10]));
 }
 
-unittest
+@safe unittest
 {
     int x = 10;
     int underX(int a) { return a < x; }
@@ -2155,7 +2191,7 @@ template filterBidirectional(alias pred)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [ 1, 2, 3, 4, 5 ];
     auto small = filterBidirectional!("a < 3")(arr);
@@ -2566,7 +2602,7 @@ need not be assignable at all to be swapped.
 If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
-its fields must also all be (recursivelly) mutable.
+its fields must also all be (recursively) mutable.
 */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
@@ -2620,7 +2656,7 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     lhs.proxySwap(rhs);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2645,7 +2681,7 @@ unittest
     static assert(!__traits(compiles, swap(imm1, imm2)));
 }
 
-unittest
+@safe unittest
 {
     static struct NoCopy
     {
@@ -2683,14 +2719,14 @@ unittest
     static assert(!__traits(compiles, swap(const1, const2)));
 }
 
-unittest
+@safe unittest
 {
     //Bug# 4789
     int[1] s = [1];
     swap(s, s);
 }
 
-unittest
+@safe unittest
 {
     static struct NoAssign
     {
@@ -2704,7 +2740,7 @@ unittest
     assert(s2.i == 1);
 }
 
-unittest
+@safe unittest
 {
     struct S
     {
@@ -2714,14 +2750,14 @@ unittest
     static assert(!__traits(compiles, swap(s, s)));
 }
 
-unittest
+@safe unittest
 {
     //11853
     alias T = Tuple!(int, double);
     static assert(isAssignable!T);
 }
 
-unittest
+@safe unittest
 {
     // 12024
     import std.datetime;
@@ -2790,7 +2826,7 @@ template forward(args...)
 }
 
 ///
-unittest
+@safe unittest
 {
     class C
     {
@@ -2805,7 +2841,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
 
@@ -2822,7 +2858,7 @@ unittest
     assert(s == "HelloHello");
 }
 
-unittest
+@safe unittest
 {
     auto foo(TL...)(auto ref TL args)
     {
@@ -2853,7 +2889,7 @@ unittest
     assert(baz(S(), makeS(), n, s) == "LLRRRL");
 }
 
-unittest
+@safe unittest
 {
     ref int foo(ref int a) { return a; }
     ref int bar(Args)(auto ref Args args)
@@ -3041,7 +3077,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -3053,7 +3089,7 @@ unittest
     assert(equal(splitter(a, 0), [ [], [1] ]));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3113,7 +3149,7 @@ unittest
         }
     }
 }
-unittest
+@safe unittest
 {
     auto L = retro(iota(1L, 10L));
     auto s = splitter(L, 5L);
@@ -3290,7 +3326,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
     return Result(r, s);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -3331,7 +3367,7 @@ unittest
     assert(walkLength(words) == 5, text(walkLength(words)));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3344,17 +3380,18 @@ unittest
     assert(equal(sp6, ["", ""][]));
 }
 
-unittest
+@safe unittest
 {
     // Issue 10773
     auto s = splitter("abc", "");
     assert(s.equal(["a", "b", "c"]));
 }
 
-unittest
+@safe unittest
 {
     // Test by-reference separator
     class RefSep {
+    @safe:
         string _impl;
         this(string s) { _impl = s; }
         @property empty() { return _impl.empty; }
@@ -3482,7 +3519,7 @@ private struct SplitterResult(alias isTerminator, Range)
     }
 }
 
-unittest
+@safe unittest
 {
     auto L = iota(1L, 10L);
     auto s = splitter(L, [5L, 6L]);
@@ -3493,7 +3530,7 @@ unittest
     assert(s.empty);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3526,7 +3563,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     struct Entry
     {
@@ -3549,7 +3586,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     import std.uni : isWhite;
 
@@ -3641,7 +3678,7 @@ if (isSomeChar!C)
     assert(equal(splitter(s), ["a", "bcd", "ef", "gh"][]));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.string : strip;
@@ -3667,7 +3704,7 @@ unittest
     assert(dictionary["last"]== 4);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
     import std.string : split;
@@ -3742,6 +3779,9 @@ Lazily joins a range of ranges with a separator. The separator itself
 is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
 
+See_also:
+$(XREF range,chain), which chains a sequence of ranges with compatible elements
+into a single range.
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR)
@@ -3899,7 +3939,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -3971,11 +4011,12 @@ unittest
         .array();
 }
 
-unittest
+@safe unittest
 {
     // Transience correctness test
     struct TransientRange
     {
+    @safe:
         int[][] src;
         int[] buf;
 
@@ -4144,10 +4185,11 @@ unittest
     assert(!equal(js2, js));
 }
 
-unittest
+@safe unittest
 {
     struct TransientRange
     {
+    @safe:
         int[] _buf;
         int[][] _values;
         this(int[][] values)
@@ -4185,10 +4227,11 @@ unittest
     assert(equal(result, [1,2,3,4,5,6,7]));
 }
 
-unittest
+@safe unittest
 {
     struct TransientRange
     {
+    @safe:
         dchar[] _buf;
         dstring[] _values;
         this(dstring[] values)
@@ -4254,10 +4297,14 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
+
+    // Filter duplicates in-place using copy
+    arr.length -= arr.uniq().copy(arr).length;
+    assert(arr == [ 1, 2, 3, 4, 5 ]);
 }
 
 private struct UniqResult(alias pred, Range)
@@ -4317,7 +4364,7 @@ private struct UniqResult(alias pred, Range)
     }
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -4417,14 +4464,14 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
         tuple(4, 3u), tuple(5, 1u) ][]));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -4444,6 +4491,321 @@ unittest
             tuple(9, 1u), tuple(10, 1u)]));
     }
 }
+
+
+// Used by implementation of groupBy.
+private struct GroupByChunkImpl(alias equivFun, Range)
+{
+    alias equiv = binaryFun!equivFun;
+
+    private Range r;
+
+    /* For forward ranges, using .save is more reliable than blindly assuming
+     * that the current value of .front will persist past a .popFront. However,
+     * if Range is only an input range, then we have no choice but to save the
+     * value of .front. */
+    static if (isForwardRange!Range)
+    {
+        private Range prev;
+        this(Range _r, Range _prev)
+        {
+            r = _r.save;
+            prev = _prev.save;
+        }
+        @property bool empty()
+        {
+            return r.empty || !equiv(prev.front, r.front);
+        }
+    }
+    else
+    {
+        private ElementType!Range prev;
+        this(Range _r, ElementType!Range _prev)
+        {
+            r = _r;
+            prev = _prev;
+        }
+        @property bool empty()
+        {
+            return r.empty || !equiv(prev, r.front);
+        }
+    }
+
+    @property ElementType!Range front() { return r.front; }
+
+    void popFront()
+    in
+    {
+        import core.exception : RangeError;
+        if (r.empty) throw new RangeError();
+    }
+    body
+    {
+        r.popFront();
+    }
+
+    static if (isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            typeof(this) copy;
+            copy.r = r.save;
+            copy.prev = prev.save;
+            return copy;
+        }
+    }
+}
+
+// Implementation of groupBy.
+private struct GroupByImpl(alias equivFun, Range)
+{
+    alias equiv = binaryFun!equivFun;
+
+    private Range r;
+
+    /* For forward ranges, using .save is more reliable than blindly assuming
+     * that the current value of .front will persist past a .popFront. However,
+     * if Range is only an input range, then we have no choice but to save the
+     * value of .front. */
+    static if (isForwardRange!Range)
+    {
+        private Range _prev;
+        private void savePrev() { _prev = r.save; }
+        private @property ElementType!Range prev() { return _prev.front; }
+    }
+    else
+    {
+        private ElementType!Range _prev;
+        private void savePrev() { _prev = r.front; }
+        private alias prev = _prev;
+    }
+
+    this(Range _r)
+    {
+        r = _r;
+        if (!empty)
+            savePrev();
+    }
+    @property bool empty() { return r.empty; }
+
+    @property auto front()
+    in
+    {
+        import core.exception : RangeError;
+        if (r.empty) throw new RangeError();
+    }
+    body
+    {
+        return GroupByChunkImpl!(equivFun, Range)(r, _prev);
+    }
+
+    void popFront()
+    {
+        while (!r.empty)
+        {
+            if (!equiv(prev, r.front))
+            {
+                savePrev();
+                return;
+            }
+            r.popFront();
+        }
+    }
+
+    static if (isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            typeof(this) copy;
+            copy.r = r.save;
+            copy._prev = _prev.save;
+            return copy;
+        }
+    }
+}
+
+/**
+ * Chunks an input range into subranges of equivalent adjacent elements.
+ *
+ * Equivalence is defined by the predicate $(D equiv), which can be either
+ * binary or unary. In the binary form, two _range elements $(D a) and $(D b)
+ * are considered equivalent if $(D equiv(a,b)) is true. In unary form, two
+ * elements are considered equivalent if $(D equiv(a) == equiv(b)) is true.
+ *
+ * Params:
+ *  equiv = Predicate for determining equivalence.
+ *  r = The range to be chunked.
+ *
+ * Returns: A range of ranges in which all elements in a given subrange are
+ * equivalent under the given predicate.
+ *
+ * Notes:
+ *
+ * Equivalent elements separated by an intervening non-equivalent element will
+ * appear in separate subranges; this function only considers adjacent
+ * equivalence. Elements in the subranges will always appear in the same order
+ * they appear in the original range.
+ *
+ * Being an equivalence relation, the binary form of $(D equiv) is assumed to
+ * be reflexive (i.e., $(D equiv(a,a)) must be true). If not, unexpected
+ * results may be produced.
+ *
+ * See_also:
+ * $(XREF algorithm,group), which collapses adjacent equivalent elements into a
+ * single element.
+ */
+auto groupBy(alias equiv, Range)(Range r)
+    if (isInputRange!Range)
+{
+    static if (is(typeof(binaryFun!equiv(ElementType!Range.init,
+                                         ElementType!Range.init)) : bool))
+        return GroupByImpl!(equiv, Range)(r);
+    else static if (is(typeof(
+            unaryFun!equiv(ElementType!Range.init) ==
+            unaryFun!equiv(ElementType!Range.init))))
+        return GroupByImpl!((a,b) => equiv(a) == equiv(b), Range)(r);
+    else
+        static assert(0, "groupBy expects either a binary predicate or "~
+                         "a unary predicate on range elements of type: "~
+                         ElementType!Range.stringof);
+}
+
+/// Showing usage with binary predicate:
+@safe unittest
+{
+    // Grouping by particular attribute of each element:
+    auto data = [
+        [1, 1],
+        [1, 2],
+        [2, 2],
+        [2, 3]
+    ];
+
+    auto r1 = data.groupBy!((a,b) => a[0] == b[0]);
+    assert(r1.equal!equal([
+        [[1, 1], [1, 2]],
+        [[2, 2], [2, 3]]
+    ]));
+
+    auto r2 = data.groupBy!((a,b) => a[1] == b[1]);
+    assert(r2.equal!equal([
+        [[1, 1]],
+        [[1, 2], [2, 2]],
+        [[2, 3]]
+    ]));
+}
+
+/// Showing usage with unary predicate:
+pure @safe nothrow unittest
+{
+    // Grouping by particular attribute of each element:
+    auto range =
+    [
+        [1, 1],
+        [1, 1],
+        [1, 2],
+        [2, 2],
+        [2, 3],
+        [2, 3],
+        [3, 3]
+    ];
+
+    auto byX = groupBy!(a => a[0])(range);
+    auto expected1 =
+    [
+        [[1, 1], [1, 1], [1, 2]],
+        [[2, 2], [2, 3], [2, 3]],
+        [[3, 3]]
+    ];
+    foreach (e; byX)
+    {
+        assert(!expected1.empty);
+        assert(e.equal(expected1.front));
+        expected1.popFront();
+    }
+
+    auto byY = groupBy!(a => a[1])(range);
+    auto expected2 =
+    [
+        [[1, 1], [1, 1]],
+        [[1, 2], [2, 2]],
+        [[2, 3], [2, 3], [3, 3]]
+    ];
+    foreach (e; byY)
+    {
+        assert(!expected2.empty);
+        assert(e.equal(expected2.front));
+        expected2.popFront();
+    }
+}
+
+pure @safe nothrow unittest
+{
+    struct Item { int x, y; }
+
+    // Force R to have only an input range API with reference semantics, so
+    // that we're not unknowingly making use of array semantics outside of the
+    // range API.
+    class RefInputRange(R)
+    {
+        R data;
+        this(R _data) pure @safe nothrow { data = _data; }
+        @property bool empty() pure @safe nothrow { return data.empty; }
+        @property auto front() pure @safe nothrow { return data.front; }
+        void popFront() pure @safe nothrow { data.popFront(); }
+    }
+    auto refInputRange(R)(R range) { return new RefInputRange!R(range); }
+
+    {
+        auto arr = [ Item(1,2), Item(1,3), Item(2,3) ];
+        static assert(isForwardRange!(typeof(arr)));
+
+        auto byX = groupBy!(a => a.x)(arr);
+        static assert(isForwardRange!(typeof(byX)));
+
+        auto byX_subrange1 = byX.front.save;
+        auto byX_subrange2 = byX.front.save;
+        static assert(isForwardRange!(typeof(byX_subrange1)));
+        static assert(isForwardRange!(typeof(byX_subrange2)));
+
+        byX.popFront();
+        assert(byX_subrange1.equal([ Item(1,2), Item(1,3) ]));
+        byX_subrange1.popFront();
+        assert(byX_subrange1.equal([ Item(1,3) ]));
+        assert(byX_subrange2.equal([ Item(1,2), Item(1,3) ]));
+
+        auto byY = groupBy!(a => a.y)(arr);
+        static assert(isForwardRange!(typeof(byY)));
+
+        auto byY2 = byY.save;
+        static assert(is(typeof(byY) == typeof(byY2)));
+        byY.popFront();
+        assert(byY.front.equal([ Item(1,3), Item(2,3) ]));
+        assert(byY2.front.equal([ Item(1,2) ]));
+    }
+
+    // Test non-forward input ranges.
+    {
+        auto range = refInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
+        auto byX = groupBy!(a => a.x)(range);
+        assert(byX.front.equal([ Item(1,1), Item(1,2) ]));
+        byX.popFront();
+        assert(byX.front.equal([ Item(2,2) ]));
+        byX.popFront();
+        assert(byX.empty);
+        assert(range.empty);
+
+        range = refInputRange([ Item(1,1), Item(1,2), Item(2,2) ]);
+        auto byY = groupBy!(a => a.y)(range);
+        assert(byY.front.equal([ Item(1,1) ]));
+        byY.popFront();
+        assert(byY.front.equal([ Item(1,2), Item(2,2) ]));
+        byY.popFront();
+        assert(byY.empty);
+        assert(range.empty);
+    }
+}
+
 
 // overwriteAdjacent
 /*
@@ -4613,12 +4975,7 @@ if (isInputRange!InputRange &&
             UEEType[is(UEEType == char) ? 4 : 2] buf;
 
             size_t len = encode(buf, needle);
-            //TODO: Make find!(R, R) @safe
-            R trustedFindRR(ref R haystack, UEEType[] needle) @trusted pure
-            {
-                return cast(R) std.algorithm.find(haystack, needle);
-            }
-            return trustedFindRR(haystack, buf[0 .. len]);
+            return find(haystack, buf[0 .. len]);
         }
         else
         {
@@ -4684,7 +5041,7 @@ if (isInputRange!InputRange &&
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -4702,7 +5059,7 @@ unittest
     assert(!find!("toLower(a) == b")(s, "hello").empty);
 }
 
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -4713,7 +5070,7 @@ unittest
     auto r = find(lst[], 5);
     assert(equal(r, SList!int(5, 7, 3)[]));
     assert(find([1, 2, 3, 5], 4).empty);
-    assert(equal(find!"a>b"("hello", 'k'), "llo"));
+    assert(equal(find!"a > b"("hello", 'k'), "llo"));
 }
 
 @safe pure nothrow unittest
@@ -4752,7 +5109,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     //CTFE
     static assert (find("abc", 'b') == "bc");
@@ -4769,7 +5126,7 @@ unittest
     static assert(find!((a,b)=>a==b)([1, 2, 3], 2));
 }
 
-unittest
+@safe unittest
 {
     import std.exception : assertCTFEable;
 
@@ -4791,7 +5148,7 @@ unittest
     assertCTFEable!dg;
 }
 
-unittest
+@safe unittest
 {
     // Bugzilla 11603
     enum Foo : ubyte { A }
@@ -4838,8 +5195,9 @@ if (isForwardRange!R1 && isForwardRange!R2
             Select!(haystack[0].sizeof == 1, ubyte[],
                 Select!(haystack[0].sizeof == 2, ushort[], uint[]));
         // Will use the array specialization
-        return cast(R1) .find!(pred, Representation, Representation)
-            (cast(Representation) haystack, cast(Representation) needle);
+        static TO force(TO, T)(T r) @trusted { return cast(TO)r; }
+        return force!R1(.find!(pred, Representation, Representation)
+            (force!Representation(haystack), force!Representation(needle)));
     }
     else
     {
@@ -4848,7 +5206,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -4857,7 +5215,7 @@ unittest
     assert([1, 2, 3, 4].find(SList!int(2, 3)[]) == [2, 3, 4]);
 }
 
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -4919,7 +5277,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     }
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // @@@BUG@@@ removing static below makes unittest fail
@@ -5004,7 +5362,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
     }
 }
 
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -5013,7 +5371,7 @@ unittest
 }
 
 //Bug# 8334
-unittest
+@safe unittest
 {
     auto haystack = [1, 2, 3, 4, 1, 9, 12, 42];
     auto needle = [12, 42, 27];
@@ -5095,7 +5453,7 @@ unittest
     return haystack;
 }
 
-unittest
+@safe unittest
 {
     // Test simpleMindedFind for the case where both haystack and needle have
     // length.
@@ -5104,6 +5462,7 @@ unittest
 
     struct CustomString
     {
+    @safe:
         string _impl;
 
         // This is what triggers issue 7992.
@@ -5185,7 +5544,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 4, 2, 3 ];
     assert(find(a, 4) == [ 4, 2, 3 ]);
@@ -5195,7 +5554,7 @@ unittest
     assert(find(a, 5, [ 1.2, 3.5 ], 2.0) == tuple([ 2, 3 ], 3));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -5207,7 +5566,7 @@ unittest
     assert(find("abc", "bc").length == 2);
 }
 
-unittest
+@safe unittest
 {
     import std.string : toUpper;
 
@@ -5236,7 +5595,7 @@ unittest
     assert(find!(f)(s, "hello").length == 3);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -5256,7 +5615,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -5381,7 +5740,7 @@ Range1 find(Range1, alias pred, Range2)(
     return needle.beFound(haystack);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -5401,7 +5760,7 @@ unittest
     assert(find(b, boyerMooreFinder(a)).empty);
 }
 
-unittest
+@safe unittest
 {
     auto bm = boyerMooreFinder("for");
     auto match = find("Moor", bm);
@@ -5464,7 +5823,7 @@ if (isInputRange!InputRange)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto arr = [ 1, 2, 3, 4, 1 ];
     assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
@@ -5505,7 +5864,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-unittest
+@safe unittest
 {
     string s = "abcdef";
     assert(findSkip(s, "cd") && s == "ef");
@@ -5667,7 +6026,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = "Carl Sagan Memorial Station";
     auto r = findSplit(a, "Velikovsky");
@@ -5686,7 +6045,7 @@ unittest
     assert(r2[1] == " Memorial Station");
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto r = findSplit(a, [9, 1]);
@@ -5713,7 +6072,7 @@ unittest
     assert(r1[1] == a[4 .. $]);
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto fwd = filter!"a > 0"(a);
@@ -5845,7 +6204,7 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(countUntil("hello world", "world") == 6);
     assert(countUntil("hello world", 'r') == 8);
@@ -5859,7 +6218,7 @@ unittest
     assert(countUntil!"a > b"([0, 7, 12, 22, 9], 20) == 3);
 }
 
-unittest
+@safe unittest
 {
     assert(countUntil("日本語", "") == 0);
     assert(countUntil("日本語"d, "") == 0);
@@ -5883,7 +6242,7 @@ unittest
     assert(r.save.countUntil(r3) == -1);
 }
 
-unittest
+@safe unittest
 {
     assert(countUntil("hello world", "world", "asd") == 6);
     assert(countUntil("hello world", "world", "ello") == 1);
@@ -5939,7 +6298,7 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.ascii : isDigit;
     import std.uni : isWhite;
@@ -5949,7 +6308,7 @@ unittest
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
 }
 
-unittest
+@safe unittest
 {
     // References
     {
@@ -6097,14 +6456,14 @@ until(alias pred, Range)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
@@ -6125,7 +6484,7 @@ unittest // bugzilla 13171
     assert(a == [4]);
 }
 
-unittest // Issue 10460
+@safe unittest // Issue 10460
 {
     auto a = [1, 2, 3, 4];
     foreach (ref e; a.until(3))
@@ -6295,7 +6654,7 @@ if (isInputRange!R &&
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(startsWith("abc", ""));
     assert(startsWith("abc", "a"));
@@ -6310,7 +6669,7 @@ unittest
     assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -6422,7 +6781,7 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))))
 }
 
 ///
-unittest
+@safe unittest
 {
     auto s1 = "Hello world";
     assert(!skipOver(s1, "Ha"));
@@ -6452,7 +6811,7 @@ if (is(typeof(binaryFun!pred(r.front, e))))
 }
 
 ///
-unittest {
+@safe unittest {
     auto s1 = "Hello world";
     assert(!skipOver(s1, 'a'));
     assert(s1 == "Hello world");
@@ -6490,7 +6849,7 @@ void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
     }
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s1 = "Hello world";
@@ -6605,7 +6964,7 @@ if (isBidirectionalRange!R &&
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(endsWith("abc", ""));
     assert(!endsWith("abc", "b"));
@@ -6619,7 +6978,7 @@ unittest
     assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -6746,7 +7105,7 @@ if (isForwardRange!R1 && isInputRange!R2 &&
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 }
@@ -6806,7 +7165,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
         return commonPrefix!"a == b"(r1, r2);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.exception : assertThrown;
@@ -6893,7 +7252,7 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
     auto r = findAdjacent(a);
@@ -6903,7 +7262,7 @@ unittest
 
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
@@ -6949,22 +7308,22 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
     int[] b = [ 3, 1, 2 ];
     assert(findAmong(a, b) == a[2 .. $]);
 }
 
-unittest
+@safe unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ -1, 0, 2, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
     assert(findAmong(a, b) == [2, 1, 2, 3, 4, 5 ]);
     assert(findAmong(b, [ 4, 6, 7 ][]).empty);
-    assert(findAmong!("a==b")(a, b).length == a.length - 2);
-    assert(findAmong!("a==b")(b, [ 4, 6, 7 ][]).empty);
+    assert(findAmong!("a == b")(a, b).length == a.length - 2);
+    assert(findAmong!("a == b")(b, [ 4, 6, 7 ][]).empty);
 }
 
 // count
@@ -6994,7 +7353,7 @@ size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.uni : toLower;
 
@@ -7012,7 +7371,7 @@ unittest
     assert(count!("a > 1")(a) == 8);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -7033,7 +7392,7 @@ unittest
     assert(count!("a == '語'")("日本語"d) == 1);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) printf("algorithm.count.unittest\n");
     string s = "This is a fofofof list";
@@ -7077,7 +7436,7 @@ size_t count(alias pred = "true", R)(R haystack)
     return result;
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -7087,7 +7446,7 @@ unittest
 }
 
 // Issue 11253
-nothrow unittest
+@safe nothrow unittest
 {
     assert([1, 2, 3].count([2, 3]) == 1);
 }
@@ -7122,7 +7481,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
 }
 
 ///
-unittest
+@safe unittest
 {
     auto s = "1 + (2 * (3 + 1 / 2)";
     assert(!balancedParens(s, '(', ')'));
@@ -7189,7 +7548,7 @@ template equal(alias pred = "a == b")
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math : approxEqual;
     import std.algorithm : equal;
@@ -7214,7 +7573,7 @@ This can be very useful when the element type of a range is itself a
 range. In particular, $(D equal) can be its own predicate, allowing
 range of range (of range...) comparisons.
  +/
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
     import std.range : iota, chunks;
@@ -7224,7 +7583,7 @@ unittest
     ));
 }
 
-unittest
+@safe unittest
 {
     import std.math : approxEqual;
 
@@ -7241,13 +7600,13 @@ unittest
     assert(!equal("hello", "world"));
 
     // same strings, but "explicit non default" comparison (to test the non optimized array comparison)
-    assert( equal!("a==b")("æøå", "æøå")); //UTF8 vs UTF8
-    assert(!equal!("a==b")("???", "æøå")); //UTF8 vs UTF8
-    assert( equal!("a==b")("æøå"w, "æøå"d)); //UTF16 vs UTF32
-    assert(!equal!("a==b")("???"w, "æøå"d));//UTF16 vs UTF32
-    assert( equal!("a==b")("æøå"d, "æøå"d)); //UTF32 vs UTF32
-    assert(!equal!("a==b")("???"d, "æøå"d));//UTF32 vs UTF32
-    assert(!equal!("a==b")("hello", "world"));
+    assert( equal!("a == b")("æøå", "æøå")); //UTF8 vs UTF8
+    assert(!equal!("a == b")("???", "æøå")); //UTF8 vs UTF8
+    assert( equal!("a == b")("æøå"w, "æøå"d)); //UTF16 vs UTF32
+    assert(!equal!("a == b")("???"w, "æøå"d));//UTF16 vs UTF32
+    assert( equal!("a == b")("æøå"d, "æøå"d)); //UTF32 vs UTF32
+    assert(!equal!("a == b")("???"d, "æøå"d));//UTF32 vs UTF32
+    assert(!equal!("a == b")("hello", "world"));
 
     //Array of string
     assert(equal(["hello", "world"], ["hello", "world"]));
@@ -7356,7 +7715,7 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
                     }
                     return 0;
                 }()
-                : core.stdc.string.memcmp(r1.ptr, r2.ptr, len);
+                : () @trusted { return memcmp(r1.ptr, r2.ptr, len); }();
             if (result) return result;
         }
         else
@@ -7384,7 +7743,7 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
 }
 
 ///
-unittest
+@safe unittest
 {
     int result;
 
@@ -7483,7 +7842,7 @@ MinType!T min(T...)(T args)
     return cast(typeof(return)) (chooseA ? a : b);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -7568,7 +7927,7 @@ MaxType!T max(T...)(T args)
 }
 
 ///
-unittest
+@safe unittest
 {
     int a = 5;
     short b = 6;
@@ -7581,7 +7940,7 @@ unittest
     assert(e == 2);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -7629,7 +7988,7 @@ body
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(clamp(2, 1, 3) == 2);
     assert(clamp(0, 1, 3) == 1);
@@ -7640,7 +7999,7 @@ unittest
     assert(clamp(5, -1, 2u) == 2);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -7881,7 +8240,7 @@ Range minPos(alias pred = "a < b", Range)(Range range)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and first occurs in position 3
@@ -7890,7 +8249,7 @@ unittest
     assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -7917,7 +8276,7 @@ unittest
                .equal([ 1, 2, 4, 1, 1, 2 ]));
 }
 
-unittest
+@safe unittest
 {
     //BUG 9299
     debug(std_algorithm) scope(success)
@@ -7955,7 +8314,7 @@ mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[]    x = [ 1,  5, 2, 7,   4, 3 ];
     double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
@@ -7964,7 +8323,7 @@ unittest
     assert(m[1] == y[3 .. $]);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -8230,7 +8589,7 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.uni : toUpper;
 
@@ -8260,7 +8619,7 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 }
 
 ///
-unittest
+@safe unittest
 {
     string a = "Saturday", b = "Sunday";
     auto p = levenshteinDistanceAndPath(a, b);
@@ -8268,7 +8627,7 @@ unittest
     assert(equal(p[1], "nrrnsnnn"));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -8320,8 +8679,9 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     static if (isArray!Range1 && isArray!Range2 &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
-        immutable overlaps = source.ptr < target.ptr + target.length &&
-                             target.ptr < source.ptr + source.length;
+        immutable overlaps = () @trusted {
+            return source.ptr < target.ptr + target.length &&
+                   target.ptr < source.ptr + source.length; }();
 
         if (overlaps)
         {
@@ -8346,55 +8706,66 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 5 ];
     int[] b = [ 9, 8 ];
-    int[] c = new int[a.length + b.length + 10];
-    auto d = copy(b, copy(a, c));
-    assert(c[0 .. a.length + b.length] == a ~ b);
-    assert(d.length == 10);
+    int[] buf = new int[a.length + b.length + 10];
+    auto rem = copy(a, buf);    // copy a into buf
+    rem = copy(b, rem);         // copy b into remainder of buf
+    assert(buf[0 .. a.length + b.length] == [1, 5, 9, 8]);
+    assert(rem.length == 10);   // unused slots in buf
 }
 
 /**
 As long as the target range elements support assignment from source
-range elements, different types of ranges are accepted.
+range elements, different types of ranges are accepted:
 */
-unittest
+@safe unittest
 {
-    float[] a = [ 1.0f, 5 ];
-    double[] b = new double[a.length];
-    auto d = copy(a, b);
+    float[] src = [ 1.0f, 5 ];
+    double[] dest = new double[src.length];
+    copy(src, dest);
 }
 
 /**
-To copy at most $(D n) elements from range $(D a) to range $(D b), you
-may want to use $(D copy(take(a, n), b)). To copy those elements from
-range $(D a) that satisfy predicate $(D pred) to range $(D b), you may
-want to use $(D copy(a.filter!(pred), b)).
+To _copy at most $(D n) elements from a range, you may want to use 
+$(XREF range, take):
 */
-unittest
+@safe unittest
 {
-    int[] a = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
-    auto b = new int[a.length];
-    auto c = copy(a.filter!(a => (a & 1) == 1), b);
-    assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
+    int[] src = [ 1, 5, 8, 9, 10 ];
+    auto dest = new int[3];
+    copy(take(src, dest.length), dest);
+    assert(dest[0 .. $] == [ 1, 5, 8 ]);
+}
+
+/**
+To _copy just those elements from a range that satisfy a predicate you 
+may want to use $(LREF filter):
+*/
+@safe unittest
+{
+    int[] src = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
+    auto dest = new int[src.length];
+    auto rem = copy(src.filter!(a => (a & 1) == 1), dest);
+    assert(dest[0 .. $ - rem.length] == [ 1, 5, 9, 1 ]);
 }
 
 /**
 $(XREF range, retro) can be used to achieve behavior similar to
-$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward').
+$(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 */
-unittest
+@safe unittest
 {
     import std.algorithm, std.range;
     int[] src = [1, 2, 4];
-    int[] dst = [0, 0, 0, 0, 0];
-    copy(src.retro, dst.retro);
-    assert(dst == [0, 0, 1, 2, 4]);
+    int[] dest = [0, 0, 0, 0, 0];
+    copy(src.retro, dest.retro);
+    assert(dest == [0, 0, 1, 2, 4]);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -8445,7 +8816,7 @@ swapRanges(Range1, Range2)(Range1 r1, Range2 r2)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 100, 101, 102, 103 ];
     int[] b = [ 0, 1, 2, 3 ];
@@ -8477,7 +8848,7 @@ if (isBidirectionalRange!Range && !isRandomAccessRange!Range
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [ 1, 2, 3 ];
     reverse(arr);
@@ -8497,7 +8868,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     }
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -8543,14 +8914,14 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
 }
 
 ///
-unittest
+@safe unittest
 {
     char[] arr = "hello\U00010143\u0100\U00010143".dup;
     reverse(arr);
     assert(arr == "\U00010143\u0100\U00010143olleh");
 }
 
-unittest
+@safe unittest
 {
     void test(string a, string b)
     {
@@ -8794,7 +9165,7 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
 The simplest use of $(D bringToFront) is for rotating elements in a
 buffer. For example:
 */
-unittest
+@safe unittest
 {
     auto arr = [4, 5, 6, 7, 1, 2, 3];
     auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
@@ -8808,7 +9179,7 @@ range. This is very useful with forward ranges that cannot compute
 comfortably right-bounded subranges like $(D arr[0 .. 4]) above. In
 the example below, $(D r2) is a right subrange of $(D r1).
 */
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -8824,7 +9195,7 @@ unittest
 /**
 Elements can be swapped across ranges of different types:
 */
-unittest
+@safe unittest
 {
     import std.container : SList;
 
@@ -8835,7 +9206,7 @@ unittest
     assert(equal(vec, [ 5, 6, 7 ]));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
     import std.random : Random, unpredictableSeed, uniform;
@@ -9155,7 +9526,7 @@ if (s == SwapStrategy.stable
     return result;
 }
 
-unittest
+@safe unittest
 {
     import std.exception : assertThrown;
 
@@ -9167,7 +9538,7 @@ unittest
     assertThrown(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -9211,7 +9582,7 @@ unittest
             == [0, 9, 8, 7, 4, 5]);
 }
 
-unittest
+@safe unittest
 {
     // Issue 11576
     auto arr = [1,2,3];
@@ -9220,7 +9591,7 @@ unittest
 
 }
 
-unittest
+@safe unittest
 {
     // Bug# 12889
     int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
@@ -9280,7 +9651,7 @@ if (isBidirectionalRange!Range
 }
 
 ///
-unittest
+@safe unittest
 {
     static immutable base = [1, 2, 3, 2, 4, 2, 5, 2];
 
@@ -9298,7 +9669,7 @@ unittest
     assert(remove!(a => a == 2)(arr) == [ 1, 3, 4, 5 ]);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -9485,7 +9856,7 @@ Range partition(alias predicate,
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -9522,7 +9893,7 @@ unittest
     assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
 }
 
-unittest
+@safe unittest
 {
     static bool even(int a) { return (a & 1) == 0; }
 
@@ -9555,7 +9926,7 @@ bool isPartitioned(alias pred, Range)(Range r)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] r = [ 1, 3, 5, 7, 8, 2, 4, ];
     assert(isPartitioned!"a & 1"(r));
@@ -9625,7 +9996,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
     auto pieces = partition3(a, 4);
@@ -9634,7 +10005,7 @@ unittest
     assert(pieces[2] == [ 8, 7 ]);
 }
 
-unittest
+@safe unittest
 {
     import std.random : uniform;
 
@@ -9717,7 +10088,7 @@ void topN(alias less = "a < b",
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
     auto n = 4;
@@ -9725,7 +10096,7 @@ unittest
     assert(v[n] == 9);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -9773,7 +10144,7 @@ unittest
     foreach (e; idx[mid .. $]) assert((*e)[1] >= (*idx[mid])[1]);
 }
 
-unittest
+@safe unittest
 {
     import std.random : uniform;
 
@@ -10089,7 +10460,7 @@ template multiSort(less...) //if (less.length > 1)
 }
 
 ///
-unittest
+@safe unittest
 {
     static struct Point { int x, y; }
     auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
@@ -10098,7 +10469,7 @@ unittest
     assert(pts1 == pts2);
 }
 
-unittest
+@safe unittest
 {
     static struct Point { int x, y; }
     auto pts1 = [ Point(5, 6), Point(1, 0), Point(5, 7), Point(1, 1), Point(1, 2), Point(0, 1) ];
@@ -10112,7 +10483,7 @@ unittest
     assert(equal(pts3, pts2));
 }
 
-unittest //issue 9160 (L-value only comparators)
+@safe unittest //issue 9160 (L-value only comparators)
 {
     static struct A
     {
@@ -10210,7 +10581,7 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
     }
 }
 
-unittest
+@safe unittest
 {
     import std.random : Random, uniform;
 
@@ -10943,7 +11314,7 @@ unittest
 
 unittest
 {//bugzilla 4584
-    assert(isSorted!"a<b"(sort!("a<b", SwapStrategy.stable)(
+    assert(isSorted!"a < b"(sort!("a < b", SwapStrategy.stable)(
        [83, 42, 85, 86, 87, 22, 89, 30, 91, 46, 93, 94, 95, 6,
          97, 14, 33, 10, 101, 102, 103, 26, 105, 106, 107, 6]
     )));
@@ -11133,7 +11504,7 @@ void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ];
     partialSort(a, 5);
@@ -11220,7 +11591,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] arr = [4, 3, 2, 1];
     assert(!isSorted(arr));
@@ -11230,7 +11601,7 @@ unittest
     assert(isSorted!("a > b")(arr));
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -11796,7 +12167,7 @@ template canFind(alias pred="a == b")
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(canFind([0, 1, 2, 3], 2) == true);
     assert(canFind([0, 1, 2, 3], [1, 2], [2, 3]));
@@ -11809,7 +12180,7 @@ unittest
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -11821,7 +12192,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     assert(equal!(canFind!"a < b")([[1, 2, 3], [7, 8, 9]], [2, 8]));
 }
@@ -11846,7 +12217,7 @@ template any(alias pred = "a")
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.ascii : isWhite;
     assert( all!(any!isWhite)(["a a", "b b"]));
@@ -11859,7 +12230,7 @@ evaluated to true or false in a conditional statement. $(D !any) can be a
 convenient way to quickly test that $(I none) of the elements of a range
 evaluate to true.
  +/
-unittest
+@safe unittest
 {
     int[3] vals1 = [0, 0, 0];
     assert(!any(vals1[])); //none of vals1 evaluate to true
@@ -11873,7 +12244,7 @@ unittest
     assert( all(vals3[]));
 }
 
-unittest
+@safe unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -11901,7 +12272,7 @@ template all(alias pred = "a")
 }
 
 ///
-unittest
+@safe unittest
 {
     assert( all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
@@ -11913,18 +12284,13 @@ evaluated to true or false in a conditional statement. This can be a
 convenient way to quickly evaluate that $(I _all) of the elements of a range
 are true.
  +/
-unittest
+@safe unittest
 {
     int[3] vals = [5, 3, 18];
     assert( all(vals[]));
 }
-unittest
-{
-    int x = 1;
-    assert(all!(a => a > x)([2, 3]));
-}
 
-unittest
+@safe unittest
 {
     int x = 1;
     assert(all!(a => a > x)([2, 3]));
@@ -12104,7 +12470,7 @@ SetUnion!(less, Rs) setUnion(alias less = "a < b", Rs...)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12219,7 +12585,7 @@ SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs range
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12229,7 +12595,7 @@ unittest
     assert(equal(setIntersection(a, b, c), [1, 4, 7]));
 }
 
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12330,7 +12696,7 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12338,7 +12704,7 @@ unittest
     static assert(isForwardRange!(typeof(setDifference(a, b))));
 }
 
-unittest // Issue 10460
+@safe unittest // Issue 10460
 {
     int[] a = [1, 2, 3, 4, 5];
     int[] b = [2, 4];
@@ -12444,7 +12810,7 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
@@ -12452,7 +12818,7 @@ unittest
     static assert(isForwardRange!(typeof(setSymmetricDifference(a, b))));
 }
 
-unittest // Issue 10460
+@safe unittest // Issue 10460
 {
     int[] a = [1, 2];
     double[] b = [2.0, 3.0];
@@ -12868,8 +13234,8 @@ do
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
  */
-bool nextPermutation(alias less="a<b", BidirectionalRange)
-                    (ref BidirectionalRange range)
+bool nextPermutation(alias less="a < b", BidirectionalRange)
+                    (BidirectionalRange range)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
 {
@@ -12906,7 +13272,7 @@ bool nextPermutation(alias less="a<b", BidirectionalRange)
 }
 
 ///
-unittest
+@safe unittest
 {
     // Step through all permutations of a sorted array in lexicographic order
     int[] a = [1,2,3];
@@ -12925,7 +13291,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     // Step through permutations of an array containing duplicate elements:
     int[] a = [1,1,2];
@@ -12937,7 +13303,7 @@ unittest
     assert(a == [1,1,2]);
 }
 
-unittest
+@safe unittest
 {
     // Boundary cases: arrays of 0 or 1 element.
     int[] a1 = [];
@@ -12949,7 +13315,7 @@ unittest
     assert(a2 == [1]);
 }
 
-unittest
+@safe unittest
 {
     auto a1 = [1, 2, 3, 4];
 
@@ -13026,7 +13392,7 @@ unittest
     assert(equal(a1, [1, 2, 3, 4]));
 }
 
-unittest
+@safe unittest
 {
     // Test with non-default sorting order
     int[] a = [3,2,1];
@@ -13042,6 +13408,14 @@ unittest
     assert(a == [1,2,3]);
     assert(nextPermutation!"a > b"(a) == false);
     assert(a == [3,2,1]);
+}
+
+// Issue 13594
+@safe unittest
+{
+    int[3] a = [1,2,3];
+    assert(nextPermutation(a[]));
+    assert(a == [1,3,2]);
 }
 
 // nextEvenPermutation
@@ -13106,8 +13480,8 @@ do
  * case the range is reversed back to the lexicographically smallest
  * permutation; otherwise returns true.
  */
-bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
-                        (ref BidirectionalRange range)
+bool nextEvenPermutation(alias less="a < b", BidirectionalRange)
+                        (BidirectionalRange range)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
 {
@@ -13158,7 +13532,7 @@ bool nextEvenPermutation(alias less="a<b", BidirectionalRange)
 }
 
 ///
-unittest
+@safe unittest
 {
     // Step through even permutations of a sorted array in lexicographic order
     int[] a = [1,2,3];
@@ -13170,7 +13544,7 @@ unittest
     assert(a == [1,2,3]);
 }
 
-unittest
+@safe unittest
 {
     auto a3 = [ 1, 2, 3, 4 ];
     int count = 1;
@@ -13178,7 +13552,7 @@ unittest
     assert(count == 12);
 }
 
-unittest
+@safe unittest
 {
     // Test with non-default sorting order
     auto a = [ 3, 2, 1 ];
@@ -13191,7 +13565,7 @@ unittest
     assert(a == [ 3, 2, 1 ]);
 }
 
-unittest
+@safe unittest
 {
     // Test various cases of rollover
     auto a = [ 3, 1, 2 ];
@@ -13203,11 +13577,19 @@ unittest
     assert(b == [ 1, 3, 2 ]);
 }
 
+@safe unittest
+{
+    // Issue 13594
+    int[3] a = [1,2,3];
+    assert(nextEvenPermutation(a[]));
+    assert(a == [2,3,1]);
+}
+
 /**
 Even permutations are useful for generating coordinates of certain geometric
 shapes. Here's a non-trivial example:
 */
-unittest
+@safe unittest
 {
     import std.math : sqrt;
 
@@ -13619,7 +14001,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto N = sequence!"n"(0);         // the range of natural numbers
     auto N2 = cartesianProduct(N, N); // the range of all pairs of natural numbers
@@ -13632,7 +14014,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     auto B = [ 1, 2, 3 ];
     auto C = [ 4, 5, 6 ];
@@ -13645,7 +14027,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // Test cartesian product of two infinite ranges
     auto Even = sequence!"2*n"(0);
@@ -13664,7 +14046,7 @@ unittest
     assert(canFind(EvenOdd, tuple(42, 1)));
 }
 
-unittest
+@safe unittest
 {
     // Test cartesian product of an infinite input range and a finite forward
     // range.
@@ -13700,7 +14082,7 @@ unittest
     assert(!canFind(MN.take(100), tuple(100, 200)));
 }
 
-unittest
+@safe unittest
 {
     // Test cartesian product of two finite ranges.
     auto X = [1, 2, 3];
@@ -13724,7 +14106,7 @@ unittest
     // And therefore, by set comprehension, XY == Expected
 }
 
-unittest
+@safe unittest
 {
     auto N = sequence!"n"(0);
 
@@ -13886,7 +14268,7 @@ auto cartesianProduct(RR...)(RR ranges)
     return Result(ranges);
 }
 
-unittest
+@safe unittest
 {
     // Issue 10693: cartesian product of empty ranges should be empty.
     int[] a, b, c, d, e;
@@ -13902,7 +14284,7 @@ unittest
     foreach (_; cprod2) {} // should not crash
 }
 
-unittest
+@safe unittest
 {
     // .init value of cartesianProduct should be empty
     auto cprod = cartesianProduct([0,0], [1,1], [2,2]);
@@ -13910,7 +14292,7 @@ unittest
     assert(cprod.init.empty);
 }
 
-unittest
+@safe unittest
 {
     // Issue 13393
     assert(!cartesianProduct([0],[0],[0]).save.empty);
@@ -13933,7 +14315,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
     );
 }
 
-unittest
+@safe unittest
 {
     auto N = sequence!"n"(0);
     auto N3 = cartesianProduct(N, N, N);
@@ -13946,9 +14328,7 @@ unittest
     assert(canFind(N3, tuple(9, 3, 0)));
 }
 
-version(none)
-// This unittest causes `make -f posix.mak unittest` to run out of memory. Why?
-unittest
+@safe unittest
 {
     auto N = sequence!"n"(0);
     auto N4 = cartesianProduct(N, N, N, N);
@@ -13963,7 +14343,7 @@ unittest
 
 // Issue 9878
 ///
-unittest
+@safe unittest
 {
     auto A = [ 1, 2, 3 ];
     auto B = [ 'a', 'b', 'c' ];
@@ -14037,7 +14417,7 @@ template among(values...)
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(3.among(1, 42, 24, 3, 2));
 
@@ -14054,13 +14434,13 @@ unittest
 Alternatively, $(D values) can be passed at compile-time, allowing for a more
 efficient search, but one that only supports matching on equality:
 */
-unittest
+@safe unittest
 {
     assert(3.among!(2, 3, 4));
     assert("bar".among!("foo", "bar", "baz") == 2);
 }
 
-unittest
+@safe unittest
 {
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);
@@ -14170,7 +14550,7 @@ auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choi
 }
 
 ///
-unittest
+@safe unittest
 {
     string res = 2.predSwitch!"a < b"(
         1, "less than 1",

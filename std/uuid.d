@@ -83,7 +83,7 @@ $(MYREF oidNamespace) $(MYREF x500Namespace) )
  * $(LINK http://en.wikipedia.org/wiki/Universally_unique_identifier)
  *
  * Copyright: Copyright Johannes Pfau 2011 - .
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Johannes Pfau
  * Source:    $(PHOBOSSRC std/_uuid.d)
  *
@@ -99,8 +99,8 @@ $(MYREF oidNamespace) $(MYREF x500Namespace) )
  */
 module std.uuid;
 
-import std.array, std.ascii;
-import std.conv, std.digest.md, std.digest.sha, std.random, std.range, std.string, std.traits;
+import std.range.constraints;
+import std.traits;
 
 /**
  *
@@ -330,6 +330,7 @@ public struct UUID
          */
         this(T)(in T[] uuid) if(isSomeChar!(Unqual!T))
         {
+            import std.conv : to, parse;
             if(uuid.length < 36)
             {
                 throw new UUIDParsingException(to!string(uuid), 0,
@@ -390,6 +391,7 @@ public struct UUID
         {
             import std.exception;
             import std.typetuple;
+            import std.conv : to;
 
             foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
@@ -686,6 +688,7 @@ public struct UUID
          */
         @safe pure nothrow int opCmp(in UUID s) const
         {
+            import std.algorithm : cmp;
             return cmp(this.data[], s.data[]);
         }
 
@@ -694,6 +697,7 @@ public struct UUID
          */
         @safe pure nothrow int opCmp(ref in UUID s) const
         {
+            import std.algorithm : cmp;
             return cmp(this.data[], s.data[]);
         }
 
@@ -857,6 +861,8 @@ public struct UUID
  */
 @safe pure UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
 {
+    import std.digest.md : MD5;
+
     MD5 hash;
     hash.start();
 
@@ -967,6 +973,8 @@ public struct UUID
  */
 @safe pure UUID sha1UUID(in ubyte[] data, const UUID namespace = UUID.init)
 {
+    import std.digest.sha : SHA1;
+
     SHA1 sha;
     sha.start();
 
@@ -1045,26 +1053,26 @@ public struct UUID
  */
 @trusted UUID randomUUID()
 {
+    import std.random : rndGen, Mt19937;
     return randomUUID(rndGen);
 }
-/*
- * Original boost.uuid used Mt19937, we don't want
- * to use anything worse than that. If Random is changed
- * to something else, this assert and the randomUUID function
- * have to be updated.
- */
-static assert(is(typeof(rndGen) == Mt19937));
 
 /**
  * ditto
  */
-@trusted UUID randomUUID(RNG)(ref RNG randomGen) if(isUniformRNG!(RNG) &&
-    isIntegral!(typeof(RNG.front)))
+/**
+ * Params:
+ *      randomGen = uniform RNG
+ * See_Also: $(XREF random, isUniformRNG)
+ */ 
+@trusted UUID randomUUID(RNG)(ref RNG randomGen) if(isIntegral!(typeof(RNG.front)))
 {
+    import std.random : isUniformRNG;
+    static assert(isUniformRNG!RNG, "randomGen must be an uniform RNG");
     enum size_t elemSize = typeof(RNG.front).sizeof;
     static assert(elemSize <= 16);
     UUID u;
-    foreach(size_t i; iota(cast(size_t)0, cast(size_t)16, elemSize))
+    for(size_t i; i < 16; i += elemSize)
     {
         randomGen.popFront();
         immutable randomValue = randomGen.front;
@@ -1084,9 +1092,21 @@ static assert(is(typeof(rndGen) == Mt19937));
     return u;
 }
 
+/*
+ * Original boost.uuid used Mt19937, we don't want
+ * to use anything worse than that. If Random is changed
+ * to something else, this assert and the randomUUID function
+ * have to be updated.
+ */
 unittest
 {
-    import std.random;
+    import std.random : rndGen, Mt19937;
+    static assert(is(typeof(rndGen) == Mt19937));
+}
+
+unittest
+{
+    import std.random : Xorshift192, unpredictableSeed;
     //simple call
     auto uuid = randomUUID();
 
@@ -1158,6 +1178,9 @@ UUID parseUUID(T)(T uuidString) if(isSomeString!T)
 UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     && is(Unqual!(ElementType!Range) == dchar))
 {
+    import std.conv : ConvException, parse;
+    import std.ascii : isHexDigit;
+
     static if(isForwardRange!Range)
         auto errorCopy = uuidRange.save;
 
@@ -1166,6 +1189,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
     {
         static if(isForwardRange!Range)
         {
+            import std.conv : to;
             static if(isInfinite!Range)
             {
                 throw new UUIDParsingException(to!string(take(errorCopy, pos)), pos, reason, message,
@@ -1185,6 +1209,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
 
     static if(hasLength!Range)
     {
+        import std.conv : to;
         if(uuidRange.length < 32)
         {
             throw new UUIDParsingException(to!string(uuidRange), 0, UUIDParsingException.Reason.tooLittle,
@@ -1296,6 +1321,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
 {
     import std.exception;
     import std.typetuple;
+    import std.conv : to;
 
     struct TestRange(bool forward)
     {
@@ -1538,6 +1564,8 @@ public class UUIDParsingException : Exception
     private this(string input, size_t pos, Reason why = Reason.unknown, string msg = "",
         Throwable next = null, string file = __FILE__, size_t line = __LINE__) pure @trusted
     {
+        import std.array : replace;
+        import std.string : format;
         this.input = input;
         this.position = pos;
         this.reason = why;

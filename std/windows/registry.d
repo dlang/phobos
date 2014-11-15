@@ -4,7 +4,7 @@
     Copyright: Copyright 2003-2004 by Matthew Wilson and Synesis Software
                Written by Matthew Wilson
 
-    License:
+    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
     Author:    Matthew Wilson, Kenji Hara
 
@@ -41,7 +41,7 @@ version (Windows):
 import std.array;
 import std.system : Endian, endian;
 import std.exception;
-import std.c.windows.windows;
+import core.sys.windows.windows;
 import std.windows.syserror;
 import std.conv;
 import std.utf : toUTF8, toUTF16;
@@ -1277,20 +1277,6 @@ public:
         regQueryValue(m_key.m_hkey, m_name, value, m_type);
 
         return value;
-    }
-
-    //Explicitly undocumented. It will be removed in July 2014.
-    deprecated("Please use value_DWORD instead.")
-    uint value_DWORD_LITTLEENDIAN()
-    {
-        return value_DWORD;
-    }
-
-    //Explicitly undocumented. It will be removed in July 2014.
-    deprecated("Please use value_DWORD instead.")
-    uint value_DWORD_BIGENDIAN()
-    {
-        return value_DWORD;
     }
 
     /**

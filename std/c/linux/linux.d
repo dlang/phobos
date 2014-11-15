@@ -6,9 +6,10 @@
  * countries.
  */
 
+deprecated("Please import the core.sys.posix.* modules you need instead. This module will be removed in April 2015.")
 module std.c.linux.linux;
 
-public import std.c.linux.pthread;
+public import core.sys.posix.pthread;
 
 extern (C)
 {
@@ -17,7 +18,6 @@ extern (C)
         void* __libc_stack_end;
         int __data_start;
         int _end;
-        int timezone;
 
         void *_deh_beg;
         void *_deh_end;

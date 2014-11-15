@@ -35,7 +35,7 @@
 
 /**
  * Example: See $(SAMPLESRC listener.d) and $(SAMPLESRC htmlget.d)
- * License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),
  *      $(WEB thecybershadow.net, Vladimir Panteleev)
  * Source:  $(PHOBOSSRC std/_socket.d)
@@ -45,7 +45,7 @@
 
 module std.socket;
 
-import core.stdc.stdint, core.stdc.string, std.string, std.c.stdlib, std.conv;
+import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.conv;
 
 import core.stdc.config;
 import core.time : dur, Duration;
@@ -62,9 +62,9 @@ version(Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    private import std.c.windows.windows, std.c.windows.winsock, std.windows.syserror;
-    private alias _ctimeval = std.c.windows.winsock.timeval;
-    private alias _clinger = std.c.windows.winsock.linger;
+    private import core.sys.windows.windows, core.sys.windows.winsock2, std.windows.syserror;
+    private alias _ctimeval = core.sys.windows.winsock2.timeval;
+    private alias _clinger = core.sys.windows.winsock2.linger;
 
     enum socket_t : SOCKET { INVALID_SOCKET }
     private const int _SOCKET_ERROR = SOCKET_ERROR;
@@ -78,33 +78,13 @@ version(Windows)
 else version(Posix)
 {
     version(linux)
-        import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
-               IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
-               SD_RECEIVE, SD_SEND, SD_BOTH, MSG_NOSIGNAL, INADDR_NONE,
-               TCP_KEEPIDLE, TCP_KEEPINTVL;
-    else version(OSX)
-        import std.c.osx.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
-               IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
-               SD_RECEIVE, SD_SEND, SD_BOTH, INADDR_NONE;
-    else version(FreeBSD)
     {
-        import core.sys.posix.sys.socket;
-        import core.sys.posix.sys.select;
-        import std.c.freebsd.socket;
-        private enum SD_RECEIVE = SHUT_RD;
-        private enum SD_SEND    = SHUT_WR;
-        private enum SD_BOTH    = SHUT_RDWR;
+        enum : int
+        {
+            TCP_KEEPIDLE  = 4,
+            TCP_KEEPINTVL = 5
+        }
     }
-    else version(Android)
-    {
-        import core.sys.posix.sys.socket;
-        import core.sys.posix.sys.select;
-        private enum SD_RECEIVE = SHUT_RD;
-        private enum SD_SEND    = SHUT_WR;
-        private enum SD_BOTH    = SHUT_RDWR;
-    }
-    else
-        static assert(false);
 
     import core.sys.posix.netdb;
     import core.sys.posix.sys.un : sockaddr_un;
@@ -114,7 +94,7 @@ else version(Posix)
     private import core.sys.posix.netinet.tcp;
     private import core.sys.posix.netinet.in_;
     private import core.sys.posix.sys.time;
-    //private import core.sys.posix.sys.select;
+    private import core.sys.posix.sys.select;
     private import core.sys.posix.sys.socket;
     private alias _ctimeval = core.sys.posix.sys.time.timeval;
     private alias _clinger = core.sys.posix.sys.socket.linger;
@@ -124,6 +104,12 @@ else version(Posix)
     enum socket_t : int32_t { init = -1 }
     private const int _SOCKET_ERROR = -1;
 
+    private enum : int
+    {
+        SD_RECEIVE = SHUT_RD,
+        SD_SEND    = SHUT_WR,
+        SD_BOTH    = SHUT_RDWR
+    }
 
     private int _lasterr() nothrow @nogc
     {

@@ -10,7 +10,7 @@ Macros:
 WIKI = Phobos/StdNumeric
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
                    Don Clugston, Robert Jacques
 Source:    $(PHOBOSSRC std/_numeric.d)
@@ -23,24 +23,18 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.numeric;
 
-import std.algorithm;
 import std.array;
-import std.bitmanip;
-import std.conv;
-import std.typecons;
-import std.math;
-import std.traits;
-import std.exception;
-import std.random;
-import std.string;
-import std.range;
-import std.c.stdlib;
-import std.functional;
-import std.typetuple;
 import std.complex;
+import std.conv;
+import std.exception;
+import std.math;
+import std.range.constraints;
+import std.traits;
+import std.typecons;
 
 import core.bitop;
 import core.exception;
+import core.stdc.stdlib;
 
 version(unittest)
 {
@@ -184,6 +178,8 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
     if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
         precision + exponentWidth > 0)
 {
+    import std.bitmanip;
+    import std.typetuple;
 private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
@@ -213,6 +209,7 @@ private:
 
         // If on Linux or Mac, where 80-bit reals are padded, ignore the
         // padding.
+        import std.algorithm : min;
         CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
 
         // Convert F to the correct binary type.
@@ -721,13 +718,14 @@ assert(approxEqual(x, 0.865474));
 */
 template secantMethod(alias fun)
 {
+    import std.functional : unaryFun;
     Num secantMethod(Num)(Num xn_1, Num xn)
     {
         auto fxn = unaryFun!(fun)(xn_1), d = xn_1 - xn;
         typeof(fxn) fxn_1;
 
         xn = xn_1;
-        while (!approxEqual(d, 0) && isfinite(d))
+        while (!approxEqual(d, 0) && isFinite(d))
         {
             xn_1 = xn;
             xn -= d;
@@ -762,14 +760,6 @@ private bool oppositeSigns(T1, T2)(T1 a, T2 b)
     return signbit(a) != signbit(b);
 }
 
-//regression control
-unittest
-{
-    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
-    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
-}
- 
-
 public:
 
 /**  Find a real root of a real function f(x) via bracketing.
@@ -796,12 +786,23 @@ public:
  * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
-T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
-    scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
+T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
+    scope DT tolerance) //= (T a, T b) => false)
+    if(
+        isFloatingPoint!T &&
+        is(typeof(tolerance(T.init, T.init)) : bool) &&
+        is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
+    )
 {
     auto r = findRoot(f, a, b, f(a), f(b), tolerance);
     // Return the first value if it is smaller or NaN
     return !(fabs(r[2]) > fabs(r[3])) ? r[0] : r[1];
+}
+
+///ditto
+T findRoot(T, DF)(scope DF f, in T a, in T b)
+{
+    return findRoot(f, a, b, (T a, T b) => false);
 }
 
 /** Find root of a real function f(x) by bracketing, allowing the
@@ -837,8 +838,13 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
  * root was found, both of the first two elements will contain the
  * root, and the second pair of elements will be 0.
  */
-Tuple!(T, T, R, R) findRoot(T,R)(scope R delegate(T) f, in T ax, in T bx, in R fax, in R fbx,
-    scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
+Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
+    scope DT tolerance) // = (T a, T b) => false)
+    if(
+        isFloatingPoint!T &&
+        is(typeof(tolerance(T.init, T.init)) : bool) &&
+        is(typeof(f(T.init)) == R) && isFloatingPoint!R
+    )
 in
 {
     assert(!ax.isNaN && !bx.isNaN, "Limits must not be NaN");
@@ -1138,15 +1144,36 @@ whileloop:
     return Tuple!(T, T, R, R)(a, b, fa, fb);
 }
 
+///ditto
+Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
+{
+    return findRoot(f, ax, bx, fax, fbx, (T a, T b) => false);
+}
+
+///ditto
+T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
+    scope bool delegate(T lo, T hi) tolerance = (T a, T b) => false)
+{
+    return findRoot!(T, R delegate(T), bool delegate(T lo, T hi))(f, a, b, tolerance);
+}
+
+//regression control
 unittest
+{
+    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
+    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
+    static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
+}
+
+nothrow unittest
 {
     int numProblems = 0;
     int numCalls;
 
-    void testFindRoot(real delegate(real) f, real x1, real x2)
+    void testFindRoot(real delegate(real) @nogc @safe nothrow pure f , real x1, real x2) @nogc @safe nothrow pure
     {
-        numCalls=0;
-        ++numProblems;
+        //numCalls=0;
+        //++numProblems;
         assert(!x1.isNaN && !x2.isNaN);
         assert(signbit(x1) != signbit(x2));
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
@@ -1161,9 +1188,9 @@ unittest
     }
 
     // Test functions
-    real cubicfn(real x)
+    real cubicfn(real x) @nogc @safe nothrow pure
     {
-        ++numCalls;
+        //++numCalls;
         if (x>float.max) 
             x = float.max;
         if (x<-double.max) 
@@ -1358,7 +1385,7 @@ euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    typeof(return) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         auto t = a.front - b.front;
@@ -1376,7 +1403,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     limit *= limit;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    typeof(return) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; ; a.popFront(), b.popFront())
     {
         if (a.empty)
@@ -1393,12 +1420,16 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 
 unittest
 {
-    double[] a = [ 1.0, 2.0, ];
-    double[] b = [ 4.0, 6.0, ];
-    assert(euclideanDistance(a, b) == 5);
-    assert(euclideanDistance(a, b, 5) == 5);
-    assert(euclideanDistance(a, b, 4) == 5);
-    assert(euclideanDistance(a, b, 2) == 3);
+    import std.typetuple;
+    foreach(T; TypeTuple!(double, const double, immutable double))
+    {
+        T[] a = [ 1.0, 2.0, ];
+        T[] b = [ 4.0, 6.0, ];
+        assert(euclideanDistance(a, b) == 5);
+        assert(euclideanDistance(a, b, 5) == 5);
+        assert(euclideanDistance(a, b, 4) == 5);
+        assert(euclideanDistance(a, b, 2) == 3);        
+    }
 }
 
 /**
@@ -1414,7 +1445,7 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    typeof(return) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         result += a.front * b.front;
@@ -1424,13 +1455,13 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
 }
 
 /// Ditto
-Unqual!(CommonType!(F1, F2))
+CommonType!(F1, F2)
 dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 {
     immutable n = avector.length;
     assert(n == bvector.length);
     auto avec = avector.ptr, bvec = bvector.ptr;
-    typeof(return) sum0 = 0, sum1 = 0;
+    Unqual!(typeof(return)) sum0 = 0, sum1 = 0;
 
     const all_endp = avec + n;
     const smallblock_endp = avec + (n & ~3);
@@ -1479,10 +1510,14 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
 unittest
 {
-    double[] a = [ 1.0, 2.0, ];
-    double[] b = [ 4.0, 6.0, ];
-    assert(dotProduct(a, b) == 16);
-    assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+    import std.typetuple;
+    foreach(T; TypeTuple!(double, const double, immutable double))
+    {
+        T[] a = [ 1.0, 2.0, ];
+        T[] b = [ 4.0, 6.0, ];
+        assert(dotProduct(a, b) == 16);
+        assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
+    }
 
     // Make sure the unrolled loop codepath gets tested.
     static const x =
@@ -1504,7 +1539,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    FPTemporary!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
+    Unqual!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front, t2 = b.front;
@@ -1519,13 +1554,15 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 
 unittest
 {
-    double[] a = [ 1.0, 2.0, ];
-    double[] b = [ 4.0, 3.0, ];
-    // writeln(cosineSimilarity(a, b));
-    // writeln(10.0 / sqrt(5.0 * 25));
-    assert(approxEqual(
-                cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25),
-                0.01));
+    import std.typetuple;
+    foreach(T; TypeTuple!(double, const double, immutable double))
+    {
+        T[] a = [ 1.0, 2.0, ];
+        T[] b = [ 4.0, 3.0, ];
+        assert(approxEqual(
+                    cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25),
+                    0.01));
+    }
 }
 
 /**
@@ -1652,7 +1689,7 @@ ElementType!Range entropy(Range, F)(Range r, F max)
 if (isInputRange!Range &&
     !is(CommonType!(ElementType!Range, F) == void))
 {
-    typeof(return) result = 0.0;
+    Unqual!(typeof(return)) result = 0.0;
     foreach (e; r)
     {
         if (!e) continue;
@@ -1664,11 +1701,15 @@ if (isInputRange!Range &&
 
 unittest
 {
-    double[] p = [ 0.0, 0, 0, 1 ];
-    assert(entropy(p) == 0);
-    p = [ 0.25, 0.25, 0.25, 0.25 ];
-    assert(entropy(p) == 2);
-    assert(entropy(p, 1) == 1);
+    import std.typetuple;
+    foreach(T; TypeTuple!(double, const double, immutable double))
+    {
+        T[] p = [ 0.0, 0, 0, 1 ];
+        assert(entropy(p) == 0);
+        p = [ 0.25, 0.25, 0.25, 0.25 ];
+        assert(entropy(p) == 2);
+        assert(entropy(p, 1) == 1);
+    }
 }
 
 /**
@@ -1689,7 +1730,7 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    FPTemporary!(typeof(return)) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
@@ -1734,7 +1775,7 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    FPTemporary!(typeof(return)) result = 0;
+    Unqual!(typeof(return)) result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
@@ -1762,7 +1803,7 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
-    FPTemporary!(typeof(return)) result = 0;
+    Unqual!(typeof(return)) result = 0;
     limit *= 2;
     for (; !a.empty; a.popFront(), b.popFront())
     {
@@ -1808,7 +1849,7 @@ unittest
 //         immutable i = cast(uint) (table.length
 //                 * ((x - left) / (right - left)));
 //         assert(i < n);
-//         if (isnan(table[i])) {
+//         if (isNaN(table[i])) {
 //             // initialize it
 //             auto x1 = left + i * (right - left) / n;
 //             auto x2 = left + (i + 1) * (right - left) / n;
@@ -1917,6 +1958,9 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
     if (isRandomAccessRange!(R1) && hasLength!(R1) &&
         isRandomAccessRange!(R2) && hasLength!(R2))
 {
+    import std.functional : binaryFun;
+    import std.algorithm : swap;
+
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
 
@@ -2004,7 +2048,7 @@ gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
     static bool uncomputed(F n)
     {
         static if (isFloatingPoint!(F))
-            return isnan(n);
+            return isNaN(n);
         else
             return n == n.init;
     }
@@ -2142,6 +2186,8 @@ time and computes all matches of length 1.
      */
     void popFront()
     {
+        import std.algorithm : swap;
+
         // This is a large source of optimization: if similarity at
         // the gram-1 level was 0, then we can safely assume
         // similarity at the gram level is 0 as well.
@@ -2426,6 +2472,7 @@ private alias lookup_t = float;
  */
 final class Fft
 {
+    import std.algorithm : map;
 private:
     immutable lookup_t[][] negSinLookup;
 
@@ -2907,6 +2954,8 @@ void inverseFft(Ret, R)(R range, Ret buf)
 
 unittest
 {
+    import std.algorithm;
+    import std.range;
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);

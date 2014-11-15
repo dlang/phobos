@@ -1,61 +1,61 @@
 // Written in the D programming language.
 
 /**
- * Templates with which to extract information about types and symbols at
- * compile time.
+ * Templates which extract information about types and symbols at compile time.
  *
  * <script type="text/javascript">inhibitQuickIndex = 1</script>
  *
  * $(BOOKTABLE ,
  * $(TR $(TH Category) $(TH Templates))
  * $(TR $(TD Symbol Name _traits) $(TD
- *           $(LREF packageName)
- *           $(LREF moduleName)
  *           $(LREF fullyQualifiedName)
+ *           $(LREF moduleName)
+ *           $(LREF packageName)
  * ))
  * $(TR $(TD Function _traits) $(TD
- *           $(LREF ReturnType)
- *           $(LREF ParameterTypeTuple)
  *           $(LREF arity)
- *           $(LREF ParameterStorageClassTuple)
- *           $(LREF ParameterIdentifierTuple)
- *           $(LREF ParameterDefaultValueTuple)
  *           $(LREF functionAttributes)
+ *           $(LREF functionLinkage)
+ *           $(LREF FunctionTypeOf)
  *           $(LREF isSafe)
  *           $(LREF isUnsafe)
- *           $(LREF functionLinkage)
- *           $(LREF variadicFunctionStyle)
- *           $(LREF FunctionTypeOf)
+ *           $(LREF ParameterDefaultValueTuple)
+ *           $(LREF ParameterIdentifierTuple)
+ *           $(LREF ParameterStorageClassTuple)
+ *           $(LREF ParameterTypeTuple)
+ *           $(LREF ReturnType)
  *           $(LREF SetFunctionAttributes)
+ *           $(LREF variadicFunctionStyle)
  * ))
  * $(TR $(TD Aggregate Type _traits) $(TD
- *           $(LREF isNested)
- *           $(LREF hasNested)
- *           $(LREF FieldTypeTuple)
- *           $(LREF RepresentationTypeTuple)
- *           $(LREF hasAliasing)
- *           $(LREF hasIndirections)
- *           $(LREF hasUnsharedAliasing)
- *           $(LREF hasElaborateCopyConstructor)
- *           $(LREF hasElaborateAssign)
- *           $(LREF hasElaborateDestructor)
- *           $(LREF hasMember)
- *           $(LREF EnumMembers)
- *           $(LREF BaseTypeTuple)
  *           $(LREF BaseClassesTuple)
- *           $(LREF InterfacesTuple)
- *           $(LREF TransitiveBaseTypeTuple)
- *           $(LREF MemberFunctionsTuple)
- *           $(LREF TemplateOf)
- *           $(LREF TemplateArgsOf)
+ *           $(LREF BaseTypeTuple)
  *           $(LREF classInstanceAlignment)
+ *           $(LREF EnumMembers)
+ *           $(LREF FieldNameTuple)
+ *           $(LREF FieldTypeTuple)
+ *           $(LREF hasAliasing)
+ *           $(LREF hasElaborateAssign)
+ *           $(LREF hasElaborateCopyConstructor)
+ *           $(LREF hasElaborateDestructor)
+ *           $(LREF hasIndirections)
+ *           $(LREF hasMember)
+ *           $(LREF hasNested)
+ *           $(LREF hasUnsharedAliasing)
+ *           $(LREF InterfacesTuple)
+ *           $(LREF isNested)
+ *           $(LREF MemberFunctionsTuple)
+ *           $(LREF RepresentationTypeTuple)
+ *           $(LREF TemplateArgsOf)
+ *           $(LREF TemplateOf)
+ *           $(LREF TransitiveBaseTypeTuple)
  * ))
  * $(TR $(TD Type Conversion) $(TD
  *           $(LREF CommonType)
  *           $(LREF ImplicitConversionTargets)
- *           $(LREF isImplicitlyConvertible)
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
+ *           $(LREF isImplicitlyConvertible)
  * ))
  * <!--$(TR $(TD SomethingTypeOf) $(TD
  *           $(LREF BooleanTypeOf)
@@ -72,53 +72,52 @@
  *           $(LREF AssocArrayTypeOf)
  *           $(LREF BuiltinTypeOf)
  * ))-->
- * $(TR $(TD IsSomething) $(TD
- *           $(LREF isBoolean)
- *           $(LREF isIntegral)
- *           $(LREF isFloatingPoint)
- *           $(LREF isNumeric)
- *           $(LREF isScalarType)
+ * $(TR $(TD Categories of types) $(TD
+ *           $(LREF isAggregateType)
+ *           $(LREF isArray)
+ *           $(LREF isAssociativeArray)
  *           $(LREF isBasicType)
- *           $(LREF isUnsigned)
+ *           $(LREF isBoolean)
+ *           $(LREF isBuiltinType)
+ *           $(LREF isDynamicArray)
+ *           $(LREF isFloatingPoint)
+ *           $(LREF isIntegral)
+ *           $(LREF isNarrowString)
+ *           $(LREF isNumeric)
+ *           $(LREF isPointer)
+ *           $(LREF isScalarType)
  *           $(LREF isSigned)
  *           $(LREF isSomeChar)
  *           $(LREF isSomeString)
- *           $(LREF isNarrowString)
  *           $(LREF isStaticArray)
- *           $(LREF isDynamicArray)
- *           $(LREF isArray)
- *           $(LREF isAssociativeArray)
- *           $(LREF isBuiltinType)
- *           $(LREF isPointer)
- *           $(LREF isAggregateType)
+ *           $(LREF isUnsigned)
  * ))
- * $(TR $(TD xxx) $(TD
+ * $(TR $(TD Type behaviours) $(TD
+ *           $(LREF isAbstractClass)
+ *           $(LREF isAbstractFunction)
+ *           $(LREF isCallable)
+ *           $(LREF isDelegate)
+ *           $(LREF isExpressionTuple)
+ *           $(LREF isFinalClass)
+ *           $(LREF isFinalFunction)
+ *           $(LREF isFunctionPointer)
+ *           $(LREF isInstanceOf)
  *           $(LREF isIterable)
  *           $(LREF isMutable)
- *           $(LREF isInstanceOf)
- *           $(LREF isExpressionTuple)
- *           $(LREF isTypeTuple)
- *           $(LREF isFunctionPointer)
- *           $(LREF isDelegate)
  *           $(LREF isSomeFunction)
- *           $(LREF isCallable)
- *           $(LREF isAbstractFunction)
- *           $(LREF isFinalFunction)
- *           $(LREF isAbstractClass)
- *           $(LREF isFinalClass)
+ *           $(LREF isTypeTuple)
  * ))
  * $(TR $(TD General Types) $(TD
- *           $(LREF Unqual)
  *           $(LREF ForeachType)
+ *           $(LREF KeyType)
+ *           $(LREF Largest)
+ *           $(LREF mostNegative)
  *           $(LREF OriginalType)
  *           $(LREF PointerTarget)
- *           $(LREF KeyType)
- *           $(LREF ValueType)
- *           $(LREF Unsigned)
- *           $(LREF Largest)
  *           $(LREF Signed)
- *           $(LREF unsigned)
- *           $(LREF mostNegative)
+ *           $(LREF Unqual)
+ *           $(LREF Unsigned)
+ *           $(LREF ValueType)
  * ))
  * $(TR $(TD Misc) $(TD
  *           $(LREF mangledName)
@@ -131,7 +130,7 @@
  *  WIKI = Phobos/StdTraits
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *            Tomasz Stachowiak ($(D isExpressionTuple)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
@@ -148,10 +147,8 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.traits;
-import std.typetuple;
 
-// FIXME @@@bug@@@ 12961
-import std.conv;
+import std.typetuple;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Functions
@@ -435,7 +432,7 @@ version(unittest)
         }
 
         ref const(Inner[string]) func( ref Inner var1, lazy scope string var2 );
-        inout Inner inoutFunc(inout Inner);
+        Inner inoutFunc(inout Inner) inout;
         shared(const(Inner[string])[]) data;
         const Inner delegate(double, string) @safe nothrow deleg;
         inout(int) delegate(inout int) inout inoutDeleg;
@@ -537,7 +534,7 @@ unittest
 private template fqnType(T,
     bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
-    import std.string;
+    import std.string : format;
 
     // Convenience tags
     enum {
@@ -564,8 +561,6 @@ private template fqnType(T,
 
     string parametersTypeString(T)() @property
     {
-        import std.array, std.algorithm, std.range;
-
         alias parameters   = ParameterTypeTuple!(T);
         alias parameterStC = ParameterStorageClassTuple!(T);
 
@@ -583,6 +578,9 @@ private template fqnType(T,
 
         static if (parameters.length)
         {
+            import std.algorithm : map;
+            import std.range : join, zip;
+
             string result = join(
                 map!(a => format("%s%s", a[0], a[1]))(
                     zip([staticMap!(storageClassesString, parameterStC)],
@@ -1055,7 +1053,9 @@ template ParameterIdentifierTuple(func...)
     {
         template Get(size_t i)
         {
-            static if (!isFunctionPointer!func && !isDelegate!func)
+            static if (!isFunctionPointer!func && !isDelegate!func
+                       // Unnamed parameters yield CT error.
+                       && is(typeof(__traits(identifier, PT[i..i+1]))x))
             {
                 enum Get = __traits(identifier, PT[i..i+1]);
             }
@@ -1089,8 +1089,8 @@ template ParameterIdentifierTuple(func...)
 unittest
 {
     import std.traits;
-    int foo(int num, string name);
-    static assert([ParameterIdentifierTuple!foo] == ["num", "name"]);
+    int foo(int num, string name, int);
+    static assert([ParameterIdentifierTuple!foo] == ["num", "name", ""]);
 }
 
 unittest
@@ -1141,7 +1141,11 @@ template ParameterDefaultValueTuple(func...)
     {
         template Get(size_t i)
         {
-            enum get = (PT[i..i+1] args) => args[0];
+            enum ParamName = ParameterIdentifierTuple!(func[0])[i];
+            static if (ParamName.length)
+                enum get = (PT[i..i+1]) => mixin(ParamName);
+            else // Unnamed parameter
+                enum get = (PT[i..i+1] __args) => __args[0];
             static if (is(typeof(get())))
                 enum Get = get();
             else
@@ -1180,7 +1184,7 @@ template ParameterDefaultValueTuple(func...)
 unittest
 {
     import std.traits;
-    int foo(int num, string name = "hello", int[] arr = [1,2,3]);
+    int foo(int num, string name = "hello", int[] = [1,2,3]);
     static assert(is(ParameterDefaultValueTuple!foo[0] == void));
     static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
     static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
@@ -2170,6 +2174,57 @@ unittest
 
     class NestedClass { int a; void f() { ++i; } }
     static assert(is(FieldTypeTuple!NestedClass == TypeTuple!int));
+}
+
+
+//Required for FieldNameTuple
+private enum NameOf(alias T) = T.stringof;
+
+/**
+ * Get as an expression tuple the names of the fields of a struct, class, or
+ * union. This consists of the fields that take up memory space, excluding the
+ * hidden fields like the virtual function table pointer or a context pointer
+ * for nested types. If $(D T) isn't a struct, class, or union returns an
+ * expression tuple with an empty string.
+ */
+template FieldNameTuple(T)
+{
+    static if (is(T == struct) || is(T == union))
+        alias FieldNameTuple = staticMap!(NameOf, T.tupleof[0 .. $ - isNested!T]);
+    else static if (is(T == class))
+        alias FieldNameTuple = staticMap!(NameOf, T.tupleof);
+    else
+        alias FieldNameTuple = TypeTuple!"";
+}
+
+///
+unittest
+{
+    struct S { int x; float y; }
+    static assert(FieldNameTuple!S == TypeTuple!("x", "y"));
+    static assert(FieldNameTuple!int == TypeTuple!"");
+}
+
+unittest
+{
+    static assert(FieldNameTuple!int == TypeTuple!"");
+
+    static struct StaticStruct1 { }
+    static assert(is(FieldNameTuple!StaticStruct1 == TypeTuple!()));
+
+    static struct StaticStruct2 { int a, b; }
+    static assert(FieldNameTuple!StaticStruct2 == TypeTuple!("a", "b"));
+
+    int i;
+
+    struct NestedStruct1 { void f() { ++i; } }
+    static assert(is(FieldNameTuple!NestedStruct1 == TypeTuple!()));
+
+    struct NestedStruct2 { int a; void f() { ++i; } }
+    static assert(FieldNameTuple!NestedStruct2 == TypeTuple!"a");
+
+    class NestedClass { int a; void f() { ++i; } }
+    static assert(FieldNameTuple!NestedClass == TypeTuple!"a");
 }
 
 
