@@ -538,22 +538,22 @@ unittest
 /**
 Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
-template staticMap(alias F, T...)
+template Map(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias staticMap = TypeTuple!();
+        alias Map = TypeTuple!();
     }
     else static if (T.length == 1)
     {
-        alias staticMap = TypeTuple!(F!(T[0]));
+        alias Map = TypeTuple!(F!(T[0]));
     }
     else
     {
-        alias staticMap =
+        alias Map =
             TypeTuple!(
-                staticMap!(F, T[ 0  .. $/2]),
-                staticMap!(F, T[$/2 ..  $ ]));
+                Map!(F, T[ 0  .. $/2]),
+                Map!(F, T[$/2 ..  $ ]));
     }
 }
 
@@ -561,7 +561,7 @@ template staticMap(alias F, T...)
 unittest
 {
     import std.traits : Unqual;
-    alias TL = staticMap!(Unqual, int, const int, immutable int);
+    alias TL = Map!(Unqual, int, const int, immutable int);
     static assert(is(TL == TypeTuple!(int, int, int)));
 }
 
@@ -570,14 +570,14 @@ unittest
     import std.traits : Unqual;
 
     // empty
-    alias Empty = staticMap!(Unqual);
+    alias Empty = Map!(Unqual);
     static assert(Empty.length == 0);
 
     // single
-    alias Single = staticMap!(Unqual, const int);
+    alias Single = Map!(Unqual, const int);
     static assert(is(Single == TypeTuple!int));
 
-    alias T = staticMap!(Unqual, int, const int, immutable int);
+    alias T = Map!(Unqual, int, const int, immutable int);
     static assert(is(T == TypeTuple!(int, int, int)));
 }
 
@@ -739,7 +739,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; TypeTuple!(int, Map, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -790,7 +790,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; TypeTuple!(int, Map, 42))
     {
         static assert( Instantiate!(templateAnd!(), T));
         static assert( Instantiate!(templateAnd!(testAlways), T));
@@ -848,7 +848,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; TypeTuple!(int, Map, 42))
     {
         static assert( Instantiate!(templateOr!(testAlways), T));
         static assert( Instantiate!(templateOr!(testAlways, testAlways), T));
