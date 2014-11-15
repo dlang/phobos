@@ -115,207 +115,6 @@ module std.range.constraints;
 
 import std.traits;
 
-
-// For testing only.  This code is included in a string literal to be included
-// in whatever module it's needed in, so that each module that uses it can be
-// tested individually, without needing to link to std.range.
-enum dummyRanges = q{
-    // Used with the dummy ranges for testing higher order ranges.
-    private enum RangeType
-    {
-        Input,
-        Forward,
-        Bidirectional,
-        Random
-    }
-
-    private enum Length
-    {
-        Yes,
-        No
-    }
-
-    private enum ReturnBy
-    {
-        Reference,
-        Value
-    }
-
-    // Range that's useful for testing other higher order ranges,
-    // can be parametrized with attributes.  It just dumbs down an array of
-    // numbers 1..10.
-    private struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
-    {
-        // These enums are so that the template params are visible outside
-        // this instantiation.
-        enum r = _r;
-        enum l = _l;
-        enum rt = _rt;
-
-        uint[] arr = [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
-
-        void reinit()
-        {
-            // Workaround for DMD bug 4378
-            arr = [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
-        }
-
-        void popFront()
-        {
-            arr = arr[1..$];
-        }
-
-        @property bool empty() const
-        {
-            return arr.length == 0;
-        }
-
-        static if(r == ReturnBy.Reference)
-        {
-            @property ref inout(uint) front() inout
-            {
-                return arr[0];
-            }
-
-            @property void front(uint val)
-            {
-                arr[0] = val;
-            }
-        }
-        else
-        {
-            @property uint front() const
-            {
-                return arr[0];
-            }
-        }
-
-        static if(rt >= RangeType.Forward)
-        {
-            @property typeof(this) save()
-            {
-                return this;
-            }
-        }
-
-        static if(rt >= RangeType.Bidirectional)
-        {
-            void popBack()
-            {
-                arr = arr[0..$ - 1];
-            }
-
-            static if(r == ReturnBy.Reference)
-            {
-                @property ref inout(uint) back() inout
-                {
-                    return arr[$ - 1];
-                }
-
-                @property void back(uint val)
-                {
-                    arr[$ - 1] = val;
-                }
-
-            }
-            else
-            {
-                @property uint back() const
-                {
-                    return arr[$ - 1];
-                }
-            }
-        }
-
-        static if(rt >= RangeType.Random)
-        {
-            static if(r == ReturnBy.Reference)
-            {
-                ref inout(uint) opIndex(size_t index) inout
-                {
-                    return arr[index];
-                }
-
-                void opIndexAssign(uint val, size_t index)
-                {
-                    arr[index] = val;
-                }
-            }
-            else
-            {
-                uint opIndex(size_t index) const
-                {
-                    return arr[index];
-                }
-            }
-
-            typeof(this) opSlice(size_t lower, size_t upper)
-            {
-                auto ret = this;
-                ret.arr = arr[lower..upper];
-                return ret;
-            }
-        }
-
-        static if(l == Length.Yes)
-        {
-            @property size_t length() const
-            {
-                return arr.length;
-            }
-
-            alias opDollar = length;
-        }
-    }
-
-    private enum dummyLength = 10;
-
-    private alias AllDummyRanges = TypeTuple!(
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
-        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Forward),
-        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Input),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Input),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional)
-    );
-
-};
-
-version(unittest)
-{
-    import std.typetuple;
-
-    // Tests whether forward, bidirectional and random access properties are
-    // propagated properly from the base range(s) R to the higher order range
-    // H.  Useful in combination with DummyRange for testing several higher
-    // order ranges.
-    template propagatesRangeType(H, R...) {
-        static if(allSatisfy!(isRandomAccessRange, R)) {
-           enum bool propagatesRangeType = isRandomAccessRange!H;
-        } else static if(allSatisfy!(isBidirectionalRange, R)) {
-            enum bool propagatesRangeType = isBidirectionalRange!H;
-        } else static if(allSatisfy!(isForwardRange, R)) {
-            enum bool propagatesRangeType = isForwardRange!H;
-        } else {
-            enum bool propagatesRangeType = isInputRange!H;
-        }
-    }
-
-    template propagatesLength(H, R...) {
-        static if(allSatisfy!(hasLength, R)) {
-            enum bool propagatesLength = hasLength!H;
-        } else {
-            enum bool propagatesLength = !hasLength!H;
-        }
-    }
-}
-
 /**
 Returns $(D true) if $(D R) is an input range. An input range must
 define the primitives $(D empty), $(D popFront), and $(D front). The
@@ -1236,7 +1035,7 @@ template ElementType(R)
 ///
 @safe unittest
 {
-    import std.algorithm : iota;
+    import std.range : iota;
 
     // Standard arrays: returns the type of the elements of the array
     static assert(is(ElementType!(int[]) == int));
@@ -1756,7 +1555,8 @@ auto walkLength(Range)(Range range, const size_t upTo)
 
 @safe unittest
 {
-    import std.algorithm : filter, recurrence, take;
+    import std.algorithm : filter;
+    import std.range : recurrence, take;
 
     //hasLength Range
     int[] a = [ 1, 2, 3 ];
@@ -1878,7 +1678,8 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal, iota;
+    import std.algorithm : equal;
+    import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popFrontN(LL, 2);
     assert(equal(LL, [3L, 4L, 5L, 6L]));
@@ -1898,7 +1699,8 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal, iota;
+    import std.algorithm : equal;
+    import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popBackN(LL, 2);
     assert(equal(LL, [1L, 2L, 3L, 4L]));
@@ -2096,14 +1898,10 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
     }
 }
 
-version(unittest)
-{
-    import std.typecons;
-    mixin(dummyRanges);    
-}
-
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
         assert(moveFront(d) == 1);
@@ -2225,6 +2023,8 @@ if (isNarrowString!(C[]))
 
 @safe pure unittest
 {
+    import std.typetuple;
+
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         S s = "\xC2\xA9hello";
@@ -2296,6 +2096,8 @@ if (isNarrowString!(T[]))
 
 @safe pure unittest
 {
+    import std.typetuple;
+
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         S s = "hello\xE2\x89\xA0";

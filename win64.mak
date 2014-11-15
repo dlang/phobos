@@ -220,7 +220,8 @@ SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
 SRC_STD_INTERNAL= std\internal\cstring.d std\internal\processinit.d \
 	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
-	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d
+	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d \
+	std\internal\test\dummyrange.d
 
 SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 

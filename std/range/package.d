@@ -157,10 +157,6 @@ public import std.typecons : Flag, Yes, No;
 import std.traits;
 import std.typetuple;
 
-version(unittest)
-{
-    import std.algorithm; // : equal, filter, filterBidirectional, findSplitBefore, group, joiner, map, sort, swap, until, copy;
-}
 
 /**
 Iterates a bidirectional range backwards. The original range can be
@@ -282,6 +278,7 @@ if (isBidirectionalRange!(Unqual!Range))
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
     int[] a = [ 1, 2, 3, 4, 5 ];
     assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
     assert(retro(a).source is a);
@@ -290,6 +287,7 @@ if (isBidirectionalRange!(Unqual!Range))
 
 @safe unittest
 {
+    import std.algorithm : equal;
     static assert(isBidirectionalRange!(typeof(retro("hello"))));
     int[] a;
     static assert(is(typeof(a) == typeof(retro(retro(a)))));
@@ -315,6 +313,8 @@ if (isBidirectionalRange!(Unqual!Range))
 
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+
     foreach(DummyType; AllDummyRanges) {
         static if (!isBidirectionalRange!DummyType) {
             static assert(!__traits(compiles, Retro!DummyType));
@@ -367,6 +367,7 @@ if (isBidirectionalRange!(Unqual!Range))
 
 @safe unittest
 {
+    import std.algorithm : equal;    
     auto LL = iota(1L, 4L);
     auto r = retro(LL);
     assert(equal(r, [3L, 2L, 1L]));
@@ -608,6 +609,9 @@ if (isInputRange!(Unqual!Range))
 
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+    import std.algorithm : equal;    
+
     static assert(isRandomAccessRange!(typeof(stride([1, 2, 3], 2))));
     void test(size_t n, int[] input, int[] witness)
     {
@@ -732,6 +736,8 @@ if (isInputRange!(Unqual!Range))
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto LL = iota(1L, 10L);
     auto s = stride(LL, 3);
     assert(equal(s, [1L, 4L, 7L]));
@@ -1080,6 +1086,9 @@ if (Ranges.length > 0 &&
 
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+    import std.algorithm : equal;
+
     {
         int[] arr1 = [ 1, 2, 3, 4 ];
         int[] arr2 = [ 5, 6 ];
@@ -1289,6 +1298,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 10, 20, 30, 40 ];
     auto r = roundRobin(a, b);
@@ -1318,6 +1329,7 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
     int[] a = [ 1, 2, 3, 4, 5 ];
     assert(equal(radial(a), [ 3, 4, 2, 5, 1 ]));
     a = [ 1, 2, 3, 4 ];
@@ -1328,6 +1340,8 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 {
     import std.conv : text;
     import std.exception : enforce;
+    import std.algorithm : equal;
+    import std.internal.test.dummyrange;
 
     void test(int[] input, int[] witness)
     {
@@ -1364,6 +1378,8 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto LL = iota(1L, 6L);
     auto r = radial(LL);
     assert(equal(r, [3L, 4L, 2L, 5L, 1L]));
@@ -1566,6 +1582,8 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     auto s = take(arr1, 5);
     assert(s.length == 5);
@@ -1590,6 +1608,9 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
 
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+    import std.algorithm : equal;
+
     int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     auto s = take(arr1, 5);
     assert(s.length == 5);
@@ -1682,6 +1703,8 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
 
 @safe unittest //13151
 {
+    import std.algorithm : equal;
+
     auto r = take(repeat(1, 4), 3);
     assert(r.take(2).equal(repeat(1, 2)));
 }
@@ -1777,6 +1800,8 @@ if (isInputRange!R)
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto a = [ 1, 2, 3, 4, 5 ];
 
     auto b = takeExactly(a, 3);
@@ -1789,6 +1814,8 @@ if (isInputRange!R)
 
 @safe unittest
 {
+    import std.algorithm : equal, filter;
+
     auto a = [ 1, 2, 3, 4, 5 ];
     auto b = takeExactly(a, 3);
     auto c = takeExactly(b, 2);
@@ -1805,6 +1832,9 @@ if (isInputRange!R)
 
 @safe unittest
 {
+    import std.algorithm : equal;
+    import std.internal.test.dummyrange;
+
     auto a = [ 1, 2, 3, 4, 5 ];
     //Test that take and takeExactly are the same for ranges which define length
     //but aren't sliceable.
@@ -1864,6 +1894,9 @@ if (isInputRange!R)
 
 @safe unittest
 {
+    import std.algorithm : equal;
+    import std.internal.test.dummyrange;
+
     alias DummyType = DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward);
     auto te = takeExactly(DummyType(), 5);
     Take!DummyType t = te;
@@ -1994,6 +2027,7 @@ auto takeNone(R)(R range)
 ///
 @safe unittest
 {
+    import std.algorithm : filter;
     assert(takeNone([42, 27, 19]).empty);
     assert(takeNone("dlang.org").empty);
     assert(takeNone(filter!"true"([42, 27, 19])).empty);
@@ -2001,6 +2035,8 @@ auto takeNone(R)(R range)
 
 @safe unittest
 {
+    import std.algorithm : filter;
+
     struct Dummy
     {
         mixin template genInput()
@@ -2147,6 +2183,8 @@ R dropBack(R)(R range, size_t n)
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
     assert("hello world".drop(6) == "world");
     assert("hello world".drop(50).empty);
@@ -2155,6 +2193,8 @@ R dropBack(R)(R range, size_t n)
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
     assert("hello world".dropBack(6) == "hello");
     assert("hello world".dropBack(50).empty);
@@ -2163,6 +2203,7 @@ R dropBack(R)(R range, size_t n)
 
 @safe unittest
 {
+    import std.algorithm : equal;
     import std.container.dlist;
 
     //Remove all but the first two elements
@@ -2173,12 +2214,15 @@ R dropBack(R)(R range, size_t n)
 
 @safe unittest
 {
+    import std.algorithm : equal, filter;
+
     assert(drop("", 5).empty);
     assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
 }
 
 @safe unittest
 {
+    import std.algorithm : equal;
     import std.container.dlist;
 
     //insert before the last two elements
@@ -2217,6 +2261,8 @@ R dropBackExactly(R)(R range, size_t n)
 ///
 @safe unittest
 {
+    import std.algorithm : equal, filterBidirectional;
+
     auto a = [1, 2, 3];
     assert(a.dropExactly(2) == [3]);
     assert(a.dropBackExactly(2) == [1]);
@@ -2257,6 +2303,8 @@ R dropBackOne(R)(R range)
 ///
 @safe unittest
 {
+    import std.algorithm : equal, filterBidirectional;
+
     import std.container.dlist;
 
     auto dl = DList!int(9, 1, 2, 3, 9);
@@ -2324,11 +2372,15 @@ Repeat!T repeat(T)(T value) { return Repeat!T(value); }
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
 }
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto  r = repeat(5);
     alias R = typeof(r);
     static assert(isBidirectionalRange!R);
@@ -2356,6 +2408,8 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     assert(equal(5.repeat(4), 5.repeat().take(4)));
 }
 
@@ -2603,6 +2657,8 @@ Cycle!R cycle(R)(R input)
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 }
 
@@ -2627,6 +2683,9 @@ Cycle!R cycle(R)(ref R input, size_t index = 0)
 
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+    import std.algorithm : equal;
+
     static assert(isForwardRange!(Cycle!(uint[])));
 
     // Make sure ref is getting propagated properly.
@@ -2690,6 +2749,8 @@ Cycle!R cycle(R)(ref R input, size_t index = 0)
 
 unittest // For static arrays.
 {
+    import std.algorithm : equal;
+
     int[3] a = [ 1, 2, 3 ];
     static assert(isStaticArray!(typeof(a)));
     auto c = cycle(a);
@@ -2720,6 +2781,8 @@ unittest // For static arrays.
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     int[5] arr = [0, 1, 2, 3, 4];
     auto cleD = cycle(arr[]); //Dynamic
     assert(equal(cleD[5 .. 10], arr[]));
@@ -2738,6 +2801,8 @@ unittest // For static arrays.
 
 unittest
 {
+    import std.algorithm : equal;
+
     int[5] arr = [0, 1, 2, 3, 4];
     auto cleS = cycle(arr);   //Static
     assert(equal(cleS[5 .. 10], arr[]));
@@ -2756,6 +2821,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : equal;
+
     int[1] arr = [0];
     auto cleS = cycle(arr);
     cleS = cleS[10 .. $];
@@ -2765,6 +2832,8 @@ unittest
 
 unittest //10845
 {
+    import std.algorithm : equal, filter;
+
     auto a = inputRangeObject(iota(3).filter!"true");
     assert(equal(cycle(a).take(10), [0, 1, 2, 0, 1, 2, 0, 1, 2, 0]));
 }
@@ -3143,6 +3212,7 @@ auto zip(Ranges...)(Ranges ranges)
 ///
 @safe unittest
 {
+    import std.algorithm : sort;
     int[] a = [ 1, 2, 3 ];
     string[] b = [ "a", "b", "c" ];
     sort!((c, d) => c[0] > d[0])(zip(a, b));
@@ -3173,6 +3243,9 @@ enum StoppingPolicy
 
 unittest
 {
+    import std.internal.test.dummyrange;
+    import std.algorithm : swap, sort, filter, equal, map;
+
     import std.exception : assertThrown, assertNotThrown;
     import std.typecons : tuple;
 
@@ -3286,6 +3359,8 @@ unittest
 
 @safe unittest
 {
+    import std.algorithm : sort;
+
     auto a = [5,4,3,2,1];
     auto b = [3,1,2,5,6];
     auto z = zip(a, b);
@@ -3299,6 +3374,8 @@ unittest
 @safe pure unittest
 {
     import std.typecons : tuple;
+    import std.algorithm : equal;
+
     auto LL = iota(1L, 1000L);
     auto z = zip(LL, [4]);
 
@@ -3478,6 +3555,7 @@ unittest
 unittest
 {
     import std.conv : to;
+    import std.algorithm : filter;
 
     // The filters are to make these the lowest common forward denominator ranges,
     // i.e. w/o ref return, random access, length, etc.
@@ -3627,6 +3705,8 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 ///
 unittest
 {
+    import std.algorithm : equal;
+
     // The Fibonacci numbers, using function in string form:
     // a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
@@ -3661,6 +3741,8 @@ recurrence(alias fun, State...)(State initial)
 
 unittest
 {
+    import std.algorithm : equal;
+
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
     static assert(isForwardRange!(typeof(fib)));
 
@@ -3831,6 +3913,8 @@ auto sequence(alias fun, State...)(State args)
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
     static assert(hasSlicing!(typeof(odds)));
 
@@ -4115,6 +4199,8 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
    import std.math : approxEqual;
    auto r = iota(0, 10, 1);
    assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
@@ -4136,7 +4222,7 @@ unittest
 @safe unittest
 {
     import std.math : approxEqual, nextUp, nextDown;
-    import std.algorithm : count;
+    import std.algorithm : count, equal;
 
     static assert(hasLength!(typeof(iota(0, 2))));
     auto r = iota(0, 10, 1);
@@ -4544,15 +4630,19 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 ///
 @safe unittest
 {
-   int[][] x = new int[][2];
-   x[0] = [1, 2];
-   x[1] = [3, 4];
-   auto ror = frontTransversal(x);
-   assert(equal(ror, [ 1, 3 ][]));
+    import std.algorithm : equal;
+    int[][] x = new int[][2];
+    x[0] = [1, 2];
+    x[1] = [3, 4];
+    auto ror = frontTransversal(x);
+    assert(equal(ror, [ 1, 3 ][]));
 }
 
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+    import std.algorithm : equal;
+
     static assert(is(FrontTransversal!(immutable int[][])));
 
     foreach(DummyType; AllDummyRanges) {
@@ -4836,15 +4926,18 @@ Transversal!(RangeOfRanges, opt) transversal
 ///
 @safe unittest
 {
-   int[][] x = new int[][2];
-   x[0] = [1, 2];
-   x[1] = [3, 4];
-   auto ror = transversal(x, 1);
-   assert(equal(ror, [ 2, 4 ][]));
+    import std.algorithm : equal;
+    int[][] x = new int[][2];
+    x[0] = [1, 2];
+    x[1] = [3, 4];
+    auto ror = transversal(x, 1);
+    assert(equal(ror, [ 2, 4 ][]));
 }
 
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+
     int[][] x = new int[][2];
     x[0] = [ 1, 2 ];
     x[1] = [3, 4];
@@ -4980,6 +5073,7 @@ Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
 /// Example
 @safe unittest
 {
+    import std.algorithm : equal;
     int[][] ror = [
         [1, 2, 3],
         [4, 5, 6]
@@ -5011,6 +5105,7 @@ Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
 // Issue 8764
 @safe unittest
 {
+    import std.algorithm : equal;
     ulong[1] t0 = [ 123 ];
 
     assert(!hasAssignableElements!(typeof(t0[].chunks(1))));
@@ -5236,6 +5331,7 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
     auto source = [1, 2, 3, 4, 5];
     auto indices = [4, 3, 1, 2, 0, 4];
     auto ind = indexed(source, indices);
@@ -5263,6 +5359,8 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
 
 @safe unittest
 {
+    import std.internal.test.dummyrange;
+
     foreach(DummyType; AllDummyRanges)
     {
         auto d = DummyType.init;
@@ -5488,6 +5586,7 @@ if (isForwardRange!Source)
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
     auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto chunks = chunks(source, 4);
     assert(chunks[0] == [1, 2, 3, 4]);
@@ -5516,6 +5615,8 @@ if (isForwardRange!Source)
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     //Extra toying with slicing and indexing.
     auto chunks1 = [0, 0, 1, 1, 2, 2, 3, 3, 4].chunks(2);
     auto chunks2 = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4].chunks(2);
@@ -5549,6 +5650,8 @@ if (isForwardRange!Source)
 
 unittest
 {
+    import std.algorithm : equal, filter;
+
     //ForwardRange
     auto r = filter!"true"([1, 2, 3, 4, 5]).chunks(2);
     assert(equal!"equal(a, b)"(r, [[1, 2], [3, 4], [5]]));
@@ -5776,7 +5879,9 @@ auto only(Values...)(auto ref Values values)
 ///
 @safe unittest
 {
+    import std.algorithm;
     import std.uni;
+
     assert(equal(only('♡'), "♡"));
     assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 
@@ -5786,7 +5891,7 @@ auto only(Values...)(auto ref Values values)
     assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
 }
 
-version(unittest)
+unittest
 {
     // Verify that the same common type and same arity
     // results in the same template instantiation
@@ -5800,6 +5905,8 @@ version(unittest)
 // Tests the zero-element result
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto emptyRange = only();
 
     alias EmptyRange = typeof(emptyRange);
@@ -5820,6 +5927,7 @@ version(unittest)
 // Tests the single-element result
 @safe unittest
 {
+    import std.algorithm : equal;
     import std.typecons : tuple;
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
     {
@@ -5868,6 +5976,7 @@ version(unittest)
 // Tests multiple-element results
 @safe unittest
 {
+    import std.algorithm : equal, joiner;
     static assert(!__traits(compiles, only(1, "1")));
 
     auto nums = only!(byte, uint, long)(1, 2, 3);
@@ -6142,6 +6251,8 @@ pure @safe nothrow unittest
 
 pure @safe nothrow unittest
 {
+    import std.internal.test.dummyrange;
+
     import std.typecons : tuple;
 
     static struct HasSlicing
@@ -6247,6 +6358,7 @@ pure @safe nothrow unittest
 
 pure @safe unittest
 {
+    import std.algorithm : equal;
     static immutable int[] values = [0, 1, 2, 3, 4];
     foreach(T; TypeTuple!(ubyte, ushort, uint, ulong))
     {
@@ -6853,6 +6965,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
 ///
 unittest
 {
+    import std.algorithm : sort;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
     assert(r.contains(3));
@@ -6874,6 +6987,7 @@ that break its sortedness, $(D SortedRange) will work erratically.
 */
 @safe unittest
 {
+    import std.algorithm : swap;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
     assert(r.contains(42));
@@ -6883,6 +6997,8 @@ that break its sortedness, $(D SortedRange) will work erratically.
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto a = [ 10, 20, 30, 30, 30, 40, 40, 50, 60 ];
     auto r = assumeSorted(a).trisect(30);
     assert(equal(r[0], [ 10, 20 ]));
@@ -6897,6 +7013,7 @@ that break its sortedness, $(D SortedRange) will work erratically.
 
 @safe unittest
 {
+    import std.algorithm : equal;
     auto a = [ "A", "AG", "B", "E", "F" ];
     auto r = assumeSorted!"cmp(a,b) < 0"(a).trisect("B"w);
     assert(equal(r[0], [ "A", "AG" ]));
@@ -6910,6 +7027,7 @@ that break its sortedness, $(D SortedRange) will work erratically.
 
 @safe unittest
 {
+    import std.algorithm : equal;
     static void test(SearchPolicy pol)()
     {
         auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -6957,6 +7075,7 @@ that break its sortedness, $(D SortedRange) will work erratically.
 
 @safe unittest
 {
+    import std.algorithm : swap;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
     assert(r.contains(42));
@@ -7009,6 +7128,7 @@ if (isInputRange!(Unqual!R))
 
 @safe unittest
 {
+    import std.algorithm : equal;
     static assert(isRandomAccessRange!(SortedRange!(int[])));
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
     auto p = assumeSorted(a).lowerBound(4);
@@ -7023,6 +7143,7 @@ if (isInputRange!(Unqual!R))
 
 @safe unittest
 {
+    import std.algorithm : equal;
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).upperBound(3);
     assert(equal(p, [4, 4, 5, 6 ]));
@@ -7033,6 +7154,7 @@ if (isInputRange!(Unqual!R))
 @safe unittest
 {
     import std.conv : text;
+    import std.algorithm : equal;
 
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     auto p = assumeSorted(a).equalRange(3);
@@ -7862,6 +7984,7 @@ auto refRange(R)(R* range)
 
 @safe unittest    // bug 9060
 {
+    import std.algorithm : map, joiner, group, until;
     // fix for std.algorithm
     auto r = map!(x => 0)([1]);
     chain(r, r);
@@ -7911,6 +8034,7 @@ struct NullSink
 
 @safe unittest
 {
+    import std.algorithm : map, copy;
     [4, 5, 6].map!(x => x * 2).copy(NullSink());
 }
 
@@ -8021,6 +8145,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 //
 @safe unittest
 {
+    import std.algorithm : equal, filter, map;
+
     // Pass-through
     int[] values = [1, 4, 9, 16, 25];
 
@@ -8042,6 +8168,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 //
 @safe unittest
 {
+    import std.algorithm : equal, filter, map;
+
     int[] values = [1, 4, 9, 16, 25];
 
     int count = 0;
@@ -8077,6 +8205,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 //
 @safe unittest
 {
+    import std.algorithm : filter, equal, map;
+
     char[] txt = "Line one, Line 2".dup;
 
     bool isVowel(dchar c)
@@ -8134,6 +8264,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
 @safe unittest
 {
+    import std.algorithm : equal;
+
     //Test diverting elements to an OutputRange
     string txt = "abcdefghijklmnopqrstuvwxyz";
 
@@ -8177,9 +8309,4 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     void func2(int x) {}
 
     auto r = [1, 2, 3, 4].tee!func1.tee!func2;
-}
-
-version(unittest) 
-{
-    mixin(dummyRanges);
 }

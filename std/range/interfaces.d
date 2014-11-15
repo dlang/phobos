@@ -453,13 +453,10 @@ template outputRangeObject(E...) {
     }
 }
 
-version(unittest)
-{
-    import std.typecons;
-    mixin(dummyRanges);    
-}
 
-unittest {
+unittest 
+{
+    import std.internal.test.dummyrange;
 	import std.algorithm : equal;
 	import std.array;
 
