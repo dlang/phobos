@@ -617,8 +617,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
 bool handleOption(R)(string option, R receiver, ref string[] args,
         ref configuration cfg, bool incremental)
 {
-    import std.range : splitter;
-    import std.algorithm : map;
+    import std.algorithm : map, splitter;
     import std.ascii : isAlpha;
     import std.conv : text, to;
     // Scan arguments looking for a match for this option
