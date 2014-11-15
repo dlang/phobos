@@ -30,16 +30,6 @@ import std.range.constraints;
 import std.traits;
 import std.typetuple;
 
-version(unittest) 
-{
-    import std.math;
-    import std.stdio;
-    import std.string;
-    import std.typecons;
-    import core.exception;
-    import std.string;
-}
-
 version(CRuntime_DigitalMars)
 {
     version = DigitalMarsC;
@@ -2737,7 +2727,6 @@ if (is(T == class) && !is(T == enum))
 unittest
 {
    import std.format;
-   import std.string : format;
 
    struct Point
    {
@@ -3311,6 +3300,7 @@ private int getNthInt(A...)(uint index, A args)
 version(unittest)
 void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
+    import core.exception;
     import std.array : appender;
     import std.conv : text;
     FormatSpec!char f;
@@ -3324,6 +3314,7 @@ void formatTest(T)(T val, string expected, size_t ln = __LINE__, string fn = __F
 version(unittest)
 void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, string fn = __FILE__)
 {
+    import core.exception;
     import std.array : appender;
     import std.conv : text;
     auto w = appender!string();
@@ -3336,6 +3327,7 @@ void formatTest(T)(string fmt, T val, string expected, size_t ln = __LINE__, str
 version(unittest)
 void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
+    import core.exception;
     import std.conv : text;
     import std.array : appender;
     FormatSpec!char f;
@@ -3353,6 +3345,7 @@ void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = _
 version(unittest)
 void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
+    import core.exception;
     import std.conv : text;
     import std.array : appender;
     auto w = appender!string();
@@ -3899,6 +3892,7 @@ here:
 unittest
 {
     import std.array;
+    import std.stdio;
 
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     if (false) writeln(aa.keys);
@@ -3931,11 +3925,11 @@ unittest
         assert(stream.data == "1");
     }
 
-    //auto r = std.string.format("%s", aa.values);
+    //auto r = format("%s", aa.values);
     stream.clear(); formattedWrite(stream, "%s", aa);
     //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]", stream.data);
-//    r = std.string.format("%s", aa);
-//   assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
+    //r = format("%s", aa);
+    //assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
 }
 
 unittest
@@ -3951,6 +3945,7 @@ unittest
 version(unittest)
 void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
+    import core.exception;
     import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
@@ -3992,6 +3987,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
 version(unittest)
 void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn = __FILE__, size_t ln = __LINE__)
 {
+    import core.exception;
     import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
@@ -4312,6 +4308,7 @@ version(none)unittest
 
 unittest
 {
+    import std.typecons;
     char[] line = "1 2".dup;
     int a, b;
     formattedRead(line, "%s %s", &a, &b);
@@ -5053,7 +5050,7 @@ void main()
 }
 ------------------------
  */
-void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
+void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 {
     import std.utf : toUCSindex, isValidDchar, UTFException, toUTF8;
     import core.stdc.string : strlen;
@@ -6024,10 +6021,10 @@ unittest
 
     debug(format) printf("std.format.format.unittest\n");
 
-    s = std.string.format("hello world! %s %s %s%s%s", true, 57, 1_000_000_000, 'x', " foo");
+    s = format("hello world! %s %s %s%s%s", true, 57, 1_000_000_000, 'x', " foo");
     assert(s == "hello world! true 57 1000000000x foo");
 
-    s = std.string.format("%s %A %s", 1.67, -1.28, float.nan);
+    s = format("%s %A %s", 1.67, -1.28, float.nan);
     /* The host C library is used to format floats.
      * C99 doesn't specify what the hex digit before the decimal point
      * is for %A.
@@ -6051,13 +6048,13 @@ unittest
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
-    s = std.string.format("%x %X", 0x1234AF, 0xAFAFAFAF);
+    s = format("%x %X", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1234af AFAFAFAF");
 
-    s = std.string.format("%b %o", 0x1234AF, 0xAFAFAFAF);
+    s = format("%b %o", 0x1234AF, 0xAFAFAFAF);
     assert(s == "100100011010010101111 25753727657");
 
-    s = std.string.format("%d %s", 0x1234AF, 0xAFAFAFAF);
+    s = format("%d %s", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1193135 2947526575");
 
     //version(X86_64)
@@ -6066,258 +6063,258 @@ unittest
     //}
     //else
     //{
-        s = std.string.format("%s", 1.2 + 3.4i);
+        s = format("%s", 1.2 + 3.4i);
         assert(s == "1.2+3.4i", s);
 
-        //s = std.string.format("%x %X", 1.32, 6.78f);
+        //s = format("%x %X", 1.32, 6.78f);
         //assert(s == "3ff51eb851eb851f 40D8F5C3");
 
     //}
 
-    s = std.string.format("%#06.*f",2,12.345);
+    s = format("%#06.*f",2,12.345);
     assert(s == "012.35");
 
-    s = std.string.format("%#0*.*f",6,2,12.345);
+    s = format("%#0*.*f",6,2,12.345);
     assert(s == "012.35");
 
-    s = std.string.format("%7.4g:", 12.678);
+    s = format("%7.4g:", 12.678);
     assert(s == "  12.68:");
 
-    s = std.string.format("%7.4g:", 12.678L);
+    s = format("%7.4g:", 12.678L);
     assert(s == "  12.68:");
 
-    s = std.string.format("%04f|%05d|%#05x|%#5x",-4.0,-10,1,1);
+    s = format("%04f|%05d|%#05x|%#5x",-4.0,-10,1,1);
     assert(s == "-4.000000|-0010|0x001|  0x1");
 
     i = -10;
-    s = std.string.format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
     assert(s == "-10|-10|-10|-10|-10.0000");
 
     i = -5;
-    s = std.string.format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
     assert(s == "-5| -5|-05|-5|-5.0000");
 
     i = 0;
-    s = std.string.format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
     assert(s == "0|  0|000|0|0.0000");
 
     i = 5;
-    s = std.string.format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
     assert(s == "5|  5|005|5|5.0000");
 
     i = 10;
-    s = std.string.format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
+    s = format("%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
     assert(s == "10| 10|010|10|10.0000");
 
-    s = std.string.format("%.0d", 0);
+    s = format("%.0d", 0);
     assert(s == "");
 
-    s = std.string.format("%.g", .34);
+    s = format("%.g", .34);
     assert(s == "0.3");
 
-    s = std.string.format("%.0g", .34);
+    s = format("%.0g", .34);
     assert(s == "0.3");
 
-    s = std.string.format("%.2g", .34);
+    s = format("%.2g", .34);
     assert(s == "0.34");
 
-    s = std.string.format("%0.0008f", 1e-08);
+    s = format("%0.0008f", 1e-08);
     assert(s == "0.00000001");
 
-    s = std.string.format("%0.0008f", 1e-05);
+    s = format("%0.0008f", 1e-05);
     assert(s == "0.00001000");
 
     s = "helloworld";
     string r;
-    r = std.string.format("%.2s", s[0..5]);
+    r = format("%.2s", s[0..5]);
     assert(r == "he");
-    r = std.string.format("%.20s", s[0..5]);
+    r = format("%.20s", s[0..5]);
     assert(r == "hello");
-    r = std.string.format("%8s", s[0..5]);
+    r = format("%8s", s[0..5]);
     assert(r == "   hello");
 
     byte[] arrbyte = new byte[4];
     arrbyte[0] = 100;
     arrbyte[1] = -99;
     arrbyte[3] = 0;
-    r = std.string.format("%s", arrbyte);
+    r = format("%s", arrbyte);
     assert(r == "[100, -99, 0, 0]");
 
     ubyte[] arrubyte = new ubyte[4];
     arrubyte[0] = 100;
     arrubyte[1] = 200;
     arrubyte[3] = 0;
-    r = std.string.format("%s", arrubyte);
+    r = format("%s", arrubyte);
     assert(r == "[100, 200, 0, 0]");
 
     short[] arrshort = new short[4];
     arrshort[0] = 100;
     arrshort[1] = -999;
     arrshort[3] = 0;
-    r = std.string.format("%s", arrshort);
+    r = format("%s", arrshort);
     assert(r == "[100, -999, 0, 0]");
 
     ushort[] arrushort = new ushort[4];
     arrushort[0] = 100;
     arrushort[1] = 20_000;
     arrushort[3] = 0;
-    r = std.string.format("%s", arrushort);
+    r = format("%s", arrushort);
     assert(r == "[100, 20000, 0, 0]");
 
     int[] arrint = new int[4];
     arrint[0] = 100;
     arrint[1] = -999;
     arrint[3] = 0;
-    r = std.string.format("%s", arrint);
+    r = format("%s", arrint);
     assert(r == "[100, -999, 0, 0]");
 
     long[] arrlong = new long[4];
     arrlong[0] = 100;
     arrlong[1] = -999;
     arrlong[3] = 0;
-    r = std.string.format("%s", arrlong);
+    r = format("%s", arrlong);
     assert(r == "[100, -999, 0, 0]");
 
     ulong[] arrulong = new ulong[4];
     arrulong[0] = 100;
     arrulong[1] = 999;
     arrulong[3] = 0;
-    r = std.string.format("%s", arrulong);
+    r = format("%s", arrulong);
     assert(r == "[100, 999, 0, 0]");
 
     string[] arr2 = new string[4];
     arr2[0] = "hello";
     arr2[1] = "world";
     arr2[3] = "foo";
-    r = std.string.format("%s", arr2);
+    r = format("%s", arr2);
     assert(r == `["hello", "world", "", "foo"]`);
 
-    r = std.string.format("%.8d", 7);
+    r = format("%.8d", 7);
     assert(r == "00000007");
-    r = std.string.format("%.8x", 10);
+    r = format("%.8x", 10);
     assert(r == "0000000a");
 
-    r = std.string.format("%-3d", 7);
+    r = format("%-3d", 7);
     assert(r == "7  ");
 
-    r = std.string.format("%*d", -3, 7);
+    r = format("%*d", -3, 7);
     assert(r == "7  ");
 
-    r = std.string.format("%.*d", -3, 7);
+    r = format("%.*d", -3, 7);
     assert(r == "7");
 
-    r = std.string.format("abc"c);
+    r = format("abc"c);
     assert(r == "abc");
-    r = std.string.format("def"w);
+    r = format("def"w);
     assert(r == "def");
-    r = std.string.format("ghi"d);
+    r = format("ghi"d);
     assert(r == "ghi");
 
     void* p = cast(void*)0xDEADBEEF;
-    r = std.string.format("%s", p);
+    r = format("%s", p);
     assert(r == "DEADBEEF");
 
-    r = std.string.format("%#x", 0xabcd);
+    r = format("%#x", 0xabcd);
     assert(r == "0xabcd");
-    r = std.string.format("%#X", 0xABCD);
+    r = format("%#X", 0xABCD);
     assert(r == "0XABCD");
 
-    r = std.string.format("%#o", octal!12345);
+    r = format("%#o", octal!12345);
     assert(r == "012345");
-    r = std.string.format("%o", 9);
+    r = format("%o", 9);
     assert(r == "11");
 
-    r = std.string.format("%+d", 123);
+    r = format("%+d", 123);
     assert(r == "+123");
-    r = std.string.format("%+d", -123);
+    r = format("%+d", -123);
     assert(r == "-123");
-    r = std.string.format("% d", 123);
+    r = format("% d", 123);
     assert(r == " 123");
-    r = std.string.format("% d", -123);
+    r = format("% d", -123);
     assert(r == "-123");
 
-    r = std.string.format("%%");
+    r = format("%%");
     assert(r == "%");
 
-    r = std.string.format("%d", true);
+    r = format("%d", true);
     assert(r == "1");
-    r = std.string.format("%d", false);
+    r = format("%d", false);
     assert(r == "0");
 
-    r = std.string.format("%d", 'a');
+    r = format("%d", 'a');
     assert(r == "97");
     wchar wc = 'a';
-    r = std.string.format("%d", wc);
+    r = format("%d", wc);
     assert(r == "97");
     dchar dc = 'a';
-    r = std.string.format("%d", dc);
+    r = format("%d", dc);
     assert(r == "97");
 
     byte b = byte.max;
-    r = std.string.format("%x", b);
+    r = format("%x", b);
     assert(r == "7f");
-    r = std.string.format("%x", ++b);
+    r = format("%x", ++b);
     assert(r == "80");
-    r = std.string.format("%x", ++b);
+    r = format("%x", ++b);
     assert(r == "81");
 
     short sh = short.max;
-    r = std.string.format("%x", sh);
+    r = format("%x", sh);
     assert(r == "7fff");
-    r = std.string.format("%x", ++sh);
+    r = format("%x", ++sh);
     assert(r == "8000");
-    r = std.string.format("%x", ++sh);
+    r = format("%x", ++sh);
     assert(r == "8001");
 
     i = int.max;
-    r = std.string.format("%x", i);
+    r = format("%x", i);
     assert(r == "7fffffff");
-    r = std.string.format("%x", ++i);
+    r = format("%x", ++i);
     assert(r == "80000000");
-    r = std.string.format("%x", ++i);
+    r = format("%x", ++i);
     assert(r == "80000001");
 
-    r = std.string.format("%x", 10);
+    r = format("%x", 10);
     assert(r == "a");
-    r = std.string.format("%X", 10);
+    r = format("%X", 10);
     assert(r == "A");
-    r = std.string.format("%x", 15);
+    r = format("%x", 15);
     assert(r == "f");
-    r = std.string.format("%X", 15);
+    r = format("%X", 15);
     assert(r == "F");
 
     Object c = null;
-    r = std.string.format("%s", c);
+    r = format("%s", c);
     assert(r == "null");
 
     enum TestEnum
     {
         Value1, Value2
     }
-    r = std.string.format("%s", TestEnum.Value2);
+    r = format("%s", TestEnum.Value2);
     assert(r == "Value2");
 
     immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
-    r = std.string.format("%s", aa.values);
+    r = format("%s", aa.values);
     assert(r == `["hello", "betty"]` || r == `["betty", "hello"]`);
-    r = std.string.format("%s", aa);
+    r = format("%s", aa);
     assert(r == `[3:"hello", 4:"betty"]` || r == `[4:"betty", 3:"hello"]`);
 
     static const dchar[] ds = ['a','b'];
     for (int j = 0; j < ds.length; ++j)
     {
-        r = std.string.format(" %d", ds[j]);
+        r = format(" %d", ds[j]);
         if (j == 0)
             assert(r == " 97");
         else
             assert(r == " 98");
     }
 
-    r = std.string.format(">%14d<, %s", 15, [1,2,3]);
+    r = format(">%14d<, %s", 15, [1,2,3]);
     assert(r == ">            15<, [1, 2, 3]");
 
-    assert(std.string.format("%8s", "bar") == "     bar");
-    assert(std.string.format("%8s", "b\u00e9ll\u00f4") == " b\u00e9ll\u00f4");
+    assert(format("%8s", "bar") == "     bar");
+    assert(format("%8s", "b\u00e9ll\u00f4") == " b\u00e9ll\u00f4");
 }
 
 unittest
@@ -6337,4 +6334,171 @@ unittest
     auto stream = appender!(char[])();
     formattedWrite(stream, "%s", E.C);
     assert(stream.data == "C");
+}
+
+/*****************************************************
+ * Format arguments into a string.
+ *
+ * Params: fmt  = Format string. For detailed specification, see $(XREF format,formattedWrite).
+ *         args = Variadic list of arguments to format into returned string.
+ *
+ *  $(RED format's current implementation has been replaced with $(LREF xformat)'s
+ *        implementation. in November 2012.
+ *        This is seamless for most code, but it makes it so that the only
+ *        argument that can be a format string is the first one, so any
+ *        code which used multiple format strings has broken. Please change
+ *        your calls to format accordingly.
+ *
+ *        e.g.:
+ *        ----
+ *        format("key = %s", key, ", value = %s", value)
+ *        ----
+ *        needs to be rewritten as:
+ *        ----
+ *        format("key = %s, value = %s", key, value)
+ *        ----
+ *   )
+ */
+string format(Char, Args...)(in Char[] fmt, Args args)
+{
+    import std.format : formattedWrite, FormatException;
+    import std.array : appender;
+    auto w = appender!string();
+    auto n = formattedWrite(w, fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        import std.conv : text;
+        import std.exception : enforce;
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+    }
+    return w.data;
+}
+
+unittest
+{
+    import std.format;
+    import core.exception;
+    import std.exception;
+    assertCTFEable!(
+    {
+//  assert(format(null) == "");
+    assert(format("foo") == "foo");
+    assert(format("foo%%") == "foo%");
+    assert(format("foo%s", 'C') == "fooC");
+    assert(format("%s foo", "bar") == "bar foo");
+    assert(format("%s foo %s", "bar", "abc") == "bar foo abc");
+    assert(format("foo %d", -123) == "foo -123");
+    assert(format("foo %d", 123) == "foo 123");
+
+    assertThrown!FormatException(format("foo %s"));
+    assertThrown!FormatException(format("foo %s", 123, 456));
+
+    assert(format("hel%slo%s%s%s", "world", -138, 'c', true) ==
+                  "helworldlo-138ctrue");
+    });
+}
+
+/*****************************************************
+ * Format arguments into buffer <i>buf</i> which must be large
+ * enough to hold the result. Throws RangeError if it is not.
+ * Returns: The slice of $(D buf) containing the formatted string.
+ *
+ *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
+ *        implementation. in November 2012.
+ *        This is seamless for most code, but it makes it so that the only
+ *        argument that can be a format string is the first one, so any
+ *        code which used multiple format strings has broken. Please change
+ *        your calls to sformat accordingly.
+ *
+ *        e.g.:
+ *        ----
+ *        sformat(buf, "key = %s", key, ", value = %s", value)
+ *        ----
+ *        needs to be rewritten as:
+ *        ----
+ *        sformat(buf, "key = %s, value = %s", key, value)
+ *        ----
+ *   )
+ */
+char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
+{
+    import core.exception : onRangeError;
+    import std.utf : encode;
+    import std.format : formattedWrite, FormatException;
+
+    size_t i;
+
+    struct Sink
+    {
+        void put(dchar c)
+        {
+            char[4] enc;
+            auto n = encode(enc, c);
+
+            if (buf.length < i + n)
+                onRangeError("std.string.sformat", 0);
+
+            buf[i .. i + n] = enc[0 .. n];
+            i += n;
+        }
+        void put(const(char)[] s)
+        {
+            if (buf.length < i + s.length)
+                onRangeError("std.string.sformat", 0);
+
+            buf[i .. i + s.length] = s[];
+            i += s.length;
+        }
+        void put(const(wchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+        void put(const(dchar)[] s)
+        {
+            for (; !s.empty; s.popFront())
+                put(s.front);
+        }
+    }
+    auto n = formattedWrite(Sink(), fmt, args);
+    version (all)
+    {
+        // In the future, this check will be removed to increase consistency
+        // with formattedWrite
+        import std.conv : text;
+        import std.exception : enforce;
+        enforce(n == args.length, new FormatException(
+            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+    }
+    return buf[0 .. i];
+}
+
+unittest
+{
+    import core.exception;
+    import std.format;
+
+    debug(string) trustedPrintf("std.string.sformat.unittest\n");
+
+    import std.exception;
+    assertCTFEable!(
+    {
+    char[10] buf;
+
+    assert(sformat(buf[], "foo") == "foo");
+    assert(sformat(buf[], "foo%%") == "foo%");
+    assert(sformat(buf[], "foo%s", 'C') == "fooC");
+    assert(sformat(buf[], "%s foo", "bar") == "bar foo");
+    assertThrown!RangeError(sformat(buf[], "%s foo %s", "bar", "abc"));
+    assert(sformat(buf[], "foo %d", -123) == "foo -123");
+    assert(sformat(buf[], "foo %d", 123) == "foo 123");
+
+    assertThrown!FormatException(sformat(buf[], "foo %s"));
+    assertThrown!FormatException(sformat(buf[], "foo %s", 123, 456));
+
+    assert(sformat(buf[], "%s %s %s", "c"c, "w"w, "d"d) == "c w d");
+    });
 }

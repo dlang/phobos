@@ -2109,7 +2109,7 @@ auto takeNone(R)(R range)
         int[] _arr;
     }
 
-    import std.string : format;
+    import std.format : format;
 
     foreach(range; TypeTuple!([1, 2, 3, 4, 5],
                               "hello world",
@@ -2871,7 +2871,7 @@ private alias lengthType(R) = typeof(R.init.length.init);
 struct Zip(Ranges...)
     if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
-    import std.string : format; //for generic mixins
+    import std.format : format; //for generic mixins
     import std.typecons : Tuple;
 
     alias R = Ranges;
@@ -3418,7 +3418,7 @@ unittest
 */
 private string lockstepMixin(Ranges...)(bool withIndex)
 {
-    import std.string : format, outdent;
+    import std.format : format;
 
     string[] params;
     string[] emptyChecks;
@@ -3467,7 +3467,7 @@ private string lockstepMixin(Ranges...)(bool withIndex)
     }, params.join(", "), withIndex ? "size_t index = 0;" : "",
        emptyChecks.join(" && "), dgArgs.join(", "),
        popFronts.join("\n                "),
-       withIndex ? "index++;" : "").outdent();
+       withIndex ? "index++;" : "");
 }
 
 /**

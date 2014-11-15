@@ -29,8 +29,8 @@ import std.typetuple;
 
 private string convFormat(Char, Args...)(in Char[] fmt, Args args)
 {
-    import std.string : format;
-    return std.string.format(fmt, args);
+    import std.format : format;
+    return std.format.format(fmt, args);
 }
 
 /* ************* Exceptions *************** */

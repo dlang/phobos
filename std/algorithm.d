@@ -408,7 +408,7 @@ private T* addressOf(T)(ref T val) { return &val; }
 // Also helps with missing imports errors.
 private template algoFormat()
 {
-    import std.string : format;
+    import std.format : format;
     alias algoFormat = std.string.format;
 }
 
@@ -3632,7 +3632,7 @@ private struct SplitterResult(alias isTerminator, Range)
     import std.uni : isWhite;
 
     //@@@6791@@@
-    assert(equal(std.array.splitter("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
+    assert(equal(splitter("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
     assert(equal(splitter!(std.uni.isWhite)("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
     assert(equal(splitter!"a=='本'"("日本語"), ["日", "語"]));
 }
@@ -13879,7 +13879,7 @@ auto castSwitch(choices...)(Object switchObject)
 ///
 unittest
 {
-    import std.string : format;
+    import std.format : format;
 
     class A
     {
