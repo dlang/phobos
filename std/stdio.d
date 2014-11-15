@@ -16,15 +16,20 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
  */
 module std.stdio;
 
-public import core.stdc.stdio, std.string : KeepTerminator;
-import core.vararg;
+public import core.stdc.stdio;
 static import core.stdc.stdio;
+import std.typecons : Flag;
 import std.stdiobase;
-import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
-    core.stdc.string, core.stdc.wchar_, core.exception;
-import std.range;
-import std.traits : Unqual, isSomeChar, isAggregateType, isSomeString,
-    isIntegral, isBoolean, ParameterTypeTuple;
+import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib,
+    core.stdc.string, core.stdc.wchar_;
+import std.range.constraints;
+import std.traits;
+
+/++
+If flag $(D KeepTerminator) is set to $(D KeepTerminator.yes), then the delimiter
+is included in the strings returned.
++/
+alias KeepTerminator = Flag!"keepTerminator";
 
 version (CRuntime_Microsoft)
 {
@@ -1877,6 +1882,7 @@ $(XREF file,readText)
     {
         static import std.file;
         import std.algorithm : equal;
+        import std.range;
 
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
@@ -1954,6 +1960,7 @@ $(XREF file,readText)
     unittest
     {
         import std.algorithm : equal;
+        import std.range;
 
         version(Win64)
         {
@@ -2084,14 +2091,24 @@ $(XREF file,readText)
         @property nothrow
         ubyte[] front()
         {
-            version(assert) if (empty) throw new RangeError();
+            version(assert) 
+            {
+                import core.exception : RangeError;
+                if (empty) 
+                    throw new RangeError(); 
+            }
             return chunk_;
         }
 
         /// Ditto
         void popFront()
         {
-            version(assert) if (empty) throw new RangeError();
+            version(assert) 
+            {
+                import core.exception : RangeError;
+                if (empty) 
+                    throw new RangeError(); 
+            }
             prime();
         }
     }
@@ -2571,6 +2588,7 @@ unittest
 unittest
 {
     static import std.file;
+    import std.range;
 
     auto deleteme = testFilename();
     scope(exit) std.file.remove(deleteme);
@@ -2643,7 +2661,12 @@ struct LockingTextReader
 
     @property dchar front()
     {
-        version(assert) if (empty) throw new RangeError();
+        version(assert) 
+        {
+            import core.exception : RangeError;
+            if (empty) 
+                throw new RangeError(); 
+        }
         return _front;
     }
 
@@ -2700,7 +2723,12 @@ struct LockingTextReader
 
     void popFront()
     {
-        version(assert) if (empty) throw new RangeError();
+        version(assert) 
+        {
+            import core.exception : RangeError;
+            if (empty) 
+                throw new RangeError(); 
+        }
 
         // Pop the current front.
         char[4] buf;
@@ -3666,7 +3694,8 @@ class StdioException : Exception
     uint errno;
 
 /**
-Initialize with a message and an error code. */
+Initialize with a message and an error code. 
+*/
     this(string message, uint e = .errno)
     {
         import std.conv : to;
@@ -3763,6 +3792,9 @@ unittest
 version (DIGITAL_MARS_STDIO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
+    import core.memory;
+    import std.array : appender, uninitializedArray;
+    
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
 
@@ -3904,6 +3936,9 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 version (MICROSOFT_STDIO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
+    import core.memory;
+    import std.array : appender, uninitializedArray;
+
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
 
@@ -3940,6 +3975,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 version (GCC_IO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
+    import core.memory;
     import std.utf : encode;
 
     if (fwide(fps, 0) > 0)
