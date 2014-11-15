@@ -4811,16 +4811,15 @@ unittest // about toHash
         assert(td[TD(MyStruct2(50))] == 5);
     }
 
-    // SEGV
-    // {
-    //     class MyClass{}
-    //     alias TD = Typedef!MyClass;
-    //     int[TD] td;
-    //     auto c = new MyClass;
-    //     td[TD(c)] = 6; //<-----------------
-    //     assert(TD(new MyClass) !in td);
-    //     assert(td[TD(c)] == 6);
-    // }
+    {
+        class MyClass{}
+        alias TD = Typedef!MyClass;
+        int[TD] td;
+        auto c = new MyClass;
+        td[TD(c)] = 6;
+        assert(TD(new MyClass) !in td);
+        assert(td[TD(c)] == 6);
+    }
 }
 
 /**
