@@ -1,6 +1,5 @@
 module std.container.slist;
 
-import std.exception, std.range, std.traits;
 public import std.container.util;
 
 /**
@@ -10,6 +9,11 @@ public import std.container.util;
  */
 struct SList(T)
 {
+    import std.exception : enforce;
+    import std.range : Take;
+    import std.range.constraints;
+    import std.traits;
+
     private struct Node
     {
         Node * _next;
@@ -543,12 +547,14 @@ unittest
 
 unittest
 {
+    import std.range.constraints;
     auto s = SList!int(1, 2, 5, 10);
     assert(walkLength(s[]) == 4);
 }
 
 unittest
 {
+    import std.range : take;
     auto src = take([0, 1, 2, 3], 3);
     auto s = SList!int(src);
     assert(s == SList!int(0, 1, 2));
@@ -643,6 +649,7 @@ unittest
 
 unittest
 {
+    import std.range : take;
     auto s = SList!int(1, 2, 3, 4);
     auto r = take(s[], 2);
     assert(s.insertAfter(r, 5) == 1);
@@ -663,6 +670,7 @@ unittest
 
 unittest
 {
+    import std.range.constraints;
     auto s = SList!int(1, 2, 3, 4, 5);
     auto r = s[];
     popFrontN(r, 3);
@@ -683,6 +691,7 @@ unittest
 unittest
 {
     import std.algorithm : equal;
+    import std.range;
 
     auto s = SList!int(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
     auto r = s[];
@@ -696,6 +705,7 @@ unittest
 
 unittest
 {
+    import std.range.constraints;
     auto lst = SList!int(1, 5, 42, 9);
     assert(!lst.empty);
     assert(lst.front == 1);
