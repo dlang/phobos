@@ -292,7 +292,7 @@ $(ROOT)/$(SONAME): $(LIBSO)
 
 $(LIBSO): override PIC:=-fPIC
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO) $(LIBCURL_STUB)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-Xlinker -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(LINKCURL) $(D_FILES) $(OBJS)
 
 # stub library with soname of the real libcurl.so (Bugzilla 10710)
 $(LIBCURL_STUB):
