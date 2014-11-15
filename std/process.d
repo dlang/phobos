@@ -101,13 +101,12 @@ version (Windows)
     import std.utf;
     import std.windows.syserror;
 }
-import std.algorithm;
-import std.array;
+
+import std.range.constraints;
 import std.conv;
 import std.exception;
 import std.path;
 import std.stdio;
-import std.string;
 import std.internal.processinit;
 import std.internal.cstring;
 
@@ -358,6 +357,9 @@ private Pid spawnProcessImpl(in char[][] args,
     @trusted // TODO: Should be @safe
 {
     import core.exception: RangeError;
+    import std.path : isDirSeparator;
+    import std.algorithm : any;
+    import std.string : toStringz;
 
     if (args.empty) throw new RangeError();
     const(char)[] name = args[0];
@@ -645,7 +647,8 @@ private LPVOID createEnv(const string[string] childEnv,
                          bool mergeWithParentEnv)
 {
     if (mergeWithParentEnv && childEnv.length == 0) return null;
-
+    import std.array : appender;
+    import std.uni : toUpper;
     auto envz = appender!(wchar[])();
     void put(string var, string val)
     {
@@ -688,6 +691,8 @@ version (Posix)
 private string searchPathFor(in char[] executable)
     @trusted //TODO: @safe nothrow
 {
+    import std.algorithm : splitter;
+
     auto pathz = core.stdc.stdlib.getenv("PATH");
     if (pathz == null)  return null;
 
@@ -710,6 +715,7 @@ private bool isExecutable(in char[] path) @trusted nothrow @nogc //TODO: @safe
 
 version (Posix) unittest
 {
+    import std.algorithm;
     auto unamePath = searchPathFor("uname");
     assert (!unamePath.empty);
     assert (unamePath[0] == '/');
@@ -797,6 +803,7 @@ unittest // Environment variables in spawnProcess().
 
 unittest // Stream redirection in spawnProcess().
 {
+    import std.string;
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
@@ -878,6 +885,7 @@ unittest // Specifying empty working directory.
 
 unittest // Reopening the standard streams (issue 13258)
 {
+    import std.string;
     void fun()
     {
         spawnShell("echo foo").wait();
@@ -992,6 +1000,7 @@ unittest
 version (Windows)
 unittest
 {
+    import std.string;
     TestScript prog = "echo %0 %*";
     auto outputFn = uniqueTempPath();
     scope(exit) if (exists(outputFn)) remove(outputFn);
@@ -1583,6 +1592,7 @@ private:
 
 unittest
 {
+    import std.string;
     auto p = pipe();
     p.writeEnd.writeln("Hello World");
     p.writeEnd.flush();
@@ -1797,6 +1807,7 @@ enum Redirect
 
 unittest
 {
+    import std.string;
     version (Windows) TestScript prog =
        "call :sub %~1 %~2 0
         call :sub %~1 %~2 1
@@ -2032,7 +2043,10 @@ private auto executeImpl(alias pipeFunc, Cmd)(
     size_t maxOutput = size_t.max,
     in char[] workDir = null)
 {
+    import std.string;
     import std.typecons : Tuple;
+    import std.array : appender;
+    import std.algorithm : min;
 
     auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
                       env, config, workDir);
@@ -2061,6 +2075,7 @@ private auto executeImpl(alias pipeFunc, Cmd)(
 
 unittest
 {
+    import std.string;
     // To avoid printing the newline characters, we use the echo|set trick on
     // Windows, and printf on POSIX (neither echo -n nor echo \c are portable).
     version (Windows) TestScript prog =
@@ -2081,6 +2096,7 @@ unittest
 
 unittest
 {
+    import std.string;
     auto r1 = executeShell("echo foo");
     assert (r1.status == 0);
     assert (r1.output.chomp() == "foo");
@@ -2363,6 +2379,7 @@ private string escapeShellCommandString(string command) @safe pure
 
 private string escapeWindowsShellCommand(in char[] command) @safe pure
 {
+    import std.array : appender;
     auto result = appender!string();
     result.reserve(command.length);
 
@@ -2528,12 +2545,15 @@ version(Windows) version(unittest)
 {
     import core.sys.windows.windows;
     import core.stdc.stddef;
+    import std.array;
 
     extern (Windows) wchar_t**  CommandLineToArgvW(wchar_t*, int*);
     extern (C) size_t wcslen(in wchar *);
 
     string[] parseCommandLine(string line)
     {
+        import std.algorithm : map;
+        import std.array : array;
         LPWSTR lpCommandLine = (to!(wchar[])(line) ~ "\0"w).ptr;
         int numArgs;
         LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
@@ -2904,6 +2924,7 @@ static:
         }
         else version (Windows)
         {
+            import std.uni : toUpper;
             auto envBlock = GetEnvironmentStringsW();
             enforce(envBlock, "Failed to retrieve environment variables.");
             scope(exit) FreeEnvironmentStringsW(envBlock);
@@ -3120,6 +3141,7 @@ int system(string command)
 
 private void toAStringz(in string[] a, const(char)**az)
 {
+    import std.string : toStringz;
     foreach(string s; a)
     {
         *az++ = toStringz(s);
@@ -3387,6 +3409,7 @@ private int execvpe_(in string pathname, in string[] argv, in string[] envp)
 {
 version(Posix)
 {
+    import std.array : split;
     // Is pathname rooted?
     if(pathname[0] == '/')
     {
@@ -3396,7 +3419,7 @@ version(Posix)
     else
     {
         // No, so must traverse PATHs, looking for first match
-        string[]    envPaths    =   std.array.split(
+        string[]    envPaths    =   split(
             to!string(core.stdc.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
@@ -3475,6 +3498,7 @@ string shell(string cmd)
 {
     version(Windows)
     {
+        import std.array : appender;
         // Generate a random filename
         auto a = appender!string();
         foreach (ref e; 0 .. 8)
