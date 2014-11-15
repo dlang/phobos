@@ -18,15 +18,17 @@ Source:    $(PHOBOSSRC std/_file.d)
  */
 module std.file;
 
-import core.memory;
-import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
-       core.stdc.errno, std.algorithm, std.array, std.conv,
-       std.datetime, std.exception, std.format, std.path, std.process,
-       std.range, std.stdio, std.string, std.traits,
-       std.typecons, std.typetuple, std.utf;
+import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
 
+import std.conv;
+import std.datetime;
+import std.exception;
+import std.path;
+import std.range.constraints;
+import std.traits;
+import std.typecons;
+import std.typetuple;
 import std.internal.cstring;
-
 
 version (Windows)
 {
@@ -42,10 +44,9 @@ else
 
 version (unittest)
 {
-    import core.thread;
-
     @property string deleteme() @safe
     {
+        import std.process : thisProcessID;
         static _deleteme = "deleteme.dmd.unittest.pid";
         static _first = true;
 
@@ -192,6 +193,8 @@ Throws: $(D FileException) on error.
  */
 void[] read(in char[] name, size_t upTo = size_t.max) @safe
 {
+    import std.algorithm : min;
+    import std.array : uninitializedArray;
     static trustedRef(T)(ref T buf) @trusted
     {
         return &buf;
@@ -244,6 +247,7 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
     }
     else version(Posix)
     {
+        import core.memory;
         // A few internal configuration parameters {
         enum size_t
             minInitialAlloc = 1024 * 4,
@@ -350,14 +354,16 @@ enforce(chomp(readText("deleteme")) == "abc");
 
 S readText(S = string)(in char[] name) @safe if (isSomeString!S)
 {
+    import std.utf : validate;
     static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
     auto result = trustedCast(read(name));
-    std.utf.validate(result);
+    validate(result);
     return result;
 }
 
 @safe unittest
 {
+    import std.string;
     write(deleteme, "abc\n");
     scope(exit) { assert(exists(deleteme)); remove(deleteme); }
     enforce(chomp(readText(deleteme)) == "abc");
@@ -599,6 +605,8 @@ void getTimes(in char[] name,
 
 unittest
 {
+    import std.stdio : writefln;
+
     auto currTime = Clock.currTime();
 
     write(deleteme, "a");
@@ -622,6 +630,7 @@ unittest
 
     version(fullFileTests)
     {
+        import core.thread;
         enum sleepTime = dur!"seconds"(2);
         Thread.sleep(sleepTime);
 
@@ -685,6 +694,7 @@ else version(Windows) void getTimesWin(in char[] name,
 
 version(Windows) unittest
 {
+    import std.stdio : writefln;
     auto currTime = Clock.currTime();
 
     write(deleteme, "a");
@@ -716,6 +726,7 @@ version(Windows) unittest
 
     version(fullFileTests)
     {
+        import core.thread;
         Thread.sleep(dur!"seconds"(2));
 
         currTime = Clock.currTime();
@@ -820,6 +831,7 @@ void setTimes(in char[] name,
 
 unittest
 {
+    import std.stdio : File;
     string newdir = deleteme ~ r".dir";
     string dir = newdir ~ r"/a/b/c";
     string file = dir ~ "/file";
@@ -1740,6 +1752,7 @@ else version(Posix) string readLink(C)(const(C)[] link) @safe
 
 version(Posix) @safe unittest
 {
+    import std.string;
     foreach(file; [system_directory, system_file])
     {
         if(file.exists)
@@ -1762,6 +1775,7 @@ version(Posix) @safe unittest
  */
 version(Windows) string getcwd()
 {
+    import std.utf : toUTF8;
     /* GetCurrentDirectory's return value:
         1. function succeeds: the number of characters that are written to
     the buffer, not including the terminating null character.
@@ -2057,6 +2071,7 @@ else version(Windows)
 {
     struct DirEntry
     {
+        import std.utf : toUTF8;
     public:
         alias name this;
 
@@ -2082,8 +2097,8 @@ else version(Windows)
             import core.stdc.wchar_ : wcslen;
 
             size_t clength = wcslen(fd.cFileName.ptr);
-            _name = std.utf.toUTF8(fd.cFileName[0 .. clength]);
-            _name = buildPath(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
+            _name = toUTF8(fd.cFileName[0 .. clength]);
+            _name = buildPath(path, toUTF8(fd.cFileName[0 .. clength]));
             _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
@@ -2635,6 +2650,7 @@ enum SpanMode
 
 private struct DirIteratorImpl
 {
+    import std.array : Appender, appender;
     SpanMode _mode;
     // Whether we should follow symlinked directories while iterating.
     // It also indicates whether we should avoid functions which call
@@ -2912,12 +2928,15 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 
 unittest
 {
+    import std.algorithm;
+    import std.range;
+    import std.process;
     version(Android)
         string testdir = deleteme; // This has to be an absolute path when
                                    // called from a shared library on Android,
                                    // ie an apk
     else
-        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(getpid()); // needs to be relative
+        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID()); // needs to be relative
     mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
     write(buildPath(testdir, "somefile"), null);
@@ -2997,6 +3016,7 @@ foreach(d; dFiles)
 auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
+    import std.algorithm : filter;
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
     return filter!f(DirIterator(path, mode, followSymlink));
 }
@@ -3011,6 +3031,8 @@ DirEntry dirEntry(in char[] name)
 //Test dirEntry with a directory.
 unittest
 {
+    import core.thread;
+    import std.stdio : writefln;
     auto before = Clock.currTime();
     Thread.sleep(dur!"seconds"(2));
     immutable path = deleteme ~ "_dir";
@@ -3061,6 +3083,8 @@ unittest
 //Test dirEntry with a file.
 unittest
 {
+    import core.thread;
+    import std.stdio : writefln;
     auto before = Clock.currTime();
     Thread.sleep(dur!"seconds"(2));
     immutable path = deleteme ~ "_file";
@@ -3111,6 +3135,8 @@ unittest
 //Test dirEntry with a symlink to a directory.
 version(linux) unittest
 {
+    import core.thread;
+    import std.stdio : writefln;
     auto before = Clock.currTime();
     Thread.sleep(dur!"seconds"(2));
     immutable orig = deleteme ~ "_dir";
@@ -3156,6 +3182,8 @@ version(linux) unittest
 //Test dirEntry with a symlink to a file.
 version(linux) unittest
 {
+    import core.thread;
+    import std.stdio : writefln;
     auto before = Clock.currTime();
     Thread.sleep(dur!"seconds"(2));
     immutable orig = deleteme ~ "_file";
@@ -3219,6 +3247,9 @@ a file name to prevent accidental changes to result in incorrect behavior.
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
 {
+    import std.stdio : File;
+    import std.format : formattedRead;
+    import std.array : appender;
     typeof(return) result;
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
@@ -3284,6 +3315,7 @@ string tempDir() @trusted
     {
         version(Windows)
         {
+            import std.utf : toUTF8;
             // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992(v=vs.85).aspx
             wchar[MAX_PATH + 2] buf;
             DWORD len = GetTempPathW(buf.length, buf.ptr);
@@ -3291,6 +3323,7 @@ string tempDir() @trusted
         }
         else version(Posix)
         {
+            import std.process : environment;
             // This function looks through the list of alternative directories
             // and returns the first one which exists and is a directory.
             static string findExistingDir(T...)(lazy T alternatives)
