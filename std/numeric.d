@@ -632,6 +632,7 @@ public:
 
 unittest
 {
+    import std.typetuple;
     alias FPTypes =
         TypeTuple!(
             CustomFloat!(5, 10),
