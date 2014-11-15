@@ -23,7 +23,9 @@ module std.conv;
 
 public import std.ascii : LetterCase;
 
-import std.exception, std.range, std.traits, std.typetuple;
+import std.range.constraints;
+import std.traits;
+import std.typetuple;
 
 /* ************* Exceptions *************** */
 
@@ -98,6 +100,7 @@ private
         if (isSomeString!T)
     {
         import std.format : FormatSpec, formatValue;
+        import std.array : appender;
 
         auto w = appender!T();
         FormatSpec!(ElementEncodingType!T) f;
@@ -314,6 +317,7 @@ template to(T)
 // Tests for issue 8729: do NOT skip leading WS
 @safe pure unittest
 {
+    import std.exception;
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assertThrown!ConvException(to!T(" 0"));
@@ -353,11 +357,13 @@ T toImpl(T, S)(S value)
     // Conversion from integer to integer, and changing its sign
     static if (isUnsignedInt!S && isSignedInt!T && S.sizeof == T.sizeof)
     {   // unsigned to signed & same size
+        import std.exception : enforce;
         enforce(value <= cast(S)T.max,
                 new ConvOverflowException("Conversion positive overflow"));
     }
     else static if (isSignedInt!S && isUnsignedInt!T)
     {   // signed to unsigned
+        import std.exception : enforce;
         enforce(0 <= value,
                 new ConvOverflowException("Conversion negative overflow"));
     }
@@ -382,6 +388,7 @@ T toImpl(T, S)(S value)
 // Tests for issue 6377
 @safe pure unittest
 {
+    import std.exception;
     // Conversion between same size
     foreach (S; TypeTuple!(byte, short, int, long))
     {
@@ -693,6 +700,7 @@ T toImpl(T, S)(S value)
 
 @safe pure unittest
 {
+    import std.exception;
     // Testing object conversions
     class A {}
     class B : A {}
@@ -706,6 +714,8 @@ T toImpl(T, S)(S value)
 // Unittest for 6288
 @safe pure unittest
 {
+    import std.exception;
+
     alias Identity(T)      =              T;
     alias toConst(T)       =        const T;
     alias toShared(T)      =       shared T;
@@ -821,6 +831,7 @@ T toImpl(T, S)(S value)
     }
     else static if (isExactSomeString!S)
     {
+        import std.array : appender;
         // other string-to-string
         //Use Appender directly instead of toStr, which also uses a formatedWrite
         auto w = appender!T();
@@ -835,6 +846,7 @@ T toImpl(T, S)(S value)
     else static if (is(S == void[]) || is(S == const(void)[]) || is(S == immutable(void)[]))
     {
         import core.stdc.string : memcpy;
+        import std.exception : enforce;
         // Converting void array to string
         alias Char = Unqual!(ElementEncodingType!T);
         auto raw = cast(const(ubyte)[]) value;
@@ -876,6 +888,7 @@ T toImpl(T, S)(S value)
         }
 
         import std.format : FormatSpec, formatValue;
+        import std.array : appender;
 
         //Default case, delegate to format
         //Note: we don't call toStr directly, to avoid duplicate work.
@@ -924,6 +937,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 
 @safe pure unittest
 {
+    import std.exception;
     void dg()
     {
         // string to string conversion
@@ -1022,6 +1036,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 
 @safe pure nothrow unittest
 {
+    import std.exception;
     // Conversion representing integer values with string
 
     foreach (Int; TypeTuple!(ubyte, ushort, uint, ulong))
@@ -1311,6 +1326,8 @@ T toImpl(T, S)(S value)
 
 @safe pure unittest
 {
+    import std.exception;
+
     dchar a = ' ';
     assert(to!char(a) == ' ');
     a = 300;
@@ -1334,6 +1351,8 @@ T toImpl(T, S)(S value)
 
 unittest
 {
+    import std.exception;
+
     // Narrowing conversions from enum -> integral should be allowed, but they
     // should throw at runtime if the enum value doesn't fit in the target
     // type.
@@ -1377,6 +1396,7 @@ T toImpl(T, S)(S value)
     static if (isStaticArray!T)
     {
         import std.string : format;
+        import std.exception : enforce;
         auto res = to!(E[])(value);
         enforce!ConvException(T.length == res.length,
             format("Length mismatch when converting to static array: %s vs %s", T.length, res.length));
@@ -1384,6 +1404,7 @@ T toImpl(T, S)(S value)
     }
     else
     {
+        import std.array : appender;
         auto w = appender!(E[])();
         w.reserve(value.length);
         foreach (i, ref e; value)
@@ -1396,6 +1417,8 @@ T toImpl(T, S)(S value)
 
 @safe pure unittest
 {
+    import std.exception;
+
     // array to array conversions
     uint[] a = ([ 1u, 2, 3 ]).dup;
     auto b = to!(float[])(a);
@@ -1480,6 +1503,7 @@ T toImpl(T, S)(S value)
 }
 @safe /*pure */unittest // Bugzilla 8705, from doc
 {
+    import std.exception;
     int[string][double[int[]]] a;
     auto b = to!(short[wstring][string[double[]]])(a);
     a = [null:["hello":int.max]];
@@ -1752,6 +1776,7 @@ T toImpl(T, S)(S value)
 
 @safe pure unittest
 {
+    import std.exception;
     enum En8143 : int { A = 10, B = 20, C = 30, D = 20 }
     enum En8143[][] m3 = to!(En8143[][])([[10, 30], [30, 10]]);
     static assert(m3 == [[En8143.A, En8143.C], [En8143.C, En8143.A]]);
@@ -1794,6 +1819,7 @@ template roundTo(Target)
 
 unittest
 {
+    import std.exception;
     assert(roundTo!int(3.14) == 3);
     assert(roundTo!int(3.49) == 3);
     assert(roundTo!int(3.5) == 4);
@@ -1865,6 +1891,7 @@ Lerr:
 
 unittest
 {
+    import std.exception;
     import std.algorithm : equal;
     struct InputString
     {
@@ -2074,6 +2101,7 @@ Lerr:
 
 @safe pure unittest
 {
+    import std.exception;
     // parsing error check
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
@@ -2148,6 +2176,7 @@ Lerr:
 
 @safe pure unittest
 {
+    import std.exception;
     assertCTFEable!({ string s =  "1234abc"; assert(parse! int(s) ==  1234 && s == "abc"); });
     assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
     assertCTFEable!({ string s =  "1234abc"; assert(parse!uint(s) ==  1234 && s == "abc"); });
@@ -2247,6 +2276,7 @@ Lerr:
 
 @safe pure unittest // bugzilla 7302
 {
+    import std.range : cycle;
     auto r = cycle("2A!");
     auto u = parse!uint(r, 16);
     assert(u == 42);
@@ -2255,6 +2285,7 @@ Lerr:
 
 @safe pure unittest // bugzilla 13163
 {
+    import std.exception;
     foreach (s; ["fff", "123"])
         assertThrown!ConvOverflowException(s.parse!ubyte(16));
 }
@@ -2290,6 +2321,8 @@ Target parse(Target, Source)(ref Source s)
 
 unittest
 {
+    import std.exception;
+
     enum EB : bool { a = true, b = false, c = a }
     enum EU { a, b, c }
     enum EI { a = -1, b = 0, c = 1 }
@@ -2322,8 +2355,8 @@ Target parse(Target, Source)(ref Source p)
         isFloatingPoint!Target && !is(Target == enum))
 {
     import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
-
-    static import core.stdc.math/* : HUGE_VAL*/;
+    import std.exception : enforce;
+    import core.stdc.math : HUGE_VAL;
 
     static immutable real[14] negtab =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -2714,7 +2747,7 @@ Target parse(Target, Source)(ref Source p)
         }
     }
   L6: // if overflow occurred
-    enforce(ldval != core.stdc.math.HUGE_VAL, new ConvException("Range error"));
+    enforce(ldval != HUGE_VAL, new ConvException("Range error"));
 
   L1:
     return (sign) ? -ldval : ldval;
@@ -2722,6 +2755,7 @@ Target parse(Target, Source)(ref Source p)
 
 unittest
 {
+    import std.exception;
     import std.math : isNaN, fabs;
 
     // Compare reals with given precision
@@ -2931,6 +2965,8 @@ unittest
 
 @safe pure unittest
 {
+    import std.exception;
+ 
     // Bugzilla 4959
     {
         auto s = "0 ";
@@ -3023,6 +3059,8 @@ Target parse(Target, Source)(ref Source s)
 */
 @safe pure unittest
 {
+    import std.exception;
+
     assert (to!bool("TruE") == true);
     assert (to!bool("faLse"d) == false);
     assertThrown!ConvException(to!bool("maybe"));
@@ -3062,6 +3100,8 @@ Target parse(Target, Source)(ref Source s)
 
 @safe pure unittest
 {
+    import std.exception;
+
     alias NullType = typeof(null);
     auto s1 = "null";
     assert(parse!NullType(s1) is null);
@@ -3176,6 +3216,8 @@ unittest
 
 @safe pure unittest
 {
+    import std.exception;
+
     //Check proper failure
     auto s = "[ 1 , 2 , 3 ]";
     foreach (i ; 0..s.length-1)
@@ -3266,6 +3308,8 @@ Lfewerr:
 
 @safe pure unittest
 {
+    import std.exception;
+
     auto s1 = "[1,2,3,4]";
     auto sa1 = parse!(int[4])(s1);
     assert(sa1 == [1,2,3,4]);
@@ -3340,6 +3384,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
 @safe pure unittest
 {
+    import std.exception;
+
     //Check proper failure
     auto s = "[1:10, 2:20, 3:30]";
     foreach (i ; 0 .. s.length-1)
@@ -3445,6 +3491,8 @@ private dchar parseEscape(Source)(ref Source s)
 
 @safe pure unittest
 {
+    import std.exception;
+
     string[] ss = [
         `hello!`,  //Not an escape
         `\`,       //Premature termination
@@ -3467,6 +3515,7 @@ Target parseElement(Target, Source)(ref Source s)
     if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
         isExactSomeString!Target)
 {
+    import std.array : appender;
     auto result = appender!Target();
 
     // parse array of chars
@@ -4890,6 +4939,7 @@ unittest
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
     import std.string : format;
+    import std.exception : enforce;
     enforce!ConvException(chunk.length >= typeSize,
         format("emplace: Chunk size too small: %s < %s size = %s",
         chunk.length, typeName, typeSize));
@@ -5046,6 +5096,7 @@ void toTextRange(T, W)(T value, W writer)
 
 unittest
 {
+    import std.array : appender;
     auto result = appender!(char[])();
     toTextRange(-1, result);
     assert(result.data == "-1");
