@@ -4349,6 +4349,11 @@ mixin template Proxy(alias a)
     {
         alias opDollar = a.opDollar;
     }
+
+    hash_t toHash() const nothrow @trusted
+    {
+        return typeid(typeof(a)).getHash(cast(const void*)&a);
+    }
 }
 unittest
 {
@@ -4757,6 +4762,64 @@ unittest // Issue 12596
     TD x = TD(1);
     TD y = TD(x);
     assert(x == y);
+}
+
+unittest // about toHash
+{
+    import std.typecons;
+    {
+        alias TD = Typedef!int;
+        int[TD] td;
+        td[TD(1)] = 1;
+        assert(td[TD(1)] == 1);
+    }
+
+    {
+        alias TD = Typedef!(int[]);
+        int[TD] td;
+        td[TD([1,2,3,4])] = 2;
+        assert(td[TD([1,2,3,4])] == 2);
+    }
+
+    {
+        alias TD = Typedef!(int[][]);
+        int[TD] td;
+        td[TD([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])] = 3;
+        assert(td[TD([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])] == 3);
+    }
+
+    {
+        struct MyStruct{ int x; }
+        alias TD = Typedef!MyStruct;
+        int[TD] td;
+        td[TD(MyStruct(10))] = 4;
+        assert(TD(MyStruct(20)) !in td);
+        assert(td[TD(MyStruct(10))] == 4);
+    }
+
+    {
+        static struct MyStruct2
+        {
+            int x;
+            hash_t toHash() const { return x; }
+            bool opEquals(ref const MyStruct2 r) const { return r.x == x; }
+        }
+
+        alias TD = Typedef!MyStruct2;
+        int[TD] td;
+        td[TD(MyStruct2(50))] = 5;
+        assert(td[TD(MyStruct2(50))] == 5);
+    }
+
+    {
+        class MyClass{}
+        alias TD = Typedef!MyClass;
+        int[TD] td;
+        auto c = new MyClass;
+        td[TD(c)] = 6;
+        assert(TD(new MyClass) !in td);
+        assert(td[TD(c)] == 6);
+    }
 }
 
 /**
