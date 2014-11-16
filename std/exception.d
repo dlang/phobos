@@ -83,13 +83,9 @@ void assertNotThrown(T : Throwable = Exception, E)
     }
     catch (T t)
     {
-        import std.array : empty;
-        import std.format : format;
-        immutable message = msg.empty ? t.msg : msg;
-        immutable tail = message.empty ? "." : ": " ~ message;
-        throw new AssertError(format("assertNotThrown failed: %s was thrown%s",
-                                     T.stringof, tail),
-                              file, line, t);
+        immutable message = msg.length == 0 ? t.msg : msg;
+        immutable tail = message.length == 0 ? "." : ": " ~ message;
+        throw new AssertError("assertNotThrown failed: " ~ T.stringof ~ " was thrown" ~ tail, file, line, t);
     }
 }
 ///
@@ -231,10 +227,8 @@ void assertThrown(T : Throwable = Exception, E)
         expression();
     catch (T)
         return;
-    import std.array : empty;
-    import std.format : format;
-    throw new AssertError(format("assertThrown failed: No %s was thrown%s%s",
-                                 T.stringof, msg.empty ? "." : ": ", msg),
+    throw new AssertError("assertThrown failed: No " ~ T.stringof ~ " was thrown"
+                                 ~ (msg.length == 0 ? "." : ": ") ~ msg,
                           file, line);
 }
 ///
@@ -1432,7 +1426,7 @@ class ErrnoException : Exception
         {
             auto s = core.stdc.string.strerror(errno);
         }
-        super(msg~" ("~s[0..s.strlen].idup~")", file, line);
+        super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
     }
 }
 
@@ -1500,7 +1494,7 @@ class ErrnoException : Exception
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
     try
     {
         return expression();
@@ -1516,7 +1510,7 @@ CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 ex
 CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, scope T2 delegate(E) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
     try
     {
         return expression();
@@ -1532,7 +1526,7 @@ CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, sc
 CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate(Exception) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
     try
     {
         return expression();
