@@ -55,6 +55,7 @@
  *           $(LREF CommonType)
  *           $(LREF ImplicitConversionTargets)
  *           $(LREF CopyTypeQualifiers)
+ *           $(LREF CopyConstness)
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
@@ -6015,6 +6016,79 @@ unittest
     static assert(is(CopyTypeQualifiers!(shared inout       real, int) == shared inout       int));
     static assert(is(CopyTypeQualifiers!(shared inout const real, int) == shared inout const int));
     static assert(is(CopyTypeQualifiers!(         immutable real, int) ==          immutable int));
+}
+
+/**
+Returns the type of `Target` with the "constness" of `Source`. A type's $(BOLD constness)
+refers to whether it is `const`, `immutable`, or `inout`. If `source` has no constness, the
+returned type will be the same as `Target`.
+*/
+template CopyConstness(FromType, ToType)
+{
+    alias Unshared(T) = T;
+    alias Unshared(T: shared U, U) = U;
+
+    alias CopyConstness = Unshared!(CopyTypeQualifiers!(FromType, ToType));
+}
+
+///
+unittest
+{
+    const(int) i;
+    CopyConstness!(typeof(i), float) f;
+    assert( is(typeof(f) == const float));
+
+    CopyConstness!(char, uint) u;
+    assert( is(typeof(u) == uint));
+
+    //The 'shared' qualifier will not be copied
+    assert(!is(CopyConstness!(shared bool, int) == shared int));
+
+    //But the constness will be
+    assert( is(CopyConstness!(shared const real, double) == const double));
+
+    //Careful, const(int)[] is a mutable array of const(int)
+    alias MutT = CopyConstness!(const(int)[], int);
+    assert(!is(MutT == const(int)));
+
+    //Okay, const(int[]) applies to array and contained ints
+    alias CstT = CopyConstness!(const(int[]), int);
+    assert( is(CstT == const(int)));
+}
+
+unittest
+{
+    struct Test
+    {
+        void method1() {}
+        void method2() const {}
+        void method3() immutable {}
+    }
+
+    assert(is(CopyConstness!(typeof(Test.method1), real) == real));
+
+    assert(is(CopyConstness!(typeof(Test.method2), byte) == const(byte)));
+
+    assert(is(CopyConstness!(typeof(Test.method3), string) == immutable(string)));
+}
+
+unittest
+{
+    assert(is(CopyConstness!(inout(int)[], int[]) == int[]));
+    assert(is(CopyConstness!(inout(int[]), int[]) == inout(int[])));
+}
+
+unittest
+{
+    static assert(is(CopyConstness!(                   int, real) ==             real));
+    static assert(is(CopyConstness!(const              int, real) ==       const real));
+    static assert(is(CopyConstness!(inout              int, real) ==       inout real));
+    static assert(is(CopyConstness!(inout const        int, real) == inout const real));
+    static assert(is(CopyConstness!(shared             int, real) ==             real));
+    static assert(is(CopyConstness!(shared const       int, real) ==       const real));
+    static assert(is(CopyConstness!(shared inout       int, real) == inout       real));
+    static assert(is(CopyConstness!(shared inout const int, real) == inout const real));
+    static assert(is(CopyConstness!(immutable          int, real) ==   immutable real));
 }
 
 /**
