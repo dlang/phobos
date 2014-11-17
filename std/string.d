@@ -264,7 +264,7 @@ pure nothrow unittest
 /**
    Flag indicating whether a search is case-sensitive.
 */
-alias CaseSensitive = Flag!"CaseSensitive";
+alias CaseSensitive = Flag!"caseSensitive";
 
 /++
     Returns the index of the first occurrence of $(D c) in $(D s). If $(D c)
@@ -1893,7 +1893,7 @@ S capitalize(S)(S s) @trusted pure
     If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
     is included in the strings returned.
   +/
-alias KeepTerminator = Flag!"KeepTerminator";
+alias KeepTerminator = Flag!"keepTerminator";
 /// ditto
 S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pure
     if (isSomeString!S)

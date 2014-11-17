@@ -27,6 +27,12 @@ import std.range.constraints;
 import std.traits;
 import std.typetuple;
 
+private string convFormat(Char, Args...)(in Char[] fmt, Args args)
+{
+    import std.string : format;
+    return std.string.format(fmt, args);
+}
+
 /* ************* Exceptions *************** */
 
 /**
@@ -1395,11 +1401,10 @@ T toImpl(T, S)(S value)
 
     static if (isStaticArray!T)
     {
-        import std.string : format;
         import std.exception : enforce;
         auto res = to!(E[])(value);
         enforce!ConvException(T.length == res.length,
-            format("Length mismatch when converting to static array: %s vs %s", T.length, res.length));
+            convFormat("Length mismatch when converting to static array: %s vs %s", T.length, res.length));
         return res[0 .. T.length];
     }
     else
@@ -1770,8 +1775,7 @@ T toImpl(T, S)(S value)
         if (Member == value)
             return Member;
     }
-    import std.string : format;
-    throw new ConvException(format("Value (%s) does not match any member value of enum '%s'", value, T.stringof));
+    throw new ConvException(convFormat("Value (%s) does not match any member value of enum '%s'", value, T.stringof));
 }
 
 @safe pure unittest
@@ -3896,7 +3900,7 @@ private template emplaceImpl(T)
     ref UT emplaceImpl()(ref UT chunk)
     {
         static assert (is(typeof({static T i;})),
-            format("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
+            convFormat("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
 
         return emplaceInitializer(chunk);
     }
@@ -3905,7 +3909,7 @@ private template emplaceImpl(T)
     ref UT emplaceImpl(Arg)(ref UT chunk, auto ref Arg arg)
     {
         static assert(is(typeof({T t = arg;})),
-            format("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
+            convFormat("%s cannot be emplaced from a %s.", T.stringof, Arg.stringof));
 
         static if (isStaticArray!T)
         {
@@ -3976,7 +3980,7 @@ private template emplaceImpl(T)
                         .emplaceImpl!E(chunk[i], arg);
             }
             else
-                static assert(0, format("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
+                static assert(0, convFormat("Sorry, this implementation doesn't know how to emplace a %s with a %s", T.stringof, Arg.stringof));
 
             return chunk;
         }
@@ -4042,11 +4046,11 @@ private template emplaceImpl(T)
         {
             //We can't emplace. Try to diagnose a disabled postblit.
             static assert(!(Args.length == 1 && is(Args[0] : T)),
-                format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
+                convFormat("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
 
             //We can't emplace.
             static assert(false,
-                format("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
+                convFormat("%s cannot be emplaced from %s.", T.stringof, Args[].stringof));
         }
 
         return chunk;
@@ -4069,7 +4073,7 @@ private deprecated("Using static opCall for emplace is deprecated. Plase use emp
 ref T emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
 {
     static assert (is(typeof({T t = T.opCall(args);})),
-        format("%s.opCall does not return adequate data for construction.", T.stringof));
+        convFormat("%s.opCall does not return adequate data for construction.", T.stringof));
     return emplaceImpl!T(chunk, chunk.opCall(args));
 }
 
@@ -4938,13 +4942,12 @@ unittest
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
-    import std.string : format;
     import std.exception : enforce;
     enforce!ConvException(chunk.length >= typeSize,
-        format("emplace: Chunk size too small: %s < %s size = %s",
+        convFormat("emplace: Chunk size too small: %s < %s size = %s",
         chunk.length, typeName, typeSize));
     enforce!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
-        format("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
+        convFormat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
         chunk.ptr, typeAlignment, typeName));
 }
 
