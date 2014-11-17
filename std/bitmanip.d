@@ -14,6 +14,7 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
            Jonathan M Davis,
            Alex Rønne Petersen,
            Damian Ziemba
+           Amaury SECHET
 Source: $(PHOBOSSRC std/_bitmanip.d)
 */
 /*
@@ -159,6 +160,50 @@ private template createFields(string store, size_t offset, Ts...)
     }
 }
 
+private ulong getBitsForAlign(ulong a)
+{
+    ulong bits = 0;
+    while ((a & 0x01) == 0)
+    {
+        bits++;
+        a >>= 1;
+    }
+
+    assert(a == 1, "alignment is not a power of 2");
+    return bits;
+}
+
+private template createReferenceAccessor(string store, T, ulong bits, string name)
+{
+    enum mask = (1UL << bits) - 1;
+    // getter
+    enum result = "@property "~T.stringof~" "~name~"() @trusted pure nothrow @nogc const { auto result = "
+        ~ "("~store~" & "~myToString(~mask)~");"
+        ~ " return cast("~T.stringof~") cast(void*) result;}\n"
+    // setter
+        ~"@property void "~name~"("~T.stringof~" v) @trusted pure nothrow @nogc { "
+        ~"assert(((cast(typeof("~store~")) cast(void*) v) & "~myToString(mask)~`) == 0, "Value not properly aligned for '`~name~`'"); `
+        ~store~" = cast(typeof("~store~"))"
+        ~" (("~store~" & (cast(typeof("~store~")) "~myToString(mask)~"))"
+        ~" | ((cast(typeof("~store~")) cast(void*) v) & (cast(typeof("~store~")) "~myToString(~mask)~")));}\n";
+}
+
+private template sizeOfBitField(T...)
+{
+    static if(T.length < 2)
+        enum sizeOfBitField = 0;
+    else
+        enum sizeOfBitField = T[2] + sizeOfBitField!(T[3 .. $]);
+}
+
+private template createTaggedReference(string store, T, ulong a, string name, Ts...)
+{
+	static assert(sizeOfBitField!Ts <= getBitsForAlign(a), "Fields must fit in the bits know to be zero because of alignment.");
+    enum result
+        = createReferenceAccessor!(store, T, sizeOfBitField!Ts, name).result
+        ~ createFields!(store, 0, Ts, size_t, "", T.sizeof * 8 - sizeOfBitField!Ts).result;
+}
+
 /**
 Allows creating bit fields inside $(D_PARAM struct)s and $(D_PARAM
 class)es.
@@ -209,6 +254,73 @@ bool), followed by unsigned types, followed by signed types.
 template bitfields(T...)
 {
     enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
+}
+
+/**
+This string mixin generator allows one to create tagged pointers inside $(D_PARAM struct)s and $(D_PARAM class)es.
+
+A tagged pointer uses the bits known to be zero in a normal pointer or class reference to store extra information.
+For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
+One can store a 2-bit integer there.
+
+
+Example:
+
+----
+struct A
+{
+    int a;
+    mixin(taggedPointer!(
+        uint*, "x",
+        bool, "b1", 1,
+        bool, "b2", 1));
+}
+A obj;
+obj.x = new int;
+obj.b1 = true;
+obj.b2 = false;
+----
+
+The example above creates a tagged pointer in the struct A. The pointer is of type
+$(D uint*) as specified by the first argument, and is named x, as specified by the second
+argument.
+
+Following arguments works the same way as $(D bitfield)'s. The bitfield must fit into the
+bits known to be zero because of the pointer alignement.
+*/
+
+template taggedPointer(T : T*, string name, Ts...) {
+    enum taggedPointer = createTaggedReference!(createStoreName!(T, name, 0, Ts), T*, T.alignof, name, Ts).result;
+}
+
+/**
+This string mixin generator allows one to create tagged class reference inside $(D_PARAM struct)s and $(D_PARAM class)es.
+
+A tagged class reference uses the bits known to be zero in a normal class reference to store extra information.
+For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
+One can store a 2-bit integer there.
+
+Example:
+
+----
+struct A
+{
+    int a;
+    mixin(taggedClassRef!(
+        Object, "o",
+        uint, "i", 2));
+}
+A obj;
+obj.o = new Object();
+obj.i = 3;
+----
+
+The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
+as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
+*/
+
+template taggedClassRef(T, string name, Ts...) if(is(T == class)) {
+    enum taggedClassRef = createTaggedReference!(createStoreName!(T, name, 0, Ts), T, 8, name, Ts).result;
 }
 
 @safe pure nothrow @nogc
@@ -276,6 +388,59 @@ unittest
     t2b.d = -5; assert(t2b.d == -5);
     t2b.e = -5; assert(t2b.e == -5);
     t4b.a = -5; assert(t4b.a == -5L);
+}
+
+unittest
+{
+    struct Test5
+    {
+        mixin(taggedPointer!(
+            int*, "a",
+            uint, "b", 2));
+    }
+
+    Test5 t5;
+    t5.a = null;
+    t5.b = 3;
+    assert(t5.a is null);
+    assert(t5.b == 3);
+
+    int myint = 42;
+    t5.a = &myint;
+    assert(t5.a is &myint);
+    assert(t5.b == 3);
+
+    struct Test6
+    {
+        mixin(taggedClassRef!(
+            Object, "o",
+            bool, "b", 1));
+    }
+
+    Test6 t6;
+    t6.o = null;
+    t6.b = false;
+    assert(t6.o is null);
+    assert(t6.b == false);
+
+    auto o = new Object();
+    t6.o = o;
+    t6.b = true;
+    assert(t6.o is o);
+    assert(t6.b == true);
+}
+
+unittest
+{
+    static assert(!__traits(compiles,
+        taggedPointer!(
+            int*, "a",
+            uint, "b", 3)));
+
+    static assert(!__traits(compiles,
+        taggedClassRef!(
+            Object, "a",
+            uint, "b", 4)));
 }
 
 unittest
