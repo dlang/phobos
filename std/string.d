@@ -97,6 +97,7 @@ void trustedPrintf(in char* str) @trusted nothrow @nogc
 }
 
 public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
+import std.typecons : Flag;
 
 import std.range.constraints;
 import std.traits;
@@ -263,7 +264,7 @@ pure nothrow unittest
 /**
    Flag indicating whether a search is case-sensitive.
 */
-enum CaseSensitive { no, yes }
+alias CaseSensitive = Flag!"CaseSensitive";
 
 /++
     Returns the index of the first occurrence of $(D c) in $(D s). If $(D c)
@@ -1892,7 +1893,7 @@ S capitalize(S)(S s) @trusted pure
     If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
     is included in the strings returned.
   +/
-enum KeepTerminator : bool { no, yes }
+alias KeepTerminator = Flag!"KeepTerminator";
 /// ditto
 S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pure
     if (isSomeString!S)

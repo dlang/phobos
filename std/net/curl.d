@@ -899,7 +899,7 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
     }
 }
 
-alias KeepTerminator = std.string.KeepTerminator;
+alias KeepTerminator = Flag!"KeepTerminator";
 /++
 struct ByLineBuffer(Char)
 {
