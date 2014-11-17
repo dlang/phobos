@@ -797,7 +797,8 @@ unittest{
 */
 Complex!real expi(real y)  @trusted pure nothrow @nogc
 {
-    return Complex!real(std.math.cos(y), std.math.sin(y));
+    import std.math : cos, sin;
+    return Complex!real(cos(y), sin(y));
 }
 
 unittest
