@@ -63,13 +63,13 @@ to Unicode and ASCII are found in $(LINK2 std_uni.html, std.uni) and
 $(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
 wider generality than just strings can be found in std.algorithm and std.range.
 
-Functions 
+Functions
 $(XREF uni, icmp)
 $(XREF uni, toLower)
 $(XREF uni, toLowerInPlace)
 $(XREF uni, toUpper)
 $(XREF uni, toUpperInPlace)
-are publicly imported. 
+are publicly imported.
 
 Macros: WIKI = Phobos/StdString
 MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
@@ -2307,7 +2307,7 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
     else
     {
         import std.utf : decode;
-    
+
         auto orig = str;
         size_t index = 0;
 
@@ -3616,7 +3616,7 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
 S squeeze(S)(S s, in S pattern = null)
 {
     import std.utf : encode;
- 
+
     Unqual!(typeof(s[0]))[] r;
     dchar lastc;
     size_t lasti;
