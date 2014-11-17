@@ -5183,8 +5183,11 @@ bool) makes the flag's meaning visible in calls. Each yes/no flag has
 its own type, which makes confusions and mix-ups impossible.
 
 Example:
+
+Code calling $(D getLine) (usually far away from its definition) can't be
+understood without looking at the documentation, even by users familiar with
+the API:
 ----
-// Before
 string getLine(bool keepTerminator)
 {
     ...
@@ -5192,24 +5195,25 @@ string getLine(bool keepTerminator)
     ...
 }
 ...
-// Code calling getLine (usually far away from its definition) can't
-// be understood without looking at the documentation, even by users
-// familiar with the API. Assuming the reverse meaning
-// (i.e. "ignoreTerminator") and inserting the wrong code compiles and
-// runs with erroneous results.
 auto line = getLine(false);
+----
 
-// After
-string getLine(Flag!"KeepTerminator" keepTerminator)
+Assuming the reverse meaning (i.e. "ignoreTerminator") and inserting the wrong
+code compiles and runs with erroneous results.
+
+After replacing the boolean parameter with an instantiation of $(D Flag), code
+calling $(D getLine) can be easily read and understood even by people not
+fluent with the API:
+
+----
+string getLine(Flag!"keepTerminator" keepTerminator)
 {
     ...
     if (keepTerminator) ...
     ...
 }
 ...
-// Code calling getLine can be easily read and understood even by
-// people not fluent with the API.
-auto line = getLine(Flag!"KeepTerminator".yes);
+auto line = getLine(Flag!"keepTerminator".yes);
 ----
 
 Passing categorical data by means of unstructured $(D bool)
@@ -5219,9 +5223,19 @@ kinds of coupling. The author argues citing several studies that
 coupling has a negative effect on code quality. $(D Flag) offers a
 simple structuring method for passing yes/no flags to APIs.
 
-As a perk, the flag's name may be any string and as such can include
-characters not normally allowed in identifiers, such as
-spaces and dashes.
+An alias can be used to reduce the verbosity of the flag's type:
+----
+alias KeepTerminator = Flag!"keepTerminator";
+string getline(KeepTerminator keepTerminator)
+{
+    ...
+    if (keepTerminator) ...
+    ...
+}
+...
+// Code calling getLine can now refer to flag values using the shorter name:
+auto line = getLine(KeepTerminator.yes);
+----
  */
 template Flag(string name) {
     ///
