@@ -1503,8 +1503,6 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 // Partially unrolled binary search using Shar's method
 //============================================================================
 
-private import std.math : pow;
-
 string genUnrolledSwitchSearch(size_t size)
 {
     import std.conv : to;
