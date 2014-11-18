@@ -771,7 +771,7 @@ template adjoin(F...) if (F.length > 1)
         }
         else
         {
-            import std.string : format;
+            import std.format : format;
             import std.range : iota;
             return mixin (q{tuple(%(F[%s](a)%|, %))}.format(iota(0, F.length)));
         }

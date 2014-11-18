@@ -84,7 +84,7 @@ void assertNotThrown(T : Throwable = Exception, E)
     catch (T t)
     {
         import std.array : empty;
-        import std.string : format;
+        import std.format : format;
         immutable message = msg.empty ? t.msg : msg;
         immutable tail = message.empty ? "." : ": " ~ message;
         throw new AssertError(format("assertNotThrown failed: %s was thrown%s",
@@ -232,7 +232,7 @@ void assertThrown(T : Throwable = Exception, E)
     catch (T)
         return;
     import std.array : empty;
-    import std.string : format;
+    import std.format : format;
     throw new AssertError(format("assertThrown failed: No %s was thrown%s%s",
                                  T.stringof, msg.empty ? "." : ": ", msg),
                           file, line);
@@ -923,7 +923,7 @@ T assumeWontThrow(T)(lazy T expr,
     }
     catch(Exception e)
     {
-        import std.array : empty;
+        import std.range.constraints : empty;
         immutable tail = msg.empty ? "." : ": " ~ msg;
         throw new AssertError("assumeWontThrow failed: Expression did throw" ~
                               tail, file, line);

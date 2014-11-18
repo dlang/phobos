@@ -400,7 +400,7 @@ template Tuple(Specs...)
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
-            import std.string : format;
+            import std.format : format;
 
             decl ~= format("alias _%s = Identity!(field[%s]);", i, i);
             if (name.length != 0)
@@ -2561,7 +2561,7 @@ private static:
     // overloaded function with the name.
     template INTERNAL_FUNCINFO_ID(string name, size_t i)
     {
-        import std.string : format;
+        import std.format : format;
 
         enum string INTERNAL_FUNCINFO_ID = format("F_%s_%s", name, i);
     }
@@ -2840,7 +2840,7 @@ private static:
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
-    import std.string;
+    import std.format;
 
     enum CONSTRUCTOR_NAME = "__ctor";
 
@@ -2928,7 +2928,7 @@ private static:
     public string generateFunction(
             string myFuncInfo, string name, func... )() @property
     {
-        import std.string : format;
+        import std.format : format;
 
         enum isCtor = (name == CONSTRUCTOR_NAME);
 
