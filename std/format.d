@@ -3196,21 +3196,32 @@ unittest
 }
 
 /**
-   Delegates are formatted by 'Attributes ReturnType delegate(Parameters)'
+   Delegates are formatted by 'ReturnType delegate(Parameters) FunctionAttributes'
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == delegate) && !is(T == enum) && !hasToString!(T, Char))
+void formatValue(Writer, T, Char)(Writer w, scope T, ref FormatSpec!Char f)
+    if (isDelegate!T)
 {
-    alias FA = FunctionAttribute;
-    if (functionAttributes!T & FA.pure_)    formatValue(w, "pure ", f);
-    if (functionAttributes!T & FA.nothrow_) formatValue(w, "nothrow ", f);
-    if (functionAttributes!T & FA.ref_)     formatValue(w, "ref ", f);
-    if (functionAttributes!T & FA.property) formatValue(w, "@property ", f);
-    if (functionAttributes!T & FA.trusted)  formatValue(w, "@trusted ", f);
-    if (functionAttributes!T & FA.safe)     formatValue(w, "@safe ", f);
-    formatValue(w, ReturnType!T.stringof, f);
-    formatValue(w, " delegate", f);
-    formatValue(w, ParameterTypeTuple!T.stringof, f);
+    formatValue(w, T.stringof, f);
+}
+
+///
+unittest
+{
+    import std.conv : to;
+
+    int i;
+    
+    int foo(short k) @nogc
+    {
+        return i + k;
+    }
+    
+    int delegate(short) @nogc bar() nothrow
+    {
+        return &foo; 
+    }
+
+    assert(to!string(&bar) == "int delegate(short) @nogc delegate() nothrow");
 }
 
 unittest
