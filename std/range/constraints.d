@@ -187,13 +187,13 @@ private void doPut(R, E)(ref R r, auto ref E e)
     static if (usingPut)
     {
         static assert(is(typeof(r.put(e))),
-            format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
+            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
         r.put(e);
     }
     else static if (isInputRange!R)
     {
         static assert(is(typeof(r.front = e)),
-            format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
+            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
         r.front = e;
         r.popFront();
     }
@@ -203,9 +203,8 @@ private void doPut(R, E)(ref R r, auto ref E e)
     }
     else
     {
-        import std.string;
         static assert (false,
-            format("Cannot nativaly put a %s into a %s.", E.stringof, R.stringof));
+            "Cannot nativaly put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
@@ -321,8 +320,7 @@ void put(R, E)(ref R r, E e)
     }
     else
     {
-        import std.string;
-        static assert (false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
+        static assert (false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
@@ -371,8 +369,7 @@ if (isSomeChar!E)
     }
     else
     {
-        import std.string;
-        static assert (false, format("Cannot put a %s into a %s.", E.stringof, R.stringof));
+        static assert (false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
