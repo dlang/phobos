@@ -2936,7 +2936,7 @@ unittest
                                    // called from a shared library on Android,
                                    // ie an apk
     else
-        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID()); // needs to be relative
+        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID); // needs to be relative
     mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
     write(buildPath(testdir, "somefile"), null);
