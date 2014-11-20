@@ -2238,7 +2238,7 @@ struct HTTP
         _perform();
     }
 
-    private CurlCode _perform(bool throwOnError = true)
+    private CurlCode _perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         p.status.reset();
 
@@ -2945,7 +2945,7 @@ struct FTP
         _perform();
     }
 
-    private CurlCode _perform(bool throwOnError = true)
+    private CurlCode _perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3556,6 +3556,10 @@ class CurlTimeoutException : CurlException
 /// Equal to $(ECXREF curl, CURLcode)
 alias CurlCode = CURLcode;
 
+import std.typecons : Flag;
+/// Flag to specify whether or not an exception is thrown on error.
+alias ThrowOnError = Flag!"throwOnError";
+
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
@@ -3788,14 +3792,24 @@ struct Curl
     /**
        perform the curl request by doing the HTTP,FTP etc. as it has
        been setup beforehand.
+
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(bool throwOnError = true)
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         throwOnStopped();
         CurlCode code = curl_easy_perform(this.handle);
         if (throwOnError)
             _check(code);
         return code;
+    }
+
+    // Explicitly undocumented. It will be removed in November 2015.
+    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
+    CurlCode perform(bool throwOnError)
+    {
+        return perform(cast(ThrowOnError)throwOnError);
     }
 
     /**
