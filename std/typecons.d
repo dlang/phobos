@@ -2288,7 +2288,7 @@ unittest
     {
         interface I_1 { real test(); }
         auto o = new BlackHole!I_1;
-        assert(o.test().isNaN); // NaN
+        assert(o.test().isNaN()); // NaN
     }
     // doc example
     {

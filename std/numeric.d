@@ -861,7 +861,7 @@ Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax
     )
 in
 {
-    assert(!ax.isNaN && !bx.isNaN, "Limits must not be NaN");
+    assert(!ax.isNaN() && !bx.isNaN(), "Limits must not be NaN");
     assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
 }
 body
@@ -890,7 +890,7 @@ body
     void bracket(T c)
     {
         R fc = f(c);
-        if (fc == 0 || fc.isNaN) // Exact solution, or NaN
+        if (fc == 0 || fc.isNaN()) // Exact solution, or NaN
         {
             a = c;
             fa = fc;
@@ -975,13 +975,13 @@ body
     }
 
     // On the first iteration we take a secant step:
-    if (fa == 0 || fa.isNaN)
+    if (fa == 0 || fa.isNaN())
     {
         done = true;
         b = a;
         fb = fa;
     }
-    else if (fb == 0 || fb.isNaN)
+    else if (fb == 0 || fb.isNaN())
     {
         done = true;
         a = b;
@@ -1029,7 +1029,7 @@ whileloop:
                 immutable d32 = (d31 - q21) * fd / (fd - fa);
                 immutable q33 = (d32 - q22) * fa / (fe - fa);
                 c = a + (q31 + q32 + q33);
-                if (c.isNaN || (c <= a) || (c >= b))
+                if (c.isNaN() || (c <= a) || (c >= b))
                 {
                     // DAC: If the interpolation predicts a or b, it's
                     // probable that it's the actual root. Only allow this if
@@ -1053,7 +1053,7 @@ whileloop:
                 // DAC: Alefeld doesn't explain why the number of newton steps
                 // should vary.
                 c = newtonQuadratic(distinct ? 3 : 2);
-                if (c.isNaN || (c <= a) || (c >= b))
+                if (c.isNaN() || (c <= a) || (c >= b))
                 {
                     // Failure, try a secant step:
                     c = secant_interpolate(a, b, fa, fb);
@@ -1086,7 +1086,7 @@ whileloop:
 
         // DAC: If the secant predicts a value equal to an endpoint, it's
         // probably false.
-        if (c==a || c==b || c.isNaN || fabs(c - u) > (b - a) / 2)
+        if (c==a || c==b || c.isNaN() || fabs(c - u) > (b - a) / 2)
         {
             if ((a-b) == a || (b-a) == b)
             {
@@ -1180,7 +1180,7 @@ nothrow unittest
     {
         //numCalls=0;
         //++numProblems;
-        assert(!x1.isNaN && !x2.isNaN);
+        assert(!x1.isNaN() && !x2.isNaN());
         assert(signbit(x1) != signbit(x2));
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
           (real lo, real hi) { return false; });
@@ -1671,11 +1671,11 @@ unittest
     assert(sumOfLog2s([0.0L]) == -real.infinity);
     assert(sumOfLog2s([-0.0L]) == -real.infinity);
     assert(sumOfLog2s([2.0L]) == 1);
-    assert(sumOfLog2s([-2.0L]).isNaN);
-    assert(sumOfLog2s([real.nan]).isNaN);
-    assert(sumOfLog2s([-real.nan]).isNaN);
+    assert(sumOfLog2s([-2.0L]).isNaN());
+    assert(sumOfLog2s([real.nan]).isNaN());
+    assert(sumOfLog2s([-real.nan]).isNaN());
     assert(sumOfLog2s([real.infinity]) == real.infinity);
-    assert(sumOfLog2s([-real.infinity]).isNaN);
+    assert(sumOfLog2s([-real.infinity]).isNaN());
     assert(sumOfLog2s([ 0.25, 0.25, 0.25, 0.125 ]) == -9);
 }
 

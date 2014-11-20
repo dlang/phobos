@@ -4779,9 +4779,9 @@ unittest //http://forum.dlang.org/thread/nxbdgtdlmwscocbiypjs@forum.dlang.org
         invariant()
         {
             if(j == 0)
-                assert(a.i.isNaN, "why is 'j' zero?? and i is not NaN?");
+                assert(a.i.isNaN(), "why is 'j' zero?? and i is not NaN?");
             else
-                assert(!a.i.isNaN);
+                assert(!a.i.isNaN());
         }
         SysTime when; // comment this line avoid the breakage
         int j;
