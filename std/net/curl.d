@@ -2232,13 +2232,11 @@ struct HTTP
        After the HTTP client has been setup and possibly assigned callbacks the
        $(D perform()) method will start performing the request towards the
        specified server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(ThrowOnError throwOnError = ThrowOnError.yes)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         p.status.reset();
 
@@ -2939,13 +2937,11 @@ struct FTP
        After a FTP client has been setup and possibly assigned callbacks the $(D
        perform()) method will start performing the actual communication with the
        server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(ThrowOnError throwOnError = ThrowOnError.yes)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3273,10 +3269,12 @@ struct SMTP
 
     /**
         Performs the request as configured.
+        Params:
+        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    void perform()
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
-        p.curl.perform();
+        return p.curl.perform(throwOnError);
     }
 
     /// The URL to specify the location of the resource.
@@ -4410,7 +4408,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     CurlCode code;
     try
     {
-        code = client._perform(false);
+        code = client.perform(ThrowOnError.no);
     }
     catch (Exception ex)
     {
