@@ -43,8 +43,9 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            Kenji Hara
  */
 module std.typecons;
-import std.traits, std.range;
-import std.typetuple : TypeTuple, allSatisfy;
+import std.traits;
+// FIXME
+import std.typetuple; // : TypeTuple, allSatisfy;
 
 debug(Unique) import std.stdio;
 
@@ -660,45 +661,40 @@ template Tuple(Specs...)
         /**
          * Converts to string.
          */
-        static if (allSatisfy!(isPrintable, Types))
-        string toString()
+        void toString()(scope void delegate(const(char)[]) sink)
         {
             enum header = typeof(this).stringof ~ "(",
                  footer = ")",
                  separator = ", ";
-
-            Appender!string w;
-            w.put(header);
-            foreach (i, Unused; Types)
+            sink(header);
+            foreach (i, Type; Types)
             {
                 static if (i > 0)
                 {
-                    w.put(separator);
+                    sink(separator);
                 }
                 // TODO: Change this once toString() works for shared objects.
-                static if (is(Unused == class) && is(Unused == shared))
-                    formattedWrite(w, "%s", field[i].stringof);
+                static if (is(Type == class) && is(typeof(Type.init) == shared))
+                {
+                    sink(Type.stringof);
+                }
                 else
                 {
                     import std.format : FormatSpec, formatElement;
-
-                    FormatSpec!char f;  // "%s"
-                    formatElement(w, field[i], f);
+                    FormatSpec!char f;
+                    formatElement(sink, field[i], f);
                 }
             }
-            w.put(footer);
-            return w.data;
+            sink(footer);
+        }
+
+        string toString()()
+        {
+            import std.conv : to;
+            return this.to!string;
         }
     }
 }
-
-private enum bool isPrintable(T) =
-    is(typeof({
-        import std.format : formattedWrite;
-
-        Appender!string w;
-        formattedWrite(w, "%s", T.init);
-    }));
 
 /**
     Return a copy of a Tuple with its fields in reverse order.
@@ -755,6 +751,7 @@ private template ReverseTupleSpecs(T...)
 
 unittest
 {
+    import std.conv;
     {
         Tuple!(int, "a", int, "b") nosh;
         static assert(nosh.length == 2);
@@ -779,16 +776,23 @@ unittest
         nosh[0] = 5;
         nosh[1] = 0;
         assert(nosh[0] == 5 && nosh[1] == 0);
-        assert(nosh.toString() == "Tuple!(int, real)(5, 0)", nosh.toString());
+        assert(nosh.to!string == "Tuple!(int, real)(5, 0)", nosh.to!string);
         Tuple!(int, int) yessh;
         nosh = yessh;
+    }
+    {
+        class A {}
+        Tuple!(int, shared A) nosh;
+        nosh[0] = 5;
+        assert(nosh[0] == 5 && nosh[1] is null);
+        assert(nosh.to!string == "Tuple!(int, shared(A))(5, shared(A))");
     }
     {
         Tuple!(int, string) t;
         t[0] = 10;
         t[1] = "str";
         assert(t[0] == 10 && t[1] == "str");
-        assert(t.toString() == `Tuple!(int, string)(10, "str")`, t.toString());
+        assert(t.to!string == `Tuple!(int, string)(10, "str")`, t.to!string);
     }
     {
         Tuple!(int, "a", double, "b") x;
@@ -1212,6 +1216,7 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArra
     {
         static if (isDynamicArray!T)
         {
+            import std.range.constraints : ElementEncodingType;
             alias Rebindable = const(ElementEncodingType!T)[];
         }
         else
@@ -1478,18 +1483,21 @@ Constructor initializing $(D this) with $(D value).
         _isNull = false;
     }
 
-    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    template toString()
     {
-        import std.format: formatValue;
-
-        if (isNull)
+        import std.format : FormatSpec, formatValue;
+        // Needs to be a template because of DMD @@BUG@@ 13737.
+        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
         {
-            sink.formatValue("Nullable.null", fmt);
-        }
-        else
-        {
-            sink.formatValue(_value, fmt);
-        }
+            if (isNull())
+            {
+                sink.formatValue("Nullable.null", fmt);
+            }
+            else
+            {
+                sink.formatValue(_value, fmt);
+            }
+        }        
     }
 
 /**
@@ -1774,6 +1782,7 @@ unittest
 unittest
 {
     import std.conv: to;
+    import std.array;
 
     // Bugzilla 10915
     Appender!string buffer;
@@ -1827,18 +1836,21 @@ Constructor initializing $(D this) with $(D value).
         _value = value;
     }
 
-    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    template toString()
     {
-        import std.format: formatValue;
-
-        if (isNull)
+        import std.format : FormatSpec, formatValue;
+        // Needs to be a template because of DMD @@BUG@@ 13737.
+        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
         {
-            sink.formatValue("Nullable.null", fmt);
-        }
-        else
-        {
-            sink.formatValue(_value, fmt);
-        }
+            if (isNull())
+            {
+                sink.formatValue("Nullable.null", fmt);
+            }
+            else
+            {
+                sink.formatValue(_value, fmt);
+            }
+        }        
     }
 
 /**
@@ -2040,18 +2052,21 @@ Constructor binding $(D this) with $(D value).
         _value = value;
     }
 
-    void toString(scope void delegate(const(char)[]) sink, std.format.FormatSpec!char fmt)
+    template toString()
     {
-        import std.format: formatValue;
-
-        if (isNull)
+        import std.format : FormatSpec, formatValue;
+        // Needs to be a template because of DMD @@BUG@@ 13737.
+        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
         {
-            sink.formatValue("Nullable.null", fmt);
-        }
-        else
-        {
-            sink.formatValue(*_value, fmt);
-        }
+            if (isNull())
+            {
+                sink.formatValue("Nullable.null", fmt);
+            }
+            else
+            {
+                sink.formatValue(*_value, fmt);
+            }
+        }        
     }
 
 /**
