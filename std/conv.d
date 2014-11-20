@@ -478,7 +478,7 @@ T toImpl(T, S)(ref S s)
 }
 
 /**
-When source type supports member template function opCast, is is used.
+When source type supports member template function opCast, it is used.
 */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
