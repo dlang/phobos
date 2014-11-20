@@ -1482,7 +1482,7 @@ Constructor initializing $(D this) with $(D value).
     {
         import std.format: formatValue;
 
-        if (isNull())
+        if (isNull)
         {
             sink.formatValue("Nullable.null", fmt);
         }
@@ -1831,7 +1831,7 @@ Constructor initializing $(D this) with $(D value).
     {
         import std.format: formatValue;
 
-        if (isNull())
+        if (isNull)
         {
             sink.formatValue("Nullable.null", fmt);
         }
@@ -2044,7 +2044,7 @@ Constructor binding $(D this) with $(D value).
     {
         import std.format: formatValue;
 
-        if (isNull())
+        if (isNull)
         {
             sink.formatValue("Nullable.null", fmt);
         }

@@ -1349,9 +1349,9 @@ private:
         {
             scope(exit) notified = false;
 
-            for( auto limit = Clock.currSystemTick() + period;
+            for( auto limit = Clock.currSystemTick + period;
                  !notified && !period.isNegative;
-                 period = limit - Clock.currSystemTick() )
+                 period = limit - Clock.currSystemTick )
             {
                 yield();
             }
@@ -1392,7 +1392,7 @@ private:
             auto t = m_fibers[m_pos].call( false );
             if (t !is null && !(cast(OwnerTerminated) t))
                 throw t;
-            if( m_fibers[m_pos].state() == Fiber.State.TERM )
+            if( m_fibers[m_pos].state == Fiber.State.TERM )
             {
                 if( m_pos >= (m_fibers = remove( m_fibers, m_pos )).length )
                     m_pos = 0;
@@ -1578,7 +1578,7 @@ class Generator(T) :
      */
     final bool empty() @property
     {
-        return m_value is null || state() == State.TERM;
+        return m_value is null || state == State.TERM;
     }
 
 
@@ -1615,7 +1615,7 @@ private:
 void yield(T)(ref T value)
 {
     Generator!T cur = cast(Generator!T) Fiber.getThis();
-    if (cur !is null && cur.state() == Fiber.State.EXEC)
+    if (cur !is null && cur.state == Fiber.State.EXEC)
     {
         cur.m_value = &value;
         return Fiber.yield();
@@ -1968,7 +1968,7 @@ private
 
             static if( timedWait )
             {
-                auto limit = Clock.currSystemTick() + period;
+                auto limit = Clock.currSystemTick + period;
             }
 
             while( true )
@@ -2016,7 +2016,7 @@ private
                     {
                         static if( timedWait )
                         {
-                            period = limit - Clock.currSystemTick();
+                            period = limit - Clock.currSystemTick;
                         }
                         continue;
                     }
