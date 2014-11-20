@@ -2443,7 +2443,7 @@ Variable names are chosen to match those in Vitter's paper.
             size_t qu1 = 1 + _available - _toSelect;
             double x, y1;
 
-            assert(!_Vprime.isNaN);
+            assert(!_Vprime.isNaN());
 
             while (true)
             {
