@@ -954,7 +954,7 @@ public:
         {
             string tryUseType(string tp)
             {
-                import std.string : format;
+                import std.format : format;
                 return q{
                     static if (allowed!%1$s && T.allowed!%1$s)
                         if (convertsTo!%1$s && other.convertsTo!%1$s)

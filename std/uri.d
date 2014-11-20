@@ -397,19 +397,19 @@ size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
      *  https://
      *  www.
      */
-    import std.string : icmp;
+    import std.uni : icmp;
 
     size_t i;
 
     if (s.length <= 4)
         return -1;
 
-    if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0) {
+    if (s.length > 7 && icmp(s[0 .. 7], "http://") == 0) {
         i = 7;
     }
     else
     {
-        if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
+        if (s.length > 8 && icmp(s[0 .. 8], "https://") == 0)
             i = 8;
         else
             return -1;

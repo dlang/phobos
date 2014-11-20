@@ -4187,7 +4187,7 @@ unittest
         void next(ref char[] buf)
         {
             file.readln(buf);
-            import std.string;
+            import std.string : chomp;
             buf = chomp(buf);
         }
 

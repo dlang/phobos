@@ -534,7 +534,7 @@ unittest
 private template fqnType(T,
     bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
-    import std.string : format;
+    import std.format : format;
 
     // Convenience tags
     enum {
@@ -740,7 +740,7 @@ private template fqnType(T,
 
 unittest
 {
-    import std.string : format;
+    import std.format : format;
     alias fqn = fullyQualifiedName;
 
     // Verify those 2 are the same for simple case

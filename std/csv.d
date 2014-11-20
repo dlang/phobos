@@ -1209,7 +1209,7 @@ public:
     void popFront()
     {
         static if (ErrorLevel == Malformed.throwException)
-            import std.string : format;
+            import std.format : format;
         // Skip last of record when header is depleted.
         if (_popCount.ptr && _popCount.empty)
             while(!recordEnd())

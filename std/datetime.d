@@ -496,7 +496,7 @@ private:
   +/
 struct SysTime
 {
-    import std.string : format;
+    import std.format : format;
     import std.typecons : Rebindable;
 
 public:
@@ -8835,7 +8835,7 @@ private:
  +/
 struct Date
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -13079,7 +13079,7 @@ private:
 +/
 struct TimeOfDay
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -14294,7 +14294,7 @@ private:
   +/
 struct DateTime
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -17298,7 +17298,7 @@ private:
   +/
 struct Interval(TP)
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -20198,7 +20198,7 @@ unittest
   +/
 struct PosInfInterval(TP)
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -22385,7 +22385,7 @@ unittest
   +/
 struct NegInfInterval(TP)
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -25087,7 +25087,7 @@ unittest
 struct IntervalRange(TP, Direction dir)
     if(isTimePoint!TP && dir != Direction.both)
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -25585,7 +25585,7 @@ unittest
 struct PosInfIntervalRange(TP)
     if(isTimePoint!TP)
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -25873,7 +25873,7 @@ unittest
 struct NegInfIntervalRange(TP)
     if(isTimePoint!TP)
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -26136,7 +26136,7 @@ unittest
   +/
 abstract class TimeZone
 {
-    import std.string : format;
+    import std.format : format;
 public:
 
     /++
@@ -26277,7 +26277,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             return PosixTimeZone.getTimeZone(name);
         else version(Windows)
         {
-            import std.string : format;
+            import std.format : format;
             if(auto windowsTZName = tzDatabaseNameToWindowsTZName(name))
             {
                 try
@@ -27258,7 +27258,7 @@ private:
   +/
 final class UTC : TimeZone
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -27392,7 +27392,7 @@ private:
   +/
 final class SimpleTimeZone : TimeZone
 {
-    import std.string : format;
+    import std.format : format;
 
 public:
 
@@ -28718,7 +28718,7 @@ else version(Windows)
 {
     final class WindowsTimeZone : TimeZone
     {
-        import std.string : format;
+        import std.format : format;
         import std.conv : to;
         import std.algorithm : sort;
         import std.array : appender;
@@ -29547,7 +29547,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
 
 version(Windows) unittest
 {
-    import std.string : format;
+    import std.format : format;
     foreach(tzName; TimeZone.getInstalledTZNames())
         assert(tzDatabaseNameToWindowsTZName(tzName) !is null, format("TZName which failed: %s", tzName));
 }
@@ -29692,7 +29692,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
 
 version(Windows) unittest
 {
-    import std.string : format;
+    import std.format : format;
     foreach(tzName; WindowsTimeZone.getInstalledTZNames())
         assert(windowsTZNameToTZDatabaseName(tzName) !is null, format("TZName which failed: %s", tzName));
 }
@@ -30205,7 +30205,7 @@ static bool yearIsLeapYear(int year) @safe pure nothrow
 
 unittest
 {
-    import std.string : format;
+    import std.format : format;
     foreach(year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
                    2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
     {
@@ -31471,7 +31471,7 @@ bool validTimeUnits(string[] units...) @safe pure nothrow
  +/
 int cmpTimeUnits(string lhs, string rhs) @safe pure
 {
-    import std.string : format;
+    import std.format : format;
     import std.algorithm : countUntil;
 
     auto tstrings = timeStrings;
@@ -31643,7 +31643,7 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
        units == "minutes" ||
        units == "seconds")
 {
-    import std.string : format;
+    import std.format : format;
 
     static if(units == "months")
     {
@@ -31685,7 +31685,7 @@ void enforceValid(string units)
                  (int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) @safe pure
     if(units == "days")
 {
-    import std.string : format;
+    import std.format : format;
     if(!valid!"days"(year, month, day))
         throw new DateTimeException(format("%s is not a valid day in %s in %s", day, month, year), file, line);
 }
@@ -32317,7 +32317,7 @@ unittest
   +/
 string monthToString(Month month) @safe pure
 {
-    import std.string : format;
+    import std.format : format;
     assert(month >= Month.jan && month <= Month.dec, format("Invalid month: %s", month));
     return _monthNames[month - Month.jan];
 }
@@ -32350,7 +32350,7 @@ unittest
   +/
 Month monthFromString(string monthStr) @safe pure
 {
-    import std.string : format;
+    import std.format : format;
     switch(monthStr)
     {
         case "Jan":
@@ -32456,7 +32456,7 @@ unittest
   +/
 static string fracSecsToISOString(int hnsecs) @safe pure nothrow
 {
-    import std.string : format;
+    import std.format : format;
     assert(hnsecs >= 0);
 
     try

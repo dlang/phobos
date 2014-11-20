@@ -2350,7 +2350,7 @@ public:
     unittest
     {
         import std.conv : to;
-        import std.string : format;
+        import std.format : format;
         import std.uni : unicode;
 
         assert(unicode.Cyrillic.to!string ==
@@ -2369,7 +2369,7 @@ public:
     unittest
     {
         import std.exception : assertThrown;
-        import std.string : format;
+        import std.format : format;
         assertThrown!FormatException(format("%a", unicode.ASCII));
     }
 
@@ -2538,7 +2538,7 @@ public:
     string toSourceCode(string funcName="")
     {
         import std.array : array;
-        import std.string : format;
+        import std.format : format;
         import std.algorithm : countUntil;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
@@ -4740,7 +4740,7 @@ template Utf8Matcher()
     // from 3 primitives: tab!(size), lookup and Sizes
     mixin template DefMatcher()
     {
-        import std.string : format;
+        import std.format : format;
         enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
         alias UniSizes = Erase!(1, Sizes);
 
@@ -5376,7 +5376,7 @@ package auto units(C)(C[] s)
 unittest
 {
     import std.exception : collectException;
-    import std.string : format;
+    import std.format : format;
     import std.algorithm;
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
@@ -8496,7 +8496,7 @@ S toLower(S)(S s) @trusted pure
 
 @trusted unittest //@@@BUG std.format is not @safe
 {
-    import std.string : format;
+    import std.format : format;
     foreach(ch; 0..0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
@@ -8603,7 +8603,7 @@ dchar toUpper(dchar c)
 
 @trusted unittest
 {
-    import std.string : format;
+    import std.format : format;
     foreach(ch; 0..0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');
@@ -8671,7 +8671,7 @@ unittest
 {
     static void doTest(C)(const(C)[] s, const(C)[] trueUp, const(C)[] trueLow)
     {
-        import std.string : format;
+        import std.format : format;
         string diff = "src: %( %x %)\nres: %( %x %)\ntru: %( %x %)";
         auto low = s.toLower() , up = s.toUpper();
         auto lowInp = s.dup, upInp = s.dup;
@@ -8834,7 +8834,7 @@ bool isSymbol(dchar c)
 
 unittest
 {
-    import std.string;
+    import std.format : format;
     assert(isSymbol('\u0024'));
     assert(isSymbol('\u002B'));
     assert(isSymbol('\u005E'));
@@ -8881,7 +8881,7 @@ bool isGraphical(dchar c)
 unittest
 {
     auto set = unicode("Graphical");
-    import std.string;
+    import std.format : format;
     foreach(ch; set.byCodepoint)
         assert(isGraphical(ch), format("%4x", ch));
     foreach(ch; 0..0x4000)

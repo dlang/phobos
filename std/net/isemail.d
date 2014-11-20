@@ -1301,7 +1301,7 @@ struct EmailStatus
     /// Returns a textual representation of the email status
     string toString ()
     {
-        import std.string;
+        import std.format : format;
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid,
             localPart, domainPart, statusCode);
     }
