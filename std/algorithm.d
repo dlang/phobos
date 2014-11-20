@@ -4194,6 +4194,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 unittest
 {
     import std.range.interfaces;
+    import std.range : repeat;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");

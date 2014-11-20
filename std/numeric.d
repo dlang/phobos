@@ -85,6 +85,8 @@ public enum CustomFloatFlags
 // 64-bit version of core.bitop.bsr
 private int bsr64(ulong value)
 {
+    import core.bitop : bsr;
+
     union Ulong
     {
         ulong raw;
