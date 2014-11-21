@@ -1250,7 +1250,7 @@ if (isSomeString!S)
 unittest
 {
     import std.conv : to;
-    import std.string;
+    import std.format;
     import std.typecons;
 
     static auto makeEntry(S)(string l, string[] r)
@@ -2702,7 +2702,7 @@ unittest{
 
 unittest
 {
-    import std.string : format;
+    import std.format : format;
     auto app = appender!(int[])();
     app.put(1);
     app.put(2);

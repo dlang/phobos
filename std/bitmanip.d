@@ -1570,7 +1570,7 @@ public:
     ///
     unittest
     {
-        import std.string : format;
+        import std.format : format;
 
         debug(bitarray) printf("BitArray.toString unittest\n");
         BitArray b;
@@ -1680,7 +1680,7 @@ public:
 
 unittest
 {
-    import std.string : format;
+    import std.format : format;
 
     BitArray b;
 
@@ -3424,7 +3424,7 @@ unittest
 
 unittest
 {
-    import std.string : format;
+    import std.format : format;
     import std.array;
     import std.typetuple;
     foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))

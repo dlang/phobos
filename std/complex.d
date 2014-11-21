@@ -141,7 +141,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         // Formatting with std.string.format specs: the precision and width
         // specifiers apply to both the real and imaginary parts of the
         // complex number.
-        import std.string : format;
+        import std.format : format;
         assert(format("%.2f", c)  == "1.20+3.40i");
         assert(format("%4.1f", c) == " 1.2+ 3.4i");
     }
@@ -866,7 +866,7 @@ unittest
 // Issue 10881: support %f formatting of complex numbers
 unittest
 {
-    import std.string : format;
+    import std.format : format;
 
     auto x = complex(1.2, 3.4);
     assert(format("%.2f", x) == "1.20+3.40i");

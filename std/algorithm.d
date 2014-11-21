@@ -409,7 +409,7 @@ private T* addressOf(T)(ref T val) { return &val; }
 private template algoFormat()
 {
     import std.format : format;
-    alias algoFormat = std.string.format;
+    alias algoFormat = format;
 }
 
 /**
@@ -3119,7 +3119,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 @safe unittest
 {
     import std.internal.test.dummyrange;
-    import std.range;
+    import std.algorithm;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3181,6 +3181,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 }
 @safe unittest
 {
+    import std.algorithm;
     import std.range;
     auto L = retro(iota(1L, 10L));
     auto s = splitter(L, 5L);
@@ -3658,14 +3659,14 @@ if (isSomeChar!C)
         {
             import std.uni : isWhite;
 
-            auto r = find!(std.uni.isWhite)(_s);
+            auto r = find!(isWhite)(_s);
             _frontLength = _s.length - r.length;
         }
 
     public:
         this(C[] s) pure @safe
         {
-            import std.string;
+            import std.string : strip;
             _s = s.strip();
             getFirst();
         }
@@ -3731,7 +3732,7 @@ if (isSomeChar!C)
     lines[1] = "line \ttwo".dup;
     lines[2] = "yah            last   line\ryah".dup;
     foreach (line; lines) {
-       foreach (word; std.array.splitter(std.string.strip(line))) {
+       foreach (word; splitter(strip(line))) {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
             dictionary[to!string(word)] = cast(uint)newID;
@@ -3748,7 +3749,7 @@ if (isSomeChar!C)
 @safe unittest
 {
     import std.conv : text;
-    import std.string : split;
+    import std.array : split;
 
     // Check consistency:
     // All flavors of split should produce the same results
@@ -5624,7 +5625,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 
 @safe unittest
 {
-    import std.string : toUpper;
+    import std.uni : toUpper;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -10383,7 +10384,7 @@ unittest
 unittest
 {
     import std.random : Random, unpredictableSeed, uniform;
-    import std.string : toUpper;
+    import std.uni : toUpper;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");

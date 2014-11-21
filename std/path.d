@@ -2895,12 +2895,14 @@ string expandTilde(string inputPath)
             }
             else
             {
+                import std.string : indexOf;
+
                 assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
                 assert(path[0] == '~');
 
                 // Extract username, searching for path separator.
                 string username;
-                auto last_char = std.string.indexOf(path, dirSeparator[0]);
+                auto last_char = indexOf(path, dirSeparator[0]);
 
                 if (last_char == -1)
                 {

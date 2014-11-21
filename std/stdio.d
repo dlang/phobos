@@ -490,7 +490,7 @@ Throws: $(D ErrnoException) in case of error.
     void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode)
     {
         import std.exception : errnoEnforce;
-        import std.string : format;
+        import std.format : format;
 
         // Create file descriptors from the handles
         version (DIGITAL_MARS_STDIO)
@@ -630,7 +630,7 @@ Throws: $(D ErrnoException) on error.
         scope(exit) _p.handle = null; // nullify the handle anyway
         version (Posix)
         {
-            import std.string : format;
+            import std.format : format;
 
             if (_p.isPopened)
             {

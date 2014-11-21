@@ -646,14 +646,14 @@ unittest
 {
     void test(alias matchFn)()
     {
-        import std.string : toUpper;
+        import std.uni : toUpper;
 
         foreach(i, v; TypeTuple!(string, wstring, dstring))
         {
             auto baz(Cap)(Cap m)
             if (is(Cap == Captures!(Cap.String)))
             {
-                return std.string.toUpper(m.hit);
+                return toUpper(m.hit);
             }
             alias String = v;
             assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r")), to!String("c"))
