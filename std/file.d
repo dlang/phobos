@@ -1888,6 +1888,14 @@ else version (FreeBSD)
 
         return buffer.assumeUnique;
     }
+    else version (Solaris)
+    {
+        import core.sys.posix.unistd : getpid;
+        import std.string : format;
+
+        // Only Solaris 10 and later
+        return readLink(format("/proc/%d/path/a.out", getpid()));
+    }
     else version (Android)
     {
         return readLink("/proc/self/exe");
@@ -2205,13 +2213,21 @@ else version(Posix)
             //of DT_UNKNOWN in case we don't ever actually
             //need the dtype, thus potentially avoiding the
             //cost of calling lstat).
-            if(fd.d_type != DT_UNKNOWN)
+            static if (__traits(compiles, fd.d_type != DT_UNKNOWN))
             {
-                _dType = fd.d_type;
-                _dTypeSet = true;
+                if(fd.d_type != DT_UNKNOWN)
+                {
+                    _dType = fd.d_type;
+                    _dTypeSet = true;
+                }
+                else
+                    _dTypeSet = false;
             }
             else
+            {
+                // e.g. Solaris does not have the d_type member
                 _dTypeSet = false;
+            }
         }
 
         @property string name() const pure nothrow
