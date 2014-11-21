@@ -1489,7 +1489,7 @@ Constructor initializing $(D this) with $(D value).
         // Needs to be a template because of DMD @@BUG@@ 13737.
         void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
         {
-            if (isNull())
+            if (isNull)
             {
                 sink.formatValue("Nullable.null", fmt);
             }
@@ -1497,7 +1497,7 @@ Constructor initializing $(D this) with $(D value).
             {
                 sink.formatValue(_value, fmt);
             }
-        }        
+        }
     }
 
 /**
@@ -1842,7 +1842,7 @@ Constructor initializing $(D this) with $(D value).
         // Needs to be a template because of DMD @@BUG@@ 13737.
         void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
         {
-            if (isNull())
+            if (isNull)
             {
                 sink.formatValue("Nullable.null", fmt);
             }
@@ -1850,7 +1850,7 @@ Constructor initializing $(D this) with $(D value).
             {
                 sink.formatValue(_value, fmt);
             }
-        }        
+        }
     }
 
 /**
@@ -2058,7 +2058,7 @@ Constructor binding $(D this) with $(D value).
         // Needs to be a template because of DMD @@BUG@@ 13737.
         void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
         {
-            if (isNull())
+            if (isNull)
             {
                 sink.formatValue("Nullable.null", fmt);
             }
@@ -2066,7 +2066,7 @@ Constructor binding $(D this) with $(D value).
             {
                 sink.formatValue(*_value, fmt);
             }
-        }        
+        }
     }
 
 /**
@@ -2230,9 +2230,9 @@ unittest
     NullableRef!int nri;
     assert(nri.to!string() == "Nullable.null");
 
-    struct Test 
-    { 
-        string s; 
+    struct Test
+    {
+        string s;
     }
     NullableRef!Test nt = new Test("test");
     assert(nt.to!string() == `Test("test")`);
