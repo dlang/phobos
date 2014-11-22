@@ -2232,13 +2232,11 @@ struct HTTP
        After the HTTP client has been setup and possibly assigned callbacks the
        $(D perform()) method will start performing the request towards the
        specified server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(bool throwOnError = true)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         p.status.reset();
 
@@ -2939,13 +2937,11 @@ struct FTP
        After a FTP client has been setup and possibly assigned callbacks the $(D
        perform()) method will start performing the actual communication with the
        server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(bool throwOnError = true)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3273,10 +3269,12 @@ struct SMTP
 
     /**
         Performs the request as configured.
+        Params:
+        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    void perform()
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
-        p.curl.perform();
+        return p.curl.perform(throwOnError);
     }
 
     /// The URL to specify the location of the resource.
@@ -3556,6 +3554,10 @@ class CurlTimeoutException : CurlException
 /// Equal to $(ECXREF curl, CURLcode)
 alias CurlCode = CURLcode;
 
+import std.typecons : Flag;
+/// Flag to specify whether or not an exception is thrown on error.
+alias ThrowOnError = Flag!"throwOnError";
+
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
@@ -3788,14 +3790,24 @@ struct Curl
     /**
        perform the curl request by doing the HTTP,FTP etc. as it has
        been setup beforehand.
+
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(bool throwOnError = true)
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         throwOnStopped();
         CurlCode code = curl_easy_perform(this.handle);
         if (throwOnError)
             _check(code);
         return code;
+    }
+
+    // Explicitly undocumented. It will be removed in November 2015.
+    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
+    CurlCode perform(bool throwOnError)
+    {
+        return perform(cast(ThrowOnError)throwOnError);
     }
 
     /**
@@ -4396,7 +4408,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     CurlCode code;
     try
     {
-        code = client._perform(false);
+        code = client.perform(ThrowOnError.no);
     }
     catch (Exception ex)
     {
