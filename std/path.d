@@ -887,6 +887,87 @@ unittest
     assert (setExtension("file.ext", "") == "file");
 }
 
+/** Algorithm that returns an InputRange that produces a string containing the _path given
+    by $(D path), but where
+    the extension has been set to $(D ext).
+
+    If the filename already has an extension, it is replaced.   If not, the
+    extension is simply appended to the filename.  Including a leading dot
+    in $(D ext) is optional.
+
+    If the extension is empty, this function produces the equivalent of
+    $(LREF stripExtension) applied to path.
+
+    The algorithm is lazy and does not allocate.
+*/
+auto withExtension(R1, R2)(R1 path, R2 ext)
+    if (isInputRange!R1 && isSomeChar!(ElementType!R1) &&
+        isInputRange!R2 && isSomeChar!(ElementType!R2))
+{
+    path = stripExtension(path);
+
+    if (ext.empty || ext.front() == '.')
+        return chain(path, "", ext);
+    else
+        return chain(path, ".", ext);
+}
+
+///
+unittest
+{
+    import std.algorithm : copy;
+    import std.array : appender;
+
+    auto buf = appender!(char[])();
+
+    "file".withExtension("ext").copy(&buf);
+    assert(buf.data == "file.ext");
+}
+
+unittest
+{
+    import std.internal.scopebuffer;
+    import std.stdio;
+    import std.path;
+    import std.array;
+    import std.algorithm;
+
+    void test(C1,C2)(const(C1)[] file, const(C2)[] ext, string expectedResult)
+    {
+        char[10] tmpbuf = void;
+        auto buf = ScopeBuffer!char(tmpbuf);
+        scope(exit) buf.free();
+
+        buf.length = 0;
+        file.withExtension(ext).copy(&buf);
+        assert(buf[] == expectedResult);
+    }
+
+    auto testData = [
+        ["file", "ext", "file.ext"],
+        ["file", ".ext", "file.ext"],
+        ["file.", ".ext", "file.ext"],
+        ["file.", "ext", "file.ext"],
+        ["file.old", "new", "file.new"],
+        ["file", "", "file"],
+        ["file.exe", "", "file"]
+    ];
+
+    foreach (S1; TypeTuple!(string, wstring, dstring))
+    {
+        foreach (S2; TypeTuple!(string, wstring, dstring))
+        {
+            foreach (testCase; testData)
+            {
+                test(testCase[0].to!S1, testCase[1].to!S2, testCase[2]);
+            }
+        }
+    }
+
+    auto abuf = appender!(char[])();
+    "file".withExtension("ext").copy(&abuf);
+    assert(abuf.data == "file.ext");
+}
 
 
 /** Returns the _path given by $(D path), with the extension given by
