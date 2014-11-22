@@ -124,6 +124,9 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF enumerate)))
         $(TD Iterates a _range with an attached index variable.
     ))
+    $(TR $(TD $(D $(LREF NullSink)))
+        $(TD An output _range that discards the data it receives.
+    ))
 )
 
 Ranges whose elements are sorted afford better efficiency with certain
