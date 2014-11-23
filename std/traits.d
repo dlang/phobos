@@ -55,6 +55,7 @@
  *           $(LREF CommonType)
  *           $(LREF ImplicitConversionTargets)
  *           $(LREF CopyTypeQualifiers)
+ *           $(LREF CopyShared)
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
@@ -6015,6 +6016,70 @@ unittest
     static assert(is(CopyTypeQualifiers!(shared inout       real, int) == shared inout       int));
     static assert(is(CopyTypeQualifiers!(shared inout const real, int) == shared inout const int));
     static assert(is(CopyTypeQualifiers!(         immutable real, int) ==          immutable int));
+}
+
+/**
+Returns the type of `Target` with the "sharedness" of `source`. If `source` is unshared, 
+the returned type will be the same as `Target`.
+*/
+template CopyShared(FromType, ToType)
+{
+    //immutable is implicitly shared
+    static if (is(FromType == shared) || is(FromType == immutable))
+    {
+        alias CopyShared = shared ToType;
+    }
+    else
+    {
+        alias CopyShared = ToType;
+    }
+}
+
+///
+unittest
+{
+    CopyShared!(shared int, float) f;
+    assert( is(typeof(f) == shared float));
+
+    CopyShared!(char, uint) u;
+    assert( is(typeof(u) == uint));
+
+    //immutable is implicitly shared, so this is okay
+    assert( is(CopyShared!(immutable bool, int) == shared int));
+
+    //Careful, shared(int)[] is an unshared array of shared(int)
+    alias UnsT = CopyShared!(shared(int)[], int);
+    assert(!is(UnsT == shared int));
+
+    //Okay, shared(int[]) applies to array and contained ints
+    alias ShdT = CopyShared!(shared(int[]), int);
+    assert( is(ShdT == shared int));
+}
+
+unittest
+{
+    struct Test
+    {
+        void method1() {}
+        void method2() shared {}
+        void method3() inout shared {}
+    }
+
+    assert(is(CopyShared!(typeof(Test.method1), real) == real));
+
+    assert(is(CopyShared!(typeof(Test.method2), byte) == shared byte));
+
+    assert(is(CopyShared!(typeof(Test.method3), long) == shared long));
+}
+
+unittest
+{
+    static assert(is(CopyShared!(                   int, real) ==        real));
+    static assert(is(CopyShared!(shared             int, real) == shared real));
+    static assert(is(CopyShared!(shared       const int, real) == shared real));
+    static assert(is(CopyShared!(shared inout       int, real) == shared real));
+    static assert(is(CopyShared!(shared inout const int, real) == shared real));
+    static assert(is(CopyShared!(         immutable int, real) == shared real));
 }
 
 /**
