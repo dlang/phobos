@@ -152,7 +152,7 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
  */
 module std.range;
 
-public import std.range.constraints;
+public import std.range.primitives;
 public import std.range.interfaces;
 public import std.array;
 public import std.typecons : Flag, Yes, No;

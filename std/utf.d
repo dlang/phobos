@@ -20,7 +20,7 @@
    +/
 module std.utf;
 
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
 import std.typetuple;  // TypeTuple
 

@@ -22,7 +22,7 @@ import std.typecons : Flag;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib,
     core.stdc.string, core.stdc.wchar_;
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 
 /++

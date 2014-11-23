@@ -25,7 +25,7 @@
 module std.net.isemail;
 
 // FIXME
-import std.range.constraints; // : ElementType;
+import std.range.primitives; // : ElementType;
 import std.traits;
 
 /**

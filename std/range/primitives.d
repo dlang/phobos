@@ -111,7 +111,7 @@ Authors: $(WEB erdani.com, Andrei Alexandrescu), David Simcha,
 and Jonathan M Davis. Credit for some of the ideas in building this module goes
 to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 */
-module std.range.constraints;
+module std.range.primitives;
 
 import std.traits;
 

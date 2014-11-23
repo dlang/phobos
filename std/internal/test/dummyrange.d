@@ -6,7 +6,7 @@ module std.internal.test.dummyrange;
 
 import std.typecons;
 import std.typetuple;
-import std.range.constraints;
+import std.range.primitives;
 
 enum RangeType
 {

@@ -24,7 +24,7 @@ import std.conv;
 import std.datetime;
 import std.exception;
 import std.path;
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 import std.typecons;
 import std.typetuple;

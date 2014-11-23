@@ -81,7 +81,7 @@
 module std.csv;
 
 import std.conv;
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 
 /**

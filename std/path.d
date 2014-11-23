@@ -52,7 +52,7 @@ module std.path;
 
 // FIXME
 import std.file; //: getcwd;
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 
 /** String used to separate directory names in a path.  Under

@@ -1,6 +1,6 @@
 module std.container.array;
 
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 
 public import std.container.util;

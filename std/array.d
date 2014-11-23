@@ -17,8 +17,8 @@ import std.typetuple;
 import std.functional;
 static import std.algorithm; // FIXME, remove with alias of splitter
 
-import std.range.constraints;
-public import std.range.constraints : save, empty, popFront, popBack, front, back;
+import std.range.primitives;
+public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the

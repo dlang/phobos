@@ -101,7 +101,7 @@ public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
 import std.typecons : Flag;
 
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 import std.typetuple;
 

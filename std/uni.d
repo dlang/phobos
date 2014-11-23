@@ -652,7 +652,7 @@ module std.uni;
 
 import core.stdc.stdlib;
 import std.traits, std.typetuple;
-import std.range.constraints;
+import std.range.primitives;
 
 
 // debug = std_uni;
