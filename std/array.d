@@ -768,11 +768,12 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         import core.stdc.string;
         import std.conv : emplaceRef;
 
-        auto trustedAllocateArray(size_t n) @trusted nothrow
+        static auto trustedAllocateArray(size_t n) @trusted nothrow
         {
             return uninitializedArray!(T[])(n);
         }
-        void trustedMemcopy(T[] dest, T[] src) @trusted
+
+        static void trustedMemcopy(T[] dest, T[] src) @trusted
         {
             assert(src.length == dest.length);
             if (!__ctfe)
@@ -1377,26 +1378,6 @@ unittest
 }
 
 
-private size_t joinLength(RoR)(ref RoR ror)
-    if(isForwardRange!RoR)
-{
-    size_t ret;
-    foreach(r; ror.save)
-        ret += r.length;
-    return ret;
-}
-
-private size_t joinLength(RoR)(ref RoR ror, size_t sepLength)
-    if(isForwardRange!RoR)
-{
-    size_t ret;
-    foreach(r; ror.save)
-        ret += r.length + sepLength;
-    return ret - sepLength;
-}
-
-private U trustedCast(U, V)(V v) @trusted pure nothrow { return cast(U) v; }
-
 /++
    Concatenates all of the ranges in $(D ror) together into one array using
    $(D sep) as the separator if present.
@@ -1422,31 +1403,33 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     {
         import std.conv : to;
         auto sepArr = to!RetType(sep);
-        scope(exit) sepArr.destroy();
     }
     else static if (!isArray!R)
-    {
         auto sepArr = array(sep);
-        scope(exit) sepArr.destroy();
-    }
     else
         alias sepArr = sep;
 
     static if(isForwardRange!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
-        auto result = uninitializedArray!(RetTypeElement[])(ror.joinLength(sepArr.length));
+        import std.conv : emplaceRef;
+        size_t length;
+        foreach(r; ror.save)
+            length += r.length + sepArr.length;
+        length -= sepArr.length;
+        auto result = uninitializedArray!(RetTypeElement[])(length);
         size_t len;
         foreach(e; ror.front)
-            result[len++] = e;
+            emplaceRef(result[len++], e);
         ror.popFront();
         foreach(r; ror)
         {
             foreach(e; sepArr)
-                result[len++] = e;
+                emplaceRef(result[len++], e);
             foreach(e; r)
-                result[len++] = e;
+                emplaceRef(result[len++], e);
         }
-        assert(len ==  result.length);
+        assert(len == result.length);
+        static U trustedCast(U, V)(V v) @trusted { return cast(U) v; }
         return trustedCast!RetType(result);
     }
     else
@@ -1487,18 +1470,24 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
         }
         else
         {
-            auto result = uninitializedArray!(RetTypeElement[])(ror.joinLength(1));
+            import std.conv : emplaceRef;
+            size_t length;
+            foreach(r; ror.save)
+                length += r.length + 1;
+            length -= 1;
+            auto result = uninitializedArray!(RetTypeElement[])(length);
             size_t len;
             foreach(e; ror.front)
-                result[len++] = e;
+                emplaceRef(result[len++], e);
             ror.popFront();
             foreach(r; ror)
             {
-                result[len++] = sep;
+                emplaceRef(result[len++], sep);
                 foreach(e; r)
-                    result[len++] = e;
+                    emplaceRef(result[len++], e);
             }
-            assert(len ==  result.length);
+            assert(len == result.length);
+            static U trustedCast(U, V)(V v) @trusted { return cast(U) v; }
             return trustedCast!RetType(result);
         }
     }
@@ -1530,12 +1519,17 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 
     static if(isForwardRange!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
-        auto result = uninitializedArray!(RetTypeElement[])(ror.joinLength);
+        import std.conv : emplaceRef;
+        size_t length;
+        foreach(r; ror.save)
+            length += r.length;
+        auto result = uninitializedArray!(RetTypeElement[])(length);
         size_t len;
         foreach(r; ror)
             foreach(e; r)
-                result[len++] = e;
-        assert(len ==  result.length);
+                emplaceRef(result[len++], e);
+        assert(len == result.length);
+        static U trustedCast(U, V)(V v) @trusted { return cast(U) v; }
         return trustedCast!RetType(result);
     }
     else
