@@ -11,7 +11,7 @@ struct SList(T)
 {
     import std.exception : enforce;
     import std.range : Take;
-    import std.range.constraints;
+    import std.range.primitives;
     import std.traits;
 
     private struct Node
@@ -547,7 +547,7 @@ unittest
 
 unittest
 {
-    import std.range.constraints;
+    import std.range.primitives;
     auto s = SList!int(1, 2, 5, 10);
     assert(walkLength(s[]) == 4);
 }
@@ -670,7 +670,7 @@ unittest
 
 unittest
 {
-    import std.range.constraints;
+    import std.range.primitives;
     auto s = SList!int(1, 2, 3, 4, 5);
     auto r = s[];
     popFrontN(r, 3);
@@ -705,7 +705,7 @@ unittest
 
 unittest
 {
-    import std.range.constraints;
+    import std.range.primitives;
     auto lst = SList!int(1, 5, 42, 9);
     assert(!lst.empty);
     assert(lst.front == 1);

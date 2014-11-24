@@ -18,7 +18,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.json;
 
 import std.conv;
-import std.range.constraints;
+import std.range.primitives;
 import std.array;
 import std.traits;
 

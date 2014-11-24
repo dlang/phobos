@@ -27,7 +27,7 @@ module std.bitmanip;
 
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
-import std.range.constraints;
+import std.range.primitives;
 import std.system;
 import std.traits;
 

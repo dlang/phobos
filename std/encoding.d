@@ -52,7 +52,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.encoding;
 
 import std.traits;
-import std.range.constraints;
+import std.range.primitives;
 
 unittest
 {

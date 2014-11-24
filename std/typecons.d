@@ -1216,7 +1216,7 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArra
     {
         static if (isDynamicArray!T)
         {
-            import std.range.constraints : ElementEncodingType;
+            import std.range.primitives : ElementEncodingType;
             alias Rebindable = const(ElementEncodingType!T)[];
         }
         else

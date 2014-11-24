@@ -193,7 +193,7 @@ STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 STD_REGEX_MODULES = $(addprefix std/regex/, package $(addprefix internal/, \
 	generator ir parser backtracking kickstart tests thompson))
 
-STD_RANGE_MODULES = $(addprefix std/range/, package constraints interfaces)
+STD_RANGE_MODULES = $(addprefix std/range/, package primitives interfaces)
 
 STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
 

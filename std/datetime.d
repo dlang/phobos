@@ -111,7 +111,7 @@ import core.exception;
 import core.stdc.time;
 
 import std.exception;
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 // FIXME
 import std.functional; //: unaryFun;

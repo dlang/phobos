@@ -917,7 +917,7 @@ T assumeWontThrow(T)(lazy T expr,
     }
     catch(Exception e)
     {
-        import std.range.constraints : empty;
+        import std.range.primitives : empty;
         immutable tail = msg.empty ? "." : ": " ~ msg;
         throw new AssertError("assumeWontThrow failed: Expression did throw" ~
                               tail, file, line);

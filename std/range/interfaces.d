@@ -65,7 +65,7 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 */
 module std.range.interfaces;
 
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 import std.typetuple;
 

@@ -102,7 +102,7 @@ version (Windows)
     import std.windows.syserror;
 }
 
-import std.range.constraints;
+import std.range.primitives;
 import std.conv;
 import std.exception;
 import std.path;

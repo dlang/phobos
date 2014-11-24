@@ -23,7 +23,7 @@ module std.conv;
 
 public import std.ascii : LetterCase;
 
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 import std.typetuple;
 

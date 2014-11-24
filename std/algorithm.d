@@ -390,7 +390,7 @@ module std.algorithm;
 
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
-import std.range.constraints;
+import std.range.primitives;
 // FIXME
 import std.range; // : SortedRange;
 import std.traits;
@@ -4002,7 +4002,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
 unittest
 {
-    import std.range.constraints;
+    import std.range.primitives;
     import std.range.interfaces;
     // joiner() should work for non-forward ranges too.
     auto r = inputRangeObject(["abc", "def"]);
