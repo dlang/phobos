@@ -4247,27 +4247,90 @@ void func(int n) { }
  */
 mixin template Proxy(alias a)
 {
-    auto ref opEquals(this X, B)(auto ref B b)
+    static if (is(typeof(this) == class))
     {
-        static if (is(immutable B == immutable typeof(this)))
+        override bool opEquals(Object o)
         {
-            import std.algorithm;
-            static assert(startsWith(a.stringof, "this."));
-            return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+            if (auto b = cast(typeof(this))o)
+            {
+                import std.algorithm : startsWith;
+                static assert(startsWith(a.stringof, "this."));
+                return a == mixin("b."~a.stringof[5..$]); // remove "this."
+            }
+            return false;
         }
-        else
-            return a == b;
-    }
 
-    auto ref opCmp(this X, B)(auto ref B b)
-        if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
+        bool opEquals(T)(T b)
+            if (is(typeof(a):T) || is(typeof(a.opEquals(b))) || is(typeof(b.opEquals(a))))
+        {
+            static if (is(typeof(a.opEquals(b))))
+                return a.opEquals(b);
+            else static if (is(typeof(b.opEquals(a))))
+                return b.opEquals(a);
+            else
+                return a == b;
+        }
+
+        override int opCmp(Object o)
+        {
+            if (auto b = cast(typeof(this))o)
+            {
+                import std.algorithm : startsWith;
+                static assert(startsWith(a.stringof, "this."));  // remove "this."
+                return a < mixin("b."~a.stringof[5..$]) ? -1
+                     : a > mixin("b."~a.stringof[5..$]) ? +1 : 0;
+            }
+            static if (is(typeof(a) == class))
+                return a.opCmp(o);
+            else
+                throw new Exception("Attempt to compare a "~typeid(this).toString~" and a "~typeid(o).toString);
+        }
+
+        int opCmp(T)(auto ref const T b)
+            if (is(typeof(a):T) || is(typeof(a.opCmp(b))) || is(typeof(b.opCmp(a))))
+        {
+            static if (is(typeof(a.opCmp(b))))
+                return a.opCmp(b);
+            else static if (is(typeof(b.opCmp(a))))
+                return -b.opCmp(b);
+            else
+                return a < b ? -1 : a > b ? +1 : 0;
+        }
+
+        override hash_t toHash() const nothrow @trusted
+        {
+            return typeid(typeof(a)).getHash(cast(const void*)&a);
+        }
+    }
+    else
     {
-        static if (is(typeof(a.opCmp(b))))
-            return a.opCmp(b);
-        else static if (is(typeof(b.opCmp(a))))
-            return -b.opCmp(a);
-        else
-            return a < b ? -1 : a > b ? +1 : 0;
+        auto ref opEquals(this X, B)(auto ref B b)
+        {
+            static if (is(immutable B == immutable typeof(this)))
+            {
+                import std.algorithm : startsWith;
+                static assert(startsWith(a.stringof, "this."));
+                return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+            }
+            else
+                return a == b;
+        }
+
+        auto ref opCmp(this X, B)(auto ref B b)
+          if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
+        {
+            static if (is(typeof(a.opCmp(b))))
+                return a.opCmp(b);
+            else static if (is(typeof(b.opCmp(a))))
+                return -b.opCmp(a);
+            else
+                return a < b ? -1 : a > b ? +1 : 0;
+        }
+
+        hash_t toHash() const nothrow @trusted
+        {
+            return typeid(typeof(a)).getHash(cast(const void*)&a);
+        }
     }
 
     auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
@@ -4364,12 +4427,8 @@ mixin template Proxy(alias a)
     {
         alias opDollar = a.opDollar;
     }
-
-    hash_t toHash() const nothrow @trusted
-    {
-        return typeid(typeof(a)).getHash(cast(const void*)&a);
-    }
 }
+
 unittest
 {
     static struct MyInt
@@ -4532,6 +4591,120 @@ unittest
     // template member function
     assert(h.tempfunc!int() == 0);
 }
+
+unittest // about Proxy inside a class
+{
+    class MyClass
+    {
+        int payload;
+        mixin Proxy!payload;
+        this(int i){ payload = i; }
+        string opCall(string msg){ return msg; }
+        int pow(int i){ return payload ^^ i; }
+    }
+
+    class MyClass2
+    {
+        MyClass payload;
+        mixin Proxy!payload;
+        this(int i){ payload = new MyClass(i); }
+    }
+
+    class MyClass3
+    {
+        int payload;
+        mixin Proxy!payload;
+        this(int i){ payload = i; }
+    }
+
+    // opEquals
+    Object a = new MyClass(5);
+    Object b = new MyClass(5);
+    Object c = new MyClass2(5);
+    Object d = new MyClass3(5);
+    assert(a == b);
+    assert((cast(MyClass)a) == 5);
+    assert(5 == (cast(MyClass)b));
+    assert(5 == cast(MyClass2)c);
+    assert(a != d);
+
+    assert(c != a);
+    // oops! above line is unexpected, isn't it?
+    // the reason is below.
+    // MyClass2.opEquals knows MyClass but,
+    // MyClass.opEquals doesn't know MyClass2.
+    // so, c.opEquals(a) is true, but a.opEquals(c) is false.
+    // furthermore, opEquals(T) couldn't be invoked.
+    assert((cast(MyClass2)c) != (cast(MyClass)a));
+
+    // opCmp
+    Object e = new MyClass2(7);
+    assert(a < cast(MyClass2)e); // OK. and
+    assert(e > a); // OK, but...
+    // assert(a < e); // RUNTIME ERROR!
+    // assert((cast(MyClass)a) < e); // RUNTIME ERROR!
+    assert(3 < cast(MyClass)a);
+    assert((cast(MyClass2)e) < 11);
+
+    // opCall
+    assert((cast(MyClass2)e)("hello") == "hello");
+
+    // opCast
+    assert((cast(MyClass)(cast(MyClass2)c)) == a);
+    assert((cast(int)(cast(MyClass2)c)) == 5);
+
+    // opIndex
+    class MyClass4
+    {
+        string payload;
+        mixin Proxy!payload;
+        this(string s){ payload = s; }
+    }
+    class MyClass5
+    {
+        MyClass4 payload;
+        mixin Proxy!payload;
+        this(string s){ payload = new MyClass4(s); }
+    }
+    auto f = new MyClass4("hello");
+    assert(f[1] == 'e');
+    auto g = new MyClass5("hello");
+    assert(f[1] == 'e');
+
+    // opSlice
+    assert(f[2..4] == "ll");
+
+    // opUnary
+    assert(-(cast(MyClass2)c) == -5);
+
+    // opBinary
+    assert((cast(MyClass)a) + (cast(MyClass2)c) == 10);
+    assert(5 + cast(MyClass)a == 10);
+
+    // opAssign
+    (cast(MyClass2)c) = 11;
+    assert((cast(MyClass2)c) == 11);
+    (cast(MyClass2)c) = new MyClass(13);
+    assert((cast(MyClass2)c) == 13);
+
+    // opOpAssign
+    assert((cast(MyClass2)c) += 4);
+    assert((cast(MyClass2)c) == 17);
+
+    // opDispatch
+    assert((cast(MyClass2)c).pow(2) == 289);
+
+    // opDollar
+    assert(f[2..$-1] == "ll");
+
+    // toHash
+    int[Object] hash;
+    hash[a] = 19;
+    hash[c] = 21;
+    assert(hash[b] == 19);
+    assert(hash[c] == 21);
+}
+
 unittest
 {
     struct MyInt
