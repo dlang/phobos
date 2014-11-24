@@ -196,8 +196,8 @@ $(TR $(TDNW $(LREF clamp)) $(TD $(D clamp(1, 3, 6)) returns $(D
 $(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("oh hi",
 "ohayo")) returns $(D tuple(" hi", "ayo")).)
 )
-$(TR $(TDNW $(LREF predSwitch)) $(TD 2.predSwitch(1, "one", 2, "two", 3,
-"three") returns $(D "two").)
+$(TR $(TDNW $(LREF predSwitch)) $(TD $(D 2.predSwitch(1, "one", 2, "two",
+3, "three")) returns $(D "two").)
 )
 $(LEADINGROW Iteration
 )
