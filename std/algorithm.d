@@ -168,6 +168,9 @@ of values, e.g. $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
 $(TR $(TDNW $(LREF castSwitch)) $(TD $(D (new A()).castSwitch((A a)=>1,(B
 b)=>2)) returns $(D 1).)
 )
+$(TR $(TDNW $(LREF clamp)) $(TD $(D clamp(1, 3, 6)) returns $(D
+3). $(D clamp(4, 3, 6)) returns $(D 4).)
+)
 $(TR $(TDNW $(LREF cmp)) $(TD $(D cmp("abc", "abcd")) is $(D
 -1), $(D cmp("abc", "aba")) is $(D 1), and $(D cmp("abc", "abc")) is
 $(D 0).)
@@ -189,9 +192,6 @@ $(TR $(TDNW $(LREF max)) $(TD $(D max(3, 4, 2)) returns $(D
 )
 $(TR $(TDNW $(LREF min)) $(TD $(D min(3, 4, 2)) returns $(D
 2).)
-)
-$(TR $(TDNW $(LREF clamp)) $(TD $(D clamp(1, 3, 6)) returns $(D
-3). $(D clamp(4, 3, 6)) return $(D 4).)
 )
 $(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("oh hi",
 "ohayo")) returns $(D tuple(" hi", "ayo")).)
