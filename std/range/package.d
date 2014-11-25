@@ -2653,11 +2653,9 @@ nothrow:
 
     inout(typeof(this)) opSlice(size_t i, DollarToken) inout @safe
     {
-        alias RetType = typeof(return);
         static auto trustedCtor(typeof(_ptr) p, size_t idx) @trusted
         {
-            // cast: Issue 12177 workaround
-            return cast(RetType)Cycle(*cast(R*)(p), idx);
+            return cast(inout)Cycle(*cast(R*)(p), idx);
         }
         return trustedCtor(_ptr, _index + i);
     }
