@@ -35,6 +35,8 @@ $(TR $(TDNW Pruning and Filling)
     $(MYREF center) $(MYREF detab) $(MYREF entab) $(MYREF wrap)
     $(MYREF outdent) $(LINK2 std_array.html#popFront, popFront)
     $(XREF _array, front) $(XREF _array, popBack) $(XREF _array, back)
+    $(MYREF eraseFront) $(MYREF eraseBack) $(MYREF eraseFirst)
+    $(MYREF eraseFirstN) $(MYREF eraseBack) $(MYREF eraseBackN)
     )
 )
 
@@ -4762,5 +4764,498 @@ pure unittest
         assert(equal(jt, ht));
         assert(equal(jt, htc));
         assert(equal(jt, hti));
+    }
+}
+
+/** This functions returns a slice of $(D str) without $(D front) if $(D
+front) is equal to the beginning of $(D str).
+
+If $(D front) is not present in $(D str), $(D str) will be returned.
+*/
+auto eraseFront(T,S)(T str, S front)
+    if (isSomeString!T && isSomeString!S)
+{
+    if (str.startsWith(front))
+    {
+        return str[codeLength!(ElementEncodingType!T)(front) .. $];
+    }
+
+    return str;
+}
+
+/// Ditto
+auto eraseFront(T)(T str, dchar front)
+    if (isSomeString!T)
+{
+    auto strD = str.byDchar();
+    if (!strD.empty && strD.front == front)
+    {
+        return str[codeLength!(ElementEncodingType!T)(front) .. $];
+    }
+
+    return str;
+}
+
+///
+@safe pure @nogc unittest
+{
+    string rslt = eraseFront("Hello World", "Hello ");
+    assert(rslt == "World");
+
+    rslt = eraseFront("Hello World", 'H');
+    assert(rslt == "ello World");
+}
+
+@safe pure unittest
+{
+    foreach(T; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            T rslt = eraseFront(to!T("Hello World"), to!S("Hello "));
+            assert(rslt == "World", to!string(rslt));
+            rslt = eraseFront(to!T("Hellö World"), to!S("Hellö "));
+            assert(rslt == "World", to!string(rslt));
+            rslt = eraseFront(to!T("Hällö World"), to!S("Hällö "));
+            assert(rslt == "World", to!string(rslt));
+            rslt = eraseFront(to!T("Hällö Wörld"), to!S("ö öö"));
+            assert(rslt == "Hällö Wörld", to!string(rslt));
+            rslt = eraseFront(to!T("Ällö Wörld"), 'Ä');
+            assert(rslt == "llö Wörld", to!string(rslt));
+
+            rslt = eraseFront(to!T(`さいごの果実`), to!S("さい"));
+            assert(rslt == "ごの果実", to!string(rslt));
+            rslt = eraseFront(to!T(`ミツバチと科学者`), to!S("ミツバ"));
+            assert(rslt == "チと科学者", to!string(rslt));
+            rslt = eraseFront(to!T(`ミツバチと科学者`), to!S("ツバ"));
+            assert(rslt == "ミツバチと科学者", to!string(rslt));
+            rslt = eraseFront(to!T(`ミツバチと科学者`), 'ミ');
+            assert(rslt == "ツバチと科学者", to!string(rslt));
+        }
+    }
+}
+
+/** This functions returns a slice of $(D str) without $(D back) if $(D
+back) is equal to the end of $(D str).
+
+If $(D back) is not present in $(D str), $(D str) will be returned.
+*/
+auto eraseBack(T,S)(T str, S back)
+    if (isSomeString!T && isSomeString!S)
+{
+    if (str.endsWith(back))
+    {
+        return str[0 .. $ - codeLength!(ElementEncodingType!T)(back)];
+    }
+
+    return str;
+}
+
+/// Ditto
+auto eraseBack(T)(T str, dchar back)
+    if (isSomeString!T)
+{
+    if (str.endsWith(back))
+    {
+        return str[0 .. $ - codeLength!(ElementEncodingType!T)(back)];
+    }
+
+    return str;
+}
+
+///
+@safe pure unittest
+{
+    string rslt = eraseBack("Hello World", "orld");
+    assert(rslt == "Hello W");
+
+    rslt = eraseBack("Hello World", 'd');
+    assert(rslt == "Hello Worl");
+}
+
+@safe pure unittest
+{
+    foreach(T; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            T rslt = eraseBack(to!T("Hello World"), to!S(" World"));
+            assert(rslt == "Hello", to!string(rslt));
+            rslt = eraseBack(to!T("Hellö Wörld"), to!S(" Wörld"));
+            assert(rslt == "Hellö", to!string(rslt));
+            rslt = eraseBack(to!T("Hällö Wörld"), to!S("Wörld"));
+            assert(rslt == "Hällö ", to!string(rslt));
+            rslt = eraseBack(to!T("Hällö Wörld"), to!S("Wärld"));
+            assert(rslt == "Hällö Wörld", to!string(rslt));
+            rslt = eraseBack(to!T("Hällö Wörlü"), 'ü');
+            assert(rslt == "Hällö Wörl", to!string(rslt));
+
+            rslt = eraseBack(to!T("Hällö Wörlß"), 'ß');
+            assert(rslt == "Hällö Wörl", to!string(rslt));
+
+            rslt = eraseBack(to!T(`さいごの果実`), to!S("の果実"));
+            assert(rslt == "さいご", to!string(rslt));
+            rslt = eraseBack(to!T(`ミツバチと科学者`), to!S("科学者"));
+            assert(rslt == "ミツバチと", to!string(rslt));
+            rslt = eraseBack(to!T(`ミツバチと科学者`), to!S("と科学者"));
+            assert(rslt == "ミツバチ", to!string(rslt));
+            rslt = eraseBack(to!T("ミツバチと科学者"), '者');
+            assert(rslt == "ミツバチと科学", to!string(rslt));
+        }
+    }
+}
+
+auto eraseFirstLastImpl(T,S)(T str, S toErase, ptrdiff_t idx) {
+    auto len = codeLength!(ElementEncodingType!T)(toErase);
+    return str[0 .. idx] ~ str[idx+len .. $];
+}
+
+/** This functions returns a copy of $(D str) without the first occurrence
+of $(D toErase).
+
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
+*/
+auto eraseFirst(T,S)(T str, S toErase)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
+{
+    auto idx = str.indexOf(toErase);
+    if (idx != -1)
+    {
+        return eraseFirstLastImpl(str, toErase, idx);
+    }
+
+    return str;
+}
+
+///
+@safe pure unittest
+{
+    string rslt = eraseFirst("Hello Worlld", "ll");
+    assert(rslt == "Heo Worlld");
+
+    rslt = eraseFirst("Hello Worlld", 'l');
+    assert(rslt == "Helo Worlld");
+}
+
+@safe pure unittest
+{
+    foreach(T; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            T rslt = eraseFirst(to!T("Hello Worldo W"), to!S("o W"));
+            assert(rslt == "Hellorldo W", to!string(rslt));
+            rslt = eraseFirst(to!T("Hellö Wörldö W"), to!S("ö W"));
+            assert(rslt == "Hellörldö W", to!string(rslt));
+            rslt = eraseFirst(to!T("Hällö Wörldö Wö"), to!S("ö Wö"));
+            assert(rslt == "Hällrldö Wö", to!string(rslt));
+            rslt = eraseFirst(to!T("Hällö Wörldö ö"), to!S("ö öö"));
+            assert(rslt == "Hällö Wörldö ö", to!string(rslt));
+
+            rslt = eraseFirst(to!T(`さいごの果実`), to!S("ごの"));
+            assert(rslt == "さい果実", to!string(rslt));
+            rslt = eraseFirst(to!T(`ミツバチと科学者`), to!S("チと"));
+            assert(rslt == "ミツバ科学者", to!string(rslt));
+            rslt = eraseFirst(to!T(`ミツバチと科学者`), to!S("バチ"));
+            assert(rslt == "ミツと科学者", to!string(rslt));
+        }
+    }
+}
+
+/** This functions returns a copy of $(D str) without the last occurrence
+of $(D toErase).
+
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
+*/
+auto eraseLast(T,S)(T str, S toErase)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
+{
+    auto idx = str.lastIndexOf(toErase);
+    if (idx != -1)
+    {
+        return eraseFirstLastImpl(str, toErase, idx);
+    }
+
+    return str;
+}
+
+///
+@safe pure unittest
+{
+    string rslt = eraseLast("Hello Worlld", "ll");
+    assert(rslt == "Hello Word");
+
+    rslt = eraseLast("Hello Worlld", 'o');
+    assert(rslt == "Hello Wrlld");
+}
+
+@safe pure unittest
+{
+    foreach(T; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            T rslt = eraseLast(to!T("Hello Worldo W"), to!S("o W"));
+            assert(rslt == "Hello World", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T("Hellö Wörldö W"), to!S("ö W"));
+            assert(rslt == "Hellö Wörld", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T("Hällö Wörldö Wö"), to!S("ö Wö"));
+            assert(rslt == "Hällö Wörld", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T("Hällö Wörldö ö"), to!S("ö öö"));
+            assert(rslt == "Hällö Wörldö ö", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T("Hällö Wörldö ö"), 'r');
+            assert(rslt == "Hällö Wöldö ö", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T(`さいごの果実`), to!S("ごの"));
+            assert(rslt == "さい果実", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T(`ミツバチと科学者`), to!S("チと"));
+            assert(rslt == "ミツバ科学者", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T(`ミツバチと科学者`), to!S("バチ"));
+            assert(rslt == "ミツと科学者", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+
+            rslt = eraseLast(to!T(`ミツバチと科チ学者`), 'チ');
+            assert(rslt == "ミツバチと科学者", to!string(rslt) ~ " " ~
+                to!string(typeid(T)) ~ " " ~ to!string(typeid(S)));
+        }
+    }
+}
+
+/** This functions returns a copy of $(D str) without the first N occurrence
+of $(D toErase).
+
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
+*/
+auto eraseFirstN(T,S)(T str, int cnt, S toErase)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
+{
+    auto idx = str.indexOf(toErase);
+    if (idx != -1)
+    {
+        auto len = codeLength!(ElementEncodingType!T)(toErase);
+        auto ret = appender!T();
+        ret.reserve(str.length - len);
+        ptrdiff_t oldIdx = 0;
+
+        do
+        {
+            ret.put(str[oldIdx .. idx]);
+            oldIdx = idx + len;
+            idx = str.indexOf(toErase, oldIdx);
+            --cnt;
+        }
+        while(cnt != 0 && idx != -1);
+
+        ret.put(str[oldIdx .. $]);
+
+        return ret.data;
+    }
+
+    return str;
+}
+
+///
+@safe pure unittest
+{
+    string rslt = eraseFirstN("Hello Worlld ll", 2, "ll");
+    assert(rslt == "Heo Word ll");
+
+    rslt = eraseFirstN("Hello Worlld ll", 2, 'l');
+    assert(rslt == "Heo Worlld ll");
+}
+
+@safe pure unittest
+{
+    foreach(T; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            T rslt = eraseFirstN(to!T("Hellö Wörlö W"), 1, to!S("lö"));
+            assert(rslt == "Hel Wörlö W", to!string(rslt));
+            rslt = eraseFirstN(to!T("Hellö Wörlö W"), 2, to!S("lö"));
+            assert(rslt == "Hel Wör W", to!string(rslt));
+            rslt = eraseFirstN(to!T("Hellö Wörlö W"), 2, 'ö');
+            assert(rslt == "Hell Wrlö W", to!string(rslt));
+
+            rslt = eraseFirstN(to!T(`ごのさいごの果実`), 1, to!S("ごの"));
+            assert(rslt == "さいごの果実", to!string(rslt));
+            rslt = eraseFirstN(to!T(`ごのさいごの果実`), 2, to!S("ごの"));
+            assert(rslt == "さい果実", to!string(rslt));
+            rslt = eraseFirstN(to!T(`ごのさいごの果の実`), 2, 'の');
+            assert(rslt == "ごさいご果の実", to!string(rslt));
+        }
+    }
+}
+
+
+/** This functions returns a copy of $(D str) without the last N occurrence
+of $(D toErase).
+
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
+*/
+auto eraseLastN(T,S)(T str, int cnt, S toErase)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
+{
+    alias RetType = ElementEncodingType!(T);
+    auto idx = str.lastIndexOf(toErase);
+    if (idx != -1)
+    {
+        auto len = codeLength!RetType(toErase);
+        auto ret = new Unqual!(RetType)[str.length - len];
+        size_t retIdx = ret.length;
+
+        ptrdiff_t oldIdx = str.length;
+
+        ptrdiff_t sLow;
+        ptrdiff_t sHigh;
+        ptrdiff_t dLow;
+
+        do
+        {
+            sLow = idx+len;
+            sHigh = oldIdx;
+            dLow = retIdx - (sHigh-sLow);
+            ret[dLow .. retIdx] = str[sLow .. oldIdx];
+            retIdx = dLow;
+            oldIdx = idx;
+            idx = str.lastIndexOf(toErase, oldIdx);
+            --cnt;
+        }
+        while (cnt != 0 && idx != -1);
+
+        dLow = retIdx - oldIdx;
+
+        ret[dLow .. retIdx] = str[0 .. oldIdx];
+
+        auto trustedAssume() @trusted {
+            return ret[dLow .. $].assumeUnique;
+        }
+
+        return trustedAssume();
+    }
+
+    return str;
+}
+
+///
+@safe pure unittest
+{
+    string rslt = eraseLastN("Hello Worlld ll", 2, "ll");
+    assert(rslt == "Hello Word ");
+
+    rslt = eraseLastN("Hello Worlld ll", 2, 'l');
+    assert(rslt == "Hello Worlld ");
+}
+
+@safe pure unittest
+{
+    string rslt = eraseLastN("Helolo", 1, "l");
+    assert(rslt == "Heloo", rslt);
+
+    string rslt2 = eraseLastN("Helolo", 2, "l");
+    assert(rslt2 == "Heoo", rslt2);
+
+    rslt2 = eraseLastN("Helolo", 2, 'l');
+    assert(rslt2 == "Heoo", rslt2);
+}
+
+@safe pure unittest
+{
+    foreach(T; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            T rslt = eraseLastN(to!T("Hellö Wörlö W"), 1, to!S("lö"));
+            assert(rslt == "Hellö Wör W", to!string(rslt));
+            rslt = eraseLastN(to!T("Hel Wör W"), 2, to!S("lö"));
+            assert(rslt == "Hel Wör W", to!string(rslt));
+            rslt = eraseLastN(to!T("Hellö Wörlö W"), 2, 'ö');
+            assert(rslt == "Hellö Wrl W", to!string(rslt));
+
+            rslt = eraseLastN(to!T(`ごのさいごの果実`), 1, to!S("ごの"));
+            assert(rslt == "ごのさい果実", to!string(rslt));
+            rslt = eraseLastN(to!T(`ごのさいごの果実`), 2, to!S("ごの"));
+            assert(rslt == "さい果実", to!string(rslt));
+            rslt = eraseLastN(to!T(`のごのさいごの果実`), 2, 'の');
+            assert(rslt == "のごさいご果実", to!string(rslt));
+        }
+    }
+}
+
+/** This functions returns a copy of $(D str) without the Nth occurrence
+of $(D toErase).
+
+If $(D toErase) is not present in $(D str), $(D str) will be returned.
+*/
+auto eraseNth(T,S)(T str, int cnt, S toErase)
+    if (isSomeString!T && (isSomeString!S || isSomeChar!S))
+{
+    import std.stdio : writefln;
+    alias RetType = ElementEncodingType!(T);
+    ptrdiff_t sliceIdx = 0;
+    auto len = codeLength!RetType(toErase);
+
+    do
+    {
+        sliceIdx = str.indexOf(toErase, sliceIdx);
+        if (sliceIdx == -1)
+        {
+            return str;
+        }
+
+        if(cnt == 1)
+        {
+            break;
+        }
+        else
+        {
+            sliceIdx += len;
+            --cnt;
+        }
+    }
+    while(cnt == 1);
+
+    auto ret = appender!T();
+    ret.reserve(str.length - len);
+
+    ret.put(str[0 .. sliceIdx]);
+    ret.put(str[sliceIdx + len .. $]);
+    return ret.data;
+}
+
+@safe pure unittest
+{
+    foreach(T; TypeTuple!(string, wstring, dstring))
+    {
+        foreach(S; TypeTuple!(string, wstring, dstring))
+        {
+            T rslt = eraseNth(to!T("Hellö Wörlö W"), 2, to!S("lö"));
+            assert(rslt == "Hellö Wör W", to!string(rslt));
+
+            rslt = eraseNth(to!T("Hellö Wörlö W"), 1, to!S("ö"));
+            assert(rslt == "Hell Wörlö W", to!string(rslt));
+
+            rslt = eraseNth(to!T(`ごのさいごの果実`), 1, to!S("ごの"));
+            assert(rslt == "さいごの果実", to!string(rslt));
+
+            rslt = eraseNth(to!T(`ごのさいごの果実`), 2, to!S("ごの"));
+            assert(rslt == "ごのさい果実", to!string(rslt));
+
+            rslt = eraseNth(to!T(`ごのさいごの果実`), 2, to!S("の"));
+            assert(rslt == "ごのさいご果実", to!string(rslt));
+        }
     }
 }
