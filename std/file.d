@@ -150,16 +150,44 @@ class FileException : Exception
     }
 }
 
-private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
+/**
+ * Indicates an error occurred during a file operation.
+ */
+enum FileError
+{
+	/** Permission not granted to access the file */
+	accessDenied,
+}
+
+/**
+ * Used for error callbacks inside functions that cannot continue without error handling (like dirEntries).
+ * Return true to thow an exception, false to swallow the error, skip the file and continue.
+ */
+alias FileErrorHandler = bool delegate(FileError error, const(char)[] name) nothrow @safe;
+
+private T cenforce(T)(T condition, lazy const(char)[] name, FileErrorHandler errorHandler = null, string file = __FILE__, size_t line = __LINE__)
 {
     if (!condition)
     {
       version (Windows)
       {
-        throw new FileException(name, .GetLastError(), file, line);
+         auto lastError = .GetLastError();
+         if(errorHandler !is null) 
+         {
+           if(lastError == 0x05) {
+             if(!errorHandler(FileError.accessDenied, name)) return condition;
+           }
+         }
+         throw new FileException(name, lastError, file, line);
       }
       else version (Posix)
       {
+        if(errorHandler !is null)
+        {
+          if(.errno == EACCES) {
+            if(!errorHandler(FileError.accessDenied, name)) return condition;
+          }
+        }
         throw new FileException(name, .errno, file, line);
       }
     }
@@ -2657,6 +2685,7 @@ private struct DirIteratorImpl
     // stat (since we should only need lstat in this case and it would
     // be more efficient to not call stat in addition to lstat).
     bool _followSymlink;
+    FileErrorHandler _errorHandler;
     DirEntry _cur;
     Appender!(DirHandle[]) _stack;
     Appender!(DirEntry[]) _stashed; //used in depth first mode
@@ -2686,7 +2715,11 @@ private struct DirIteratorImpl
             string search_pattern = buildPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
             HANDLE h = FindFirstFileW(search_pattern.tempCStringW(), &findinfo);
-            cenforce(h != INVALID_HANDLE_VALUE, directory);
+            if(h == INVALID_HANDLE_VALUE)
+            {
+                cenforce(false, directory, _errorHandler);
+                return false; // TODO: check logic, is this suppose to be true or false?
+            }
             _stack.put(DirHandle(directory, h));
             return toNext(false, &findinfo);
         }
@@ -2750,7 +2783,11 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            auto h = cenforce(opendir(directory.tempCString()), directory);
+            auto h = opendir(directory.tempCString());
+            if(!h) {
+                cenforce(false, directory, _errorHandler);
+                return false; // TODO: check logic, is this suppose to be true or false?
+            }
             _stack.put(DirHandle(directory, h));
             return next();
         }
@@ -2792,10 +2829,11 @@ private struct DirIteratorImpl
         }
     }
 
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(string pathname, SpanMode mode, bool followSymlink, FileErrorHandler errorHandler = null)
     {
         _mode = mode;
         _followSymlink = followSymlink;
+        _errorHandler = errorHandler;
         _stack = appender(cast(DirHandle[])[]);
         if(_mode == SpanMode.depth)
             _stashed = appender(cast(DirEntry[])[]);
@@ -2818,7 +2856,7 @@ private struct DirIteratorImpl
     @property DirEntry front(){ return _cur; }
     void popFront()
     {
-        switch(_mode)
+        final switch(_mode)
         {
         case SpanMode.depth:
             if(next())
@@ -2846,7 +2884,7 @@ private struct DirIteratorImpl
             else
                 while(!empty && !next()){}
             break;
-        default:
+        case SpanMode.shallow:
             next();
         }
     }
@@ -2861,9 +2899,9 @@ struct DirIterator
 {
 private:
     RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(string pathname, SpanMode mode, bool followSymlink, FileErrorHandler errorHandler = null)
     {
-        impl = typeof(impl)(pathname, mode, followSymlink);
+        impl = typeof(impl)(pathname, mode, followSymlink, errorHandler);
     }
 public:
     @property bool empty(){ return impl.empty; }
@@ -2921,9 +2959,10 @@ foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
 }
 --------------------
  +/
-auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
+auto dirEntries(string path, SpanMode mode, bool followSymlink = true,
+	FileErrorHandler errorHandler = null)
 {
-    return DirIterator(path, mode, followSymlink);
+    return DirIterator(path, mode, followSymlink, errorHandler);
 }
 
 unittest
@@ -3014,11 +3053,11 @@ foreach(d; dFiles)
 --------------------
  +/
 auto dirEntries(string path, string pattern, SpanMode mode,
-    bool followSymlink = true)
+    bool followSymlink = true, FileErrorHandler errorHandler = null)
 {
     import std.algorithm : filter;
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
-    return filter!f(DirIterator(path, mode, followSymlink));
+    return filter!f(DirIterator(path, mode, followSymlink, errorHandler));
 }
 
 // Explicitly undocumented. It will be removed in July 2015.
