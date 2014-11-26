@@ -2627,9 +2627,9 @@ nothrow:
     {
         static ref auto trustedPtrIdx(typeof(_ptr) p, size_t idx) @trusted
         {
-            return p[idx];
+            return p[idx % R.length];
         }
-        return trustedPtrIdx(_ptr, (n + _index) % R.length);
+        return trustedPtrIdx(_ptr, n + _index);
     }
 
     @property inout(Cycle) save() inout @safe
