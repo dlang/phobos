@@ -404,7 +404,7 @@ public:
         Throws:
             $(LREF DateTimeException) if it fails to get the time.
       +/
-    static @property TickDuration currSystemTick() @safe
+    static @property TickDuration currSystemTick() @safe nothrow
     {
         return TickDuration.currSystemTick;
     }
