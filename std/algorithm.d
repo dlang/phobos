@@ -4552,11 +4552,8 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 /**
  * Specifies whether a predicate is an equivalence relation.
  */
-enum IsEquivRelation : bool
-{
-    no,  /// Predicate is not an equivalence relation
-    yes, /// Predicate is an equivalence relation
-}
+import std.typecons : Flag;
+alias IsEquivRelation = Flag!"isEquivRelation";
 
 // Used by implementation of groupBy.
 private struct GroupByChunkImpl(alias pred, IsEquivRelation isEquivRelation, Range)
