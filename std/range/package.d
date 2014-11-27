@@ -2689,7 +2689,7 @@ Cycle!R cycle(R)(R input)
     return input;
 }
 
-Cycle!R cycle(R)(ref R input, size_t index = 0)
+Cycle!R cycle(R)(ref R input, size_t index = 0) @system
     if (isStaticArray!R)
 {
     return Cycle!R(input, index);
@@ -2761,7 +2761,7 @@ Cycle!R cycle(R)(ref R input, size_t index = 0)
     }
 }
 
-unittest // For static arrays.
+@system unittest // For static arrays.
 {
     import std.algorithm : equal;
 
@@ -2813,7 +2813,7 @@ unittest // For static arrays.
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm : equal;
 
@@ -2833,7 +2833,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm : equal;
 
