@@ -1,8 +1,7 @@
 Ddoc
 
 $(P Phobos is the standard runtime library that comes with the D language
-compiler. Also, check out the
-<a href="http://www.prowiki.org/wiki4d/wiki.cgi?Phobos">wiki for Phobos</a>.)
+compiler.)
 
 $(P The following table is a quick reference guide to which Phobos modules to
 use for a given category of functionality. Note that some modules may appear in
