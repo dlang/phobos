@@ -149,7 +149,7 @@ std_algorithm.html#sort, $(D std.algorithm.sort)) function also conveniently
 returns a $(D SortedRange). $(D SortedRange) objects provide some additional
 _range operations that take advantage of the fact that the _range is sorted.
 
-Source: $(PHOBOSSRC std/range/_package.d)
+Source: $(PHOBOSSRC std/_range/_package.d)
 
 Macros:
 
