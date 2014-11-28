@@ -525,7 +525,7 @@ unittest
         {
             //Testing PutC and PutS
             foreach (Type; TypeTuple!(PutC!TC, PutS!TC))
-            {
+            (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
                 Type type;
                 auto sink = new Type();
 
@@ -541,7 +541,7 @@ unittest
                     put(value, ss);
                     assert(value.result == "I♥日本語！日本語が好きですか？");
                 }
-            }
+            }();
         }
     }
 }

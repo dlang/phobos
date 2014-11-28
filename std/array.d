@@ -1620,7 +1620,7 @@ unittest
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
         foreach(S; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
             assert(join(filteredWordsArr, to!(ElementType!(S))(',')) == "日本語,paul,jerry");
@@ -1654,7 +1654,7 @@ unittest
             assert(join(filteredLenWordsArr, filterComma) == "日本語, paul, jerry");
             assert(join(filter!"true"(words), filterComma) == "日本語, paul, jerry");
             assert(join(words, filterComma) == "日本語, paul, jerry");
-        }
+        }();
 
         assert(join(filteredWords) == "日本語pauljerry");
         assert(join(filteredWordsArr) == "日本語pauljerry");
@@ -1779,7 +1779,7 @@ unittest
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
             auto from = to!T("foo");
             auto into = to!S("silly");
@@ -1795,7 +1795,7 @@ unittest
             assert(i == 0);
 
             assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
-        }
+        }();
     }
 
     immutable s = "This is a foo foo list";
@@ -2147,7 +2147,7 @@ unittest
     {
         foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
             auto s2 = to!S("Thüs is a ßöö foo list");
             auto from = to!T("foo");
@@ -2169,7 +2169,7 @@ unittest
             assert(cmp(r3, "This is a foo foo list") == 0);
 
             assert(replaceFirst(r3, to!T("won't find"), to!T("whatever")) is r3);
-        }
+        }();
     }
 }
 
@@ -2255,7 +2255,7 @@ unittest
     {
         foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
             auto s2 = to!S("Thüs is a ßöö ßöö list");
             auto from = to!T("foo");
@@ -2277,7 +2277,7 @@ unittest
             assert(cmp(r3, "This is a foo foo list") == 0);
 
             assert(replaceLast(r3, to!T("won't find"), to!T("whatever")) is r3);
-        }
+        }();
     }
 }
 

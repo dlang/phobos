@@ -470,7 +470,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a")) == -1);
             assert(indexOf(to!S("def"), to!T("a")) == -1);
             assert(indexOf(to!S("abba"), to!T("a")) == 0);
@@ -500,7 +500,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             // Thanks to Carlos Santander B. and zwang
             assert(indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
                            to!T("page-break-before"), CaseSensitive.no) == -1);
-        }
+        }();
 
         foreach (cs; EnumMembers!CaseSensitive)
         {
@@ -545,7 +545,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         foreach(T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOf(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
             assert(indexOf(to!S("abba"), to!T("a"), 2) == 3);
@@ -582,7 +582,7 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 
             // In order for indexOf with and without index to be consistent
             assert(indexOf(to!S(""), to!T("")) == indexOf(to!S(""), to!T(""), 0));
-        }
+        }();
 
         foreach(cs; EnumMembers!CaseSensitive)
         {
@@ -855,7 +855,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOf(cast(S)null, to!T("a")) == -1, typeStr);
@@ -890,7 +890,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(sPlts, to!T("FOuRTh"), CaseSensitive.no) == 10, typeStr);
             assert(lastIndexOf(sMars, to!T("whO\'s \'MY"), CaseSensitive.no) == 0, typeStr);
             assert(lastIndexOf(sMars, to!T(sMars), CaseSensitive.no) == 0, typeStr);
-        }
+        }();
 
         foreach (cs; EnumMembers!CaseSensitive)
         {
@@ -952,7 +952,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         foreach(T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOf(cast(S)null, to!T("a")) == -1, typeStr);
@@ -980,7 +980,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 4, CaseSensitive.no) == 2, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), 6, CaseSensitive.no) == 3, typeStr);
             assert(lastIndexOf(to!S(""), to!T(""), 0) == lastIndexOf(to!S(""), to!T("")), typeStr);
-        }
+        }();
 
         foreach(cs; EnumMembers!CaseSensitive)
         {
@@ -1149,7 +1149,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a")) == -1);
             assert(indexOfAny(to!S("def"), to!T("rsa")) == -1);
             assert(indexOfAny(to!S("abba"), to!T("a")) == 0);
@@ -1172,7 +1172,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
                 CaseSensitive.no) == 0);
 
             assert(indexOfAny("\u0100", to!T("\u0100"), CaseSensitive.no) == 0);
-        }
+        }();
     }
     }
     );
@@ -1232,7 +1232,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         foreach(T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfAny(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOfAny(to!S("def"), to!T("AaF"), 0) == -1);
             assert(indexOfAny(to!S("abba"), to!T("NSa"), 2) == 3);
@@ -1257,7 +1257,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 
             assert(indexOfAny("\u0100", to!T("\u0100"), 0,
                 CaseSensitive.no) == 0);
-        }
+        }();
 
         foreach(cs; EnumMembers!CaseSensitive)
         {
@@ -1310,7 +1310,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfAny(cast(S)null, to!T("a")) == -1);
             assert(lastIndexOfAny(to!S("def"), to!T("rsa")) == -1);
             assert(lastIndexOfAny(to!S("abba"), to!T("a")) == 3);
@@ -1347,7 +1347,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 
             assert(lastIndexOfAny("\u0100", to!T("\u0100"),
                 CaseSensitive.no) == 0);
-        }
+        }();
     }
     }
     );
@@ -1406,7 +1406,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOfAny(cast(S)null, to!T("a"), 1337) == -1,
@@ -1442,7 +1442,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
                 CaseSensitive.no) == -1, typeStr);
             assert(lastIndexOfAny(to!S("ÖABCDEFCDEF"), to!T("ö"), 2,
                 CaseSensitive.no) == 0, typeStr);
-        }
+        }();
     }
     }
     );
@@ -1486,7 +1486,7 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(indexOfNeither("abba", "a") == 1);
 
@@ -1514,7 +1514,7 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
                     to!string(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
                     CaseSensitive.no)));
             }
-        }
+        }();
     }
     }
     );
@@ -1571,7 +1571,7 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(indexOfNeither(cast(S)null, to!T("a"), 1) == -1);
             assert(indexOfNeither(to!S("def"), to!T("a"), 1) == 1,
                 to!string(indexOfNeither(to!S("def"), to!T("a"), 1)));
@@ -1598,7 +1598,7 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
                     CaseSensitive.no) == 2, to!string(indexOfNeither(
                     to!S("öDfEfffg"), to!T("äDi"), 2, CaseSensitive.no)));
             }
-        }
+        }();
     }
     }
     );
@@ -1641,7 +1641,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfNeither(cast(S)null, to!T("a")) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("rsa")) == 2);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("fgh")) == 2);
@@ -1670,7 +1670,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
             assert(lastIndexOfNeither(to!S("dfeffgfffö"), to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"),
                 CaseSensitive.no) == 8, to!string(lastIndexOfNeither(to!S("dfeffgfffö"),
                 to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"), CaseSensitive.no)));
-        }
+        }();
     }
     }
     );
@@ -1722,7 +1722,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         foreach (T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(lastIndexOfNeither(cast(S)null, to!T("a"), 1337) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("f")) == 1);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("fgh")) == 2);
@@ -1750,7 +1750,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("NSA"), 2,
                 CaseSensitive.no) == 1, to!string(lastIndexOfNeither(
                     to!S("dfefffg"), to!T("NSA"), 2, CaseSensitive.no)));
-        }
+        }();
     }
     }
     );
@@ -2274,7 +2274,7 @@ unittest
         assert(chomp(to!S("hello\u2029\u2029")) == "hello\u2029");
 
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S)null, cast(T)null) is null);
             assert(chomp(to!S("hello\n"), cast(T)null) == "hello");
@@ -2285,7 +2285,7 @@ unittest
             assert(chomp(to!S("hello"), to!T("llo")) == "he");
             assert(chomp(to!S("\uFF28ello"), to!T("llo")) == "\uFF28e");
             assert(chomp(to!S("\uFF28el\uFF4co"), to!T("l\uFF4co")) == "\uFF28e");
-        }
+        }();
     }
     });
 }
@@ -2342,13 +2342,13 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
             assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
             assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el\uFF4co")), ""));
             assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el")), "\uFF4co"));
             assert(equal(chompPrefix(to!S("\uFF28el"), to!T("\uFF28el\uFF4co")), "\uFF28el"));
-        }
+        }();
     }
     });
 }
@@ -2880,7 +2880,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
         foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
                                wchar[], const(wchar)[], immutable(wchar)[],
                                dchar[], const(dchar)[], immutable(dchar)[]))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             foreach(R; TypeTuple!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
             {
@@ -2892,7 +2892,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
                 assert(translate(to!S("hello world"), tt, to!T("q5"))
                     == to!S("qe55o wor5d"));
             }
-        }
+        }();
 
         auto s = to!S("hello world");
         dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
@@ -2941,7 +2941,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
         foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
                                wchar[], const(wchar)[], immutable(wchar)[],
                                dchar[], const(dchar)[], immutable(dchar)[]))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
 
             foreach(R; TypeTuple!(string[dchar], const string[dchar],
                         immutable string[dchar]))
@@ -2958,7 +2958,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                 assert(translate(to!S("hello world"), tt, to!T("42")) ==
                        to!S("yellowe4242o wor42d"));
             }
-        }
+        }();
 
         auto s = to!S("hello world");
         string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
@@ -3179,7 +3179,7 @@ body
                to!S("hello \U00010143 world"));
 
         foreach (T; TypeTuple!(char[], const(char)[], immutable(char)[]))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(translate(to!S("hello world"), makeTrans("hl", "q5"), to!T("r")) ==
                    to!S("qe55o wo5d"));
             assert(translate(to!S("hello \U00010143 world"), makeTrans("hl", "q5"), to!T("r")) ==
@@ -3188,7 +3188,7 @@ body
                    to!S(" wrd"));
             assert(translate(to!S("hello world"), makeTrans("hl", "q5"), to!T("q5")) ==
                    to!S("qe55o wor5d"));
-        }
+        }();
     }
     });
 }
