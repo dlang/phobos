@@ -30981,7 +30981,7 @@ unittest
                            function(string a){return cast(ubyte[])a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias testParse822!cr test;
         alias testBadParse822!cr testBad;
@@ -31219,7 +31219,7 @@ unittest
             testBad(cast(string)currStr);
             testBad((cast(string)currStr) ~ "                                    ");
         }
-    }
+    }();
 }
 
 // Obsolete Format per section 4.3 of RFC 5322.
@@ -31245,7 +31245,7 @@ unittest
                            function(string a){return cast(ubyte[])a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias testParse822!cr test;
         {
@@ -31432,7 +31432,7 @@ unittest
                 assert(collectExceptionMsg!DateTimeException(parseRFC822DateTime(value)) == tooShortMsg);
             }
         }
-    }
+    }();
 }
 
 
@@ -32687,7 +32687,7 @@ unittest
 
     foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
 
         assert(_stripCFWS(cr("")).empty);
@@ -32775,7 +32775,7 @@ unittest
         assert(equal(_stripCFWS(cr(" \n (hello) \n (hello) \n \n hello")), cr("hello")));
         assert(equal(_stripCFWS(cr(" \n \n (hello)\t\n (hello) \n hello")), cr("hello")));
         assert(equal(_stripCFWS(cr(" \n\t\n\t(hello)\t\n (hello) \n hello")), cr("hello")));
-    }
+    }();
 }
 
 // This is so that we don't have to worry about std.conv.to throwing. It also

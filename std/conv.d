@@ -397,7 +397,7 @@ T toImpl(T, S)(S value)
     import std.exception;
     // Conversion between same size
     foreach (S; TypeTuple!(byte, short, int, long))
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias U = Unsigned!S;
 
         foreach (Sint; TypeTuple!(S, const S, immutable S))
@@ -413,12 +413,12 @@ T toImpl(T, S)(S value)
             assertThrown!ConvOverflowException(to!Uint(sn),
                 text(Sint.stringof, ' ', Uint.stringof, ' ', un));
         }
-    }
+    }();
 
     // Conversion between different size
     foreach (i, S1; TypeTuple!(byte, short, int, long))
     foreach (   S2; TypeTuple!(byte, short, int, long)[i+1..$])
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias U1 = Unsigned!S1;
         alias U2 = Unsigned!S2;
 
@@ -458,7 +458,7 @@ T toImpl(T, S)(S value)
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
         }
-    }
+    }();
 }
 
 /*
@@ -746,7 +746,7 @@ T toImpl(T, S)(S value)
 
     foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
     foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;
         //pragma(msg, srcmod!Object, " -> ", tgtmod!Object, ", convertible = ",
@@ -782,7 +782,7 @@ T toImpl(T, S)(S value)
             static assert(!is(typeof(to!(tgtmod!C)(srcmod!I.init))));   // I to C
             static assert(!is(typeof(to!(tgtmod!J)(srcmod!I.init))));   // I to J
         }
-    }
+    }();
 }
 
 /**

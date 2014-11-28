@@ -1987,7 +1987,7 @@ unittest
         typeof(&dstyle), typeof(&typesafe)))
     {
         foreach (T; TypeTuple!(BaseT, FunctionTypeOf!BaseT))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum linkage = functionLinkage!T;
             enum attrs = functionAttributes!T;
 
@@ -2020,7 +2020,7 @@ unittest
             // Strip all attributes again.
             alias T3 = SetFunctionAttributes!(T2, functionLinkage!T, FA.none);
             static assert(is(T3 == T));
-        }
+        }();
     }
 }
 

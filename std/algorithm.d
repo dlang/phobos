@@ -6755,7 +6755,7 @@ if (isInputRange!R &&
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             //Lots of strings
             assert(startsWith(to!S("abc"), to!T("")));
             assert(startsWith(to!S("ab"), to!T("a")));
@@ -6788,7 +6788,7 @@ if (isInputRange!R &&
             assert(startsWith(to!S("a"), T.init, "") == 1);
             assert(startsWith(to!S("a"), T.init, 'a') == 1);
             assert(startsWith(to!S("a"), 'a', T.init) == 2);
-        }
+        }();
     }
 
     //Length but no RA
@@ -6881,7 +6881,7 @@ if (is(typeof(binaryFun!pred(r.front, e))))
 }
 
 ///
-@safe unittest 
+@safe unittest
 {
     auto s1 = "Hello world";
     assert(!skipOver(s1, 'a'));
@@ -7066,7 +7066,7 @@ if (isBidirectionalRange!R &&
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             //Lots of strings
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));
@@ -7096,7 +7096,7 @@ if (isBidirectionalRange!R &&
             assert(endsWith(to!S("a"), T.init, "") == 1);
             assert(endsWith(to!S("a"), T.init, 'a') == 1);
             assert(endsWith(to!S("a"), 'a', T.init) == 2);
-        }
+        }();
     }
 
     foreach (T; TypeTuple!(int, short))
@@ -7259,7 +7259,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
                            dchar[], const(dchar)[], dstring))
     {
         foreach(T; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
             assert(commonPrefix(to!S("hello"), to!T("")).empty);
@@ -7279,7 +7279,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
                                 to!T("\U0010FFFF\U0010FFFB\U0010FFFE")) == to!S("\U0010FFFF\U0010FFFB"));
             assert(commonPrefix!"a != b"(to!S("Пиво"), to!T("онво")) == to!S("Пи"));
             assert(commonPrefix!"a != b"(to!S("онво"), to!T("Пиво")) == to!S("он"));
-        }
+        }();
 
         static assert(is(typeof(commonPrefix(to!S("Пиво"), filter!"true"("Пони"))) == S));
         assert(equal(commonPrefix(to!S("Пиво"), filter!"true"("Пони")), to!S("П")));
@@ -8810,7 +8810,7 @@ range elements, different types of ranges are accepted:
 }
 
 /**
-To _copy at most $(D n) elements from a range, you may want to use 
+To _copy at most $(D n) elements from a range, you may want to use
 $(XREF range, take):
 */
 @safe unittest
@@ -8823,7 +8823,7 @@ $(XREF range, take):
 }
 
 /**
-To _copy just those elements from a range that satisfy a predicate you 
+To _copy just those elements from a range that satisfy a predicate you
 may want to use $(LREF filter):
 */
 @safe unittest

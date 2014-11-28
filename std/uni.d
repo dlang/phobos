@@ -7211,7 +7211,7 @@ unittest
     {
         foreach(S1; TypeTuple!(string, wstring, dstring))
         foreach(S2; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(cfunc("".to!S1(), "".to!S2()) == 0);
             assert(cfunc("A".to!S1(), "".to!S2()) > 0);
             assert(cfunc("".to!S1(), "0".to!S2()) < 0);
@@ -7223,7 +7223,7 @@ unittest
             // Check example:
             assert(cfunc("Август".to!S1(), "авгусТ".to!S2()) == 0);
             assert(cfunc("ΌΎ".to!S1(), "όύ".to!S2()) == 0);
-        }
+        }();
         // check that the order is properly agnostic to the case
         auto strs = [ "Apple", "ORANGE",  "orAcle", "amp", "banana"];
         sort!((a,b) => cfunc(a,b) < 0)(strs);

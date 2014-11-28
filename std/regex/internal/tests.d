@@ -344,7 +344,7 @@ unittest
     {
         int i;
         foreach(Char; TypeTuple!( char, wchar, dchar))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
             {
@@ -354,7 +354,7 @@ unittest
             }
             Regex!(Char) r;
             foreach(a, tvd; tv)
-            {
+            (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
                 uint c = tvd.result[0];
                 debug(std_regex_test) writeln(" Test #", a, " pattern: ", tvd.pattern, " with Char = ", Char.stringof);
                 try
@@ -383,8 +383,8 @@ unittest
                                     tvd.replace, " vs ", result));
                     }
                 }
-            }
-        }
+            }();
+        }();
         debug(std_regex_test) writeln("!!! FReD bulk test done "~matchFn.stringof~" !!!");
     }
 
@@ -415,7 +415,7 @@ unittest
         else
             alias Tests = TypeTuple!(Sequence!(0, 30), Sequence!(235, tv.length-5));
         foreach(a, v; Tests)
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum tvd = tv[v];
             static if(tvd.result == "c")
             {
@@ -444,7 +444,7 @@ unittest
                                 tvd.replace, " vs ", result);
                 }
             }
-        }
+        }();
         debug(std_regex_test) writeln("!!! FReD C-T test done !!!");
     }
 

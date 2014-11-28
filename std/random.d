@@ -1710,7 +1710,7 @@ body
     {
 
         foreach (T; std.typetuple.TypeTuple!(float, double, real))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             UniformRNG rng = UniformRNG(unpredictableSeed);
 
             auto a = uniform01();
@@ -1734,7 +1734,7 @@ body
             while (--i && uniform01!T(rng) == init) {}
             assert(i > 0);
             assert(i < 50);
-        }
+        }();
     }
 }
 
