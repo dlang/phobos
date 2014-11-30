@@ -8069,7 +8069,7 @@ struct NullSink
 +/
 
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
-if (isInputRange!R1 && isOutputRange!(R2, typeof(inputRange.front)))
+if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
 {
     static struct Result
     {
@@ -8246,8 +8246,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     {
         const int strideLen = 3;
         int i = 0;
-        typeof(Range.front) elem1;
-        typeof(Range.front) elem2;
+        ElementType!Range elem1;
+        ElementType!Range elem2;
         while (!r.empty)
         {
             if (i % strideLen == 0)
