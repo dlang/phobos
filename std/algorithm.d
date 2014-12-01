@@ -5302,7 +5302,7 @@ until either $(D pred(haystack.front)), or $(D
 haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
 pred).
 
-To find the last element of a bidirectional $(D haystack) satisfying
+To _find the last element of a bidirectional $(D haystack) satisfying
 $(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
 range, retro).
 
@@ -5706,8 +5706,6 @@ Finds two or more $(D needles) into a $(D haystack). The predicate $(D
 pred) is used throughout to compare elements. By default, elements are
 compared for equality.
 
-$(D BoyerMooreFinder) allocates GC memory.
-
 Params:
 
 haystack = The target of the search. Must be an $(GLOSSARY input
@@ -5851,6 +5849,23 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     }
 }
 
+/**
+ * Sets up Boyer-Moore matching for use with $(D find) below.
+ * By default, elements are compared for equality.
+ * 
+ * $(D BoyerMooreFinder) allocates GC memory.
+ * 
+ * Params:
+ * pred = Predicate used to compare elements.
+ * needle = A random-access range with length and slicing.
+ */
+BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
+(alias pred = "a == b", Range)
+(Range needle) if (isRandomAccessRange!(Range) || isSomeString!Range)
+{
+    return typeof(return)(needle);
+}
+
 /// Ditto
 struct BoyerMooreFinder(alias pred, Range)
 {
@@ -5945,15 +5960,18 @@ public:
     alias opDollar = length;
 }
 
-/// Ditto
-BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
-(alias pred = "a == b", Range)
-(Range needle) if (isRandomAccessRange!(Range) || isSomeString!Range)
-{
-    return typeof(return)(needle);
-}
-
-// Oddly this is not disabled by bug 4759
+/**
+ * Finds $(D needle) in $(D haystack) efficiently using the
+ * $(LUCKY Boyer-Moore) method.
+ * 
+ * Params:
+ * haystack = A random-access range with length and slicing.
+ * needle = A $(LREF BoyerMooreFinder).
+ * 
+ * Returns:
+ * $(D haystack) advanced such that $(D needle) is a prefix of it (if no
+ * such position exists, returns $(D haystack) advanced to termination).
+ */
 Range1 find(Range1, alias pred, Range2)(
     Range1 haystack, BoyerMooreFinder!(pred, Range2) needle)
 {
@@ -5972,10 +5990,14 @@ Range1 find(Range1, alias pred, Range2)(
         auto p = find(h, boyerMooreFinder(n));
         assert(!p.empty);
     }
+}
 
+///
+@safe unittest
+{
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
-    //writeln(find(a, boyerMooreFinder(b)));
+
     assert(find(a, boyerMooreFinder(b)) == [ 1, 2, 3, 4, 5 ]);
     assert(find(b, boyerMooreFinder(a)).empty);
 }
