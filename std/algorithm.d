@@ -5297,6 +5297,84 @@ if (isInputRange!InputRange &&
 }
 
 /**
+Advances the input range $(D haystack) by calling $(D haystack.popFront)
+until either $(D pred(haystack.front)), or $(D
+haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
+pred).
+
+To find the last element of a bidirectional $(D haystack) satisfying
+$(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
+range, retro).
+
+See_Also:
+     $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
+*/
+InputRange find(alias pred, InputRange)(InputRange haystack)
+if (isInputRange!InputRange)
+{
+    alias R = InputRange;
+    alias predFun = unaryFun!pred;
+    static if (isNarrowString!R)
+    {
+        import std.utf : decode;
+
+        immutable len = haystack.length;
+        size_t i = 0, next = 0;
+        while (next < len)
+        {
+            if (predFun(decode(haystack, next)))
+                return haystack[i .. $];
+            i = next;
+        }
+        return haystack[$ .. $];
+    }
+    else static if (!isInfinite!R && hasSlicing!R && is(typeof(haystack[cast(size_t)0 .. $])))
+    {
+        size_t i = 0;
+        foreach (ref e; haystack)
+        {
+            if (predFun(e))
+                return haystack[i .. $];
+            ++i;
+        }
+        return haystack[$ .. $];
+    }
+    else
+    {
+        //standard range
+        for ( ; !haystack.empty; haystack.popFront() )
+        {
+            if (predFun(haystack.front))
+                break;
+        }
+        return haystack;
+    }
+}
+
+///
+@safe unittest
+{
+    auto arr = [ 1, 2, 3, 4, 1 ];
+    assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
+
+    // with predicate alias
+    bool pred(int x) { return x + 1 > 1.5; }
+    assert(find!(pred)(arr) == arr);
+}
+
+@safe pure unittest
+{
+    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int[] r = [ 1, 2, 3 ];
+    assert(find!(a=>a > 2)(r) == [3]);
+    bool pred(int x) { return x + 1 > 1.5; }
+    assert(find!(pred)(r) == r);
+
+    assert(find!(a=>a > 'v')("hello world") == "world");
+    assert(find!(a=>a%4 == 0)("日本語") == "本語");
+}
+
+/**
 Finds a forward range in another. Elements are compared for
 equality. Performs $(BIGOH walkLength(haystack) * walkLength(needle))
 comparisons in the worst case. Specializations taking advantage of
@@ -5907,84 +5985,6 @@ Range1 find(Range1, alias pred, Range2)(
     auto bm = boyerMooreFinder("for");
     auto match = find("Moor", bm);
     assert(match.empty);
-}
-
-/**
-Advances the input range $(D haystack) by calling $(D haystack.popFront)
-until either $(D pred(haystack.front)), or $(D
-haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
-pred).
-
-To find the last element of a bidirectional $(D haystack) satisfying
-$(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
-range, retro).
-
-See_Also:
-     $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
-*/
-InputRange find(alias pred, InputRange)(InputRange haystack)
-if (isInputRange!InputRange)
-{
-    alias R = InputRange;
-    alias predFun = unaryFun!pred;
-    static if (isNarrowString!R)
-    {
-        import std.utf : decode;
-
-        immutable len = haystack.length;
-        size_t i = 0, next = 0;
-        while (next < len)
-        {
-            if (predFun(decode(haystack, next)))
-                return haystack[i .. $];
-            i = next;
-        }
-        return haystack[$ .. $];
-    }
-    else static if (!isInfinite!R && hasSlicing!R && is(typeof(haystack[cast(size_t)0 .. $])))
-    {
-        size_t i = 0;
-        foreach (ref e; haystack)
-        {
-            if (predFun(e))
-                return haystack[i .. $];
-            ++i;
-        }
-        return haystack[$ .. $];
-    }
-    else
-    {
-        //standard range
-        for ( ; !haystack.empty; haystack.popFront() )
-        {
-            if (predFun(haystack.front))
-                break;
-        }
-        return haystack;
-    }
-}
-
-///
-@safe unittest
-{
-    auto arr = [ 1, 2, 3, 4, 1 ];
-    assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
-
-    // with predicate alias
-    bool pred(int x) { return x + 1 > 1.5; }
-    assert(find!(pred)(arr) == arr);
-}
-
-@safe pure unittest
-{
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] r = [ 1, 2, 3 ];
-    assert(find!(a=>a > 2)(r) == [3]);
-    bool pred(int x) { return x + 1 > 1.5; }
-    assert(find!(pred)(r) == r);
-
-    assert(find!(a=>a > 'v')("hello world") == "world");
-    assert(find!(a=>a%4 == 0)("日本語") == "本語");
 }
 
 // findSkip
