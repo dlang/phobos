@@ -3,6 +3,11 @@ Ddoc
 $(P Phobos is the standard runtime library that comes with the D language
 compiler.)
 
+$(P Generally, the $(D std) namespace is used for the main modules in the
+Phobos standard library. The $(D etc) namespace is used for external C/C++
+library bindings. The $(D core) namespace is used for low-level D runtime
+functions.)
+
 $(P The following table is a quick reference guide to which Phobos modules to
 use for a given category of functionality. Note that some modules may appear in
 more than one category, as some Phobos modules are quite generic and can be
@@ -323,11 +328,6 @@ $(BOOKTABLE ,
         the compiler.)
     )
 )
-
-$(P Generally, the $(D std) namespace is used for the main modules in the
-Phobos standard library. The $(D etc) namespace is used for external C/C++
-library bindings. The $(D core) namespace is used for low-level D runtime
-functions.)
 
 Macros:
 	TITLE=Phobos Runtime Library
