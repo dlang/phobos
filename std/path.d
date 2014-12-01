@@ -32,6 +32,10 @@
     returned, it is usually a slice of an input string.  If a function
     allocates, this is explicitly mentioned in the documentation.
 
+    Upgrading:
+        $(WEB digitalmars.com/d/1.0/phobos/std_path.html#fnmatch) can
+        be replaced with $(D globMatch).
+
     Authors:
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
