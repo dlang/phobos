@@ -3695,11 +3695,15 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 
     void popFront()
     {
+        static auto trustedCycle(ref typeof(_state) s) @trusted
+        {
+            return cycle(s);
+        }
         // The cast here is reasonable because fun may cause integer
         // promotion, but needs to return a StateType to make its operation
         // closed.  Therefore, we have no other choice.
         _state[_n % stateSize] = cast(StateType) binaryFun!(fun, "a", "n")(
-            cycle(_state), _n + stateSize);
+            trustedCycle(_state), _n + stateSize);
         ++_n;
     }
 
@@ -3717,7 +3721,7 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
 
@@ -3753,7 +3757,7 @@ recurrence(alias fun, State...)(State initial)
     return typeof(return)(state);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
 
