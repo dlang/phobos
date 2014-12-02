@@ -5297,6 +5297,84 @@ if (isInputRange!InputRange &&
 }
 
 /**
+Advances the input range $(D haystack) by calling $(D haystack.popFront)
+until either $(D pred(haystack.front)), or $(D
+haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
+pred).
+
+To _find the last element of a bidirectional $(D haystack) satisfying
+$(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
+range, retro).
+
+See_Also:
+     $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
+*/
+InputRange find(alias pred, InputRange)(InputRange haystack)
+if (isInputRange!InputRange)
+{
+    alias R = InputRange;
+    alias predFun = unaryFun!pred;
+    static if (isNarrowString!R)
+    {
+        import std.utf : decode;
+
+        immutable len = haystack.length;
+        size_t i = 0, next = 0;
+        while (next < len)
+        {
+            if (predFun(decode(haystack, next)))
+                return haystack[i .. $];
+            i = next;
+        }
+        return haystack[$ .. $];
+    }
+    else static if (!isInfinite!R && hasSlicing!R && is(typeof(haystack[cast(size_t)0 .. $])))
+    {
+        size_t i = 0;
+        foreach (ref e; haystack)
+        {
+            if (predFun(e))
+                return haystack[i .. $];
+            ++i;
+        }
+        return haystack[$ .. $];
+    }
+    else
+    {
+        //standard range
+        for ( ; !haystack.empty; haystack.popFront() )
+        {
+            if (predFun(haystack.front))
+                break;
+        }
+        return haystack;
+    }
+}
+
+///
+@safe unittest
+{
+    auto arr = [ 1, 2, 3, 4, 1 ];
+    assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
+
+    // with predicate alias
+    bool pred(int x) { return x + 1 > 1.5; }
+    assert(find!(pred)(arr) == arr);
+}
+
+@safe pure unittest
+{
+    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int[] r = [ 1, 2, 3 ];
+    assert(find!(a=>a > 2)(r) == [3]);
+    bool pred(int x) { return x + 1 > 1.5; }
+    assert(find!(pred)(r) == r);
+
+    assert(find!(a=>a > 'v')("hello world") == "world");
+    assert(find!(a=>a%4 == 0)("日本語") == "本語");
+}
+
+/**
 Finds a forward range in another. Elements are compared for
 equality. Performs $(BIGOH walkLength(haystack) * walkLength(needle))
 comparisons in the worst case. Specializations taking advantage of
@@ -5628,18 +5706,16 @@ Finds two or more $(D needles) into a $(D haystack). The predicate $(D
 pred) is used throughout to compare elements. By default, elements are
 compared for equality.
 
-$(D BoyerMooreFinder) allocates GC memory.
-
 Params:
 
-haystack = The target of the search. Must be an $(GLOSSARY input
-range). If any of $(D needles) is a range with elements comparable to
-elements in $(D haystack), then $(D haystack) must be a $(GLOSSARY
-forward range) such that the search can backtrack.
+haystack = The target of the search. Must be an input range.
+If any of $(D needles) is a range with elements comparable to
+elements in $(D haystack), then $(D haystack) must be a forward range
+such that the search can backtrack.
 
 needles = One or more items to search for. Each of $(D needles) must
 be either comparable to one element in $(D haystack), or be itself a
-$(GLOSSARY forward range) with elements comparable with elements in
+forward range with elements comparable with elements in
 $(D haystack).
 
 Returns:
@@ -5773,6 +5849,23 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     }
 }
 
+/**
+ * Sets up Boyer-Moore matching for use with $(D find) below.
+ * By default, elements are compared for equality.
+ * 
+ * $(D BoyerMooreFinder) allocates GC memory.
+ * 
+ * Params:
+ * pred = Predicate used to compare elements.
+ * needle = A random-access range with length and slicing.
+ */
+BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
+(alias pred = "a == b", Range)
+(Range needle) if (isRandomAccessRange!(Range) || isSomeString!Range)
+{
+    return typeof(return)(needle);
+}
+
 /// Ditto
 struct BoyerMooreFinder(alias pred, Range)
 {
@@ -5867,15 +5960,18 @@ public:
     alias opDollar = length;
 }
 
-/// Ditto
-BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
-(alias pred = "a == b", Range)
-(Range needle) if (isRandomAccessRange!(Range) || isSomeString!Range)
-{
-    return typeof(return)(needle);
-}
-
-// Oddly this is not disabled by bug 4759
+/**
+ * Finds $(D needle) in $(D haystack) efficiently using the
+ * $(LUCKY Boyer-Moore) method.
+ * 
+ * Params:
+ * haystack = A random-access range with length and slicing.
+ * needle = A $(LREF BoyerMooreFinder).
+ * 
+ * Returns:
+ * $(D haystack) advanced such that $(D needle) is a prefix of it (if no
+ * such position exists, returns $(D haystack) advanced to termination).
+ */
 Range1 find(Range1, alias pred, Range2)(
     Range1 haystack, BoyerMooreFinder!(pred, Range2) needle)
 {
@@ -5894,10 +5990,14 @@ Range1 find(Range1, alias pred, Range2)(
         auto p = find(h, boyerMooreFinder(n));
         assert(!p.empty);
     }
+}
 
+///
+@safe unittest
+{
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
-    //writeln(find(a, boyerMooreFinder(b)));
+
     assert(find(a, boyerMooreFinder(b)) == [ 1, 2, 3, 4, 5 ]);
     assert(find(b, boyerMooreFinder(a)).empty);
 }
@@ -5907,84 +6007,6 @@ Range1 find(Range1, alias pred, Range2)(
     auto bm = boyerMooreFinder("for");
     auto match = find("Moor", bm);
     assert(match.empty);
-}
-
-/**
-Advances the input range $(D haystack) by calling $(D haystack.popFront)
-until either $(D pred(haystack.front)), or $(D
-haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
-pred).
-
-To find the last element of a bidirectional $(D haystack) satisfying
-$(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
-range, retro).
-
-See_Also:
-     $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
-*/
-InputRange find(alias pred, InputRange)(InputRange haystack)
-if (isInputRange!InputRange)
-{
-    alias R = InputRange;
-    alias predFun = unaryFun!pred;
-    static if (isNarrowString!R)
-    {
-        import std.utf : decode;
-
-        immutable len = haystack.length;
-        size_t i = 0, next = 0;
-        while (next < len)
-        {
-            if (predFun(decode(haystack, next)))
-                return haystack[i .. $];
-            i = next;
-        }
-        return haystack[$ .. $];
-    }
-    else static if (!isInfinite!R && hasSlicing!R && is(typeof(haystack[cast(size_t)0 .. $])))
-    {
-        size_t i = 0;
-        foreach (ref e; haystack)
-        {
-            if (predFun(e))
-                return haystack[i .. $];
-            ++i;
-        }
-        return haystack[$ .. $];
-    }
-    else
-    {
-        //standard range
-        for ( ; !haystack.empty; haystack.popFront() )
-        {
-            if (predFun(haystack.front))
-                break;
-        }
-        return haystack;
-    }
-}
-
-///
-@safe unittest
-{
-    auto arr = [ 1, 2, 3, 4, 1 ];
-    assert(find!("a > 2")(arr) == [ 3, 4, 1 ]);
-
-    // with predicate alias
-    bool pred(int x) { return x + 1 > 1.5; }
-    assert(find!(pred)(arr) == arr);
-}
-
-@safe pure unittest
-{
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] r = [ 1, 2, 3 ];
-    assert(find!(a=>a > 2)(r) == [3]);
-    bool pred(int x) { return x + 1 > 1.5; }
-    assert(find!(pred)(r) == r);
-
-    assert(find!(a=>a > 'v')("hello world") == "world");
-    assert(find!(a=>a%4 == 0)("日本語") == "本語");
 }
 
 // findSkip
