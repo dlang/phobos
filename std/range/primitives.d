@@ -63,9 +63,6 @@ $(BOOKTABLE ,
         $(TD Tests if a given _range supports the array slicing operation $(D
         R[x..y]).
     ))
-    $(TR $(TD $(D $(LREF walkLength)))
-        $(TD Computes the length of any _range in O(n) time.
-    ))
 )
 
 Finally, this module also defines some convenience functions for
@@ -94,6 +91,9 @@ $(BOOKTABLE ,
     ))
     $(TR $(TD $(D $(LREF moveAt)))
         $(TD Removes the $(I i)'th element of a random-access _range.
+    ))
+    $(TR $(TD $(D $(LREF walkLength)))
+        $(TD Computes the length of any _range in O(n) time.
     ))
 )
 
