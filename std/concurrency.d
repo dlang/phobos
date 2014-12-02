@@ -323,6 +323,22 @@ private:
 
 
     MessageBox  mbox;
+
+public:
+
+    /**
+     * Generate a convenient string for identifying this Tid.  This is only
+     * useful to see if Tid's that are currently executing are the same or
+     * different, e.g. for logging and debugging.  It is potentially possible
+     * that a Tid executed in the future will have the same toString() output
+     * as another Tid that has already terminated.
+     */
+    void toString(scope void delegate(const(char)[]) sink)
+    {
+        import std.format;
+        formattedWrite(sink, "Tid(%x)", &mbox);
+    }
+
 }
 
 
@@ -2148,6 +2164,7 @@ private
         size_t      m_localMsgs;
         size_t      m_maxMsgs;
         bool        m_closed;
+
     }
 
 
