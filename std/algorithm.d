@@ -5708,14 +5708,14 @@ compared for equality.
 
 Params:
 
-haystack = The target of the search. Must be an $(GLOSSARY input
-range). If any of $(D needles) is a range with elements comparable to
-elements in $(D haystack), then $(D haystack) must be a $(GLOSSARY
-forward range) such that the search can backtrack.
+haystack = The target of the search. Must be an input range.
+If any of $(D needles) is a range with elements comparable to
+elements in $(D haystack), then $(D haystack) must be a forward range
+such that the search can backtrack.
 
 needles = One or more items to search for. Each of $(D needles) must
 be either comparable to one element in $(D haystack), or be itself a
-$(GLOSSARY forward range) with elements comparable with elements in
+forward range with elements comparable with elements in
 $(D haystack).
 
 Returns:
