@@ -204,20 +204,23 @@ else
        without wrapping it.  If I didn't wrap it, casts would be required
        basically everywhere.
 */
-private void atomicSetUbyte(ref ubyte stuff, ubyte newVal)
+private void atomicSetUbyte(T)(ref T stuff, T newVal)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     //core.atomic.cas(cast(shared) &stuff, stuff, newVal);
     atomicStore(*(cast(shared) &stuff), newVal);
 }
 
-private ubyte atomicReadUbyte(ref ubyte val)
+private ubyte atomicReadUbyte(T)(ref T val)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     return atomicLoad(*(cast(shared) &val));
 }
 
 // This gets rid of the need for a lot of annoying casts in other parts of the
 // code, when enums are involved.
-private bool atomicCasUbyte(ref ubyte stuff, ubyte testVal, ubyte newVal)
+private bool atomicCasUbyte(T)(ref T stuff, T testVal, T newVal)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     return core.atomic.cas(cast(shared) &stuff, testVal, newVal);
 }
