@@ -2469,16 +2469,35 @@ unittest
     }
 }
 
+alias PreserveAttributes = Flag!"preserveAttributes";
+
+version (StdDdoc)
+{
+    /// Defaults to PreserveAttributes.yes on Windows, and the opposite on all other platforms.
+    PreserveAttributes preserveAttributesDefault;
+}
+else version(Windows)
+{
+    enum preserveAttributesDefault = PreserveAttributes.yes;
+}
+else
+{
+    enum preserveAttributesDefault = PreserveAttributes.no;
+}
+
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
+File attributes are preserved, if $(D preserve) equals $(D Yes.preserve).
+On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
 Throws: $(D FileException) on error.
  */
-void copy(in char[] from, in char[] to)
+void copy(in char[] from, in char[] to, PreserveAttributes preserve = preserveAttributesDefault)
 {
     version(Windows)
     {
+        assert(preserve == Yes.preserve);
         immutable result = CopyFileW(from.tempCStringW(), to.tempCStringW(), false);
         if (!result)
             throw new FileException(to.idup);
@@ -2522,8 +2541,8 @@ void copy(in char[] from, in char[] to)
                 assert(size >= toxfer);
                 size -= toxfer;
             }
-            import core.sys.posix.sys.stat;
-            cenforce(fchmod(fdw, statbuf.st_mode)==0, from);
+            if (preserve)
+                cenforce(fchmod(fdw, statbuf.st_mode) == 0, from);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
@@ -2553,21 +2572,10 @@ version(Posix) unittest //issue 11434
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "1");
-    import core.sys.posix.sys.stat;
-    cenforce(chmod(toStringz(t1), octal!767)==0, t1);
-    copy(t1, t2);
+    setAttributes(t1, octal!767);
+    copy(t1, t2, Yes.preserveAttributes);
     assert(readText(t2) == "1");
-
-    stat_t statbuf = void;
-    immutable fd = core.sys.posix.fcntl.open(toStringz(t1), O_RDONLY);
-    cenforce(fd != -1, t2);
-    scope(exit) core.sys.posix.unistd.close(fd);
-
-    cenforce(fstat(fd, &statbuf) == 0, t2);
-
-    import std.string:format;
-    auto permissions = format("%o", statbuf.st_mode);
-    assert(permissions=="100767");
+    assert(getAttributes(t2) == octal!100767);
 }
 
 /++
