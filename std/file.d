@@ -479,7 +479,11 @@ void rename(in char[] from, in char[] to) @trusted
                             to)));
     }
     else version(Posix)
+    {
+        import core.stdc.stdio;
+
         cenforce(core.stdc.stdio.rename(from.tempCString(), to.tempCString()) == 0, to);
+    }
 }
 
 @safe unittest
@@ -506,8 +510,12 @@ void remove(in char[] name) @trusted
         cenforce(DeleteFileW(name.tempCStringW()), name);
     }
     else version(Posix)
+    {
+        import core.stdc.stdio;
+
         cenforce(core.stdc.stdio.remove(name.tempCString()) == 0,
             "Failed to remove file " ~ name);
+    }
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name) @trusted
@@ -2477,6 +2485,8 @@ void copy(in char[] from, in char[] to)
     }
     else version(Posix)
     {
+        import core.stdc.stdio;
+
         immutable fd = core.sys.posix.fcntl.open(from.tempCString(), O_RDONLY);
         cenforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
