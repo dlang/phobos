@@ -1652,6 +1652,8 @@ void yield(T)(T value)
 
 version (Win64) {
     // fibers are broken on Win64
+} else version (Win32) {
+    // fibers are broken in Win32 under server 2012: bug 13821
 } else unittest {
     import core.exception;
     import std.exception;
