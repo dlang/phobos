@@ -5025,8 +5025,10 @@ struct Transposed(RangeOfRanges)
 
     @property auto front()
     {
-        import std.algorithm : map;
-        return map!"a.front"(_input.save);
+        import std.algorithm : filter, map;
+        return _input.save
+                     .filter!(a => !a.empty)
+                     .map!(a => a.front);
     }
 
     void popFront()
@@ -5036,8 +5038,11 @@ struct Transposed(RangeOfRanges)
         while (!r.empty)
         {
             auto e = r.front;
-            e.popFront();
-            r.front = e;
+            if (!e.empty)
+            {
+                e.popFront();
+                r.front = e;
+            }
 
             r.popFront();
         }
@@ -5074,6 +5079,18 @@ private:
     // Boundary case: transpose of empty range should be empty
     int[][] ror = [];
     assert(transposed(ror).empty);
+}
+
+// Issue 9507
+unittest
+{
+    import std.algorithm : equal;
+
+    auto r = [[1,2], [3], [4,5], [], [6]];
+    assert(r.transposed.equal!equal([
+        [1, 3, 4, 6],
+        [2, 5]
+    ]));
 }
 
 /**
