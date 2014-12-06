@@ -3,29 +3,52 @@
 /**
 Defines generic containers.
 
-Source: $(PHOBOSSRC std/container/_package.d)
-Macros:
-WIKI = Phobos/StdContainer
-TEXTWITHCOMMAS = $0
+Submodules:
 
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
-copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+This module consists of the following submodules:
 
-License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(WEB
-boost.org/LICENSE_1_0.txt)).
+$(UL
+    $(LI
+        The $(LINK2 std_container_array, std._container.array) module provides
+        an $(D Array) type with deterministic control of memory, not reliant on
+        the GC unlike the built-in arrays.
+    )
+    $(LI
+        The $(LINK2 std_container_binaryheap, std._container.binaryheap) module
+        provides a binary heap implementation that can be applied to any
+        user-provided random-access range.
+    )
+    $(LI
+        The $(LINK2 std_container_dlist, std._container.dlist) module provides
+        a doubly-linked list implementation.
+    )
+    $(LI
+        The $(LINK2 std_container_rbtree, std._container.rbtree) module
+        implements red-black trees.
+    )
+    $(LI
+        The $(LINK2 std_container_slist, std._container.slist) module
+        implements singly-linked lists.
+    )
+    $(LI
+        The $(LINK2 std_container_util, std._container.util) module contains
+        some generic tools commonly used by container implementations.
+    )
+)
 
-Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+Container_primitives:
 
-$(BOOKTABLE $(TEXTWITHCOMMAS Container primitives. A _container need not
-implement all primitives, but if a primitive is implemented, it must
-support the syntax described in the $(B syntax) column with the semantics
-described in the $(B description) column, and it must not have worse worst-case
-complexity than denoted in big-O notation in the $(BIGOH &middot;) column.
-Below, $(D C) means a _container type, $(D c) is a value of _container
-type, $(D n$(SUBx)) represents the effective length of value $(D x),
-which could be a single element (in which case $(D n$(SUB x)) is $(D 1)),
-a _container, or a range.),
+The following table describes a common set of primitives that containers
+implement.  A _container need not implement all primitives, but if a
+primitive is implemented, it must support the syntax described in the $(B
+syntax) column with the semantics described in the $(B description) column, and
+it must not have a worst-case complexity worse than denoted in big-O notation in
+the $(BIGOH &middot;) column.  Below, $(D C) means a _container type, $(D c) is
+a value of _container type, $(D n$(SUBx)) represents the effective length of
+value $(D x), which could be a single element (in which case $(D n$(SUB x)) is
+$(D 1)), a _container, or a range.
+
+$(BOOKTABLE Container primitives,
 
 $(TR $(TH Syntax) $(TH $(BIGOH &middot;)) $(TH Description))
 
@@ -210,6 +233,20 @@ The key's type is defined by the _container.))
 $(TR  $(TDNW $(D )) $(TDNW $(D )) $(TD ))
 
 )
+
+Source: $(PHOBOSSRC std/_container/package.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
  */
 
 module std.container;
