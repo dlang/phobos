@@ -1997,7 +1997,10 @@ struct RandomCover(Range, UniformRNG = void)
         {
             _input = input;
             _chosen.length = _input.length;
-            _alreadyChosen = 0;
+            if (_chosen.length == 0)
+            {
+                _alreadyChosen = 1;
+            }
         }
     }
     else
@@ -2009,7 +2012,10 @@ struct RandomCover(Range, UniformRNG = void)
             _input = input;
             _rng = rng;
             _chosen.length = _input.length;
-            _alreadyChosen = 0;
+            if (_chosen.length == 0)
+            {
+                _alreadyChosen = 1;
+            }
         }
 
         this(Range input, UniformRNG rng)
@@ -2037,7 +2043,6 @@ struct RandomCover(Range, UniformRNG = void)
     {
         if (_alreadyChosen == 0)
         {
-            _chosen[] = false;
             popFront();
         }
         return _input[_current];
@@ -2139,6 +2144,15 @@ unittest
         sort(b);
         assert(a == b, text(b));
     }
+}
+
+unittest
+{
+    // Bugzilla 12589
+    int[] r = [];
+    auto rc = randomCover(r);
+    assert(rc.length == 0);
+    assert(rc.empty);
 }
 
 // RandomSample
