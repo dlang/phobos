@@ -1,8 +1,11 @@
 /**
-These _range-construction tools are implemented using templates; but sometimes
-an object-based interface for ranges is needed. For this purpose, this module
+This module is a submodule of $(LINK2 std_range_package.html, std.range).
+
+The main $(D std.range) module provides template-based tools for working with
+ranges, but sometimes an object-based interface for ranges is needed, such as
+when runtime polymorphism is required. For this purpose, this submodule
 provides a number of object and $(D interface) definitions that can be used to
-wrap around _range objects created by the above templates.
+wrap around _range objects created by the $(D std.range) templates.
 
 $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF InputRange)))

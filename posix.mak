@@ -91,7 +91,7 @@ DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
@@ -421,6 +421,9 @@ $(DOC_OUTPUT_DIR)/std_container_%.html : std/container/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_range_%.html : std/range/%.d $(STDDOC)
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_regex_%.html : std/regex/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)

@@ -1,6 +1,9 @@
 /**
-This module defines several templates for testing whether a given object is a
-_range, and what kind of _range it is:
+This module is a submodule of $(LINK2 std_range_package.html, std.range).
+
+It provides basic range functionality by defining several templates for testing
+whether a given object is a _range, and what kind of _range it is:
+
 $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF isInputRange)))
         $(TD Tests if something is an $(I input _range), defined to be
@@ -30,7 +33,7 @@ $(BOOKTABLE ,
     ))
 )
 
-A number of templates are provided that test for various _range capabilities:
+It also provides number of templates that test for various _range capabilities:
 
 $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF hasMobileElements)))
@@ -65,8 +68,7 @@ $(BOOKTABLE ,
     ))
 )
 
-Finally, this module also defines some convenience functions for
-manipulating ranges:
+Finally, it includes some convenience functions for manipulating ranges:
 
 $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF popFrontN)))
