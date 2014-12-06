@@ -4822,6 +4822,18 @@ struct Typedef(T, T init = T.init, string cookie=null)
         this(tdef.Typedef_payload);
     }
 
+    // We need to add special overload for cast(Typedef!X)exp,
+    // thus we can't simply inherit Proxy!Typedef_payload
+    T2 opCast(T2 : Typedef!(T, Unused), this X, T, Unused...)()
+    {
+        return T2(cast(T)Typedef_payload);
+    }
+
+    auto ref opCast(T2, this X)()
+    {
+        return cast(T2)Typedef_payload;
+    }
+
     mixin Proxy!Typedef_payload;
 }
 
@@ -4989,7 +5001,7 @@ unittest // about toHash
         static struct MyStruct2
         {
             int x;
-            hash_t toHash() const { return x; }
+            size_t toHash() const nothrow @safe { return x; }
             bool opEquals(ref const MyStruct2 r) const { return r.x == x; }
         }
 
@@ -5008,6 +5020,18 @@ unittest // about toHash
         assert(TD(new MyClass) !in td);
         assert(td[TD(c)] == 6);
     }
+}
+
+unittest
+{
+    alias String = Typedef!(char[]);
+    alias CString = Typedef!(const(char)[]);
+    CString cs = "fubar";
+    String s = cast(String)cs;
+    assert(cs == s);
+    char[] s2 = cast(char[])cs;
+    const(char)[] cs2 = cast(const(char)[])s;
+    assert(s2 == cs2);
 }
 
 /**
