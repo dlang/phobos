@@ -5,7 +5,7 @@ Defines generic containers.
 
 Submodules:
 
-This module consists of several submodules:
+This module consists of the following submodules:
 
 $(UL
     $(LI

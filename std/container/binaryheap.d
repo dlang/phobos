@@ -1,3 +1,23 @@
+/**
+This module provides a $(D BinaryHeap) adaptor that makes a binary heap out of
+any user-provided random-access range.
+
+This module is a submodule of $(LINK2 std_container_package, std.container).
+
+Source: $(PHOBOSSRC std/container/_binaryheap.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+*/
 module std.container.binaryheap;
 
 import std.range.primitives;
