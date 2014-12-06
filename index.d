@@ -8,7 +8,7 @@ Phobos standard library. The $(D etc) namespace is used for external C/C++
 library bindings. The $(D core) namespace is used for low-level D runtime
 functions.)
 
-$(P The following table is a quick reference guide to which Phobos modules to
+$(P The following table is a quick reference guide for which Phobos modules to
 use for a given category of functionality. Note that some modules may appear in
 more than one category, as some Phobos modules are quite generic and can be
 applied in a variety of situations.)
@@ -127,9 +127,9 @@ $(BOOKTABLE ,
             $(D std.file) is for accessing the operating system's filesystem,
             and $(D std.path) is for manipulating filesystem pathnames in a
             platform-independent way.$(BR)
-            Note that $(D std.stream) and $(D std.cstream) are older,
-            deprecated modules slated to be replaced in the future; new code
-            should avoid relying on them.
+	    Note that $(D std.stream) and $(D std.cstream) are older,
+	    deprecated modules scheduled to be replaced in the future; new
+	    client code should avoid relying on them.
         )
     )
     $(TR
@@ -174,8 +174,8 @@ $(BOOKTABLE ,
             $(LINK2 core_thread, core.thread)
         )
         $(TD These modules provide primitives for concurrent processing,
-            multithreading, synchronisation, and interacting with operating
-            system processes.$(BR)
+	    multithreading, synchronization, and interacting with operating
+	    system processes.$(BR)
 
             $(D core.atomic) provides primitives for lock-free concurrent
             programming.$(BR)
@@ -310,8 +310,8 @@ $(BOOKTABLE ,
 
             $(D std.typecons) provides various utilities for type construction
             and compile-time type introspection. It provides facilities for
-            constructing of scoped variables and reference-counted types, as
-            well as miscellaneous useful generic types such as tuples and
+            constructing scoped variables and reference-counted types, as well
+            as miscellaneous useful generic types such as tuples and
             flags.$(BR)
 
             $(D std.bitmanip) provides various bit-level operations, bit
