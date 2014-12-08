@@ -2487,7 +2487,7 @@ else
 
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
-File attributes are preserved, if $(D preserve) equals $(D Yes.preserve).
+File attributes are preserved, if $(D preserve) equals $(D PreserveAttributes.yes).
 On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
