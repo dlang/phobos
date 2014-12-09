@@ -1394,6 +1394,12 @@ unittest
 {
     assert (buildNormalizedPath("") is null);
     assert (buildNormalizedPath("foo") == "foo");
+    assert (buildNormalizedPath(".") == ".");
+    assert (buildNormalizedPath(".", ".") == ".");
+    assert (buildNormalizedPath("foo", "..") == ".");
+    assert (buildNormalizedPath("", "") is null);
+    assert (buildNormalizedPath("", ".") == ".");
+    assert (buildNormalizedPath(".", "") == ".");
 
     version (Posix)
     {
@@ -1416,6 +1422,12 @@ unittest
         assert (buildNormalizedPath("/foo", "/bar/..", "baz") == "/baz");
         assert (buildNormalizedPath("foo/./bar", "../../", "../baz") == "../baz");
         assert (buildNormalizedPath("/foo/./bar", "../../baz") == "/baz");
+
+        //Curent dir path
+        assert (buildNormalizedPath("./") == ".");
+        assert (buildNormalizedPath("././") == ".");
+        assert (buildNormalizedPath("./foo/..") == ".");
+        assert (buildNormalizedPath("foo/..") == ".");
     }
     else version (Windows)
     {
@@ -1462,6 +1474,12 @@ unittest
         assert (buildNormalizedPath(`c:\foo`, `bar\baz\`) == `c:\foo\bar\baz`);
         assert (buildNormalizedPath(`c:\foo`, `bar/..`) == `c:\foo`);
         assert (buildNormalizedPath(`\\server\share\foo`, `..\bar`) == `\\server\share\bar`);
+
+        //Curent dir path
+        assert (buildNormalizedPath(".\\") == ".");
+        assert (buildNormalizedPath(".\\.\\") == ".");
+        assert (buildNormalizedPath(".\\foo\\..") == ".");
+        assert (buildNormalizedPath("foo\\..") == ".");
     }
     else static assert (0);
 }
