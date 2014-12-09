@@ -1179,6 +1179,17 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     if (isSomeChar!C)
 {
     import core.stdc.stdlib;
+
+    //Remove empty fields
+    bool allEmpty = true;
+    foreach(ref const(C[]) path ; paths){
+        if(path != null){
+            allEmpty = false;
+            break;
+        }
+    }
+    if(allEmpty)    return null;
+
     auto paths2 = new const(C)[][](paths.length);
         //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
 
@@ -1359,7 +1370,14 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     // Return path, including root element and excluding the
     // final dir separator.
     immutable len = (relPart.ptr - fullPath.ptr) + (i > 0 ? i - 1 : 0);
-    fullPath = fullPath[0 .. len];
+    if(len==0)
+    {
+        fullPath.length = 1;
+        fullPath[0] = '.';
+    }
+    else
+        fullPath = fullPath[0 .. len];
+
     version (Windows)
     {
         // On Windows, if the path is on the form `\\server\share`,
