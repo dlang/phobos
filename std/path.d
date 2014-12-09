@@ -1146,7 +1146,10 @@ unittest
     while at the same time resolving current/parent directory
     symbols ($(D ".") and $(D "..")) and removing superfluous
     directory separators.
+    It will return "." is the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
+
+    Using buildNormalizedPath on null paths will always return null.
 
     Note that this function does not resolve symbolic links.
 
@@ -1154,6 +1157,8 @@ unittest
 
     Examples:
     ---
+    assert (buildNormalizedPath("foo", "..") == ".");
+
     version (Posix)
     {
         assert (buildNormalizedPath("/foo/./bar/..//baz/") == "/foo/baz");
