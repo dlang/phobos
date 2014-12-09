@@ -5852,9 +5852,9 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 /**
  * Sets up Boyer-Moore matching for use with $(D find) below.
  * By default, elements are compared for equality.
- * 
+ *
  * $(D BoyerMooreFinder) allocates GC memory.
- * 
+ *
  * Params:
  * pred = Predicate used to compare elements.
  * needle = A random-access range with length and slicing.
@@ -5963,11 +5963,11 @@ public:
 /**
  * Finds $(D needle) in $(D haystack) efficiently using the
  * $(LUCKY Boyer-Moore) method.
- * 
+ *
  * Params:
  * haystack = A random-access range with length and slicing.
  * needle = A $(LREF BoyerMooreFinder).
- * 
+ *
  * Returns:
  * $(D haystack) advanced such that $(D needle) is a prefix of it (if no
  * such position exists, returns $(D haystack) advanced to termination).
@@ -9673,8 +9673,6 @@ if (s == SwapStrategy.stable
     && hasLvalueElements!Range
     && Offset.length >= 1)
 {
-    import std.exception : enforce;
-
     auto result = range;
     auto src = range, tgt = range;
     size_t pos;
@@ -9689,10 +9687,13 @@ if (s == SwapStrategy.stable
             auto from = i;
             enum delta = 1;
         }
-        enforce(pos <= from,
-                "remove(): incorrect ordering of elements to remove");
-        if (pass > 0)
+
+        static if (pass > 0)
         {
+            import std.exception : enforce;
+            enforce(pos <= from,
+                    "remove(): incorrect ordering of elements to remove");
+
             for (; pos < from; ++pos, src.popFront(), tgt.popFront())
             {
                 move(src.front, tgt.front);
