@@ -9,17 +9,14 @@ version(unittest) import std.stdio;
     True if T provides an std.container interface
     with random access.
 */
-template isRAContainer(T)
-{
-    enum isRAContainer = isRandomAccessRange!(typeof(T.init[])) 
-        &&  is(typeof(
-            () {
-                T t = T.init;
-                t.insert(ElementType!(T.Range).init);   
-                t.removeAny();
-             }
-        ));
-}
+enum isRAContainer(T) = isRandomAccessRange!(typeof(T.init[]))
+	&& is(typeof(
+	() {
+		T t = T.init;
+		t.insertBack(ElementType!(T.Range).init);
+		t.removeAny();
+	}
+));a
 
 ///
 unittest
