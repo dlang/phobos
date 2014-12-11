@@ -1187,8 +1187,10 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
 
     //Remove empty fields
     bool allEmpty = true;
-    foreach(ref const(C[]) path ; paths){
-        if(path != null){
+    foreach(ref const(C[]) path ; paths)
+    {
+        if(path !is null)
+        {
             allEmpty = false;
             break;
         }
