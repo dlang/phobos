@@ -37,13 +37,13 @@ Constructor taking a random access range
 /**
 Comparison for equality.
      */
-    bool opEquals(const FixedArray rhs) const
+    bool opEquals(const FixedArray rhs) inout
     {
         return opEquals(rhs);
     }
 
     /// ditto
-    bool opEquals(ref const FixedArray rhs) const
+    bool opEquals(ref const FixedArray rhs) inout
     {
         if(length != rhs.length)
             return false;
@@ -67,7 +67,7 @@ elements.
 
 Complexity: $(BIGOH 1)
      */
-    @property bool empty() const
+    @property bool empty() inout
     {
         return _length == 0;
     }
@@ -77,7 +77,7 @@ Returns the number of elements in the container.
 
 Complexity: $(BIGOH 1).
      */
-    @property size_t length() const
+    @property size_t length() inout
     {
         return _length;
     }
@@ -103,7 +103,7 @@ Returns the maximum number of elements the container can store
 
 Complexity: $(BIGOH 1)
      */
-    @property size_t capacity()
+    @property size_t capacity() inout
     {
         return _store.length;
     }
@@ -114,7 +114,7 @@ forward order.
 
 Complexity: $(BIGOH 1)
      */
-    Range opIndex()
+    inout(Range) opIndex() inout
     {
         return _store[0 .. length];
     }
@@ -127,7 +127,7 @@ Precondition: $(D a <= b && b <= length)
 
 Complexity: $(BIGOH 1)
      */
-    Range opSlice(size_t i, size_t j)
+    inout(Range) opSlice(size_t i, size_t j) inout
     {
         version (assert) if (i > j || j > length) throw new RangeError();
         return _store[i .. j];
@@ -141,14 +141,14 @@ Precondition: $(D !empty)
 
 Complexity: $(BIGOH 1)
      */
-    @property ref T front()
+    @property ref inout(T) front() inout
     {
         version (assert) if (empty) throw new RangeError();
         return _store[0];
     }
 
     /// ditto
-    @property ref T back()
+    @property ref inout(T) back() inout
     {
         version (assert) if (empty) throw new RangeError();
         return _store[length - 1];
@@ -161,7 +161,7 @@ Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
      */
-    ref T opIndex(size_t i)
+    ref inout(T) opIndex(size_t i) inout
     {
         version (assert) if (i >= _length) throw new RangeError();
         return _store[i];
