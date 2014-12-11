@@ -259,7 +259,7 @@ Complexity: $(BIGOH log(n)).
      */
     T removeAny()
     {
-        auto result = back;
+        auto result = move(back);
         removeBack();
         return result;
     }
