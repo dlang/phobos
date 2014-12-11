@@ -38,13 +38,13 @@ Constructor taking a random access range
 /**
 Comparison for equality.
      */
-    bool opEquals(const FixedArray rhs) inout
+    bool opEquals(FixedArray rhs)
     {
         return opEquals(rhs);
     }
 
     /// ditto
-    bool opEquals(ref const FixedArray rhs) inout
+    bool opEquals(ref FixedArray rhs)
     {
         if(length != rhs.length)
             return false;
@@ -115,7 +115,7 @@ forward order.
 
 Complexity: $(BIGOH 1)
      */
-    inout(Range) opIndex() inout
+    Range opIndex()
     {
         return _store[0 .. length];
     }
@@ -128,7 +128,7 @@ Precondition: $(D a <= b && b <= length)
 
 Complexity: $(BIGOH 1)
      */
-    inout(Range) opSlice(size_t i, size_t j) inout
+    Range opSlice(size_t i, size_t j)
     {
         version (assert) if (i > j || j > length) throw new RangeError();
         return _store[i .. j];
@@ -142,17 +142,17 @@ Precondition: $(D !empty)
 
 Complexity: $(BIGOH 1)
      */
-    @property ref inout(T) front() inout
+    @property ref T front()
     {
         version (assert) if (empty) throw new RangeError();
         return _store[0];
     }
 
     /// ditto
-    @property ref inout(T) back() inout
+    @property ref T back()
     {
         version (assert) if (empty) throw new RangeError();
-        return _store[length - 1];
+        return _store[_length - 1];
     }
 
 /**
@@ -162,7 +162,7 @@ Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
      */
-    ref inout(T) opIndex(size_t i) inout
+    ref T opIndex(size_t i)
     {
         version (assert) if (i >= _length) throw new RangeError();
         return _store[i];
@@ -324,7 +324,6 @@ Complexity: $(BIGOH log(n)).
             .destroy(_store[length - 1]);
         
         --_length;
-
     }
     /// ditto
     alias stableRemoveBack = removeBack;
@@ -425,6 +424,6 @@ unittest
     assert(fa1 != fa2);
     fa2.removeBack(4);
 
-    const fa3 = fixedArray(fa1.release(), 50);
+    auto fa3 = fixedArray(fa1.release(), 50);
     assert(fa3 == fa2);
 }
