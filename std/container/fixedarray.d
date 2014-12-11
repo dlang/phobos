@@ -408,3 +408,23 @@ unittest
 	assert(fa.removeAny() == 12.0);
 }
 
+
+// equality
+unittest
+{
+    double[] store = new double[100];
+    auto fa1 = fixedArray(store, 50);
+    fa1[] = 12;
+
+    auto fa2 = fixedArray(new double[100], 50);
+    fa2[] = 12;
+    assert(fa1 == fa2);
+
+    fa2.insertBack([1, 2, 3, 4]);
+    assert(fa1 != fa2);
+    fa2.removeBack(4);
+
+    const fa3 = fixedArray(fa1.release(), 50);
+    assert(fa3 == fa2);
+
+}
