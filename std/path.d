@@ -1377,7 +1377,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     // Return path, including root element and excluding the
     // final dir separator.
     immutable len = (relPart.ptr - fullPath.ptr) + (i > 0 ? i - 1 : 0);
-    if(len==0)
+    if(len == 0)
     {
         fullPath.length = 1;
         fullPath[0] = '.';
