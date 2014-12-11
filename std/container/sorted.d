@@ -330,6 +330,19 @@ Return SortedRange for _store
 
 
 /**
+ * Return to the first occurence of $(D elem) in store
+ * or null.
+	*/
+	Element* opBinaryRight(string op)(Element e)
+		if(op == "in")
+	{
+		auto er = this.equalRange(e);
+        if(er.empty)
+            return null;
+        return cast(Element*) &er.front();
+	}
+
+/**
 Container primitives
     */
     Range lowerBound(Value)(Value val)
@@ -483,4 +496,21 @@ unittest
         
         assert(sa.length == 20);
     }
+}
+
+// opIn
+unittest
+{
+	import std.array, std.container;
+    enum int[] data = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+    foreach(T; TypeTuple!(int[], Array!int))
+    {
+        import std.algorithm : equal;
+        import std.range : take;
+        T store = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+		auto sa = sorted(store);
+
+		assert((11 in sa) is null);
+		assert(*(16 in sa) == sa.back());
+	}
 }
