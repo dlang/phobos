@@ -62,16 +62,6 @@ struct Sorted(Store, alias less = "a < b")
     else
         static assert(false, "Store must be a random access range or a container providing one");
 
-/**
-    The primary range type of Sorted is a $(D std.range.SortedRange)
-    */
-    alias Range = SortedRange!(_Store.Range, comp);
-/**
-    An alias to the type of elements stored
-    */
-    alias Element = ElementType!Range;
-
-
     _Store _store;
 
     // Asserts that the store is sorted 
@@ -81,6 +71,15 @@ struct Sorted(Store, alias less = "a < b")
     }
 
 public:
+
+/**
+    The primary range type of Sorted is a $(D std.range.SortedRange)
+    */
+    alias Range = SortedRange!(_Store.Range, comp);
+/**
+    An alias to the type of elements stored
+    */
+    alias Element = ElementType!Range;
 
     /**
        Sorts store.  If $(D initialSize) is
@@ -145,7 +144,7 @@ $(D length). The return value is sorted.
 /**
 Returns $(D true) if the store is _empty, $(D false) otherwise.
      */
-    @property bool empty()
+    @property bool empty() inout
     {
         return length == 0;
     }
@@ -164,7 +163,7 @@ support a $(D dup) method.
 /**
 Returns the number of sorted elements.
      */
-    @property size_t length()
+    @property size_t length() inout
     {
         return _store.length;
     }
@@ -213,11 +212,11 @@ Inserts $(D value) into the store. If the underlying store is a range
 and $(D length == capacity), throws an exception.
      */
     // Insert one item
-    size_t insertBack(Value)(Value value)
+    size_t linearInsert(Value)(Value value)
         if (isImplicitlyConvertible!(Value, ElementType!Store))
     {
         _store.insertBack(value);
-        std.algorithm.completeSort!(comp)(assumeSorted!comp(_store[0 .. length-1]), _store[length-1 .. length]);    
+        std.algorithm.completeSort!(comp)(assumeSorted!comp(_store[0 .. length-1]), _store[length-1 .. length]);
         debug(Sorted) assertSorted();
         return 1;
     }
@@ -225,7 +224,7 @@ and $(D length == capacity), throws an exception.
 Inserts all elements of range $(D stuff) into store. If the underlying
 store is a range and has not enough space left, throws an exception.
     */
-    size_t insertBack(Range)(Range stuff)
+    size_t linearInsert(Range)(Range stuff)
         if (isInputRange!Range 
            && isImplicitlyConvertible!(ElementType!Range, ElementType!Store))
     {
@@ -255,16 +254,13 @@ store is a range and has not enough space left, throws an exception.
         return count;
     }
 
-    /// ditto   
-    alias insert = insertBack;
-
 
 /**
       Removes the given range from the store. Note that
       this method requires r to be optained from this store
       and the store to be a container.
      */
-    void remove(Range r)
+    void linearRemove(Range r)
     {
         import std.algorithm : swapRanges;
         size_t count = r.length;
@@ -325,7 +321,7 @@ Return SortedRange for _store
 /**
     Return element at index $(D idx)
     */
-    auto ref const(Element) opIndex(size_t idx)
+    ref Element opIndex(size_t idx)
     {
         return _store[idx];
     }
@@ -450,13 +446,13 @@ unittest
             assert(s.back == 16);
 
             auto removeThese = s[].drop(s.length - 2);
-            s.remove(removeThese);
+            s.linearRemove(removeThese);
             assert(equal(s[], [1, 2, 3, 4, 7, 8, 9, 10]));
 
-            s.remove(s[].drop(2).take(2));
+            s.linearRemove(s[].drop(2).take(2));
             assert(equal(s[], [1, 2, 7, 8, 9, 10]));
 
-            s.remove(s[].take(2));
+            s.linearRemove(s[].take(2));
             assert(equal(s[], [ 7, 8, 9, 10]));
         }
     }
@@ -470,7 +466,7 @@ unittest
         int[] inputs = iota(20).map!(x => uniform(0, 1000)).array;
         auto sa = Sorted!(Array!int)();
         foreach(i; inputs)
-            sa.insertBack(i);
+            sa.linearInsert(i);
 
         foreach(idx; 1 .. sa.length())
             assert(sa[idx-1] <= sa[idx]);
@@ -480,7 +476,7 @@ unittest
     {
         auto inputs = iota(20).map!(x => uniform(0, 1000));
         auto sa = Sorted!(Array!int)();
-        sa.insertBack(inputs);
+        sa.linearInsert(inputs);
 
         foreach(idx; 1 .. sa.length())
             assert(sa[idx-1] <= sa[idx]);
