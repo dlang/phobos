@@ -1,8 +1,7 @@
 module std.container.fixedarray;
 
-import core.exception,
-  std.algorithm, std.conv, std.exception, std.range,
-  std.traits, std.typecons;
+import core.exception, std.algorithm, std.conv, std.exception, std.range,
+        std.traits, std.typecons;
 
 public import std.container.util;
 version(unittest) import std.stdio;
@@ -13,11 +12,16 @@ No memory is ever allocated. Throws if not enough space is left
 for an operation to succeed. */
 struct FixedArray(Store)
 {
+
+/**
+    Random access range that provides the same range primitives as Store.
+    */
     alias Range = Store;
-    alias T = ElementType!Range;
+
     private {
-         Store _store;
-         size_t _length;
+        alias T = ElementType!Range;
+        Store _store;
+        size_t _length;
     }
 
 /**
@@ -79,10 +83,7 @@ Complexity: $(BIGOH 1).
     }
 
     /// ditto
-    size_t opDollar() const
-    {
-        return length;
-    }
+    alias opDollar = length;
 
 /**
 Set length.
@@ -94,7 +95,7 @@ Complexity: $(BIGOH 1).
 
     @property void length(size_t nlength) 
     {
-        enforce(0 <= nlength && nlength <= capacity);
+        version(assert) if (0 <= nlength && nlength <= capacity) throw new RangeError();
         _length = nlength;
     }
 /**
@@ -177,12 +178,13 @@ Complexity: $(BIGOH slice.length)
      */
     void opSliceAssign(T value)
     {
-        _store[] = value;
+        _store[0 .. length] = value;
     }
 
     /// ditto
     void opSliceAssign(T value, size_t i, size_t j)
     {
+        version(assert) if(j < length) throw new RangeError;
         _store[i .. j] = value;
     }
 
@@ -278,7 +280,7 @@ elements in $(D stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
         if(length == capacity)
-            throw new RangeError("FixedArray is full");
+            throw new RangeError("not enough room to insert stuff");
         _store[_length] = stuff;
         ++_length;
         return 1;
@@ -291,7 +293,7 @@ elements in $(D stuff)
         static if(hasLength!Stuff)
         {
             if(stuff.length > (capacity - length))
-                throw new RangeError("not enough room for stuff");
+                throw new RangeError("not enough room to insert stuff");
         }
             
         size_t count;
@@ -315,7 +317,7 @@ Complexity: $(BIGOH log(n)).
      */
     void removeBack()
     {
-        enforce(!empty);
+        version(assert) if(!empty) throw new RangeError;
         /* static if superfluos? */
         static if (hasElaborateDestructor!T)
             .destroy(_store[length - 1]);
@@ -381,8 +383,6 @@ unittest
     {
         assert(i == 1);
     }
-
-
 }
 
 /**
