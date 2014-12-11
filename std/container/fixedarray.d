@@ -95,7 +95,7 @@ Complexity: $(BIGOH 1).
 
     @property void length(size_t nlength) 
     {
-        version(assert) if (0 <= nlength && nlength <= capacity) throw new RangeError();
+        version(assert) if (nlength > capacity) throw new RangeError();
         _length = nlength;
     }
 /**
@@ -317,7 +317,7 @@ Complexity: $(BIGOH log(n)).
      */
     void removeBack()
     {
-        version(assert) if(!empty) throw new RangeError;
+        version(assert) if(empty) throw new RangeError;
         /* static if superfluos? */
         static if (hasElaborateDestructor!T)
             .destroy(_store[length - 1]);
@@ -426,5 +426,4 @@ unittest
 
     const fa3 = fixedArray(fa1.release(), 50);
     assert(fa3 == fa2);
-
 }
