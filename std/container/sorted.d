@@ -16,7 +16,7 @@ enum isRAContainer(T) = isRandomAccessRange!(typeof(T.init[]))
 		t.insertBack(ElementType!(T.Range).init);
 		t.removeAny();
 	}
-));a
+));
 
 ///
 unittest
@@ -62,23 +62,14 @@ struct Sorted(Store, alias less = "a < b")
     else
         static assert(false, "Store must be a random access range or a container providing one");
 
-    alias _Range = SortedRange!(_Store.Range, comp);
-    alias Element = ElementType!_Range; 
-
-    // disable assignment via Range
-    static struct Range
-    {
-        @property 
-        _Range payload;
-        alias payload this;
-        
-        @property 
-        auto ref const(Element) front() { return payload.front; }
-        @property
-        auto ref const(Element) back() { return payload.front; }
-        @disable void opIndexAssign();
-        @disable void opIndexOpAssign();
-    }
+/**
+    The primary range type of Sorted is a $(D std.range.SortedRange)
+    */
+    alias Range = SortedRange!(_Store.Range, comp);
+/**
+    An alias to the type of elements stored
+    */
+    alias Element = ElementType!Range;
 
 
     _Store _store;
@@ -86,10 +77,7 @@ struct Sorted(Store, alias less = "a < b")
     // Asserts that the store is sorted 
     void assertSorted()
     {
-        debug
-        {
-            assert(std.algorithm.isSorted!(comp)(_store()));
-        }
+        assert(std.algorithm.isSorted!(comp)(_store[]));
     }
 
 public:
@@ -285,26 +273,7 @@ store is a range and has not enough space left, throws an exception.
             _store.remove(r);
         else
             // move elements to the end and reduce length of array
-            swapRanges(r.payload, retro(this[].payload));
-
-        _store.length = length - count;
-        sort!comp(_store[]);    
-        assertSorted(); 
-    }
-
-/// ditto
-    void remove(Take!Range r)
-    {
-        Range source = r.source;
-        auto newT = source.payload.take(r.length);
-        import std.algorithm : swapRanges;
-        size_t count = r.length;
-        // if the underlying store supports it natively
-        static if(__traits(compiles, _store.remove(newT)))
-            _store.remove(newT);
-        else
-            // move elements to the end and reduce length of array
-            swapRanges(newT, retro(this[].payload));
+            swapRanges(r, retro(this[]));
 
         _store.length = length - count;
         sort!comp(_store[]);    
@@ -341,7 +310,7 @@ Return SortedRange for _store
     Range opIndex()
     {
         import std.range : assumeSorted;
-        return Range(_store[0 .. length].assumeSorted!comp);
+        return _store[0 .. length].assumeSorted!comp;
     }
 
 /**
@@ -350,7 +319,7 @@ Return SortedRange for _store
     Range opSlice(size_t start, size_t stop)
     {
         enforce(stop <= length);
-        return Range(_store[0 .. stop].assumeSorted!comp);
+        return _store[0 .. stop].assumeSorted!comp;
     }
 
 /**
@@ -369,19 +338,19 @@ Container primitives
     */
     Range lowerBound(Value)(Value val)
     {
-        return Range(this[].lowerBound(val));
+        return this[].lowerBound(val);
     }   
 
 /// ditto
     Range upperBound(Value)(Value val)
     {
-        return Range(this[].upperBound(val));
+        return this[].upperBound(val);
     }   
 
 /// ditto
     Range equalRange(Value)(Value val)
     {
-        return Range(this[].equalRange(val));
+        return this[].equalRange(val);
     }   
 }
 
@@ -491,16 +460,6 @@ unittest
             assert(equal(s[], [ 7, 8, 9, 10]));
         }
     }
-}
-
-unittest
-{
-    int[] a = [1, 2, 3, 4];
-    auto sa = sorted(a);
-    auto s = sa[];
-    static assert(!is(typeof(s.front() = 12)));
-    static assert(!is(typeof(s.back() = 12)));
-    static assert(!is(typeof(s[1] = 12)));
 }
 
 // test insertion
