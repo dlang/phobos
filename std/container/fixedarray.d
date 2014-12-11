@@ -4,7 +4,7 @@ import core.exception, std.algorithm, std.conv, std.exception, std.range,
         std.traits, std.typecons;
 
 public import std.container.util;
-version(unittest) import std.stdio;
+version(unittest) import std.stdio, std.container;
 
 /**
 Array type that uses a random access range as fixed storage location. 
@@ -51,9 +51,11 @@ Comparison for equality.
         return equal(_store[0 .. _length], rhs._store[0 .. _length]);
     }
 
+static if(is(typeof(_store.dup())))
+{
 /**
 Duplicates the container. The elements themselves are not transitively
-duplicated.
+duplicated. The underlying store must support .dup as well.
 
 Complexity: $(BIGOH n).
      */
@@ -61,6 +63,9 @@ Complexity: $(BIGOH n).
     {
         return FixedArray(_store.dup, _length);
     }
+}
+
+
 
 /**
 Property returning $(D true) if and only if the container has no
@@ -426,4 +431,29 @@ unittest
 
     auto fa3 = fixedArray(fa1.release(), 50);
     assert(fa3 == fa2);
+}
+
+// dup
+unittest
+{
+    {
+        auto store = Array!int(iota(0, 50));
+        auto fa1 = fixedArray(store[0 .. 25]);
+        auto fa2 = fixedArray(store[25 .. $]);
+
+        foreach(i,j; zip(fa1[], retro(fa2[])))
+            assert(i + j == 49);
+
+        // cannot dup
+        static assert(!is(typeof(fa1.dup)));
+    }
+    {
+        auto store = new int[20];
+        auto fa = fixedArray(store);
+        auto fa2 = fa.dup();
+
+        assert(equal(fa[], fa2[]));
+        fa2[12] = 12;
+        assert(!equal(fa[], fa2[]));
+    }
 }

@@ -149,6 +149,8 @@ Returns $(D true) if the store is _empty, $(D false) otherwise.
         return length == 0;
     }
 
+static if(is(typeof(_store.dup())))
+{
 /**
 Returns a wrapped duplicate of the store. The underlying store must also
 support a $(D dup) method.
@@ -159,7 +161,7 @@ support a $(D dup) method.
         result._store = _store.dup();
         return result;
     }
-
+}
 /**
 Returns the number of sorted elements.
      */
