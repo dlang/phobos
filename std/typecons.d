@@ -1079,6 +1079,40 @@ unittest
     static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
 }
 
+// Bugzilla 13837
+unittest
+{
+    // New behaviour, named arguments.
+    static assert(is(
+        typeof(tuple!("x")(1)) == Tuple!(int, "x")));
+    static assert(is(
+        typeof(tuple!("x")(1.0)) == Tuple!(double, "x")));
+    static assert(is(
+        typeof(tuple!("x")("foo")) == Tuple!(string, "x")));
+    static assert(is(
+        typeof(tuple!("x", "y")(1, 2.0)) == Tuple!(int, "x", double, "y")));
+
+    auto a = tuple!("a", "b", "c")("1", 2, 3.0f);
+    static assert(is(typeof(a.a) == string));
+    static assert(is(typeof(a.b) == int));
+    static assert(is(typeof(a.c) == float));
+
+    // Old behaviour, but with explicit type parameters.
+    static assert(is(
+        typeof(tuple!(int, double)(1, 2.0)) == Tuple!(int, double)));
+    static assert(is(
+        typeof(tuple!(const int)(1)) == Tuple!(const int)));
+    static assert(is(
+        typeof(tuple()) == Tuple!()));
+
+    // Nonsensical behaviour
+    static assert(!__traits(compiles, tuple!(1)(2)));
+    static assert(!__traits(compiles, tuple!("x")(1, 2)));
+    static assert(!__traits(compiles, tuple!("x", "y")(1)));
+    static assert(!__traits(compiles, tuple!("x")()));
+    static assert(!__traits(compiles, tuple!("x", int)(2)));
+}
+
 /**
 Returns a $(D Tuple) object instantiated and initialized according to
 the arguments.
@@ -1089,12 +1123,53 @@ auto value = tuple(5, 6.7, "hello");
 assert(value[0] == 5);
 assert(value[1] == 6.7);
 assert(value[2] == "hello");
+
+// Field names can be provided.
+auto entry = tuple!("index", "value")(4, "Hello");
+assert(entry.index == 4);
+assert(entry.value == "Hello");
 ----
 */
 
-Tuple!T tuple(T...)(T args)
+template tuple(Names...)
 {
-    return typeof(return)(args);
+    auto tuple(Args...)(Args args)
+    {
+        static if (Names.length == 0)
+        {
+            // No specified names, just infer types from Args...
+            return Tuple!Args(args);
+        }
+        else static if (!is(typeof(Names[0]) : string))
+        {
+            // Names[0] isn't a string, must be explicit types.
+            return Tuple!Names(args);
+        }
+        else
+        {
+            // Names[0] is a string, so must be specifying names.
+            static assert(Names.length == Args.length,
+                "Insufficient number of names given.");
+
+            // Interleave(a, b).and(c, d) == (a, c, b, d)
+            // This is to get the interleaving of types and names for Tuple
+            // e.g. Tuple!(int, "x", string, "y")
+            template Interleave(A...)
+            {
+                template and(B...) if (B.length == 1)
+                {
+                    alias TypeTuple!(A[0], B[0]) and;
+                }
+
+                template and(B...) if (B.length != 1)
+                {
+                    alias TypeTuple!(A[0], B[0],
+                        Interleave!(A[1..$]).and!(B[1..$])) and;
+                }
+            }
+            return Tuple!(Interleave!(Args).and!(Names))(args);
+        }
+    }
 }
 
 /**
