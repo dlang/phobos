@@ -1187,15 +1187,15 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
 
     //Remove empty fields
     bool allEmpty = true;
-    foreach(ref const(C[]) path ; paths)
+    foreach (ref const(C[]) path ; paths)
     {
-        if(path !is null)
+        if (path !is null)
         {
             allEmpty = false;
             break;
         }
     }
-    if(allEmpty)    return null;
+    if (allEmpty) return null;
 
     auto paths2 = new const(C)[][](paths.length);
         //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
@@ -1377,7 +1377,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     // Return path, including root element and excluding the
     // final dir separator.
     immutable len = (relPart.ptr - fullPath.ptr) + (i > 0 ? i - 1 : 0);
-    if(len == 0)
+    if (len == 0)
     {
         fullPath.length = 1;
         fullPath[0] = '.';
