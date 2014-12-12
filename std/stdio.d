@@ -4157,9 +4157,11 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         return buf.length;
     }
 
-    auto sz = GC.sizeOf(buf.ptr);
-    //auto sz = buf.length;
-    buf = buf.ptr[0 .. sz];
+    // extend buffer to the allocated size, but don't interfere with standard arrays
+    auto info = GC.query(buf.ptr);
+    if (buf.ptr == info.base && !(info.attr & GC.BlkAttr.APPENDABLE))
+        buf = buf.ptr[0 .. info.size];
+        
     if (fp._flag & _IONBF)
     {
         /* Use this for unbuffered I/O, when running
@@ -4216,7 +4218,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                     goto L1;
                 }
             }
-            if (i > sz)
+            if (i > buf.length)
             {
                 buf = uninitializedArray!(char[])(i);
             }
@@ -4238,7 +4240,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 if (c == terminator)
                     break;
             }
-            if (i > sz)
+            if (i > buf.length)
             {
                 buf = uninitializedArray!(char[])(i);
             }
@@ -4265,10 +4267,11 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
      */
     auto fp = cast(_iobuf*)fps;
 
-    auto sz = GC.sizeOf(buf.ptr);
-    //auto sz = buf.length;
-    buf = buf.ptr[0 .. sz];
-
+    // extend buffer to the allocated size, but don't interfere with standard arrays
+    auto info = GC.query(buf.ptr);
+    if (buf.ptr == info.base && !(info.attr & GC.BlkAttr.APPENDABLE))
+        buf = buf.ptr[0 .. info.size];
+        
     auto app = appender(buf);
     app.clear();
     if(app.capacity == 0)
@@ -4378,9 +4381,18 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         buf.length = 0;                // end of file
         return 0;
     }
-    if (s <= buf.length || s <= GC.sizeOf(buf.ptr))
+
+    // extend buffer to the allocated size, but don't interfere with standard arrays
+    auto info = GC.query(buf.ptr);
+    if (buf.ptr == info.base && !(info.attr & GC.BlkAttr.APPENDABLE))
+        buf = buf.ptr[0 .. info.size];
+    else if (s > buf.length && s <= buf.capacity)
+        goto L1;
+
+    if (s <= buf.length)
     {
-        buf = buf.ptr[0 .. s];
+      L1:
+        buf.length = s;
         buf[] = lineptr[0 .. s];
     }
     else
@@ -4490,6 +4502,39 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     return buf.length;
 }
 
+unittest
+{
+    auto deleteme = testFilename();
+    scope(exit) std.file.remove(deleteme);
+
+    std.file.write(deleteme, "abcd\n0123456789abcde\n1234\n");
+    File f = File(deleteme, "rb");
+    
+    char[] ln = new char[2];
+    assert(ln.capacity > 5);
+    char* lnptr = ln.ptr;
+    f.readln(ln);
+
+    assert(ln == "abcd\n");
+    assert(lnptr == ln.ptr); // should not reallocate
+    char[] t = ln[0..2];
+    t ~= 't';
+    assert(t == "abt");
+    assert(ln == "abcd\n");  // bug 13856: ln stomped to "abtd"
+
+    // it can also stomp the array length
+    ln = new char[4];
+    assert(ln.capacity < 16);
+    lnptr = ln.ptr;
+    f.readln(ln);
+    assert(ln == "0123456789abcde\n");
+    assert(ln.ptr != lnptr);  // used to write to ln, overwriting allocation length byte
+
+    char[100] buf;
+    ln = buf[];
+    f.readln(ln);
+    assert(ln.ptr == buf.ptr); // avoid allocation, buffer is good enough
+}
 
 /** Experimental network access via the File interface
 
