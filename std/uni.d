@@ -6601,7 +6601,7 @@ unittest
 auto byCodePoint(Range)(Range range)
     if(isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 {
-	// TODO: Propagate bidirectional access
+    // TODO: Propagate bidirectional access
     static struct Result
     {
         private Range _range;
