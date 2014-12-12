@@ -1710,6 +1710,242 @@ public:
         assert(c[2] == 0);
     }
 
+    // Rolls double word (upper, lower) to the right by n bits and returns the
+    // lower word of the result.
+    private static size_t rollRight(size_t upper, size_t lower, size_t nbits)
+        pure @safe nothrow @nogc
+    in
+    {
+        assert(nbits < bitsPerSizeT);
+    }
+    body
+    {
+        return (upper << (bitsPerSizeT - nbits)) | (lower >> nbits);
+    }
+
+    unittest
+    {
+        static if (size_t.sizeof == 8)
+        {
+            size_t x = 0x12345678_90ABCDEF;
+            size_t y = 0xFEDBCA09_87654321;
+
+            assert(rollRight(x, y, 32) == 0x90ABCDEF_FEDBCA09);
+            assert(rollRight(y, x, 4) == 0x11234567_890ABCDE);
+        }
+        else static if (size_t.sizeof == 4)
+        {
+            size_t x = 0x12345678;
+            size_t y = 0x90ABCDEF;
+
+            assert(rollRight(x, y, 16) == 0x567890AB);
+            assert(rollRight(y, x, 4) == 0xF1234567);
+        }
+        else
+            static assert(0, "Unsupported size_t width");
+    }
+
+    // Rolls double word (upper, lower) to the left by n bits and returns the
+    // upper word of the result.
+    private static size_t rollLeft(size_t upper, size_t lower, size_t nbits)
+        pure @safe nothrow @nogc
+    in
+    {
+        assert(nbits < bitsPerSizeT);
+    }
+    body
+    {
+        return (upper << nbits) | (lower >> (bitsPerSizeT - nbits));
+    }
+
+    unittest
+    {
+        static if (size_t.sizeof == 8)
+        {
+            size_t x = 0x12345678_90ABCDEF;
+            size_t y = 0xFEDBCA09_87654321;
+
+            assert(rollLeft(x, y, 32) == 0x90ABCDEF_FEDBCA09);
+            assert(rollLeft(y, x, 4) == 0xEDBCA098_76543211);
+        }
+        else static if (size_t.sizeof == 4)
+        {
+            size_t x = 0x12345678;
+            size_t y = 0x90ABCDEF;
+
+            assert(rollLeft(x, y, 16) == 0x567890AB);
+            assert(rollLeft(y, x, 4) == 0x0ABCDEF1);
+        }
+    }
+
+    /**
+     * Operator $(D >>=) support.
+     *
+     * Shifts all the bits in the array to the right by the given number of
+     * bits.  The rightmost bits are dropped, and 0's are inserted at the front
+     * to fill up the vacant bits.
+     *
+     * $(RED Warning: unused bits in the final word up to the next word
+     * boundary may be overwritten by this operation. It does not attempt to
+     * preserve bits past the end of the array.)
+     */
+    void opOpAssign(string op)(size_t nbits) @nogc pure nothrow
+        if (op == ">>")
+    {
+        size_t wordsToShift = nbits / bitsPerSizeT;
+        size_t bitsToShift = nbits % bitsPerSizeT;
+
+        if (wordsToShift < dim)
+        {
+            // Unfortunately, due to the way core.bitop.bt() works, indices are
+            // the reverse order of what an equivalent >> on a size_t would do,
+            // so we have to use rollLeft() instead of rollRight() here,
+            // contrary to the direction of the >> operator on this BitArray.
+            foreach_reverse (i; 1 .. dim - wordsToShift)
+            {
+                ptr[i + wordsToShift] = rollLeft(ptr[i], ptr[i-1],
+                                                 bitsToShift);
+            }
+            ptr[wordsToShift] = rollLeft(ptr[0], 0, bitsToShift);
+        }
+
+        import std.algorithm : min;
+        foreach (i; 0 .. min(wordsToShift, dim))
+        {
+            ptr[i] = 0;
+        }
+    }
+
+    /**
+     * Operator $(D <<=) support.
+     *
+     * Shifts all the bits in the array to the left by the given number of
+     * bits.  The leftmost bits are dropped, and 0's are appended to the end to
+     * fill up the vacant bits.
+     *
+     * $(RED Warning: unused bits in the final word up to the next word
+     * boundary may be overwritten by this operation. It does not attempt to
+     * preserve bits past the end of the array.)
+     */
+    void opOpAssign(string op)(size_t nbits) @nogc pure nothrow
+        if (op == "<<")
+    {
+        size_t wordsToShift = nbits / bitsPerSizeT;
+        size_t bitsToShift = nbits % bitsPerSizeT;
+
+        // Unfortunately, due to the way core.bitop.bt() works, indices are the
+        // reverse order of what an equivalent << on a size_t would do, so we
+        // have to use rollRight() instead of rollLeft() here, contrary to the
+        // direction of the << operator on this BitArray.
+        if (wordsToShift + 1 < dim)
+        {
+            foreach (i; 0 .. dim - wordsToShift - 1)
+            {
+                ptr[i] = rollRight(ptr[i + wordsToShift + 1],
+                                   ptr[i + wordsToShift], bitsToShift);
+            }
+        }
+
+        // The last word needs some care, as it must shift in 0's from past the
+        // end of the array.
+        if (wordsToShift < dim)
+        {
+            ptr[dim - wordsToShift - 1] = rollRight(0, ptr[dim - 1] & endMask,
+                                                    bitsToShift);
+        }
+
+        import std.algorithm : min;
+        foreach (i; 0 .. min(wordsToShift, dim))
+        {
+            ptr[dim - i - 1] = 0;
+        }
+    }
+
+    unittest
+    {
+        import std.format : format;
+
+        BitArray b;
+        b.init([1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1]);
+
+        b >>= 1;
+        assert(format("%b", b) == "01100_10101001");
+
+        b <<= 1;
+        assert(format("%b", b) == "11001_01010010");
+
+        b >>= 4;
+        assert(format("%b", b) == "00001_10010101");
+
+        b <<= 5;
+        assert(format("%b", b) == "10010_10100000");
+
+        b >>= 13;
+        assert(format("%b", b) == "00000_00000000");
+
+        b.init([1, 0, 1, 1, 0, 1, 1, 1]);
+        b <<= 8;
+        assert(format("%b", b) == "00000000");
+
+    }
+
+    // Test multi-word case
+    unittest
+    {
+        import std.format : format;
+        BitArray b;
+
+        // This has to be long enough to occupy more than one size_t. On 64-bit
+        // machines, this would be at least 64 bits.
+        b.init([
+            1, 0, 0, 0, 0, 0, 0, 0,  1, 1, 0, 0, 0, 0, 0, 0,
+            1, 1, 1, 0, 0, 0, 0, 0,  1, 1, 1, 1, 0, 0, 0, 0,
+            1, 1, 1, 1, 1, 0, 0, 0,  1, 1, 1, 1, 1, 1, 0, 0,
+            1, 1, 1, 1, 1, 1, 1, 0,  1, 1, 1, 1, 1, 1, 1, 1,
+            1, 0, 1, 0, 1, 0, 1, 0,  0, 1, 0, 1, 0, 1, 0, 1,
+        ]);
+        b >>= 8;
+        assert(format("%b", b) ==
+               "00000000_10000000_"~
+               "11000000_11100000_"~
+               "11110000_11111000_"~
+               "11111100_11111110_"~
+               "11111111_10101010");
+
+        // Test right shift of more than one size_t's worth of bits
+        b >>= 68;
+        assert(format("%b", b) ==
+               "00000000_00000000_"~
+               "00000000_00000000_"~
+               "00000000_00000000_"~
+               "00000000_00000000_"~
+               "00000000_00001000");
+
+        b.init([
+            1, 0, 0, 0, 0, 0, 0, 0,  1, 1, 0, 0, 0, 0, 0, 0,
+            1, 1, 1, 0, 0, 0, 0, 0,  1, 1, 1, 1, 0, 0, 0, 0,
+            1, 1, 1, 1, 1, 0, 0, 0,  1, 1, 1, 1, 1, 1, 0, 0,
+            1, 1, 1, 1, 1, 1, 1, 0,  1, 1, 1, 1, 1, 1, 1, 1,
+            1, 0, 1, 0, 1, 0, 1, 0,  0, 1, 0, 1, 0, 1, 0, 1,
+        ]);
+        b <<= 8;
+        assert(format("%b", b) ==
+               "11000000_11100000_"~
+               "11110000_11111000_"~
+               "11111100_11111110_"~
+               "11111111_10101010_"~
+               "01010101_00000000");
+
+        // Test left shift of more than 1 size_t's worth of bits
+        b <<= 68;
+        assert(format("%b", b) ==
+               "01010000_00000000_"~
+               "00000000_00000000_"~
+               "00000000_00000000_"~
+               "00000000_00000000_"~
+               "00000000_00000000");
+    }
+
     /***************************************
      * Return a string representation of this BitArray.
      *
