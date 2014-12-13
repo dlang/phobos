@@ -1874,7 +1874,18 @@ Allows to directly use range operations on lines of a file.
                 return line is null;
             }
 
-            @property Char[] front()
+        @property Char[] front()
+        {
+            return line;
+        }
+
+        void popFront()
+        {
+            import std.algorithm : endsWith;
+
+            assert(file.isOpen);
+            file.readln(line, terminator);
+            if (line.empty)
             {
                 return line;
             }
@@ -4105,14 +4116,68 @@ unittest
     }
 }
 
+private extern (C) void[] _d_newarrayU(const TypeInfo ti, size_t length) pure nothrow;
+
+// roll our own appender, but with "safe" arrays
+private struct readlnAppender
+{
+    char[] buf;
+    size_t cap;
+    size_t pos;
+
+    void init(char[] b)
+    {
+        buf = b;
+        cap = buf.capacity;
+        if (cap < buf.length)
+            cap = buf.length;
+        pos = 0;
+    }
+    @property char[] data()
+    {
+        if (pos > buf.length)
+            assumeSafeAppend(buf.ptr[0..pos]);
+        return buf.ptr[0..pos];
+    }
+
+    void reserve(size_t n)
+    {
+        if (pos + n > cap)
+        {
+            size_t ncap = cap * 2 + 128;
+            char[] nbuf = cast(char[])_d_newarrayU(typeid(char[]), ncap);
+            memcpy(nbuf.ptr, buf.ptr, pos);
+            cap = nbuf.capacity;
+            buf = nbuf.ptr[0 .. buf.length];   // remember initial length
+        }
+    }
+    void putchar(char c)
+    {
+        reserve(1);
+        buf.ptr[pos++] = c;
+    }
+    void putdchar(dchar dc)
+    {
+        import std.utf : toUTF8;
+
+        char[4] ubuf;
+        char[] u = toUTF8(ubuf, dc);
+        reserve(u.length);
+        foreach(c; u)
+            buf.ptr[pos++] = c;
+    }
+    void putbuf(char[] b)
+    {
+        reserve(b.length);
+        memcpy(buf.ptr + pos, b.ptr, b.length);
+        pos += b.length;
+    }
+}
+
 // Private implementation of readln
 version (DIGITAL_MARS_STDIO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation /*ignored*/)
 {
-    import core.memory;
-    import core.stdc.string : memcpy;
-    import std.array : appender, uninitializedArray;
-
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
 
@@ -4125,13 +4190,15 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     {   /* Stream is in wide characters.
          * Read them and convert to chars.
          */
+        readlnAppender app;
+        app.init(buf);
+
         static assert(wchar_t.sizeof == 2);
-        auto app = appender(buf);
-        app.clear();
         for (int c = void; (c = FGETWC(fp)) != -1; )
         {
             if ((c & ~0x7F) == 0)
-            {   app.put(cast(char) c);
+            {
+                app.putchar(cast(char) c);
                 if (c == terminator)
                     break;
             }
@@ -4147,8 +4214,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                     }
                     c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                 }
-                //std.utf.encode(buf, c);
-                app.put(cast(dchar)c);
+                app.putdchar(cast(dchar)c);
             }
         }
         if (ferror(fps))
@@ -4157,11 +4223,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         return buf.length;
     }
 
-    // extend buffer to the allocated size, but don't interfere with standard arrays
-    auto info = GC.query(buf.ptr);
-    if (buf.ptr == info.base && !(info.attr & GC.BlkAttr.APPENDABLE))
-        buf = buf.ptr[0 .. info.size];
-        
     if (fp._flag & _IONBF)
     {
         /* Use this for unbuffered I/O, when running
@@ -4169,14 +4230,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
          * cases.
          */
       L1:
-        auto app = appender(buf);
-        app.clear();
-        if(app.capacity == 0)
-            app.reserve(128); // get at least 128 bytes available
+        readlnAppender app;
+        app.init(buf);
 
         int c;
         while((c = FGETC(fp)) != -1) {
-            app.put(cast(char) c);
+            app.putchar(cast(char) c);
             if(c == terminator) {
                 buf = app.data;
                 return buf.length;
@@ -4220,7 +4279,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             }
             if (i > buf.length)
             {
-                buf = uninitializedArray!(char[])(i);
+                buf = cast(char[])_d_newarrayU(typeid(char[]), i);
             }
             if (i - 1)
                 memcpy(buf.ptr, p, i - 1);
@@ -4242,10 +4301,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             }
             if (i > buf.length)
             {
-                buf = uninitializedArray!(char[])(i);
+                buf = cast(char[])_d_newarrayU(typeid(char[]), i);
             }
             memcpy(buf.ptr, p, i);
-            buf = buf[0 .. i];
+            buf = buf.ptr[0 .. i];
         }
         fp._cnt -= i;
         fp._ptr += i;
@@ -4257,7 +4316,6 @@ version (MICROSOFT_STDIO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation /*ignored*/)
 {
     import core.memory;
-    import std.array : appender, uninitializedArray;
 
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
@@ -4267,19 +4325,12 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
      */
     auto fp = cast(_iobuf*)fps;
 
-    // extend buffer to the allocated size, but don't interfere with standard arrays
-    auto info = GC.query(buf.ptr);
-    if (buf.ptr == info.base && !(info.attr & GC.BlkAttr.APPENDABLE))
-        buf = buf.ptr[0 .. info.size];
-        
-    auto app = appender(buf);
-    app.clear();
-    if(app.capacity == 0)
-        app.reserve(128); // get at least 128 bytes available
+    readlnAppender app;
+    app.init(buf);
 
     int c;
     while((c = FGETC(fp)) != -1) {
-        app.put(cast(char) c);
+        app.putchar(cast(char) c);
         if(c == terminator) {
             buf = app.data;
             return buf.length;
@@ -4382,23 +4433,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         return 0;
     }
 
-    // extend buffer to the allocated size, but don't interfere with standard arrays
-    auto info = GC.query(buf.ptr);
-    if (buf.ptr == info.base && !(info.attr & GC.BlkAttr.APPENDABLE))
-        buf = buf.ptr[0 .. info.size];
-    else if (s > buf.length && s <= buf.capacity)
-        goto L1;
-
-    if (s <= buf.length)
-    {
-      L1:
-        buf.length = s;
-        buf[] = lineptr[0 .. s];
-    }
-    else
-    {
-        buf = lineptr[0 .. s].dup;
-    }
+    readlnAppender app;
+    app.init(buf);
+    app.putbuf(lineptr[0 .. s]);
+    buf = app.data;
     return s;
 }
 
