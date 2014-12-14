@@ -4454,9 +4454,25 @@ forward range in all other cases.
 */
 struct Group(alias pred, R) if (isInputRange!R)
 {
-    private R _input;
-    private Tuple!(ElementType!R, uint) _current;
     private alias comp = binaryFun!pred;
+
+    private alias E = ElementType!R;
+    static if ((is(E == class) || is(E == interface)) &&
+               (is(E == const) || is(E == immutable)))
+    {
+        private alias MutableE = Rebindable!E;
+    }
+    else static if (is(E : Unqual!E))
+    {
+        private alias MutableE = Unqual!E;
+    }
+    else
+    {
+        private alias MutableE = E;
+    }
+
+    private R _input;
+    private Tuple!(MutableE, uint) _current;
 
     this(R input)
     {
@@ -4494,7 +4510,7 @@ struct Group(alias pred, R) if (isInputRange!R)
         }
     }
 
-    @property ref Tuple!(ElementType!R, uint) front()
+    @property auto ref front()
     {
         assert(!empty);
         return _current;
@@ -4547,6 +4563,31 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
     }
 }
 
+unittest
+{
+    // Issue 13857
+    immutable(int)[] a1 = [1,1,2,2,2,3,4,4,5,6,6,7,8,9,9,9];
+    auto g1 = group(a1);
+
+    // Issue 13162
+    immutable(ubyte)[] a2 = [1, 1, 1, 0, 0, 0];
+    auto g2 = a2.group;
+
+    // Issue 10104
+    const a3 = [1, 1, 2, 2];
+    auto g3 = a3.group;
+
+    interface I {}
+    class C : I {}
+    const C[] a4 = [new const C()];
+    auto g4 = a4.group!"a is b";
+
+    immutable I[] a5 = [new immutable C()];
+    auto g5 = a5.group!"a is b";
+
+    const(int[][]) a6 = [[1], [1]];
+    auto g6 = a6.group;
+}
 
 // Used by groupBy.
 /**

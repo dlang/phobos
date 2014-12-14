@@ -438,7 +438,10 @@ template Tuple(Specs...)
         {
             auto lhs = typeof(tup1.field[i]).init;
             auto rhs = typeof(tup2.field[i]).init;
-            auto result = mixin("lhs "~op~" rhs");
+            static if (op == "=")
+                lhs = rhs;
+            else
+                auto result = mixin("lhs "~op~" rhs");
         }
     }));
 
@@ -1111,6 +1114,14 @@ unittest
     static assert(!__traits(compiles, tuple!("x", "y")(1)));
     static assert(!__traits(compiles, tuple!("x")()));
     static assert(!__traits(compiles, tuple!("x", int)(2)));
+}
+
+unittest
+{
+    class C {}
+    Tuple!(Rebindable!(const C)) a;
+    Tuple!(const C) b;
+    a = b;
 }
 
 /**
