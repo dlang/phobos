@@ -144,7 +144,7 @@ $(D length). The return value is sorted.
 /**
 Returns $(D true) if the store is _empty, $(D false) otherwise.
      */
-    @property bool empty() inout
+    @property bool empty() const
     {
         return length == 0;
     }
@@ -165,7 +165,7 @@ support a $(D dup) method.
 /**
 Returns the number of sorted elements.
      */
-    @property size_t length() inout
+    @property size_t length() const
     {
         return _store.length;
     }

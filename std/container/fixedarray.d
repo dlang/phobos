@@ -73,7 +73,7 @@ elements.
 
 Complexity: $(BIGOH 1)
      */
-    @property bool empty() inout
+    @property bool empty() const
     {
         return _length == 0;
     }
@@ -83,7 +83,7 @@ Returns the number of elements in the container.
 
 Complexity: $(BIGOH 1).
      */
-    @property size_t length() inout
+    @property size_t length() const
     {
         return _length;
     }
@@ -94,7 +94,7 @@ Complexity: $(BIGOH 1).
 /**
 Set length.
 
-Precondition: $(D 0 <= nlength && nlength <= capacity)
+Precondition: $(D nlength <= capacity)
 
 Complexity: $(BIGOH 1).
      */
@@ -109,7 +109,7 @@ Returns the maximum number of elements the container can store
 
 Complexity: $(BIGOH 1)
      */
-    @property size_t capacity() inout
+    @property size_t capacity() const
     {
         return _store.length;
     }
