@@ -11,7 +11,7 @@ Array type that uses a random access range as fixed storage location.
 No memory is ever allocated. Throws if not enough space is left
 for an operation to succeed. */
 struct FixedArray(Store)
-    if(isRandomAccessRange!Store)
+    if(isRandomAccessRange!Store && hasLength!Store)
 {
 
 /**

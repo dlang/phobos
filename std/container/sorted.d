@@ -53,14 +53,14 @@ struct Sorted(Store, alias less = "a < b")
         alias _Store = Store;
         enum storeIsContainer = true;
     }
-    else static if(isRandomAccessRange!(Store))
+    else static if(isRandomAccessRange!(Store) && hasLength!Store)
     {
         import std.container.fixedarray;
         alias _Store = FixedArray!Store;
         enum storeIsContainer = false;
     }
     else
-        static assert(false, "Store must be a random access range or a container providing one");
+        static assert(false, "Store must be a random access range with a length property or a container providing one");
 
     _Store _store;
 
