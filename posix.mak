@@ -266,12 +266,15 @@ OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
 MAKEFILE = $(firstword $(MAKEFILE_LIST))
 
+# build with shared library support
+SHARED=$(if $(findstring $(OS),linux freebsd),1,)
+
 ################################################################################
 # Rules begin here
 ################################################################################
 
 # Main target (builds the dll on linux, too)
-ifeq (linux,$(OS))
+ifneq (,$(SHARED))
 all : lib dll
 else
 all : lib
@@ -347,7 +350,7 @@ $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 	@rm $(@:.o=.deps.tmp)
 #	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
 
-ifneq (linux,$(OS))
+ifeq (,$(SHARED))
 
 $(UT_D_OBJS): $(DRUNTIME)
 
@@ -392,7 +395,7 @@ install2 : all
 	$(eval lib_dir=$(if $(filter $(OS),osx), lib, lib$(MODEL)))
 	mkdir -p $(INSTALL_DIR)/$(OS)/$(lib_dir)
 	cp $(LIB) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
-ifneq (,$(findstring $(OS),linux))
+ifneq (,$(SHARED))
 	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 	ln -sf $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
 endif
