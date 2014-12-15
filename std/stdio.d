@@ -1850,7 +1850,14 @@ Allows to directly use range operations on lines of a file.
         }
 
     private:
-        struct Impl
+        File file;
+        Char[] line;
+        Char[] buf; // keeps the terminator to allow reusage of memory in readln
+        Terminator terminator;
+        KeepTerminator keepTerminator;
+
+    public:
+        this(File f, KeepTerminator kt, Terminator terminator)
         {
         private:
             File file;
@@ -1884,7 +1891,8 @@ Allows to directly use range operations on lines of a file.
             import std.algorithm : endsWith;
 
             assert(file.isOpen);
-            file.readln(line, terminator);
+            file.readln(buf, terminator);
+            line = buf;
             if (line.empty)
             {
                 return line;
@@ -4116,26 +4124,26 @@ unittest
     }
 }
 
-private extern (C) void[] _d_newarrayU(const TypeInfo ti, size_t length) pure nothrow;
-
 // roll our own appender, but with "safe" arrays
-private struct readlnAppender
+private struct ReadlnAppender
 {
     char[] buf;
     size_t cap;
     size_t pos;
+    size_t initcap;
 
-    void init(char[] b)
+    void initialize(char[] b)
     {
         buf = b;
-        cap = buf.capacity;
+        cap = initcap = buf.capacity;
         if (cap < buf.length)
             cap = buf.length;
         pos = 0;
     }
     @property char[] data()
     {
-        if (pos > buf.length)
+        // always shrink/extend the buffer to allow reuse in the next call
+        if (initcap > 0 || cap > buf.length)
             assumeSafeAppend(buf.ptr[0..pos]);
         return buf.ptr[0..pos];
     }
@@ -4144,8 +4152,8 @@ private struct readlnAppender
     {
         if (pos + n > cap)
         {
-            size_t ncap = cap * 2 + 128;
-            char[] nbuf = cast(char[])_d_newarrayU(typeid(char[]), ncap);
+            size_t ncap = cap * 2 + 128 + n;
+            char[] nbuf = new char[ncap];
             memcpy(nbuf.ptr, buf.ptr, pos);
             cap = nbuf.capacity;
             buf = nbuf.ptr[0 .. buf.length];   // remember initial length
@@ -4172,6 +4180,20 @@ private struct readlnAppender
         memcpy(buf.ptr + pos, b.ptr, b.length);
         pos += b.length;
     }
+    void putonly(char[] b)
+    {
+        // assume this is the only put call
+        if (b.length > cap)
+        {
+            buf = b.dup;
+            initcap = 0; // no need to call assumeSafeAppend
+        }
+        else
+        {
+            memcpy(buf.ptr, b.ptr, b.length);
+        }
+        pos = b.length;
+    }
 }
 
 // Private implementation of readln
@@ -4186,13 +4208,13 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
      */
     auto fp = cast(_iobuf*)fps;
 
+    ReadlnAppender app;
+    app.initialize(buf);
+
     if (__fhnd_info[fp._file] & FHND_WCHAR)
     {   /* Stream is in wide characters.
          * Read them and convert to chars.
          */
-        readlnAppender app;
-        app.init(buf);
-
         static assert(wchar_t.sizeof == 2);
         for (int c = void; (c = FGETWC(fp)) != -1; )
         {
@@ -4219,20 +4241,15 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         }
         if (ferror(fps))
             StdioException();
-        buf = app.data;
-        return buf.length;
     }
 
-    if (fp._flag & _IONBF)
+    else if (fp._flag & _IONBF)
     {
         /* Use this for unbuffered I/O, when running
          * across buffer boundaries, or for any but the common
          * cases.
          */
       L1:
-        readlnAppender app;
-        app.init(buf);
-
         int c;
         while((c = FGETC(fp)) != -1) {
             app.putchar(cast(char) c);
@@ -4245,8 +4262,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 
         if (ferror(fps))
             StdioException();
-        buf = app.data;
-        return buf.length;
     }
     else
     {
@@ -4277,14 +4292,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                     goto L1;
                 }
             }
-            if (i > buf.length)
-            {
-                buf = cast(char[])_d_newarrayU(typeid(char[]), i);
-            }
-            if (i - 1)
-                memcpy(buf.ptr, p, i - 1);
-            buf[i - 1] = cast(char)terminator;
-            buf = buf[0 .. i];
+            app.putonly(p[0..i]);
+            app.buf.ptr[i - 1] = cast(char)terminator;
             if (terminator == '\n' && c == '\r')
                 i++;
         }
@@ -4299,17 +4308,14 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 if (c == terminator)
                     break;
             }
-            if (i > buf.length)
-            {
-                buf = cast(char[])_d_newarrayU(typeid(char[]), i);
-            }
-            memcpy(buf.ptr, p, i);
-            buf = buf.ptr[0 .. i];
+            app.putonly(p[0..i]);
         }
         fp._cnt -= i;
         fp._ptr += i;
-        return i;
     }
+
+    buf = app.data;
+    return buf.length;
 }
 
 version (MICROSOFT_STDIO)
@@ -4325,8 +4331,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
      */
     auto fp = cast(_iobuf*)fps;
 
-    readlnAppender app;
-    app.init(buf);
+    ReadlnAppender app;
+    app.initialize(buf);
 
     int c;
     while((c = FGETC(fp)) != -1) {
@@ -4433,8 +4439,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         return 0;
     }
 
-    readlnAppender app;
-    app.init(buf);
+    ReadlnAppender app;
+    app.initialize(buf);
     app.putbuf(lineptr[0 .. s]);
     buf = app.data;
     return s;
