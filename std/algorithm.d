@@ -2670,7 +2670,7 @@ If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
 its fields must also all be (recursively) mutable.
 */
-void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
+void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow @nogc
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
     static if (hasAliasing!T) if (!__ctfe)
@@ -2854,6 +2854,25 @@ unittest // 9975
     assertThrown!Error(move(p));
     assertThrown!Error(move(p, pp));
     assertThrown!Error(swap(p, pp));
+}
+
+unittest
+{
+    static struct A
+    {
+        int* x;
+        this(this) { x = new int; }
+    }
+    A a1, a2;
+    swap(a1, a2);
+
+    static struct B
+    {
+        int* x;
+        void opAssign(B) { x = new int; }
+    }
+    B b1, b2;
+    swap(b1, b2);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
