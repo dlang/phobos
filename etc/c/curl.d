@@ -1250,7 +1250,12 @@ enum CurlOption {
   /** Set authentication type for authenticated TLS */
   tlsauth_type,
   /** the last unused */
-  lastentry
+  lastentry,
+
+  writedata = file, /// convenient alias
+  readdata = infile, /// ditto
+  headerdata = writeheader, /// ditto
+  rtspheader = httpheader, /// ditto
 }
 ///
 alias int CURLoption;
