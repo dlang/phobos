@@ -5832,7 +5832,7 @@ public:
 
     immutable BitFlags!Enum flags_empty;
     // A default constructed BitFlags has no value set
-    assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.B));
+    assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.C));
 
     // Value can be set with the | operator
     immutable BitFlags!Enum flags_A = flags_empty | Enum.A;
