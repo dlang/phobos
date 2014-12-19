@@ -1146,7 +1146,7 @@ unittest
     while at the same time resolving current/parent directory
     symbols ($(D ".") and $(D "..")) and removing superfluous
     directory separators.
-    It will return "." is the path leads to the starting directory.
+    It will return "." if the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
 
     Using buildNormalizedPath on null paths will always return null.
