@@ -50,7 +50,7 @@
  *
  * Copyright: Based on the CEPHES math library, which is
  *            Copyright (C) 1994 Stephen L. Moshier (moshier@world.std.com).
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Stephen L. Moshier (original C code). Conversion to D by Don Clugston
  * Source:    $(PHOBOSSRC std/_mathspecial.d)
  */
@@ -62,7 +62,12 @@ private import std.internal.math.errorfunction;
 /* ***********************************************
  *            GAMMA AND RELATED FUNCTIONS        *
  * ***********************************************/
-//pure nothrow:
+
+pure:
+nothrow:
+@safe:
+@nogc:
+
 /** The Gamma function, $(GAMMA)(x)
  *
  *  $(GAMMA)(x) is a generalisation of the factorial function

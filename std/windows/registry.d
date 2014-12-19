@@ -4,11 +4,11 @@
     Copyright: Copyright 2003-2004 by Matthew Wilson and Synesis Software
                Written by Matthew Wilson
 
-    License:
+    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
     Author:    Matthew Wilson, Kenji Hara
 
-    Histry:
+    History:
         Created      15th March 2003,
         Updated      25th April 2004,
 
@@ -36,15 +36,17 @@
  *
  * ////////////////////////////////////////////////////////////////////////// */
 module std.windows.registry;
+version (Windows):
 
 import std.array;
 import std.system : Endian, endian;
 import std.exception;
-import std.c.windows.windows;
+import core.sys.windows.windows;
 import std.windows.syserror;
 import std.conv;
-import std.utf : toUTFz, toUTF16z, toUTF8, toUTF16;
+import std.utf : toUTF8, toUTF16;
 private import std.internal.windows.advapi32;
+import std.internal.cstring;
 
 //debug = winreg;
 debug(winreg) import std.stdio;
@@ -68,11 +70,13 @@ class Win32Exception : Exception
 {
     int error;
 
+    @safe pure nothrow
     this(string message, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(message, fn, ln, next);
     }
 
+    @safe pure
     this(string message, int errnum, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(text(message, " (", errnum, ")"), fn, ln, next);
@@ -116,6 +120,7 @@ public:
         Params:
             message = The message associated with the exception.
      */
+    @safe pure
     this(string message, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(message, fn, ln, next);
@@ -128,6 +133,7 @@ public:
             message = The message associated with the exception.
             error = The Win32 error number associated with the exception.
      */
+    @safe pure
     this(string message, int error, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(message, error, fn, ln, next);
@@ -326,7 +332,7 @@ body
 {
     HKEY hkeyResult;
     enforceSucc(RegCreateKeyExW(
-                        hkey, toUTF16z(subKey), 0, null, dwOptions,
+                        hkey, subKey.tempCStringW(), 0, null, dwOptions,
                         compatibleRegsam(samDesired), cast(LPSECURITY_ATTRIBUTES) lpsa,
                         &hkeyResult, &disposition),
         "Failed to create requested key: \"" ~ subKey ~ "\"");
@@ -346,11 +352,11 @@ body
     if (haveWoW64Job(samDesired))
     {
         loadAdvapi32();
-        res = pRegDeleteKeyExW(hkey, toUTF16z(subKey), samDesired, 0);
+        res = pRegDeleteKeyExW(hkey, subKey.tempCStringW(), samDesired, 0);
     }
     else
     {
-        res = RegDeleteKeyW(hkey, toUTF16z(subKey));
+        res = RegDeleteKeyW(hkey, subKey.tempCStringW());
     }
     enforceSucc(res, "Key cannot be deleted: \"" ~ subKey ~ "\"");
 }
@@ -363,7 +369,7 @@ in
 }
 body
 {
-    enforceSucc(RegDeleteValueW(hkey, toUTF16z(valueName)),
+    enforceSucc(RegDeleteValueW(hkey, valueName.tempCStringW()),
         "Value cannot be deleted: \"" ~ valueName ~ "\"");
 }
 
@@ -492,7 +498,7 @@ in
 body
 {
     REG_VALUE_TYPE type;
-    enforceSucc(RegQueryValueExW(hkey, toUTF16z(name), null, cast(LPDWORD) &type, null, null),
+    enforceSucc(RegQueryValueExW(hkey, name.tempCStringW(), null, cast(LPDWORD) &type, null, null),
         "Value cannot be opened: \"" ~ name ~ "\"");
 
     return type;
@@ -507,7 +513,7 @@ in
 body
 {
     HKEY hkeyResult;
-    enforceSucc(RegOpenKeyExW(hkey, toUTF16z(subKey), 0, compatibleRegsam(samDesired), &hkeyResult),
+    enforceSucc(RegOpenKeyExW(hkey, subKey.tempCStringW(), 0, compatibleRegsam(samDesired), &hkeyResult),
         "Failed to open requested key: \"" ~ subKey ~ "\"");
 
     return hkeyResult;
@@ -534,12 +540,12 @@ body
     void* data = &u.qw;
     DWORD cbData = u.qw.sizeof;
 
-    auto keyname = toUTF16z(name);
-    LONG res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data, &cbData);
+    auto keynameTmp = name.tempCStringW();
+    LONG res = RegQueryValueExW(hkey, keynameTmp, null, cast(LPDWORD) &type, data, &cbData);
     if (res == ERROR_MORE_DATA)
     {
         data = (new ubyte[cbData]).ptr;
-        res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data, &cbData);
+        res = RegQueryValueExW(hkey, keynameTmp, null, cast(LPDWORD) &type, data, &cbData);
     }
 
     enforceSucc(res,
@@ -593,14 +599,14 @@ body
 {
     REG_VALUE_TYPE type;
 
-    auto keyname = toUTF16z(name);
+    auto keynameTmp = name.tempCStringW();
     wchar[] data = new wchar[256];
     DWORD cbData = to!DWORD(data.length * wchar.sizeof);
-    LONG res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
+    LONG res = RegQueryValueExW(hkey, keynameTmp, null, cast(LPDWORD) &type, data.ptr, &cbData);
     if (res == ERROR_MORE_DATA)
     {
         data.length = cbData / wchar.sizeof;
-        res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
+        res = RegQueryValueExW(hkey, keynameTmp, null, cast(LPDWORD) &type, data.ptr, &cbData);
     }
     else if (res == ERROR_SUCCESS)
     {
@@ -638,7 +644,7 @@ body
     REG_VALUE_TYPE type;
 
     DWORD cbData = value.sizeof;
-    enforceSucc(RegQueryValueExW(hkey, toUTF16z(name), null, cast(LPDWORD) &type, &value, &cbData),
+    enforceSucc(RegQueryValueExW(hkey, name.tempCStringW(), null, cast(LPDWORD) &type, &value, &cbData),
         "Cannot read the requested value");
     enforce(type == reqType,
             new RegistryException("Value type has been changed since the value was acquired"));
@@ -674,7 +680,7 @@ body
     REG_VALUE_TYPE type;
 
     DWORD cbData = value.sizeof;
-    enforceSucc(RegQueryValueExW(hkey, toUTF16z(name), null, cast(LPDWORD) &type, &value, &cbData),
+    enforceSucc(RegQueryValueExW(hkey, name.tempCStringW(), null, cast(LPDWORD) &type, &value, &cbData),
         "Cannot read the requested value");
     enforce(type == reqType,
             new RegistryException("Value type has been changed since the value was acquired"));
@@ -701,12 +707,12 @@ body
     byte[] data = new byte[100];
     DWORD cbData = to!DWORD(data.length);
     LONG res;
-    auto keyname = toUTF16z(name);
-    res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
+    auto keynameTmp = name.tempCStringW();
+    res = RegQueryValueExW(hkey, keynameTmp, null, cast(LPDWORD) &type, data.ptr, &cbData);
     if (res == ERROR_MORE_DATA)
     {
         data.length = cbData;
-        res = RegQueryValueExW(hkey, keyname, null, cast(LPDWORD) &type, data.ptr, &cbData);
+        res = RegQueryValueExW(hkey, keynameTmp, null, cast(LPDWORD) &type, data.ptr, &cbData);
     }
     enforceSucc(res, "Cannot read the requested value");
     enforce(type == reqType,
@@ -731,7 +737,7 @@ in
 }
 body
 {
-    enforceSucc(RegSetValueExW(hkey, toUTF16z(subKey), 0, type, cast(BYTE*) lpData, cbData),
+    enforceSucc(RegSetValueExW(hkey, subKey.tempCStringW(), 0, type, cast(BYTE*) lpData, cbData),
         "Value cannot be set: \"" ~ subKey ~ "\"");
 }
 
@@ -786,12 +792,14 @@ private void regProcessNthValue(HKEY hkey, scope void delegate(scope LONG delega
  */
 class Key
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_hkey !is null);
     }
 
 private:
+    @safe pure nothrow
     this(HKEY hkey, string name, bool created)
     in
     {
@@ -1069,9 +1077,9 @@ public:
      */
     void setValue(string name, string value, bool asEXPAND_SZ)
     {
-        auto psz = toUTF16z(value);
-        const(void)* data = psz;
-        DWORD len = to!DWORD(lstrlenW(psz) * wchar.sizeof);
+        auto pszTmp = value.tempCStringW();
+        const(void)* data = pszTmp;
+        DWORD len = to!DWORD(lstrlenW(pszTmp) * wchar.sizeof);
 
         regSetValue(m_hkey, name,
                     asEXPAND_SZ ? REG_VALUE_TYPE.REG_EXPAND_SZ
@@ -1151,12 +1159,14 @@ private:
  */
 class Value
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key, string name, REG_VALUE_TYPE type)
     in
     {
@@ -1222,12 +1232,12 @@ public:
 
         // ExpandEnvironemntStrings():
         //      http://msdn2.microsoft.com/en-us/library/ms724265.aspx
-        LPCWSTR  lpSrc      =   toUTF16z(value);
-        DWORD   cchRequired =   ExpandEnvironmentStringsW(lpSrc, null, 0);
+        const srcTmp        =   value.tempCStringW();
+        DWORD   cchRequired =   ExpandEnvironmentStringsW(srcTmp, null, 0);
         wchar[]  newValue   =   new wchar[cchRequired];
 
-        immutable DWORD count = enforceEx!Win32Exception(
-            ExpandEnvironmentStringsW(lpSrc, newValue.ptr, to!DWORD(newValue.length)),
+        immutable DWORD count = enforce!Win32Exception(
+            ExpandEnvironmentStringsW(srcTmp, newValue.ptr, to!DWORD(newValue.length)),
             "Failed to expand environment variables");
 
         return toUTF8(newValue[0 .. count-1]); // remove trailing 0
@@ -1267,18 +1277,6 @@ public:
         regQueryValue(m_key.m_hkey, m_name, value, m_type);
 
         return value;
-    }
-
-    deprecated("Please use value_DWORD instead.")
-    uint value_DWORD_LITTLEENDIAN()
-    {
-        return value_DWORD;
-    }
-
-    deprecated("Please use value_DWORD instead.")
-    uint value_DWORD_BIGENDIAN()
-    {
-        return value_DWORD;
     }
 
     /**
@@ -1367,12 +1365,14 @@ foreach (string subkeyName; key.keyNames)
  */
 class KeyNameSequence
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key)
     {
         m_key = key;
@@ -1462,12 +1462,14 @@ foreach (Key subkey; key.keys)
  */
 class KeySequence
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key)
     {
         m_key = key;
@@ -1569,12 +1571,14 @@ foreach (string valueName; key.valueNames)
  */
 class ValueNameSequence
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key)
     {
         m_key = key;
@@ -1663,12 +1667,14 @@ foreach (Value value; key.values)
  */
 class ValueSequence
 {
+    @safe pure nothrow
     invariant()
     {
         assert(m_key !is null);
     }
 
 private:
+    @safe pure nothrow
     this(Key key)
     {
         m_key = key;

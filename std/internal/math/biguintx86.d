@@ -51,6 +51,9 @@
 module std.internal.math.biguintx86;
 
 @system:
+pure:
+nothrow:
+
 /*
   Naked asm is used throughout, because:
   (a) it frees up the EBP register
@@ -66,7 +69,7 @@ private:
  * Each instance of '@' in s is replaced by 0,1,...n-1. This is a helper
  * function for some of the asm routines.
  */
-string indexedLoopUnroll(int n, string s) pure
+string indexedLoopUnroll(int n, string s) pure @safe
 {
     string u;
     for (int i = 0; i<n; ++i) {
@@ -91,7 +94,7 @@ unittest
 
 public:
 
-alias uint BigDigit; // A Bignum is an array of BigDigits. Usually the machine word size.
+alias BigDigit = uint; // A Bignum is an array of BigDigits. Usually the machine word size.
 
 // Limits for when to switch between multiplication algorithms.
 enum : int { KARATSUBALIMIT = 18 }; // Minimum value for which Karatsuba is worthwhile.
@@ -104,7 +107,7 @@ enum : int { KARATSUBASQUARELIMIT=26 }; // Minimum value for which square Karats
  * Set op == '+' for addition, '-' for subtraction.
  */
 uint multibyteAddSub(char op)(uint[] dest, const uint [] src1, const uint []
-		src2, uint carry) pure
+        src2, uint carry) pure
 {
     // Timing:
     // Pentium M: 2.25/int
@@ -114,7 +117,7 @@ uint multibyteAddSub(char op)(uint[] dest, const uint [] src1, const uint []
     // a resister (AL), and restoring it after the branch.
 
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
-    asm {
+    asm pure nothrow {
         naked;
         push EDI;
         push EBX;
@@ -135,13 +138,13 @@ uint multibyteAddSub(char op)(uint[] dest, const uint [] src1, const uint []
 L_unrolled:
         shr AL, 1; // get carry from EAX
     }
-        mixin(" asm {"
+    mixin(" asm pure nothrow {"
         ~ indexedLoopUnroll( 8,
         "mov EAX, [@*4-8*4+EDX+ECX*4];"
         ~ ( op == '+' ? "adc" : "sbb" ) ~ " EAX, [@*4-8*4+ESI+ECX*4];"
-        "mov [@*4-8*4+EDI+ECX*4], EAX;")
+        ~ "mov [@*4-8*4+EDI+ECX*4], EAX;")
         ~ "}");
-asm {
+    asm pure nothrow {
         setc AL; // save carry
         add ECX, 8;
         ja L_unrolled;
@@ -152,12 +155,12 @@ L2:     // Do the residual 1..7 ints.
 L_residual:
         shr AL, 1; // get carry from EAX
     }
-        mixin(" asm {"
+    mixin(" asm pure nothrow {"
         ~ indexedLoopUnroll( 1,
         "mov EAX, [@*4+EDX+ECX*4];"
         ~ ( op == '+' ? "adc" : "sbb" ) ~ " EAX, [@*4+ESI+ECX*4];"
-        "mov [@*4+EDI+ECX*4], EAX;") ~ "}");
-asm {
+        ~ "mov [@*4+EDI+ECX*4], EAX;") ~ "}");
+    asm pure nothrow {
         setc AL; // save carry
         add ECX, 1;
         jnz L_residual;
@@ -219,7 +222,7 @@ unittest
 uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure
 {
     enum { LASTPARAM = 1*4 } // 0* pushes + return address.
-    asm {
+    asm pure nothrow {
         naked;
         mov ECX, [ESP + LASTPARAM + 0*4]; // dest.length;
         mov EDX, [ESP + LASTPARAM + 1*4]; // dest.ptr
@@ -227,10 +230,10 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure
 L1: ;
     }
     static if (op=='+')
-        asm { add [EDX], EAX; }
+        asm pure nothrow { add [EDX], EAX; }
     else
-        asm { sub [EDX], EAX; }
-    asm {
+        asm pure nothrow { sub [EDX], EAX; }
+    asm pure nothrow {
         mov EAX, 1;
         jnc L2;
         add EDX, 4;
@@ -252,7 +255,7 @@ uint multibyteShlNoMMX(uint [] dest, const uint [] src, uint numbits) pure
     // 2.0 cycles/int on PPro..PM (limited by execution port p0)
     // 5.0 cycles/int on Athlon, which has 7 cycles for SHLD!!
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
-    asm {
+    asm pure nothrow {
         naked;
         push ESI;
         push EDI;
@@ -290,7 +293,7 @@ L_last:
         pop EDI;
         pop ESI;
         ret 4*4;
-     }
+    }
 }
 
 /** dest[#] = src[#] >> numbits
@@ -302,8 +305,7 @@ uint multibyteShl(uint [] dest, const uint [] src, uint numbits) pure
     // Timing:
     // K7 1.2/int. PM 1.7/int P4 5.3/int
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
-
-    asm {
+    asm pure nothrow {
         naked;
         push ESI;
         push EDI;
@@ -378,13 +380,13 @@ L_length1:
         psllq MM1, MM3;
         movd [EDI], MM1;
         jmp L_alldone;
-   }
+    }
 }
 
 void multibyteShr(uint [] dest, const uint [] src, uint numbits) pure
 {
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
-    asm {
+    asm pure nothrow {
         naked;
         push ESI;
         push EDI;
@@ -462,7 +464,7 @@ L_length1:
         movd    [EDI +4*EBX], MM1;
         jmp L_alldone;
 
-   }
+    }
 }
 
 /** dest[#] = src[#] >> numbits
@@ -474,7 +476,7 @@ void multibyteShrNoMMX(uint [] dest, const uint [] src, uint numbits) pure
     // 2.0 cycles/int on PPro..PM (limited by execution port p0)
     // Terrible performance on AMD64, which has 7 cycles for SHRD!!
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
-    asm {
+    asm pure nothrow {
         naked;
         push ESI;
         push EDI;
@@ -512,7 +514,7 @@ L_last:
         pop EDI;
         pop ESI;
         ret 4*4;
-     }
+    }
 }
 
 unittest
@@ -557,7 +559,7 @@ unittest
  * Returns carry.
  */
 uint multibyteMul(uint[] dest, const uint[] src, uint multiplier, uint carry)
-	pure
+    pure
 {
     // Timing: definitely not optimal.
     // Pentium M: 5.0 cycles/operation, has 3 resource stalls/iteration
@@ -574,7 +576,7 @@ uint multibyteMul(uint[] dest, const uint[] src, uint multiplier, uint carry)
     {
         __gshared int zero = 0;
     }
-    asm {
+    asm pure nothrow {
         naked;
         push ESI;
         push EDI;
@@ -614,7 +616,7 @@ L_odd:
         pop EDI;
         pop ESI;
         ret 5*4;
-     }
+    }
 }
 
 unittest
@@ -650,8 +652,8 @@ string asmMulAdd_innerloop(string OP, string M_ADDRESS) pure {
         // The first member of 'dest' which will be modified is [EDI+4*EBX].
         // EAX must already contain the first member of 'src', [ESI+4*EBX].
 
-version(D_PIC) { bool using_PIC = true; } else { bool using_PIC=false; }
-return "asm {
+    version(D_PIC) { bool using_PIC = true; } else { bool using_PIC = false; }
+    return "
         // Entry point for even length
         add EBX, 1;
         mov EBP, ECX; // carry
@@ -680,9 +682,9 @@ L1:
         mov ECX, zero;
         mov EAX, [ESI+4*EBX];
         adc ECX, EDX;
-                " ~
-    (using_PIC ? "" : "   mov storagenop, EDX; ") // make #uops in loop a multiple of 3, can't do this in PIC mode.
-        ~ "
+" ~
+        (using_PIC ? "" : "   mov storagenop, EDX; ") // make #uops in loop a multiple of 3, can't do this in PIC mode.
+~ "
         mul int ptr [" ~ M_ADDRESS ~ "];
         " ~ OP ~ " [-4+EDI+4*EBX], EBP;
         mov EBP, zero;
@@ -695,12 +697,13 @@ L1:
         jl L1;
 L_done: " ~ OP ~ " [-8+EDI+4*EBX], ECX;
         adc EBP, 0;
-                }";
+";
                 // final carry is now in EBP
 }
 
-string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure {
-return "asm {
+string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure
+{
+    return "
         mul int ptr [" ~M_ADDRESS ~"];
         mov EBP, zero;
         add ECX, EAX;
@@ -710,7 +713,7 @@ return "asm {
         add EBX, 2;
         jl L1;
         jmp L_done;
-                }";
+";
 }
 
 
@@ -721,7 +724,7 @@ return "asm {
  * Returns carry out of MSB (0..FFFF_FFFF).
  */
 uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
-		multiplier, uint carry) pure {
+        multiplier, uint carry) pure {
     // Timing: This is the most time-critical bignum function.
     // Pentium M: 5.4 cycles/operation, still has 2 resource stalls + 1load block/iteration
 
@@ -748,7 +751,7 @@ uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
     }
 
     enum { LASTPARAM = 5*4 } // 4* pushes + return address.
-    asm {
+    asm pure nothrow {
         naked;
 
         push ESI;
@@ -768,19 +771,19 @@ uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
         mov EAX, [ESI+4*EBX];
         test EBX, 1;
         jnz L_enter_odd;
-}
-                // Main loop, with entry point for even length
-mixin(asmMulAdd_innerloop(OP, "ESP+LASTPARAM"));
-asm {
+    }
+    // Main loop, with entry point for even length
+    mixin("asm pure nothrow {" ~ asmMulAdd_innerloop(OP, "ESP+LASTPARAM") ~ "}");
+    asm pure nothrow {
         mov EAX, EBP; // get final carry
         pop EBP;
         pop EBX;
         pop EDI;
         pop ESI;
         ret 5*4;
-}
+    }
 L_enter_odd:
-    mixin(asmMulAdd_enter_odd(OP, "ESP+LASTPARAM"));
+    mixin("asm pure nothrow {" ~ asmMulAdd_enter_odd(OP, "ESP+LASTPARAM") ~ "}");
 }
 
 unittest
@@ -806,8 +809,8 @@ unittest
     }
     ----
  */
-void multibyteMultiplyAccumulate(uint [] dest, const uint[] left, 
-		const uint [] right) pure {
+void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
+        const uint [] right) pure {
     // Register usage
     // EDX:EAX = used in multiply
     // EBX = index
@@ -828,7 +831,7 @@ void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
     }
 
     enum { LASTPARAM = 6*4 } // 4* pushes + local + return address.
-    asm {
+    asm pure nothrow {
         naked;
 
         push ESI;
@@ -857,10 +860,10 @@ outer_loop:
         mov EAX, [ESI+4*EBX];
         test EBX, 1;
         jnz L_enter_odd;
-                }
-        // -- Inner loop, with even entry point
-        mixin(asmMulAdd_innerloop("add", "ESP"));
-asm {
+    }
+    // -- Inner loop, with even entry point
+    mixin("asm pure nothrow { " ~ asmMulAdd_innerloop("add", "ESP") ~ "}");
+    asm pure nothrow {
         mov [-4+EDI+4*EBX], EBP;
         add EDI, 4;
         cmp EDI, [ESP + LASTPARAM + 4*0]; // is EDI = &dest[$]?
@@ -878,9 +881,9 @@ outer_done:
         pop EDI;
         pop ESI;
         ret 6*4;
-}
+    }
 L_enter_odd:
-    mixin(asmMulAdd_enter_odd("add", "ESP"));
+    mixin("asm pure nothrow {" ~ asmMulAdd_enter_odd("add", "ESP") ~ "}");
 }
 
 /**  dest[#] /= divisor.
@@ -906,7 +909,7 @@ uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow) pure
     // [ESP] = kinv (2^64 /divisor)
     enum { LASTPARAM = 5*4 } // 4* pushes + return address.
     enum { LOCALS = 2*4} // MASK, KINV
-    asm {
+    asm pure nothrow {
         naked;
 
         push ESI;
@@ -1021,35 +1024,35 @@ void multibyteAddDiagonalSquares(uint [] dest, const uint [] src) pure
            improve it by moving the mov EAX after the adc [EDI], EAX. Probably not worthwhile.
     */
     enum { LASTPARAM = 4*5 } // 4* pushes + return address.
- asm {
-    naked;
-    push ESI;
-    push EDI;
-    push EBX;
-        push ECX;
-    mov EDI, [ESP + LASTPARAM + 4*3]; //dest.ptr;
-    mov EBX, [ESP + LASTPARAM + 4*0]; //src.length;
-    mov ESI, [ESP + LASTPARAM + 4*1]; //src.ptr;
-    lea EDI, [EDI + 8*EBX];      // EDI = end of dest
-    lea ESI, [ESI + 4*EBX];      // ESI = end of src
-    neg EBX;                     // count UP to zero.
-    xor ECX, ECX;             // initial carry = 0.
+    asm pure nothrow {
+        naked;
+        push ESI;
+        push EDI;
+        push EBX;
+            push ECX;
+        mov EDI, [ESP + LASTPARAM + 4*3]; //dest.ptr;
+        mov EBX, [ESP + LASTPARAM + 4*0]; //src.length;
+        mov ESI, [ESP + LASTPARAM + 4*1]; //src.ptr;
+        lea EDI, [EDI + 8*EBX];      // EDI = end of dest
+        lea ESI, [ESI + 4*EBX];      // ESI = end of src
+        neg EBX;                     // count UP to zero.
+        xor ECX, ECX;             // initial carry = 0.
 L1:
-    mov EAX, [ESI + 4*EBX];
-    mul EAX, EAX;
-    shr CL, 1;                 // get carry
-    adc [EDI + 8*EBX], EAX;
-    adc [EDI + 8*EBX + 4], EDX;
-    setc CL;                   // save carry
-    inc EBX;
-    jnz L1;
+        mov EAX, [ESI + 4*EBX];
+        mul EAX, EAX;
+        shr CL, 1;                 // get carry
+        adc [EDI + 8*EBX], EAX;
+        adc [EDI + 8*EBX + 4], EDX;
+        setc CL;                   // save carry
+        inc EBX;
+        jnz L1;
 
         pop ECX;
         pop EBX;
         pop EDI;
         pop ESI;
         ret 4*4;
- }
+    }
 }
 
 unittest
@@ -1108,7 +1111,7 @@ void multibyteTriangleAccumulateAsm(uint[] dest, const uint[] src) pure
     }
 
     enum { LASTPARAM = 6*4 } // 4* pushes + local + return address.
-    asm {
+    asm pure nothrow {
         naked;
 
         push ESI;
@@ -1152,8 +1155,8 @@ outer_loop:
         jnz L_enter_odd;
     }
     // -- Inner loop, with even entry point
-    mixin(asmMulAdd_innerloop("add", "ESP"));
-    asm {
+    mixin("asm pure nothrow { " ~ asmMulAdd_innerloop("add", "ESP") ~ "}");
+    asm pure nothrow {
         mov [-4+EDI+4*EBX], EBP;
         add EDI, 4;
         cmp EDI, [ESP + LASTPARAM + 4*2]; // is EDI = &dest[$-3]?
@@ -1188,8 +1191,8 @@ length_is_3:
         pop ESI;
         ret 4*4;
     }
-    L_enter_odd:
-        mixin(asmMulAdd_enter_odd("add", "ESP"));
+L_enter_odd:
+    mixin("asm pure nothrow {" ~ asmMulAdd_enter_odd("add", "ESP") ~ "}");
 }
 
 unittest

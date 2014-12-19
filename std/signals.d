@@ -15,7 +15,7 @@
  *      $(LINK2 http://en.wikipedia.org/wiki/Observer_pattern, Observer pattern)$(BR)
  *      $(LINK2 http://en.wikipedia.org/wiki/Signals_and_slots, Wikipedia)$(BR)
  *      $(LINK2 http://boost.org/doc/html/$(SIGNALS).html, Boost Signals)$(BR)
- *      $(LINK2 http://doc.trolltech.com/4.1/signalsandslots.html, Qt)$(BR)
+ *      $(LINK2 http://qt-project.org/doc/qt-5/signalsandslots.html, Qt)$(BR)
  *
  *      There has been a great deal of discussion in the D newsgroups
  *      over this, and several implementations:
@@ -50,7 +50,7 @@
  *      SIGNALS=signals
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_signals.d)
  */
@@ -62,7 +62,7 @@
 module std.signals;
 
 import std.stdio;
-import std.c.stdlib : calloc, realloc, free;
+import core.stdc.stdlib : calloc, realloc, free;
 import core.exception : onOutOfMemoryError;
 
 // Special function for internal use only.
@@ -71,7 +71,7 @@ import core.exception : onOutOfMemoryError;
 extern (C) Object _d_toObject(void* p);
 
 // Used in place of Object.notifyRegister and Object.notifyUnRegister.
-alias void delegate(Object) DisposeEvt;
+alias DisposeEvt = void delegate(Object);
 extern (C) void  rt_attachDisposeEvent( Object obj, DisposeEvt evt );
 extern (C) void  rt_detachDisposeEvent( Object obj, DisposeEvt evt );
 //debug=signal;
@@ -141,7 +141,7 @@ void main()
 
 mixin template Signal(T1...)
 {
-    static import std.c.stdlib;
+    static import core.stdc.stdlib;
     static import core.exception;
     /***
      * A slot is implemented as a delegate.
@@ -151,7 +151,7 @@ mixin template Signal(T1...)
      * Delegates to struct instances or nested functions must not be
      * used as slots.
      */
-    alias void delegate(T1) slot_t;
+    alias slot_t = void delegate(T1);
 
     /***
      * Call each of the connected slots, passing the argument(s) i to them.
@@ -179,7 +179,7 @@ mixin template Signal(T1...)
             if (slots.length == 0)
             {
                 len = 4;
-                auto p = std.c.stdlib.calloc(slot_t.sizeof, len);
+                auto p = core.stdc.stdlib.calloc(slot_t.sizeof, len);
                 if (!p)
                     core.exception.onOutOfMemoryError();
                 slots = (cast(slot_t*)p)[0 .. len];
@@ -187,7 +187,7 @@ mixin template Signal(T1...)
             else
             {
                 len = len * 2 + 4;
-                auto p = std.c.stdlib.realloc(slots.ptr, slot_t.sizeof * len);
+                auto p = core.stdc.stdlib.realloc(slots.ptr, slot_t.sizeof * len);
                 if (!p)
                     core.exception.onOutOfMemoryError();
                 slots = (cast(slot_t*)p)[0 .. len];
@@ -261,7 +261,7 @@ mixin template Signal(T1...)
                     rt_detachDisposeEvent(o, &unhook);
                 }
             }
-            std.c.stdlib.free(slots.ptr);
+            core.stdc.stdlib.free(slots.ptr);
             slots = null;
         }
     }
@@ -440,7 +440,7 @@ unittest {
         a.value2 = 42;
         a.value3 = 43;
     }
-    
+
     test(new Bar);
 
     class BarDerived: Bar
@@ -453,12 +453,12 @@ unittest {
         mixin Signal!(string, int)  s5;
         mixin Signal!(string, long) s6;
     }
-    
+
     auto a = new BarDerived;
-    
+
     test!Bar(a);
     test!BarDerived(a);
-    
+
     auto o4 = new Observer;
     auto o5 = new Observer;
     auto o6 = new Observer;

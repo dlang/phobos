@@ -1,16 +1,16 @@
 // Written in the D programming language.
 
 /**
- * Compress/decompress data using the $(LINK2 http://www._zlib.net, zlib library).
+ * Compress/decompress data using the $(WEB www.zlib.net, zlib library).
  *
  * References:
- *  $(LINK2 http://en.wikipedia.org/wiki/Zlib, Wikipedia)
+ *  $(WEB en.wikipedia.org/wiki/Zlib, Wikipedia)
  *
  * Macros:
  *  WIKI = Phobos/StdZlib
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_zlib.d)
  */
@@ -23,7 +23,7 @@ module std.zlib;
 
 //debug=zlib;       // uncomment to turn on debugging printf's
 
-private import etc.c.zlib, std.conv;
+import etc.c.zlib;
 
 // Values for 'mode'
 
@@ -67,8 +67,12 @@ class ZlibException : Exception
 
 uint adler32(uint adler, const(void)[] buf)
 {
-    return etc.c.zlib.adler32(adler, cast(ubyte *)buf.ptr,
-            to!uint(buf.length));
+    import std.range : chunks;
+    foreach(chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    {
+        adler = etc.c.zlib.adler32(adler, chunk.ptr, cast(uint)chunk.length);
+    }
+    return adler;
 }
 
 unittest
@@ -90,7 +94,12 @@ unittest
 
 uint crc32(uint crc, const(void)[] buf)
 {
-    return etc.c.zlib.crc32(crc, cast(ubyte *)buf.ptr, to!uint(buf.length));
+    import std.range : chunks;
+    foreach(chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    {
+        crc = etc.c.zlib.crc32(crc, chunk.ptr, cast(uint)chunk.length);
+    }
+    return crc;
 }
 
 unittest
@@ -143,14 +152,18 @@ const(void)[] compress(const(void)[] buf)
 
 /*********************************************
  * Decompresses the data in srcbuf[].
- * Params: destlen = size of the uncompressed data.
- * It need not be accurate, but the decompression will be faster if the exact
- * size is supplied.
+ * Params:
+ *  srcbuf  = buffer containing the compressed data.
+ *  destlen = size of the uncompressed data.
+ *            It need not be accurate, but the decompression will be faster
+ *            if the exact size is supplied.
+ *  winbits = the base two logarithm of the maximum window size.
  * Returns: the decompressed data.
  */
 
 void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
 {
+    import std.conv : to;
     int err;
     ubyte[] destbuf;
 
@@ -255,6 +268,8 @@ enum HeaderFormat {
 
 class Compress
 {
+    import std.conv: to;
+
   private:
     z_stream zs;
     int level = Z_DEFAULT_COMPRESSION;
@@ -417,6 +432,8 @@ class Compress
 
 class UnCompress
 {
+    import std.conv: to;
+
   private:
     z_stream zs;
     int inited;
@@ -577,7 +594,6 @@ unittest // by Dave
 
     bool CompressThenUncompress (ubyte[] src)
     {
-      try {
         ubyte[] dst = cast(ubyte[])std.zlib.compress(cast(void[])src);
         double ratio = (dst.length / cast(double)src.length);
         debug(zlib) writef("src.length: %1$d, dst: %2$d, Ratio = %3$f", src.length, dst.length, ratio);
@@ -585,12 +601,8 @@ unittest // by Dave
         uncompressedBuf = cast(ubyte[])std.zlib.uncompress(cast(void[])dst);
         assert(src.length == uncompressedBuf.length);
         assert(src == uncompressedBuf);
-      }
-      catch {
-        debug(zlib) writefln(" ... Exception thrown when src.length = %1$d.", src.length);
-        return false;
-      }
-      return true;
+
+        return true;
     }
 
 

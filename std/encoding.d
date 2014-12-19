@@ -39,7 +39,7 @@ Macros:
     WIKI=Phobos/StdEncoding
 
 Copyright: Copyright Janice Caron 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
 Source:    $(PHOBOSSRC std/_encoding.d)
 */
@@ -51,9 +51,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.encoding;
 
-import std.string;
 import std.traits;
-import std.range;
+import std.range.primitives;
 
 unittest
 {
@@ -645,14 +644,14 @@ template EncoderInstance(E)
 //=============================================================================
 
 /** Defines various character sets. */
-enum AsciiChar : ubyte { init };
+enum AsciiChar : ubyte { init }
 /// Ditto
-alias immutable(AsciiChar)[] AsciiString;
+alias AsciiString = immutable(AsciiChar)[];
 
 template EncoderInstance(CharType : AsciiChar)
 {
-    alias AsciiChar E;
-    alias AsciiString EString;
+    alias E = AsciiChar;
+    alias EString = AsciiString;
 
     @property string encodingName()
     {
@@ -725,17 +724,17 @@ template EncoderInstance(CharType : AsciiChar)
 //=============================================================================
 
 /** Defines an Latin1-encoded character. */
-enum Latin1Char : ubyte { init };
+enum Latin1Char : ubyte { init }
 /**
 Defines an Latin1-encoded string (as an array of $(D
 immutable(Latin1Char))).
  */
-alias immutable(Latin1Char)[] Latin1String; ///
+alias Latin1String = immutable(Latin1Char)[]; ///
 
 template EncoderInstance(CharType : Latin1Char)
 {
-    alias Latin1Char E;
-    alias Latin1String EString;
+    alias E = Latin1Char;
+    alias EString = Latin1String;
 
     @property string encodingName()
     {
@@ -801,17 +800,17 @@ template EncoderInstance(CharType : Latin1Char)
 //=============================================================================
 
 /** Defines a Windows1252-encoded character. */
-enum Windows1252Char : ubyte { init };
+enum Windows1252Char : ubyte { init }
 /**
 Defines an Windows1252-encoded string (as an array of $(D
 immutable(Windows1252Char))).
  */
-alias immutable(Windows1252Char)[] Windows1252String; ///
+alias Windows1252String = immutable(Windows1252Char)[]; ///
 
 template EncoderInstance(CharType : Windows1252Char)
 {
-    alias Windows1252Char E;
-    alias Windows1252String EString;
+    alias E = Windows1252Char;
+    alias EString = Windows1252String;
 
     @property string encodingName()
     {
@@ -819,9 +818,9 @@ template EncoderInstance(CharType : Windows1252Char)
     }
 
     immutable wstring charMap =
-        "\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"
-        "\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"
-        "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"
+        "\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"~
+        "\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"~
+        "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"~
         "\u02DC\u2122\u0161\u203A\u0153\uFFFD\u017E\u0178"
     ;
 
@@ -907,8 +906,8 @@ template EncoderInstance(CharType : Windows1252Char)
 
 template EncoderInstance(CharType : char)
 {
-    alias char E;
-    alias immutable(char)[] EString;
+    alias E = char;
+    alias EString = immutable(char)[];
 
     @property string encodingName()
     {
@@ -1073,8 +1072,8 @@ template EncoderInstance(CharType : char)
 
 template EncoderInstance(CharType : wchar)
 {
-    alias wchar E;
-    alias immutable(wchar)[] EString;
+    alias E = wchar;
+    alias EString = immutable(wchar)[];
 
     @property string encodingName()
     {
@@ -1170,8 +1169,8 @@ template EncoderInstance(CharType : wchar)
 
 template EncoderInstance(CharType : dchar)
 {
-    alias dchar E;
-    alias immutable(dchar)[] EString;
+    alias E = dchar;
+    alias EString = immutable(dchar)[];
 
     @property string encodingName()
     {
@@ -1242,8 +1241,8 @@ Returns true if c is a valid code point
  since these are valid code points (even though they are not valid
  characters).
 
- Supercedes:
- This function supercedes $(D std.utf.startsValidDchar()).
+ Supersedes:
+ This function supersedes $(D std.utf.startsValidDchar()).
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
@@ -1284,7 +1283,7 @@ unittest
 }
 
 /**
- Returns true iff it is possible to represent the specifed codepoint
+ Returns true iff it is possible to represent the specified codepoint
  in the encoding.
 
  The type of encoding cannot be deduced. Therefore, it is necessary to
@@ -1341,10 +1340,10 @@ unittest
 /**
  Returns true if the string is encoded correctly
 
- Supercedes:
- This function supercedes std.utf.validate(), however note that this
+ Supersedes:
+ This function supersedes std.utf.validate(), however note that this
  function returns a bool indicating whether the input was valid or not,
- wheras the older funtion would throw an exception.
+ whereas the older function would throw an exception.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
@@ -1507,13 +1506,14 @@ unittest
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Supercedes:
- This function supercedes std.utf.toUTFindex().
+ Supersedes:
+ This function supersedes std.utf.toUTFindex().
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
     s = the string to be counted
+    n = the current code point index
  */
 ptrdiff_t index(E)(const(E)[] s,int n)
 in
@@ -1542,9 +1542,9 @@ unittest
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Supercedes:
- This function supercedes std.utf.decode(), however, note that the
- function codePoints() supercedes it more conveniently.
+ Supersedes:
+ This function supersedes std.utf.decode(), however, note that the
+ function codePoints() supersedes it more conveniently.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
@@ -1649,9 +1649,9 @@ body
  The type of the output cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding as a template parameter.
 
- Supercedes:
- This function supercedes std.utf.encode(), however, note that the
- function codeUnits() supercedes it more conveniently.
+ Supersedes:
+ This function supersedes std.utf.encode(), however, note that the
+ function codeUnits() supersedes it more conveniently.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
@@ -1681,14 +1681,15 @@ body
  The type of the output cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding as a template parameter.
 
- Supercedes:
- This function supercedes std.utf.encode(), however, note that the
- function codeUnits() supercedes it more conveniently.
+ Supersedes:
+ This function supersedes std.utf.encode(), however, note that the
+ function codeUnits() supersedes it more conveniently.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    c = the code point to be encoded
+    c     = the code point to be encoded
+    array = the destination array
 
  Returns:
           the number of code units written to the array
@@ -1717,9 +1718,9 @@ body
 //  * The type of the output cannot be deduced. Therefore, it is necessary to
 //  * explicitly specify the encoding as a template parameter.
 //  *
-//  * Supercedes:
-//  * This function supercedes std.utf.encode(), however, note that the
-//  * function codeUnits() supercedes it more conveniently.
+//  * Supersedes:
+//  * This function supersedes std.utf.encode(), however, note that the
+//  * function codeUnits() supersedes it more conveniently.
 //  *
 //  * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 //  *
@@ -1741,34 +1742,35 @@ Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
  */
 
-size_t encode(E, R)(dchar c, R range)
+size_t encode(E, R)(dchar c, auto ref R range)
+if (isNativeOutputRange!(R, E))
 {
     static if (is(Unqual!E == char))
     {
         if (c <= 0x7F)
         {
-            range.put(cast(char) c);
+            put(range, cast(char) c);
             return 1;
         }
         if (c <= 0x7FF)
         {
-            range.put(cast(char)(0xC0 | (c >> 6)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xC0 | (c >> 6)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 2;
         }
         if (c <= 0xFFFF)
         {
-            range.put(cast(char)(0xE0 | (c >> 12)));
-            range.put(cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xE0 | (c >> 12)));
+            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 3;
         }
         if (c <= 0x10FFFF)
         {
-            range.put(cast(char)(0xF0 | (c >> 18)));
-            range.put(cast(char)(0x80 | ((c >> 12) & 0x3F)));
-            range.put(cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            range.put(cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xF0 | (c >> 18)));
+            put(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
+            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 4;
         }
         else
@@ -1780,22 +1782,31 @@ size_t encode(E, R)(dchar c, R range)
     {
         if (c <= 0xFFFF)
         {
-            r.put(cast(wchar) c);
+            range.put(cast(wchar) c);
             return 1;
         }
-        r.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
-        r.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
+        range.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
+        range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
     else static if (is(Unqual!E == dchar))
     {
-        r.put(c);
+        range.put(c);
         return 1;
     }
     else
     {
-        assert(0);
+        static assert(0);
     }
+}
+
+unittest
+{
+    import std.array;
+    Appender!(char[]) r;
+    assert(encode!(char)('T', r) == 1);
+    assert(encode!(wchar)('T', r) == 1);
+    assert(encode!(dchar)('T', r) == 1);
 }
 
 /**
@@ -1810,14 +1821,15 @@ size_t encode(E, R)(dchar c, R range)
  The type of the output cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding as a template parameter.
 
- Supercedes:
- This function supercedes std.utf.encode(), however, note that the
- function codeUnits() supercedes it more conveniently.
+ Supersedes:
+ This function supersedes std.utf.encode(), however, note that the
+ function codeUnits() supersedes it more conveniently.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    c = the code point to be encoded
+    c  = the code point to be encoded
+    dg = the delegate to invoke for each code unit
  */
 void encode(E)(dchar c, void delegate(E) dg)
 in
@@ -1841,8 +1853,8 @@ body
  at each iteration with the offset into the string at which the code point
  begins.
 
- Supercedes:
- This function supercedes std.utf.decode().
+ Supersedes:
+ This function supersedes std.utf.decode().
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
@@ -1892,13 +1904,13 @@ unittest
  The type of the output cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding type in the template parameter.
 
- Supercedes:
- This function supercedes std.utf.encode().
+ Supersedes:
+ This function supersedes std.utf.encode().
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    d = the code point to be encoded
+    c = the code point to be encoded
 
  Examples:
  --------------------------------------------------------
@@ -1957,10 +1969,10 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Supercedes:
- This function supercedes std.utf.toUTF8(), std.utf.toUTF16() and
+ Supersedes:
+ This function supersedes std.utf.toUTF8(), std.utf.toUTF16() and
  std.utf.toUTF32()
- (but note that to!() supercedes it more conveniently).
+ (but note that to!() supersedes it more conveniently).
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
@@ -1996,11 +2008,74 @@ body
     }
     else
     {
+        static if(is(Dst == wchar))
+        {
+            immutable minReservePlace = 2;
+        }
+        else static if(is(Dst == dchar))
+        {
+            immutable minReservePlace = 1;
+        }
+        else
+        {
+            immutable minReservePlace = 6;
+        }
+
+        Dst[] buffer = new Dst[s.length];
+        Dst[] tmpBuffer = buffer;
         const(Src)[] t = s;
+
         while (t.length != 0)
         {
-            r ~= encode!(Dst)(decode(t));
+            if(tmpBuffer.length < minReservePlace)
+            {
+                size_t prevLength = buffer.length;
+                buffer.length += t.length + minReservePlace;
+                tmpBuffer = buffer[prevLength - tmpBuffer.length .. $];
+            }
+            EncoderInstance!(Dst).encode(decode(t), tmpBuffer);
         }
+
+        r = cast(immutable)buffer[0 .. buffer.length - tmpBuffer.length];
+    }
+}
+
+unittest
+{
+    import std.range;
+    import std.typetuple;
+    {
+        import std.conv : to;
+
+        string asciiCharString = to!string(iota(0, 128, 1));
+
+        alias Types = TypeTuple!(string, Latin1String, AsciiString, Windows1252String, dstring, wstring);
+        foreach(S; Types)
+            foreach(D; Types)
+            {
+                string str;
+                S sStr;
+                D dStr;
+                transcode(asciiCharString, sStr);
+                transcode(sStr, dStr);
+                transcode(dStr, str);
+                assert(asciiCharString == str);
+            }
+    }
+    {
+        string czechChars = "Příliš žluťoučký kůň úpěl ďábelské ódy.";
+        alias Types = TypeTuple!(string, dstring, wstring);
+        foreach(S; Types)
+            foreach(D; Types)
+            {
+                string str;
+                S sStr;
+                D dStr;
+                transcode(czechChars, sStr);
+                transcode(sStr, dStr);
+                transcode(dStr, str);
+                assert(czechChars == str);
+            }
     }
 }
 
@@ -2010,8 +2085,8 @@ body
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Supercedes:
- This function supercedes std.utf.toUTF8(), std.utf.toUTF16() and
+ Supersedes:
+ This function supersedes std.utf.toUTF8(), std.utf.toUTF16() and
  std.utf.toUTF32().
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
@@ -2052,6 +2127,8 @@ class UnrecognizedEncodingException : EncodingException
 /** Abstract base class of all encoding schemes */
 abstract class EncodingScheme
 {
+    import std.uni : toLower;
+    
     /**
      * Registers a subclass of EncodingScheme.
      *
@@ -2094,7 +2171,7 @@ abstract class EncodingScheme
      */
     static EncodingScheme create(string encodingName)
     {
-        auto p = std.string.toLower(encodingName) in supported;
+        auto p = toLower(encodingName) in supported;
         if (p is null)
             throw new EncodingException("Unrecognized Encoding: "~encodingName);
         string className = *p;
@@ -2145,7 +2222,8 @@ abstract class EncodingScheme
          * The input to this function MUST be a valid code point.
          *
          * Params:
-         *    c = the code point to be encoded
+         *    c      = the code point to be encoded
+         *    buffer = the destination array
          *
          * Returns:
          *    the number of ubytes written.
@@ -2333,6 +2411,7 @@ abstract class EncodingScheme
      *
      * Params:
      *    s = the string to be counted
+     *    n = the current code point index
      */
     ptrdiff_t index(const(ubyte)[] s, size_t n)
     in
@@ -2388,7 +2467,7 @@ class EncodingSchemeASCII : EncodingScheme
                 "ISO_646.irv:1991",
                 "US-ASCII",
                 "cp367",
-                "csASCII"
+                "csASCII",
                 "iso-ir-6",
                 "us"
             ];
@@ -2712,7 +2791,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         {
             auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.decode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length * wchar.sizeof..$];
             return c;
         }
 
@@ -2725,7 +2804,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         {
             auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length * wchar.sizeof..$];
             return c;
         }
 
@@ -2734,6 +2813,23 @@ class EncodingSchemeUtf16Native : EncodingScheme
             return cast(immutable(ubyte)[])"\uFFFD"w;
         }
     }
+}
+unittest
+{
+    version(LittleEndian)
+    {
+        auto efrom = EncodingScheme.create("utf-16le");
+        ubyte[6] sample = [154,1, 155,1, 156,1];
+    }
+    version(BigEndian)
+    {
+        auto efrom = EncodingScheme.create("utf-16be");
+        ubyte[6] sample = [1,154, 1,155, 1,156];
+    }
+    const(ubyte)[] ub = cast(const(ubyte)[])sample;
+    dchar dc = efrom.safeDecode(ub);
+    assert(dc == 410);
+    assert(ub.length == 4);
 }
 
 /**
@@ -2790,7 +2886,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         {
             auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.decode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length * dchar.sizeof..$];
             return c;
         }
 
@@ -2803,7 +2899,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         {
             auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
-            s = s[$-t.length..$];
+            s = s[$-t.length * dchar.sizeof..$];
             return c;
         }
 
@@ -2812,6 +2908,23 @@ class EncodingSchemeUtf32Native : EncodingScheme
             return cast(immutable(ubyte)[])"\uFFFD"d;
         }
     }
+}
+unittest
+{
+    version(LittleEndian)
+    {
+        auto efrom = EncodingScheme.create("utf-32le");
+        ubyte[12] sample = [154,1,0,0, 155,1,0,0, 156,1,0,0];
+    }
+    version(BigEndian)
+    {
+        auto efrom = EncodingScheme.create("utf-32be");
+        ubyte[12] sample = [0,0,1,154, 0,0,1,155, 0,0,1,156];
+    }
+    const(ubyte)[] ub = cast(const(ubyte)[])sample;
+    dchar dc = efrom.safeDecode(ub);
+    assert(dc == 410);
+    assert(ub.length == 8);
 }
 
 //=============================================================================

@@ -7,7 +7,7 @@
  *  WIKI = Phobos/StdDemangle
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *                        Thomas Kuehne, Frits van Bommel
  * Source:    $(PHOBOSSRC std/_demangle.d)
@@ -20,9 +20,7 @@
  */
 module std.demangle;
 
-private import core.demangle;
-private import std.exception;
-
+/+
 private class MangleException : Exception
 {
     this()
@@ -30,6 +28,7 @@ private class MangleException : Exception
         super("MangleException");
     }
 }
++/
 
 /*****************************
  * Demangle D mangled names.
@@ -47,11 +46,11 @@ import std.demangle;
 void test(int x, float y) { }
 
 int main()
-{   
+{
     string buffer;
     bool inword;
     int c;
-    
+
     writefln("Try typing in: %s", test.mangleof);
     while ((c = fgetc(stdin)) != EOF)
     {
@@ -67,7 +66,7 @@ int main()
         }
         else
         {   if (c == '_' || isAlpha(c))
-            {   
+            {
                 inword = true;
                 buffer.length = 0;
                 buffer ~= cast(char) c;
@@ -85,6 +84,8 @@ int main()
 
 string demangle(string name)
 {
-    auto ret = core.demangle.demangle(name);
+    import core.demangle : demangle;
+    import std.exception : assumeUnique;
+    auto ret = demangle(name);
     return assumeUnique(ret);
 }

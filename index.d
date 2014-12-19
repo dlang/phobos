@@ -1,292 +1,333 @@
 Ddoc
 
-Phobos is the standard runtime library that comes with the
-D language compiler. Also, check out the
-<a href="http://www.prowiki.org/wiki4d/wiki.cgi?Phobos">wiki for Phobos</a>.
+$(P Phobos is the standard runtime library that comes with the D language
+compiler.)
 
+$(P Generally, the $(D std) namespace is used for the main modules in the
+Phobos standard library. The $(D etc) namespace is used for external C/C++
+library bindings. The $(D core) namespace is used for low-level D runtime
+functions.)
 
-<h2>Philosophy</h2>
+$(P The following table is a quick reference guide for which Phobos modules to
+use for a given category of functionality. Note that some modules may appear in
+more than one category, as some Phobos modules are quite generic and can be
+applied in a variety of situations.)
 
-	Each module in Phobos conforms as much as possible to the
-	following design goals. These are goals
-	rather than requirements because D is not a religion,
-	it's a programming language, and it recognizes that
-	sometimes the goals are contradictory and counterproductive
-	in certain situations, and programmers have
-	jobs that need to get done.
+$(BOOKTABLE ,
+    $(TR
+        $(TH Category)
+        $(TH Modules)
+        $(TH Description)
+    )
+    $(TR
+        $(TDNW Algorithms &amp; ranges)
+        $(TD
+            $(LINK2 std_algorithm.html, std.algorithm)$(BR)
+            $(LINK2 std_range_package.html, std.range)$(BR)
+            $(LINK2 std_range_primitives.html, std.range.primitives)$(BR)
+            $(LINK2 std_range_interfaces.html, std.range.interfaces)
+        )
+        $(TD Generic algorithms that work with $(LINK2 std_range.html, ranges)
+            of any type, including strings, arrays, and other kinds of
+            sequentially-accessed data. Algorithms include searching,
+            comparison, iteration, sorting, set operations, and mutation.
+        )
+    )
+    $(TR
+        $(TDNW Array manipulation)
+        $(TD
+            $(LINK2 std_array.html, std.array)$(BR)
+            $(LINK2 std_algorithm.html, std.algorithm)
+        )
+        $(TD Convenient operations commonly used with built-in arrays.
+            Note that many common array operations are subsets of more generic
+            algorithms that work with arbitrary ranges, so they are found in
+            $(D std.algorithm).
+        )
+    )
+    $(TR
+        $(TDNW Containers)
+        $(TD
+            $(LINK2 std_container_array.html, std.container.array)$(BR)
+            $(LINK2 std_container_binaryheap.html, std.container.binaryheap)$(BR)
+            $(LINK2 std_container_dlist.html, std.container.dlist)$(BR)
+            $(LINK2 std_container_rbtree.html, std.container.rbtree)$(BR)
+            $(LINK2 std_container_slist.html, std.container.slist)
+        )
+        $(TD See $(LINK2 std_container_package.html, std.container.*) for an
+            overview.
+        )
+    )
+    $(TR
+        $(TDNW Data formats)
+        $(TD
+            $(LINK2 std_base64.html, std.base64)$(BR)
+            $(LINK2 std_csv.html, std.csv)$(BR)
+            $(LINK2 std_json.html, std.json)$(BR)
+            $(LINK2 std_xml.html, std.xml)$(BR)
+            $(LINK2 std_zip.html, std.zip)$(BR)
+            $(LINK2 std_zlib.html, std.zlib)
+        )
+        $(TD Modules for reading/writing different data formats.
+        )
+    )
+    $(TR
+        $(TDNW Data integrity)
+        $(TD
+            $(LINK2 std_digest_crc, std.digest.crc)$(BR)
+            $(LINK2 std_digest_digest, std.digest.digest)$(BR)
+            $(LINK2 std_digest_md, std.digest.md)$(BR)
+            $(LINK2 std_digest_ripemd, std.digest.ripemd)$(BR)
+            $(LINK2 std_digest_sha, std.digest.sha)$(BR)
+        )
+        $(TD Hash algorithms for verifying data integrity.
+        )
+    )
+    $(TR
+        $(TDNW Date &amp; time)
+        $(TD
+            $(LINK2 std_datetime.html, std.datetime)$(BR)
+            $(LINK2 core_time.html, core.time)
+        )
+        $(TD $(D std.datetime) provides convenient access to date and time
+        representations.$(BR)
+        $(D core.time) implements low-level time primitives.
+        )
+    )
+    $(TR
+        $(TDNW Exception handling)
+        $(TD
+            $(LINK2 std_exception.html, std.exception)$(BR)
+            $(LINK2 core_exception.html, core.exception)
+        )
+        $(TD $(D std.exception) implements routines related to exceptions.
+            $(D core.exception) defines built-in exception types and low-level
+            language hooks required by the compiler.
+        )
+    )
+    $(TR
+        $(TDNW External library bindings)
+        $(TD
+            $(LINK2 etc_c_curl.html, etc.c.curl)$(BR)
+            $(LINK2 etc_c_sqlite3.html, etc.c.sqlite3)$(BR)
+            $(LINK2 etc_c_zlib.html, etc.c.zlib)
+        )
+        $(TD Various bindings to external C libraries.
+        )
+    )
+    $(TR
+        $(TDNW I/O &amp; File system)
+        $(TD
+            $(LINK2 std_file.html, std.file)$(BR)
+            $(LINK2 std_path.html, std.path)$(BR)
+            $(LINK2 std_stdio.html, std.stdio)
+        )
+        $(TD
+            $(D std.stdio) is the main module for I/O.$(BR)
+            $(D std.file) is for accessing the operating system's filesystem,
+            and $(D std.path) is for manipulating filesystem pathnames in a
+            platform-independent way.$(BR)
+	    Note that $(D std.stream) and $(D std.cstream) are older,
+	    deprecated modules scheduled to be replaced in the future; new
+	    client code should avoid relying on them.
+        )
+    )
+    $(TR
+        $(TDNW Memory management)
+        $(TD
+            $(LINK2 core_memory.html, core.memory)$(BR)
+            $(LINK2 std_typecons.html, std.typecons)$(BR)
+        )
+        $(TD
+            $(D core.memory) provides an API for user code to control the
+            built-in garbage collector.$(BR)
+            $(D std.typecons) contains primitives for building scoped variables
+            and reference-counted types.
+        )
+    )
+    $(TR
+        $(TDNW Metaprogramming)
+        $(TD 
+            $(LINK2 std_traits.html, std.traits)$(BR)
+            $(LINK2 std_typecons.html, std.typecons)$(BR)
+            $(LINK2 std_typetuple.html, std.typetuple)$(BR)
+            $(LINK2 core_demangle.html, core.demangle)
+        )
+        $(TD
+            These modules provide the primitives for compile-time introspection
+            and metaprogramming.
+        )
+    )
+    $(TR
+        $(TDNW Multitasking)
+        $(TD
+            $(LINK2 std_concurrency, std.concurrency)$(BR)
+            $(LINK2 std_parallelism, std.parallelism)$(BR)
+            $(LINK2 std_process, std.process)$(BR)
+            $(LINK2 core_atomic, core.atomic)$(BR)
+            $(LINK2 core_sync_barrier, core.sync.barrier)$(BR)
+            $(LINK2 core_sync_condition, core.sync.condition)$(BR)
+            $(LINK2 core_sync_exception, core.sync.exception)$(BR)
+            $(LINK2 core_sync_mutex, core.sync.mutex)$(BR)
+            $(LINK2 core_sync_rwmutex, core.sync.rwmutex)$(BR)
+            $(LINK2 core_sync_semaphore, core.sync.semaphore)$(BR)
+            $(LINK2 core_thread, core.thread)
+        )
+        $(TD These modules provide primitives for concurrent processing,
+	    multithreading, synchronization, and interacting with operating
+	    system processes.$(BR)
 
-	<dl><dl>
+            $(D core.atomic) provides primitives for lock-free concurrent
+            programming.$(BR)
 
+            $(D core.sync.*) modules provide low-level concurrent
+            programming building blocks.$(BR)
 
-	<dt>Machine and Operating System Independent Interfaces
+            $(D core.thread) implements multithreading primitives.
+        )
+    )
+    $(TR
+        $(TDNW Networking)
+        $(TD
+            $(LINK2 std_socket.html, std.socket)$(BR)
+            $(LINK2 std_socketstream.html, std.socketstream)$(BR)
+            $(LINK2 std_net_curl.html, std.net.curl)$(BR)
+            $(LINK2 std_net_isemail.html, std.net.isemail)
+        )
+        $(TD Utilities for networking.
+        )
+    )
+    $(TR
+        $(TDNW Numeric)
+        $(TD
+            $(LINK2 std_bigint.html, std.bigint)$(BR)
+            $(LINK2 std_complex.html, std.complex)$(BR)
+            $(LINK2 std_math.html, std.math)$(BR)
+            $(LINK2 std_mathspecial.html, std.mathspecial)$(BR)
+            $(LINK2 std_numeric.html, std.numeric)$(BR)
+            $(LINK2 std_random.html, std.random)
+        )
+        $(TD These modules provide the standard mathematical functions and
+            numerical algorithms.$(BR)
+            $(D std.bigint) provides an arbitrary-precision integer type.$(BR)
+            $(D std.complex) provides a complex number type.$(BR)
+            $(D std.random) provides pseudo-random number generators.
+        )
+    )
+    $(TR
+        $(TDNW Paradigms)
+        $(TD
+            $(LINK2 std_functional, std.functional)$(BR)
+            $(LINK2 std_algorithm, std.algorithm)$(BR)
+            $(LINK2 std_signals, std.signals)
+        )
+        $(TD $(D std.functional), along with the lazy algorithms of
+            $(D std.algorithm), provides utilities for writing functional-style
+            code in D.$(BR)
 
-	<dd>It's pretty well accepted that gratuitous non-portability
-	should be avoided. This should not be
-	construed, however, as meaning that access to unusual
-	features of an operating system should be prevented.
+            $(D std.signals) provides a signal-and-slots framework for
+            event-driven programming.
+        )
+    )
+    $(TR
+        $(TDNW Runtime utilities)
+        $(TD
+            $(LINK2 std_getopt.html, std.getopt)$(BR)
+            $(LINK2 std_compiler.html, std.compiler)$(BR)
+            $(LINK2 std_system.html, std.system)$(BR)
+            $(LINK2 core_cpuid.html, core.cpuid)$(BR)
+            $(LINK2 core_memory.html, core.memory)$(BR)
+        )
+        $(TD Various modules for interacting with the execution environment and
+            compiler.$(BR)
+            $(D std.getopt) implements parsing of command-line arguments.$(BR)
+            $(D std.compiler) provides compiler information, mainly the
+            compiler vendor string and language version.$(BR)
+            $(D std.system) provides information about the runtime environment,
+            such as OS type and endianness.$(BR)
+            $(D core.cpuid) provides information on the capabilities of the
+            CPU the program is running on.$(BR)
+            $(D core.memory) allows user code to control the built-in garbage
+            collector.
+        )
+    )
+    $(TR
+        $(TDNW String manipulation)
+        $(TD
+            $(LINK2 std_string.html, std.string)$(BR)
+            $(LINK2 std_array.html, std.array)$(BR)
+            $(LINK2 std_algorithm.html, std.algorithm)$(BR)
+            $(LINK2 std_uni, std.uni)$(BR)
+            $(LINK2 std_utf, std.utf)$(BR)
+            $(LINK2 std_format.html, std.format)$(BR)
+            $(LINK2 std_path.html, std.path)$(BR)
+            $(LINK2 std_regex.html, std.regex)$(BR)
+            $(LINK2 std_ascii, std.ascii)$(BR)
+            $(LINK2 std_encoding.html, std.encoding)$(BR)
+            $(LINK2 std_windows_charset.html, std.windows.charset)
+        )
+        $(TD $(D std.string) contains functions that work specifically with
+            strings.$(BR)
 
+            Many string manipulations are special cases of more generic
+            algorithms that work with general arrays, or generic ranges; these
+            are found in $(D std.array) and $(D std.algorithm).$(BR)
 
-	<dt>Simple Operations should be Simple
+            D strings are encoded in Unicode; $(D std.uni) provides operations
+            that work with Unicode strings in general, while $(D std.utf) deals
+            with specific Unicode encodings and conversions between them.$(BR)
 
-	<dd>A common and simple operation, like writing an array of
-	bytes to a file, should be simple to
-	code. I haven't seen a class library yet that simply and efficiently
-	implemented common, basic file I/O operations.
+            $(D std.format) provides $(D printf)-style format string
+            formatting, with D's own improvements and extensions.$(BR)
 
+            For manipulating filesystem pathnames, $(D std.path) is
+            provided.$(BR)
 
-	<dt>Classes should strive to be independent of one another
+            $(D std.regex) is a very fast library for string matching and
+            substitution using regular expressions.$(BR)
 
-	<dd>It's discouraging to pull in a megabyte of code bloat
-	by just trying to read a file into an array of
-	bytes. Class independence also means that classes that turn
-	out to be mistakes can be deprecated and redesigned without
-	forcing a rewrite of the rest of the class library.
+            $(D std.ascii) provides routines specific to the ASCII subset of
+            Unicode.
 
+            Windows-specific character set support is provided by
+            $(D std.windows.charset).
 
-	<dt>No pointless wrappers around C runtime library functions or OS API functions
+            Rudimentary support for other string encodings is provided by
+            $(D std.encoding).
+        )
+    )
+    $(TR
+        $(TDNW Type manipulations)
+        $(TD
+            $(LINK2 std_conv.html, std.conv)$(BR)
+            $(LINK2 std_typecons.html, std.typecons)$(BR)
+            $(LINK2 std_bitmanip.html, std.bitmanip)$(BR)
+            $(LINK2 core_bitop.html, core.bitop)$(BR)
+        )
+        $(TD $(D std.conv) provides powerful automatic conversions between
+            built-in types as well as user-defined types that implement
+            standard conversion primitives.$(BR)
 
-	<dd>D provides direct access to C runtime library functions
-	and operating system API functions.
-	Pointless D wrappers around those functions just adds blather,
-	bloat, baggage and bugs.
+            $(D std.typecons) provides various utilities for type construction
+            and compile-time type introspection. It provides facilities for
+            constructing scoped variables and reference-counted types, as well
+            as miscellaneous useful generic types such as tuples and
+            flags.$(BR)
 
-
-	<dt>Class implementations should use DBC
-
-	<dd>This will prove that DBC (Contract Programming) is worthwhile.
-	Not only will it aid in debugging the class, but
-	it will help every class user use the class correctly.
-	DBC in the class library will have great leverage.
-
-
-	<dt>Use Exceptions for Error Handling
-
-	<dd>See <a href="../errors.html">Error Handling in D</a>.
-
-	</dl></dl>
-
-<hr>
-<h2>Imports</h2>
-
-	Runtime library modules can be imported with the
-	<b>import</b> statement. Each module falls into one of several
-	packages:
-
-	<dl>
-	<dt><a href="#std">std</a>
-	<dd>These are the core modules.
-	<p>
-
-	<dl>
-	<dt><a href="#std_windows">std.windows</a>
-	<dd>Modules specific to the Windows operating system.
-	<p>
-
-	<dt><a href="#std_linux">std.linux</a>
-	<dd>Modules specific to the Linux operating system.
-	<p>
-
-	<dt><a href="#std_c">std.c</a>
-	<dd>Modules that are simply interfaces to C functions.
-	For example, interfaces to standard C library functions
-	will be in std.c, such as std.c.stdio would be the interface
-	to C's stdio.h.
-	<p>
-
-	<dl>
-	<dt><a href="#std_c_windows">std.c.windows</a>
-	<dd>Modules corresponding to the C Windows API functions.
-	<p>
-
-	<dt><a href="#std_c_linux">std.c.linux</a>
-	<dd>Modules corresponding to the C Linux API functions.
-	<p>
-
-	</dl>
-	</dl>
-
-	</dl>
-
-	<dl>
-	<dt><b>etc</b>
-	<dd>This is the root of a hierarchy of modules mirroring the std
-	hierarchy. Modules in etc are not standard D modules. They are
-	here because they are experimental, or for some other reason are
-	not quite suitable for std, although they are still useful.
-	<p>
-	</dl>
-
-<hr>
-<a name="std"><h3>std: Core library modules</h3></a>
-
-	<dl>
-
-	<dt><a href="std_ascii.html"><b>std.ascii</b></a>
-	<dd>Functions that operate on ASCII characters.
-
-	<dt><a href="std_base64.html"><b>std.base64</b></a>
-	<dd>Encode/decode base64 format.
-
-	<dt><a href="std_bigint.html"><b>std.bigint</b></a>
-	<dd>Arbitrary-precision ('bignum') arithmetic
-
-$(V1
-	<dt><a href="std_bitarray.html"><b>std.bitarray</b></a>
-	<dd>Arrays of bits.
-
-	<dt><a href="std_boxer.html"><b>std.boxer</b></a>
-	<dd>Box/unbox types.
+            $(D std.bitmanip) provides various bit-level operations, bit
+            arrays, and bit fields. $(D core.bitop) provides low-level bit
+            manipulation primitives.$(BR)
+        )
+    )
+    $(TR
+        $(TDNW Vector programming)
+        $(TD
+            $(LINK2 core_simd, core.simd)$(BR)
+        )
+        $(TD The $(D core.simd) module provides access to SIMD intrinsics in
+        the compiler.)
+    )
 )
-	<dt><a href="std_compiler.html"><b>std.compiler</b></a>
-	<dd>Information about the D compiler implementation.
-
-	<dt><a href="std_conv.html"><b>std.conv</b></a>
-	<dd>Conversion of strings to integers.
-
-$(V1
-	<dt><a href="std_date.html"><b>std.date</b></a>
-	<dd>Date and time functions. Support locales.
-)
-
-	<dt><a href="std_datetime.html"><b>std.datetime</b></a>
-	<dd>Date and time-related types and functions.
-
-	<dt><a href="std_file.html"><b>std.file</b></a>
-	<dd>Basic file operations like read, write, append.
-
-	<dt><a href="std_format.html"><b>std.format</b></a>
-	<dd>Formatted conversions of values to strings.
-
-$(V1
-	<dt><a href="std_gc.html"><b>std.gc</b></a>
-	<dd>Control the garbage collector.
-)
-	<dt><a href="std_math.html"><b>std.math</b></a>
-	<dd>Include all the usual math functions like sin, cos, atan, etc.
-
-	<dt><a href="std_md5.html"><b>std.md5</b></a>
-	<dd>Compute MD5 digests.
-
-	<dt><a href="std_mmfile.html"><b>std.mmfile</b></a>
-	<dd>Memory mapped files.
-
-	<dt><a href="object.html"><b>object</b></a>
-	<dd>The root class of the inheritance hierarchy
-
-	<dt><a href="std_outbuffer.html"><b>std.outbuffer</b></a>
-	<dd>Assemble data into an array of bytes
-
-	<dt><a href="std_path.html"><b>std.path</b></a>
-	<dd>Manipulate file names, path names, etc.
-
-	<dt><a href="std_process.html"><b>std.process</b></a>
-	<dd>Create/destroy threads.
-
-	<dt><a href="std_random.html"><b>std.random</b></a>
-	<dd>Random number generation.
-
-$(V1
-	<dt><a href="std_recls.html"><b>std.recls</b></a>
-	<dd>Recursively search file system and (currently Windows
-	only) FTP sites.
-)
-	<dt><a href="std_regex.html"><b>std.regex</b></a>
-	<dd>The usual regular expression functions.
-
-	<dt><a href="std_socket.html"><b>std.socket</b></a>
-	<dd>Sockets.
-
-	<dt><a href="std_socketstream.html"><b>std.socketstream</b></a>
-	<dd>Stream for a blocking, connected <b>Socket</b>.
-
-	<dt><a href="std_stdint.html"><b>std.stdint</b></a>
-	<dd>Integral types for various purposes.
-
-	<dt><a href="std_stdio.html"><b>std.stdio</b></a>
-	<dd>Standard I/O.
-
-	<dt><a href="std_cstream.html"><b>std.cstream</b></a>
-	<dd>Stream I/O.
-
-	<dt><a href="std_stream.html"><b>std.stream</b></a>
-	<dd>Stream I/O.
-
-	<dt><a href="std_string.html"><b>std.string</b></a>
-	<dd>Basic string operations not covered by array ops.
-
-	<dt><a href="std_system.html"><b>std.system</b></a>
-	<dd>Inquire about the CPU, operating system.
-
-	<!--dt><a href="std_thread.html"><b>std.thread</b></a>
-	<dd>One per thread. Operations to do on a thread.-->
-
-	<dt><a href="std_uni.html"><b>std.base64</b></a>
-	<dd>Functions that operate on Unicode characters.
-
-	<dt><a href="std_uri.html"><b>std.uri</b></a>
-	<dd>Encode and decode Uniform Resource Identifiers (URIs).
-
-	<dt><a href="std_utf.html"><b>std.utf</b></a>
-	<dd>Encode and decode utf character encodings.
-
-	<dt><a href="std_zip.html"><b>std.zip</b></a>
-	<dd>Read/write zip archives.
-
-	<dt><a href="std_zlib.html"><b>std.zlib</b></a>
-	<dd>Compression / Decompression of data.
-
-	</dl>
-
-<hr><!-- ===================================== -->
-<a name="std_windows"><h3>std.windows: Modules specific to the Windows operating system</h3></a>
-
-	<dl>
-
-	<dt><b>std.windows.syserror</b></a>
-	<dd>Convert Windows error codes to strings.
-
-	</dl>
-
-<hr><!-- ===================================== -->
-<a name="std_linux"><h3>std.linux: Modules specific to the Linux operating system</h3></a>
-
-<hr><!-- ===================================== -->
-<a name="std_c"><h3>std.c: Interface to C functions</h3></a>
-
-	<dl>
-
-	<dt><a href="#stdio"><b>std.c.stdio</b></a>
-	<dd>Interface to C stdio functions like printf().
-
-	</dl>
-
-<hr><!-- ===================================== -->
-<a name="std_c_windows"><h3>std.c.windows: Interface to C Windows functions</h3></a>
-
-	<dl>
-
-	<dt><b>std.c.windows.windows</b>
-	<dd>Interface to Windows APIs
-
-	</dl>
-
-<hr><!-- ===================================== -->
-<a name="std_c_linux"><h3>std.c.linux: Interface to C Linux functions</h3></a>
-
-	<dl>
-
-	<dt><b>std.c.linux.linux</b>
-	<dd>Interface to Linux APIs
-
-	</dl>
-
-<hr><!-- ===================================== -->
-<a name="stdio"><h2>std.c.stdio</h2></a>
-
-<dl><dl>
-	<dt>int <b>printf</b>(char* format, ...)
-	<dd>C printf() function.
-</dl></dl>
 
 Macros:
 	TITLE=Phobos Runtime Library

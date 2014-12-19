@@ -1,5 +1,6 @@
 # Makefile for zlib64
 
+MODEL=64
 VCDIR=\Program Files (x86)\Microsoft Visual Studio 10.0\VC
 
 CC="$(VCDIR)\bin\amd64\cl"
@@ -78,14 +79,14 @@ example.obj: example.c zlib.h zconf.h
 minigzip.obj: minigzip.c zlib.h zconf.h
 	$(CC) /c $(cvarsdll) $(CFLAGS) $*.c
 
-zlib64.lib: $(OBJS)
-	$(LIB) $(LIBFLAGS) /OUT:zlib64.lib $(OBJS)
+zlib$(MODEL).lib: $(OBJS)
+	$(LIB) $(LIBFLAGS) /OUT:zlib$(MODEL).lib $(OBJS)
 
-example.exe: example.obj zlib64.lib
-	$(LD) $(LDFLAGS) example.obj zlib64.lib
+example.exe: example.obj zlib$(MODEL).lib
+	$(LD) $(LDFLAGS) example.obj zlib$(MODEL).lib
 
-minigzip.exe: minigzip.obj zlib64.lib
-	$(LD) $(LDFLAGS) minigzip.obj zlib64.lib
+minigzip.exe: minigzip.obj zlib$(MODEL).lib
+	$(LD) $(LDFLAGS) minigzip.obj zlib$(MODEL).lib
 
 test: example.exe minigzip.exe
 	example

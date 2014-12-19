@@ -115,8 +115,8 @@ version(Windows)
             {
                 WORD wProcessorArchitecture;
                 WORD wReserved;
-            };
-        };
+            }
+        }
         DWORD     dwPageSize;
         LPVOID    lpMinimumApplicationAddress;
         LPVOID    lpMaximumApplicationAddress;
@@ -144,7 +144,25 @@ else version(linux)
 
     shared static this()
     {
-        totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN );
+        totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
+    }
+}
+else version(Solaris)
+{
+    import core.sys.posix.unistd;
+
+    shared static this()
+    {
+        totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
+    }
+}
+else version(Android)
+{
+    import core.sys.posix.unistd;
+
+    shared static this()
+    {
+        totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
 else version(useSysctlbyname)
@@ -186,20 +204,23 @@ else
        without wrapping it.  If I didn't wrap it, casts would be required
        basically everywhere.
 */
-private void atomicSetUbyte(ref ubyte stuff, ubyte newVal)
+private void atomicSetUbyte(T)(ref T stuff, T newVal)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     //core.atomic.cas(cast(shared) &stuff, stuff, newVal);
     atomicStore(*(cast(shared) &stuff), newVal);
 }
 
-private ubyte atomicReadUbyte(ref ubyte val)
+private ubyte atomicReadUbyte(T)(ref T val)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     return atomicLoad(*(cast(shared) &val));
 }
 
 // This gets rid of the need for a lot of annoying casts in other parts of the
 // code, when enums are involved.
-private bool atomicCasUbyte(ref ubyte stuff, ubyte testVal, ubyte newVal)
+private bool atomicCasUbyte(T)(ref T stuff, T testVal, T newVal)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     return core.atomic.cas(cast(shared) &stuff, testVal, newVal);
 }
@@ -207,20 +228,16 @@ private bool atomicCasUbyte(ref ubyte stuff, ubyte testVal, ubyte newVal)
 /*--------------------- Generic helper functions, etc.------------------------*/
 private template MapType(R, functions...)
 {
-    static if(functions.length == 0)
-    {
-        alias typeof(unaryFun!(functions[0])(ElementType!R.init)) MapType;
-    }
-    else
-    {
-        alias typeof(adjoin!(staticMap!(unaryFun, functions))
-                     (ElementType!R.init)) MapType;
-    }
+    static assert(functions.length);
+
+    ElementType!R e = void;
+    alias MapType =
+        typeof(adjoin!(staticMap!(unaryFun, functions))(e));
 }
 
 private template ReduceType(alias fun, R, E)
 {
-    alias typeof(binaryFun!fun(E.init, ElementType!R.init)) ReduceType;
+    alias ReduceType = typeof(binaryFun!fun(E.init, ElementType!R.init));
 }
 
 private template noUnsharedAliasing(T)
@@ -242,17 +259,17 @@ private template isSafeTask(F)
 
 unittest
 {
-    alias void function() @safe F1;
-    alias void function() F2;
-    alias void function(uint, string) @trusted F3;
-    alias void function(uint, char[]) F4;
+    alias F1 = void function() @safe;
+    alias F2 = void function();
+    alias F3 = void function(uint, string) @trusted;
+    alias F4 = void function(uint, char[]);
 
     static assert( isSafeTask!F1);
     static assert(!isSafeTask!F2);
     static assert( isSafeTask!F3);
     static assert(!isSafeTask!F4);
 
-    alias uint[] function(uint, string) pure @trusted F5;
+    alias F5 = uint[] function(uint, string) pure @trusted;
     static assert( isSafeTask!F5);
 }
 
@@ -300,7 +317,7 @@ private enum TaskStatus : ubyte
 
 private template AliasReturn(alias fun, T...)
 {
-    alias typeof({ T args; return fun(args); }) AliasReturn;
+    alias AliasReturn = typeof({ T args; return fun(args); });
 }
 
 // Should be private, but std.algorithm.reduce is used in the zero-thread case
@@ -309,13 +326,13 @@ template reduceAdjoin(functions...)
 {
     static if(functions.length == 1)
     {
-        alias binaryFun!(functions[0]) reduceAdjoin;
+        alias reduceAdjoin = binaryFun!(functions[0]);
     }
     else
     {
         T reduceAdjoin(T, U)(T lhs, U rhs)
         {
-            alias staticMap!(binaryFun, functions) funs;
+            alias funs = staticMap!(binaryFun, functions);
 
             foreach(i, Unused; typeof(lhs.expand))
             {
@@ -331,13 +348,13 @@ private template reduceFinish(functions...)
 {
     static if(functions.length == 1)
     {
-        alias binaryFun!(functions[0]) reduceFinish;
+        alias reduceFinish = binaryFun!(functions[0]);
     }
     else
     {
         T reduceFinish(T)(T lhs, T rhs)
         {
-            alias staticMap!(binaryFun, functions) funs;
+            alias funs = staticMap!(binaryFun, functions);
 
             foreach(i, Unused; typeof(lhs.expand))
             {
@@ -347,15 +364,6 @@ private template reduceFinish(functions...)
             return lhs;
         }
     }
-}
-
-private template isAssignable(T)
-{
-    enum isAssignable = is(typeof({
-        T a;
-        T b;
-        a = b;
-    }));
 }
 
 private template isRoundRobin(R : RoundRobinBuffer!(C1, C2), C1, C2)
@@ -474,11 +482,11 @@ struct Task(alias fun, Args...)
     */
     static if(__traits(isSame, fun, run))
     {
-        alias _args[1..$] args;
+        alias args = _args[1..$];
     }
     else
     {
-        alias _args args;
+        alias args = _args;
     }
 
 
@@ -514,7 +522,7 @@ struct Task(alias fun, Args...)
     The return type of the function called by this $(D Task).  This can be
     $(D void).
     */
-    alias typeof(fun(_args)) ReturnType;
+    alias ReturnType = typeof(fun(_args));
 
     static if(!is(ReturnType == void))
     {
@@ -545,9 +553,9 @@ struct Task(alias fun, Args...)
         enforce(this.pool !is null, "Job not submitted yet.");
     }
 
-    private this(Args args)
+    static if(Args.length > 0)
     {
-        static if(args.length > 0)
+        private this(Args args)
         {
             _args = args;
         }
@@ -1392,16 +1400,20 @@ private:
         singleTaskThread = new Thread(&doSingleTask);
         singleTaskThread.start();
 
-        if(priority != int.max)
+        // Disabled until writing code to support
+        // running thread with specified priority
+        // See https://d.puremagic.com/issues/show_bug.cgi?id=8960
+
+        /*if(priority != int.max)
         {
             singleTaskThread.priority = priority;
-        }
+        }*/
     }
 
 public:
     // This is used in parallel_algorithm but is too unstable to document
     // as public API.
-    size_t defaultWorkUnitSize(size_t rangeLen) const pure nothrow @safe
+    size_t defaultWorkUnitSize(size_t rangeLen) const @safe pure nothrow
     {
         if(this.size == 0)
         {
@@ -1431,7 +1443,7 @@ public:
     */
     this(size_t nWorkers) @trusted
     {
-        synchronized(TaskPool.classinfo)
+        synchronized(typeid(TaskPool))
         {
             instanceStartIndex = nextInstanceIndex;
 
@@ -1530,7 +1542,7 @@ public:
     ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     {
         enforce(workUnitSize > 0, "workUnitSize must be > 0.");
-        alias ParallelForeach!R RetType;
+        alias RetType = ParallelForeach!R;
         return RetType(this, range, workUnitSize);
     }
 
@@ -1553,99 +1565,96 @@ public:
         }
     }
 
-    /**
-    Eager parallel map.  The eagerness of this function means it has less
-    overhead than the lazily evaluated $(D TaskPool.map) and should be
-    preferred where the memory requirements of eagerness are acceptable.
-    $(D functions) are the functions to be evaluated, passed as template alias
-    parameters in a style similar to $(XREF algorithm, map).  The first
-    argument must be a random access range.
-
-    ---
-    auto numbers = iota(100_000_000.0);
-
-    // Find the square roots of numbers.
-    //
-    // Timings on an Athlon 64 X2 dual core machine:
-    //
-    // Parallel eager map:                   0.802 s
-    // Equivalent serial implementation:     1.768 s
-    auto squareRoots = taskPool.amap!sqrt(numbers);
-    ---
-
-    Immediately after the range argument, an optional work unit size argument
-    may be provided.  Work units as used by $(D amap) are identical to those
-    defined for parallel foreach.  If no work unit size is provided, the
-    default work unit size is used.
-
-    ---
-    // Same thing, but make work unit size 100.
-    auto squareRoots = taskPool.amap!sqrt(numbers, 100);
-    ---
-
-    An output range for returning the results may be provided as the last
-    argument.  If one is not provided, an array of the proper type will be
-    allocated on the garbage collected heap.  If one is provided, it must be a
-    random access range with assignable elements, must have reference
-    semantics with respect to assignment to its elements, and must have the
-    same length as the input range.  Writing to adjacent elements from
-    different threads must be safe.
-
-    ---
-    // Same thing, but explicitly allocate an array
-    // to return the results in.  The element type
-    // of the array may be either the exact type
-    // returned by functions or an implicit conversion
-    // target.
-    auto squareRoots = new float[numbers.length];
-    taskPool.amap!sqrt(numbers, squareRoots);
-
-    // Multiple functions, explicit output range, and
-    // explicit work unit size.
-    auto results = new Tuple!(float, real)[numbers.length];
-    taskPool.amap!(sqrt, log)(numbers, 100, results);
-    ---
-
-    Note:
-
-    A memory barrier is guaranteed to be executed after all results are written
-    but before returning so that results produced by all threads are visible
-    in the calling thread.
-
-    Tips:
-
-    To perform the mapping operation in place, provide the same range for the
-    input and output range.
-
-    To parallelize the copying of a range with expensive to evaluate elements
-    to an array, pass an identity function (a function that just returns
-    whatever argument is provided to it) to $(D amap).
-
-    $(B Exception Handling):
-
-    When at least one exception is thrown from inside the map functions,
-    the submission of additional $(D Task) objects is terminated as soon as
-    possible, in a non-deterministic manner.  All currently executing or
-    enqueued work units are allowed to complete.  Then, all exceptions that
-    were thrown from any work unit are chained using $(D Throwable.next) and
-    rethrown.  The order of the exception chaining is non-deterministic.
-     */
+    ///
     template amap(functions...)
     {
-        ///
+        /**
+        Eager parallel map.  The eagerness of this function means it has less
+        overhead than the lazily evaluated $(D TaskPool.map) and should be
+        preferred where the memory requirements of eagerness are acceptable.
+        $(D functions) are the functions to be evaluated, passed as template alias
+        parameters in a style similar to $(XREF algorithm, map).  The first
+        argument must be a random access range. For performance reasons, amap
+        will assume the range elements have not yet been initialized. Elements will
+        be overwritten without calling a destructor nor doing an assignment. As such,
+        the range must not contain meaningful data: either un-initialized objects, or
+        objects in their $(D .init) state.
+
+        ---
+        auto numbers = iota(100_000_000.0);
+
+        // Find the square roots of numbers.
+        //
+        // Timings on an Athlon 64 X2 dual core machine:
+        //
+        // Parallel eager map:                   0.802 s
+        // Equivalent serial implementation:     1.768 s
+        auto squareRoots = taskPool.amap!sqrt(numbers);
+        ---
+
+        Immediately after the range argument, an optional work unit size argument
+        may be provided.  Work units as used by $(D amap) are identical to those
+        defined for parallel foreach.  If no work unit size is provided, the
+        default work unit size is used.
+
+        ---
+        // Same thing, but make work unit size 100.
+        auto squareRoots = taskPool.amap!sqrt(numbers, 100);
+        ---
+
+        An output range for returning the results may be provided as the last
+        argument.  If one is not provided, an array of the proper type will be
+        allocated on the garbage collected heap.  If one is provided, it must be a
+        random access range with assignable elements, must have reference
+        semantics with respect to assignment to its elements, and must have the
+        same length as the input range.  Writing to adjacent elements from
+        different threads must be safe.
+
+        ---
+        // Same thing, but explicitly allocate an array
+        // to return the results in.  The element type
+        // of the array may be either the exact type
+        // returned by functions or an implicit conversion
+        // target.
+        auto squareRoots = new float[numbers.length];
+        taskPool.amap!sqrt(numbers, squareRoots);
+
+        // Multiple functions, explicit output range, and
+        // explicit work unit size.
+        auto results = new Tuple!(float, real)[numbers.length];
+        taskPool.amap!(sqrt, log)(numbers, 100, results);
+        ---
+
+        Note:
+
+        A memory barrier is guaranteed to be executed after all results are written
+        but before returning so that results produced by all threads are visible
+        in the calling thread.
+
+        Tips:
+
+        To perform the mapping operation in place, provide the same range for the
+        input and output range.
+
+        To parallelize the copying of a range with expensive to evaluate elements
+        to an array, pass an identity function (a function that just returns
+        whatever argument is provided to it) to $(D amap).
+
+        $(B Exception Handling):
+
+        When at least one exception is thrown from inside the map functions,
+        the submission of additional $(D Task) objects is terminated as soon as
+        possible, in a non-deterministic manner.  All currently executing or
+        enqueued work units are allowed to complete.  Then, all exceptions that
+        were thrown from any work unit are chained using $(D Throwable.next) and
+        rethrown.  The order of the exception chaining is non-deterministic.
+        */
         auto amap(Args...)(Args args)
         if(isRandomAccessRange!(Args[0]))
         {
-            static if(functions.length == 1)
-            {
-                alias unaryFun!(functions[0]) fun;
-            }
-            else
-            {
-                alias adjoin!(staticMap!(unaryFun, functions)) fun;
-            }
+            alias fun = adjoin!(staticMap!(unaryFun, functions));
 
-            alias args[0] range;
+            alias range = args[0];
             immutable len = range.length;
 
             static if(
@@ -1654,11 +1663,11 @@ public:
                 is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
-                alias args[$ - 1] buf;
-                alias args[0..$ - 1] args2;
-                alias Args[0..$ - 1] Args2;
+                alias buf = args[$ - 1];
+                alias args2 = args[0..$ - 1];
+                alias Args2 = Args[0..$ - 1];
                 enforce(buf.length == len,
-                        text("Can't use a user supplied buffer that's the wrong "
+                        text("Can't use a user supplied buffer that's the wrong ",
                              "size.  (Expected  :", len, " Got:  ", buf.length));
             }
             else static if(randAssignable!(Args[$ - 1]) && Args.length > 1)
@@ -1668,8 +1677,8 @@ public:
             else
             {
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])(len);
-                alias args args2;
-                alias Args Args2;
+                alias args2 = args;
+                alias Args2 = Args;
             }
 
             if(!len) return buf;
@@ -1685,7 +1694,7 @@ public:
                 auto workUnitSize = defaultWorkUnitSize(range.length);
             }
 
-            alias typeof(range) R;
+            alias R = typeof(range);
 
             if(workUnitSize > len)
             {
@@ -1698,7 +1707,7 @@ public:
                 size_t index = 0;
                 foreach(elem; range)
                 {
-                    buf[index++] = fun(elem);
+                    emplaceRef(buf[index++], fun(elem));
                 }
                 return buf;
             }
@@ -1727,9 +1736,21 @@ public:
 
                     immutable end = min(len, start + workUnitSize);
 
-                    foreach(i; start..end)
+                    static if (hasSlicing!R)
                     {
-                        buf[i] = fun(range[i]);
+                        auto subrange = range[start..end];
+                        foreach(i; start..end)
+                        {
+                            emplaceRef(buf[i], fun(subrange.front));
+                            subrange.popFront();
+                        }
+                    }
+                    else
+                    {
+                        foreach(i; start..end)
+                        {
+                            emplaceRef(buf[i], fun(range[i]));
+                        }
                     }
                 }
             }
@@ -1739,92 +1760,85 @@ public:
         }
     }
 
-    /**
-    A semi-lazy parallel map that can be used for pipelining.  The map
-    functions are evaluated for the first $(D bufSize) elements and stored in a
-    buffer and made available to $(D popFront).  Meanwhile, in the
-    background a second buffer of the same size is filled.  When the first
-    buffer is exhausted, it is swapped with the second buffer and filled while
-    the values from what was originally the second buffer are read.  This
-    implementation allows for elements to be written to the buffer without
-    the need for atomic operations or synchronization for each write, and
-    enables the mapping function to be evaluated efficiently in parallel.
-
-    $(D map) has more overhead than the simpler procedure used by $(D amap)
-    but avoids the need to keep all results in memory simultaneously and works
-    with non-random access ranges.
-
-    Params:
-
-    source = The input range to be mapped.  If $(D source) is not random
-    access it will be lazily buffered to an array of size $(D bufSize) before
-    the map function is evaluated.  (For an exception to this rule, see Notes.)
-
-    bufSize = The size of the buffer to store the evaluated elements.
-
-    workUnitSize = The number of elements to evaluate in a single
-    $(D Task).  Must be less than or equal to $(D bufSize), and
-    should be a fraction of $(D bufSize) such that all worker threads can be
-    used.  If the default of size_t.max is used, workUnitSize will be set to
-    the pool-wide default.
-
-    Returns:  An input range representing the results of the map.  This range
-              has a length iff $(D source) has a length.
-
-    Notes:
-
-    If a range returned by $(D map) or $(D asyncBuf) is used as an input to
-    $(D map), then as an optimization the copying from the output buffer
-    of the first range to the input buffer of the second range is elided, even
-    though the ranges returned by $(D map) and $(D asyncBuf) are non-random
-    access ranges.  This means that the $(D bufSize) parameter passed to the
-    current call to $(D map) will be ignored and the size of the buffer
-    will be the buffer size of $(D source).
-
-    Examples:
-    ---
-    // Pipeline reading a file, converting each line
-    // to a number, taking the logarithms of the numbers,
-    // and performing the additions necessary to find
-    // the sum of the logarithms.
-
-    auto lineRange = File("numberList.txt").byLine();
-    auto dupedLines = std.algorithm.map!"a.idup"(lineRange);
-    auto nums = taskPool.map!(to!double)(dupedLines);
-    auto logs = taskPool.map!log10(nums);
-
-    double sum = 0;
-    foreach(elem; logs)
-    {
-        sum += elem;
-    }
-    ---
-
-    $(B Exception Handling):
-
-    Any exceptions thrown while iterating over $(D source)
-    or computing the map function are re-thrown on a call to $(D popFront) or,
-    if thrown during construction, are simply allowed to propagate to the
-    caller.  In the case of exceptions thrown while computing the map function,
-    the exceptions are chained as in $(D TaskPool.amap).
-    */
+    ///
     template map(functions...)
     {
-        ///
+        /**
+        A semi-lazy parallel map that can be used for pipelining.  The map
+        functions are evaluated for the first $(D bufSize) elements and stored in a
+        buffer and made available to $(D popFront).  Meanwhile, in the
+        background a second buffer of the same size is filled.  When the first
+        buffer is exhausted, it is swapped with the second buffer and filled while
+        the values from what was originally the second buffer are read.  This
+        implementation allows for elements to be written to the buffer without
+        the need for atomic operations or synchronization for each write, and
+        enables the mapping function to be evaluated efficiently in parallel.
+
+        $(D map) has more overhead than the simpler procedure used by $(D amap)
+        but avoids the need to keep all results in memory simultaneously and works
+        with non-random access ranges.
+
+        Params:
+
+        source = The input range to be mapped.  If $(D source) is not random
+        access it will be lazily buffered to an array of size $(D bufSize) before
+        the map function is evaluated.  (For an exception to this rule, see Notes.)
+
+        bufSize = The size of the buffer to store the evaluated elements.
+
+        workUnitSize = The number of elements to evaluate in a single
+        $(D Task).  Must be less than or equal to $(D bufSize), and
+        should be a fraction of $(D bufSize) such that all worker threads can be
+        used.  If the default of size_t.max is used, workUnitSize will be set to
+        the pool-wide default.
+
+        Returns:  An input range representing the results of the map.  This range
+                  has a length iff $(D source) has a length.
+
+        Notes:
+
+        If a range returned by $(D map) or $(D asyncBuf) is used as an input to
+        $(D map), then as an optimization the copying from the output buffer
+        of the first range to the input buffer of the second range is elided, even
+        though the ranges returned by $(D map) and $(D asyncBuf) are non-random
+        access ranges.  This means that the $(D bufSize) parameter passed to the
+        current call to $(D map) will be ignored and the size of the buffer
+        will be the buffer size of $(D source).
+
+        Examples:
+        ---
+        // Pipeline reading a file, converting each line
+        // to a number, taking the logarithms of the numbers,
+        // and performing the additions necessary to find
+        // the sum of the logarithms.
+
+        auto lineRange = File("numberList.txt").byLine();
+        auto dupedLines = std.algorithm.map!"a.idup"(lineRange);
+        auto nums = taskPool.map!(to!double)(dupedLines);
+        auto logs = taskPool.map!log10(nums);
+
+        double sum = 0;
+        foreach(elem; logs)
+        {
+            sum += elem;
+        }
+        ---
+
+        $(B Exception Handling):
+
+        Any exceptions thrown while iterating over $(D source)
+        or computing the map function are re-thrown on a call to $(D popFront) or,
+        if thrown during construction, are simply allowed to propagate to the
+        caller.  In the case of exceptions thrown while computing the map function,
+        the exceptions are chained as in $(D TaskPool.amap).
+        */
         auto
         map(S)(S source, size_t bufSize = 100, size_t workUnitSize = size_t.max)
         if(isInputRange!S)
         {
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                     "Work unit size must be smaller than buffer size.");
-            static if(functions.length == 1)
-            {
-                alias unaryFun!(functions[0]) fun;
-            }
-            else
-            {
-                alias adjoin!(staticMap!(unaryFun, functions)) fun;
-            }
+            alias fun = adjoin!(staticMap!(unaryFun, functions));
 
             static final class Map
             {
@@ -1837,7 +1851,7 @@ public:
                 is(typeof(source.bufPos)) &&
                 is(typeof(source.doBufSwap()));
 
-                alias MapType!(S, functions) E;
+                alias E = MapType!(S, functions);
                 E[] buf1, buf2;
                 S source;
                 TaskPool pool;
@@ -1848,7 +1862,7 @@ public:
 
             static if(isRandomAccessRange!S)
             {
-                alias S FromType;
+                alias FromType = S;
 
                 void popSource()
                 {
@@ -1881,7 +1895,7 @@ public:
                                  );
                 }
 
-                alias typeof(source.buf1) FromType;
+                alias FromType = typeof(source.buf1);
                 FromType from;
 
                 // Just swap our input buffer with source's output buffer.
@@ -1908,7 +1922,7 @@ public:
             }
             else
             {
-                alias ElementType!S[] FromType;
+                alias FromType = ElementType!S[];
 
                 // The temporary array that data is copied to before being
                 // mapped.
@@ -1933,7 +1947,7 @@ public:
             {
                 size_t _length;
 
-                public @property size_t length() const pure nothrow @safe
+                public @property size_t length() const @safe pure nothrow
                 {
                     return _length;
                 }
@@ -2087,7 +2101,7 @@ public:
     Given a $(D source) range that is expensive to iterate over, returns an
     input range that asynchronously buffers the contents of
     $(D source) into a buffer of $(D bufSize) elements in a worker thread,
-    while making prevously buffered elements from a second buffer, also of size
+    while making previously buffered elements from a second buffer, also of size
     $(D bufSize), available via the range interface of the returned
     object.  The returned range has a length iff $(D hasLength!S).
     $(D asyncBuf) is useful, for example, when performing expensive operations
@@ -2100,7 +2114,7 @@ public:
     void main()
     {
         // Fetch lines of a file in a background thread
-        // while processing prevously fetched lines,
+        // while processing previously fetched lines,
         // dealing with byLine's buffer recycling by
         // eagerly duplicating every line.
         auto lines = File("foo.txt").byLine();
@@ -2134,7 +2148,7 @@ public:
             // the heap.
 
             // The element type of S.
-            alias ElementType!S E;  // Needs to be here b/c of forward ref bugs.
+            alias E = ElementType!S;  // Needs to be here b/c of forward ref bugs.
 
         private:
             E[] buf1, buf2;
@@ -2149,7 +2163,7 @@ public:
                 size_t _length;
 
                 // Available if hasLength!S.
-                public @property size_t length() const pure nothrow @safe
+                public @property size_t length() const @safe pure nothrow
                 {
                     return _length;
                 }
@@ -2292,7 +2306,7 @@ public:
     Examples:
     ---
     // Fetch lines of a file in a background
-    // thread while processing prevously fetched
+    // thread while processing previously fetched
     // lines, without duplicating any lines.
     auto file = File("foo.txt");
 
@@ -2336,107 +2350,106 @@ public:
         return asyncBuf(roundRobin, nBuffers / 2);
     }
 
-    /**
-    Parallel reduce on a random access range.  Except as otherwise noted, usage
-    is similar to $(XREF algorithm, _reduce).  This function works by splitting
-    the range to be reduced into work units, which are slices to be reduced in
-    parallel.  Once the results from all work units are computed, a final serial
-    reduction is performed on these results to compute the final answer.
-    Therefore, care must be taken to choose the seed value appropriately.
-
-    Because the reduction is being performed in parallel,
-    $(D functions) must be associative.  For notational simplicity, let # be an
-    infix operator representing $(D functions).  Then, (a # b) # c must equal
-    a # (b # c).  Floating point addition is not associative
-    even though addition in exact arithmetic is.  Summing floating
-    point numbers using this function may give different results than summing
-    serially.  However, for many practical purposes floating point addition
-    can be treated as associative.
-
-    Note that, since $(D functions) are assumed to be associative, additional
-    optimizations are made to the serial portion of the reduction algorithm.
-    These take advantage of the instruction level parallelism of modern CPUs,
-    in addition to the thread-level parallelism that the rest of this
-    module exploits.  This can lead to better than linear speedups relative
-    to $(XREF algorithm, _reduce), especially for fine-grained benchmarks
-    like dot products.
-
-    An explicit seed may be provided as the first argument.  If
-    provided, it is used as the seed for all work units and for the final
-    reduction of results from all work units.  Therefore, if it is not the
-    identity value for the operation being performed, results may differ from
-    those generated by $(XREF algorithm, _reduce) or depending on how many work
-    units are used.  The next argument must be the range to be reduced.
-    ---
-    // Find the sum of squares of a range in parallel, using
-    // an explicit seed.
-    //
-    // Timings on an Athlon 64 X2 dual core machine:
-    //
-    // Parallel reduce:                     72 milliseconds
-    // Using std.algorithm.reduce instead:  181 milliseconds
-    auto nums = iota(10_000_000.0f);
-    auto sumSquares = taskPool.reduce!"a + b"(
-        0.0, std.algorithm.map!"a * a"(nums)
-    );
-    ---
-
-    If no explicit seed is provided, the first element of each work unit
-    is used as a seed.  For the final reduction, the result from the first
-    work unit is used as the seed.
-    ---
-    // Find the sum of a range in parallel, using the first
-    // element of each work unit as the seed.
-    auto sum = taskPool.reduce!"a + b"(nums);
-    ---
-
-    An explicit work unit size may be specified as the last argument.
-    Specifying too small a work unit size will effectively serialize the
-    reduction, as the final reduction of the result of each work unit will
-    dominate computation time.  If $(D TaskPool.size) for this instance
-    is zero, this parameter is ignored and one work unit is used.
-    ---
-    // Use a work unit size of 100.
-    auto sum2 = taskPool.reduce!"a + b"(nums, 100);
-
-    // Work unit size of 100 and explicit seed.
-    auto sum3 = taskPool.reduce!"a + b"(0.0, nums, 100);
-    ---
-
-    Parallel reduce supports multiple functions, like
-    $(D std.algorithm.reduce).
-    ---
-    // Find both the min and max of nums.
-    auto minMax = taskPool.reduce!(min, max)(nums);
-    assert(minMax[0] == reduce!min(nums));
-    assert(minMax[1] == reduce!max(nums));
-    ---
-
-    $(B Exception Handling):
-
-    After this function is finished executing, any exceptions thrown
-    are chained together via $(D Throwable.next) and rethrown.  The chaining
-    order is non-deterministic.
-     */
+    ///
     template reduce(functions...)
     {
+        /**
+        Parallel reduce on a random access range.  Except as otherwise noted, usage
+        is similar to $(XREF algorithm, _reduce).  This function works by splitting
+        the range to be reduced into work units, which are slices to be reduced in
+        parallel.  Once the results from all work units are computed, a final serial
+        reduction is performed on these results to compute the final answer.
+        Therefore, care must be taken to choose the seed value appropriately.
 
-        ///
+        Because the reduction is being performed in parallel,
+        $(D functions) must be associative.  For notational simplicity, let # be an
+        infix operator representing $(D functions).  Then, (a # b) # c must equal
+        a # (b # c).  Floating point addition is not associative
+        even though addition in exact arithmetic is.  Summing floating
+        point numbers using this function may give different results than summing
+        serially.  However, for many practical purposes floating point addition
+        can be treated as associative.
+
+        Note that, since $(D functions) are assumed to be associative, additional
+        optimizations are made to the serial portion of the reduction algorithm.
+        These take advantage of the instruction level parallelism of modern CPUs,
+        in addition to the thread-level parallelism that the rest of this
+        module exploits.  This can lead to better than linear speedups relative
+        to $(XREF algorithm, _reduce), especially for fine-grained benchmarks
+        like dot products.
+
+        An explicit seed may be provided as the first argument.  If
+        provided, it is used as the seed for all work units and for the final
+        reduction of results from all work units.  Therefore, if it is not the
+        identity value for the operation being performed, results may differ from
+        those generated by $(XREF algorithm, _reduce) or depending on how many work
+        units are used.  The next argument must be the range to be reduced.
+        ---
+        // Find the sum of squares of a range in parallel, using
+        // an explicit seed.
+        //
+        // Timings on an Athlon 64 X2 dual core machine:
+        //
+        // Parallel reduce:                     72 milliseconds
+        // Using std.algorithm.reduce instead:  181 milliseconds
+        auto nums = iota(10_000_000.0f);
+        auto sumSquares = taskPool.reduce!"a + b"(
+            0.0, std.algorithm.map!"a * a"(nums)
+        );
+        ---
+
+        If no explicit seed is provided, the first element of each work unit
+        is used as a seed.  For the final reduction, the result from the first
+        work unit is used as the seed.
+        ---
+        // Find the sum of a range in parallel, using the first
+        // element of each work unit as the seed.
+        auto sum = taskPool.reduce!"a + b"(nums);
+        ---
+
+        An explicit work unit size may be specified as the last argument.
+        Specifying too small a work unit size will effectively serialize the
+        reduction, as the final reduction of the result of each work unit will
+        dominate computation time.  If $(D TaskPool.size) for this instance
+        is zero, this parameter is ignored and one work unit is used.
+        ---
+        // Use a work unit size of 100.
+        auto sum2 = taskPool.reduce!"a + b"(nums, 100);
+
+        // Work unit size of 100 and explicit seed.
+        auto sum3 = taskPool.reduce!"a + b"(0.0, nums, 100);
+        ---
+
+        Parallel reduce supports multiple functions, like
+        $(D std.algorithm.reduce).
+        ---
+        // Find both the min and max of nums.
+        auto minMax = taskPool.reduce!(min, max)(nums);
+        assert(minMax[0] == reduce!min(nums));
+        assert(minMax[1] == reduce!max(nums));
+        ---
+
+        $(B Exception Handling):
+
+        After this function is finished executing, any exceptions thrown
+        are chained together via $(D Throwable.next) and rethrown.  The chaining
+        order is non-deterministic.
+         */
         auto reduce(Args...)(Args args)
         {
-            alias reduceAdjoin!functions fun;
-            alias reduceFinish!functions finishFun;
+            alias fun = reduceAdjoin!functions;
+            alias finishFun = reduceFinish!functions;
 
             static if(isIntegral!(Args[$ - 1]))
             {
                 size_t workUnitSize = cast(size_t) args[$ - 1];
-                alias args[0..$ - 1] args2;
-                alias Args[0..$ - 1] Args2;
+                alias args2 = args[0..$ - 1];
+                alias Args2 = Args[0..$ - 1];
             }
             else
             {
-                alias args args2;
-                alias Args Args2;
+                alias args2 = args;
+                alias Args2 = Args;
             }
 
             auto makeStartValue(Type)(Type e)
@@ -2450,9 +2463,7 @@ public:
                     typeof(adjoin!(staticMap!(binaryFun, functions))(e, e)) seed = void;
                     foreach (i, T; seed.Types)
                     {
-                        auto p = (cast(void*) &seed.expand[i])
-                        [0 .. seed.expand[i].sizeof];
-                        emplace!T(p, e);
+                        emplaceRef(seed.expand[i], e);
                     }
 
                     return seed;
@@ -2462,8 +2473,8 @@ public:
             static if(args2.length == 2)
             {
                 static assert(isInputRange!(Args2[1]));
-                alias args2[1] range;
-                alias args2[0] seed;
+                alias range = args2[1];
+                alias seed = args2[0];
                 enum explicitSeed = true;
 
                 static if(!is(typeof(workUnitSize)))
@@ -2474,7 +2485,7 @@ public:
             else
             {
                 static assert(args2.length == 1);
-                alias args2[0] range;
+                alias range = args2[0];
 
                 static if(!is(typeof(workUnitSize)))
                 {
@@ -2489,8 +2500,8 @@ public:
                 range.popFront();
             }
 
-            alias typeof(seed) E;
-            alias typeof(range) R;
+            alias E = typeof(seed);
+            alias R = typeof(range);
 
             E reduceOnRange(R range, size_t lowerBound, size_t upperBound)
             {
@@ -2592,7 +2603,7 @@ public:
             immutable size_t nWorkUnits = (len / workUnitSize) + ((len % workUnitSize == 0) ? 0 : 1);
             assert(nWorkUnits * workUnitSize >= len);
 
-            alias Task!(run, typeof(&reduceOnRange), R, size_t, size_t) RTask;
+            alias RTask = Task!(run, typeof(&reduceOnRange), R, size_t, size_t);
             RTask[] tasks;
 
             // Can't use alloca() due to Bug 3753.  Use a fixed buffer
@@ -2961,7 +2972,7 @@ public:
 
     The proper way to instantiate this object is to call
     $(D WorkerLocalStorage.toRange).  Once instantiated, this object behaves
-    as a finite random-access range with assignable, lvalue elemends and
+    as a finite random-access range with assignable, lvalue elements and
     a length equal to the number of worker threads in the $(D TaskPool) that
     created it plus 1.
      */
@@ -3074,7 +3085,7 @@ public:
     a call to $(D Task.workForce), $(D Task.yieldForce) or $(D Task.spinForce)
     causes them to be executed.
 
-    Use only if you have waitied on every $(D Task) and therefore know the
+    Use only if you have waited on every $(D Task) and therefore know the
     queue is empty, or if you speculatively executed some tasks and no longer
     need the results.
      */
@@ -3272,7 +3283,7 @@ terminating the main thread.
 
     if(!initialized)
     {
-        synchronized(TaskPool.classinfo)
+        synchronized(typeid(TaskPool))
         {
             if(!pool)
             {
@@ -3362,7 +3373,7 @@ private void submitAndExecute(
 {
     immutable nThreads = pool.size + 1;
 
-    alias typeof(scopedTask(doIt)) PTask;
+    alias PTask = typeof(scopedTask(doIt));
     import core.stdc.stdlib;
     import core.stdc.string : memcpy;
 
@@ -3621,7 +3632,7 @@ enum string parallelApplyMixinInputRange = q{
 
         static if(hasLvalueElements!R)
         {
-            alias ElementType!R*[] Temp;
+            alias Temp = ElementType!R*[];
             Temp temp;
 
             // Returns:  The previous value of nPopped.
@@ -3651,7 +3662,7 @@ enum string parallelApplyMixinInputRange = q{
         else
         {
 
-            alias ElementType!R[] Temp;
+            alias Temp = ElementType!R[];
             Temp temp;
 
             // Returns:  The previous value of nPopped.
@@ -3784,17 +3795,17 @@ private struct ParallelForeach(R)
     TaskPool pool;
     R range;
     size_t workUnitSize;
-    alias ElementType!R E;
+    alias E = ElementType!R;
 
     static if(hasLvalueElements!R)
     {
-        alias int delegate(ref E) NoIndexDg;
-        alias int delegate(size_t, ref E) IndexDg;
+        alias NoIndexDg = int delegate(ref E);
+        alias IndexDg = int delegate(size_t, ref E);
     }
     else
     {
-        alias int delegate(E) NoIndexDg;
-        alias int delegate(size_t, E) IndexDg;
+        alias NoIndexDg = int delegate(E);
+        alias IndexDg = int delegate(size_t, E);
     }
 
     int opApply(scope NoIndexDg dg)
@@ -3833,8 +3844,8 @@ private struct RoundRobinBuffer(C1, C2)
 {
     // No need for constraints because they're already checked for in asyncBuf.
 
-    alias ParameterTypeTuple!(C1.init)[0] Array;
-    alias typeof(Array.init[0]) T;
+    alias Array = ParameterTypeTuple!(C1.init)[0];
+    alias T = typeof(Array.init[0]);
 
     T[][] bufs;
     size_t index;
@@ -3894,7 +3905,7 @@ private struct RoundRobinBuffer(C1, C2)
         primed = false;
     }
 
-    bool empty() @property const pure nothrow @safe
+    bool empty() @property const @safe pure nothrow
     {
         return _empty;
     }
@@ -3916,7 +3927,7 @@ unittest
     scope(exit) poolInstance.stop();
 
     // The only way this can be verified is manually.
-    stderr.writeln("totalCPUs = ", totalCPUs);
+    debug(std_parallelism) stderr.writeln("totalCPUs = ", totalCPUs);
 
     auto oldPriority = poolInstance.priority;
     poolInstance.priority = Thread.PRIORITY_MAX;
@@ -4103,7 +4114,7 @@ unittest
         auto tSlow = task!slowFun();
         pool1.put(tSlow);
         pool1.finish();
-        tSlow.yieldForce();
+        tSlow.yieldForce;
         // Can't assert that pool1.status == PoolState.stopNow because status
         // doesn't change until after the "done" flag is set and the waiting
         // thread is woken up.
@@ -4166,12 +4177,15 @@ unittest
            ));
 
     {
-        auto file = File("tempDelMe.txt", "wb");
+        import std.file : deleteme;
+
+        string temp_file = std.file.deleteme ~ "-tempDelMe.txt";
+        auto file = File(temp_file, "wb");
         scope(exit)
         {
             file.close();
             import std.file;
-            remove("tempDelMe.txt");
+            remove(temp_file);
         }
 
         auto written = [[1.0, 2, 3], [4.0, 5, 6], [7.0, 8, 9]];
@@ -4180,12 +4194,12 @@ unittest
             file.writeln(join(to!(string[])(row), "\t"));
         }
 
-        file = File("tempDelMe.txt");
+        file = File(temp_file);
 
         void next(ref char[] buf)
         {
             file.readln(buf);
-            import std.string;
+            import std.string : chomp;
             buf = chomp(buf);
         }
 
@@ -4552,4 +4566,25 @@ version(parallelismStressTest)
             poolInstance.stop();
         }
     }
+}
+
+version(unittest)
+{
+    struct __S_12733
+    {
+        invariant() { assert(checksum == 1234567890); }    
+        this(ulong u){n = u;}
+        void opAssign(__S_12733 s){this.n = s.n;}
+        ulong n;
+        ulong checksum = 1234567890;
+    }
+
+    static auto __genPair_12733(ulong n) { return __S_12733(n); }
+}
+
+unittest
+{
+    immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
+ 
+    auto result = taskPool.amap!__genPair_12733(data);
 }

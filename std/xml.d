@@ -116,7 +116,7 @@ Macros:
     WIKI=Phobos/StdXml
 
 Copyright: Copyright Janice Caron 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
 Source:    $(PHOBOSSRC std/_xml.d)
 */
@@ -377,7 +377,7 @@ S encode(S)(S s)
         lastI = i + 1;
     }
 
-    if (!result.data) return s;
+    if (!result.data.ptr) return s;
     result.put(s[lastI .. $]);
     return result.data;
 }
@@ -693,7 +693,7 @@ class Element : Item
      * Constructs an Element from a Tag.
      *
      * Params:
-     *      tag = the start or empty tag of the element.
+     *      tag_ = the start or empty tag of the element.
      */
     this(const(Tag) tag_)
     {
@@ -871,7 +871,7 @@ class Element : Item
      * You should rarely need to call this function. It exists so that Elements
      * can be used as associative array keys.
      */
-    override const size_t toHash()
+    override size_t toHash() const
     {
         size_t hash = tag.toHash();
         foreach(item;items) hash += item.toHash();
@@ -883,7 +883,7 @@ class Element : Item
         /**
          * Returns the decoded interior of an element.
          *
-         * The element is assumed to containt text <i>only</i>. So, for
+         * The element is assumed to contain text <i>only</i>. So, for
          * example, given XML such as "&lt;title&gt;Good &amp;amp;
          * Bad&lt;/title&gt;", will return "Good &amp; Bad".
          *
@@ -969,7 +969,7 @@ class Element : Item
  * $(DDOC_ENUM_MEMBERS EMPTY) Used for empty tags
  *
  */
-enum TagType { START, END, EMPTY };
+enum TagType { START, END, EMPTY }
 
 /**
  * Class representing an XML tag.
@@ -1117,9 +1117,10 @@ class Tag
         override int opCmp(Object o)
         {
             const tag = toType!(const Tag)(o);
+            // Note that attr is an AA, so the comparison is nonsensical (bug 10381)
             return
                 ((name != tag.name) ? ( name < tag.name ? -1 : 1 ) :
-                ((attr != tag.attr) ? ( attr < tag.attr ? -1 : 1 ) :
+                ((attr != tag.attr) ? ( cast(void *)attr < cast(void*)tag.attr ? -1 : 1 ) :
                 ((type != tag.type) ? ( type < tag.type ? -1 : 1 ) :
             0 )));
         }
@@ -1156,7 +1157,7 @@ class Tag
             {
                 string s = "<" ~ name;
                 foreach(key,val;attr)
-                    s ~= format(" %s=\"%s\"",key,decode(val,DecodeMode.LOOSE));
+                    s ~= format(" %s=\"%s\"",key,encode(val));
                 return s;
             }
 
@@ -1270,14 +1271,14 @@ class Comment : Item
      * You should rarely need to call this function. It exists so that Comments
      * can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this comment
      */
-    override const string toString() { return "<!--" ~ content ~ "-->"; }
+    override string toString() const { return "<!--" ~ content ~ "-->"; }
 
-    override @property const bool isEmptyXML() { return false; } /// Returns false always
+    override @property bool isEmptyXML() const { return false; } /// Returns false always
 }
 
 /**
@@ -1288,7 +1289,7 @@ class CData : Item
     private string content;
 
     /**
-     * Construct a chraracter data section
+     * Construct a character data section
      *
      * Params:
      *      content = the body of the character data segment
@@ -1349,14 +1350,14 @@ class CData : Item
      * You should rarely need to call this function. It exists so that CDatas
      * can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this CData section
      */
-    override const string toString() { return cdata ~ content ~ "]]>"; }
+    override string toString() const { return cdata ~ content ~ "]]>"; }
 
-    override @property const bool isEmptyXML() { return false; } /// Returns false always
+    override @property bool isEmptyXML() const { return false; } /// Returns false always
 }
 
 /**
@@ -1426,17 +1427,17 @@ class Text : Item
      * You should rarely need to call this function. It exists so that Texts
      * can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this Text section
      */
-    override const string toString() { return content; }
+    override string toString() const { return content; }
 
     /**
      * Returns true if the content is the empty string
      */
-    override @property const bool isEmptyXML() { return content.length == 0; }
+    override @property bool isEmptyXML() const { return content.length == 0; }
 }
 
 /**
@@ -1508,14 +1509,14 @@ class XMLInstruction : Item
      * You should rarely need to call this function. It exists so that
      * XmlInstructions can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this XmlInstruction
      */
-    override const string toString() { return "<!" ~ content ~ ">"; }
+    override string toString() const { return "<!" ~ content ~ ">"; }
 
-    override @property const bool isEmptyXML() { return false; } /// Returns false always
+    override @property bool isEmptyXML() const { return false; } /// Returns false always
 }
 
 /**
@@ -1587,14 +1588,14 @@ class ProcessingInstruction : Item
      * You should rarely need to call this function. It exists so that
      * ProcessingInstructions can be used as associative array keys.
      */
-    override const size_t toHash() { return hash(content); }
+    override size_t toHash() const { return hash(content); }
 
     /**
      * Returns a string representation of this ProcessingInstruction
      */
-    override const string toString() { return "<?" ~ content ~ "?>"; }
+    override string toString() const { return "<?" ~ content ~ "?>"; }
 
-    override @property const bool isEmptyXML() { return false; } /// Returns false always
+    override @property bool isEmptyXML() const { return false; } /// Returns false always
 }
 
 /**
@@ -1609,10 +1610,10 @@ abstract class Item
     abstract override int opCmp(Object o);
 
     /// Returns the hash of this item
-    abstract override const size_t toHash();
+    abstract override size_t toHash() const;
 
     /// Returns a string representation of this item
-    abstract override const string toString();
+    abstract override string toString() const;
 
     /**
      * Returns an indented string representation of this item
@@ -1620,14 +1621,14 @@ abstract class Item
      * Params:
      *      indent = number of spaces by which to indent child elements
      */
-    const string[] pretty(uint indent)
+    string[] pretty(uint indent) const
     {
         string s = strip(toString());
         return s.length == 0 ? [] : [ s ];
     }
 
     /// Returns true if the item represents empty XML text
-    abstract @property const bool isEmptyXML();
+    abstract @property bool isEmptyXML() const;
 }
 
 /**
@@ -1655,7 +1656,7 @@ class DocumentParser : ElementParser
      * This is enforced by the function's in contract.
      *
      * Params:
-     *      xmltext = the entire XML document as text
+     *      xmlText_ = the entire XML document as text
      *
      */
     this(string xmlText_)
@@ -1695,9 +1696,9 @@ class DocumentParser : ElementParser
  */
 class ElementParser
 {
-    alias void delegate(string) Handler;
-    alias void delegate(in Element element) ElementHandler;
-    alias void delegate(ElementParser parser) ParserHandler;
+    alias Handler = void delegate(string);
+    alias ElementHandler = void delegate(in Element element);
+    alias ParserHandler = void delegate(ElementParser parser);
 
     private
     {
@@ -1733,7 +1734,7 @@ class ElementParser
      * The Tag at the start of the element being parsed. You can read this to
      * determine the tag's name and attributes.
      */
-    const @property const(Tag) tag() { return tag_; }
+    @property const(Tag) tag() const { return tag_; }
 
     /**
      * Register a handler which will be called whenever a start tag is
@@ -1830,7 +1831,7 @@ class ElementParser
     /**
      * Register an alternative handler which will be called whenever text
      * is encountered. This differs from onText in that onText will decode
-     * the text, wheras onTextRaw will not. This allows you to make design
+     * the text, whereas onTextRaw will not. This allows you to make design
      * choices, since onText will be more accurate, but slower, while
      * onTextRaw will be faster, but less accurate. Of course, you can
      * still call decode() within your handler, if you want, but you'd
@@ -1855,7 +1856,7 @@ class ElementParser
 
     /**
      * Register a handler which will be called whenever a character data
-     * segement is encountered.
+     * segment is encountered.
      *
      * Examples:
      * --------------
@@ -1923,7 +1924,7 @@ class ElementParser
      * Examples:
      * --------------
      * // Call this function whenever an XML instruction is encountered
-     * // (Note: XML instructions may only occur preceeding the root tag of a
+     * // (Note: XML instructions may only occur preceding the root tag of a
      * // document).
      * onPI = (string s)
      * {
@@ -2074,7 +2075,7 @@ class ElementParser
     /**
      * Returns that part of the element which has already been parsed
      */
-    override const string toString()
+    override string toString() const
     {
         assert(elementStart.length >= s.length);
         return elementStart[0 .. elementStart.length - s.length];
@@ -2349,7 +2350,7 @@ private
         int n = 0;
              if (s.startsWith("'yes'") || s.startsWith("\"yes\"")) n = 5;
         else if (s.startsWith("'no'" ) || s.startsWith("\"no\"" )) n = 4;
-        else fail("standalone attribute value must be 'yes', \"yes\","
+        else fail("standalone attribute value must be 'yes', \"yes\","~
             " 'no' or \"no\"");
         s = s[n..$];
     }
@@ -2623,7 +2624,7 @@ private
  *
  * Throws: CheckException if the document is not well formed
  *
- * CheckException's toString() method will yield the complete heirarchy of
+ * CheckException's toString() method will yield the complete hierarchy of
  * parse failure (the XML equivalent of a stack trace), giving the line and
  * column number of every failure at every level.
  */
@@ -2685,7 +2686,7 @@ unittest
     }
     catch(CheckException e)
     {
-        int n = e.toString().indexOf("end tag name \"genres\" differs"
+        int n = e.toString().indexOf("end tag name \"genres\" differs"~
             " from start tag name \"genre\"");
         assert(n != -1);
     }
@@ -2731,6 +2732,13 @@ EOS";
     xml.parse();
 }
 
+unittest
+{
+    string s = `<tag attr="&quot;value&gt;" />`;
+    auto doc = new Document(s);
+    assert(doc.toString() == s);
+}
+
 /** The base class for exceptions thrown by this module */
 class XMLException : Exception { this(string msg) { super(msg); } }
 
@@ -2773,7 +2781,7 @@ class TagException : XMLException
  */
 class CheckException : XMLException
 {
-    CheckException err; /// Parent in heirarchy
+    CheckException err; /// Parent in hierarchy
     private string tail;
     /**
      * Name of production rule which failed to parse,
@@ -2802,7 +2810,7 @@ class CheckException : XMLException
         if (err !is null) err.complete(entire);
     }
 
-    override const string toString()
+    override string toString() const
     {
         string s;
         if (line != 0) s = format("Line %d, column %d: ",line,column);
@@ -2813,7 +2821,7 @@ class CheckException : XMLException
     }
 }
 
-private alias CheckException Err;
+private alias Err = CheckException;
 
 // Private helper functions
 

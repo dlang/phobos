@@ -20,47 +20,84 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.traits, std.typecons, std.typetuple;
-// for making various functions visible in *naryFun
-import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+import std.traits, std.typetuple;
+
+
+private template needOpCallAlias(alias fun)
+{
+    /* Determine whether or not unaryFun and binaryFun need to alias to fun or
+     * fun.opCall. Basically, fun is a function object if fun(...) compiles. We
+     * want is(unaryFun!fun) (resp., is(binaryFun!fun)) to be true if fun is
+     * any function object. There are 4 possible cases:
+     *
+     *  1) fun is the type of a function object with static opCall;
+     *  2) fun is an instance of a function object with static opCall;
+     *  3) fun is the type of a function object with non-static opCall;
+     *  4) fun is an instance of a function object with non-static opCall.
+     *
+     * In case (1), is(unaryFun!fun) should compile, but does not if unaryFun
+     * aliases itself to fun, because typeof(fun) is an error when fun itself
+     * is a type. So it must be aliased to fun.opCall instead. All other cases
+     * should be aliased to fun directly.
+     */
+    static if (is(typeof(fun.opCall) == function))
+    {
+        import std.traits : ParameterTypeTuple;
+
+        enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, () {
+            return fun(ParameterTypeTuple!fun.init);
+        });
+    }
+    else
+        enum needOpCallAlias = false;
+}
 
 /**
 Transforms a string representing an expression into a unary
-function. The string must use symbol name $(D a) as the parameter.
-
-Example:
-
-----
-alias unaryFun!("(a & 1) == 0") isEven;
-assert(isEven(2) && !isEven(1));
-----
+function. The string must either use symbol name $(D a) as
+the parameter or provide the symbol via the $(D parmName) argument.
+If $(D fun) is not a string, $(D unaryFun) aliases itself away to $(D fun).
 */
 
-template unaryFun(alias fun, bool byRef = false, string parmName = "a")
+template unaryFun(alias fun, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
-        static if (byRef)
+        static if (!fun._ctfeMatchUnary(parmName))
         {
-            auto unaryFun(ElementType)(ref ElementType __a)
-            {
-                mixin("alias __a "~parmName~";");
-                mixin("return (" ~ fun ~ ");");
-            }
+            import std.traits, std.typecons, std.typetuple;
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
-        else
+        auto unaryFun(ElementType)(auto ref ElementType __a)
         {
-            auto unaryFun(ElementType)(ElementType __a)
-            {
-                mixin("alias __a "~parmName~";");
-                mixin("return (" ~ fun ~ ");");
-            }
+            mixin("alias " ~ parmName ~ " = __a ;");
+            return mixin(fun);
         }
+    }
+    else static if (needOpCallAlias!fun)
+    {
+        // Issue 9906
+        alias unaryFun = fun.opCall;
     }
     else
     {
-        alias fun unaryFun;
+        alias unaryFun = fun;
     }
+}
+
+///
+unittest
+{
+    // Strings are compiled into functions:
+    alias isEven = unaryFun!("(a & 1) == 0");
+    assert(isEven(2) && !isEven(1));
+}
+
+/+ Undocumented, will be removed December 2014+/
+deprecated("Parameter byRef is obsolete. Please call unaryFun!(fun, parmName) directly.")
+template unaryFun(alias fun, bool byRef, string parmName = "a")
+{
+    alias unaryFun = unaryFun!(fun, parmName);
 }
 
 unittest
@@ -76,21 +113,41 @@ unittest
 
     int num = 41;
     assert(unaryFun!("a + 1", true)(num) == 42);
+
+    // Issue 9906
+    struct Seen
+    {
+        static bool opCall(int n) { return true; }
+    }
+    static assert(needOpCallAlias!Seen);
+    static assert(is(typeof(unaryFun!Seen(1))));
+    assert(unaryFun!Seen(1));
+
+    Seen s;
+    static assert(!needOpCallAlias!s);
+    static assert(is(typeof(unaryFun!s(1))));
+    assert(unaryFun!s(1));
+
+    struct FuncObj
+    {
+        bool opCall(int n) { return true; }
+    }
+    FuncObj fo;
+    static assert(!needOpCallAlias!fo);
+    static assert(is(typeof(unaryFun!fo)));
+    assert(unaryFun!fo(1));
+
+    // Function object with non-static opCall can only be called with an
+    // instance, not with merely the type.
+    static assert(!is(typeof(unaryFun!FuncObj)));
 }
 
 /**
-Transforms a string representing an expression into a Boolean binary
-predicate. The string must use symbol names $(D a) and $(D b) as the
-compared elements.
-
-   Example:
-
-----
-alias binaryFun!("a < b") less;
-assert(less(1, 2) && !less(2, 1));
-alias binaryFun!("a > b") greater;
-assert(!greater("1", "2") && greater("2", "1"));
-----
+Transforms a string representing an expression into a binary function. The
+string must either use symbol names $(D a) and $(D b) as the parameters or
+provide the symbols via the $(D parm1Name) and $(D parm2Name) arguments.
+If $(D fun) is not a string, $(D binaryFun) aliases itself away to
+$(D fun).
 */
 
 template binaryFun(alias fun, string parm1Name = "a",
@@ -98,26 +155,41 @@ template binaryFun(alias fun, string parm1Name = "a",
 {
     static if (is(typeof(fun) : string))
     {
-        auto binaryFun(ElementType1, ElementType2)
-            (ElementType1 __a, ElementType2 __b)
+        static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
         {
-            mixin("alias __a "~parm1Name~";");
-            mixin("alias __b "~parm2Name~";");
-            mixin("return (" ~ fun ~ ");");
+            import std.traits, std.typecons, std.typetuple;
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
+        auto binaryFun(ElementType1, ElementType2)
+            (auto ref ElementType1 __a, auto ref ElementType2 __b)
+        {
+            mixin("alias "~parm1Name~" = __a ;");
+            mixin("alias "~parm2Name~" = __b ;");
+            return mixin(fun);
+        }
+    }
+    else static if (needOpCallAlias!fun)
+    {
+        // Issue 9906
+        alias binaryFun = fun.opCall;
     }
     else
     {
-        alias fun binaryFun;
+        alias binaryFun = fun;
     }
+}
+
+///
+unittest
+{
+    alias less = binaryFun!("a < b");
+    assert(less(1, 2) && !less(2, 1));
+    alias greater = binaryFun!("a > b");
+    assert(!greater("1", "2") && greater("2", "1"));
 }
 
 unittest
 {
-    alias binaryFun!(q{a < b}) less;
-    assert(less(1, 2) && !less(2, 1));
-    assert(less("1", "2") && !less("2", "1"));
-
     static int f1(int a, string b) { return a + 1; }
     static assert(is(typeof(binaryFun!(f1)(1, "2")) == int));
     assert(binaryFun!(f1)(41, "a") == 42);
@@ -127,23 +199,334 @@ unittest
     assert(binaryFun!("a + b")(41, 1) == 42);
     //@@BUG
     //assert(binaryFun!("return a + b;")(41, 1) == 42);
+
+    // Issue 9906
+    struct Seen
+    {
+        static bool opCall(int x, int y) { return true; }
+    }
+    static assert(is(typeof(binaryFun!Seen)));
+    assert(binaryFun!Seen(1,1));
+
+    struct FuncObj
+    {
+        bool opCall(int x, int y) { return true; }
+    }
+    FuncObj fo;
+    static assert(!needOpCallAlias!fo);
+    static assert(is(typeof(binaryFun!fo)));
+    assert(unaryFun!fo(1,1));
+
+    // Function object with non-static opCall can only be called with an
+    // instance, not with merely the type.
+    static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
-/*
+// skip all ASCII chars except a..z, A..Z, 0..9, '_' and '.'.
+private uint _ctfeSkipOp(ref string op)
+{
+    if (!__ctfe) assert(false);
+    import std.ascii : isASCII, isAlphaNum;
+    immutable oldLength = op.length;
+    while (op.length)
+    {
+        immutable front = op[0];
+        if(front.isASCII && !(front.isAlphaNum || front == '_' || front == '.'))
+            op = op[1..$];
+        else
+            break;
+    }
+    return oldLength != op.length;
+}
+
+// skip all digits
+private uint _ctfeSkipInteger(ref string op)
+{
+    if (!__ctfe) assert(false);
+    import std.ascii : isDigit;
+    immutable oldLength = op.length;
+    while (op.length)
+    {
+        immutable front = op[0];
+        if(front.isDigit)
+            op = op[1..$];
+        else
+            break;
+    }
+    return oldLength != op.length;
+}
+
+// skip name
+private uint _ctfeSkipName(ref string op, string name)
+{
+    if (!__ctfe) assert(false);
+    if (op.length >= name.length && op[0..name.length] == name)
+    {
+        op = op[name.length..$];
+        return 1;
+    }
+    return 0;
+}
+
+// returns 1 if $(D fun) is trivial unary function
+private uint _ctfeMatchUnary(string fun, string name)
+{
+    if (!__ctfe) assert(false);
+    import std.stdio;
+    fun._ctfeSkipOp;
+    for (;;) 
+    {
+        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger;
+        if (h == 0)
+        {
+            fun._ctfeSkipOp;
+            break;
+        }
+        else if (h == 1)
+        {
+            if(!fun._ctfeSkipOp)
+                break;
+        }
+        else
+            return 0;
+    }
+    return fun.length == 0;
+}
+
+unittest
+{
+    static assert(!_ctfeMatchUnary("sqrt(ё)", "ё"));
+    static assert(!_ctfeMatchUnary("ё.sqrt", "ё"));
+    static assert(!_ctfeMatchUnary(".ё+ё", "ё"));
+    static assert(!_ctfeMatchUnary("_ё+ё", "ё"));
+    static assert(!_ctfeMatchUnary("ёё", "ё"));
+    static assert(_ctfeMatchUnary("a+a", "a"));
+    static assert(_ctfeMatchUnary("a + 10", "a"));
+    static assert(_ctfeMatchUnary("4 == a", "a"));
+    static assert(_ctfeMatchUnary("2==a", "a"));
+    static assert(_ctfeMatchUnary("1 != a", "a"));
+    static assert(_ctfeMatchUnary("a!=4", "a"));
+    static assert(_ctfeMatchUnary("a< 1", "a"));
+    static assert(_ctfeMatchUnary("434 < a", "a"));
+    static assert(_ctfeMatchUnary("132 > a", "a"));
+    static assert(_ctfeMatchUnary("123 >a", "a"));
+    static assert(_ctfeMatchUnary("a>82", "a"));
+    static assert(_ctfeMatchUnary("ё>82", "ё"));
+    static assert(_ctfeMatchUnary("ё[ё(ё)]", "ё"));
+    static assert(_ctfeMatchUnary("ё[21]", "ё"));
+}
+
+// returns 1 if $(D fun) is trivial binary function
+private uint _ctfeMatchBinary(string fun, string name1, string name2)
+{
+    if (!__ctfe) assert(false);
+    fun._ctfeSkipOp;
+    for (;;) 
+    {
+        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger;
+        if (h == 0)
+        {
+            fun._ctfeSkipOp;
+            break;
+        }
+        else if (h == 1)
+        {
+            if(!fun._ctfeSkipOp)
+                break;
+        }
+        else
+            return 0;
+    }
+    return fun.length == 0;
+}
+
+unittest {
+
+    static assert(!_ctfeMatchBinary("sqrt(ё)", "ё", "b"));
+    static assert(!_ctfeMatchBinary("ё.sqrt", "ё", "b"));
+    static assert(!_ctfeMatchBinary(".ё+ё", "ё", "b"));
+    static assert(!_ctfeMatchBinary("_ё+ё", "ё", "b"));
+    static assert(!_ctfeMatchBinary("ёё", "ё", "b"));
+    static assert(_ctfeMatchBinary("a+a", "a", "b"));
+    static assert(_ctfeMatchBinary("a + 10", "a", "b"));
+    static assert(_ctfeMatchBinary("4 == a", "a", "b"));
+    static assert(_ctfeMatchBinary("2==a", "a", "b"));
+    static assert(_ctfeMatchBinary("1 != a", "a", "b"));
+    static assert(_ctfeMatchBinary("a!=4", "a", "b"));
+    static assert(_ctfeMatchBinary("a< 1", "a", "b"));
+    static assert(_ctfeMatchBinary("434 < a", "a", "b"));
+    static assert(_ctfeMatchBinary("132 > a", "a", "b"));
+    static assert(_ctfeMatchBinary("123 >a", "a", "b"));
+    static assert(_ctfeMatchBinary("a>82", "a", "b"));
+    static assert(_ctfeMatchBinary("ё>82", "ё", "q"));
+    static assert(_ctfeMatchBinary("ё[ё(10)]", "ё", "q"));
+    static assert(_ctfeMatchBinary("ё[21]", "ё", "q"));
+
+    static assert(!_ctfeMatchBinary("sqrt(ё)+b", "b", "ё"));
+    static assert(!_ctfeMatchBinary("ё.sqrt-b", "b", "ё"));
+    static assert(!_ctfeMatchBinary(".ё+b", "b", "ё"));
+    static assert(!_ctfeMatchBinary("_b+ё", "b", "ё"));
+    static assert(!_ctfeMatchBinary("ba", "b", "a"));
+    static assert(_ctfeMatchBinary("a+b", "b", "a"));
+    static assert(_ctfeMatchBinary("a + b", "b", "a"));
+    static assert(_ctfeMatchBinary("b == a", "b", "a"));
+    static assert(_ctfeMatchBinary("b==a", "b", "a"));
+    static assert(_ctfeMatchBinary("b != a", "b", "a"));
+    static assert(_ctfeMatchBinary("a!=b", "b", "a"));
+    static assert(_ctfeMatchBinary("a< b", "b", "a"));
+    static assert(_ctfeMatchBinary("b < a", "b", "a"));
+    static assert(_ctfeMatchBinary("b > a", "b", "a"));
+    static assert(_ctfeMatchBinary("b >a", "b", "a"));
+    static assert(_ctfeMatchBinary("a>b", "b", "a"));
+    static assert(_ctfeMatchBinary("ё>b", "b", "ё"));
+    static assert(_ctfeMatchBinary("b[ё(-1)]", "b", "ё"));
+    static assert(_ctfeMatchBinary("ё[-21]", "b", "ё"));
+}
+
+//undocumented
+template safeOp(string S)
+    if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
+{
+    private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
+        if (isIntegral!ElementType1 && isIntegral!ElementType2)
+    {
+        alias T = CommonType!(ElementType1, ElementType2);
+        return mixin("cast(T)a "~S~" cast(T)b");
+    }
+
+    bool safeOp(T0, T1)(auto ref T0 a, auto ref T1 b)
+    {
+        static if (isIntegral!T0 && isIntegral!T1 &&
+                   (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
+        {
+            static if (S == "<=" || S == "<")
+            {
+                static if (mostNegative!T0 < 0)
+                    immutable result = a < 0 || unsafeOp(a, b);
+                else
+                    immutable result = b >= 0 && unsafeOp(a, b);
+            }
+            else
+            {
+                static if (mostNegative!T0 < 0)
+                    immutable result = a >= 0 && unsafeOp(a, b);
+                else
+                    immutable result = b < 0 || unsafeOp(a, b);
+            }
+        }
+        else
+        {
+            static assert (is(typeof(mixin("a "~S~" b"))),
+                "Invalid arguments: Cannot compare types " ~ T0.stringof ~ " and " ~ T1.stringof ~ ".");
+
+            immutable result = mixin("a "~S~" b");
+        }
+        return result;
+    }
+}
+
+unittest //check user defined types
+{
+    import std.algorithm : equal;
+    struct Foo
+    {
+        int a;
+        auto opEquals(Foo foo)
+        {
+            return a == foo.a;
+        }
+    }
+    assert(safeOp!"!="(Foo(1), Foo(2)));
+}
+
+/**
    Predicate that returns $(D_PARAM a < b).
+   Correctly compares signed and unsigned integers, ie. -1 < 2U.
 */
-//bool less(T)(T a, T b) { return a < b; }
-//alias binaryFun!(q{a < b}) less;
+alias lessThan = safeOp!"<";
 
-/*
+pure @safe @nogc nothrow unittest
+{
+    assert(lessThan(2, 3));
+    assert(lessThan(2U, 3U));
+    assert(lessThan(2, 3.0));
+    assert(lessThan(-2, 3U));
+    assert(lessThan(2, 3U));
+    assert(!lessThan(3U, -2));
+    assert(!lessThan(3U, 2));
+    assert(!lessThan(0, 0));
+    assert(!lessThan(0U, 0));
+    assert(!lessThan(0, 0U));
+}
+
+/**
    Predicate that returns $(D_PARAM a > b).
+   Correctly compares signed and unsigned integers, ie. 2U > -1.
 */
-//alias binaryFun!(q{a > b}) greater;
+alias greaterThan = safeOp!">";
 
-/*
+unittest
+{
+    assert(!greaterThan(2, 3));
+    assert(!greaterThan(2U, 3U));
+    assert(!greaterThan(2, 3.0));
+    assert(!greaterThan(-2, 3U));
+    assert(!greaterThan(2, 3U));
+    assert(greaterThan(3U, -2));
+    assert(greaterThan(3U, 2));
+    assert(!greaterThan(0, 0));
+    assert(!greaterThan(0U, 0));
+    assert(!greaterThan(0, 0U));
+}
+
+/**
    Predicate that returns $(D_PARAM a == b).
+   Correctly compares signed and unsigned integers, ie. !(-1 == ~0U).
 */
-//alias binaryFun!(q{a == b}) equalTo;
+alias equalTo = safeOp!"==";
+
+unittest
+{
+    assert(equalTo(0U, 0));
+    assert(equalTo(0, 0U));
+    assert(!equalTo(-1, ~0U));
+}
+/**
+   N-ary predicate that reverses the order of arguments, e.g., given
+   $(D pred(a, b, c)), returns $(D pred(c, b, a)).
+*/
+template reverseArgs(alias pred)
+{
+    auto reverseArgs(Args...)(auto ref Args args)
+        if (is(typeof(pred(Reverse!args))))
+    {
+        return pred(Reverse!args);
+    }
+}
+
+unittest
+{
+    alias gt = reverseArgs!(binaryFun!("a < b"));
+    assert(gt(2, 1) && !gt(1, 1));
+    int x = 42;
+    bool xyz(int a, int b) { return a * x < b / x; }
+    auto foo = &xyz;
+    foo(4, 5);
+    alias zyx = reverseArgs!(foo);
+    assert(zyx(5, 4) == foo(4, 5));
+
+    int abc(int a, int b, int c) { return a * b + c; }
+    alias cba = reverseArgs!abc;
+    assert(abc(91, 17, 32) == cba(32, 17, 91));
+
+    int a(int a) { return a * 2; }
+    alias _a = reverseArgs!a;
+    assert(a(2) == _a(2));
+
+    int b() { return 4; }
+    alias _b = reverseArgs!b;
+    assert(b() == _b());
+}
 
 /**
    Binary predicate that reverses the order of arguments, e.g., given
@@ -152,7 +535,7 @@ unittest
 template binaryReverseArgs(alias pred)
 {
     auto binaryReverseArgs(ElementType1, ElementType2)
-            (ElementType1 a, ElementType2 b)
+            (auto ref ElementType1 a, auto ref ElementType2 b)
     {
         return pred(b, a);
     }
@@ -160,66 +543,83 @@ template binaryReverseArgs(alias pred)
 
 unittest
 {
-    alias binaryReverseArgs!(binaryFun!("a < b")) gt;
+    alias gt = binaryReverseArgs!(binaryFun!("a < b"));
     assert(gt(2, 1) && !gt(1, 1));
     int x = 42;
     bool xyz(int a, int b) { return a * x < b / x; }
     auto foo = &xyz;
     foo(4, 5);
-    alias binaryReverseArgs!(foo) zyx;
+    alias zyx = binaryReverseArgs!(foo);
     assert(zyx(5, 4) == foo(4, 5));
 }
 
 /**
 Negates predicate $(D pred).
-
-Example:
-----
-string a = "   Hello, world!";
-assert(find!(not!isWhite)(a) == "Hello, world!");
-----
  */
 template not(alias pred)
 {
-    auto not(T...)(T args)
-    if (is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
+    auto not(T...)(auto ref T args)
     {
-        static if (T.length == 1)
+        static if (is(typeof(!pred(args))))
+            return !pred(args);
+        else static if (T.length == 1)
             return !unaryFun!pred(args);
         else static if (T.length == 2)
             return !binaryFun!pred(args);
         else
-            static assert(false, "not unimplemented for multiple arguments");
+            static assert(0);
     }
 }
 
+///
+unittest
+{
+    import std.functional;
+    import std.algorithm : find;
+    import std.uni : isWhite;
+    string a = "   Hello, world!";
+    assert(find!(not!isWhite)(a) == "Hello, world!");
+}
+
+unittest
+{
+    assert(not!"a != 5"(5));
+    assert(not!"a != b"(5, 5));
+
+    assert(not!(() => false)());
+    assert(not!(a => a != 5)(5));
+    assert(not!((a, b) => a != b)(5, 5));
+    assert(not!((a, b, c) => a * b * c != 125 )(5, 5, 5));
+}
+
 /**
-Curries $(D fun) by tying its first argument to a particular value.
+$(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially
+applies) $(D_PARAM fun) by tying its first argument to $(D_PARAM arg).
 
 Example:
 
 ----
 int fun(int a, int b) { return a + b; }
-alias curry!(fun, 5) fun5;
+alias partial!(fun, 5) fun5;
 assert(fun5(6) == 11);
 ----
 
 Note that in most cases you'd use an alias instead of a value
-assignment. Using an alias allows you to curry template functions
-without committing to a particular type of the function.
+assignment. Using an alias allows you to partially evaluate template
+functions without committing to a particular type of the function.
  */
-template curry(alias fun, alias arg)
+template partial(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
-        ReturnType!fun curry(ParameterTypeTuple!fun[1..$] args2)
+        ReturnType!fun partial(ParameterTypeTuple!fun[1..$] args2)
         {
             return fun(arg, args2);
         }
     }
     else
     {
-        auto curry(Ts...)(Ts args2)
+        auto partial(Ts...)(Ts args2)
         {
             static if (is(typeof(fun(arg, args2))))
             {
@@ -242,37 +642,44 @@ template curry(alias fun, alias arg)
     }
 }
 
-// tests for currying callables
+/**
+Deprecated alias for $(D partial), kept for backwards compatibility
+ */
+
+deprecated("Please use std.functional.partial instead")
+alias curry = partial;
+
+// tests for partially evaluating callables
 unittest
 {
     static int f1(int a, int b) { return a + b; }
-    assert(curry!(f1, 5)(6) == 11);
+    assert(partial!(f1, 5)(6) == 11);
 
     int f2(int a, int b) { return a + b; }
     int x = 5;
-    assert(curry!(f2, x)(6) == 11);
+    assert(partial!(f2, x)(6) == 11);
     x = 7;
-    assert(curry!(f2, x)(6) == 13);
-    static assert(curry!(f2, 5)(6) == 11);
+    assert(partial!(f2, x)(6) == 13);
+    static assert(partial!(f2, 5)(6) == 11);
 
     auto dg = &f2;
-    auto f3 = &curry!(dg, x);
+    auto f3 = &partial!(dg, x);
     assert(f3(6) == 13);
 
     static int funOneArg(int a) { return a; }
-    assert(curry!(funOneArg, 1)() == 1);
+    assert(partial!(funOneArg, 1)() == 1);
 
     static int funThreeArgs(int a, int b, int c) { return a + b + c; }
-    alias curry!(funThreeArgs, 1) funThreeArgs1;
+    alias funThreeArgs1 = partial!(funThreeArgs, 1);
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(2))));
 
     enum xe = 5;
-    alias curry!(f2, xe) fe;
+    alias fe = partial!(f2, xe);
     static assert(fe(6) == 11);
 }
 
-// tests for currying templated/overloaded callables
+// tests for partially evaluating templated/overloaded callables
 unittest
 {
     static auto add(A, B)(A x, B y)
@@ -280,17 +687,17 @@ unittest
         return x + y;
     }
 
-    alias curry!(add, 5) add5;
+    alias add5 = partial!(add, 5);
     assert(add5(6) == 11);
     static assert(!is(typeof(add5())));
     static assert(!is(typeof(add5(6, 7))));
 
-    // taking address of templated curry needs explicit type
+    // taking address of templated partial evaluation needs explicit type
     auto dg = &add5!(int);
     assert(dg(6) == 11);
 
     int x = 5;
-    alias curry!(add, x) addX;
+    alias addX = partial!(add, x);
     assert(addX(6) == 11);
 
     static struct Callable
@@ -300,9 +707,9 @@ unittest
         double opCall(double a, double b) { return a + b; }
     }
     Callable callable;
-    assert(curry!(Callable, "5")("6") == "56");
-    assert(curry!(callable, 5)(6) == 30);
-    assert(curry!(callable, 7.0)(3.0) == 7.0 + 3.0);
+    assert(partial!(Callable, "5")("6") == "56");
+    assert(partial!(callable, 5)(6) == 30);
+    assert(partial!(callable, 7.0)(3.0) == 7.0 + 3.0);
 
     static struct TCallable
     {
@@ -312,15 +719,15 @@ unittest
         }
     }
     TCallable tcallable;
-    assert(curry!(tcallable, 5)(6) == 11);
-    static assert(!is(typeof(curry!(tcallable, "5")(6))));
+    assert(partial!(tcallable, 5)(6) == 11);
+    static assert(!is(typeof(partial!(tcallable, "5")(6))));
 
     static A funOneArg(A)(A a) { return a; }
-    alias curry!(funOneArg, 1) funOneArg1;
+    alias funOneArg1 = partial!(funOneArg, 1);
     assert(funOneArg1() == 1);
 
     static auto funThreeArgs(A, B, C)(A a, B b, C c) { return a + b + c; }
-    alias curry!(funThreeArgs, 1) funThreeArgs1;
+    alias funThreeArgs1 = partial!(funThreeArgs, 1);
     assert(funThreeArgs1(2, 3) == 6);
     static assert(!is(typeof(funThreeArgs1(1))));
 
@@ -340,43 +747,51 @@ $(XREF typecons, Tuple) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
 
-Example:
-
-----
-static bool f1(int a) { return a != 0; }
-static int f2(int a) { return a / 2; }
-auto x = adjoin!(f1, f2)(5);
-assert(is(typeof(x) == Tuple!(bool, int)));
-assert(x[0] == true && x[1] == 2);
-----
+Note: In the special case where where only a single function is provided
+($(D F.length == 1)), adjoin simply aliases to the single passed function
+($(D F[0])).
 */
-template adjoin(F...) if (F.length)
+template adjoin(F...) if (F.length == 1)
 {
-    auto adjoin(V...)(V a)
+    alias adjoin = F[0];
+}
+/// ditto
+template adjoin(F...) if (F.length > 1)
+{
+    auto adjoin(V...)(auto ref V a)
     {
-        static if (F.length == 1)
-        {
-            return F[0](a);
-        }
-        else static if (F.length == 2)
+        import std.typecons : tuple;
+        static if (F.length == 2)
         {
             return tuple(F[0](a), F[1](a));
         }
+        else static if (F.length == 3)
+        {
+            return tuple(F[0](a), F[1](a), F[2](a));
+        }
         else
         {
-            alias typeof(F[0](a)) Head;
-            Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
-            foreach (i, Unused; result.Types)
-            {
-                emplace(&result[i], F[i](a));
-            }
-            return result;
+            import std.format : format;
+            import std.range : iota;
+            return mixin (q{tuple(%(F[%s](a)%|, %))}.format(iota(0, F.length)));
         }
     }
 }
 
+///
 unittest
 {
+    import std.functional, std.typecons;
+    static bool f1(int a) { return a != 0; }
+    static int f2(int a) { return a / 2; }
+    auto x = adjoin!(f1, f2)(5);
+    assert(is(typeof(x) == Tuple!(bool, int)));
+    assert(x[0] == true && x[1] == 2);
+}
+
+unittest
+{
+    import std.typecons;
     static bool F1(int a) { return a != 0; }
     auto x1 = adjoin!(F1)(5);
     static int F2(int a) { return a / 2; }
@@ -388,7 +803,7 @@ unittest
     assert(x3[0] && x3[1] == 2 && x3[2] == 2);
 
     bool F4(int a) { return a != x1; }
-    alias adjoin!(F4) eff4;
+    alias eff4 = adjoin!(F4);
     static struct S
     {
         bool delegate(int) store;
@@ -398,6 +813,25 @@ unittest
     s.store = (int a) { return eff4(a); };
     auto x4 = s.fun();
     assert(x4 == 43);
+}
+
+unittest
+{
+    import std.typetuple : staticMap;
+    import std.typecons : Tuple, tuple;
+    alias funs = staticMap!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
+    alias afun = adjoin!funs;
+    assert(afun(5) == tuple(5, 10, 15, 25, -5));
+
+    static class C{}
+    alias IC = immutable(C);
+    IC foo(){return typeof(return).init;}
+    Tuple!(IC, IC, IC, IC) ret1 = adjoin!(foo, foo, foo, foo)();
+
+    static struct S{int* p;}
+    alias IS = immutable(S);
+    IS bar(){return typeof(return).init;}
+    enum Tuple!(IS, IS, IS, IS) ret2 = adjoin!(bar, bar, bar, bar)();
 }
 
 // /*private*/ template NaryFun(string fun, string letter, V...)
@@ -412,7 +846,7 @@ unittest
 //             ~NaryFun!(fun, [letter[0] + 1], V[1..$]).args;
 //         enum code = args ~ "return "~fun~";";
 //     }
-//     alias void Result;
+//     alias Result = void;
 // }
 
 // unittest
@@ -435,7 +869,7 @@ unittest
 
 // unittest
 // {
-//     alias naryFun!("a + b") test;
+//     alias test = naryFun!("a + b");
 //     test(1, 2);
 // }
 
@@ -458,13 +892,13 @@ template compose(fun...)
 {
     static if (fun.length == 1)
     {
-        alias unaryFun!(fun[0]) compose;
+        alias compose = unaryFun!(fun[0]);
     }
     else static if (fun.length == 2)
     {
         // starch
-        alias unaryFun!(fun[0]) fun0;
-        alias unaryFun!(fun[1]) fun1;
+        alias fun0 = unaryFun!(fun[0]);
+        alias fun1 = unaryFun!(fun[1]);
 
         // protein: the core composition operation
         typeof({ E a; return fun0(fun1(a)); }()) compose(E)(E a)
@@ -475,7 +909,7 @@ template compose(fun...)
     else
     {
         // protein: assembling operations
-        alias compose!(fun[0], compose!(fun[1 .. $])) compose;
+        alias compose = compose!(fun[0], compose!(fun[1 .. $]));
     }
 }
 
@@ -494,13 +928,11 @@ template compose(fun...)
 int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
 ----
  */
-template pipe(fun...)
-{
-    alias compose!(Reverse!(fun)) pipe;
-}
+alias pipe(fun...) = compose!(Reverse!(fun));
 
 unittest
 {
+    import std.conv : to;
     string foo(int a) { return to!(string)(a); }
     int bar(string a) { return to!(int)(a) + 1; }
     double baz(int a) { return a + 0.5; }
@@ -529,7 +961,7 @@ double transmogrify(int a, string b)
 {
    ... expensive computation ...
 }
-alias memoize!transmogrify fastTransmogrify;
+alias fastTransmogrify = memoize!transmogrify;
 unittest
 {
     auto slow = transmogrify(2, "hello");
@@ -542,93 +974,144 @@ Technically the memoized function should be pure because $(D memoize) assumes it
 always return the same result for a given tuple of arguments. However, $(D memoize) does not
 enforce that because sometimes it
 is useful to memoize an impure function, too.
-
-To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
-For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
-
-Example:
-----
-ulong fib(ulong n)
-{
-    alias memoize!fib mfib;
-    return n < 2 ? 1 : mfib(n - 2) + mfib(n - 1);
-}
-...
-assert(fib(10) == 89);
-----
-
-To improve the speed of the factorial function,
-
-Example:
-----
-ulong fact(ulong n)
-{
-    alias memoize!fact mfact;
-    return n < 2 ? 1 : n * mfact(n - 1);
-}
-...
-assert(fact(10) == 3628800);
-----
-
-This memoizes all values of $(D fact) up to the largest argument. To only cache the final
-result, move $(D memoize) outside the function as shown below.
-
-Example:
-----
-ulong factImpl(ulong n)
-{
-    return n < 2 ? 1 : n * mfact(n - 1);
-}
-alias memoize!factImpl fact;
-...
-assert(fact(10) == 3628800);
-----
-
-The $(D maxSize) parameter is a cutoff for the cache size. If upon a miss the length of the hash
-table is found to be $(D maxSize), the table is simply cleared.
-
-Example:
-----
-// Memoize no more than 128 values of transmogrify
-alias memoize!(transmogrify, 128) fastTransmogrify;
-----
 */
-template memoize(alias fun, uint maxSize = uint.max)
+template memoize(alias fun)
 {
+    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
+
     ReturnType!fun memoize(ParameterTypeTuple!fun args)
     {
-        static ReturnType!fun[Tuple!(typeof(args))] memo;
-        auto t = tuple(args);
-        auto p = t in memo;
-        if (p) return *p;
-        static if (maxSize != uint.max)
-        {
-            if (memo.length >= maxSize) memo = null;
-        }
-        auto r = fun(args);
-        //writeln("Inserting result ", typeof(r).stringof, "(", r, ") for parameters ", t);
-        memo[t] = r;
-        return r;
+        alias Args = ParameterTypeTuple!fun;
+        import std.typecons : Tuple;
+
+        static ReturnType!fun[Tuple!Args] memo;
+        auto t = Tuple!Args(args);
+        if (auto p = t in memo)
+            return *p;
+        return memo[t] = fun(args);
     }
+}
+
+/// ditto
+template memoize(alias fun, uint maxSize)
+{
+    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
+    ReturnType!fun memoize(ParameterTypeTuple!fun args)
+    {
+        import std.typecons : tuple;
+        static struct Value { ParameterTypeTuple!fun args; ReturnType!fun res; }
+        static Value[] memo;
+        static size_t[] initialized;
+
+        if (!memo.length)
+        {
+            import core.memory;
+
+            enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
+            memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
+            enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
+            initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
+        }
+
+        import core.bitop : bts;
+        import std.conv : emplace;
+
+        size_t hash;
+        foreach (ref arg; args)
+            hash = hashOf(arg, hash);
+        // cuckoo hashing
+        immutable idx1 = hash % maxSize;
+        if (!bts(initialized.ptr, idx1))
+            return emplace(&memo[idx1], args, fun(args)).res;
+        else if (memo[idx1].args == args)
+            return memo[idx1].res;
+        // FNV prime
+        immutable idx2 = (hash * 16777619) % maxSize;
+        if (!bts(initialized.ptr, idx2))
+            emplace(&memo[idx2], memo[idx1]);
+        else if (memo[idx2].args == args)
+            return memo[idx2].res;
+        else if (idx1 != idx2)
+            memo[idx2] = memo[idx1];
+
+        memo[idx1] = Value(args, fun(args));
+        return memo[idx1].res;
+    }
+}
+
+/**
+ * To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
+ * For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
+ */
+unittest
+{
+    ulong fib(ulong n)
+    {
+        return n < 2 ? 1 : memoize!fib(n - 2) + memoize!fib(n - 1);
+    }
+    assert(fib(10) == 89);
+}
+
+/**
+ * To improve the speed of the factorial function,
+ */
+unittest
+{
+    ulong fact(ulong n)
+    {
+        return n < 2 ? 1 : n * memoize!fact(n - 1);
+    }
+    assert(fact(10) == 3628800);
+}
+
+/**
+ * This memoizes all values of $(D fact) up to the largest argument. To only cache the final
+ * result, move $(D memoize) outside the function as shown below.
+ */
+unittest
+{
+    ulong factImpl(ulong n)
+    {
+        return n < 2 ? 1 : n * factImpl(n - 1);
+    }
+    alias fact = memoize!factImpl;
+    assert(fact(10) == 3628800);
+}
+
+/**
+ * When the $(D maxSize) parameter is specified, memoize will used
+ * a fixed size hash table to limit the number of cached entries.
+ */
+unittest
+{
+    ulong fact(ulong n)
+    {
+        // Memoize no more than 8 values
+        return n < 2 ? 1 : n * memoize!(fact, 8)(n - 1);
+    }
+    assert(fact(8) == 40320);
+    // using more entries than maxSize will overwrite existing entries
+    assert(fact(10) == 3628800);
 }
 
 unittest
 {
-    alias memoize!(function double(double x) { return sqrt(x); }) msqrt;
+    import core.math;
+    alias msqrt = memoize!(function double(double x) { return sqrt(x); });
     auto y = msqrt(2.0);
     assert(y == msqrt(2.0));
     y = msqrt(4.0);
     assert(y == sqrt(4.0));
 
-    // alias memoize!rgb2cmyk mrgb2cmyk;
+    // alias mrgb2cmyk = memoize!rgb2cmyk;
     // auto z = mrgb2cmyk([43, 56, 76]);
     // assert(z == mrgb2cmyk([43, 56, 76]));
 
-    //alias memoize!fib mfib;
+    //alias mfib = memoize!fib;
 
     static ulong fib(ulong n)
     {
-        alias memoize!fib mfib;
+        alias mfib = memoize!fib;
         return n < 2 ? 1 : mfib(n - 2) + mfib(n - 1);
     }
 
@@ -637,13 +1120,30 @@ unittest
 
     static ulong fact(ulong n)
     {
-        alias memoize!fact mfact;
+        alias mfact = memoize!fact;
         return n < 2 ? 1 : n * mfact(n - 1);
     }
     assert(fact(10) == 3628800);
+
+    // Issue 12568
+    static uint len2(const string s) { // Error
+    alias mLen2 = memoize!len2;
+    if (s.length == 0)
+        return 0;
+    else
+        return 1 + mLen2(s[1 .. $]);
+    }
+
+    int _func(int x) { return 1; }
+    alias func = memoize!(_func, 10);
+    assert(func(int.init) == 1);
+    assert(func(int.init) == 1);
 }
 
-private struct DelegateFaker(F) {
+private struct DelegateFaker(F)
+{
+    import std.typecons;
+
     // for @safe
     static F castToF(THIS)(THIS x) @trusted
     {
@@ -688,7 +1188,7 @@ private struct DelegateFaker(F) {
         }
     }
     // Type information used by the generated code.
-    alias FuncInfo!(F) FuncInfo_doIt;
+    alias FuncInfo_doIt = FuncInfo!(F);
 
     // Generate the member function doIt().
     mixin( std.typecons.MemberFunctionGenerator!(GeneratingPolicy!())
@@ -732,7 +1232,7 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
     }
     else
     {
-        alias typeof(&(new DelegateFaker!(F)).doIt) DelType;
+        alias DelType = typeof(&(new DelegateFaker!(F)).doIt);
 
         static struct DelegateFields {
             union {
@@ -828,7 +1328,7 @@ unittest {
         static assert(is(typeof(dg_trusted) == int delegate() @trusted));
         static assert(is(typeof(dg_system) == int delegate() @system));
         static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
-        //static assert(is(typeof(dg_pure_nothrow_safe) == int delegate() pure nothrow @safe));
+        //static assert(is(typeof(dg_pure_nothrow_safe) == int delegate() @safe pure nothrow));
 
         assert(dg_ref() == refvar);
         assert(dg_pure() == 1);
@@ -852,4 +1352,3 @@ unittest {
         static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
     }
 }
-

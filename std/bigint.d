@@ -13,7 +13,7 @@
  *
  * For very large numbers, consider using the $(WEB gmplib.org, GMP library) instead.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Don Clugston
  * Source: $(PHOBOSSRC std/_bigint.d)
  */
@@ -32,7 +32,7 @@ private import std.traits;
 /** A struct representing an arbitrary precision integer
  *
  * All arithmetic operations are supported, except
- * unsigned shift right (>>>). Logical operations are not currently supported.
+ * unsigned shift right (>>>). Bitwise operations (|, &, ^, ~) are supported, and behave as if BigInt was an infinite length 2's complement number.
  *
  * BigInt implements value semantics using copy-on-write. This means that
  * assignment is cheap, but operations such as x++ will cause heap
@@ -100,20 +100,27 @@ public:
             ok = data.fromDecimalString(s);
         }
         assert(ok);
+
         if (isZero())
             neg = false;
         sign = neg;
     }
 
     ///
-    this(T)(T x) pure if (isIntegral!T)
+    this(T)(T x) pure nothrow if (isIntegral!T)
     {
         data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
 
     ///
-    BigInt opAssign(T)(T x) pure if (isIntegral!T)
+    this(T)(T x) pure nothrow if (is(Unqual!T == BigInt))
+    {
+        opAssign(x);
+    }
+
+    ///
+    BigInt opAssign(T)(T x) pure nothrow if (isIntegral!T)
     {
         data = cast(ulong)absUnsign(x);
         sign = (x < 0);
@@ -129,9 +136,9 @@ public:
     }
 
     // BigInt op= integer
-    BigInt opOpAssign(string op, T)(T y) pure
+    BigInt opOpAssign(string op, T)(T y) pure nothrow
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
-          || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
+          || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         ulong u = absUnsign(y);
 
@@ -156,8 +163,14 @@ public:
         else static if (op=="/")
         {
             assert(y!=0, "Division by zero");
-            static assert(!is(T == long) && !is(T == ulong));
-            data = BigUint.divInt(data, cast(uint)u);
+            static if (T.sizeof <= uint.sizeof)
+            {
+                data = BigUint.divInt(data, cast(uint)u);
+            }
+            else
+            {
+                data = BigUint.divInt(data, u);
+            }
             sign = data.isZero() ? false : sign ^ (y < 0);
         }
         else static if (op=="%")
@@ -196,13 +209,18 @@ public:
             sign = (y & 1) ? sign : false;
             data = BigUint.pow(data, u);
         }
+        else static if (op=="|" || op=="&" || op=="^")
+        {
+            BigInt b = y;
+            opOpAssign!op(b);
+        }
         else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
     }
 
     // BigInt op= BigInt
-    BigInt opOpAssign(string op, T)(T y) pure
-        if ((op=="+" || op== "-" || op=="*" || op=="/" || op=="%")
+    BigInt opOpAssign(string op, T)(T y) pure nothrow
+        if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
             && is (T: BigInt))
     {
         static if (op == "+")
@@ -238,30 +256,37 @@ public:
                     sign = false;
             }
         }
-        else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
+        else static if (op == "|" || op == "&" || op == "^")
+        {
+            data = BigUint.bitwiseOp!op(data, y.data, sign, y.sign, sign);
+        }
+        else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~
+            T.stringof ~ " is not supported");
         return this;
     }
 
     // BigInt op BigInt
-    BigInt opBinary(string op, T)(T y) pure
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") 
-			&& is (T: BigInt))
+    BigInt opBinary(string op, T)(T y) pure nothrow const
+        if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^" ||
+            op=="/" || op=="%")
+            && is (T: BigInt))
     {
         BigInt r = this;
         return r.opOpAssign!(op)(y);
     }
 
     // BigInt op integer
-    BigInt opBinary(string op, T)(T y) pure
-        if ((op=="+" || op == "*" || op=="-" || op=="/"
-            || op==">>" || op=="<<" || op=="^^") && isIntegral!T)
+    BigInt opBinary(string op, T)(T y) pure nothrow const
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
+            op=="^"|| op==">>" || op=="<<" || op=="^^")
+            && isIntegral!T)
     {
         BigInt r = this;
         return r.opOpAssign!(op)(y);
     }
 
     //
-    int opBinary(string op, T : int)(T y) pure
+    int opBinary(string op, T : int)(T y) pure nothrow const
         if (op == "%" && isIntegral!T)
     {
         assert(y!=0);
@@ -273,14 +298,14 @@ public:
     }
 
     // Commutative operators
-    BigInt opBinaryRight(string op, T)(T y) pure
-        if ((op=="+" || op=="*") && isIntegral!T)
+    BigInt opBinaryRight(string op, T)(T y) pure nothrow const
+        if ((op=="+" || op=="*" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
 
     //  BigInt = integer op BigInt
-    BigInt opBinaryRight(string op, T)(T y) pure
+    BigInt opBinaryRight(string op, T)(T y) pure nothrow const
         if (op == "-" && isIntegral!T)
     {
         ulong u = absUnsign(y);
@@ -295,14 +320,15 @@ public:
     }
 
     //  integer = integer op BigInt
-    T opBinaryRight(string op, T)(T x) pure
+    T opBinaryRight(string op, T)(T x) pure nothrow const
         if ((op=="%" || op=="/") && isIntegral!T)
     {
+        checkDivByZero();
+
         static if (op == "%")
         {
-            checkDivByZero();
             // x%y always has the same sign as x.
-            if (data.ulongLength() > 1)
+            if (data.ulongLength > 1)
                 return x;
             ulong u = absUnsign(x);
             ulong rem = u % data.peekUlong(0);
@@ -311,14 +337,13 @@ public:
         }
         else static if (op == "/")
         {
-            checkDivByZero();
-            if (data.ulongLength() > 1)
+            if (data.ulongLength > 1)
                 return 0;
             return cast(T)(x / data.peekUlong(0));
         }
     }
     // const unary operations
-    BigInt opUnary(string op)() pure /*const*/ if (op=="+" || op=="-")
+    BigInt opUnary(string op)() pure nothrow const if (op=="+" || op=="-" || op=="~")
     {
        static if (op=="-")
        {
@@ -326,12 +351,16 @@ public:
             r.negate();
             return r;
         }
+        else static if (op=="~")
+        {
+            return -(this+1);
+        }
         else static if (op=="+")
            return this;
     }
 
     // non-const unary operations
-    BigInt opUnary(string op)() pure if (op=="++" || op=="--")
+    BigInt opUnary(string op)() pure nothrow if (op=="++" || op=="--")
     {
         static if (op=="++")
         {
@@ -360,13 +389,27 @@ public:
     }
 
     ///
-    T opCast(T:bool)() pure
+    T opCast(T:bool)() pure const
     {
         return !isZero();
     }
 
     ///
-    int opCmp(T)(T y) pure if (isIntegral!T)
+    T opCast(T)() pure const if (is(Unqual!T == BigInt)) {
+        return this;
+    }
+
+    // Hack to make BigInt's typeinfo.compare work properly.
+    // Note that this must appear before the other opCmp overloads, otherwise
+    // DMD won't find it.
+    int opCmp(ref const BigInt y) pure nothrow const
+    {
+        // Simply redirect to the "real" opCmp implementation.
+        return this.opCmp!BigInt(y);
+    }
+
+    ///
+    int opCmp(T)(T y) pure nothrow const if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
@@ -374,7 +417,7 @@ public:
         return sign? -cmp: cmp;
     }
     ///
-    int opCmp(T:BigInt)(T y) pure
+    int opCmp(T:BigInt)(const T y) pure nothrow const
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
@@ -383,33 +426,33 @@ public:
     }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
-    long toLong() pure const
+    long toLong() pure nothrow const
     {
         return (sign ? -1 : 1) *
-          (data.ulongLength() == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
+          (data.ulongLength == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
           ? cast(long)(data.peekUlong(0))
           : long.max);
     }
     /// Returns the value of this BigInt as an int,
     /// or +- int.max if outside the representable range.
-    int toInt() pure const
+    int toInt() pure nothrow const
     {
         return (sign ? -1 : 1) *
-          (data.uintLength() == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
+          (data.uintLength == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
           ? cast(int)(data.peekUint(0))
           : int.max);
     }
     /// Number of significant uints which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
-    @property size_t uintLength() pure const
+    @property size_t uintLength() pure nothrow const
     {
-        return data.uintLength();
+        return data.uintLength;
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
-    @property size_t ulongLength() pure const
+    @property size_t ulongLength() pure nothrow const
     {
-        return data.ulongLength();
+        return data.ulongLength;
     }
 
     /** Convert the BigInt to string, passing it to 'sink'.
@@ -445,9 +488,15 @@ public:
         if (!hex && !signChar && (f.width == 0 || minw < f.width))
         {
             if (f.flPlus)
-                signChar = '+', ++minw;
+            {
+                signChar = '+';
+                ++minw;
+            }
             else if (f.flSpace)
-                signChar = ' ', ++minw;
+            {
+                signChar = ' ';
+                ++minw;
+            }
         }
 
         auto maxw = minw < f.width ? f.width : minw;
@@ -484,8 +533,14 @@ private:
         return buff;
     }
 +/
+    // Implement toHash so that BigInt works properly as an AA key.
+    size_t toHash() const @trusted nothrow
+    {
+        return data.toHash() + sign;
+    }
+
 private:
-    void negate() pure nothrow @safe
+    void negate() @safe pure nothrow
     {
         if (!data.isZero())
             sign = !sign;
@@ -498,15 +553,16 @@ private:
     {
         return sign;
     }
+
     // Generate a runtime error if division by zero occurs
-    void checkDivByZero() pure const  @safe
+    void checkDivByZero() pure const nothrow @safe
     {
         if (isZero())
             throw new Error("BigInt division by zero");
     }
 }
 
-string toDecimalString(BigInt x) 
+string toDecimalString(const(BigInt) x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -514,7 +570,7 @@ string toDecimalString(BigInt x)
     return outbuff;
 }
 
-string toHex(BigInt x) 
+string toHex(const(BigInt) x)
 {
     string outbuff="";
     void sink(const(char)[] s) { outbuff ~= s; }
@@ -527,6 +583,7 @@ Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
 {
     static if (isSigned!T)
     {
+        import std.conv;
         /* This returns the correct result even when x = T.min
          * on two's complement machines because unsigned(T.min) = |T.min|
          * even though -T.min = T.min.
@@ -537,6 +594,46 @@ Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
     {
         return x;
     }
+}
+
+nothrow pure
+unittest {
+    BigInt a, b;
+    a = 1;
+    b = 2;
+    auto c = a + b;
+}
+
+nothrow pure
+unittest {
+    long a;
+    BigInt b;
+    auto c = a + b;
+    auto d = b + a;
+}
+
+nothrow pure
+unittest {
+    BigInt x = 1, y = 2;
+    assert(x <  y);
+    assert(x <= y);
+    assert(y >= x);
+    assert(y >  x);
+    assert(x != y);
+
+    long r1 = x.toLong;
+    assert(r1 == 1);
+
+    BigInt r2 = 10 % x;
+    assert(r2 == 0);
+
+    BigInt r3 = 10 / y;
+    assert(r3 == 5);
+
+    BigInt[] arr = [BigInt(1)];
+    auto incr = arr[0]++;
+    assert(arr == [BigInt(2)]);
+    assert(incr == BigInt(1));
 }
 
 unittest {
@@ -775,6 +872,11 @@ unittest
     auto r = abs(BigInt(-1000)); // 6486
     assert(r == 1000);
 
+    auto r2 = abs(const(BigInt)(-500)); // 11188
+    assert(r2 == 500);
+    auto r3 = abs(immutable(BigInt)(-733)); // 11188
+    assert(r3 == 733);
+
     // opCast!bool
     BigInt one = 1, zero;
     assert(one && !zero);
@@ -790,4 +892,142 @@ unittest // 6850
     }
 
     assert(pureTest() == 1337);
+}
+
+unittest // 8435 & 10118
+{
+    auto i = BigInt(100);
+    auto j = BigInt(100);
+
+    // Two separate BigInt instances representing same value should have same
+    // hash.
+    assert(typeid(i).getHash(&i) == typeid(j).getHash(&j));
+    assert(typeid(i).compare(&i, &j) == 0);
+
+    // BigInt AA keys should behave consistently.
+    int[BigInt] aa;
+    aa[BigInt(123)] = 123;
+    assert(BigInt(123) in aa);
+
+    aa[BigInt(123)] = 321;
+    assert(aa[BigInt(123)] == 321);
+
+    auto keys = aa.byKey;
+    assert(keys.front == BigInt(123));
+    keys.popFront();
+    assert(keys.empty);
+}
+
+unittest // 11148
+{
+    void foo(BigInt) {}
+    const BigInt cbi = 3;
+    immutable BigInt ibi = 3;
+
+    assert(__traits(compiles, foo(cbi)));
+    assert(__traits(compiles, foo(ibi)));
+
+    import std.typetuple : TypeTuple;
+    import std.conv : to;
+
+    foreach (T1; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
+    {
+        foreach (T2; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
+        {
+            T1 t1 = 2;
+            T2 t2 = t1;
+
+            T2 t2_1 = to!T2(t1);
+            T2 t2_2 = cast(T2)t1;
+
+            assert(t2 == t1);
+            assert(t2 == 2);
+
+            assert(t2_1 == t1);
+            assert(t2_1 == 2);
+
+            assert(t2_2 == t1);
+            assert(t2_2 == 2);
+        }
+    }
+
+    BigInt n = 2;
+    n *= 2;
+}
+
+unittest // 8167
+{
+    BigInt a = BigInt(3);
+    BigInt b = BigInt(a);
+}
+
+unittest // 9061
+{
+    long l1 = 0x12345678_90ABCDEF;
+    long l2 = 0xFEDCBA09_87654321;
+    long l3 = l1 | l2;
+    long l4 = l1 & l2;
+    long l5 = l1 ^ l2;
+
+    BigInt b1 = l1;
+    BigInt b2 = l2;
+    BigInt b3 = b1 | b2;
+    BigInt b4 = b1 & b2;
+    BigInt b5 = b1 ^ b2;
+
+    assert(l3 == b3);
+    assert(l4 == b4);
+    assert(l5 == b5);
+}
+
+unittest // 11600
+{
+    import std.conv;
+    import std.exception : assertThrown;
+
+    // Original bug report
+    assertThrown!ConvException(to!BigInt("avadakedavra"));
+
+    // Digit string lookalikes that are actually invalid
+    assertThrown!ConvException(to!BigInt("0123hellothere"));
+    assertThrown!ConvException(to!BigInt("-hihomarylowe"));
+    assertThrown!ConvException(to!BigInt("__reallynow__"));
+    assertThrown!ConvException(to!BigInt("-123four"));
+}
+
+unittest // 11583
+{
+    BigInt x = 0;
+    assert((x > 0) == false);
+}
+
+unittest // 13391
+{
+    BigInt x1 = "123456789";
+    BigInt x2 = "123456789123456789";
+    BigInt x3 = "123456789123456789123456789";
+
+    import std.typetuple : TypeTuple;
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assert((x1 * T.max) / T.max == x1);
+        assert((x2 * T.max) / T.max == x2);
+        assert((x3 * T.max) / T.max == x3);
+    }
+
+    assert(x1 / -123456789 == -1);
+    assert(x1 / 123456789U == 1);
+    assert(x1 / -123456789L == -1);
+    assert(x1 / 123456789UL == 1);
+    assert(x2 / -123456789123456789L == -1);
+    assert(x2 / 123456789123456789UL == 1);
+
+    assert(x1 / uint.max == 0);
+    assert(x1 / ulong.max == 0);
+    assert(x2 / ulong.max == 0);
+
+    x1 /= 123456789UL;
+    assert(x1 == 1);
+    x2 /= 123456789123456789UL;
+    assert(x2 == 1);
 }

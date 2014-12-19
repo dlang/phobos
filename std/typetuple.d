@@ -21,7 +21,7 @@
  *  WIKI = Phobos/StdTypeTuple
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
@@ -34,14 +34,12 @@
  */
 module std.typetuple;
 
-import std.traits;
-
 /**
  * Creates a typetuple out of a sequence of zero or more types.
  */
 template TypeTuple(TList...)
 {
-    alias TList TypeTuple;
+    alias TypeTuple = TList;
 }
 
 ///
@@ -99,13 +97,13 @@ unittest
 private template genericIndexOf(args...)
     if (args.length >= 1)
 {
-    alias Alias!(args[0]) e;
-    alias   args[1 .. $]  tuple;
+    alias e     = Alias!(args[0]);
+    alias tuple = args[1 .. $];
 
     static if (tuple.length)
     {
-        alias Alias!(tuple[0]) head;
-        alias   tuple[1 .. $]  tail;
+        alias head = Alias!(tuple[0]);
+        alias tail = tuple[1 .. $];
 
         static if (isSame!(e, head))
         {
@@ -146,7 +144,7 @@ unittest
 }
 
 /// Kept for backwards compatibility
-alias staticIndexOf IndexOf;
+alias IndexOf = staticIndexOf;
 
 /**
  * Returns a typetuple created from TList with the first occurrence,
@@ -154,13 +152,13 @@ alias staticIndexOf IndexOf;
  */
 template Erase(T, TList...)
 {
-    alias GenericErase!(T, TList).result Erase;
+    alias Erase = GenericErase!(T, TList).result;
 }
 
 /// Ditto
 template Erase(alias T, TList...)
 {
-    alias GenericErase!(T, TList).result Erase;
+    alias Erase = GenericErase!(T, TList).result;
 }
 
 ///
@@ -175,22 +173,22 @@ unittest
 private template GenericErase(args...)
     if (args.length >= 1)
 {
-    alias Alias!(args[0]) e;
-    alias   args[1 .. $]  tuple;
+    alias e     = Alias!(args[0]);
+    alias tuple = args[1 .. $] ;
 
     static if (tuple.length)
     {
-        alias Alias!(tuple[0]) head;
-        alias   tuple[1 .. $]  tail;
+        alias head = Alias!(tuple[0]);
+        alias tail = tuple[1 .. $];
 
         static if (isSame!(e, head))
-            alias tail result;
+            alias result = tail;
         else
-            alias TypeTuple!(head, GenericErase!(e, tail).result) result;
+            alias result = TypeTuple!(head, GenericErase!(e, tail).result);
     }
     else
     {
-        alias TypeTuple!() result;
+        alias result = TypeTuple!();
     }
 }
 
@@ -212,13 +210,13 @@ unittest
  */
 template EraseAll(T, TList...)
 {
-    alias GenericEraseAll!(T, TList).result EraseAll;
+    alias EraseAll = GenericEraseAll!(T, TList).result;
 }
 
 /// Ditto
 template EraseAll(alias T, TList...)
 {
-    alias GenericEraseAll!(T, TList).result EraseAll;
+    alias EraseAll = GenericEraseAll!(T, TList).result;
 }
 
 ///
@@ -234,23 +232,23 @@ unittest
 private template GenericEraseAll(args...)
     if (args.length >= 1)
 {
-    alias Alias!(args[0]) e;
-    alias   args[1 .. $]  tuple;
+    alias e     = Alias!(args[0]);
+    alias tuple = args[1 .. $];
 
     static if (tuple.length)
     {
-        alias Alias!(tuple[0]) head;
-        alias   tuple[1 .. $]  tail;
-        alias GenericEraseAll!(e, tail).result next;
+        alias head = Alias!(tuple[0]);
+        alias tail = tuple[1 .. $];
+        alias next = GenericEraseAll!(e, tail).result;
 
         static if (isSame!(e, head))
-            alias next result;
+            alias result = next;
         else
-            alias TypeTuple!(head, next) result;
+            alias result = TypeTuple!(head, next);
     }
     else
     {
-        alias TypeTuple!() result;
+        alias result = TypeTuple!();
     }
 }
 
@@ -273,9 +271,10 @@ unittest
 template NoDuplicates(TList...)
 {
     static if (TList.length == 0)
-    alias TList NoDuplicates;
+        alias NoDuplicates = TList;
     else
-    alias TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $]))) NoDuplicates;
+        alias NoDuplicates =
+            TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
 }
 
 ///
@@ -302,25 +301,25 @@ unittest
  */
 template Replace(T, U, TList...)
 {
-    alias GenericReplace!(T, U, TList).result Replace;
+    alias Replace = GenericReplace!(T, U, TList).result;
 }
 
 /// Ditto
 template Replace(alias T, U, TList...)
 {
-    alias GenericReplace!(T, U, TList).result Replace;
+    alias Replace = GenericReplace!(T, U, TList).result;
 }
 
 /// Ditto
 template Replace(T, alias U, TList...)
 {
-    alias GenericReplace!(T, U, TList).result Replace;
+    alias Replace = GenericReplace!(T, U, TList).result;
 }
 
 /// Ditto
 template Replace(alias T, alias U, TList...)
 {
-    alias GenericReplace!(T, U, TList).result Replace;
+    alias Replace = GenericReplace!(T, U, TList).result;
 }
 
 ///
@@ -336,24 +335,24 @@ unittest
 private template GenericReplace(args...)
     if (args.length >= 2)
 {
-    alias Alias!(args[0]) from;
-    alias Alias!(args[1]) to;
-    alias   args[2 .. $]  tuple;
+    alias from  = Alias!(args[0]);
+    alias to    = Alias!(args[1]);
+    alias tuple = args[2 .. $];
 
     static if (tuple.length)
     {
-        alias Alias!(tuple[0]) head;
-        alias    tuple[1 .. $] tail;
+        alias head = Alias!(tuple[0]);
+        alias tail = tuple[1 .. $];
 
         static if (isSame!(from, head))
-            alias TypeTuple!(to, tail) result;
+            alias result = TypeTuple!(to, tail);
         else
-            alias TypeTuple!(head,
-                GenericReplace!(from, to, tail).result) result;
+            alias result = TypeTuple!(head,
+                GenericReplace!(from, to, tail).result);
     }
     else
     {
-        alias TypeTuple!() result;
+        alias result = TypeTuple!();
     }
  }
 
@@ -382,25 +381,25 @@ unittest
  */
 template ReplaceAll(T, U, TList...)
 {
-    alias GenericReplaceAll!(T, U, TList).result ReplaceAll;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
 }
 
 /// Ditto
 template ReplaceAll(alias T, U, TList...)
 {
-    alias GenericReplaceAll!(T, U, TList).result ReplaceAll;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
 }
 
 /// Ditto
 template ReplaceAll(T, alias U, TList...)
 {
-    alias GenericReplaceAll!(T, U, TList).result ReplaceAll;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
 }
 
 /// Ditto
 template ReplaceAll(alias T, alias U, TList...)
 {
-    alias GenericReplaceAll!(T, U, TList).result ReplaceAll;
+    alias ReplaceAll = GenericReplaceAll!(T, U, TList).result;
 }
 
 ///
@@ -416,24 +415,24 @@ unittest
 private template GenericReplaceAll(args...)
     if (args.length >= 2)
 {
-    alias Alias!(args[0]) from;
-    alias Alias!(args[1]) to;
-    alias   args[2 .. $]  tuple;
+    alias from  = Alias!(args[0]);
+    alias to    = Alias!(args[1]);
+    alias tuple = args[2 .. $];
 
     static if (tuple.length)
     {
-        alias Alias!(tuple[0]) head;
-        alias    tuple[1 .. $] tail;
-        alias GenericReplaceAll!(from, to, tail).result next;
+        alias head = Alias!(tuple[0]);
+        alias tail = tuple[1 .. $];
+        alias next = GenericReplaceAll!(from, to, tail).result;
 
         static if (isSame!(from, head))
-            alias TypeTuple!(to, next) result;
+            alias result = TypeTuple!(to, next);
         else
-            alias TypeTuple!(head, next) result;
+            alias result = TypeTuple!(head, next);
     }
     else
     {
-        alias TypeTuple!() result;
+        alias result = TypeTuple!();
     }
 }
 
@@ -490,11 +489,11 @@ unittest
 template MostDerived(T, TList...)
 {
     static if (TList.length == 0)
-    alias T MostDerived;
+        alias MostDerived = T;
     else static if (is(TList[0] : T))
-    alias MostDerived!(TList[0], TList[1 .. $]) MostDerived;
+        alias MostDerived = MostDerived!(TList[0], TList[1 .. $]);
     else
-    alias MostDerived!(T, TList[1 .. $]) MostDerived;
+        alias MostDerived = MostDerived!(T, TList[1 .. $]);
 }
 
 ///
@@ -516,12 +515,13 @@ unittest
 template DerivedToFront(TList...)
 {
     static if (TList.length == 0)
-    alias TList DerivedToFront;
+        alias DerivedToFront = TList;
     else
-    alias TypeTuple!(MostDerived!(TList[0], TList[1 .. $]),
-                    DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
-                            TList[0],
-                            TList[1 .. $]))) DerivedToFront;
+        alias DerivedToFront =
+            TypeTuple!(MostDerived!(TList[0], TList[1 .. $]),
+                       DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
+                                TList[0],
+                                TList[1 .. $])));
 }
 
 ///
@@ -561,21 +561,24 @@ template staticMap(alias F, T...)
 ///
 unittest
 {
+    import std.traits : Unqual;
     alias TL = staticMap!(Unqual, int, const int, immutable int);
     static assert(is(TL == TypeTuple!(int, int, int)));
 }
 
 unittest
 {
+    import std.traits : Unqual;
+
     // empty
-    alias staticMap!(Unqual) Empty;
+    alias Empty = staticMap!(Unqual);
     static assert(Empty.length == 0);
 
     // single
-    alias staticMap!(Unqual, const int) Single;
+    alias Single = staticMap!(Unqual, const int);
     static assert(is(Single == TypeTuple!int));
 
-    alias staticMap!(Unqual, int, const int, immutable int) T;
+    alias T = staticMap!(Unqual, int, const int, immutable int);
     static assert(is(T == TypeTuple!(int, int, int)));
 }
 
@@ -607,12 +610,14 @@ template allSatisfy(alias F, T...)
 ///
 unittest
 {
+    import std.traits : isIntegral;
+
     static assert(!allSatisfy!(isIntegral, int, double));
     static assert( allSatisfy!(isIntegral, int, long));
 }
 
 /**
-Tests whether all given items satisfy a template predicate, i.e. evaluates to
+Tests whether any given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
 Evaluation is $(I not) short-circuited if a true result is encountered; the
@@ -639,6 +644,8 @@ template anySatisfy(alias F, T...)
 ///
 unittest
 {
+    import std.traits : isIntegral;
+
     static assert(!anySatisfy!(isIntegral, string, double));
     static assert( anySatisfy!(isIntegral, int, double));
 }
@@ -673,6 +680,8 @@ template Filter(alias pred, TList...)
 ///
 unittest
 {
+    import std.traits : isNarrowString, isUnsigned;
+
     alias Types1 = TypeTuple!(string, wstring, dchar[], char[], dstring, int);
     alias TL1 = Filter!(isNarrowString, Types1);
     static assert(is(TL1 == TypeTuple!(string, wstring, char[])));
@@ -684,6 +693,8 @@ unittest
 
 unittest
 {
+    import std.traits : isPointer;
+
     static assert(is(Filter!(isPointer, int, void*, char[], int*) == TypeTuple!(void*, int*)));
     static assert(is(Filter!isPointer == TypeTuple!()));
 }
@@ -714,16 +725,13 @@ private version (unittest)
  */
 template templateNot(alias pred)
 {
-    template templateNot(T...)
-    {
-        enum templateNot = !pred!T;
-    }
+    enum templateNot(T...) = !pred!T;
 }
 
 ///
 unittest
 {
-    import std.traits;
+    import std.traits : isPointer;
 
     alias isNoPointer = templateNot!isPointer;
     static assert(!isNoPointer!(int*));
@@ -760,7 +768,7 @@ template templateAnd(Preds...)
         else
         {
             static if (Instantiate!(Preds[0], T))
-                alias Instantiate!(.templateAnd!(Preds[1 .. $]), T) templateAnd;
+                alias templateAnd = Instantiate!(.templateAnd!(Preds[1 .. $]), T);
             else
                 enum templateAnd = false;
         }
@@ -770,6 +778,8 @@ template templateAnd(Preds...)
 ///
 unittest
 {
+    import std.traits : isNumeric, isUnsigned;
+
     alias storesNegativeNumbers = templateAnd!(isNumeric, templateNot!isUnsigned);
     static assert(storesNegativeNumbers!int);
     static assert(!storesNegativeNumbers!string && !storesNegativeNumbers!uint);
@@ -818,7 +828,7 @@ template templateOr(Preds...)
             static if (Instantiate!(Preds[0], T))
                 enum templateOr = true;
             else
-                alias Instantiate!(.templateOr!(Preds[1 .. $]), T) templateOr;
+                alias templateOr = Instantiate!(.templateOr!(Preds[1 .. $]), T);
         }
     }
 }
@@ -826,6 +836,8 @@ template templateOr(Preds...)
 ///
 unittest
 {
+    import std.traits : isPointer, isUnsigned;
+
     alias isPtrOrUnsigned = templateOr!(isPointer, isUnsigned);
     static assert( isPtrOrUnsigned!uint &&  isPtrOrUnsigned!(short*));
     static assert(!isPtrOrUnsigned!int  && !isPtrOrUnsigned!(string));
@@ -867,8 +879,8 @@ package:
 // symbols and literal values
 template Alias(alias a)
 {
-    static if (__traits(compiles, { alias a x; }))
-        alias a Alias;
+    static if (__traits(compiles, { alias x = a; }))
+        alias Alias = a;
     else static if (__traits(compiles, { enum x = a; }))
         enum Alias = a;
     else
@@ -877,16 +889,16 @@ template Alias(alias a)
 // types and tuples
 template Alias(a...)
 {
-    alias a Alias;
+    alias Alias = a;
 }
 
 unittest
 {
     enum abc = 1;
-    static assert(__traits(compiles, { alias Alias!(123) a; }));
-    static assert(__traits(compiles, { alias Alias!(abc) a; }));
-    static assert(__traits(compiles, { alias Alias!(int) a; }));
-    static assert(__traits(compiles, { alias Alias!(1,abc,int) a; }));
+    static assert(__traits(compiles, { alias a = Alias!(123); }));
+    static assert(__traits(compiles, { alias a = Alias!(abc); }));
+    static assert(__traits(compiles, { alias a = Alias!(int); }));
+    static assert(__traits(compiles, { alias a = Alias!(1,abc,int); }));
 }
 
 
@@ -980,7 +992,7 @@ unittest
  */
 private template Pack(T...)
 {
-    alias T tuple;
+    alias tuple = T;
 
     // For convenience
     template equals(U...)
@@ -1015,7 +1027,4 @@ unittest
  */
 // TODO: Consider publicly exposing this, maybe even if only for better
 // understandability of error messages.
-template Instantiate(alias Template, Params...)
-{
-    alias Template!Params Instantiate;
-}
+alias Instantiate(alias Template, Params...) = Template!Params;

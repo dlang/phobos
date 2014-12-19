@@ -38,13 +38,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w -d -property
-#DFLAGS=-unittest -g -d
-#DFLAGS=-unittest -cov -g -d
+DFLAGS=-O -release -w
+#DFLAGS=-unittest -g
+#DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w -d -property
+UDFLAGS=-O -w
 
 ## C compiler
 
@@ -60,8 +60,8 @@ DMD=dmd
 
 ## Location of where to write the html documentation files
 
-DOCSRC = .
-STDDOC = $(DOCSRC)/std.ddoc
+DOCSRC = ../dlang.org
+STDDOC = $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
@@ -108,27 +108,30 @@ SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
 	std\string.d std\format.d \
 	std\file.d
 
-SRC_STD_2_HEAVY= std\range.d
-
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\metastrings.d std\bitmanip.d std\typecons.d \
-    std\uni.d std\base64.d std\md5.d std\ascii.d \
-    std\demangle.d std\uri.d std\mmfile.d std\getopt.d
+	std\bitmanip.d std\typecons.d \
+	std\uni.d std\base64.d std\ascii.d \
+	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
 SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
-    std\encoding.d std\xml.d \
-    std\random.d \
-    std\exception.d \
-    std\compiler.d \
-    std\system.d std\concurrency.d
+	std\encoding.d std\xml.d \
+	std\random.d \
+	std\exception.d \
+	std\compiler.d \
+	std\system.d std\concurrency.d
 
 SRC_STD_3b= std\datetime.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
-    std\digest\ripemd.d std\digest\digest.d
+	std\digest\ripemd.d std\digest\digest.d
+
+SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
+	std\container\dlist.d std\container\rbtree.d std\container\slist.d \
+	std\container\util.d std\container\package.d
+
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_5_HEAVY= std\algorithm.d
@@ -136,40 +139,46 @@ SRC_STD_5_HEAVY= std\algorithm.d
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
-	std\container.d std\conv.d \
-	std\zip.d std\cstream.d
+	std\conv.d std\zip.d std\cstream.d \
+	$(SRC_STD_CONTAINER)
 
-SRC_STD_REST= std\regex.d \
-	std\stdint.d \
+SRC_STD_REST= std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
+SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
 	$(SRC_STD_5_HEAVY) $(SRC_STD_6) $(SRC_STD_REST)
 
-SRC=	unittest.d crc32.d index.d
+SRC=	unittest.d index.d
 
-SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
+SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
-	std\outbuffer.d std\md5.d std\base64.d \
-	std\mmfile.d \
+	std\outbuffer.d std\base64.d \
+	std\metastrings.d std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\typetuple.d std\traits.d \
-	std\metastrings.d std\getopt.d \
+	std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d \
+	std\stdiobase.d std\parallelism.d \
 	std\exception.d std\ascii.d
+
+SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
+	std\regex\internal\tests.d std\regex\internal\backtracking.d \
+	std\regex\internal\thompson.d std\regex\internal\kickstart.d \
+	std\regex\internal\generator.d
+
+SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
+	std\range\interfaces.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -191,7 +200,10 @@ SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
-SRC_STD_INTERNAL= std\internal\processinit.d std\internal\uni.d std\internal\uni_tab.d
+SRC_STD_INTERNAL= std\internal\cstring.d std\internal\processinit.d \
+	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
+	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d \
+	std\internal\test\dummyrange.d
 
 SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 
@@ -205,7 +217,8 @@ SRC_ETC=
 
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
-SRC_TO_COMPILE_NOT_STD= crc32.d \
+SRC_TO_COMPILE_NOT_STD= \
+	$(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
@@ -218,6 +231,7 @@ SRC_TO_COMPILE_NOT_STD= crc32.d \
 	$(SRC_ETC_C)
 
 SRC_TO_COMPILE= $(SRC_STD_ALL) \
+	$(SRC_STD_RANGE) \
 	$(SRC_TO_COMPILE_NOT_STD)
 
 SRC_ZLIB= \
@@ -285,7 +299,12 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
-	$(DOC)\std_container.html \
+	$(DOC)\std_container_array.html \
+	$(DOC)\std_container_binaryheap.html \
+	$(DOC)\std_container_dlist.html \
+	$(DOC)\std_container_rbtree.html \
+	$(DOC)\std_container_slist.html \
+	$(DOC)\std_container_package.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
@@ -306,8 +325,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
-	$(DOC)\std_md5.html \
-	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
 	$(DOC)\std_outbuffer.html \
@@ -315,7 +332,9 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
-	$(DOC)\std_range.html \
+	$(DOC)\std_range_package.html \
+	$(DOC)\std_range_primitives.html \
+	$(DOC)\std_range_interfaces.html \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
@@ -355,7 +374,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
-	$(DOC)\phobos.html
+	$(DOC)\index.html
 
 $(LIB) : $(SRC_TO_COMPILE) \
 	$(ZLIB) $(DRUNTIMELIB) win32.mak win64.mak
@@ -368,7 +387,7 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
@@ -398,7 +417,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=95 -unittest -main -run std\string.d
 	$(DMD) -cov=71 -unittest -main -run std\format.d
 	$(DMD) -cov=83 -unittest -main -run std\file.d
-	$(DMD) -cov=86 -unittest -main -run std\range.d
+	$(DMD) -cov=86 -unittest -main -run std\range\package.d
 	$(DMD) -cov=95 -unittest -main -run std\array.d
 	$(DMD) -cov=100 -unittest -main -run std\functional.d
 	$(DMD) -cov=96 -unittest -main -run std\path.d
@@ -409,12 +428,10 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=95 -unittest -main -run std\complex.d
 	$(DMD) -cov=70 -unittest -main -run std\numeric.d
 	$(DMD) -cov=94 -unittest -main -run std\bigint.d
-	$(DMD) -cov=100 -unittest -main -run std\metastrings.d
 	$(DMD) -cov=95 -unittest -main -run std\bitmanip.d
 	$(DMD) -cov=82 -unittest -main -run std\typecons.d
 	$(DMD) -cov=44 -unittest -main -run std\uni.d
 	$(DMD) -cov=91 -unittest -main -run std\base64.d
-	$(DMD) -cov=99 -unittest -main -run std\md5.d
 	$(DMD) -cov=100 -unittest -main -run std\ascii.d
 	$(DMD) -cov=0  -unittest -main -run std\demangle.d
 	$(DMD) -cov=57 -unittest -main -run std\uri.d
@@ -426,7 +443,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=62 -unittest -main -run std\encoding.d
 	$(DMD) -cov=61 -unittest -main -run std\xml.d
 	$(DMD) -cov=79 -unittest -main -run std\random.d
-	$(DMD) -cov=92 -unittest -main -d -run std\exception.d
+	$(DMD) -cov=92 -unittest -main -run std\exception.d
 	$(DMD) -cov=73 -unittest -main -run std\concurrency.d
 	$(DMD) -cov=95 -unittest -main -run std\datetime.d
 	$(DMD) -cov=96 -unittest -main -run std\uuid.d
@@ -442,21 +459,24 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=54 -unittest -main -run std\stream.d
 	$(DMD) -cov=53 -unittest -main -run std\socket.d
 	$(DMD) -cov=0  -unittest -main -run std\socketstream.d
-	$(DMD) -cov=88 -unittest -main -run std\container.d
-	$(DMD) -cov=90 -unittest -main -d -run std\conv.d
+	$(DMD) -cov=95 -unittest -main -run std\container\array.d
+	$(DMD) -cov=68 -unittest -main -run std\container\binaryheap.d
+	$(DMD) -cov=91 -unittest -main -run std\container\dlist.d
+	$(DMD) -cov=93 -unittest -main -run std\container\rbtree.d
+	$(DMD) -cov=92 -unittest -main -run std\container\slist.d
+	$(DMD) -cov=100 -unittest -main -run std\container\util.d
+	$(DMD) -cov=100 -unittest -main -run std\container\package.d
+	$(DMD) -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -cov=0  -unittest -main -run std\zip.d
 	$(DMD) -cov=92 -unittest -main -run std\cstream.d
-	$(DMD) -cov=77 -unittest -main -run std\regex.d
+	$(DMD) -cov=77 -unittest -main -run std\regex\tests.d
 	$(DMD) -cov=92 -unittest -main -run std\json.d
 	$(DMD) -cov=87 -unittest -main -run std\parallelism.d
 	$(DMD) -cov=50 -unittest -main -run std\mathspecial.d
 	$(DMD) -cov=71 -unittest -main -run std\process.d
-	$(DMD) -cov=0  -unittest -main -run crc32.d 
 	$(DMD) -cov=70 -unittest -main -run std\net\isemail.d
 	$(DMD) -cov=2  -unittest -main -run std\net\curl.d
 	$(DMD) -cov=60 -unittest -main -run std\windows\registry.d
-	$(DMD) -cov=55 -unittest -main -run std\internal\uni.d
-	$(DMD) -cov=0  -unittest -main -run std\internal\uni_tab.d
 	$(DMD) -cov=0  -unittest -main -run std\internal\digest\sha_SSSE3.d
 	$(DMD) -cov=50 -unittest -main -run std\internal\math\biguintcore.d
 	$(DMD) -cov=75 -unittest -main -run std\internal\math\biguintnoasm.d
@@ -482,8 +502,8 @@ DDOCFLAGS=$(DFLAGS) -version=StdDdoc
 $(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object_.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
 
-$(DOC)\phobos.html : $(STDDOC) index.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\phobos.html $(STDDOC) index.d
+$(DOC)\index.html : $(STDDOC) index.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\index.html $(STDDOC) index.d
 
 $(DOC)\core_atomic.html : $(STDDOC) $(DRUNTIME)\src\core\atomic.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_atomic.html $(STDDOC) $(DRUNTIME)\src\core\atomic.d -I$(DRUNTIME)\src\
@@ -563,8 +583,35 @@ $(DOC)\std_complex.html : $(STDDOC) std\complex.d
 $(DOC)\std_conv.html : $(STDDOC) std\conv.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_conv.html $(STDDOC) std\conv.d
 
-$(DOC)\std_container.html : $(STDDOC) std\container.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container.html $(STDDOC) std\container.d
+$(DOC)\std_container_array.html : $(STDDOC) std\container\array.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_array.html $(STDDOC) std\container\array.d
+
+$(DOC)\std_container_binaryheap.html : $(STDDOC) std\container\binaryheap.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_binaryheap.html $(STDDOC) std\container\binaryheap.d
+
+$(DOC)\std_container_dlist.html : $(STDDOC) std\container\dlist.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_dlist.html $(STDDOC) std\container\dlist.d
+
+$(DOC)\std_container_rbtree.html : $(STDDOC) std\container\rbtree.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_rbtree.html $(STDDOC) std\container\rbtree.d
+
+$(DOC)\std_container_slist.html : $(STDDOC) std\container\slist.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_slist.html $(STDDOC) std\container\slist.d
+
+$(DOC)\std_container_util.html : $(STDDOC) std\container\util.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_util.html $(STDDOC) std\container\util.d
+
+$(DOC)\std_container_package.html : $(STDDOC) std\container\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_package.html $(STDDOC) std\container\package.d
+
+$(DOC)\std_range_package.html : $(STDDOC) std\range\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_package.html $(STDDOC) std\range\package.d
+
+$(DOC)\std_range_primitives.html : $(STDDOC) std\range\primitives.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_primitives.html $(STDDOC) std\range\primitives.d
+
+$(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_interfaces.html $(STDDOC) std\range\interfaces.d
 
 $(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
@@ -605,12 +652,6 @@ $(DOC)\std_math.html : $(STDDOC) std\math.d
 $(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mathspecial.html $(STDDOC) std\mathspecial.d
 
-$(DOC)\std_md5.html : $(STDDOC) std\md5.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_md5.html $(STDDOC) std\md5.d
-
-$(DOC)\std_metastrings.html : $(STDDOC) std\metastrings.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_metastrings.html $(STDDOC) std\metastrings.d
-
 $(DOC)\std_mmfile.html : $(STDDOC) std\mmfile.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mmfile.html $(STDDOC) std\mmfile.d
 
@@ -632,11 +673,11 @@ $(DOC)\std_process.html : $(STDDOC) std\process.d
 $(DOC)\std_random.html : $(STDDOC) std\random.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
 
-$(DOC)\std_range.html : $(STDDOC) std\range.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range.d
+$(DOC)\std_range.html : $(STDDOC) std\range\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range\package.d
 
-$(DOC)\std_regex.html : $(STDDOC) std\regex.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex.d
+$(DOC)\std_regex.html : $(STDDOC) std\regex\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex\package.d
 
 $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d
@@ -654,7 +695,7 @@ $(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
 
 $(DOC)\std_stream.html : $(STDDOC) std\stream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html -d $(STDDOC) std\stream.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html $(STDDOC) std\stream.d
 
 $(DOC)\std_string.html : $(STDDOC) std\string.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_string.html $(STDDOC) std\string.d
@@ -663,7 +704,7 @@ $(DOC)\std_system.html : $(STDDOC) std\system.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_system.html $(STDDOC) std\system.d
 
 $(DOC)\std_thread.html : $(STDDOC) $(DRUNTIME)\src\core\thread.d
-	$(DMD) -c -o- -d $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) -I$(DRUNTIME)\src $(DRUNTIME)\src\core\thread.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) -I$(DRUNTIME)\src $(DRUNTIME)\src\core\thread.d
 
 $(DOC)\std_traits.html : $(STDDOC) std\traits.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_traits.html $(STDDOC) std\traits.d
@@ -776,9 +817,9 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
-	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) \
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS)
+	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -797,6 +838,9 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
 	zip32 -u phobos $(SRC_STD_DIGEST)
+	zip32 -u phobos $(SRC_STD_CONTAINER)
+	zip32 -u phobos $(SRC_STD_REGEX)
+	zip32 -u phobos $(SRC_STD_RANGE)
 
 phobos.zip : zip
 
@@ -815,5 +859,9 @@ cleanhtml:
 install: phobos.zip
 	$(CP) phobos.lib phobos64.lib $(DIR)\windows\lib
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DRUNTIME)\lib\gcstub64.obj $(DIR)\windows\lib
+	+rd/s/q $(DIR)\html\d\phobos
+	+md $(DIR)\html\d\phobos
+	$(CP) $(DOCS) $(DIR)\html\d\phobos
+	$(CP) $(DOC)\index.html $(DIR)\html\d\phobos\index.html
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos

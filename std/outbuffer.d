@@ -5,7 +5,7 @@
  *      WIKI = Phobos/StdOutbuffer
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
  */
@@ -19,11 +19,11 @@ module std.outbuffer;
 private
 {
     import core.memory;
+    import core.stdc.stdarg;
+    import core.stdc.stdio;
+    import core.stdc.stdlib;
     import std.algorithm;
     import std.string;
-    import std.c.stdio;
-    import std.c.stdlib;
-    import std.c.stdarg;
 }
 
 /*********************************************
@@ -33,11 +33,12 @@ private
  * OutBuffer's byte order is the format native to the computer.
  * To control the byte order (endianness), use a class derived
  * from OutBuffer.
+ * OutBuffer's internal buffer is allocated with the GC.
  */
 
 class OutBuffer
 {
-    ubyte data[];
+    ubyte[] data;
     size_t offset;
 
     invariant()
@@ -84,6 +85,11 @@ class OutBuffer
                 GC.clrAttr(data.ptr, GC.BlkAttr.NO_SCAN);
             }
         }
+
+    /**********************************
+     * put enables OutBuffer to be used as an OutputRange.
+     */
+    alias write put;
 
     /*************************************
      * Append data to the internal buffer.
@@ -258,6 +264,8 @@ class OutBuffer
         char[128] buffer;
         int count;
 
+        // Can't use `tempCString()` here as it will result in compilation error:
+        // "cannot mix core.std.stdlib.alloca() and exception handling".
         auto f = toStringz(format);
         auto p = buffer.ptr;
         auto psize = buffer.length;
@@ -310,10 +318,7 @@ class OutBuffer
     {
         version (Win64)
         {
-            va_list ap;
-            ap = cast(va_list)&format;
-            ap += format.sizeof;
-            vprintf(format, ap);
+            vprintf(format, _argptr);
         }
         else version (X86_64)
         {
@@ -371,4 +376,27 @@ unittest
     //auto s = buf.toString();
     //printf("buf = '%.*s'\n", s.length, s.ptr);
     assert(cmp(buf.toString(), "hello world 6") == 0);
+}
+
+unittest
+{
+    import std.range;
+    static assert(isOutputRange!(OutBuffer, char));
+
+    import std.algorithm;
+  {
+    OutBuffer buf = new OutBuffer();
+    "hello".copy(buf);
+    assert(buf.toBytes() == "hello");
+  }
+  {
+    OutBuffer buf = new OutBuffer();
+    "hello"w.copy(buf);
+    assert(buf.toBytes() == "h\x00e\x00l\x00l\x00o\x00");
+  }
+  {
+    OutBuffer buf = new OutBuffer();
+    "hello"d.copy(buf);
+    assert(buf.toBytes() == "h\x00\x00\x00e\x00\x00\x00l\x00\x00\x00l\x00\x00\x00o\x00\x00\x00");
+  }
 }

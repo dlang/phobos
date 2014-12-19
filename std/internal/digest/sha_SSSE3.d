@@ -15,8 +15,6 @@
  */
 module std.internal.digest.sha_SSSE3;
 
-import std.conv;
-
 version(D_PIC)
 {
     // Do not use (Bug9378).
@@ -146,7 +144,7 @@ version(USE_SSSE3)
     {
         assert(i < 100);
         string s;
-	if (i >= 10)
+        if (i >= 10)
             s ~= cast(char)('0' + (i / 10) % 10);
         return s ~ cast(char)('0' + i % 10);
     }
@@ -201,12 +199,12 @@ version(USE_SSSE3)
      */
     private nothrow pure string wrap(string[] insn)
     {
-        string s = "asm {";
+        string s = "asm pure nothrow @nogc {";
         foreach (t; insn) s ~= (t ~ "; \n");
         s ~= "}";
         return s;
         // Is not CTFE:
-        // return "asm { " ~ join(insn, "; \n") ~ "}";
+        // return "asm pure nothrow @nogc { " ~ join(insn, "; \n") ~ "}";
     }
 
     /**
@@ -645,7 +643,7 @@ version(USE_SSSE3)
     /**
      *
      */
-    public nothrow pure void transformSSSE3(uint[5]* state, const(ubyte[64])* buffer)
+    public void transformSSSE3(uint[5]* state, const(ubyte[64])* buffer) pure nothrow @nogc
     {
         mixin(wrap(["naked;"] ~ prologue()));
         // Precalc first 4*16=64 bytes
@@ -708,4 +706,3 @@ version(USE_SSSE3)
         mixin(wrap(epilogue()));
     }
 }
-

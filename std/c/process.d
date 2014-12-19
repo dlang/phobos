@@ -1,5 +1,7 @@
 
 /**
+ * $(RED Deprecated. Please use $(D core.stdc.stdlib) or the core.sys.posix.*
+ *       modules you need instead.  This module will be removed in December 2015.)
  * C's &lt;process.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
@@ -7,44 +9,49 @@
  *      WIKI=Phobos/StdCProcess
  */
 
+deprecated("Please import core.stdc.stdlib or the core.sys.posix.* modules you need instead. This module will be removed in December 2015.")
 module std.c.process;
 
-private import std.c.stddef;
+private import core.stdc.stddef;
+public import core.stdc.stdlib : exit, abort, system;
 
 extern (C):
 
-void exit(int);
+//These declarations are not defined or used elsewhere.
 void _c_exit();
 void _cexit();
-void _exit(int);
-void abort();
 void _dodtors();
 int getpid();
+enum { WAIT_CHILD, WAIT_GRANDCHILD }
+int cwait(int *,int,int);
+int wait(int *);
+int execlpe(in char *, in char *,...);
 
-int system(in char *);
-
+//These constants are undefined elsewhere and only used in the deprecated part
+//of std.process.
 enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY };
 
+//These declarations are defined for Posix in core.sys.posix.unistd but unused
+//from here.
+void _exit(int);
 int execl(in char *, in char *,...);
 int execle(in char *, in char *,...);
 int execlp(in char *, in char *,...);
-int execlpe(in char *, in char *,...);
+
+//All of these except for execvpe are defined for Posix in core.sys.posix.unistd
+//and only used in the old part of std.process.
 int execv(in char *, in char **);
 int execve(in char *, in char **, in char **);
 int execvp(in char *, in char **);
 int execvpe(in char *, in char **, in char **);
 
-
-enum { WAIT_CHILD, WAIT_GRANDCHILD }
-
-int cwait(int *,int,int);
-int wait(int *);
-
+//All these Windows declarations are not publicly defined elsewhere and only
+//spawnvp is used once in a deprecated function in std.process.
 version (Windows)
 {
     uint _beginthread(void function(void *),uint,void *);
 
-    extern (Windows) alias uint function (void *) stdfp;
+    extern (Windows) alias stdfp = uint function (void *);
 
     uint _beginthreadex(void* security, uint stack_size,
             stdfp start_addr, void* arglist, uint initflag,

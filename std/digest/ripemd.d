@@ -22,7 +22,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
  * module.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * CTFE:
  * Digests do not work in CTFE
@@ -43,49 +43,13 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  * Macros:
  * WIKI = Phobos/StdRipemd
  * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
- *
- * Examples:
- * ---------
- * //Template API
- * import std.digest.ripemd;
- *
- * ubyte[20] hash = ripemd160Of("abc");
- * assert(toHexString(hash) == "8EB208F7E05D987A9B044A8E98C6B087F15A0BFC");
- *
- * //Feeding data
- * ubyte[1024] data;
- * RIPEMD160 md;
- * md.start();
- * md.put(data[]);
- * md.start(); //Start again
- * md.put(data[]);
- * hash = md.finish();
- * ---------
- *
- * ---------
- * //OOP API
- * import std.digest.ripemd;
- *
- * auto md = new RIPEMD160Digest();
- * ubyte[] hash = md.digest("abc");
- * assert(toHexString(hash) == "8EB208F7E05D987A9B044A8E98C6B087F15A0BFC");
- *
- * //Feeding data
- * ubyte[1024] data;
- * md.put(data[]);
- * md.reset(); //Start again
- * md.put(data[]);
- * hash = md.finish();
- * ---------
  */
 
 module std.digest.ripemd;
 
-import std.bitmanip, std.exception, std.string;
-
 public import std.digest.digest;
 
-//verify example
+///
 unittest
 {
     //Template API
@@ -104,7 +68,7 @@ unittest
     hash = md.finish();
 }
 
-//verify example
+///
 unittest
 {
     //OOP API
@@ -123,7 +87,7 @@ unittest
 }
 
 //rotateLeft rotates x left n bits
-private nothrow pure uint rotateLeft(uint x, uint n)
+private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
 {
     // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
     // No assembler required.
@@ -133,47 +97,16 @@ private nothrow pure uint rotateLeft(uint x, uint n)
 /**
  * Template API RIPEMD160 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
- *
- * Examples:
- * --------
- * //Simple example, hashing a string using ripemd160Of helper function
- * ubyte[20] hash = ripemd160Of("abc");
- * //Let's get a hash string
- * assert(toHexString(hash) == "8EB208F7E05D987A9B044A8E98C6B087F15A0BFC");
- * --------
- *
- * --------
- * //Using the basic API
- * RIPEMD160 hash;
- * hash.start();
- * ubyte[1024] data;
- * //Initialize data here...
- * hash.put(data);
- * ubyte[20] result = hash.finish();
- * --------
- *
- * --------
- * //Let's use the template features:
- * //Note: When passing a RIPEMD160 to a function, it must be passed by referece!
- * void doSomething(T)(ref T hash) if(isDigest!T)
- * {
- *     hash.put(cast(ubyte)0);
- * }
- * RIPEMD160 md;
- * md.start();
- * doSomething(md);
- * assert(toHexString(md.finish()) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
- * --------
  */
 struct RIPEMD160
 {
     private:
         // magic initialization constants
-        uint _state[5] = [0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0]; // state (ABCDE)
+        uint[5] _state = [0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0]; // state (ABCDE)
         ulong _count; //number of bits, modulo 2^64
         ubyte[64] _buffer; // input buffer
 
-        enum ubyte[64] _padding =
+        static immutable ubyte[64] _padding =
         [
           0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -181,7 +114,7 @@ struct RIPEMD160
         ];
 
         // F, G, H, I and J are basic RIPEMD160 functions
-        static nothrow pure
+        static @safe pure nothrow @nogc
         {
             uint F(uint x, uint y, uint z) { return x ^ y ^ z; }
             uint G(uint x, uint y, uint z) { return (x & y) | (~x & z); }
@@ -196,35 +129,40 @@ struct RIPEMD160
          */
 
         /* the ten basic operations FF() through III() */
-        static nothrow pure void FF(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void FF(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += F(b, c, d) + x;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void GG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void GG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += G(b, c, d) + x + 0x5a827999UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void HH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void HH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += H(b, c, d) + x + 0x6ed9eba1UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void II(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void II(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += I(b, c, d) + x + 0x8f1bbcdcUL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void JJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void JJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += J(b, c, d) + x + 0xa953fd4eUL;
             a = rotateLeft(a, s) + e;
@@ -236,35 +174,40 @@ struct RIPEMD160
          * Rotation is separate from addition to prevent recomputation.
          */
 
-        static nothrow pure void FFF(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void FFF(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += F(b, c, d) + x;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void GGG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void GGG(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += G(b, c, d) + x + 0x7a6d76e9UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void HHH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void HHH(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += H(b, c, d) + x + 0x6d703ef3UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void III(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void III(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += I(b, c, d) + x + 0x5c4dd124UL;
             a = rotateLeft(a, s) + e;
             c = rotateLeft(c, 10);
         }
 
-        static nothrow pure void JJJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+        static void JJJ(ref uint a, uint b, ref uint c, uint d, uint e, uint x, uint s)
+            @safe pure nothrow @nogc
         {
             a += J(b, c, d) + x + 0x50a28be6UL;
             a = rotateLeft(a, s) + e;
@@ -275,7 +218,8 @@ struct RIPEMD160
          * RIPEMD160 basic transformation. Transforms state based on block.
          */
 
-        private nothrow pure void transform(const(ubyte[64])* block)
+        private void transform(const(ubyte[64])* block)
+            pure nothrow @nogc
         {
             uint aa = _state[0],
                  bb = _state[1],
@@ -509,7 +453,7 @@ struct RIPEMD160
          * dig.put(buf); //buffer
          * ----
          */
-        @trusted nothrow pure void put(scope const(ubyte)[] data...)
+        void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
         {
             uint i, index, partLen;
             auto inputLen = data.length;
@@ -561,7 +505,7 @@ struct RIPEMD160
          * digest.put(0);
          * --------
          */
-        @trusted nothrow pure void start()
+        void start() @safe pure nothrow @nogc
         {
             this = RIPEMD160.init;
         }
@@ -580,8 +524,10 @@ struct RIPEMD160
          * assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
          * --------
          */
-        @trusted nothrow pure ubyte[20] finish()
+        ubyte[20] finish() @trusted pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
+
             ubyte[20] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
@@ -610,7 +556,7 @@ struct RIPEMD160
         }
 }
 
-//verify example
+///
 unittest
 {
     //Simple example, hashing a string using ripemd160Of helper function
@@ -619,7 +565,7 @@ unittest
     assert(toHexString(hash) == "8EB208F7E05D987A9B044A8E98C6B087F15A0BFC");
 }
 
-//verify example
+///
 unittest
 {
     //Using the basic API
@@ -631,7 +577,7 @@ unittest
     ubyte[20] result = hash.finish();
 }
 
-//verify example
+///
 unittest
 {
     //Let's use the template features:
@@ -645,7 +591,7 @@ unittest
     assert(toHexString(md.finish()) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
 }
 
-//verify example
+///
 unittest
 {
     //Simple example
@@ -694,7 +640,7 @@ unittest
     digest = ripemd160Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     assert(digest == cast(ubyte[])x"b0e20b6e3116640286ed3a87a5713079b21f5189");
 
-    digest = ripemd160Of("1234567890123456789012345678901234567890"
+    digest = ripemd160Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[])x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
 
@@ -714,12 +660,6 @@ unittest
 /**
  * This is a convenience alias for $(XREF digest.digest, digest) using the
  * RIPEMD160 implementation.
- *
- * Examples:
- * ---------
- * ubyte[20] hash = ripemd160Of("abc");
- * assert(hash == digest!RIPEMD160("abc")); //This is the same as above
- * ---------
  */
 //simple alias doesn't work here, hope this gets inlined...
 auto ripemd160Of(T...)(T data)
@@ -727,7 +667,7 @@ auto ripemd160Of(T...)(T data)
     return digest!(RIPEMD160, T)(data);
 }
 
-//verify example
+///
 unittest
 {
     ubyte[20] hash = ripemd160Of("abc");
@@ -740,34 +680,10 @@ unittest
  *
  * This is an alias for $(XREF digest.digest, WrapperDigest)!RIPEMD160, see
  * $(XREF digest.digest, WrapperDigest) for more information.
- *
- * Examples:
- * --------
- * //Simple example, hashing a string using Digest.digest helper function
- * auto md = new RIPEMD160Digest();
- * ubyte[] hash = md.digest("abc");
- * //Let's get a hash string
- * assert(toHexString(hash) == "8EB208F7E05D987A9B044A8E98C6B087F15A0BFC");
- * --------
- *
- * --------
- * //Let's use the OOP features:
- * void test(Digest dig)
- * {
- *     dig.put(cast(ubyte)0);
- * }
- * auto md = new RIPEMD160Digest();
- * test(md);
- *
- * //Let's use a custom buffer:
- * ubyte[20] buf;
- * ubyte[] result = md.finish(buf[]);
- * assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
- * --------
  */
-alias WrapperDigest!RIPEMD160 RIPEMD160Digest;
+alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
 
-//verify example
+///
 unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
@@ -777,10 +693,10 @@ unittest
     assert(toHexString(hash) == "8EB208F7E05D987A9B044A8E98C6B087F15A0BFC");
 }
 
-//verify example
+///
 unittest
 {
-     //Let's use the OOP features:
+    //Let's use the OOP features:
     void test(Digest dig)
     {
       dig.put(cast(ubyte)0);

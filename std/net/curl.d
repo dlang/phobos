@@ -20,6 +20,10 @@ Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
+Windows x86 note:
+A DMD compatible libcurl static library can be downloaded from the dlang.org
+$(LINK2 http://dlang.org/download.html, download page).
+
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
 of the language. Futhermore it provides <a href="std_range.html">$(D range)</a>
@@ -123,7 +127,7 @@ http.perform();
 First, an instance of the reference-counted HTTP struct is created. Then the
 custom delegates are set. These will be called whenever the HTTP instance
 receives a header and a data buffer, respectively. In this simple example, the
-headers are writting to stdout and the data is ignored. If the request should be
+headers are written to stdout and the data is ignored. If the request should be
 stopped before it has finished then return something less than data.length from
 the onReceive callback. See $(LREF onReceiveHeader)/$(LREF onReceive) for more
 information. Finally the HTTP request is effected by calling perform(), which is
@@ -135,11 +139,11 @@ MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco,
 Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
-License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Jonas Drewsen. Some of the SMTP code contributed by Jimmy Cao.
 
 Credits: The functionally is based on $(WEB _curl.haxx.se/libcurl, libcurl).
-         LibCurl is licensed under an MIT/X derivate license.
+         LibCurl is licensed under an MIT/X derivative license.
 */
 /*
          Copyright Jonas Drewsen 2011 - 2012.
@@ -166,6 +170,10 @@ import std.traits;
 import std.typecons;
 import std.typetuple;
 
+import std.internal.cstring;
+
+public import etc.c.curl : CurlOption;
+
 version(unittest)
 {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
@@ -188,11 +196,34 @@ version(unittest)
 }
 version(StdDdoc) import std.stdio;
 
-pragma(lib, "curl");
+version (Windows) pragma(lib, "curl");
 extern (C) void exit(int);
 
-// Default data timeout for Protcools
+// Default data timeout for Protocols
 private enum _defaultDataTimeout = dur!"minutes"(2);
+
+/**
+Macros:
+
+CALLBACK_PARAMS = $(TABLE ,
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM dlTotal))
+        $(DDOC_PARAM_DESC total bytes to download)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM dlNow))
+        $(DDOC_PARAM_DESC currently downloaded bytes)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM ulTotal))
+        $(DDOC_PARAM_DESC total bytes to upload)
+        )
+    $(DDOC_PARAM_ROW
+        $(DDOC_PARAM_ID $(DDOC_PARAM ulNow))
+        $(DDOC_PARAM_DESC currently uploaded bytes)
+        )
+)
+*/
 
 /** Connection type used when the URL should be used to auto detect the protocol.
   *
@@ -342,7 +373,10 @@ unittest
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -396,14 +430,17 @@ unittest
  *
  * Params:
  * url = resource to post to
- * putData = data to send as the body of the request. An array
- *           of an arbitrary type is accepted and will be cast to ubyte[]
- *           before sending it.
+ * postData = data to send as the body of the request. An array
+ *            of an arbitrary type is accepted and will be cast to ubyte[]
+ *            before sending it.
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -463,7 +500,10 @@ unittest
  *        guess connection type and create a new instance for this call only.
  *
  * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
+ * for $(D char), content will be converted from the connection character set
+ * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
+ * by default) to UTF-8.
  *
  * Example:
  * ----
@@ -541,11 +581,11 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
         auto trimmed = url.findSplitAfter("ftp://")[1];
         auto t = trimmed.findSplitAfter("/");
         enum minDomainNameLength = 3;
-        enforceEx!CurlException(t[0].length > minDomainNameLength,
+        enforce!CurlException(t[0].length > minDomainNameLength,
                                 text("Invalid FTP URL for delete ", url));
         conn.url = t[0];
 
-        enforceEx!CurlException(!t[1].empty,
+        enforce!CurlException(!t[1].empty,
                                 text("No filename specified to delete for URL ", url));
         conn.addCommand("DELE " ~ t[1]);
         conn.perform();
@@ -708,6 +748,13 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         client.onReceiveHeader = null;
         client.onReceiveStatusLine = null;
         client.onReceive = null;
+
+        if (sendData !is null &&
+            (client.method == HTTP.Method.post || client.method == HTTP.Method.put))
+        {
+            client.onSend = null;
+            client.handle.onSeek = null;
+        }
     }
     client.url = url;
     HTTP.StatusLine statusLine;
@@ -760,7 +807,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
-    enforceEx!CurlException(statusLine.code / 100 == 2,
+    enforce!CurlException(statusLine.code / 100 == 2,
                             format("HTTP request returned status code %s",
                                    statusLine.code));
 
@@ -786,7 +833,12 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
  */
 private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 {
-    scope (exit) client.onReceive = null;
+    scope (exit)
+    {
+        client.onReceive = null;
+        if (!sendData.empty)
+            client.onSend = null;
+    }
 
     ubyte[] content;
 
@@ -835,19 +887,19 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
 
         // The content has to be re-encoded to utf8
         auto scheme = EncodingScheme.create(encoding);
-        enforceEx!CurlException(scheme !is null,
+        enforce!CurlException(scheme !is null,
                                 format("Unknown encoding '%s'", encoding));
 
         auto strInfo = decodeString(content, scheme);
-        enforceEx!CurlException(strInfo[0] != size_t.max,
-                                format("Invalid encoding sequence for enconding '%s'",
+        enforce!CurlException(strInfo[0] != size_t.max,
+                                format("Invalid encoding sequence for encoding '%s'",
                                        encoding));
 
         return strInfo[1];
     }
 }
 
-alias std.string.KeepTerminator KeepTerminator;
+alias KeepTerminator = Flag!"keepTerminator";
 /++
 struct ByLineBuffer(Char)
 {
@@ -894,7 +946,6 @@ struct ByLineBuffer(Char)
  *
  * Params:
  * url = The url to receive content from
- * postData = Data to HTTP Post
  * keepTerminator = KeepTerminator.yes signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
@@ -933,13 +984,13 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
         @property @safe Char[] front()
         {
-            enforceEx!CurlException(currentValid, "Cannot call front() on empty range");
+            enforce!CurlException(currentValid, "Cannot call front() on empty range");
             return current;
         }
 
         void popFront()
         {
-            enforceEx!CurlException(currentValid, "Cannot call popFront() on empty range");
+            enforce!CurlException(currentValid, "Cannot call popFront() on empty range");
             if (lines.empty)
             {
                 currentValid = false;
@@ -1433,7 +1484,6 @@ static struct AsyncChunkInputRange
  * Params:
  * url = The url to receive content from
  * postData = Data to HTTP Post
- * terminator = The character that terminates a line
  * chunkSize = The size of the chunks
  * transmitBuffers = The number of chunks buffered asynchronously
  * conn = The connection to use e.g. HTTP or FTP.
@@ -1544,7 +1594,7 @@ private void _asyncDuplicateConnection(Conn, PostData)
     }
     else
     {
-        enforceEx!CurlException(postData is null,
+        enforce!CurlException(postData is null,
                                 "Cannot put ftp data using byLineAsync()");
         tid.send(cast(ulong)connDup.handle.handle);
         tid.send(HTTP.Method.undefined);
@@ -1564,10 +1614,10 @@ private mixin template Protocol()
 
     /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
     /// pause a request
-    alias CurlReadFunc.pause requestPause;
+    alias requestPause = CurlReadFunc.pause;
 
     /// Value to return from onSend delegate in order to abort a request
-    alias CurlReadFunc.abort requestAbort;
+    alias requestAbort = CurlReadFunc.abort;
 
     static uint defaultAsyncStringBufferSize = 100;
 
@@ -1643,7 +1693,7 @@ private mixin template Protocol()
     }
 
     /// Type of proxy
-    alias etc.c.curl.CurlProxy CurlProxy;
+    alias CurlProxy = etc.c.curl.CurlProxy;
 
     /** Proxy type
      *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -1719,7 +1769,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether SSL peer certificates should be verified.
-        See: $(WEB http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
+        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYPEER, verifypeer)
     */
     @property void verifyPeer(bool on)
     {
@@ -1727,7 +1777,7 @@ private mixin template Protocol()
     }
 
     /** Sets whether the host within an SSL certificate should be verified.
-        See: $(WEB http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
+        See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTSSLVERIFYHOST, verifypeer)
     */
     @property void verifyHost(bool on)
     {
@@ -1767,6 +1817,22 @@ private mixin template Protocol()
         http.onReceive = (ubyte[] data) { return data.length; };
         http.setAuthentication("myuser", "mypassword");
         http.perform();
+    }
+
+    /**
+       Set the user name and password for proxy authentication.
+
+       Params:
+       username = the username
+       password = the password
+    */
+    void setProxyAuthentication(const(char)[] username, const(char)[] password)
+    {
+        p.curl.set(CurlOption.proxyuserpwd,
+            format("%s:%s",
+                username.replace(":", "%3A"),
+                password.replace(":", "%3A"))
+        );
     }
 
     /**
@@ -1811,8 +1877,8 @@ private mixin template Protocol()
       * callback returns.
       *
       * Returns:
-      * The callback returns the incoming bytes read. If not the entire array is
-      * the request will abort.
+      * The callback returns the number of incoming bytes read. If the entire array is
+      * not read the request will abort.
       * The special value .pauseRequest can be returned in order to pause the
       * current request.
       *
@@ -1929,7 +1995,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
         dchar dc = scheme.safeDecode(basesrc);
         if (dc == INVALID_SEQUENCE)
         {
-            enforceEx!CurlException(len != 4, "Invalid code sequence");
+            enforce!CurlException(len != 4, "Invalid code sequence");
             return false;
         }
         dst ~= dc;
@@ -1994,8 +2060,8 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.url = "http://upload.wikimedia.org/wikipedia/commons/"
   *            "5/53/Wikipedia-logo-en-big.png";
   * http.onReceive = (ubyte[] data) { return data.length; };
-  * http.onProgress = (double dltotal, double dlnow,
-  *                    double ultotal, double ulnow)
+  * http.onProgress = (size_t dltotal, size_t dlnow,
+  *                    size_t ultotal, size_t ulnow)
   * {
   *     writeln("Progress ", dltotal, ", ", dlnow, ", ", ultotal, ", ", ulnow);
   *     return 0;
@@ -2011,7 +2077,7 @@ struct HTTP
     mixin Protocol;
 
     /// Authentication method equal to $(ECXREF curl, CurlAuth)
-    alias CurlAuth AuthMethod;
+    alias AuthMethod = CurlAuth;
 
     static private uint defaultMaxRedirects = 10;
 
@@ -2035,6 +2101,69 @@ struct HTTP
 
         /// The HTTP method to use.
         Method method = Method.undefined;
+
+        @property void onReceiveHeader(void delegate(in char[] key,
+                                                     in char[] value) callback)
+        {
+            // Wrap incoming callback in order to separate http status line from
+            // http headers.  On redirected requests there may be several such
+            // status lines. The last one is the one recorded.
+            auto dg = (in char[] header)
+            {
+                import std.utf : UTFException;
+                try
+                {
+                    if (header.empty)
+                    {
+                        // header delimiter
+                        return;
+                    }
+                    if (header.startsWith("HTTP/"))
+                    {
+                        string[string] empty;
+                        headersIn = empty; // clear
+
+                        auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
+                        if (m.empty)
+                        {
+                            // Invalid status line
+                        }
+                        else
+                        {
+                            status.majorVersion = to!ushort(m.captures[1]);
+                            status.minorVersion = to!ushort(m.captures[2]);
+                            status.code = to!ushort(m.captures[3]);
+                            status.reason = m.captures[4].idup;
+                            if (onReceiveStatusLine != null)
+                                onReceiveStatusLine(status);
+                        }
+                        return;
+                    }
+
+                    // Normal http header
+                    auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
+
+                    auto fieldName = m.captures[1].toLower().idup;
+                    if (fieldName == "content-type")
+                    {
+                        auto mct = match(cast(char[]) m.captures[2],
+                                         regex("charset=([^;]*)"));
+                        if (!mct.empty && mct.captures.length > 1)
+                            charset = mct.captures[1].idup;
+                    }
+
+                    if (!m.empty && callback !is null)
+                        callback(fieldName, m.captures[2]);
+                    headersIn[fieldName] = m.captures[2].idup;
+                }
+                catch(UTFException e)
+                {
+                    //munch it - a header should be all ASCII, any "wrong UTF" is broken header
+                }
+            };
+
+            curl.onReceiveHeader = dg;
+        }
     }
 
     private RefCounted!Impl p;
@@ -2043,16 +2172,17 @@ struct HTTP
 
         $(WEB www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
     */
-    alias CurlTimeCond TimeCond;
+    alias TimeCond = CurlTimeCond;
 
     /**
        Constructor taking the url as parameter.
     */
-    this(const(char)[] url)
+    static HTTP opCall(const(char)[] url)
     {
-        initialize();
-
-        this.url = url;
+        HTTP http;
+        http.initialize();
+        http.url = url;
+        return http;
     }
 
     static HTTP opCall()
@@ -2088,6 +2218,7 @@ struct HTTP
         maxRedirects = HTTP.defaultMaxRedirects;
         p.charset = "ISO-8859-1"; // Default charset defined in HTTP RFC
         p.method = Method.undefined;
+        setUserAgent(HTTP.defaultUserAgent);
         dataTimeout = _defaultDataTimeout;
         onReceiveHeader = null;
         version (unittest) verbose = true;
@@ -2101,13 +2232,11 @@ struct HTTP
        After the HTTP client has been setup and possibly assigned callbacks the
        $(D perform()) method will start performing the request towards the
        specified server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(bool throwOnError = true)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         p.status.reset();
 
@@ -2151,6 +2280,7 @@ struct HTTP
         p.curl.set(CurlOption.url, url);
     }
 
+    /// Set the CA certificate bundle file to use for SSL peer verification
     @property void caInfo(const(char)[] caFile)
     {
         p.curl.set(CurlOption.cainfo, caFile);
@@ -2162,10 +2292,10 @@ struct HTTP
     {
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
-        alias CurlReadFunc.pause requestPause;
+        alias requestPause = CurlReadFunc.pause;
 
         /// Value to return from onSend delegate in order to abort a request
-        alias CurlReadFunc.abort requestAbort;
+        alias requestAbort = CurlReadFunc.abort;
 
         /**
            True if the instance is stopped. A stopped instance is not usable.
@@ -2206,7 +2336,7 @@ struct HTTP
         @property void proxyPort(ushort port);
 
         /// Type of proxy
-        alias etc.c.curl.CurlProxy CurlProxy;
+        alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -2275,6 +2405,15 @@ struct HTTP
                                const(char)[] domain = "");
 
         /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
+
+        /**
          * The event handler that gets called when data is needed for sending. The
          * length of the $(D void[]) specifies the maximum number of bytes that can
          * be sent.
@@ -2332,17 +2471,14 @@ struct HTTP
         @property void onReceive(size_t delegate(ubyte[]) callback);
 
         /**
-         * The event handler that gets called to inform of upload/download progress.
+         * Register an event handler that gets called to inform of
+         * upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns: Return 0 to signal success, return non-zero to
+         * abort transfer.
          *
          * Example:
          * ----
@@ -2385,10 +2521,45 @@ struct HTTP
      */
     void addRequestHeader(const(char)[] name, const(char)[] value)
     {
+        if (icmp(name, "User-Agent") == 0)
+            return setUserAgent(value);
         string nv = format("%s: %s", name, value);
         p.headersOut = curl_slist_append(p.headersOut,
-                                         cast(char*) toStringz(nv));
+                                         nv.tempCString().buffPtr);
         p.curl.set(CurlOption.httpheader, p.headersOut);
+    }
+
+    /**
+     * The default "User-Agent" value send with a request.
+     * It has the form "Phobos-std.net.curl/$(I PHOBOS_VERSION) (libcurl/$(I CURL_VERSION))"
+     */
+    static immutable string defaultUserAgent;
+
+    shared static this()
+    {
+        import std.compiler : version_major, version_minor;
+
+        // http://curl.haxx.se/docs/versions.html
+        enum fmt = "Phobos-std.net.curl/%d.%03d (libcurl/%d.%d.%d)";
+        enum maxLen = fmt.length - "%d%03d%d%d%d".length + 10 + 10 + 3 + 3 + 3;
+
+        __gshared char[maxLen] buf = void;
+
+        auto curlVer = curl_version_info(CURLVERSION_NOW).version_num;
+        defaultUserAgent = cast(immutable)sformat(
+            buf, fmt, version_major, version_minor,
+            curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
+    }
+
+    /** Set the value of the user agent request header field.
+     *
+     * By default a request has it's "User-Agent" field set to $(LREF
+     * defaultUserAgent) even if $(D setUserAgent) was never called.  Pass
+     * an empty string to suppress the "User-Agent" field altogether.
+     */
+    void setUserAgent(const(char)[] userAgent)
+    {
+        p.curl.set(CurlOption.useragent, userAgent);
     }
 
     /** The headers read from a successful response.
@@ -2420,7 +2591,7 @@ struct HTTP
         return p.status;
     }
 
-    // Set the active cookie string e.g. "name1=value1;name2=value2"
+    /// Set the active cookie string e.g. "name1=value1;name2=value2"
     void setCookie(const(char)[] cookie)
     {
         p.curl.set(CurlOption.cookie, cookie);
@@ -2484,7 +2655,7 @@ struct HTTP
       */
     @property void postData(const(void)[] data)
     {
-        _postData(data, "application/octet-stream");
+        setPostData(data, "application/octet-stream");
     }
 
     /** Specifying data to post when not using the onSend callback.
@@ -2503,11 +2674,28 @@ struct HTTP
       */
     @property void postData(const(char)[] data)
     {
-        _postData(data, "text/plain");
+        setPostData(data, "text/plain");
     }
 
-    // Helper for postData property
-    private void _postData(const(void)[] data, string contentType)
+    /**
+     * Specify data to post when not using the onSend callback, with
+     * user-specified Content-Type.
+     * Params:
+     *	data = Data to post.
+     *	contentType = MIME type of the data, for example, "text/plain" or
+     *	    "application/octet-stream". See also:
+     *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
+     *      Internet media type) on Wikipedia.
+     *-----
+     * import std.net.curl;
+     * auto http = HTTP("http://onlineform.example.com");
+     * auto data = "app=login&username=bob&password=s00perS3kret";
+     * http.setPostData(data, "application/x-www-form-urlencoded");
+     * http.onReceive = (ubyte[] data) { return data.length; };
+     * http.perform();
+     *-----
+     */
+    void setPostData(const(void)[] data, string contentType)
     {
         // cannot use callback when specifying data directly so it is disabled here.
         p.curl.clear(CurlOption.readfunction);
@@ -2551,55 +2739,7 @@ struct HTTP
     @property void onReceiveHeader(void delegate(in char[] key,
                                                  in char[] value) callback)
     {
-        // Wrap incoming callback in order to separate http status line from
-        // http headers.  On redirected requests there may be several such
-        // status lines. The last one is the one recorded.
-        auto dg = (in char[] header)
-        {
-            if (header.empty)
-            {
-                // header delimiter
-                return;
-            }
-            if (header.startsWith("HTTP/"))
-            {
-                string[string] empty;
-                p.headersIn = empty; // clear
-
-                auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
-                if (m.empty)
-                {
-                    // Invalid status line
-                }
-                else
-                {
-                    p.status.majorVersion = to!ushort(m.captures[1]);
-                    p.status.minorVersion = to!ushort(m.captures[2]);
-                    p.status.code = to!ushort(m.captures[3]);
-                    p.status.reason = m.captures[4].idup;
-                    if (p.onReceiveStatusLine != null)
-                        p.onReceiveStatusLine(p.status);
-                }
-                return;
-            }
-
-            // Normal http header
-            auto m = match(cast(char[]) header, regex("(.*?): (.*)$"));
-
-            auto fieldName = m.captures[1].toLower().idup;
-            if (fieldName == "content-type")
-            {
-                auto mct = match(cast(char[]) m.captures[2],
-                                 regex("charset=([^;]*)"));
-                if (!mct.empty && mct.captures.length > 1)
-                    p.charset = mct.captures[1].idup;
-            }
-
-            if (!m.empty && callback !is null)
-                callback(fieldName, m.captures[2]);
-            p.headersIn[fieldName] = m.captures[2].idup;
-        };
-        p.curl.onReceiveHeader = dg;
+        p.onReceiveHeader = callback;
     }
 
     /**
@@ -2749,11 +2889,12 @@ struct FTP
     /**
        FTP access to the specified url.
     */
-    this(const(char)[] url)
+    static FTP opCall(const(char)[] url)
     {
-        initialize();
-
-        this.url = url;
+        FTP ftp;
+        ftp.initialize();
+        ftp.url = url;
+        return ftp;
     }
 
     static FTP opCall()
@@ -2796,13 +2937,11 @@ struct FTP
        After a FTP client has been setup and possibly assigned callbacks the $(D
        perform()) method will start performing the actual communication with the
        server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(bool throwOnError = true)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         return p.curl.perform(throwOnError);
     }
@@ -2821,10 +2960,10 @@ struct FTP
     {
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
-        alias CurlReadFunc.pause requestPause;
+        alias requestPause = CurlReadFunc.pause;
 
         /// Value to return from onSend delegate in order to abort a request
-        alias CurlReadFunc.abort requestAbort;
+        alias requestAbort = CurlReadFunc.abort;
 
         /**
            True if the instance is stopped. A stopped instance is not usable.
@@ -2865,7 +3004,7 @@ struct FTP
         @property void proxyPort(ushort port);
 
         /// Type of proxy
-        alias etc.c.curl.CurlProxy CurlProxy;
+        alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -2934,6 +3073,15 @@ struct FTP
                                const(char)[] domain = "");
 
         /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
+
+        /**
          * The event handler that gets called when data is needed for sending. The
          * length of the $(D void[]) specifies the maximum number of bytes that can
          * be sent.
@@ -2966,15 +3114,12 @@ struct FTP
         /**
          * The event handler that gets called to inform of upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns:
+         * Return 0 from the callback to signal success, return non-zero to
+         * abort transfer.
          */
         @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                                size_t ulTotal, size_t ulNow) callback);
@@ -3007,15 +3152,17 @@ struct FTP
     void addCommand(const(char)[] command)
     {
         p.commands = curl_slist_append(p.commands,
-                                       cast(char*) toStringz(command));
+                                       command.tempCString().buffPtr);
         p.curl.set(CurlOption.postquote, p.commands);
     }
 
+    /// Connection encoding. Defaults to ISO-8859-1.
     @property void encoding(string name)
     {
         p.encoding = name;
     }
 
+    /// ditto
     @property string encoding()
     {
         return p.encoding;
@@ -3060,6 +3207,23 @@ struct SMTP
                 curl.shutdown();
         }
         Curl curl;
+
+        @property void message(string msg)
+        {
+            auto _message = msg;
+            /**
+                This delegate reads the message text and copies it.
+            */
+            curl.onSend = delegate size_t(void[] data)
+            {
+                if (!msg.length) return 0;
+                auto m = cast(void[])msg;
+                size_t to_copy = min(data.length, _message.length);
+                data[0..to_copy] = (cast(void[])_message)[0..to_copy];
+                _message = _message[to_copy..$];
+                return to_copy;
+            };
+        }
     }
 
     private RefCounted!Impl p;
@@ -3067,11 +3231,12 @@ struct SMTP
     /**
         Sets to the URL of the SMTP server.
     */
-    this(const(char)[] url)
+    static SMTP opCall(const(char)[] url)
     {
-        initialize();
-
-        this.url = url;
+        SMTP smtp;
+        smtp.initialize();
+        smtp.url = url;
+        return smtp;
     }
 
     static SMTP opCall()
@@ -3104,10 +3269,12 @@ struct SMTP
 
     /**
         Performs the request as configured.
+        Params:
+        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    void perform()
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
-        p.curl.perform();
+        return p.curl.perform(throwOnError);
     }
 
     /// The URL to specify the location of the resource.
@@ -3121,7 +3288,7 @@ struct SMTP
         }
         else
         {
-            enforceEx!CurlException(lowered.startsWith("smtp://"),
+            enforce!CurlException(lowered.startsWith("smtp://"),
                                     "The url must be for the smtp protocol.");
         }
         p.curl.set(CurlOption.url, url);
@@ -3130,6 +3297,7 @@ struct SMTP
     private void initialize()
     {
         p.curl.initialize();
+        p.curl.set(CurlOption.upload, 1L);
         dataTimeout = _defaultDataTimeout;
         verifyPeer = true;
         verifyHost = true;
@@ -3141,10 +3309,10 @@ struct SMTP
     {
         /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
         /// pause a request
-        alias CurlReadFunc.pause requestPause;
+        alias requestPause = CurlReadFunc.pause;
 
         /// Value to return from onSend delegate in order to abort a request
-        alias CurlReadFunc.abort requestAbort;
+        alias requestAbort = CurlReadFunc.abort;
 
         /**
            True if the instance is stopped. A stopped instance is not usable.
@@ -3185,7 +3353,7 @@ struct SMTP
         @property void proxyPort(ushort port);
 
         /// Type of proxy
-        alias etc.c.curl.CurlProxy CurlProxy;
+        alias CurlProxy = etc.c.curl.CurlProxy;
 
         /** Proxy type
          *  See: $(WEB curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY, _proxy_type)
@@ -3254,6 +3422,15 @@ struct SMTP
                                const(char)[] domain = "");
 
         /**
+           Set the user name and password for proxy authentication.
+
+           Params:
+           username = the username
+           password = the password
+        */
+        void setProxyAuthentication(const(char)[] username, const(char)[] password);
+
+        /**
          * The event handler that gets called when data is needed for sending. The
          * length of the $(D void[]) specifies the maximum number of bytes that can
          * be sent.
@@ -3284,15 +3461,12 @@ struct SMTP
         /**
          * The event handler that gets called to inform of upload/download progress.
          *
-         * Params:
-         * dlTotal = total bytes to download
-         * dlNow = currently downloaded bytes
-         * ulTotal = total bytes to upload
-         * ulNow = currently uploaded bytes
+         * Callback_parameters:
+         * $(CALLBACK_PARAMS)
          *
-         * Returns:
-         * Return 0 from the callback to signal success, return non-zero to abort
-         *          transfer
+         * Callback_returns:
+         * Return 0 from the callback to signal success, return non-zero to
+         * abort transfer.
          */
         @property void onProgress(int delegate(size_t dlTotal, size_t dlNow,
                                                size_t ulTotal, size_t ulNow) callback);
@@ -3318,7 +3492,7 @@ struct SMTP
         {
             recipients_list =
                 curl_slist_append(recipients_list,
-                                  cast(char*)toStringz(recipient));
+                                  recipient.tempCString().buffPtr);
         }
         p.curl.set(CurlOption.mail_rcpt, recipients_list);
     }
@@ -3329,19 +3503,7 @@ struct SMTP
 
     @property void message(string msg)
     {
-        auto _message = msg;
-        /**
-            This delegate reads the message text and copies it.
-        */
-        p.curl.onSend = delegate size_t(void[] data)
-        {
-            if (!msg.length) return 0;
-            auto m = cast(void[])msg;
-            size_t to_copy = min(data.length, _message.length);
-            data[0..to_copy] = (cast(void[])_message)[0..to_copy];
-            _message = _message[to_copy..$];
-            return to_copy;
-        };
+        p.message = msg;
     }
 }
 
@@ -3357,6 +3519,7 @@ class CurlException : Exception
             line = The line number where the exception occurred.
             next = The previous exception in the chain of exceptions, if any.
       +/
+    @safe pure nothrow
     this(string msg,
          string file = __FILE__,
          size_t line = __LINE__,
@@ -3378,6 +3541,7 @@ class CurlTimeoutException : CurlException
             line = The line number where the exception occurred.
             next = The previous exception in the chain of exceptions, if any.
       +/
+    @safe pure nothrow
     this(string msg,
          string file = __FILE__,
          size_t line = __LINE__,
@@ -3388,19 +3552,28 @@ class CurlTimeoutException : CurlException
 }
 
 /// Equal to $(ECXREF curl, CURLcode)
-alias CURLcode CurlCode;
+alias CurlCode = CURLcode;
+
+import std.typecons : Flag;
+/// Flag to specify whether or not an exception is thrown on error.
+alias ThrowOnError = Flag!"throwOnError";
 
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
   raw access to libcurl is needed.
+
+  Warning: This struct uses interior pointers for callbacks. Only allocate it
+  on the stack if you never move or copy it. This also means passing by reference
+  when passing Curl to other functions. Otherwise always allocate on
+  the heap.
 */
 struct Curl
 {
     shared static this()
     {
         // initialize early to prevent thread races
-        enforceEx!CurlException(!curl_global_init(CurlGlobal.all),
+        enforce!CurlException(!curl_global_init(CurlGlobal.all),
                                 "Couldn't initialize libcurl");
     }
 
@@ -3409,8 +3582,8 @@ struct Curl
         curl_global_cleanup();
     }
 
-    alias void[] OutData;
-    alias ubyte[] InData;
+    alias OutData = void[];
+    alias InData = ubyte[];
     bool stopped;
 
     // A handle should not be used by two threads simultaneously
@@ -3425,17 +3598,17 @@ struct Curl
     private int delegate(size_t dltotal, size_t dlnow,
                          size_t ultotal, size_t ulnow) _onProgress;
 
-    alias CurlReadFunc.pause requestPause;
-    alias CurlReadFunc.abort requestAbort;
+    alias requestPause = CurlReadFunc.pause;
+    alias requestAbort = CurlReadFunc.abort;
 
     /**
        Initialize the instance by creating a working curl handle.
     */
     void initialize()
     {
-        enforceEx!CurlException(!handle, "Curl instance already initialized");
+        enforce!CurlException(!handle, "Curl instance already initialized");
         handle = curl_easy_init();
-        enforceEx!CurlException(handle, "Curl instance couldn't be initialized");
+        enforce!CurlException(handle, "Curl instance couldn't be initialized");
         stopped = false;
         set(CurlOption.nosignal, 1);
     }
@@ -3463,14 +3636,21 @@ struct Curl
                                  opensocketfunction, noprogress,
                                  progressdata, progressfunction,
                                  debugdata, debugfunction,
-                                 ssl_ctx_function, interleavedata,
+                                 interleavedata,
                                  interleavefunction, chunk_data,
                                  chunk_bgn_function, chunk_end_function,
                                  fnmatch_data, fnmatch_function,
-                                 ssh_keydata, cookiejar, postfields);
+                                 cookiejar, postfields);
             foreach(option; tt)
                 copy.clear(option);
         }
+
+        // The options are only supported by libcurl when it has been built
+        // against certain versions of OpenSSL - if your libcurl uses an old
+        // OpenSSL, or uses an entirely different SSL engine, attempting to
+        // clear these normally will raise an exception
+        copy.clearIfSupported(CurlOption.ssl_ctx_function);
+        copy.clearIfSupported(CurlOption.ssh_keydata);
 
         // Enable for curl version > 7.21.7
         static if (LIBCURL_VERSION_MAJOR >= 7 &&
@@ -3498,10 +3678,10 @@ struct Curl
 
     private void _check(CurlCode code)
     {
-        enforceEx!CurlTimeoutException(code != CurlError.operation_timedout,
+        enforce!CurlTimeoutException(code != CurlError.operation_timedout,
                                        errorString(code));
 
-        enforceEx!CurlException(code == CurlError.ok,
+        enforce!CurlException(code == CurlError.ok,
                                 errorString(code));
     }
 
@@ -3517,7 +3697,7 @@ struct Curl
     private void throwOnStopped(string message = null)
     {
         auto def = "Curl instance called after being cleaned up";
-        enforceEx!CurlException(!stopped,
+        enforce!CurlException(!stopped,
                                 message == null ? def : message);
     }
 
@@ -3553,7 +3733,7 @@ struct Curl
     void set(CurlOption option, const(char)[] value)
     {
         throwOnStopped();
-        _check(curl_easy_setopt(this.handle, option, toStringz(value)));
+        _check(curl_easy_setopt(this.handle, option, value.tempCString().buffPtr));
     }
 
     /**
@@ -3592,16 +3772,42 @@ struct Curl
     }
 
     /**
+       Clear a pointer option. Does not raise an exception if the underlying
+       libcurl does not support the option. Use sparingly.
+       Params:
+       option = A $(ECXREF curl, CurlOption) as found in the curl documentation
+    */
+    void clearIfSupported(CurlOption option)
+    {
+        throwOnStopped();
+        auto rval = curl_easy_setopt(this.handle, option, null);
+        if (rval != CurlError.unknown_telnet_option)
+        {
+            _check(rval);
+        }
+    }
+
+    /**
        perform the curl request by doing the HTTP,FTP etc. as it has
        been setup beforehand.
+
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(bool throwOnError = true)
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         throwOnStopped();
         CurlCode code = curl_easy_perform(this.handle);
         if (throwOnError)
             _check(code);
         return code;
+    }
+
+    // Explicitly undocumented. It will be removed in November 2015.
+    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
+    CurlCode perform(bool throwOnError)
+    {
+        return perform(cast(ThrowOnError)throwOnError);
     }
 
     /**
@@ -3663,7 +3869,7 @@ struct Curl
     {
         _onReceiveHeader = (in char[] od)
         {
-            throwOnStopped("Receive header callback called on "
+            throwOnStopped("Receive header callback called on "~
                            "cleaned up Curl instance");
             callback(od);
         };
@@ -3781,7 +3987,7 @@ struct Curl
     {
         _onSocketOption = (curl_socket_t sock, CurlSockType st)
         {
-            throwOnStopped("Socket option callback called on "
+            throwOnStopped("Socket option callback called on "~
                            "cleaned up Curl instance");
             return callback(sock, st);
         };
@@ -3823,7 +4029,7 @@ struct Curl
     {
         _onProgress = (size_t dlt, size_t dln, size_t ult, size_t uln)
         {
-            throwOnStopped("Progress callback called on cleaned "
+            throwOnStopped("Progress callback called on cleaned "~
                            "up Curl instance");
             return callback(dlt, dln, ult, uln);
         };
@@ -3952,7 +4158,7 @@ private struct Pool(Data)
 
     @safe Data pop()
     {
-        enforceEx!Exception(root != null, "pop() called on empty pool");
+        enforce!Exception(root != null, "pop() called on empty pool");
         auto d = root.data;
         auto n = root.next;
         root.next = freeList;
@@ -4099,11 +4305,11 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
                 // Could not decode an entire line. Save
                 // bytes left in data for next call to
                 // onReceive. Can be up to a max of 4 bytes.
-                enforceEx!CurlException(data.length <= 4,
+                enforce!CurlException(data.length <= 4,
                                         format(
-                                        "Too many bytes left not decoded %s"
-                                        " > 4. Maybe the charset specified in"
-                                        " headers does not match "
+                                        "Too many bytes left not decoded %s"~
+                                        " > 4. Maybe the charset specified in"~
+                                        " headers does not match "~
                                         "the actual content downloaded?",
                                         data.length));
                 leftOverBytes ~= data;
@@ -4202,7 +4408,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     CurlCode code;
     try
     {
-        code = client._perform(false);
+        code = client.perform(ThrowOnError.no);
     }
     catch (Exception ex)
     {

@@ -22,6 +22,11 @@ module std.internal.math.gammafunction;
 import std.internal.math.errorfunction;
 import std.math;
 
+pure:
+nothrow:
+@safe:
+@nogc:
+
 private {
 
 enum real SQRT2PI = 2.50662827463100050242E0L; // sqrt(2pi)
@@ -122,31 +127,31 @@ real igammaTemmeLarge(real a, real x)
 {
     static immutable real[][13] coef = [
         [ -0.333333333333333333333, 0.0833333333333333333333,
-          -0.0148148148148148148148, 0.00115740740740740740741, 
-          0.000352733686067019400353, -0.0001787551440329218107, 
+          -0.0148148148148148148148, 0.00115740740740740740741,
+          0.000352733686067019400353, -0.0001787551440329218107,
           0.39192631785224377817e-4, -0.218544851067999216147e-5,
           -0.18540622107151599607e-5, 0.829671134095308600502e-6,
-          -0.176659527368260793044e-6, 0.670785354340149858037e-8, 
-          0.102618097842403080426e-7, -0.438203601845335318655e-8, 
-          0.914769958223679023418e-9, -0.255141939949462497669e-10, 
-          -0.583077213255042506746e-10, 0.243619480206674162437e-10, 
+          -0.176659527368260793044e-6, 0.670785354340149858037e-8,
+          0.102618097842403080426e-7, -0.438203601845335318655e-8,
+          0.914769958223679023418e-9, -0.255141939949462497669e-10,
+          -0.583077213255042506746e-10, 0.243619480206674162437e-10,
           -0.502766928011417558909e-11 ],
-        [ -0.00185185185185185185185, -0.00347222222222222222222, 
-          0.00264550264550264550265, -0.000990226337448559670782, 
-          0.000205761316872427983539, -0.40187757201646090535e-6, 
-          -0.18098550334489977837e-4, 0.764916091608111008464e-5, 
-          -0.161209008945634460038e-5, 0.464712780280743434226e-8, 
-          0.137863344691572095931e-6, -0.575254560351770496402e-7, 
-          0.119516285997781473243e-7, -0.175432417197476476238e-10, 
+        [ -0.00185185185185185185185, -0.00347222222222222222222,
+          0.00264550264550264550265, -0.000990226337448559670782,
+          0.000205761316872427983539, -0.40187757201646090535e-6,
+          -0.18098550334489977837e-4, 0.764916091608111008464e-5,
+          -0.161209008945634460038e-5, 0.464712780280743434226e-8,
+          0.137863344691572095931e-6, -0.575254560351770496402e-7,
+          0.119516285997781473243e-7, -0.175432417197476476238e-10,
           -0.100915437106004126275e-8, 0.416279299184258263623e-9,
           -0.856390702649298063807e-10 ],
-        [ 0.00413359788359788359788, -0.00268132716049382716049, 
-          0.000771604938271604938272, 0.200938786008230452675e-5, 
-          -0.000107366532263651605215, 0.529234488291201254164e-4, 
-          -0.127606351886187277134e-4, 0.342357873409613807419e-7, 
-          0.137219573090629332056e-5, -0.629899213838005502291e-6, 
-          0.142806142060642417916e-6, -0.204770984219908660149e-9, 
-          -0.140925299108675210533e-7, 0.622897408492202203356e-8, 
+        [ 0.00413359788359788359788, -0.00268132716049382716049,
+          0.000771604938271604938272, 0.200938786008230452675e-5,
+          -0.000107366532263651605215, 0.529234488291201254164e-4,
+          -0.127606351886187277134e-4, 0.342357873409613807419e-7,
+          0.137219573090629332056e-5, -0.629899213838005502291e-6,
+          0.142806142060642417916e-6, -0.204770984219908660149e-9,
+          -0.140925299108675210533e-7, 0.622897408492202203356e-8,
           -0.136704883966171134993e-8 ],
         [ 0.000649434156378600823045, 0.000229472093621399176955,
           -0.000469189494395255712128, 0.000267720632062838852962,
@@ -192,26 +197,26 @@ real igammaTemmeLarge(real a, real x)
         [ -0.00407251211951401664727, 0.00640336283380806979482,
           -0.00404101610816766177474 ]
     ];
-  
-    // avoid nans when one of the arguments is inf: 
+
+    // avoid nans when one of the arguments is inf:
     if(x == real.infinity && a != real.infinity)
         return 0;
-        
+
     if(x != real.infinity && a == real.infinity)
         return 1;
 
     real sigma = (x - a) / a;
     real phi = sigma - log(sigma + 1);
-    
+
     real y = a * phi;
     real z = sqrt(2 * phi);
     if(x < a)
         z = -z;
-  
+
     real[13] workspace;
     foreach(i; 0 .. coef.length)
         workspace[i] = poly(z, coef[i]);
-   
+
     real result = poly(1 / a, workspace);
     result *= exp(-y) / sqrt(2 * PI * a);
     if(x < a)
@@ -345,7 +350,7 @@ unittest {
     for (int i=1; fact<real.max; ++i) {
         // Require exact equality for small factorials
         if (i<14) assert(gamma(i*1.0L) == fact);
-        assert(feqrel(gamma(i*1.0L), fact) > real.mant_dig-15);
+        assert(feqrel(gamma(i*1.0L), fact) >= real.mant_dig-15);
         fact *= (i*1.0L);
     }
     assert(gamma(0.0) == real.infinity);
@@ -364,7 +369,7 @@ unittest {
     real SQRT_PI = 1.77245385090551602729816748334114518279754945612238L;
 
 
-    assert(feqrel(gamma(0.5L), SQRT_PI) == real.mant_dig);
+    assert(feqrel(gamma(0.5L), SQRT_PI) >= real.mant_dig-1);
     assert(feqrel(gamma(17.25L), 4.224986665692703551570937158682064589938e13L) >= real.mant_dig-4);
 
     assert(feqrel(gamma(1.0 / 3.0L),  2.67893853470774763365569294097467764412868937795730L) >= real.mant_dig-2);
@@ -490,7 +495,7 @@ unittest {
     assert(logGamma(-real.min_normal*real.epsilon) == real.infinity);
 
     // x, correct loggamma(x), correct d/dx loggamma(x).
-    static real[] testpoints = [
+    immutable static real[] testpoints = [
     8.0L,                    8.525146484375L      + 1.48766904143001655310E-5,   2.01564147795560999654E0L,
     8.99993896484375e-1L,    6.6375732421875e-2L  + 5.11505711292524166220E-6L, -7.54938684259372234258E-1,
     7.31597900390625e-1L,    2.2369384765625e-1   + 5.21506341809849792422E-6L, -1.13355566660398608343E0L,
@@ -892,12 +897,12 @@ unittest { // also tested by the normal distribution
 
     // Test against Mathematica   betaRegularized[z,a,b]
     // These arbitrary points are chosen to give good code coverage.
-    assert(feqrel(betaIncomplete(8, 10, 0.2), 0.010_934_315_234_099_2L) >=  real.mant_dig - 4);
+    assert(feqrel(betaIncomplete(8, 10, 0.2), 0.010_934_315_234_099_2L) >=  real.mant_dig - 5);
     assert(feqrel(betaIncomplete(2, 2.5, 0.9),0.989_722_597_604_452_767_171_003_59L) >= real.mant_dig - 1 );
-    assert(feqrel(betaIncomplete(1000, 800, 0.5), 1.179140859734704555102808541457164E-06L) >= real.mant_dig - 12 );
+    assert(feqrel(betaIncomplete(1000, 800, 0.5), 1.179140859734704555102808541457164E-06L) >= real.mant_dig - 13 );
     assert(feqrel(betaIncomplete(0.0001, 10000, 0.0001),0.999978059362107134278786L) >= real.mant_dig - 18 );
     assert(betaIncomplete(0.01, 327726.7, 0.545113) == 1.0);
-    assert(feqrel(betaIncompleteInv(8, 10, 0.010_934_315_234_099_2L), 0.2L) >= real.mant_dig - 1);
+    assert(feqrel(betaIncompleteInv(8, 10, 0.010_934_315_234_099_2L), 0.2L) >= real.mant_dig - 2);
     assert(feqrel(betaIncomplete(0.01, 498.437, 0.0121433),0.99999664562033077636065L) >= real.mant_dig - 1);
     assert(feqrel(betaIncompleteInv(5, 10, 0.2000002972865658842), 0.229121208190918L) >= real.mant_dig - 3);
     assert(feqrel(betaIncompleteInv(4, 7, 0.8000002209179505L), 0.483657360076904L) >= real.mant_dig - 3);
@@ -1498,13 +1503,12 @@ done:
     return y;
 }
 
-version(unittest) import core.stdc.stdio;
 unittest {
     // Exact values
     assert(digamma(1)== -EULERGAMMA);
     assert(feqrel(digamma(0.25), -PI/2 - 3* LN2 - EULERGAMMA) >= real.mant_dig-7);
     assert(feqrel(digamma(1.0L/6), -PI/2 *sqrt(3.0L) - 2* LN2 -1.5*log(3.0L) - EULERGAMMA) >= real.mant_dig-7);
-    assert(digamma(-5)!<>0);
+    assert(digamma(-5).isNaN());
     assert(feqrel(digamma(2.5), -EULERGAMMA - 2*LN2 + 2.0 + 2.0L/3) >= real.mant_dig-9);
     assert(isIdentical(digamma(NaN(0xABC)), NaN(0xABC)));
 

@@ -32,6 +32,10 @@
     returned, it is usually a slice of an input string.  If a function
     allocates, this is explicitly mentioned in the documentation.
 
+    Upgrading:
+        $(WEB digitalmars.com/d/1.0/phobos/std_path.html#fnmatch) can
+        be replaced with $(D globMatch).
+
     Authors:
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
@@ -39,7 +43,7 @@
         Thomas Kühne,
         $(WEB erdani.org, Andrei Alexandrescu)
     Copyright:
-        Copyright (c) 2000–2011, the authors. All rights reserved.
+        Copyright (c) 2000-2014, the authors. All rights reserved.
     License:
         $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:
@@ -50,24 +54,10 @@
 module std.path;
 
 
-import std.algorithm;
-import std.array;
-import std.conv;
-import std.file: getcwd;
-import std.string;
+// FIXME
+import std.file; //: getcwd;
+import std.range.primitives;
 import std.traits;
-
-version(Posix)
-{
-    import core.exception;
-    import core.stdc.errno;
-    import core.sys.posix.pwd;
-    import core.sys.posix.stdlib;
-    private import core.exception : onOutOfMemoryError;
-}
-
-
-
 
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
@@ -94,7 +84,7 @@ else static assert (0, "unsupported platform");
     On Windows, this includes both $(D `\`) and $(D `/`).
     On POSIX, it's just $(D `/`).
 */
-bool isDirSeparator(dchar c)  @safe pure nothrow
+bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
 {
     if (c == '/') return true;
     version(Windows) if (c == '\\') return true;
@@ -108,7 +98,7 @@ bool isDirSeparator(dchar c)  @safe pure nothrow
     the drive letter from the rest of the path.  On POSIX, this always
     returns false.
 */
-private bool isDriveSeparator(dchar c)  @safe pure nothrow
+private bool isDriveSeparator(dchar c)  @safe pure nothrow @nogc
 {
     version(Windows) return c == ':';
     else return false;
@@ -116,19 +106,20 @@ private bool isDriveSeparator(dchar c)  @safe pure nothrow
 
 
 /*  Combines the isDirSeparator and isDriveSeparator tests. */
-version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow
+version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow @nogc
 {
     return isDirSeparator(c) || isDriveSeparator(c);
 }
-version(Posix) private alias isDirSeparator isSeparator;
+version(Posix) private alias isSeparator = isDirSeparator;
 
 
 /*  Helper function that determines the position of the last
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ptrdiff_t lastSeparator(C)(in C[] path)  @safe pure nothrow
-    if (isSomeChar!C)
+private ptrdiff_t lastSeparator(R)(const R path)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i])) --i;
@@ -138,13 +129,17 @@ private ptrdiff_t lastSeparator(C)(in C[] path)  @safe pure nothrow
 
 version (Windows)
 {
-    private bool isUNC(C)(in C[] path) @safe pure nothrow  if (isSomeChar!C)
+    private bool isUNC(R)(const R path)
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isNarrowString!R)
     {
         return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
             && !isDirSeparator(path[2]);
     }
 
-    private ptrdiff_t uncRootLength(C)(in C[] path) @safe pure nothrow  if (isSomeChar!C)
+    private ptrdiff_t uncRootLength(R)(const R path)
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isNarrowString!R)
         in { assert (isUNC(path)); }
         body
     {
@@ -163,12 +158,16 @@ version (Windows)
         return i;
     }
 
-    private bool hasDrive(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+    private bool hasDrive(R)(const R path)
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isNarrowString!R)
     {
         return path.length >= 2 && isDriveSeparator(path[1]);
     }
 
-    private bool isDriveRoot(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+    private bool isDriveRoot(R)(const R path)
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            isNarrowString!R)
     {
         return path.length >= 3 && isDriveSeparator(path[1])
             && isDirSeparator(path[2]);
@@ -179,24 +178,27 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private inout(C)[] ltrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
-    if (isSomeChar!C)
+private auto ltrimDirSeparators(R)(inout R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     int i = 0;
     while (i < path.length && isDirSeparator(path[i])) ++i;
-    return path[i .. $];
+    return path[i .. path.length];
 }
 
-private inout(C)[] rtrimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
-    if (isSomeChar!C)
+private auto rtrimDirSeparators(R)(inout R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && isDirSeparator(path[i])) --i;
     return path[0 .. i+1];
 }
 
-private inout(C)[] trimDirSeparators(C)(inout(C)[] path)  @safe pure nothrow
-    if (isSomeChar!C)
+private auto trimDirSeparators(R)(inout R path)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
 }
@@ -256,10 +258,10 @@ else static assert (0);
 
     Note:
     This function $(I only) strips away the specified suffix, which
-    doesn't necessarily have to represent an extension.  If you want
-    to remove the extension from a path, regardless of what the extension
+    doesn't necessarily have to represent an extension.
+    To remove the extension from a path, regardless of what the extension
     is, use $(LREF stripExtension).
-    If you want the filename without leading directories and without
+    To obtain the filename without leading directories and without
     an extension, combine the functions like this:
     ---
     assert (baseName(stripExtension("dir/file.ext")) == "file");
@@ -271,24 +273,27 @@ else static assert (0);
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-inout(C)[] baseName(C)(inout(C)[] path)
-    @trusted pure //TODO: nothrow (BUG 5700)
-    if (isSomeChar!C)
+auto baseName(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
-    auto p1 = stripDrive(path);
+    auto p1 = stripDrive!(BaseOf!R)(path);
     if (p1.empty)
     {
-        version (Windows) if (isUNC(path))
+        version (Windows) if (isUNC!(BaseOf!R)(path))
         {
-            return cast(typeof(return)) dirSeparator.dup;
+            return path[0..1];
         }
-        return null;
+        static if (is(StringTypeOf!R))
+            return StringTypeOf!R.init[];   // which is null
+        else
+            return p1; // which is empty
     }
 
     auto p2 = rtrimDirSeparators(p1);
     if (p2.empty) return p1[0 .. 1];
 
-    return p2[lastSeparator(p2)+1 .. $];
+    return p2[lastSeparator(p2)+1 .. p2.length];
 }
 
 /// ditto
@@ -326,6 +331,13 @@ unittest
     assert (baseName!(CaseSensitive.yes)("file.ext", ".EXT") == "file.ext");
     assert (baseName!(CaseSensitive.no)("file.ext", ".EXT") == "file");
 
+    {
+        auto r = MockRange!(immutable(char))(`dir/file.ext`);
+        auto s = r.baseName();
+        foreach (i, c; `file`)
+            assert(s[i] == c);
+    }
+
     version (Windows)
     {
         assert (baseName(`dir\file.ext`) == `file.ext`);
@@ -345,12 +357,20 @@ unittest
         assert (baseName(`\\server\share\file`) == `file`);
         assert (baseName(`\\server\share\`) == `\`);
         assert (baseName(`\\server\share`) == `\`);
+
+        auto r = MockRange!(immutable(char))(`\\server\share`);
+        auto s = r.baseName();
+        foreach (i, c; `\`)
+            assert(s[i] == c);
     }
 
     assert (baseName(stripExtension("dir/file.ext")) == "file");
 
     static assert (baseName("dir/file.ext") == "file.ext");
     static assert (baseName("dir/file.ext", ".ext") == "file");
+
+    static struct DirEntry { string s; alias s this; }
+    assert(baseName(DirEntry("dir/file.ext")) == "file.ext");
 }
 
 
@@ -360,9 +380,8 @@ unittest
     includes the drive letter if present.
 
     This function performs a memory allocation if and only if $(D path)
-    is mutable and does not have a directory (in which case a new mutable
-    string is needed to hold the returned current-directory symbol,
-    $(D ".")).
+    does not have a directory (in which case a new string is needed to
+    hold the returned current-directory symbol, $(D ".")).
 
     Examples:
     ---
@@ -390,6 +409,7 @@ C[] dirName(C)(C[] path)
     //TODO: @safe (BUG 6169) pure nothrow (because of to())
     if (isSomeChar!C)
 {
+    import std.conv : to;
     if (path.empty) return to!(typeof(return))(".");
 
     auto p = rtrimDirSeparators(path);
@@ -478,7 +498,7 @@ unittest
     }
     ---
 */
-inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
+inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
 {
     if (path.empty) return null;
 
@@ -541,7 +561,7 @@ unittest
     }
     ---
 */
-inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow
+inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     version (Windows)
@@ -587,12 +607,14 @@ unittest
     }
     ---
 */
-inout(C)[] stripDrive(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
+auto stripDrive(R)(inout R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
     version(Windows)
     {
-        if (hasDrive(path))      return path[2 .. $];
-        else if (isUNC(path))    return path[uncRootLength(path) .. $];
+        if (hasDrive!(BaseOf!R)(path))      return path[2 .. path.length];
+        else if (isUNC!(BaseOf!R)(path))    return path[uncRootLength!(BaseOf!R)(path) .. path.length];
     }
     return path;
 }
@@ -605,10 +627,20 @@ unittest
         assert (stripDrive(`d:\dir\file`) == `\dir\file`);
         assert (stripDrive(`\\server\share\dir\file`) == `\dir\file`);
         static assert (stripDrive(`d:\dir\file`) == `\dir\file`);
+
+        auto r = MockRange!(immutable(char))(`d:\dir\file`);
+        auto s = r.stripDrive();
+        foreach (i, c; `\dir\file`)
+            assert(s[i] == c);
     }
     version(Posix)
     {
         assert (stripDrive(`d:\dir\file`) == `d:\dir\file`);
+
+        auto r = MockRange!(immutable(char))(`d:\dir\file`);
+        auto s = r.stripDrive();
+        foreach (i, c; `d:\dir\file`)
+            assert(s[i] == c);
     }
 }
 
@@ -618,8 +650,9 @@ unittest
 /*  Helper function that returns the position of the filename/extension
     separator dot in path.  If not found, returns -1.
 */
-private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
-    if (isSomeChar!C)
+private ptrdiff_t extSeparatorPos(R)(const R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i]))
@@ -629,8 +662,6 @@ private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
     }
     return -1;
 }
-
-
 
 
 /** Returns the _extension part of a file name, including the dot.
@@ -647,11 +678,19 @@ private ptrdiff_t extSeparatorPos(C)(in C[] path)  @safe pure nothrow
     assert (extension(".file.ext")      == ".ext");
     ---
 */
-inout(C)[] extension(C)(inout(C)[] path)  @safe pure nothrow  if (isSomeChar!C)
+auto extension(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
-    auto i = extSeparatorPos(path);
-    if (i == -1) return null;
-    else return path[i .. $];
+    auto i = extSeparatorPos!(BaseOf!R)(path);
+    if (i == -1)
+    {
+        static if (is(StringTypeOf!R))
+            return StringTypeOf!R.init[];   // which is null
+        else
+            return path[0 .. 0];
+    }
+    else return path[i .. path.length];
 }
 
 
@@ -690,12 +729,22 @@ unittest
 
     static assert (extension("file").empty);
     static assert (extension("file.ext") == ".ext");
+
+    {
+        auto r = MockRange!(immutable(char))(`file.ext1.ext2`);
+        auto s = r.extension();
+        foreach (i, c; `.ext2`)
+            assert(s[i] == c);
+    }
+
+    static struct DirEntry { string s; alias s this; }
+    assert (extension(DirEntry("file")).empty);
 }
 
 
 
 
-/** Returns the path with the extension stripped off.
+/** Returns slice of path[] with the extension stripped off.
 
     Examples:
     ---
@@ -708,7 +757,7 @@ unittest
     assert (stripExtension("dir/file.ext")   == "dir/file");
     ---
 */
-inout(C)[] stripExtension(C)(inout(C)[] path)  @safe pure nothrow
+inout(C)[] stripExtension(C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
     auto i = extSeparatorPos(path);
@@ -760,6 +809,9 @@ unittest
     extension is simply appended to the filename.  Including a leading dot
     in $(D ext) is optional.
 
+    If the extension is empty, this function is equivalent to
+    $(LREF stripExtension).
+
     This function normally allocates a new string (the possible exception
     being the case when path is immutable and doesn't already have an
     extension).
@@ -768,6 +820,7 @@ unittest
     ---
     assert (setExtension("file", "ext")      == "file.ext");
     assert (setExtension("file", ".ext")     == "file.ext");
+    assert (setExtension("file.old", "")     == "file");
     assert (setExtension("file.old", "new")  == "file.new");
     assert (setExtension("file.old", ".new") == "file.new");
     ---
@@ -776,10 +829,10 @@ immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
-    if (ext.length > 0 && ext[0] == '.')
-        return cast(typeof(return))(stripExtension(path)~ext);
-    else
+    if (ext.length > 0 && ext[0] != '.')
         return cast(typeof(return))(stripExtension(path)~'.'~ext);
+    else
+        return cast(typeof(return))(stripExtension(path)~ext);
 }
 
 ///ditto
@@ -787,6 +840,9 @@ immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
+    if (ext.length == 0)
+        return stripExtension(path);
+
     // Optimised for the case where path is immutable and has no extension
     if (ext.length > 0 && ext[0] == '.') ext = ext[1 .. $];
     auto i = extSeparatorPos(path);
@@ -829,8 +885,11 @@ unittest
 
     static assert (setExtension("file"w.dup, "ext"w) == "file.ext");
     static assert (setExtension("file.old"d.dup, "new"d) == "file.new");
-}
 
+    // Issue 10601
+    assert (setExtension("file", "") == "file");
+    assert (setExtension("file.ext", "") == "file");
+}
 
 
 
@@ -855,6 +914,7 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure // TODO: nothrow (because of to())
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
+    import std.conv : to;
     auto i = extSeparatorPos(path);
     if (i == -1)
     {
@@ -886,56 +946,114 @@ unittest
 }
 
 
+/** Combines one or more path segments.
 
+    This function takes a set of path segments, given as an input
+    range of string elements or as a set of string arguments,
+    and concatenates them with each other.  Directory separators
+    are inserted between segments if necessary.  If any of the
+    path segments are absolute (as defined by $(LREF isAbsolute)), the
+    preceding segments will be dropped.
 
-/** Combines one or more path components.
-
-    The given path components are concatenated with each other,
-    and if necessary, directory separators are inserted between
-    them. If any of the path components are rooted (as defined by
-    $(LREF isRooted)) the preceding path components will be dropped.
+    On Windows, if one of the path segments are rooted, but not absolute
+    (e.g. $(D `\foo`)), all preceding path segments down to the previous
+    root will be dropped.  (See below for an example.)
 
     This function always allocates memory to hold the resulting path.
+    The variadic overload is guaranteed to only perform a single
+    allocation, as is the range version if $(D paths) is a forward
+    range.
+*/
+immutable(ElementEncodingType!(ElementType!Range))[]
+    buildPath(Range)(Range segments)
+        if (isInputRange!Range && isSomeString!(ElementType!Range))
+{
+    if (segments.empty) return null;
 
-    Examples:
-    ---
+    // If this is a forward range, we can pre-calculate a maximum length.
+    static if (isForwardRange!Range)
+    {
+        auto segments2 = segments.save;
+        size_t precalc = 0;
+        foreach (segment; segments2) precalc += segment.length + 1;
+    }
+    // Otherwise, just venture a guess and resize later if necessary.
+    else size_t precalc = 255;
+
+    auto buf = new Unqual!(ElementEncodingType!(ElementType!Range))[](precalc);
+    size_t pos = 0;
+    foreach (segment; segments)
+    {
+        if (segment.empty) continue;
+        static if (!isForwardRange!Range)
+        {
+            immutable neededLength = pos + segment.length + 1;
+            if (buf.length < neededLength)
+                buf.length = reserve(buf, neededLength + buf.length/2);
+        }
+        if (pos > 0)
+        {
+            if (isRooted(segment))
+            {
+                version (Posix)
+                {
+                    pos = 0;
+                }
+                else version (Windows)
+                {
+                    if (isAbsolute(segment))
+                        pos = 0;
+                    else
+                    {
+                        pos = rootName(buf[0 .. pos]).length;
+                        if (pos > 0 && isDirSeparator(buf[pos-1])) --pos;
+                    }
+                }
+            }
+            else if (!isDirSeparator(buf[pos-1]))
+                buf[pos++] = dirSeparator[0];
+        }
+        buf[pos .. pos + segment.length] = segment[];
+        pos += segment.length;
+    }
+    static U trustedCast(U, V)(V v) @trusted pure nothrow { return cast(U) v; }
+    return trustedCast!(typeof(return))(buf[0 .. pos]);
+}
+
+/// ditto
+immutable(C)[] buildPath(C)(const(C[])[] paths...)
+    @safe pure nothrow
+    if (isSomeChar!C)
+{
+    return buildPath!(typeof(paths))(paths);
+}
+
+///
+unittest
+{
     version (Posix)
     {
         assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
-        assert (buildPath("/foo/", "bar")      == "/foo/bar");
+        assert (buildPath("/foo/", "bar/baz")  == "/foo/bar/baz");
         assert (buildPath("/foo", "/bar")      == "/bar");
     }
 
     version (Windows)
     {
         assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
-        assert (buildPath(`c:\foo`, "bar")    == `c:\foo\bar`);
-        assert (buildPath("foo", `d:\bar`)    == `d:\bar`);
-        assert (buildPath("foo", `\bar`)      == `\bar`);
+        assert (buildPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
+        assert (buildPath("foo", `d:\bar`)     == `d:\bar`);
+        assert (buildPath("foo", `\bar`)       == `\bar`);
+        assert (buildPath(`c:\foo`, `\bar`)    == `c:\bar`);
     }
-    ---
-*/
-immutable(C)[] buildPath(C)(const(C[])[] paths...)
-    @safe pure //TODO: nothrow (because of reduce() and to())
-    if (isSomeChar!C)
-{
-    static typeof(return) joinPaths(const(C)[] lhs, const(C)[] rhs)
-        @trusted pure //TODO: nothrow (because of to())
-    {
-        if (rhs.empty) return to!(typeof(return))(lhs);
-        if (lhs.empty || isRooted(rhs)) return to!(typeof(return))(rhs);
-        if (isDirSeparator(lhs[$-1]) || isDirSeparator(rhs[0]))
-            return cast(typeof(return))(lhs ~ rhs);
-        else
-            return cast(typeof(return))(lhs ~ dirSeparator ~ rhs);
-    }
-
-    return to!(typeof(return))(reduce!joinPaths(paths));
 }
 
-
-unittest
+unittest // non-documented
 {
+    import std.range;
+    // ir() wraps an array in a plain (i.e. non-forward) input range, so that
+    // we can test both code paths
+    InputRange!(C[]) ir(C)(C[][] p...) { return inputRangeObject(p); }
     version (Posix)
     {
         assert (buildPath("foo") == "foo");
@@ -955,6 +1073,23 @@ unittest
 
         static assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
         static assert (buildPath("foo", "/bar", "baz") == "/bar/baz");
+
+        // The following are mostly duplicates of the above, except that the
+        // range version does not accept mixed constness.
+        assert (buildPath(ir("foo")) == "foo");
+        assert (buildPath(ir("/foo/")) == "/foo/");
+        assert (buildPath(ir("foo", "bar")) == "foo/bar");
+        assert (buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
+        assert (buildPath(ir("foo/".dup, "bar".dup)) == "foo/bar");
+        assert (buildPath(ir("foo///".dup, "bar".dup)) == "foo///bar");
+        assert (buildPath(ir("/foo"w, "bar"w)) == "/foo/bar");
+        assert (buildPath(ir("foo"w.dup, "/bar"w.dup)) == "/bar");
+        assert (buildPath(ir("foo"w.dup, "bar/"w.dup)) == "foo/bar/");
+        assert (buildPath(ir("/"d, "foo"d)) == "/foo");
+        assert (buildPath(ir(""d.dup, "foo"d.dup)) == "foo");
+        assert (buildPath(ir("foo"d, ""d)) == "foo");
+        assert (buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
+        assert (buildPath(ir("foo"w.dup, "/bar"w.dup, "baz"w.dup)) == "/bar/baz");
     }
     version (Windows)
     {
@@ -964,10 +1099,32 @@ unittest
         assert (buildPath("foo", `\bar`) == `\bar`);
         assert (buildPath(`c:\foo`, "bar") == `c:\foo\bar`);
         assert (buildPath("foo"w, `d:\bar`w.dup) ==  `d:\bar`);
+        assert (buildPath(`c:\foo\bar`, `\baz`) == `c:\baz`);
+        assert (buildPath(`\\foo\bar\baz`d, `foo`d, `\bar`d) == `\\foo\bar\bar`d);
 
         static assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
         static assert (buildPath("foo", `c:\bar`, "baz") == `c:\bar\baz`);
+
+        assert (buildPath(ir("foo")) == "foo");
+        assert (buildPath(ir(`\foo/`)) == `\foo/`);
+        assert (buildPath(ir("foo", "bar", "baz")) == `foo\bar\baz`);
+        assert (buildPath(ir("foo", `\bar`)) == `\bar`);
+        assert (buildPath(ir(`c:\foo`, "bar")) == `c:\foo\bar`);
+        assert (buildPath(ir("foo"w.dup, `d:\bar`w.dup)) ==  `d:\bar`);
+        assert (buildPath(ir(`c:\foo\bar`, `\baz`)) == `c:\baz`);
+        assert (buildPath(ir(`\\foo\bar\baz`d, `foo`d, `\bar`d)) == `\\foo\bar\bar`d);
     }
+
+    // Test that allocation works as it should.
+    auto manyShort = "aaa".repeat(1000).array();
+    auto manyShortCombined = join(manyShort, dirSeparator);
+    assert (buildPath(manyShort) == manyShortCombined);
+    assert (buildPath(ir(manyShort)) == manyShortCombined);
+
+    auto fewLong = 'b'.repeat(500).array().repeat(10).array();
+    auto fewLongCombined = join(fewLong, dirSeparator);
+    assert (buildPath(fewLong) == fewLongCombined);
+    assert (buildPath(ir(fewLong)) == fewLongCombined);
 }
 
 unittest
@@ -985,12 +1142,14 @@ unittest
 }
 
 
-
 /** Performs the same task as $(LREF buildPath),
     while at the same time resolving current/parent directory
     symbols ($(D ".") and $(D "..")) and removing superfluous
     directory separators.
+    It will return "." is the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
+
+    Using buildNormalizedPath on null paths will always return null.
 
     Note that this function does not resolve symbolic links.
 
@@ -998,6 +1157,8 @@ unittest
 
     Examples:
     ---
+    assert (buildNormalizedPath("foo", "..") == ".");
+
     version (Posix)
     {
         assert (buildNormalizedPath("/foo/./bar/..//baz/") == "/foo/baz");
@@ -1022,7 +1183,20 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
     if (isSomeChar!C)
 {
-    import std.c.stdlib;
+    import core.stdc.stdlib;
+
+    //Remove empty fields
+    bool allEmpty = true;
+    foreach (ref const(C[]) path ; paths)
+    {
+        if (path !is null)
+        {
+            allEmpty = false;
+            break;
+        }
+    }
+    if (allEmpty) return null;
+
     auto paths2 = new const(C)[][](paths.length);
         //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
 
@@ -1203,7 +1377,14 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     // Return path, including root element and excluding the
     // final dir separator.
     immutable len = (relPart.ptr - fullPath.ptr) + (i > 0 ? i - 1 : 0);
-    fullPath = fullPath[0 .. len];
+    if (len == 0)
+    {
+        fullPath.length = 1;
+        fullPath[0] = '.';
+    }
+    else
+        fullPath = fullPath[0 .. len];
+
     version (Windows)
     {
         // On Windows, if the path is on the form `\\server\share`,
@@ -1220,6 +1401,18 @@ unittest
 {
     assert (buildNormalizedPath("") is null);
     assert (buildNormalizedPath("foo") == "foo");
+    assert (buildNormalizedPath(".") == ".");
+    assert (buildNormalizedPath(".", ".") == ".");
+    assert (buildNormalizedPath("foo", "..") == ".");
+    assert (buildNormalizedPath("", "") is null);
+    assert (buildNormalizedPath("", ".") == ".");
+    assert (buildNormalizedPath(".", "") == ".");
+    assert (buildNormalizedPath(null, "foo") == "foo");
+    assert (buildNormalizedPath("", "foo") == "foo");
+    assert (buildNormalizedPath("", "") == "");
+    assert (buildNormalizedPath("", null) == "");
+    assert (buildNormalizedPath(null, "") == "");
+    assert (buildNormalizedPath!(char)(null, null) == "");
 
     version (Posix)
     {
@@ -1242,6 +1435,15 @@ unittest
         assert (buildNormalizedPath("/foo", "/bar/..", "baz") == "/baz");
         assert (buildNormalizedPath("foo/./bar", "../../", "../baz") == "../baz");
         assert (buildNormalizedPath("/foo/./bar", "../../baz") == "/baz");
+
+        assert (buildNormalizedPath("foo", "", "bar") == "foo/bar");
+        assert (buildNormalizedPath("foo", null, "bar") == "foo/bar");
+
+        //Curent dir path
+        assert (buildNormalizedPath("./") == ".");
+        assert (buildNormalizedPath("././") == ".");
+        assert (buildNormalizedPath("./foo/..") == ".");
+        assert (buildNormalizedPath("foo/..") == ".");
     }
     else version (Windows)
     {
@@ -1288,6 +1490,15 @@ unittest
         assert (buildNormalizedPath(`c:\foo`, `bar\baz\`) == `c:\foo\bar\baz`);
         assert (buildNormalizedPath(`c:\foo`, `bar/..`) == `c:\foo`);
         assert (buildNormalizedPath(`\\server\share\foo`, `..\bar`) == `\\server\share\bar`);
+
+        assert (buildNormalizedPath("foo", "", "bar") == `foo\bar`);
+        assert (buildNormalizedPath("foo", null, "bar") == `foo\bar`);
+
+        //Curent dir path
+        assert (buildNormalizedPath(`.\`) == ".");
+        assert (buildNormalizedPath(`.\.\`) == ".");
+        assert (buildNormalizedPath(`.\foo\..`) == ".");
+        assert (buildNormalizedPath(`foo\..`) == ".");
     }
     else static assert (0);
 }
@@ -1437,10 +1648,10 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
 {
     static struct PathSplitter
     {
-    @safe pure nothrow:
-        @property empty() const { return _empty; }
+    @safe pure nothrow @nogc:
+        @property bool empty() const { return _empty; }
 
-        @property front() const
+        @property const(C)[] front() const
         {
             assert (!empty, "PathSplitter: called front() on empty range");
             return _front;
@@ -1471,7 +1682,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             }
         }
 
-        @property back() const
+        @property const(C)[] back() const
         {
             assert (!empty, "PathSplitter: called back() on empty range");
             return _back;
@@ -1573,6 +1784,7 @@ unittest
     // equal2 verifies that the range is the same both ways, i.e.
     // through front/popFront and back/popBack.
     import std.range;
+    import std.algorithm;
     bool equal2(R1, R2)(R1 r1, R2 r2)
     {
         static assert (isBidirectionalRange!R1);
@@ -1624,6 +1836,10 @@ unittest
     {
         assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
     });
+
+    // Bugzilla 11691
+    // front should return a mutable array of const elements
+    static assert(is(typeof(pathSplitter!char(null).front) == const(char)[]));
 }
 
 
@@ -1658,11 +1874,13 @@ unittest
     }
     ---
 */
-bool isRooted(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+bool isRooted(R)(inout R path)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
     version (Posix)         return false;
-    else version (Windows)  return isAbsolute(path);
+    else version (Windows)  return isAbsolute!(BaseOf!R)(path);
 }
 
 
@@ -1685,6 +1903,9 @@ unittest
 
     static assert (isRooted("/foo"));
     static assert (!isRooted("foo"));
+
+    static struct DirEntry { string s; alias s this; }
+    assert (!isRooted(DirEntry("foo")));
 }
 
 
@@ -1721,16 +1942,25 @@ unittest
     }
     ---
 */
-version (StdDdoc) bool isAbsolute(C)(in C[] path) @safe pure nothrow
-    if (isSomeChar!C);
-
-else version (Windows) bool isAbsolute(C)(in C[] path)  @safe pure nothrow
-    if (isSomeChar!C)
+version (StdDdoc)
 {
-    return isDriveRoot(path) || isUNC(path);
+    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            is(StringTypeOf!R));
 }
-
-else version (Posix) alias isRooted isAbsolute;
+else version (Windows)
+{
+    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+            is(StringTypeOf!R))
+    {
+        return isDriveRoot!(BaseOf!R)(path) || isUNC!(BaseOf!R)(path);
+    }
+}
+else version (Posix)
+{
+    alias isAbsolute = isRooted;
+}
 
 
 unittest
@@ -1757,6 +1987,14 @@ unittest
     assert (!isAbsolute("d:foo"));
     static assert (isAbsolute(`d:\foo`));
     }
+
+    {
+        auto r = MockRange!(immutable(char))(`../foo`);
+        assert(!r.isAbsolute());
+    }
+
+    static struct DirEntry { string s; alias s this; }
+    assert(!isAbsolute(DirEntry("foo")));
 }
 
 
@@ -1789,6 +2027,7 @@ unittest
         assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
         assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
         assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
+        assert (absolutePath(`\file`, `c:\foo\bar`)        == `c:\file`);
     }
     ---
 
@@ -1821,6 +2060,8 @@ unittest
         assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
         assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
         assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
+        assert (absolutePath(`\`, `c:\`)                   == `c:\`);
+        assert (absolutePath(`\some\file`, `c:\foo\bar`)   == `c:\some\file`);
         static assert (absolutePath(`some\file`, `c:\foo\bar`) == `c:\foo\bar\some\file`);
     }
 
@@ -2191,6 +2432,7 @@ bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
 in
 {
     // Verify that pattern[] is valid
+    import std.algorithm : balancedParens;
     assert(balancedParens(pattern, '[', ']', 0));
     assert(balancedParens(pattern, '{', '}', 0));
 }
@@ -2376,9 +2618,11 @@ unittest
     On POSIX, $(D filename) may not contain a forward slash ($(D '/')) or
     the null character ($(D '\0')).
 */
-bool isValidFilename(C)(in C[] filename)  @safe pure nothrow  if (isSomeChar!C)
+bool isValidFilename(R)(R filename)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
-    import core.stdc.stdio;
+    import core.stdc.stdio : FILENAME_MAX;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
     foreach (c; filename)
     {
@@ -2399,7 +2643,9 @@ bool isValidFilename(C)(in C[] filename)  @safe pure nothrow  if (isSomeChar!C)
                 case '?':
                 case '*':
                     return false;
+
                 default:
+                    break;
             }
         }
         else version (Posix)
@@ -2410,7 +2656,8 @@ bool isValidFilename(C)(in C[] filename)  @safe pure nothrow  if (isSomeChar!C)
     }
     version (Windows)
     {
-        if (filename[$-1] == '.' || filename[$-1] == ' ') return false;
+        auto last = filename[filename.length - 1];
+        if (last == '.' || last == ' ') return false;
     }
 
     // All criteria passed
@@ -2420,6 +2667,7 @@ bool isValidFilename(C)(in C[] filename)  @safe pure nothrow  if (isSomeChar!C)
 
 unittest
 {
+    import std.conv;
     auto valid = ["foo"];
     auto invalid = ["", "foo\0bar", "foo/bar"];
     auto pfdep = [`foo\bar`, "*.txt"];
@@ -2436,6 +2684,14 @@ unittest
         foreach (fn; invalid)
             assert (!isValidFilename(to!T(fn)));
     }
+
+    {
+        auto r = MockRange!(immutable(char))(`dir/file.d`);
+        assert(!isValidFilename(r));
+    }
+
+    static struct DirEntry { string s; alias s this; }
+    assert(isValidFilename(DirEntry("file.ext")));
 }
 
 
@@ -2640,6 +2896,9 @@ string expandTilde(string inputPath)
     {
         import core.stdc.string : strlen;
         import core.stdc.stdlib : getenv, malloc, free;
+        import core.exception : onOutOfMemoryError;
+        import core.sys.posix.pwd : passwd, getpwnam_r;
+        import core.stdc.errno : errno, ERANGE;
 
         /*  Joins a path from a C string to the remainder of path.
 
@@ -2687,68 +2946,79 @@ string expandTilde(string inputPath)
         // Replaces the tilde from path with the path from the user database.
         static string expandFromDatabase(string path)
         {
-            assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
-            assert(path[0] == '~');
-
-            // Extract username, searching for path separator.
-            string username;
-            auto last_char = std.string.indexOf(path, dirSeparator[0]);
-
-            if (last_char == -1)
+            // Android doesn't really support this, as getpwnam_r
+            // isn't provided and getpwnam is basically just a stub
+            version(Android)
             {
-                username = path[1 .. $] ~ '\0';
-                last_char = username.length + 1;
+                return path;
             }
             else
             {
-                username = path[1 .. last_char] ~ '\0';
-            }
-            assert(last_char > 1);
+                import std.string : indexOf;
 
-            // Reserve C memory for the getpwnam_r() function.
-            passwd result;
-            int extra_memory_size = 5 * 1024;
-            void* extra_memory;
+                assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
+                assert(path[0] == '~');
 
-            while (1)
-            {
-                extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
-                if (extra_memory == null)
-                    goto Lerror;
+                // Extract username, searching for path separator.
+                string username;
+                auto last_char = indexOf(path, dirSeparator[0]);
 
-                // Obtain info from database.
-                passwd *verify;
-                errno = 0;
-                if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
-                        &verify) == 0)
+                if (last_char == -1)
                 {
-                    // Failure if verify doesn't point at result.
-                    if (verify != &result)
-                        // username is not found, so return path[]
-                        goto Lnotfound;
-                    break;
+                    username = path[1 .. $] ~ '\0';
+                    last_char = username.length + 1;
+                }
+                else
+                {
+                    username = path[1 .. last_char] ~ '\0';
+                }
+                assert(last_char > 1);
+
+                // Reserve C memory for the getpwnam_r() function.
+                passwd result;
+                int extra_memory_size = 5 * 1024;
+                void* extra_memory;
+
+                while (1)
+                {
+                    extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
+                    if (extra_memory == null)
+                        goto Lerror;
+
+                    // Obtain info from database.
+                    passwd *verify;
+                    errno = 0;
+                    if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
+                            &verify) == 0)
+                    {
+                        // Failure if verify doesn't point at result.
+                        if (verify != &result)
+                            // username is not found, so return path[]
+                            goto Lnotfound;
+                        break;
+                    }
+
+                    if (errno != ERANGE)
+                        goto Lerror;
+
+                    // extra_memory isn't large enough
+                    core.stdc.stdlib.free(extra_memory);
+                    extra_memory_size *= 2;
                 }
 
-                if (errno != ERANGE)
-                    goto Lerror;
+                path = combineCPathWithDPath(result.pw_dir, path, last_char);
 
-                // extra_memory isn't large enough
+            Lnotfound:
                 core.stdc.stdlib.free(extra_memory);
-                extra_memory_size *= 2;
+                return path;
+
+            Lerror:
+                // Errors are going to be caused by running out of memory
+                if (extra_memory)
+                    core.stdc.stdlib.free(extra_memory);
+                onOutOfMemoryError();
+                return null;
             }
-
-            path = combineCPathWithDPath(result.pw_dir, path, last_char);
-
-        Lnotfound:
-            core.stdc.stdlib.free(extra_memory);
-            return path;
-
-        Lerror:
-            // Errors are going to be caused by running out of memory
-            if (extra_memory)
-                core.stdc.stdlib.free(extra_memory);
-            onOutOfMemoryError();
-            return null;
         }
 
         // Return early if there is no tilde in path.
@@ -2799,15 +3069,59 @@ unittest
         if (oldHome !is null) environment["HOME"] = oldHome;
         else environment.remove("HOME");
 
-        // Test user expansion for root. Are there unices without /root?
+        // Test user expansion for root, no /root on Android
         version (OSX)
+        {
             assert(expandTilde("~root") == "/var/root", expandTilde("~root"));
-        else
-            assert(expandTilde("~root") == "/root", expandTilde("~root"));
-        version (OSX)
             assert(expandTilde("~root/") == "/var/root/", expandTilde("~root/"));
+        }
+        else version (Android)
+        {
+        }
         else
+        {
+            assert(expandTilde("~root") == "/root", expandTilde("~root"));
             assert(expandTilde("~root/") == "/root/", expandTilde("~root/"));
+        }
         assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }
+}
+
+version (unittest)
+{
+    /* Define a mock RandomAccessRange to use for unittesting.
+     */
+
+    struct MockRange(C)
+    {
+        this(C[] array) { this.array = array; }
+      const
+      {
+        @property size_t length() { return array.length; }
+        @property bool empty() { return array.length == 0; }
+        @property C front() { return array[0]; }
+        @property C back()  { return array[$ - 1]; }
+        @property size_t opDollar() { return length; }
+        C opIndex(size_t i) { return array[i]; }
+      }
+        void popFront() { array = array[1 .. $]; }
+        void popBack()  { array = array[0 .. $-1]; }
+        MockRange!C opSlice( size_t lwr, size_t upr) const
+        {
+            return MockRange!C(array[lwr .. upr]);
+        }
+        @property MockRange save() { return this; }
+      private:
+        C[] array;
+    }
+
+    static assert( isRandomAccessRange!(MockRange!(const(char))) );
+}
+
+private template BaseOf(R)
+{
+    static if (isRandomAccessRange!R && isSomeChar!(ElementType!R))
+        alias BaseOf = R;
+    else
+        alias BaseOf = StringTypeOf!R;
 }

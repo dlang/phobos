@@ -24,17 +24,9 @@
  */
 module std.net.isemail;
 
-import std.algorithm : cmp, equal, uniq, filter, contains = canFind;
-import std.range : ElementType;
-import std.array;
-import std.ascii;
-import std.conv;
-import std.exception : enforce;
-import std.regex;
-import std.string;
+// FIXME
+import std.range.primitives; // : ElementType;
 import std.traits;
-import std.utf;
-import std.uni;
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
@@ -67,8 +59,17 @@ import std.uni;
 EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no,
     EmailStatusCode errorLevel = EmailStatusCode.none) if (isSomeChar!(Char))
 {
-    alias const(Char)[] tstring;
+    import std.algorithm : uniq, canFind;
+    import std.exception : enforce;
+    import std.array : array, split;
+    import std.conv : to;
+    import std.regex : match, regex;
+    import std.string : indexOf, lastIndexOf;
+    import std.uni : isNumber;
 
+    alias tstring = const(Char)[];
+
+    enum defaultThreshold = 16;
     int threshold;
     bool diagnose;
 
@@ -84,7 +85,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
         switch (errorLevel)
         {
-            case EmailStatusCode.warning: threshold = threshold; break;
+            case EmailStatusCode.warning: threshold = defaultThreshold; break;
             case EmailStatusCode.error: threshold = EmailStatusCode.valid; break;
             default: threshold = errorLevel;
         }
@@ -228,7 +229,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                                 break;
 
                                 default:
-                                    throw new Exception("More text found where none is allowed, but unrecognised prior "
+                                    throw new Exception("More text found where none is allowed, but unrecognised prior " ~
                                                         "context: " ~ to!(string)(contextPrior));
                             }
                         }
@@ -238,7 +239,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                             contextPrior = context;
                             auto c = token.front;
 
-                            if (c < '!' || c > '~' || c == '\n' || Token.specials.contains(token))
+                            if (c < '!' || c > '~' || c == '\n' || Token.specials.canFind(token))
                                 returnStatus ~= EmailStatusCode.errorExpectingText;
 
                             parseData[EmailPart.componentLocalPart] ~= token;
@@ -281,7 +282,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         }
 
                         endOrDie = false;
-                        elementLength = 0,
+                        elementLength = 0;
                         elementCount++;
 
                         //atomList[EmailPart.componentDomain][elementCount] = "";
@@ -344,7 +345,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                                 break;
 
                                 default:
-                                    throw new Exception("More text found where none is allowed, but unrecognised prior "
+                                    throw new Exception("More text found where none is allowed, but unrecognised prior " ~
                                                         "context: " ~ to!(string)(contextPrior));
                             }
 
@@ -353,7 +354,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         auto c = token.front;
                         hyphenFlag = false;
 
-                        if (c < '!' || c > '~' || Token.specials.contains(token))
+                        if (c < '!' || c > '~' || Token.specials.canFind(token))
                             returnStatus ~= EmailStatusCode.errorExpectingText;
 
                         else if (token == Token.hyphen)
@@ -730,7 +731,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
         if (elementCount == 0)
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomain;
 
-        if (isNumeric(atomList[EmailPart.componentDomain][elementCount].front))
+        if (isNumber(atomList[EmailPart.componentDomain][elementCount].front))
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomainNumeric;
     }
 
@@ -850,19 +851,19 @@ unittest
     //         EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
         // DNS check is currently not implemented
 
-    assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyz`
-        `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`
-        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij`.isEmail(CheckDns.no,
+    assert((`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyz`~
+        `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`~
+        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij`).isEmail(CheckDns.no,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322TooLong);
 
-    assert(`a@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyz`
-        `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`
-        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hij`.isEmail(CheckDns.no,
+    assert((`a@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyz`~
+        `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`~
+        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hij`).isEmail(CheckDns.no,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322TooLong);
 
-    assert(`a@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyz`
-        `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`
-        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hijk`.isEmail(CheckDns.no,
+    assert((`a@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyz`~
+        `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`~
+        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hijk`).isEmail(CheckDns.no,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322DomainTooLong);
 
     assert(`"test"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
@@ -999,7 +1000,7 @@ unittest
         EmailStatusCode.foldingWhitespace, `Folding whitespace`);
 
     assert("\u000D\u000A \u000D\u000A test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
-        EmailStatusCode.deprecatedFoldingWhitespace, `FWS with one line composed entirely of WSP`
+        EmailStatusCode.deprecatedFoldingWhitespace, `FWS with one line composed entirely of WSP`~
         ` -- only allowed as obsolete FWS (someone might allow only non-obsolete FWS)`);
 
     assert(`(comment)test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.comment);
@@ -1024,21 +1025,21 @@ unittest
     assert(`test@(comment)abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.com`.isEmail(CheckDns.no,
         EmailStatusCode.any).statusCode == EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt);
 
-    assert(`(comment)test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghik.abcdefghijklmnopqrstuvwxyz`
-        `abcdefghijklmnopqrstuvwxyzabcdefghik.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.`
-        `abcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstu`.isEmail(CheckDns.no,
+    assert((`(comment)test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghik.abcdefghijklmnopqrstuvwxyz`~
+        `abcdefghijklmnopqrstuvwxyzabcdefghik.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.`~
+        `abcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstu`).isEmail(CheckDns.no,
         EmailStatusCode.any).statusCode == EmailStatusCode.comment);
 
     assert("test@iana.org\u000A".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
     assert(`test@xn--hxajbheg2az3al.xn--jxalpdlp`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
-        EmailStatusCode.valid, `A valid IDN from ICANN's <a href="http://idn.icann.org/#The_example.test_names">`
+        EmailStatusCode.valid, `A valid IDN from ICANN's <a href="http://idn.icann.org/#The_example.test_names">`~
         `IDN TLD evaluation gateway</a>`);
 
     assert(`xn--test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid,
-        `RFC 3490: "unless the email standards are revised to invite the use of IDNA for local parts, a domain label`
-        ` that holds the local part of an email address SHOULD NOT begin with the ACE prefix, and even if it does,`
+        `RFC 3490: "unless the email standards are revised to invite the use of IDNA for local parts, a domain label`~
+        ` that holds the local part of an email address SHOULD NOT begin with the ACE prefix, and even if it does,`~
         ` it is to be interpreted literally as a local part that happens to begin with the ACE prefix"`);
 
     assert(`test@iana.org-`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
@@ -1178,7 +1179,7 @@ unittest
         EmailStatusCode.foldingWhitespace, `FWS`);
 
     assert("test@iana.org\u000D\u000A \u000D\u000A ".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
-        EmailStatusCode.deprecatedFoldingWhitespace, `FWS with one line composed entirely of WSP -- `
+        EmailStatusCode.deprecatedFoldingWhitespace, `FWS with one line composed entirely of WSP -- `~
         `only allowed as obsolete FWS (someone might allow only non-obsolete FWS)`);
 
     assert("test@iana.org\u000D\u000A".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
@@ -1300,6 +1301,7 @@ struct EmailStatus
     /// Returns a textual representation of the email status
     string toString ()
     {
+        import std.format : format;
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid,
             localPart, domainPart, statusCode);
     }
@@ -1315,13 +1317,13 @@ string statusCodeDescription (EmailStatusCode statusCode)
         case EmailStatusCode.dnsWarning: return "Address is valid but a DNS check was not successful";
         case EmailStatusCode.rfc5321: return "Address is valid for SMTP but has unusual elements";
 
-        case EmailStatusCode.cFoldingWhitespace: return "Address is valid within the message but cannot be used"
+        case EmailStatusCode.cFoldingWhitespace: return "Address is valid within the message but cannot be used"~
             " unmodified for the envelope";
 
-        case EmailStatusCode.deprecated_: return "Address contains deprecated elements but may still be valid in"
+        case EmailStatusCode.deprecated_: return "Address contains deprecated elements but may still be valid in"~
             " restricted contexts";
 
-        case EmailStatusCode.rfc5322: return "The address is only valid according to the broad definition of RFC 5322."
+        case EmailStatusCode.rfc5322: return "The address is only valid according to the broad definition of RFC 5322."~
             " It is otherwise invalid";
 
         case EmailStatusCode.any: return "";
@@ -1333,7 +1335,7 @@ string statusCodeDescription (EmailStatusCode statusCode)
         case EmailStatusCode.valid: return "Address is valid";
 
         // Address is valid but a DNS check was not successful
-        case EmailStatusCode.dnsWarningNoMXRecord: return "Could not find an MX record for this domain but an A-record"
+        case EmailStatusCode.dnsWarningNoMXRecord: return "Could not find an MX record for this domain but an A-record"~
             " does exist";
 
         case EmailStatusCode.dnsWarningNoRecord: return "Could not find an MX record or an A-record for this domain";
@@ -1341,13 +1343,13 @@ string statusCodeDescription (EmailStatusCode statusCode)
         // Address is valid for SMTP but has unusual elements
         case EmailStatusCode.rfc5321TopLevelDomain: return "Address is valid but at a Top Level Domain";
 
-        case EmailStatusCode.rfc5321TopLevelDomainNumeric: return "Address is valid but the Top Level Domain begins"
+        case EmailStatusCode.rfc5321TopLevelDomainNumeric: return "Address is valid but the Top Level Domain begins"~
             " with a number";
 
         case EmailStatusCode.rfc5321QuotedString: return "Address is valid but contains a quoted string";
         case EmailStatusCode.rfc5321AddressLiteral: return "Address is valid but at a literal address not a domain";
 
-        case EmailStatusCode.rfc5321IpV6Deprecated: return "Address is valid but contains a :: that only elides one"
+        case EmailStatusCode.rfc5321IpV6Deprecated: return "Address is valid but contains a :: that only elides one"~
             " zero group";
 
 
@@ -1358,7 +1360,7 @@ string statusCodeDescription (EmailStatusCode statusCode)
         // Address contains deprecated elements but may still be valid in restricted contexts
         case EmailStatusCode.deprecatedLocalPart: return "The local part is in a deprecated form";
 
-        case EmailStatusCode.deprecatedFoldingWhitespace: return "Address contains an obsolete form of"
+        case EmailStatusCode.deprecatedFoldingWhitespace: return "Address contains an obsolete form of"~
             " Folding White Space";
 
         case EmailStatusCode.deprecatedQuotedText: return "A quoted string contains a deprecated character";
@@ -1366,11 +1368,11 @@ string statusCodeDescription (EmailStatusCode statusCode)
         case EmailStatusCode.deprecatedComment: return "Address contains a comment in a position that is deprecated";
         case EmailStatusCode.deprecatedCommentText: return "A comment contains a deprecated character";
 
-        case EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt: return "Address contains a comment or"
+        case EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt: return "Address contains a comment or"~
             " Folding White Space around the @ sign";
 
         // The address is only valid according to the broad definition of RFC 5322
-        case EmailStatusCode.rfc5322Domain: return "Address is RFC 5322 compliant but contains domain characters that"
+        case EmailStatusCode.rfc5322Domain: return "Address is RFC 5322 compliant but contains domain characters that"~
         " are not allowed by DNS";
 
         case EmailStatusCode.rfc5322TooLong: return "Address is too long";
@@ -1379,7 +1381,7 @@ string statusCodeDescription (EmailStatusCode statusCode)
         case EmailStatusCode.rfc5322LabelTooLong: return "The domain part contains an element that is too long";
         case EmailStatusCode.rfc5322DomainLiteral: return "The domain literal is not a valid RFC 5321 address literal";
 
-        case EmailStatusCode.rfc5322DomainLiteralObsoleteText: return "The domain literal is not a valid RFC 5321"
+        case EmailStatusCode.rfc5322DomainLiteralObsoleteText: return "The domain literal is not a valid RFC 5321"~
             " address literal and it contains obsolete characters";
 
         case EmailStatusCode.rfc5322IpV6GroupCount:
@@ -1406,7 +1408,7 @@ string statusCodeDescription (EmailStatusCode statusCode)
 
         case EmailStatusCode.errorTextAfterQuotedString: return "Address contains text after a quoted string";
 
-        case EmailStatusCode.errorTextAfterDomainLiteral: return "Extra characters were found after the end of"
+        case EmailStatusCode.errorTextAfterDomainLiteral: return "Extra characters were found after the end of"~
             " the domain literal";
 
         case EmailStatusCode.errorExpectingQuotedPair:
@@ -1670,8 +1672,6 @@ enum EmailStatusCode
 
 private:
 
-enum threshold = 16;
-
 // Email parts for the isEmail function
 enum EmailPart
 {
@@ -1883,6 +1883,8 @@ unittest
 int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false)
     if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
 {
+    import std.uni : icmp;
+    import std.algorithm : cmp;
     auto s1End = length <= s1.length ? length : s1.length;
     auto s2End = length <= s2.length ? length : s2.length;
 
@@ -1920,6 +1922,8 @@ unittest
  */
 auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 {
+    import std.regex : match;
+    import std.algorithm : filter;
     auto dg = invert ? (ElementType!(Range) e) { return e.match(pattern).empty; } :
                        (ElementType!(Range) e) { return !e.match(pattern).empty; };
 
@@ -1928,6 +1932,8 @@ auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 
 unittest
 {
+    import std.algorithm : equal;
+    import std.regex;
     assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
     assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
 }
@@ -1984,6 +1990,7 @@ unittest
  */
 const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
 {
+    import std.utf : codeLength;
     return str[index .. index + codeLength!(T)(c)];
 }
 
@@ -1991,84 +1998,4 @@ unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
-}
-
-// issue 4673
-bool isNumeric (dchar c)
-{
-    switch (c)
-    {
-        case 'i':
-        case '.':
-        case '-':
-        case '+':
-        case 'u':
-        case 'l':
-        case 'L':
-        case 'U':
-        case 'I':
-            return false;
-
-        default:
-    }
-
-    return std.uni.isNumber(c);
-}
-
-// Issue 5744
-import core.stdc.string : memcmp;
-
-ptrdiff_t lastIndexOf(Char1, Char2)(in Char1[] s, const(Char2)[] sub,
-        CaseSensitive cs = CaseSensitive.yes) if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    if (cs == CaseSensitive.yes)
-    {
-        Char2 c;
-
-        if (sub.length == 0)
-            return s.length;
-        c = sub[0];
-        if (sub.length == 1)
-            return std.string.lastIndexOf(s, c);
-        for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-        {
-            if (s[i] == c)
-            {
-                if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-                    return i;
-            }
-        }
-        return -1;
-    }
-    else
-    {
-        dchar c;
-
-        if (sub.length == 0)
-            return s.length;
-        c = sub[0];
-        if (sub.length == 1)
-            return std.string.lastIndexOf(s, c, cs);
-        if (c <= 0x7F)
-        {
-            c = std.ascii.toLower(c);
-            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-            {
-                if (std.ascii.toLower(s[i]) == c)
-                {
-                    if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
-                        return i;
-                }
-            }
-        }
-        else
-        {
-            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-            {
-                if (icmp(s[i .. i + sub.length], sub) == 0)
-                    return i;
-            }
-        }
-        return -1;
-    }
 }

@@ -22,7 +22,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
  * module.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * CTFE:
  * Digests do not work in CTFE
@@ -39,40 +39,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  * Macros:
  * WIKI = Phobos/StdMd5
  * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
- *
- * Examples:
- * ---------
- * //Template API
- * import std.digest.md;
- *
- * ubyte[16] hash = md5Of("abc");
- * assert(toHexString(hash) == "900150983CD24FB0D6963F7D28E17F72");
- *
- * //Feeding data
- * ubyte[1024] data;
- * MD5 md5;
- * md5.start();
- * md5.put(data[]);
- * md5.start(); //Start again
- * md5.put(data[]);
- * hash = md5.finish();
- * ---------
- *
- * ---------
- * //OOP API
- * import std.digest.md;
- *
- * auto md5 = new MD5Digest();
- * ubyte[] hash = md5.digest("abc");
- * assert(toHexString(hash) == "900150983CD24FB0D6963F7D28E17F72");
- *
- * //Feeding data
- * ubyte[1024] data;
- * md5.put(data[]);
- * md5.reset(); //Start again
- * md5.put(data[]);
- * hash = md5.finish();
- * ---------
  */
 
 /* md5.d - RSA Data Security, Inc., MD5 message-digest algorithm
@@ -80,18 +46,13 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  */
 module std.digest.md;
 
-import std.bitmanip, std.exception, std.string;
-
 public import std.digest.digest;
 
-//verify example
+///
 unittest
 {
     //Template API
     import std.digest.md;
-
-    ubyte[16] hash = md5Of("abc");
-    assert(toHexString(hash) == "900150983CD24FB0D6963F7D28E17F72");
 
     //Feeding data
     ubyte[1024] data;
@@ -100,10 +61,10 @@ unittest
     md5.put(data[]);
     md5.start(); //Start again
     md5.put(data[]);
-    hash = md5.finish();
+    auto hash = md5.finish();
 }
 
-//verify example
+///
 unittest
 {
     //OOP API
@@ -122,7 +83,7 @@ unittest
 }
 
 //rotateLeft rotates x left n bits
-private nothrow pure uint rotateLeft(uint x, uint n)
+private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
 {
     // With recently added optimization to DMD (commit 32ea0206 at 07/28/11), this is translated to rol.
     // No assembler required.
@@ -132,47 +93,16 @@ private nothrow pure uint rotateLeft(uint x, uint n)
 /**
  * Template API MD5 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
- *
- * Examples:
- * --------
- * //Simple example, hashing a string using md5Of helper function
- * ubyte[16] hash = md5Of("abc");
- * //Let's get a hash string
- * assert(toHexString(hash) == "900150983CD24FB0D6963F7D28E17F72");
- * --------
- *
- * --------
- * //Using the basic API
- * MD5 hash;
- * hash.start();
- * ubyte[1024] data;
- * //Initialize data here...
- * hash.put(data);
- * ubyte[16] result = hash.finish();
- * --------
- *
- * --------
- * //Let's use the template features:
- * //Note: When passing a MD5 to a function, it must be passed by referece!
- * void doSomething(T)(ref T hash) if(isDigest!T)
- * {
- *     hash.put(cast(ubyte)0);
- * }
- * MD5 md5;
- * md5.start();
- * doSomething(md5);
- * assert(toHexString(md5.finish()) == "93B885ADFE0DA089CDF634904FD59F71");
- * --------
  */
 struct MD5
 {
     private:
         // magic initialization constants
-        uint _state[4] = [0x67452301,0xefcdab89,0x98badcfe,0x10325476]; // state (ABCD)
+        uint[4] _state = [0x67452301,0xefcdab89,0x98badcfe,0x10325476]; // state (ABCD)
         ulong _count; //number of bits, modulo 2^64
         ubyte[64] _buffer; // input buffer
 
-        enum ubyte[64] _padding =
+        static immutable ubyte[64] _padding =
         [
           0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -180,7 +110,7 @@ struct MD5
         ];
 
         // F, G, H and I are basic MD5 functions
-        static nothrow pure
+        static @safe pure nothrow @nogc
         {
             uint F(uint x, uint y, uint z) { return (x & y) | (~x & z); }
             uint G(uint x, uint y, uint z) { return (x & z) | (y & ~z); }
@@ -193,28 +123,32 @@ struct MD5
          * FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
          * Rotation is separate from addition to prevent recomputation.
          */
-        static nothrow pure void FF(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+        static void FF(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+            @safe pure nothrow @nogc
         {
             a += F (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
-        static nothrow pure void GG(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+        static void GG(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+            @safe pure nothrow @nogc
         {
             a += G (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
-        static nothrow pure void HH(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+        static void HH(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+            @safe pure nothrow @nogc
         {
             a += H (b, c, d) + x + ac;
             a = rotateLeft(a, s);
             a += b;
         }
 
-        static nothrow pure void II(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+        static void II(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+            @safe pure nothrow @nogc
         {
             a += I (b, c, d) + x + ac;
             a = rotateLeft(a, s);
@@ -246,7 +180,7 @@ struct MD5
             S44 = 21,
         }
 
-        private nothrow pure void transform(const(ubyte[64])* block)
+        private void transform(const(ubyte[64])* block) pure nothrow @nogc
         {
             uint a = _state[0],
                  b = _state[1],
@@ -363,7 +297,7 @@ struct MD5
          * dig.put(buf); //buffer
          * ----
          */
-        @trusted nothrow pure void put(scope const(ubyte)[] data...)
+        void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
         {
             uint i, index, partLen;
             auto inputLen = data.length;
@@ -415,7 +349,7 @@ struct MD5
          * digest.put(0);
          * --------
          */
-        @trusted nothrow pure void start()
+        void start() @safe pure nothrow @nogc
         {
             this = MD5.init;
         }
@@ -423,18 +357,11 @@ struct MD5
         /**
          * Returns the finished MD5 hash. This also calls $(LREF start) to
          * reset the internal state.
-         *
-         * Examples:
-         * --------
-         * //Simple example
-         * MD5 hash;
-         * hash.start();
-         * hash.put(cast(ubyte)0);
-         * ubyte[16] result = hash.finish();
-         * --------
-         */
-        @trusted nothrow pure ubyte[16] finish()
+          */
+        ubyte[16] finish() @trusted pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
+
             ubyte[16] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
@@ -460,9 +387,18 @@ struct MD5
             start();
             return data;
         }
+        ///
+        unittest
+        {
+            //Simple example
+            MD5 hash;
+            hash.start();
+            hash.put(cast(ubyte)0);
+            ubyte[16] result = hash.finish();
+        }
 }
 
-//verify example
+///
 unittest
 {
     //Simple example, hashing a string using md5Of helper function
@@ -471,7 +407,7 @@ unittest
     assert(toHexString(hash) == "900150983CD24FB0D6963F7D28E17F72");
 }
 
-//verify example
+///
 unittest
 {
     //Using the basic API
@@ -483,7 +419,7 @@ unittest
     ubyte[16] result = hash.finish();
 }
 
-//verify example
+///
 unittest
 {
     //Let's use the template features:
@@ -495,16 +431,6 @@ unittest
     md5.start();
     doSomething(md5);
     assert(toHexString(md5.finish()) == "93B885ADFE0DA089CDF634904FD59F71");
-}
-
-//verify example
-unittest
-{
-    //Simple example
-    MD5 hash;
-    hash.start();
-    hash.put(cast(ubyte)0);
-    ubyte[16] result = hash.finish();
 }
 
 unittest
@@ -545,7 +471,7 @@ unittest
     digest = md5Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     assert(digest == cast(ubyte[])x"d174ab98d277d9f5a5611c2c9f419d9f");
 
-    digest = md5Of("1234567890123456789012345678901234567890"
+    digest = md5Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[])x"57edf4a22be3c955ac49da2e2107b67a");
 
@@ -565,12 +491,6 @@ unittest
 /**
  * This is a convenience alias for $(XREF digest.digest, digest) using the
  * MD5 implementation.
- *
- * Examples:
- * ---------
- * ubyte[16] hash = md5Of("abc");
- * assert(hash == digest!MD5("abc")); //This is the same as above
- * ---------
  */
 //simple alias doesn't work here, hope this gets inlined...
 auto md5Of(T...)(T data)
@@ -578,7 +498,7 @@ auto md5Of(T...)(T data)
     return digest!(MD5, T)(data);
 }
 
-//verify example
+///
 unittest
 {
     ubyte[16] hash = md5Of("abc");
@@ -591,34 +511,10 @@ unittest
  *
  * This is an alias for $(XREF digest.digest, WrapperDigest)!MD5, see
  * $(XREF digest.digest, WrapperDigest) for more information.
- *
- * Examples:
- * --------
- * //Simple example, hashing a string using Digest.digest helper function
- * auto md5 = new MD5Digest();
- * ubyte[] hash = md5.digest("abc");
- * //Let's get a hash string
- * assert(toHexString(hash) == "900150983CD24FB0D6963F7D28E17F72");
- * --------
- *
- * --------
- * //Let's use the OOP features:
- * void test(Digest dig)
- * {
- *     dig.put(cast(ubyte)0);
- * }
- * auto md5 = new MD5Digest();
- * test(md5);
- *
- * //Let's use a custom buffer:
- * ubyte[16] buf;
- * ubyte[] result = md5.finish(buf[]);
- * assert(toHexString(result) == "93B885ADFE0DA089CDF634904FD59F71");
- * --------
  */
-alias WrapperDigest!MD5 MD5Digest;
+alias MD5Digest = WrapperDigest!MD5;
 
-//verify example
+///
 unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
@@ -628,7 +524,7 @@ unittest
     assert(toHexString(hash) == "900150983CD24FB0D6963F7D28E17F72");
 }
 
-//verify example
+///
 unittest
 {
      //Let's use the OOP features:
