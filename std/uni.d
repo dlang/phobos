@@ -8580,6 +8580,11 @@ unittest
     Warning:
     Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
+
+    Example:
+    toUpper can be used as an argument to $(XREF algorithm, map) to produce an algorithm that can
+    convert a range of characters to upper case without allocating memory.
+    A string can then be produced by using $(XREF algorithm, copy) to send it to an $(XREF array, appender).
 +/
 @safe pure nothrow @nogc
 dchar toUpper(dchar c)
@@ -8599,6 +8604,18 @@ dchar toUpper(dchar c)
         return toUpperTab(idx);
     }
     return c;
+}
+
+///
+unittest
+{
+    import std.algorithm;
+    import std.uni;
+    import std.array;
+
+    auto abuf = appender!(char[])();
+    "hello".map!toUpper.copy(&abuf);
+    assert(abuf.data == "HELLO");
 }
 
 @trusted unittest
