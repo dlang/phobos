@@ -2096,11 +2096,11 @@ $(XREF file,readText)
         @property nothrow
         ubyte[] front()
         {
-            version(assert) 
+            version(assert)
             {
                 import core.exception : RangeError;
-                if (empty) 
-                    throw new RangeError(); 
+                if (empty)
+                    throw new RangeError();
             }
             return chunk_;
         }
@@ -2108,11 +2108,11 @@ $(XREF file,readText)
         /// Ditto
         void popFront()
         {
-            version(assert) 
+            version(assert)
             {
                 import core.exception : RangeError;
-                if (empty) 
-                    throw new RangeError(); 
+                if (empty)
+                    throw new RangeError();
             }
             prime();
         }
@@ -2666,11 +2666,11 @@ struct LockingTextReader
 
     @property dchar front()
     {
-        version(assert) 
+        version(assert)
         {
             import core.exception : RangeError;
-            if (empty) 
-                throw new RangeError(); 
+            if (empty)
+                throw new RangeError();
         }
         return _front;
     }
@@ -2728,11 +2728,11 @@ struct LockingTextReader
 
     void popFront()
     {
-        version(assert) 
+        version(assert)
         {
             import core.exception : RangeError;
-            if (empty) 
-                throw new RangeError(); 
+            if (empty)
+                throw new RangeError();
         }
 
         // Pop the current front.
@@ -3699,7 +3699,7 @@ class StdioException : Exception
     uint errno;
 
 /**
-Initialize with a message and an error code. 
+Initialize with a message and an error code.
 */
     this(string message, uint e = .errno)
     {
@@ -3764,7 +3764,26 @@ extern(C) void std_stdio_static_this()
 //---------
 __gshared
 {
-    File stdin; /// The standard input stream.
+    /** The standard input stream.
+     */
+    File stdin;
+    ///
+    unittest
+    {
+     // Read stdin, sort lines, write to stdout
+     import std.stdio, std.array, std.algorithm : sort, copy, map;
+
+     void main() {
+      stdin                         // read from stdin
+        .byLine(KeepTerminator.yes) // a line at a time
+        .map!(a => a.idup)          // byLine() reuses its buffer, so copy the lines
+        .array                      // convert to array of lines
+        .sort()                     // sort the lines
+        .copy(                      // copy output of .sort to an OutputRange
+          stdout.lockingTextWriter());   // the OutputRange
+     }
+    }
+
     File stdout; /// The standard output stream.
     File stderr; /// The standard error stream.
 }
@@ -3799,7 +3818,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
     import core.memory;
     import std.array : appender, uninitializedArray;
-    
+
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
 
