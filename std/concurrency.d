@@ -87,7 +87,7 @@ private
         static if( !T.length )
             enum hasLocalAliasing = false;
         else
-            enum hasLocalAliasing = (std.traits.hasLocalAliasing!(T[0]) && !is(T[0] == Tid)) ||
+            enum hasLocalAliasing = (std.traits.hasUnsharedAliasing!(T[0]) && !is(T[0] == Tid)) ||
                                      std.concurrency.hasLocalAliasing!(T[1 .. $]);
     }
 

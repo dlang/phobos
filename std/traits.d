@@ -3009,11 +3009,6 @@ unittest //12000
     A!int dummy;
 }
 
-//Explicitly undocumented. They will be removed in December 2014.
-deprecated("Please use hasLocalAliasing instead.")    alias hasLocalAliasing    = hasUnsharedAliasing;
-deprecated("Please use hasRawLocalAliasing instead.") alias hasRawLocalAliasing = hasRawUnsharedAliasing;
-deprecated("Please use hasLocalObjects instead.")     alias hasLocalObjects     = hasUnsharedObjects;
-
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
