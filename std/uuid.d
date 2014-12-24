@@ -776,11 +776,7 @@ public struct UUID
         ///ditto
         @safe pure nothrow string toString() const
         {
-            //@@@BUG@@@ workaround for bugzilla 5700
-            try
-                return _toString().idup;
-            catch(Exception)
-                assert(0, "It should be impossible for idup to throw.");
+            return _toString().idup;
         }
 
         ///
