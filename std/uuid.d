@@ -1060,7 +1060,7 @@ public struct UUID
  * Params:
  *      randomGen = uniform RNG
  * See_Also: $(XREF random, isUniformRNG)
- */ 
+ */
 @trusted UUID randomUUID(RNG)(ref RNG randomGen) if(isIntegral!(typeof(RNG.front)))
 {
     import std.random : isUniformRNG;
