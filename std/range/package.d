@@ -1949,7 +1949,10 @@ auto takeOne(R)(R source) if (isInputRange!R)
             @property auto ref front() { assert(!empty); return _source.front; }
             void popFront() { assert(!empty); _empty = true; }
             void popBack() { assert(!empty); _empty = true; }
-            @property auto save() { return Result(_source.save, empty); }
+            static if (isForwardRange!(Unqual!R))
+            {
+                @property auto save() { return Result(_source.save, empty); }
+            }
             @property auto ref back() { assert(!empty); return _source.front; }
             @property size_t length() const { return !empty; }
             alias opDollar = length;
@@ -1982,6 +1985,21 @@ auto takeOne(R)(R source) if (isInputRange!R)
     s.popFront();
     assert(s.length == 0);
     assert(s.empty);
+}
+
+unittest
+{
+    struct NonForwardRange
+    {
+        enum empty = false;
+        int front() { return 42; }
+        void popFront() {}
+    }
+
+    static assert(!isForwardRange!NonForwardRange);
+
+    auto s = takeOne(NonForwardRange());
+    assert(s.front == 42);
 }
 
 /++
