@@ -383,7 +383,7 @@ if (isBidirectionalRange!(Unqual!Range))
 
 @safe unittest
 {
-    import std.algorithm : equal;    
+    import std.algorithm : equal;
     auto LL = iota(1L, 4L);
     auto r = retro(LL);
     assert(equal(r, [3L, 2L, 1L]));
@@ -626,7 +626,7 @@ if (isInputRange!(Unqual!Range))
 @safe unittest
 {
     import std.internal.test.dummyrange;
-    import std.algorithm : equal;    
+    import std.algorithm : equal;
 
     static assert(isRandomAccessRange!(typeof(stride([1, 2, 3], 2))));
     void test(size_t n, int[] input, int[] witness)
