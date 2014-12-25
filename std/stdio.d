@@ -1829,7 +1829,11 @@ the contents may well have changed).
 
 /**
 Returns an input range set up to read from the file handle one line
-at a time. Each line will be newly allocated.
+at a time. Each line will be newly allocated. $(D front) will cache
+its value to allow repeated calls without unnecessary allocations.
+
+Note: Due to caching byLineCopy can be more memory-efficient than
+$(D File.byLine.map!idup).
 
 The element type for the range will be $(D Char[]). Range
 primitives may throw $(D StdioException) on I/O error.
@@ -1844,7 +1848,7 @@ text mode).
 
 Example:
 ----
-import std.algorithm, std.stdio;
+import std.algorithm, std.array, std.stdio;
 // Print sorted lines of a file.
 void main()
 {
@@ -3770,18 +3774,17 @@ __gshared
     ///
     unittest
     {
-     // Read stdin, sort lines, write to stdout
-     import std.stdio, std.array, std.algorithm : sort, copy, map;
-
-     void main() {
-      stdin                         // read from stdin
-        .byLine(KeepTerminator.yes) // a line at a time
-        .map!(a => a.idup)          // byLine() reuses its buffer, so copy the lines
-        .array                      // convert to array of lines
-        .sort()                     // sort the lines
-        .copy(                      // copy output of .sort to an OutputRange
-          stdout.lockingTextWriter());   // the OutputRange
-     }
+        // Read stdin, sort lines, write to stdout
+        import std.stdio, std.array, std.algorithm : sort, copy;
+    
+        void main() {
+            stdin                       // read from stdin
+            .byLineCopy(KeepTerminator.yes) // copying each line
+            .array()                    // convert to array of lines
+            .sort()                     // sort the lines
+            .copy(                      // copy output of .sort to an OutputRange
+                stdout.lockingTextWriter()); // the OutputRange
+        }
     }
 
     File stdout; /// The standard output stream.
