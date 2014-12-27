@@ -1453,14 +1453,14 @@ unittest
 
 // sum
 /**
-Sums elements of $(D r), which must be a finite input range. Although
-conceptually $(D sum(r)) is equivalent to $(D reduce!((a, b) => a +
+Sums elements of $(D r), which must be a finite $(LINK2 std_range.html#isInputRange, input range). Although
+conceptually $(D sum(r)) is equivalent to $(LREF reduce)!((a, b) => a +
 b)(0, r)), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
-random-access range with length and slicing, then $(D sum) uses the
+$(LI If $(D $(XREF range, ElementType)!R) is a floating-point type and $(D R) is a
+$(LINK2 std_range.html#isRandomAccessRange, random-access range) with length and slicing, then $(D sum) uses the
 $(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
@@ -1470,13 +1470,13 @@ Kahan summation) algorithm.)
 $(LI In all other cases, a simple element by element addition is done.)
 )
 
-For floating point inputs, calculations are made in $(D real)
+For floating point inputs, calculations are made in $(LINK2 ../type.html, $(D real))
 precision for $(D real) inputs and in $(D double) precision otherwise
 (Note this is a special case that deviates from $(D reduce)'s behavior,
 which would have kept $(D float) precision for a $(D float) range).
 For all other types, the calculations are done in the same type obtained
 from from adding two elements of the range, which may be a different
-type from the elements themselves (for example, in case of integral promotion).
+type from the elements themselves (for example, in case of $(LINK2 ../type.html#integer-promotions, integral promotion)).
 
 A seed may be passed to $(D sum). Not only will this seed be used as an initial
 value, but its type will override all the above, and determine the algorithm
@@ -1486,6 +1486,9 @@ Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
 at expense of precision, one can use $(D reduce!((a, b) => a + b)(0, r)), which
 is not specialized for summation.
+
+Returns:
+    The sum of all the elements in the range r.
  */
 auto sum(R)(R r)
 if (isInputRange!R && !isInfinite!R && is(typeof(r.front + r.front)))
