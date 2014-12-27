@@ -265,7 +265,7 @@ unittest
 /**
 Returns a newly allocated associative array out of elements of the input range,
 which must be a range of tuples (Key, Value).
-See also: $(XREF typecons, Tuple)
+See_Also: $(XREF typecons, Tuple)
  */
 
 auto assocArray(Range)(Range r)
@@ -1300,7 +1300,7 @@ deprecated("Please use std.algorithm.splitter instead.") alias splitter = std.al
 /++
 Eagerly splits $(D s) into an array, using $(D delim) as the delimiter.
 
-See also: $(XREF algorithm, splitter) for the lazy version of this operator.
+See_Also: $(XREF algorithm, splitter) for the lazy version of this operator.
  +/
 auto split(R, E)(R r, E delim)
 if (isForwardRange!R && is(typeof(ElementType!R.init == E.init)))
@@ -1381,6 +1381,16 @@ unittest
 /++
    Concatenates all of the ranges in $(D ror) together into one array using
    $(D sep) as the separator if present.
+
+   Params:
+        ror = Range of Ranges of Elements
+        sep = Range of Elements
+
+   Returns:
+        an allocated array of Elements
+
+   See_Also:
+        $(XREF algorithm, joiner)
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
