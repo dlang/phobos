@@ -1632,26 +1632,35 @@ unittest
 }
 
 /**
-Fills $(D range) with a $(D filler).
+Assigns $(D value) to each element of input range $(D range).
+
+Params:
+        range = an $(LINK2 std_range.html#isInputRange, input range) that exposes references to its elements
+                and has assignable elements
+        value = assigned to each element of range
+
+See_Also:
+        $(LREF uninitializedFill)
+        $(LREF initializeAll)
  */
-void fill(Range, Value)(Range range, Value filler)
-    if (isInputRange!Range && is(typeof(range.front = filler)))
+void fill(Range, Value)(Range range, Value value)
+    if (isInputRange!Range && is(typeof(range.front = value)))
 {
     alias T = ElementType!Range;
 
-    static if (is(typeof(range[] = filler)))
+    static if (is(typeof(range[] = value)))
     {
-        range[] = filler;
+        range[] = value;
     }
-    else static if (is(typeof(range[] = T(filler))))
+    else static if (is(typeof(range[] = T(value))))
     {
-        range[] = T(filler);
+        range[] = T(value);
     }
     else
     {
         for ( ; !range.empty; range.popFront() )
         {
-            range.front = filler;
+            range.front = value;
         }
     }
 }
@@ -1847,13 +1856,20 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
 }
 
 /**
-Fills a range with a value. Assumes that the range does not currently
-contain meaningful content. This is of interest for structs that
-define copy constructors (for all other types, fill and
+Initializes each element of $(D range) with $(D value).
+Assumes that the elements of the range are uninitialized.
+This is of interest for structs that
+define copy constructors (for all other types, $(LREF fill) and
 uninitializedFill are equivalent).
 
-uninitializedFill will only operate on ranges that expose references to its
-members and have assignable elements.
+Params:
+        range = an $(LINK2 std_range.html#isInputRange, input range) that exposes references to its elements
+                and has assignable elements
+        value = assigned to each element of range
+
+See_Also:
+        $(LREF fill)
+        $(LREF initializeAll)
 
 Example:
 ----
@@ -1863,8 +1879,8 @@ uninitializedFill(s, 42);
 assert(s == [ 42, 42, 42, 42, 42 ]);
 ----
  */
-void uninitializedFill(Range, Value)(Range range, Value filler)
-    if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = filler)))
+void uninitializedFill(Range, Value)(Range range, Value value)
+    if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = value)))
 {
     alias T = ElementType!Range;
     static if (hasElaborateAssign!T)
@@ -1873,20 +1889,24 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
 
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
-            emplaceRef!T(range.front, filler);
+            emplaceRef!T(range.front, value);
     }
     else
         // Doesn't matter whether fill is initialized or not
-        return fill(range, filler);
+        return fill(range, value);
 }
 
 /**
-Initializes all elements of a range with their $(D .init)
-value. Assumes that the range does not currently contain meaningful
-content.
+Initializes all elements of $(D range) with their $(D .init) value.
+Assumes that the elements of the range are uninitialized.
 
-initializeAll will operate on ranges that expose references to its
-members and have assignable elements, as well as on (mutable) strings.
+Params:
+        range = an $(LINK2 std_range.html#isInputRange, input range) that exposes references to its elements
+                and has assignable elements
+
+See_Also:
+        $(LREF fill)
+        $(LREF uninitializeFill)
 
 Example:
 ----
