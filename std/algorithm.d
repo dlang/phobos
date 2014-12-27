@@ -420,6 +420,9 @@ in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(a))
 left to right for all elements $(D a) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
+
+See_Also:
+    $(WEB en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
 */
 template map(fun...) if (fun.length >= 1)
 {
@@ -1073,8 +1076,14 @@ result) is returned. The one-argument version $(D reduce!(fun)(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
-See also: $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
-precise summing of floating point numbers.
+Returns:
+    the accumulated $(D result)
+
+See_Also:
+    $(WEB en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
+
+    $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
+    precise summing of floating point numbers.
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
@@ -2037,16 +2046,24 @@ unittest
 /**
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
-Implements the homonym function present in various programming
-languages of functional flavor. The call $(D filter!(predicate)(range))
-returns a new range only containing elements $(D x) in $(D range) for
-which $(D predicate(x)) is $(D true).
+Implements the higher order filter function.
+
+Params:
+    predicate = function to apply to each element of range
+    range = range of elements
+
+Returns:
+    $(D filter!(predicate)(range)) returns a new range containing only elements $(D x) in $(D range) for
+    which $(D predicate(x)) returns $(D true).
+
+See_Also:
+    $(WEB en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
  */
-template filter(alias pred) if (is(typeof(unaryFun!pred)))
+template filter(alias predicate) if (is(typeof(unaryFun!predicate)))
 {
-    auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
+    auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        return FilterResult!(unaryFun!pred, Range)(rs);
+        return FilterResult!(unaryFun!predicate, Range)(range);
     }
 }
 
