@@ -1232,53 +1232,49 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 
         @property auto ref front()
         {
-            static string makeSwitch()
+            final switch (_current)
             {
-                string result = "switch (_current) {\n";
                 foreach (i, R; Rs)
                 {
-                    auto si = to!string(i);
-                    result ~= "case "~si~": "~
-                        "assert(!source["~si~"].empty); return source["~si~"].front;\n";
+                    case i:
+                        assert(!source[i].empty);
+                        return source[i].front;
                 }
-                return result ~ "default: assert(0); }";
             }
-
-            mixin(makeSwitch());
+            assert(0);
         }
 
         void popFront()
         {
-            static string makeSwitchPopFront()
+            final switch (_current)
             {
-                string result = "switch (_current) {\n";
                 foreach (i, R; Rs)
                 {
-                    auto si = to!string(i);
-                    result ~= "case "~si~": source["~si~"].popFront(); break;\n";
+                    case i:
+                        source[i].popFront();
+                        break;
                 }
-                return result ~ "default: assert(0); }";
             }
-
-            static string makeSwitchIncrementCounter()
+	
+            auto next = _current == (Rs.length - 1) ? 0 : (_current + 1);
+            final switch (next)
             {
-                string result =
-                    "auto next = _current == Rs.length - 1 ? 0 : _current + 1;\n"~
-                    "switch (next) {\n";
                 foreach (i, R; Rs)
                 {
-                    auto si = to!string(i);
-                    auto si_1 = to!string(i ? i - 1 : Rs.length - 1);
-                    result ~= "case "~si~": "~
-                        "if (!source["~si~"].empty) { _current = "~si~"; return; }\n"~
-                        "if ("~si~" == _current) { _current = _current.max; return; }\n"~
-                        "goto case "~to!string((i + 1) % Rs.length)~";\n";
+                    case i:
+                        if (!source[i].empty)
+                        {
+                            _current = i;
+                            return;
+                        }
+                        if (i == _current)
+                        {
+                            _current = _current.max;
+                            return;
+                        }
+                        goto case (i + 1) % Rs.length;
                 }
-                return result ~ "default: assert(0); }";
             }
-
-            mixin(makeSwitchPopFront());
-            mixin(makeSwitchIncrementCounter());
         }
 
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
