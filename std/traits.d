@@ -5605,7 +5605,9 @@ unittest
 
 /**
  * Check whether the tuple T is an expression tuple.
- * An expression tuple only contains expressions. See also $(LREF isTypeTuple).
+ * An expression tuple only contains expressions.
+ *
+ * See_Also: $(LREF isTypeTuple).
  */
 template isExpressionTuple(T ...)
 {
@@ -5650,7 +5652,9 @@ unittest
 
 /**
  * Check whether the tuple $(D T) is a type tuple.
- * A type tuple only contains types. See also $(LREF isExpressionTuple).
+ * A type tuple only contains types.
+ *
+ * See_Also: $(LREF isExpressionTuple).
  */
 template isTypeTuple(T...)
 {

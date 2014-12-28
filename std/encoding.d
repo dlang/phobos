@@ -1964,7 +1964,7 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
 }
 
 /**
- Convert a string from one encoding to another. (See also to!() below).
+ Convert a string from one encoding to another.
 
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
@@ -1979,6 +1979,9 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Params:
     s = the source string
     r = the destination string
+
+ See_Also:
+    $(XREF conv, to)
 
  Examples:
  --------------------------------------------------------
@@ -2128,7 +2131,7 @@ class UnrecognizedEncodingException : EncodingException
 abstract class EncodingScheme
 {
     import std.uni : toLower;
-    
+
     /**
      * Registers a subclass of EncodingScheme.
      *

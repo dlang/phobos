@@ -2241,7 +2241,11 @@ public:
 
 
 
-    /// Obtains a set that is the inversion of this set. See also $(LREF inverted).
+    /**
+     * Obtains a set that is the inversion of this set.
+     *
+     * See_Also: $(LREF inverted)
+     */
     auto opUnary(string op: "!")()
     {
         return this.inverted;
@@ -4406,7 +4410,7 @@ public template buildTrie(Value, Key, Args...)
         In other words $(LREF mapTrieIndex) should be a
         monotonically increasing function that maps $(D Key) to an integer.
 
-        See also: $(XREF _algorithm, sort),
+        See_Also: $(XREF _algorithm, sort),
         $(XREF _range, SortedRange),
         $(XREF _algorithm, setUnion).
     */
@@ -6083,7 +6087,7 @@ template SetSearcher(alias table, string kind)
         $(D unicode.InBlockName), to search a script
         use $(D unicode.ScriptName).
 
-        See also $(LREF block), $(LREF script)
+        See_Also: $(LREF block), $(LREF script)
         and (not included in this search) $(LREF hangulSyllableType).
 
         Example:
@@ -6134,8 +6138,6 @@ template SetSearcher(alias table, string kind)
     /**
         Narrows down the search for sets of $(CODEPOINTS) to all Unicode blocks.
 
-        See also $(S_LINK Unicode properties, table of properties).
-
         Note:
         Here block names are unambiguous as no scripts are searched
         and thus to search use simply $(D unicode.block.BlockName) notation.
@@ -6147,6 +6149,8 @@ template SetSearcher(alias table, string kind)
         // use .block for explicitness
         assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
         ---
+
+        See_Also: $(S_LINK Unicode properties, table of properties).
     */
     struct block
     {
@@ -6711,7 +6715,8 @@ unittest
     // the usual range manipulation is possible
     assert(wideOne[].filter!isMark.equal("\u0308"));
     ---
-    $(P See also $(LREF decodeGrapheme), $(LREF graphemeStride). )
+
+    See_Also: $(LREF decodeGrapheme), $(LREF graphemeStride)
 +/
 @trusted struct Grapheme
 {
@@ -6803,7 +6808,7 @@ public:
         // still could be useful though
         assert(g[].equal("A\u0301B"));
         ---
-        See also $(LREF Grapheme.valid) below.
+        See_Also: $(LREF Grapheme.valid)
     +/
     ref opOpAssign(string op)(dchar ch)
     {
@@ -7441,7 +7446,8 @@ public dchar compose(dchar first, dchar second) pure nothrow
     Note:
     This function also decomposes hangul syllables
     as prescribed by the standard.
-    See also $(LREF decomposeHangul) for a restricted version
+
+    See_Also: $(LREF decomposeHangul) for a restricted version
     that takes into account only hangul syllables  but
     no other decompositions.
 

@@ -2985,7 +2985,8 @@ If splitting a string on whitespace and token compression is desired,
 consider using $(D splitter) without specifying a separator (see overload
 below).
 
-See also $(XREF regex, splitter) for a version that splits using a regular
+See_Also:
+ $(XREF regex, splitter) for a version that splits using a regular
 expression defined separator.
 */
 auto splitter(Range, Separator)(Range r, Separator s)
@@ -3241,7 +3242,7 @@ Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
-See also $(XREF regex, splitter) for a version that splits using a regular
+See_Also: $(XREF regex, splitter) for a version that splits using a regular
 expression defined separator.
  */
 auto splitter(Range, Separator)(Range r, Separator s)

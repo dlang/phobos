@@ -1015,7 +1015,7 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options) @trusted
 
 private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addrinfo* hints) @system
 {
-	import std.array : appender;
+        import std.array : appender;
 
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
