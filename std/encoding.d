@@ -1966,9 +1966,6 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
 /**
  Convert a string from one encoding to another.
 
- The input to this function MUST be validly encoded.
- This is enforced by the function's in-contract.
-
  Supersedes:
  This function supersedes std.utf.toUTF8(), std.utf.toUTF16() and
  std.utf.toUTF32()
@@ -1977,8 +1974,9 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    s = the source string
-    r = the destination string
+    s = Source string. $(B Must) be validly encoded.
+        This is enforced by the function's in-contract.
+    r = Destination string
 
  See_Also:
     $(XREF conv, to)
