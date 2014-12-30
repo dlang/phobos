@@ -606,7 +606,8 @@ public:
             ~ " in a " ~ VariantN.stringof ~ ". Valid types are "
                 ~ AllowedTypes.stringof);
         // Assignment should destruct previous value
-        fptr(OpID.destruct, &store, null);
+        // BUG 13871. fptr may be null here.
+        if (fptr) fptr(OpID.destruct, &store, null);
 
         static if (is(T : VariantN))
         {
