@@ -1842,6 +1842,20 @@ body
 }
 
 /**
+Encodes $(D c) in units of type $(D E) and writes the result to the
+output range $(D R). Returns the number of $(D E)s written.
+ */
+size_t encode(Tgt, Src, R)(in Src[] s, R range)
+{
+    size_t result;
+    foreach (c; s)
+    {
+        result += encode!(Tgt)(c, range);
+    }
+    return result;
+}
+
+/**
  Returns a foreachable struct which can bidirectionally iterate over all
  code points in a string.
 
@@ -1946,21 +1960,6 @@ unittest
     assert(a[0] == 0xE2);
     assert(a[1] == 0x82);
     assert(a[2] == 0xAC);
-}
-
-/**
-Encodes $(D c) in units of type $(D E) and writes the result to the
-output range $(D R). Returns the number of $(D E)s written.
- */
-
-size_t encode(Tgt, Src, R)(in Src[] s, R range)
-{
-    size_t result;
-    foreach (c; s)
-    {
-        result += encode!(Tgt)(c, range);
-    }
-    return result;
 }
 
 /**
