@@ -1741,7 +1741,6 @@ body
 Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
  */
-
 size_t encode(E, R)(dchar c, auto ref R range)
 if (isNativeOutputRange!(R, E))
 {
@@ -1842,8 +1841,14 @@ body
 }
 
 /**
-Encodes $(D c) in units of type $(D E) and writes the result to the
-output range $(D R). Returns the number of $(D E)s written.
+Encodes the contents of $(D s) in units of type $(D Tgt), writing the result to an
+output range.
+
+Returns: The number of $(D Tgt) elements written.
+Params:
+Tgt = Element type of $(D range).
+s = Input array.
+range = Output range.
  */
 size_t encode(Tgt, Src, R)(in Src[] s, R range)
 {
