@@ -1455,7 +1455,7 @@ unittest
 /**
 Sums elements of $(D r), which must be a finite $(LINK2 std_range.html#isInputRange, input range). Although
 conceptually $(D sum(r)) is equivalent to $(LREF reduce)!((a, b) => a +
-b)(0, r)), $(D sum) uses specialized algorithms to maximize accuracy,
+b)(0, r), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
