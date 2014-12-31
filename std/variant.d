@@ -605,8 +605,6 @@ public:
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof ~ ". Valid types are "
                 ~ AllowedTypes.stringof);
-        // Assignment should destruct previous value
-        fptr(OpID.destruct, &store, null);
 
         static if (is(T : VariantN))
         {
@@ -620,6 +618,9 @@ public:
         }
         else
         {
+            // Assignment should destruct previous value
+            fptr(OpID.destruct, &store, null);
+
             static if (T.sizeof <= size)
             {
                 // If T is a class we're only copying the reference, so it
@@ -2512,6 +2513,17 @@ unittest
         @disable this();
     }
     auto a = appender!(T[]);
+}
+
+unittest
+{
+    // Bugzilla 13871
+    alias A = Algebraic!(int, typeof(null));
+    static struct B { A value; }
+    alias C = std.variant.Algebraic!B;
+
+    C var;
+    var = C(B());
 }
 
 unittest
