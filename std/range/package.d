@@ -383,7 +383,7 @@ if (isBidirectionalRange!(Unqual!Range))
 
 @safe unittest
 {
-    import std.algorithm : equal;    
+    import std.algorithm : equal;
     auto LL = iota(1L, 4L);
     auto r = retro(LL);
     assert(equal(r, [3L, 2L, 1L]));
@@ -626,7 +626,7 @@ if (isInputRange!(Unqual!Range))
 @safe unittest
 {
     import std.internal.test.dummyrange;
-    import std.algorithm : equal;    
+    import std.algorithm : equal;
 
     static assert(isRandomAccessRange!(typeof(stride([1, 2, 3], 2))));
     void test(size_t n, int[] input, int[] witness)
@@ -1945,7 +1945,10 @@ auto takeOne(R)(R source) if (isInputRange!R)
             @property auto ref front() { assert(!empty); return _source.front; }
             void popFront() { assert(!empty); _empty = true; }
             void popBack() { assert(!empty); _empty = true; }
-            @property auto save() { return Result(_source.save, empty); }
+            static if (isForwardRange!(Unqual!R))
+            {
+                @property auto save() { return Result(_source.save, empty); }
+            }
             @property auto ref back() { assert(!empty); return _source.front; }
             @property size_t length() const { return !empty; }
             alias opDollar = length;
@@ -1978,6 +1981,21 @@ auto takeOne(R)(R source) if (isInputRange!R)
     s.popFront();
     assert(s.length == 0);
     assert(s.empty);
+}
+
+unittest
+{
+    struct NonForwardRange
+    {
+        enum empty = false;
+        int front() { return 42; }
+        void popFront() {}
+    }
+
+    static assert(!isForwardRange!NonForwardRange);
+
+    auto s = takeOne(NonForwardRange());
+    assert(s.front == 42);
 }
 
 /++
