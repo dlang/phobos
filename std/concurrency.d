@@ -577,13 +577,12 @@ unittest
 /**
  * Places the values as a message at the back of tid's message queue.
  *
- * Sends the supplied value to the thread represented by tid.  As with
- * $(XREF concurrency, spawn), $(D T) must not have unshared aliasing.
+ * Sends the supplied value to the thread represented by tid. The user have
+ * to ensure there is no unshared aliasing (see $(XREF traits, hasUnsharedAliasing))
+ * if messages are being send to thread.
  */
 void send(T...)( Tid tid, T vals )
 {
-    static assert( !hasLocalAliasing!(T),
-                   "Aliases to mutable thread-local data not allowed." );
     _send( tid, vals );
 }
 
@@ -597,8 +596,6 @@ void send(T...)( Tid tid, T vals )
  */
 void prioritySend(T...)( Tid tid, T vals )
 {
-    static assert( !hasLocalAliasing!(T),
-                   "Aliases to mutable thread-local data not allowed." );
     _send( MsgType.priority, tid, vals );
 }
 
