@@ -1298,48 +1298,48 @@ Alias for $(XREF algorithm, splitter).
 deprecated("Please use std.algorithm.splitter instead.") alias splitter = std.algorithm.splitter;
 
 /++
-    Eagerly splits $(D r) into an array, using $(D sep) as the delimiter.
+    Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
 
-    The range must be a $(LINK2 std_range.html#isForwardRange, forward range).
-    The separator can be a value of the same type as the elements in $(D r) or
+    The range must be a $(FULL_XREF std_range.html#isForwardRange, forward range).
+    The separator can be a value of the same type as the elements in $(D range) or
     it can be another forward range.
 
     Examples:
-        If $(D r) is a $(D string), $(D sep) can be a $(D char) or another
-        $(D string). The return type will be an array of strings. If $(D r) is
+        If $(D range) is a $(D string), $(D sep) can be a $(D char) or another
+        $(D string). The return type will be an array of strings. If $(D range) is
         an $(D int) array, $(D sep) can be an $(D int) or another $(D int) array.
         The return type will be an array of $(D int) arrays.
 
     Params:
-        r = a forward range.
-        sep = a value of the same type as the elements of $(D r) or another
+        range = a forward range.
+        sep = a value of the same type as the elements of $(D range) or another
         forward range.
 
     Returns:
-        An array containing the divided parts of $(D r).
+        An array containing the divided parts of $(D range).
 
     See_Also:
         $(XREF algorithm, splitter) for the lazy version of this function.
  +/
-auto split(Range, Separator)(Range r, Separator sep)
+auto split(Range, Separator)(Range range, Separator sep)
 if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init)))
 {
     import std.algorithm : splitter;
-    return r.splitter(sep).array;
+    return range.splitter(sep).array;
 }
 ///ditto
-auto split(Range, Separator)(Range r, Separator sep)
+auto split(Range, Separator)(Range range, Separator sep)
 if (isForwardRange!Range && isForwardRange!Separator && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
 {
     import std.algorithm : splitter;
-    return r.splitter(sep).array;
+    return range.splitter(sep).array;
 }
 ///ditto
-auto split(alias isTerminator, Range)(Range r)
-if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(r.front))))
+auto split(alias isTerminator, Range)(Range range)
+if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 {
     import std.algorithm : splitter;
-    return r.splitter!isTerminator.array;
+    return range.splitter!isTerminator.array;
 }
 
 unittest
