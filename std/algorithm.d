@@ -84,21 +84,27 @@ $(TR $(TH Function Name) $(TH Description))
 $(LEADINGROW Searching)
 
 $(T2 all,
-        $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements are positive)
+        $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements
+        are positive)
 $(T2 any,
-        $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one element is positive)
+        $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one
+        element is positive)
 $(T2 balancedParens,
-        $(D balancedParens("((1 + 1) / 2)")) returns $(D true) because the string has balanced parentheses.)
+        $(D balancedParens("((1 + 1) / 2)")) returns $(D true) because the
+        string has balanced parentheses.)
 $(T2 boyerMooreFinder,
-        $(D find("hello world", boyerMooreFinder("or"))) returns $(D "orld") using the $(LUCKY Boyer-Moore _algorithm).)
+        $(D find("hello world", boyerMooreFinder("or"))) returns $(D "orld")
+        using the $(LUCKY Boyer-Moore _algorithm).)
 $(T2 canFind,
         $(D canFind("hello world", "or")) returns $(D true).)
 $(T2 count,
-        Counts elements that are equal to a specified value or satisfy a predicate.
-        $(D count([1, 2, 1], 1)) returns $(D 2) and $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
+        Counts elements that are equal to a specified value or satisfy a
+        predicate.  $(D count([1, 2, 1], 1)) returns $(D 2) and
+        $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
 $(T2 countUntil,
-        $(D countUntil(a, b)) returns the number of steps taken in $(D a) to reach $(D b);
-        for example, $(D countUntil("hello!", "o")) returns $(D 4).)
+        $(D countUntil(a, b)) returns the number of steps taken in $(D a) to
+        reach $(D b); for example, $(D countUntil("hello!", "o")) returns
+        $(D 4).)
 $(T2 commonPrefix,
         $(D commonPrefix("parakeet", "parachute")) returns $(D "para").)
 $(T2 endsWith,
@@ -107,29 +113,37 @@ $(T2 find,
         $(D find("hello world", "or")) returns $(D "orld") using linear search.
         (For binary search refer to $(XREF range,sortedRange).))
 $(T2 findAdjacent,
-        $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with two equal adjacent elements, i.e. $(D [3, 3, 4]).)
+        $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
+        two equal adjacent elements, i.e. $(D [3, 3, 4]).)
 $(T2 findAmong,
-        $(D findAmong("abcd", "qcx")) returns $(D "cd") because $(D 'c') is among $(D "qcx").)
+        $(D findAmong("abcd", "qcx")) returns $(D "cd") because $(D 'c') is
+        among $(D "qcx").)
 $(T2 findSkip,
-        If $(D a = "abcde"), then $(D findSkip(a, "x")) returns $(D false) and leaves $(D a) unchanged,
-        whereas $(D findSkip(a, 'c')) advances $(D a) to $(D "cde") and returns $(D true).)
+        If $(D a = "abcde"), then $(D findSkip(a, "x")) returns $(D false) and
+        leaves $(D a) unchanged, whereas $(D findSkip(a, 'c')) advances $(D a)
+        to $(D "cde") and returns $(D true).)
 $(T2 findSplit,
-        $(D findSplit("abcdefg", "de")) returns the three ranges $(D "abc"), $(D "de"), and $(D "fg").)
+        $(D findSplit("abcdefg", "de")) returns the three ranges $(D "abc"),
+        $(D "de"), and $(D "fg").)
 $(T2 findSplitAfter,
-        $(D findSplitAfter("abcdefg", "de")) returns the two ranges $(D "abcde") and $(D "fg").)
+        $(D findSplitAfter("abcdefg", "de")) returns the two ranges
+        $(D "abcde") and $(D "fg").)
 $(T2 findSplitBefore,
-        $(D findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc") and $(D "defg").)
+        $(D findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc")
+        and $(D "defg").)
 $(T2 minCount,
         $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
 $(T2 minPos,
         $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
-        i.e., positions the range at the first occurrence of its minimal element.)
+        i.e., positions the range at the first occurrence of its minimal
+        element.)
 $(T2 mismatch,
-        $(D mismatch("parakeet", "parachute")) returns the two ranges $(D "keet") and $(D "chute").)
+        $(D mismatch("parakeet", "parachute")) returns the two ranges
+        $(D "keet") and $(D "chute").)
 $(T2 skipOver,
-        Assume $(D a = "blah"). Then $(D skipOver(a, "bi")) leaves $(D a) unchanged and returns $(D false),
-        whereas $(D skipOver(a, "bl")) advances $(D a) to refer to $(D "ah")
-        and returns $(D true).)
+        Assume $(D a = "blah"). Then $(D skipOver(a, "bi")) leaves $(D a)
+        unchanged and returns $(D false), whereas $(D skipOver(a, "bl"))
+        advances $(D a) to refer to $(D "ah") and returns $(D true).)
 $(T2 startsWith,
         $(D startsWith("hello, world", "hello")) returns $(D true).)
 $(T2 until,
@@ -138,21 +152,25 @@ $(T2 until,
 $(LEADINGROW Comparison)
 
 $(T2 among,
-        Checks if a value is among a set of values, e.g. $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
+        Checks if a value is among a set of values, e.g.
+        $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
 $(T2 castSwitch,
         $(D (new A()).castSwitch((A a)=>1,(B b)=>2)) returns $(D 1).)
 $(T2 clamp,
         $(D clamp(1, 3, 6)) returns $(D 3). $(D clamp(4, 3, 6)) returns $(D 4).)
 $(T2 cmp,
-        $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1), and $(D cmp("abc", "abc")) is $(D 0).)
+        $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1),
+        and $(D cmp("abc", "abc")) is $(D 0).)
 $(T2 equal,
-        Compares ranges for element-by-element equality, e.g. $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
+        Compares ranges for element-by-element equality, e.g.
+        $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
 $(T2 levenshteinDistance,
-        $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using the
-        $(LUCKY Levenshtein distance _algorithm).)
+        $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
+        the $(LUCKY Levenshtein distance _algorithm).)
 $(T2 levenshteinDistanceAndPath,
-        $(D levenshteinDistanceAndPath("kitten", "sitting")) returns $(D tuple(3, "snnnsni"))
-        by using the $(LUCKY Levenshtein distance _algorithm).)
+        $(D levenshteinDistanceAndPath("kitten", "sitting")) returns
+        $(D tuple(3, "snnnsni")) by using the $(LUCKY Levenshtein distance
+        _algorithm).)
 $(T2 max,
         $(D max(3, 4, 2)) returns $(D 4).)
 $(T2 min,
@@ -169,21 +187,26 @@ $(T2 cache,
 $(T2 cacheBidirectional,
         As above, but also provides $(D back) and $(D popBack).)
 $(T2 filter,
-        $(D filter!"a > 0"([1, -1, 2, 0, -3])) iterates over elements $(D 1) and $(D 2).)
+        $(D filter!"a > 0"([1, -1, 2, 0, -3])) iterates over elements $(D 1)
+        and $(D 2).)
 $(T2 filterBidirectional,
-        Similar to $(D filter), but also provides $(D back) and $(D popBack) at a small increase in cost.)
+        Similar to $(D filter), but also provides $(D back) and $(D popBack) at
+        a small increase in cost.)
 $(T2 group,
-        $(D group([5, 2, 2, 3, 3])) returns a range containing the tuples $(D tuple(5, 1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
+        $(D group([5, 2, 2, 3, 3])) returns a range containing the tuples
+        $(D tuple(5, 1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
 $(T2 groupBy,
         $(D groupBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
-        returns a range containing 3 subranges: the first with just $(D [1, 1]);
-        the second with the elements $(D [1, 2]) and $(D [2, 2]);
+        returns a range containing 3 subranges: the first with just
+        $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
         and the third with just $(D [2, 1]).)
 $(T2 joiner,
-        $(D joiner(["hello", "world!"], "; ")) returns a range that iterates over the characters
-        $(D "hello; world!"). No new string is created - the existing inputs are iterated.)
+        $(D joiner(["hello", "world!"], "; ")) returns a range that iterates
+        over the characters $(D "hello; world!"). No new string is created -
+        the existing inputs are iterated.)
 $(T2 map,
-        $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers $(D 2), $(D 4), $(D 6).)
+        $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
+        $(D 2), $(D 4), $(D 6).)
 $(T2 reduce,
         $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
 $(T2 splitter,
@@ -196,21 +219,25 @@ $(T2 uniq,
 $(LEADINGROW Sorting)
 
 $(T2 completeSort,
-        If $(D a = [10, 20, 30]) and $(D b = [40, 6, 15]), then $(D completeSort(a, b)) leaves
-        $(D a = [6, 10, 15]) and $(D b = [20, 30, 40]).
-        The range $(D a) must be sorted prior to the call, and as a result the combination
-        $(D $(XREF range,chain)(a, b)) is sorted.)
+        If $(D a = [10, 20, 30]) and $(D b = [40, 6, 15]), then
+        $(D completeSort(a, b)) leaves $(D a = [6, 10, 15]) and $(D b = [20,
+        30, 40]).
+        The range $(D a) must be sorted prior to the call, and as a result the
+        combination $(D $(XREF range,chain)(a, b)) is sorted.)
 $(T2 isPartitioned,
-        $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because the predicate is
-        $(D true) for a portion of the range and $(D false) afterwards.)
+        $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
+        the predicate is $(D true) for a portion of the range and $(D false)
+        afterwards.)
 $(T2 isSorted,
         $(D isSorted([1, 1, 2, 3])) returns $(D true).)
 $(T2 makeIndex,
         Creates a separate index for a range.)
 $(T2 nextPermutation,
-        Computes the next lexicographically greater permutation of a range in-place.)
+        Computes the next lexicographically greater permutation of a range
+        in-place.)
 $(T2 nextEvenPermutation,
-        Computes the next lexicographically greater even permutation of a range in-place.)
+        Computes the next lexicographically greater even permutation of a range
+        in-place.)
 $(T2 partialSort,
         If $(D a = [5, 4, 3, 2, 1]), then $(D partialSort(a, 3)) leaves
         $(D a[0 .. 3] = [1, 2, 3]).
@@ -218,7 +245,8 @@ $(T2 partialSort,
 $(T2 partition,
         Partitions a range according to a predicate.)
 $(T2 partition3,
-        Partitions a range in three parts (less than, equal, greater than the given pivot).)
+        Partitions a range in three parts (less than, equal, greater than the
+        given pivot).)
 $(T2 schwartzSort,
         Sorts with the help of the $(LUCKY Schwartzian transform).)
 $(T2 sort,
@@ -235,23 +263,27 @@ $(T2 cartesianProduct,
 $(T2 largestPartialIntersection,
         Copies out the values that occur most frequently in a range of ranges.)
 $(T2 largestPartialIntersectionWeighted,
-        Copies out the values that occur most frequently (multiplied by per-value weights) in a range of ranges.)
+        Copies out the values that occur most frequently (multiplied by
+        per-value weights) in a range of ranges.)
 $(T2 nWayUnion,
-        Computes the union of a set of sets implemented as a range of sorted ranges.)
+        Computes the union of a set of sets implemented as a range of sorted
+        ranges.)
 $(T2 setDifference,
         Lazily computes the set difference of two or more sorted ranges.)
 $(T2 setIntersection,
         Lazily computes the intersection of two or more sorted ranges.)
 $(T2 setSymmetricDifference,
-        Lazily computes the symmetric set difference of two or more sorted ranges.)
+        Lazily computes the symmetric set difference of two or more sorted
+        ranges.)
 $(T2 setUnion,
         Lazily computes the set union of two or more sorted ranges.)
 
 $(LEADINGROW Mutation)
 
 $(T2 bringToFront,
-        If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]), $(D bringToFront(a, b))
-        leaves $(D a = [4, 5, 6]) and $(D b = [7, 1, 2, 3]).)
+        If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),
+        $(D bringToFront(a, b)) leaves $(D a = [4, 5, 6]) and
+        $(D b = [7, 1, 2, 3]).)
 $(T2 copy,
         Copies a range to another. If
         $(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
@@ -259,31 +291,37 @@ $(T2 copy,
 $(T2 fill,
         Fills a range with a pattern,
         e.g., if $(D a = new int[3]), then $(D fill(a, 4))
-        leaves $(D a = [4, 4, 4]) and $(D fill(a, [3, 4])) leaves $(D a = [3, 4, 3]).)
+        leaves $(D a = [4, 4, 4]) and $(D fill(a, [3, 4])) leaves
+        $(D a = [3, 4, 3]).)
 $(T2 initializeAll,
-        If $(D a = [1.2, 3.4]), then $(D initializeAll(a)) leaves $(D a = [double.init, double.init]).)
+        If $(D a = [1.2, 3.4]), then $(D initializeAll(a)) leaves
+        $(D a = [double.init, double.init]).)
 $(T2 move,
-        $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a) destructively.)
+        $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
+        destructively.)
 $(T2 moveAll,
         Moves all elements from one range to another.)
 $(T2 moveSome,
         Moves as many elements as possible from one range to another.)
 $(T2 remove,
-        Removes elements from a range in-place, and returns the shortened range.)
+        Removes elements from a range in-place, and returns the shortened
+        range.)
 $(T2 reverse,
         If $(D a = [1, 2, 3]), $(D reverse(a)) changes it to $(D [3, 2, 1]).)
 $(T2 strip,
-        Strips all leading and trailing elements equal to a value, or that satisfy a predicate.
-        If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and $(D strip!(e => e == 1)(a))
-        returns $(D [0]).)
+        Strips all leading and trailing elements equal to a value, or that
+        satisfy a predicate.
+        If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and
+        $(D strip!(e => e == 1)(a)) returns $(D [0]).)
 $(T2 stripLeft,
-        Strips all leading elements equal to a value, or that satisfy a predicate.
-        If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and $(D stripLeft!(e => e == 1)(a))
-        returns $(D [0, 1, 1]).)
+        Strips all leading elements equal to a value, or that satisfy a
+        predicate.  If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and
+        $(D stripLeft!(e => e == 1)(a)) returns $(D [0, 1, 1]).)
 $(T2 stripRight,
-        Strips all trailing elements equal to a value, or that satisfy a predicate.
-        If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and $(D stripRight!(e => e == 1)(a))
-        returns $(D [1, 1, 0]).)
+        Strips all trailing elements equal to a value, or that satisfy a
+        predicate.
+        If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and
+        $(D stripRight!(e => e == 1)(a)) returns $(D [1, 1, 0]).)
 $(T2 swap,
         Swaps two values.)
 $(T2 swapRanges,
