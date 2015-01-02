@@ -3826,7 +3826,6 @@ private:
     alias ElementType = typeof(compute(State.init, cast(size_t) 1));
     State _state;
     size_t _n;
-    ElementType _cache;
 
     static struct DollarToken{}
 
@@ -3835,23 +3834,16 @@ public:
     {
         _state = initial;
         _n = n;
-        _cache = compute(_state, _n);
     }
 
     @property ElementType front()
     {
-        return _cache;
-    }
-
-    ElementType moveFront()
-    {
-        import std.algorithm : move;
-        return move(this._cache);
+        return compute(_state, _n);
     }
 
     void popFront()
     {
-        _cache = compute(_state, ++_n);
+        ++_n;
     }
 
     enum opDollar = DollarToken();
@@ -3978,6 +3970,13 @@ auto sequence(alias fun, State...)(State args)
     //Infinite slicing tests
     odds = odds[10 .. $];
     assert(equal(odds.take(3), [21, 23, 25]));
+}
+
+// Issue 5036
+unittest
+{
+    auto s = sequence!((a, n) => new int)(0);
+    assert(s.front != s.front);  // no caching
 }
 
 /**
