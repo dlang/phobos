@@ -4706,7 +4706,22 @@ private struct GroupByImpl(alias pred, EquivRelation equivRelation, Range)
             assert(!equivRelation || pred(r.front, r.front),
                    "predicate " ~ pred.stringof ~ " is claimed to be "~
                    "equivalence relation yet isn't reflexive");
-            savePrev();
+            
+            // _prev's type may be a nested struct, so must be initialized
+            // directly in the constructor (cannot call savePred()).
+            static if (isForwardRange!Range)
+            {
+                _prev = r.save;
+            }
+            else
+            {
+                _prev = r.front;
+            }
+        }
+        else
+        {
+            // We won't use _prev, but must be initialized.
+            _prev = typeof(_prev).init;
         }
     }
     @property bool empty() { return r.empty; }
@@ -4984,6 +4999,11 @@ unittest
     ]));
 }
 
+// Issue 13805
+unittest
+{
+    [""].map!((s) => s).groupBy!((x, y) => true);    
+}
 
 // overwriteAdjacent
 /*
