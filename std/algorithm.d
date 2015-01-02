@@ -14,10 +14,10 @@ $(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF minCount)
 $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver) $(MYREF startsWith)
 $(MYREF until) )
 )
-$(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF castSwitch)  $(MYREF cmp)
-$(MYREF equal) $(MYREF levenshteinDistance) $(MYREF levenshteinDistanceAndPath)
-$(MYREF max) $(MYREF min) $(MYREF mismatch) $(MYREF clamp) $(MYREF
-predSwitch))
+$(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF castSwitch) $(MYREF clamp)
+$(MYREF cmp) $(MYREF equal) $(MYREF levenshteinDistance) $(MYREF
+levenshteinDistanceAndPath) $(MYREF max) $(MYREF min) $(MYREF mismatch)
+$(MYREF predSwitch))
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF cache) $(MYREF cacheBidirectional)
 $(MYREF filter) $(MYREF filterBidirectional)
@@ -25,9 +25,9 @@ $(MYREF group) $(MYREF groupBy) $(MYREF joiner) $(MYREF map) $(MYREF reduce)
 $(MYREF splitter) $(MYREF sum) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
-$(MYREF isSorted) $(MYREF makeIndex) $(MYREF multiSort) $(MYREF nextPermutation)
-$(MYREF nextEvenPermutation) $(MYREF partialSort) $(MYREF
-partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
+$(MYREF isSorted) $(MYREF makeIndex) $(MYREF multiSort) $(MYREF
+nextEvenPermutation) $(MYREF nextPermutation) $(MYREF partialSort)
+$(MYREF partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
 $(MYREF topN) $(MYREF topNCopy) )
 )
 $(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF cartesianProduct) $(MYREF
@@ -232,11 +232,11 @@ $(T2 isSorted,
         $(D isSorted([1, 1, 2, 3])) returns $(D true).)
 $(T2 makeIndex,
         Creates a separate index for a range.)
-$(T2 nextPermutation,
-        Computes the next lexicographically greater permutation of a range
-        in-place.)
 $(T2 nextEvenPermutation,
         Computes the next lexicographically greater even permutation of a range
+        in-place.)
+$(T2 nextPermutation,
+        Computes the next lexicographically greater permutation of a range
         in-place.)
 $(T2 partialSort,
         If $(D a = [5, 4, 3, 2, 1]), then $(D partialSort(a, 3)) leaves
