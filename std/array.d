@@ -1407,6 +1407,15 @@ unittest
     }
 }
 
+/++
+   Conservative heuristic to determine if a range can be iterated cheaply.
+   Used by $(D join) in decision to do an extra iteration of the range to
+   compute the resultant length. If iteration is not cheap then precomputing
+   length could be more expensive than using $(D Appender).
+
+   For now, we only assume arrays are cheap to iterate.
+ +/
+private enum bool hasCheapIteration(R) = isArray!R;
 
 /++
    Concatenates all of the ranges in $(D ror) together into one array using
@@ -1449,7 +1458,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     else
         alias sepArr = sep;
 
-    static if(isForwardRange!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
+    static if(hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
         import std.conv : emplaceRef;
         size_t length;
@@ -1499,7 +1508,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
     if (ror.empty)
         return RetType.init;
 
-    static if(isForwardRange!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
+    static if(hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
         static if (isSomeChar!E && isSomeChar!RetTypeElement && E.sizeof > RetTypeElement.sizeof)
         {
@@ -1557,7 +1566,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if (ror.empty)
         return RetType.init;
 
-    static if(isForwardRange!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
+    static if(hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
         import std.conv : emplaceRef;
         size_t length;
@@ -1748,6 +1757,27 @@ unittest
     import std.typecons : tuple;
     assert([[tuple(1)]].join == [tuple(1)]);
     assert([[tuple("x")]].join == [tuple("x")]);
+}
+
+// Issue 13877
+unittest
+{
+    // Test that the range is iterated only once.
+    import std.algorithm : map;
+    int c = 0;
+    auto j1 = [1, 2, 3].map!(_ => [c++]).join;
+    assert(c == 3);
+    assert(j1 == [0, 1, 2]);
+
+    c = 0;
+    auto j2 = [1, 2, 3].map!(_ => [c++]).join(9);
+    assert(c == 3);
+    assert(j2 == [0, 9, 1, 9, 2]);
+
+    c = 0;
+    auto j3 = [1, 2, 3].map!(_ => [c++]).join([9]);
+    assert(c == 3);
+    assert(j3 == [0, 9, 1, 9, 2]);
 }
 
 
