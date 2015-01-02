@@ -20,7 +20,7 @@ $(MYREF max) $(MYREF min) $(MYREF mismatch) $(MYREF clamp) $(MYREF
 predSwitch))
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF cache) $(MYREF cacheBidirectional)
-$(MYREF filter) $(MYREF filterBidirectional)
+$(MYREF each) $(MYREF filter) $(MYREF filterBidirectional)
 $(MYREF group) $(MYREF groupBy) $(MYREF joiner) $(MYREF map) $(MYREF reduce)
 $(MYREF splitter) $(MYREF sum) $(MYREF uniq) )
 )
@@ -186,6 +186,9 @@ $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)
 $(T2 cacheBidirectional,
         As above, but also provides $(D back) and $(D popBack).)
+$(T2 each,
+        $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
+        and $(D 3) on their own lines.)
 $(T2 filter,
         $(D filter!"a > 0"([1, -1, 2, 0, -3])) iterates over elements $(D 1)
         and $(D 2).)
@@ -1408,6 +1411,149 @@ unittest
     int[] data;
     static assert(is(typeof(reduce!((a, b)=>a+b)(data))));
 }
+
+
+// each
+/**
+Eagerly iterates over $(D r) and calls $(D pred) over _each element.
+
+Params:
+    pred = predicate to apply to each element of the range
+    r = range or iterable over which each iterates
+
+Example:
+---
+void deleteOldBackups()
+{
+    import std.algorithm, std.datetime, std.file;
+    auto cutoff = Clock.currTime() - 7.days;
+    dirEntries("", "*~", SpanMode.depth)
+        .filter!(de => de.timeLastModified < cutoff)
+        .each!remove();
+}
+---
+
+If the range supports it, the value can be mutated in place. Examples:
+---
+arr.each!((ref a) => a++);
+arr.each!"a++";
+---
+
+If no predicate is specified, $(D each) will default to doing nothing
+but consuming the entire range. $(D .front) will be evaluated, but this
+can be avoided by explicitly specifying a predicate lambda with a
+$(D lazy) parameter.
+
+$(D each) also supports $(D opApply)-based iterators, so it will work
+with e.g. $(XREF parallelism, parallel).
+
+See_Also: $(XREF range,tee)
+
+ */
+template each(alias pred = "a")
+{
+    alias BinaryArgs = TypeTuple!(pred, "i", "a");
+
+    enum isRangeUnaryIterable(R) =
+        is(typeof(unaryFun!pred(R.init.front)));
+
+    enum isRangeBinaryIterable(R) =
+        is(typeof(binaryFun!BinaryArgs(0, R.init.front)));
+
+    enum isRangeIterable(R) =
+        isInputRange!R &&
+        (isRangeUnaryIterable!R || isRangeBinaryIterable!R);
+
+    enum isForeachUnaryIterable(R) =
+        is(typeof((R r) {
+            foreach (ref a; r)
+                cast(void)unaryFun!pred(a);
+        }));
+
+    enum isForeachBinaryIterable(R) =
+        is(typeof((R r) {
+            foreach (i, ref a; r)
+                cast(void)binaryFun!BinaryArgs(i, a);
+        }));
+
+    enum isForeachIterable(R) =
+        (!isForwardRange!R || isDynamicArray!R) &&
+        (isForeachUnaryIterable!R || isForeachBinaryIterable!R);
+
+    void each(Range)(Range r)
+    if (isRangeIterable!Range && !isForeachIterable!Range)
+    {
+        debug(each) pragma(msg, "Using while for ", Range.stringof);
+        static if (isRangeUnaryIterable!Range)
+        {
+            while (!r.empty)
+            {
+                cast(void)unaryFun!pred(r.front);
+                r.popFront();
+            }
+        }
+        else // if (isRangeBinaryIterable!Range)
+        {
+            size_t i = 0;
+            while (!r.empty)
+            {
+                cast(void)binaryFun!BinaryArgs(i, r.front);
+                r.popFront();
+                i++;
+            }
+        }
+    }
+
+    void each(Iterable)(Iterable r)
+        if (isForeachIterable!Iterable)
+    {
+        debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
+        static if (isForeachUnaryIterable!Iterable)
+        {
+            foreach (ref e; r)
+                cast(void)unaryFun!pred(e);
+        }
+        else // if (isForeachBinaryIterable!Iterable)
+        {
+            foreach (i, ref e; r)
+                cast(void)binaryFun!BinaryArgs(i, e);
+        }
+    }
+}
+
+unittest
+{
+    long[] arr;
+    // Note: each over arrays should resolve to the
+    // foreach variant, but as this is a performance
+    // improvement it is not unit-testable.
+    iota(5).each!(n => arr ~= n);
+    assert(arr == [0, 1, 2, 3, 4]);
+
+    // in-place mutation
+    arr.each!((ref n) => n++);
+    assert(arr == [1, 2, 3, 4, 5]);
+
+    // by-ref lambdas should not be allowed for non-ref ranges
+    static assert(!is(typeof(arr.map!(n => n).each!((ref n) => n++))));
+
+    // default predicate (walk / consume)
+    auto m = arr.map!(n => n);
+    (&m).each();
+    assert(m.empty);
+
+    // in-place mutation with index
+    arr[] = 0;
+    arr.each!"a=i"();
+    assert(arr == [0, 1, 2, 3, 4]);
+
+    // opApply iterators
+    static assert(is(typeof({
+        import std.parallelism;
+        arr.parallel.each!"a++";
+    })));
+}
+
 
 // sum
 /**
