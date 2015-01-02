@@ -270,7 +270,8 @@ See_Also: $(XREF typecons, Tuple)
 
 auto assocArray(Range)(Range r)
     if (isInputRange!Range &&
-        ElementType!Range.length == 2)
+        ElementType!Range.length == 2 &&
+        isMutable!(ElementType!Range.Types[1]))
 {
     import std.typecons : isTuple;
     static assert(isTuple!(ElementType!Range), "assocArray: argument must be a range of tuples");
@@ -303,6 +304,16 @@ unittest
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
     static assert(!__traits(compiles, [ tuple("foo") ].assocArray()));
     static assert( __traits(compiles, [ tuple("foo", "bar") ].assocArray()));
+}
+
+// Issue 13909
+unittest
+{
+    import std.typecons;
+    auto a = [tuple!(const string, string)("foo", "bar")];
+    auto b = [tuple!(string, const string)("foo", "bar")];
+    static assert( __traits(compiles, assocArray(a)));
+    static assert(!__traits(compiles, assocArray(b)));
 }
 
 private template blockAttribute(T)
