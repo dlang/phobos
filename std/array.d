@@ -317,12 +317,12 @@ unittest
 }
 
 /**
-Iterate over an associative array by key/value tuples.
+Construct a range iterating over an associative array by key/value tuples.
 
 Returns: A forward range of Tuple's of key and value pairs from the given
 associative array.
 */
-auto byPair(Key,Value)(Value[Key] aa)
+auto byPair(Key, Value)(Value[Key] aa)
 {
     import std.typecons : tuple;
     import std.algorithm : map;
