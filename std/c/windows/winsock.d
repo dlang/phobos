@@ -4,7 +4,7 @@
 */
 
 
-deprecated("Please import core.sys.windows.winsock2 instead. This module will be removed in April 2015.")
+/// Please import core.sys.windows.winsock2 instead.This module will be deprecated in DMD 2.068.
 module std.c.windows.winsock;
 
 public import core.sys.windows.winsock2;

@@ -10,7 +10,7 @@
  */
 
 
-deprecated("Please import core.stdc.stdlib or core.sys.posix.stdlib instead. This module will be removed in December 2015.")
+/// Please import core.stdc.stdlib or core.sys.posix.stdlib instead. This module will be deprecated in DMD 2.068.
 module std.c.stdlib;
 
 public import core.stdc.stdlib;

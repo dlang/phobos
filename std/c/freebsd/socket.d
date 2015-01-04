@@ -4,7 +4,7 @@
  * This module is just for making std.socket work under FreeBSD, and these
  * definitions should actually be in druntime. (core.sys.posix.netdb or sth)
  */
-deprecated("Please import the core.sys.posix.* modules you need instead. This module will be removed in April 2015.")
+/// Please import the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
 module std.c.freebsd.socket;
 
 public import core.sys.posix.netdb;
