@@ -9,7 +9,7 @@
  *      WIKI=Phobos/StdCString
  */
 
-deprecated("Please import core.stdc.string instead. This module will be removed in December 2015.")
+/// Please import core.stdc.string instead. This module will be deprecated in DMD 2.068.
 module std.c.string;
 
 public import core.stdc.string;

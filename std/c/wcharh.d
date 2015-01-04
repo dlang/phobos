@@ -9,7 +9,7 @@
  *      WIKI=Phobos/StdCWchar
  */
 
-deprecated("Please import core.stdc.wchar_ instead. This module will be removed in December 2015.")
+/// Please import core.stdc.wchar_ instead. This module will be deprecated in DMD 2.068.
 module std.c.wcharh;
 
 public import core.stdc.wchar_;
