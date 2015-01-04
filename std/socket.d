@@ -1663,6 +1663,23 @@ public:
     }
 
     /**
+     * Compares with another InternetAddress of same type for equality
+     * Returns: true if the InternetAddresses share the same address and
+     * port number.
+     * Examples:
+     * --------------
+     * InternetAddress addr1,addr2;
+     * if (addr1 == addr2) { }
+     * --------------
+     */
+    override bool opEquals(Object o) const
+    {
+        auto other = cast(InternetAddress)o;
+        return other && this.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr &&
+            this.sin.sin_port == other.sin.sin_port;
+    }
+
+    /**
      * Parse an IPv4 address string in the dotted-decimal form $(I a.b.c.d)
      * and return the number.
      * Returns: If the string is not a legitimate IPv4 address,
