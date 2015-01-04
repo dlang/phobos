@@ -1712,7 +1712,7 @@ public:
 
     // Rolls double word (upper, lower) to the right by n bits and returns the
     // lower word of the result.
-    private static size_t rollRight(size_t upper, size_t lower, size_t nbits)
+    private static size_t rollRight()(size_t upper, size_t lower, size_t nbits)
         pure @safe nothrow @nogc
     in
     {
@@ -1747,7 +1747,7 @@ public:
 
     // Rolls double word (upper, lower) to the left by n bits and returns the
     // upper word of the result.
-    private static size_t rollLeft(size_t upper, size_t lower, size_t nbits)
+    private static size_t rollLeft()(size_t upper, size_t lower, size_t nbits)
         pure @safe nothrow @nogc
     in
     {
