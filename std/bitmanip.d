@@ -1779,10 +1779,10 @@ public:
     }
 
     /**
-     * Operator $(D >>=) support.
+     * Operator $(D <<=) support.
      *
-     * Shifts all the bits in the array to the right by the given number of
-     * bits.  The rightmost bits are dropped, and 0's are inserted at the front
+     * Shifts all the bits in the array to the left by the given number of
+     * bits.  The leftmost bits are dropped, and 0's are appended to the end
      * to fill up the vacant bits.
      *
      * $(RED Warning: unused bits in the final word up to the next word
@@ -1790,17 +1790,13 @@ public:
      * preserve bits past the end of the array.)
      */
     void opOpAssign(string op)(size_t nbits) @nogc pure nothrow
-        if (op == ">>")
+        if (op == "<<")
     {
         size_t wordsToShift = nbits / bitsPerSizeT;
         size_t bitsToShift = nbits % bitsPerSizeT;
 
         if (wordsToShift < dim)
         {
-            // Unfortunately, due to the way core.bitop.bt() works, indices are
-            // the reverse order of what an equivalent >> on a size_t would do,
-            // so we have to use rollLeft() instead of rollRight() here,
-            // contrary to the direction of the >> operator on this BitArray.
             foreach_reverse (i; 1 .. dim - wordsToShift)
             {
                 ptr[i + wordsToShift] = rollLeft(ptr[i], ptr[i-1],
@@ -1817,26 +1813,22 @@ public:
     }
 
     /**
-     * Operator $(D <<=) support.
+     * Operator $(D >>=) support.
      *
-     * Shifts all the bits in the array to the left by the given number of
-     * bits.  The leftmost bits are dropped, and 0's are appended to the end to
-     * fill up the vacant bits.
+     * Shifts all the bits in the array to the right by the given number of
+     * bits.  The rightmost bits are dropped, and 0's are inserted at the back
+     * to fill up the vacant bits.
      *
      * $(RED Warning: unused bits in the final word up to the next word
      * boundary may be overwritten by this operation. It does not attempt to
      * preserve bits past the end of the array.)
      */
     void opOpAssign(string op)(size_t nbits) @nogc pure nothrow
-        if (op == "<<")
+        if (op == ">>")
     {
         size_t wordsToShift = nbits / bitsPerSizeT;
         size_t bitsToShift = nbits % bitsPerSizeT;
 
-        // Unfortunately, due to the way core.bitop.bt() works, indices are the
-        // reverse order of what an equivalent << on a size_t would do, so we
-        // have to use rollRight() instead of rollLeft() here, contrary to the
-        // direction of the << operator on this BitArray.
         if (wordsToShift + 1 < dim)
         {
             foreach (i; 0 .. dim - wordsToShift - 1)
@@ -1866,25 +1858,25 @@ public:
         import std.format : format;
 
         BitArray b;
-        b.init([1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1]);
-
-        b >>= 1;
-        assert(format("%b", b) == "01100_10101001");
+        b.init([1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1]);
 
         b <<= 1;
-        assert(format("%b", b) == "11001_01010010");
+        assert(format("%b", b) == "01100_10101101");
 
-        b >>= 4;
+        b >>= 1;
+        assert(format("%b", b) == "11001_01011010");
+
+        b <<= 4;
         assert(format("%b", b) == "00001_10010101");
 
-        b <<= 5;
+        b >>= 5;
         assert(format("%b", b) == "10010_10100000");
 
-        b >>= 13;
+        b <<= 13;
         assert(format("%b", b) == "00000_00000000");
 
         b.init([1, 0, 1, 1, 0, 1, 1, 1]);
-        b <<= 8;
+        b >>= 8;
         assert(format("%b", b) == "00000000");
 
     }
@@ -1904,7 +1896,7 @@ public:
             1, 1, 1, 1, 1, 1, 1, 0,  1, 1, 1, 1, 1, 1, 1, 1,
             1, 0, 1, 0, 1, 0, 1, 0,  0, 1, 0, 1, 0, 1, 0, 1,
         ]);
-        b >>= 8;
+        b <<= 8;
         assert(format("%b", b) ==
                "00000000_10000000_"~
                "11000000_11100000_"~
@@ -1913,7 +1905,7 @@ public:
                "11111111_10101010");
 
         // Test right shift of more than one size_t's worth of bits
-        b >>= 68;
+        b <<= 68;
         assert(format("%b", b) ==
                "00000000_00000000_"~
                "00000000_00000000_"~
@@ -1928,7 +1920,7 @@ public:
             1, 1, 1, 1, 1, 1, 1, 0,  1, 1, 1, 1, 1, 1, 1, 1,
             1, 0, 1, 0, 1, 0, 1, 0,  0, 1, 0, 1, 0, 1, 0, 1,
         ]);
-        b <<= 8;
+        b >>= 8;
         assert(format("%b", b) ==
                "11000000_11100000_"~
                "11110000_11111000_"~
@@ -1937,7 +1929,7 @@ public:
                "01010101_00000000");
 
         // Test left shift of more than 1 size_t's worth of bits
-        b <<= 68;
+        b >>= 68;
         assert(format("%b", b) ==
                "01010000_00000000_"~
                "00000000_00000000_"~
