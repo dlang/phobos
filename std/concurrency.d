@@ -53,7 +53,7 @@
  *
  * Copyright: Copyright Sean Kelly 2009 - 2014.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   Sean Kelly, Alex Rønne Petersen
+ * Authors:   Sean Kelly, Alex Rønne Petersen, Martin Nowak
  * Source:    $(PHOBOSSRC std/_concurrency.d)
  */
 /*          Copyright Sean Kelly 2009 - 2014.
@@ -2402,4 +2402,147 @@ version( unittest )
         simpleTest();
         scheduler = null;
     }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// initOnce
+//////////////////////////////////////////////////////////////////////////////
+
+private template initOnceLock()
+{
+    __gshared Mutex lock;
+
+    shared static this()
+    {
+        lock = new Mutex;
+    }
+
+    @property Mutex initOnceLock()
+    {
+        return lock;
+    }
+}
+
+/**
+ * Initializes $(D_PARAM var) with the lazy $(D_PARAM init) value in a
+ * thread-safe manner.
+ *
+ * The implementation guarantees that all threads simultaneously calling
+ * initOnce with the same $(D_PARAM var) argument block until $(D_PARAM var) is
+ * fully initialized. All side-effects of $(D_PARAM init) are globally visible
+ * afterwards.
+ *
+ * Params:
+ *   var = The variable to initialize
+ *   init = The lazy initializer value
+ *
+ * Returns:
+ *   A reference to the initialized variable
+ */
+auto ref initOnce(alias var)(lazy typeof(var) init)
+{
+    return initOnce!var(init, initOnceLock);
+}
+
+/// A typical use-case is to perform lazy but thread-safe initialization.
+unittest
+{
+    static class MySingleton
+    {
+        static MySingleton instance()
+        {
+            static __gshared MySingleton inst;
+            return initOnce!inst(new MySingleton);
+        }
+    }
+    assert(MySingleton.instance !is null);
+}
+
+unittest
+{
+    static class MySingleton
+    {
+        static MySingleton instance()
+        {
+            static __gshared MySingleton inst;
+            return initOnce!inst(new MySingleton);
+        }
+    private:
+        this() { val = ++cnt; }
+        size_t val;
+        static __gshared size_t cnt;
+    }
+
+    foreach (_; 0 .. 10)
+        spawn({ownerTid.send(MySingleton.instance.val);});
+    foreach (_; 0 .. 10)
+        assert(receiveOnly!size_t == MySingleton.instance.val);
+    assert(MySingleton.cnt == 1);
+}
+
+/**
+ * Same as above, but takes a separate mutex instead of sharing one among
+ * all initOnce instances.
+ *
+ * This should be used to avoid dead-locks when the $(D_PARAM init)
+ * expression waits for the result of another thread that might also
+ * call initOnce. Use with care.
+ *
+ * Params:
+ *   var = The variable to initialize
+ *   init = The lazy initializer value
+ *   mutex = A mutex to prevent race conditions
+ *
+ * Returns:
+ *   A reference to the initialized variable
+ */
+auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
+{
+    // check that var is global, can't take address of a TLS variable
+    static assert(is(typeof({__gshared p = &var;})), "var must be 'static shared' or '__gshared'.");
+    import core.atomic;
+
+    static shared bool flag;
+    if (!atomicLoad!(MemoryOrder.acq)(flag))
+    {
+        synchronized (mutex)
+        {
+            if (!atomicLoad!(MemoryOrder.acq)(flag))
+            {
+                var = init;
+                atomicStore!(MemoryOrder.rel)(flag, true);
+            }
+        }
+    }
+    return var;
+}
+
+/// Use a separate mutex when init blocks on another thread that might also call initOnce.
+unittest
+{
+    static shared bool varA, varB;
+    __gshared Mutex m;
+    m = new Mutex;
+
+    spawn({
+        // use a different mutex for varB to avoid a dead-lock
+        initOnce!varB(true, m);
+        ownerTid.send(true);
+    });
+    // init depends on the result of the spawned thread
+    initOnce!varA(receiveOnly!bool);
+    assert(varA == true);
+    assert(varB == true);
+}
+
+unittest
+{
+     static shared bool a;
+     __gshared bool b;
+    static bool c;
+    bool d;
+    initOnce!a(true);
+    initOnce!b(true);
+    static assert(!__traits(compiles, initOnce!c(true))); // TLS
+    static assert(!__traits(compiles, initOnce!d(true))); // local variable
 }
