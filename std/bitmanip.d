@@ -1866,13 +1866,13 @@ public:
         import std.format : format;
 
         BitArray b;
-        b.init([1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1]);
+        b.init([1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1]);
 
         b >>= 1;
-        assert(format("%b", b) == "01100_10101001");
+        assert(format("%b", b) == "01100_10101101");
 
         b <<= 1;
-        assert(format("%b", b) == "11001_01010010");
+        assert(format("%b", b) == "11001_01011010");
 
         b >>= 4;
         assert(format("%b", b) == "00001_10010101");
