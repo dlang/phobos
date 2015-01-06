@@ -828,9 +828,14 @@ class Element : Item
      * if (e1 == e2) { }
      * --------------
      */
-    override bool opEquals(Object o)
+    override bool opEquals(const Item item) const
     {
-        const element = toType!(const Element)(o);
+        auto element = cast(const Element)item;
+        return element && opEquals(element);
+    }
+    /** ditto */
+    final bool opEquals(const Element element) const
+    {
         auto len = items.length;
         if (len != element.items.length) return false;
         foreach (i; 0 .. len)
@@ -1238,9 +1243,8 @@ class Comment : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(Object o)
+    override bool opEquals(const Item item) const
     {
-        const item = toType!(const Item)(o);
         const t = cast(Comment)item;
         return t !is null && content == t.content;
     }
@@ -1317,9 +1321,8 @@ class CData : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(Object o)
+    override bool opEquals(const Item item) const
     {
-        const item = toType!(const Item)(o);
         const t = cast(CData)item;
         return t !is null && content == t.content;
     }
@@ -1394,9 +1397,8 @@ class Text : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(Object o)
+    override bool opEquals(const Item item) const
     {
-        const item = toType!(const Item)(o);
         const t = cast(Text)item;
         return t !is null && content == t.content;
     }
@@ -1555,9 +1557,8 @@ class ProcessingInstruction : Item
      * if (item1 == item2) { }
      * --------------
      */
-    override bool opEquals(Object o)
+    override bool opEquals(const Item item) const
     {
-        const item = toType!(const Item)(o);
         const t = cast(ProcessingInstruction)item;
         return t !is null && content == t.content;
     }
@@ -1604,7 +1605,12 @@ class ProcessingInstruction : Item
 abstract class Item
 {
     /// Compares with another Item of same type for equality
-    abstract override bool opEquals(Object o);
+    abstract bool opEquals(const Item item) const;
+    /** ditto */
+    override bool opEquals(Object o)
+    {
+        return opEquals(cast(const Item)o);
+    }
 
     /// Compares with another Item of same type
     abstract override int opCmp(Object o);

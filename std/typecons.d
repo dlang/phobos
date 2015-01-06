@@ -4920,6 +4920,11 @@ struct Typedef(T, T init = T.init, string cookie=null)
         return cast(T2)Typedef_payload;
     }
 
+    final bool opEquals(const Typedef typedef_) const
+    {
+        return this is typedef_;
+    }
+
     mixin Proxy!Typedef_payload;
 }
 
