@@ -3755,6 +3755,8 @@ Initialize with a message and an error code.
         }
         else
         {
+            import core.stdc.string : strerror;
+
             auto s = core.stdc.string.strerror(errno);
         }
         auto sysmsg = to!string(s);

@@ -1180,7 +1180,8 @@ A singleton instance of the default random number generator
  */
 @property ref Random rndGen() @safe
 {
-    import std.algorithm : map, repeat;
+    import std.algorithm : map;
+    import std.range : repeat;
 
     static Random result;
     static bool initialized;
