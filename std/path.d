@@ -40,7 +40,7 @@
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
         Grzegorz Adam Hankiewicz,
-        Thomas Kühne,
+        Thomas K$(UUML)hne,
         $(WEB erdani.org, Andrei Alexandrescu)
     Copyright:
         Copyright (c) 2000-2014, the authors. All rights reserved.
