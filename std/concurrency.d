@@ -325,6 +325,10 @@ private:
     MessageBox  mbox;
 
 public:
+    final bool opEquals(const Tid other) const
+    {
+        return this is other;
+    }
 
     /**
      * Generate a convenient string for identifying this Tid.  This is only
