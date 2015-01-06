@@ -4,15 +4,10 @@
  * Macros:
  *      WIKI = Phobos/StdOutbuffer
  *
- * Copyright: Copyright Digital Mars 2000 - 2009.
+ * Copyright: Copyright Digital Mars 2000 - 2015.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
- */
-/*          Copyright Digital Mars 2000 - 2009.
- * Distributed under the Boost Software License, Version 1.0.
- *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.outbuffer;
 
@@ -47,6 +42,8 @@ class OutBuffer
         assert(offset <= data.length);
     }
 
+  pure nothrow @safe
+  {
     this()
     {
         //printf("in OutBuffer constructor\n");
@@ -67,7 +64,7 @@ class OutBuffer
      */
 
 
-    void reserve(size_t nbytes)
+    void reserve(size_t nbytes) @trusted
         in
         {
             assert(offset + nbytes >= offset);
@@ -102,12 +99,12 @@ class OutBuffer
             offset += bytes.length;
         }
 
-    void write(in wchar[] chars)
+    void write(in wchar[] chars) @trusted
         {
         write(cast(ubyte[]) chars);
         }
 
-    void write(const(dchar)[] chars)
+    void write(const(dchar)[] chars) @trusted
         {
         write(cast(ubyte[]) chars);
         }
@@ -123,7 +120,7 @@ class OutBuffer
     void write(char c) { write(cast(ubyte)c); }         /// ditto
     void write(dchar c) { write(cast(uint)c); }         /// ditto
 
-    void write(ushort w)                /// ditto
+    void write(ushort w) @trusted                /// ditto
     {
         reserve(ushort.sizeof);
         *cast(ushort *)&data[offset] = w;
@@ -132,14 +129,14 @@ class OutBuffer
 
     void write(short s) { write(cast(ushort)s); }               /// ditto
 
-    void write(wchar c)         /// ditto
+    void write(wchar c) @trusted        /// ditto
     {
         reserve(wchar.sizeof);
         *cast(wchar *)&data[offset] = c;
         offset += wchar.sizeof;
     }
 
-    void write(uint w)          /// ditto
+    void write(uint w) @trusted         /// ditto
     {
         reserve(uint.sizeof);
         *cast(uint *)&data[offset] = w;
@@ -148,7 +145,7 @@ class OutBuffer
 
     void write(int i) { write(cast(uint)i); }           /// ditto
 
-    void write(ulong l)         /// ditto
+    void write(ulong l) @trusted         /// ditto
     {
         reserve(ulong.sizeof);
         *cast(ulong *)&data[offset] = l;
@@ -157,35 +154,31 @@ class OutBuffer
 
     void write(long l) { write(cast(ulong)l); }         /// ditto
 
-    void write(float f)         /// ditto
+    void write(float f) @trusted         /// ditto
     {
         reserve(float.sizeof);
         *cast(float *)&data[offset] = f;
         offset += float.sizeof;
     }
 
-    void write(double f)                /// ditto
+    void write(double f) @trusted               /// ditto
     {
         reserve(double.sizeof);
         *cast(double *)&data[offset] = f;
         offset += double.sizeof;
     }
 
-    void write(real f)          /// ditto
+    void write(real f) @trusted         /// ditto
     {
         reserve(real.sizeof);
         *cast(real *)&data[offset] = f;
         offset += real.sizeof;
     }
 
-    void write(in char[] s)             /// ditto
+    void write(in char[] s) @trusted             /// ditto
     {
         write(cast(ubyte[])s);
     }
-    // void write(immutable(char)[] s)          /// ditto
-    // {
-    //     write(cast(ubyte[])s);
-    // }
 
     void write(OutBuffer buf)           /// ditto
     {
@@ -249,17 +242,18 @@ class OutBuffer
      * Convert internal buffer to array of chars.
      */
 
-    override string toString()
+    override string toString() const
     {
         //printf("OutBuffer.toString()\n");
         return cast(string) data[0 .. offset].idup;
     }
+  }
 
     /*****************************************
      * Append output of C's vprintf() to internal buffer.
      */
 
-    void vprintf(string format, va_list args)
+    void vprintf(string format, va_list args) @trusted nothrow
     {
         char[128] buffer;
         int count;
@@ -314,7 +308,7 @@ class OutBuffer
      * Append output of C's printf() to internal buffer.
      */
 
-    void printf(string format, ...)
+    void printf(string format, ...) @trusted
     {
         version (Win64)
         {
@@ -341,7 +335,7 @@ class OutBuffer
      * all data past index.
      */
 
-    void spread(size_t index, size_t nbytes)
+    void spread(size_t index, size_t nbytes) pure nothrow @safe
         in
         {
             assert(index <= offset);
