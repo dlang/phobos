@@ -9,6 +9,7 @@
 /// Please import the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
 module std.c.linux.linux;
 
+version (linux):
 public import core.sys.posix.pthread;
 
 extern (C)

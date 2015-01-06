@@ -5,4 +5,5 @@
 /// Please import core.sys.windows.stat instead. This module will be deprecated in DMD 2.068.
 module std.c.windows.stat;
 
+version (Windows):
 public import core.sys.windows.stat;
