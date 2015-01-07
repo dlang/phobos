@@ -1439,10 +1439,10 @@ creal sqrt(creal z) @nogc @safe pure nothrow
 }
 
 /**
- * Calculates e$(SUP x).
+ * Calculates e$(SUPERSCRIPT x).
  *
  *  $(TABLE_SV
- *    $(TR $(TH x)             $(TH e$(SUP x)) )
+ *    $(TR $(TH x)             $(TH e$(SUPERSCRIPT x)) )
  *    $(TR $(TD +$(INFIN))     $(TD +$(INFIN)) )
  *    $(TR $(TD -$(INFIN))     $(TD +0.0)      )
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
@@ -1535,7 +1535,7 @@ unittest
  * than exp(x)-1.
  *
  *  $(TABLE_SV
- *    $(TR $(TH x)             $(TH e$(SUP x)-1)  )
+ *    $(TR $(TH x)             $(TH e$(SUPERSCRIPT x)-1)  )
  *    $(TR $(TD $(PLUSMN)0.0)  $(TD $(PLUSMN)0.0) )
  *    $(TR $(TD +$(INFIN))     $(TD +$(INFIN))    )
  *    $(TR $(TD -$(INFIN))     $(TD -1.0)         )
@@ -1764,7 +1764,7 @@ L_largenegative:
 
 
 /**
- * Calculates 2$(SUP x).
+ * Calculates 2$(SUPERSCRIPT x).
  *
  *  $(TABLE_SV
  *    $(TR $(TH x)             $(TH exp2(x))   )
@@ -2136,7 +2136,7 @@ unittest
  *
  * Returns:
  *      Calculate and return $(I x) and $(I exp) such that
- *      value =$(I x)*2$(SUP exp) and
+ *      value =$(I x)*2$(SUPERSCRIPT exp) and
  *      .5 $(LT)= |$(I x)| $(LT) 1.0
  *
  *      $(I x) has same sign as value.
@@ -2489,7 +2489,7 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
 
 /*******************************************
- * Compute n * 2$(SUP exp)
+ * Compute n * 2$(SUPERSCRIPT exp)
  * References: frexp
  */
 
@@ -2988,7 +2988,7 @@ unittest
  * If x is subnormal, it is treated as if it were normalized.
  * For a positive, finite x:
  *
- * 1 $(LT)= $(I x) * FLT_RADIX$(SUP -logb(x)) $(LT) FLT_RADIX
+ * 1 $(LT)= $(I x) * FLT_RADIX$(SUPERSCRIPT -logb(x)) $(LT) FLT_RADIX
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)                 $(TH logb(x))   $(TH divide by 0?) )
@@ -3069,7 +3069,7 @@ real modf(real x, ref real i) @trusted nothrow @nogc
 }
 
 /*************************************
- * Efficiently calculates x * 2$(SUP n).
+ * Efficiently calculates x * 2$(SUPERSCRIPT n).
  *
  * scalbn handles underflow and overflow in
  * the same fashion as the basic arithmetic operators.
@@ -5400,7 +5400,7 @@ real fmin(real x, real y) @safe pure nothrow @nogc { return x < y ? x : y; }
 real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; }
 
 /*******************************************************************
- * Compute the value of x $(SUP n), where n is an integer
+ * Compute the value of x $(SUPERSCRIPT n), where n is an integer
  */
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
     if (isFloatingPoint!(F) && isIntegral!(G))
@@ -5567,7 +5567,7 @@ real pow(I, F)(I x, F y) @nogc @trusted pure nothrow
 }
 
 /*********************************************
- * Calculates x$(SUP y).
+ * Calculates x$(SUPERSCRIPT y).
  *
  * $(TABLE_SV
  * $(TR $(TH x) $(TH y) $(TH pow(x, y))
