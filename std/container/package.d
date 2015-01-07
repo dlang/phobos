@@ -9,29 +9,29 @@ This module consists of the following submodules:
 
 $(UL
     $(LI
-        The $(LINK2 std_container_array, std._container.array) module provides
+        The $(LINK2 std_container_array.html, std._container.array) module provides
         an $(D Array) type with deterministic control of memory, not reliant on
         the GC unlike the built-in arrays.
     )
     $(LI
-        The $(LINK2 std_container_binaryheap, std._container.binaryheap) module
+        The $(LINK2 std_container_binaryheap.html, std._container.binaryheap) module
         provides a binary heap implementation that can be applied to any
         user-provided random-access range.
     )
     $(LI
-        The $(LINK2 std_container_dlist, std._container.dlist) module provides
+        The $(LINK2 std_container_dlist.html, std._container.dlist) module provides
         a doubly-linked list implementation.
     )
     $(LI
-        The $(LINK2 std_container_rbtree, std._container.rbtree) module
+        The $(LINK2 std_container_rbtree.html, std._container.rbtree) module
         implements red-black trees.
     )
     $(LI
-        The $(LINK2 std_container_slist, std._container.slist) module
+        The $(LINK2 std_container_slist.html, std._container.slist) module
         implements singly-linked lists.
     )
     $(LI
-        The $(LINK2 std_container_util, std._container.util) module contains
+        The $(LINK2 std_container_util.html, std._container.util) module contains
         some generic tools commonly used by container implementations.
     )
 )
