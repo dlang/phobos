@@ -1311,7 +1311,7 @@ deprecated("Please use std.algorithm.splitter instead.") alias splitter = std.al
 /++
     Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
 
-    The range must be a $(FULL_XREF std_range.html#isForwardRange, forward range).
+    The range must be a $(XREF2 range, isForwardRange, forward range).
     The separator can be a value of the same type as the elements in $(D range) or
     it can be another forward range.
 
