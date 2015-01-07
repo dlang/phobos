@@ -1,7 +1,7 @@
 /**
 This module implements a red-black tree container.
 
-This module is a submodule of $(LINK2 std_container_package, std.container).
+This module is a submodule of $(LINK2 std_container_package.html, std.container).
 
 Source: $(PHOBOSSRC std/container/_rbtree.d)
 Macros:
