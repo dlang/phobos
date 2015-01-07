@@ -1,8 +1,6 @@
 // Written in the D programming language.
 
 /++
-    $(SECTION Overview)
-
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
