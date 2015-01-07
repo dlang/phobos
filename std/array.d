@@ -263,6 +263,7 @@ unittest
 }
 
 /**
+Params: r = An input range of tuples of keys and values.
 Returns: A newly allocated associative array out of elements of the input
 range, which must be a range of tuples (Key, Value).
 See_Also: $(XREF typecons, Tuple)
@@ -297,7 +298,7 @@ auto assocArray(Range)(Range r)
     assert(b == ["foo":"bar", "baz":"quux"]);
 }
 
-/// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
+// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
 unittest
 {
     import std.typecons;
@@ -318,6 +319,8 @@ unittest
 
 /**
 Construct a range iterating over an associative array by key/value tuples.
+
+Params: aa = The associative array to iterate over.
 
 Returns: A forward range of Tuple's of key and value pairs from the given
 associative array.
