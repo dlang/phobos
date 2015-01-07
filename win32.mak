@@ -305,6 +305,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_container_rbtree.html \
 	$(DOC)\std_container_slist.html \
 	$(DOC)\std_container_package.html \
+	$(DOC)\std_container_util.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
