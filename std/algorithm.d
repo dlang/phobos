@@ -1411,14 +1411,14 @@ unittest
 
 // sum
 /**
-Sums elements of $(D r), which must be a finite $(LINK2 std_range.html#isInputRange, input range). Although
+Sums elements of $(D r), which must be a finite $(XREF2 range, isInputRange, input range). Although
 conceptually $(D sum(r)) is equivalent to $(LREF reduce)!((a, b) => a +
 b)(0, r), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
 $(LI If $(D $(XREF range, ElementType)!R) is a floating-point type and $(D R) is a
-$(LINK2 std_range.html#isRandomAccessRange, random-access range) with length and slicing, then $(D sum) uses the
+$(XREF2 range, isRandomAccessRange, random-access range) with length and slicing, then $(D sum) uses the
 $(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
@@ -1605,7 +1605,7 @@ unittest
 Assigns $(D value) to each element of input range $(D range).
 
 Params:
-        range = an $(LINK2 std_range.html#isInputRange, input range) that exposes references to its elements
+        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
         value = assigned to each element of range
 
@@ -1833,7 +1833,7 @@ define copy constructors (for all other types, $(LREF fill) and
 uninitializedFill are equivalent).
 
 Params:
-        range = an $(LINK2 std_range.html#isInputRange, input range) that exposes references to its elements
+        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
         value = assigned to each element of range
 
@@ -1871,7 +1871,7 @@ Initializes all elements of $(D range) with their $(D .init) value.
 Assumes that the elements of the range are uninitialized.
 
 Params:
-        range = an $(LINK2 std_range.html#isInputRange, input range) that exposes references to its elements
+        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
 
 See_Also:
@@ -4706,7 +4706,7 @@ private struct GroupByImpl(alias pred, EquivRelation equivRelation, Range)
             assert(!equivRelation || pred(r.front, r.front),
                    "predicate " ~ pred.stringof ~ " is claimed to be "~
                    "equivalence relation yet isn't reflexive");
-            
+
             // _prev's type may be a nested struct, so must be initialized
             // directly in the constructor (cannot call savePred()).
             static if (isForwardRange!Range)
@@ -5002,7 +5002,7 @@ unittest
 // Issue 13805
 unittest
 {
-    [""].map!((s) => s).groupBy!((x, y) => true);    
+    [""].map!((s) => s).groupBy!((x, y) => true);
 }
 
 // overwriteAdjacent
