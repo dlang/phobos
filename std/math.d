@@ -86,6 +86,8 @@ $(TR $(TDNW Hardware Control) $(TD
  *              $0</table>
  *      SVH = $(TR $(TH $1) $(TH $2))
  *      SV  = $(TR $(TD $1) $(TD $2))
+ *      TH3 = $(TR $(TH $1) $(TH $2) $(TH $3))
+ *      TD3 = $(TR $(TD $1) $(TD $2) $(TD $3))
  *
  *      NAN = $(RED NAN)
  *      SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
@@ -566,23 +568,43 @@ unittest
 real cos(real x) @safe pure nothrow @nogc;       /* intrinsic */
 
 /***********************************
- * Returns sine of x. x is in radians.
+ * Returns $(WEB en.wikipedia.org/wiki/Sine, sine) of x. x is in $(WEB en.wikipedia.org/wiki/Radian, radians).
  *
  *      $(TABLE_SV
- *      $(TR $(TH x)               $(TH sin(x))      $(TH invalid?))
- *      $(TR $(TD $(NAN))          $(TD $(NAN))      $(TD yes))
- *      $(TR $(TD $(PLUSMN)0.0)    $(TD $(PLUSMN)0.0) $(TD no))
- *      $(TR $(TD $(PLUSMNINF))    $(TD $(NAN))      $(TD yes))
+ *      $(TH3 x           ,  sin(x)      ,  invalid?)
+ *      $(TD3 $(NAN)      ,  $(NAN)      ,  yes     )
+ *      $(TD3 $(PLUSMN)0.0,  $(PLUSMN)0.0,  no      )
+ *      $(TD3 $(PLUSMNINF),  $(NAN)      ,  yes     )
  *      )
+ *
+ * Params:
+ *      x = angle in radians (not degrees)
+ * Returns:
+ *      sine of x
+ * See_Also:
+ *      $(MYREF cos), $(MYREF tan), $(MYREF asin)
  * Bugs:
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
 real sin(real x) @safe pure nothrow @nogc;       /* intrinsic */
 
+///
+unittest
+{
+    import std.math : sin, PI;
+    import std.stdio : writefln;
+
+    void main()
+    {
+      real x = 30.0;
+      auto result = sin(x * (PI / 180)); // convert degrees to radians
+      writefln("The sine of %s degrees is %s", x, result);
+    }
+}
 
 /***********************************
- *  sine, complex and imaginary
+ *  Returns sine for complex and imaginary arguments.
  *
  *  sin(z) = sin(z.re)*cosh(z.im) + cos(z.re)*sinh(z.im)i
  *
