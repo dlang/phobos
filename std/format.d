@@ -6353,7 +6353,7 @@ unittest
  * Params: fmt  = Format string. For detailed specification, see $(XREF format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  *
- *  $(RED format's current implementation has been replaced with $(LREF xformat)'s
+ * Please Note: $(RED format's current implementation has been replaced with $(LREF xformat)'s
  *        implementation. in November 2012.
  *        This is seamless for most code, but it makes it so that the only
  *        argument that can be a format string is the first one, so any
