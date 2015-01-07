@@ -6352,23 +6352,6 @@ unittest
  *
  * Params: fmt  = Format string. For detailed specification, see $(XREF format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
- *
- * Please Note: $(RED format's current implementation has been replaced with $(LREF xformat)'s
- *        implementation. in November 2012.
- *        This is seamless for most code, but it makes it so that the only
- *        argument that can be a format string is the first one, so any
- *        code which used multiple format strings has broken. Please change
- *        your calls to format accordingly.
- *
- *        e.g.:
- *        ----
- *        format("key = %s", key, ", value = %s", value)
- *        ----
- *        needs to be rewritten as:
- *        ----
- *        format("key = %s, value = %s", key, value)
- *        ----
- *   )
  */
 string format(Char, Args...)(in Char[] fmt, Args args)
 {
