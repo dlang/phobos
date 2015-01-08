@@ -2981,9 +2981,9 @@ template forward(args...)
 
 // splitter
 /**
-Splits a range using an element as a separator. This can be used with
-any narrow string type or sliceable range type, but is most popular
-with string types.
+Lazily splits a range using an element as a separator. This can be used with
+any narrow string type or sliceable range type, but is most popular with string
+types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
@@ -2994,11 +2994,21 @@ element. If a range with one separator is given, the result is a range
 with two empty elements.
 
 If splitting a string on whitespace and token compression is desired,
-consider using $(D splitter) without specifying a separator (see overload
+consider using $(D splitter) without specifying a separator (see third overload
 below).
 
+Params:
+    r = The $(XREF2 range, isInputRange, input range) to be split.
+    s = The element to be treated as the separator between range segments to be
+    split.
+
+Returns:
+    An input range of the subranges of elements between separators. If $(D r)
+    is a forward range or bidirectional range, the returned range will be
+    likewise.
+
 See_Also:
- $(XREF regex, splitter) for a version that splits using a regular
+ $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
 */
 auto splitter(Range, Separator)(Range r, Separator s)
@@ -3246,15 +3256,25 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 }
 
 /**
-Splits a range using another range as a separator. This can be used
-with any narrow string type or sliceable range type, but is most popular
-with string types.
+Similar to the previous overload of $(D splitter), except this one uses another
+range as a separator. This can be used with any narrow string type or sliceable
+range type, but is most popular with string types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
-See_Also: $(XREF regex, splitter) for a version that splits using a regular
+Params:
+    r = The $(XREF2 range, isInputRange, input range) to be split.
+    s = The $(XREF2 range, isForwardRange, forward range) to be treated as the
+        separator between segments of $(D r) to be split.
+
+Returns:
+    An input range of the subranges of elements between separators. If $(D r)
+    is a forward range or bidirectional range, the returned range will be
+    likewise.
+
+See_Also: $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
  */
 auto splitter(Range, Separator)(Range r, Separator s)
@@ -3697,6 +3717,13 @@ Lazily splits the string $(D s) into words, using whitespace as the delimiter.
 This function is string specific and, contrary to
 $(D splitter!(std.uni.isWhite)), runs of whitespace will be merged together
 (no empty tokens will be produced).
+
+Params:
+    s = The string to be split.
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) of string segments split by
+    whitespace.
  +/
 auto splitter(C)(C[] s)
 if (isSomeChar!C)
