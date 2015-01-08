@@ -4547,16 +4547,6 @@ private struct UniqResult(alias pred, Range)
 }
 
 // group
-/**
-Similarly to $(D uniq), $(D group) iterates unique consecutive
-elements of the given range. The element type is $(D
-Tuple!(ElementType!R, uint)) because it includes the count of
-equivalent elements seen. Equivalence of elements is assessed by using
-the predicate $(D pred), by default $(D "a == b").
-
-$(D Group) is an input range if $(D R) is an input range, and a
-forward range in all other cases.
-*/
 struct Group(alias pred, R) if (isInputRange!R)
 {
     private alias comp = binaryFun!pred;
@@ -4631,7 +4621,25 @@ struct Group(alias pred, R) if (isInputRange!R)
     }
 }
 
-/// Ditto
+/**
+Groups consecutively equivalent elements into a single tuple of the element and
+the number of its repetitions.
+
+Similarly to $(D uniq), $(D group) produces a range that iterates over unique
+consecutive elements of the given range. Each element of this range is a tuple
+of the element and the number of times it is repeated in the original range.
+Equivalence of elements is assessed by using the predicate $(D pred), which
+defaults to $(D "a == b").
+
+Params:
+    pred = Binary predicate for determining equivalence of two elements.
+    r = The $(XREF2 range, isInputRange, input range) to iterate over.
+
+Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
+representing each consecutively unique element and its respective number of
+occurrences in that run.  This will be an input range if $(D R) is an input
+range, and a forward range in all other cases.
+*/
 Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 {
     return typeof(return)(r);
