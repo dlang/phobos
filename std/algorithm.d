@@ -6923,9 +6923,10 @@ Params:
 
 Returns:
 
-0 if (none of) the needle(s) occur at the beginning of the given range;
-otherwise the position of the matching needle, that is, 1 if it starts with $(D
-withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so on.
+0 if the needle(s) do not occur at the beginning of the given range;
+otherwise the position of the matching needle, that is, 1 if the range starts
+with $(D withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
+on.
 
 In the case where $(D doesThisStart) starts with multiple of the ranges or
 elements in $(D withOneOfThese), then the shortest one matches (if there are
@@ -7316,7 +7317,26 @@ void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 }
 
 /**
+Checks if the given range ends with (one of) the given needle(s).
 The reciprocal of $(D startsWith).
+
+Params:
+    pred = The predicate to use for comparing elements between the range and
+        the needle(s).
+
+    doesThisEnd = The $(XREF2 range, isBidirectionalRange, bidirectional range)
+        to check.
+
+    withOneOfThese = The needles to check against, which may be single
+        elements, or bidirectional ranges of elements.
+
+    withThis = The single element to check.
+
+Returns:
+0 if the needle(s) do not occur at the end of the given range;
+otherwise the position of the matching needle, that is, 1 if the range ends
+with $(D withOneOfThese[0]), 2 if it ends with $(D withOneOfThese[1]), and so
+on.
  */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
