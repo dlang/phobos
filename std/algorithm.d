@@ -7726,6 +7726,15 @@ Advances $(D r) until it finds the first two adjacent elements $(D a),
 $(D b) that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
 evaluations of $(D pred).
 
+Params:
+    pref = The predicate to satisfy.
+    r = A $(XREF2 range, isForwardRange, forward range) to search in.
+
+Returns:
+$(D r) advanced to the first occurrence of two adjacent elements that satisfy
+the given predicate. If there are no such two elements, returns $(D r) advanced
+until empty.
+
 See_Also:
      $(WEB sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
 */
