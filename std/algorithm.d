@@ -6905,13 +6905,32 @@ unittest // bugzilla 13171
 }
 
 /**
-If the range $(D doesThisStart) starts with $(I any) of the $(D
-withOneOfThese) ranges or elements, returns 1 if it starts with $(D
-withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
-on. If none match, returns 0. In the case where $(D doesThisStart) starts
-with multiple of the ranges or elements in $(D withOneOfThese), then the
-shortest one matches (if there are two which match which are of the same
-length (e.g. $(D "a") and $(D 'a')), then the left-most of them in the argument
+Checks whether the given $(XREF2 range, isInputRange, input range) starts with
+(one of) the given needle(s).
+
+Params:
+
+    pred = Predicate to use in comparing the elements of the haystack and the
+        needle(s).
+
+    doesThisStart = The input range to check.
+
+    withOneOfThese = The needles against which the range is to be checked,
+        which may be individual elements or input ranges of elements.
+
+    withThis = The single needle to check, which may be either a single element
+        or an input range of elements.
+
+Returns:
+
+0 if (none of) the needle(s) occur at the beginning of the given range;
+otherwise the position of the matching needle, that is, 1 if it starts with $(D
+withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so on.
+
+In the case where $(D doesThisStart) starts with multiple of the ranges or
+elements in $(D withOneOfThese), then the shortest one matches (if there are
+two which match which are of the same length (e.g. $(D "a") and $(D 'a')), then
+the left-most of them in the argument
 list matches).
  */
 uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
