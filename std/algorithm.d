@@ -1714,6 +1714,12 @@ void fill(Range, Value)(Range range, Value value)
 Fills $(D range) with a pattern copied from $(D filler). The length of
 $(D range) does not have to be a multiple of the length of $(D
 filler). If $(D filler) is empty, an exception is thrown.
+
+Params:
+    range = An $(XREF2 range, isInputRange, input range) that exposes
+            references to its elements and has assignable elements.
+    filler = The $(XREF2 range, isForwardRange, forward range) representing the
+             _fill pattern.
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
     if (isInputRange!Range1
