@@ -6478,6 +6478,9 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 /++
+    Counts elements in the given $(XREF2 range, isForwardRange, forward range)
+    until the given predicate is true for one of the given needles.
+
     Params:
         pred = The predicate for determining when to stop counting.
         haystack = The $(XREF2 range, isInputRange, input range) to be counted.
