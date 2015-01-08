@@ -1605,9 +1605,9 @@ unittest
 Assigns $(D value) to each element of input range $(D range).
 
 Params:
-        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
-        value = assigned to each element of range
+        value = Assigned to each element of range
 
 See_Also:
         $(LREF uninitializedFill)
@@ -1714,6 +1714,12 @@ void fill(Range, Value)(Range range, Value value)
 Fills $(D range) with a pattern copied from $(D filler). The length of
 $(D range) does not have to be a multiple of the length of $(D
 filler). If $(D filler) is empty, an exception is thrown.
+
+Params:
+    range = An $(XREF2 range, isInputRange, input range) that exposes
+            references to its elements and has assignable elements.
+    filler = The $(XREF2 range, isForwardRange, forward range) representing the
+             _fill pattern.
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
     if (isInputRange!Range1
@@ -1833,9 +1839,9 @@ define copy constructors (for all other types, $(LREF fill) and
 uninitializedFill are equivalent).
 
 Params:
-        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
-        value = assigned to each element of range
+        value = Assigned to each element of range
 
 See_Also:
         $(LREF fill)
@@ -1871,7 +1877,7 @@ Initializes all elements of $(D range) with their $(D .init) value.
 Assumes that the elements of the range are uninitialized.
 
 Params:
-        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
 
 See_Also:
@@ -2007,11 +2013,11 @@ unittest
 /**
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
-Implements the higher order filter function.
+Implements the higher order _filter function.
 
 Params:
-    predicate = function to apply to each element of range
-    range = range of elements
+    predicate = Function to apply to each element of range
+    range = Input range of elements
 
 Returns:
     $(D filter!(predicate)(range)) returns a new range containing only elements $(D x) in $(D range) for
@@ -2204,6 +2210,9 @@ private struct FilterResult(alias pred, Range)
  * that the filtered range can be spanned from both directions. Also,
  * $(XREF range, retro) can be applied against the filtered range.
  *
+ * Params:
+ *     predicate = Function to apply to each element of range
+ *     r = Bidirectional range of elements
  */
 template filterBidirectional(alias pred)
 {
@@ -2278,8 +2287,15 @@ private struct FilterBidiResult(alias pred, Range)
 
 // move
 /**
-Moves $(D source) into $(D target) via a destructive
-copy.
+Moves $(D source) into $(D target) via a destructive copy.
+
+Params:
+    source = Data to copy. If a destructor or postblit is defined, it is reset
+        to its $(D .init) value after it is moved into target.  Note that data
+        with internal pointers that point to itself cannot be moved, and will
+        trigger an assertion failure.
+    target = Where to copy into. The destructor, if any, is invoked before the
+        copy is performed.
 */
 void move(T)(ref T source, ref T target)
 {
@@ -2541,12 +2557,20 @@ unittest// Issue 8057
 // moveAll
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
-tgt) in lockstep in increasing order, calls $(D move(a, b)). Returns
-the leftover portion of $(D tgt). Throws an exception if there is not
-enough room in $(D tgt) to accommodate all of $(D src).
+tgt) in lockstep in increasing order, calls $(D move(a, b)).
 
 Preconditions:
-$(D walkLength(src) <= walkLength(tgt))
+$(D walkLength(src) <= walkLength(tgt)).
+An exception will be thrown if this condition does not hold, i.e., there is not
+enough room in $(D tgt) to accommodate all of $(D src).
+
+Params:
+    src = An $(XREF2 range, isInputRange, input range) with movable elements.
+    tgt = An $(XREF2 range, isInputRange, input range) with elements that
+        elements from $(D src) can be moved into.
+
+Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
+been moved.
  */
 Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
@@ -2589,8 +2613,15 @@ unittest
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
 tgt) in lockstep in increasing order, calls $(D move(a, b)). Stops
-when either $(D src) or $(D tgt) have been exhausted. Returns the
-leftover portions of the two ranges.
+when either $(D src) or $(D tgt) have been exhausted.
+
+Params:
+    src = An $(XREF2 range, isInputRange, input range) with movable elements.
+    tgt = An $(XREF2 range, isInputRange, input range) with elements that
+        elements from $(D src) can be moved into.
+
+Returns: The leftover portions of the two ranges after one or the other of the
+ranges have been exhausted.
  */
 Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
@@ -2627,6 +2658,10 @@ If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
 its fields must also all be (recursively) mutable.
+
+Params:
+    lhs = Data to be swapped with $(D rhs).
+    rhs = Data to be swapped with $(D lhs).
 */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow @nogc
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
