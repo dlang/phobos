@@ -1605,9 +1605,9 @@ unittest
 Assigns $(D value) to each element of input range $(D range).
 
 Params:
-        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
-        value = assigned to each element of range
+        value = Assigned to each element of range
 
 See_Also:
         $(LREF uninitializedFill)
@@ -1833,9 +1833,9 @@ define copy constructors (for all other types, $(LREF fill) and
 uninitializedFill are equivalent).
 
 Params:
-        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
-        value = assigned to each element of range
+        value = Assigned to each element of range
 
 See_Also:
         $(LREF fill)
@@ -1871,7 +1871,7 @@ Initializes all elements of $(D range) with their $(D .init) value.
 Assumes that the elements of the range are uninitialized.
 
 Params:
-        range = an $(XREF2 range, isInputRange, input range) that exposes references to its elements
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
                 and has assignable elements
 
 See_Also:
@@ -2010,8 +2010,8 @@ $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 Implements the higher order filter function.
 
 Params:
-    predicate = function to apply to each element of range
-    range = range of elements
+    predicate = Function to apply to each element of range
+    range = Range of elements
 
 Returns:
     $(D filter!(predicate)(range)) returns a new range containing only elements $(D x) in $(D range) for
