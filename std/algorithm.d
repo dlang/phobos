@@ -6051,6 +6051,11 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
  * Params:
  * pred = Predicate used to compare elements.
  * needle = A random-access range with length and slicing.
+ *
+ * Returns:
+ * An instance of $(D BoyerMooreFinder) that can be used with $(D find()) to
+ * invoke the Boyer-Moore matching algorithm for finding of $(D needle) in a
+ * given haystack.
  */
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
 (alias pred = "a == b", Range)
