@@ -6434,13 +6434,18 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 /++
-    Returns the number of elements which must be popped from the front of
+    Params:
+        pred = The predicate for determining when to stop counting.
+        haystack = The $(XREF2 range, isInputRange, input range) to be counted.
+        needles = Either a single element, or a $(XREF2 range, isForwardRange,
+            forward range) of elements, to be evaluated in turn against each
+            element in $(D haystack) under the given predicate.
+
+    Returns: The number of elements which must be popped from the front of
     $(D haystack) before reaching an element for which
     $(D startsWith!pred(haystack, needles)) is $(D true). If
     $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
     $(D haystack), then $(D -1) is returned.
-
-    $(D needles) may be either an element or a range.
   +/
 ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
     if (isForwardRange!R
@@ -6588,7 +6593,14 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 }
 
 /++
-    Returns the number of elements which must be popped from $(D haystack)
+    Similar to the previous overload of $(D countUntil), except that this one
+    evaluates only the predicate $(D pred).
+
+    Params:
+        pred = Predicate to when to stop counting.
+        haystack = An $(XREF2 range, isInputRange, input range) of elements
+          to be counted.
+    Returns: The number of elements which must be popped from $(D haystack)
     before $(D pred(haystack.front)) is $(D true).
   +/
 ptrdiff_t countUntil(alias pred, R)(R haystack)
@@ -6684,8 +6696,16 @@ enum OpenRight
 }
 
 /**
-Lazily iterates $(D range) until value $(D sentinel) is found, at
-which point it stops.
+Lazily iterates $(D range) until the element $(D e) for which
+$(D pred(e, sentinel)) is true.
+
+Params:
+    pred = Predicate to determine when to stop.
+    range = The $(XREF2 range, isInputRange, input range) to iterate over.
+    sentinel = The element to stop at.
+    openRight = Determines whether the element for which the given predicate is
+        true should be included in the resulting range ($(D OpenRight.no)), or
+        not ($(D OpenRight.yes)).
  */
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 {
