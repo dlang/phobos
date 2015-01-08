@@ -3902,9 +3902,9 @@ is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
 
 Params:
-    r = An $(XREF2, range, isInputRange, input range) of input ranges to be
+    r = An $(XREF2 range, isInputRange, input range) of input ranges to be
         joined.
-    sep = A $(XREF2, range, isForwardRange, forward range) of element(s) to
+    sep = A $(XREF2 range, isForwardRange, forward range) of element(s) to
         serve as separators in the joined range.
 
 Returns:
@@ -4425,11 +4425,20 @@ unittest
 
 // uniq
 /**
-Iterates unique consecutive elements of the given range (functionality
+Lazily iterates unique consecutive elements of the given range (functionality
 akin to the $(WEB wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
 $(D pred), by default $(D "a == b"). If the given range is
 bidirectional, $(D uniq) also yields a bidirectional range.
+
+Params:
+    pred = Predicate for determining equivalence between range elements.
+    r = An $(XREF2 range, isInputRange, input range) of elements to filter.
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) of consecutively unique
+    elements in the original range. If $(D r) is also a forward range or
+    bidirectional range, the returned range will be likewise.
 */
 auto uniq(alias pred = "a == b", Range)(Range r)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
@@ -4446,6 +4455,11 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     // Filter duplicates in-place using copy
     arr.length -= arr.uniq().copy(arr).length;
     assert(arr == [ 1, 2, 3, 4, 5 ]);
+
+    // Note that uniqueness is only determined consecutively; duplicated
+    // elements separated by an intervening different element will not be
+    // eliminated:
+    assert(equal(uniq([ 1, 1, 2, 1, 1, 3, 1]), [1, 2, 1, 3, 1]));
 }
 
 private struct UniqResult(alias pred, Range)
