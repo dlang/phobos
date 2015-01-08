@@ -3901,6 +3901,17 @@ Lazily joins a range of ranges with a separator. The separator itself
 is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
 
+Params:
+    r = An $(XREF2, range, isInputRange, input range) of input ranges to be
+        joined.
+    sep = A $(XREF2, range, isForwardRange, forward range) of element(s) to
+        serve as separators in the joined range.
+
+Returns:
+An input range of elements in the joined range. This will be a forward range if
+both outer and inner ranges of $(D RoR) are forward ranges; otherwise it will
+be only an input range.
+
 See_also:
 $(XREF range,chain), which chains a sequence of ranges with compatible elements
 into a single range.
