@@ -3012,8 +3012,8 @@ See_Also:
  $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
 */
-auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(ElementType!Range.init == Separator.init))
+auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
+if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
     import std.conv : unsigned;
@@ -3043,7 +3043,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             static IndexType lastIndexOf(Range haystack, Separator needle)
             {
                 import std.range : retro;
-                auto r = haystack.retro().find(needle);
+                auto r = haystack.retro().find!pred(needle);
                 return r.retro().length - 1;
             }
         }
@@ -3081,7 +3081,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             assert(!empty);
             if (_frontLength == _unComputed)
             {
-                auto r = _input.find(_separator);
+                auto r = _input.find!pred(_separator);
                 _frontLength = _input.length - r.length;
             }
             return _input[0 .. _frontLength];
@@ -3178,6 +3178,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
     a = [ 0, 1 ];
     assert(equal(splitter(a, 0), [ [], [1] ]));
+    w = [ [0], [1], [2] ];
+    assert(equal(splitter!"a.front == b"(w, 1), [ [[0]], [[2]] ]));
 }
 
 @safe unittest
@@ -3278,8 +3280,8 @@ Returns:
 See_Also: $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
  */
-auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(Range.init.front == Separator.init.front) : bool)
+auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
+if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         && (hasSlicing!Range || isNarrowString!Range)
         && isForwardRange!Separator
         && (hasLength!Separator || isNarrowString!Separator))
@@ -3305,7 +3307,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             assert(!_input.empty);
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
-                           _input.length - find(_input, _separator).length;
+                           _input.length - find!pred(_input, _separator).length;
             static if (isBidirectionalRange!Range)
                 if (_frontLength == _input.length) _backLength = _frontLength;
         }
@@ -3320,7 +3322,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             {
                 import std.range : retro;
                 _backLength = _input.length -
-                    find(retro(_input), retro(_separator)).source.length;
+                    find!pred(retro(_input), retro(_separator)).source.length;
             }
         }
 
@@ -3473,6 +3475,19 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
     wstring names = ",peter,paul,jerry,";
     auto words = split(names, ",");
     assert(walkLength(words) == 5, text(walkLength(words)));
+}
+
+@safe unittest
+{
+    int[][] a = [ [1], [2], [0], [3], [0], [4], [5], [0] ];
+    int[][][] w = [ [[1], [2]], [[3]], [[4], [5]], [] ];
+    uint i;
+    foreach (e; splitter!"a.front == 0"(a, 0))
+    {
+        assert(i < w.length);
+        assert(e == w[i++]);
+    }
+    assert(i == w.length);
 }
 
 @safe unittest
