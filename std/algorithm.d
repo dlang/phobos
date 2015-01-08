@@ -7794,10 +7794,21 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
 
 // findAmong
 /**
-Advances $(D seq) by calling $(D seq.popFront) until either $(D
-find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes
-empty. Performs $(BIGOH seq.length * choices.length) evaluations of
-$(D pred).
+Searches the given range for an element that matches one of the given choices.
+
+Advances $(D seq) by calling $(D seq.popFront) until either
+$(D find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes empty.
+Performs $(BIGOH seq.length * choices.length) evaluations of $(D pred).
+
+Params:
+    pred = The predicate to use for determining a match.
+    seq = The $(XREF2 range, isInputRange, input range) to search.
+    choices = A $(XREF2 range, isForwardRange, forward range) of possible
+        choices.
+
+Returns:
+$(D seq) advanced to the first matching element, or until empty if there are no
+matching elements.
 
 See_Also:
     $(WEB sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
