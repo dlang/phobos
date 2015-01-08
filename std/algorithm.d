@@ -6204,10 +6204,16 @@ Range1 find(Range1, alias pred, Range2)(
 
 // findSkip
 /**
- * If $(D needle) occurs in $(D haystack), positions $(D haystack)
- * right after the first occurrence of $(D needle) and returns $(D
- * true). Otherwise, leaves $(D haystack) as is and returns $(D
- * false).
+ * Finds $(D needle) in $(D haystack) and positions $(D haystack)
+ * right after the first occurrence of $(D needle).
+ *
+ * Params:
+ *  haystack = The $(XREF2 range, isForwardRange, forward range) to search in.
+ *  needle = The $(XREF2 range, isForwardRange, forward range) to search for.
+ *
+ * Returns: $(D true) if the needle was found, in which case $(D haystack) is
+ * positioned after the end of the first occurrence of $(D needle); otherwise
+ * $(D false), leaving $(D haystack) untouched.
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -6223,10 +6229,16 @@ if (isForwardRange!R1 && isForwardRange!R2
 ///
 @safe unittest
 {
+    // Needle is found; s is replaced by the substring following the first
+    // occurrence of the needle.
     string s = "abcdef";
     assert(findSkip(s, "cd") && s == "ef");
+
+    // Needle is not found; s is left untouched.
     s = "abcdef";
     assert(!findSkip(s, "cxd") && s == "abcdef");
+
+    // If the needle occurs at the end of the range, the range is left empty.
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
 }
