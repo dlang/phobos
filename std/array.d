@@ -1,6 +1,6 @@
 // Written in the D programming language.
 /**
-Functions and types that manipulate built-in arrays.
+Functions and types that manipulate built-in arrays and associative arrays.
 
 Copyright: Copyright Andrei Alexandrescu 2008- and Jonathan M Davis 2011-.
 
@@ -263,8 +263,9 @@ unittest
 }
 
 /**
-Returns a newly allocated associative array out of elements of the input range,
-which must be a range of tuples (Key, Value).
+Params: r = An input range of tuples of keys and values.
+Returns: A newly allocated associative array out of elements of the input
+range, which must be a range of tuples (Key, Value).
 See_Also: $(XREF typecons, Tuple)
  */
 
@@ -297,7 +298,7 @@ auto assocArray(Range)(Range r)
     assert(b == ["foo":"bar", "baz":"quux"]);
 }
 
-/// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
+// @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
 unittest
 {
     import std.typecons;
@@ -314,6 +315,68 @@ unittest
     auto b = [tuple!(string, const string)("foo", "bar")];
     static assert( __traits(compiles, assocArray(a)));
     static assert(!__traits(compiles, assocArray(b)));
+}
+
+/**
+Construct a range iterating over an associative array by key/value tuples.
+
+Params: aa = The associative array to iterate over.
+
+Returns: A forward range of Tuple's of key and value pairs from the given
+associative array.
+*/
+auto byPair(Key, Value)(Value[Key] aa)
+{
+    import std.typecons : tuple;
+    import std.algorithm : map;
+
+    return aa.byKeyValue.map!(pair => tuple(pair.key, pair.value));
+}
+
+///
+unittest
+{
+    import std.typecons : tuple, Tuple;
+    import std.algorithm : sort;
+
+    auto aa = ["a": 1, "b": 2, "c": 3];
+    Tuple!(string, int)[] pairs;
+
+    // Iteration over key/value pairs.
+    foreach (pair; aa.byPair)
+    {
+        pairs ~= pair;
+    }
+
+    // Iteration order is implementation-dependent, so we should sort it to get
+    // a fixed order.
+    sort(pairs);
+    assert(pairs == [
+        tuple("a", 1),
+        tuple("b", 2),
+        tuple("c", 3)
+    ]);
+}
+
+unittest
+{
+    import std.typecons : tuple, Tuple;
+
+    auto aa = ["a":2];
+    auto pairs = aa.byPair();
+
+    static assert(is(typeof(pairs.front) == Tuple!(string,int)));
+    static assert(isForwardRange!(typeof(pairs)));
+
+    assert(!pairs.empty);
+    assert(pairs.front == tuple("a", 2));
+
+    auto savedPairs = pairs.save;
+
+    pairs.popFront();
+    assert(pairs.empty);
+    assert(!savedPairs.empty);
+    assert(savedPairs.front == tuple("a", 2));
 }
 
 private template blockAttribute(T)
