@@ -7544,10 +7544,19 @@ if (isBidirectionalRange!R &&
 /**
 Returns the common prefix of two ranges.
 
-If the first argument is a string, then the result is a slice of $(D r1) which
-contains the characters that both ranges start with. For all other types, the
-type of the result is the same as the result of $(D takeExactly(r1, n)), where
-$(D n) is the number of elements that both ranges start with.
+Params:
+    pred = The predicate to use in comparing elements for commonality. Defaults
+        to equality $(D "a == b").
+
+    r1 = A $(XREF2 range, isForwardRange, forward range) of elements.
+
+    r2 = An $(XREF2 range, isInputRange, input range) of elements.
+
+Returns:
+A slice of $(D r1) which contains the characters that both ranges start with,
+if the first argument is a string; otherwise, the same as the result of
+$(D takeExactly(r1, n)), where $(D n) is the number of elements in the common
+prefix of both ranges.
 
 See_Also:
     $(XREF range, takeExactly)
@@ -7590,6 +7599,7 @@ if (isForwardRange!R1 && isInputRange!R2 &&
     assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 }
 
+/// ditto
 auto commonPrefix(alias pred, R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isInputRange!R2 &&
     is(typeof(binaryFun!pred(r1.front, r2.front))))
@@ -7610,6 +7620,7 @@ if (isNarrowString!R1 && isInputRange!R2 &&
     return result[0 .. i];
 }
 
+/// ditto
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isInputRange!R2 && !isNarrowString!R2 &&
     is(typeof(r1.front == r2.front)))
@@ -7617,6 +7628,7 @@ if (isNarrowString!R1 && isInputRange!R2 && !isNarrowString!R2 &&
     return commonPrefix!"a == b"(r1, r2);
 }
 
+/// ditto
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isNarrowString!R2)
 {
