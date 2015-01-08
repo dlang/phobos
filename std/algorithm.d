@@ -7194,12 +7194,25 @@ if (isInputRange!R &&
 }
 
 /**
-If $(D startsWith(r1, r2)), consume the corresponding elements off $(D
-r1) and return $(D true). Otherwise, leave $(D r1) unchanged and
-return $(D false).
+Skip over the initial portion of the first given range that matches the second
+range, or do nothing if there is no match.
+
+Params:
+    pred = The predicate that determines whether elements from each respective
+        range match. Defaults to equality $(D "a == b").
+    r1 = The $(XREF2 range, isForwardRange, forward range) to move forward.
+    r2 = The $(XREF2 range, isInputRange, input range) representing the initial
+         segment of $(D r1) to skip over.
+
+Returns:
+true if the initial segment of $(D r1) matches $(D r2), and $(D r1) has been
+advanced to the point past this segment; otherwise false, and $(D r1) is left
+in its original position.
  */
 bool skipOver(alias pred = "a == b", R1, R2)(ref R1 r1, R2 r2)
-if (is(typeof(binaryFun!pred(r1.front, r2.front))))
+    if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
+        isForwardRange!R1 &&
+        isInputRange!R2)
 {
     auto r = r1.save;
     while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
@@ -7229,12 +7242,24 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))))
 }
 
 /**
-Checks whether a range starts with an element, and if so, consume that
-element off $(D r) and return $(D true). Otherwise, leave $(D r)
-unchanged and return $(D false).
+Skip over the first element of the given range if it matches the given element,
+otherwise do nothing.
+
+Params:
+    pred = The predicate that determines whether an element from the range
+        matches the given element.
+
+    r = The $(XREF range, isInputRange, input range) to skip over.
+
+    e = The element to match.
+
+Returns:
+true if the first element matches the given element according to the given
+predicate, and the range has been advanced by one element; otherwise false, and
+the range is left untouched.
  */
 bool skipOver(alias pred = "a == b", R, E)(ref R r, E e)
-if (is(typeof(binaryFun!pred(r.front, e))))
+    if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
 {
     if (r.empty || !binaryFun!pred(r.front, e))
         return false;
