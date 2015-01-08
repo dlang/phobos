@@ -2287,8 +2287,15 @@ private struct FilterBidiResult(alias pred, Range)
 
 // move
 /**
-Moves $(D source) into $(D target) via a destructive
-copy.
+Moves $(D source) into $(D target) via a destructive copy.
+
+Params:
+    source = Data to copy. If a destructor or postblit is defined, it is reset
+        to its $(D .init) value after it is moved into target.  Note that data
+        with internal pointers that point to itself cannot be moved, and will
+        trigger an assertion failure.
+    target = Where to copy into. The destructor, if any, is invoked before the
+        copy is performed.
 */
 void move(T)(ref T source, ref T target)
 {
@@ -2550,12 +2557,20 @@ unittest// Issue 8057
 // moveAll
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
-tgt) in lockstep in increasing order, calls $(D move(a, b)). Returns
-the leftover portion of $(D tgt). Throws an exception if there is not
-enough room in $(D tgt) to accommodate all of $(D src).
+tgt) in lockstep in increasing order, calls $(D move(a, b)).
 
 Preconditions:
-$(D walkLength(src) <= walkLength(tgt))
+$(D walkLength(src) <= walkLength(tgt)).
+An exception will be thrown if this condition does not hold, i.e., there is not
+enough room in $(D tgt) to accommodate all of $(D src).
+
+Params:
+    src = An $(XREF2 range, isInputRange, input range) with movable elements.
+    tgt = An $(XREF2 range, isInputRange, input range) with elements that
+        elements from $(D src) can be moved into.
+
+Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
+been moved.
  */
 Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
@@ -2598,8 +2613,15 @@ unittest
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
 tgt) in lockstep in increasing order, calls $(D move(a, b)). Stops
-when either $(D src) or $(D tgt) have been exhausted. Returns the
-leftover portions of the two ranges.
+when either $(D src) or $(D tgt) have been exhausted.
+
+Params:
+    src = An $(XREF2 range, isInputRange, input range) with movable elements.
+    tgt = An $(XREF2 range, isInputRange, input range) with elements that
+        elements from $(D src) can be moved into.
+
+Returns: The leftover portions of the two ranges after one or the other of the
+ranges have been exhausted.
  */
 Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
