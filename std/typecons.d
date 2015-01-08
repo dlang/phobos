@@ -1124,6 +1124,13 @@ unittest
     a = b;
 }
 
+@nogc unittest
+{
+    alias T = Tuple!(string, "s");
+    T x;
+    x = T.init;
+}
+
 /**
 Returns a $(D Tuple) object instantiated and initialized according to
 the arguments.
