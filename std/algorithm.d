@@ -5200,7 +5200,12 @@ find(retro(haystack), needle)). See $(XREF range, retro).
 
 Params:
 
-haystack = The range searched in.
+pred = The predicate for comparing each element with the needle, defaulting to
+$(D "a == b").
+The negated predicate $(D "a != b") can be used to search instead for the first
+element $(I not) matching the needle.
+
+haystack = The $(XREF2 range, isInputRange, input range) searched in.
 
 needle = The element searched for.
 
@@ -5211,9 +5216,9 @@ $(D isInputRange!InputRange && is(typeof(binaryFun!pred(haystack.front, needle)
 
 Returns:
 
-$(D haystack) advanced such that $(D binaryFun!pred(haystack.front,
-needle)) is $(D true) (if no such position exists, returns $(D
-haystack) after exhaustion).
+$(D haystack) advanced such that the front element is the one searched for;
+that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
+such position exists, returns an empty $(D haystack).
 
 See_Also:
      $(WEB sgi.com/tech/stl/_find.html, STL's _find)
@@ -5480,6 +5485,19 @@ To _find the last element of a bidirectional $(D haystack) satisfying
 $(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
 range, retro).
 
+Params:
+
+pred = The predicate for determining if a given element is the one being
+searched for.
+
+haystack = The $(XREF2 range, isInputRange, input range) to search in.
+
+Returns:
+
+$(D haystack) advanced such that the front element is the one searched for;
+that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
+such position exists, returns an empty $(D haystack).
+
 See_Also:
      $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
 */
@@ -5549,22 +5567,21 @@ if (isInputRange!InputRange)
 }
 
 /**
-Finds a forward range in another. Elements are compared for
-equality. Performs $(BIGOH walkLength(haystack) * walkLength(needle))
-comparisons in the worst case. Specializations taking advantage of
-bidirectional or random access (where present) may accelerate search
-depending on the statistics of the two ranges' content.
+Finds the first occurrence of a forward range in another forward range.
+
+Performs $(BIGOH walkLength(haystack) * walkLength(needle)) comparisons in the
+worst case.  There are specializations that improve performance by taking
+advantage of bidirectional or random access in the given ranges (where
+possible), depending on the statistics of the two ranges' content.
 
 Params:
 
-haystack = The range searched in.
+pred = The predicate to use for comparing respective elements from the haystack
+and the needle. Defaults to simple equality $(D "a == b").
 
-needle = The range searched for.
+haystack = The $(XREF2 range, isForwardRange, forward range) searched in.
 
-Constraints:
-
-$(D isForwardRange!R1 && isForwardRange!R2 &&
-is(typeof(binaryFun!pred(haystack.front, needle.front) : bool)))
+needle = The $(XREF2 range, isForwardRange, forward range) searched for.
 
 Returns:
 
@@ -5881,6 +5898,8 @@ pred) is used throughout to compare elements. By default, elements are
 compared for equality.
 
 Params:
+
+pred = The predicate to use for comparing elements.
 
 haystack = The target of the search. Must be an input range.
 If any of $(D needles) is a range with elements comparable to
