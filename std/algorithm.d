@@ -6742,18 +6742,6 @@ enum OpenRight
     yes /// Interval is open to the right (last element is not included)
 }
 
-/**
-Lazily iterates $(D range) until the element $(D e) for which
-$(D pred(e, sentinel)) is true.
-
-Params:
-    pred = Predicate to determine when to stop.
-    range = The $(XREF2 range, isInputRange, input range) to iterate over.
-    sentinel = The element to stop at.
-    openRight = Determines whether the element for which the given predicate is
-        true should be included in the resulting range ($(D OpenRight.no)), or
-        not ($(D OpenRight.yes)).
- */
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 {
     private Range _input;
@@ -6844,7 +6832,24 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     }
 }
 
-/// Ditto
+/**
+Lazily iterates $(D range) _until the element $(D e) for which
+$(D pred(e, sentinel)) is true.
+
+Params:
+    pred = Predicate to determine when to stop.
+    range = The $(XREF2 range, isInputRange, input range) to iterate over.
+    sentinel = The element to stop at.
+    openRight = Determines whether the element for which the given predicate is
+        true should be included in the resulting range ($(D OpenRight.no)), or
+        not ($(D OpenRight.yes)).
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) that iterates over the
+    original range's elements, but ends when the specified predicate becomes
+    true. If the original range is a $(XREF2 range, isForwardRange, forward
+    range) or higher, this range will be a forward range.
+ */
 Until!(pred, Range, Sentinel)
 until(alias pred = "a == b", Range, Sentinel)
 (Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
