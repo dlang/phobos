@@ -2013,11 +2013,11 @@ unittest
 /**
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
-Implements the higher order filter function.
+Implements the higher order _filter function.
 
 Params:
     predicate = Function to apply to each element of range
-    range = Range of elements
+    range = Input range of elements
 
 Returns:
     $(D filter!(predicate)(range)) returns a new range containing only elements $(D x) in $(D range) for
@@ -2210,6 +2210,9 @@ private struct FilterResult(alias pred, Range)
  * that the filtered range can be spanned from both directions. Also,
  * $(XREF range, retro) can be applied against the filtered range.
  *
+ * Params:
+ *     predicate = Function to apply to each element of range
+ *     r = Bidirectional range of elements
  */
 template filterBidirectional(alias pred)
 {
