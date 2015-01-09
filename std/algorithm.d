@@ -14665,6 +14665,13 @@ pure @safe nothrow @nogc unittest
     assert(D.front == front1);
 }
 
+// Issue 13935
+unittest
+{
+    auto seq = [1, 2].map!(x => x);
+    foreach (pair; cartesianProduct(seq, seq)) {}
+}
+
 /**
 Find $(D value) _among $(D values), returning the 1-based index
 of the first matching value in $(D values), or $(D 0) if $(D value)
