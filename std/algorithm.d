@@ -2998,9 +2998,10 @@ consider using $(D splitter) without specifying a separator (see third overload
 below).
 
 Params:
-    r = The $(XREF2 range, isInputRange, input range) to be split.
+    r = The $(XREF2 range, isInputRange, input range) to be split. Must support
+        slicing and $(D .length).
     s = The element to be treated as the separator between range segments to be
-    split.
+        split. Must be of the same type as the element type of $(D r).
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
