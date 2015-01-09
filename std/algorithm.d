@@ -3723,8 +3723,8 @@ Params:
     s = The string to be split.
 
 Returns:
-    An $(XREF2 range, isInputRange, input range) of string segments split by
-    whitespace.
+    An $(XREF2 range, isInputRange, input range) of slices of the original
+    string split by whitespace.
  +/
 auto splitter(C)(C[] s)
 if (isSomeChar!C)
