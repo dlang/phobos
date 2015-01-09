@@ -6480,7 +6480,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 
 /++
     Counts elements in the given $(XREF2 range, isForwardRange, forward range)
-    until the given predicate is true for one of the given needles.
+    until the given predicate is true for one of the given $(D needles).
 
     Params:
         pred = The predicate for determining when to stop counting.
