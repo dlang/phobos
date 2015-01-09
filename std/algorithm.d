@@ -14540,13 +14540,12 @@ auto cartesianProduct(RR...)(RR ranges)
         }
         @property Result save()
         {
-            Result copy;
+            Result copy = this;
             foreach (i, r; ranges)
             {
                 copy.ranges[i] = r.save;
                 copy.current[i] = current[i].save;
             }
-            copy.empty = this.empty;
             return copy;
         }
     }
