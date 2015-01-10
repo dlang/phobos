@@ -2981,9 +2981,9 @@ template forward(args...)
 
 // splitter
 /**
-Splits a range using an element as a separator. This can be used with
-any narrow string type or sliceable range type, but is most popular
-with string types.
+Lazily splits a range using an element as a separator. This can be used with
+any narrow string type or sliceable range type, but is most popular with string
+types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
@@ -2994,11 +2994,22 @@ element. If a range with one separator is given, the result is a range
 with two empty elements.
 
 If splitting a string on whitespace and token compression is desired,
-consider using $(D splitter) without specifying a separator (see overload
+consider using $(D splitter) without specifying a separator (see third overload
 below).
 
+Params:
+    r = The $(XREF2 range, isInputRange, input range) to be split. Must support
+        slicing and $(D .length).
+    s = The element to be treated as the separator between range segments to be
+        split. Must be of the same type as the element type of $(D r).
+
+Returns:
+    An input range of the subranges of elements between separators. If $(D r)
+    is a forward range or bidirectional range, the returned range will be
+    likewise.
+
 See_Also:
- $(XREF regex, splitter) for a version that splits using a regular
+ $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
 */
 auto splitter(Range, Separator)(Range r, Separator s)
@@ -3246,15 +3257,25 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 }
 
 /**
-Splits a range using another range as a separator. This can be used
-with any narrow string type or sliceable range type, but is most popular
-with string types.
+Similar to the previous overload of $(D splitter), except this one uses another
+range as a separator. This can be used with any narrow string type or sliceable
+range type, but is most popular with string types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
-See_Also: $(XREF regex, splitter) for a version that splits using a regular
+Params:
+    r = The $(XREF2 range, isInputRange, input range) to be split.
+    s = The $(XREF2 range, isForwardRange, forward range) to be treated as the
+        separator between segments of $(D r) to be split.
+
+Returns:
+    An input range of the subranges of elements between separators. If $(D r)
+    is a forward range or bidirectional range, the returned range will be
+    likewise.
+
+See_Also: $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
  */
 auto splitter(Range, Separator)(Range r, Separator s)
@@ -3697,6 +3718,13 @@ Lazily splits the string $(D s) into words, using whitespace as the delimiter.
 This function is string specific and, contrary to
 $(D splitter!(std.uni.isWhite)), runs of whitespace will be merged together
 (no empty tokens will be produced).
+
+Params:
+    s = The string to be split.
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) of slices of the original
+    string split by whitespace.
  +/
 auto splitter(C)(C[] s)
 if (isSomeChar!C)
@@ -3873,6 +3901,17 @@ if (isSomeChar!C)
 Lazily joins a range of ranges with a separator. The separator itself
 is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
+
+Params:
+    r = An $(XREF2 range, isInputRange, input range) of input ranges to be
+        joined.
+    sep = A $(XREF2 range, isForwardRange, forward range) of element(s) to
+        serve as separators in the joined range.
+
+Returns:
+An input range of elements in the joined range. This will be a forward range if
+both outer and inner ranges of $(D RoR) are forward ranges; otherwise it will
+be only an input range.
 
 See_also:
 $(XREF range,chain), which chains a sequence of ranges with compatible elements
@@ -4387,11 +4426,20 @@ unittest
 
 // uniq
 /**
-Iterates unique consecutive elements of the given range (functionality
+Lazily iterates unique consecutive elements of the given range (functionality
 akin to the $(WEB wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
 $(D pred), by default $(D "a == b"). If the given range is
 bidirectional, $(D uniq) also yields a bidirectional range.
+
+Params:
+    pred = Predicate for determining equivalence between range elements.
+    r = An $(XREF2 range, isInputRange, input range) of elements to filter.
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) of consecutively unique
+    elements in the original range. If $(D r) is also a forward range or
+    bidirectional range, the returned range will be likewise.
 */
 auto uniq(alias pred = "a == b", Range)(Range r)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
@@ -4408,6 +4456,11 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     // Filter duplicates in-place using copy
     arr.length -= arr.uniq().copy(arr).length;
     assert(arr == [ 1, 2, 3, 4, 5 ]);
+
+    // Note that uniqueness is only determined consecutively; duplicated
+    // elements separated by an intervening different element will not be
+    // eliminated:
+    assert(equal(uniq([ 1, 1, 2, 1, 1, 3, 1]), [1, 2, 1, 3, 1]));
 }
 
 private struct UniqResult(alias pred, Range)
@@ -4495,16 +4548,6 @@ private struct UniqResult(alias pred, Range)
 }
 
 // group
-/**
-Similarly to $(D uniq), $(D group) iterates unique consecutive
-elements of the given range. The element type is $(D
-Tuple!(ElementType!R, uint)) because it includes the count of
-equivalent elements seen. Equivalence of elements is assessed by using
-the predicate $(D pred), by default $(D "a == b").
-
-$(D Group) is an input range if $(D R) is an input range, and a
-forward range in all other cases.
-*/
 struct Group(alias pred, R) if (isInputRange!R)
 {
     private alias comp = binaryFun!pred;
@@ -4579,7 +4622,25 @@ struct Group(alias pred, R) if (isInputRange!R)
     }
 }
 
-/// Ditto
+/**
+Groups consecutively equivalent elements into a single tuple of the element and
+the number of its repetitions.
+
+Similarly to $(D uniq), $(D group) produces a range that iterates over unique
+consecutive elements of the given range. Each element of this range is a tuple
+of the element and the number of times it is repeated in the original range.
+Equivalence of elements is assessed by using the predicate $(D pred), which
+defaults to $(D "a == b").
+
+Params:
+    pred = Binary predicate for determining equivalence of two elements.
+    r = The $(XREF2 range, isInputRange, input range) to iterate over.
+
+Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
+representing each consecutively unique element and its respective number of
+occurrences in that run.  This will be an input range if $(D R) is an input
+range, and a forward range in all other cases.
+*/
 Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 {
     return typeof(return)(r);
@@ -5140,7 +5201,12 @@ find(retro(haystack), needle)). See $(XREF range, retro).
 
 Params:
 
-haystack = The range searched in.
+pred = The predicate for comparing each element with the needle, defaulting to
+$(D "a == b").
+The negated predicate $(D "a != b") can be used to search instead for the first
+element $(I not) matching the needle.
+
+haystack = The $(XREF2 range, isInputRange, input range) searched in.
 
 needle = The element searched for.
 
@@ -5151,9 +5217,9 @@ $(D isInputRange!InputRange && is(typeof(binaryFun!pred(haystack.front, needle)
 
 Returns:
 
-$(D haystack) advanced such that $(D binaryFun!pred(haystack.front,
-needle)) is $(D true) (if no such position exists, returns $(D
-haystack) after exhaustion).
+$(D haystack) advanced such that the front element is the one searched for;
+that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
+such position exists, returns an empty $(D haystack).
 
 See_Also:
      $(WEB sgi.com/tech/stl/_find.html, STL's _find)
@@ -5420,6 +5486,19 @@ To _find the last element of a bidirectional $(D haystack) satisfying
 $(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
 range, retro).
 
+Params:
+
+pred = The predicate for determining if a given element is the one being
+searched for.
+
+haystack = The $(XREF2 range, isInputRange, input range) to search in.
+
+Returns:
+
+$(D haystack) advanced such that the front element is the one searched for;
+that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
+such position exists, returns an empty $(D haystack).
+
 See_Also:
      $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
 */
@@ -5489,22 +5568,21 @@ if (isInputRange!InputRange)
 }
 
 /**
-Finds a forward range in another. Elements are compared for
-equality. Performs $(BIGOH walkLength(haystack) * walkLength(needle))
-comparisons in the worst case. Specializations taking advantage of
-bidirectional or random access (where present) may accelerate search
-depending on the statistics of the two ranges' content.
+Finds the first occurrence of a forward range in another forward range.
+
+Performs $(BIGOH walkLength(haystack) * walkLength(needle)) comparisons in the
+worst case.  There are specializations that improve performance by taking
+advantage of bidirectional or random access in the given ranges (where
+possible), depending on the statistics of the two ranges' content.
 
 Params:
 
-haystack = The range searched in.
+pred = The predicate to use for comparing respective elements from the haystack
+and the needle. Defaults to simple equality $(D "a == b").
 
-needle = The range searched for.
+haystack = The $(XREF2 range, isForwardRange, forward range) searched in.
 
-Constraints:
-
-$(D isForwardRange!R1 && isForwardRange!R2 &&
-is(typeof(binaryFun!pred(haystack.front, needle.front) : bool)))
+needle = The $(XREF2 range, isForwardRange, forward range) searched for.
 
 Returns:
 
@@ -5822,6 +5900,8 @@ compared for equality.
 
 Params:
 
+pred = The predicate to use for comparing elements.
+
 haystack = The target of the search. Must be an input range.
 If any of $(D needles) is a range with elements comparable to
 elements in $(D haystack), then $(D haystack) must be a forward range
@@ -5972,6 +6052,11 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
  * Params:
  * pred = Predicate used to compare elements.
  * needle = A random-access range with length and slicing.
+ *
+ * Returns:
+ * An instance of $(D BoyerMooreFinder) that can be used with $(D find()) to
+ * invoke the Boyer-Moore matching algorithm for finding of $(D needle) in a
+ * given haystack.
  */
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
 (alias pred = "a == b", Range)
@@ -6125,10 +6210,16 @@ Range1 find(Range1, alias pred, Range2)(
 
 // findSkip
 /**
- * If $(D needle) occurs in $(D haystack), positions $(D haystack)
- * right after the first occurrence of $(D needle) and returns $(D
- * true). Otherwise, leaves $(D haystack) as is and returns $(D
- * false).
+ * Finds $(D needle) in $(D haystack) and positions $(D haystack)
+ * right after the first occurrence of $(D needle).
+ *
+ * Params:
+ *  haystack = The $(XREF2 range, isForwardRange, forward range) to search in.
+ *  needle = The $(XREF2 range, isForwardRange, forward range) to search for.
+ *
+ * Returns: $(D true) if the needle was found, in which case $(D haystack) is
+ * positioned after the end of the first occurrence of $(D needle); otherwise
+ * $(D false), leaving $(D haystack) untouched.
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -6144,10 +6235,16 @@ if (isForwardRange!R1 && isForwardRange!R2
 ///
 @safe unittest
 {
+    // Needle is found; s is replaced by the substring following the first
+    // occurrence of the needle.
     string s = "abcdef";
     assert(findSkip(s, "cd") && s == "ef");
+
+    // Needle is not found; s is left untouched.
     s = "abcdef";
     assert(!findSkip(s, "cxd") && s == "abcdef");
+
+    // If the needle occurs at the end of the range, the range is left empty.
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
 }
@@ -6382,13 +6479,21 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 /++
-    Returns the number of elements which must be popped from the front of
+    Counts elements in the given $(XREF2 range, isForwardRange, forward range)
+    until the given predicate is true for one of the given $(D needles).
+
+    Params:
+        pred = The predicate for determining when to stop counting.
+        haystack = The $(XREF2 range, isInputRange, input range) to be counted.
+        needles = Either a single element, or a $(XREF2 range, isForwardRange,
+            forward range) of elements, to be evaluated in turn against each
+            element in $(D haystack) under the given predicate.
+
+    Returns: The number of elements which must be popped from the front of
     $(D haystack) before reaching an element for which
     $(D startsWith!pred(haystack, needles)) is $(D true). If
     $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
     $(D haystack), then $(D -1) is returned.
-
-    $(D needles) may be either an element or a range.
   +/
 ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
     if (isForwardRange!R
@@ -6536,7 +6641,14 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 }
 
 /++
-    Returns the number of elements which must be popped from $(D haystack)
+    Similar to the previous overload of $(D countUntil), except that this one
+    evaluates only the predicate $(D pred).
+
+    Params:
+        pred = Predicate to when to stop counting.
+        haystack = An $(XREF2 range, isInputRange, input range) of elements
+          to be counted.
+    Returns: The number of elements which must be popped from $(D haystack)
     before $(D pred(haystack.front)) is $(D true).
   +/
 ptrdiff_t countUntil(alias pred, R)(R haystack)
@@ -6631,10 +6743,6 @@ enum OpenRight
     yes /// Interval is open to the right (last element is not included)
 }
 
-/**
-Lazily iterates $(D range) until value $(D sentinel) is found, at
-which point it stops.
- */
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 {
     private Range _input;
@@ -6725,7 +6833,24 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     }
 }
 
-/// Ditto
+/**
+Lazily iterates $(D range) _until the element $(D e) for which
+$(D pred(e, sentinel)) is true.
+
+Params:
+    pred = Predicate to determine when to stop.
+    range = The $(XREF2 range, isInputRange, input range) to iterate over.
+    sentinel = The element to stop at.
+    openRight = Determines whether the element for which the given predicate is
+        true should be included in the resulting range ($(D OpenRight.no)), or
+        not ($(D OpenRight.yes)).
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) that iterates over the
+    original range's elements, but ends when the specified predicate becomes
+    true. If the original range is a $(XREF2 range, isForwardRange, forward
+    range) or higher, this range will be a forward range.
+ */
 Until!(pred, Range, Sentinel)
 until(alias pred = "a == b", Range, Sentinel)
 (Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
@@ -6781,13 +6906,33 @@ unittest // bugzilla 13171
 }
 
 /**
-If the range $(D doesThisStart) starts with $(I any) of the $(D
-withOneOfThese) ranges or elements, returns 1 if it starts with $(D
-withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
-on. If none match, returns 0. In the case where $(D doesThisStart) starts
-with multiple of the ranges or elements in $(D withOneOfThese), then the
-shortest one matches (if there are two which match which are of the same
-length (e.g. $(D "a") and $(D 'a')), then the left-most of them in the argument
+Checks whether the given $(XREF2 range, isInputRange, input range) starts with
+(one of) the given needle(s).
+
+Params:
+
+    pred = Predicate to use in comparing the elements of the haystack and the
+        needle(s).
+
+    doesThisStart = The input range to check.
+
+    withOneOfThese = The needles against which the range is to be checked,
+        which may be individual elements or input ranges of elements.
+
+    withThis = The single needle to check, which may be either a single element
+        or an input range of elements.
+
+Returns:
+
+0 if the needle(s) do not occur at the beginning of the given range;
+otherwise the position of the matching needle, that is, 1 if the range starts
+with $(D withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
+on.
+
+In the case where $(D doesThisStart) starts with multiple of the ranges or
+elements in $(D withOneOfThese), then the shortest one matches (if there are
+two which match which are of the same length (e.g. $(D "a") and $(D 'a')), then
+the left-most of them in the argument
 list matches).
  */
 uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
@@ -7051,12 +7196,25 @@ if (isInputRange!R &&
 }
 
 /**
-If $(D startsWith(r1, r2)), consume the corresponding elements off $(D
-r1) and return $(D true). Otherwise, leave $(D r1) unchanged and
-return $(D false).
+Skip over the initial portion of the first given range that matches the second
+range, or do nothing if there is no match.
+
+Params:
+    pred = The predicate that determines whether elements from each respective
+        range match. Defaults to equality $(D "a == b").
+    r1 = The $(XREF2 range, isForwardRange, forward range) to move forward.
+    r2 = The $(XREF2 range, isInputRange, input range) representing the initial
+         segment of $(D r1) to skip over.
+
+Returns:
+true if the initial segment of $(D r1) matches $(D r2), and $(D r1) has been
+advanced to the point past this segment; otherwise false, and $(D r1) is left
+in its original position.
  */
 bool skipOver(alias pred = "a == b", R1, R2)(ref R1 r1, R2 r2)
-if (is(typeof(binaryFun!pred(r1.front, r2.front))))
+    if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
+        isForwardRange!R1 &&
+        isInputRange!R2)
 {
     auto r = r1.save;
     while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
@@ -7086,12 +7244,24 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))))
 }
 
 /**
-Checks whether a range starts with an element, and if so, consume that
-element off $(D r) and return $(D true). Otherwise, leave $(D r)
-unchanged and return $(D false).
+Skip over the first element of the given range if it matches the given element,
+otherwise do nothing.
+
+Params:
+    pred = The predicate that determines whether an element from the range
+        matches the given element.
+
+    r = The $(XREF range, isInputRange, input range) to skip over.
+
+    e = The element to match.
+
+Returns:
+true if the first element matches the given element according to the given
+predicate, and the range has been advanced by one element; otherwise false, and
+the range is left untouched.
  */
 bool skipOver(alias pred = "a == b", R, E)(ref R r, E e)
-if (is(typeof(binaryFun!pred(r.front, e))))
+    if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
 {
     if (r.empty || !binaryFun!pred(r.front, e))
         return false;
@@ -7148,7 +7318,26 @@ void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 }
 
 /**
+Checks if the given range ends with (one of) the given needle(s).
 The reciprocal of $(D startsWith).
+
+Params:
+    pred = The predicate to use for comparing elements between the range and
+        the needle(s).
+
+    doesThisEnd = The $(XREF2 range, isBidirectionalRange, bidirectional range)
+        to check.
+
+    withOneOfThese = The needles to check against, which may be single
+        elements, or bidirectional ranges of elements.
+
+    withThis = The single element to check.
+
+Returns:
+0 if the needle(s) do not occur at the end of the given range;
+otherwise the position of the matching needle, that is, 1 if the range ends
+with $(D withOneOfThese[0]), 2 if it ends with $(D withOneOfThese[1]), and so
+on.
  */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
@@ -7356,10 +7545,19 @@ if (isBidirectionalRange!R &&
 /**
 Returns the common prefix of two ranges.
 
-If the first argument is a string, then the result is a slice of $(D r1) which
-contains the characters that both ranges start with. For all other types, the
-type of the result is the same as the result of $(D takeExactly(r1, n)), where
-$(D n) is the number of elements that both ranges start with.
+Params:
+    pred = The predicate to use in comparing elements for commonality. Defaults
+        to equality $(D "a == b").
+
+    r1 = A $(XREF2 range, isForwardRange, forward range) of elements.
+
+    r2 = An $(XREF2 range, isInputRange, input range) of elements.
+
+Returns:
+A slice of $(D r1) which contains the characters that both ranges start with,
+if the first argument is a string; otherwise, the same as the result of
+$(D takeExactly(r1, n)), where $(D n) is the number of elements in the common
+prefix of both ranges.
 
 See_Also:
     $(XREF range, takeExactly)
@@ -7402,6 +7600,7 @@ if (isForwardRange!R1 && isInputRange!R2 &&
     assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 }
 
+/// ditto
 auto commonPrefix(alias pred, R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isInputRange!R2 &&
     is(typeof(binaryFun!pred(r1.front, r2.front))))
@@ -7422,6 +7621,7 @@ if (isNarrowString!R1 && isInputRange!R2 &&
     return result[0 .. i];
 }
 
+/// ditto
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isInputRange!R2 && !isNarrowString!R2 &&
     is(typeof(r1.front == r2.front)))
@@ -7429,6 +7629,7 @@ if (isNarrowString!R1 && isInputRange!R2 && !isNarrowString!R2 &&
     return commonPrefix!"a == b"(r1, r2);
 }
 
+/// ditto
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isNarrowString!R2)
 {
@@ -7526,6 +7727,15 @@ Advances $(D r) until it finds the first two adjacent elements $(D a),
 $(D b) that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
 evaluations of $(D pred).
 
+Params:
+    pref = The predicate to satisfy.
+    r = A $(XREF2 range, isForwardRange, forward range) to search in.
+
+Returns:
+$(D r) advanced to the first occurrence of two adjacent elements that satisfy
+the given predicate. If there are no such two elements, returns $(D r) advanced
+until empty.
+
 See_Also:
      $(WEB sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
 */
@@ -7585,10 +7795,21 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
 
 // findAmong
 /**
-Advances $(D seq) by calling $(D seq.popFront) until either $(D
-find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes
-empty. Performs $(BIGOH seq.length * choices.length) evaluations of
-$(D pred).
+Searches the given range for an element that matches one of the given choices.
+
+Advances $(D seq) by calling $(D seq.popFront) until either
+$(D find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes empty.
+Performs $(BIGOH seq.length * choices.length) evaluations of $(D pred).
+
+Params:
+    pred = The predicate to use for determining a match.
+    seq = The $(XREF2 range, isInputRange, input range) to search.
+    choices = A $(XREF2 range, isForwardRange, forward range) of possible
+        choices.
+
+Returns:
+$(D seq) advanced to the first matching element, or until empty if there are no
+matching elements.
 
 See_Also:
     $(WEB sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
