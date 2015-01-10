@@ -14540,13 +14540,12 @@ auto cartesianProduct(RR...)(RR ranges)
         }
         @property Result save()
         {
-            Result copy;
+            Result copy = this;
             foreach (i, r; ranges)
             {
                 copy.ranges[i] = r.save;
                 copy.current[i] = current[i].save;
             }
-            copy.empty = this.empty;
             return copy;
         }
     }
@@ -14664,6 +14663,13 @@ pure @safe nothrow @nogc unittest
     auto D = C.save;
     C.popFront();
     assert(D.front == front1);
+}
+
+// Issue 13935
+unittest
+{
+    auto seq = [1, 2].map!(x => x);
+    foreach (pair; cartesianProduct(seq, seq)) {}
 }
 
 /**
