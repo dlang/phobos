@@ -1,4 +1,4 @@
-module std.simd;
+module std.experimental.simd;
 
 /*
 pure:
