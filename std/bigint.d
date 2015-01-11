@@ -277,8 +277,8 @@ public:
 
     // BigInt op integer
     BigInt opBinary(string op, T)(T y) pure nothrow const
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
-            op=="^"|| op==">>" || op=="<<" || op=="^^")
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%" || op=="|" ||
+            op=="&" || op=="^" || op==">>" || op=="<<" || op=="^^")
             && isIntegral!T)
     {
         BigInt r = this;
@@ -1030,4 +1030,13 @@ unittest // 13391
     assert(x1 == 1);
     x2 /= 123456789123456789UL;
     assert(x2 == 1);
+}
+
+unittest // 13963
+{
+    BigInt x = 1;
+    assert(is(typeof(x % 1) == int));
+    assert(is(typeof(x % 1U) == int));
+    assert(is(typeof(x % 1L) == BigInt));
+    assert(is(typeof(x % 1UL) == BigInt));
 }
