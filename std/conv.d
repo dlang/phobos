@@ -1984,9 +1984,11 @@ Target parse(Target, Source)(ref Source s)
                 if (c > 9)
                     break;
 
-                if (v < Target.max/10 ||
-                    (v == Target.max/10 && c <= maxLastDigit + sign))
+                if (v >= 0 && (v < Target.max/10 ||
+                    (v == Target.max/10 && c <= maxLastDigit + sign)))
                 {
+                    // Note: `v` can become negative here in case of parsing
+                    // the most negative value:
                     v = cast(Target) (v * 10 + c);
                     s.popFront();
                 }
@@ -2184,6 +2186,15 @@ Lerr:
     assertCTFEable!({ string s =  "1234abc"; assert(parse! int(s) ==  1234 && s == "abc"); });
     assertCTFEable!({ string s = "-1234abc"; assert(parse! int(s) == -1234 && s == "abc"); });
     assertCTFEable!({ string s =  "1234abc"; assert(parse!uint(s) ==  1234 && s == "abc"); });
+}
+
+// Issue 13931
+@safe pure unittest
+{
+    import std.exception;
+
+    assertThrown!ConvOverflowException("-21474836480".to!int());
+    assertThrown!ConvOverflowException("-92233720368547758080".to!long());
 }
 
 /// ditto
