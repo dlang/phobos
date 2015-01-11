@@ -438,7 +438,10 @@ template Tuple(Specs...)
         {
             auto lhs = typeof(tup1.field[i]).init;
             auto rhs = typeof(tup2.field[i]).init;
-            auto result = mixin("lhs "~op~" rhs");
+            static if (op == "=")
+                lhs = rhs;
+            else
+                auto result = mixin("lhs "~op~" rhs");
         }
     }));
 
@@ -1111,6 +1114,21 @@ unittest
     static assert(!__traits(compiles, tuple!("x", "y")(1)));
     static assert(!__traits(compiles, tuple!("x")()));
     static assert(!__traits(compiles, tuple!("x", int)(2)));
+}
+
+unittest
+{
+    class C {}
+    Tuple!(Rebindable!(const C)) a;
+    Tuple!(const C) b;
+    a = b;
+}
+
+@nogc unittest
+{
+    alias T = Tuple!(string, "s");
+    T x;
+    x = T.init;
 }
 
 /**
@@ -5821,7 +5839,7 @@ public:
 
     immutable BitFlags!Enum flags_empty;
     // A default constructed BitFlags has no value set
-    assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.B));
+    assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.C));
 
     // Value can be set with the | operator
     immutable BitFlags!Enum flags_A = flags_empty | Enum.A;

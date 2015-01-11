@@ -61,7 +61,7 @@ DMD=dmd
 ## Location of where to write the html documentation files
 
 DOCSRC = ../dlang.org
-STDDOC = $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
+STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
@@ -305,6 +305,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_container_rbtree.html \
 	$(DOC)\std_container_slist.html \
 	$(DOC)\std_container_package.html \
+	$(DOC)\std_container_util.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \

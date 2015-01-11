@@ -1,5 +1,4 @@
 /++
-  $(SECTION Intro)
   $(LUCKY Regular expressions) are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions

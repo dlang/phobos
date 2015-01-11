@@ -383,7 +383,7 @@ if (isBidirectionalRange!(Unqual!Range))
 
 @safe unittest
 {
-    import std.algorithm : equal;    
+    import std.algorithm : equal;
     auto LL = iota(1L, 4L);
     auto r = retro(LL);
     assert(equal(r, [3L, 2L, 1L]));
@@ -626,7 +626,7 @@ if (isInputRange!(Unqual!Range))
 @safe unittest
 {
     import std.internal.test.dummyrange;
-    import std.algorithm : equal;    
+    import std.algorithm : equal;
 
     static assert(isRandomAccessRange!(typeof(stride([1, 2, 3], 2))));
     void test(size_t n, int[] input, int[] witness)
@@ -1232,53 +1232,49 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 
         @property auto ref front()
         {
-            static string makeSwitch()
+            final switch (_current)
             {
-                string result = "switch (_current) {\n";
                 foreach (i, R; Rs)
                 {
-                    auto si = to!string(i);
-                    result ~= "case "~si~": "~
-                        "assert(!source["~si~"].empty); return source["~si~"].front;\n";
+                    case i:
+                        assert(!source[i].empty);
+                        return source[i].front;
                 }
-                return result ~ "default: assert(0); }";
             }
-
-            mixin(makeSwitch());
+            assert(0);
         }
 
         void popFront()
         {
-            static string makeSwitchPopFront()
+            final switch (_current)
             {
-                string result = "switch (_current) {\n";
                 foreach (i, R; Rs)
                 {
-                    auto si = to!string(i);
-                    result ~= "case "~si~": source["~si~"].popFront(); break;\n";
+                    case i:
+                        source[i].popFront();
+                        break;
                 }
-                return result ~ "default: assert(0); }";
             }
-
-            static string makeSwitchIncrementCounter()
+	
+            auto next = _current == (Rs.length - 1) ? 0 : (_current + 1);
+            final switch (next)
             {
-                string result =
-                    "auto next = _current == Rs.length - 1 ? 0 : _current + 1;\n"~
-                    "switch (next) {\n";
                 foreach (i, R; Rs)
                 {
-                    auto si = to!string(i);
-                    auto si_1 = to!string(i ? i - 1 : Rs.length - 1);
-                    result ~= "case "~si~": "~
-                        "if (!source["~si~"].empty) { _current = "~si~"; return; }\n"~
-                        "if ("~si~" == _current) { _current = _current.max; return; }\n"~
-                        "goto case "~to!string((i + 1) % Rs.length)~";\n";
+                    case i:
+                        if (!source[i].empty)
+                        {
+                            _current = i;
+                            return;
+                        }
+                        if (i == _current)
+                        {
+                            _current = _current.max;
+                            return;
+                        }
+                        goto case (i + 1) % Rs.length;
                 }
-                return result ~ "default: assert(0); }";
             }
-
-            mixin(makeSwitchPopFront());
-            mixin(makeSwitchIncrementCounter());
         }
 
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
@@ -1949,7 +1945,10 @@ auto takeOne(R)(R source) if (isInputRange!R)
             @property auto ref front() { assert(!empty); return _source.front; }
             void popFront() { assert(!empty); _empty = true; }
             void popBack() { assert(!empty); _empty = true; }
-            @property auto save() { return Result(_source.save, empty); }
+            static if (isForwardRange!(Unqual!R))
+            {
+                @property auto save() { return Result(_source.save, empty); }
+            }
             @property auto ref back() { assert(!empty); return _source.front; }
             @property size_t length() const { return !empty; }
             alias opDollar = length;
@@ -1982,6 +1981,21 @@ auto takeOne(R)(R source) if (isInputRange!R)
     s.popFront();
     assert(s.length == 0);
     assert(s.empty);
+}
+
+unittest
+{
+    struct NonForwardRange
+    {
+        enum empty = false;
+        int front() { return 42; }
+        void popFront() {}
+    }
+
+    static assert(!isForwardRange!NonForwardRange);
+
+    auto s = takeOne(NonForwardRange());
+    assert(s.front == 42);
 }
 
 /++
@@ -3812,7 +3826,6 @@ private:
     alias ElementType = typeof(compute(State.init, cast(size_t) 1));
     State _state;
     size_t _n;
-    ElementType _cache;
 
     static struct DollarToken{}
 
@@ -3821,23 +3834,16 @@ public:
     {
         _state = initial;
         _n = n;
-        _cache = compute(_state, _n);
     }
 
     @property ElementType front()
     {
-        return _cache;
-    }
-
-    ElementType moveFront()
-    {
-        import std.algorithm : move;
-        return move(this._cache);
+        return compute(_state, _n);
     }
 
     void popFront()
     {
-        _cache = compute(_state, ++_n);
+        ++_n;
     }
 
     enum opDollar = DollarToken();
@@ -3964,6 +3970,13 @@ auto sequence(alias fun, State...)(State args)
     //Infinite slicing tests
     odds = odds[10 .. $];
     assert(equal(odds.take(3), [21, 23, 25]));
+}
+
+// Issue 5036
+unittest
+{
+    auto s = sequence!((a, n) => new int)(0);
+    assert(s.front != s.front);  // no caching
 }
 
 /**
@@ -8100,6 +8113,8 @@ struct NullSink
   will not actually be executed until the range is "walked" using functions
   that evaluate ranges, such as $(XREF array,array) or
   $(XREF algorithm,reduce).
+
+  See_Also: $(XREF argorithm,each)
 +/
 
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)

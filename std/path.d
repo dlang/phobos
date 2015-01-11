@@ -40,7 +40,7 @@
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
         Grzegorz Adam Hankiewicz,
-        Thomas Kühne,
+        Thomas K$(UUML)hne,
         $(WEB erdani.org, Andrei Alexandrescu)
     Copyright:
         Copyright (c) 2000-2014, the authors. All rights reserved.
@@ -1146,7 +1146,7 @@ unittest
     while at the same time resolving current/parent directory
     symbols ($(D ".") and $(D "..")) and removing superfluous
     directory separators.
-    It will return "." is the path leads to the starting directory.
+    It will return "." if the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
 
     Using buildNormalizedPath on null paths will always return null.

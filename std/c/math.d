@@ -9,7 +9,7 @@
  *      WIKI=Phobos/StdCMath
  */
 
-deprecated("Please import core.stdc.math instead. This module will be removed in December 2015.")
+/// Please import core.stdc.math instead. This module will be deprecated in DMD 2.068.
 module std.c.math;
 
 public import core.stdc.math;

@@ -819,7 +819,7 @@ $(UL
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
           !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
-        isExactSomeString!T)
+        !isInfinite!S && isExactSomeString!T)
 {
     static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
@@ -1092,7 +1092,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 {
     // Conversion representing associative array with string
     int[string] a = ["0":1, "1":2];
-    assert(to!string(a) == `["0":1, "1":2]` || 
+    assert(to!string(a) == `["0":1, "1":2]` ||
            to!string(a) == `["1":2, "0":1]`);
 }
 
@@ -2970,7 +2970,7 @@ unittest
 @safe pure unittest
 {
     import std.exception;
- 
+
     // Bugzilla 4959
     {
         auto s = "0 ";
@@ -5242,4 +5242,75 @@ unittest
     enum Test { a = 0 }
     ulong l = 0;
     auto t = l.to!Test;
+}
+
+/**
+    A wrapper on top of the built-in cast operator that allows one to restrict
+    casting of the original type of the value.
+
+    A common issue with using a raw cast is that it may silently continue to
+    compile even if the value's type has changed during refactoring,
+    which breaks the initial assumption about the cast.
+
+    Params:
+        From  = The type to cast from. The programmer must ensure it is legal
+                to make this cast.
+        To    = The type to cast to
+        value = The value to cast. It must be of type $(D From),
+                otherwise a compile-time error is emitted.
+
+    Returns:
+        the value after the cast, returned by reference if possible
+ */
+template castFrom(From)
+{
+    auto ref to(To, T)(auto ref T value) @system
+    {
+        static assert (
+            is(From == T),
+            "the value to cast is not of specified type '" ~ From.stringof ~
+                 "', it is of type '" ~ T.stringof ~ "'"
+        );
+
+        static assert (
+            is(typeof(cast(To)value)),
+            "can't cast from '" ~ From.stringof ~ "' to '" ~ To.stringof ~ "'"
+        );
+
+        return cast(To) value;
+    }
+}
+
+///
+unittest
+{
+    // Regular cast, which has been verified to be legal by the programmer:
+    {
+        long x;
+        auto y = cast(int) x;
+    }
+
+    // However this will still compile if 'x' is changed to be a pointer:
+    {
+        long* x;
+        auto y = cast(int) x;
+    }
+
+    // castFrom provides a more reliable alternative to casting:
+    {
+        long x;
+        auto y = castFrom!long.to!int(x);
+    }
+
+    // Changing the type of 'x' will now issue a compiler error,
+    // allowing bad casts to be caught before it's too late:
+    {
+        long* x;
+        static assert (
+            !__traits(compiles, castFrom!long.to!int(x))
+        );
+
+        // if cast is still needed, must be changed to:
+        auto y = castFrom!(long*).to!int(x);
+    }
 }

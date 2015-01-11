@@ -8,7 +8,7 @@
  * Authors:   Leandro Lucarella
  */
 
-deprecated("Please import core.sys.linux.tipc instead. This module will be removed in December 2015.")
+/// Please import core.sys.linux.tipc instead. This module will be deprecated in DMD 2.068.
 module std.c.linux.tipc;
 
 public import core.sys.linux.tipc;

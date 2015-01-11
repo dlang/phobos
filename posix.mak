@@ -92,16 +92,19 @@ WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES))
-STDDOC = $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
+STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
 DDOC=$(DMD) -m$(MODEL) -w -c -o- -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Set DRUNTIME name and full path
+ifneq (,$(DRUNTIME))
+	CUSTOM_DRUNTIME=1
+endif
 ifeq (,$(findstring win,$(OS)))
 	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
-	DRUNTIMESO = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL)so.a
+	DRUNTIMESO = $(basename $(DRUNTIME))so.a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
@@ -382,6 +385,9 @@ endif
 	cp -r etc/* $(INSTALL_DIR)/src/phobos/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
+ifeq (1,$(CUSTOM_DRUNTIME))
+# We consider a custom-set DRUNTIME a sign they build druntime themselves
+else
 # This rule additionally produces $(DRUNTIMESO). Add a fake dependency
 # to always invoke druntime's make. Use FORCE instead of .PHONY to
 # avoid rebuilding phobos when $(DRUNTIME) didn't change.
@@ -393,6 +399,8 @@ $(DRUNTIMESO): $(DRUNTIME)
 endif
 
 FORCE:
+
+endif
 
 ###########################################################
 # html documentation

@@ -1118,6 +1118,9 @@ A "good" seed for initializing random number engines. Initializing
 with $(D_PARAM unpredictableSeed) makes engines generate different
 random number sequences every run.
 
+Returns:
+A single unsigned integer seed value, different on each successive call
+
 Example:
 
 ----
@@ -1171,10 +1174,14 @@ unittest
 Global random number generator used by various functions in this
 module whenever no generator is specified. It is allocated per-thread
 and initialized to an unpredictable value for each thread.
+
+Returns:
+A singleton instance of the default random number generator
  */
 @property ref Random rndGen() @safe
 {
-    import std.algorithm : map, repeat;
+    import std.algorithm : map;
+    import std.range : repeat;
 
     static Random result;
     static bool initialized;
@@ -1196,6 +1203,17 @@ either side). Valid values for $(D boundaries) are $(D "[]"), $(D
 "$(LPAREN)]"), $(D "[$(RPAREN)"), and $(D "()"). The default interval
 is closed to the left and open to the right. The version that does not
 take $(D urng) uses the default generator $(D rndGen).
+
+Params:
+    a = lower bound of the _uniform distribution
+    b = upper bound of the _uniform distribution
+    urng = (optional) random number generator to use;
+           if not specified, defaults to $(D rndGen)
+
+Returns:
+    A single random variate drawn from the _uniform distribution
+    between $(D a) and $(D b), whose type is the common type of
+    these parameters
 
 Example:
 
@@ -1542,8 +1560,16 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 
 /**
 Generates a uniformly-distributed number in the range $(D [T.min,
-T.max]) for any integral type $(D T). If no random number generator is
-passed, uses the default $(D rndGen).
+T.max]) for any integral or character type $(D T). If no random
+number generator is passed, uses the default $(D rndGen).
+
+Params:
+    urng = (optional) random number generator to use;
+           if not specified, defaults to $(D rndGen)
+
+Returns:
+    Random variate drawn from the _uniform distribution across all
+    possible values of the integral or character type $(D T).
  */
 auto uniform(T, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
@@ -1604,6 +1630,14 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 /**
 Returns a uniformly selected member of enum $(D E). If no random number
 generator is passed, uses the default $(D rndGen).
+
+Params:
+    urng = (optional) random number generator to use;
+           if not specified, defaults to $(D rndGen)
+
+Returns:
+    Random variate drawn with equal probability from any
+    of the possible values of the enum $(D E).
  */
 auto uniform(E, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
@@ -1648,6 +1682,15 @@ if (is(E == enum))
  * $(D uniform01) offers a faster generation of random variates than
  * the equivalent $(D uniform!"[$(RPAREN)"(0.0, 1.0)) and so may be preferred
  * for some applications.
+ *
+ * Params:
+ *     urng = (optional) random number generator to use;
+ *            if not specified, defaults to $(D rndGen)
+ *
+ * Returns:
+ *     Floating-point random variate of type $(D T) drawn from the _uniform
+ *     distribution across the half-open interval [0, 1$(RPAREN).
+ *
  */
 T uniform01(T = double)()
     if (isFloatingPoint!T)
@@ -1777,6 +1820,11 @@ F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.  If no RNG is specified, $(D rndGen)
 will be used.
+
+Params:
+    r = random-access range whose elements are to be shuffled
+    gen = (optional) random number generator to use; if not
+          specified, defaults to $(D rndGen)
  */
 
 void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
@@ -1820,6 +1868,13 @@ $(D partialShuffle) was called.
 
 $(D r) must be a random-access range with length.  $(D n) must be less than
 or equal to $(D r.length).  If no RNG is specified, $(D rndGen) will be used.
+
+Params:
+    r = random-access range whose elements are to be shuffled
+    n = number of elements of $(D r) to shuffle (counting from the beginning);
+        must be less than $(D r.length)
+    gen = (optional) random number generator to use; if not
+          specified, defaults to $(D rndGen)
 */
 void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
@@ -1862,6 +1917,20 @@ unittest
 /**
 Rolls a dice with relative probabilities stored in $(D
 proportions). Returns the index in $(D proportions) that was chosen.
+
+Params:
+    rnd = (optional) random number generator to use; if not
+          specified, defaults to $(D rndGen)
+    proportions = forward range or list of individual values
+                  whose elements correspond to the probabilities
+                  with which to choose the corresponding index
+                  value
+
+Returns:
+    Random variate drawn from the index values
+    [0, ... $(D proportions.length) - 1], with the probability
+    of getting an individual index value $(D i) being proportional to
+    $(D proportions[i]).
 
 Example:
 
@@ -1946,6 +2015,16 @@ must be a random-access range with length.
 
 If no random number generator is passed to $(D randomCover), the
 thread-global RNG rndGen will be used internally.
+
+Params:
+    r = random-access range to cover
+    rng = (optional) random number generator to use;
+          if not specified, defaults to $(D rndGen)
+
+Returns:
+    Range whose elements consist of the elements of $(D r),
+    in random order.  Will be a forward range if both $(D r) and
+    $(D rng) are forward ranges, an input range otherwise.
 
 Example:
 ----
@@ -2162,6 +2241,28 @@ elements. The order of elements is the same as in the original
 range. The total length of $(D r) must be known. If $(D total) is
 passed in, the total number of sample is considered to be $(D
 total). Otherwise, $(D RandomSample) uses $(D r.length).
+
+Params:
+    r = range to sample from
+    n = number of elements to include in the sample;
+        must be less than or equal to the total number
+        of elements in $(D r) and/or the parameter
+        $(D total) (if provided)
+    total = (semi-optional) number of elements of $(D r)
+            from which to select the sample (counting from
+            the beginning); must be less than or equal to
+            the total number of elements in $(D r) itself.
+            May be omitted if $(D r) has the $(D .length)
+            property and the sample is to be drawn from
+            all elements of $(D r).
+    rng = (optional) random number generator to use;
+          if not specified, defaults to $(D rndGen)
+
+Returns:
+    Range whose elements consist of a randomly selected subset of
+    the elements of $(D r), in the same order as these elements
+    appear in $(D r) itself.  Will be a forward range if both $(D r)
+    and $(D rng) are forward ranges, an input range otherwise.
 
 $(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
 (see Vitter $(WEB dx.doi.org/10.1145/358105.893, 1984), $(WEB

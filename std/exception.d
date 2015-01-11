@@ -983,12 +983,12 @@ check if $(D source) points to $(D target), $(I not) what $(D target) references
 If $(D source) is or contains a union, then there may be either false positives or
 false negatives:
 
-$(D doesPointTo) will return $(D true) if it is absolutly certain
+$(D doesPointTo) will return $(D true) if it is absolutely certain
 $(D source) points to $(D target). It may produce false negatives, but never
 false positives. This function should be prefered when trying to validate
 input data.
 
-$(D mayPointTo) will return $(D false) if it is absolutly certain
+$(D mayPointTo) will return $(D false) if it is absolutely certain
 $(D source) does not point to $(D target). It may produce false positives, but never
 false negatives. This function should be prefered for defensively choosing a
 code path.

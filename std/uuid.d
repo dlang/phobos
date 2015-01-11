@@ -235,12 +235,12 @@ public struct UUID
          * Construct a UUID struct from the 16 byte representation
          * of a UUID.
          */
-        @safe pure nothrow this(ref in ubyte[16] uuidData)
+        @safe pure nothrow @nogc this(ref in ubyte[16] uuidData)
         {
             data = uuidData;
         }
         /// ditto
-        @safe pure nothrow this(in ubyte[16] uuidData)
+        @safe pure nothrow @nogc this(in ubyte[16] uuidData)
         {
             data = uuidData;
         }
@@ -449,7 +449,7 @@ public struct UUID
          * Returns true if and only if the UUID is equal
          * to {00000000-0000-0000-0000-000000000000}
          */
-        @trusted pure nothrow @property bool empty() const
+        @trusted pure nothrow @nogc @property bool empty() const
         {
             if(__ctfe)
                 return data == (ubyte[16]).init;
@@ -512,7 +512,7 @@ public struct UUID
          * See_Also:
          * $(MYREF3 UUID.Variant, Variant)
          */
-        @safe pure nothrow @property Variant variant() const
+        @safe pure nothrow @nogc @property Variant variant() const
         {
             //variant is stored in octet 7
             //which is index 8, since indexes count backwards
@@ -572,7 +572,7 @@ public struct UUID
          * See_Also:
          * $(MYREF3 UUID.Version, Version)
          */
-        @safe pure nothrow @property Version uuidVersion() const
+        @safe pure nothrow @nogc @property Version uuidVersion() const
         {
             //version is stored in octet 9
             //which is index 6, since indexes count backwards
@@ -627,7 +627,7 @@ public struct UUID
         /**
          * Swap the data of this UUID with the data of rhs.
          */
-        @safe pure nothrow void swap(ref UUID rhs)
+        @safe pure nothrow @nogc void swap(ref UUID rhs)
         {
             auto bck = data;
             data = rhs.data;
@@ -670,7 +670,7 @@ public struct UUID
          * sort(ids);
          * -------------------------
          */
-        @safe pure nothrow bool opEquals(in UUID s) const
+        @safe pure nothrow @nogc bool opEquals(in UUID s) const
         {
             return s.data == this.data;
         }
@@ -678,7 +678,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow bool opEquals(ref in UUID s) const
+        @safe pure nothrow @nogc bool opEquals(ref in UUID s) const
         {
             return s.data == this.data;
         }
@@ -686,7 +686,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow int opCmp(in UUID s) const
+        @safe pure nothrow @nogc int opCmp(in UUID s) const
         {
             import std.algorithm : cmp;
             return cmp(this.data[], s.data[]);
@@ -695,7 +695,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow int opCmp(ref in UUID s) const
+        @safe pure nothrow @nogc int opCmp(ref in UUID s) const
         {
             import std.algorithm : cmp;
             return cmp(this.data[], s.data[]);
@@ -704,7 +704,7 @@ public struct UUID
         /**
          * ditto
          */
-        @safe pure nothrow size_t toHash() const
+        @safe pure nothrow @nogc size_t toHash() const
         {
             size_t seed = 0;
             foreach(entry; this.data)
@@ -776,11 +776,7 @@ public struct UUID
         ///ditto
         @safe pure nothrow string toString() const
         {
-            //@@@BUG@@@ workaround for bugzilla 5700
-            try
-                return _toString().idup;
-            catch(Exception)
-                assert(0, "It should be impossible for idup to throw.");
+            return _toString().idup;
         }
 
         ///
@@ -851,7 +847,7 @@ public struct UUID
  * for strings and wstrings. It's always possible to pass wstrings and dstrings
  * by using the ubyte[] function overload (but be aware of endianness issues!).
  */
-@safe pure UUID md5UUID(const(char[]) name, const UUID namespace = UUID.init)
+@safe pure nothrow @nogc UUID md5UUID(const(char[]) name, const UUID namespace = UUID.init)
 {
     return md5UUID(cast(const(ubyte[]))name, namespace);
 }
@@ -859,7 +855,7 @@ public struct UUID
 /**
  * ditto
  */
-@safe pure UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
+@safe pure nothrow @nogc UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
 {
     import std.digest.md : MD5;
 
@@ -963,7 +959,7 @@ public struct UUID
  * for strings and wstrings. It's always possible to pass wstrings and dstrings
  * by using the ubyte[] function overload (but be aware of endianness issues!).
  */
-@safe pure UUID sha1UUID(in char[] name, const UUID namespace = UUID.init)
+@safe pure nothrow @nogc UUID sha1UUID(in char[] name, const UUID namespace = UUID.init)
 {
     return sha1UUID(cast(const(ubyte[]))name, namespace);
 }
@@ -971,7 +967,7 @@ public struct UUID
 /**
  * ditto
  */
-@safe pure UUID sha1UUID(in ubyte[] data, const UUID namespace = UUID.init)
+@safe pure nothrow @nogc UUID sha1UUID(in ubyte[] data, const UUID namespace = UUID.init)
 {
     import std.digest.sha : SHA1;
 
@@ -1064,7 +1060,7 @@ public struct UUID
  * Params:
  *      randomGen = uniform RNG
  * See_Also: $(XREF random, isUniformRNG)
- */ 
+ */
 @trusted UUID randomUUID(RNG)(ref RNG randomGen) if(isIntegral!(typeof(RNG.front)))
 {
     import std.random : isUniformRNG;

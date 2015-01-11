@@ -3009,11 +3009,6 @@ unittest //12000
     A!int dummy;
 }
 
-//Explicitly undocumented. They will be removed in December 2014.
-deprecated("Please use hasLocalAliasing instead.")    alias hasLocalAliasing    = hasUnsharedAliasing;
-deprecated("Please use hasRawLocalAliasing instead.") alias hasRawLocalAliasing = hasRawUnsharedAliasing;
-deprecated("Please use hasLocalObjects instead.")     alias hasLocalObjects     = hasUnsharedObjects;
-
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
@@ -5610,7 +5605,9 @@ unittest
 
 /**
  * Check whether the tuple T is an expression tuple.
- * An expression tuple only contains expressions. See also $(LREF isTypeTuple).
+ * An expression tuple only contains expressions.
+ *
+ * See_Also: $(LREF isTypeTuple).
  */
 template isExpressionTuple(T ...)
 {
@@ -5655,7 +5652,9 @@ unittest
 
 /**
  * Check whether the tuple $(D T) is a type tuple.
- * A type tuple only contains types. See also $(LREF isExpressionTuple).
+ * A type tuple only contains types.
+ *
+ * See_Also: $(LREF isExpressionTuple).
  */
 template isTypeTuple(T...)
 {

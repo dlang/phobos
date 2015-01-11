@@ -14,20 +14,20 @@ $(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF minCount)
 $(MYREF minPos) $(MYREF mismatch) $(MYREF skipOver) $(MYREF startsWith)
 $(MYREF until) )
 )
-$(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF castSwitch)  $(MYREF cmp)
-$(MYREF equal) $(MYREF levenshteinDistance) $(MYREF levenshteinDistanceAndPath)
-$(MYREF max) $(MYREF min) $(MYREF mismatch) $(MYREF clamp) $(MYREF
-predSwitch))
+$(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF castSwitch) $(MYREF clamp)
+$(MYREF cmp) $(MYREF equal) $(MYREF levenshteinDistance) $(MYREF
+levenshteinDistanceAndPath) $(MYREF max) $(MYREF min) $(MYREF mismatch)
+$(MYREF predSwitch))
 )
 $(TR $(TDNW Iteration) $(TD $(MYREF cache) $(MYREF cacheBidirectional)
-$(MYREF filter) $(MYREF filterBidirectional)
+$(MYREF each) $(MYREF filter) $(MYREF filterBidirectional)
 $(MYREF group) $(MYREF groupBy) $(MYREF joiner) $(MYREF map) $(MYREF reduce)
 $(MYREF splitter) $(MYREF sum) $(MYREF uniq) )
 )
 $(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
-$(MYREF isSorted) $(MYREF makeIndex) $(MYREF multiSort) $(MYREF nextPermutation)
-$(MYREF nextEvenPermutation) $(MYREF partialSort) $(MYREF
-partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
+$(MYREF isSorted) $(MYREF makeIndex) $(MYREF multiSort) $(MYREF
+nextEvenPermutation) $(MYREF nextPermutation) $(MYREF partialSort)
+$(MYREF partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
 $(MYREF topN) $(MYREF topNCopy) )
 )
 $(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF cartesianProduct) $(MYREF
@@ -78,302 +78,263 @@ sort(a);            // no predicate, "a < b" is implicit
 ----
 
 $(BOOKTABLE Cheat Sheet,
-$(TR $(TH Function Name) $(TH Description)
-)
-$(LEADINGROW Searching
-)
-$(TR $(TDNW $(LREF all)) $(TD $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements are positive)
-)
-$(TR $(TDNW $(LREF any)) $(TD $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one element is positive)
-)
-$(TR $(TDNW $(LREF balancedParens)) $(TD $(D
-balancedParens("((1 + 1) / 2)")) returns $(D true) because the string
-has balanced parentheses.)
-)
-$(TR $(TDNW $(LREF boyerMooreFinder)) $(TD $(D find("hello
-world", boyerMooreFinder("or"))) returns $(D "orld") using the $(LUCKY
-Boyer-Moore _algorithm).)
-)
-$(TR $(TDNW $(LREF canFind)) $(TD $(D canFind("hello world",
-"or")) returns $(D true).)
-)
-$(TR $(TDNW $(LREF count)) $(TD Counts elements that are equal
-to a specified value or satisfy a predicate. $(D count([1, 2, 1], 1))
-returns $(D 2) and $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
-)
-$(TR $(TDNW $(LREF countUntil)) $(TD $(D countUntil(a, b))
-returns the number of steps taken in $(D a) to reach $(D b); for
-example, $(D countUntil("hello!", "o")) returns $(D 4).)
-)
-$(TR $(TDNW $(LREF commonPrefix)) $(TD $(D commonPrefix("parakeet",
-"parachute")) returns $(D "para").)
-)
-$(TR $(TDNW $(LREF endsWith)) $(TD $(D endsWith("rocks", "ks"))
-returns $(D true).)
-)
-$(TR $(TD $(LREF find)) $(TD $(D find("hello world",
-"or")) returns $(D "orld") using linear search. (For binary search refer
-to $(XREF range,sortedRange).))
-)
-$(TR $(TDNW $(LREF findAdjacent)) $(TD $(D findAdjacent([1, 2,
-3, 3, 4])) returns the subrange starting with two equal adjacent
-elements, i.e. $(D [3, 3, 4]).)
-)
-$(TR $(TDNW $(LREF findAmong)) $(TD $(D findAmong("abcd",
-"qcx")) returns $(D "cd") because $(D 'c') is among $(D "qcx").)
-)
-$(TR $(TDNW $(LREF findSkip)) $(TD If $(D a = "abcde"), then
-$(D findSkip(a, "x")) returns $(D false) and leaves $(D a) unchanged,
-whereas $(D findSkip(a, 'c')) advances $(D a) to $(D "cde") and
-returns $(D true).)
-)
-$(TR $(TDNW $(LREF findSplit)) $(TD $(D findSplit("abcdefg",
-"de")) returns the three ranges $(D "abc"), $(D "de"), and $(D
-"fg").)
-)
-$(TR $(TDNW $(LREF findSplitAfter)) $(TD $(D
-findSplitAfter("abcdefg", "de")) returns the two ranges $(D "abcde")
-and $(D "fg").)
-)
-$(TR $(TDNW $(LREF findSplitBefore)) $(TD $(D
-findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc") and
-$(D "defg").)
-)
-$(TR $(TDNW $(LREF minCount)) $(TD $(D minCount([2, 1, 1, 4,
-1])) returns $(D tuple(1, 3)).)
-)
-$(TR $(TDNW $(LREF minPos)) $(TD $(D minPos([2, 3, 1, 3, 4,
-1])) returns the subrange $(D [1, 3, 4, 1]), i.e., positions the range
-at the first occurrence of its minimal element.)
-)
-$(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("parakeet", "parachute"))
-returns the two ranges $(D "keet") and $(D "chute").)
-)
-$(TR $(TDNW $(LREF skipOver)) $(TD Assume $(D a = "blah"). Then
-$(D skipOver(a, "bi")) leaves $(D a) unchanged and returns $(D false),
-whereas $(D skipOver(a, "bl")) advances $(D a) to refer to $(D "ah")
-and returns $(D true).)
-)
-$(TR $(TDNW $(LREF startsWith)) $(TD $(D startsWith("hello,
-world", "hello")) returns $(D true).)
-)
-$(TR $(TDNW $(LREF until)) $(TD Lazily iterates a range
-until a specific value is found.)
-)
-$(LEADINGROW Comparison
-)
-$(TR $(TDNW $(LREF among)) $(TD Checks if a value is among a set
-of values, e.g. $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
-)
-$(TR $(TDNW $(LREF castSwitch)) $(TD $(D (new A()).castSwitch((A a)=>1,(B
-b)=>2)) returns $(D 1).)
-)
-$(TR $(TDNW $(LREF clamp)) $(TD $(D clamp(1, 3, 6)) returns $(D
-3). $(D clamp(4, 3, 6)) returns $(D 4).)
-)
-$(TR $(TDNW $(LREF cmp)) $(TD $(D cmp("abc", "abcd")) is $(D
--1), $(D cmp("abc", "aba")) is $(D 1), and $(D cmp("abc", "abc")) is
-$(D 0).)
-)
-$(TR $(TDNW $(LREF equal)) $(TD Compares ranges for
-element-by-element equality, e.g. $(D equal([1, 2, 3], [1.0, 2.0,
-3.0])) returns $(D true).)
-)
-$(TR $(TDNW $(LREF levenshteinDistance)) $(TD $(D
-levenshteinDistance("kitten", "sitting")) returns $(D 3) by using the
-$(LUCKY Levenshtein distance _algorithm).)
-)
-$(TR $(TDNW $(LREF levenshteinDistanceAndPath)) $(TD $(D
-levenshteinDistanceAndPath("kitten", "sitting")) returns $(D tuple(3,
-"snnnsni")) by using the $(LUCKY Levenshtein distance _algorithm).)
-)
-$(TR $(TDNW $(LREF max)) $(TD $(D max(3, 4, 2)) returns $(D
-4).)
-)
-$(TR $(TDNW $(LREF min)) $(TD $(D min(3, 4, 2)) returns $(D
-2).)
-)
-$(TR $(TDNW $(LREF mismatch)) $(TD $(D mismatch("oh hi",
-"ohayo")) returns $(D tuple(" hi", "ayo")).)
-)
-$(TR $(TDNW $(LREF predSwitch)) $(TD $(D 2.predSwitch(1, "one", 2, "two",
-3, "three")) returns $(D "two").)
-)
-$(LEADINGROW Iteration
-)
-$(TR $(TDNW $(LREF cache)) $(TD Eagerly evaluates and caches
-another range's $(D front).)
-)
-$(TR $(TDNW $(LREF cacheBidirectional)) $(TD As above, but also
-provides $(D back) and $(D popBack).)
-)
-$(TR $(TDNW $(LREF filter)) $(TD $(D filter!"a > 0"([1, -1, 2,
-0, -3])) iterates over elements $(D 1) and $(D 2).)
-)
-$(TR $(TDNW $(LREF filterBidirectional)) $(TD Similar to $(D
-filter), but also provides $(D back) and $(D popBack) at a small
-increase in cost.)
-)
-$(TR $(TDNW $(LREF group)) $(TD $(D group([5, 2, 2, 3, 3]))
-returns a range containing the tuples $(D tuple(5, 1)),
-$(D tuple(2, 2)), and $(D tuple(3, 2)).)
-)
-$(TR $(TDNW $(LREF groupBy)) $(TD $(D groupBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
-returns a range containing 3 subranges: the first with just $(D [1, 1]); the
-second with the elements $(D [1, 2]) and $(D [2, 2]); and the third with just
-$(D [2, 1]).)
-)
-$(TR $(TDNW $(LREF joiner)) $(TD $(D joiner(["hello",
-"world!"], "; ")) returns a range that iterates over the characters $(D
-"hello; world!"). No new string is created - the existing inputs are
-iterated.)
-)
-$(TR $(TDNW $(LREF map)) $(TD $(D map!"2 * a"([1, 2, 3]))
-lazily returns a range with the numbers $(D 2), $(D 4), $(D 6).)
-)
-$(TR $(TDNW $(LREF reduce)) $(TD $(D reduce!"a + b"([1, 2, 3,
-4])) returns $(D 10).)
-)
-$(TR $(TDNW $(LREF splitter)) $(TD Lazily splits a range by a
-separator.)
-)
-$(TR $(TDNW $(LREF sum)) $(TD Same as $(D reduce), but specialized for
-accurate summation.)
-)
-$(TR $(TDNW $(LREF uniq)) $(TD Iterates over the unique elements
-in a range, which is assumed sorted.)
-)
-$(LEADINGROW Sorting
-)
-$(TR $(TDNW $(LREF completeSort)) $(TD If $(D a = [10, 20, 30])
-and $(D b = [40, 6, 15]), then $(D completeSort(a, b)) leaves $(D a =
-[6, 10, 15]) and $(D b = [20, 30, 40]). The range $(D a) must be
-sorted prior to the call, and as a result the combination $(D $(XREF
-range,chain)(a, b)) is sorted.)
-)
-$(TR $(TDNW $(LREF isPartitioned)) $(TD $(D isPartitioned!"a <
-0"([-1, -2, 1, 0, 2])) returns $(D true) because the predicate is $(D
-true) for a portion of the range and $(D false) afterwards.)
-)
-$(TR $(TDNW $(LREF isSorted)) $(TD $(D isSorted([1, 1, 2, 3]))
-returns $(D true).)
-)
-$(TR $(TDNW $(LREF makeIndex)) $(TD Creates a separate index
-for a range.)
-)
-$(TR $(TDNW $(LREF nextPermutation)) $(TD Computes the next lexicographically
-greater permutation of a range in-place.)
-)
-$(TR $(TDNW $(LREF nextEvenPermutation)) $(TD Computes the next
-lexicographically greater even permutation of a range in-place.)
-)
-$(TR $(TDNW $(LREF partialSort)) $(TD If $(D a = [5, 4, 3, 2,
-1]), then $(D partialSort(a, 3)) leaves $(D a[0 .. 3] = [1, 2,
-3]). The other elements of $(D a) are left in an unspecified order.)
-)
-$(TR $(TDNW $(LREF partition)) $(TD Partitions a range
-according to a predicate.)
-)
-$(TR $(TDNW $(LREF partition3)) $(TD Partitions a range
-in three parts (less than, equal, greater than the given pivot).)
-)
-$(TR $(TDNW $(LREF schwartzSort)) $(TD Sorts with the help of
-the $(LUCKY Schwartzian transform).)
-)
-$(TR $(TDNW $(LREF sort)) $(TD Sorts.)
-)
-$(TR $(TDNW $(LREF topN)) $(TD Separates the top elements in a
-range.)
-)
-$(TR $(TDNW $(LREF topNCopy)) $(TD Copies out the top elements
-of a range.)
-)
-$(LEADINGROW Set operations
-)
-$(TR $(TDNW $(LREF cartesianProduct)) $(TD Computes Cartesian product of two
-ranges.)
-)
-$(TR $(TDNW $(LREF largestPartialIntersection)) $(TD Copies out
-the values that occur most frequently in a range of ranges.)
-)
-$(TR $(TDNW $(LREF largestPartialIntersectionWeighted)) $(TD
-Copies out the values that occur most frequently (multiplied by
-per-value weights) in a range of ranges.)
-)
-$(TR $(TDNW $(LREF nWayUnion)) $(TD Computes the union of a set
-of sets implemented as a range of sorted ranges.)
-)
-$(TR $(TDNW $(LREF setDifference)) $(TD Lazily computes the set
-difference of two or more sorted ranges.)
-)
-$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the
-intersection of two or more sorted ranges.)
-)
-$(TR $(TDNW $(LREF setSymmetricDifference)) $(TD Lazily
-computes the symmetric set difference of two or more sorted ranges.)
-)
-$(TR $(TDNW $(LREF setUnion)) $(TD Lazily computes the set
-union of two or more sorted ranges.)
-)
-$(LEADINGROW Mutation
-)
-$(TR $(TDNW $(LREF bringToFront)) $(TD If $(D a = [1, 2, 3])
-and $(D b = [4, 5, 6, 7]), $(D bringToFront(a, b)) leaves $(D a = [4,
-5, 6]) and $(D b = [7, 1, 2, 3]).)
-)
-$(TR $(TDNW $(LREF copy)) $(TD Copies a range to another. If
-$(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
-leaves $(D b = [1, 2, 3, 0, 0]) and returns $(D b[3 .. $]).)
-)
-$(TR $(TDNW $(LREF fill)) $(TD Fills a range with a pattern,
-e.g., if $(D a = new int[3]), then $(D fill(a, 4)) leaves $(D a = [4,
-4, 4]) and $(D fill(a, [3, 4])) leaves $(D a = [3, 4, 3]).)
-)
-$(TR $(TDNW $(LREF initializeAll)) $(TD If $(D a = [1.2, 3.4]),
-then $(D initializeAll(a)) leaves $(D a = [double.init,
-double.init]).)
-)
-$(TR $(TDNW $(LREF move)) $(TD $(D move(a, b)) moves $(D a)
-into $(D b). $(D move(a)) reads $(D a) destructively.)
-)
-$(TR $(TDNW $(LREF moveAll)) $(TD Moves all elements from one
-range to another.)
-)
-$(TR $(TDNW $(LREF moveSome)) $(TD Moves as many elements as
-possible from one range to another.)
-)
-$(TR $(TDNW $(LREF remove)) $(TD Removes elements from a range
-in-place, and returns the shortened range.)
-)
-$(TR $(TDNW $(LREF reverse)) $(TD If $(D a = [1, 2, 3]), $(D
-reverse(a)) changes it to $(D [3, 2, 1]).)
-)
-$(TR $(TDNW $(LREF strip)) $(TD Strips all leading and trailing
-elements equal to a value, or that satisfy a predicate.
-If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and $(D strip!(e => e == 1)(a))
-returns $(D [0]).)
-)
-$(TR $(TDNW $(LREF stripLeft)) $(TD Strips all leading elements equal to a value,
-or that satisfy a predicate.
-If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and $(D stripLeft!(e => e == 1)(a))
-returns $(D [0, 1, 1]).)
-)
-$(TR $(TDNW $(LREF stripRight)) $(TD Strips all trailing elements equal to a value,
-or that satisfy a predicate.
-If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and $(D stripRight!(e => e == 1)(a))
-returns $(D [1, 1, 0]).)
-)
-$(TR $(TDNW $(LREF swap)) $(TD Swaps two values.)
-)
-$(TR $(TDNW $(LREF swapRanges)) $(TD Swaps all elements of two
-ranges.)
-)
-$(TR $(TDNW $(LREF uninitializedFill)) $(TD Fills a range
-(assumed uninitialized) with a value.)
-)
+
+$(TR $(TH Function Name) $(TH Description))
+
+$(LEADINGROW Searching)
+
+$(T2 all,
+        $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements
+        are positive)
+$(T2 any,
+        $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one
+        element is positive)
+$(T2 balancedParens,
+        $(D balancedParens("((1 + 1) / 2)")) returns $(D true) because the
+        string has balanced parentheses.)
+$(T2 boyerMooreFinder,
+        $(D find("hello world", boyerMooreFinder("or"))) returns $(D "orld")
+        using the $(LUCKY Boyer-Moore _algorithm).)
+$(T2 canFind,
+        $(D canFind("hello world", "or")) returns $(D true).)
+$(T2 count,
+        Counts elements that are equal to a specified value or satisfy a
+        predicate.  $(D count([1, 2, 1], 1)) returns $(D 2) and
+        $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
+$(T2 countUntil,
+        $(D countUntil(a, b)) returns the number of steps taken in $(D a) to
+        reach $(D b); for example, $(D countUntil("hello!", "o")) returns
+        $(D 4).)
+$(T2 commonPrefix,
+        $(D commonPrefix("parakeet", "parachute")) returns $(D "para").)
+$(T2 endsWith,
+        $(D endsWith("rocks", "ks")) returns $(D true).)
+$(T2 find,
+        $(D find("hello world", "or")) returns $(D "orld") using linear search.
+        (For binary search refer to $(XREF range,sortedRange).))
+$(T2 findAdjacent,
+        $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
+        two equal adjacent elements, i.e. $(D [3, 3, 4]).)
+$(T2 findAmong,
+        $(D findAmong("abcd", "qcx")) returns $(D "cd") because $(D 'c') is
+        among $(D "qcx").)
+$(T2 findSkip,
+        If $(D a = "abcde"), then $(D findSkip(a, "x")) returns $(D false) and
+        leaves $(D a) unchanged, whereas $(D findSkip(a, 'c')) advances $(D a)
+        to $(D "cde") and returns $(D true).)
+$(T2 findSplit,
+        $(D findSplit("abcdefg", "de")) returns the three ranges $(D "abc"),
+        $(D "de"), and $(D "fg").)
+$(T2 findSplitAfter,
+        $(D findSplitAfter("abcdefg", "de")) returns the two ranges
+        $(D "abcde") and $(D "fg").)
+$(T2 findSplitBefore,
+        $(D findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc")
+        and $(D "defg").)
+$(T2 minCount,
+        $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
+$(T2 minPos,
+        $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
+        i.e., positions the range at the first occurrence of its minimal
+        element.)
+$(T2 mismatch,
+        $(D mismatch("parakeet", "parachute")) returns the two ranges
+        $(D "keet") and $(D "chute").)
+$(T2 skipOver,
+        Assume $(D a = "blah"). Then $(D skipOver(a, "bi")) leaves $(D a)
+        unchanged and returns $(D false), whereas $(D skipOver(a, "bl"))
+        advances $(D a) to refer to $(D "ah") and returns $(D true).)
+$(T2 startsWith,
+        $(D startsWith("hello, world", "hello")) returns $(D true).)
+$(T2 until,
+        Lazily iterates a range until a specific value is found.)
+
+$(LEADINGROW Comparison)
+
+$(T2 among,
+        Checks if a value is among a set of values, e.g.
+        $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
+$(T2 castSwitch,
+        $(D (new A()).castSwitch((A a)=>1,(B b)=>2)) returns $(D 1).)
+$(T2 clamp,
+        $(D clamp(1, 3, 6)) returns $(D 3). $(D clamp(4, 3, 6)) returns $(D 4).)
+$(T2 cmp,
+        $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1),
+        and $(D cmp("abc", "abc")) is $(D 0).)
+$(T2 equal,
+        Compares ranges for element-by-element equality, e.g.
+        $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
+$(T2 levenshteinDistance,
+        $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
+        the $(LUCKY Levenshtein distance _algorithm).)
+$(T2 levenshteinDistanceAndPath,
+        $(D levenshteinDistanceAndPath("kitten", "sitting")) returns
+        $(D tuple(3, "snnnsni")) by using the $(LUCKY Levenshtein distance
+        _algorithm).)
+$(T2 max,
+        $(D max(3, 4, 2)) returns $(D 4).)
+$(T2 min,
+        $(D min(3, 4, 2)) returns $(D 2).)
+$(T2 mismatch,
+        $(D mismatch("oh hi", "ohayo")) returns $(D tuple(" hi", "ayo")).)
+$(T2 predSwitch,
+        $(D 2.predSwitch(1, "one", 2, "two", 3, "three")) returns $(D "two").)
+
+$(LEADINGROW Iteration)
+
+$(T2 cache,
+        Eagerly evaluates and caches another range's $(D front).)
+$(T2 cacheBidirectional,
+        As above, but also provides $(D back) and $(D popBack).)
+$(T2 each,
+        $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
+        and $(D 3) on their own lines.)
+$(T2 filter,
+        $(D filter!"a > 0"([1, -1, 2, 0, -3])) iterates over elements $(D 1)
+        and $(D 2).)
+$(T2 filterBidirectional,
+        Similar to $(D filter), but also provides $(D back) and $(D popBack) at
+        a small increase in cost.)
+$(T2 group,
+        $(D group([5, 2, 2, 3, 3])) returns a range containing the tuples
+        $(D tuple(5, 1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
+$(T2 groupBy,
+        $(D groupBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
+        returns a range containing 3 subranges: the first with just
+        $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
+        and the third with just $(D [2, 1]).)
+$(T2 joiner,
+        $(D joiner(["hello", "world!"], "; ")) returns a range that iterates
+        over the characters $(D "hello; world!"). No new string is created -
+        the existing inputs are iterated.)
+$(T2 map,
+        $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
+        $(D 2), $(D 4), $(D 6).)
+$(T2 reduce,
+        $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
+$(T2 splitter,
+        Lazily splits a range by a separator.)
+$(T2 sum,
+        Same as $(D reduce), but specialized for accurate summation.)
+$(T2 uniq,
+        Iterates over the unique elements in a range, which is assumed sorted.)
+
+$(LEADINGROW Sorting)
+
+$(T2 completeSort,
+        If $(D a = [10, 20, 30]) and $(D b = [40, 6, 15]), then
+        $(D completeSort(a, b)) leaves $(D a = [6, 10, 15]) and $(D b = [20,
+        30, 40]).
+        The range $(D a) must be sorted prior to the call, and as a result the
+        combination $(D $(XREF range,chain)(a, b)) is sorted.)
+$(T2 isPartitioned,
+        $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
+        the predicate is $(D true) for a portion of the range and $(D false)
+        afterwards.)
+$(T2 isSorted,
+        $(D isSorted([1, 1, 2, 3])) returns $(D true).)
+$(T2 makeIndex,
+        Creates a separate index for a range.)
+$(T2 nextEvenPermutation,
+        Computes the next lexicographically greater even permutation of a range
+        in-place.)
+$(T2 nextPermutation,
+        Computes the next lexicographically greater permutation of a range
+        in-place.)
+$(T2 partialSort,
+        If $(D a = [5, 4, 3, 2, 1]), then $(D partialSort(a, 3)) leaves
+        $(D a[0 .. 3] = [1, 2, 3]).
+        The other elements of $(D a) are left in an unspecified order.)
+$(T2 partition,
+        Partitions a range according to a predicate.)
+$(T2 partition3,
+        Partitions a range in three parts (less than, equal, greater than the
+        given pivot).)
+$(T2 schwartzSort,
+        Sorts with the help of the $(LUCKY Schwartzian transform).)
+$(T2 sort,
+        Sorts.)
+$(T2 topN,
+        Separates the top elements in a range.)
+$(T2 topNCopy,
+        Copies out the top elements of a range.)
+
+$(LEADINGROW Set operations)
+
+$(T2 cartesianProduct,
+        Computes Cartesian product of two ranges.)
+$(T2 largestPartialIntersection,
+        Copies out the values that occur most frequently in a range of ranges.)
+$(T2 largestPartialIntersectionWeighted,
+        Copies out the values that occur most frequently (multiplied by
+        per-value weights) in a range of ranges.)
+$(T2 nWayUnion,
+        Computes the union of a set of sets implemented as a range of sorted
+        ranges.)
+$(T2 setDifference,
+        Lazily computes the set difference of two or more sorted ranges.)
+$(T2 setIntersection,
+        Lazily computes the intersection of two or more sorted ranges.)
+$(T2 setSymmetricDifference,
+        Lazily computes the symmetric set difference of two or more sorted
+        ranges.)
+$(T2 setUnion,
+        Lazily computes the set union of two or more sorted ranges.)
+
+$(LEADINGROW Mutation)
+
+$(T2 bringToFront,
+        If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),
+        $(D bringToFront(a, b)) leaves $(D a = [4, 5, 6]) and
+        $(D b = [7, 1, 2, 3]).)
+$(T2 copy,
+        Copies a range to another. If
+        $(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
+        leaves $(D b = [1, 2, 3, 0, 0]) and returns $(D b[3 .. $]).)
+$(T2 fill,
+        Fills a range with a pattern,
+        e.g., if $(D a = new int[3]), then $(D fill(a, 4))
+        leaves $(D a = [4, 4, 4]) and $(D fill(a, [3, 4])) leaves
+        $(D a = [3, 4, 3]).)
+$(T2 initializeAll,
+        If $(D a = [1.2, 3.4]), then $(D initializeAll(a)) leaves
+        $(D a = [double.init, double.init]).)
+$(T2 move,
+        $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
+        destructively.)
+$(T2 moveAll,
+        Moves all elements from one range to another.)
+$(T2 moveSome,
+        Moves as many elements as possible from one range to another.)
+$(T2 remove,
+        Removes elements from a range in-place, and returns the shortened
+        range.)
+$(T2 reverse,
+        If $(D a = [1, 2, 3]), $(D reverse(a)) changes it to $(D [3, 2, 1]).)
+$(T2 strip,
+        Strips all leading and trailing elements equal to a value, or that
+        satisfy a predicate.
+        If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and
+        $(D strip!(e => e == 1)(a)) returns $(D [0]).)
+$(T2 stripLeft,
+        Strips all leading elements equal to a value, or that satisfy a
+        predicate.  If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and
+        $(D stripLeft!(e => e == 1)(a)) returns $(D [0, 1, 1]).)
+$(T2 stripRight,
+        Strips all trailing elements equal to a value, or that satisfy a
+        predicate.
+        If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and
+        $(D stripRight!(e => e == 1)(a)) returns $(D [1, 1, 0]).)
+$(T2 swap,
+        Swaps two values.)
+$(T2 swapRanges,
+        Swaps all elements of two ranges.)
+$(T2 uninitializedFill,
+        Fills a range (assumed uninitialized) with a value.)
 )
 
 Macros:
+T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 WIKI = Phobos/StdAlgorithm
 MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
 
@@ -420,6 +381,9 @@ in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(a))
 left to right for all elements $(D a) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
+
+See_Also:
+    $(WEB en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
 */
 template map(fun...) if (fun.length >= 1)
 {
@@ -1073,8 +1037,14 @@ result) is returned. The one-argument version $(D reduce!(fun)(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
-See also: $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
-precise summing of floating point numbers.
+Returns:
+    the accumulated $(D result)
+
+See_Also:
+    $(WEB en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
+
+    $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
+    precise summing of floating point numbers.
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
@@ -1442,16 +1412,159 @@ unittest
     static assert(is(typeof(reduce!((a, b)=>a+b)(data))));
 }
 
+
+// each
+/**
+Eagerly iterates over $(D r) and calls $(D pred) over _each element.
+
+Params:
+    pred = predicate to apply to each element of the range
+    r = range or iterable over which each iterates
+
+Example:
+---
+void deleteOldBackups()
+{
+    import std.algorithm, std.datetime, std.file;
+    auto cutoff = Clock.currTime() - 7.days;
+    dirEntries("", "*~", SpanMode.depth)
+        .filter!(de => de.timeLastModified < cutoff)
+        .each!remove();
+}
+---
+
+If the range supports it, the value can be mutated in place. Examples:
+---
+arr.each!((ref a) => a++);
+arr.each!"a++";
+---
+
+If no predicate is specified, $(D each) will default to doing nothing
+but consuming the entire range. $(D .front) will be evaluated, but this
+can be avoided by explicitly specifying a predicate lambda with a
+$(D lazy) parameter.
+
+$(D each) also supports $(D opApply)-based iterators, so it will work
+with e.g. $(XREF parallelism, parallel).
+
+See_Also: $(XREF range,tee)
+
+ */
+template each(alias pred = "a")
+{
+    alias BinaryArgs = TypeTuple!(pred, "i", "a");
+
+    enum isRangeUnaryIterable(R) =
+        is(typeof(unaryFun!pred(R.init.front)));
+
+    enum isRangeBinaryIterable(R) =
+        is(typeof(binaryFun!BinaryArgs(0, R.init.front)));
+
+    enum isRangeIterable(R) =
+        isInputRange!R &&
+        (isRangeUnaryIterable!R || isRangeBinaryIterable!R);
+
+    enum isForeachUnaryIterable(R) =
+        is(typeof((R r) {
+            foreach (ref a; r)
+                cast(void)unaryFun!pred(a);
+        }));
+
+    enum isForeachBinaryIterable(R) =
+        is(typeof((R r) {
+            foreach (i, ref a; r)
+                cast(void)binaryFun!BinaryArgs(i, a);
+        }));
+
+    enum isForeachIterable(R) =
+        (!isForwardRange!R || isDynamicArray!R) &&
+        (isForeachUnaryIterable!R || isForeachBinaryIterable!R);
+
+    void each(Range)(Range r)
+    if (isRangeIterable!Range && !isForeachIterable!Range)
+    {
+        debug(each) pragma(msg, "Using while for ", Range.stringof);
+        static if (isRangeUnaryIterable!Range)
+        {
+            while (!r.empty)
+            {
+                cast(void)unaryFun!pred(r.front);
+                r.popFront();
+            }
+        }
+        else // if (isRangeBinaryIterable!Range)
+        {
+            size_t i = 0;
+            while (!r.empty)
+            {
+                cast(void)binaryFun!BinaryArgs(i, r.front);
+                r.popFront();
+                i++;
+            }
+        }
+    }
+
+    void each(Iterable)(Iterable r)
+        if (isForeachIterable!Iterable)
+    {
+        debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
+        static if (isForeachUnaryIterable!Iterable)
+        {
+            foreach (ref e; r)
+                cast(void)unaryFun!pred(e);
+        }
+        else // if (isForeachBinaryIterable!Iterable)
+        {
+            foreach (i, ref e; r)
+                cast(void)binaryFun!BinaryArgs(i, e);
+        }
+    }
+}
+
+unittest
+{
+    long[] arr;
+    // Note: each over arrays should resolve to the
+    // foreach variant, but as this is a performance
+    // improvement it is not unit-testable.
+    iota(5).each!(n => arr ~= n);
+    assert(arr == [0, 1, 2, 3, 4]);
+
+    // in-place mutation
+    arr.each!((ref n) => n++);
+    assert(arr == [1, 2, 3, 4, 5]);
+
+    // by-ref lambdas should not be allowed for non-ref ranges
+    static assert(!is(typeof(arr.map!(n => n).each!((ref n) => n++))));
+
+    // default predicate (walk / consume)
+    auto m = arr.map!(n => n);
+    (&m).each();
+    assert(m.empty);
+
+    // in-place mutation with index
+    arr[] = 0;
+    arr.each!"a=i"();
+    assert(arr == [0, 1, 2, 3, 4]);
+
+    // opApply iterators
+    static assert(is(typeof({
+        import std.parallelism;
+        arr.parallel.each!"a++";
+    })));
+}
+
+
 // sum
 /**
-Sums elements of $(D r), which must be a finite input range. Although
-conceptually $(D sum(r)) is equivalent to $(D reduce!((a, b) => a +
-b)(0, r)), $(D sum) uses specialized algorithms to maximize accuracy,
+Sums elements of $(D r), which must be a finite $(XREF2 range, isInputRange, input range). Although
+conceptually $(D sum(r)) is equivalent to $(LREF reduce)!((a, b) => a +
+b)(0, r), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
-random-access range with length and slicing, then $(D sum) uses the
+$(LI If $(D $(XREF range, ElementType)!R) is a floating-point type and $(D R) is a
+$(XREF2 range, isRandomAccessRange, random-access range) with length and slicing, then $(D sum) uses the
 $(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
@@ -1461,13 +1574,13 @@ Kahan summation) algorithm.)
 $(LI In all other cases, a simple element by element addition is done.)
 )
 
-For floating point inputs, calculations are made in $(D real)
+For floating point inputs, calculations are made in $(LINK2 ../type.html, $(D real))
 precision for $(D real) inputs and in $(D double) precision otherwise
 (Note this is a special case that deviates from $(D reduce)'s behavior,
 which would have kept $(D float) precision for a $(D float) range).
 For all other types, the calculations are done in the same type obtained
 from from adding two elements of the range, which may be a different
-type from the elements themselves (for example, in case of integral promotion).
+type from the elements themselves (for example, in case of $(LINK2 ../type.html#integer-promotions, integral promotion)).
 
 A seed may be passed to $(D sum). Not only will this seed be used as an initial
 value, but its type will override all the above, and determine the algorithm
@@ -1477,6 +1590,9 @@ Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
 at expense of precision, one can use $(D reduce!((a, b) => a + b)(0, r)), which
 is not specialized for summation.
+
+Returns:
+    The sum of all the elements in the range r.
  */
 auto sum(R)(R r)
 if (isInputRange!R && !isInfinite!R && is(typeof(r.front + r.front)))
@@ -1632,26 +1748,35 @@ unittest
 }
 
 /**
-Fills $(D range) with a $(D filler).
+Assigns $(D value) to each element of input range $(D range).
+
+Params:
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
+                and has assignable elements
+        value = Assigned to each element of range
+
+See_Also:
+        $(LREF uninitializedFill)
+        $(LREF initializeAll)
  */
-void fill(Range, Value)(Range range, Value filler)
-    if (isInputRange!Range && is(typeof(range.front = filler)))
+void fill(Range, Value)(Range range, Value value)
+    if (isInputRange!Range && is(typeof(range.front = value)))
 {
     alias T = ElementType!Range;
 
-    static if (is(typeof(range[] = filler)))
+    static if (is(typeof(range[] = value)))
     {
-        range[] = filler;
+        range[] = value;
     }
-    else static if (is(typeof(range[] = T(filler))))
+    else static if (is(typeof(range[] = T(value))))
     {
-        range[] = T(filler);
+        range[] = T(value);
     }
     else
     {
         for ( ; !range.empty; range.popFront() )
         {
-            range.front = filler;
+            range.front = value;
         }
     }
 }
@@ -1735,6 +1860,12 @@ void fill(Range, Value)(Range range, Value filler)
 Fills $(D range) with a pattern copied from $(D filler). The length of
 $(D range) does not have to be a multiple of the length of $(D
 filler). If $(D filler) is empty, an exception is thrown.
+
+Params:
+    range = An $(XREF2 range, isInputRange, input range) that exposes
+            references to its elements and has assignable elements.
+    filler = The $(XREF2 range, isForwardRange, forward range) representing the
+             _fill pattern.
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
     if (isInputRange!Range1
@@ -1847,13 +1978,20 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
 }
 
 /**
-Fills a range with a value. Assumes that the range does not currently
-contain meaningful content. This is of interest for structs that
-define copy constructors (for all other types, fill and
+Initializes each element of $(D range) with $(D value).
+Assumes that the elements of the range are uninitialized.
+This is of interest for structs that
+define copy constructors (for all other types, $(LREF fill) and
 uninitializedFill are equivalent).
 
-uninitializedFill will only operate on ranges that expose references to its
-members and have assignable elements.
+Params:
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
+                and has assignable elements
+        value = Assigned to each element of range
+
+See_Also:
+        $(LREF fill)
+        $(LREF initializeAll)
 
 Example:
 ----
@@ -1863,8 +2001,8 @@ uninitializedFill(s, 42);
 assert(s == [ 42, 42, 42, 42, 42 ]);
 ----
  */
-void uninitializedFill(Range, Value)(Range range, Value filler)
-    if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = filler)))
+void uninitializedFill(Range, Value)(Range range, Value value)
+    if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = value)))
 {
     alias T = ElementType!Range;
     static if (hasElaborateAssign!T)
@@ -1873,20 +2011,24 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
 
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
-            emplaceRef!T(range.front, filler);
+            emplaceRef!T(range.front, value);
     }
     else
         // Doesn't matter whether fill is initialized or not
-        return fill(range, filler);
+        return fill(range, value);
 }
 
 /**
-Initializes all elements of a range with their $(D .init)
-value. Assumes that the range does not currently contain meaningful
-content.
+Initializes all elements of $(D range) with their $(D .init) value.
+Assumes that the elements of the range are uninitialized.
 
-initializeAll will operate on ranges that expose references to its
-members and have assignable elements, as well as on (mutable) strings.
+Params:
+        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
+                and has assignable elements
+
+See_Also:
+        $(LREF fill)
+        $(LREF uninitializeFill)
 
 Example:
 ----
@@ -2017,16 +2159,24 @@ unittest
 /**
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
-Implements the homonym function present in various programming
-languages of functional flavor. The call $(D filter!(predicate)(range))
-returns a new range only containing elements $(D x) in $(D range) for
-which $(D predicate(x)) is $(D true).
+Implements the higher order _filter function.
+
+Params:
+    predicate = Function to apply to each element of range
+    range = Input range of elements
+
+Returns:
+    $(D filter!(predicate)(range)) returns a new range containing only elements $(D x) in $(D range) for
+    which $(D predicate(x)) returns $(D true).
+
+See_Also:
+    $(WEB en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
  */
-template filter(alias pred) if (is(typeof(unaryFun!pred)))
+template filter(alias predicate) if (is(typeof(unaryFun!predicate)))
 {
-    auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
+    auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        return FilterResult!(unaryFun!pred, Range)(rs);
+        return FilterResult!(unaryFun!predicate, Range)(range);
     }
 }
 
@@ -2206,6 +2356,9 @@ private struct FilterResult(alias pred, Range)
  * that the filtered range can be spanned from both directions. Also,
  * $(XREF range, retro) can be applied against the filtered range.
  *
+ * Params:
+ *     predicate = Function to apply to each element of range
+ *     r = Bidirectional range of elements
  */
 template filterBidirectional(alias pred)
 {
@@ -2280,8 +2433,15 @@ private struct FilterBidiResult(alias pred, Range)
 
 // move
 /**
-Moves $(D source) into $(D target) via a destructive
-copy.
+Moves $(D source) into $(D target) via a destructive copy.
+
+Params:
+    source = Data to copy. If a destructor or postblit is defined, it is reset
+        to its $(D .init) value after it is moved into target.  Note that data
+        with internal pointers that point to itself cannot be moved, and will
+        trigger an assertion failure.
+    target = Where to copy into. The destructor, if any, is invoked before the
+        copy is performed.
 */
 void move(T)(ref T source, ref T target)
 {
@@ -2543,12 +2703,20 @@ unittest// Issue 8057
 // moveAll
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
-tgt) in lockstep in increasing order, calls $(D move(a, b)). Returns
-the leftover portion of $(D tgt). Throws an exception if there is not
-enough room in $(D tgt) to accommodate all of $(D src).
+tgt) in lockstep in increasing order, calls $(D move(a, b)).
 
 Preconditions:
-$(D walkLength(src) <= walkLength(tgt))
+$(D walkLength(src) <= walkLength(tgt)).
+An exception will be thrown if this condition does not hold, i.e., there is not
+enough room in $(D tgt) to accommodate all of $(D src).
+
+Params:
+    src = An $(XREF2 range, isInputRange, input range) with movable elements.
+    tgt = An $(XREF2 range, isInputRange, input range) with elements that
+        elements from $(D src) can be moved into.
+
+Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
+been moved.
  */
 Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
@@ -2591,8 +2759,15 @@ unittest
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
 tgt) in lockstep in increasing order, calls $(D move(a, b)). Stops
-when either $(D src) or $(D tgt) have been exhausted. Returns the
-leftover portions of the two ranges.
+when either $(D src) or $(D tgt) have been exhausted.
+
+Params:
+    src = An $(XREF2 range, isInputRange, input range) with movable elements.
+    tgt = An $(XREF2 range, isInputRange, input range) with elements that
+        elements from $(D src) can be moved into.
+
+Returns: The leftover portions of the two ranges after one or the other of the
+ranges have been exhausted.
  */
 Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
@@ -2629,8 +2804,12 @@ If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
 
 $(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
 its fields must also all be (recursively) mutable.
+
+Params:
+    lhs = Data to be swapped with $(D rhs).
+    rhs = Data to be swapped with $(D lhs).
 */
-void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
+void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow @nogc
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 {
     static if (hasAliasing!T) if (!__ctfe)
@@ -2816,6 +2995,25 @@ unittest // 9975
     assertThrown!Error(swap(p, pp));
 }
 
+unittest
+{
+    static struct A
+    {
+        int* x;
+        this(this) { x = new int; }
+    }
+    A a1, a2;
+    swap(a1, a2);
+
+    static struct B
+    {
+        int* x;
+        void opAssign(B) { x = new int; }
+    }
+    B b1, b2;
+    swap(b1, b2);
+}
+
 void swapFront(R1, R2)(R1 r1, R2 r2)
     if (isInputRange!R1 && isInputRange!R2)
 {
@@ -2929,9 +3127,9 @@ template forward(args...)
 
 // splitter
 /**
-Splits a range using an element as a separator. This can be used with
-any narrow string type or sliceable range type, but is most popular
-with string types.
+Lazily splits a range using an element as a separator. This can be used with
+any narrow string type or sliceable range type, but is most popular with string
+types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
@@ -2942,14 +3140,32 @@ element. If a range with one separator is given, the result is a range
 with two empty elements.
 
 If splitting a string on whitespace and token compression is desired,
-consider using $(D splitter) without specifying a separator (see overload
+consider using $(D splitter) without specifying a separator (see fourth overload
 below).
 
-See also $(XREF regex, splitter) for a version that splits using a regular
+Params:
+    pred = The predicate for comparing each element with the separator,
+        defaulting to $(D "a == b").
+    r = The $(XREF2 range, isInputRange, input range) to be split. Must support
+        slicing and $(D .length).
+    s = The element to be treated as the separator between range segments to be
+        split.
+
+Constraints:
+    The predicate $(D pred) needs to accept an element of $(D r) and the
+    separator $(D s).
+
+Returns:
+    An input range of the subranges of elements between separators. If $(D r)
+    is a forward range or bidirectional range, the returned range will be
+    likewise.
+
+See_Also:
+ $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
 */
-auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(ElementType!Range.init == Separator.init))
+auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
+if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
     import std.conv : unsigned;
@@ -2979,7 +3195,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             static IndexType lastIndexOf(Range haystack, Separator needle)
             {
                 import std.range : retro;
-                auto r = haystack.retro().find(needle);
+                auto r = haystack.retro().find!pred(needle);
                 return r.retro().length - 1;
             }
         }
@@ -3017,7 +3233,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             assert(!empty);
             if (_frontLength == _unComputed)
             {
-                auto r = _input.find(_separator);
+                auto r = _input.find!pred(_separator);
                 _frontLength = _input.length - r.length;
             }
             return _input[0 .. _frontLength];
@@ -3114,6 +3330,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
     a = [ 0, 1 ];
     assert(equal(splitter(a, 0), [ [], [1] ]));
+    w = [ [0], [1], [2] ];
+    assert(equal(splitter!"a.front == b"(w, 1), [ [[0]], [[2]] ]));
 }
 
 @safe unittest
@@ -3193,19 +3411,35 @@ if (is(typeof(ElementType!Range.init == Separator.init))
 }
 
 /**
-Splits a range using another range as a separator. This can be used
-with any narrow string type or sliceable range type, but is most popular
-with string types.
+Similar to the previous overload of $(D splitter), except this one uses another
+range as a separator. This can be used with any narrow string type or sliceable
+range type, but is most popular with string types.
 
 Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
-See also $(XREF regex, splitter) for a version that splits using a regular
+Params:
+    pred = The predicate for comparing each element with the separator,
+        defaulting to $(D "a == b").
+    r = The $(XREF2 range, isInputRange, input range) to be split.
+    s = The $(XREF2 range, isForwardRange, forward range) to be treated as the
+        separator between segments of $(D r) to be split.
+
+Constraints:
+    The predicate $(D pred) needs to accept an element of $(D r) and an
+    element of $(D s).
+
+Returns:
+    An input range of the subranges of elements between separators. If $(D r)
+    is a forward range or bidirectional range, the returned range will be
+    likewise.
+
+See_Also: $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
  */
-auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(Range.init.front == Separator.init.front) : bool)
+auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
+if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         && (hasSlicing!Range || isNarrowString!Range)
         && isForwardRange!Separator
         && (hasLength!Separator || isNarrowString!Separator))
@@ -3231,7 +3465,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             assert(!_input.empty);
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
-                           _input.length - find(_input, _separator).length;
+                           _input.length - find!pred(_input, _separator).length;
             static if (isBidirectionalRange!Range)
                 if (_frontLength == _input.length) _backLength = _frontLength;
         }
@@ -3246,7 +3480,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             {
                 import std.range : retro;
                 _backLength = _input.length -
-                    find(retro(_input), retro(_separator)).source.length;
+                    find!pred(retro(_input), retro(_separator)).source.length;
             }
         }
 
@@ -3359,6 +3593,28 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
     return Result(r, s);
 }
 
+///
+@safe unittest
+{
+    assert(equal(splitter("hello  world", "  "), [ "hello", "world" ]));
+    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    int[][] w = [ [1, 2], [3, 0, 4, 5, 0] ];
+    assert(equal(splitter(a, [0, 0]), w));
+    a = [ 0, 0 ];
+    assert(equal(splitter(a, [0, 0]), [ (int[]).init, (int[]).init ]));
+    a = [ 0, 0, 1 ];
+    assert(equal(splitter(a, [0, 0]), [ [], [1] ]));
+}
+
+@safe unittest
+{
+    // There seems to be a difficulty in startsWith, so this needs further
+    // attention.
+    //auto m = [ ["k":0], ["k":1], ["k":1], ["k":2] ];
+    //bool pred(int[string] a, int b) { return a["k"] == b; }
+    //assert(equal(splitter!pred(m, [1, 1]), [ [[0]], [[2]] ]));
+}
+
 @safe unittest
 {
     import std.conv : text;
@@ -3403,6 +3659,19 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
 
 @safe unittest
 {
+    int[][] a = [ [1], [2], [0], [3], [0], [4], [5], [0] ];
+    int[][][] w = [ [[1], [2]], [[3]], [[4], [5]], [] ];
+    uint i;
+    foreach (e; splitter!"a.front == 0"(a, 0))
+    {
+        assert(i < w.length);
+        assert(e == w[i++]);
+    }
+    assert(i == w.length);
+}
+
+@safe unittest
+{
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s6 = ",";
@@ -3440,11 +3709,49 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
     assert(words.equal([ "i", "am", "pointing" ]));
 }
 
-///ditto
+/**
+
+Similar to the previous overload of $(D splitter), except this one does not use a separator.
+Instead, the predicate is an unary function on the input range's element type.
+
+Two adjacent separators are considered to surround an empty element in
+the split range. Use $(D filter!(a => !a.empty)) on the result to compress
+empty elements.
+
+Params:
+    isTerminator = The predicate for deciding where to split the range.
+    r = The $(XREF2 range, isInputRange, input range) to be split.
+
+Constraints:
+    The predicate $(D isTerminator) needs to accept an element of $(D r).
+
+Returns:
+    An input range of the subranges of elements between separators. If $(D r)
+    is a forward range or bidirectional range, the returned range will be
+    likewise.
+
+See_Also: $(XREF regex, _splitter) for a version that splits using a regular
+expression defined separator.
+ */
 auto splitter(alias isTerminator, Range)(Range input)
 if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 {
     return SplitterResult!(unaryFun!isTerminator, Range)(input);
+}
+
+///
+@safe unittest
+{
+    assert(equal(splitter!"a == ' '"("hello  world"), [ "hello", "", "world" ]));
+    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
+    assert(equal(splitter!"a == 0"(a), w));
+    a = [ 0 ];
+    assert(equal(splitter!"a == 0"(a), [ (int[]).init, (int[]).init ]));
+    a = [ 0, 1 ];
+    assert(equal(splitter!"a == 0"(a), [ [], [1] ]));
+    w = [ [0], [1], [2] ];
+    assert(equal(splitter!"a.front == 1"(w), [ [[0]], [[2]] ]));
 }
 
 private struct SplitterResult(alias isTerminator, Range)
@@ -3644,6 +3951,13 @@ Lazily splits the string $(D s) into words, using whitespace as the delimiter.
 This function is string specific and, contrary to
 $(D splitter!(std.uni.isWhite)), runs of whitespace will be merged together
 (no empty tokens will be produced).
+
+Params:
+    s = The string to be split.
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) of slices of the original
+    string split by whitespace.
  +/
 auto splitter(C)(C[] s)
 if (isSomeChar!C)
@@ -3820,6 +4134,17 @@ if (isSomeChar!C)
 Lazily joins a range of ranges with a separator. The separator itself
 is a range. If you do not provide a separator, then the ranges are
 joined directly without anything in between them.
+
+Params:
+    r = An $(XREF2 range, isInputRange, input range) of input ranges to be
+        joined.
+    sep = A $(XREF2 range, isForwardRange, forward range) of element(s) to
+        serve as separators in the joined range.
+
+Returns:
+An input range of elements in the joined range. This will be a forward range if
+both outer and inner ranges of $(D RoR) are forward ranges; otherwise it will
+be only an input range.
 
 See_also:
 $(XREF range,chain), which chains a sequence of ranges with compatible elements
@@ -4334,11 +4659,20 @@ unittest
 
 // uniq
 /**
-Iterates unique consecutive elements of the given range (functionality
+Lazily iterates unique consecutive elements of the given range (functionality
 akin to the $(WEB wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
 $(D pred), by default $(D "a == b"). If the given range is
 bidirectional, $(D uniq) also yields a bidirectional range.
+
+Params:
+    pred = Predicate for determining equivalence between range elements.
+    r = An $(XREF2 range, isInputRange, input range) of elements to filter.
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) of consecutively unique
+    elements in the original range. If $(D r) is also a forward range or
+    bidirectional range, the returned range will be likewise.
 */
 auto uniq(alias pred = "a == b", Range)(Range r)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
@@ -4355,6 +4689,11 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     // Filter duplicates in-place using copy
     arr.length -= arr.uniq().copy(arr).length;
     assert(arr == [ 1, 2, 3, 4, 5 ]);
+
+    // Note that uniqueness is only determined consecutively; duplicated
+    // elements separated by an intervening different element will not be
+    // eliminated:
+    assert(equal(uniq([ 1, 1, 2, 1, 1, 3, 1]), [1, 2, 1, 3, 1]));
 }
 
 private struct UniqResult(alias pred, Range)
@@ -4442,21 +4781,27 @@ private struct UniqResult(alias pred, Range)
 }
 
 // group
-/**
-Similarly to $(D uniq), $(D group) iterates unique consecutive
-elements of the given range. The element type is $(D
-Tuple!(ElementType!R, uint)) because it includes the count of
-equivalent elements seen. Equivalence of elements is assessed by using
-the predicate $(D pred), by default $(D "a == b").
-
-$(D Group) is an input range if $(D R) is an input range, and a
-forward range in all other cases.
-*/
 struct Group(alias pred, R) if (isInputRange!R)
 {
-    private R _input;
-    private Tuple!(ElementType!R, uint) _current;
     private alias comp = binaryFun!pred;
+
+    private alias E = ElementType!R;
+    static if ((is(E == class) || is(E == interface)) &&
+               (is(E == const) || is(E == immutable)))
+    {
+        private alias MutableE = Rebindable!E;
+    }
+    else static if (is(E : Unqual!E))
+    {
+        private alias MutableE = Unqual!E;
+    }
+    else
+    {
+        private alias MutableE = E;
+    }
+
+    private R _input;
+    private Tuple!(MutableE, uint) _current;
 
     this(R input)
     {
@@ -4494,7 +4839,7 @@ struct Group(alias pred, R) if (isInputRange!R)
         }
     }
 
-    @property ref Tuple!(ElementType!R, uint) front()
+    @property auto ref front()
     {
         assert(!empty);
         return _current;
@@ -4510,7 +4855,25 @@ struct Group(alias pred, R) if (isInputRange!R)
     }
 }
 
-/// Ditto
+/**
+Groups consecutively equivalent elements into a single tuple of the element and
+the number of its repetitions.
+
+Similarly to $(D uniq), $(D group) produces a range that iterates over unique
+consecutive elements of the given range. Each element of this range is a tuple
+of the element and the number of times it is repeated in the original range.
+Equivalence of elements is assessed by using the predicate $(D pred), which
+defaults to $(D "a == b").
+
+Params:
+    pred = Binary predicate for determining equivalence of two elements.
+    r = The $(XREF2 range, isInputRange, input range) to iterate over.
+
+Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
+representing each consecutively unique element and its respective number of
+occurrences in that run.  This will be an input range if $(D R) is an input
+range, and a forward range in all other cases.
+*/
 Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 {
     return typeof(return)(r);
@@ -4547,6 +4910,31 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
     }
 }
 
+unittest
+{
+    // Issue 13857
+    immutable(int)[] a1 = [1,1,2,2,2,3,4,4,5,6,6,7,8,9,9,9];
+    auto g1 = group(a1);
+
+    // Issue 13162
+    immutable(ubyte)[] a2 = [1, 1, 1, 0, 0, 0];
+    auto g2 = a2.group;
+
+    // Issue 10104
+    const a3 = [1, 1, 2, 2];
+    auto g3 = a3.group;
+
+    interface I {}
+    class C : I {}
+    const C[] a4 = [new const C()];
+    auto g4 = a4.group!"a is b";
+
+    immutable I[] a5 = [new immutable C()];
+    auto g5 = a5.group!"a is b";
+
+    const(int[][]) a6 = [[1], [1]];
+    auto g6 = a6.group;
+}
 
 // Used by groupBy.
 /**
@@ -4666,7 +5054,22 @@ private struct GroupByImpl(alias pred, EquivRelation equivRelation, Range)
             assert(!equivRelation || pred(r.front, r.front),
                    "predicate " ~ pred.stringof ~ " is claimed to be "~
                    "equivalence relation yet isn't reflexive");
-            savePrev();
+
+            // _prev's type may be a nested struct, so must be initialized
+            // directly in the constructor (cannot call savePred()).
+            static if (isForwardRange!Range)
+            {
+                _prev = r.save;
+            }
+            else
+            {
+                _prev = r.front;
+            }
+        }
+        else
+        {
+            // We won't use _prev, but must be initialized.
+            _prev = typeof(_prev).init;
         }
     }
     @property bool empty() { return r.empty; }
@@ -4944,6 +5347,11 @@ unittest
     ]));
 }
 
+// Issue 13805
+unittest
+{
+    [""].map!((s) => s).groupBy!((x, y) => true);
+}
 
 // overwriteAdjacent
 /*
@@ -5026,7 +5434,12 @@ find(retro(haystack), needle)). See $(XREF range, retro).
 
 Params:
 
-haystack = The range searched in.
+pred = The predicate for comparing each element with the needle, defaulting to
+$(D "a == b").
+The negated predicate $(D "a != b") can be used to search instead for the first
+element $(I not) matching the needle.
+
+haystack = The $(XREF2 range, isInputRange, input range) searched in.
 
 needle = The element searched for.
 
@@ -5037,9 +5450,9 @@ $(D isInputRange!InputRange && is(typeof(binaryFun!pred(haystack.front, needle)
 
 Returns:
 
-$(D haystack) advanced such that $(D binaryFun!pred(haystack.front,
-needle)) is $(D true) (if no such position exists, returns $(D
-haystack) after exhaustion).
+$(D haystack) advanced such that the front element is the one searched for;
+that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
+such position exists, returns an empty $(D haystack).
 
 See_Also:
      $(WEB sgi.com/tech/stl/_find.html, STL's _find)
@@ -5306,6 +5719,19 @@ To _find the last element of a bidirectional $(D haystack) satisfying
 $(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
 range, retro).
 
+Params:
+
+pred = The predicate for determining if a given element is the one being
+searched for.
+
+haystack = The $(XREF2 range, isInputRange, input range) to search in.
+
+Returns:
+
+$(D haystack) advanced such that the front element is the one searched for;
+that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
+such position exists, returns an empty $(D haystack).
+
 See_Also:
      $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
 */
@@ -5375,22 +5801,21 @@ if (isInputRange!InputRange)
 }
 
 /**
-Finds a forward range in another. Elements are compared for
-equality. Performs $(BIGOH walkLength(haystack) * walkLength(needle))
-comparisons in the worst case. Specializations taking advantage of
-bidirectional or random access (where present) may accelerate search
-depending on the statistics of the two ranges' content.
+Finds the first occurrence of a forward range in another forward range.
+
+Performs $(BIGOH walkLength(haystack) * walkLength(needle)) comparisons in the
+worst case.  There are specializations that improve performance by taking
+advantage of bidirectional or random access in the given ranges (where
+possible), depending on the statistics of the two ranges' content.
 
 Params:
 
-haystack = The range searched in.
+pred = The predicate to use for comparing respective elements from the haystack
+and the needle. Defaults to simple equality $(D "a == b").
 
-needle = The range searched for.
+haystack = The $(XREF2 range, isForwardRange, forward range) searched in.
 
-Constraints:
-
-$(D isForwardRange!R1 && isForwardRange!R2 &&
-is(typeof(binaryFun!pred(haystack.front, needle.front) : bool)))
+needle = The $(XREF2 range, isForwardRange, forward range) searched for.
 
 Returns:
 
@@ -5708,6 +6133,8 @@ compared for equality.
 
 Params:
 
+pred = The predicate to use for comparing elements.
+
 haystack = The target of the search. Must be an input range.
 If any of $(D needles) is a range with elements comparable to
 elements in $(D haystack), then $(D haystack) must be a forward range
@@ -5858,6 +6285,11 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
  * Params:
  * pred = Predicate used to compare elements.
  * needle = A random-access range with length and slicing.
+ *
+ * Returns:
+ * An instance of $(D BoyerMooreFinder) that can be used with $(D find()) to
+ * invoke the Boyer-Moore matching algorithm for finding of $(D needle) in a
+ * given haystack.
  */
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
 (alias pred = "a == b", Range)
@@ -6011,10 +6443,16 @@ Range1 find(Range1, alias pred, Range2)(
 
 // findSkip
 /**
- * If $(D needle) occurs in $(D haystack), positions $(D haystack)
- * right after the first occurrence of $(D needle) and returns $(D
- * true). Otherwise, leaves $(D haystack) as is and returns $(D
- * false).
+ * Finds $(D needle) in $(D haystack) and positions $(D haystack)
+ * right after the first occurrence of $(D needle).
+ *
+ * Params:
+ *  haystack = The $(XREF2 range, isForwardRange, forward range) to search in.
+ *  needle = The $(XREF2 range, isForwardRange, forward range) to search for.
+ *
+ * Returns: $(D true) if the needle was found, in which case $(D haystack) is
+ * positioned after the end of the first occurrence of $(D needle); otherwise
+ * $(D false), leaving $(D haystack) untouched.
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -6030,10 +6468,16 @@ if (isForwardRange!R1 && isForwardRange!R2
 ///
 @safe unittest
 {
+    // Needle is found; s is replaced by the substring following the first
+    // occurrence of the needle.
     string s = "abcdef";
     assert(findSkip(s, "cd") && s == "ef");
+
+    // Needle is not found; s is left untouched.
     s = "abcdef";
     assert(!findSkip(s, "cxd") && s == "abcdef");
+
+    // If the needle occurs at the end of the range, the range is left empty.
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
 }
@@ -6268,13 +6712,21 @@ if (isForwardRange!R1 && isForwardRange!R2)
 }
 
 /++
-    Returns the number of elements which must be popped from the front of
+    Counts elements in the given $(XREF2 range, isForwardRange, forward range)
+    until the given predicate is true for one of the given $(D needles).
+
+    Params:
+        pred = The predicate for determining when to stop counting.
+        haystack = The $(XREF2 range, isInputRange, input range) to be counted.
+        needles = Either a single element, or a $(XREF2 range, isForwardRange,
+            forward range) of elements, to be evaluated in turn against each
+            element in $(D haystack) under the given predicate.
+
+    Returns: The number of elements which must be popped from the front of
     $(D haystack) before reaching an element for which
     $(D startsWith!pred(haystack, needles)) is $(D true). If
     $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
     $(D haystack), then $(D -1) is returned.
-
-    $(D needles) may be either an element or a range.
   +/
 ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
     if (isForwardRange!R
@@ -6422,7 +6874,14 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 }
 
 /++
-    Returns the number of elements which must be popped from $(D haystack)
+    Similar to the previous overload of $(D countUntil), except that this one
+    evaluates only the predicate $(D pred).
+
+    Params:
+        pred = Predicate to when to stop counting.
+        haystack = An $(XREF2 range, isInputRange, input range) of elements
+          to be counted.
+    Returns: The number of elements which must be popped from $(D haystack)
     before $(D pred(haystack.front)) is $(D true).
   +/
 ptrdiff_t countUntil(alias pred, R)(R haystack)
@@ -6517,10 +6976,6 @@ enum OpenRight
     yes /// Interval is open to the right (last element is not included)
 }
 
-/**
-Lazily iterates $(D range) until value $(D sentinel) is found, at
-which point it stops.
- */
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 {
     private Range _input;
@@ -6566,9 +7021,9 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     private bool predSatisfied()
     {
         static if (is(Sentinel == void))
-            return unaryFun!pred(_input.front);
+            return cast(bool) unaryFun!pred(_input.front);
         else
-            return startsWith!pred(_input, _sentinel);
+            return cast(bool) startsWith!pred(_input, _sentinel);
     }
 
     void popFront()
@@ -6611,7 +7066,24 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     }
 }
 
-/// Ditto
+/**
+Lazily iterates $(D range) _until the element $(D e) for which
+$(D pred(e, sentinel)) is true.
+
+Params:
+    pred = Predicate to determine when to stop.
+    range = The $(XREF2 range, isInputRange, input range) to iterate over.
+    sentinel = The element to stop at.
+    openRight = Determines whether the element for which the given predicate is
+        true should be included in the resulting range ($(D OpenRight.no)), or
+        not ($(D OpenRight.yes)).
+
+Returns:
+    An $(XREF2 range, isInputRange, input range) that iterates over the
+    original range's elements, but ends when the specified predicate becomes
+    true. If the original range is a $(XREF2 range, isForwardRange, forward
+    range) or higher, this range will be a forward range.
+ */
 Until!(pred, Range, Sentinel)
 until(alias pred = "a == b", Range, Sentinel)
 (Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
@@ -6666,14 +7138,40 @@ unittest // bugzilla 13171
     assert(equal(a, [0, 0, 3, 4]));
 }
 
+unittest // Issue 13124
+{
+    auto s = "hello how\nare you";
+    s.until!(c => c.among!('\n', '\r'));
+}
+
 /**
-If the range $(D doesThisStart) starts with $(I any) of the $(D
-withOneOfThese) ranges or elements, returns 1 if it starts with $(D
-withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
-on. If none match, returns 0. In the case where $(D doesThisStart) starts
-with multiple of the ranges or elements in $(D withOneOfThese), then the
-shortest one matches (if there are two which match which are of the same
-length (e.g. $(D "a") and $(D 'a')), then the left-most of them in the argument
+Checks whether the given $(XREF2 range, isInputRange, input range) starts with
+(one of) the given needle(s).
+
+Params:
+
+    pred = Predicate to use in comparing the elements of the haystack and the
+        needle(s).
+
+    doesThisStart = The input range to check.
+
+    withOneOfThese = The needles against which the range is to be checked,
+        which may be individual elements or input ranges of elements.
+
+    withThis = The single needle to check, which may be either a single element
+        or an input range of elements.
+
+Returns:
+
+0 if the needle(s) do not occur at the beginning of the given range;
+otherwise the position of the matching needle, that is, 1 if the range starts
+with $(D withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
+on.
+
+In the case where $(D doesThisStart) starts with multiple of the ranges or
+elements in $(D withOneOfThese), then the shortest one matches (if there are
+two which match which are of the same length (e.g. $(D "a") and $(D 'a')), then
+the left-most of them in the argument
 list matches).
  */
 uint startsWith(alias pred = "a == b", Range, Needles...)(Range doesThisStart, Needles withOneOfThese)
@@ -6937,12 +7435,25 @@ if (isInputRange!R &&
 }
 
 /**
-If $(D startsWith(r1, r2)), consume the corresponding elements off $(D
-r1) and return $(D true). Otherwise, leave $(D r1) unchanged and
-return $(D false).
+Skip over the initial portion of the first given range that matches the second
+range, or do nothing if there is no match.
+
+Params:
+    pred = The predicate that determines whether elements from each respective
+        range match. Defaults to equality $(D "a == b").
+    r1 = The $(XREF2 range, isForwardRange, forward range) to move forward.
+    r2 = The $(XREF2 range, isInputRange, input range) representing the initial
+         segment of $(D r1) to skip over.
+
+Returns:
+true if the initial segment of $(D r1) matches $(D r2), and $(D r1) has been
+advanced to the point past this segment; otherwise false, and $(D r1) is left
+in its original position.
  */
 bool skipOver(alias pred = "a == b", R1, R2)(ref R1 r1, R2 r2)
-if (is(typeof(binaryFun!pred(r1.front, r2.front))))
+    if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
+        isForwardRange!R1 &&
+        isInputRange!R2)
 {
     auto r = r1.save;
     while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
@@ -6972,12 +7483,24 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))))
 }
 
 /**
-Checks whether a range starts with an element, and if so, consume that
-element off $(D r) and return $(D true). Otherwise, leave $(D r)
-unchanged and return $(D false).
+Skip over the first element of the given range if it matches the given element,
+otherwise do nothing.
+
+Params:
+    pred = The predicate that determines whether an element from the range
+        matches the given element.
+
+    r = The $(XREF range, isInputRange, input range) to skip over.
+
+    e = The element to match.
+
+Returns:
+true if the first element matches the given element according to the given
+predicate, and the range has been advanced by one element; otherwise false, and
+the range is left untouched.
  */
 bool skipOver(alias pred = "a == b", R, E)(ref R r, E e)
-if (is(typeof(binaryFun!pred(r.front, e))))
+    if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
 {
     if (r.empty || !binaryFun!pred(r.front, e))
         return false;
@@ -7034,7 +7557,26 @@ void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 }
 
 /**
+Checks if the given range ends with (one of) the given needle(s).
 The reciprocal of $(D startsWith).
+
+Params:
+    pred = The predicate to use for comparing elements between the range and
+        the needle(s).
+
+    doesThisEnd = The $(XREF2 range, isBidirectionalRange, bidirectional range)
+        to check.
+
+    withOneOfThese = The needles to check against, which may be single
+        elements, or bidirectional ranges of elements.
+
+    withThis = The single element to check.
+
+Returns:
+0 if the needle(s) do not occur at the end of the given range;
+otherwise the position of the matching needle, that is, 1 if the range ends
+with $(D withOneOfThese[0]), 2 if it ends with $(D withOneOfThese[1]), and so
+on.
  */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
 if (isBidirectionalRange!Range && Needles.length > 1 &&
@@ -7242,10 +7784,19 @@ if (isBidirectionalRange!R &&
 /**
 Returns the common prefix of two ranges.
 
-If the first argument is a string, then the result is a slice of $(D r1) which
-contains the characters that both ranges start with. For all other types, the
-type of the result is the same as the result of $(D takeExactly(r1, n)), where
-$(D n) is the number of elements that both ranges start with.
+Params:
+    pred = The predicate to use in comparing elements for commonality. Defaults
+        to equality $(D "a == b").
+
+    r1 = A $(XREF2 range, isForwardRange, forward range) of elements.
+
+    r2 = An $(XREF2 range, isInputRange, input range) of elements.
+
+Returns:
+A slice of $(D r1) which contains the characters that both ranges start with,
+if the first argument is a string; otherwise, the same as the result of
+$(D takeExactly(r1, n)), where $(D n) is the number of elements in the common
+prefix of both ranges.
 
 See_Also:
     $(XREF range, takeExactly)
@@ -7288,6 +7839,7 @@ if (isForwardRange!R1 && isInputRange!R2 &&
     assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 }
 
+/// ditto
 auto commonPrefix(alias pred, R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isInputRange!R2 &&
     is(typeof(binaryFun!pred(r1.front, r2.front))))
@@ -7308,6 +7860,7 @@ if (isNarrowString!R1 && isInputRange!R2 &&
     return result[0 .. i];
 }
 
+/// ditto
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isInputRange!R2 && !isNarrowString!R2 &&
     is(typeof(r1.front == r2.front)))
@@ -7315,6 +7868,7 @@ if (isNarrowString!R1 && isInputRange!R2 && !isNarrowString!R2 &&
     return commonPrefix!"a == b"(r1, r2);
 }
 
+/// ditto
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isNarrowString!R2)
 {
@@ -7412,6 +7966,15 @@ Advances $(D r) until it finds the first two adjacent elements $(D a),
 $(D b) that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
 evaluations of $(D pred).
 
+Params:
+    pref = The predicate to satisfy.
+    r = A $(XREF2 range, isForwardRange, forward range) to search in.
+
+Returns:
+$(D r) advanced to the first occurrence of two adjacent elements that satisfy
+the given predicate. If there are no such two elements, returns $(D r) advanced
+until empty.
+
 See_Also:
      $(WEB sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
 */
@@ -7471,10 +8034,21 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
 
 // findAmong
 /**
-Advances $(D seq) by calling $(D seq.popFront) until either $(D
-find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes
-empty. Performs $(BIGOH seq.length * choices.length) evaluations of
-$(D pred).
+Searches the given range for an element that matches one of the given choices.
+
+Advances $(D seq) by calling $(D seq.popFront) until either
+$(D find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes empty.
+Performs $(BIGOH seq.length * choices.length) evaluations of $(D pred).
+
+Params:
+    pred = The predicate to use for determining a match.
+    seq = The $(XREF2 range, isInputRange, input range) to search.
+    choices = A $(XREF2 range, isForwardRange, forward range) of possible
+        choices.
+
+Returns:
+$(D seq) advanced to the first matching element, or until empty if there are no
+matching elements.
 
 See_Also:
     $(WEB sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
@@ -14426,13 +15000,12 @@ auto cartesianProduct(RR...)(RR ranges)
         }
         @property Result save()
         {
-            Result copy;
+            Result copy = this;
             foreach (i, r; ranges)
             {
                 copy.ranges[i] = r.save;
                 copy.current[i] = current[i].save;
             }
-            copy.empty = this.empty;
             return copy;
         }
     }
@@ -14550,6 +15123,13 @@ pure @safe nothrow @nogc unittest
     auto D = C.save;
     C.popFront();
     assert(D.front == front1);
+}
+
+// Issue 13935
+unittest
+{
+    auto seq = [1, 2].map!(x => x);
+    foreach (pair; cartesianProduct(seq, seq)) {}
 }
 
 /**

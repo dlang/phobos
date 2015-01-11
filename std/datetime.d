@@ -28852,6 +28852,8 @@ else version(Windows)
 
         static immutable(WindowsTimeZone) getTimeZone(string name) @trusted
         {
+            import std.utf : toUTF16;
+
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
             foreach (tzKeyName; baseKey.keyNames)

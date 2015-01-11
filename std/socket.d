@@ -1015,7 +1015,7 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options) @trusted
 
 private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addrinfo* hints) @system
 {
-	import std.array : appender;
+        import std.array : appender;
 
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
@@ -1660,6 +1660,23 @@ public:
                 return null;
             return host.name;
         }
+    }
+
+    /**
+     * Compares with another InternetAddress of same type for equality
+     * Returns: true if the InternetAddresses share the same address and
+     * port number.
+     * Examples:
+     * --------------
+     * InternetAddress addr1,addr2;
+     * if (addr1 == addr2) { }
+     * --------------
+     */
+    override bool opEquals(Object o) const
+    {
+        auto other = cast(InternetAddress)o;
+        return other && this.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr &&
+            this.sin.sin_port == other.sin.sin_port;
     }
 
     /**

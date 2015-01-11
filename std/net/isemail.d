@@ -1269,37 +1269,37 @@ struct EmailStatus
     }
 
     /// Indicates if the email address is valid or not.
-    @property bool valid ()
+    @property bool valid () const
     {
         return valid_;
     }
 
     /// The local part of the email address, that is, the part before the @ sign.
-    @property string localPart ()
+    @property string localPart () const
     {
         return localPart_;
     }
 
     /// The domain part of the email address, that is, the part after the @ sign.
-    @property string domainPart ()
+    @property string domainPart () const
     {
         return domainPart_;
     }
 
     /// The email status code
-    @property EmailStatusCode statusCode ()
+    @property EmailStatusCode statusCode () const
     {
         return statusCode_;
     }
 
     /// Returns a describing string of the status code
-    @property string status ()
+    @property string status () const
     {
         return statusCodeDescription(statusCode_);
     }
 
     /// Returns a textual representation of the email status
-    string toString ()
+    string toString () const
     {
         import std.format : format;
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid,

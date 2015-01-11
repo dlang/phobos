@@ -1741,7 +1741,6 @@ body
 Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
  */
-
 size_t encode(E, R)(dchar c, auto ref R range)
 if (isNativeOutputRange!(R, E))
 {
@@ -1839,6 +1838,26 @@ in
 body
 {
     EncoderInstance!(E).encode(c,dg);
+}
+
+/**
+Encodes the contents of $(D s) in units of type $(D Tgt), writing the result to an
+output range.
+
+Returns: The number of $(D Tgt) elements written.
+Params:
+Tgt = Element type of $(D range).
+s = Input array.
+range = Output range.
+ */
+size_t encode(Tgt, Src, R)(in Src[] s, R range)
+{
+    size_t result;
+    foreach (c; s)
+    {
+        result += encode!(Tgt)(c, range);
+    }
+    return result;
 }
 
 /**
@@ -1949,25 +1968,7 @@ unittest
 }
 
 /**
-Encodes $(D c) in units of type $(D E) and writes the result to the
-output range $(D R). Returns the number of $(D E)s written.
- */
-
-size_t encode(Tgt, Src, R)(in Src[] s, R range)
-{
-    size_t result;
-    foreach (c; s)
-    {
-        result += encode!(Tgt)(c, range);
-    }
-    return result;
-}
-
-/**
- Convert a string from one encoding to another. (See also to!() below).
-
- The input to this function MUST be validly encoded.
- This is enforced by the function's in-contract.
+ Convert a string from one encoding to another.
 
  Supersedes:
  This function supersedes std.utf.toUTF8(), std.utf.toUTF16() and
@@ -1977,8 +1978,12 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    s = the source string
-    r = the destination string
+    s = Source string. $(B Must) be validly encoded.
+        This is enforced by the function's in-contract.
+    r = Destination string
+
+ See_Also:
+    $(XREF conv, to)
 
  Examples:
  --------------------------------------------------------
@@ -2128,7 +2133,7 @@ class UnrecognizedEncodingException : EncodingException
 abstract class EncodingScheme
 {
     import std.uni : toLower;
-    
+
     /**
      * Registers a subclass of EncodingScheme.
      *
