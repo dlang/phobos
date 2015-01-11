@@ -2994,14 +2994,20 @@ element. If a range with one separator is given, the result is a range
 with two empty elements.
 
 If splitting a string on whitespace and token compression is desired,
-consider using $(D splitter) without specifying a separator (see third overload
+consider using $(D splitter) without specifying a separator (see fourth overload
 below).
 
 Params:
+    pred = The predicate for comparing each element with the separator,
+        defaulting to $(D "a == b").
     r = The $(XREF2 range, isInputRange, input range) to be split. Must support
         slicing and $(D .length).
     s = The element to be treated as the separator between range segments to be
-        split. Must be of the same type as the element type of $(D r).
+        split.
+
+Constraints:
+    The predicate $(D pred) needs to accept an element of $(D r) and the
+    separator $(D s).
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
@@ -3012,8 +3018,8 @@ See_Also:
  $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
 */
-auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(ElementType!Range.init == Separator.init))
+auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
+if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
     import std.conv : unsigned;
@@ -3043,7 +3049,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             static IndexType lastIndexOf(Range haystack, Separator needle)
             {
                 import std.range : retro;
-                auto r = haystack.retro().find(needle);
+                auto r = haystack.retro().find!pred(needle);
                 return r.retro().length - 1;
             }
         }
@@ -3081,7 +3087,7 @@ if (is(typeof(ElementType!Range.init == Separator.init))
             assert(!empty);
             if (_frontLength == _unComputed)
             {
-                auto r = _input.find(_separator);
+                auto r = _input.find!pred(_separator);
                 _frontLength = _input.length - r.length;
             }
             return _input[0 .. _frontLength];
@@ -3178,6 +3184,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
     a = [ 0, 1 ];
     assert(equal(splitter(a, 0), [ [], [1] ]));
+    w = [ [0], [1], [2] ];
+    assert(equal(splitter!"a.front == b"(w, 1), [ [[0]], [[2]] ]));
 }
 
 @safe unittest
@@ -3266,9 +3274,15 @@ the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
 Params:
+    pred = The predicate for comparing each element with the separator,
+        defaulting to $(D "a == b").
     r = The $(XREF2 range, isInputRange, input range) to be split.
     s = The $(XREF2 range, isForwardRange, forward range) to be treated as the
         separator between segments of $(D r) to be split.
+
+Constraints:
+    The predicate $(D pred) needs to accept an element of $(D r) and an
+    element of $(D s).
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
@@ -3278,8 +3292,8 @@ Returns:
 See_Also: $(XREF regex, _splitter) for a version that splits using a regular
 expression defined separator.
  */
-auto splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(Range.init.front == Separator.init.front) : bool)
+auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
+if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         && (hasSlicing!Range || isNarrowString!Range)
         && isForwardRange!Separator
         && (hasLength!Separator || isNarrowString!Separator))
@@ -3305,7 +3319,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             assert(!_input.empty);
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
-                           _input.length - find(_input, _separator).length;
+                           _input.length - find!pred(_input, _separator).length;
             static if (isBidirectionalRange!Range)
                 if (_frontLength == _input.length) _backLength = _frontLength;
         }
@@ -3320,7 +3334,7 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
             {
                 import std.range : retro;
                 _backLength = _input.length -
-                    find(retro(_input), retro(_separator)).source.length;
+                    find!pred(retro(_input), retro(_separator)).source.length;
             }
         }
 
@@ -3433,6 +3447,28 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
     return Result(r, s);
 }
 
+///
+@safe unittest
+{
+    assert(equal(splitter("hello  world", "  "), [ "hello", "world" ]));
+    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    int[][] w = [ [1, 2], [3, 0, 4, 5, 0] ];
+    assert(equal(splitter(a, [0, 0]), w));
+    a = [ 0, 0 ];
+    assert(equal(splitter(a, [0, 0]), [ (int[]).init, (int[]).init ]));
+    a = [ 0, 0, 1 ];
+    assert(equal(splitter(a, [0, 0]), [ [], [1] ]));
+}
+
+@safe unittest
+{
+    // There seems to be a difficulty in startsWith, so this needs further
+    // attention.
+    //auto m = [ ["k":0], ["k":1], ["k":1], ["k":2] ];
+    //bool pred(int[string] a, int b) { return a["k"] == b; }
+    //assert(equal(splitter!pred(m, [1, 1]), [ [[0]], [[2]] ]));
+}
+
 @safe unittest
 {
     import std.conv : text;
@@ -3477,6 +3513,19 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
 
 @safe unittest
 {
+    int[][] a = [ [1], [2], [0], [3], [0], [4], [5], [0] ];
+    int[][][] w = [ [[1], [2]], [[3]], [[4], [5]], [] ];
+    uint i;
+    foreach (e; splitter!"a.front == 0"(a, 0))
+    {
+        assert(i < w.length);
+        assert(e == w[i++]);
+    }
+    assert(i == w.length);
+}
+
+@safe unittest
+{
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s6 = ",";
@@ -3514,11 +3563,49 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
     assert(words.equal([ "i", "am", "pointing" ]));
 }
 
-///ditto
+/**
+
+Similar to the previous overload of $(D splitter), except this one does not use a separator.
+Instead, the predicate is an unary function on the input range's element type.
+
+Two adjacent separators are considered to surround an empty element in
+the split range. Use $(D filter!(a => !a.empty)) on the result to compress
+empty elements.
+
+Params:
+    isTerminator = The predicate for deciding where to split the range.
+    r = The $(XREF2 range, isInputRange, input range) to be split.
+
+Constraints:
+    The predicate $(D isTerminator) needs to accept an element of $(D r).
+
+Returns:
+    An input range of the subranges of elements between separators. If $(D r)
+    is a forward range or bidirectional range, the returned range will be
+    likewise.
+
+See_Also: $(XREF regex, _splitter) for a version that splits using a regular
+expression defined separator.
+ */
 auto splitter(alias isTerminator, Range)(Range input)
 if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 {
     return SplitterResult!(unaryFun!isTerminator, Range)(input);
+}
+
+///
+@safe unittest
+{
+    assert(equal(splitter!"a == ' '"("hello  world"), [ "hello", "", "world" ]));
+    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
+    assert(equal(splitter!"a == 0"(a), w));
+    a = [ 0 ];
+    assert(equal(splitter!"a == 0"(a), [ (int[]).init, (int[]).init ]));
+    a = [ 0, 1 ];
+    assert(equal(splitter!"a == 0"(a), [ [], [1] ]));
+    w = [ [0], [1], [2] ];
+    assert(equal(splitter!"a.front == 1"(w), [ [[0]], [[2]] ]));
 }
 
 private struct SplitterResult(alias isTerminator, Range)
