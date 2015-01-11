@@ -7,28 +7,44 @@ public import std.container.util;
 version(unittest) import std.stdio, std.container;
 
 /**
-Array type that uses a random access range as fixed storage location. 
-No memory is ever allocated. Throws if not enough space is left
-for an operation to succeed. */
+Array type that uses a $(XREF2 range, isRandomAccessRange, random access range)
+as fixed storage location. No memory is ever allocated. Throws if not enough
+space is left for an operation to succeed.
+*/
 struct FixedArray(Store)
     if(isRandomAccessRange!Store && hasLength!Store)
 {
 
 /**
-    Random access range that provides the same range primitives as Store.
+    $(XREF2 range, isRandomAccessRange, random access range) that provides
+    the same range primitives as $(D Store).
+
+    $(LREF opIndex) and $(LREF opSlice) return values of this type.
     */
     alias Range = Store;
 
+/**
+ * The type of the elements that can be stored in this
+ * FixedArray.
+ */
+    alias Element = ElementType!Range;
+
     private {
-        alias T = ElementType!Range;
         Store _store;
         size_t _length;
     }
 
 /**
-Constructor taking a random access range
+    Constructor taking a random access range of type $(D Store).
+
+    Params:
+        store = $(XREF2 range, isRandomAccessRange, random access range) used as a store
+        initialLength = the initial length of the FixedArray. If set two $(D 0),
+                        all elements in store will be overwritten and if set to
+                        $(D range.length) no elements can be inserted into the
+                        $(D FixedArray) until some are removed.
      */
-    this(Store s, size_t initialLength = size_t.max)
+    this(Store store, size_t initialLength = size_t.max)
     {
         _store = s;
         _length = min(initialLength, _store.length);
@@ -37,6 +53,9 @@ Constructor taking a random access range
 
 /**
 Comparison for equality.
+
+    Two FixedArrays are equal, if they have the same length and
+    corresponding elements are equal.
      */
     bool opEquals(FixedArray rhs)
     {
@@ -55,7 +74,7 @@ static if(is(typeof(_store.dup())))
 {
 /**
 Duplicates the container. The elements themselves are not transitively
-duplicated. The underlying store must support .dup as well.
+duplicated. The underlying store must support $(D .dup) as well.
 
 Complexity: $(BIGOH n).
      */
@@ -93,7 +112,8 @@ Complexity: $(BIGOH 1).
 
 /**
 Set length.
-
+Params:
+    nlength = the new length
 Precondition: $(D nlength <= capacity)
 
 Complexity: $(BIGOH 1).
@@ -115,7 +135,8 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Returns a range that iterates over elements of the container, in
+Returns a $(XREF range, isRandomAccessRange, random access range)
+of type $(LREF Range) that iterates over elements of the container, in
 forward order.
 
 Complexity: $(BIGOH 1)
@@ -127,9 +148,13 @@ Complexity: $(BIGOH 1)
 
 /**
 Returns a range that iterates over elements of the container from
-index $(D a) up to (excluding) index $(D b).
+index $(D i) up to (excluding) index $(D j).
 
-Precondition: $(D a <= b && b <= length)
+Params:
+    i = index of first element in result
+    j = index of first element not in result.
+
+Precondition: $(D i <= j && j <= length)
 
 Complexity: $(BIGOH 1)
      */
@@ -221,7 +246,7 @@ Complexity: $(BIGOH slice.length)
     }
 
 /**
-Forwards to $(D insertBack(stuff)).
+Forwards to $(LREF insertBack).
      */
     void opOpAssign(string op, Stuff)(Stuff stuff)
         if (op == "~")
@@ -273,9 +298,12 @@ Complexity: $(BIGOH log(n)).
     alias stableRemoveAny = removeAny;
 /**
 Inserts $(D value) to the front or back of the container. $(D stuff)
-can be a value convertible to $(D T) or a range of objects convertible
-to $(D T). The stable version behaves the same, but guarantees that
+can be a value convertible to $(D Element) or a $(XREF2 range, isInputRange, range) of objects convertible
+to $(D Element). The stable version behaves the same, but guarantees that
 ranges iterating over the container are never invalidated.
+
+Params:
+    stuff = Either a $(XREF2 range, isInputRange, range) of elements to insert or an value convertible to $(D Element).
 
 Returns: The number of elements inserted
 
@@ -283,7 +311,7 @@ Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
 elements in $(D stuff)
      */
     size_t insertBack(Stuff)(Stuff stuff)
-    if (isImplicitlyConvertible!(Stuff, T))
+    if (isImplicitlyConvertible!(Stuff, Element))
     {
         if(length == capacity)
             throw new RangeError("not enough room to insert stuff");
@@ -319,7 +347,7 @@ container are never invalidated.
 
 Precondition: $(D !empty)
 
-Complexity: $(BIGOH log(n)).
+Complexity: $(BIGOH log(1)).
      */
     void removeBack()
     {
@@ -341,6 +369,9 @@ if $(D howMany > n), all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
 never invalidated.
+
+Params:
+    howMany = How many elements should be removed.
 
 Returns: The number of elements removed
 
@@ -391,7 +422,8 @@ unittest
 }
 
 /**
- * Wrap store in a fixedArray and return it
+ * Wrap store, which must be a $(XREF2 range, isRandomAccessRange, random access range)
+ * in a fixedArray and return it
  */
 auto fixedArray(Store)(Store s, size_t initialLength = size_t.max)
 {

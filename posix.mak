@@ -201,7 +201,7 @@ STD_RANGE_MODULES = $(addprefix std/range/, package primitives interfaces)
 STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
 
 STD_CONTAINER_MODULES = $(addprefix std/container/, package array \
-		binaryheap dlist rbtree slist util)
+		binaryheap dlist rbtree slist util fixedarray sorted)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
