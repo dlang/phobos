@@ -1,6 +1,11 @@
 // Written in the D programming language.
 
 /**
+Implements algorithms oriented mainly towards processing of
+sequences. Sequences processed by these functions define range-based interfaces.
+See also $(LINK2 std_range.html, Reference on ranges) and 
+$(WEB ddili.org/ders/d.en/ranges.html, tutorial on ranges).
+
 <script type="text/javascript">inhibitQuickIndex = 1</script>
 
 $(BOOKTABLE ,
@@ -42,15 +47,6 @@ $(MYREF stripRight) $(MYREF swap) $(MYREF swapRanges) $(MYREF uninitializedFill)
 )
 $(TR $(TDNW Utility) $(TD $(MYREF forward) ))
 )
-
-Implements algorithms oriented mainly towards processing of
-sequences. Some functions are semantic equivalents or supersets of
-those found in the $(D $(LESS)_algorithm$(GREATER)) header in $(WEB
-sgi.com/tech/stl/, Alexander Stepanov's Standard Template Library) for
-C++. Sequences processed by these functions define range-based interfaces.
-
-$(LINK2 std_range.html, Reference on ranges)$(BR)
-$(LINK2 http://ddili.org/ders/d.en/ranges.html, Tutorial on ranges)
 
 Many functions in this module are parameterized with a function or a
 $(GLOSSARY predicate). The predicate may be passed either as a

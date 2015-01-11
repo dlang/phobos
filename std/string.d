@@ -1,6 +1,9 @@
 // Written in the D programming language.
 
 /**
+String handling functions. Note that many typical string functions are found in 
+$(D std.algorithm) because all D strings are bidirectional ranges.
+
 $(SCRIPT inhibitQuickIndex = 1;)
 
 $(BOOKTABLE ,
@@ -51,7 +54,6 @@ $(TR $(TDNW Miscellaneous)
 )
 )
 
-This module presents String handling functions.
 Objects of types $(D _string), $(D wstring), and $(D dstring) are value types
 and cannot be mutated element-by-element. For using mutation during building
 strings, use $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D xxxstring)

@@ -1,4 +1,6 @@
 /**
+Cyclic Redundancy Check (32-bit) implementation.
+
 <script type="text/javascript">inhibitQuickIndex = 1</script>
 
 $(BOOKTABLE ,
@@ -13,7 +15,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
 )
 )
 
- * Cyclic Redundancy Check (32-bit) implementation.
  *
  * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
  * differences between the template and the OOP API, see $(D std.digest.digest).

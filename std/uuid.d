@@ -1,4 +1,11 @@
 /**
+ * A $(LINK2 http://en.wikipedia.org/wiki/Universally_unique_identifier, UUID), or
+ * $(LINK2 http://en.wikipedia.org/wiki/Universally_unique_identifier, Universally unique identifier),
+ * is intended to uniquely identify information in a distributed environment
+ * without significant central coordination. It can be
+ * used to tag objects with very short lifetimes, or to reliably identify very
+ * persistent objects across a network.
+ *
 <script type="text/javascript">inhibitQuickIndex = 1</script>
 
 $(BOOKTABLE ,
@@ -19,13 +26,6 @@ $(MYREF oidNamespace) $(MYREF x500Namespace) )
 )
 )
 
- * A $(LINK2 http://en.wikipedia.org/wiki/Universally_unique_identifier, UUID), or
- * $(LINK2 http://en.wikipedia.org/wiki/Universally_unique_identifier, Universally unique identifier),
- * is intended to uniquely identify information in a distributed environment
- * without significant central coordination. It can be
- * used to tag objects with very short lifetimes, or to reliably identify very
- * persistent objects across a network.
- *
  * UUIDs have many applications. Some examples follow: Databases may use UUIDs to identify
  * rows or records in order to ensure that they are unique across different
  * databases, or for publication/subscription services. Network messages may be

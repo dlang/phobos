@@ -1,6 +1,10 @@
 // Written in the D programming language.
 
 /**
+ * Contains the elementary mathematical functions (powers, roots,
+ * and trigonometric functions), and low-level floating-point operations.
+ * Mathematical special functions are available in $(D std.mathspecial).
+ *
 $(SCRIPT inhibitQuickIndex = 1;)
 
 $(BOOKTABLE ,
@@ -50,13 +54,6 @@ $(TR $(TDNW Hardware Control) $(TD
 ))
 )
 
-
- * Elementary mathematical functions
- *
- * Contains the elementary mathematical functions (powers, roots,
- * and trigonometric functions), and low-level floating-point operations.
- * Mathematical special functions are available in std.mathspecial.
- *
  * The functionality closely follows the IEEE754-2008 standard for
  * floating-point arithmetic, including the use of camelCase names rather
  * than C99-style lower case names. All of these functions behave correctly

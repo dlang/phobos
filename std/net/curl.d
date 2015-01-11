@@ -1,6 +1,10 @@
 // Written in the D programming language.
 
 /**
+Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
+libcurl). The libcurl library must be installed on the system in order to use
+this module.
+
 <script type="text/javascript">inhibitQuickIndex = 1</script>
 
 $(BOOKTABLE ,
@@ -15,10 +19,6 @@ $(TR $(TDNW Low level) $(TD $(MYREF HTTP) $(MYREF FTP) $(MYREF
 SMTP) )
 )
 )
-
-Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
-libcurl). The libcurl library must be installed on the system in order to use
-this module.
 
 Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org

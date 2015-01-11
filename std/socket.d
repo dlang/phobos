@@ -34,6 +34,7 @@
  */
 
 /**
+ * Socket primitives.
  * Example: See $(SAMPLESRC listener.d) and $(SAMPLESRC htmlget.d)
  * License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),
