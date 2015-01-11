@@ -1,7 +1,93 @@
 // Written in the D programming language.
 
 /**
-Defines generic containers.
+This module defines generic containers.
+
+Construction:
+
+To implement the different containers both struct and D class based
+approaches have been used. However you do not have to care about this
+as long as you use $(XREF container_util, make) for construction.
+
+---
+import std.container;
+// Construct a red-black tree and an array containing the values 1, 2, 3 each.
+// RedBlackTree must be allocated using new
+RedBlackTree!int rbTree = new RedBlackTree!int(1, 2, 3);
+// But you cannot use new with Array
+Array!int array = Array!int(1, 2, 3);
+// make hides the differences
+RedBlackTree!int rbTree2 = make!(RedBlackTree!int)(1, 2, 3);
+Array!int array = make!(Array!int)(1, 2, 3);
+---
+
+Reference_semantics:
+
+All containers have reference semantics, which means that after
+assignment both variables refer to the same underlying data.
+
+To make a copy of a _container, use the primitive $(D c._dup).
+---
+import std.container, std.range;
+Array!int originalArray = make!(Array!int)(1, 2, 3);
+Array!int secondArray = originalArray;
+assert(equal(originalArray[], secondArray[]));
+
+// changing one instance changes the other one as well!
+originalArray[0] = 12;
+assert(secondArray[0] == 12);
+
+// secondArray now refers to a independent copy of originalArray
+secondArray = originalArray.dup;
+secondArray[0] = 1;
+// assert that originalArray has not been effected
+assert(originalArray[0] == 12);
+---
+
+$(B Attention:) If you use an uninitialized _container you will
+dereference a _null pointer, if the _container was implemented as a class.
+---
+import std.container;
+
+RedBlackTree!int rbTree;
+rbTree.insert(5); // null pointer dereference
+---
+
+If you use a struct-based _container it will work, because the struct
+intializes itself upon use. However up to this point the _container will not
+have an identity and assignment does not create two references to the same
+data.
+
+---
+import std.container;
+
+// create an uninitialized array
+Array!int array1;
+// array2 does _not_ refer to array1
+Array!int array2 = array1;
+array2.insertBack(42);
+// thus array1 will not be affected
+assert(array1.empty);
+
+// after initialization reference semantics work as expected
+array1 = array2;
+// now effects array2 as well
+array1.removeBack();
+assert(array2.empty);
+---
+It is therefore recommended to always construct containers using $(XREF container_util, make).
+
+This is in fact necessary if you want to put containers into another container.
+Thus to construct an $(D Array) of (e.g) ten other empty $(D Arrays), use
+the following that calls $(D make) ten times.
+
+---
+import std.range, std.container, std.algorithm;
+
+Array!(Array!int) arrayOfArrays = make!(Array!(Array!int))(
+    repeat(0, 10).map!(x => make!(Array!int))
+);
+---
 
 Submodules:
 
@@ -36,9 +122,41 @@ $(UL
     )
 )
 
+A_containers_primary_range:
+
+While some _container offer direct access to its elements e.g. via
+$(D opIndex), $(D c.front()) or $(D c.back()), you'll in generall access
+and modify _container's contents using its primary $(LINK2 std_range_package.html, range) type, which is aliased as $(D c.Range),
+e.g. the primary range type of $(D Array!int) is $(D Array!int.Range).
+
+If the documentation of a member function of a container takes a
+a parameter of type $(D Range), then it refers to the primary range type of
+this container. And you'll have to pass a range obtained from the same
+container you call the member function on.
+
+If you can pass any type of $(LINK2 std_range_package.html, range) to
+a member function, the documention usually refers to this (templated)
+parameter type as $(D Stuff).
+
 Container_primitives:
 
-The following table describes a common set of primitives that containers
+The containers do not form a class hierarchy, instead they implement a
+common set of primitives (see table below). These primitives each guarantee
+a specific worst case complexity and thus allow generic code to be written
+independently of the container implementation.
+
+For example the primitives $(D c.remove(r)) and $(D c.linearRemove(r)) both
+remove the sequence of elements in range $(D r) from the container $(D c).
+The primitive $(D c.remove(r)) guarantees $(BIGOH 1) complexity and
+$(D c.linearRemove(r)) relaxes this guarantee to $(BIGOH n) (where $(D n)
+is the length of the container $(D c)).
+
+Since a sequence of elements can be removed from a $(LINK2 std_container_dlist.html, doubly linked list)
+in constant time $(D DList) provides the primitive $(D c.remove(r))
+as well as $(D c.linearRemove(r)). On the other hand a
+$(LINK2 std_container_array.html, Array) only offers $(D c.linearRemove(r)).
+
+The following table describes the common set of primitives that containers
 implement.  A _container need not implement all primitives, but if a
 primitive is implemented, it must support the syntax described in the $(B
 syntax) column with the semantics described in the $(B description) column, and
