@@ -6875,9 +6875,9 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     private bool predSatisfied()
     {
         static if (is(Sentinel == void))
-            return unaryFun!pred(_input.front);
+            return cast(bool) unaryFun!pred(_input.front);
         else
-            return startsWith!pred(_input, _sentinel);
+            return cast(bool) startsWith!pred(_input, _sentinel);
     }
 
     void popFront()
@@ -6990,6 +6990,12 @@ unittest // bugzilla 13171
     foreach (ref e; a.until(3))
         e = 0;
     assert(equal(a, [0, 0, 3, 4]));
+}
+
+unittest // Issue 13124
+{
+    auto s = "hello how\nare you";
+    s.until!(c => c.among!('\n', '\r'));
 }
 
 /**
