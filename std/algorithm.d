@@ -3608,11 +3608,9 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 @safe unittest
 {
-    // There seems to be a difficulty in startsWith, so this needs further
-    // attention.
-    //auto m = [ ["k":0], ["k":1], ["k":1], ["k":2] ];
-    //bool pred(int[string] a, int b) { return a["k"] == b; }
-    //assert(equal(splitter!pred(m, [1, 1]), [ [[0]], [[2]] ]));
+    alias C = Tuple!(int, "x", int, "y");
+    auto a = [C(1,0), C(2,0), C(3,1), C(4,0)];
+    assert(equal(splitter!"a.x == b"(a, [2, 3]), [ [C(1,0)], [C(4,0)] ]));
 }
 
 @safe unittest
@@ -5854,6 +5852,17 @@ if (isForwardRange!R1 && isForwardRange!R2
     assert(find("hello, world", "World").empty);
     assert(find("hello, world", "wo") == "world");
     assert([1, 2, 3, 4].find(SList!int(2, 3)[]) == [2, 3, 4]);
+    alias C = Tuple!(int, "x", int, "y");
+    auto a = [C(1,0), C(2,0), C(3,1), C(4,0)];
+    assert(a.find!"a.x == b"([2, 3]) == [C(2,0), C(3,1), C(4,0)]);
+    assert(a[1 .. $].find!"a.x == b"([2, 3]) == [C(2,0), C(3,1), C(4,0)]);
+}
+
+@safe unittest
+{
+    import std.container : SList;
+    alias C = Tuple!(int, "x", int, "y");
+    assert([C(1,0), C(2,0), C(3,1), C(4,0)].find!"a.x == b"(SList!int(2, 3)[]) == [C(2,0), C(3,1), C(4,0)]);
 }
 
 @safe unittest
@@ -5889,7 +5898,7 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     size_t step = 1;
     auto needleBack = needle.back;
     needle.popBack();
-    for (auto i = needle.save; !i.empty && !binaryFun!pred(i.back, needleBack);
+    for (auto i = needle.save; !i.empty && i.back != needleBack;
          i.popBack(), ++step)
     {
     }
@@ -6034,7 +6043,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
 
     static if (hasLength!R1)
     {
-        static if (hasLength!R2)
+        static if (!hasLength!R2)
             size_t estimatedNeedleLength = 0;
         else
             immutable size_t estimatedNeedleLength = needle.length;
@@ -7280,7 +7289,7 @@ if (isInputRange!R1 &&
         //RA dual indexing mode
         foreach (j; 0 .. needle.length)
         {
-            if (!binaryFun!pred(needle[j], haystack[j]))
+            if (!binaryFun!pred(haystack[j], needle[j]))
                 // not found
                 return false;
         }
@@ -7339,6 +7348,9 @@ if (isInputRange!R &&
     assert(startsWith("abc", "x", "aa", "ab") == 3);
     assert(startsWith("abc", "x", "aaa", "sab") == 0);
     assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
+    alias C = Tuple!(int, "x", int, "y");
+    assert(startsWith!"a.x == b"([ C(1,1), C(1,2), C(2,2) ], [1, 1]));
+    assert(startsWith!"a.x == b"([ C(1,1), C(2,1), C(2,2) ], [1, 1], [1, 2], [1, 3]) == 2);
 }
 
 @safe unittest
