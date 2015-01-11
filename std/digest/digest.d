@@ -1,4 +1,7 @@
 /**
+ * This module describes the digest APIs used in Phobos. All digests follow these APIs.
+ * Additionally, this module contains useful helper methods which can be used with every _digest type.
+ *
 <script type="text/javascript">inhibitQuickIndex = 1</script>
 
 $(BOOKTABLE ,
@@ -17,9 +20,6 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
 )
 )
 
- * This module describes the digest APIs used in Phobos. All digests follow these APIs.
- * Additionally, this module contains useful helper methods which can be used with every _digest type.
- *
  * APIs:
  * There are two APIs for digests: The template API and the OOP API. The template API uses structs
  * and template helpers like $(LREF isDigest). The OOP API implements digests as classes inheriting

@@ -1,5 +1,9 @@
 // Written in the D programming language.
 /**
+ * Computes SHA1 and SHA2 hashes of arbitrary data. SHA hashes are 20 to 64 byte
+ * quantities (depending on the SHA algorithm) that are like a checksum or CRC,
+ * but are more robust.
+ *
 <script type="text/javascript">inhibitQuickIndex = 1</script>
 
 $(BOOKTABLE ,
@@ -14,10 +18,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
 )
 )
 
- * Computes SHA1 and SHA2 hashes of arbitrary data. SHA hashes are 20 to 64 byte
- * quantities (depending on the SHA algorithm) that are like a checksum or CRC,
- * but are more robust.
- *
  * SHA2 comes in several different versions, all supported by this module:
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *
