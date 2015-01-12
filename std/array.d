@@ -2,6 +2,59 @@
 /**
 Functions and types that manipulate built-in arrays and associative arrays.
 
+This module provides all kinds of functions to create, manipulate or convert arrays:
+
+$(BOOKTABLE ,
+    $(TR $(TD $(D $(LREF _array)))
+        $(TD Returns a copy of the input in a newly allocated dynamic _array.
+    ))
+    $(TR $(TD $(D $(LREF appender)))
+        $(TD Returns a new Appender initialized with a given _array.
+    ))
+    $(TR $(TD $(D $(LREF assocArray)))
+        $(TD Returns a newly allocated associative _array from a range of key/value tuples.
+    ))
+    $(TR $(TD $(D $(LREF byPair)))
+        $(TD Construct a range iterating over an associative _array by key/value tuples.
+    ))
+    $(TR $(TD $(D $(LREF insertInPlace)))
+        $(TD Inserts into an existing _array at a given position.
+    ))
+    $(TR $(TD $(D $(LREF join)))
+        $(TD Concatenates a range of ranges into one _array.
+    ))
+    $(TR $(TD $(D $(LREF minimallyInitializedArray)))
+        $(TD Returns a new _array of type $(D T).
+    ))
+    $(TR $(TD $(D $(LREF replace)))
+        $(TD Returns a new _array with all occurrences of a certain subrange replaced.
+    ))
+    $(TR $(TD $(D $(LREF replaceFirst)))
+        $(TD Returns a new _array with the first occurrence of a certain subrange replaced.
+    ))
+    $(TR $(TD $(D $(LREF replaceInPlace)))
+        $(TD Replaces all occurrences of a certain subrange and puts the result into a given _array.
+    ))
+    $(TR $(TD $(D $(LREF replaceInto)))
+        $(TD Replaces all occurrences of a certain subrange and puts the result into an output range.
+    ))
+    $(TR $(TD $(D $(LREF replaceLast)))
+        $(TD Returns a new _array with the last occurrence of a certain subrange replaced.
+    ))
+    $(TR $(TD $(D $(LREF replaceSlice)))
+        $(TD Returns a new _array with a given slice replaced.
+    ))
+    $(TR $(TD $(D $(LREF replicate)))
+        $(TD Creates a new _array out of several copies of an input _array or range.
+    ))
+    $(TR $(TD $(D $(LREF split)))
+        $(TD Eagerly split a range or string into an _array.
+    ))
+    $(TR $(TD $(D $(LREF uninitializedArray)))
+        $(TD Returns a new _array of type $(D T) without initializing its elements.
+    ))
+)
+
 Copyright: Copyright Andrei Alexandrescu 2008- and Jonathan M Davis 2011-.
 
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -21,7 +74,7 @@ import std.range.primitives;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
-Returns a newly-allocated dynamic array consisting of a copy of the
+Returns a newly allocated dynamic array consisting of a copy of the
 input range, static array, dynamic array, or class or struct with an
 $(D opApply) function $(D r).  Note that narrow strings are handled as
 a special case in an overload.
@@ -263,6 +316,7 @@ unittest
 }
 
 /**
+Returns a newly allocated associative _array from a range of key/value tuples.
 Params: r = An input range of tuples of keys and values.
 Returns: A newly allocated associative array out of elements of the input
 range, which must be a range of tuples (Key, Value).
@@ -1256,6 +1310,7 @@ ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
     return cast(RetType) r;
 }
 
+/// ditto
 ElementType!S[] replicate(S)(S s, size_t n)
 if (isInputRange!S && !isDynamicArray!S)
 {
@@ -1289,6 +1344,12 @@ Eagerly split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
 
 $(D @safe), $(D pure) and $(D CTFE)-able.
+
+See_Also:
+$(XREF algorithm, splitter) for a version that splits using any separator.
+
+$(XREF regex, splitter) for a version that splits using a regular
+expression defined separator.
 +/
 S[] split(S)(S s) @safe pure
 if (isSomeString!S)
@@ -1367,7 +1428,7 @@ unittest //safety, purity, ctfe ...
 }
 
 /++
-Alias for $(XREF algorithm, splitter).
+Alias for $(XREF algorithm, _splitter).
  +/
 deprecated("Please use std.algorithm.splitter instead.") alias splitter = std.algorithm.splitter;
 
