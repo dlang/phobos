@@ -3,7 +3,7 @@
 /**
 Implements algorithms oriented mainly towards processing of
 sequences. Sequences processed by these functions define range-based interfaces.
-See also $(LINK2 std_range.html, Reference on ranges) and 
+See also $(LINK2 std_range.html, Reference on ranges) and
 $(WEB ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
 <script type="text/javascript">inhibitQuickIndex = 1</script>
@@ -2352,7 +2352,7 @@ private struct FilterResult(alias pred, Range)
  * $(XREF range, retro) can be applied against the filtered range.
  *
  * Params:
- *     predicate = Function to apply to each element of range
+ *     pred = Function to apply to each element of range
  *     r = Bidirectional range of elements
  */
 template filterBidirectional(alias pred)
@@ -3713,13 +3713,13 @@ empty elements.
 
 Params:
     isTerminator = The predicate for deciding where to split the range.
-    r = The $(XREF2 range, isInputRange, input range) to be split.
+    input = The $(XREF2 range, isInputRange, input range) to be split.
 
 Constraints:
-    The predicate $(D isTerminator) needs to accept an element of $(D r).
+    The predicate $(D isTerminator) needs to accept an element of $(D input).
 
 Returns:
-    An input range of the subranges of elements between separators. If $(D r)
+    An input range of the subranges of elements between separators. If $(D input)
     is a forward range or bidirectional range, the returned range will be
     likewise.
 
@@ -7974,7 +7974,7 @@ $(D b) that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
 evaluations of $(D pred).
 
 Params:
-    pref = The predicate to satisfy.
+    pred = The predicate to satisfy.
     r = A $(XREF2 range, isForwardRange, forward range) to search in.
 
 Returns:
