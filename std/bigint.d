@@ -277,8 +277,8 @@ public:
 
     // BigInt op integer
     BigInt opBinary(string op, T)(T y) pure nothrow const
-        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%" || op=="|" ||
-            op=="&" || op=="^" || op==">>" || op=="<<" || op=="^^")
+        if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
+            op=="^"|| op==">>" || op=="<<" || op=="^^")
             && isIntegral!T)
     {
         BigInt r = this;
@@ -286,15 +286,36 @@ public:
     }
 
     //
-    int opBinary(string op, T : int)(T y) pure nothrow const
+    auto opBinary(string op, T)(T y) pure nothrow const
         if (op == "%" && isIntegral!T)
     {
         assert(y!=0);
-        uint u = absUnsign(y);
-        int rem = BigUint.modInt(data, u);
-        // x%y always has the same sign as x.
-        // This is not the same as mathematical mod.
-        return sign ? -rem : rem;
+
+        // BigInt % long => long
+        // BigInt % ulong => BigInt
+        // BigInt % other_type => int
+        static if (is(Unqual!T == long) || is(Unqual!T == ulong))
+        {
+            auto r = this % BigInt(y);
+
+            static if (is(Unqual!T == long))
+            {
+                return r.toLong();
+            }
+            else
+            {
+                // return as-is to avoid overflow
+                return r;
+            }
+        }
+        else
+        {
+            uint u = absUnsign(y);
+            int rem = BigUint.modInt(data, u);
+            // x%y always has the same sign as x.
+            // This is not the same as mathematical mod.
+            return sign ? -rem : rem;
+        }
     }
 
     // Commutative operators
@@ -1035,8 +1056,41 @@ unittest // 13391
 unittest // 13963
 {
     BigInt x = 1;
-    assert(is(typeof(x % 1) == int));
-    assert(is(typeof(x % 1U) == int));
-    assert(is(typeof(x % 1L) == BigInt));
+    import std.typetuple : TypeTuple;
+    foreach(Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
+    {
+        assert(is(typeof(x % Int(1)) == int));
+    }
+    assert(is(typeof(x % 1L) == long));
     assert(is(typeof(x % 1UL) == BigInt));
+
+    auto x1 = BigInt(8);
+    auto x2 = -BigInt(long.min) + 1;
+
+    // long
+    assert(x1 % 2L == 0L);
+    assert(-x1 % 2L == 0L);
+
+    assert(x1 % 3L == 2L);
+    assert(x1 % -3L == 2L);
+    assert(-x1 % 3L == -2L);
+    assert(-x1 % -3L == -2L);
+
+    assert(x1 % 11L == 8L);
+    assert(x1 % -11L == 8L);
+    assert(-x1 % 11L == -8L);
+    assert(-x1 % -11L == -8L);
+
+    // ulong
+    assert(x1 % 2UL == BigInt(0));
+    assert(-x1 % 2UL == BigInt(0));
+
+    assert(x1 % 3UL == BigInt(2));
+    assert(-x1 % 3UL == -BigInt(2));
+
+    assert(x1 % 11UL == BigInt(8));
+    assert(-x1 % 11UL == -BigInt(8));
+
+    assert(x2 % ulong.max == x2);
+    assert(-x2 % ulong.max == -x2);
 }
