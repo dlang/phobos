@@ -48,7 +48,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  *
  * Macros:
  *      WIKI = Phobos/StdSha1
- *      MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 /*          Copyright Kai Nacke 2012.

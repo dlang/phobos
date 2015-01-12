@@ -75,7 +75,6 @@ $(XREF format, format)
 are publicly imported.
 
 Macros: WIKI = Phobos/StdString
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
 
 Copyright: Copyright Digital Mars 2007-.
 

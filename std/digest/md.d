@@ -38,7 +38,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  *
  * Macros:
  * WIKI = Phobos/StdMd5
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 /* md5.d - RSA Data Security, Inc., MD5 message-digest algorithm

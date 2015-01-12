@@ -46,7 +46,6 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * Source:    $(PHOBOSSRC std/_digest/_digest.d)
  *
  * Macros:
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  * MYREF2 = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$2">$1</a>&nbsp;</font>
  * MYREF3 = <a href="#$2">$(D $1)</a>
  *

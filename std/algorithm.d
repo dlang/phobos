@@ -332,7 +332,6 @@ $(T2 uninitializedFill,
 Macros:
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 WIKI = Phobos/StdAlgorithm
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
 
 Copyright: Andrei Alexandrescu 2008-.
 

@@ -42,7 +42,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  *
  * Macros:
  * WIKI = Phobos/StdRipemd
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 module std.digest.ripemd;
