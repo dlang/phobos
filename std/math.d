@@ -76,7 +76,6 @@ $(TR $(TDNW Hardware Control) $(TD
  *
  * Macros:
  *      WIKI = Phobos/StdMath
- *      MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#.$1">$1</a>&nbsp;</font>
  *
  *      TABLE_SV = <table border=1 cellpadding=4 cellspacing=0>
  *              <caption>Special Values</caption>

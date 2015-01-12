@@ -210,7 +210,7 @@
     $(REG_TABLE
         $(REG_TITLE Format specifier, Replaced by )
         $(REG_ROW $&amp;, the whole match. )
-        $(REG_ROW $`, part of input $(I preceding) the match. )
+        $(REG_ROW $(DOLLAR)$(BACKTICK), part of input $(I preceding) the match. )
         $(REG_ROW $', part of input $(I following) the match. )
         $(REG_ROW $$, '$' character. )
         $(REG_ROW \c &#44 where c is any character, the character c itself. )

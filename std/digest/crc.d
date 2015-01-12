@@ -39,7 +39,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
  *
  * Macros:
  * WIKI = Phobos/StdUtilDigestCRC32
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  *
  * Standards:
  * Implements the 'common' IEEE CRC32 variant

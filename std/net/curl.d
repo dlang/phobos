@@ -133,9 +133,6 @@ the onReceive callback. See $(LREF onReceiveHeader)/$(LREF onReceive) for more
 information. Finally the HTTP request is effected by calling perform(), which is
 synchronous.
 
-Macros:
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
-
 Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
