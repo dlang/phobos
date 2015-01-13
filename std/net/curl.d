@@ -22,7 +22,7 @@ SMTP) )
 
 Note:
 You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"]) 
-to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org DUB).
+to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org
