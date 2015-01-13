@@ -390,7 +390,7 @@ unittest
  *
  * Throws:
  *
- * CurlException on error.
+ * $(D CurlException) on error.
  *
  * See_Also: $(LREF HTTP.Method)
  */
