@@ -1358,7 +1358,10 @@ private:
 
         override void wait() nothrow
         {
-            switchContext();
+            scope(exit) notified = false;
+
+            while( !notified )
+                switchContext();
         }
 
         override bool wait( Duration period ) nothrow
