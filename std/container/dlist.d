@@ -633,6 +633,9 @@ Complexity: $(BIGOH r.walkLength)
     /// ditto
     alias stableLinearRemove = linearRemove;
 
+    /// String representation of the container
+    mixin forwardToStringTo!opSlice;
+
 private:
 
     // Helper: Inserts stuff before the node n.

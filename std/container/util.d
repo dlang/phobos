@@ -140,3 +140,37 @@ unittest
     auto rbtmin = make!(RedBlackTree, "a < b", false)(3, 2, 2, 1);
     assert(equal(rbtmin[], [1, 2, 3]));
 }
+
+package:
+/**
+ *String representation of the container
+ */
+mixin template forwardToStringTo(alias symbol)
+{
+    string toString() {
+        import std.conv : to;
+        return to!string(symbol);
+    }
+}
+///
+unittest
+{
+    import std.container : Array, RedBlackTree, SList, DList;
+    import std.range : iota;
+    import std.algorithm : equal;
+    import std.conv : to;
+
+    auto arr = make!Array(iota(5));
+    assert(equal(to!string(arr), to!string(arr[])));
+
+    auto rbtmax = make!(RedBlackTree, "a > b")(iota(5));
+    assert(equal(to!string(rbtmax), to!string(rbtmax[])));
+
+    alias makeList = make!SList;
+    auto list = makeList(1, 7, 42);
+    assert(equal(to!string(list), to!string(list[])));
+
+    alias makeDList = make!DList;
+    auto dlist = makeDList(1, 7, 42);
+    assert(equal(to!string(dlist), to!string(dlist[])));
+}
