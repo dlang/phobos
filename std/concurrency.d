@@ -70,6 +70,7 @@ public
 }
 private
 {
+    import core.atomic;
     import core.thread;
     import core.sync.mutex;
     import core.sync.condition;
@@ -2223,7 +2224,7 @@ private
          */
         void put( T val )
         {
-            put( new Node( val ) );
+            put( newNode( val ) );
         }
 
 
@@ -2269,9 +2270,9 @@ private
                 m_last = null;
             else if( m_last is n.next )
                 m_last = n;
-            Node* todelete = n.next;
+            Node* to_free = n.next;
             n.next = n.next.next;
-            //delete todelete;
+            freeNode( to_free );
             m_count--;
         }
 
@@ -2314,6 +2315,75 @@ private
             {
                 val = v;
             }
+        }
+
+
+        __gshared Node* sm_freeNodes = null;
+        __gshared Mutex sm_freeLock  = null;
+
+
+        shared static this()
+        {
+            sm_freeLock = new Mutex;
+        }
+
+
+        Node* newNode( T v )
+        {
+            Node* n = null;
+            synchronized( sm_freeLock )
+            {
+                if( sm_freeNodes !is null )
+                {
+                    n = sm_freeNodes;
+                    sm_freeNodes = n.next;
+                }
+            }
+            if( n !is null )
+            {
+                n.next = null;
+                n.val  = v;
+                return n;
+            }
+            return new Node( v );
+
+            // lock-free shared freelist
+            /+ NOTE: This is really really slow.
+            Node* n = null;
+            n = cast(Node*) sm_freeNodes.atomicLoad!(MemoryOrder.raw)();
+            while( n !is null )
+            {
+                if( cas( &sm_freeNodes,
+                         cast(shared(Node)*) n.next,
+                         cast(shared(Node)*) n ) )
+                {
+                    n.next = null;
+                    n.val  = v;
+                    return n;
+                }
+                n = cast(Node*) sm_freeNodes.atomicLoad!(MemoryOrder.raw)();
+            }
+            return new Node( v );
+            +/
+        }
+
+
+        void freeNode( Node* n )
+        {
+            synchronized( sm_freeLock )
+            {
+                n.next = sm_freeNodes;
+                sm_freeNodes = n;
+            }
+
+            // lock-free shared freelist
+            /+ NOTE: This is really really slow.
+            do
+            {
+                n.next = cast(Node*) sm_freeNodes.atomicLoad!(MemoryOrder.raw)();
+            } while( !cas( &sm_freeNodes, cast(shared(Node)*) n,
+                           cast(shared(Node)*) n.next ) );
+            +/
         }
 
 
