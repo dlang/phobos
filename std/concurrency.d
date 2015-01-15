@@ -1446,6 +1446,50 @@ private:
 }
 
 
+unittest
+{
+    static void receive(Condition cond, ref size_t received)
+    {
+        while (true)
+        {
+            synchronized (cond.mutex)
+            {
+                cond.wait();
+                ++received;
+            }
+        }
+    }
+
+    static void send(Condition cond, ref size_t sent)
+    {
+        while (true)
+        {
+            synchronized (cond.mutex)
+            {
+                ++sent;
+                cond.notify();
+            }
+        }
+    }
+
+    auto fs = new FiberScheduler;
+    auto mtx = new Mutex;
+    auto cond = fs.newCondition(mtx);
+
+    size_t received, sent;
+    auto waiter = new Fiber({receive(cond, received);}), notifier = new Fiber({send(cond, sent);});
+    waiter.call();
+    assert(received == 0);
+    notifier.call();
+    assert(sent == 1);
+    assert(received == 0);
+    waiter.call();
+    assert(received == 1);
+    waiter.call();
+    assert(received == 1);
+}
+
+
 /**
  * Sets the Scheduler behavior within the program.
  *
