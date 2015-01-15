@@ -539,6 +539,9 @@ Complexity: $(BIGOH n)
 
 /// ditto
     alias stableLinearRemove = linearRemove;
+
+/// String representation of the container
+    mixin forwardToStringTo!opSlice;
 }
 
 unittest

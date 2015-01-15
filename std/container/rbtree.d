@@ -1638,6 +1638,9 @@ assert(equal(rbt[], [5]));
         _begin = end.leftmost;
         _length = length;
     }
+
+    /// String representation of the container
+    override mixin forwardToStringTo!opSlice;
 }
 
 //Verify Example for removeKey.

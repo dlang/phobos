@@ -867,6 +867,9 @@ $(D r)
         length = offset1 + tailLength;
         return this[length - tailLength .. length];
     }
+
+    /// String representation of the container
+    mixin forwardToStringTo!opSlice;
 }
 
 unittest
