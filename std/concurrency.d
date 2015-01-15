@@ -1200,7 +1200,7 @@ interface Scheduler
      *      cases a Scheduler may need to hold this reference and unlock the
      *      mutex before yielding execution to another logical thread.
      */
-    Condition newCondition( Mutex m ) /*nothrow*/;
+    Condition newCondition( Mutex m ) nothrow;
 }
 
 
@@ -1257,7 +1257,7 @@ class ThreadScheduler :
     /**
      * Creates a new Condition variable.  No custom behavior is needed here.
      */
-    Condition newCondition( Mutex m ) /*nothrow*/
+    Condition newCondition( Mutex m ) nothrow
     {
         return new Condition( m );
     }
@@ -1329,7 +1329,7 @@ class FiberScheduler :
     /**
      * Returns a Condition analog that yields when wait or notify is called.
      */
-    Condition newCondition( Mutex m ) /*nothrow*/
+    Condition newCondition( Mutex m ) nothrow
     {
         return new FiberCondition( m );
     }
@@ -1351,7 +1351,7 @@ private:
     class FiberCondition :
         Condition
     {
-        this( Mutex m )
+        this( Mutex m ) nothrow
         {
             super(m);
             notified = false;
@@ -1393,8 +1393,6 @@ private:
     private:
         final void switchContext() nothrow
         {
-            // nothrow hack needed until lock/unlock are nothrow
-            scope (failure) assert(0);
             mutex.unlock();
             scope(exit) mutex.lock();
             yield();
