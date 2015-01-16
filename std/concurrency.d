@@ -2348,6 +2348,9 @@ private
 
         void freeNode(Node* n)
         {
+            // destroy val to free any owned GC memory
+            destroy(n.val);
+
             sm_lock.lock();
             scope (exit) sm_lock.unlock();
 
