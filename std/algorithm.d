@@ -2442,7 +2442,7 @@ void move(T)(ref T source, ref T target)
 {
     import core.stdc.string : memcpy;
 
-    static if (hasAliasing!T) if (!__ctfe)
+    static if (!is( T == class) && hasAliasing!T) if (!__ctfe)
     {
         import std.exception : doesPointTo;
         assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
@@ -2535,6 +2535,12 @@ unittest
     move(s41, s42);
     assert(s41.x.n == 0);
     assert(s42.x.n == 1);
+
+    // Issue 13990 test
+    class S5;
+
+    S5 s51;
+    static assert(__traits(compiles, move(s51, s51)), "issue 13990, cannot move opaque class reference"); 
 }
 
 /// Ditto
