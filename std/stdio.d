@@ -145,7 +145,12 @@ else version (MICROSOFT_STDIO)
     enum
     {
         _O_RDONLY = 0x0000,
+        _O_WRONLY = 0x0001,
+        _O_RDWR   = 0x0002,
         _O_APPEND = 0x0004,
+        _O_CREAT  = 0x0100,
+        _O_TRUNC  = 0x0200,
+        _O_EXCL   = 0x0400,
         _O_TEXT   = 0x4000,
         _O_BINARY = 0x8000,
     }
@@ -335,8 +340,8 @@ Hello, Jimmy!
  */
 struct File
 {
-    import std.traits : isScalarType, isArray;
     import std.range.primitives : ElementEncodingType;
+    import std.traits : isScalarType, isArray;
     enum Orientation { unknown, narrow, wide }
 
     private struct Impl
@@ -1529,9 +1534,11 @@ for every line.
     }
 
 /**
- Returns a temporary file by calling $(WEB
- cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
- Note that the created file has no $(LREF name).*/
+ Returns a temporary file by calling
+ $(WEB  cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
+
+ $(RED Warning: The $(LREF File) returned has an empty $(LREF name)).
+  */
     static File tmpfile() @safe
     {
         import std.exception : errnoEnforce;
@@ -1539,6 +1546,185 @@ for every line.
         return File(errnoEnforce(.tmpfile(),
                 "Could not create temporary file with tmpfile()"),
             null);
+    }
+
+/**
+Creates a file with a randomly generated name and returns an open File to it.
+
+There is nothing special about the file created other than the fact that its
+name is randomly generated, and it defaults to being in the temp directory on
+the system. It will only be deleted if explicitly deleted or if it's in the
+temp directory, and the temp directory is cleared out (as happens on system
+startup or shutdown on some systems).
+
+The file is created with R/W permissions and opened with $(D "w+b"). On POSIX
+systems, the permissions are restricted to the current user, though the
+effective permissions are modified by the process' umask in the usual way.
+
+Params:
+    prefix = Prefix for the generated file name.
+    suffix = Suffix for the generated file name (which also provides a way to
+             give the file an extension).
+    dir    = Directory of the temporary file. Defaults to the result of
+             $(XREF file, tempDir).
+
+Throws:
+    $(D Exception) if the file could not be created.
+
+See_Also:
+    $(LREF tmpfile)
+  */
+    static File scratchFile(const(char)[] prefix, const(char)[] suffix, const(char)[] dir)
+    {
+        import std.exception : ErrnoException;
+        import std.file : isSymlink;
+        import std.path : absolutePath, baseName, buildPath, dirName;
+
+        static string genTempName(const(char)[] prefix, const(char)[] suffix, const(char)[] dir)
+        {
+            import std.ascii : digits, letters;
+            import std.random : rndGen;
+            import std.range : chain;
+            import std.string : representation;
+            auto name = (char[]).init ~ prefix ~ "012345678901234" ~ suffix;
+
+            // Replace the 012345678901234 with random characters
+            rndGen.popFront();
+            auto chars = chain(letters.representation, digits.representation);
+            foreach (ref c; name[prefix.length .. $ - suffix.length])
+            {
+                c = chars[rndGen.front % chars.length];
+                rndGen.popFront();
+            }
+
+            return buildPath(dir, name);
+        }
+
+        // Once should be enough given the randomness, but we'll give it three
+        // times to be safe.
+        enum limit = 3;
+        for (int i = 0; true; ++i)
+        {
+            auto filename = genTempName(prefix, suffix, dir);
+
+            // So that we can test the case where the file already exists.
+            version (unittest)
+            {
+                if (i == 0)
+                {
+                    import std.file;
+                    std.file.write(filename, "nothing");
+                }
+            }
+
+            // O_EXCL does not support symbolic links.
+            if (dirName(filename).isSymlink)
+                filename = buildPath(absolutePath(dirName(filename), baseName(filename)));
+
+            import std.internal.cstring : tempCString;
+            version (Posix)
+            {
+                import core.sys.posix.sys.stat, core.sys.posix.fcntl;
+                auto fd = open(tempCString(filename), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+            }
+            else version (Windows)
+            {
+                version (DIGITAL_MARS_STDIO)
+                {
+                    enum openFlags = O_RDWR | O_CREAT | O_EXCL;
+                    enum permissions = S_IREAD | S_IWRITE;
+                }
+                else version (MICROSOFT_STDIO)
+                {
+                    enum openFlags = _O_RDWR | _O_CREAT | _O_EXCL;
+                    enum permissions = _S_IREAD | _S_IWRITE;
+                }
+                auto fd = _wsopen(tempCString!wchar(filename), openFlags, _SH_DENYNO, permissions);
+            }
+            else static assert("Unsupported OS");
+
+            if (fd == -1)
+            {
+                import std.string: format;
+                version (unittest)
+                {
+                    import std.file;
+                    if (i == 0 && filename.exists)
+                    {
+                        std.file.remove(filename);
+                        import core.stdc.errno : errno, EEXIST;
+                        assert(errno == EEXIST, format("Error code: %s", errno));
+                    }
+                }
+                if (i == limit - 1)
+                {
+                    auto msg = format("Failed to create temporary file after %s attempts. Last file name tried [%s].",
+                                      limit, filename);
+                    throw new ErrnoException(msg);
+                }
+                continue;
+            }
+
+            File retval;
+            retval.fdopen(fd, "w+b", filename);
+            return retval;
+        }
+
+        assert(0);
+    }
+
+    /// Ditto
+    static File scratchFile(string prefix = null, string suffix = null)
+    {
+        import std.file : tempDir;
+        return File.scratchFile(prefix, suffix, std.file.tempDir());
+    }
+
+    unittest
+    {
+        import std.algorithm, std.conv, std.file, std.path, std.process;
+
+        {
+            string name;
+            scope(exit) if(name.exists) std.file.remove(name);
+
+            {
+                auto file = File.scratchFile();
+                name = file.name;
+                assert(!name.empty);
+                assert(buildNormalizedPath(name.dirName) == buildNormalizedPath(tempDir()));
+                assert(!name.baseName.empty);
+                assert(name.exists);
+                assert(name.isFile);
+                file.write("hello world");
+            }
+
+            assert(name.exists);
+            assert(name.isFile);
+            assert(readText(name) == "hello world");
+        }
+
+        auto dir = buildPath(tempDir(), "test_sub_dir_" ~ to!string(thisProcessID));
+        mkdir(dir);
+        scope(exit) if(dir.exists) rmdirRecurse(dir);
+        string name;
+        {
+            auto file = File.scratchFile("foobar", ".baz", dir);
+            name = file.name;
+            assert(!name.empty);
+            assert(name.dirName == dir);
+            assert(buildNormalizedPath(name.dirName) == buildNormalizedPath(dir));
+            assert(!name.baseName.empty);
+            assert(name.baseName.startsWith("foobar"));
+            assert(name.extension == ".baz");
+            assert(name.length > "foobar".length + ".baz".length);
+            assert(name.exists);
+            assert(name.isFile);
+            file.write("D for the win!");
+        }
+        assert(name.exists);
+        assert(name.isFile);
+        assert(readText(name) == "D for the win!");
     }
 
 /**
