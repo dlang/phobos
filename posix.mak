@@ -91,7 +91,7 @@ DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) $(STD_ALGO_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
@@ -182,7 +182,7 @@ LINKCURL:=$(if $(LIBCURL_STUB),-L$(LIBCURL_STUB),-L-lcurl)
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint \
+STD_MODULES = $(addprefix std/, array ascii base64 bigint \
 		bitmanip compiler complex concurrency conv		\
 		cstream csv datetime demangle encoding exception	\
 		file format functional getopt json math mathspecial	\
@@ -195,6 +195,8 @@ STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
 STD_REGEX_MODULES = $(addprefix std/regex/, package $(addprefix internal/, \
 	generator ir parser backtracking kickstart tests thompson))
+
+STD_ALGO_MODULES = $(addprefix std/algorithm/, package)
 
 STD_RANGE_MODULES = $(addprefix std/range/, package primitives interfaces)
 
@@ -229,7 +231,8 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
-	$(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_REGEX_MODULES) $(STD_RANGE_MODULES)
+	$(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_REGEX_MODULES) \
+	$(STD_RANGE_MODULES) $(STD_ALGO_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -426,6 +429,9 @@ $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_container_%.html : std/container/%.d $(STDDOC)
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_algorithm_%.html : std/algorithm/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_range_%.html : std/range/%.d $(STDDOC)
