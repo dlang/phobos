@@ -322,13 +322,13 @@ template packageName(alias T)
 
 unittest
 {
-    import std.algorithm;
+    import std.array;
 
     // Commented out because of dmd @@@BUG8922@@@
     // static assert(packageName!std == "std");  // this package (currently: "std.std")
     static assert(packageName!(std.traits) == "std");     // this module
     static assert(packageName!packageName == "std");      // symbol in this module
-    static assert(packageName!(std.algorithm) == "std");  // other module from same package
+    static assert(packageName!(std.array) == "std");  // other module from same package
 
     import core.sync.barrier;  // local import
     static assert(packageName!core == "core");
@@ -376,13 +376,13 @@ template moduleName(alias T)
 
 unittest
 {
-    import std.algorithm;
+    import std.array;
 
     static assert(!__traits(compiles, moduleName!std));
     static assert(moduleName!(std.traits) == "std.traits");            // this module
     static assert(moduleName!moduleName == "std.traits");              // symbol in this module
-    static assert(moduleName!(std.algorithm) == "std.algorithm");      // other module
-    static assert(moduleName!(std.algorithm.map) == "std.algorithm");  // symbol in other module
+    static assert(moduleName!(std.array) == "std.array");      // other module
+    static assert(moduleName!(std.array.array) == "std.array");  // symbol in other module
 
     import core.sync.barrier;  // local import
     static assert(!__traits(compiles, moduleName!(core.sync)));
