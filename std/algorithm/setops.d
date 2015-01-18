@@ -73,7 +73,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 ///
 @safe unittest
 {
-    import std.algorithm : canFind; // FIXME
+    import std.algorithm.searching : canFind;
     import std.range;
     import std.typecons : tuple;
 
@@ -90,7 +90,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 ///
 @safe unittest
 {
-    import std.algorithm : canFind; // FIXME
+    import std.algorithm.searching : canFind;
     import std.typecons : tuple;
 
     auto B = [ 1, 2, 3 ];
@@ -107,7 +107,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 @safe unittest
 {
     // Test cartesian product of two infinite ranges
-    import std.algorithm : canFind; // FIXME
+    import std.algorithm.searching : canFind;
     import std.range;
     import std.typecons : tuple;
 
@@ -131,7 +131,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 {
     // Test cartesian product of an infinite input range and a finite forward
     // range.
-    import std.algorithm : canFind; // FIXME
+    import std.algorithm.searching : canFind;
     import std.range;
     import std.typecons : tuple;
 
@@ -169,7 +169,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 
 @safe unittest
 {
-    import std.algorithm : canFind; // FIXME
+    import std.algorithm.searching : canFind;
     import std.typecons : tuple;
 
     // Test cartesian product of two finite ranges.
@@ -196,7 +196,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 
 @safe unittest
 {
-    import std.algorithm : canFind; // FIXME
+    import std.algorithm.searching : canFind;
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
     import std.typecons : tuple;
@@ -416,7 +416,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 
 @safe unittest
 {
-    import std.algorithm : canFind; // FIXME
+    import std.algorithm.searching : canFind;
     import std.range;
     import std.typecons : tuple, Tuple;
 
@@ -433,7 +433,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 
 @safe unittest
 {
-    import std.algorithm : canFind; // FIXME
+    import std.algorithm.searching : canFind;
     import std.range;
     import std.typecons : tuple, Tuple;
 
@@ -722,7 +722,7 @@ struct NWayUnion(alias less, RangeOfRanges)
 
     this(RangeOfRanges ror)
     {
-        import std.algorithm : remove, SwapStrategy; // FIXME
+        import std.algorithm.mutation : remove, SwapStrategy;
 
         // Preemptively get rid of all empty ranges in the input
         // No need for stability either

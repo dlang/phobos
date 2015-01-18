@@ -877,7 +877,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
 
     EditOp[] path()
     {
-    import std.algorithm : reverse; // FIXME
+        import std.algorithm.mutation : reverse;
 
         EditOp[] result;
         size_t i = rows - 1, j = cols - 1;

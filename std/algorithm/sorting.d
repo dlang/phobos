@@ -1,7 +1,8 @@
 // Written in the D programming language.
 module std.algorithm.sorting;
 
-import std.algorithm : SortOutput, SwapStrategy; // FIXME
+import std.algorithm : SortOutput; // FIXME
+import std.algorithm.mutation : SwapStrategy;
 import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 // FIXME
@@ -669,6 +670,8 @@ template multiSort(less...) //if (less.length > 1)
 
 private size_t getPivot(alias less, Range)(Range r)
 {
+    import std.algorithm.mutation : swapAt;
+
     // This algorithm sorts the first, middle and last elements of r,
     // then returns the index of the middle element.  In effect, it uses the
     // median-of-three heuristic.
@@ -709,6 +712,8 @@ private size_t getPivot(alias less, Range)(Range r)
 
 private void optimisticInsertionSort(alias less, Range)(Range r)
 {
+    import std.algorithm.mutation : swapAt;
+
     alias pred = binaryFun!(less);
     if (r.length < 2)
     {
@@ -859,6 +864,7 @@ unittest
 unittest
 {
     import std.algorithm : rndstuff; // FIXME
+    import std.algorithm : swapRanges; // FIXME
     import std.random : Random, unpredictableSeed, uniform;
     import std.uni : toUpper;
 
@@ -918,8 +924,6 @@ unittest
         // Unstable sort should complete without an excessive number of predicate calls
         // This would suggest it's running in quadratic time
 
-	import std.algorithm : swapRanges; // FIXME
-
         // Compilation error if predicate is not static, i.e. a nested function
         static uint comp;
         static bool pred(size_t a, size_t b)
@@ -959,27 +963,10 @@ unittest
     }
 }
 
-//private
-void swapAt(R)(R r, size_t i1, size_t i2)
-{
-    import std.algorithm : swap; // FIXME
-    static if (is(typeof(&r[i1])))
-    {
-        swap(r[i1], r[i2]);
-    }
-    else
-    {
-        if (i1 == i2) return;
-        auto t1 = moveAt(r, i1);
-        auto t2 = moveAt(r, i2);
-        r[i2] = t1;
-        r[i1] = t2;
-    }
-}
-
 private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 {
     import std.algorithm : swap; // FIXME
+    import std.algorithm.mutation : swapAt;
     import std.algorithm.comparison : min;
 
     alias Elem = ElementType!(Range);
@@ -1038,6 +1025,8 @@ private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 // Bottom-Up Heap-Sort Implementation
 private template HeapSortImpl(alias less, Range)
 {
+    import std.algorithm.mutation : swapAt;
+
     static assert(isRandomAccessRange!Range);
     static assert(hasLength!Range);
     static assert(hasSwappableElements!Range || hasAssignableElements!Range);

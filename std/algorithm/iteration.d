@@ -2534,7 +2534,7 @@ auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
-    import std.algorithm : find; // FIXME
+    import std.algorithm.searching : find;
     import std.conv : unsigned;
 
     static struct Result
@@ -2815,7 +2815,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         && isForwardRange!Separator
         && (hasLength!Separator || isNarrowString!Separator))
 {
-    import std.algorithm : find; // FIXME
+    import std.algorithm.searching : find;
     import std.conv : unsigned;
 
     static struct Result
@@ -3139,7 +3139,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 
 private struct SplitterResult(alias isTerminator, Range)
 {
-    import std.algorithm : find; // FIXME
+    import std.algorithm.searching : find;
     enum fullSlicing = (hasLength!Range && hasSlicing!Range) || isSomeString!Range;
 
     private Range _input;
@@ -3353,7 +3353,7 @@ Returns:
 auto splitter(C)(C[] s)
 if (isSomeChar!C)
 {
-    import std.algorithm : find; // FIXME
+    import std.algorithm.searching : find;
     static struct Result
     {
     private:
@@ -3745,8 +3745,9 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 ///
 @safe unittest
 {
-    import std.algorithm : copy; // FIXME
+    import std.algorithm.mutation : copy;
     import std.algorithm.comparison : equal;
+
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
 
