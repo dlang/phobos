@@ -1430,7 +1430,8 @@ unittest //safety, purity, ctfe ...
 /++
 Alias for $(XREF algorithm, _splitter).
  +/
-deprecated("Please use std.algorithm.splitter instead.") alias splitter = std.algorithm.splitter;
+deprecated("Please use std.algorithm.iteration.splitter instead.")
+alias splitter = std.algorithm.iteration.splitter;
 
 /++
     Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.

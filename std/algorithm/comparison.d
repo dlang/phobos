@@ -1,7 +1,8 @@
 // Written in the D programming language.
 module std.algorithm.comparison;
 
-import std.algorithm : filter, map, reverse; // FIXME: ugly hack
+import std.algorithm : reverse; // FIXME: ugly hack
+import std.algorithm.iteration : filter, map;
 
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
