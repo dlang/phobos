@@ -2,16 +2,9 @@
 module std.algorithm.iteration;
 
 // FIXME
-import std.algorithm : algoFormat, copy, find;
-
-import std.algorithm.comparison : equal, max, min;
-
-// FIXME
 import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
-// FIXME
-import std.typetuple; // : TypeTuple, staticMap, allSatisfy, anySatisfy;
 
 /++
 $(D cache) eagerly evaluates $(D front) of $(D range)
@@ -54,6 +47,7 @@ if (isBidirectionalRange!Range)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.stdio, std.range;
     import std.typecons : tuple;
 
@@ -108,6 +102,7 @@ same cost or side effects.
 +/
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range;
     int i = 0;
 
@@ -124,6 +119,7 @@ same cost or side effects.
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range;
     auto a = [1, 2, 3, 4];
     assert(equal(a.map!"(a - 1)*a"().cache(),                      [ 0, 2, 6, 12]));
@@ -136,6 +132,8 @@ same cost or side effects.
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     //immutable test
     static struct S
     {
@@ -152,6 +150,8 @@ same cost or side effects.
 
 @safe pure nothrow unittest
 {
+    import std.algorithm.comparison : equal;
+
     //safety etc
     auto a = [1, 2, 3, 4];
     assert(equal(a.cache(),              a));
@@ -192,6 +192,8 @@ private struct Cache(R, bool bidir)
 
     private
     {
+        import std.typetuple : TypeTuple;
+
         alias E  = ElementType!R;
         alias UE = Unqual!E;
 
@@ -326,6 +328,8 @@ template map(fun...) if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
+        import std.typetuple : staticMap;
+
         alias AppliedReturnType(alias f) = typeof(f(r.front));
 
         static if (fun.length > 1)
@@ -355,6 +359,7 @@ template map(fun...) if (fun.length >= 1)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range : chain;
     int[] arr1 = [ 1, 2, 3, 4 ];
     int[] arr2 = [ 5, 6 ];
@@ -387,6 +392,7 @@ it separately:
 */
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : to;
 
     alias stringize = map!(to!string);
@@ -504,6 +510,7 @@ private struct MapResult(alias fun, Range)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : to;
     import std.functional : adjoin;
 
@@ -525,6 +532,7 @@ private struct MapResult(alias fun, Range)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
     import std.ascii : toUpper;
     import std.range;
@@ -626,6 +634,7 @@ unittest
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range;
     auto LL = iota(1L, 4L);
     auto m = map!"a*a"(LL);
@@ -650,6 +659,7 @@ unittest
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range;
     //slicing infinites
     auto rr = iota(0, 5).cycle().map!"a * a"();
@@ -693,6 +703,7 @@ template filter(alias predicate) if (is(typeof(unaryFun!predicate)))
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.math : approxEqual;
     import std.range;
 
@@ -767,6 +778,7 @@ private struct FilterResult(alias pred, Range)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
     import std.range;
 
@@ -822,6 +834,8 @@ private struct FilterResult(alias pred, Range)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     int[] a = [ 3, 4 ];
     const aConst = a;
     auto r = filter!("a > 3")(aConst);
@@ -840,6 +854,7 @@ private struct FilterResult(alias pred, Range)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.functional : compose, pipe;
 
     assert(equal(compose!(map!"2 * a", filter!"a & 1")([1,2,3,4,5]),
@@ -850,6 +865,8 @@ private struct FilterResult(alias pred, Range)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     int x = 10;
     int underX(int a) { return a < x; }
     const(int)[] list = [ 1, 2, 10, 11, 3, 4 ];
@@ -881,7 +898,9 @@ template filterBidirectional(alias pred)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range;
+
     int[] arr = [ 1, 2, 3, 4, 5 ];
     auto small = filterBidirectional!("a < 3")(arr);
     static assert(isBidirectionalRange!(typeof(small)));
@@ -1045,6 +1064,7 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.typecons : tuple, Tuple;
 
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
@@ -1054,6 +1074,7 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
     import std.typecons : tuple, Tuple;
 
@@ -1359,6 +1380,8 @@ auto groupBy(alias pred, EquivRelation equivRelation, Range)(Range r)
 /// Showing usage with binary predicate:
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     // Grouping by particular attribute of each element:
     auto data = [
         [1, 1],
@@ -1393,6 +1416,8 @@ auto groupBy(alias pred, EquivRelation equivRelation, Range)(Range r)
 /// Showing usage with unary predicate:
 pure @safe nothrow unittest
 {
+    import std.algorithm.comparison : equal;
+
     // Grouping by particular attribute of each element:
     auto range =
     [
@@ -1436,6 +1461,8 @@ pure @safe nothrow unittest
 
 pure @safe nothrow unittest
 {
+    import std.algorithm.comparison : equal;
+
     struct Item { int x, y; }
 
     // Force R to have only an input range API with reference semantics, so
@@ -1504,6 +1531,7 @@ pure @safe nothrow unittest
 // Issue 13595
 unittest
 {
+    import std.algorithm.comparison : equal;
     auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].groupBy!((x, y) => ((x*y) % 3) == 0);
     assert(r.equal!equal([
         [1],
@@ -1698,6 +1726,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : text;
 
     debug(std_algorithm) scope(success)
@@ -1717,6 +1746,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range.primitives;
     import std.range.interfaces;
     // joiner() should work for non-forward ranges too.
@@ -1726,6 +1756,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range;
 
     // Related to issue 8061
@@ -1774,6 +1805,8 @@ unittest
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     // Transience correctness test
     struct TransientRange
     {
@@ -1909,6 +1942,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
 unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range.interfaces;
     import std.range : repeat;
 
@@ -1951,6 +1985,8 @@ unittest
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     struct TransientRange
     {
     @safe:
@@ -1993,6 +2029,9 @@ unittest
 
 @safe unittest
 {
+    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.comparison : equal;
+
     struct TransientRange
     {
     @safe:
@@ -2069,6 +2108,8 @@ See_Also:
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
+    import std.typetuple : staticMap;
+
     alias binfuns = staticMap!(binaryFun, fun);
     static if (fun.length > 1)
         import std.typecons : tuple, isTuple;
@@ -2195,6 +2236,7 @@ remarkable power and flexibility.
 */
 @safe unittest
 {
+    import std.algorithm.comparison : max, min;
     import std.math : approxEqual;
     import std.range;
 
@@ -2249,6 +2291,7 @@ The number of seeds must be correspondingly increased.
 */
 @safe unittest
 {
+    import std.algorithm.comparison : max, min;
     import std.math : approxEqual, sqrt;
     import std.typecons : tuple, Tuple;
 
@@ -2270,6 +2313,7 @@ The number of seeds must be correspondingly increased.
 
 unittest
 {
+    import std.algorithm.comparison : max, min;
     import std.exception : assertThrown;
     import std.range;
     import std.typecons : tuple, Tuple;
@@ -2343,6 +2387,7 @@ unittest
 @safe unittest
 {
     // Issue #10408 - Two-function reduce of a const array.
+    import std.algorithm.comparison : max, min;
     import std.typecons : tuple, Tuple;
 
     const numbers = [10, 30, 20];
@@ -2387,6 +2432,7 @@ unittest
     int fun(int a, int b){return a + b + 1;}
     auto foo()
     {
+        import std.algorithm.comparison : max;
         import std.typecons : tuple, Tuple;
 
         auto a = reduce!(fun)([1, 2, 3]);
@@ -2404,6 +2450,7 @@ unittest
 
 @safe unittest
 {
+    import std.algorithm.comparison : max, min;
     import std.typecons : tuple, Tuple;
 
     //http://forum.dlang.org/thread/oghtttkopzjshsuflelk@forum.dlang.org
@@ -2419,6 +2466,7 @@ unittest
 
 @safe unittest //12569
 {
+    import std.algorithm.comparison : max, min;
     import std.typecons: tuple;
     dchar c = 'a';
     reduce!(min, max)(tuple(c, c), "hello"); // OK
@@ -2486,6 +2534,7 @@ auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
 if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
+    import std.algorithm : find; // FIXME
     import std.conv : unsigned;
 
     static struct Result
@@ -2640,6 +2689,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
@@ -2764,6 +2815,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         && isForwardRange!Separator
         && (hasLength!Separator || isNarrowString!Separator))
 {
+    import std.algorithm : find; // FIXME
     import std.conv : unsigned;
 
     static struct Result
@@ -2916,6 +2968,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(equal(splitter("hello  world", "  "), [ "hello", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [3, 0, 4, 5, 0] ];
@@ -2928,6 +2982,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.typecons : Tuple;
 
     alias C = Tuple!(int, "x", int, "y");
@@ -2937,6 +2992,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.conv : text;
     import std.array : split;
 
@@ -2992,6 +3048,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s6 = ",";
@@ -3005,6 +3062,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     // Issue 10773
     auto s = splitter("abc", "");
     assert(s.equal(["a", "b", "c"]));
@@ -3012,6 +3071,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     // Test by-reference separator
     class RefSep {
     @safe:
@@ -3062,6 +3123,8 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     assert(equal(splitter!"a == ' '"("hello  world"), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
@@ -3076,6 +3139,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 
 private struct SplitterResult(alias isTerminator, Range)
 {
+    import std.algorithm : find; // FIXME
     enum fullSlicing = (hasLength!Range && hasSlicing!Range) || isSomeString!Range;
 
     private Range _input;
@@ -3185,6 +3249,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range : iota;
 
     auto L = iota(1L, 10L);
@@ -3198,6 +3263,8 @@ private struct SplitterResult(alias isTerminator, Range)
 
 @safe unittest
 {
+    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
 
     debug(std_algorithm) scope(success)
@@ -3233,7 +3300,10 @@ private struct SplitterResult(alias isTerminator, Range)
 
 @safe unittest
 {
+    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.comparison : equal;
     import std.range;
+
     struct Entry
     {
         int low;
@@ -3257,6 +3327,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.uni : isWhite;
 
     //@@@6791@@@
@@ -3282,6 +3353,7 @@ Returns:
 auto splitter(C)(C[] s)
 if (isSomeChar!C)
 {
+    import std.algorithm : find; // FIXME
     static struct Result
     {
     private:
@@ -3335,12 +3407,15 @@ if (isSomeChar!C)
 ///
 @safe pure unittest
 {
+    import std.algorithm.comparison : equal;
     auto a = " a     bcd   ef gh ";
     assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
 }
 
 @safe pure unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.typetuple : TypeTuple;
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         import std.conv : to;
@@ -3382,6 +3457,8 @@ if (isSomeChar!C)
 
 @safe unittest
 {
+    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.comparison : equal;
     import std.conv : text;
     import std.array : split;
 
@@ -3668,6 +3745,8 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 ///
 @safe unittest
 {
+    import std.algorithm : copy; // FIXME
+    import std.algorithm.comparison : equal;
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
 
@@ -3740,6 +3819,7 @@ private struct UniqResult(alias pred, Range)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
     import std.range;
 

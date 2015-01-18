@@ -1,18 +1,12 @@
 // Written in the D programming language.
 module std.algorithm.comparison;
 
-import std.algorithm : reverse; // FIXME: ugly hack
-import std.algorithm.iteration : filter, map;
-
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
-
 import std.traits;
 // FIXME
 import std.typecons; // : tuple, Tuple;
-// FIXME
-import std.typetuple; // : TypeTuple, staticMap, allSatisfy, anySatisfy;
 
 /**
 Find $(D value) _among $(D values), returning the 1-based index
@@ -80,6 +74,8 @@ efficient search, but one that only supports matching on equality:
 
 @safe unittest
 {
+    import std.typetuple : TypeTuple;
+
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);
     else
@@ -307,6 +303,7 @@ auto castSwitch(choices...)(Object switchObject)
 ///
 unittest
 {
+    import std.algorithm.iteration : map;
     import std.format : format;
 
     class A
@@ -714,6 +711,7 @@ range of range (of range...) comparisons.
 
 @safe unittest
 {
+    import std.algorithm.iteration : map;
     import std.math : approxEqual;
     import std.internal.test.dummyrange;
 
@@ -879,6 +877,8 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
 
     EditOp[] path()
     {
+    import std.algorithm : reverse; // FIXME
+
         EditOp[] result;
         size_t i = rows - 1, j = cols - 1;
         // restore the path
@@ -1052,6 +1052,7 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 ///
 @safe unittest
 {
+    import std.algorithm.iteration : filter;
     import std.uni : toUpper;
 
     assert(levenshteinDistance("cat", "rat") == 1);

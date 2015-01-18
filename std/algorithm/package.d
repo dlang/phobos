@@ -5913,7 +5913,8 @@ assert(arr == [ 1, 3, 4, 5, 4, 5, 2  ]);
 Specifies whether the output of certain algorithm is desired in sorted
 format.
  */
-enum SortOutput {
+enum SortOutput
+{
     no,  /// Don't sort output
     yes, /// Sort output
 }

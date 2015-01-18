@@ -1,16 +1,11 @@
 // Written in the D programming language.
 module std.algorithm.setops;
 
-// Ugly hack, while stuff still sits in package.d
-private import std.algorithm;
-
 import std.range.primitives;
 
 // FIXME
 import std.functional; // : unaryFun, binaryFun;
 import std.traits;
-// FIXME
-import std.typecons; // : tuple, Tuple;
 // FIXME
 import std.typetuple; // : TypeTuple, staticMap, allSatisfy, anySatisfy;
 
@@ -36,11 +31,14 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
     if (!allSatisfy!(isForwardRange, R1, R2) ||
         anySatisfy!(isInfinite, R1, R2))
 {
+    import std.algorithm.iteration : map, joiner;
+
     static if (isInfinite!R1 && isInfinite!R2)
     {
         static if (isForwardRange!R1 && isForwardRange!R2)
         {
             import std.range : zip, repeat, take, chain, sequence;
+
             // This algorithm traverses the cartesian product by alternately
             // covering the right and bottom edges of an increasing square area
             // over the infinite table of combinations. This schedule allows us
@@ -75,7 +73,9 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 ///
 @safe unittest
 {
+    import std.algorithm : canFind; // FIXME
     import std.range;
+    import std.typecons : tuple;
 
     auto N = sequence!"n"(0);         // the range of natural numbers
     auto N2 = cartesianProduct(N, N); // the range of all pairs of natural numbers
@@ -90,6 +90,9 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 ///
 @safe unittest
 {
+    import std.algorithm : canFind; // FIXME
+    import std.typecons : tuple;
+
     auto B = [ 1, 2, 3 ];
     auto C = [ 4, 5, 6 ];
     auto BC = cartesianProduct(B, C);
@@ -104,7 +107,10 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 @safe unittest
 {
     // Test cartesian product of two infinite ranges
+    import std.algorithm : canFind; // FIXME
     import std.range;
+    import std.typecons : tuple;
+
     auto Even = sequence!"2*n"(0);
     auto Odd = sequence!"2*n+1"(0);
     auto EvenOdd = cartesianProduct(Even, Odd);
@@ -125,7 +131,10 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 {
     // Test cartesian product of an infinite input range and a finite forward
     // range.
+    import std.algorithm : canFind; // FIXME
     import std.range;
+    import std.typecons : tuple;
+
     auto N = sequence!"n"(0);
     auto M = [100, 200, 300];
     auto NM = cartesianProduct(N,M);
@@ -160,6 +169,9 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 
 @safe unittest
 {
+    import std.algorithm : canFind; // FIXME
+    import std.typecons : tuple;
+
     // Test cartesian product of two finite ranges.
     auto X = [1, 2, 3];
     auto Y = [4, 5, 6];
@@ -184,6 +196,11 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 
 @safe unittest
 {
+    import std.algorithm : canFind; // FIXME
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.typecons : tuple;
+
     import std.range;
     auto N = sequence!"n"(0);
 
@@ -312,6 +329,7 @@ auto cartesianProduct(RR...)(RR ranges)
         }
         @property auto front()
         {
+            import std.algorithm : algoFormat; // FIXME
             import std.range : iota;
             return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
                                     iota(0, current.length)));
@@ -385,7 +403,10 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
      * one level of tuples so that a ternary cartesian product, for example,
      * returns 3-element tuples instead of nested 2-element tuples.
      */
+    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.iteration : map;
     import std.range : iota;
+
     enum string denest = algoFormat("tuple(a[0], %(a[1][%d]%|,%))",
                                 iota(0, otherRanges.length+1));
     return map!denest(
@@ -395,7 +416,10 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 
 @safe unittest
 {
+    import std.algorithm : canFind; // FIXME
     import std.range;
+    import std.typecons : tuple, Tuple;
+
     auto N = sequence!"n"(0);
     auto N3 = cartesianProduct(N, N, N);
 
@@ -409,7 +433,10 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 
 @safe unittest
 {
+    import std.algorithm : canFind; // FIXME
     import std.range;
+    import std.typecons : tuple, Tuple;
+
     auto N = sequence!"n"(0);
     auto N4 = cartesianProduct(N, N, N, N);
 
@@ -425,6 +452,9 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
     auto A = [ 1, 2, 3 ];
     auto B = [ 'a', 'b', 'c' ];
     auto C = [ "x", "y", "z" ];
@@ -459,6 +489,7 @@ pure @safe nothrow @nogc unittest
 // Issue 13935
 unittest
 {
+    import std.algorithm.iteration : map;
     auto seq = [1, 2].map!(x => x);
     foreach (pair; cartesianProduct(seq, seq)) {}
 }
@@ -524,6 +555,8 @@ void largestPartialIntersection
             sorted);
 }
 
+import std.algorithm : SortOutput; // FIXME
+
 // largestPartialIntersectionWeighted
 /**
 Similar to $(D largestPartialIntersection), but associates a weight
@@ -557,6 +590,9 @@ void largestPartialIntersectionWeighted
 (alias less = "a < b", RangeOfRanges, Range, WeightsAA)
 (RangeOfRanges ror, Range tgt, WeightsAA weights, SortOutput sorted = SortOutput.no)
 {
+    import std.algorithm.iteration : group;
+    import std.algorithm.sorting : topNCopy;
+
     if (tgt.empty) return;
     alias InfoType = ElementType!Range;
     bool heapComp(InfoType a, InfoType b)
@@ -569,6 +605,7 @@ void largestPartialIntersectionWeighted
 unittest
 {
     import std.conv : text;
+    import std.typecons : tuple, Tuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -592,6 +629,7 @@ unittest
 unittest
 {
     import std.conv : text;
+    import std.typecons : tuple, Tuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -612,6 +650,8 @@ unittest
 
 unittest
 {
+    import std.typecons : tuple, Tuple;
+
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 // Figure which number can be found in most arrays of the set of
 // arrays below, with specific per-element weights
@@ -634,6 +674,7 @@ unittest
 unittest
 {
     import std.container : Array;
+    import std.typecons : Tuple;
 
     alias T = Tuple!(uint, uint);
     const Array!T arrayOne = Array!T( [ T(1,2), T(3,4) ] );
@@ -681,6 +722,8 @@ struct NWayUnion(alias less, RangeOfRanges)
 
     this(RangeOfRanges ror)
     {
+        import std.algorithm : remove, SwapStrategy; // FIXME
+
         // Preemptively get rid of all empty ranges in the input
         // No need for stability either
         _ror = remove!("a.empty", SwapStrategy.unstable)(ror);
@@ -723,6 +766,8 @@ NWayUnion!(less, RangeOfRanges) nWayUnion
 ///
 unittest
 {
+    import std.algorithm.comparison : equal;
+
     double[][] a =
     [
         [ 1, 4, 7, 8 ],
@@ -813,6 +858,8 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     assert(equal(setDifference(a, b), [5, 9][]));
@@ -821,6 +868,8 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 
 @safe unittest // Issue 10460
 {
+    import std.algorithm.comparison : equal;
+
     int[] a = [1, 2, 3, 4, 5];
     int[] b = [2, 4];
     foreach (ref e; setDifference(a, b))
@@ -931,6 +980,8 @@ SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs range
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 0, 1, 4, 5, 7, 8 ];
@@ -941,6 +992,9 @@ SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs range
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
+
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 0, 1, 4, 5, 7, 8 ];
@@ -1065,6 +1119,8 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
@@ -1211,6 +1267,8 @@ SetUnion!(less, Rs) setUnion(alias less = "a < b", Rs...)
 ///
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 10 ];

@@ -1,16 +1,12 @@
 // Written in the D programming language.
 module std.algorithm.sorting;
 
-private import std.algorithm; // ugly hack for now
-
+import std.algorithm : SortOutput, SwapStrategy; // FIXME
 import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
-
 // FIXME
 import std.range; // : SortedRange;
 import std.traits;
-// FIXME
-import std.typecons; // : tuple, Tuple;
 
 // completeSort
 /**
@@ -26,6 +22,7 @@ void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(SortedRange!(Range1, less) lhs, Range2 rhs)
 if (hasLength!(Range2) && hasSlicing!(Range2))
 {
+    import std.algorithm : bringToFront; // FIXME
     import std.range : chain, assumeSorted;
     // Probably this algorithm can be optimized by using in-place
     // merge
@@ -159,6 +156,7 @@ Range partition(alias predicate,
     if ((ss == SwapStrategy.stable && isRandomAccessRange!(Range))
             || (ss != SwapStrategy.stable && isForwardRange!(Range)))
 {
+    import std.algorithm : bringToFront, swap; // FIXME;
     alias pred = unaryFun!(predicate);
     if (r.empty) return r;
     static if (ss == SwapStrategy.stable)
@@ -236,6 +234,7 @@ Range partition(alias predicate,
 ///
 @safe unittest
 {
+    import std.algorithm : count, find; // FIXME
     import std.conv : text;
 
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -273,6 +272,7 @@ Range partition(alias predicate,
 
 @safe unittest
 {
+    import std.algorithm : rndstuff; // FIXME
     static bool even(int a) { return (a & 1) == 0; }
 
     // test with random data
@@ -332,6 +332,10 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 {
     // The algorithm is described in "Engineering a sort function" by
     // Jon Bentley et al, pp 1257.
+
+    import std.algorithm : swap, swapRanges; // FIXME
+    import std.algorithm.comparison : min;
+    import std.typecons : tuple;
 
     alias lessFun = binaryFun!less;
     size_t i, j, k = r.length, l = k;
@@ -449,6 +453,7 @@ makeIndex(
     if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
             && is(ElementType!(RangeIndex) : ElementType!(Range)*))
 {
+    import std.algorithm : addressOf; // FIXME
     import std.exception : enforce;
 
     // assume collection already ordered
@@ -623,7 +628,9 @@ template multiSort(less...) //if (less.length > 1)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     import std.range;
+
     static struct Point { int x, y; }
     auto pts1 = [ Point(5, 6), Point(1, 0), Point(5, 7), Point(1, 1), Point(1, 2), Point(0, 1) ];
     auto pts2 = [ Point(0, 1), Point(1, 0), Point(1, 1), Point(1, 2), Point(5, 6), Point(5, 7) ];
@@ -851,6 +858,7 @@ unittest
 
 unittest
 {
+    import std.algorithm : rndstuff; // FIXME
     import std.random : Random, unpredictableSeed, uniform;
     import std.uni : toUpper;
 
@@ -910,6 +918,8 @@ unittest
         // Unstable sort should complete without an excessive number of predicate calls
         // This would suggest it's running in quadratic time
 
+	import std.algorithm : swapRanges; // FIXME
+
         // Compilation error if predicate is not static, i.e. a nested function
         static uint comp;
         static bool pred(size_t a, size_t b)
@@ -929,6 +939,8 @@ unittest
     }
 
     {
+    	import std.algorithm : swap; // FIXME
+
         bool proxySwapCalled;
         struct S
         {
@@ -950,6 +962,7 @@ unittest
 //private
 void swapAt(R)(R r, size_t i1, size_t i2)
 {
+    import std.algorithm : swap; // FIXME
     static if (is(typeof(&r[i1])))
     {
         swap(r[i1], r[i2]);
@@ -966,6 +979,9 @@ void swapAt(R)(R r, size_t i1, size_t i2)
 
 private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 {
+    import std.algorithm : swap; // FIXME
+    import std.algorithm.comparison : min;
+
     alias Elem = ElementType!(Range);
     enum size_t optimisticInsertionSortGetsBetter = 25;
     static assert(optimisticInsertionSortGetsBetter >= 1);
@@ -1111,6 +1127,8 @@ private template TimSortImpl(alias pred, R)
     // Entry point for tim sort
     void sort(R range, T[] temp)
     {
+    	import std.algorithm.comparison : min;
+
         // Do insertion sort on small range
         if (range.length <= minimalMerge)
         {
@@ -1202,6 +1220,8 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
+    	import std.algorithm : reverse; // FIXME
+
         if (range.length < 2) return range.length;
 
         size_t i = 2;
@@ -1225,6 +1245,8 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
+	import std.algorithm : move; // FIXME
+
         for (; sortedLen < range.length; ++sortedLen)
         {
             T item = moveAt(range, sortedLen);
@@ -1333,6 +1355,8 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
+	import std.algorithm : copy; // FIXME
+
         assert(mid <= range.length);
         assert(temp.length >= mid);
 
@@ -1414,6 +1438,8 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
+	import std.algorithm : copy; // FIXME
+
         assert(mid <= range.length);
         assert(temp.length >= range.length - mid);
 
@@ -1601,6 +1627,8 @@ unittest
     // Generates data especially for testing sorting with Timsort
     static E[] genSampleData(uint seed)
     {
+	import std.algorithm : swap, swapRanges; // FIXME
+
         auto rnd = Random(seed);
 
         E[] arr;
@@ -1763,6 +1791,7 @@ schwartzSort(alias transform, alias less = "a < b",
 unittest
 {
     // issue 4909
+    import std.typecons : Tuple;
     Tuple!(char)[] chars;
     schwartzSort!"a[0]"(chars);
 }
@@ -1770,12 +1799,14 @@ unittest
 unittest
 {
     // issue 5924
+    import std.typecons : Tuple;
     Tuple!(char)[] chars;
     schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
 }
 
 unittest
 {
+    import std.algorithm.iteration : map;
     import std.math : log2;
 
     debug(std_algorithm) scope(success)
@@ -1808,6 +1839,7 @@ unittest
 
 unittest
 {
+    import std.algorithm.iteration : map;
     import std.math : log2;
 
     debug(std_algorithm) scope(success)
@@ -1889,6 +1921,7 @@ void topN(alias less = "a < b",
         Range)(Range r, size_t nth)
     if (isRandomAccessRange!(Range) && hasLength!Range)
 {
+    import std.algorithm : swap; // FIXME
     import std.random : uniform;
 
     static assert(ss == SwapStrategy.unstable,
@@ -1931,6 +1964,9 @@ void topN(alias less = "a < b",
 
 @safe unittest
 {
+    import std.algorithm.comparison : max, min;
+    import std.algorithm.iteration : reduce;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //scope(failure) writeln(stderr, "Failure testing algorithm");
@@ -1979,6 +2015,8 @@ void topN(alias less = "a < b",
 
 @safe unittest
 {
+    import std.algorithm.comparison : max, min;
+    import std.algorithm.iteration : reduce;
     import std.random : uniform;
 
     debug(std_algorithm) scope(success)
@@ -2116,6 +2154,7 @@ bool nextPermutation(alias less="a < b", BidirectionalRange)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
 {
+    import std.algorithm : find, reverse, swap; // FIXME
     import std.range : retro, takeExactly;
     // Ranges of 0 or 1 element have no distinct permutations.
     if (range.empty) return false;
@@ -2195,6 +2234,8 @@ bool nextPermutation(alias less="a < b", BidirectionalRange)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     auto a1 = [1, 2, 3, 4];
 
     assert(nextPermutation(a1));
@@ -2363,6 +2404,7 @@ bool nextEvenPermutation(alias less="a < b", BidirectionalRange)
     if (isBidirectionalRange!BidirectionalRange &&
         hasSwappableElements!BidirectionalRange)
 {
+    import std.algorithm : find, reverse, swap; // FIXME
     import std.range : retro, takeExactly;
     // Ranges of 0 or 1 element have no distinct permutations.
     if (range.empty) return false;
