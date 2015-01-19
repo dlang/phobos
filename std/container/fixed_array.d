@@ -1,4 +1,4 @@
-module std.container.fixedarray;
+module std.container.fixed_array;
 
 import core.exception, std.algorithm, std.conv, std.exception, std.range,
         std.traits, std.typecons;
@@ -30,9 +30,20 @@ struct FixedArray(Store)
     alias Element = ElementType!Range;
 
     private {
-        Store _store;
-        size_t _length;
+
+        static struct Data {
+            Store store;
+            size_t length;
+        }
+
+        alias Payload = RefCounted!(Data, RefCountedAutoInitialize.yes);
+        Payload payload;
+
+        @property
+        ref inout(Store) store() inout { return payload.store; }
+
     }
+
 
 /**
     Constructor taking a random access range of type $(D Store).
@@ -46,8 +57,9 @@ struct FixedArray(Store)
      */
     this(Store store, size_t initialLength = size_t.max)
     {
-        _store = s;
-        _length = min(initialLength, _store.length);
+
+        payload.store = move(store);
+        length = min(initialLength, store.length);
     }
 
 
@@ -67,10 +79,10 @@ Comparison for equality.
     {
         if(length != rhs.length)
             return false;
-        return equal(_store[0 .. _length], rhs._store[0 .. _length]);
+        return equal(store[0 .. length], rhs.store[0 .. length]);
     }
 
-static if(is(typeof(_store.dup())))
+static if(is(typeof(store.dup)))
 {
 /**
 Duplicates the container. The elements themselves are not transitively
@@ -80,7 +92,7 @@ Complexity: $(BIGOH n).
      */
     @property FixedArray dup()
     {
-        return FixedArray(_store.dup, _length);
+        return FixedArray(store.dup, length);
     }
 }
 
@@ -94,7 +106,7 @@ Complexity: $(BIGOH 1)
      */
     @property bool empty() const
     {
-        return _length == 0;
+        return length == 0;
     }
 
 /**
@@ -104,7 +116,7 @@ Complexity: $(BIGOH 1).
      */
     @property size_t length() const
     {
-        return _length;
+        return payload.length;
     }
 
     /// ditto
@@ -122,7 +134,8 @@ Complexity: $(BIGOH 1).
     @property void length(size_t nlength) 
     {
         version(assert) if (nlength > capacity) throw new RangeError();
-        _length = nlength;
+        // TODO initialize the new elements?
+        payload.length = nlength;
     }
 /**
 Returns the maximum number of elements the container can store 
@@ -131,7 +144,7 @@ Complexity: $(BIGOH 1)
      */
     @property size_t capacity() const
     {
-        return _store.length;
+        return store.length;
     }
 
 /**
@@ -143,7 +156,7 @@ Complexity: $(BIGOH 1)
      */
     Range opIndex()
     {
-        return _store[0 .. length];
+        return store[0 .. length];
     }
 
 /**
@@ -161,7 +174,7 @@ Complexity: $(BIGOH 1)
     Range opSlice(size_t i, size_t j)
     {
         version (assert) if (i > j || j > length) throw new RangeError();
-        return _store[i .. j];
+        return store[i .. j];
     }
 
 
@@ -172,17 +185,17 @@ Precondition: $(D !empty)
 
 Complexity: $(BIGOH 1)
      */
-    @property ref T front()
+    @property ref Element front()
     {
         version (assert) if (empty) throw new RangeError();
-        return _store[0];
+        return store[0];
     }
 
     /// ditto
-    @property ref T back()
+    @property ref Element back()
     {
         version (assert) if (empty) throw new RangeError();
-        return _store[_length - 1];
+        return store[length - 1];
     }
 
 /**
@@ -192,10 +205,10 @@ Precondition: $(D i < length)
 
 Complexity: $(BIGOH 1)
      */
-    ref T opIndex(size_t i)
+    ref Element opIndex(size_t i)
     {
-        version (assert) if (i >= _length) throw new RangeError();
-        return _store[i];
+        version (assert) if (i >= length) throw new RangeError();
+        return store[i];
     }
 
 /**
@@ -207,42 +220,42 @@ Precondition: $(D i < j && j < length)
 
 Complexity: $(BIGOH slice.length)
      */
-    void opSliceAssign(T value)
+    void opSliceAssign(Element value)
     {
-        _store[0 .. length] = value;
+        store[0 .. length] = value;
     }
 
     /// ditto
-    void opSliceAssign(T value, size_t i, size_t j)
+    void opSliceAssign(Element value, size_t i, size_t j)
     {
         version(assert) if(j < length) throw new RangeError;
-        _store[i .. j] = value;
+        store[i .. j] = value;
     }
 
     /// ditto
     void opSliceUnary(string op)()
         if(op == "++" || op == "--")
     {
-        mixin(op~"_store[];");
+        mixin(op~"store[];");
     }
 
     /// ditto
     void opSliceUnary(string op)(size_t i, size_t j)
         if(op == "++" || op == "--")
     {
-        mixin(op~"_store[i .. j];");
+        mixin(op~"store[i .. j];");
     }
 
     /// ditto
-    void opSliceOpAssign(string op)(T value)
+    void opSliceOpAssign(string op)(Elementvalue)
     {
-        mixin("_store[] "~op~"= value;");
+        mixin("store[] "~op~"= value;");
     }
 
     /// ditto
-    void opSliceOpAssign(string op)(T value, size_t i, size_t j)
+    void opSliceOpAssign(string op)(Elementvalue, size_t i, size_t j)
     {
-        mixin("_store[i .. j] "~op~"= value;");
+        mixin("store[i .. j] "~op~"= value;");
     }
 
 /**
@@ -263,7 +276,7 @@ Complexity: $(BIGOH n)
      */
     void clear()
     {
-        _length = 0;
+        length = 0;
     }
 
 /**
@@ -273,8 +286,8 @@ instance is unuseable afterwarts.
      */
     Store release()
     {
-        auto result = move(_store);
-        return result[0 .. _length];
+        auto result = move(store);
+        return result[0 .. length];
     }
 
 /**
@@ -288,7 +301,7 @@ Returns: The element removed.
 
 Complexity: $(BIGOH log(n)).
      */
-    T removeAny()
+    Element removeAny()
     {
         auto result = move(back);
         removeBack();
@@ -315,14 +328,14 @@ elements in $(D stuff)
     {
         if(length == capacity)
             throw new RangeError("not enough room to insert stuff");
-        _store[_length] = stuff;
-        ++_length;
+        store[length] = stuff;
+        length = length + 1;
         return 1;
     }
 
     /// ditto
     size_t insertBack(Stuff)(Stuff stuff)
-    if(isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+    if(isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Element))
     {
         static if(hasLength!Stuff)
         {
@@ -353,10 +366,10 @@ Complexity: $(BIGOH log(1)).
     {
         version(assert) if(empty) throw new RangeError;
         /* static if superfluos? */
-        static if (hasElaborateDestructor!T)
-            .destroy(_store[length - 1]);
+        static if (hasElaborateDestructor!Element)
+            .destroy(store[length - 1]);
         
-        --_length;
+        length = length - 1;
     }
     /// ditto
     alias stableRemoveBack = removeBack;
@@ -380,11 +393,11 @@ Complexity: $(BIGOH howMany).
     size_t removeBack(size_t howMany)
     {
         if (howMany > length) howMany = length;
-        static if (hasElaborateDestructor!T)
-            foreach (ref e; _store[length - howMany .. length])
+        static if (hasElaborateDestructor!Element)
+            foreach (ref e; store[length - howMany .. length])
                 .destroy(e);
 
-        _length -= howMany;
+        length = length - howMany;
         return howMany;
     }
     /// ditto
