@@ -1474,6 +1474,30 @@ for every line.
         }
     }
 
+    unittest // Issue 14005, original test case
+    {
+        static import std.file;
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "D'deki tanıma göre, dönüş değerini üretirken veya olası yan etkilerini oluştururken değerlere erişmeyen bir işlev saftır. da değişebilen evrensel durum olarak kabul edildiklerinden saf işlevler giriş ve çıkış işlemleri de içeremezler.
+
+Bazı saf işlevler parametrelerinde değişiklik de yapmazlar. Dolayısıyla, bu gibi işlevlerin programdaki tek etkileri dönüş değerleridir. Bu açıdan bakıldığında, parametrelerinde değişiklik yapmayan saf işlevlerin belirli parametre değerlerine karşılık hep aynı değeri döndürecekleri belli demektir. Dolayısıyla, böyle bir işlevin dönüş değeri eniyileştirme amacıyla sonradan kullanılmak üzere saklanabilir. (Bu gözlem hem derleyici hem de programcı için yararlıdır.)");
+        scope(exit) std.file.remove(deleteme);
+        foreach (line; File(deleteme, "r").byLine) {}
+    }
+
+    unittest // Issue 14005, targeted test case
+    {
+        static import std.file;
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "1234");
+        scope(exit) std.file.remove(deleteme);
+        auto pool = new char[6];
+        pool[] = 'a';
+        auto buf = pool[0 .. 3]; // smaller than the file contents
+        File(deleteme).readln(buf); // should not write into pool beyond buf
+        assert(pool[3 .. $] == "aaa");
+    }
+
     /**
      * Read data from the file according to the specified
      * $(LINK2 std_format.html#format-string, format specifier) using
@@ -3898,9 +3922,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         return buf.length;
     }
 
-    auto sz = GC.sizeOf(buf.ptr);
-    //auto sz = buf.length;
-    buf = buf.ptr[0 .. sz];
+    auto sz = buf.length;
     if (fp._flag & _IONBF)
     {
         /* Use this for unbuffered I/O, when running
@@ -4006,10 +4028,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
      */
     auto fp = cast(_iobuf*)fps;
 
-    auto sz = GC.sizeOf(buf.ptr);
-    //auto sz = buf.length;
-    buf = buf.ptr[0 .. sz];
-
     auto app = appender(buf);
     app.clear();
     if(app.capacity == 0)
@@ -4109,7 +4127,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         buf.length = 0;                // end of file
         return 0;
     }
-    buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
     if (s <= buf.length)
     {
         buf.length = s;
