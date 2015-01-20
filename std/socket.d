@@ -2237,7 +2237,7 @@ public:
             auto length = set.length;
             if (index >= length)
             {
-                while (length < index)
+                while (index >= length)
                     length *= 2;
                 set.length = length;
                 set.length = set.capacity;
@@ -2432,6 +2432,13 @@ unittest
             testPair[1].receive(b[]);
         }
     });
+}
+
+unittest // Issue 14013 - auto-resize
+{
+    auto set = new SocketSet(1);
+    foreach (n; 0..768)
+        set.add(cast(socket_t)n);
 }
 
 /// The level at which a socket option is defined:
