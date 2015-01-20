@@ -1795,17 +1795,6 @@ T toImpl(T, S)(S value)
 /***************************************************************
  Rounded conversion from floating point to integral.
 
-Example:
----------------
-assert(roundTo!int(3.14) == 3);
-assert(roundTo!int(3.49) == 3);
-assert(roundTo!int(3.5) == 4);
-assert(roundTo!int(3.999) == 4);
-assert(roundTo!int(-3.14) == -3);
-assert(roundTo!int(-3.49) == -3);
-assert(roundTo!int(-3.5) == -4);
-assert(roundTo!int(-3.999) == -4);
----------------
 Rounded conversions do not work with non-integral target types.
  */
 
@@ -1821,9 +1810,9 @@ template roundTo(Target)
     }
 }
 
+///
 unittest
 {
-    import std.exception;
     assert(roundTo!int(3.14) == 3);
     assert(roundTo!int(3.49) == 3);
     assert(roundTo!int(3.5) == 4);
@@ -1833,7 +1822,11 @@ unittest
     assert(roundTo!int(-3.5) == -4);
     assert(roundTo!int(-3.999) == -4);
     assert(roundTo!(const int)(to!(const double)(-3.999)) == -4);
+}
 
+unittest
+{
+    import std.exception;
     // boundary values
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
     {
@@ -1852,21 +1845,7 @@ unittest
  * could not convert the entire input. It still throws if an overflow
  * occurred during conversion or if no character of the input
  * was meaningfully converted.
- *
- * Example:
- * --------------
- * string test = "123 \t  76.14";
- * auto a = parse!uint(test);
- * assert(a == 123);
- * assert(test == " \t  76.14"); // parse bumps string
- * munch(test, " \t\n\r"); // skip ws
- * assert(test == "76.14");
- * auto b = parse!double(test);
- * assert(b == 76.14);
- * assert(test == "");
- * --------------
  */
-
 Target parse(Target, Source)(ref Source s)
     if (isInputRange!Source &&
         isSomeChar!(ElementType!Source) &&
@@ -1891,6 +1870,21 @@ Target parse(Target, Source)(ref Source s)
     }
 Lerr:
     throw parseError("bool should be case-insensitive 'true' or 'false'");
+}
+
+///
+unittest
+{
+    import std.string : munch;
+    string test = "123 \t  76.14";
+    auto a = parse!uint(test);
+    assert(a == 123);
+    assert(test == " \t  76.14"); // parse bumps string
+    munch(test, " \t\n\r"); // skip ws
+    assert(test == "76.14");
+    auto b = parse!double(test);
+    assert(b == 76.14);
+    assert(test == "");
 }
 
 unittest
@@ -3652,16 +3646,6 @@ user specifically asks for a $(D long) with the $(D L) suffix, always
 give the $(D long). Give an unsigned iff it is asked for with the $(D
 U) or $(D u) suffix. _Octals created from integers preserve the type
 of the passed-in integral.
-
-Example:
-----
-// same as 0177
-auto x = octal!177;
-// octal is a compile-time device
-enum y = octal!160;
-// Create an unsigned octal
-auto z = octal!"1_000_000u";
-----
  */
 @property int octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
@@ -3697,15 +3681,20 @@ template octal(alias s)
     enum auto octal = octal!(typeof(s), to!string(s));
 }
 
+///
+unittest
+{
+    // same as 0177
+    auto x = octal!177;
+    // octal is a compile-time device
+    enum y = octal!160;
+    // Create an unsigned octal
+    auto z = octal!"1_000_000u";
+}
+
 /*
     Takes a string, num, which is an octal literal, and returns its
     value, in the type T specified.
-
-    So:
-
-    int a = octal!(int, "10");
-
-    assert(a == 8);
 */
 @property T octal(T, string num)()
     if (isOctalLiteral!num)
@@ -3726,6 +3715,14 @@ template octal(alias s)
     }
 
     return value;
+}
+
+///
+unittest
+{
+    int a = octal!(int, "10");
+
+    assert(a == 8);
 }
 
 /*
@@ -5028,6 +5025,7 @@ T* emplace(T, Args...)(void[] chunk, auto ref Args args)
     return emplace(cast(T*) chunk.ptr, args);
 }
 
+///
 unittest
 {
     struct S
