@@ -198,7 +198,7 @@ private template sizeOfBitField(T...)
 
 private template createTaggedReference(string store, T, ulong a, string name, Ts...)
 {
-	static assert(sizeOfBitField!Ts <= getBitsForAlign(a), "Fields must fit in the bits know to be zero because of alignment.");
+    static assert(sizeOfBitField!Ts <= getBitsForAlign(a), "Fields must fit in the bits know to be zero because of alignment.");
     enum result
         = createReferenceAccessor!(store, T, sizeOfBitField!Ts, name).result
         ~ createFields!(store, 0, Ts, size_t, "", T.sizeof * 8 - sizeOfBitField!Ts).result;
@@ -263,24 +263,6 @@ A tagged pointer uses the bits known to be zero in a normal pointer or class ref
 For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
 One can store a 2-bit integer there.
 
-
-Example:
-
-----
-struct A
-{
-    int a;
-    mixin(taggedPointer!(
-        uint*, "x",
-        bool, "b1", 1,
-        bool, "b2", 1));
-}
-A obj;
-obj.x = new int;
-obj.b1 = true;
-obj.b2 = false;
-----
-
 The example above creates a tagged pointer in the struct A. The pointer is of type
 $(D uint*) as specified by the first argument, and is named x, as specified by the second
 argument.
@@ -293,6 +275,23 @@ template taggedPointer(T : T*, string name, Ts...) {
     enum taggedPointer = createTaggedReference!(createStoreName!(T, name, 0, Ts), T*, T.alignof, name, Ts).result;
 }
 
+///
+unittest
+{
+    struct A
+    {
+        int a;
+        mixin(taggedPointer!(
+            uint*, "x",
+            bool, "b1", 1,
+            bool, "b2", 1));
+    }
+    A obj;
+    obj.x = new uint;
+    obj.b1 = true;
+    obj.b2 = false;
+}
+
 /**
 This string mixin generator allows one to create tagged class reference inside $(D_PARAM struct)s and $(D_PARAM class)es.
 
@@ -300,27 +299,27 @@ A tagged class reference uses the bits known to be zero in a normal class refere
 For example, a pointer to an integer must be 4-byte aligned, so there are 2 bits that are always known to be zero.
 One can store a 2-bit integer there.
 
-Example:
-
-----
-struct A
-{
-    int a;
-    mixin(taggedClassRef!(
-        Object, "o",
-        uint, "i", 2));
-}
-A obj;
-obj.o = new Object();
-obj.i = 3;
-----
-
 The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
 as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
 */
 
 template taggedClassRef(T, string name, Ts...) if(is(T == class)) {
     enum taggedClassRef = createTaggedReference!(createStoreName!(T, name, 0, Ts), T, 8, name, Ts).result;
+}
+
+///
+unittest
+{
+    struct A
+    {
+        int a;
+        mixin(taggedClassRef!(
+            Object, "o",
+            uint, "i", 2));
+    }
+    A obj;
+    obj.o = new Object();
+    obj.i = 3;
 }
 
 @safe pure nothrow @nogc
@@ -2217,17 +2216,6 @@ private union EndianSwapper(T)
     $(D real) is not supported, because its size is implementation-dependent
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
-
-        Examples:
---------------------
-int i = 12345;
-ubyte[4] swappedI = nativeToBigEndian(i);
-assert(i == bigEndianToNative!int(swappedI));
-
-double d = 123.45;
-ubyte[8] swappedD = nativeToBigEndian(d);
-assert(d == bigEndianToNative!double(swappedD));
---------------------
   +/
 auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
     if(canSwapEndianness!T)
@@ -2235,7 +2223,7 @@ auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
     return nativeToBigEndianImpl(val);
 }
 
-//Verify Examples
+///
 unittest
 {
     int i = 12345;
@@ -2350,17 +2338,6 @@ unittest
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
-
-        Examples:
---------------------
-ushort i = 12345;
-ubyte[2] swappedI = nativeToBigEndian(i);
-assert(i == bigEndianToNative!ushort(swappedI));
-
-dchar c = 'D';
-ubyte[4] swappedC = nativeToBigEndian(c);
-assert(c == bigEndianToNative!dchar(swappedC));
---------------------
   +/
 T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     if(canSwapEndianness!T && n == T.sizeof)
@@ -2368,7 +2345,7 @@ T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     return bigEndianToNativeImpl!(T, n)(val);
 }
 
-//Verify Examples.
+///
 unittest
 {
     ushort i = 12345;
@@ -2413,17 +2390,6 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @n
     as a regular one (and in the case of floating point values, it's necessary,
     because the FPU will mess up any swapped floating point values. So, you
     can't actually have swapped floating point values as floating point values).
-
-        Examples:
---------------------
-int i = 12345;
-ubyte[4] swappedI = nativeToLittleEndian(i);
-assert(i == littleEndianToNative!int(swappedI));
-
-double d = 123.45;
-ubyte[8] swappedD = nativeToLittleEndian(d);
-assert(d == littleEndianToNative!double(swappedD));
---------------------
   +/
 auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
     if(canSwapEndianness!T)
@@ -2431,7 +2397,7 @@ auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
     return nativeToLittleEndianImpl(val);
 }
 
-//Verify Examples.
+///
 unittest
 {
     int i = 12345;
@@ -2519,17 +2485,6 @@ unittest
     $(D real) is not supported, because its size is implementation-dependent
     and therefore could vary from machine to machine (which could make it
     unusable if you tried to transfer it to another machine).
-
-        Examples:
---------------------
-ushort i = 12345;
-ubyte[2] swappedI = nativeToLittleEndian(i);
-assert(i == littleEndianToNative!ushort(swappedI));
-
-dchar c = 'D';
-ubyte[4] swappedC = nativeToLittleEndian(c);
-assert(c == littleEndianToNative!dchar(swappedC));
---------------------
   +/
 T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     if(canSwapEndianness!T && n == T.sizeof)
@@ -2537,7 +2492,7 @@ T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
     return littleEndianToNativeImpl!T(val);
 }
 
-//Verify Unittest.
+///
 unittest
 {
     ushort i = 12345;
@@ -2674,28 +2629,6 @@ unittest
                 front). If index is a pointer, then it is updated to the index
                 after the bytes read. The overloads with index are only
                 available if $(D hasSlicing!R) is $(D true).
-
-        Examples:
---------------------
-ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
-assert(buffer.peek!uint() == 17110537);
-assert(buffer.peek!ushort() == 261);
-assert(buffer.peek!ubyte() == 1);
-
-assert(buffer.peek!uint(2) == 369700095);
-assert(buffer.peek!ushort(2) == 5641);
-assert(buffer.peek!ubyte(2) == 22);
-
-size_t index = 0;
-assert(buffer.peek!ushort(&index) == 261);
-assert(index == 2);
-
-assert(buffer.peek!uint(&index) == 369700095);
-assert(index == 6);
-
-assert(buffer.peek!ubyte(&index) == 8);
-assert(index == 7);
---------------------
   +/
 
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
@@ -2754,7 +2687,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
         return littleEndianToNative!T(bytes);
 }
 
-//Verify Example.
+///
 unittest
 {
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
@@ -2999,21 +2932,6 @@ unittest
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness that the bytes are assumed to be in.
         range = The range to read from.
-
-        Examples:
---------------------
-ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
-assert(buffer.length == 7);
-
-assert(buffer.read!ushort() == 261);
-assert(buffer.length == 5);
-
-assert(buffer.read!uint() == 369700095);
-assert(buffer.length == 1);
-
-assert(buffer.read!ubyte() == 8);
-assert(buffer.empty);
---------------------
   +/
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
     if(canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
@@ -3040,7 +2958,7 @@ T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
         return littleEndianToNative!T(bytes);
 }
 
-//Verify Example.
+///
 unittest
 {
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
@@ -3258,49 +3176,6 @@ unittest
         range = The range to write to.
         index = The index to start writing to. If index is a pointer, then it
                 is updated to the index after the bytes read.
-
-        Examples:
---------------------
-{
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-    buffer.write!uint(29110231u, 0);
-    assert(buffer == [1, 188, 47, 215, 0, 0, 0, 0]);
-
-    buffer.write!ushort(927, 0);
-    assert(buffer == [3, 159, 47, 215, 0, 0, 0, 0]);
-
-    buffer.write!ubyte(42, 0);
-    assert(buffer == [42, 159, 47, 215, 0, 0, 0, 0]);
-}
-
-{
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-    buffer.write!uint(142700095u, 2);
-    assert(buffer == [0, 0, 8, 129, 110, 63, 0, 0, 0]);
-
-    buffer.write!ushort(19839, 2);
-    assert(buffer == [0, 0, 77, 127, 110, 63, 0, 0, 0]);
-
-    buffer.write!ubyte(132, 2);
-    assert(buffer == [0, 0, 132, 127, 110, 63, 0, 0, 0]);
-}
-
-{
-    ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-    size_t index = 0;
-    buffer.write!ushort(261, &index);
-    assert(buffer == [1, 5, 0, 0, 0, 0, 0, 0]);
-    assert(index == 2);
-
-    buffer.write!uint(369700095u, &index);
-    assert(buffer == [1, 5, 22, 9, 44, 255, 0, 0]);
-    assert(index == 6);
-
-    buffer.write!ubyte(8, &index);
-    assert(buffer == [1, 5, 22, 9, 44, 255, 8, 0]);
-    assert(index == 7);
-}
---------------------
   +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
     if(canSwapEndianness!T &&
@@ -3331,7 +3206,7 @@ void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t*
     range[begin .. end] = bytes[0 .. T.sizeof];
 }
 
-//Verify Example.
+///
 unittest
 {
     {
@@ -3644,19 +3519,6 @@ unittest
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness to write the bytes in.
         range = The range to append to.
-
-        Examples:
---------------------
-auto buffer = appender!(const ubyte[])();
-buffer.append!ushort(261);
-assert(buffer.data == [1, 5]);
-
-buffer.append!uint(369700095u);
-assert(buffer.data == [1, 5, 22, 9, 44, 255]);
-
-buffer.append!ubyte(8);
-assert(buffer.data == [1, 5, 22, 9, 44, 255, 8]);
---------------------
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
     if(canSwapEndianness!T && isOutputRange!(R, ubyte))
@@ -3669,7 +3531,7 @@ void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
     put(range, bytes[]);
 }
 
-//Verify Example.
+///
 unittest
 {
     import std.array;
