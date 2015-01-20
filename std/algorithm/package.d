@@ -425,7 +425,7 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
-Source: $(PHOBOSSRC std/_algorithm.d)
+Source: $(PHOBOSSRC std/_algorithm/package.d)
  */
 module std.algorithm;
 //debug = std_algorithm;

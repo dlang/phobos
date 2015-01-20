@@ -1,4 +1,16 @@
 // Written in the D programming language.
+/**
+This is a submodule of $(LINK2 std_algorithm_package.html, std.algorithm).
+It contains generic _sorting algorithms.
+
+Copyright: Andrei Alexandrescu 2008-.
+
+License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+Authors: $(WEB erdani.com, Andrei Alexandrescu)
+
+Source: $(PHOBOSSRC std/algorithm/_sorting.d)
+ */
 module std.algorithm.sorting;
 
 import std.algorithm : SortOutput; // FIXME

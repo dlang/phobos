@@ -1,4 +1,16 @@
 // Written in the D programming language.
+/**
+This is a submodule of $(LINK2 std_algorithm_package.html, std.algorithm).
+It contains generic algorithms that implement set operations.
+
+Copyright: Andrei Alexandrescu 2008-.
+
+License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+Authors: $(WEB erdani.com, Andrei Alexandrescu)
+
+Source: $(PHOBOSSRC std/algorithm/_setops.d)
+ */
 module std.algorithm.setops;
 
 import std.range.primitives;
