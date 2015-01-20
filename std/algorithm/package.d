@@ -1,54 +1,137 @@
 // Written in the D programming language.
 
 /**
-Implements algorithms oriented mainly towards processing of
-sequences. Sequences processed by these functions define range-based interfaces.
-See also $(LINK2 std_range.html, Reference on ranges) and
+This package implements generic algorithms oriented towards the processing of
+sequences. Sequences processed by these functions define range-based
+interfaces.  See also $(LINK2 std_range.html, Reference on ranges) and
 $(WEB ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
 <script type="text/javascript">inhibitQuickIndex = 1</script>
 
-$(BOOKTABLE ,
-$(TR $(TH Category) $(TH Functions)
-)
-$(TR $(TDNW Searching) $(TD $(MYREF all) $(MYREF any) $(MYREF balancedParens) $(MYREF
-boyerMooreFinder) $(MYREF canFind) $(MYREF commonPrefix) $(MYREF count)
-$(MYREF countUntil) $(MYREF endsWith) $(MYREF find) $(MYREF
-findAdjacent) $(MYREF findAmong) $(MYREF findSkip) $(MYREF findSplit)
-$(MYREF findSplitAfter) $(MYREF findSplitBefore) $(MYREF minCount)
-$(MYREF minPos) $(MYREF skipOver) $(MYREF startsWith)
-$(MYREF until) )
-)
-$(TR $(TDNW Comparison) $(TD $(MYREF among) $(MYREF castSwitch) $(MYREF clamp)
-$(MYREF cmp) $(MYREF equal) $(MYREF levenshteinDistance) $(MYREF
-levenshteinDistanceAndPath) $(MYREF max) $(MYREF min) $(MYREF mismatch)
-$(MYREF predSwitch))
-)
-$(TR $(TDNW Iteration) $(TD $(MYREF cache) $(MYREF cacheBidirectional)
-$(MYREF each) $(MYREF filter) $(MYREF filterBidirectional)
-$(MYREF group) $(MYREF groupBy) $(MYREF joiner) $(MYREF map) $(MYREF reduce)
-$(MYREF splitter) $(MYREF sum) $(MYREF uniq) )
-)
-$(TR $(TDNW Sorting) $(TD $(MYREF completeSort) $(MYREF isPartitioned)
-$(MYREF isSorted) $(MYREF makeIndex) $(MYREF multiSort) $(MYREF
-nextEvenPermutation) $(MYREF nextPermutation) $(MYREF partialSort)
-$(MYREF partition) $(MYREF partition3) $(MYREF schwartzSort) $(MYREF sort)
-$(MYREF topN) $(MYREF topNCopy) )
-)
-$(TR $(TDNW Set&nbsp;operations) $(TD $(MYREF cartesianProduct) $(MYREF
-largestPartialIntersection) $(MYREF largestPartialIntersectionWeighted)
-$(MYREF nWayUnion) $(MYREF setDifference) $(MYREF setIntersection) $(MYREF
-setSymmetricDifference) $(MYREF setUnion) )
-)
-$(TR $(TDNW Mutation) $(TD $(MYREF bringToFront) $(MYREF copy) $(MYREF
-fill) $(MYREF initializeAll) $(MYREF move) $(MYREF moveAll) $(MYREF
-moveSome) $(MYREF remove) $(MYREF reverse) $(MYREF strip) $(MYREF stripLeft)
-$(MYREF stripRight) $(MYREF swap) $(MYREF swapRanges) $(MYREF uninitializedFill) )
-)
-$(TR $(TDNW Utility) $(TD $(MYREF forward) ))
-)
+Algorithms are categorized into the following submodules:
 
-Many functions in this module are parameterized with a function or a
+$(BOOKTABLE ,
+$(TR $(TH Category) $(TH Submodule) $(TH Functions)
+)
+$(TR $(TDNW Searching)
+     $(TDNW $(SUBMODULE searching))
+     $(TD
+        $(SUBREF searching, all) 
+        $(SUBREF searching, any) 
+        $(SUBREF searching, balancedParens)
+        $(SUBREF searching, boyerMooreFinder) 
+        $(SUBREF searching, canFind) 
+        $(SUBREF searching, commonPrefix)
+        $(SUBREF searching, count) 
+        $(SUBREF searching, countUntil) 
+        $(SUBREF searching, endsWith) 
+        $(SUBREF searching, find)
+        $(SUBREF searching, findAdjacent) 
+        $(SUBREF searching, findAmong) 
+        $(SUBREF searching, findSkip)
+        $(SUBREF searching, findSplit) 
+        $(SUBREF searching, findSplitAfter) 
+        $(SUBREF searching, findSplitBefore)
+        $(SUBREF searching, minCount) 
+        $(SUBREF searching, minPos) 
+        $(SUBREF searching, skipOver) 
+        $(SUBREF searching, startsWith)
+        $(SUBREF searching, until)
+    )
+)
+$(TR $(TDNW Comparison)
+    $(TDNW $(SUBMODULE comparison))
+    $(TD
+        $(SUBREF comparison, among)
+        $(SUBREF comparison, castSwitch)
+        $(SUBREF comparison, clamp)
+        $(SUBREF comparison, cmp)
+        $(SUBREF comparison, equal)
+        $(SUBREF comparison, levenshteinDistance)
+        $(SUBREF comparison, levenshteinDistanceAndPath)
+        $(SUBREF comparison, max)
+        $(SUBREF comparison, min)
+        $(SUBREF comparison, mismatch)
+        $(SUBREF comparison, predSwitch)
+    )
+)
+$(TR $(TDNW Iteration)
+    $(TDNW $(SUBMODULE iteration))
+    $(TD 
+        $(SUBREF iteration, cache) 
+        $(SUBREF iteration, cacheBidirectional) 
+        $(SUBREF iteration, each) 
+        $(SUBREF iteration, filter) 
+        $(SUBREF iteration, filterBidirectional) 
+        $(SUBREF iteration, group) 
+        $(SUBREF iteration, groupBy) 
+        $(SUBREF iteration, joiner) 
+        $(SUBREF iteration, map) 
+        $(SUBREF iteration, reduce) 
+        $(SUBREF iteration, splitter) 
+        $(SUBREF iteration, sum) 
+        $(SUBREF iteration, uniq)
+    )
+)
+$(TR $(TDNW Sorting)
+    $(TDNW $(SUBMODULE sorting))
+    $(TD 
+        $(SUBREF sorting, completeSort) 
+        $(SUBREF sorting, isPartitioned) 
+        $(SUBREF sorting, isSorted) 
+        $(SUBREF sorting, makeIndex) 
+        $(SUBREF sorting, multiSort) 
+        $(SUBREF sorting, nextEvenPermutation) 
+        $(SUBREF sorting, nextPermutation) 
+        $(SUBREF sorting, partialSort) 
+        $(SUBREF sorting, partition) 
+        $(SUBREF sorting, partition3) 
+        $(SUBREF sorting, schwartzSort) 
+        $(SUBREF sorting, sort) 
+        $(SUBREF sorting, topN) 
+        $(SUBREF sorting, topNCopy)
+    )
+)
+$(TR $(TDNW Set&nbsp;operations)
+    $(TDNW $(SUBMODULE setops))
+    $(TD 
+        $(SUBREF setops, cartesianProduct) 
+        $(SUBREF setops, largestPartialIntersection) 
+        $(SUBREF setops, largestPartialIntersectionWeighted) 
+        $(SUBREF setops, nWayUnion) 
+        $(SUBREF setops, setDifference) 
+        $(SUBREF setops, setIntersection) 
+        $(SUBREF setops, setSymmetricDifference) 
+        $(SUBREF setops, setUnion)
+    )
+)
+$(TR $(TDNW Mutation)
+    $(TDNW $(SUBMODULE mutation))
+    $(TD 
+        $(SUBREF mutation, bringToFront) 
+        $(SUBREF mutation, copy) 
+        $(SUBREF mutation, fill) 
+        $(SUBREF mutation, initializeAll) 
+        $(SUBREF mutation, move) 
+        $(SUBREF mutation, moveAll) 
+        $(SUBREF mutation, moveSome) 
+        $(SUBREF mutation, remove) 
+        $(SUBREF mutation, reverse) 
+        $(SUBREF mutation, strip) 
+        $(SUBREF mutation, stripLeft) 
+        $(SUBREF mutation, stripRight) 
+        $(SUBREF mutation, swap) 
+        $(SUBREF mutation, swapRanges) 
+        $(SUBREF mutation, uninitializedFill)
+    )
+)
+$(TR $(TDNW Utility)
+    $(TDNW -)
+    $(TD $(MYREF forward)
+    )
+))
+
+Many functions in this package are parameterized with a function or a
 $(GLOSSARY predicate). The predicate may be passed either as a
 function name, a delegate name, a $(GLOSSARY functor) name, or a
 compile-time string. The string may consist of $(B any) legal D
@@ -79,259 +162,262 @@ $(TR $(TH Function Name) $(TH Description))
 
 $(LEADINGROW Searching)
 
-$(T2 all,
+$(T2 searching, all,
         $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements
         are positive)
-$(T2 any,
+$(T2 searching, any,
         $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one
         element is positive)
-$(T2 balancedParens,
+$(T2 searching, balancedParens,
         $(D balancedParens("((1 + 1) / 2)")) returns $(D true) because the
         string has balanced parentheses.)
-$(T2 boyerMooreFinder,
+$(T2 searching, boyerMooreFinder,
         $(D find("hello world", boyerMooreFinder("or"))) returns $(D "orld")
         using the $(LUCKY Boyer-Moore _algorithm).)
-$(T2 canFind,
+$(T2 searching, canFind,
         $(D canFind("hello world", "or")) returns $(D true).)
-$(T2 count,
+$(T2 searching, count,
         Counts elements that are equal to a specified value or satisfy a
         predicate.  $(D count([1, 2, 1], 1)) returns $(D 2) and
         $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
-$(T2 countUntil,
+$(T2 searching, countUntil,
         $(D countUntil(a, b)) returns the number of steps taken in $(D a) to
         reach $(D b); for example, $(D countUntil("hello!", "o")) returns
         $(D 4).)
-$(T2 commonPrefix,
+$(T2 searching, commonPrefix,
         $(D commonPrefix("parakeet", "parachute")) returns $(D "para").)
-$(T2 endsWith,
+$(T2 searching, endsWith,
         $(D endsWith("rocks", "ks")) returns $(D true).)
-$(T2 find,
+$(T2 searching, find,
         $(D find("hello world", "or")) returns $(D "orld") using linear search.
         (For binary search refer to $(XREF range,sortedRange).))
-$(T2 findAdjacent,
+$(T2 searching, findAdjacent,
         $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
         two equal adjacent elements, i.e. $(D [3, 3, 4]).)
-$(T2 findAmong,
+$(T2 searching, findAmong,
         $(D findAmong("abcd", "qcx")) returns $(D "cd") because $(D 'c') is
         among $(D "qcx").)
-$(T2 findSkip,
+$(T2 searching, findSkip,
         If $(D a = "abcde"), then $(D findSkip(a, "x")) returns $(D false) and
         leaves $(D a) unchanged, whereas $(D findSkip(a, 'c')) advances $(D a)
         to $(D "cde") and returns $(D true).)
-$(T2 findSplit,
+$(T2 searching, findSplit,
         $(D findSplit("abcdefg", "de")) returns the three ranges $(D "abc"),
         $(D "de"), and $(D "fg").)
-$(T2 findSplitAfter,
+$(T2 searching, findSplitAfter,
         $(D findSplitAfter("abcdefg", "de")) returns the two ranges
         $(D "abcde") and $(D "fg").)
-$(T2 findSplitBefore,
+$(T2 searching, findSplitBefore,
         $(D findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc")
         and $(D "defg").)
-$(T2 minCount,
+$(T2 searching, minCount,
         $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
-$(T2 minPos,
+$(T2 searching, minPos,
         $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
         i.e., positions the range at the first occurrence of its minimal
         element.)
-$(T2 mismatch,
+$(T2 searching, mismatch,
         $(D mismatch("parakeet", "parachute")) returns the two ranges
         $(D "keet") and $(D "chute").)
-$(T2 skipOver,
+$(T2 searching, skipOver,
         Assume $(D a = "blah"). Then $(D skipOver(a, "bi")) leaves $(D a)
         unchanged and returns $(D false), whereas $(D skipOver(a, "bl"))
         advances $(D a) to refer to $(D "ah") and returns $(D true).)
-$(T2 startsWith,
+$(T2 searching, startsWith,
         $(D startsWith("hello, world", "hello")) returns $(D true).)
-$(T2 until,
+$(T2 searching, until,
         Lazily iterates a range until a specific value is found.)
 
 $(LEADINGROW Comparison)
 
-$(T2 among,
+$(T2 comparison, among,
         Checks if a value is among a set of values, e.g.
         $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
-$(T2 castSwitch,
+$(T2 comparison, castSwitch,
         $(D (new A()).castSwitch((A a)=>1,(B b)=>2)) returns $(D 1).)
-$(T2 clamp,
+$(T2 comparison, clamp,
         $(D clamp(1, 3, 6)) returns $(D 3). $(D clamp(4, 3, 6)) returns $(D 4).)
-$(T2 cmp,
+$(T2 comparison, cmp,
         $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1),
         and $(D cmp("abc", "abc")) is $(D 0).)
-$(T2 equal,
+$(T2 comparison, equal,
         Compares ranges for element-by-element equality, e.g.
         $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
-$(T2 levenshteinDistance,
+$(T2 comparison, levenshteinDistance,
         $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
         the $(LUCKY Levenshtein distance _algorithm).)
-$(T2 levenshteinDistanceAndPath,
+$(T2 comparison, levenshteinDistanceAndPath,
         $(D levenshteinDistanceAndPath("kitten", "sitting")) returns
         $(D tuple(3, "snnnsni")) by using the $(LUCKY Levenshtein distance
         _algorithm).)
-$(T2 max,
+$(T2 comparison, max,
         $(D max(3, 4, 2)) returns $(D 4).)
-$(T2 min,
+$(T2 comparison, min,
         $(D min(3, 4, 2)) returns $(D 2).)
-$(T2 mismatch,
+$(T2 comparison, mismatch,
         $(D mismatch("oh hi", "ohayo")) returns $(D tuple(" hi", "ayo")).)
-$(T2 predSwitch,
+$(T2 comparison, predSwitch,
         $(D 2.predSwitch(1, "one", 2, "two", 3, "three")) returns $(D "two").)
 
 $(LEADINGROW Iteration)
 
-$(T2 cache,
+$(T2 iteration, cache,
         Eagerly evaluates and caches another range's $(D front).)
-$(T2 cacheBidirectional,
+$(T2 iteration, cacheBidirectional,
         As above, but also provides $(D back) and $(D popBack).)
-$(T2 each,
+$(T2 iteration, each,
         $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
         and $(D 3) on their own lines.)
-$(T2 filter,
+$(T2 iteration, filter,
         $(D filter!"a > 0"([1, -1, 2, 0, -3])) iterates over elements $(D 1)
         and $(D 2).)
-$(T2 filterBidirectional,
+$(T2 iteration, filterBidirectional,
         Similar to $(D filter), but also provides $(D back) and $(D popBack) at
         a small increase in cost.)
-$(T2 group,
+$(T2 iteration, group,
         $(D group([5, 2, 2, 3, 3])) returns a range containing the tuples
         $(D tuple(5, 1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
-$(T2 groupBy,
+$(T2 iteration, groupBy,
         $(D groupBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
         returns a range containing 3 subranges: the first with just
         $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
         and the third with just $(D [2, 1]).)
-$(T2 joiner,
+$(T2 iteration, joiner,
         $(D joiner(["hello", "world!"], "; ")) returns a range that iterates
         over the characters $(D "hello; world!"). No new string is created -
         the existing inputs are iterated.)
-$(T2 map,
+$(T2 iteration, map,
         $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
         $(D 2), $(D 4), $(D 6).)
-$(T2 reduce,
+$(T2 iteration, reduce,
         $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
-$(T2 splitter,
+$(T2 iteration, splitter,
         Lazily splits a range by a separator.)
-$(T2 sum,
+$(T2 iteration, sum,
         Same as $(D reduce), but specialized for accurate summation.)
-$(T2 uniq,
+$(T2 iteration, uniq,
         Iterates over the unique elements in a range, which is assumed sorted.)
 
 $(LEADINGROW Sorting)
 
-$(T2 completeSort,
+$(T2 sorting, completeSort,
         If $(D a = [10, 20, 30]) and $(D b = [40, 6, 15]), then
         $(D completeSort(a, b)) leaves $(D a = [6, 10, 15]) and $(D b = [20,
         30, 40]).
         The range $(D a) must be sorted prior to the call, and as a result the
         combination $(D $(XREF range,chain)(a, b)) is sorted.)
-$(T2 isPartitioned,
+$(T2 sorting, isPartitioned,
         $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
         the predicate is $(D true) for a portion of the range and $(D false)
         afterwards.)
-$(T2 isSorted,
+$(T2 sorting, isSorted,
         $(D isSorted([1, 1, 2, 3])) returns $(D true).)
-$(T2 makeIndex,
+$(T2 sorting, makeIndex,
         Creates a separate index for a range.)
-$(T2 nextEvenPermutation,
+$(T2 sorting, nextEvenPermutation,
         Computes the next lexicographically greater even permutation of a range
         in-place.)
-$(T2 nextPermutation,
+$(T2 sorting, nextPermutation,
         Computes the next lexicographically greater permutation of a range
         in-place.)
-$(T2 partialSort,
+$(T2 sorting, partialSort,
         If $(D a = [5, 4, 3, 2, 1]), then $(D partialSort(a, 3)) leaves
         $(D a[0 .. 3] = [1, 2, 3]).
         The other elements of $(D a) are left in an unspecified order.)
-$(T2 partition,
+$(T2 sorting, partition,
         Partitions a range according to a predicate.)
-$(T2 partition3,
+$(T2 sorting, partition3,
         Partitions a range in three parts (less than, equal, greater than the
         given pivot).)
-$(T2 schwartzSort,
+$(T2 sorting, schwartzSort,
         Sorts with the help of the $(LUCKY Schwartzian transform).)
-$(T2 sort,
+$(T2 sorting, sort,
         Sorts.)
-$(T2 topN,
+$(T2 sorting, topN,
         Separates the top elements in a range.)
-$(T2 topNCopy,
+$(T2 sorting, topNCopy,
         Copies out the top elements of a range.)
 
 $(LEADINGROW Set operations)
 
-$(T2 cartesianProduct,
+$(T2 setops, cartesianProduct,
         Computes Cartesian product of two ranges.)
-$(T2 largestPartialIntersection,
+$(T2 setops, largestPartialIntersection,
         Copies out the values that occur most frequently in a range of ranges.)
-$(T2 largestPartialIntersectionWeighted,
+$(T2 setops, largestPartialIntersectionWeighted,
         Copies out the values that occur most frequently (multiplied by
         per-value weights) in a range of ranges.)
-$(T2 nWayUnion,
+$(T2 setops, nWayUnion,
         Computes the union of a set of sets implemented as a range of sorted
         ranges.)
-$(T2 setDifference,
+$(T2 setops, setDifference,
         Lazily computes the set difference of two or more sorted ranges.)
-$(T2 setIntersection,
+$(T2 setops, setIntersection,
         Lazily computes the intersection of two or more sorted ranges.)
-$(T2 setSymmetricDifference,
+$(T2 setops, setSymmetricDifference,
         Lazily computes the symmetric set difference of two or more sorted
         ranges.)
-$(T2 setUnion,
+$(T2 setops, setUnion,
         Lazily computes the set union of two or more sorted ranges.)
 
 $(LEADINGROW Mutation)
 
-$(T2 bringToFront,
+$(T2 mutation, bringToFront,
         If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),
         $(D bringToFront(a, b)) leaves $(D a = [4, 5, 6]) and
         $(D b = [7, 1, 2, 3]).)
-$(T2 copy,
+$(T2 mutation, copy,
         Copies a range to another. If
         $(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
         leaves $(D b = [1, 2, 3, 0, 0]) and returns $(D b[3 .. $]).)
-$(T2 fill,
+$(T2 mutation, fill,
         Fills a range with a pattern,
         e.g., if $(D a = new int[3]), then $(D fill(a, 4))
         leaves $(D a = [4, 4, 4]) and $(D fill(a, [3, 4])) leaves
         $(D a = [3, 4, 3]).)
-$(T2 initializeAll,
+$(T2 mutation, initializeAll,
         If $(D a = [1.2, 3.4]), then $(D initializeAll(a)) leaves
         $(D a = [double.init, double.init]).)
-$(T2 move,
+$(T2 mutation, move,
         $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
         destructively.)
-$(T2 moveAll,
+$(T2 mutation, moveAll,
         Moves all elements from one range to another.)
-$(T2 moveSome,
+$(T2 mutation, moveSome,
         Moves as many elements as possible from one range to another.)
-$(T2 remove,
+$(T2 mutation, remove,
         Removes elements from a range in-place, and returns the shortened
         range.)
-$(T2 reverse,
+$(T2 mutation, reverse,
         If $(D a = [1, 2, 3]), $(D reverse(a)) changes it to $(D [3, 2, 1]).)
-$(T2 strip,
+$(T2 mutation, strip,
         Strips all leading and trailing elements equal to a value, or that
         satisfy a predicate.
         If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and
         $(D strip!(e => e == 1)(a)) returns $(D [0]).)
-$(T2 stripLeft,
+$(T2 mutation, stripLeft,
         Strips all leading elements equal to a value, or that satisfy a
         predicate.  If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and
         $(D stripLeft!(e => e == 1)(a)) returns $(D [0, 1, 1]).)
-$(T2 stripRight,
+$(T2 mutation, stripRight,
         Strips all trailing elements equal to a value, or that satisfy a
         predicate.
         If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and
         $(D stripRight!(e => e == 1)(a)) returns $(D [1, 1, 0]).)
-$(T2 swap,
+$(T2 mutation, swap,
         Swaps two values.)
-$(T2 swapRanges,
+$(T2 mutation, swapRanges,
         Swaps all elements of two ranges.)
-$(T2 uninitializedFill,
+$(T2 mutation, uninitializedFill,
         Fills a range (assumed uninitialized) with a value.)
 )
 
 Macros:
-T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
+T2=$(TR $(TD $(SUBREF $1, $2)) $(TD $(T2_SKIP $+)))
+T2_SKIP=$+
 WIKI = Phobos/StdAlgorithm
+SUBMODULE = $(LINK2 std_algorithm_$1.html, std.algorithm.$1)
+SUBREF = $(LINK2 std_algorithm_$1.html#.$2, $(TT $2))$(NBSP)
 
 Copyright: Andrei Alexandrescu 2008-.
 
