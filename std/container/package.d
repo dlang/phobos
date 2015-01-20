@@ -220,7 +220,7 @@ $(BOOKTABLE Container primitives,
 $(TR $(TH Syntax) $(TH $(BIGOH &middot;)) $(TH Description))
 
 $(TR $(TDNW $(D C(x))) $(TDNW $(D n$(SUBSCRIPT x))) $(TD Creates a
-_container of type $(D C) from either another _container or a range.))
+_container of type $(D C) from either another _container or a range. The created _container must not be a null reference even if x is empty.))
 
 $(TR $(TDNW $(D c.dup)) $(TDNW $(D n$(SUBSCRIPT c))) $(TD Returns a
 duplicate of the _container.))
