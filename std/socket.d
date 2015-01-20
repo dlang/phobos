@@ -2187,7 +2187,7 @@ private:
 
         final size_t capacity() @property const pure nothrow @nogc
         {
-            return set.length / FD_NFDBITS;
+            return set.length * FD_NFDBITS;
         }
 
         int maxfd;
@@ -2237,7 +2237,7 @@ public:
             auto length = set.length;
             if (index >= length)
             {
-                while (length < index)
+                while (index >= length)
                     length *= 2;
                 set.length = length;
                 set.length = set.capacity;
@@ -2432,6 +2432,17 @@ unittest
             testPair[1].receive(b[]);
         }
     });
+}
+
+unittest // Issue 14012, 14013
+{
+    auto set = new SocketSet(1);
+    assert(set.max >= 0);
+
+    enum LIMIT = 4096;
+    foreach (n; 0..LIMIT)
+        set.add(cast(socket_t)n);
+    assert(set.max >= LIMIT);
 }
 
 /// The level at which a socket option is defined:
