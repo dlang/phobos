@@ -3,6 +3,31 @@
 This is a submodule of $(LINK2 std_algorithm_package.html, std.algorithm).
 It contains generic algorithms that implement set operations.
 
+$(BOOKTABLE Cheat Sheet,
+
+$(TR $(TH Function Name) $(TH Description))
+
+$(T2 cartesianProduct,
+        Computes Cartesian product of two ranges.)
+$(T2 largestPartialIntersection,
+        Copies out the values that occur most frequently in a range of ranges.)
+$(T2 largestPartialIntersectionWeighted,
+        Copies out the values that occur most frequently (multiplied by
+        per-value weights) in a range of ranges.)
+$(T2 nWayUnion,
+        Computes the union of a set of sets implemented as a range of sorted
+        ranges.)
+$(T2 setDifference,
+        Lazily computes the set difference of two or more sorted ranges.)
+$(T2 setIntersection,
+        Lazily computes the intersection of two or more sorted ranges.)
+$(T2 setSymmetricDifference,
+        Lazily computes the symmetric set difference of two or more sorted
+        ranges.)
+$(T2 setUnion,
+        Lazily computes the set union of two or more sorted ranges.)
+)
+
 Copyright: Andrei Alexandrescu 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -10,6 +35,9 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_setops.d)
+
+Macros:
+T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.setops;
 

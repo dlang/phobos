@@ -3,6 +3,40 @@
 This is a submodule of $(LINK2 std_algorithm_package.html, std.algorithm).
 It contains generic _comparison algorithms.
 
+$(BOOKTABLE Cheat Sheet,
+
+$(TR $(TH Function Name) $(TH Description))
+
+$(T2 among,
+        Checks if a value is among a set of values, e.g.
+        $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
+$(T2 castSwitch,
+        $(D (new A()).castSwitch((A a)=>1,(B b)=>2)) returns $(D 1).)
+$(T2 clamp,
+        $(D clamp(1, 3, 6)) returns $(D 3). $(D clamp(4, 3, 6)) returns $(D 4).)
+$(T2 cmp,
+        $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1),
+        and $(D cmp("abc", "abc")) is $(D 0).)
+$(T2 equal,
+        Compares ranges for element-by-element equality, e.g.
+        $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
+$(T2 levenshteinDistance,
+        $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
+        the $(LUCKY Levenshtein distance _algorithm).)
+$(T2 levenshteinDistanceAndPath,
+        $(D levenshteinDistanceAndPath("kitten", "sitting")) returns
+        $(D tuple(3, "snnnsni")) by using the $(LUCKY Levenshtein distance
+        _algorithm).)
+$(T2 max,
+        $(D max(3, 4, 2)) returns $(D 4).)
+$(T2 min,
+        $(D min(3, 4, 2)) returns $(D 2).)
+$(T2 mismatch,
+        $(D mismatch("oh hi", "ohayo")) returns $(D tuple(" hi", "ayo")).)
+$(T2 predSwitch,
+        $(D 2.predSwitch(1, "one", 2, "two", 3, "three")) returns $(D "two").)
+)
+
 Copyright: Andrei Alexandrescu 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -10,6 +44,9 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_comparison.d)
+
+Macros:
+T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.comparison;
 

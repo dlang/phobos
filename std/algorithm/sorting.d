@@ -3,6 +3,49 @@
 This is a submodule of $(LINK2 std_algorithm_package.html, std.algorithm).
 It contains generic _sorting algorithms.
 
+$(BOOKTABLE Cheat Sheet,
+
+$(TR $(TH Function Name) $(TH Description))
+
+$(T2 completeSort,
+        If $(D a = [10, 20, 30]) and $(D b = [40, 6, 15]), then
+        $(D completeSort(a, b)) leaves $(D a = [6, 10, 15]) and $(D b = [20,
+        30, 40]).
+        The range $(D a) must be sorted prior to the call, and as a result the
+        combination $(D $(XREF range,chain)(a, b)) is sorted.)
+$(T2 isPartitioned,
+        $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
+        the predicate is $(D true) for a portion of the range and $(D false)
+        afterwards.)
+$(T2 isSorted,
+        $(D isSorted([1, 1, 2, 3])) returns $(D true).)
+$(T2 makeIndex,
+        Creates a separate index for a range.)
+$(T2 nextEvenPermutation,
+        Computes the next lexicographically greater even permutation of a range
+        in-place.)
+$(T2 nextPermutation,
+        Computes the next lexicographically greater permutation of a range
+        in-place.)
+$(T2 partialSort,
+        If $(D a = [5, 4, 3, 2, 1]), then $(D partialSort(a, 3)) leaves
+        $(D a[0 .. 3] = [1, 2, 3]).
+        The other elements of $(D a) are left in an unspecified order.)
+$(T2 partition,
+        Partitions a range according to a predicate.)
+$(T2 partition3,
+        Partitions a range in three parts (less than, equal, greater than the
+        given pivot).)
+$(T2 schwartzSort,
+        Sorts with the help of the $(LUCKY Schwartzian transform).)
+$(T2 sort,
+        Sorts.)
+$(T2 topN,
+        Separates the top elements in a range.)
+$(T2 topNCopy,
+        Copies out the top elements of a range.)
+)
+
 Copyright: Andrei Alexandrescu 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -10,6 +53,9 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_sorting.d)
+
+Macros:
+T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.sorting;
 

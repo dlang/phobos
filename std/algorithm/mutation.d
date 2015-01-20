@@ -3,6 +3,60 @@
 This is a submodule of $(LINK2 std_algorithm_package.html, std.algorithm).
 It contains generic _mutation algorithms.
 
+$(BOOKTABLE Cheat Sheet,
+
+$(TR $(TH Function Name) $(TH Description))
+
+$(T2 bringToFront,
+        If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),
+        $(D bringToFront(a, b)) leaves $(D a = [4, 5, 6]) and
+        $(D b = [7, 1, 2, 3]).)
+$(T2 copy,
+        Copies a range to another. If
+        $(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
+        leaves $(D b = [1, 2, 3, 0, 0]) and returns $(D b[3 .. $]).)
+$(T2 fill,
+        Fills a range with a pattern,
+        e.g., if $(D a = new int[3]), then $(D fill(a, 4))
+        leaves $(D a = [4, 4, 4]) and $(D fill(a, [3, 4])) leaves
+        $(D a = [3, 4, 3]).)
+$(T2 initializeAll,
+        If $(D a = [1.2, 3.4]), then $(D initializeAll(a)) leaves
+        $(D a = [double.init, double.init]).)
+$(T2 move,
+        $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
+        destructively.)
+$(T2 moveAll,
+        Moves all elements from one range to another.)
+$(T2 moveSome,
+        Moves as many elements as possible from one range to another.)
+$(T2 remove,
+        Removes elements from a range in-place, and returns the shortened
+        range.)
+$(T2 reverse,
+        If $(D a = [1, 2, 3]), $(D reverse(a)) changes it to $(D [3, 2, 1]).)
+$(T2 strip,
+        Strips all leading and trailing elements equal to a value, or that
+        satisfy a predicate.
+        If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and
+        $(D strip!(e => e == 1)(a)) returns $(D [0]).)
+$(T2 stripLeft,
+        Strips all leading elements equal to a value, or that satisfy a
+        predicate.  If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and
+        $(D stripLeft!(e => e == 1)(a)) returns $(D [0, 1, 1]).)
+$(T2 stripRight,
+        Strips all trailing elements equal to a value, or that satisfy a
+        predicate.
+        If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and
+        $(D stripRight!(e => e == 1)(a)) returns $(D [1, 1, 0]).)
+$(T2 swap,
+        Swaps two values.)
+$(T2 swapRanges,
+        Swaps all elements of two ranges.)
+$(T2 uninitializedFill,
+        Fills a range (assumed uninitialized) with a value.)
+)
+
 Copyright: Andrei Alexandrescu 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -10,6 +64,9 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_mutation.d)
+
+Macros:
+T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.mutation;
 

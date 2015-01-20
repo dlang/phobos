@@ -3,6 +3,77 @@
 This is a submodule of $(LINK2 std_algorithm_package.html, std.algorithm).
 It contains generic _searching algorithms.
 
+$(BOOKTABLE Cheat Sheet,
+
+$(TR $(TH Function Name) $(TH Description))
+
+$(T2 all,
+        $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements
+        are positive)
+$(T2 any,
+        $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one
+        element is positive)
+$(T2 balancedParens,
+        $(D balancedParens("((1 + 1) / 2)")) returns $(D true) because the
+        string has balanced parentheses.)
+$(T2 boyerMooreFinder,
+        $(D find("hello world", boyerMooreFinder("or"))) returns $(D "orld")
+        using the $(LUCKY Boyer-Moore _algorithm).)
+$(T2 canFind,
+        $(D canFind("hello world", "or")) returns $(D true).)
+$(T2 count,
+        Counts elements that are equal to a specified value or satisfy a
+        predicate.  $(D count([1, 2, 1], 1)) returns $(D 2) and
+        $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
+$(T2 countUntil,
+        $(D countUntil(a, b)) returns the number of steps taken in $(D a) to
+        reach $(D b); for example, $(D countUntil("hello!", "o")) returns
+        $(D 4).)
+$(T2 commonPrefix,
+        $(D commonPrefix("parakeet", "parachute")) returns $(D "para").)
+$(T2 endsWith,
+        $(D endsWith("rocks", "ks")) returns $(D true).)
+$(T2 find,
+        $(D find("hello world", "or")) returns $(D "orld") using linear search.
+        (For binary search refer to $(XREF range,sortedRange).))
+$(T2 findAdjacent,
+        $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
+        two equal adjacent elements, i.e. $(D [3, 3, 4]).)
+$(T2 findAmong,
+        $(D findAmong("abcd", "qcx")) returns $(D "cd") because $(D 'c') is
+        among $(D "qcx").)
+$(T2 findSkip,
+        If $(D a = "abcde"), then $(D findSkip(a, "x")) returns $(D false) and
+        leaves $(D a) unchanged, whereas $(D findSkip(a, 'c')) advances $(D a)
+        to $(D "cde") and returns $(D true).)
+$(T2 findSplit,
+        $(D findSplit("abcdefg", "de")) returns the three ranges $(D "abc"),
+        $(D "de"), and $(D "fg").)
+$(T2 findSplitAfter,
+        $(D findSplitAfter("abcdefg", "de")) returns the two ranges
+        $(D "abcde") and $(D "fg").)
+$(T2 findSplitBefore,
+        $(D findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc")
+        and $(D "defg").)
+$(T2 minCount,
+        $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
+$(T2 minPos,
+        $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
+        i.e., positions the range at the first occurrence of its minimal
+        element.)
+$(T2 mismatch,
+        $(D mismatch("parakeet", "parachute")) returns the two ranges
+        $(D "keet") and $(D "chute").)
+$(T2 skipOver,
+        Assume $(D a = "blah"). Then $(D skipOver(a, "bi")) leaves $(D a)
+        unchanged and returns $(D false), whereas $(D skipOver(a, "bl"))
+        advances $(D a) to refer to $(D "ah") and returns $(D true).)
+$(T2 startsWith,
+        $(D startsWith("hello, world", "hello")) returns $(D true).)
+$(T2 until,
+        Lazily iterates a range until a specific value is found.)
+)
+
 Copyright: Andrei Alexandrescu 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -10,6 +81,9 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_searching.d)
+
+Macros:
+T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.searching;
 

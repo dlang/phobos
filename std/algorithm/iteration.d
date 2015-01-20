@@ -3,6 +3,48 @@
 This is a submodule of $(LINK2 std_algorithm_package.html, std.algorithm).
 It contains generic _iteration algorithms.
 
+$(BOOKTABLE Cheat Sheet,
+
+$(TR $(TH Function Name) $(TH Description))
+
+$(T2 cache,
+        Eagerly evaluates and caches another range's $(D front).)
+$(T2 cacheBidirectional,
+        As above, but also provides $(D back) and $(D popBack).)
+$(T2 each,
+        $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
+        and $(D 3) on their own lines.)
+$(T2 filter,
+        $(D filter!"a > 0"([1, -1, 2, 0, -3])) iterates over elements $(D 1)
+        and $(D 2).)
+$(T2 filterBidirectional,
+        Similar to $(D filter), but also provides $(D back) and $(D popBack) at
+        a small increase in cost.)
+$(T2 group,
+        $(D group([5, 2, 2, 3, 3])) returns a range containing the tuples
+        $(D tuple(5, 1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
+$(T2 groupBy,
+        $(D groupBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
+        returns a range containing 3 subranges: the first with just
+        $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
+        and the third with just $(D [2, 1]).)
+$(T2 joiner,
+        $(D joiner(["hello", "world!"], "; ")) returns a range that iterates
+        over the characters $(D "hello; world!"). No new string is created -
+        the existing inputs are iterated.)
+$(T2 map,
+        $(D map!"2 * a"([1, 2, 3])) lazily returns a range with the numbers
+        $(D 2), $(D 4), $(D 6).)
+$(T2 reduce,
+        $(D reduce!"a + b"([1, 2, 3, 4])) returns $(D 10).)
+$(T2 splitter,
+        Lazily splits a range by a separator.)
+$(T2 sum,
+        Same as $(D reduce), but specialized for accurate summation.)
+$(T2 uniq,
+        Iterates over the unique elements in a range, which is assumed sorted.)
+)
+
 Copyright: Andrei Alexandrescu 2008-.
 
 License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -10,6 +52,9 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_iteration.d)
+
+Macros:
+T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.iteration;
 
