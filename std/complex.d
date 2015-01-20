@@ -22,23 +22,6 @@ import std.traits;
     If neither $(D re) nor $(D im) are floating-point numbers, this
     function returns a $(D Complex!double).  Otherwise, the return type
     is deduced using $(D std.traits.CommonType!(R, I)).
-
-    Examples:
-    ---
-    auto c = complex(2.0);
-    static assert (is(typeof(c) == Complex!double));
-    assert (c.re == 2.0);
-    assert (c.im == 0.0);
-
-    auto w = complex(2);
-    static assert (is(typeof(w) == Complex!double));
-    assert (w == c);
-
-    auto z = complex(1, 3.14L);
-    static assert (is(typeof(z) == Complex!real));
-    assert (z.re == 1.0L);
-    assert (z.im == 3.14L);
-    ---
 */
 auto complex(T)(T re)  @safe pure nothrow @nogc  if (is(T : double))
 {
@@ -58,6 +41,7 @@ auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
         return Complex!double(re, im);
 }
 
+///
 unittest
 {
     auto a = complex(1.0);
