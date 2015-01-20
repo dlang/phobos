@@ -120,8 +120,8 @@ class CSVException : Exception
         this.col = col;
     }
 
-    override string toString() @safe pure 
-	{
+    override string toString() @safe pure
+    {
         return "(Row: " ~ to!string(row) ~
               ", Col: " ~ to!string(col) ~ ") " ~ msg;
     }
@@ -130,20 +130,20 @@ class CSVException : Exception
 @safe pure unittest
 {
     import std.string;
-	auto e1 = new Exception("Foobar");
-	auto e2 = new CSVException("args", e1);
-	assert(e2.next is e1);
+    auto e1 = new Exception("Foobar");
+    auto e2 = new CSVException("args", e1);
+    assert(e2.next is e1);
 
-	size_t r = 13;
-	size_t c = 37;
+    size_t r = 13;
+    size_t c = 37;
 
-	auto e3 = new CSVException("argv", r, c);
-	assert(e3.row == r);
-	assert(e3.col == c);
+    auto e3 = new CSVException("argv", r, c);
+    assert(e3.row == r);
+    assert(e3.col == c);
 
-	auto em = e3.toString();
-	assert(em.indexOf("13") != -1);
-	assert(em.indexOf("37") != -1);
+    auto em = e3.toString();
+    assert(em.indexOf("13") != -1);
+    assert(em.indexOf("37") != -1);
 }
 
 /**
@@ -160,14 +160,14 @@ class IncompleteCellException : CSVException
     /// already been fed to the output range.
     dstring partialData;
 
-    this(string msg, string file = __FILE__, size_t line = __LINE__, 
-		Throwable next = null) @safe pure
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+        Throwable next = null) @safe pure
     {
         super(msg, file, line);
     }
 
     this(string msg, Throwable next, string file = __FILE__, size_t line =
-		__LINE__) @safe pure
+        __LINE__) @safe pure
     {
         super(msg, next, file, line);
     }
@@ -175,9 +175,9 @@ class IncompleteCellException : CSVException
 
 @safe pure unittest
 {
-	auto e1 = new Exception("Foobar");
-	auto e2 = new IncompleteCellException("args", e1);
-	assert(e2.next is e1);
+    auto e1 = new Exception("Foobar");
+    auto e2 = new IncompleteCellException("args", e1);
+    assert(e2.next is e1);
 }
 
 /**
@@ -202,14 +202,14 @@ class IncompleteCellException : CSVException
  */
 class HeaderMismatchException : CSVException
 {
-    this(string msg, string file = __FILE__, size_t line = __LINE__, 
-		Throwable next = null) @safe pure
+    this(string msg, string file = __FILE__, size_t line = __LINE__,
+        Throwable next = null) @safe pure
     {
         super(msg, file, line);
     }
 
-    this(string msg, Throwable next, string file = __FILE__, 
-		size_t line = __LINE__) @safe pure
+    this(string msg, Throwable next, string file = __FILE__,
+        size_t line = __LINE__) @safe pure
     {
         super(msg, next, file, line);
     }
@@ -217,9 +217,9 @@ class HeaderMismatchException : CSVException
 
 @safe pure unittest
 {
-	auto e1 = new Exception("Foobar");
-	auto e2 = new HeaderMismatchException("args", e1);
-	assert(e2.next is e1);
+    auto e1 = new Exception("Foobar");
+    auto e2 = new HeaderMismatchException("args", e1);
+    assert(e2.next is e1);
 }
 
 /**
@@ -413,6 +413,7 @@ auto csvReader(Contents = string,
         (input, header, delimiter, quote);
 }
 
+///
 auto csvReader(Contents = string,
                Malformed ErrorLevel = Malformed.throwException,
                Range, Header, Separator = char)
@@ -778,19 +779,6 @@ private pure struct Input(Range, Malformed ErrorLevel)
  * This range is returned by the $(LREF csvReader) functions. It can be
  * created in a similar manner to allow $(D ErrorLevel) be set to $(LREF
  * Malformed).ignore if best guess processing should take place.
- *
- * Example for integer data:
- *
- * -------
- * int[] ans = [76,26,22];
- * auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
- *       (str, ';', '^');
- *
- * foreach(record; records) {
- *    assert(equal(record, ans));
- * }
- * -------
- *
  */
 private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
     if (isSomeChar!Separator && isInputRange!Range
@@ -1105,6 +1093,7 @@ public:
     }
 }
 
+///
 @safe pure unittest
 {
     import std.algorithm;
@@ -1335,28 +1324,6 @@ public:
  * start with either a delimiter or record break (\n, \r\n, \r) which
  * must be removed for subsequent calls.
  *
- * -------
- * string str = "65,63\n123,3673";
- *
- * auto a = appender!(char[])();
- *
- * csvNextToken(str,a,',','"');
- * assert(a.data == "65");
- * assert(str == ",63\n123,3673");
- *
- * str.popFront();
- * a.shrinkTo(0);
- * csvNextToken(str,a,',','"');
- * assert(a.data == "63");
- * assert(str == "\n123,3673");
- *
- * str.popFront();
- * a.shrinkTo(0);
- * csvNextToken(str,a,',','"');
- * assert(a.data == "123");
- * assert(str == ",3673");
- * -------
- *
  * params:
  *       input = Any CSV input
  *       ans   = The first field in the input
@@ -1470,6 +1437,31 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
             throw new IncompleteCellException(
                   "Data continues on future lines or trailing quote");
 
+}
+
+///
+unittest
+{
+    import std.array : appender;
+    string str = "65,63\n123,3673";
+
+    auto a = appender!(char[])();
+
+    csvNextToken(str,a,',','"');
+    assert(a.data == "65");
+    assert(str == ",63\n123,3673");
+
+    str.popFront();
+    a.shrinkTo(0);
+    csvNextToken(str,a,',','"');
+    assert(a.data == "63");
+    assert(str == "\n123,3673");
+
+    str.popFront();
+    a.shrinkTo(0);
+    csvNextToken(str,a,',','"');
+    assert(a.data == "123");
+    assert(str == ",3673");
 }
 
 // Test csvNextToken on simplest form and correct format.
