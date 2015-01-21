@@ -425,7 +425,8 @@ to another program). Invoking the example above with $(D "--foo -- --bar")
 parses foo but leaves "--bar" in $(D args). The double-dash itself is
 removed from the argument array.
 */
-GetoptResult getopt(T...)(ref string[] args, T opts) {
+GetoptResult getopt(T...)(ref string[] args, T opts)
+{
     import std.exception : enforce;
     enforce(args.length,
             "Invalid arguments string passed: program name missing");
@@ -500,7 +501,7 @@ struct Option {
                    /// an error.
 }
 
-pure Option splitAndGet(string opt) @trusted nothrow
+private pure Option splitAndGet(string opt) @trusted nothrow
 {
     import std.array : split;
     auto sp = split(opt, "|");
@@ -614,7 +615,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     }
 }
 
-bool handleOption(R)(string option, R receiver, ref string[] args,
+private bool handleOption(R)(string option, R receiver, ref string[] args,
         ref configuration cfg, bool incremental)
 {
     import std.algorithm : map, splitter;
@@ -622,7 +623,8 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
     import std.conv : text, to;
     // Scan arguments looking for a match for this option
     bool ret = false;
-    for (size_t i = 1; i < args.length; ) {
+    for (size_t i = 1; i < args.length; )
+    {
         auto a = args[i];
         if (endOfOptions.length && a == endOfOptions) break;
         if (cfg.stopOnFirstNonOption && (!a.length || a[0] != optionChar))
@@ -685,7 +687,8 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
             enum isCallbackWithLessThanTwoParameters =
                 (is(typeof(receiver) == delegate) || is(typeof(*receiver) == function)) &&
                 !is(typeof(receiver("", "")));
-            if (!isCallbackWithLessThanTwoParameters && !(val.length) && !incremental) {
+            if (!isCallbackWithLessThanTwoParameters && !(val.length) && !incremental)
+            {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
                 enforce(i < args.length,
@@ -1351,7 +1354,8 @@ message is present it will be printed after the long version of the
 $(D Option).
 
 ------------
-foreach(it; opt) {
+foreach(it; opt)
+{
     writefln("%*s %*s %s", lengthOfLongestShortOption, it.optShort,
         lengthOfLongestLongOption, it.optLong, it.help);
 }
