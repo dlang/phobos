@@ -22,7 +22,7 @@ $(BOOKTABLE ,
     $(TR
         $(TDNW Algorithms &amp; ranges)
         $(TD
-            $(LINK2 std_algorithm.html, std.algorithm)$(BR)
+            $(LINK2 std_algorithm_package.html, std.algorithm)$(BR)
             $(LINK2 std_range_package.html, std.range)$(BR)
             $(LINK2 std_range_primitives.html, std.range.primitives)$(BR)
             $(LINK2 std_range_interfaces.html, std.range.interfaces)
@@ -37,7 +37,7 @@ $(BOOKTABLE ,
         $(TDNW Array manipulation)
         $(TD
             $(LINK2 std_array.html, std.array)$(BR)
-            $(LINK2 std_algorithm.html, std.algorithm)
+            $(LINK2 std_algorithm_package.html, std.algorithm)
         )
         $(TD Convenient operations commonly used with built-in arrays.
             Note that many common array operations are subsets of more generic
@@ -218,7 +218,7 @@ $(BOOKTABLE ,
         $(TDNW Paradigms)
         $(TD
             $(LINK2 std_functional, std.functional)$(BR)
-            $(LINK2 std_algorithm, std.algorithm)$(BR)
+            $(LINK2 std_algorithm_package, std.algorithm)$(BR)
             $(LINK2 std_signals, std.signals)
         )
         $(TD $(D std.functional), along with the lazy algorithms of
@@ -256,7 +256,7 @@ $(BOOKTABLE ,
         $(TD
             $(LINK2 std_string.html, std.string)$(BR)
             $(LINK2 std_array.html, std.array)$(BR)
-            $(LINK2 std_algorithm.html, std.algorithm)$(BR)
+            $(LINK2 std_algorithm_package.html, std.algorithm)$(BR)
             $(LINK2 std_uni, std.uni)$(BR)
             $(LINK2 std_utf, std.utf)$(BR)
             $(LINK2 std_format.html, std.format)$(BR)
