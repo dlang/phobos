@@ -2205,6 +2205,9 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         hasAssignableElements!RangeIndex &&
         isIntegral!(ElementType!(RangeIndex)))
 {
+    static assert(ss == SwapStrategy.unstable,
+                  "Stable swap strategy not implemented yet.");
+
     import std.container : BinaryHeap;
     import std.exception : enforce;
 
@@ -2235,6 +2238,9 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         hasAssignableElements!RangeIndex &&
         is(ElementType!(RangeIndex) == ElementType!(Range)*))
 {
+    static assert(ss == SwapStrategy.unstable,
+                  "Stable swap strategy not implemented yet.");
+
     import std.container : BinaryHeap;
 
     if (index.empty) return;
