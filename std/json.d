@@ -3,6 +3,38 @@
 /**
 JavaScript Object Notation
 
+
+   Synopsis:
+
+----
+    //parse a file or string of json into a usable structure
+    string s = "{ \"language\": \"D\", \"rating\": 3.14, \"code\": \"42\" }";
+    JSONValue j = parseJSON(s)
+    writeln("Language: ", j["language"].str(), " Rating: ", j["rating"].floating());
+
+    // j and j["language"] return JSONValue, j["language"].str() returns a string
+
+    //check a type
+    long x;
+    if (j["code"].type() == JSON_TYPE.INTEGER) {
+        x = j["code"].integer;
+    } else {
+        x = to!int(j["code"].str());
+    }
+
+    // create a json struct
+    JSONValue jj = [ "language": "D" ];
+    // rating doesnt exist yet, so use .object to assign
+    jj.object["rating"] = JSONValue(3.14);
+    // create an array to assign to list
+    jj.object["list"] = JSONValue( ["a", "b", "c"] );
+    // list already exists, so .object optional
+    j["list"].array ~= JSONValue("D");
+
+    s = j.toString();
+    writeln(s);
+----
+
 Copyright: Copyright Jeremie Pelletier 2008 - 2009.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Jeremie Pelletier, David Herberth
@@ -58,7 +90,16 @@ struct JSONValue
     private Store store;
     private JSON_TYPE type_tag;
 
-    /// Specifies the _type of the value stored in this structure.
+    /**
+      Returns the JSON_TYPE of the value stored in this structure.
+      Example:
+      ---
+      string j = "{ \"language\": \"D\" }";
+      JSONValue j = parseJSON(s);
+      // j.type() == JSON_TYPE.OBJECT
+      // j["language"].type() == JSON_TYPE.STRING
+      ---
+    */
     @property JSON_TYPE type() const
     {
         return type_tag;
@@ -107,8 +148,19 @@ struct JSONValue
         return type_tag = newType;
     }
 
-    /// Value getter/setter for $(D JSON_TYPE.STRING).
-    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
+    /** Value getter/setter for $(D JSON_TYPE.STRING).
+    Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
+    Example:
+    ---
+    JSONValue j = [ "language": "D" ];
+
+    // get value
+    string s = j["language"].str();
+
+    // change existing key to new string
+    j["language"].str("Perl");
+    ---
+    */
     @property inout(string) str() inout
     {
         enforce!JSONException(type == JSON_TYPE.STRING,
