@@ -1652,6 +1652,7 @@ $(XREF stdio,StdioException) on failure to redirect any of the streams.$(BR)
 
 Example:
 ---
+// my_application writes to stdout and might write to stderr
 auto pipes = pipeProcess("my_application", Redirect.stdout | Redirect.stderr);
 scope(exit) wait(pipes.pid);
 
@@ -1662,6 +1663,28 @@ foreach (line; pipes.stdout.byLine) output ~= line.idup;
 // Store lines of errors.
 string[] errors;
 foreach (line; pipes.stderr.byLine) errors ~= line.idup;
+
+
+// sendmail expects to read from stdin
+pipes = pipeProcess(["/usr/bin/sendmail", "-t"], Redirect.stdin);
+pipes.stdin.writeln("To: you");
+pipes.stdin.writeln("From: me");
+pipes.stdin.writeln("Subject: dlang");
+pipes.stdin.writeln("");
+pipes.stdin.writeln(message);
+
+// a single period tells sendmail we are finished
+pipes.stdin.writeln(".");
+
+// but at this point sendmail might not see it, we need to flush
+pipes.stdin.flush();
+
+// sendmail happens to exit on ".", but some you have to close the file:
+pipes.stdin.close();
+
+// otherwise this wait will wait forever
+wait(pipes.pid);
+
 ---
 */
 ProcessPipes pipeProcess(in char[][] args,
