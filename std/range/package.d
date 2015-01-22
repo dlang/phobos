@@ -4437,6 +4437,49 @@ unittest
     }
 }
 
+/* Generic overload that handles arbitrary types that support arithmetic
+ * operations.
+ */
+/// ditto
+auto iota(B, E)(B begin, E end)
+    if (!isIntegral!(CommonType!(B, E)) &&
+        !isFloatingPoint!(CommonType!(B, E)) &&
+        !isPointer!(CommonType!(B, E)) &&
+        is(typeof(B.init < E.init)) &&
+        is(typeof(++B.init)))
+{
+    static struct Result
+    {
+        B current;
+        E end;
+
+        @property bool empty() { return !(current < end); }
+        @property auto front() { return current; }
+        void popFront()
+        {
+            assert(!empty);
+            ++current;
+        }
+    }
+    return Result(begin, end);
+}
+
+// Issue 6447
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.bigint;
+
+    auto s = BigInt(1_000_000_000_000);
+    auto e = BigInt(1_000_000_000_003);
+    auto r = iota(s, e);
+    assert(r.equal([
+        BigInt(1_000_000_000_000),
+        BigInt(1_000_000_000_001),
+        BigInt(1_000_000_000_002),
+    ]));
+}
+
 /**
    Options for the $(LREF FrontTransversal) and $(LREF Transversal) ranges
    (below).
