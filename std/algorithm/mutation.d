@@ -949,7 +949,7 @@ T move(T)(ref T source)
                         hasElaborateCopyConstructor, hasElaborateDestructor,
                         isAssignable;
 
-    static if (hasAliasing!T) if (!__ctfe)
+    static if (!is(T == class) && hasAliasing!T) if (!__ctfe)
     {
         import std.exception : doesPointTo;
         assert(!doesPointTo(source, source), "Cannot move object with internal pointer.");
@@ -1041,6 +1041,13 @@ unittest
     S4 s42 = move(s41);
     assert(s41.x.n == 0);
     assert(s42.x.n == 1);
+
+    // Issue 13990 test
+    class S5;
+
+    S5 s51;
+    static assert(__traits(compiles, s51 = move(s51)),
+                  "issue 13990, cannot move opaque class reference"); 
 }
 
 unittest//Issue 6217
