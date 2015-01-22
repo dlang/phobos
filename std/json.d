@@ -16,9 +16,12 @@ JavaScript Object Notation
 
     //check a type
     long x;
-    if (j["code"].type() == JSON_TYPE.INTEGER) {
+    if (j["code"].type() == JSON_TYPE.INTEGER)
+    {
         x = j["code"].integer;
-    } else {
+    }
+    else
+    {
         x = to!int(j["code"].str());
     }
 
