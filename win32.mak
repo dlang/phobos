@@ -572,26 +572,26 @@ $(DOC)\core_sync_rwmutex.html : $(STDDOC) $(DRUNTIME)\src\core\sync\rwmutex.d
 $(DOC)\core_sync_semaphore.html : $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_sync_semaphore.html $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d -I$(DRUNTIME)\src\
 
-$(DOC)\std_algorithm\package.html : $(STDDOC) std\algorithm\package.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm\package.html $(STDDOC) std\algorithm\package.d
+$(DOC)\std_algorithm_package.html : $(STDDOC) std\algorithm\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_package.html $(STDDOC) std\algorithm\package.d
 
-$(DOC)\std_algorithm\comparison.html : $(STDDOC) std\algorithm\comparison.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm\comparison.html $(STDDOC) std\algorithm\comparison.d
+$(DOC)\std_algorithm_comparison.html : $(STDDOC) std\algorithm\comparison.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_comparison.html $(STDDOC) std\algorithm\comparison.d
 
-$(DOC)\std_algorithm\iteration.html : $(STDDOC) std\algorithm\iteration.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm\iteration.html $(STDDOC) std\algorithm\iteration.d
+$(DOC)\std_algorithm_iteration.html : $(STDDOC) std\algorithm\iteration.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_iteration.html $(STDDOC) std\algorithm\iteration.d
 
-$(DOC)\std_algorithm\mutation.html : $(STDDOC) std\algorithm\mutation.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm\mutation.html $(STDDOC) std\algorithm\mutation.d
+$(DOC)\std_algorithm_mutation.html : $(STDDOC) std\algorithm\mutation.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_mutation.html $(STDDOC) std\algorithm\mutation.d
 
-$(DOC)\std_algorithm\searching.html : $(STDDOC) std\algorithm\searching.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm\searching.html $(STDDOC) std\algorithm\searching.d
+$(DOC)\std_algorithm_searching.html : $(STDDOC) std\algorithm\searching.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_searching.html $(STDDOC) std\algorithm\searching.d
 
-$(DOC)\std_algorithm\setops.html : $(STDDOC) std\algorithm\setops.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm\setops.html $(STDDOC) std\algorithm\setops.d
+$(DOC)\std_algorithm_setops.html : $(STDDOC) std\algorithm\setops.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_setops.html $(STDDOC) std\algorithm\setops.d
 
-$(DOC)\std_algorithm\sorting.html : $(STDDOC) std\algorithm\sorting.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm\sorting.html $(STDDOC) std\algorithm\sorting.d
+$(DOC)\std_algorithm_sorting.html : $(STDDOC) std\algorithm\sorting.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_sorting.html $(STDDOC) std\algorithm\sorting.d
 
 $(DOC)\std_array.html : $(STDDOC) std\array.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d
