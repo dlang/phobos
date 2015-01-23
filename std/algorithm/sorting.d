@@ -44,6 +44,8 @@ $(T2 topN,
         Separates the top elements in a range.)
 $(T2 topNCopy,
         Copies out the top elements of a range.)
+$(T2 topNIndex,
+        Builds an index of the top elements of a range.)
 )
 
 Copyright: Andrei Alexandrescu 2008-.
@@ -1001,7 +1003,7 @@ unittest
     }
 
     {
-    	import std.algorithm : swap; // FIXME
+        import std.algorithm : swap; // FIXME
 
         bool proxySwapCalled;
         struct S
@@ -1174,7 +1176,7 @@ private template TimSortImpl(alias pred, R)
     // Entry point for tim sort
     void sort(R range, T[] temp)
     {
-    	import std.algorithm.comparison : min;
+        import std.algorithm.comparison : min;
 
         // Do insertion sort on small range
         if (range.length <= minimalMerge)
@@ -1267,7 +1269,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-    	import std.algorithm : reverse; // FIXME
+        import std.algorithm : reverse; // FIXME
 
         if (range.length < 2) return range.length;
 
@@ -1292,7 +1294,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-	import std.algorithm : move; // FIXME
+    import std.algorithm : move; // FIXME
 
         for (; sortedLen < range.length; ++sortedLen)
         {
@@ -1402,7 +1404,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-	import std.algorithm : copy; // FIXME
+    import std.algorithm : copy; // FIXME
 
         assert(mid <= range.length);
         assert(temp.length >= mid);
@@ -1485,7 +1487,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-	import std.algorithm : copy; // FIXME
+    import std.algorithm : copy; // FIXME
 
         assert(mid <= range.length);
         assert(temp.length >= range.length - mid);
@@ -1674,7 +1676,7 @@ unittest
     // Generates data especially for testing sorting with Timsort
     static E[] genSampleData(uint seed)
     {
-	import std.algorithm : swap, swapRanges; // FIXME
+    import std.algorithm : swap, swapRanges; // FIXME
 
         auto rnd = Random(seed);
 
@@ -1957,6 +1959,7 @@ $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
 If $(D n >= r.length), the algorithm has no effect.
 
 See_Also:
+    $(LREF topNIndex),
     $(WEB sgi.com/tech/stl/nth_element.html, STL's nth_element)
 
 BUGS:
@@ -2164,6 +2167,137 @@ unittest
     ptrdiff_t[] b = new ptrdiff_t[n];
     topNCopy!(binaryFun!("a < b"))(a, b, SortOutput.yes);
     assert(isSorted!(binaryFun!("a < b"))(b));
+}
+
+/**
+Given a range of elements, constructs an index of its top $(I n) elements
+(i.e., the first $(I n) elements if the range were sorted).
+
+Similar to $(LREF topN), except that the range is not modified.
+
+Params:
+    less = A binary predicate that defines the ordering of range elements.
+        Defaults to $(D a < b).
+    ss = $(RED (Not implemented yet.)) Specify the swapping strategy.
+    r = A $(XREF2 range, isRandomAccessRange, random-access range) of elements
+        to make an index for.
+    index = A $(XREF2 range, isRandomAccessRange, random-access range) with
+        assignable elements to build the index in. The length of this range
+        determines how many top elements to index in $(D r).
+
+        This index range can either have integral elements, in which case the
+        constructed index will consist of zero-based numerical indices into
+        $(D r); or it can have pointers to the element type of $(D r), in which
+        case the constructed index will be pointers to the top elements in
+        $(D r).
+    sorted = Determines whether to sort the index by the elements they refer
+        to.
+
+See_also: $(LREF topN), $(LREF topNCopy).
+
+BUGS:
+The swapping strategy parameter is not implemented yet; currently it is
+ignored.
+*/
+void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
+               Range, RangeIndex)
+              (Range r, RangeIndex index, SortOutput sorted = SortOutput.no)
+    if (isRandomAccessRange!Range &&
+        isRandomAccessRange!RangeIndex &&
+        hasAssignableElements!RangeIndex &&
+        isIntegral!(ElementType!(RangeIndex)))
+{
+    static assert(ss == SwapStrategy.unstable,
+                  "Stable swap strategy not implemented yet.");
+
+    import std.container : BinaryHeap;
+    import std.exception : enforce;
+
+    if (index.empty) return;
+    enforce(ElementType!(RangeIndex).max >= index.length,
+            "Index type too small");
+    bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
+    {
+        return binaryFun!(less)(r[a], r[b]);
+    }
+    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
+    foreach (i; 0 .. r.length)
+    {
+        heap.conditionalInsert(cast(ElementType!RangeIndex) i);
+    }
+    if (sorted == SortOutput.yes)
+    {
+        while (!heap.empty) heap.removeFront();
+    }
+}
+
+/// ditto
+void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
+               Range, RangeIndex)
+              (Range r, RangeIndex index, SortOutput sorted = SortOutput.no)
+    if (isRandomAccessRange!Range &&
+        isRandomAccessRange!RangeIndex &&
+        hasAssignableElements!RangeIndex &&
+        is(ElementType!(RangeIndex) == ElementType!(Range)*))
+{
+    static assert(ss == SwapStrategy.unstable,
+                  "Stable swap strategy not implemented yet.");
+
+    import std.container : BinaryHeap;
+
+    if (index.empty) return;
+    static bool indirectLess(const ElementType!(RangeIndex) a,
+                             const ElementType!(RangeIndex) b)
+    {
+        return binaryFun!less(*a, *b);
+    }
+    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
+    foreach (i; 0 .. r.length)
+    {
+        heap.conditionalInsert(&r[i]);
+    }
+    if (sorted == SortOutput.yes)
+    {
+        while (!heap.empty) heap.removeFront();
+    }
+}
+
+///
+unittest
+{
+    // Construct index to top 3 elements using numerical indices:
+    int[] a = [ 10, 2, 7, 5, 8, 1 ];
+    int[] index = new int[3];
+    topNIndex(a, index, SortOutput.yes);
+    assert(index == [5, 1, 3]); // because a[5]==1, a[1]==2, a[3]==5
+
+    // Construct index to top 3 elements using pointer indices:
+    int*[] ptrIndex = new int*[3];
+    topNIndex(a, ptrIndex, SortOutput.yes);
+    assert(ptrIndex == [ &a[5], &a[1], &a[3] ]);
+}
+
+unittest
+{
+    import std.conv : text;
+
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    {
+        int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
+        int*[] b = new int*[5];
+        topNIndex!("a > b")(a, b, SortOutput.yes);
+        //foreach (e; b) writeln(*e);
+        assert(b == [ &a[0], &a[2], &a[1], &a[6], &a[5]]);
+    }
+    {
+        int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
+        auto b = new ubyte[5];
+        topNIndex!("a > b")(a, b, SortOutput.yes);
+        //foreach (e; b) writeln(e, ":", a[e]);
+        assert(b == [ cast(ubyte) 0, cast(ubyte)2, cast(ubyte)1, cast(ubyte)6, cast(ubyte)5], text(b));
+    }
 }
 
 // nextPermutation
