@@ -3998,7 +3998,7 @@ unittest
    is returned.
 
    For built-in types, the range returned is a random access range. For
-   user-defined types that support $(D <) and $(D ++), the range is an input
+   user-defined types that support $(D ++), the range is an input
    range.
 
    Throws:
@@ -4460,15 +4460,23 @@ auto iota(B, E)(B begin, E end)
     if (!isIntegral!(CommonType!(B, E)) &&
         !isFloatingPoint!(CommonType!(B, E)) &&
         !isPointer!(CommonType!(B, E)) &&
-        is(typeof(B.init < E.init)) &&
-        is(typeof(++B.init)))
+        is(typeof(++B.init)) &&
+        (is(typeof(B.init < E.init)) || is(typeof(B.init == E.init))) )
 {
     static struct Result
     {
         B current;
         E end;
 
-        @property bool empty() { return !(current < end); }
+        @property bool empty()
+        {
+            static if (is(typeof(B.init < E.init)))
+                return !(current < end);
+            else static if (is(typeof(B.init != E.init)))
+                return current == end;
+            else
+                static assert(0);
+        }
         @property auto front() { return current; }
         void popFront()
         {
@@ -4481,7 +4489,7 @@ auto iota(B, E)(B begin, E end)
 
 /**
 User-defined types such as $(XREF bigint, BigInt) are also supported, as long
-as they can be compared with $(D <) and incremented with $(D ++).
+as they can be incremented with $(D ++) and compared with $(D <) or $(D ==).
 */
 // Issue 6447
 unittest
@@ -4497,6 +4505,36 @@ unittest
         BigInt(1_000_000_000_001),
         BigInt(1_000_000_000_002)
     ]));
+}
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+
+    // Test iota() for a type that only supports ++ and != but does not have
+    // '<'-ordering.
+    struct Cyclic(int wrapAround)
+    {
+        int current;
+
+        this(int start) { current = start % wrapAround; }
+
+        bool opEquals(Cyclic c) { return current == c.current; }
+        bool opEquals(int i) { return current == i; }
+        void opUnary(string op)() if (op == "++")
+        {
+            current = (current + 1) % wrapAround;
+        }
+    }
+    alias Cycle5 = Cyclic!5;
+
+    // Easy case
+    auto i1 = iota(Cycle5(1), Cycle5(4));
+    assert(i1.equal([1, 2, 3]));
+
+    // Wraparound case
+    auto i2 = iota(Cycle5(3), Cycle5(2));
+    assert(i2.equal([3, 4, 0, 1 ]));
 }
 
 /**
