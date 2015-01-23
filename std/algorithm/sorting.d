@@ -44,6 +44,8 @@ $(T2 topN,
         Separates the top elements in a range.)
 $(T2 topNCopy,
         Copies out the top elements of a range.)
+$(T2 topNIndex,
+        Builds an index of the top elements of a range.)
 )
 
 Copyright: Andrei Alexandrescu 2008-.
