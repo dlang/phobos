@@ -58,6 +58,7 @@ $(TR $(TDNW Comparison)
 $(TR $(TDNW Iteration)
     $(TDNW $(SUBMODULE iteration))
     $(TD 
+        $(SUBREF iteration, aggregate) 
         $(SUBREF iteration, cache) 
         $(SUBREF iteration, cacheBidirectional) 
         $(SUBREF iteration, each) 

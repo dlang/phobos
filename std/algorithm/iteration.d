@@ -7,6 +7,9 @@ $(BOOKTABLE Cheat Sheet,
 
 $(TR $(TH Function Name) $(TH Description))
 
+$(T2 aggregate,
+        $(D [[3, 1, 5], [2, 6, 4]].aggregate!max) returns a range containing
+        the elements $(D 5) and $(D 6).)
 $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)
 $(T2 cacheBidirectional,
@@ -62,6 +65,52 @@ module std.algorithm.iteration;
 import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
+
+///
+template aggregate(fun...) if (fun.length >= 1)
+{
+    /**
+     * Aggregates elements in each subrange of the given range of ranges using
+     * the given aggregating function(s).
+     * Params:
+     *  fun = One or more aggregating functions (binary functions that return a
+     *      single _aggregate value of their arguments).
+     *  ror = A range of ranges to be aggregated.
+     *
+     * Returns:
+     * A range representing the aggregated value(s) of each subrange
+     * of the original range. If only one aggregating function is specified,
+     * each element will be the aggregated value itself; if multiple functions
+     * are specified, each element will be a tuple of the aggregated values of
+     * each respective function.
+     */
+    auto aggregate(RoR)(RoR ror)
+        if (isInputRange!RoR && isIterable!(ElementType!RoR))
+    {
+        return ror.map!(reduce!fun);
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm.comparison : equal, max, min;
+
+        auto data = [[4, 2, 1, 3], [4, 9, -1, 3, 2], [3]];
+
+        // Single aggregating function
+        auto agg1 = data.aggregate!max;
+        assert(agg1.equal([4, 9, 3]));
+
+        // Multiple aggregating functions
+        import std.typecons : tuple;
+        auto agg2 = data.aggregate!(max, min);
+        assert(agg2.equal([
+            tuple(4, 1),
+            tuple(9, -1),
+            tuple(3, 3)
+        ]));
+    }
+}
 
 /++
 $(D cache) eagerly evaluates $(D front) of $(D range)
