@@ -3,16 +3,17 @@
 /**
 JavaScript Object Notation
 
-
-   Synopsis:
-
+Synopsis:
 ----
     //parse a file or string of json into a usable structure
     string s = "{ \"language\": \"D\", \"rating\": 3.14, \"code\": \"42\" }";
-    JSONValue j = parseJSON(s)
-    writeln("Language: ", j["language"].str(), " Rating: ", j["rating"].floating());
+    JSONValue j = parseJSON(s);
+    writeln("Language: ", j["language"].str(),
+            " Rating: ", j["rating"].floating()
+    );
 
-    // j and j["language"] return JSONValue, j["language"].str() returns a string
+    // j and j["language"] return JSONValue,
+    // j["language"].str returns a string
 
     //check a type
     long x;
@@ -22,7 +23,7 @@ JavaScript Object Notation
     }
     else
     {
-        x = to!int(j["code"].str());
+        x = to!int(j["code"].str);
     }
 
     // create a json struct
@@ -32,7 +33,7 @@ JavaScript Object Notation
     // create an array to assign to list
     jj.object["list"] = JSONValue( ["a", "b", "c"] );
     // list already exists, so .object optional
-    j["list"].array ~= JSONValue("D");
+    jj["list"].array ~= JSONValue("D");
 
     s = j.toString();
     writeln(s);
@@ -95,17 +96,18 @@ struct JSONValue
 
     /**
       Returns the JSON_TYPE of the value stored in this structure.
-      Example:
-      ---
-      string j = "{ \"language\": \"D\" }";
-      JSONValue j = parseJSON(s);
-      // j.type() == JSON_TYPE.OBJECT
-      // j["language"].type() == JSON_TYPE.STRING
-      ---
     */
     @property JSON_TYPE type() const
     {
         return type_tag;
+    }
+    ///
+    unittest
+    {
+          string s = "{ \"language\": \"D\" }";
+          JSONValue j = parseJSON(s);
+          assert(j.type() == JSON_TYPE.OBJECT);
+          assert(j["language"].type() == JSON_TYPE.STRING);
     }
 
     /**
@@ -151,19 +153,8 @@ struct JSONValue
         return type_tag = newType;
     }
 
-    /** Value getter/setter for $(D JSON_TYPE.STRING).
-    Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
-    Example:
-    ---
-    JSONValue j = [ "language": "D" ];
-
-    // get value
-    string s = j["language"].str();
-
-    // change existing key to new string
-    j["language"].str("Perl");
-    ---
-    */
+    /// Value getter/setter for $(D JSON_TYPE.STRING).
+    /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
     @property inout(string) str() inout
     {
         enforce!JSONException(type == JSON_TYPE.STRING,
@@ -175,6 +166,20 @@ struct JSONValue
     {
         assign(v);
         return store.str;
+    }
+    ///
+    unittest
+    {
+        JSONValue j = [ "language": "D" ];
+
+        // get value
+        assert(j["language"].str() == "D");
+        // str() or str is ok
+        assert(j["language"].str == "D");
+
+        // change existing key to new string
+        j["language"].str("Perl");
+        assert(j["language"].str == "Perl");
     }
 
     /// Value getter/setter for $(D JSON_TYPE.INTEGER).
@@ -372,6 +377,18 @@ struct JSONValue
         store = arg.store;
         type_tag = arg.type;
     }
+    ///
+    unittest
+    {
+        JSONValue j = JSONValue( "a string" );
+        j = JSONValue(42);
+
+        j = JSONValue( [1, 2, 3] );
+        assert(j.type() == JSON_TYPE.ARRAY);
+
+        j = JSONValue( ["language": "D"] );
+        assert(j.type() == JSON_TYPE.OBJECT);
+    }
 
     void opAssign(T)(T arg) if(!isStaticArray!T && !is(T : JSONValue))
     {
@@ -393,6 +410,13 @@ struct JSONValue
                                 "JSONValue array index is out of range");
         return store.array[i];
     }
+    ///
+    unittest
+    {
+        JSONValue j = JSONValue( [42, 43, 44] );
+        assert( j[0].integer == 42 );
+        assert( j[1].integer == 43 );
+    }
 
     /// Hash syntax for json objects.
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
@@ -402,6 +426,12 @@ struct JSONValue
                                 "JSONValue is not an object");
         return *enforce!JSONException(k in store.object,
                                         "Key not found: " ~ k);
+    }
+    ///
+    unittest
+    {
+        JSONValue j = JSONValue( ["language": "D"] );
+        assert( j["language"].str() == "D" );
     }
 
     /// Operator sets $(D value) for element of JSON object by $(D key)
@@ -419,6 +449,13 @@ struct JSONValue
 
         store.object[key] = value;
     }
+    ///
+    unittest
+    {
+            JSONValue j = JSONValue( ["language": "D"] );
+            j["language"].str = "Perl";
+            assert( j["language"].str == "Perl" );
+    }
 
     void opIndexAssign(T)(T arg, size_t i)
     {
@@ -427,6 +464,13 @@ struct JSONValue
         enforceEx!JSONException(i < store.array.length,
                                 "JSONValue array index is out of range");
         store.array[i] = arg;
+    }
+    ///
+    unittest
+    {
+            JSONValue j = JSONValue( ["Perl", "C"] );
+            j[1].str = "D";
+            assert( j[1].str == "D" );
     }
 
     JSONValue opBinary(string op : "~", T)(T arg)
@@ -478,6 +522,12 @@ struct JSONValue
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
         return k in store.object;
+    }
+    ///
+    unittest
+    {
+        JSONValue j = [ "language": "D", "author": "walter" ];
+        string a = ("author" in j).str;
     }
 
     /// Implements the foreach $(D opApply) interface for json arrays.
