@@ -1003,7 +1003,7 @@ unittest
     }
 
     {
-    	import std.algorithm : swap; // FIXME
+        import std.algorithm : swap; // FIXME
 
         bool proxySwapCalled;
         struct S
@@ -1176,7 +1176,7 @@ private template TimSortImpl(alias pred, R)
     // Entry point for tim sort
     void sort(R range, T[] temp)
     {
-    	import std.algorithm.comparison : min;
+        import std.algorithm.comparison : min;
 
         // Do insertion sort on small range
         if (range.length <= minimalMerge)
@@ -1269,7 +1269,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-    	import std.algorithm : reverse; // FIXME
+        import std.algorithm : reverse; // FIXME
 
         if (range.length < 2) return range.length;
 
@@ -1294,7 +1294,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-	import std.algorithm : move; // FIXME
+    import std.algorithm : move; // FIXME
 
         for (; sortedLen < range.length; ++sortedLen)
         {
@@ -1404,7 +1404,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-	import std.algorithm : copy; // FIXME
+    import std.algorithm : copy; // FIXME
 
         assert(mid <= range.length);
         assert(temp.length >= mid);
@@ -1487,7 +1487,7 @@ private template TimSortImpl(alias pred, R)
     }
     body
     {
-	import std.algorithm : copy; // FIXME
+    import std.algorithm : copy; // FIXME
 
         assert(mid <= range.length);
         assert(temp.length >= range.length - mid);
@@ -1676,7 +1676,7 @@ unittest
     // Generates data especially for testing sorting with Timsort
     static E[] genSampleData(uint seed)
     {
-	import std.algorithm : swap, swapRanges; // FIXME
+    import std.algorithm : swap, swapRanges; // FIXME
 
         auto rnd = Random(seed);
 
