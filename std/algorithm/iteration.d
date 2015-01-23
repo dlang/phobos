@@ -1324,113 +1324,38 @@ unittest
     auto g6 = a6.group;
 }
 
-// Used by groupBy.
-/**
- * Specifies whether a predicate is an equivalence relation.
- */
-import std.typecons : Flag;
-alias EquivRelation = Flag!"equivRelation";
-
-// Used by implementation of groupBy.
-private struct GroupByChunkImpl(alias pred, EquivRelation equivRelation, Range)
+// Used by implementation of groupBy for non-forward input ranges.
+private struct GroupByChunkImpl(alias pred, Range)
+    if (isInputRange!Range && !isForwardRange!Range)
 {
     alias fun = binaryFun!pred;
 
     private Range r;
-    static if (!equivRelation)
-        private bool first = true;
-    else
-        private enum first = false;
+    private ElementType!Range prev;
 
-    /* For forward ranges, using .save is more reliable than blindly assuming
-     * that the current value of .front will persist past a .popFront. However,
-     * if Range is only an input range, then we have no choice but to save the
-     * value of .front. */
-    static if (isForwardRange!Range)
+    this(Range range, ElementType!Range _prev)
     {
-        private Range prev;
-        this(Range _r, Range _prev)
-        {
-            r = _r.save;
-            prev = _prev.save;
-        }
-        private void savePrev() { prev = r.save; }
-        @property bool empty()
-        {
-            return r.empty || (!first && !fun(prev.front, r.front));
-        }
+        r = range;
+        prev = _prev;
     }
-    else
+
+    @property bool empty()
     {
-        private ElementType!Range prev;
-        this(Range _r, ElementType!Range _prev)
-        {
-            r = _r;
-            prev = _prev;
-        }
-        private void savePrev() { prev = r.front; }
-        @property bool empty()
-        {
-            return r.empty || (!first && !fun(prev, r.front));
-        }
+        return r.empty || !fun(prev, r.front);
     }
 
     @property ElementType!Range front() { return r.front; }
-
-    void popFront()
-    in
-    {
-        import core.exception : RangeError;
-        if (r.empty) throw new RangeError();
-    }
-    body
-    {
-        // If this is a non-equivalence relation, we cannot assume transitivity
-        // so we have to update .prev at every step.
-        static if (!equivRelation)
-        {
-            savePrev();
-            first = false;
-        }
-
-        r.popFront();
-    }
-
-    static if (isForwardRange!Range)
-    {
-        @property typeof(this) save()
-        {
-            typeof(this) copy;
-            copy.r = r.save;
-            copy.prev = prev.save;
-            return copy;
-        }
-    }
+    void popFront() { r.popFront(); }
 }
 
-// Implementation of groupBy.
-private struct GroupByImpl(alias pred, EquivRelation equivRelation, Range)
+// Implementation of groupBy for non-forward input ranges.
+private struct GroupByImpl(alias pred, Range)
+    if (isInputRange!Range && !isForwardRange!Range)
 {
     alias fun = binaryFun!pred;
 
     private Range r;
-
-    /* For forward ranges, using .save is more reliable than blindly assuming
-     * that the current value of .front will persist past a .popFront. However,
-     * if Range is only an input range, then we have no choice but to save the
-     * value of .front. */
-    static if (isForwardRange!Range)
-    {
-        private Range _prev;
-        private void savePrev() { _prev = r.save; }
-        private @property ElementType!Range prev() { return _prev.front; }
-    }
-    else
-    {
-        private ElementType!Range _prev;
-        private void savePrev() { _prev = r.front; }
-        private alias prev = _prev;
-    }
+    private ElementType!Range _prev;
 
     this(Range _r)
     {
@@ -1439,20 +1364,12 @@ private struct GroupByImpl(alias pred, EquivRelation equivRelation, Range)
         {
             // Check reflexivity if predicate is claimed to be an equivalence
             // relation.
-            assert(!equivRelation || pred(r.front, r.front),
-                   "predicate " ~ pred.stringof ~ " is claimed to be "~
-                   "equivalence relation yet isn't reflexive");
+            assert(pred(r.front, r.front),
+                   "predicate " ~ pred.stringof ~ " is not reflexive");
 
             // _prev's type may be a nested struct, so must be initialized
             // directly in the constructor (cannot call savePred()).
-            static if (isForwardRange!Range)
-            {
-                _prev = r.save;
-            }
-            else
-            {
-                _prev = r.front;
-            }
+            _prev = r.front;
         }
         else
         {
@@ -1463,52 +1380,179 @@ private struct GroupByImpl(alias pred, EquivRelation equivRelation, Range)
     @property bool empty() { return r.empty; }
 
     @property auto front()
-    in
     {
-        import core.exception : RangeError;
-        if (r.empty) throw new RangeError();
-    }
-    body
-    {
-        return GroupByChunkImpl!(pred, equivRelation, Range)(r, _prev);
+        return GroupByChunkImpl!(pred, Range)(r, _prev);
     }
 
     void popFront()
     {
         while (!r.empty)
         {
-            static if (equivRelation)
+            if (!fun(_prev, r.front))
             {
-                if (!fun(prev, r.front))
-                {
-                    savePrev();
-                    break;
-                }
-                r.popFront();
+                _prev = r.front;
+                break;
             }
-            else
-            {
-                // For non-equivalence relations, we cannot assume transitivity
-                // so we must update prev each time.
-                savePrev();
-                r.popFront();
-
-                if (!r.empty && !fun(prev, r.front))
-                    break;
-            }
+            r.popFront();
         }
     }
+}
 
-    static if (isForwardRange!Range)
+// Single-pass implementation of groupBy for forward ranges.
+private struct GroupByImpl(alias pred, Range)
+    if (isForwardRange!Range)
+{
+    import std.typecons : RefCounted;
+
+    // Outer range
+    static struct Impl
     {
-        @property typeof(this) save()
+        size_t groupNum;
+        Range  current;
+        Range  next;
+    }
+
+    // Inner range
+    static struct Group
+    {
+        private size_t groupNum;
+        private Range  start;
+        private Range  current;
+
+        private RefCounted!Impl mothership;
+
+        this(RefCounted!Impl origin)
         {
-            typeof(this) copy;
-            copy.r = r.save;
-            copy._prev = _prev.save;
+            groupNum = origin.groupNum;
+
+            start = origin.current.save;
+            current = origin.current.save;
+            assert(!start.empty);
+
+            mothership = origin;
+
+            // Note: this requires reflexivity.
+            assert(pred(start.front, current.front),
+                   "predicate " ~ pred.stringof ~ " is not reflexive");
+        }
+
+        @property bool empty() { return groupNum == size_t.max; }
+        @property auto ref front() { return current.front; }
+
+        void popFront()
+        {
+            current.popFront();
+
+            // Note: this requires transitivity.
+            if (current.empty || !pred(start.front, current.front))
+            {
+                if (groupNum == mothership.groupNum)
+                {
+                    // If parent range hasn't moved on yet, help it along by
+                    // saving location of start of next Group.
+                    mothership.next = current.save;
+                }
+
+                groupNum = size_t.max;
+            }
+        }
+
+        @property auto save()
+        {
+            auto copy = this;
+            copy.current = current.save;
             return copy;
         }
     }
+    static assert(isForwardRange!Group);
+
+    private RefCounted!Impl impl;
+
+    this(Range r)
+    {
+        impl = RefCounted!Impl(0, r, r.save);
+    }
+
+    @property bool empty() { return impl.current.empty; }
+    @property auto front() { return Group(impl); }
+
+    void popFront()
+    {
+        // Scan for next group. If we're lucky, one of our Groups would have
+        // already set .next to the start of the next group, in which case the
+        // loop is skipped.
+        while (!impl.next.empty && pred(impl.current.front, impl.next.front))
+        {
+            impl.next.popFront();
+        }
+
+        impl.current = impl.next.save;
+
+        // Indicate to any remaining Groups that we have moved on.
+        impl.groupNum++;
+    }
+
+    @property auto save()
+    {
+        // Note: the new copy of the range will be detached from any existing
+        // satellite Groups, and will not benefit from the .next acceleration.
+        return typeof(this)(impl.current.save);
+    }
+
+    static assert(isForwardRange!(typeof(this)));
+}
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+
+    size_t popCount = 0;
+    class RefFwdRange
+    {
+        int[]  impl;
+
+        this(int[] data) { impl = data; }
+        @property bool empty() { return impl.empty; }
+        @property auto ref front() { return impl.front; }
+        void popFront()
+        {
+            impl.popFront();
+            popCount++;
+        }
+        @property auto save() { return new RefFwdRange(impl); }
+    }
+    static assert(isForwardRange!RefFwdRange);
+
+    auto testdata = new RefFwdRange([1, 3, 5, 2, 4, 7, 6, 8, 9]);
+    auto groups = testdata.groupBy!((a,b) => (a % 2) == (b % 2));
+    auto outerSave1 = groups.save;
+
+    // Sanity test
+    assert(groups.equal!equal([[1, 3, 5], [2, 4], [7], [6, 8], [9]]));
+    assert(groups.empty);
+
+    // Performance test for single-traversal use case: popFront should not have
+    // been called more times than there are elements if we traversed the
+    // segmented range exactly once.
+    assert(popCount == 9);
+
+    // Outer range .save test
+    groups = outerSave1.save;
+    assert(!groups.empty);
+
+    // Inner range .save test
+    auto grp1 = groups.front.save;
+    auto grp1b = grp1.save;
+    assert(grp1b.equal([1, 3, 5]));
+    assert(grp1.save.equal([1, 3, 5]));
+
+    // Inner range should remain consistent after outer range has moved on.
+    groups.popFront();
+    assert(grp1.save.equal([1, 3, 5]));
+
+    // Inner range should not be affected by subsequent inner ranges.
+    assert(groups.front.equal([2, 4]));
+    assert(grp1.save.equal([1, 3, 5]));
 }
 
 /**
@@ -1519,23 +1563,11 @@ private struct GroupByImpl(alias pred, EquivRelation equivRelation, Range)
  * are considered equivalent if $(D pred(a,b)) is true. In unary form, two
  * elements are considered equivalent if $(D pred(a) == pred(b)) is true.
  *
- * The optional parameter $(D equivRelation), which defaults to
- * $(D EquivRelation.no) for binary predicates if not specified, specifies
- * whether $(D pred) is an equivalence relation, that is, whether it is
- * reflexive ($(D pred(x,x)) is always true), symmetric ($(D pred(x,y) ==
- * pred(y,x))), and transitive ($(D pred(x,y) && pred(y,z)) implies
- * $(D pred(x,z))). When this is the case, $(D groupBy) can take advantage of
- * these three properties for a slight performance improvement.
- *
- * Note that it is not an error to specify $(D EquivRelation.no) even when
- * $(D pred) is an equivalence relation; the resulting range will just be
- * slightly slower than it could be. However, if $(D EquivRelation.yes) is
- * specified yet $(D pred) is actually $(I not) an equivalence relation, the
- * behaviour of the resulting range is undefined.
- *
- * Unary predicates always imply $(D equivRelation.yes), since they are
- * internally converted to the binary equivalence relation $(D pred(a) ==
- * pred(b)).
+ * This predicate must be an equivalence relation, that is, it must be
+ * reflexive ($(D pred(x,x)) is always true), symmetric
+ * ($(D pred(x,y) == pred(y,x))), and transitive ($(D pred(x,y) && pred(y,z))
+ * implies $(D pred(x,z))). If this is not the case, the range returned by
+ * groupBy may assert at runtime or behave erratically.
  *
  * Params:
  *  pred = Predicate for determining equivalence.
@@ -1558,20 +1590,13 @@ private struct GroupByImpl(alias pred, EquivRelation equivRelation, Range)
 auto groupBy(alias pred, Range)(Range r)
     if (isInputRange!Range)
 {
-    return groupBy!(pred, EquivRelation.no, Range)(r);
-}
-
-/// ditto
-auto groupBy(alias pred, EquivRelation equivRelation, Range)(Range r)
-    if (isInputRange!Range)
-{
     static if (is(typeof(binaryFun!pred(ElementType!Range.init,
                                         ElementType!Range.init)) : bool))
-        return GroupByImpl!(pred, equivRelation, Range)(r);
+        return GroupByImpl!(pred, Range)(r);
     else static if (is(typeof(
             unaryFun!pred(ElementType!Range.init) ==
             unaryFun!pred(ElementType!Range.init))))
-        return GroupByImpl!((a,b) => pred(a) == pred(b), EquivRelation.yes, Range)(r);
+        return GroupByImpl!((a,b) => pred(a) == pred(b), Range)(r);
     else
         static assert(0, "groupBy expects either a binary predicate or "~
                          "a unary predicate on range elements of type: "~
@@ -1579,7 +1604,7 @@ auto groupBy(alias pred, EquivRelation equivRelation, Range)(Range r)
 }
 
 /// Showing usage with binary predicate:
-@safe unittest
+/*FIXME: @safe*/ unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1591,31 +1616,45 @@ auto groupBy(alias pred, EquivRelation equivRelation, Range)(Range r)
         [2, 3]
     ];
 
-    auto r1 = data.groupBy!((a,b) => a[0] == b[0], EquivRelation.yes);
+    auto r1 = data.groupBy!((a,b) => a[0] == b[0]);
     assert(r1.equal!equal([
         [[1, 1], [1, 2]],
         [[2, 2], [2, 3]]
     ]));
 
-    auto r2 = data.groupBy!((a,b) => a[1] == b[1], EquivRelation.yes);
+    auto r2 = data.groupBy!((a,b) => a[1] == b[1]);
     assert(r2.equal!equal([
         [[1, 1]],
         [[1, 2], [2, 2]],
         [[2, 3]]
     ]));
+}
 
-    // Grouping by maximum adjacent difference:
-    import std.math : abs;
-    auto r3 = [1, 3, 2, 5, 4, 9, 10].groupBy!((a, b) => abs(a-b) < 3);
-    assert(r3.equal!equal([
-        [1, 3, 2],
-        [5, 4],
-        [9, 10]
-    ]));
+version(none) // this example requires support for non-equivalence relations
+unittest
+{
+    auto data = [
+        [1, 1],
+        [1, 2],
+        [2, 2],
+        [2, 3]
+    ];
+
+    version(none)
+    {
+        // Grouping by maximum adjacent difference:
+        import std.math : abs;
+        auto r3 = [1, 3, 2, 5, 4, 9, 10].groupBy!((a, b) => abs(a-b) < 3);
+        assert(r3.equal!equal([
+            [1, 3, 2],
+            [5, 4],
+            [9, 10]
+        ]));
+    }
 }
 
 /// Showing usage with unary predicate:
-pure @safe nothrow unittest
+/* FIXME: pure @safe nothrow*/ unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1660,7 +1699,7 @@ pure @safe nothrow unittest
     }
 }
 
-pure @safe nothrow unittest
+/*FIXME: pure @safe nothrow*/ unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1730,6 +1769,7 @@ pure @safe nothrow unittest
 }
 
 // Issue 13595
+version(none) // This requires support for non-equivalence relations
 unittest
 {
     import std.algorithm.comparison : equal;
