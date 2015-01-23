@@ -1333,9 +1333,9 @@ private struct GroupByChunkImpl(alias pred, Range)
     private Range r;
     private ElementType!Range prev;
 
-    this(Range _r, ElementType!Range _prev)
+    this(Range range, ElementType!Range _prev)
     {
-        r = _r;
+        r = range;
         prev = _prev;
     }
 
@@ -1398,7 +1398,7 @@ private struct GroupByImpl(alias pred, Range)
     }
 }
 
-// Andrei's implementation of groupBy for forward ranges.
+// Single-pass implementation of groupBy for forward ranges.
 private struct GroupByImpl(alias pred, Range)
     if (isForwardRange!Range)
 {
@@ -1415,11 +1415,11 @@ private struct GroupByImpl(alias pred, Range)
     // Inner range
     static struct Group
     {
-        size_t groupNum;
-        Range  start;
-        Range  current;
+        private size_t groupNum;
+        private Range  start;
+        private Range  current;
 
-        RefCounted!Impl mothership;
+        private RefCounted!Impl mothership;
 
         this(RefCounted!Impl origin)
         {
@@ -1432,7 +1432,8 @@ private struct GroupByImpl(alias pred, Range)
             mothership = origin;
 
             // Note: this requires reflexivity.
-            assert(pred(start.front, current.front));
+            assert(pred(start.front, current.front),
+                   "predicate " ~ pred.stringof ~ " is not reflexive");
         }
 
         @property bool empty() { return groupNum == size_t.max; }
@@ -1465,7 +1466,7 @@ private struct GroupByImpl(alias pred, Range)
     }
     static assert(isForwardRange!Group);
 
-    RefCounted!Impl impl;
+    private RefCounted!Impl impl;
 
     this(Range r)
     {
