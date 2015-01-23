@@ -7,6 +7,9 @@ $(BOOKTABLE Cheat Sheet,
 
 $(TR $(TH Function Name) $(TH Description))
 
+$(T2 aggregate,
+        $(D [[3, 1, 5], [2, 6, 4]].aggregate!max) returns a range containing
+        the elements $(D 5) and $(D 6).)
 $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)
 $(T2 cacheBidirectional,
