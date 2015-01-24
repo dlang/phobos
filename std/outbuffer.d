@@ -312,24 +312,13 @@ class OutBuffer
 
     void printf(string format, ...) @trusted
     {
-        version (Win64)
-        {
-            vprintf(format, _argptr);
-        }
-        else version (X86_64)
-        {
-            va_list ap;
+        va_list ap;
+        static if (is(typeof(__va_argsave)))
             va_start(ap, __va_argsave);
-            vprintf(format, ap);
-            va_end(ap);
-        }
         else
-        {
-            va_list ap;
-            ap = cast(va_list)&format;
-            ap += format.sizeof;
-            vprintf(format, ap);
-        }
+            va_start(ap, format);
+        vprintf(format, ap);
+        va_end(ap);
     }
 
     /*****************************************
