@@ -1013,7 +1013,7 @@ template memoize(alias fun, uint maxSize)
             initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
         }
 
-        import core.bitop : bts;
+        import core.bitop : bt, bts;
         import std.conv : emplace;
 
         size_t hash;
@@ -1021,14 +1021,21 @@ template memoize(alias fun, uint maxSize)
             hash = hashOf(arg, hash);
         // cuckoo hashing
         immutable idx1 = hash % maxSize;
-        if (!bts(initialized.ptr, idx1))
-            return emplace(&memo[idx1], args, fun(args)).res;
+        if (!bt(initialized.ptr, idx1))
+        {
+            emplace(&memo[idx1], args, fun(args));
+            bts(initialized.ptr, idx1); // only set to initialized after setting args and value (bugzilla 14025)
+            return memo[idx1].res;
+        }
         else if (memo[idx1].args == args)
             return memo[idx1].res;
         // FNV prime
         immutable idx2 = (hash * 16777619) % maxSize;
-        if (!bts(initialized.ptr, idx2))
+        if (!bt(initialized.ptr, idx2))
+        {
             emplace(&memo[idx2], memo[idx1]);
+            bts(initialized.ptr, idx2); // only set to initialized after setting args and value (bugzilla 14025)
+        }
         else if (memo[idx2].args == args)
             return memo[idx2].res;
         else if (idx1 != idx2)
