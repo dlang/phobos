@@ -1094,7 +1094,7 @@ final class Pid
     This is a number that uniquely identifies the process on the operating
     system, for at least as long as the process is running.  Once $(LREF wait)
     has been called on the $(LREF Pid), this method will return an
-    invalid process ID.
+    invalid (negative) process ID.
     */
     @property int processID() const @safe pure nothrow
     {
