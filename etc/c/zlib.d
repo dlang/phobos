@@ -1,5 +1,6 @@
 /* zlib.d: modified from zlib.h by Walter Bright */
 /* updated from 1.2.1 to 1.2.3 by Thomas Kuehne */
+/* updated from 1.2.3 to 1.2.8 by Dmitry Atamanov */
 
 module etc.c.zlib;
 
@@ -37,8 +38,8 @@ import core.stdc.config;
 
 extern (C):
 
-const char[] ZLIB_VERSION = "1.2.3";
-const ZLIB_VERNUM = 0x1230;
+const char[] ZLIB_VERSION = "1.2.8";
+const ZLIB_VERNUM = 0x1280;
 
 /*
      The 'zlib' compression library provides in-memory compression and
