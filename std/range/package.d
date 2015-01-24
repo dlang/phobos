@@ -4460,7 +4460,7 @@ auto iota(B, E)(B begin, E end)
     if (!isIntegral!(CommonType!(B, E)) &&
         !isFloatingPoint!(CommonType!(B, E)) &&
         !isPointer!(CommonType!(B, E)) &&
-        is(typeof(++B.init)) &&
+        is(typeof((ref B b) { ++b; })) &&
         (is(typeof(B.init < E.init)) || is(typeof(B.init == E.init))) )
 {
     static struct Result
