@@ -917,7 +917,7 @@ public:
 
         static bool[] ba = [1,0,1];
 
-        BitArray a; a.init(ba);
+        auto a = BitArray(ba);
 
         int i;
         foreach (b;a)
@@ -980,7 +980,7 @@ public:
         static bool[5] data = [1,0,1,1,0];
         int i;
 
-        b.init(data);
+        b = BitArray(data);
         b.reverse;
         for (i = 0; i < data.length; i++)
         {
@@ -1041,7 +1041,7 @@ public:
         debug(bitarray) printf("BitArray.sort.unittest\n");
 
         __gshared size_t x = 0b1100011000;
-        __gshared BitArray ba = { 10, &x };
+        __gshared ba = BitArray(10, &x);
         ba.sort;
         for (size_t i = 0; i < 6; i++)
             assert(ba[i] == false);
@@ -1082,13 +1082,13 @@ public:
         static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
         static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
-        BitArray c; c.init(bc);
-        BitArray d; d.init(bd);
-        BitArray e; e.init(be);
-        BitArray f; f.init(bf);
-        BitArray g; g.init(bg);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
+        auto c = BitArray(bc);
+        auto d = BitArray(bd);
+        auto e = BitArray(be);
+        auto f = BitArray(bf);
+        auto g = BitArray(bg);
 
         assert(a != b);
         assert(a != c);
@@ -1148,13 +1148,13 @@ public:
         static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
         static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
-        BitArray c; c.init(bc);
-        BitArray d; d.init(bd);
-        BitArray e; e.init(be);
-        BitArray f; f.init(bf);
-        BitArray g; g.init(bg);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
+        auto c = BitArray(bc);
+        auto d = BitArray(bd);
+        auto e = BitArray(be);
+        auto f = BitArray(bf);
+        auto g = BitArray(bg);
 
         assert(a >  b);
         assert(a >= b);
@@ -1173,9 +1173,9 @@ public:
         {
             v.length = i;
             v[] = false;
-            BitArray x; x.init(v);
+            auto x = BitArray(v);
             v[i-1] = true;
-            BitArray y; y.init(v);
+            auto y = BitArray(v);
             assert(x < y);
             assert(x <= y);
         }
@@ -1218,10 +1218,26 @@ public:
         return hash;
     }
 
+    deprecated("Please use the constructor instead. This function will be removed in Jan 2016.")
+    /***************************************
+     * $(RED Will be deprecated in 2.068. Please use the constructor instead.)
+     */
+    void init(bool[] ba) pure nothrow
+    {
+        this = BitArray(ba);
+    }
+
+    deprecated("Please use the constructor instead. This function will be removed in Jan 2016.")
+    /// ditto
+    void init(void[] v, size_t numbits) pure nothrow
+    {
+        this = BitArray(v, numbits);
+    }
+
     /***************************************
      * Set this $(D BitArray) to the contents of $(D ba).
      */
-    void init(bool[] ba) pure nothrow
+    this(bool[] ba) pure nothrow
     {
         length = ba.length;
         foreach (i, b; ba)
@@ -1230,6 +1246,12 @@ public:
         }
     }
 
+    // Deliberately undocumented: raw initialization of bit array.
+    this(size_t _len, size_t* _ptr)
+    {
+        len = _len;
+        ptr = _ptr;
+    }
 
     /***************************************
      * Map the $(D BitArray) onto $(D v), with $(D numbits) being the number of bits
@@ -1238,8 +1260,9 @@ public:
      * these will be set to 0.
      *
      * This is the inverse of $(D opCast).
+     * $(RED Will be deprecated in 2.068. Please use the constructor instead.)
      */
-    void init(void[] v, size_t numbits) pure nothrow
+    this(void[] v, size_t numbits) pure nothrow
     in
     {
         assert(numbits <= v.length * 8);
@@ -1262,12 +1285,11 @@ public:
 
         static bool[] ba = [1,0,1,0,1];
 
-        BitArray a; a.init(ba);
-        BitArray b;
+        auto a = BitArray(ba);
         void[] v;
 
         v = cast(void[])a;
-        b.init(v, a.length);
+        auto b = BitArray(v, a.length);
 
         assert(b[0] == 1);
         assert(b[1] == 0);
@@ -1303,7 +1325,7 @@ public:
 
         static bool[] ba = [1,0,1,0,1];
 
-        BitArray a; a.init(ba);
+        auto a = BitArray(ba);
         void[] v = cast(void[])a;
 
         assert(v.length == a.dim * size_t.sizeof);
@@ -1335,7 +1357,7 @@ public:
 
         static bool[] ba = [1,0,1,0,1];
 
-        BitArray a; a.init(ba);
+        auto a = BitArray(ba);
         BitArray b = ~a;
 
         assert(b[0] == 0);
@@ -1382,8 +1404,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
 
         BitArray c = a & b;
 
@@ -1401,8 +1423,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
 
         BitArray c = a | b;
 
@@ -1420,8 +1442,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
 
         BitArray c = a ^ b;
 
@@ -1439,8 +1461,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
 
         BitArray c = a - b;
 
@@ -1488,8 +1510,8 @@ public:
     {
         static bool[] ba = [1,0,1,0,1,1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
         BitArray c = a;
         c.length = 5;
         c &= b;
@@ -1507,8 +1529,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
 
         a &= b;
         assert(a[0] == 1);
@@ -1525,8 +1547,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
 
         a |= b;
         assert(a[0] == 1);
@@ -1543,8 +1565,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
 
         a ^= b;
         assert(a[0] == 0);
@@ -1561,8 +1583,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
 
         a -= b;
         assert(a[0] == 0);
@@ -1593,7 +1615,7 @@ public:
 
         static bool[] ba = [1,0,1,0,1];
 
-        BitArray a; a.init(ba);
+        auto a = BitArray(ba);
         BitArray b;
 
         b = (a ~= true);
@@ -1627,8 +1649,8 @@ public:
         static bool[] ba = [1,0];
         static bool[] bb = [0,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
         BitArray c;
 
         c = (a ~= b);
@@ -1684,8 +1706,8 @@ public:
         static bool[] ba = [1,0];
         static bool[] bb = [0,1,0];
 
-        BitArray a; a.init(ba);
-        BitArray b; b.init(bb);
+        auto a = BitArray(ba);
+        auto b = BitArray(bb);
         BitArray c;
 
         c = (a ~ b);
@@ -1856,8 +1878,7 @@ public:
     {
         import std.format : format;
 
-        BitArray b;
-        b.init([1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1]);
+        auto b = BitArray([1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1]);
 
         b <<= 1;
         assert(format("%b", b) == "01100_10101101");
@@ -1874,7 +1895,7 @@ public:
         b <<= 13;
         assert(format("%b", b) == "00000_00000000");
 
-        b.init([1, 0, 1, 1, 0, 1, 1, 1]);
+        b = BitArray([1, 0, 1, 1, 0, 1, 1, 1]);
         b >>= 8;
         assert(format("%b", b) == "00000000");
 
@@ -1884,11 +1905,10 @@ public:
     unittest
     {
         import std.format : format;
-        BitArray b;
 
         // This has to be long enough to occupy more than one size_t. On 64-bit
         // machines, this would be at least 64 bits.
-        b.init([
+        auto b = BitArray([
             1, 0, 0, 0, 0, 0, 0, 0,  1, 1, 0, 0, 0, 0, 0, 0,
             1, 1, 1, 0, 0, 0, 0, 0,  1, 1, 1, 1, 0, 0, 0, 0,
             1, 1, 1, 1, 1, 0, 0, 0,  1, 1, 1, 1, 1, 1, 0, 0,
@@ -1912,7 +1932,7 @@ public:
                "00000000_00000000_"~
                "00000000_00001000");
 
-        b.init([
+        b = BitArray([
             1, 0, 0, 0, 0, 0, 0, 0,  1, 1, 0, 0, 0, 0, 0, 0,
             1, 1, 1, 0, 0, 0, 0, 0,  1, 1, 1, 1, 0, 0, 0, 0,
             1, 1, 1, 1, 1, 0, 0, 0,  1, 1, 1, 1, 1, 1, 0, 0,
@@ -1965,8 +1985,7 @@ public:
         import std.format : format;
 
         debug(bitarray) printf("BitArray.toString unittest\n");
-        BitArray b;
-        b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+        auto b = BitArray([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
 
         auto s1 = format("%s", b);
         assert(s1 == "[0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]");
@@ -1994,8 +2013,7 @@ public:
     {
         import std.algorithm : equal;
 
-        BitArray b1;
-        b1.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+        auto b1 = BitArray([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
         assert(b1.bitsSet.equal([4, 5, 6, 7, 12, 13, 14, 15]));
 
         BitArray b2;
@@ -2014,17 +2032,17 @@ public:
         debug(bitarray) printf("BitArray.bitsSet unittest\n");
         BitArray b;
         enum wordBits = size_t.sizeof * 8;
-        b.init([size_t.max], 0);
+        b = BitArray([size_t.max], 0);
         assert(b.bitsSet.empty);
-        b.init([size_t.max], 1);
+        b = BitArray([size_t.max], 1);
         assert(b.bitsSet.equal([0]));
-        b.init([size_t.max], wordBits);
+        b = BitArray([size_t.max], wordBits);
         assert(b.bitsSet.equal(iota(wordBits)));
-        b.init([size_t.max, size_t.max], wordBits);
+        b = BitArray([size_t.max, size_t.max], wordBits);
         assert(b.bitsSet.equal(iota(wordBits)));
-        b.init([size_t.max, size_t.max], wordBits + 1);
+        b = BitArray([size_t.max, size_t.max], wordBits + 1);
         assert(b.bitsSet.equal(iota(wordBits + 1)));
-        b.init([size_t.max, size_t.max], wordBits * 2);
+        b = BitArray([size_t.max, size_t.max], wordBits * 2);
         assert(b.bitsSet.equal(iota(wordBits * 2)));
     }
 
@@ -2076,29 +2094,29 @@ unittest
 
     BitArray b;
 
-    b.init([]);
+    b = BitArray([]);
     assert(format("%s", b) == "[]");
     assert(format("%b", b) is null);
 
-    b.init([1]);
+    b = BitArray([1]);
     assert(format("%s", b) == "[1]");
     assert(format("%b", b) == "1");
 
-    b.init([0, 0, 0, 0]);
+    b = BitArray([0, 0, 0, 0]);
     assert(format("%b", b) == "0000");
 
-    b.init([0, 0, 0, 0, 1, 1, 1, 1]);
+    b = BitArray([0, 0, 0, 0, 1, 1, 1, 1]);
     assert(format("%s", b) == "[0, 0, 0, 0, 1, 1, 1, 1]");
     assert(format("%b", b) == "00001111");
 
-    b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    b = BitArray([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
     assert(format("%s", b) == "[0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]");
     assert(format("%b", b) == "00001111_00001111");
 
-    b.init([1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    b = BitArray([1, 0, 0, 0, 0, 1, 1, 1, 1]);
     assert(format("%b", b) == "1_00001111");
 
-    b.init([1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
+    b = BitArray([1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
     assert(format("%b", b) == "1_00001111_00001111");
 }
 
