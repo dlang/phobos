@@ -24,9 +24,9 @@ import std.functional; // : binaryFun;
 
 public import std.container.util;
 
-version(unittest) version = RBDoChecks;
+version(unittest) debug = RBDoChecks;
 
-//version = RBDoChecks;
+//debug = RBDoChecks;
 
 /*
  * Implementation for a Red Black node for use in a Red Black Tree (see below)
@@ -694,7 +694,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         static if(allowDuplicates)
         {
             result.setColor(_end);
-            version(RBDoChecks)
+            debug(RBDoChecks)
                 check();
             ++_length;
             return result;
@@ -708,7 +708,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
                 ++_length;
                 result.setColor(_end);
             }
-            version(RBDoChecks)
+            debug(RBDoChecks)
                 check();
             return Tuple!(bool, "added", Node, "n")(added, result);
         }
@@ -1138,7 +1138,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         auto n = _begin;
         auto result = n.value;
         _begin = n.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
         return result;
     }
@@ -1165,7 +1165,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         scope(success)
             --_length;
         _begin = _begin.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
     }
 
@@ -1183,7 +1183,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             _begin = _begin.remove(_end);
         else
             lastnode.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
     }
 
@@ -1223,7 +1223,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             b = b.remove(_end);
             --_length;
         }
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
         return Range(e, _end);
     }
@@ -1522,7 +1522,7 @@ assert(equal(rbt[], [5]));
         assert(equal(re, [3]));
     }
 
-    version(RBDoChecks)
+    debug(RBDoChecks)
     {
         /*
          * Print the tree.  This prints a sideways view of the tree in ASCII form,
