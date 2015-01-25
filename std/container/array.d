@@ -40,7 +40,7 @@ GC managed objects referenced from an $(D Array) will be kept alive.
 Note:
 
 When using $(D Array) with range-based functions like those in $(D std.algorithm),
-$(Array) must be sliced to get a range (for example, use $(D array[].map!)
+$(D Array) must be sliced to get a range (for example, use $(D array[].map!)
 instead of $(D array.map!)). The container itself is not a range.
  */
 struct Array(T)
