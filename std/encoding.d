@@ -1261,17 +1261,13 @@ bool isValidCodePoint(dchar c)
  explicitly specify the encoding type.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-
- Examples:
- -----------------------------------
- assert(encodingName!(Latin1Char) == "ISO-8859-1");
- -----------------------------------
  */
 @property string encodingName(T)()
 {
     return EncoderInstance!(T).encodingName;
 }
 
+///
 unittest
 {
     assert(encodingName!(char) == "UTF-8");
@@ -1290,22 +1286,19 @@ unittest
  explicitly specify the encoding type.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-
- Examples:
- -----------------------------------
- assert(canEncode!(Latin1Char)('A'));
- -----------------------------------
  */
 bool canEncode(E)(dchar c)
 {
     return EncoderInstance!(E).canEncode(c);
 }
 
+///
 unittest
 {
+     assert( canEncode!(Latin1Char)('A'));
     assert(!canEncode!(AsciiChar)('\u00A0'));
-    assert(canEncode!(Latin1Char)('\u00A0'));
-    assert(canEncode!(Windows1252Char)('\u20AC'));
+    assert( canEncode!(Latin1Char)('\u00A0'));
+    assert( canEncode!(Windows1252Char)('\u20AC'));
     assert(!canEncode!(Windows1252Char)('\u20AD'));
     assert(!canEncode!(Windows1252Char)('\uFFFD'));
     assert(!canEncode!(char)(cast(dchar)0x110000));
@@ -1326,15 +1319,16 @@ bool isValidCodeUnit(E)(E c)
     return EncoderInstance!(E).isValidCodeUnit(c);
 }
 
+///
 unittest
 {
-    assert(!isValidCodeUnit(cast(AsciiChar)0xA0));
-    assert( isValidCodeUnit(cast(Windows1252Char)0x80));
-    assert(!isValidCodeUnit(cast(Windows1252Char)0x81));
     assert(!isValidCodeUnit(cast(char)0xC0));
     assert(!isValidCodeUnit(cast(char)0xFF));
     assert( isValidCodeUnit(cast(wchar)0xD800));
     assert(!isValidCodeUnit(cast(dchar)0xD800));
+    assert(!isValidCodeUnit(cast(AsciiChar)0xA0));
+    assert( isValidCodeUnit(cast(Windows1252Char)0x80));
+    assert(!isValidCodeUnit(cast(Windows1252Char)0x81));
 }
 
 /**
@@ -1355,9 +1349,11 @@ bool isValid(E)(const(E)[] s)
     return s.length == validLength(s);
 }
 
+///
 unittest
 {
-    assert(isValid("\u20AC100"));
+    assert( isValid("\u20AC100"));
+	assert(!isValid(cast(char[3])[167, 133, 175]));
 }
 
 /**
@@ -1436,6 +1432,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
     return cast(immutable(E)[])array[0..offset];
 }
 
+///
 unittest
 {
     assert(sanitize("hello \xF0\x80world") == "hello \xEF\xBF\xBDworld");
@@ -1466,13 +1463,15 @@ body
     return before - s.length;
 }
 
+///
 unittest
 {
     assert(firstSequence("\u20AC1000") == "\u20AC".length);
+	assert(firstSequence("hel") == "h".length);
 }
 
 /**
- Returns the length the last encoded sequence.
+ Returns the length of the last encoded sequence.
 
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
@@ -1495,9 +1494,11 @@ body
     return t.length - s.length;
 }
 
+///
 unittest
 {
     assert(lastSequence("1000\u20AC") == "\u20AC".length);
+	assert(lastSequence("hellö") == "ö".length);
 }
 
 /**
@@ -1528,9 +1529,11 @@ body
     return t.length - s.length;
 }
 
+///
 unittest
 {
     assert(index("\u20AC100",1) == 3);
+    assert(index("hällo",2) == 3);
 }
 
 /**
@@ -1902,6 +1905,7 @@ body
     return CodePoints!(E)(s);
 }
 
+///
 unittest
 {
     string s = "hello";
@@ -1930,19 +1934,6 @@ unittest
 
  Params:
     c = the code point to be encoded
-
- Examples:
- --------------------------------------------------------
- dchar d = '\u20AC';
- foreach(c;codeUnits!(char)(d))
- {
-     writefln("%X",c)
- }
- // will print
- // E2
- // 82
- // AC
- --------------------------------------------------------
  */
 CodeUnits!(E) codeUnits(E)(dchar c)
 in
@@ -1954,6 +1945,7 @@ body
     return CodeUnits!(E)(c);
 }
 
+///
 unittest
 {
     char[] a;
@@ -1984,17 +1976,6 @@ unittest
 
  See_Also:
     $(XREF conv, to)
-
- Examples:
- --------------------------------------------------------
- wstring ws;
- transcode("hello world",ws);
-     // transcode from UTF-8 to UTF-16
-
- Latin1String ls;
- transcode(ws, ls);
-     // transcode from UTF-16 to ISO-8859-1
-  --------------------------------------------------------
  */
 void transcode(Src,Dst)(immutable(Src)[] s,out immutable(Dst)[] r)
 in
@@ -2045,6 +2026,20 @@ body
     }
 }
 
+///
+unittest
+{
+    wstring ws;
+    // transcode from UTF-8 to UTF-16
+    transcode("hello world",ws);
+    assert(ws == "hello world"w);
+
+    Latin1String ls;
+    // transcode from UTF-16 to ISO-8859-1
+    transcode(ws, ls);
+    assert(ws == "hello world");
+}
+
 unittest
 {
     import std.range;
@@ -2083,41 +2078,6 @@ unittest
             }
     }
 }
-
-/*
- Convert a string from one encoding to another. (See also transcode() above).
-
- The input to this function MUST be validly encoded.
- This is enforced by the function's in-contract.
-
- Supersedes:
- This function supersedes std.utf.toUTF8(), std.utf.toUTF16() and
- std.utf.toUTF32().
-
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-
- Params:
-    Dst = the destination encoding type
-    s = the source string
-
- Examples:
- -----------------------------------------------------------------------------
- auto ws = to!(wchar)("hello world");  // transcode from UTF-8 to UTF-16
- auto ls = to!(Latin1Char)(ws);            // transcode from UTF-16 to ISO-8859-1
- -----------------------------------------------------------------------------
- */
-// TODO: Commented out for no - to be moved to std.conv
-// Dst to(Dst,Src)(immutable(Src)[] s)
-// in
-// {
-//  assert(isValid(s));
-// }
-// body
-// {
-//  Dst r;
-//  transcode(s,r);
-//  return r;
-// }
 
 //=============================================================================
 
