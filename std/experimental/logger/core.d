@@ -2954,3 +2954,59 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
 }
+
+// check that thread-local logging does not propagate
+// to shared logger
+unittest
+{
+    import std.concurrency, core.atomic, core.thread;
+
+    static shared logged_count = 0;
+
+    class TestLog : Logger
+    {
+        Tid tid;
+
+        this()
+        {
+            super (LogLevel.trace);
+            this.tid = thisTid;
+        }
+
+        override void writeLogMsg(ref LogEntry payload) @trusted
+        {
+            assert(thisTid == this.tid);
+            atomicOp!"+="(logged_count, 1);
+        }
+    }
+
+    class IgnoredLog : Logger
+    {
+        this()
+        {
+            super (LogLevel.trace);
+        }
+
+        override void writeLogMsg(ref LogEntry payload) @trusted
+        {
+            assert(false);
+        }
+    }
+
+    sharedLog = new IgnoredLog;
+    Thread[] spawned;
+
+    foreach (i; 0..4)
+    {
+        spawned ~= new Thread({
+            stdThreadLocalLog = new TestLog;
+            trace("zzzzzzzzzz");
+        });
+        spawned[$-1].start();
+    }
+
+    foreach (t; spawned)
+        t.join();
+
+    assert (atomicOp!"=="(logged_count, 4));
+}
