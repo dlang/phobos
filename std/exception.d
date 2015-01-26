@@ -44,6 +44,7 @@
  +/
 module std.exception;
 
+import std.range;
 import std.traits;
 
 import core.stdc.errno;
@@ -1268,7 +1269,7 @@ unittest
     assert(!doesPointTo(darr[0 .. 1], darr));
 
     //But they do point their elements
-    foreach(i; 0 .. 4)
+    foreach (i; 0 .. 4)
         assert(doesPointTo(darr, darr[i]));
     assert(doesPointTo(darr[0..3], darr[2]));
     assert(!doesPointTo(darr[0..3], darr[3]));
@@ -1612,4 +1613,375 @@ version(unittest) package
 {
     static assert({ cast(void)dg(); return true; }());
     cast(void)dg();
+}
+
+/** This $(D enum) is used to select the methods of the range to handle by the
+  $(D handle) range wrapper. The values of the $(D enum) can be OR'd to
+  selected multiple primitives to be handled.
+ */
+enum RangePrimitive
+{
+    front    = 0b00_0000_0001,
+    back     = 0b00_0000_0010,
+    popFront = 0b00_0000_0100,
+    popBack  = 0b00_0000_1000,
+    empty    = 0b00_0001_0000,
+    save     = 0b00_0010_0000,
+    length   = 0b00_0100_0000,
+    opDollar = 0b00_1000_0000,
+    opIndex  = 0b01_0000_0000,
+    opSlice  = 0b10_0000_0000,
+}
+
+/** This range handles exceptions originating in ranges.
+
+To use the range the code has to specify what methods of the range should be
+handled. This is done by use of the $(LREF $(D RangePrimitive)) enum. Multiple
+methods of a range can be handled at once, by using the or operator two
+combine multiple $(D RangePrimitive). If more than one method should be
+handled by one user supplied handler, all methods must have the same sigature.
+
+The $(D handler) $(D alias) must takes a $(D Throwable) as first of type $(D
+R) as first argument a range of type $(D IRange) as second argument. The
+return type of the $(D alias) must be equal to the return type of the
+primitive handled.
+
+Params:
+    E = The type of Throwable to handle.
+    functionsToHandle = The $(D RangePrimitive) selecting which primitives to
+        handle.
+    handler = The callable that is called when a handled primitive throw an
+    $(D Throwable) of type $(D E). The handler must have the same return type
+    as the handled primitive and must accepect parameters of the $(D E, ref
+    IRange).
+    input = The range to handle.
+
+Returns: A wrapper $(D struct) that preserves the $(D range) interface of the
+passed $(D IRange input).
+*/
+auto handle(E : Throwable, RangePrimitive functionsToHandle, alias handler, IRange)(IRange input)
+if (isInputRange!IRange)
+{
+    static struct Handler(E : Throwable, alias handler, IRange)
+    {
+        IRange range;
+        alias range this;
+
+        static if (isForwardRange!IRange)
+        {
+            static if (functionsToHandle & RangePrimitive.save)
+            {
+                @property typeof(this) save()
+                {
+                    try
+                    {
+                        return typeof(this)(range.save);
+                    }
+                    catch(E exception)
+                    {
+                        //return typeof(this)(handler(exception, this.range));
+                        auto r = handler(exception, this.range);
+                        return Handler!(E,handler,IRange)(r);
+                    }
+                }
+            }
+        }
+
+        static if (isInfinite!IRange)
+        {
+            enum bool empty = false;
+        }
+        else static if (functionsToHandle & RangePrimitive.empty)
+        {
+            @property bool empty()
+            {
+                try
+                {
+                    return this.range.empty;
+                }
+                catch(E exception)
+                {
+                    return handler(exception, this.range);
+                }
+            }
+        }
+
+        static if (isInputRange!IRange)
+        {
+            static if (functionsToHandle & RangePrimitive.front)
+            {
+                @property auto front()
+                {
+                    try
+                    {
+                        return this.range.front;
+                    }
+                    catch(E exception)
+                    {
+                        return handler(exception, this.range);
+                    }
+                }
+            }
+
+            static if (functionsToHandle & RangePrimitive.popFront)
+            {
+                void popFront()
+                {
+                    try
+                    {
+                        return this.range.popFront();
+                    }
+                    catch(E exception)
+                    {
+                        handler(exception, this.range);
+                    }
+                }
+            }
+        }
+
+        static if (isBidirectionalRange!IRange)
+        {
+            static if (functionsToHandle & RangePrimitive.back)
+            {
+                @property auto back()
+                {
+                    try
+                    {
+                        return this.range.back;
+                    }
+                    catch(E exception)
+                    {
+                        return handler(exception, this.range);
+                    }
+                }
+            }
+
+            static if (functionsToHandle & RangePrimitive.popBack)
+            {
+                void popBack()
+                {
+                    try
+                    {
+                        return this.range.popBack();
+                    }
+                    catch(E exception)
+                    {
+                        handler(exception, this.range);
+                    }
+                }
+            }
+        }
+
+        static if (isRandomAccessRange!IRange)
+        {
+            static if (functionsToHandle & RangePrimitive.opIndex)
+            {
+                auto ref opIndex(size_t index)
+                {
+                    try
+                    {
+                        return this.range[index];
+                    }
+                    catch(E exception)
+                    {
+                        return handler(exception, this.range);
+                    }
+                }
+            }
+        }
+
+        static if (hasLength!IRange)
+        {
+            static if (functionsToHandle & RangePrimitive.length)
+            {
+                @property auto length()
+                {
+                    try
+                    {
+                        return this.range.length;
+                    }
+                    catch(E exception)
+                    {
+                        return handler(exception, this.range);
+                    }
+                }
+            }
+        }
+
+        static if (hasSlicing!IRange)
+        {
+            static if (hasLength!IRange)
+            {
+                static if (functionsToHandle & RangePrimitive.opSlice)
+                {
+                    auto opSlice(size_t low, size_t high)
+                    {
+                        try
+                        {
+                            return typeof(this)(this.range[low .. high]);
+                        }
+                        catch(E exception)
+                        {
+                            return handler(exception, this.range);
+                        }
+                    }
+                }
+            }
+            else static if (is(typeof(range[opSlice_t.max .. $])))
+            {
+                struct DollarToken{}
+                enum opDollar = DollarToken.init;
+                static if (functionsToHandle & RangePrimitive.opSlice)
+                {
+                    auto opSlice(size_t low, DollarToken)
+                    {
+                        try
+                        {
+                            return typeof(this)(this.range[low .. $]);
+                        }
+                        catch(E exception)
+                        {
+                            return handler(exception, this.range);
+                        }
+                    }
+
+                    auto opSlice(size_t low, size_t high)
+                    {
+                        try
+                        {
+                            import std.range : take;
+                            return this[low .. $].take(high - low);
+                        }
+                        catch(E exception)
+                        {
+                            return handler(exception, this.range);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    auto ret = Handler!(E, handler, IRange)(input);
+    return ret;
+}
+
+///
+unittest
+{
+    import std.algorithm : equal, map, splitter;
+    import std.conv : to, ConvException;
+
+    auto s = "12,1337z32,54,2,7,9,1z,6,8";
+
+    // The next line Range will throw as some elements of the input do not
+    // convert to integer
+    auto r = s.splitter(',').map!(a => to!int(a));
+
+    auto h = r.handle!(ConvException, RangePrimitive.front, (e, r) => 0);
+    assert(equal(h, [12, 0, 54, 2, 7, 9, 0, 6, 8]));
+}
+
+///
+unittest
+{
+    static struct ThrowingRange
+    {
+        int a;
+
+        @property bool empty()
+        {
+            throw new Exception("empty has thrown");
+        }
+
+        @property int front()
+        {
+            throw new Exception("front has thrown");
+        }
+
+        @property int back()
+        {
+            throw new Exception("back has thrown");
+        }
+
+        void popFront()
+        {
+            throw new Exception("popFront has thrown");
+        }
+
+        void popBack()
+        {
+            throw new Exception("popBack has thrown");
+        }
+
+        int opIndex(size_t i)
+        {
+            throw new Exception("opIndex has thrown");
+        }
+
+        int[] opSlice(size_t l, size_t h)
+        {
+            throw new Exception("opSlice has thrown");
+        }
+
+        @property size_t length()
+        {
+            throw new Exception("length has thrown");
+        }
+
+        alias opDollar = length;
+
+        @property ThrowingRange save()
+        {
+            throw new Exception("save has thrown");
+        }
+    }
+
+    static assert(isInputRange!ThrowingRange);
+    static assert(isForwardRange!ThrowingRange);
+    static assert(isBidirectionalRange!ThrowingRange);
+
+    auto f = ThrowingRange(2);
+    auto fb = f.handle!(Exception, RangePrimitive.front | RangePrimitive.back,
+            (e, r) => -1)();
+    assert(fb.front == -1);
+    assert(fb.back == -1);
+    assertThrown(fb.popFront());
+    assertThrown(fb.popBack());
+    assertThrown(fb.empty);
+    assertThrown(fb.save);
+
+    auto pfb = f.handle!(Exception,
+            RangePrimitive.popFront | RangePrimitive.popBack, (e, r) => -1)();
+
+    pfb.popFront(); // this would throw otherwise
+    pfb.popBack(); // this would throw otherwise
+
+    auto em = f.handle!(Exception,
+            RangePrimitive.empty, (e, r) => false)();
+
+    assert(!em.empty);
+
+    auto arr = f.handle!(Exception,
+            RangePrimitive.opIndex, (e, r) => 1337)();
+
+    assert(arr[0] == 1337);
+
+    auto slice = f.handle!(Exception,
+            RangePrimitive.opSlice, (e, r) => [0,1,2,3])();
+
+    //assert(slice[0 .. 4] == [0,1,2,3]);
+    //assert(slice[0 .. 3] == [0,1,2,3]);
+
+    auto han = delegate(Exception e, ref ThrowingRange r) {
+        return ThrowingRange(1337);
+    };
+
+    auto save = f.handle!(Exception,
+        RangePrimitive.save,
+        function(Exception e, ref ThrowingRange r) {
+            return ThrowingRange(1337);
+        })();
+
+    save.save();
 }
