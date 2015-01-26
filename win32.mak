@@ -129,9 +129,13 @@ SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
 	std\digest\ripemd.d std\digest\digest.d
 
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
-	std\container\dlist.d std\container\rbtree.d std\container\slist.d \
-	std\container\util.d std\container\package.d
+    std\container\dlist.d std\container\rbtree.d std\container\slist.d \
+    std\container\util.d std\container\package.d
 
+SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
+	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
+	std\experimental\logger\package.d
+    
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
@@ -145,13 +149,13 @@ SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\conv.d std\zip.d std\cstream.d \
-	$(SRC_STD_CONTAINER)
+	$(SRC_STD_CONTAINER) $(SRC_STD_LOGGER)
 
 SRC_STD_REST= std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
-	std\process.d
+	std\process.d \
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
@@ -371,6 +375,11 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_zlib.html \
 	$(DOC)\std_net_isemail.html \
 	$(DOC)\std_net_curl.html \
+	$(DOC)\std_experimental_logger_core.html \
+	$(DOC)\std_experimental_logger_filelogger.html \
+	$(DOC)\std_experimental_logger_multilogger.html \
+	$(DOC)\std_experimental_logger_nulllogger.html \
+	$(DOC)\std_experimental_logger_package.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -785,6 +794,21 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 $(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
 
+$(DOC)\std_experimental_logger_core.html : $(STDDOC) std\experimental\logger\core.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_core.html $(STDDOC) std\experimental\logger\core.d
+
+$(DOC)\std_experimental_logger_multilogger.html : $(STDDOC) std\experimental\logger\multilogger.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_multilogger.html $(STDDOC) std\experimental\logger\multilogger.d
+
+$(DOC)\std_experimental_logger_filelogger.html : $(STDDOC) std\experimental\logger\filelogger.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_filelogger.html $(STDDOC) std\experimental\logger\filelogger.d
+
+$(DOC)\std_experimental_logger_nulllogger.html : $(STDDOC) std\experimental\logger\nulllogger.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_nulllogger.html $(STDDOC) std\experimental\logger\nulllogger.d
+
+$(DOC)\std_experimental_logger_package.html : $(STDDOC) std\experimental\logger\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_package.html $(STDDOC) std\experimental\logger\package.d
+
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
 
@@ -856,7 +880,8 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO)
+	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO) \
+	$(SRC_STD_LOGGER)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -879,6 +904,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_REGEX)
 	zip32 -u phobos $(SRC_STD_RANGE)
 	zip32 -u phobos $(SRC_STD_ALGO)
+	zip32 -u phobos $(SRC_STD_LOGGER)
 
 phobos.zip : zip
 
