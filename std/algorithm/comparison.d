@@ -1114,10 +1114,7 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 
     if (slen == 1 && tlen == 1)
     {
-        if (eq(s.front, t.front))
-            return 0;
-        else
-            return 1;
+        return eq(s.front, t.front) ? 0 : 1;
     }
 
     if (slen > tlen)
@@ -1146,7 +1143,6 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     assert(levenshteinDistance!((a, b) => std.uni.toUpper(a) == std.uni.toUpper(b))
         ("parks", "SPARK") == 2);
     assert(levenshteinDistance("parks".filter!"true", "spark".filter!"true") == 2);
-//    assert(levenshteinDistance("parks".filterBidirectional!"true", "spark".filterBidirectional!"true") == 2); fail unittests
     assert(levenshteinDistance("ID", "I♥D") == 1);
 }
 
