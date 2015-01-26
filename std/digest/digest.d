@@ -2,8 +2,9 @@
  * This module describes the digest APIs used in Phobos. All digests follow these APIs.
  * Additionally, this module contains useful helper methods which can be used with every _digest type.
  *
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -17,6 +18,7 @@ $(TR $(TDNW OOP API) $(TD $(MYREF Digest)
 $(TR $(TDNW Helper functions) $(TD $(MYREF toHexString))
 )
 $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDigest))
+)
 )
 )
 

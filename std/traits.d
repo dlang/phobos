@@ -3,8 +3,9 @@
 /**
  * Templates which extract information about types and symbols at compile time.
  *
- * <script type="text/javascript">inhibitQuickIndex = 1</script>
+ * $(SCRIPT inhibitQuickIndex = 1;)
  *
+ * $(DIVC quickindex,
  * $(BOOKTABLE ,
  * $(TR $(TH Category) $(TH Templates))
  * $(TR $(TD Symbol Name _traits) $(TD
@@ -124,6 +125,7 @@
  *           $(LREF Select)
  *           $(LREF select)
  * ))
+ * )
  * )
  *
  * Macros:
