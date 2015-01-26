@@ -3980,12 +3980,26 @@ unittest
 }
 
 /**
-   Returns a range that goes through the numbers $(D begin), $(D begin +
-   step), $(D begin + 2 * step), $(D ...), up to and excluding $(D
-   end). The range offered is a random access range. The two-arguments
-   version has $(D step = 1). If $(D begin < end && step < 0) or $(D
-   begin > end && step > 0) or $(D begin == end), then an empty range is
-   returned.
+   Construct a range of values that span the given starting and stopping
+   values.
+
+   Params:
+   begin = The starting value.
+   end = The value that serves as the stopping criterion. This value is not
+        included in the range.
+   step = The value to add to the current value at each iteration.
+
+   Returns:
+   A range that goes through the numbers $(D begin), $(D begin + step),
+   $(D begin + 2 * step), $(D ...), up to and excluding $(D end).
+
+   The two-argument overloads have $(D step = 1). If $(D begin < end && step <
+   0) or $(D begin > end && step > 0) or $(D begin == end), then an empty range
+   is returned.
+
+   For built-in types, the range returned is a random access range. For
+   user-defined types that support $(D ++), the range is an input
+   range.
 
    Throws:
    $(D Exception) if $(D begin != end && step == 0), an exception is
@@ -4157,6 +4171,7 @@ auto iota(E)(E end)
     return iota(begin, end);
 }
 
+/// Ditto
 // Specialization for floating-point types
 auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
@@ -4244,15 +4259,15 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
 @safe unittest
 {
     import std.algorithm : equal;
+    import std.math : approxEqual;
 
-   import std.math : approxEqual;
-   auto r = iota(0, 10, 1);
-   assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
-   r = iota(0, 11, 3);
-   assert(equal(r, [0, 3, 6, 9][]));
-   assert(r[2] == 6);
-   auto rf = iota(0.0, 0.5, 0.1);
-   assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
+    auto r = iota(0, 10, 1);
+    assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
+    r = iota(0, 11, 3);
+    assert(equal(r, [0, 3, 6, 9][]));
+    assert(r[2] == 6);
+    auto rf = iota(0.0, 0.5, 0.1);
+    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 }
 
 unittest
@@ -4435,6 +4450,91 @@ unittest
         const s2 = cRange[0 .. 3];
         const l = cRange.length;
     }
+}
+
+/* Generic overload that handles arbitrary types that support arithmetic
+ * operations.
+ */
+/// ditto
+auto iota(B, E)(B begin, E end)
+    if (!isIntegral!(CommonType!(B, E)) &&
+        !isFloatingPoint!(CommonType!(B, E)) &&
+        !isPointer!(CommonType!(B, E)) &&
+        is(typeof((ref B b) { ++b; })) &&
+        (is(typeof(B.init < E.init)) || is(typeof(B.init == E.init))) )
+{
+    static struct Result
+    {
+        B current;
+        E end;
+
+        @property bool empty()
+        {
+            static if (is(typeof(B.init < E.init)))
+                return !(current < end);
+            else static if (is(typeof(B.init != E.init)))
+                return current == end;
+            else
+                static assert(0);
+        }
+        @property auto front() { return current; }
+        void popFront()
+        {
+            assert(!empty);
+            ++current;
+        }
+    }
+    return Result(begin, end);
+}
+
+/**
+User-defined types such as $(XREF bigint, BigInt) are also supported, as long
+as they can be incremented with $(D ++) and compared with $(D <) or $(D ==).
+*/
+// Issue 6447
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.bigint;
+
+    auto s = BigInt(1_000_000_000_000);
+    auto e = BigInt(1_000_000_000_003);
+    auto r = iota(s, e);
+    assert(r.equal([
+        BigInt(1_000_000_000_000),
+        BigInt(1_000_000_000_001),
+        BigInt(1_000_000_000_002)
+    ]));
+}
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+
+    // Test iota() for a type that only supports ++ and != but does not have
+    // '<'-ordering.
+    struct Cyclic(int wrapAround)
+    {
+        int current;
+
+        this(int start) { current = start % wrapAround; }
+
+        bool opEquals(Cyclic c) { return current == c.current; }
+        bool opEquals(int i) { return current == i; }
+        void opUnary(string op)() if (op == "++")
+        {
+            current = (current + 1) % wrapAround;
+        }
+    }
+    alias Cycle5 = Cyclic!5;
+
+    // Easy case
+    auto i1 = iota(Cycle5(1), Cycle5(4));
+    assert(i1.equal([1, 2, 3]));
+
+    // Wraparound case
+    auto i2 = iota(Cycle5(3), Cycle5(2));
+    assert(i2.equal([3, 4, 0, 1 ]));
 }
 
 /**
