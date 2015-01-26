@@ -72,7 +72,7 @@ class MultiLogger : Logger
         import std.range.interfaces : back, popBack;
         for (size_t i = 0; i < this.logger.length; ++i)
         {
-            if (this.logger[i].name == toRemove) 
+            if (this.logger[i].name == toRemove)
             {
                 Logger ret = this.logger[i].logger;
                 this.logger[i] = this.logger.back();
@@ -184,9 +184,12 @@ unittest
 
 @safe unittest
 {
-    auto dl = sharedLog;
+    auto dl = cast(FileLogger)sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
-}
 
+    auto tl = cast(StdForwardLogger)stdThreadLocalLog;
+    assert(tl !is null);
+    stdThreadLocalLog.logLevel = LogLevel.all;
+}

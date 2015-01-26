@@ -107,13 +107,13 @@ bool isLoggingEnabled()(LogLevel ll, LogLevel loggerLL,
 }
 
 /** This template returns the $(D LogLevel) named "logLevel" of type $(D
-LogLevel) defined in a user defined module where the filename has the 
+LogLevel) defined in a user defined module where the filename has the
 suffix "_loggerconfig.d". This $(D LogLevel) sets the minimal $(D LogLevel)
 of the module.
 
 A minimal $(D LogLevel) can be defined on a per module basis.
 In order to define a module $(D LogLevel) a file with a modulename
-"MODULENAME_loggerconfig" must be found. If no such module exists and the 
+"MODULENAME_loggerconfig" must be found. If no such module exists and the
 module is a nested module, it is checked if there exists a
 "PARENT_MODULE_loggerconfig" module with such a symbol.
 If this module exists and it contains a $(D LogLevel) called logLevel this $(D
@@ -2946,15 +2946,6 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     atomicStore!(MemoryOrder.rel)(dst, src);
 }
 
-@safe unittest
-{
-    stdThreadLocalLog.logLevel = LogLevel.all;
-    auto dl = cast(FileLogger)sharedLog;
-    assert(dl !is null);
-    assert(dl.logLevel == LogLevel.all);
-    assert(globalLogLevel == LogLevel.all);
-}
-
 // check that thread-local logging does not propagate
 // to shared logger
 unittest
@@ -2993,6 +2984,12 @@ unittest
         }
     }
 
+    auto oldSharedLog = sharedLog;
+    scope(exit)
+    {
+        sharedLog = oldSharedLog;
+    }
+
     sharedLog = new IgnoredLog;
     Thread[] spawned;
 
@@ -3009,4 +3006,16 @@ unittest
         t.join();
 
     assert (atomicOp!"=="(logged_count, 4));
+}
+
+@safe unittest
+{
+    auto dl = cast(FileLogger)sharedLog;
+    assert(dl !is null);
+    assert(dl.logLevel == LogLevel.all);
+    assert(globalLogLevel == LogLevel.all);
+
+    auto tl = cast(StdForwardLogger)stdThreadLocalLog;
+    assert(tl !is null);
+    stdThreadLocalLog.logLevel = LogLevel.all;
 }
