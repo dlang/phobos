@@ -1733,7 +1733,7 @@ unittest
     assert(w.data == "1337.7");
 }
 
-@safe pure unittest
+@safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
     foreach (T; TypeTuple!(float, double, real))
@@ -1787,7 +1787,7 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
     put(w, 'i');
 }
 
-@safe pure unittest
+@safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
     foreach (T; TypeTuple!(cfloat, cdouble, creal))
@@ -1838,7 +1838,7 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
     put(w, 'i');
 }
 
-@safe pure unittest
+@safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
     foreach (T; TypeTuple!(ifloat, idouble, ireal))
@@ -3560,15 +3560,21 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
             text("expected one of `", expected, "`, result = `", w.data, "`"), fn, ln);
 }
 
+@safe /*pure*/ unittest     // formatting floating point values is now impure
+{
+    import std.array;
+
+    auto stream = appender!string();
+    formattedWrite(stream, "%s", 1.1);
+    assert(stream.data == "1.1", stream.data);
+}
+
 pure unittest
 {
     import std.algorithm;
     import std.array;
-    auto stream = appender!string();
-    formattedWrite(stream, "%s", 1.1);
-    assert(stream.data == "1.1", stream.data);
 
-    stream = appender!string();
+    auto stream = appender!string();
     formattedWrite(stream, "%s", map!"a*a"([2, 3, 5]));
     assert(stream.data == "[4, 9, 25]", stream.data);
 
