@@ -1085,31 +1085,28 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
-    alias comp = binaryFun!(equals);
+    alias eq = binaryFun!(equals);
 
-    while (!s.empty() && !t.empty() && comp(s.front, t.front))
+    for (;;)
     {
-        s.popFront();
-        t.popFront();
-    }
-
-    static if (isBidirectionalRange!(Range1) && isBidirectionalRange!(Range2))
-    {
-        while (!s.empty() && !t.empty() && comp(s.back, t.back))
+        if (s.empty) return t.walkLength;
+        if (t.empty) return s.walkLength;
+        if (eq(s.front, t.front))
         {
-            s.popBack();
-            t.popBack();
+            s.popFront();
+            t.popFront();
+            continue;
         }
-    }
-
-    if (s.empty())
-    {
-        return walkLength(t);
-    }
-
-    if (t.empty())
-    {
-        return walkLength(s);
+        static if (isBidirectionalRange!(Range1) && isBidirectionalRange!(Range2))
+        {
+            if (eq(s.back, t.back))
+            {
+                s.popBack();
+                t.popBack();
+                continue;
+            }
+        }
+        break;
     }
 
     auto slen = walkLength(s.save);
@@ -1117,7 +1114,7 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 
     if (slen == 1 && tlen == 1)
     {
-        if (comp(s.front, t.front))
+        if (eq(s.front, t.front))
             return 0;
         else
             return 1;
@@ -1125,12 +1122,12 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 
     if (slen > tlen)
     {
-        Levenshtein!(Range1, comp, size_t) lev;
+        Levenshtein!(Range1, eq, size_t) lev;
         return lev.distanceLowMem(s, t, slen, tlen);
     }
     else
     {
-        Levenshtein!(Range2, comp, size_t) lev;
+        Levenshtein!(Range2, eq, size_t) lev;
         return lev.distanceLowMem(t, s, tlen, slen);
     }
 }
