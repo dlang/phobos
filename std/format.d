@@ -1572,6 +1572,25 @@ unittest
 }
 
 /**
+ * Vector values are formatted like static arrays.
+ */
+void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+    if (std.traits.isSIMDVector!T)
+{
+    formatValue(w, obj.array, f);
+}
+
+version(D_SIMD)
+unittest
+{
+    __vector(int[4]) v = [1, 2, 3, 4];
+    formatTest(v, "[1, 2, 3, 4]");
+
+    __vector(int[4])[] varr = [[1, 2, 3, 4], [5, 6, 7, 8]];
+    formatTest(varr, "[[1, 2, 3, 4], [5, 6, 7, 8]]");
+}
+
+/**
  * Floating-point values are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)

@@ -91,6 +91,7 @@
  *           $(LREF isSomeString)
  *           $(LREF isStaticArray)
  *           $(LREF isUnsigned)
+ *           $(LREF isSIMDVector)
  * ))
  * $(TR $(TD Type behaviours) $(TD
  *           $(LREF isAbstractClass)
