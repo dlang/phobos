@@ -26372,13 +26372,15 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         else version(Windows)
         {
             import std.format : format;
-            if(auto windowsTZName = tzDatabaseNameToWindowsTZName(name))
+            auto windowsTZName = tzDatabaseNameToWindowsTZName(name);
+            if(windowsTZName != null)
             {
                 try
                     return WindowsTimeZone.getTimeZone(windowsTZName);
                 catch(DateTimeException dte)
                 {
-                    if(auto oldName = _getOldName(windowsTZName))
+                    auto oldName = _getOldName(windowsTZName);
+                    if(oldName != null)
                         return WindowsTimeZone.getTimeZone(oldName);
                     throw dte;
                 }

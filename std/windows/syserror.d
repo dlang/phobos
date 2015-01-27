@@ -127,7 +127,7 @@ class WindowsException : Exception
 
         auto buf = appender!string();
 
-        if (str)
+        if (str != null)
         {
             buf.put(str);
             buf.put(": ");
