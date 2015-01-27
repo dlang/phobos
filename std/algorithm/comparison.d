@@ -1085,15 +1085,46 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
-    Levenshtein!(Range1, binaryFun!(equals), size_t) lev;
+    alias eq = binaryFun!(equals);
+
+    for (;;)
+    {
+        if (s.empty) return t.walkLength;
+        if (t.empty) return s.walkLength;
+        if (eq(s.front, t.front))
+        {
+            s.popFront();
+            t.popFront();
+            continue;
+        }
+        static if (isBidirectionalRange!(Range1) && isBidirectionalRange!(Range2))
+        {
+            if (eq(s.back, t.back))
+            {
+                s.popBack();
+                t.popBack();
+                continue;
+            }
+        }
+        break;
+    }
+
     auto slen = walkLength(s.save);
     auto tlen = walkLength(t.save);
+
+    if (slen == 1 && tlen == 1)
+    {
+        return eq(s.front, t.front) ? 0 : 1;
+    }
+
     if (slen > tlen)
     {
+        Levenshtein!(Range1, eq, size_t) lev;
         return lev.distanceLowMem(s, t, slen, tlen);
     }
     else
     {
+        Levenshtein!(Range2, eq, size_t) lev;
         return lev.distanceLowMem(t, s, tlen, slen);
     }
 }
@@ -1106,6 +1137,8 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 
     assert(levenshteinDistance("cat", "rat") == 1);
     assert(levenshteinDistance("parks", "spark") == 2);
+    assert(levenshteinDistance("abcde", "abcde") == 0);
+    assert(levenshteinDistance("abcde", "abCde") == 1);
     assert(levenshteinDistance("kitten", "sitting") == 3);
     assert(levenshteinDistance!((a, b) => std.uni.toUpper(a) == std.uni.toUpper(b))
         ("parks", "SPARK") == 2);
