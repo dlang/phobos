@@ -15,12 +15,11 @@ applied in a variety of situations.)
 
 $(BOOKTABLE ,
     $(TR
-        $(TH Category)
         $(TH Modules)
         $(TH Description)
     )
+    $(LEADINGROW Algorithms &amp; ranges)
     $(TR
-        $(TDNW Algorithms &amp; ranges)
         $(TD
             $(LINK2 std_algorithm_package.html, std.algorithm)$(BR)
             $(LINK2 std_range_package.html, std.range)$(BR)
@@ -33,8 +32,8 @@ $(BOOKTABLE ,
             comparison, iteration, sorting, set operations, and mutation.
         )
     )
+    $(LEADINGROW Array manipulation)
     $(TR
-        $(TDNW Array manipulation)
         $(TD
             $(LINK2 std_array.html, std.array)$(BR)
             $(LINK2 std_algorithm_package.html, std.algorithm)
@@ -45,8 +44,8 @@ $(BOOKTABLE ,
             $(D std.algorithm).
         )
     )
+    $(LEADINGROW Containers)
     $(TR
-        $(TDNW Containers)
         $(TD
             $(LINK2 std_container_array.html, std.container.array)$(BR)
             $(LINK2 std_container_binaryheap.html, std.container.binaryheap)$(BR)
@@ -58,8 +57,8 @@ $(BOOKTABLE ,
             overview.
         )
     )
+    $(LEADINGROW Data formats)
     $(TR
-        $(TDNW Data formats)
         $(TD
             $(LINK2 std_base64.html, std.base64)$(BR)
             $(LINK2 std_csv.html, std.csv)$(BR)
@@ -71,8 +70,8 @@ $(BOOKTABLE ,
         $(TD Modules for reading/writing different data formats.
         )
     )
+    $(LEADINGROW Data integrity)
     $(TR
-        $(TDNW Data integrity)
         $(TD
             $(LINK2 std_digest_crc, std.digest.crc)$(BR)
             $(LINK2 std_digest_digest, std.digest.digest)$(BR)
@@ -83,8 +82,8 @@ $(BOOKTABLE ,
         $(TD Hash algorithms for verifying data integrity.
         )
     )
+    $(LEADINGROW Date &amp; time)
     $(TR
-        $(TDNW Date &amp; time)
         $(TD
             $(LINK2 std_datetime.html, std.datetime)$(BR)
             $(LINK2 core_time.html, core.time)
@@ -94,8 +93,8 @@ $(BOOKTABLE ,
         $(D core.time) implements low-level time primitives.
         )
     )
+    $(LEADINGROW Exception handling)
     $(TR
-        $(TDNW Exception handling)
         $(TD
             $(LINK2 std_exception.html, std.exception)$(BR)
             $(LINK2 core_exception.html, core.exception)
@@ -105,8 +104,8 @@ $(BOOKTABLE ,
             language hooks required by the compiler.
         )
     )
+    $(LEADINGROW External library bindings)
     $(TR
-        $(TDNW External library bindings)
         $(TD
             $(LINK2 etc_c_curl.html, etc.c.curl)$(BR)
             $(LINK2 etc_c_sqlite3.html, etc.c.sqlite3)$(BR)
@@ -115,8 +114,8 @@ $(BOOKTABLE ,
         $(TD Various bindings to external C libraries.
         )
     )
+    $(LEADINGROW I/O &amp; File system)
     $(TR
-        $(TDNW I/O &amp; File system)
         $(TD
             $(LINK2 std_file.html, std.file)$(BR)
             $(LINK2 std_path.html, std.path)$(BR)
@@ -132,8 +131,8 @@ $(BOOKTABLE ,
 	    client code should avoid relying on them.
         )
     )
+    $(LEADINGROW Memory management)
     $(TR
-        $(TDNW Memory management)
         $(TD
             $(LINK2 core_memory.html, core.memory)$(BR)
             $(LINK2 std_typecons.html, std.typecons)$(BR)
@@ -145,8 +144,8 @@ $(BOOKTABLE ,
             and reference-counted types.
         )
     )
+    $(LEADINGROW Metaprogramming)
     $(TR
-        $(TDNW Metaprogramming)
         $(TD 
             $(LINK2 std_traits.html, std.traits)$(BR)
             $(LINK2 std_typecons.html, std.typecons)$(BR)
@@ -158,8 +157,8 @@ $(BOOKTABLE ,
             and metaprogramming.
         )
     )
+    $(LEADINGROW Multitasking)
     $(TR
-        $(TDNW Multitasking)
         $(TD
             $(LINK2 std_concurrency, std.concurrency)$(BR)
             $(LINK2 std_parallelism, std.parallelism)$(BR)
@@ -186,8 +185,8 @@ $(BOOKTABLE ,
             $(D core.thread) implements multithreading primitives.
         )
     )
+    $(LEADINGROW Networking)
     $(TR
-        $(TDNW Networking)
         $(TD
             $(LINK2 std_socket.html, std.socket)$(BR)
             $(LINK2 std_socketstream.html, std.socketstream)$(BR)
@@ -197,8 +196,8 @@ $(BOOKTABLE ,
         $(TD Utilities for networking.
         )
     )
+    $(LEADINGROW Numeric)
     $(TR
-        $(TDNW Numeric)
         $(TD
             $(LINK2 std_bigint.html, std.bigint)$(BR)
             $(LINK2 std_complex.html, std.complex)$(BR)
@@ -214,8 +213,8 @@ $(BOOKTABLE ,
             $(D std.random) provides pseudo-random number generators.
         )
     )
+    $(LEADINGROW Paradigms)
     $(TR
-        $(TDNW Paradigms)
         $(TD
             $(LINK2 std_functional, std.functional)$(BR)
             $(LINK2 std_algorithm_package, std.algorithm)$(BR)
@@ -229,8 +228,8 @@ $(BOOKTABLE ,
             event-driven programming.
         )
     )
+    $(LEADINGROW Runtime utilities)
     $(TR
-        $(TDNW Runtime utilities)
         $(TD
             $(LINK2 std_getopt.html, std.getopt)$(BR)
             $(LINK2 std_compiler.html, std.compiler)$(BR)
@@ -251,8 +250,8 @@ $(BOOKTABLE ,
             collector.
         )
     )
+    $(LEADINGROW String manipulation)
     $(TR
-        $(TDNW String manipulation)
         $(TD
             $(LINK2 std_string.html, std.string)$(BR)
             $(LINK2 std_array.html, std.array)$(BR)
@@ -296,8 +295,8 @@ $(BOOKTABLE ,
             $(D std.encoding).
         )
     )
+    $(LEADINGROW Type manipulations)
     $(TR
-        $(TDNW Type manipulations)
         $(TD
             $(LINK2 std_conv.html, std.conv)$(BR)
             $(LINK2 std_typecons.html, std.typecons)$(BR)
@@ -319,8 +318,8 @@ $(BOOKTABLE ,
             manipulation primitives.$(BR)
         )
     )
+    $(LEADINGROW Vector programming)
     $(TR
-        $(TDNW Vector programming)
         $(TD
             $(LINK2 core_simd, core.simd)$(BR)
         )
