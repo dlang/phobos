@@ -814,4 +814,37 @@ unittest
     auto zip3 = new ZipArchive(data1);
     zip3.build();
     assert(zip3.directory["foo"].compressedSize == am1.compressedSize);
+    
+    // Test if packing and unpacking produces the original data
+    import std.random : uniform, MinstdRand0;
+    import std.stdio, std.conv;
+    MinstdRand0 gen;
+    const uint itemCount = 20, minSize = 10, maxSize = 500;
+    foreach (variant; 0..2)
+    {
+        bool useZip64 = !!variant;
+        zip1 = new ZipArchive();
+        zip1.isZip64 = useZip64;
+        ArchiveMember[itemCount] ams;
+        foreach (i; 0..itemCount)
+        {
+            ams[i] = new ArchiveMember();
+            ams[i].name = to!string(i);
+            ams[i].expandedData = new ubyte[](uniform(minSize, maxSize));
+            foreach (ref ubyte c; ams[i].expandedData)
+                c = cast(ubyte)(uniform(0, 256));
+            ams[i].compressionMethod(CompressionMethod.deflate);
+            zip1.addMember(ams[i]);
+        }
+        auto zippedData = zip1.build();
+        zip2 = new ZipArchive(zippedData);
+        assert(zip2.isZip64 == useZip64);
+        foreach (am; ams)
+        {
+            am2 = zip2.directory[am.name];
+            zip2.expand(am2);
+            assert(am.crc32 == am2.crc32);
+            assert(am.expandedData == am2.expandedData);
+        }
+    }
 }
