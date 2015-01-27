@@ -126,7 +126,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Encodes $(D_PARAM source) into $(D_PARAM buffer).
      *
      * Params:
-     *  source = an $(D InputRange) to encode.
+     *  source = an `InputRange` to encode.
      *  buffer = a buffer to store encoded result.
      *
      * Returns:
@@ -267,8 +267,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Encodes $(D_PARAM source) into $(D_PARAM range).
      *
      * Params:
-     *  source = an $(D InputRange) to encode.
-     *  range  = an $(D OutputRange) to put encoded result.
+     *  source = an `InputRange` to encode.
+     *  range  = an `OutputRange` to put encoded result.
      *
      * Returns:
      *  the number of calling put.
@@ -499,7 +499,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * Captures a Range state.
              *
              * Returns:
-             *  a copy of $(D this).
+             *  a copy of `this`.
              */
             @property
             typeof(this) save()
@@ -646,7 +646,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * Captures a Range state.
              *
              * Returns:
-             *  a copy of $(D this).
+             *  a copy of `this`.
              */
             @property
             typeof(this) save()
@@ -660,9 +660,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * Iterates through an $(D InputRange) at a time by using $(D Encoder).
+     * Iterates through an `InputRange` at a time by using `Encoder`.
      *
-     * Default $(D Encoder) encodes chunk data.
+     * Default `Encoder` encodes chunk data.
      *
      * Example:
      * -----
@@ -676,8 +676,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * }
      * -----
      *
-     * In addition, You can use $(D Encoder) that returns encoded single character.
-     * This $(D Encoder) performs Range-based and lazy encoding.
+     * In addition, You can use `Encoder` that returns encoded single character.
+     * This `Encoder` performs Range-based and lazy encoding.
      *
      * Example:
      * -----
@@ -691,10 +691,10 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * -----
      *
      * Params:
-     *  range = an $(D InputRange) to iterate.
+     *  range = an `InputRange` to iterate.
      *
      * Returns:
-     *  a $(D Encoder) object instantiated and initialized according to the arguments.
+     *  a `Encoder` object instantiated and initialized according to the arguments.
      */
     Encoder!(Range) encoder(Range)(Range range) if (isInputRange!Range)
     {
@@ -767,7 +767,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Decodes $(D_PARAM source) into $(D_PARAM buffer).
      *
      * Params:
-     *  source = an $(D InputRange) to decode.
+     *  source = an `InputRange` to decode.
      *  buffer = a buffer to store decoded result.
      *
      * Returns:
@@ -918,8 +918,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Decodes $(D_PARAM source) into $(D_PARAM range).
      *
      * Params:
-     *  source = an $(D InputRange) to decode.
-     *  range  = an $(D OutputRange) to put decoded result
+     *  source = an `InputRange` to decode.
+     *  range  = an `OutputRange` to put decoded result
      *
      * Returns:
      *  the number of calling put.
@@ -1156,7 +1156,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * Captures a Range state.
              *
              * Returns:
-             *  a copy of $(D this).
+             *  a copy of `this`.
              */
             @property
             typeof(this) save()
@@ -1325,7 +1325,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * Captures a Range state.
              *
              * Returns:
-             *  a copy of $(D this).
+             *  a copy of `this`.
              */
             @property
             typeof(this) save()
@@ -1339,9 +1339,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * Iterates through an $(D InputRange) at a time by using $(D Decoder).
+     * Iterates through an `InputRange` at a time by using `Decoder`.
      *
-     * Default $(D Decoder) decodes chunk data.
+     * Default `Decoder` decodes chunk data.
      *
      * Example:
      * -----
@@ -1351,8 +1351,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * }
      * -----
      *
-     * In addition, You can use $(D Decoder) that returns decoded single character.
-     * This $(D Decoder) performs Range-based and lazy decoding.
+     * In addition, You can use `Decoder` that returns decoded single character.
+     * This `Decoder` performs Range-based and lazy decoding.
      *
      * Example:
      * -----
@@ -1364,14 +1364,14 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * -----
      *
      * NOTE:
-     *  If you use $(D ByChunk), chunk-size should be the multiple of 4.
-     *  $(D Decoder) can't judge a encode-boundary.
+     *  If you use `ByChunk`, chunk-size should be the multiple of 4.
+     *  `Decoder` can't judge a encode-boundary.
      *
      * Params:
-     *  range = an $(D InputRange) to iterate.
+     *  range = an `InputRange` to iterate.
      *
      * Returns:
-     *  a $(D Decoder) object instantiated and initialized according to the arguments.
+     *  a `Decoder` object instantiated and initialized according to the arguments.
      */
     Decoder!(Range) decoder(Range)(Range range) if (isInputRange!Range)
     {

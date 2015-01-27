@@ -1,5 +1,5 @@
 /**
- * $(RED Deprecated. Please use $(D core.sys.linux.tipc) instead.  This module
+ * $(RED Deprecated. Please use `core.sys.linux.tipc` instead.  This module
  *       will be removed in December 2015.)
  * Interface for Linux TIPC sockets, /usr/include/linux/tipc.h
  *

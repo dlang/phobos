@@ -1,5 +1,5 @@
 /**
- * $(RED Deprecated. Please use $(D core.stdc.locale) instead.  This module will
+ * $(RED Deprecated. Please use `core.stdc.locale` instead.  This module will
  *       be removed in December 2015.)
  * C's &lt;locale.h&gt;
  * License: Public Domain

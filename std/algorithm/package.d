@@ -139,8 +139,8 @@ Many functions in this package are parameterized with a function or a
 $(GLOSSARY predicate). The predicate may be passed either as a
 function name, a delegate name, a $(GLOSSARY functor) name, or a
 compile-time string. The string may consist of $(B any) legal D
-expression that uses the symbol $(D a) (for unary functions) or the
-symbols $(D a) and $(D b) (for binary functions). These names will NOT
+expression that uses the symbol `a` (for unary functions) or the
+symbols `a` and `b` (for binary functions). These names will NOT
 interfere with other homonym symbols in user code because they are
 evaluated in a different context. The default for all binary
 comparison predicates is $(D "a == b") for unordered operations and

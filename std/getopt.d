@@ -3,7 +3,7 @@
 /**
 Processing of command line options.
 
-The getopt module implements a $(D getopt) function, which adheres to
+The getopt module implements a `getopt` function, which adheres to
 the POSIX syntax for command line options. GNU extensions are
 supported in the form of long options introduced by a double dash
 ("--"). Support for bundling of command line options, as was the case
@@ -19,7 +19,7 @@ License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 Credits:   This module and its documentation are inspired by Perl's $(WEB
            perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
-           D's $(D getopt) is simpler than its Perl counterpart because $(D
+           D's `getopt` is simpler than its Perl counterpart because $(D
            getopt) infers the expected parameter types from the static types of
            the passed-in pointers.
 Source:    $(PHOBOSSRC std/_getopt.d)
@@ -37,7 +37,7 @@ import std.traits;
 /**
  * Thrown on one of the following conditions:
  * - An unrecognized command-line argument is passed
- *   and $(D std.getopt.config.passThrough) was not present.
+ *   and `std.getopt.config.passThrough` was not present.
  */
 class GetOptException : Exception
 {
@@ -80,31 +80,31 @@ void main(string[] args)
 }
 ---------
 
- The $(D getopt) function takes a reference to the command line
- (as received by $(D main)) as its first argument, and an
+ The `getopt` function takes a reference to the command line
+ (as received by `main`) as its first argument, and an
  unbounded number of pairs of strings and pointers. Each string is an
  option meant to "fill" the value pointed-to by the pointer to its
  right (the "bound" pointer). The option string in the call to
- $(D getopt) should not start with a dash.
+ `getopt` should not start with a dash.
 
  In all cases, the command-line options that were parsed and used by
- $(D getopt) are removed from $(D args). Whatever in the
- arguments did not look like an option is left in $(D args) for
+ `getopt` are removed from `args`. Whatever in the
+ arguments did not look like an option is left in `args` for
  further processing by the program. Values that were unaffected by the
  options are not touched, so a common idiom is to initialize options
- to their defaults and then invoke $(D getopt). If a
+ to their defaults and then invoke `getopt`. If a
  command-line argument is recognized as an option with a parameter and
  the parameter cannot be parsed properly (e.g. a number is expected
- but not present), a $(D ConvException) exception is thrown.
- If $(D std.getopt.config.passThrough) was not passed to getopt
- and an unrecognized command-line argument is found, a $(D GetOptException)
+ but not present), a `ConvException` exception is thrown.
+ If `std.getopt.config.passThrough` was not passed to getopt
+ and an unrecognized command-line argument is found, a `GetOptException`
  is thrown.
 
- Depending on the type of the pointer being bound, $(D getopt)
+ Depending on the type of the pointer being bound, `getopt`
  recognizes the following kinds of options:
 
  $(OL
-    $(LI $(I Boolean options). A lone argument sets the option to $(D true).
+    $(LI $(I Boolean options). A lone argument sets the option to `true`.
     Additionally $(B true) or $(B false) can be set within the option separated
     with an "=" sign:
 
@@ -113,11 +113,11 @@ void main(string[] args)
   getopt(args, "verbose", &verbose, "debug", &debugging);
 ---------
 
-    To set $(D verbose) to $(D true), invoke the program with either
-    $(D --verbose) or $(D --verbose=true).
+    To set `verbose` to `true`, invoke the program with either
+    `--verbose` or `--verbose=true`.
 
-    To set $(D debugging) to $(D false), invoke the program with
-    $(D --debugging=false).
+    To set `debugging` to `false`, invoke the program with
+    `--debugging=false`.
     )
 
     $(LI $(I Numeric options.) If an option is bound to a numeric type, a
@@ -129,8 +129,8 @@ void main(string[] args)
   getopt(args, "timeout", &timeout);
 ---------
 
-    To set $(D timeout) to $(D 5), invoke the program with either
-    $(D --timeout=5) or $(D --timeout 5).
+    To set `timeout` to `5`, invoke the program with either
+    `--timeout=5` or $(D --timeout 5).
     )
 
     $(LI $(I Incremental options.) If an option name has a "+" suffix and is
@@ -145,7 +145,7 @@ void main(string[] args)
     Invoking the program with "--paranoid --paranoid --paranoid" will set $(D
     paranoid) to 3. Note that an incremental option never expects a parameter,
     e.g. in the command line "--paranoid 42 --paranoid", the "42" does not set
-    $(D paranoid) to 42; instead, $(D paranoid) is set to 2 and "42" is not
+    `paranoid` to 42; instead, `paranoid` is set to 2 and "42" is not
     considered as part of the normal program arguments.
     )
 
@@ -159,8 +159,8 @@ void main(string[] args)
   getopt(args, "color", &color);
 ---------
 
-    To set $(D color) to $(D Color.yes), invoke the program with either
-    $(D --color=yes) or $(D --color yes).
+    To set `color` to `Color.yes`, invoke the program with either
+    `--color=yes` or $(D --color yes).
     )
 
     $(LI $(I String options.) If an option is bound to a string, a string is
@@ -173,7 +173,7 @@ getopt(args, "output", &outputFile);
 ---------
 
     Invoking the program with "--output=myfile.txt" or "--output myfile.txt"
-    will set $(D outputFile) to "myfile.txt". If you want to pass a string
+    will set `outputFile` to "myfile.txt". If you want to pass a string
     containing spaces, you need to use the quoting that is appropriate to your
     shell, e.g. --output='my file.txt'.
     )
@@ -187,7 +187,7 @@ getopt(args, "output", &outputFiles);
 ---------
 
     Invoking the program with "--output=myfile.txt --output=yourfile.txt" or
-    "--output myfile.txt --output yourfile.txt" will set $(D outputFiles) to
+    "--output myfile.txt --output yourfile.txt" will set `outputFiles` to
     $(D [ "myfile.txt", "yourfile.txt" ]).
 
     Alternatively you can set $(LREF arraySep) as the element separator:
@@ -211,7 +211,7 @@ getopt(args, "tune", &tuningParms);
 ---------
 
     Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will set
-    $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].
+    `tuningParms` to [ "alpha" : 0.5, "beta" : 0.6 ].
 
     Alternatively you can set $(LREF arraySep) as the element separator:
 
@@ -309,7 +309,7 @@ getopt(args, "verbose|loquacious|garrulous", &verbose);
 $(B Case)
 
 By default options are case-insensitive. You can change that behavior
-by passing $(D getopt) the $(D caseSensitive) directive like this:
+by passing `getopt` the `caseSensitive` directive like this:
 
 ---------
 bool foo, bar;
@@ -320,8 +320,8 @@ getopt(args,
 ---------
 
 In the example above, "--foo", "--bar", "--FOo", "--bAr" etc. are recognized.
-The directive is active til the end of $(D getopt), or until the
-converse directive $(D caseInsensitive) is encountered:
+The directive is active til the end of `getopt`, or until the
+converse directive `caseInsensitive` is encountered:
 
 ---------
 bool foo, bar;
@@ -341,8 +341,8 @@ option "bar" was parsed.
 $(B "Short" versus "long" options)
 
 Traditionally, programs accepted single-letter options preceded by
-only one dash (e.g. $(D -t)). $(D getopt) accepts such parameters
-seamlessly. When used with a double-dash (e.g. $(D --t)), a
+only one dash (e.g. `-t`). `getopt` accepts such parameters
+seamlessly. When used with a double-dash (e.g. `--t`), a
 single-letter option behaves the same as a multi-letter option. When
 used with a single dash, a single-letter option is accepted. If the
 option has a parameter, that must be "stuck" to the option without
@@ -353,9 +353,9 @@ uint timeout;
 getopt(args, "timeout|t", &timeout);
 ---------
 
-To set $(D timeout) to $(D 5), use either of the following: $(D --timeout=5),
-$(D --timeout 5), $(D --t=5), $(D --t 5), or $(D -t5). Forms such as $(D -t 5)
-and $(D -timeout=5) will be not accepted.
+To set `timeout` to `5`, use either of the following: `--timeout=5`,
+$(D --timeout 5), `--t=5`, $(D --t 5), or `-t5`. Forms such as $(D -t 5)
+and `-timeout=5` will be not accepted.
 
 For more details about short options, refer also to the next section.
 
@@ -363,7 +363,7 @@ $(B Bundling)
 
 Single-letter options can be bundled together, i.e. "-abc" is the same as
 $(D "-a -b -c"). By default, this option is turned off. You can turn it on
-with the $(D std.getopt.config.bundling) directive:
+with the `std.getopt.config.bundling` directive:
 
 ---------
 bool foo, bar;
@@ -374,7 +374,7 @@ getopt(args,
 ---------
 
 In case you want to only enable bundling for some of the parameters,
-bundling can be turned off with $(D std.getopt.config.noBundling).
+bundling can be turned off with `std.getopt.config.noBundling`.
 
 $(B Required)
 
@@ -389,14 +389,14 @@ getopt(args,
     "bar|b", &bar);
 ---------
 
-Only the option direclty following $(D std.getopt.config.required) is
+Only the option direclty following `std.getopt.config.required` is
 required.
 
 $(B Passing unrecognized options through)
 
 If an application needs to do its own processing of whichever arguments
-$(D getopt) did not understand, it can pass the
-$(D std.getopt.config.passThrough) directive to $(D getopt):
+`getopt` did not understand, it can pass the
+`std.getopt.config.passThrough` directive to `getopt`:
 
 ---------
 bool foo, bar;
@@ -407,22 +407,22 @@ getopt(args,
 ---------
 
 An unrecognized option such as "--baz" will be found untouched in
-$(D args) after $(D getopt) returns.
+`args` after `getopt` returns.
 
 $(D Help Information Generation)
 
 If an option string is followed by another string, this string serves as an
-description for this option. The function $(D getopt) returns a struct of type
-$(D GetoptResult). This return value contains information about all passed options
+description for this option. The function `getopt` returns a struct of type
+`GetoptResult`. This return value contains information about all passed options
 as well a bool indicating if information about these options where required by
 the passed arguments.
 
 $(B Options Terminator)
 
-A lonesome double-dash terminates $(D getopt) gathering. It is used to
+A lonesome double-dash terminates `getopt` gathering. It is used to
 separate program options from other parameters (e.g. options to be passed
 to another program). Invoking the example above with $(D "--foo -- --bar")
-parses foo but leaves "--bar" in $(D args). The double-dash itself is
+parses foo but leaves "--bar" in `args`. The double-dash itself is
 removed from the argument array.
 */
 GetoptResult getopt(T...)(ref string[] args, T opts)
@@ -456,9 +456,9 @@ unittest
 }
 
 /**
-   Configuration options for $(D getopt).
+   Configuration options for `getopt`.
 
-   You can pass them to $(D getopt) in any position, except in between an option
+   You can pass them to `getopt` in any position, except in between an option
    string and its bound pointer.
 */
 enum config {
@@ -480,18 +480,18 @@ enum config {
     required
 }
 
-/** The result of the $(D getopt) function.
+/** The result of the `getopt` function.
 
-The $(D GetoptResult) contains two members. The first member is a boolean with
-the name $(D helpWanted). The second member is an array of $(D Option). The
-array is accessable by the name $(D options).
+The `GetoptResult` contains two members. The first member is a boolean with
+the name `helpWanted`. The second member is an array of `Option`. The
+array is accessable by the name `options`.
 */
 struct GetoptResult {
     bool helpWanted; /// Flag indicating if help was requested
     Option[] options; /// All possible options
 }
 
-/** The result of the $(D getoptHelp) function.
+/** The result of the `getoptHelp` function.
 */
 struct Option {
     string optShort; /// The short symbol for this option
@@ -850,22 +850,22 @@ unittest
 /**
    The option character (default '-').
 
-   Defaults to '-' but it can be assigned to prior to calling $(D getopt).
+   Defaults to '-' but it can be assigned to prior to calling `getopt`.
  */
 dchar optionChar = '-';
 
 /**
    The string that conventionally marks the end of all options (default '--').
 
-   Defaults to "--" but can be assigned to prior to calling $(D getopt). Assigning an
-   empty string to $(D endOfOptions) effectively disables it.
+   Defaults to "--" but can be assigned to prior to calling `getopt`. Assigning an
+   empty string to `endOfOptions` effectively disables it.
  */
 string endOfOptions = "--";
 
 /**
    The assignment character used in options with parameters (default '=').
 
-   Defaults to '=' but can be assigned to prior to calling $(D getopt).
+   Defaults to '=' but can be assigned to prior to calling `getopt`.
  */
 dchar assignChar = '=';
 
@@ -873,7 +873,7 @@ dchar assignChar = '=';
    The string used to separate the elements of an array or associative array
    (default is "" which means the elements are separated by whitespace).
 
-   Defaults to "" but can be assigned to prior to calling $(D getopt).
+   Defaults to "" but can be assigned to prior to calling `getopt`.
  */
 string arraySep = "";
 
@@ -1345,13 +1345,13 @@ unittest
     assert(args == ["program", "--option"]);
 }
 
-/** This function prints the passed $(D Option) and text in an aligned manner.
+/** This function prints the passed `Option` and text in an aligned manner.
 
 The passed text will be printed first, followed by a newline. Than the short
 and long version of every option will be printed. The short and long version
-will be aligned to the longest option of every $(D Option) passed. If a help
+will be aligned to the longest option of every `Option` passed. If a help
 message is present it will be printed after the long version of the
-$(D Option).
+`Option`.
 
 ------------
 foreach(it; opt)
@@ -1363,7 +1363,7 @@ foreach(it; opt)
 
 Params:
     text = The text to printed at the beginning of the help output.
-    opt = The $(D Option) extracted from the $(D getopt) parameter.
+    opt = The `Option` extracted from the `getopt` parameter.
 */
 void defaultGetoptPrinter(string text, Option[] opt)
 {
@@ -1372,14 +1372,14 @@ void defaultGetoptPrinter(string text, Option[] opt)
     defaultGetoptFormatter(stdout.lockingTextWriter(), text, opt);
 }
 
-/** This function writes the passed text and $(D Option) into an output range
+/** This function writes the passed text and `Option` into an output range
 in the manner, described in the documentation of function
-$(D defaultGetoptPrinter).
+`defaultGetoptPrinter`.
 
 Params:
     output = The output range used to write the help information.
     text = The text to printed at the beginning of the help output.
-    opt = The $(D Option) extracted from the $(D getopt) parameter.
+    opt = The `Option` extracted from the `getopt` parameter.
 */
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 {

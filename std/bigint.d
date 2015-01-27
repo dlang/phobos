@@ -571,13 +571,13 @@ unittest
     j ^^= 11;
 }
 
-/** This function returns a $(D string) representation of a $(D BigInt).
+/** This function returns a `string` representation of a `BigInt`.
 
 Params:
-    x = The $(D BigInt) to convert to a decimal $(D string).
+    x = The `BigInt` to convert to a decimal `string`.
 
 Returns:
-    A $(D string) that represents the $(D BigInt) as a decimal number.
+    A `string` that represents the `BigInt` as a decimal number.
 
 */
 string toDecimalString(const(BigInt) x)
@@ -588,13 +588,13 @@ string toDecimalString(const(BigInt) x)
     return outbuff;
 }
 
-/** This function returns a $(D string) representation of a $(D BigInt).
+/** This function returns a `string` representation of a `BigInt`.
 
 Params:
-    x = The $(D BigInt) to convert to a hexadecimal $(D string).
+    x = The `BigInt` to convert to a hexadecimal `string`.
 
 Returns:
-    A $(D string) that represents the $(D BigInt) as a hexadecimal  number.
+    A `string` that represents the `BigInt` as a hexadecimal  number.
 
 */
 string toHex(const(BigInt) x)

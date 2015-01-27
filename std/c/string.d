@@ -1,6 +1,6 @@
 
 /**
- * $(RED Deprecated. Please use $(D core.stdc.string) instead.  This module will
+ * $(RED Deprecated. Please use `core.stdc.string` instead.  This module will
  *       be removed in December 2015.)
  * C's &lt;string.h&gt;
  * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com

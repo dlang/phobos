@@ -26,7 +26,7 @@ version (StdDdoc)
 
     /// Query the text for a Windows error code (as returned by $(LINK2
     /// http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
-    /// $(D GetLastError))) as a D string.
+    /// `GetLastError`)) as a D string.
     string sysErrorString(
         DWORD errCode,
         // MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT) is the user's default language
@@ -36,20 +36,20 @@ version (StdDdoc)
     /*********************
      * Thrown if errors that set $(LINK2
      * http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
-     * $(D GetLastError)) occur.
+     * `GetLastError`) occur.
      */
     class WindowsException : Exception
     {
         private alias DWORD = int;
-        final @property DWORD code(); /// $(D GetLastError)'s return value.
+        final @property DWORD code(); /// `GetLastError`'s return value.
         @disable this(int dummy);
     }
 
     /++
-        If $(D !!value) is true, $(D value) is returned. Otherwise,
+        If `!!value` is true, `value` is returned. Otherwise,
         $(D new WindowsException(GetLastError(), msg)) is thrown.
-        $(D WindowsException) assumes that the last operation set
-        $(D GetLastError()) appropriately.
+        `WindowsException` assumes that the last operation set
+        `GetLastError()` appropriately.
 
         Example:
         --------------------
@@ -118,7 +118,7 @@ class WindowsException : Exception
 {
     import core.sys.windows.windows;
 
-    final @property DWORD code() { return _code; } /// $(D GetLastError)'s return value.
+    final @property DWORD code() { return _code; } /// `GetLastError`'s return value.
     private DWORD _code;
 
     this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted

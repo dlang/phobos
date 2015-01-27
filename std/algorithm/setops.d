@@ -536,10 +536,10 @@ unittest
 
 // largestPartialIntersection
 /**
-Given a range of sorted forward ranges $(D ror), copies to $(D tgt)
+Given a range of sorted forward ranges `ror`, copies to `tgt`
 the elements that are common to most ranges, along with their number
-of occurrences. All ranges in $(D ror) are assumed to be sorted by $(D
-less). Only the most frequent $(D tgt.length) elements are returned.
+of occurrences. All ranges in `ror` are assumed to be sorted by $(D
+less). Only the most frequent `tgt.length` elements are returned.
 
 Example:
 ----
@@ -559,28 +559,28 @@ largestPartialIntersection(a, b);
 assert(b[0] == tuple(7.0, 4u));
 ----
 
-$(D 7.0) is the correct answer because it occurs in $(D 4) out of the
-$(D 5) inputs, more than any other number. The second member of the
-resulting tuple is indeed $(D 4) (recording the number of occurrences
-of $(D 7.0)). If more of the top-frequent numbers are needed, just
-create a larger $(D tgt) range. In the example above, creating $(D b)
-with length $(D 2) yields $(D tuple(1.0, 3u)) in the second position.
+`7.0` is the correct answer because it occurs in `4` out of the
+`5` inputs, more than any other number. The second member of the
+resulting tuple is indeed `4` (recording the number of occurrences
+of `7.0`). If more of the top-frequent numbers are needed, just
+create a larger `tgt` range. In the example above, creating `b`
+with length `2` yields $(D tuple(1.0, 3u)) in the second position.
 
-The function $(D largestPartialIntersection) is useful for
+The function `largestPartialIntersection` is useful for
 e.g. searching an $(LUCKY inverted index) for the documents most
 likely to contain some terms of interest. The complexity of the search
-is $(BIGOH n * log(tgt.length)), where $(D n) is the sum of lengths of
+is $(BIGOH n * log(tgt.length)), where `n` is the sum of lengths of
 all input ranges. This approach is faster than keeping an associative
 array of the occurrences and then selecting its top items, and also
-requires less memory ($(D largestPartialIntersection) builds its
-result directly in $(D tgt) and requires no extra memory).
+requires less memory (`largestPartialIntersection` builds its
+result directly in `tgt` and requires no extra memory).
 
-Warning: Because $(D largestPartialIntersection) does not allocate
-extra memory, it will leave $(D ror) modified. Namely, $(D
-largestPartialIntersection) assumes ownership of $(D ror) and
+Warning: Because `largestPartialIntersection` does not allocate
+extra memory, it will leave `ror` modified. Namely, $(D
+largestPartialIntersection) assumes ownership of `ror` and
 discretionarily swaps and advances elements of it. If you want $(D
 ror) to preserve its contents after the call, you may want to pass a
-duplicate to $(D largestPartialIntersection) (and perhaps cache the
+duplicate to `largestPartialIntersection` (and perhaps cache the
 duplicate in between calls).
  */
 void largestPartialIntersection
@@ -599,7 +599,7 @@ import std.algorithm : SortOutput; // FIXME
 
 // largestPartialIntersectionWeighted
 /**
-Similar to $(D largestPartialIntersection), but associates a weight
+Similar to `largestPartialIntersection`, but associates a weight
 with each distinct element in the intersection.
 
 Example:
@@ -621,10 +621,10 @@ largestPartialIntersectionWeighted(a, b, weights);
 assert(b[0] == tuple(4.0, 2u));
 ----
 
-The correct answer in this case is $(D 4.0), which, although only
-appears two times, has a total weight $(D 4.6) (three times its weight
-$(D 2.3)). The value $(D 7) is weighted with $(D 1.1) and occurs four
-times for a total weight $(D 4.4).
+The correct answer in this case is `4.0`, which, although only
+appears two times, has a total weight `4.6` (three times its weight
+`2.3`). The value `7` is weighted with `1.1` and occurs four
+times for a total weight `4.4`.
  */
 void largestPartialIntersectionWeighted
 (alias less = "a < b", RangeOfRanges, Range, WeightsAA)
@@ -728,21 +728,21 @@ unittest
 Computes the union of multiple sets. The input sets are passed as a
 range of ranges and each is assumed to be sorted by $(D
 less). Computation is done lazily, one union element at a time. The
-complexity of one $(D popFront) operation is $(BIGOH
-log(ror.length)). However, the length of $(D ror) decreases as ranges
+complexity of one `popFront` operation is $(BIGOH
+log(ror.length)). However, the length of `ror` decreases as ranges
 in it are exhausted, so the complexity of a full pass through $(D
 NWayUnion) is dependent on the distribution of the lengths of ranges
-contained within $(D ror). If all ranges have the same length $(D n)
+contained within `ror`. If all ranges have the same length `n`
 (worst case scenario), the complexity of a full pass through $(D
 NWayUnion) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
 log(ror.length)) times worse than just spanning all ranges in
-turn. The output comes sorted (unstably) by $(D less).
+turn. The output comes sorted (unstably) by `less`.
 
-Warning: Because $(D NWayUnion) does not allocate extra memory, it
-will leave $(D ror) modified. Namely, $(D NWayUnion) assumes ownership
-of $(D ror) and discretionarily swaps and advances elements of it. If
-you want $(D ror) to preserve its contents after the call, you may
-want to pass a duplicate to $(D NWayUnion) (and perhaps cache the
+Warning: Because `NWayUnion` does not allocate extra memory, it
+will leave `ror` modified. Namely, `NWayUnion` assumes ownership
+of `ror` and discretionarily swaps and advances elements of it. If
+you want `ror` to preserve its contents after the call, you may
+want to pass a duplicate to `NWayUnion` (and perhaps cache the
 duplicate in between calls).
  */
 struct NWayUnion(alias less, RangeOfRanges)
@@ -823,8 +823,8 @@ unittest
 }
 
 /**
-Lazily computes the difference of $(D r1) and $(D r2). The two ranges
-are assumed to be sorted by $(D less). The element types of the two
+Lazily computes the difference of `r1` and `r2`. The two ranges
+are assumed to be sorted by `less`. The element types of the two
 ranges must have a common type.
  */
 struct SetDifference(alias less = "a < b", R1, R2)
@@ -919,7 +919,7 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
 
 /**
 Lazily computes the intersection of two or more input ranges $(D
-ranges). The ranges are assumed to be sorted by $(D less). The element
+ranges). The ranges are assumed to be sorted by `less`. The element
 types of the ranges must have a common type.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
@@ -1061,14 +1061,14 @@ SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs range
 }
 
 /**
-Lazily computes the symmetric difference of $(D r1) and $(D r2),
-i.e. the elements that are present in exactly one of $(D r1) and $(D
-r2). The two ranges are assumed to be sorted by $(D less), and the
-output is also sorted by $(D less). The element types of the two
+Lazily computes the symmetric difference of `r1` and `r2`,
+i.e. the elements that are present in exactly one of `r1` and $(D
+r2). The two ranges are assumed to be sorted by `less`, and the
+output is also sorted by `less`. The element types of the two
 ranges must have a common type.
 
 If both arguments are ranges of L-values of the same type then
-$(D SetSymmetricDifference) will also be a range of L-values of
+`SetSymmetricDifference` will also be a range of L-values of
 that type.
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
@@ -1183,10 +1183,10 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
 }
 
 /**
-Lazily computes the union of two or more ranges $(D rs). The ranges
-are assumed to be sorted by $(D less). Elements in the output are not
+Lazily computes the union of two or more ranges `rs`. The ranges
+are assumed to be sorted by `less`. Elements in the output are not
 unique; the length of the output is the sum of the lengths of the
-inputs. (The $(D length) member is offered if all ranges also have
+inputs. (The `length` member is offered if all ranges also have
 length.) The element types of all ranges must have a common type.
  */
 struct SetUnion(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))

@@ -21,8 +21,8 @@ immutable
         Note:
             This is for cases where you need a value representing the OS at
             runtime. If you're doing something which should compile differently
-            on different OSes, then please use $(D version(Windows)),
-            $(D version(linux)), etc.
+            on different OSes, then please use `version(Windows)`,
+            `version(linux)`, etc.
 
         See_Also:
             <a href="../version.html#PredefinedVersions">Predefined Versions</a>
@@ -56,8 +56,8 @@ immutable
             This is intended for cases where you need to deal with endianness at
             runtime. If you're doing something which should compile differently
             depending on whether you're compiling on a big endian or little
-            endian machine, then please use $(D version(BigEndian)) and
-            $(D version(LittleEndian)).
+            endian machine, then please use `version(BigEndian)` and
+            `version(LittleEndian)`.
 
         See_Also:
             <a href="../version.html#PredefinedVersions">Predefined Versions</a>

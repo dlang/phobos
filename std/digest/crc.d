@@ -18,10 +18,10 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
 )
 
  *
- * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest.digest).
+ * This module conforms to the APIs defined in `std.digest.digest`. To understand the
+ * differences between the template and the OOP API, see `std.digest.digest`.
  *
- * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
+ * This module publicly imports `std.digest.digest` and can be used as a stand-alone
  * module.
  *
  * Note:
@@ -145,7 +145,7 @@ private immutable uint[256] crc32_table =
 
 /**
  * Template API CRC32 implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  */
 struct CRC32
 {
@@ -156,8 +156,8 @@ struct CRC32
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF range, OutputRange) interface for `ubyte` and
+         * `const(ubyte)[]`.
          */
         void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
         {
@@ -215,7 +215,7 @@ struct CRC32
         }
 
         /**
-         * Works like $(D finish) but does not reset the internal state, so it's possible
+         * Works like `finish` but does not reset the internal state, so it's possible
          * to continue putting data into this CRC32 after a call to peek.
          */
         ubyte[4] peek() const @safe pure nothrow @nogc
@@ -332,7 +332,7 @@ unittest
 
 /**
  * OOP API CRC32 implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  *
  * This is an alias for $(XREF digest.digest, WrapperDigest)!CRC32, see
  * $(XREF digest.digest, WrapperDigest) for more information.

@@ -3,7 +3,7 @@
 /**
  * Contains the elementary mathematical functions (powers, roots,
  * and trigonometric functions), and low-level floating-point operations.
- * Mathematical special functions are available in $(D std.mathspecial).
+ * Mathematical special functions are available in `std.mathspecial`.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -2434,7 +2434,7 @@ unittest
  * Extracts the exponent of x as a signed integral value.
  *
  * If x is not a special value, the result is the same as
- * $(D cast(int)logb(x)).
+ * `cast(int)logb(x)`.
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)                $(TH ilogb(x))     $(TH Range error?))
@@ -4920,7 +4920,7 @@ R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
 }
 
 /*********************************
-Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
+Returns `-1` if $(D x < 0), `x` if $(D x == 0), `1` if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
@@ -6404,13 +6404,13 @@ body
 }
 
 /**
-   Computes whether $(D lhs) is approximately equal to $(D rhs)
-   admitting a maximum relative difference $(D maxRelDiff) and a
-   maximum absolute difference $(D maxAbsDiff).
+   Computes whether `lhs` is approximately equal to `rhs`
+   admitting a maximum relative difference `maxRelDiff` and a
+   maximum absolute difference `maxAbsDiff`.
 
-   If the two inputs are ranges, $(D approxEqual) returns true if and
+   If the two inputs are ranges, `approxEqual` returns true if and
    only if the ranges have the same number of elements and if $(D
-   approxEqual) evaluates to $(D true) for each pair of elements.
+   approxEqual) evaluates to `true` for each pair of elements.
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {

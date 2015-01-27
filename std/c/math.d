@@ -1,6 +1,6 @@
 
 /**
- * $(RED Deprecated. Please use $(D core.stdc.math) instead.  This module will
+ * $(RED Deprecated. Please use `core.stdc.math` instead.  This module will
  *       be removed in December 2015.)
  * C's &lt;math.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com

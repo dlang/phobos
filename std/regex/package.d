@@ -33,7 +33,7 @@
 
   ...
 
-  // The result of the $(D matchAll) is directly testable with if/assert/while.
+  // The result of the `matchAll` is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
   assert(matchFirst("Letter", `^\p{L}+$`));
 
@@ -47,7 +47,7 @@
   Checks of this sort of are better addressed by additional post-processing.
 
   The basic syntax shouldn't surprise experienced users of regular expressions.
-  For an introduction to $(D std.regex) see a
+  For an introduction to `std.regex` see a
   $(WEB dlang.org/regular-expression.html, short tour) of the module API
   and its abilities.
 
@@ -203,7 +203,7 @@
 
     A set of functions in this module that do the substitution rely
     on a simple format to guide the process. In particular the table below
-    applies to the $(D format) argument of
+    applies to the `format` argument of
     $(LREF replaceFirst) and $(LREF replaceAll).
 
     The format string can reference parts of match using the following notation.
@@ -221,7 +221,7 @@
   $(SECTION Slicing and zero memory allocations orientation)
 
   All matches returned by pattern matching functionality in this library
-    are slices of the original input. The notable exception is the $(D replace)
+    are slices of the original input. The notable exception is the `replace`
     family of functions  that generate a new string from the input.
 
     In cases where producing the replacement is the ultimate goal
@@ -234,7 +234,7 @@
 
   Authors: Dmitry Olshansky,
 
-    API and utility constructs are modeled after the original $(D std.regex)
+    API and utility constructs are modeled after the original `std.regex`
   by Walter Bright and Andrei Alexandrescu.
 
   Source: $(PHOBOSSRC std/_regex.d)
@@ -254,9 +254,9 @@ import std.regex.internal.thompson; //TODO: get rid of this dependency
 import std.exception, std.traits, std.range;
 
 /++
-    $(D Regex) object holds regular expression pattern in compiled form.
+    `Regex` object holds regular expression pattern in compiled form.
 
-    Instances of this object are constructed via calls to $(D regex).
+    Instances of this object are constructed via calls to `regex`.
     This is an intended form for caching and storage of frequently
     used regular expressions.
 
@@ -288,24 +288,24 @@ import std.exception, std.traits, std.range;
 public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
 
 /++
-    A $(D StaticRegex) is $(D Regex) object that contains D code specially
+    A `StaticRegex` is `Regex` object that contains D code specially
     generated at compile-time to speed up matching.
 
-    Implicitly convertible to normal $(D Regex),
+    Implicitly convertible to normal `Regex`,
     however doing so will result in losing this additional capability.
 +/
 public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
 
 /++
     Compile regular expression pattern for the later execution.
-    Returns: $(D Regex) object that works on inputs having
-    the same character width as $(D pattern).
+    Returns: `Regex` object that works on inputs having
+    the same character width as `pattern`.
 
     Params:
     pattern = Regular expression
     flags = The _attributes (g, i, m and x accepted)
 
-    Throws: $(D RegexException) if there were any errors during compilation.
+    Throws: `RegexException` if there were any errors during compilation.
 +/
 @trusted public auto regex(S)(S pattern, const(char)[] flags="")
     if(isSomeString!(S))
@@ -359,8 +359,8 @@ enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
 
 
 /++
-    $(D Captures) object contains submatches captured during a call
-    to $(D match) or iteration over $(D RegexMatch) range.
+    `Captures` object contains submatches captured during a call
+    to `match` or iteration over `RegexMatch` range.
 
     First element of range is the whole match.
 +/
@@ -538,13 +538,13 @@ unittest
 }
 
 /++
-    A regex engine state, as returned by $(D match) family of functions.
+    A regex engine state, as returned by `match` family of functions.
 
     Effectively it's a forward range of Captures!R, produced
     by lazily searching for matches in a given input.
 
     $(D alias Engine) specifies an engine type to use during matching,
-    and is automatically deduced in a call to $(D match)/$(D bmatch).
+    and is automatically deduced in a call to `match`/`bmatch`.
 +/
 @trusted public struct RegexMatch(R, alias Engine = ThompsonMatcher)
     if(isSomeString!R)
@@ -758,7 +758,7 @@ private R replaceAllWith(alias output,
 
 
 /++
-    Start matching $(D input) to regex pattern $(D re),
+    Start matching `input` to regex pattern `re`,
     using Thompson NFA matching scheme.
 
     The use of this function is $(RED discouraged) - use either of
@@ -770,7 +770,7 @@ private R replaceAllWith(alias output,
     matching scheme to use depends highly on the pattern kind and
     can done automatically on case by case basis.
 
-    Returns: a $(D RegexMatch) object holding engine state after first match.
+    Returns: a `RegexMatch` object holding engine state after first match.
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
@@ -796,11 +796,11 @@ public auto match(R, RegEx)(R input, RegEx re)
 }
 
 /++
-    Find the first (leftmost) slice of the $(D input) that
-    matches the pattern $(D re). This function picks the most suitable
+    Find the first (leftmost) slice of the `input` that
+    matches the pattern `re`. This function picks the most suitable
     regular expression engine depending on the pattern properties.
 
-    $(D re) parameter can be one of three types:
+    `re` parameter can be one of three types:
     $(UL
       $(LI Plain string, in which case it's compiled to bytecode before matching. )
       $(LI Regex!char (wchar/dchar) that contains a pattern in the form of
@@ -836,14 +836,14 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
 }
 
 /++
-    Initiate a search for all non-overlapping matches to the pattern $(D re)
-    in the given $(D input). The result is a lazy range of matches generated
+    Initiate a search for all non-overlapping matches to the pattern `re`
+    in the given `input`. The result is a lazy range of matches generated
     as they are encountered in the input going left to right.
 
     This function picks the most suitable regular expression engine
     depending on the pattern properties.
 
-    $(D re) parameter can be one of three types:
+    `re` parameter can be one of three types:
     $(UL
       $(LI Plain string, in which case it's compiled to bytecode before matching. )
       $(LI Regex!char (wchar/dchar) that contains a pattern in the form of
@@ -920,7 +920,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 }
 
 /++
-    Start matching of $(D input) to regex pattern $(D re),
+    Start matching of `input` to regex pattern `re`,
     using traditional $(LUCKY backtracking) matching scheme.
 
     The use of this function is $(RED discouraged) - use either of
@@ -932,7 +932,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
     matching scheme to use depends highly on the pattern kind and
     can done automatically on case by case basis.
 
-    Returns: a $(D RegexMatch) object holding engine
+    Returns: a `RegexMatch` object holding engine
     state after first match.
 
 +/
@@ -1030,8 +1030,8 @@ L_Replace_Loop:
 }
 
 /++
-    Construct a new string from $(D input) by replacing the first match with
-    a string generated from it according to the $(D format) specifier.
+    Construct a new string from `input` by replacing the first match with
+    a string generated from it according to the `format` specifier.
 
     To replace all matches use $(LREF replaceAll).
 
@@ -1058,18 +1058,18 @@ public R replaceFirst(R, C, RegEx)(R input, RegEx re, const(C)[] format)
 
 /++
     This is a general replacement tool that construct a new string by replacing
-    matches of pattern $(D re) in the $(D input). Unlike the other overload
+    matches of pattern `re` in the `input`. Unlike the other overload
     there is no format string instead captures are passed to
-    to a user-defined functor $(D fun) that returns a new string
+    to a user-defined functor `fun` that returns a new string
     to use as replacement.
 
-    This version replaces the first match in $(D input),
+    This version replaces the first match in `input`,
     see $(LREF replaceAll) to replace the all of the matches.
 
     Returns:
-    A new string of the same type as $(D input) with all matches
-    replaced by return values of $(D fun). If no matches found
-    returns the $(D input) itself.
+    A new string of the same type as `input` with all matches
+    replaced by return values of `fun`. If no matches found
+    returns the `input` itself.
 
     Example:
     ---
@@ -1087,11 +1087,11 @@ public R replaceFirst(alias fun, R, RegEx)(R input, RegEx re)
 
 /++
     A variation on $(LREF replaceFirst) that instead of allocating a new string
-    on each call outputs the result piece-wise to the $(D sink). In particular
+    on each call outputs the result piece-wise to the `sink`. In particular
     this enables efficient construction of a final output incrementally.
 
     Like in $(LREF replaceFirst) family of functions there is an overload
-    for the substitution guided by the $(D format) string
+    for the substitution guided by the `format` string
     and the one with the user defined callback.
 
     Example:
@@ -1142,9 +1142,9 @@ public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
 }
 
 /++
-    Construct a new string from $(D input) by replacing all of the
-    fragments that match a pattern $(D re) with a string generated
-    from the match according to the $(D format) specifier.
+    Construct a new string from `input` by replacing all of the
+    fragments that match a pattern `re` with a string generated
+    from the match according to the `format` specifier.
 
     To replace only the first match use $(LREF replaceFirst).
 
@@ -1155,7 +1155,7 @@ public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
     see $(S_LINK Replace format string, the format string).
 
     Returns:
-    A string of the same type as $(D input) with the all
+    A string of the same type as `input` with the all
     of the matches (if any) replaced.
     If no match is found returns the input string itself.
 
@@ -1174,18 +1174,18 @@ public @trusted R replaceAll(R, C, RegEx)(R input, RegEx re, const(C)[] format)
 
 /++
     This is a general replacement tool that construct a new string by replacing
-    matches of pattern $(D re) in the $(D input). Unlike the other overload
+    matches of pattern `re` in the `input`. Unlike the other overload
     there is no format string instead captures are passed to
-    to a user-defined functor $(D fun) that returns a new string
+    to a user-defined functor `fun` that returns a new string
     to use as replacement.
 
-    This version replaces all of the matches found in $(D input),
+    This version replaces all of the matches found in `input`,
     see $(LREF replaceFirst) to replace the first match only.
 
     Returns:
-    A new string of the same type as $(D input) with all matches
-    replaced by return values of $(D fun). If no matches found
-    returns the $(D input) itself.
+    A new string of the same type as `input` with all matches
+    replaced by return values of `fun`. If no matches found
+    returns the `input` itself.
 
     Params:
     input = string to search
@@ -1212,7 +1212,7 @@ public @trusted R replaceAll(alias fun, R, RegEx)(R input, RegEx re)
 
 /++
     A variation on $(LREF replaceAll) that instead of allocating a new string
-    on each call outputs the result piece-wise to the $(D sink). In particular
+    on each call outputs the result piece-wise to the `sink`. In particular
     this enables efficient construction of a final output incrementally.
 
     As with $(LREF replaceAll) there are 2 overloads - one with a format string,
@@ -1303,7 +1303,7 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
 }
 
 /++
-    Old API for replacement, operation depends on flags of pattern $(D re).
+    Old API for replacement, operation depends on flags of pattern `re`.
     With "g" flag it performs the equivalent of $(LREF replaceAll) otherwise it
     works the same as $(LREF replaceFirst).
 
@@ -1405,7 +1405,7 @@ public:
 }
 
 /**
-    A helper function, creates a $(D Splitter) on range $(D r) separated by regex $(D pat).
+    A helper function, creates a `Splitter` on range `r` separated by regex `pat`.
     Captured subexpressions have no effect on the resulting range.
 */
 public Splitter!(Range, RegEx) splitter(Range, RegEx)(Range r, RegEx pat)
@@ -1414,7 +1414,7 @@ public Splitter!(Range, RegEx) splitter(Range, RegEx)(Range r, RegEx pat)
     return Splitter!(Range, RegEx)(r, pat);
 }
 
-///An eager version of $(D splitter) that creates an array with splitted slices of $(D input).
+///An eager version of `splitter` that creates an array with splitted slices of `input`.
 public @trusted String[] split(String, RegEx)(String input, RegEx rx)
     if(isSomeString!String  && isRegexFor!(RegEx, String))
 {

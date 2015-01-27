@@ -1,6 +1,6 @@
 
 /**
- * $(RED Deprecated. Please use $(D core.stdc.time) instead.  This module will
+ * $(RED Deprecated. Please use `core.stdc.time` instead.  This module will
  *       be removed in December 2015.)
  * C's &lt;time.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com

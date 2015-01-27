@@ -2,7 +2,7 @@
 
 /**
    This module implements the formatting functionality for strings and
-   I/O. It's comparable to C99's $(D vsprintf()) and uses a similar
+   I/O. It's comparable to C99's `vsprintf()` and uses a similar
    format encoding scheme.
 
    For an introductory look at $(B std.format)'s capabilities and how to use
@@ -68,19 +68,19 @@ private alias enforceFmt = enforceEx!FormatException;
 
 
 /**********************************************************************
-   Interprets variadic argument list $(D args), formats them according
-   to $(D fmt), and sends the resulting characters to $(D w). The
-   encoding of the output is the same as $(D Char). The type $(D Writer)
+   Interprets variadic argument list `args`, formats them according
+   to `fmt`, and sends the resulting characters to `w`. The
+   encoding of the output is the same as `Char`. The type `Writer`
    must satisfy $(XREF range,isOutputRange!(Writer, Char)).
 
    The variadic arguments are normally consumed in order. POSIX-style
    $(WEB opengroup.org/onlinepubs/009695399/functions/printf.html,
    positional parameter syntax) is also supported. Each argument is
    formatted into a sequence of chars according to the format
-   specification, and the characters are passed to $(D w). As many
+   specification, and the characters are passed to `w`. As many
    arguments as specified in the format string are consumed and
    formatted. If there are fewer arguments than format specifiers, a
-   $(D FormatException) is thrown. If there are more remaining arguments
+   `FormatException` is thrown. If there are more remaining arguments
    than needed by the format specification, they are ignored but only
    if at least one argument was formatted.
 
@@ -176,7 +176,7 @@ $(I FormatChar):
 
     $(TR $(TD $(B '0')) $(TD numeric) $(TD Use leading
     zeros to pad rather than spaces (except for the floating point
-    values $(D nan) and $(D infinity)).  Ignore if there's a $(I
+    values `nan` and `infinity`).  Ignore if there's a $(I
     Precision).))
 
     $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
@@ -530,8 +530,8 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 }
 
 /**
-Reads characters from input range $(D r), converts them according
-to $(D fmt), and writes them to $(D args).
+Reads characters from input range `r`, converts them according
+to `fmt`, and writes them to `args`.
 
 Params:
     r = The range to read from.
@@ -623,7 +623,7 @@ template FormatSpec(Char)
 }
 
 /**
- * A General handler for $(D printf) style format specifiers. Used for building more
+ * A General handler for `printf` style format specifiers. Used for building more
  * specific formatting functions.
  */
 struct FormatSpec(Char)
@@ -634,7 +634,7 @@ struct FormatSpec(Char)
     import std.conv : parse, text, to;
 
     /**
-       Minimum _width, default $(D 0).
+       Minimum _width, default `0`.
      */
     int width = 0;
 
@@ -646,8 +646,8 @@ struct FormatSpec(Char)
     int precision = UNSPECIFIED;
 
     /**
-       Special value for width and precision. $(D DYNAMIC) width or
-       precision means that they were specified with $(D '*') in the
+       Special value for width and precision. `DYNAMIC` width or
+       precision means that they were specified with `'*'` in the
        format string and are passed at runtime through the varargs.
      */
     enum int DYNAMIC = int.max;
@@ -659,50 +659,50 @@ struct FormatSpec(Char)
     enum int UNSPECIFIED = DYNAMIC - 1;
 
     /**
-       The actual format specifier, $(D 's') by default.
+       The actual format specifier, `'s'` by default.
     */
     char spec = 's';
 
     /**
-       Index of the argument for positional parameters, from $(D 1) to
-       $(D ubyte.max). ($(D 0) means not used).
+       Index of the argument for positional parameters, from `1` to
+       `ubyte.max`. (`0` means not used).
     */
     ubyte indexStart;
 
     /**
        Index of the last argument for positional parameter range, from
-       $(D 1) to $(D ubyte.max). ($(D 0) means not used).
+       `1` to `ubyte.max`. (`0` means not used).
     */
     ubyte indexEnd;
 
     version(StdDdoc)
     {
         /**
-         The format specifier contained a $(D '-') ($(D printf)
+         The format specifier contained a `'-'` (`printf`
          compatibility).
          */
         bool flDash;
 
         /**
-         The format specifier contained a $(D '0') ($(D printf)
+         The format specifier contained a `'0'` (`printf`
          compatibility).
          */
         bool flZero;
 
         /**
-         The format specifier contained a $(D ' ') ($(D printf)
+         The format specifier contained a $(D ' ') (`printf`
          compatibility).
          */
         bool flSpace;
 
         /**
-         The format specifier contained a $(D '+') ($(D printf)
+         The format specifier contained a `'+'` (`printf`
          compatibility).
          */
         bool flPlus;
 
         /**
-         The format specifier contained a $(D '#') ($(D printf)
+         The format specifier contained a `'#'` (`printf`
          compatibility).
          */
         bool flHash;
@@ -735,7 +735,7 @@ struct FormatSpec(Char)
 
     /**
        In case of a compound format specifier, $(D _sep) contains the
-       string positioning after $(D "%|").
+       string positioning after `"%|"`.
      */
     const(Char)[] sep;
 
@@ -746,19 +746,19 @@ struct FormatSpec(Char)
 
     /*
        This string is inserted before each sequence (e.g. array)
-       formatted (by default $(D "[")).
+       formatted (by default `"["`).
      */
     enum immutable(Char)[] seqBefore = "[";
 
     /*
        This string is inserted after each sequence formatted (by
-       default $(D "]")).
+       default `"]"`).
      */
     enum immutable(Char)[] seqAfter = "]";
 
     /*
        This string is inserted after each element keys of a sequence (by
-       default $(D ":")).
+       default `":"`).
      */
     enum immutable(Char)[] keySeparator = ":";
 
@@ -769,7 +769,7 @@ struct FormatSpec(Char)
     enum immutable(Char)[] seqSeparator = ", ";
 
     /**
-       Construct a new $(D FormatSpec) using the format string $(D fmt), no
+       Construct a new `FormatSpec` using the format string `fmt`, no
        processing is done until needed.
      */
     this(in Char[] fmt) @safe pure
@@ -1201,14 +1201,14 @@ struct FormatSpec(Char)
 }
 
 /**
-Helper function that returns a $(D FormatSpec) for a single specifier given
-in $(D fmt)
+Helper function that returns a `FormatSpec` for a single specifier given
+in `fmt`
 
 Params:
     fmt = A format specifier
 
 Returns:
-    A $(D FormatSpec) with the specifier parsed.
+    A `FormatSpec` with the specifier parsed.
 
 Enforces giving only one specifier to the function.
   */
@@ -1248,13 +1248,13 @@ unittest
 }
 
 /**
-$(D bool)s are formatted as "true" or "false" with %s and as "1" or
+`bool`s are formatted as "true" or "false" with %s and as "1" or
 "0" with integral-specific format specs.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -1331,12 +1331,12 @@ unittest
 }
 
 /**
-$(D null) literal is formatted as $(D "null").
+`null` literal is formatted as `"null"`.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
@@ -1367,12 +1367,12 @@ unittest
 }
 
 /**
-Integrals are formatted like $(D printf) does.
+Integrals are formatted like `printf` does.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -1612,12 +1612,12 @@ unittest
 }
 
 /**
-Floating-point values are formatted like $(D printf) does.
+Floating-point values are formatted like `printf` does.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -1766,12 +1766,12 @@ unittest
 }
 
 /*
-Formatting a $(D creal) is deprecated but still kept around for a while.
+Formatting a `creal` is deprecated but still kept around for a while.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
@@ -1822,12 +1822,12 @@ unittest
 }
 
 /*
-   Formatting an $(D ireal) is deprecated but still kept around for a while.
+   Formatting an `ireal` is deprecated but still kept around for a while.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
@@ -1867,14 +1867,14 @@ unittest
 }
 
 /**
-Individual characters ($(D char), $(D wchar), or $(D dchar)) are formatted as
+Individual characters (`char`, `wchar`, or `dchar`) are formatted as
 Unicode characters with %s and as integers with integral-specific format
 specs.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -1942,12 +1942,12 @@ unittest
 }
 
 /**
-Strings are formatted like $(D printf) does.
+Strings are formatted like `printf` does.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -2021,9 +2021,9 @@ unittest
 Static-size arrays are formatted as dynamic arrays.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, auto ref T obj, ref FormatSpec!Char f)
 if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -2060,13 +2060,13 @@ unittest    // Test for issue 8310
 Dynamic arrays are formatted as input ranges.
 
 Specializations:
-    $(UL $(LI $(D void[]) is formatted like $(D ubyte[]).)
+    $(UL $(LI `void[]` is formatted like `ubyte[]`.)
         $(LI Const array is converted to input range by removing its qualifier.))
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -2600,13 +2600,13 @@ if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 }
 
 /**
-   Associative arrays are formatted by using $(D ':') and $(D ", ") as
-   separators, and enclosed by $(D '[') and $(D ']').
+   Associative arrays are formatted by using `':'` and $(D ", ") as
+   separators, and enclosed by `'['` and `']'`.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     obj = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
@@ -2828,9 +2828,9 @@ unittest
 }
 
 /**
-   Aggregates ($(D struct), $(D union), $(D class), and $(D interface)) are
-   basically formatted by calling $(D toString).
-   $(D toString) should have one of the following signatures:
+   Aggregates (`struct`, `union`, `class`, and `interface`) are
+   basically formatted by calling `toString`.
+   `toString` should have one of the following signatures:
 
 ---
 const void toString(scope void delegate(const(char)[]) sink, FormatSpec fmt);
@@ -2840,11 +2840,11 @@ const string toString();
 ---
 
    For the class objects which have input range interface,
-   $(UL $(LI If the instance $(D toString) has overridden
-             $(D Object.toString), it is used.)
+   $(UL $(LI If the instance `toString` has overridden
+             `Object.toString`, it is used.)
         $(LI Otherwise, the objects are formatted as input range.))
 
-   For the struct and union objects which does not have $(D toString),
+   For the struct and union objects which does not have `toString`,
    $(UL $(LI If they have range interface, formatted as input range.)
         $(LI Otherwise, they are formatted like $(D Type(field1, filed2, ...)).))
 
@@ -2892,7 +2892,7 @@ if (is(T == class) && !is(T == enum))
 }
 
 /++
-   $(D formatValue) allows to reuse existing format specifiers:
+   `formatValue` allows to reuse existing format specifiers:
  +/
 unittest
 {
@@ -2919,7 +2919,7 @@ unittest
 }
 
 /++
-   The following code compares the use of $(D formatValue) and $(D formattedWrite).
+   The following code compares the use of `formatValue` and `formattedWrite`.
  +/
 unittest
 {
@@ -3207,12 +3207,12 @@ unittest
 }
 
 /**
-$(D enum) is formatted like its base value.
+`enum` is formatted like its base value.
 
 Params:
-    w = The $(D OutputRange) to write to.
+    w = The `OutputRange` to write to.
     val = The value to write.
-    f = The $(D FormatSpec) defining how to write the value.
+    f = The `FormatSpec` defining how to write the value.
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == enum))
@@ -5006,22 +5006,22 @@ private TypeInfo primitiveTypeInfo(Mangle m)
  * The variadic arguments are consumed in order.  Each is formatted
  * into a sequence of chars, using the default format specification
  * for its type, and the characters are sequentially passed to putc.
- * If a $(D char[]), $(D wchar[]), or $(D dchar[]) argument is
+ * If a `char[]`, `wchar[]`, or `dchar[]` argument is
  * encountered, it is interpreted as a format string. As many
  * arguments as specified in the format string are consumed and
  * formatted according to the format specifications in that string and
  * passed to putc. If there are too few remaining arguments, a
- * $(D FormatException) is thrown. If there are more remaining arguments than
+ * `FormatException` is thrown. If there are more remaining arguments than
  * needed by the format specification, the default processing of
  * arguments resumes until they are all consumed.
  *
  * Params:
  *        putc =        Output is sent do this delegate, character by character.
- *        arguments = Array of $(D TypeInfo)s, one for each argument to be formatted.
+ *        arguments = Array of `TypeInfo`s, one for each argument to be formatted.
  *        argptr = Points to variadic argument list.
  *
  * Throws:
- *        Mismatched arguments and formats result in a $(D FormatException) being thrown.
+ *        Mismatched arguments and formats result in a `FormatException` being thrown.
  *
  * Format_String:
  *        <a name="format-string">$(I Format strings)</a>
@@ -6594,7 +6594,7 @@ unittest
 /*****************************************************
  * Format arguments into buffer <i>buf</i> which must be large
  * enough to hold the result. Throws RangeError if it is not.
- * Returns: The slice of $(D buf) containing the formatted string.
+ * Returns: The slice of `buf` containing the formatted string.
  *
  *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
  *        implementation. in November 2012.

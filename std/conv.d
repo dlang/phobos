@@ -277,7 +277,7 @@ might fail the range check.
 /**
    Entry point that dispatches to the appropriate conversion
    primitive. Client code normally calls $(D _to!TargetType(value))
-   (and not some variant of $(D toImpl)).
+   (and not some variant of `toImpl`).
  */
 template to(T)
 {
@@ -528,7 +528,7 @@ T toImpl(T, S)(S value)
 
 /**
 When target type supports 'converting construction', it is used.
-$(UL $(LI If target type is struct, $(D T(value)) is used.)
+$(UL $(LI If target type is struct, `T(value)` is used.)
      $(LI If target type is class, $(D new T(value)) is used.))
 */
 T toImpl(T, S)(S value)
@@ -789,21 +789,21 @@ T toImpl(T, S)(S value)
 Stringize conversion from all types is supported.
 $(UL
   $(LI String _to string conversion works for any two string types having
-       ($(D char), $(D wchar), $(D dchar)) character widths and any
-       combination of qualifiers (mutable, $(D const), or $(D immutable)).)
+       (`char`, `wchar`, `dchar`) character widths and any
+       combination of qualifiers (mutable, `const`, or `immutable`).)
   $(LI Converts array (other than strings) to string.
-       Each element is converted by calling $(D to!T).)
+       Each element is converted by calling `to!T`.)
   $(LI Associative array to string conversion.
-       Each element is printed by calling $(D to!T).)
-  $(LI Object to string conversion calls $(D toString) against the object or
-       returns $(D "null") if the object is null.)
-  $(LI Struct to string conversion calls $(D toString) against the struct if
+       Each element is printed by calling `to!T`.)
+  $(LI Object to string conversion calls `toString` against the object or
+       returns `"null"` if the object is null.)
+  $(LI Struct to string conversion calls `toString` against the struct if
        it is defined.)
-  $(LI For structs that do not define $(D toString), the conversion to string
+  $(LI For structs that do not define `toString`, the conversion to string
        produces the list of fields.)
   $(LI Enumerated types are converted to strings as their symbolic names.)
-  $(LI Boolean values are printed as $(D "true") or $(D "false").)
-  $(LI $(D char), $(D wchar), $(D dchar) to a string type.)
+  $(LI Boolean values are printed as `"true"` or `"false"`.)
+  $(LI `char`, `wchar`, `dchar` to a string type.)
   $(LI Unsigned or signed integers to strings.
        $(DL $(DT [special case])
             $(DD Convert integral value to string in $(D_PARAM radix) radix.
@@ -813,8 +813,8 @@ $(UL
             and their case is determined by the $(D_PARAM letterCase) parameter.)))
   $(LI All floating point types to all string types.)
   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
-       If pointer is $(D char*), treat it as C-style strings.
-       In that case, this function is $(D @system).))
+       If pointer is `char*`, treat it as C-style strings.
+       In that case, this function is `@system`.))
 */
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
@@ -914,7 +914,7 @@ T toImpl(T, S)(S value)
 }
 
 /*
-    Check whether type $(D T) can be used in a switch statement.
+    Check whether type `T` can be used in a switch statement.
     This is useful for compile-time generation of switch case statements.
 */
 private template isSwitchable(E)
@@ -1390,7 +1390,7 @@ unittest
 
 /**
 Array-to-array conversion (except when target is a string type)
-converts each element in turn by using $(D to).
+converts each element in turn by using `to`.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
@@ -3155,8 +3155,8 @@ package void skipWS(R)(ref R r)
 
 /**
  * Parses an array from a string given the left bracket (default $(D
- * '[')), right bracket (default $(D ']')), and element separator (by
- * default $(D ',')).
+ * '[')), right bracket (default `']'`), and element separator (by
+ * default `','`).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
     if (isExactSomeString!Source &&
@@ -3336,8 +3336,8 @@ Lfewerr:
 
 /**
  * Parses an associative array from a string given the left bracket (default $(D
- * '[')), right bracket (default $(D ']')), key-value separator (default $(D
- * ':')), and element seprator (by default $(D ',')).
+ * '[')), right bracket (default `']'`), key-value separator (default $(D
+ * ':')), and element seprator (by default `','`).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
     if (isExactSomeString!Source &&
@@ -3633,18 +3633,18 @@ unittest
 
 
 /***************************************************************
-The $(D octal) facility is intended as an experimental facility to
-replace _octal literals starting with $(D '0'), which many find
-confusing. Using $(D octal!177) or $(D octal!"177") instead of $(D
+The `octal` facility is intended as an experimental facility to
+replace _octal literals starting with `'0'`, which many find
+confusing. Using `octal!177` or `octal!"177"` instead of $(D
 0177) as an _octal literal makes code clearer and the intent more
 visible. If use of this facility becomes predominant, a future
 version of the language may deem old-style _octal literals deprecated.
 
 The rules for strings are the usual for literals: If it can fit in an
-$(D int), it is an $(D int). Otherwise, it is a $(D long). But, if the
-user specifically asks for a $(D long) with the $(D L) suffix, always
-give the $(D long). Give an unsigned iff it is asked for with the $(D
-U) or $(D u) suffix. _Octals created from integers preserve the type
+`int`, it is an `int`. Otherwise, it is a `long`. But, if the
+user specifically asks for a `long` with the `L` suffix, always
+give the `long`. Give an unsigned iff it is asked for with the $(D
+U) or `u` suffix. _Octals created from integers preserve the type
 of the passed-in integral.
  */
 @property int octal(string num)()
@@ -4088,12 +4088,12 @@ ref T emplaceOpCaller(T, Args...)(ref T chunk, auto ref Args args)
 
 // emplace
 /**
-Given a pointer $(D chunk) to uninitialized memory (but already typed
-as $(D T)), constructs an object of non-$(D class) type $(D T) at that
+Given a pointer `chunk` to uninitialized memory (but already typed
+as `T`), constructs an object of non-`class` type `T` at that
 address.
 
 Returns: A pointer to the newly constructed object (which is the same
-as $(D chunk)).
+as `chunk`).
  */
 T* emplace(T)(T* chunk) @safe pure nothrow
 {
@@ -4102,15 +4102,15 @@ T* emplace(T)(T* chunk) @safe pure nothrow
 }
 
 /**
-Given a pointer $(D chunk) to uninitialized memory (but already typed
-as a non-class type $(D T)), constructs an object of type $(D T) at
-that address from arguments $(D args).
+Given a pointer `chunk` to uninitialized memory (but already typed
+as a non-class type `T`), constructs an object of type `T` at
+that address from arguments `args`.
 
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
+This function can be `@trusted` if the corresponding constructor of
+`T` is `@safe`.
 
 Returns: A pointer to the newly constructed object (which is the same
-as $(D chunk)).
+as `chunk`).
  */
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
 if (!is(T == struct) && Args.length == 1)
@@ -4960,15 +4960,15 @@ private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignmen
 }
 
 /**
-Given a raw memory area $(D chunk), constructs an object of $(D class)
-type $(D T) at that address. The constructor is passed the arguments
-$(D Args). The $(D chunk) must be as least as large as $(D T) needs
-and should have an alignment multiple of $(D T)'s alignment. (The size
-of a $(D class) instance is obtained by using $(D
+Given a raw memory area `chunk`, constructs an object of `class`
+type `T` at that address. The constructor is passed the arguments
+`Args`. The `chunk` must be as least as large as `T` needs
+and should have an alignment multiple of `T`'s alignment. (The size
+of a `class` instance is obtained by using $(D
 __traits(classInstanceSize, T))).
 
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
+This function can be `@trusted` if the corresponding constructor of
+`T` is `@safe`.
 
 Returns: A pointer to the newly constructed object.
  */
@@ -5007,14 +5007,14 @@ unittest
 }
 
 /**
-Given a raw memory area $(D chunk), constructs an object of non-$(D
-class) type $(D T) at that address. The constructor is passed the
-arguments $(D args), if any. The $(D chunk) must be as least as large
-as $(D T) needs and should have an alignment multiple of $(D T)'s
+Given a raw memory area `chunk`, constructs an object of non-$(D
+class) type `T` at that address. The constructor is passed the
+arguments `args`, if any. The `chunk` must be as least as large
+as `T` needs and should have an alignment multiple of `T`'s
 alignment.
 
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
+This function can be `@trusted` if the corresponding constructor of
+`T` is `@safe`.
 
 Returns: A pointer to the newly constructed object.
  */
@@ -5116,10 +5116,10 @@ unittest
 
 
 /**
-    Returns the corresponding _unsigned value for $(D x) (e.g. if $(D x) has type
-    $(D int), it returns $(D cast(uint) x)). The advantage compared to the cast
-    is that you do not need to rewrite the cast if $(D x) later changes type
-    (e.g from $(D int) to $(D long)).
+    Returns the corresponding _unsigned value for `x` (e.g. if `x` has type
+    `int`, it returns $(D cast(uint) x)). The advantage compared to the cast
+    is that you do not need to rewrite the cast if `x` later changes type
+    (e.g from `int` to `long`).
 
     Note that the result is always mutable even if the original type was const
     or immutable. In order to retain the constness, use $(XREF traits, Unsigned).
@@ -5190,10 +5190,10 @@ unittest
 
 
 /**
-    Returns the corresponding _signed value for $(D x) (e.g. if $(D x) has type
-    $(D uint), it returns $(D cast(int) x)). The advantage compared to the cast
-    is that you do not need to rewrite the cast if $(D x) later changes type
-    (e.g from $(D uint) to $(D ulong)).
+    Returns the corresponding _signed value for `x` (e.g. if `x` has type
+    `uint`, it returns $(D cast(int) x)). The advantage compared to the cast
+    is that you do not need to rewrite the cast if `x` later changes type
+    (e.g from `uint` to `ulong`).
 
     Note that the result is always mutable even if the original type was const
     or immutable. In order to retain the constness, use $(XREF traits, Signed).
@@ -5265,7 +5265,7 @@ unittest
         From  = The type to cast from. The programmer must ensure it is legal
                 to make this cast.
         To    = The type to cast to
-        value = The value to cast. It must be of type $(D From),
+        value = The value to cast. It must be of type `From`,
                 otherwise a compile-time error is emitted.
 
     Returns:

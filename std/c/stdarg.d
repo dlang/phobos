@@ -1,6 +1,6 @@
 
 /**
- * $(RED Deprecated. Please use $(D core.stdc.stdarg) instead.  This module will
+ * $(RED Deprecated. Please use `core.stdc.stdarg` instead.  This module will
  *       be removed in December 2015.)
  * C's &lt;stdarg.h&gt;
  * Authors: Hauke Duden and Walter Bright, Digital Mars, www.digitalmars.com
