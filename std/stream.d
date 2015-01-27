@@ -1206,10 +1206,7 @@ class Stream : InputStream, OutputStream {
   // returns number of bytes written
   size_t printf(const(char)[] format, ...) {
     va_list ap;
-    static if (is(typeof(__va_argsave)))
-        va_start(ap, __va_argsave);
-    else
-        va_start(ap, format);
+    va_start(ap, format);
     auto result = vprintf(format, ap);
     va_end(ap);
     return result;
