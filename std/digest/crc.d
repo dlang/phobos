@@ -1,8 +1,9 @@
 /**
 Cyclic Redundancy Check (32-bit) implementation.
 
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -12,6 +13,7 @@ $(TR $(TDNW Template API) $(TD $(MYREF CRC32)
 $(TR $(TDNW OOP API) $(TD $(MYREF CRC32Digest))
 )
 $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
+)
 )
 )
 

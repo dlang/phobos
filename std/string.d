@@ -6,6 +6,7 @@ $(D std.algorithm) because all D strings are bidirectional ranges.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions) )
 $(TR $(TDNW Searching)
@@ -51,6 +52,7 @@ $(TR $(TDNW Miscellaneous)
     $(TD $(MYREF fromStringz) $(MYREF toStringz) $(MYREF splitLines)
     $(MYREF representation) $(MYREF assumeUTF)
     )
+)
 )
 )
 

@@ -2,8 +2,9 @@
  * Computes RIPEMD-160 hashes of arbitrary data. RIPEMD-160 hashes are 20 byte quantities
  * that are like a checksum or CRC, but are more robust.
  *
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -13,6 +14,7 @@ $(TR $(TDNW Template API) $(TD $(MYREF RIPEMD160)
 $(TR $(TDNW OOP API) $(TD $(MYREF RIPEMD160Digest))
 )
 $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
+)
 )
 )
 

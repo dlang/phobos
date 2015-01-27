@@ -4,8 +4,9 @@
  * quantities (depending on the SHA algorithm) that are like a checksum or CRC,
  * but are more robust.
  *
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -15,6 +16,7 @@ $(TR $(TDNW Template API) $(TD $(MYREF SHA1)
 $(TR $(TDNW OOP API) $(TD $(MYREF SHA1Digest))
 )
 $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
+)
 )
 )
 

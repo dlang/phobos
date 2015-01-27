@@ -7,6 +7,7 @@
  *
 $(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Members) )
 $(TR $(TDNW Constants) $(TD
@@ -52,6 +53,7 @@ $(TR $(TDNW Complex Numbers) $(TD
 $(TR $(TDNW Hardware Control) $(TD
     $(MYREF IeeeFlags) $(MYREF FloatingPointControl)
 ))
+)
 )
 
  * The functionality closely follows the IEEE754-2008 standard for

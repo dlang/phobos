@@ -6,10 +6,11 @@ sequences. Sequences processed by these functions define range-based
 interfaces.  See also $(LINK2 std_range.html, Reference on ranges) and
 $(WEB ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+$(SCRIPT inhibitQuickIndex = 1;)
 
 Algorithms are categorized into the following submodules:
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Submodule) $(TH Functions)
 )
@@ -132,6 +133,7 @@ $(TR $(TDNW Utility)
     $(TD $(MYREF forward)
     )
 ))
+)
 
 Many functions in this package are parameterized with a function or a
 $(GLOSSARY predicate). The predicate may be passed either as a

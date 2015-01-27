@@ -5,8 +5,9 @@ Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
 
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -17,6 +18,7 @@ $(MYREF byLineAsync) $(MYREF byChunkAsync) )
 )
 $(TR $(TDNW Low level) $(TD $(MYREF HTTP) $(MYREF FTP) $(MYREF
 SMTP) )
+)
 )
 )
 

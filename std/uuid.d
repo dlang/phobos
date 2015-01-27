@@ -6,8 +6,9 @@
  * used to tag objects with very short lifetimes, or to reliably identify very
  * persistent objects across a network.
  *
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -23,6 +24,7 @@ $(MYREF2 UUID.opEquals, opEquals) $(MYREF2 UUID.opCmp, opCmp) $(MYREF2 UUID.toHa
 )
 $(TR $(TDNW UUID namespaces) $(TD $(MYREF dnsNamespace) $(MYREF urlNamespace)
 $(MYREF oidNamespace) $(MYREF x500Namespace) )
+)
 )
 )
 
