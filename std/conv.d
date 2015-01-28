@@ -2378,7 +2378,7 @@ Target parse(Target, Source)(ref Source p)
 
     ConvException bailOut()(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
-        if (!msg)
+        if (msg == null)
             msg = "Floating point conversion error";
         return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }

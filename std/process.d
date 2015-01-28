@@ -879,7 +879,7 @@ unittest // Specifying empty working directory.
     TestScript prog = "";
 
     string directory = "";
-    assert(directory && !directory.length);
+    assert(directory.ptr && !directory.length);
     spawnProcess([prog.path], null, Config.none, directory).wait();
 }
 

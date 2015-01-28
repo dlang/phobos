@@ -252,7 +252,7 @@ mixin template Signal(T1...)
          * know that this object is destroyed so they are not left
          * with dangling references to it.
          */
-        if (slots)
+        if (slots.length)
         {
             foreach (slot; slots[0 .. slots_idx])
             {
@@ -386,20 +386,20 @@ unittest {
         a.s2.connect(&o2.watchInt);
         a.s3.connect(&o3.watchLong);
 
-        assert(!o1.i && !o1.l && !o1.str);
-        assert(!o2.i && !o2.l && !o2.str);
-        assert(!o3.i && !o3.l && !o3.str);
+        assert(!o1.i && !o1.l && o1.str == null);
+        assert(!o2.i && !o2.l && o2.str == null);
+        assert(!o3.i && !o3.l && o3.str == null);
 
         a.value1 = 11;
         assert(o1.i == 11 && !o1.l && o1.str == "str1");
-        assert(!o2.i && !o2.l && !o2.str);
-        assert(!o3.i && !o3.l && !o3.str);
+        assert(!o2.i && !o2.l && o2.str == null);
+        assert(!o3.i && !o3.l && o3.str == null);
         o1.i = -11; o1.str = "x1";
 
         a.value2 = 12;
         assert(o1.i == -11 && !o1.l && o1.str == "x1");
         assert(o2.i == 12 && !o2.l && o2.str == "str2");
-        assert(!o3.i && !o3.l && !o3.str);
+        assert(!o3.i && !o3.l && o3.str == null);
         o2.i = -12; o2.str = "x2";
 
         a.value3 = 13;
@@ -468,20 +468,20 @@ unittest {
     a.s5.connect(&o5.watchInt);
     a.s6.connect(&o6.watchLong);
 
-    assert(!o4.i && !o4.l && !o4.str);
-    assert(!o5.i && !o5.l && !o5.str);
-    assert(!o6.i && !o6.l && !o6.str);
+    assert(!o4.i && !o4.l && o4.str == null);
+    assert(!o5.i && !o5.l && o5.str == null);
+    assert(!o6.i && !o6.l && o6.str == null);
 
     a.value4 = 44;
     assert(o4.i == 44 && !o4.l && o4.str == "str4");
-    assert(!o5.i && !o5.l && !o5.str);
-    assert(!o6.i && !o6.l && !o6.str);
+    assert(!o5.i && !o5.l && o5.str == null);
+    assert(!o6.i && !o6.l && o6.str == null);
     o4.i = -44; o4.str = "x4";
 
     a.value5 = 45;
     assert(o4.i == -44 && !o4.l && o4.str == "x4");
     assert(o5.i == 45 && !o5.l && o5.str == "str5");
-    assert(!o6.i && !o6.l && !o6.str);
+    assert(!o6.i && !o6.l && o6.str == null);
     o5.i = -45; o5.str = "x5";
 
     a.value6 = 46;

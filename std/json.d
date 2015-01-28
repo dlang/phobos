@@ -714,7 +714,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                 goto Next;
         }
 
-        return str.data ? str.data : "";
+        return str.data.length ? str.data : "";
     }
 
     void parseValue(JSONValue* value)

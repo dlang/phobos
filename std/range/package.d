@@ -8053,7 +8053,7 @@ unittest
         assert(wrapper[2] == 2);
         assert(arr == [1, 42, 2, 41, 3, 40, 4, 42, 9]);
 
-        assert(*wrapper[3 .. 6].ptr, [41, 3, 40]);
+        assert(*wrapper[3 .. 6].ptr != null, [41, 3, 40]);
         assert(arr == [1, 42, 2, 41, 3, 40, 4, 42, 9]);
     }
 
