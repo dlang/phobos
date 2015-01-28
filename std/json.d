@@ -593,11 +593,30 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 
     int depth = -1;
     dchar next = 0;
-    int line = 1, pos = 1;
+    int line = 1, pos = 0;
 
     void error(string msg)
     {
         throw new JSONException(msg, line, pos);
+    }
+
+    dchar popChar()
+    {
+        if (json.empty) error("Unexpected end of data.");
+        dchar c = json.front;
+        json.popFront();
+
+        if(c == '\n')
+        {
+            line++;
+            pos = 0;
+        }
+        else
+        {
+            pos++;
+        }
+
+        return c;
     }
 
     dchar peekChar()
@@ -605,8 +624,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
         if(!next)
         {
             if(json.empty) return '\0';
-            next = json.front;
-            json.popFront();
+            next = popChar();
         }
         return next;
     }
@@ -627,21 +645,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
             next = 0;
         }
         else
-        {
-            if(json.empty) error("Unexpected end of data.");
-            c = json.front;
-            json.popFront();
-        }
-
-        if(c == '\n' || (c == '\r' && peekChar() != '\n'))
-        {
-            line++;
-            pos = 1;
-        }
-        else
-        {
-            pos++;
-        }
+            c = popChar();
 
         return c;
     }
@@ -1345,4 +1349,21 @@ unittest
     jv = [5, 4, 3, 2, 1];
     assert( jv.type == JSON_TYPE.ARRAY );
     assert( jv[3].integer == 2 );
+}
+
+unittest
+{
+    auto s = q"EOF
+[
+  1,
+  2,
+  3,
+  potato
+]
+EOF";
+
+    import std.exception;
+
+    auto e = collectException!JSONException(parseJSON(s));
+    assert(e.msg == "Unexpected character 'p'. (Line 5:3)", e.msg);
 }
