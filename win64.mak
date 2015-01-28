@@ -354,7 +354,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_file.html \
 	$(DOC)\std_format.html \
 	$(DOC)\std_functional.html \
-	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
@@ -378,7 +377,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_stream.html \
 	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
-	$(DOC)\std_thread.html \
 	$(DOC)\std_traits.html \
 	$(DOC)\std_typecons.html \
 	$(DOC)\std_typetuple.html \
