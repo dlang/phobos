@@ -5,18 +5,18 @@ This module defines generic containers.
 
 Construction:
 
-To implement the different containers both struct and D class based
-approaches have been used. However you do not have to care about this
-as long as you use $(XREF container_util, make) for construction.
+To implement the different containers both struct and class based
+approaches have been used. $(XREF container_util, make) allows for
+uniform construction with either approach.
 
 ---
 import std.container;
-// Construct a red-black tree and an array containing the values 1, 2, 3 each.
-// RedBlackTree must be allocated using new
+// Construct a red-black tree and an array both containing the values 1, 2, 3.
+// RedBlackTree should typically be allocated using `new`
 RedBlackTree!int rbTree = new RedBlackTree!int(1, 2, 3);
-// But you cannot use new with Array
+// But `new` should not be used with Array
 Array!int array = Array!int(1, 2, 3);
-// make hides the differences
+// `make` hides the differences
 RedBlackTree!int rbTree2 = make!(RedBlackTree!int)(1, 2, 3);
 Array!int array = make!(Array!int)(1, 2, 3);
 ---
@@ -26,7 +26,7 @@ Reference_semantics:
 All containers have reference semantics, which means that after
 assignment both variables refer to the same underlying data.
 
-To make a copy of a _container, use the primitive $(D c._dup).
+To make a copy of a _container, use the $(D c._dup) _container primitive.
 ---
 import std.container, std.range;
 Array!int originalArray = make!(Array!int)(1, 2, 3);
@@ -37,15 +37,16 @@ assert(equal(originalArray[], secondArray[]));
 originalArray[0] = 12;
 assert(secondArray[0] == 12);
 
-// secondArray now refers to a independent copy of originalArray
+// secondArray now refers to an independent copy of originalArray
 secondArray = originalArray.dup;
 secondArray[0] = 1;
 // assert that originalArray has not been effected
 assert(originalArray[0] == 12);
 ---
 
-$(B Attention:) If you use an uninitialized _container you will
-dereference a _null pointer, if the _container was implemented as a class.
+$(B Attention:) If the _container is implemented as a class, using an
+uninitialized instance can cause a null pointer dereference.
+
 ---
 import std.container;
 
@@ -53,8 +54,8 @@ RedBlackTree!int rbTree;
 rbTree.insert(5); // null pointer dereference
 ---
 
-If you use a struct-based _container it will work, because the struct
-intializes itself upon use. However up to this point the _container will not
+Using an uninitialized struct-based _container will work, because the struct
+intializes itself upon use; however, up to this point the _container will not
 have an identity and assignment does not create two references to the same
 data.
 
@@ -77,8 +78,8 @@ assert(array2.empty);
 ---
 It is therefore recommended to always construct containers using $(XREF container_util, make).
 
-This is in fact necessary if you want to put containers into another container.
-Thus to construct an $(D Array) of (e.g) ten other empty $(D Arrays), use
+This is in fact necessary to put containers into another _container.
+For example, to construct an $(D Array) of ten empty $(D Array)s, use
 the following that calls $(D make) ten times.
 
 ---
@@ -96,8 +97,8 @@ This module consists of the following submodules:
 $(UL
     $(LI
         The $(LINK2 std_container_array.html, std._container.array) module provides
-        an $(D Array) type with deterministic control of memory, not reliant on
-        the GC unlike the built-in arrays.
+        an array type with deterministic control of memory, not reliant on
+        the GC unlike built-in arrays.
     )
     $(LI
         The $(LINK2 std_container_binaryheap.html, std._container.binaryheap) module
@@ -118,41 +119,43 @@ $(UL
     )
     $(LI
         The $(LINK2 std_container_util.html, std._container.util) module contains
-        some generic tools commonly used by container implementations.
+        some generic tools commonly used by _container implementations.
     )
 )
 
-A_containers_primary_range:
+The_primary_range_of_a_container:
 
-While some _container offer direct access to its elements e.g. via
-$(D opIndex), $(D c.front()) or $(D c.back()), you'll in generall access
-and modify _container's contents using its primary $(LINK2 std_range_package.html, range) type, which is aliased as $(D c.Range),
-e.g. the primary range type of $(D Array!int) is $(D Array!int.Range).
+While some _containers offer direct access to their elements e.g. via
+$(D opIndex), $(D c.front) or $(D c.back), access
+and modification of a _container's contents is generally done through
+its primary $(LINK2 std_range_package.html, range) type,
+which is aliased as $(D C.Range). For example, the primary range type of
+$(D Array!int) is $(D Array!int.Range).
 
-If the documentation of a member function of a container takes a
+If the documentation of a member function of a _container takes a
 a parameter of type $(D Range), then it refers to the primary range type of
-this container. And you'll have to pass a range obtained from the same
-container you call the member function on.
+this _container. Arguments to these parameters must be obtained from the same
+_container instance as the one being worked with.
 
-If you can pass any type of $(LINK2 std_range_package.html, range) to
-a member function, the documention usually refers to this (templated)
-parameter type as $(D Stuff).
+When any $(LINK2 std_range_package.html, range) can be passed as an argument to
+a member function, the documention usually refers to the parameter's templated
+type as $(D Stuff).
 
 Container_primitives:
 
-The containers do not form a class hierarchy, instead they implement a
+Containers do not form a class hierarchy, instead they implement a
 common set of primitives (see table below). These primitives each guarantee
 a specific worst case complexity and thus allow generic code to be written
-independently of the container implementation.
+independently of the _container implementation.
 
 For example the primitives $(D c.remove(r)) and $(D c.linearRemove(r)) both
-remove the sequence of elements in range $(D r) from the container $(D c).
+remove the sequence of elements in range $(D r) from the _container $(D c).
 The primitive $(D c.remove(r)) guarantees $(BIGOH 1) complexity and
 $(D c.linearRemove(r)) relaxes this guarantee to $(BIGOH n) (where $(D n)
-is the length of the container $(D c)).
+is the length of the _container $(D c)).
 
 Since a sequence of elements can be removed from a $(LINK2 std_container_dlist.html, doubly linked list)
-in constant time $(D DList) provides the primitive $(D c.remove(r))
+in constant time, $(D DList) provides the primitive $(D c.remove(r))
 as well as $(D c.linearRemove(r)). On the other hand a
 $(LINK2 std_container_array.html, Array) only offers $(D c.linearRemove(r)).
 
@@ -234,7 +237,7 @@ last element of the _container, in a _container-defined order.))
 
 $(TR $(TDNW $(D c.moveBack)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
 Destructively reads and returns the last element of the
-container. The slot is not removed from the _container; it is left
+_container. The slot is not removed from the _container; it is left
 initialized with $(D T.init). This routine need not be defined if $(D
 front) returns a $(D ref).))
 
@@ -243,7 +246,7 @@ $(D v) to the last element of the _container.))
 
 $(TR $(TDNW $(D c[x])) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Provides
 indexed access into the _container. The index type is
-_container-defined. A container may define several index types (and
+_container-defined. A _container may define several index types (and
 consequently overloaded indexing).))
 
 $(TR  $(TDNW $(D c.moveAt(x))) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
