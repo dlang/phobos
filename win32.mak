@@ -683,9 +683,6 @@ $(DOC)\std_format.html : $(STDDOC) std\format.d
 $(DOC)\std_functional.html : $(STDDOC) std\functional.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_functional.html $(STDDOC) std\functional.d
 
-$(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_gc.html $(STDDOC) $(DRUNTIME)\src\core\memory.d
-
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
 
@@ -748,9 +745,6 @@ $(DOC)\std_string.html : $(STDDOC) std\string.d
 
 $(DOC)\std_system.html : $(STDDOC) std\system.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_system.html $(STDDOC) std\system.d
-
-$(DOC)\std_thread.html : $(STDDOC) $(DRUNTIME)\src\core\thread.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) -I$(DRUNTIME)\src $(DRUNTIME)\src\core\thread.d
 
 $(DOC)\std_traits.html : $(STDDOC) std\traits.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_traits.html $(STDDOC) std\traits.d
