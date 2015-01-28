@@ -18,7 +18,15 @@ RedBlackTree!int rbTree = new RedBlackTree!int(1, 2, 3);
 Array!int array = Array!int(1, 2, 3);
 // `make` hides the differences
 RedBlackTree!int rbTree2 = make!(RedBlackTree!int)(1, 2, 3);
-Array!int array = make!(Array!int)(1, 2, 3);
+Array!int array2 = make!(Array!int)(1, 2, 3);
+---
+
+Note that $(D make) can infer the element type from the given arguments.
+
+---
+import std.container;
+auto rbTree = make!RedBlackTree(1, 2, 3); // RedBlackTree!int
+auto array = make!Array("1", "2", "3"); // Array!string
 ---
 
 Reference_semantics:
