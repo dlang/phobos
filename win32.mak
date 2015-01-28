@@ -132,10 +132,6 @@ SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
     std\container\dlist.d std\container\rbtree.d std\container\slist.d \
     std\container\util.d std\container\package.d
 
-SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
-	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
-	std\experimental\logger\package.d
-    
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
 SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
@@ -155,7 +151,7 @@ SRC_STD_REST= std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
-	std\process.d \
+	std\process.d
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
@@ -191,6 +187,10 @@ SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
+SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
+	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
+	std\experimental\logger\package.d
+    
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
 	std\c\locale.d std\c\wcharh.d
@@ -403,9 +403,18 @@ $(LIB) : $(SRC_TO_COMPILE) \
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
 		$(ZLIB) $(DRUNTIMELIB)
 
-UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
-		unittest3.obj unittest3a.obj unittest3b.obj unittest4.obj \
-		unittest5.obj unittest6.obj unittest7.obj unittest8.obj
+UNITTEST_OBJS= \
+		unittest1.obj \
+		unittest2.obj \
+		unittest2a.obj \
+		unittest3.obj \
+		unittest3a.obj \
+		unittest3b.obj \
+		unittest4.obj \
+		unittest5.obj \
+		unittest6.obj \
+		unittest7.obj \
+		unittest8.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
@@ -421,7 +430,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
-	unittest
+	.\unittest.exe
 
 #unittest : unittest.exe
 #	unittest
@@ -893,12 +902,12 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
+	zip32 -u phobos $(SRC_STD_LOGGER)
 	zip32 -u phobos $(SRC_STD_DIGEST)
 	zip32 -u phobos $(SRC_STD_CONTAINER)
 	zip32 -u phobos $(SRC_STD_REGEX)
 	zip32 -u phobos $(SRC_STD_RANGE)
 	zip32 -u phobos $(SRC_STD_ALGO)
-	zip32 -u phobos $(SRC_STD_LOGGER)
 
 phobos.zip : zip
 
