@@ -142,12 +142,50 @@ $(D Array!int) is $(D Array!int.Range).
 
 If the documentation of a member function of a _container takes a
 a parameter of type $(D Range), then it refers to the primary range type of
-this _container. Arguments to these parameters must be obtained from the same
-_container instance as the one being worked with.
+this _container. Oftentimes $(D Take!Range) will be used, in which case
+the range refers to a span of the elements in the _container. Arguments to
+these parameters $(B must) be obtained from the same _container instance
+as the one being worked with. It is important to note that many generic range
+algorithms return the same range type as their input range.
+
+---
+import std.algorithm : equal, find;
+import std.container;
+import std.range : takeOne;
+
+auto array = make!Array(1, 2, 3);
+
+// `find` returns an Array!int.Range advanced to the element "2"
+array.linearRemove(array[].find(2));
+
+assert(array[].equal([1]));
+
+array = make!Array(1, 2, 3);
+
+// the range given to `linearRemove` is a Take!(Array!int.Range)
+// spanning just the element "2"
+array.linearRemove(array[].find(2).takeOne());
+
+assert(array[].equal([1, 3]));
+---
 
 When any $(LINK2 std_range_package.html, range) can be passed as an argument to
 a member function, the documention usually refers to the parameter's templated
 type as $(D Stuff).
+
+---
+import std.algorithm : equal;
+import std.container;
+import std.range : iota;
+
+auto array = make!Array(1, 2);
+
+// the range type returned by `iota` is completely unrelated to Array,
+// which is fine for Array.insertBack:
+array.insertBack(iota(3, 10));
+
+assert(array[].equal([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+---
 
 Container_primitives:
 
