@@ -1,5 +1,5 @@
 /**
-This module provides a $(D BinaryHeap) adaptor that makes a binary heap out of
+This module provides a `BinaryHeap` adaptor that makes a binary heap out of
 any user-provided random-access range.
 
 This module is a submodule of $(LINK2 std_container_package.html, std.container).
@@ -29,29 +29,29 @@ public import std.container.util;
 /**
 Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
 container on top of a given random-access range type (usually $(D
-T[])) or a random-access container type (usually $(D Array!T)). The
-documentation of $(D BinaryHeap) will refer to the underlying range or
+T[])) or a random-access container type (usually `Array!T`). The
+documentation of `BinaryHeap` will refer to the underlying range or
 container as the $(I store) of the heap.
 
 The binary heap induces structure over the underlying store such that
-accessing the largest element (by using the $(D front) property) is a
+accessing the largest element (by using the `front` property) is a
 $(BIGOH 1) operation and extracting it (by using the $(D
 removeFront()) method) is done fast in $(BIGOH log n) time.
 
-If $(D less) is the less-than operator, which is the default option,
-then $(D BinaryHeap) defines a so-called max-heap that optimizes
+If `less` is the less-than operator, which is the default option,
+then `BinaryHeap` defines a so-called max-heap that optimizes
 extraction of the $(I largest) elements. To define a min-heap,
 instantiate BinaryHeap with $(D "a > b") as its predicate.
 
-Simply extracting elements from a $(D BinaryHeap) container is
-tantamount to lazily fetching elements of $(D Store) in descending
-order. Extracting elements from the $(D BinaryHeap) to completion
+Simply extracting elements from a `BinaryHeap` container is
+tantamount to lazily fetching elements of `Store` in descending
+order. Extracting elements from the `BinaryHeap` to completion
 leaves the underlying store sorted in ascending order but, again,
 yields elements in descending order.
 
-If $(D Store) is a range, the $(D BinaryHeap) cannot grow beyond the
-size of that range. If $(D Store) is a container that supports $(D
-insertBack), the $(D BinaryHeap) may grow by adding elements to the
+If `Store` is a range, the `BinaryHeap` cannot grow beyond the
+size of that range. If `Store` is a container that supports $(D
+insertBack), the `BinaryHeap` may grow by adding elements to the
 container.
      */
 struct BinaryHeap(Store, alias less = "a < b")
@@ -164,12 +164,12 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 public:
 
     /**
-       Converts the store $(D s) into a heap. If $(D initialSize) is
-       specified, only the first $(D initialSize) elements in $(D s)
+       Converts the store `s` into a heap. If `initialSize` is
+       specified, only the first `initialSize` elements in `s`
        are transformed into a heap, after which the heap can grow up
-       to $(D r.length) (if $(D Store) is a range) or indefinitely (if
-       $(D Store) is a container with $(D insertBack)). Performs
-       $(BIGOH min(r.length, initialSize)) evaluations of $(D less).
+       to `r.length` (if `Store` is a range) or indefinitely (if
+       `Store` is a container with `insertBack`). Performs
+       $(BIGOH min(r.length, initialSize)) evaluations of `less`.
      */
     this(Store s, size_t initialSize = size_t.max)
     {
@@ -177,7 +177,7 @@ public:
     }
 
 /**
-Takes ownership of a store. After this, manipulating $(D s) may make
+Takes ownership of a store. After this, manipulating `s` may make
 the heap work incorrectly.
      */
     void acquire(Store s, size_t initialSize = size_t.max)
@@ -207,8 +207,8 @@ heap.
     }
 
 /**
-Clears the heap. Returns the portion of the store from $(D 0) up to
-$(D length), which satisfies the $(LUCKY heap property).
+Clears the heap. Returns the portion of the store from `0` up to
+`length`, which satisfies the $(LUCKY heap property).
      */
     auto release()
     {
@@ -223,7 +223,7 @@ $(D length), which satisfies the $(LUCKY heap property).
     }
 
 /**
-Returns $(D true) if the heap is _empty, $(D false) otherwise.
+Returns `true` if the heap is _empty, `false` otherwise.
      */
     @property bool empty()
     {
@@ -232,7 +232,7 @@ Returns $(D true) if the heap is _empty, $(D false) otherwise.
 
 /**
 Returns a duplicate of the heap. The underlying store must also
-support a $(D dup) method.
+support a `dup` method.
      */
     @property BinaryHeap dup()
     {
@@ -270,7 +270,7 @@ underlying store (if the store is a container).
 
 /**
 Returns a copy of the _front of the heap, which is the largest element
-according to $(D less).
+according to `less`.
      */
     @property ElementType!Store front()
     {
@@ -287,7 +287,7 @@ Clears the heap by detaching it from the underlying store.
     }
 
 /**
-Inserts $(D value) into the store. If the underlying store is a range
+Inserts `value` into the store. If the underlying store is a range
 and $(D length == capacity), throws an exception.
      */
     size_t insert(ElementType!Store value)
@@ -351,7 +351,7 @@ Removes the largest element from the heap.
 /**
 Removes the largest element from the heap and returns a copy of
 it. The element still resides in the heap's store. For performance
-reasons you may want to use $(D removeFront) with heaps of objects
+reasons you may want to use `removeFront` with heaps of objects
 that are expensive to copy.
      */
     ElementType!Store removeAny()
@@ -361,7 +361,7 @@ that are expensive to copy.
     }
 
 /**
-Replaces the largest element in the store with $(D value).
+Replaces the largest element in the store with `value`.
      */
     void replaceFront(ElementType!Store value)
     {
@@ -373,11 +373,11 @@ Replaces the largest element in the store with $(D value).
     }
 
 /**
-If the heap has room to grow, inserts $(D value) into the store and
-returns $(D true). Otherwise, if $(D less(value, front)), calls $(D
-replaceFront(value)) and returns again $(D true). Otherwise, leaves
-the heap unaffected and returns $(D false). This method is useful in
-scenarios where the smallest $(D k) elements of a set of candidates
+If the heap has room to grow, inserts `value` into the store and
+returns `true`. Otherwise, if $(D less(value, front)), calls $(D
+replaceFront(value)) and returns again `true`. Otherwise, leaves
+the heap unaffected and returns `false`. This method is useful in
+scenarios where the smallest `k` elements of a set of candidates
 must be collected.
      */
     bool conditionalInsert(ElementType!Store value)
@@ -410,7 +410,7 @@ unittest
     assert(equal(a, [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]));
 }
 
-/// $(D BinaryHeap) implements the standard input range interface, allowing
+/// `BinaryHeap` implements the standard input range interface, allowing
 /// lazy iteration of the underlying range in descending order.
 unittest
 {
@@ -422,8 +422,8 @@ unittest
 }
 
 /**
-Convenience function that returns a $(D BinaryHeap!Store) object
-initialized with $(D s) and $(D initialSize).
+Convenience function that returns a `BinaryHeap!Store` object
+initialized with `s` and `initialSize`.
  */
 BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
         size_t initialSize = size_t.max)

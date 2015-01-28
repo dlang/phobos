@@ -48,13 +48,13 @@ version(unittest) {
 
 /**
  * Creates a compile-time list of types from a tuple.
- * $(D TypeList)s are more general than tuples because
- * you can pass more than one $(D TypeList) to a template.
+ * `TypeList`s are more general than tuples because
+ * you can pass more than one `TypeList` to a template.
  * You may also combine them into higher-order structures.
- * $(D TypeList)s are passed to other templates as alias parameters
- * To create an empty list use $(D TypeList!())
+ * `TypeList`s are passed to other templates as alias parameters
+ * To create an empty list use `TypeList!()`
  *
- * $(D TypeList) efines several "methods":
+ * `TypeList` efines several "methods":
  *
  * $(D_PARAM toTuple), $(D_PARAM head), $(D_PARAM tail), $(D_PARAM length), $(D_PARAM isEmpty)
  *
@@ -104,7 +104,7 @@ unittest {
 }
 
 /**
- * Appends a type tuple to a $(D TypeList), returns a $(D TypeList)
+ * Appends a type tuple to a `TypeList`, returns a `TypeList`
 */
 template AppendTypes(alias List, T...)
 {
@@ -123,7 +123,7 @@ unittest {
 }
 
 /**
- * Appends one $(D TypeList) to another, returns a $(D TypeList)
+ * Appends one `TypeList` to another, returns a `TypeList`
 */
 template Append(alias Left, alias Right)
 {
@@ -139,7 +139,7 @@ unittest {
 }
 
 /**
- * Prepends a type to a $(D TypeList), returns a $(D TypeList)
+ * Prepends a type to a `TypeList`, returns a `TypeList`
 */
 template Cons(T, alias List)
 {
@@ -160,7 +160,7 @@ unittest {
 }
 
 /**
- * Tests if all emements of a $(D TypeList) against a predicate.
+ * Tests if all emements of a `TypeList` against a predicate.
  * Returns true if all all types satisfy the predicate, false otherwise.
 */
 template All(alias List, alias F)
@@ -187,7 +187,7 @@ unittest {
 }
 
 /**
- * Tests if there is an emement in a $(D TypeList) that satisfies a predicate.
+ * Tests if there is an emement in a `TypeList` that satisfies a predicate.
 */
 template Any(alias List, alias F)
 {
@@ -211,7 +211,7 @@ template Map(alias F, T...)
 }
 
 /**
- * Applies a given "function" to a $(D TypeList). Returns a $(D TypeList) of results
+ * Applies a given "function" to a `TypeList`. Returns a `TypeList` of results
 */
 private template Map(alias F, alias List)
 {
@@ -243,7 +243,7 @@ template Filter(alias Pred, T...)
 }
 
 /**
- * Filters a $(D TypeList) using a predicate. Returns a $(D TypeList) of elements that
+ * Filters a `TypeList` using a predicate. Returns a `TypeList` of elements that
  * satisfy the predicate.
 */
 template Filter(alias Pred, alias List)
@@ -348,7 +348,7 @@ unittest {
 }
 
 /** Negates a type predicate.
- * The negated predicate is a "member" $(D apply).
+ * The negated predicate is a "member" `apply`.
  *
  * Example:
  * ----
@@ -369,7 +369,7 @@ unittest {
 }
 
 /** Combines two type predicates using logical OR.
- * The resulting predicate is callable through the field $(D apply)
+ * The resulting predicate is callable through the field `apply`
  *
  * Example:
  * ----
@@ -391,7 +391,7 @@ unittest {
 }
 
 /** Combines a list of type predicates using logical OR.
- * The resulting predicate is callable through the field $(D apply)
+ * The resulting predicate is callable through the field `apply`
 */
 template Or(alias FList)
 {
@@ -413,7 +413,7 @@ unittest {
 }
 
 /** Combines two type predicates using logical AND.
- * The resulting predicate is callable through the field $(D apply)
+ * The resulting predicate is callable through the field `apply`
  *
  * Example:
  * ----
@@ -435,7 +435,7 @@ unittest {
 }
 
 /** Combines a list of type predicates using logical AND.
- * The resulting predicate is callable through the field $(D apply)
+ * The resulting predicate is callable through the field `apply`
 */
 template And(alias FList)
 {

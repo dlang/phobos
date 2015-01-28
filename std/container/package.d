@@ -78,8 +78,8 @@ assert(array2.empty);
 It is therefore recommended to always construct containers using $(XREF container_util, make).
 
 This is in fact necessary if you want to put containers into another container.
-Thus to construct an $(D Array) of (e.g) ten other empty $(D Arrays), use
-the following that calls $(D make) ten times.
+Thus to construct an `Array` of (e.g) ten other empty `Arrays`, use
+the following that calls `make` ten times.
 
 ---
 import std.range, std.container, std.algorithm;
@@ -96,7 +96,7 @@ This module consists of the following submodules:
 $(UL
     $(LI
         The $(LINK2 std_container_array.html, std._container.array) module provides
-        an $(D Array) type with deterministic control of memory, not reliant on
+        an `Array` type with deterministic control of memory, not reliant on
         the GC unlike the built-in arrays.
     )
     $(LI
@@ -125,18 +125,18 @@ $(UL
 A_containers_primary_range:
 
 While some _container offer direct access to its elements e.g. via
-$(D opIndex), $(D c.front()) or $(D c.back()), you'll in generall access
-and modify _container's contents using its primary $(LINK2 std_range_package.html, range) type, which is aliased as $(D c.Range),
-e.g. the primary range type of $(D Array!int) is $(D Array!int.Range).
+`opIndex`, `c.front()` or `c.back()`, you'll in generall access
+and modify _container's contents using its primary $(LINK2 std_range_package.html, range) type, which is aliased as `c.Range`,
+e.g. the primary range type of `Array!int` is `Array!int.Range`.
 
 If the documentation of a member function of a container takes a
-a parameter of type $(D Range), then it refers to the primary range type of
+a parameter of type `Range`, then it refers to the primary range type of
 this container. And you'll have to pass a range obtained from the same
 container you call the member function on.
 
 If you can pass any type of $(LINK2 std_range_package.html, range) to
 a member function, the documention usually refers to this (templated)
-parameter type as $(D Stuff).
+parameter type as `Stuff`.
 
 Container_primitives:
 
@@ -145,109 +145,109 @@ common set of primitives (see table below). These primitives each guarantee
 a specific worst case complexity and thus allow generic code to be written
 independently of the container implementation.
 
-For example the primitives $(D c.remove(r)) and $(D c.linearRemove(r)) both
-remove the sequence of elements in range $(D r) from the container $(D c).
-The primitive $(D c.remove(r)) guarantees $(BIGOH 1) complexity and
-$(D c.linearRemove(r)) relaxes this guarantee to $(BIGOH n) (where $(D n)
-is the length of the container $(D c)).
+For example the primitives `c.remove(r)` and `c.linearRemove(r)` both
+remove the sequence of elements in range `r` from the container `c`.
+The primitive `c.remove(r)` guarantees $(BIGOH 1) complexity and
+`c.linearRemove(r)` relaxes this guarantee to $(BIGOH n) (where `n`
+is the length of the container `c`).
 
 Since a sequence of elements can be removed from a $(LINK2 std_container_dlist.html, doubly linked list)
-in constant time $(D DList) provides the primitive $(D c.remove(r))
-as well as $(D c.linearRemove(r)). On the other hand a
-$(LINK2 std_container_array.html, Array) only offers $(D c.linearRemove(r)).
+in constant time `DList` provides the primitive `c.remove(r)`
+as well as `c.linearRemove(r)`. On the other hand a
+$(LINK2 std_container_array.html, Array) only offers `c.linearRemove(r)`.
 
 The following table describes the common set of primitives that containers
 implement.  A _container need not implement all primitives, but if a
 primitive is implemented, it must support the syntax described in the $(B
 syntax) column with the semantics described in the $(B description) column, and
 it must not have a worst-case complexity worse than denoted in big-O notation in
-the $(BIGOH &middot;) column.  Below, $(D C) means a _container type, $(D c) is
+the $(BIGOH &middot;) column.  Below, `C` means a _container type, `c` is
 a value of _container type, $(D n$(SUBSCRIPT x)) represents the effective length of
-value $(D x), which could be a single element (in which case $(D n$(SUBSCRIPT x)) is
-$(D 1)), a _container, or a range.
+value `x`, which could be a single element (in which case $(D n$(SUBSCRIPT x)) is
+`1`), a _container, or a range.
 
 $(BOOKTABLE Container primitives,
 
 $(TR $(TH Syntax) $(TH $(BIGOH &middot;)) $(TH Description))
 
-$(TR $(TDNW $(D C(x))) $(TDNW $(D n$(SUBSCRIPT x))) $(TD Creates a
-_container of type $(D C) from either another _container or a range.))
+$(TR $(TDNW `C(x)`) $(TDNW $(D n$(SUBSCRIPT x))) $(TD Creates a
+_container of type `C` from either another _container or a range.))
 
-$(TR $(TDNW $(D c.dup)) $(TDNW $(D n$(SUBSCRIPT c))) $(TD Returns a
+$(TR $(TDNW `c.dup`) $(TDNW $(D n$(SUBSCRIPT c))) $(TD Returns a
 duplicate of the _container.))
 
 $(TR $(TDNW $(D c ~ x)) $(TDNW $(D n$(SUBSCRIPT c) + n$(SUBSCRIPT x))) $(TD
-Returns the concatenation of $(D c) and $(D r). $(D x) may be a single
+Returns the concatenation of `c` and `r`. `x` may be a single
 element or an input range.))
 
 $(TR $(TDNW $(D x ~ c)) $(TDNW $(D n$(SUBSCRIPT c) + n$(SUBSCRIPT x))) $(TD
-Returns the concatenation of $(D x) and $(D c).  $(D x) may be a
+Returns the concatenation of `x` and `c`.  `x` may be a
 single element or an input range type.))
 
 $(LEADINGROW Iteration)
 
-$(TR  $(TD $(D c.Range)) $(TD) $(TD The primary range
+$(TR  $(TD `c.Range`) $(TD) $(TD The primary range
 type associated with the _container.))
 
-$(TR $(TD $(D c[])) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns a range
+$(TR $(TD `c[]`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns a range
 iterating over the entire _container, in a _container-defined order.))
 
 $(TR $(TDNW $(D c[a .. b])) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Fetches a
-portion of the _container from key $(D a) to key $(D b).))
+portion of the _container from key `a` to key `b`.))
 
 $(LEADINGROW Capacity)
 
-$(TR $(TD $(D c.empty)) $(TD $(D 1)) $(TD Returns $(D true) if the
-_container has no elements, $(D false) otherwise.))
+$(TR $(TD `c.empty`) $(TD `1`) $(TD Returns `true` if the
+_container has no elements, `false` otherwise.))
 
-$(TR  $(TD $(D c.length)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
+$(TR  $(TD `c.length`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
 number of elements in the _container.))
 
 $(TR $(TDNW $(D c.length = n)) $(TDNW $(D n$(SUBSCRIPT c) + n)) $(TD Forces
-the number of elements in the _container to $(D n). If the _container
+the number of elements in the _container to `n`. If the _container
 ends up growing, the added elements are initialized in a
-_container-dependent manner (usually with $(D T.init)).))
+_container-dependent manner (usually with `T.init`).))
 
-$(TR $(TD $(D c.capacity)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
+$(TR $(TD `c.capacity`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
 maximum number of elements that can be stored in the _container
 without triggering a reallocation.))
 
-$(TR $(TD $(D c.reserve(x))) $(TD $(D n$(SUBSCRIPT c))) $(TD Forces $(D
-capacity) to at least $(D x) without reducing it.))
+$(TR $(TD `c.reserve(x)`) $(TD $(D n$(SUBSCRIPT c))) $(TD Forces $(D
+capacity) to at least `x` without reducing it.))
 
 $(LEADINGROW Access)
 
-$(TR $(TDNW $(D c.front)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
+$(TR $(TDNW `c.front`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
 first element of the _container, in a _container-defined order.))
 
-$(TR $(TDNW $(D c.moveFront)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
+$(TR $(TDNW `c.moveFront`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
 Destructively reads and returns the first element of the
 _container. The slot is not removed from the _container; it is left
-initialized with $(D T.init). This routine need not be defined if $(D
-front) returns a $(D ref).))
+initialized with `T.init`. This routine need not be defined if $(D
+front) returns a `ref`.))
 
 $(TR $(TDNW $(D c.front = v)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Assigns
-$(D v) to the first element of the _container.))
+`v` to the first element of the _container.))
 
-$(TR $(TDNW $(D c.back)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
+$(TR $(TDNW `c.back`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Returns the
 last element of the _container, in a _container-defined order.))
 
-$(TR $(TDNW $(D c.moveBack)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
+$(TR $(TDNW `c.moveBack`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
 Destructively reads and returns the last element of the
 container. The slot is not removed from the _container; it is left
-initialized with $(D T.init). This routine need not be defined if $(D
-front) returns a $(D ref).))
+initialized with `T.init`. This routine need not be defined if $(D
+front) returns a `ref`.))
 
 $(TR $(TDNW $(D c.back = v)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Assigns
-$(D v) to the last element of the _container.))
+`v` to the last element of the _container.))
 
-$(TR $(TDNW $(D c[x])) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Provides
+$(TR $(TDNW `c[x]`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD Provides
 indexed access into the _container. The index type is
 _container-defined. A container may define several index types (and
 consequently overloaded indexing).))
 
-$(TR  $(TDNW $(D c.moveAt(x))) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
-Destructively reads and returns the value at position $(D x). The slot
+$(TR  $(TDNW `c.moveAt(x)`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
+Destructively reads and returns the value at position `x`. The slot
 is not removed from the _container; it is left initialized with $(D
 T.init).))
 
@@ -261,94 +261,94 @@ _container.))
 $(LEADINGROW Operations)
 
 $(TR $(TDNW $(D e in c)) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
-Returns nonzero if e is found in $(D c).))
+Returns nonzero if e is found in `c`.))
 
-$(TR  $(TDNW $(D c.lowerBound(v))) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
-Returns a range of all elements strictly less than $(D v).))
+$(TR  $(TDNW `c.lowerBound(v)`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
+Returns a range of all elements strictly less than `v`.))
 
-$(TR  $(TDNW $(D c.upperBound(v))) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
-Returns a range of all elements strictly greater than $(D v).))
+$(TR  $(TDNW `c.upperBound(v)`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
+Returns a range of all elements strictly greater than `v`.))
 
-$(TR  $(TDNW $(D c.equalRange(v))) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
-Returns a range of all elements in $(D c) that are equal to $(D v).))
+$(TR  $(TDNW `c.equalRange(v)`) $(TDNW $(D log n$(SUBSCRIPT c))) $(TD
+Returns a range of all elements in `c` that are equal to `v`.))
 
 $(LEADINGROW Modifiers)
 
 $(TR $(TDNW $(D c ~= x)) $(TDNW $(D n$(SUBSCRIPT c) + n$(SUBSCRIPT x)))
-$(TD Appends $(D x) to $(D c). $(D x) may be a single element or an
+$(TD Appends `x` to `c`. `x` may be a single element or an
 input range type.))
 
-$(TR  $(TDNW $(D c.clear())) $(TDNW $(D n$(SUBSCRIPT c))) $(TD Removes all
-elements in $(D c).))
+$(TR  $(TDNW `c.clear()`) $(TDNW $(D n$(SUBSCRIPT c))) $(TD Removes all
+elements in `c`.))
 
-$(TR  $(TDNW $(D c.insert(x))) $(TDNW $(D n$(SUBSCRIPT x) * log n$(SUBSCRIPT c)))
-$(TD Inserts $(D x) in $(D c) at a position (or positions) chosen by $(D c).))
+$(TR  $(TDNW `c.insert(x)`) $(TDNW $(D n$(SUBSCRIPT x) * log n$(SUBSCRIPT c)))
+$(TD Inserts `x` in `c` at a position (or positions) chosen by `c`.))
 
-$(TR  $(TDNW $(D c.stableInsert(x)))
-$(TDNW $(D n$(SUBSCRIPT x) * log n$(SUBSCRIPT c))) $(TD Same as $(D c.insert(x)),
+$(TR  $(TDNW `c.stableInsert(x)`)
+$(TDNW $(D n$(SUBSCRIPT x) * log n$(SUBSCRIPT c))) $(TD Same as `c.insert(x)`,
 but is guaranteed to not invalidate any ranges.))
 
-$(TR  $(TDNW $(D c.linearInsert(v))) $(TDNW $(D n$(SUBSCRIPT c))) $(TD Same
-as $(D c.insert(v)) but relaxes complexity to linear.))
+$(TR  $(TDNW `c.linearInsert(v)`) $(TDNW $(D n$(SUBSCRIPT c))) $(TD Same
+as `c.insert(v)` but relaxes complexity to linear.))
 
-$(TR  $(TDNW $(D c.stableLinearInsert(v))) $(TDNW $(D n$(SUBSCRIPT c)))
-$(TD Same as $(D c.stableInsert(v)) but relaxes complexity to linear.))
+$(TR  $(TDNW `c.stableLinearInsert(v)`) $(TDNW $(D n$(SUBSCRIPT c)))
+$(TD Same as `c.stableInsert(v)` but relaxes complexity to linear.))
 
-$(TR  $(TDNW $(D c.removeAny())) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Removes some element from $(D c) and returns it.))
+$(TR  $(TDNW `c.removeAny()`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Removes some element from `c` and returns it.))
 
-$(TR  $(TDNW $(D c.stableRemoveAny())) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Same as $(D c.removeAny()), but is guaranteed to not invalidate any
+$(TR  $(TDNW `c.stableRemoveAny()`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Same as `c.removeAny()`, but is guaranteed to not invalidate any
 iterators.))
 
-$(TR  $(TDNW $(D c.insertFront(v))) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Inserts $(D v) at the front of $(D c).))
+$(TR  $(TDNW `c.insertFront(v)`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Inserts `v` at the front of `c`.))
 
-$(TR  $(TDNW $(D c.stableInsertFront(v))) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Same as $(D c.insertFront(v)), but guarantees no ranges will be
+$(TR  $(TDNW `c.stableInsertFront(v)`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Same as `c.insertFront(v)`, but guarantees no ranges will be
 invalidated.))
 
-$(TR  $(TDNW $(D c.insertBack(v))) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Inserts $(D v) at the back of $(D c).))
+$(TR  $(TDNW `c.insertBack(v)`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Inserts `v` at the back of `c`.))
 
-$(TR  $(TDNW $(D c.stableInsertBack(v))) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Same as $(D c.insertBack(v)), but guarantees no ranges will be
+$(TR  $(TDNW `c.stableInsertBack(v)`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Same as `c.insertBack(v)`, but guarantees no ranges will be
 invalidated.))
 
-$(TR  $(TDNW $(D c.removeFront())) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Removes the element at the front of $(D c).))
+$(TR  $(TDNW `c.removeFront()`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Removes the element at the front of `c`.))
 
-$(TR  $(TDNW $(D c.stableRemoveFront())) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Same as $(D c.removeFront()), but guarantees no ranges will be
+$(TR  $(TDNW `c.stableRemoveFront()`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Same as `c.removeFront()`, but guarantees no ranges will be
 invalidated.))
 
-$(TR  $(TDNW $(D c.removeBack())) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Removes the value at the back of $(D c).))
+$(TR  $(TDNW `c.removeBack()`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Removes the value at the back of `c`.))
 
-$(TR  $(TDNW $(D c.stableRemoveBack())) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Same as $(D c.removeBack()), but guarantees no ranges will be
+$(TR  $(TDNW `c.stableRemoveBack()`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Same as `c.removeBack()`, but guarantees no ranges will be
 invalidated.))
 
-$(TR  $(TDNW $(D c.remove(r))) $(TDNW $(D n$(SUBSCRIPT r) * log n$(SUBSCRIPT c)))
-$(TD Removes range $(D r) from $(D c).))
+$(TR  $(TDNW `c.remove(r)`) $(TDNW $(D n$(SUBSCRIPT r) * log n$(SUBSCRIPT c)))
+$(TD Removes range `r` from `c`.))
 
-$(TR  $(TDNW $(D c.stableRemove(r)))
+$(TR  $(TDNW `c.stableRemove(r)`)
 $(TDNW $(D n$(SUBSCRIPT r) * log n$(SUBSCRIPT c)))
-$(TD Same as $(D c.remove(r)), but guarantees iterators are not
+$(TD Same as `c.remove(r)`, but guarantees iterators are not
 invalidated.))
 
-$(TR  $(TDNW $(D c.linearRemove(r))) $(TDNW $(D n$(SUBSCRIPT c)))
-$(TD Removes range $(D r) from $(D c).))
+$(TR  $(TDNW `c.linearRemove(r)`) $(TDNW $(D n$(SUBSCRIPT c)))
+$(TD Removes range `r` from `c`.))
 
-$(TR  $(TDNW $(D c.stableLinearRemove(r))) $(TDNW $(D n$(SUBSCRIPT c)))
-$(TD Same as $(D c.linearRemove(r)), but guarantees iterators are not
+$(TR  $(TDNW `c.stableLinearRemove(r)`) $(TDNW $(D n$(SUBSCRIPT c)))
+$(TD Same as `c.linearRemove(r)`, but guarantees iterators are not
 invalidated.))
 
-$(TR  $(TDNW $(D c.removeKey(k))) $(TDNW $(D log n$(SUBSCRIPT c)))
-$(TD Removes an element from $(D c) by using its key $(D k).
+$(TR  $(TDNW `c.removeKey(k)`) $(TDNW $(D log n$(SUBSCRIPT c)))
+$(TD Removes an element from `c` by using its key `k`.
 The key's type is defined by the _container.))
 
-$(TR  $(TDNW $(D )) $(TDNW $(D )) $(TD ))
+$(TR  $(TDNW ``) $(TDNW ``) $(TD ))
 
 )
 
@@ -378,10 +378,10 @@ public import std.container.slist;
 import std.typetuple;
 
 
-/* The following documentation and type $(D TotalContainer) are
+/* The following documentation and type `TotalContainer` are
 intended for developers only.
 
-$(D TotalContainer) is an unimplemented container that illustrates a
+`TotalContainer` is an unimplemented container that illustrates a
 host of primitives that a container may define. It is to some extent
 the bottom of the conceptual container hierarchy. A given container
 most often will choose to only implement a subset of these primitives,
@@ -389,7 +389,7 @@ and define its own additional ones. Adhering to the standard primitive
 names below allows generic code to work independently of containers.
 
 Things to remember: any container must be a reference type, whether
-implemented as a $(D class) or $(D struct). No primitive below
+implemented as a `class` or `struct`. No primitive below
 requires the container to escape addresses of elements, which means
 that compliant containers can be defined to use reference counting or
 other deterministic memory management techniques.
@@ -401,32 +401,32 @@ the ones below, lest user code gets confused.
 Complexity of operations should be interpreted as "at least as good
 as". If an operation is required to have $(BIGOH n) complexity, it
 could have anything lower than that, e.g. $(BIGOH log(n)). Unless
-specified otherwise, $(D n) inside a $(BIGOH) expression stands for
+specified otherwise, `n` inside a $(BIGOH) expression stands for
 the number of elements in the container.
  */
 struct TotalContainer(T)
 {
 /**
-If the container has a notion of key-value mapping, $(D KeyType)
+If the container has a notion of key-value mapping, `KeyType`
 defines the type of the key of the container.
  */
     alias KeyType = T;
 
 /**
 If the container has a notion of multikey-value mapping, $(D
-KeyTypes[k]), where $(D k) is a zero-based unsigned number, defines
-the type of the $(D k)th key of the container.
+KeyTypes[k]), where `k` is a zero-based unsigned number, defines
+the type of the `k`th key of the container.
 
-A container may define both $(D KeyType) and $(D KeyTypes), e.g. in
+A container may define both `KeyType` and `KeyTypes`, e.g. in
 the case it has the notion of primary/preferred key.
  */
     alias KeyTypes = TypeTuple!T;
 
 /**
-If the container has a notion of key-value mapping, $(D ValueType)
+If the container has a notion of key-value mapping, `ValueType`
 defines the type of the value of the container. Typically, a map-style
-container mapping values of type $(D K) to values of type $(D V)
-defines $(D KeyType) to be $(D K) and $(D ValueType) to be $(D V).
+container mapping values of type `K` to values of type `V`
+defines `KeyType` to be `K` and `ValueType` to be `V`.
  */
     alias ValueType = T;
 
@@ -518,7 +518,7 @@ Generally a container may define several types of ranges.
     }
 
 /**
-Property returning $(D true) if and only if the container has no
+Property returning `true` if and only if the container has no
 elements.
 
 Complexity: $(BIGOH 1)
@@ -561,7 +561,7 @@ Complexity: $(BIGOH log(n)).
     }
 
 /**
-Ensures sufficient capacity to accommodate $(D n) elements.
+Ensures sufficient capacity to accommodate `n` elements.
 
 Postcondition: $(D capacity >= n)
 
@@ -576,7 +576,7 @@ $(BIGOH 1).
 /**
 Returns a range that iterates over all elements of the container, in a
 container-defined order. The container should choose the most
-convenient and fast method of iteration for $(D opSlice()).
+convenient and fast method of iteration for `opSlice()`.
 
 Complexity: $(BIGOH log(n))
  */
@@ -597,7 +597,7 @@ Complexity: $(BIGOH log(n))
     }
 
 /**
-Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
+Forward to `opSlice().front` and `opSlice().back`, respectively.
 
 Complexity: $(BIGOH log(n))
  */
@@ -668,7 +668,7 @@ $(D k in container) returns true if the given key is in the container.
     }
 
 /**
-Returns a range of all elements containing $(D k) (could be empty or a
+Returns a range of all elements containing `k` (could be empty or a
 singleton range).
  */
     Range equalRange(KeyType k)
@@ -677,7 +677,7 @@ singleton range).
     }
 
 /**
-Returns a range of all elements with keys less than $(D k) (could be
+Returns a range of all elements with keys less than `k` (could be
 empty or a singleton range). Only defined by containers that store
 data sorted at all times.
  */
@@ -687,7 +687,7 @@ data sorted at all times.
     }
 
 /**
-Returns a range of all elements with keys larger than $(D k) (could be
+Returns a range of all elements with keys larger than `k` (could be
 empty or a singleton range).  Only defined by containers that store
 data sorted at all times.
  */
@@ -697,9 +697,9 @@ data sorted at all times.
     }
 
 /**
-Returns a new container that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
+Returns a new container that's the concatenation of `this` and its
+argument. `opBinaryRight` is only defined if `Stuff` does not
+define `opBinary`.
 
 Complexity: $(BIGOH n + m), where m is the number of elements in $(D
 stuff)
@@ -727,7 +727,7 @@ Forwards to $(D insertAfter(this[], stuff)).
 Removes all contents from the container. The container decides how $(D
 capacity) is affected.
 
-Postcondition: $(D empty)
+Postcondition: `empty`
 
 Complexity: $(BIGOH n)
  */
@@ -737,8 +737,8 @@ Complexity: $(BIGOH n)
     }
 
 /**
-Sets the number of elements in the container to $(D newSize). If $(D
-newSize) is greater than $(D length), the added elements are added to
+Sets the number of elements in the container to `newSize`. If $(D
+newSize) is greater than `length`, the added elements are added to
 unspecified positions in the container and initialized with $(D
 .init).
 
@@ -752,21 +752,21 @@ Postcondition: $(D _length == newLength)
     }
 
 /**
-Inserts $(D stuff) in an unspecified position in the
+Inserts `stuff` in an unspecified position in the
 container. Implementations should choose whichever insertion means is
 the most advantageous for the container, but document the exact
-behavior. $(D stuff) can be a value convertible to the element type of
+behavior. `stuff` can be a value convertible to the element type of
 the container, or a range of values convertible to it.
 
-The $(D stable) version guarantees that ranges iterating over the
+The `stable` version guarantees that ranges iterating over the
 container are never invalidated. Client code that counts on
-non-invalidating insertion should use $(D stableInsert). Such code would
+non-invalidating insertion should use `stableInsert`. Such code would
 not compile against containers that don't support it.
 
 Returns: The number of elements added.
 
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-elements in $(D stuff)
+Complexity: $(BIGOH m * log(n)), where `m` is the number of
+elements in `stuff`
  */
     size_t insert(Stuff)(Stuff stuff)
     {
@@ -779,7 +779,7 @@ elements in $(D stuff)
     }
 
 /**
-Same as $(D insert(stuff)) and $(D stableInsert(stuff)) respectively,
+Same as `insert(stuff)` and `stableInsert(stuff)` respectively,
 but relax the complexity constraint to linear.
  */
     size_t linearInsert(Stuff)(Stuff stuff)
@@ -799,7 +799,7 @@ value that's the most advantageous for the container. The stable version
 behaves the same, but guarantees that ranges iterating over the container
 are never invalidated.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Returns: The element removed.
 
@@ -816,7 +816,7 @@ Complexity: $(BIGOH log(n)).
     }
 
 /**
-Inserts $(D value) to the front or back of the container. $(D stuff)
+Inserts `value` to the front or back of the container. `stuff`
 can be a value convertible to the container's element type or a range
 of values convertible to it. The stable version behaves the same, but
 guarantees that ranges iterating over the container are never
@@ -853,7 +853,7 @@ the container are never invalidated. The optional parameter $(D
 howMany) instructs removal of that many elements. If $(D howMany > n),
 all elements are removed and no exception is thrown.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Complexity: $(BIGOH log(n)).
  */
@@ -878,9 +878,9 @@ Complexity: $(BIGOH log(n)).
     }
 
 /**
-Removes $(D howMany) values at the front or back of the
+Removes `howMany` values at the front or back of the
 container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
+do not throw if they could not remove `howMany` elements. Instead,
 if $(D howMany > n), all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
@@ -911,9 +911,9 @@ Complexity: $(BIGOH howMany * log(n)).
     }
 
 /**
-Removes all values corresponding to key $(D k).
+Removes all values corresponding to key `k`.
 
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
+Complexity: $(BIGOH m * log(n)), where `m` is the number of
 elements with the same key.
 
 Returns: The number of elements removed.
@@ -924,8 +924,8 @@ Returns: The number of elements removed.
     }
 
 /**
-Inserts $(D stuff) before, after, or instead range $(D r), which must
-be a valid range previously extracted from this container. $(D stuff)
+Inserts `stuff` before, after, or instead range `r`, which must
+be a valid range previously extracted from this container. `stuff`
 can be a value convertible to the container's element type or a range
 of objects convertible to it. The stable version behaves the same, but
 guarantees that ranges iterating over the container are never
@@ -933,7 +933,7 @@ invalidated.
 
 Returns: The number of values inserted.
 
-Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
+Complexity: $(BIGOH n + m), where `m` is the length of `stuff`
  */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
@@ -966,16 +966,16 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     }
 
 /**
-Removes all elements belonging to $(D r), which must be a range
+Removes all elements belonging to `r`, which must be a range
 obtained originally from this container. The stable version behaves the
 same, but guarantees that ranges iterating over the container are
 never invalidated.
 
 Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
+initially were right after `r`.
 
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-elements in $(D r)
+Complexity: $(BIGOH m * log(n)), where `m` is the number of
+elements in `r`
  */
     Range remove(Range r)
     {
@@ -988,10 +988,10 @@ elements in $(D r)
     }
 
 /**
-Same as $(D remove) above, but has complexity relaxed to linear.
+Same as `remove` above, but has complexity relaxed to linear.
 
 Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
+initially were right after `r`.
 
 Complexity: $(BIGOH n)
  */

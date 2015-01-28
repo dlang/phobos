@@ -11,14 +11,14 @@ $(T2 completeSort,
         If $(D a = [10, 20, 30]) and $(D b = [40, 6, 15]), then
         $(D completeSort(a, b)) leaves $(D a = [6, 10, 15]) and $(D b = [20,
         30, 40]).
-        The range $(D a) must be sorted prior to the call, and as a result the
+        The range `a` must be sorted prior to the call, and as a result the
         combination $(D $(XREF range,chain)(a, b)) is sorted.)
 $(T2 isPartitioned,
-        $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
-        the predicate is $(D true) for a portion of the range and $(D false)
+        $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns `true` because
+        the predicate is `true` for a portion of the range and `false`
         afterwards.)
 $(T2 isSorted,
-        $(D isSorted([1, 1, 2, 3])) returns $(D true).)
+        $(D isSorted([1, 1, 2, 3])) returns `true`.)
 $(T2 makeIndex,
         Creates a separate index for a range.)
 $(T2 nextEvenPermutation,
@@ -30,7 +30,7 @@ $(T2 nextPermutation,
 $(T2 partialSort,
         If $(D a = [5, 4, 3, 2, 1]), then $(D partialSort(a, 3)) leaves
         $(D a[0 .. 3] = [1, 2, 3]).
-        The other elements of $(D a) are left in an unspecified order.)
+        The other elements of `a` are left in an unspecified order.)
 $(T2 partition,
         Partitions a range according to a predicate.)
 $(T2 partition3,
@@ -72,12 +72,12 @@ import std.traits;
 // completeSort
 /**
 Sorts the random-access range $(D chain(lhs, rhs)) according to
-predicate $(D less). The left-hand side of the range $(D lhs) is
-assumed to be already sorted; $(D rhs) is assumed to be unsorted. The
-exact strategy chosen depends on the relative sizes of $(D lhs) and
-$(D rhs).  Performs $(BIGOH lhs.length + rhs.length * log(rhs.length))
+predicate `less`. The left-hand side of the range `lhs` is
+assumed to be already sorted; `rhs` is assumed to be unsorted. The
+exact strategy chosen depends on the relative sizes of `lhs` and
+`rhs`.  Performs $(BIGOH lhs.length + rhs.length * log(rhs.length))
 (best case) to $(BIGOH (lhs.length + rhs.length) * log(lhs.length +
-rhs.length)) (worst-case) evaluations of $(D swap).
+rhs.length)) (worst-case) evaluations of `swap`.
 */
 void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(SortedRange!(Range1, less) lhs, Range2 rhs)
@@ -111,7 +111,7 @@ unittest
 // isSorted
 /**
 Checks whether a forward range is sorted according to the comparison
-operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
+operation `less`. Performs $(BIGOH r.length) evaluations of $(D
 less).
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
@@ -186,27 +186,27 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 
 // partition
 /**
-Partitions a range in two using $(D pred) as a
+Partitions a range in two using `pred` as a
 predicate. Specifically, reorders the range $(D r = [left,
-right$(RPAREN)) using $(D swap) such that all elements $(D i) for
-which $(D pred(i)) is $(D true) come before all elements $(D j) for
-which $(D pred(j)) returns $(D false).
+right$(RPAREN)) using `swap` such that all elements `i` for
+which `pred(i)` is `true` come before all elements `j` for
+which `pred(j)` returns `false`.
 
 Performs $(BIGOH r.length) (if unstable or semistable) or $(BIGOH
-r.length * log(r.length)) (if stable) evaluations of $(D less) and $(D
+r.length * log(r.length)) (if stable) evaluations of `less` and $(D
 swap). The unstable version computes the minimum possible evaluations
-of $(D swap) (roughly half of those performed by the semistable
+of `swap` (roughly half of those performed by the semistable
 version).
 
 Returns:
 
-The right part of $(D r) after partitioning.
+The right part of `r` after partitioning.
 
-If $(D ss == SwapStrategy.stable), $(D partition) preserves the
-relative ordering of all elements $(D a), $(D b) in $(D r) for which
+If $(D ss == SwapStrategy.stable), `partition` preserves the
+relative ordering of all elements `a`, `b` in `r` for which
 $(D pred(a) == pred(b)). If $(D ss == SwapStrategy.semistable), $(D
-partition) preserves the relative ordering of all elements $(D a), $(D
-b) in the left part of $(D r) for which $(D pred(a) == pred(b)).
+partition) preserves the relative ordering of all elements `a`, $(D
+b) in the left part of `r` for which $(D pred(a) == pred(b)).
 
 See_Also:
     STL's $(WEB sgi.com/tech/stl/_partition.html, _partition)$(BR)
@@ -346,7 +346,7 @@ Range partition(alias predicate,
 }
 
 /**
-Returns $(D true) if $(D r) is partitioned according to predicate $(D
+Returns `true` if `r` is partitioned according to predicate $(D
 pred).
  */
 bool isPartitioned(alias pred, Range)(Range r)
@@ -373,15 +373,15 @@ bool isPartitioned(alias pred, Range)(Range r)
 
 // partition3
 /**
-Rearranges elements in $(D r) in three adjacent ranges and returns
-them. The first and leftmost range only contains elements in $(D r)
-less than $(D pivot). The second and middle range only contains
-elements in $(D r) that are equal to $(D pivot). Finally, the third
-and rightmost range only contains elements in $(D r) that are greater
-than $(D pivot). The less-than test is defined by the binary function
-$(D less).
+Rearranges elements in `r` in three adjacent ranges and returns
+them. The first and leftmost range only contains elements in `r`
+less than `pivot`. The second and middle range only contains
+elements in `r` that are equal to `pivot`. Finally, the third
+and rightmost range only contains elements in `r` that are greater
+than `pivot`. The less-than test is defined by the binary function
+`less`.
 
-BUGS: stable $(D partition3) has not been implemented yet.
+BUGS: stable `partition3` has not been implemented yet.
  */
 auto partition3(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, E)
 (Range r, E pivot)
@@ -475,7 +475,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 // makeIndex
 /**
-Computes an index for $(D r) based on the comparison $(D less). The
+Computes an index for `r` based on the comparison `less`. The
 index is a sorted array of pointers or indices into the original
 range. This technique is similar to sorting, but it is more flexible
 because (1) it allows "sorting" of immutable collections, (2) allows
@@ -485,21 +485,21 @@ and (4) may be faster when dealing with large objects. However, using
 an index may also be slower under certain circumstances due to the
 extra indirection, and is always larger than a sorting-based solution
 because it needs space for the index in addition to the original
-collection. The complexity is the same as $(D sort)'s.
+collection. The complexity is the same as `sort`'s.
 
-The first overload of $(D makeIndex) writes to a range containing
+The first overload of `makeIndex` writes to a range containing
 pointers, and the second writes to a range containing offsets. The
-first overload requires $(D Range) to be a forward range, and the
+first overload requires `Range` to be a forward range, and the
 latter requires it to be a random-access range.
 
-$(D makeIndex) overwrites its second argument with the result, but
+`makeIndex` overwrites its second argument with the result, but
 never reallocates it.
 
-Returns: The pointer-based version returns a $(D SortedRange) wrapper
+Returns: The pointer-based version returns a `SortedRange` wrapper
 over index, of type $(D SortedRange!(RangeIndex, (a, b) =>
 binaryFun!less(*a, *b))) thus reflecting the ordering of the
-index. The index-based version returns $(D void) because the ordering
-relation involves not only $(D index) but also $(D r).
+index. The index-based version returns `void` because the ordering
+relation involves not only `index` but also `r`.
 
 Throws: If the second argument's length is less than that of the range
 indexed, an exception is thrown.
@@ -627,10 +627,10 @@ $(D void multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less));)
 
 Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
-"a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
-and sorts elements that have the same $(D id) by $(D date)
+"a.date > b.date")(r)) sorts the range `r` by `id` ascending,
+and sorts elements that have the same `id` by `date`
 descending. Such a call is equivalent to $(D sort!"a.id != b.id ? a.id
-< b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
+< b.id : a.date > b.date"(r)), but `multiSort` is faster because it
 does fewer comparisons (in addition to being more convenient).
  */
 template multiSort(less...) //if (less.length > 1)
@@ -825,28 +825,28 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
 // sort
 /**
-Sorts a random-access range according to the predicate $(D less). Performs
-$(BIGOH r.length * log(r.length)) evaluations of $(D less). Stable sorting
-requires $(D hasAssignableElements!Range) to be true.
+Sorts a random-access range according to the predicate `less`. Performs
+$(BIGOH r.length * log(r.length)) evaluations of `less`. Stable sorting
+requires `hasAssignableElements!Range` to be true.
 
-$(D sort) returns a $(XREF range, SortedRange) over the original range, which
+`sort` returns a $(XREF range, SortedRange) over the original range, which
 functions that can take advantage of sorted data can then use to know that the
 range is sorted and adjust accordingly. The $(XREF range, SortedRange) is a
 wrapper around the original range, so both it and the original range are sorted,
 but other functions won't know that the original range has been sorted, whereas
 they $(I can) know that $(XREF range, SortedRange) has been sorted.
 
-The predicate is expected to satisfy certain rules in order for $(D sort) to
+The predicate is expected to satisfy certain rules in order for `sort` to
 behave as expected - otherwise, the program may fail on certain inputs (but not
-others) when not compiled in release mode, due to the cursory $(D assumeSorted)
-check. Specifically, $(D sort) expects $(D less(a,b) && less(b,c)) to imply
-$(D less(a,c)) (transitivity), and, conversely, $(D !less(a,b) && !less(b,c)) to
-imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
+others) when not compiled in release mode, due to the cursory `assumeSorted`
+check. Specifically, `sort` expects $(D less(a,b) && less(b,c)) to imply
+`less(a,c)` (transitivity), and, conversely, $(D !less(a,b) && !less(b,c)) to
+imply `!less(a,c)`. Note that the default predicate ($(D "a < b")) does not
 always satisfy these conditions for floating point types, because the expression
-will always be $(D false) when either $(D a) or $(D b) is NaN.
+will always be `false` when either `a` or `b` is NaN.
 
-Returns: The initial range wrapped as a $(D SortedRange) with the predicate
-$(D binaryFun!less).
+Returns: The initial range wrapped as a `SortedRange` with the predicate
+`binaryFun!less`.
 
 Algorithms: $(WEB en.wikipedia.org/wiki/Introsort) is used for unstable sorting and
 $(WEB en.wikipedia.org/wiki/Timsort, Timsort) is used for stable sorting.
@@ -1768,8 +1768,8 @@ known as the decorate-sort-undecorate pattern in Python and Lisp. (Not
 to be confused with $(WEB youtube.com/watch?v=UHw6KXbvazs, the other
 Schwartz).) This function is helpful when the sort comparison includes
 an expensive computation. The complexity is the same as that of the
-corresponding $(D sort), but $(D schwartzSort) evaluates $(D
-transform) only $(D r.length) times (less than half when compared to
+corresponding `sort`, but `schwartzSort` evaluates $(D
+transform) only `r.length` times (less than half when compared to
 regular sorting). The usage can be best illustrated with an example.
 
 Examples:
@@ -1782,18 +1782,18 @@ sort!((a, b) => hashFun(a) < hashFun(b))(array);
 schwartzSort!(hashFun, "a < b")(array);
 ----
 
-The $(D schwartzSort) function might require less temporary data and
+The `schwartzSort` function might require less temporary data and
 be faster than the Perl idiom or the decorate-sort-undecorate idiom
 present in Python and Lisp. This is because sorting is done in-place
 and only minimal extra data (one array of transformed elements) is
 created.
 
 To check whether an array was sorted and benefit of the speedup of
-Schwartz sorting, a function $(D schwartzIsSorted) is not provided
+Schwartz sorting, a function `schwartzIsSorted` is not provided
 because the effect can be achieved by calling $(D
 isSorted!less(map!transform(r))).
 
-Returns: The initial range wrapped as a $(D SortedRange) with the
+Returns: The initial range wrapped as a `SortedRange` with the
 predicate $(D (a, b) => binaryFun!less(transform(a),
 transform(b))).
  */
@@ -1921,10 +1921,10 @@ unittest
 
 // partialSort
 /**
-Reorders the random-access range $(D r) such that the range $(D r[0
-.. mid]) is the same as if the entire $(D r) were sorted, and leaves
+Reorders the random-access range `r` such that the range $(D r[0
+.. mid]) is the same as if the entire `r` were sorted, and leaves
 the range $(D r[mid .. r.length]) in no particular order. Performs
-$(BIGOH r.length * log(mid)) evaluations of $(D pred). The
+$(BIGOH r.length * log(mid)) evaluations of `pred`. The
 implementation simply calls $(D topN!(less, ss)(r, n)) and then $(D
 sort!(less, ss)(r[0 .. n])).
 */
@@ -1946,15 +1946,15 @@ void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 
 // topN
 /**
-Reorders the range $(D r) using $(D swap) such that $(D r[nth]) refers
+Reorders the range `r` using `swap` such that `r[nth]` refers
 to the element that would fall there if the range were fully
-sorted. In addition, it also partitions $(D r) such that all elements
-$(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
-and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
+sorted. In addition, it also partitions `r` such that all elements
+`e1` from `r[0]` to `r[nth]` satisfy $(D !less(r[nth], e1)),
+and all elements `e2` from `r[nth]` to `r[r.length]` satisfy
 $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
-(according to $(D less)) elements in $(D r). Performs an expected
+(according to `less`) elements in `r`. Performs an expected
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
-(if stable) evaluations of $(D less) and $(D swap).
+(if stable) evaluations of `less` and `swap`.
 
 If $(D n >= r.length), the algorithm has no effect.
 
@@ -2119,10 +2119,10 @@ unittest
 }
 
 /**
-Copies the top $(D n) elements of the input range $(D source) into the
-random-access range $(D target), where $(D n =
-target.length). Elements of $(D source) are not touched. If $(D
-sorted) is $(D true), the target is sorted. Otherwise, the target
+Copies the top `n` elements of the input range `source` into the
+random-access range `target`, where $(D n =
+target.length). Elements of `source` are not touched. If $(D
+sorted) is `true`, the target is sorted. Otherwise, the target
 respects the $(WEB en.wikipedia.org/wiki/Binary_heap, heap property).
  */
 TRange topNCopy(alias less = "a < b", SRange, TRange)
@@ -2183,13 +2183,13 @@ Params:
         to make an index for.
     index = A $(XREF2 range, isRandomAccessRange, random-access range) with
         assignable elements to build the index in. The length of this range
-        determines how many top elements to index in $(D r).
+        determines how many top elements to index in `r`.
 
         This index range can either have integral elements, in which case the
         constructed index will consist of zero-based numerical indices into
-        $(D r); or it can have pointers to the element type of $(D r), in which
+        `r`; or it can have pointers to the element type of `r`, in which
         case the constructed index will be pointers to the top elements in
-        $(D r).
+        `r`.
     sorted = Determines whether to sort the index by the elements they refer
         to.
 
@@ -2302,16 +2302,16 @@ unittest
 
 // nextPermutation
 /**
- * Permutes $(D range) in-place to the next lexicographically greater
+ * Permutes `range` in-place to the next lexicographically greater
  * permutation.
  *
- * The predicate $(D less) defines the lexicographical ordering to be used on
+ * The predicate `less` defines the lexicographical ordering to be used on
  * the range.
  *
  * If the range is currently the lexicographically greatest permutation, it is
  * permuted back to the least permutation and false is returned.  Otherwise,
  * true is returned. One can thus generate all permutations of a range by
- * sorting it according to $(D less), which produces the lexicographically
+ * sorting it according to `less`, which produces the lexicographically
  * least permutation, and then calling nextPermutation until it returns false.
  * This is guaranteed to generate all distinct permutations of the range
  * exactly once.  If there are $(I N) elements in the range and all of them are
@@ -2520,10 +2520,10 @@ bool nextPermutation(alias less="a < b", BidirectionalRange)
 
 // nextEvenPermutation
 /**
- * Permutes $(D range) in-place to the next lexicographically greater $(I even)
+ * Permutes `range` in-place to the next lexicographically greater $(I even)
  * permutation.
  *
- * The predicate $(D less) defines the lexicographical ordering to be used on
+ * The predicate `less` defines the lexicographical ordering to be used on
  * the range.
  *
  * An even permutation is one which is produced by swapping an even number of

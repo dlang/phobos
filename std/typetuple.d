@@ -652,8 +652,8 @@ unittest
 
 
 /**
- * Filters a $(D TypeTuple) using a template predicate. Returns a
- * $(D TypeTuple) of the elements which satisfy the predicate.
+ * Filters a `TypeTuple` using a template predicate. Returns a
+ * `TypeTuple` of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
 {

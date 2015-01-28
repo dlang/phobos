@@ -24,7 +24,7 @@ $(BOOKTABLE ,
         $(TD Concatenates a range of ranges into one _array.
     ))
     $(TR $(TD $(D $(LREF minimallyInitializedArray)))
-        $(TD Returns a new _array of type $(D T).
+        $(TD Returns a new _array of type `T`.
     ))
     $(TR $(TD $(D $(LREF replace)))
         $(TD Returns a new _array with all occurrences of a certain subrange replaced.
@@ -51,7 +51,7 @@ $(BOOKTABLE ,
         $(TD Eagerly split a range or string into an _array.
     ))
     $(TR $(TD $(D $(LREF uninitializedArray)))
-        $(TD Returns a new _array of type $(D T) without initializing its elements.
+        $(TD Returns a new _array of type `T` without initializing its elements.
     ))
 )
 
@@ -76,7 +76,7 @@ public import std.range.primitives : save, empty, popFront, popBack, front, back
 /**
 Returns a newly allocated dynamic array consisting of a copy of the
 input range, static array, dynamic array, or class or struct with an
-$(D opApply) function $(D r).  Note that narrow strings are handled as
+`opApply` function `r`.  Note that narrow strings are handled as
 a special case in an overload.
  */
 ForeachType!Range[] array(Range)(Range r)
@@ -176,8 +176,8 @@ unittest
 
 /**
 Convert a narrow string to an array type that fully supports random access.
-This is handled as a special case and always returns a $(D dchar[]),
-$(D const(dchar)[]), or $(D immutable(dchar)[]) depending on the constness of
+This is handled as a special case and always returns a `dchar[]`,
+`const(dchar)[]`, or `immutable(dchar)[]` depending on the constness of
 the input.
 */
 ElementType!String[] array(String)(String str) if (isNarrowString!String)
@@ -471,11 +471,11 @@ version(unittest)
 }
 
 /++
-Returns a new array of type $(D T) allocated on the garbage collected heap
+Returns a new array of type `T` allocated on the garbage collected heap
 without initializing its elements.  This can be a useful optimization if every
-element will be immediately initialized.  $(D T) may be a multidimensional
+element will be immediately initialized.  `T` may be a multidimensional
 array.  In this case sizes may be specified for any number of dimensions from 0
-to the number in $(D T).
+to the number in `T`.
 
 uninitializedArray is nothrow and weakly pure.
 +/
@@ -506,11 +506,11 @@ nothrow pure unittest
 }
 
 /++
-Returns a new array of type $(D T) allocated on the garbage collected heap.
+Returns a new array of type `T` allocated on the garbage collected heap.
 
 Partial initialization is done for types with indirections, for preservation
 of memory safety. Note that elements will only be initialized to 0, but not
-necessarily the element type's $(D .init).
+necessarily the element type's `.init`.
 
 minimallyInitializedArray is nothrow and weakly pure.
 +/
@@ -672,8 +672,8 @@ nothrow unittest
 /*
 NOTE: Undocumented for now, overlap does not yet work with ctfe.
 Returns the overlapping portion, if any, of two arrays. Unlike $(D
-equal), $(D overlap) only compares the pointers in the ranges, not the
-values referred by them. If $(D r1) and $(D r2) have an overlapping
+equal), `overlap` only compares the pointers in the ranges, not the
+values referred by them. If `r1` and `r2` have an overlapping
 slice, returns that slice. Otherwise, returns the null slice.
 */
 inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
@@ -753,8 +753,8 @@ be used once insert has not only been deprecated but removed, but until then,
 it's commented out.
 
 /++
-    Creates a new array which is a copy of $(D array) with $(D stuff) (which
-    must be an input range or a single item) inserted at position $(D pos).
+    Creates a new array which is a copy of `array` with `stuff` (which
+    must be an input range or a single item) inserted at position `pos`.
 
     Examples:
     --------------------
@@ -883,8 +883,8 @@ private void copyBackwards(T)(T[] src, T[] dest)
 }
 
 /++
-    Inserts $(D stuff) (which must be an input range or any number of
-    implicitly convertible items) in $(D array) at position $(D pos).
+    Inserts `stuff` (which must be an input range or any number of
+    implicitly convertible items) in `array` at position `pos`.
 
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
@@ -1232,9 +1232,9 @@ unittest // bugzilla 6874
 
 
 /++
-    Returns whether the $(D front)s of $(D lhs) and $(D rhs) both refer to the
+    Returns whether the `front`s of `lhs` and `rhs` both refer to the
     same place in memory, making one of the arrays a slice of the other which
-    starts at index $(D 0).
+    starts at index `0`.
   +/
 @safe
 pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
@@ -1244,9 +1244,9 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
 
 
 /++
-    Returns whether the $(D back)s of $(D lhs) and $(D rhs) both refer to the
+    Returns whether the `back`s of `lhs` and `rhs` both refer to the
     same place in memory, making one of the arrays a slice of the other which
-    end at index $(D $).
+    end at index `$`.
   +/
 @trusted
 pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
@@ -1283,8 +1283,8 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 }
 
 /********************************************
-Returns an array that consists of $(D s) (which must be an input
-range) repeated $(D n) times. This function allocates, fills, and
+Returns an array that consists of `s` (which must be an input
+range) repeated `n` times. This function allocates, fills, and
 returns a new array. For a lazy version, refer to $(XREF range, repeat).
  */
 ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
@@ -1340,10 +1340,10 @@ unittest
 }
 
 /++
-Eagerly split the string $(D s) into an array of words, using whitespace as
+Eagerly split the string `s` into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
 
-$(D @safe), $(D pure) and $(D CTFE)-able.
+`@safe`, `pure` and `CTFE`-able.
 
 See_Also:
 $(XREF algorithm, splitter) for a version that splits using any separator.
@@ -1434,25 +1434,25 @@ deprecated("Please use std.algorithm.iteration.splitter instead.")
 alias splitter = std.algorithm.iteration.splitter;
 
 /++
-    Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
+    Eagerly splits `range` into an array, using `sep` as the delimiter.
 
     The range must be a $(XREF2 range, isForwardRange, forward range).
-    The separator can be a value of the same type as the elements in $(D range) or
+    The separator can be a value of the same type as the elements in `range` or
     it can be another forward range.
 
     Examples:
-        If $(D range) is a $(D string), $(D sep) can be a $(D char) or another
-        $(D string). The return type will be an array of strings. If $(D range) is
-        an $(D int) array, $(D sep) can be an $(D int) or another $(D int) array.
-        The return type will be an array of $(D int) arrays.
+        If `range` is a `string`, `sep` can be a `char` or another
+        `string`. The return type will be an array of strings. If `range` is
+        an `int` array, `sep` can be an `int` or another `int` array.
+        The return type will be an array of `int` arrays.
 
     Params:
         range = a forward range.
-        sep = a value of the same type as the elements of $(D range) or another
+        sep = a value of the same type as the elements of `range` or another
         forward range.
 
     Returns:
-        An array containing the divided parts of $(D range).
+        An array containing the divided parts of `range`.
 
     See_Also:
         $(XREF algorithm, splitter) for the lazy version of this function.
@@ -1534,17 +1534,17 @@ unittest
 
 /++
    Conservative heuristic to determine if a range can be iterated cheaply.
-   Used by $(D join) in decision to do an extra iteration of the range to
+   Used by `join` in decision to do an extra iteration of the range to
    compute the resultant length. If iteration is not cheap then precomputing
-   length could be more expensive than using $(D Appender).
+   length could be more expensive than using `Appender`.
 
    For now, we only assume arrays are cheap to iterate.
  +/
 private enum bool hasCheapIteration(R) = isArray!R;
 
 /++
-   Concatenates all of the ranges in $(D ror) together into one array using
-   $(D sep) as the separator if present.
+   Concatenates all of the ranges in `ror` together into one array using
+   `sep` as the separator if present.
 
    Params:
         ror = Range of Ranges of Elements
@@ -1907,8 +1907,8 @@ unittest
 
 
 /++
-    Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
-    array without changing the contents of $(D subject), or the original array
+    Replace occurrences of `from` with `to` in `subject`. Returns a new
+    array without changing the contents of `subject`, or the original array
     if no match is found.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
@@ -1937,8 +1937,8 @@ unittest
 }
 
 /++
-    Same as above, but outputs the result via OutputRange $(D sink).
-    If no match is found the original array is transferred to $(D sink) as is.
+    Same as above, but outputs the result via OutputRange `sink`.
+    If no match is found the original array is transferred to `sink` as is.
 +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
 if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
@@ -2020,9 +2020,9 @@ unittest
 }
 
 /++
-    Replaces elements from $(D array) with indices ranging from $(D from)
-    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Returns a new
-    array without changing the contents of $(D subject).
+    Replaces elements from `array` with indices ranging from `from`
+    (inclusive) to `to` (exclusive) with the range `stuff`. Returns a new
+    array without changing the contents of `subject`.
  +/
 T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
     if(isInputRange!Range &&
@@ -2136,8 +2136,8 @@ unittest
 }
 
 /++
-    Replaces elements from $(D array) with indices ranging from $(D from)
-    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands or
+    Replaces elements from `array` with indices ranging from `from`
+    (inclusive) to `to` (exclusive) with the range `stuff`. Expands or
     shrinks the array as needed.
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
@@ -2277,8 +2277,8 @@ unittest
 }
 
 /++
-    Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
-    new array without changing the contents of $(D subject), or the original
+    Replaces the first occurrence of `from` with `to` in `a`. Returns a
+    new array without changing the contents of `subject`, or the original
     array if no match is found.
  +/
 E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
@@ -2377,8 +2377,8 @@ unittest
 }
 
 /++
-    Replaces the last occurrence of $(D from) with $(D to) in $(D a). Returns a
-    new array without changing the contents of $(D subject), or the original
+    Replaces the last occurrence of `from` with `to` in `a`. Returns a
+    new array without changing the contents of `subject`, or the original
     array if no match is found.
  +/
 E[] replaceLast(E, R1, R2)(E[] subject, R1 from , R2 to)
@@ -2477,8 +2477,8 @@ unittest
 }
 
 /++
-    Returns a new array that is $(D s) with $(D slice) replaced by
-    $(D replacement[]).
+    Returns a new array that is `s` with `slice` replaced by
+    `replacement[]`.
  +/
 inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
 in
@@ -2598,7 +2598,7 @@ if (isDynamicArray!A)
     /**
      * Returns the capacity of the array (the maximum number of elements the
      * managed array can accommodate before triggering a reallocation).  If any
-     * appending will reallocate, $(D capacity) returns $(D 0).
+     * appending will reallocate, `capacity` returns `0`.
      */
     @property size_t capacity() const @safe pure nothrow
     {
@@ -2834,7 +2834,7 @@ if (isDynamicArray!A)
          * for appending.
          *
          * Note that clear is disabled for immutable or const element types, due to the
-         * possibility that $(D Appender) might overwrite immutable data.
+         * possibility that `Appender` might overwrite immutable data.
          */
         void clear() @safe pure nothrow
         {
@@ -2847,7 +2847,7 @@ if (isDynamicArray!A)
         /**
          * Shrinks the managed array to the given length.
          *
-         * Throws: $(D Exception) if newlength is greater than the current array length.
+         * Throws: `Exception` if newlength is greater than the current array length.
          */
         void shrinkTo(size_t newlength) @safe pure
         {
@@ -2936,7 +2936,7 @@ if (isDynamicArray!A)
     /**
      * Construct a ref appender with a given array reference.  This does not copy the
      * data.  If the array has a larger capacity as determined by arr.capacity, it
-     * will be used by the appender.  $(D RefAppender) assumes that arr is a non-null
+     * will be used by the appender.  `RefAppender` assumes that arr is a non-null
      * value.
      *
      * Note, do not use builtin appending (i.e. ~=) on the original array passed in
@@ -2986,7 +2986,7 @@ if (isDynamicArray!A)
     /**
      * Returns the capacity of the array (the maximum number of elements the
      * managed array can accommodate before triggering a reallocation).  If any
-     * appending will reallocate, $(D capacity) returns $(D 0).
+     * appending will reallocate, `capacity` returns `0`.
      */
     @property size_t capacity() const
     {
@@ -3003,8 +3003,8 @@ if (isDynamicArray!A)
 }
 
 /++
-    Convenience function that returns an $(D Appender!A) object initialized
-    with $(D array).
+    Convenience function that returns an `Appender!A` object initialized
+    with `array`.
  +/
 Appender!A appender(A)()
 if (isDynamicArray!A)
@@ -3380,9 +3380,9 @@ unittest
 }
 
 /++
-    Convenience function that returns a $(D RefAppender!A) object initialized
-    with $(D array).  Don't use null for the $(D array) pointer, use the other
-    version of $(D appender) instead.
+    Convenience function that returns a `RefAppender!A` object initialized
+    with `array`.  Don't use null for the `array` pointer, use the other
+    version of `appender` instead.
  +/
 RefAppender!(E[]) appender(A : E[]*, E)(A array)
 {

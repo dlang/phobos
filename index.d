@@ -3,9 +3,9 @@ Ddoc
 $(P Phobos is the standard runtime library that comes with the D language
 compiler.)
 
-$(P Generally, the $(D std) namespace is used for the main modules in the
-Phobos standard library. The $(D etc) namespace is used for external C/C++
-library bindings. The $(D core) namespace is used for low-level D runtime
+$(P Generally, the `std` namespace is used for the main modules in the
+Phobos standard library. The `etc` namespace is used for external C/C++
+library bindings. The `core` namespace is used for low-level D runtime
 functions.)
 
 $(P The following table is a quick reference guide for which Phobos modules to
@@ -41,7 +41,7 @@ $(BOOKTABLE ,
         $(TD Convenient operations commonly used with built-in arrays.
             Note that many common array operations are subsets of more generic
             algorithms that work with arbitrary ranges, so they are found in
-            $(D std.algorithm).
+            `std.algorithm`.
         )
     )
     $(LEADINGROW Containers)
@@ -88,9 +88,9 @@ $(BOOKTABLE ,
             $(LINK2 std_datetime.html, std.datetime)$(BR)
             $(LINK2 core_time.html, core.time)
         )
-        $(TD $(D std.datetime) provides convenient access to date and time
+        $(TD `std.datetime` provides convenient access to date and time
         representations.$(BR)
-        $(D core.time) implements low-level time primitives.
+        `core.time` implements low-level time primitives.
         )
     )
     $(LEADINGROW Exception handling)
@@ -99,8 +99,8 @@ $(BOOKTABLE ,
             $(LINK2 std_exception.html, std.exception)$(BR)
             $(LINK2 core_exception.html, core.exception)
         )
-        $(TD $(D std.exception) implements routines related to exceptions.
-            $(D core.exception) defines built-in exception types and low-level
+        $(TD `std.exception` implements routines related to exceptions.
+            `core.exception` defines built-in exception types and low-level
             language hooks required by the compiler.
         )
     )
@@ -122,11 +122,11 @@ $(BOOKTABLE ,
             $(LINK2 std_stdio.html, std.stdio)
         )
         $(TD
-            $(D std.stdio) is the main module for I/O.$(BR)
-            $(D std.file) is for accessing the operating system's filesystem,
-            and $(D std.path) is for manipulating filesystem pathnames in a
+            `std.stdio` is the main module for I/O.$(BR)
+            `std.file` is for accessing the operating system's filesystem,
+            and `std.path` is for manipulating filesystem pathnames in a
             platform-independent way.$(BR)
-	    Note that $(D std.stream) and $(D std.cstream) are older,
+	    Note that `std.stream` and `std.cstream` are older,
 	    deprecated modules scheduled to be replaced in the future; new
 	    client code should avoid relying on them.
         )
@@ -138,9 +138,9 @@ $(BOOKTABLE ,
             $(LINK2 std_typecons.html, std.typecons)$(BR)
         )
         $(TD
-            $(D core.memory) provides an API for user code to control the
+            `core.memory` provides an API for user code to control the
             built-in garbage collector.$(BR)
-            $(D std.typecons) contains primitives for building scoped variables
+            `std.typecons` contains primitives for building scoped variables
             and reference-counted types.
         )
     )
@@ -176,13 +176,13 @@ $(BOOKTABLE ,
 	    multithreading, synchronization, and interacting with operating
 	    system processes.$(BR)
 
-            $(D core.atomic) provides primitives for lock-free concurrent
+            `core.atomic` provides primitives for lock-free concurrent
             programming.$(BR)
 
-            $(D core.sync.*) modules provide low-level concurrent
+            `core.sync.*` modules provide low-level concurrent
             programming building blocks.$(BR)
 
-            $(D core.thread) implements multithreading primitives.
+            `core.thread` implements multithreading primitives.
         )
     )
     $(LEADINGROW Networking)
@@ -208,9 +208,9 @@ $(BOOKTABLE ,
         )
         $(TD These modules provide the standard mathematical functions and
             numerical algorithms.$(BR)
-            $(D std.bigint) provides an arbitrary-precision integer type.$(BR)
-            $(D std.complex) provides a complex number type.$(BR)
-            $(D std.random) provides pseudo-random number generators.
+            `std.bigint` provides an arbitrary-precision integer type.$(BR)
+            `std.complex` provides a complex number type.$(BR)
+            `std.random` provides pseudo-random number generators.
         )
     )
     $(LEADINGROW Paradigms)
@@ -220,11 +220,11 @@ $(BOOKTABLE ,
             $(LINK2 std_algorithm_package, std.algorithm)$(BR)
             $(LINK2 std_signals, std.signals)
         )
-        $(TD $(D std.functional), along with the lazy algorithms of
-            $(D std.algorithm), provides utilities for writing functional-style
+        $(TD `std.functional`, along with the lazy algorithms of
+            `std.algorithm`, provides utilities for writing functional-style
             code in D.$(BR)
 
-            $(D std.signals) provides a signal-and-slots framework for
+            `std.signals` provides a signal-and-slots framework for
             event-driven programming.
         )
     )
@@ -239,14 +239,14 @@ $(BOOKTABLE ,
         )
         $(TD Various modules for interacting with the execution environment and
             compiler.$(BR)
-            $(D std.getopt) implements parsing of command-line arguments.$(BR)
-            $(D std.compiler) provides compiler information, mainly the
+            `std.getopt` implements parsing of command-line arguments.$(BR)
+            `std.compiler` provides compiler information, mainly the
             compiler vendor string and language version.$(BR)
-            $(D std.system) provides information about the runtime environment,
+            `std.system` provides information about the runtime environment,
             such as OS type and endianness.$(BR)
-            $(D core.cpuid) provides information on the capabilities of the
+            `core.cpuid` provides information on the capabilities of the
             CPU the program is running on.$(BR)
-            $(D core.memory) allows user code to control the built-in garbage
+            `core.memory` allows user code to control the built-in garbage
             collector.
         )
     )
@@ -265,34 +265,34 @@ $(BOOKTABLE ,
             $(LINK2 std_encoding.html, std.encoding)$(BR)
             $(LINK2 std_windows_charset.html, std.windows.charset)
         )
-        $(TD $(D std.string) contains functions that work specifically with
+        $(TD `std.string` contains functions that work specifically with
             strings.$(BR)
 
             Many string manipulations are special cases of more generic
             algorithms that work with general arrays, or generic ranges; these
-            are found in $(D std.array) and $(D std.algorithm).$(BR)
+            are found in `std.array` and `std.algorithm`.$(BR)
 
-            D strings are encoded in Unicode; $(D std.uni) provides operations
-            that work with Unicode strings in general, while $(D std.utf) deals
+            D strings are encoded in Unicode; `std.uni` provides operations
+            that work with Unicode strings in general, while `std.utf` deals
             with specific Unicode encodings and conversions between them.$(BR)
 
-            $(D std.format) provides $(D printf)-style format string
+            `std.format` provides `printf`-style format string
             formatting, with D's own improvements and extensions.$(BR)
 
-            For manipulating filesystem pathnames, $(D std.path) is
+            For manipulating filesystem pathnames, `std.path` is
             provided.$(BR)
 
-            $(D std.regex) is a very fast library for string matching and
+            `std.regex` is a very fast library for string matching and
             substitution using regular expressions.$(BR)
 
-            $(D std.ascii) provides routines specific to the ASCII subset of
+            `std.ascii` provides routines specific to the ASCII subset of
             Unicode.
 
             Windows-specific character set support is provided by
-            $(D std.windows.charset).
+            `std.windows.charset`.
 
             Rudimentary support for other string encodings is provided by
-            $(D std.encoding).
+            `std.encoding`.
         )
     )
     $(LEADINGROW Type manipulations)
@@ -303,18 +303,18 @@ $(BOOKTABLE ,
             $(LINK2 std_bitmanip.html, std.bitmanip)$(BR)
             $(LINK2 core_bitop.html, core.bitop)$(BR)
         )
-        $(TD $(D std.conv) provides powerful automatic conversions between
+        $(TD `std.conv` provides powerful automatic conversions between
             built-in types as well as user-defined types that implement
             standard conversion primitives.$(BR)
 
-            $(D std.typecons) provides various utilities for type construction
+            `std.typecons` provides various utilities for type construction
             and compile-time type introspection. It provides facilities for
             constructing scoped variables and reference-counted types, as well
             as miscellaneous useful generic types such as tuples and
             flags.$(BR)
 
-            $(D std.bitmanip) provides various bit-level operations, bit
-            arrays, and bit fields. $(D core.bitop) provides low-level bit
+            `std.bitmanip` provides various bit-level operations, bit
+            arrays, and bit fields. `core.bitop` provides low-level bit
             manipulation primitives.$(BR)
         )
     )
@@ -323,7 +323,7 @@ $(BOOKTABLE ,
         $(TD
             $(LINK2 core_simd, core.simd)$(BR)
         )
-        $(TD The $(D core.simd) module provides access to SIMD intrinsics in
+        $(TD The `core.simd` module provides access to SIMD intrinsics in
         the compiler.)
     )
 )

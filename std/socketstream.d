@@ -25,8 +25,8 @@
  *       current standards. It will remain until we have a suitable replacement,
  *       but be aware that it will not remain long term.)
  *
- * $(D SocketStream) is a stream for a blocking,
- * connected $(D Socket).
+ * `SocketStream` is a stream for a blocking,
+ * connected `Socket`.
  *
  * Example:
  *      See $(SAMPLESRC htmlget.d)
@@ -43,8 +43,8 @@ private import std.stream;
 private import std.socket;
 
 /**************
- * $(D SocketStream) is a stream for a blocking,
- * connected $(D Socket).
+ * `SocketStream` is a stream for a blocking,
+ * connected `Socket`.
  */
 class SocketStream: Stream
 {
@@ -76,7 +76,7 @@ class SocketStream: Stream
         }
 
         /**
-         * Property to get the $(D Socket) that is being streamed.
+         * Property to get the `Socket` that is being streamed.
          */
         Socket socket()
         {
@@ -121,7 +121,7 @@ class SocketStream: Stream
 
         /**
          * Socket streams do not support seeking. This disabled method throws
-         * a $(D SeekException).
+         * a `SeekException`.
          */
         @disable override ulong seek(long offset, SeekPos whence)
         {
@@ -138,7 +138,7 @@ class SocketStream: Stream
         }
 
         /**
-         * Close the $(D Socket).
+         * Close the `Socket`.
          */
         override void close()
         {

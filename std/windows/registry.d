@@ -890,11 +890,11 @@ public:
         Returns the named sub-key of this key.
 
         Params:
-            name = The name of the subkey to create. May not be $(D null).
+            name = The name of the subkey to create. May not be `null`.
         Returns:
             The created key.
         Throws:
-            $(D RegistryException) is thrown if the key cannot be created.
+            `RegistryException` is thrown if the key cannot be created.
      */
     Key createKey(string name, REGSAM access = REGSAM.KEY_ALL_ACCESS)
     {
@@ -930,12 +930,12 @@ public:
         Params:
             name = The name of the subkey to aquire. If name is the empty
                    string, then the called key is duplicated.
-            access = The desired access; one of the $(D REGSAM) enumeration.
+            access = The desired access; one of the `REGSAM` enumeration.
         Returns:
             The aquired key.
         Throws:
-            This function never returns $(D null). If a key corresponding to
-            the requested name is not found, $(D RegistryException) is thrown.
+            This function never returns `null`. If a key corresponding to
+            the requested name is not found, `RegistryException` is thrown.
      */
     Key getKey(string name, REGSAM access = REGSAM.KEY_READ)
     {
@@ -969,7 +969,7 @@ public:
         Deletes the named key.
 
         Params:
-            name = The name of the key to delete. May not be $(D null).
+            name = The name of the key to delete. May not be `null`.
      */
     void deleteKey(string name, REGSAM access = cast(REGSAM)0)
     {
@@ -980,11 +980,11 @@ public:
 
     /**
         Returns the named value.
-        If $(D name) is the empty string, then the default value is returned.
+        If `name` is the empty string, then the default value is returned.
 
         Returns:
-            This function never returns $(D null). If a value corresponding
-            to the requested name is not found, $(D RegistryException) is thrown.
+            This function never returns `null`. If a value corresponding
+            to the requested name is not found, `RegistryException` is thrown.
      */
     Value getValue(string name)
     {
@@ -1000,7 +1000,7 @@ public:
             value = The 32-bit unsigned value to set.
         Throws:
             If a value corresponding to the requested name is not found,
-            $(D RegistryException) is thrown.
+            `RegistryException` is thrown.
      */
     void setValue(string name, uint value)
     {
@@ -1015,10 +1015,10 @@ public:
             name = The name of the value to set. If it is the empty string,
                    sets the default value.
             value = The 32-bit unsigned value to set.
-            endian = Can be $(D Endian.BigEndian) or $(D Endian.LittleEndian).
+            endian = Can be `Endian.BigEndian` or `Endian.LittleEndian`.
         Throws:
             If a value corresponding to the requested name is not found,
-            $(D RegistryException) is thrown.
+            `RegistryException` is thrown.
      */
     void setValue(string name, uint value, Endian endian)
     {
@@ -1039,7 +1039,7 @@ public:
             value = The 64-bit unsigned value to set.
         Throws:
             If a value corresponding to the requested name is not found,
-            $(D RegistryException) is thrown.
+            `RegistryException` is thrown.
      */
     void setValue(string name, ulong value)
     {
@@ -1055,7 +1055,7 @@ public:
             value = The string value to set.
         Throws:
             If a value corresponding to the requested name is not found,
-            $(D RegistryException) is thrown.
+            `RegistryException` is thrown.
      */
     void setValue(string name, string value)
     {
@@ -1069,11 +1069,11 @@ public:
             name = The name of the value to set. If it is the empty string,
                    sets the default value.
             value = The string value to set.
-            asEXPAND_SZ = If $(D true), the value will be stored as an
+            asEXPAND_SZ = If `true`, the value will be stored as an
                           expandable environment string, otherwise as a normal string.
         Throws:
             If a value corresponding to the requested name is not found,
-            $(D RegistryException) is thrown.
+            `RegistryException` is thrown.
      */
     void setValue(string name, string value, bool asEXPAND_SZ)
     {
@@ -1096,7 +1096,7 @@ public:
             value = The multiple-strings value to set.
         Throws:
             If a value corresponding to the requested name is not found,
-            $(D RegistryException) is thrown.
+            `RegistryException` is thrown.
      */
     void setValue(string name, string[] value)
     {
@@ -1120,7 +1120,7 @@ public:
             value = The binary value to set.
         Throws:
             If a value corresponding to the requested name is not found,
-            $(D RegistryException) is thrown.
+            `RegistryException` is thrown.
      */
     void setValue(string name, byte[] value)
     {
@@ -1131,10 +1131,10 @@ public:
         Deletes the named value.
 
         Params:
-            name = The name of the value to delete. May not be $(D null).
+            name = The name of the value to delete. May not be `null`.
         Throws:
             If a value of the requested name is not found,
-            $(D RegistryException) is thrown.
+            `RegistryException` is thrown.
      */
     void deleteValue(string name)
     {
@@ -1206,7 +1206,7 @@ public:
         Returns:
             The contents of the value.
         Throws:
-            $(D RegistryException) if the type of the value is not REG_SZ,
+            `RegistryException` if the type of the value is not REG_SZ,
             REG_EXPAND_SZ, REG_DWORD, or REG_QWORD.
      */
     @property string value_SZ() const
@@ -1249,7 +1249,7 @@ public:
         Returns:
             The contents of the value.
         Throws:
-            $(D RegistryException) if the type of the value is not REG_MULTI_SZ.
+            `RegistryException` if the type of the value is not REG_MULTI_SZ.
      */
     @property string[] value_MULTI_SZ() const
     {
@@ -1267,7 +1267,7 @@ public:
         Returns:
             The contents of the value.
         Throws:
-            $(D RegistryException) is thrown for all types other than
+            `RegistryException` is thrown for all types other than
             REG_DWORD, REG_DWORD_LITTLE_ENDIAN and REG_DWORD_BIG_ENDIAN.
      */
     @property uint value_DWORD() const
@@ -1286,7 +1286,7 @@ public:
         Returns:
             The contents of the value.
         Throws:
-            $(D RegistryException) if the type of the value is not REG_QWORD.
+            `RegistryException` if the type of the value is not REG_QWORD.
      */
     @property ulong value_QWORD() const
     {
@@ -1309,7 +1309,7 @@ public:
         Returns:
             The contents of the value.
         Throws:
-            $(D RegistryException) if the type of the value is not REG_BINARY.
+            `RegistryException` if the type of the value is not REG_BINARY.
      */
     @property byte[] value_BINARY() const
     {
@@ -1415,7 +1415,7 @@ public:
         Returns:
             The name of the key corresponding to the given index.
         Throws:
-            $(D RegistryException) if no corresponding key is retrieved.
+            `RegistryException` if no corresponding key is retrieved.
      */
     string opIndex(size_t index)
     {
@@ -1492,7 +1492,7 @@ public:
         Returns:
             The key corresponding to the given index.
         Throws:
-            $(D RegistryException) if no corresponding key is retrieved.
+            `RegistryException` if no corresponding key is retrieved.
      */
     Key getKey(size_t index)
     {
@@ -1512,7 +1512,7 @@ public:
         Returns:
             The key corresponding to the given index.
         Throws:
-            $(D RegistryException) if no corresponding key is retrieved.
+            `RegistryException` if no corresponding key is retrieved.
      */
     Key opIndex(size_t index)
     {
@@ -1601,7 +1601,7 @@ public:
         Returns:
             The name of the value corresponding to the given index.
         Throws:
-            $(D RegistryException) if no corresponding value is retrieved.
+            `RegistryException` if no corresponding value is retrieved.
      */
     string getValueName(size_t index)
     {
@@ -1621,7 +1621,7 @@ public:
         Returns:
             The name of the value corresponding to the given index.
         Throws:
-            $(D RegistryException) if no corresponding value is retrieved.
+            `RegistryException` if no corresponding value is retrieved.
      */
     string opIndex(size_t index)
     {
@@ -1688,14 +1688,14 @@ public:
     }
 
     /**
-        The value at the given $(D index).
+        The value at the given `index`.
 
         Params:
             index = The 0-based index of the value to retrieve
         Returns:
             The value corresponding to the given index.
         Throws:
-            $(D RegistryException) if no corresponding value is retrieved
+            `RegistryException` if no corresponding value is retrieved
      */
     Value getValue(size_t index)
     {
@@ -1708,14 +1708,14 @@ public:
     }
 
     /**
-        The value at the given $(D index).
+        The value at the given `index`.
 
         Params:
             index = The 0-based index of the value to retrieve.
         Returns:
             The value corresponding to the given index.
         Throws:
-            $(D RegistryException) if no corresponding value is retrieved.
+            `RegistryException` if no corresponding value is retrieved.
      */
     Value opIndex(size_t index)
     {

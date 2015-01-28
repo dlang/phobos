@@ -8,53 +8,53 @@ $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 
 $(T2 all,
-        $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements
+        $(D all!"a > 0"([1, 2, 3, 4])) returns `true` because all elements
         are positive)
 $(T2 any,
-        $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one
+        $(D any!"a > 0"([1, 2, -3, -4])) returns `true` because at least one
         element is positive)
 $(T2 balancedParens,
-        $(D balancedParens("((1 + 1) / 2)")) returns $(D true) because the
+        $(D balancedParens("((1 + 1) / 2)")) returns `true` because the
         string has balanced parentheses.)
 $(T2 boyerMooreFinder,
-        $(D find("hello world", boyerMooreFinder("or"))) returns $(D "orld")
+        $(D find("hello world", boyerMooreFinder("or"))) returns `"orld"`
         using the $(LUCKY Boyer-Moore _algorithm).)
 $(T2 canFind,
-        $(D canFind("hello world", "or")) returns $(D true).)
+        $(D canFind("hello world", "or")) returns `true`.)
 $(T2 count,
         Counts elements that are equal to a specified value or satisfy a
-        predicate.  $(D count([1, 2, 1], 1)) returns $(D 2) and
-        $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
+        predicate.  $(D count([1, 2, 1], 1)) returns `2` and
+        $(D count!"a < 0"([1, -3, 0])) returns `1`.)
 $(T2 countUntil,
-        $(D countUntil(a, b)) returns the number of steps taken in $(D a) to
-        reach $(D b); for example, $(D countUntil("hello!", "o")) returns
-        $(D 4).)
+        $(D countUntil(a, b)) returns the number of steps taken in `a` to
+        reach `b`; for example, $(D countUntil("hello!", "o")) returns
+        `4`.)
 $(T2 commonPrefix,
-        $(D commonPrefix("parakeet", "parachute")) returns $(D "para").)
+        $(D commonPrefix("parakeet", "parachute")) returns `"para"`.)
 $(T2 endsWith,
-        $(D endsWith("rocks", "ks")) returns $(D true).)
+        $(D endsWith("rocks", "ks")) returns `true`.)
 $(T2 find,
-        $(D find("hello world", "or")) returns $(D "orld") using linear search.
+        $(D find("hello world", "or")) returns `"orld"` using linear search.
         (For binary search refer to $(XREF range,sortedRange).))
 $(T2 findAdjacent,
         $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
         two equal adjacent elements, i.e. $(D [3, 3, 4]).)
 $(T2 findAmong,
-        $(D findAmong("abcd", "qcx")) returns $(D "cd") because $(D 'c') is
-        among $(D "qcx").)
+        $(D findAmong("abcd", "qcx")) returns `"cd"` because `'c'` is
+        among `"qcx"`.)
 $(T2 findSkip,
-        If $(D a = "abcde"), then $(D findSkip(a, "x")) returns $(D false) and
-        leaves $(D a) unchanged, whereas $(D findSkip(a, 'c')) advances $(D a)
-        to $(D "cde") and returns $(D true).)
+        If $(D a = "abcde"), then $(D findSkip(a, "x")) returns `false` and
+        leaves `a` unchanged, whereas $(D findSkip(a, 'c')) advances `a`
+        to `"cde"` and returns `true`.)
 $(T2 findSplit,
-        $(D findSplit("abcdefg", "de")) returns the three ranges $(D "abc"),
-        $(D "de"), and $(D "fg").)
+        $(D findSplit("abcdefg", "de")) returns the three ranges `"abc"`,
+        `"de"`, and `"fg"`.)
 $(T2 findSplitAfter,
         $(D findSplitAfter("abcdefg", "de")) returns the two ranges
-        $(D "abcde") and $(D "fg").)
+        `"abcde"` and `"fg"`.)
 $(T2 findSplitBefore,
-        $(D findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc")
-        and $(D "defg").)
+        $(D findSplitBefore("abcdefg", "de")) returns the two ranges `"abc"`
+        and `"defg"`.)
 $(T2 minCount,
         $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
 $(T2 minPos,
@@ -63,13 +63,13 @@ $(T2 minPos,
         element.)
 $(T2 mismatch,
         $(D mismatch("parakeet", "parachute")) returns the two ranges
-        $(D "keet") and $(D "chute").)
+        `"keet"` and `"chute"`.)
 $(T2 skipOver,
-        Assume $(D a = "blah"). Then $(D skipOver(a, "bi")) leaves $(D a)
-        unchanged and returns $(D false), whereas $(D skipOver(a, "bl"))
-        advances $(D a) to refer to $(D "ah") and returns $(D true).)
+        Assume $(D a = "blah"). Then $(D skipOver(a, "bi")) leaves `a`
+        unchanged and returns `false`, whereas $(D skipOver(a, "bl"))
+        advances `a` to refer to `"ah"` and returns `true`.)
 $(T2 startsWith,
-        $(D startsWith("hello, world", "hello")) returns $(D true).)
+        $(D startsWith("hello, world", "hello")) returns `true`.)
 $(T2 until,
         Lazily iterates a range until a specific value is found.)
 )
@@ -95,14 +95,14 @@ import std.traits;
 import std.typecons; // : Tuple;
 
 /++
-Checks if $(I _all) of the elements verify $(D pred).
+Checks if $(I _all) of the elements verify `pred`.
  +/
 template all(alias pred = "a")
 {
     /++
-    Returns $(D true) if and only if $(I _all) values $(D v) found in the
-    input range $(D range) satisfy the predicate $(D pred).
-    Performs (at most) $(BIGOH range.length) evaluations of $(D pred).
+    Returns `true` if and only if $(I _all) values `v` found in the
+    input range `range` satisfy the predicate `pred`.
+    Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool all(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
@@ -121,7 +121,7 @@ template all(alias pred = "a")
 }
 
 /++
-$(D all) can also be used without a predicate, if its items can be
+`all` can also be used without a predicate, if its items can be
 evaluated to true or false in a conditional statement. This can be a
 convenient way to quickly evaluate that $(I _all) of the elements of a range
 are true.
@@ -139,16 +139,16 @@ are true.
 }
 
 /++
-Checks if $(I _any) of the elements verifies $(D pred).
-$(D !any) can be used to verify that $(I none) of the elements verify
-$(D pred).
+Checks if $(I _any) of the elements verifies `pred`.
+`!any` can be used to verify that $(I none) of the elements verify
+`pred`.
  +/
 template any(alias pred = "a")
 {
     /++
-    Returns $(D true) if and only if $(I _any) value $(D v) found in the
-    input range $(D range) satisfies the predicate $(D pred).
-    Performs (at most) $(BIGOH range.length) evaluations of $(D pred).
+    Returns `true` if and only if $(I _any) value `v` found in the
+    input range `range` satisfies the predicate `pred`.
+    Performs (at most) $(BIGOH range.length) evaluations of `pred`.
      +/
     bool any(Range)(Range range)
     if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
@@ -166,8 +166,8 @@ template any(alias pred = "a")
 }
 
 /++
-$(D any) can also be used without a predicate, if its items can be
-evaluated to true or false in a conditional statement. $(D !any) can be a
+`any` can also be used without a predicate, if its items can be
+evaluated to true or false in a conditional statement. `!any` can be a
 convenient way to quickly test that $(I none) of the elements of a range
 evaluate to true.
  +/
@@ -195,10 +195,10 @@ evaluate to true.
 
 // balancedParens
 /**
-Checks whether $(D r) has "balanced parentheses", i.e. all instances
-of $(D lPar) are closed by corresponding instances of $(D rPar). The
-parameter $(D maxNestingLevel) controls the nesting level allowed. The
-most common uses are the default or $(D 0). In the latter case, no
+Checks whether `r` has "balanced parentheses", i.e. all instances
+of `lPar` are closed by corresponding instances of `rPar`. The
+parameter `maxNestingLevel` controls the nesting level allowed. The
+most common uses are the default or `0`. In the latter case, no
 nesting is allowed.
 */
 bool balancedParens(Range, E)(Range r, E lPar, E rPar,
@@ -236,18 +236,18 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
 }
 
 /**
- * Sets up Boyer-Moore matching for use with $(D find) below.
+ * Sets up Boyer-Moore matching for use with `find` below.
  * By default, elements are compared for equality.
  *
- * $(D BoyerMooreFinder) allocates GC memory.
+ * `BoyerMooreFinder` allocates GC memory.
  *
  * Params:
  * pred = Predicate used to compare elements.
  * needle = A random-access range with length and slicing.
  *
  * Returns:
- * An instance of $(D BoyerMooreFinder) that can be used with $(D find()) to
- * invoke the Boyer-Moore matching algorithm for finding of $(D needle) in a
+ * An instance of `BoyerMooreFinder` that can be used with `find()` to
+ * invoke the Boyer-Moore matching algorithm for finding of `needle` in a
  * given haystack.
  */
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
@@ -366,9 +366,9 @@ Params:
     r2 = An $(XREF2 range, isInputRange, input range) of elements.
 
 Returns:
-A slice of $(D r1) which contains the characters that both ranges start with,
+A slice of `r1` which contains the characters that both ranges start with,
 if the first argument is a string; otherwise, the same as the result of
-$(D takeExactly(r1, n)), where $(D n) is the number of elements in the common
+$(D takeExactly(r1, n)), where `n` is the number of elements in the common
 prefix of both ranges.
 
 See_Also:
@@ -541,21 +541,21 @@ if (isNarrowString!R1 && isNarrowString!R2)
 
 // count
 /**
-The first version counts the number of elements $(D x) in $(D r) for
-which $(D pred(x, value)) is $(D true). $(D pred) defaults to
-equality. Performs $(BIGOH haystack.length) evaluations of $(D pred).
+The first version counts the number of elements `x` in `r` for
+which $(D pred(x, value)) is `true`. `pred` defaults to
+equality. Performs $(BIGOH haystack.length) evaluations of `pred`.
 
-The second version returns the number of times $(D needle) occurs in
-$(D haystack). Throws an exception if $(D needle.empty), as the _count
+The second version returns the number of times `needle` occurs in
+`haystack`. Throws an exception if `needle.empty`, as the _count
 of the empty range in any range would be infinite. Overlapped counts
-are not considered, for example $(D count("aaa", "aa")) is $(D 1), not
-$(D 2).
+are not considered, for example $(D count("aaa", "aa")) is `1`, not
+`2`.
 
-The third version counts the elements for which $(D pred(x)) is $(D
-true). Performs $(BIGOH haystack.length) evaluations of $(D pred).
+The third version counts the elements for which `pred(x)` is $(D
+true). Performs $(BIGOH haystack.length) evaluations of `pred`.
 
-Note: Regardless of the overload, $(D count) will not accept
-infinite ranges for $(D haystack).
+Note: Regardless of the overload, `count` will not accept
+infinite ranges for `haystack`.
 */
 size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
     if (isInputRange!Range && !isInfinite!Range &&
@@ -666,20 +666,20 @@ size_t count(alias pred = "true", R)(R haystack)
 
 /++
     Counts elements in the given $(XREF2 range, isForwardRange, forward range)
-    until the given predicate is true for one of the given $(D needles).
+    until the given predicate is true for one of the given `needles`.
 
     Params:
         pred = The predicate for determining when to stop counting.
         haystack = The $(XREF2 range, isInputRange, input range) to be counted.
         needles = Either a single element, or a $(XREF2 range, isForwardRange,
             forward range) of elements, to be evaluated in turn against each
-            element in $(D haystack) under the given predicate.
+            element in `haystack` under the given predicate.
 
     Returns: The number of elements which must be popped from the front of
-    $(D haystack) before reaching an element for which
-    $(D startsWith!pred(haystack, needles)) is $(D true). If
-    $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
-    $(D haystack), then $(D -1) is returned.
+    `haystack` before reaching an element for which
+    $(D startsWith!pred(haystack, needles)) is `true`. If
+    $(D startsWith!pred(haystack, needles)) is not `true` for any element in
+    `haystack`, then `-1` is returned.
   +/
 ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
     if (isForwardRange!R
@@ -828,15 +828,15 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
 }
 
 /++
-    Similar to the previous overload of $(D countUntil), except that this one
-    evaluates only the predicate $(D pred).
+    Similar to the previous overload of `countUntil`, except that this one
+    evaluates only the predicate `pred`.
 
     Params:
         pred = Predicate to when to stop counting.
         haystack = An $(XREF2 range, isInputRange, input range) of elements
           to be counted.
-    Returns: The number of elements which must be popped from $(D haystack)
-    before $(D pred(haystack.front)) is $(D true).
+    Returns: The number of elements which must be popped from `haystack`
+    before `pred(haystack.front)` is `true`.
   +/
 ptrdiff_t countUntil(alias pred, R)(R haystack)
     if (isInputRange!R &&
@@ -923,7 +923,7 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
 
 /**
 Checks if the given range ends with (one of) the given needle(s).
-The reciprocal of $(D startsWith).
+The reciprocal of `startsWith`.
 
 Params:
     pred = The predicate to use for comparing elements between the range and
@@ -940,7 +940,7 @@ Params:
 Returns:
 0 if the needle(s) do not occur at the end of the given range;
 otherwise the position of the matching needle, that is, 1 if the range ends
-with $(D withOneOfThese[0]), 2 if it ends with $(D withOneOfThese[1]), and so
+with `withOneOfThese[0]`, 2 if it ends with `withOneOfThese[1]`, and so
 on.
  */
 uint endsWith(alias pred = "a == b", Range, Needles...)(Range doesThisEnd, Needles withOneOfThese)
@@ -1151,11 +1151,11 @@ if (isBidirectionalRange!R &&
 // find
 /**
 Finds an individual element in an input range. Elements of $(D
-haystack) are compared with $(D needle) by using predicate $(D
+haystack) are compared with `needle` by using predicate $(D
 pred). Performs $(BIGOH walkLength(haystack)) evaluations of $(D
 pred).
 
-To _find the last occurrence of $(D needle) in $(D haystack), call $(D
+To _find the last occurrence of `needle` in `haystack`, call $(D
 find(retro(haystack), needle)). See $(XREF range, retro).
 
 Params:
@@ -1176,9 +1176,9 @@ $(D isInputRange!InputRange && is(typeof(binaryFun!pred(haystack.front, needle)
 
 Returns:
 
-$(D haystack) advanced such that the front element is the one searched for;
-that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
-such position exists, returns an empty $(D haystack).
+`haystack` advanced such that the front element is the one searched for;
+that is, until $(D binaryFun!pred(haystack.front, needle)) is `true`. If no
+such position exists, returns an empty `haystack`.
 
 See_Also:
      $(WEB sgi.com/tech/stl/_find.html, STL's _find)
@@ -1442,13 +1442,13 @@ if (isInputRange!InputRange &&
 }
 
 /**
-Advances the input range $(D haystack) by calling $(D haystack.popFront)
-until either $(D pred(haystack.front)), or $(D
+Advances the input range `haystack` by calling `haystack.popFront`
+until either `pred(haystack.front)`, or $(D
 haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
 pred).
 
-To _find the last element of a bidirectional $(D haystack) satisfying
-$(D pred), call $(D find!(pred)(retro(haystack))). See $(XREF
+To _find the last element of a bidirectional `haystack` satisfying
+`pred`, call $(D find!(pred)(retro(haystack))). See $(XREF
 range, retro).
 
 Params:
@@ -1460,9 +1460,9 @@ haystack = The $(XREF2 range, isInputRange, input range) to search in.
 
 Returns:
 
-$(D haystack) advanced such that the front element is the one searched for;
-that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
-such position exists, returns an empty $(D haystack).
+`haystack` advanced such that the front element is the one searched for;
+that is, until $(D binaryFun!pred(haystack.front, needle)) is `true`. If no
+such position exists, returns an empty `haystack`.
 
 See_Also:
      $(WEB sgi.com/tech/stl/find_if.html, STL's find_if)
@@ -1551,8 +1551,8 @@ needle = The $(XREF2 range, isForwardRange, forward range) searched for.
 
 Returns:
 
-$(D haystack) advanced such that $(D needle) is a prefix of it (if no
-such position exists, returns $(D haystack) advanced to termination).
+`haystack` advanced such that `needle` is a prefix of it (if no
+such position exists, returns `haystack` advanced to termination).
  */
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -1874,7 +1874,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
 }
 
 /**
-Finds two or more $(D needles) into a $(D haystack). The predicate $(D
+Finds two or more `needles` into a `haystack`. The predicate $(D
 pred) is used throughout to compare elements. By default, elements are
 compared for equality.
 
@@ -1883,40 +1883,40 @@ Params:
 pred = The predicate to use for comparing elements.
 
 haystack = The target of the search. Must be an input range.
-If any of $(D needles) is a range with elements comparable to
-elements in $(D haystack), then $(D haystack) must be a forward range
+If any of `needles` is a range with elements comparable to
+elements in `haystack`, then `haystack` must be a forward range
 such that the search can backtrack.
 
-needles = One or more items to search for. Each of $(D needles) must
-be either comparable to one element in $(D haystack), or be itself a
+needles = One or more items to search for. Each of `needles` must
+be either comparable to one element in `haystack`, or be itself a
 forward range with elements comparable with elements in
-$(D haystack).
+`haystack`.
 
 Returns:
 
-A tuple containing $(D haystack) positioned to match one of the
+A tuple containing `haystack` positioned to match one of the
 needles and also the 1-based index of the matching element in $(D
-needles) (0 if none of $(D needles) matched, 1 if $(D needles[0])
-matched, 2 if $(D needles[1]) matched...). The first needle to be found
+needles) (0 if none of `needles` matched, 1 if `needles[0]`
+matched, 2 if `needles[1]` matched...). The first needle to be found
 will be the one that matches. If multiple needles are found at the
 same spot in the range, then the shortest one is the one which matches
 (if multiple needles of the same length are found at the same spot (e.g
-$(D "a") and $(D 'a')), then the left-most of them in the argument list
+`"a"` and `'a'`), then the left-most of them in the argument list
 matches).
 
-The relationship between $(D haystack) and $(D needles) simply means
-that one can e.g. search for individual $(D int)s or arrays of $(D
-int)s in an array of $(D int)s. In addition, if elements are
+The relationship between `haystack` and `needles` simply means
+that one can e.g. search for individual `int`s or arrays of $(D
+int)s in an array of `int`s. In addition, if elements are
 individually comparable, searches of heterogeneous types are allowed
-as well: a $(D double[]) can be searched for an $(D int) or a $(D
-short[]), and conversely a $(D long) can be searched for a $(D float)
-or a $(D double[]). This makes for efficient searches without the need
+as well: a `double[]` can be searched for an `int` or a $(D
+short[]), and conversely a `long` can be searched for a `float`
+or a `double[]`. This makes for efficient searches without the need
 to coerce one side of the comparison into the other's side type.
 
 The complexity of the search is $(BIGOH haystack.length *
 max(needles.length)). (For needles that are individual items, length
 is considered to be 1.) The strategy used in searching several
-subranges at once maximizes cache usage by moving in $(D haystack) as
+subranges at once maximizes cache usage by moving in `haystack` as
 few times as possible.
  */
 Tuple!(Range, size_t) find(alias pred = "a == b", Range, Ranges...)
@@ -2031,7 +2031,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 }
 
 /**
- * Finds $(D needle) in $(D haystack) efficiently using the
+ * Finds `needle` in `haystack` efficiently using the
  * $(LUCKY Boyer-Moore) method.
  *
  * Params:
@@ -2039,8 +2039,8 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
  * needle = A $(LREF BoyerMooreFinder).
  *
  * Returns:
- * $(D haystack) advanced such that $(D needle) is a prefix of it (if no
- * such position exists, returns $(D haystack) advanced to termination).
+ * `haystack` advanced such that `needle` is a prefix of it (if no
+ * such position exists, returns `haystack` advanced to termination).
  */
 Range1 find(Range1, alias pred, Range2)(
     Range1 haystack, BoyerMooreFinder!(pred, Range2) needle)
@@ -2092,9 +2092,9 @@ template canFind(alias pred="a == b")
     import std.typetuple : allSatisfy;
 
     /++
-    Returns $(D true) if and only if any value $(D v) found in the
-    input range $(D range) satisfies the predicate $(D pred).
-    Performs (at most) $(BIGOH haystack.length) evaluations of $(D pred).
+    Returns `true` if and only if any value `v` found in the
+    input range `range` satisfies the predicate `pred`.
+    Performs (at most) $(BIGOH haystack.length) evaluations of `pred`.
      +/
     bool canFind(Range)(Range haystack)
     if (is(typeof(find!pred(haystack))))
@@ -2103,8 +2103,8 @@ template canFind(alias pred="a == b")
     }
 
     /++
-    Returns $(D true) if and only if $(D needle) can be found in $(D
-    range). Performs $(BIGOH haystack.length) evaluations of $(D pred).
+    Returns `true` if and only if `needle` can be found in $(D
+    range). Performs $(BIGOH haystack.length) evaluations of `pred`.
      +/
     bool canFind(Range, Element)(Range haystack, Element needle)
     if (is(typeof(find!pred(haystack, needle))))
@@ -2113,13 +2113,13 @@ template canFind(alias pred="a == b")
     }
 
     /++
-    Returns the 1-based index of the first needle found in $(D haystack). If no
-    needle is found, then $(D 0) is returned.
+    Returns the 1-based index of the first needle found in `haystack`. If no
+    needle is found, then `0` is returned.
 
     So, if used directly in the condition of an if statement or loop, the result
-    will be $(D true) if one of the needles is found and $(D false) if none are
+    will be `true` if one of the needles is found and `false` if none are
     found, whereas if the result is used elsewhere, it can either be cast to
-    $(D bool) for the same effect or used to get which needle was found first
+    `bool` for the same effect or used to get which needle was found first
     without having to deal with the tuple that $(D LREF find) returns for the
     same operation.
      +/
@@ -2167,17 +2167,17 @@ template canFind(alias pred="a == b")
 
 // findAdjacent
 /**
-Advances $(D r) until it finds the first two adjacent elements $(D a),
-$(D b) that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
-evaluations of $(D pred).
+Advances `r` until it finds the first two adjacent elements `a`,
+`b` that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
+evaluations of `pred`.
 
 Params:
     pred = The predicate to satisfy.
     r = A $(XREF2 range, isForwardRange, forward range) to search in.
 
 Returns:
-$(D r) advanced to the first occurrence of two adjacent elements that satisfy
-the given predicate. If there are no such two elements, returns $(D r) advanced
+`r` advanced to the first occurrence of two adjacent elements that satisfy
+the given predicate. If there are no such two elements, returns `r` advanced
 until empty.
 
 See_Also:
@@ -2242,9 +2242,9 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
 /**
 Searches the given range for an element that matches one of the given choices.
 
-Advances $(D seq) by calling $(D seq.popFront) until either
-$(D find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes empty.
-Performs $(BIGOH seq.length * choices.length) evaluations of $(D pred).
+Advances `seq` by calling `seq.popFront` until either
+$(D find!(pred)(choices, seq.front)) is `true`, or `seq` becomes empty.
+Performs $(BIGOH seq.length * choices.length) evaluations of `pred`.
 
 Params:
     pred = The predicate to use for determining a match.
@@ -2253,7 +2253,7 @@ Params:
         choices.
 
 Returns:
-$(D seq) advanced to the first matching element, or until empty if there are no
+`seq` advanced to the first matching element, or until empty if there are no
 matching elements.
 
 See_Also:
@@ -2290,16 +2290,16 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
 
 // findSkip
 /**
- * Finds $(D needle) in $(D haystack) and positions $(D haystack)
- * right after the first occurrence of $(D needle).
+ * Finds `needle` in `haystack` and positions `haystack`
+ * right after the first occurrence of `needle`.
  *
  * Params:
  *  haystack = The $(XREF2 range, isForwardRange, forward range) to search in.
  *  needle = The $(XREF2 range, isForwardRange, forward range) to search for.
  *
- * Returns: $(D true) if the needle was found, in which case $(D haystack) is
- * positioned after the end of the first occurrence of $(D needle); otherwise
- * $(D false), leaving $(D haystack) untouched.
+ * Returns: `true` if the needle was found, in which case `haystack` is
+ * positioned after the end of the first occurrence of `needle`; otherwise
+ * `false`, leaving `haystack` untouched.
  */
 bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
@@ -2330,35 +2330,35 @@ if (isForwardRange!R1 && isForwardRange!R2
 }
 
 /**
-These functions find the first occurrence of $(D needle) in $(D
-haystack) and then split $(D haystack) as follows.
+These functions find the first occurrence of `needle` in $(D
+haystack) and then split `haystack` as follows.
 
-$(D findSplit) returns a tuple $(D result) containing $(I three)
-ranges. $(D result[0]) is the portion of $(D haystack) before $(D
-needle), $(D result[1]) is the portion of $(D haystack) that matches
-$(D needle), and $(D result[2]) is the portion of $(D haystack) after
-the match. If $(D needle) was not found, $(D result[0])
-comprehends $(D haystack) entirely and $(D result[1]) and $(D result[2])
+`findSplit` returns a tuple `result` containing $(I three)
+ranges. `result[0]` is the portion of `haystack` before $(D
+needle), `result[1]` is the portion of `haystack` that matches
+`needle`, and `result[2]` is the portion of `haystack` after
+the match. If `needle` was not found, `result[0]`
+comprehends `haystack` entirely and `result[1]` and `result[2]`
 are empty.
 
-$(D findSplitBefore) returns a tuple $(D result) containing two
-ranges. $(D result[0]) is the portion of $(D haystack) before $(D
-needle), and $(D result[1]) is the balance of $(D haystack) starting
-with the match. If $(D needle) was not found, $(D result[0])
-comprehends $(D haystack) entirely and $(D result[1]) is empty.
+`findSplitBefore` returns a tuple `result` containing two
+ranges. `result[0]` is the portion of `haystack` before $(D
+needle), and `result[1]` is the balance of `haystack` starting
+with the match. If `needle` was not found, `result[0]`
+comprehends `haystack` entirely and `result[1]` is empty.
 
-$(D findSplitAfter) returns a tuple $(D result) containing two ranges.
-$(D result[0]) is the portion of $(D haystack) up to and including the
-match, and $(D result[1]) is the balance of $(D haystack) starting
-after the match. If $(D needle) was not found, $(D result[0]) is empty
-and $(D result[1]) is $(D haystack).
+`findSplitAfter` returns a tuple `result` containing two ranges.
+`result[0]` is the portion of `haystack` up to and including the
+match, and `result[1]` is the balance of `haystack` starting
+after the match. If `needle` was not found, `result[0]` is empty
+and `result[1]` is `haystack`.
 
 In all cases, the concatenation of the returned ranges spans the
-entire $(D haystack).
+entire `haystack`.
 
-If $(D haystack) is a random-access range, all three components of the
-tuple have the same type as $(D haystack). Otherwise, $(D haystack)
-must be a forward range and the type of $(D result[0]) and $(D
+If `haystack` is a random-access range, all three components of the
+tuple have the same type as `haystack`. Otherwise, `haystack`
+must be a forward range and the type of `result[0]` and $(D
 result[1]) is the same as $(XREF range,takeExactly).
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
@@ -2564,7 +2564,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 /**
 Returns the minimum element of a range together with the number of
 occurrences. The function can actually be used for counting the
-maximum or any other ordering predicate (that's why $(D maxCount) is
+maximum or any other ordering predicate (that's why `maxCount` is
 not provided).
  */
 Tuple!(ElementType!Range, size_t)
@@ -2752,10 +2752,10 @@ unittest
 // minPos
 /**
 Returns the position of the minimum element of forward range $(D
-range), i.e. a subrange of $(D range) starting at the position of its
-smallest element and with the same ending as $(D range). The function
+range), i.e. a subrange of `range` starting at the position of its
+smallest element and with the same ending as `range`. The function
 can actually be used for finding the maximum or any other ordering
-predicate (that's why $(D maxPos) is not provided).
+predicate (that's why `maxPos` is not provided).
  */
 Range minPos(alias pred = "a < b", Range)(Range range)
     if (isForwardRange!Range && !isInfinite!Range &&
@@ -2841,11 +2841,11 @@ Params:
         range match. Defaults to equality $(D "a == b").
     r1 = The $(XREF2 range, isForwardRange, forward range) to move forward.
     r2 = The $(XREF2 range, isInputRange, input range) representing the initial
-         segment of $(D r1) to skip over.
+         segment of `r1` to skip over.
 
 Returns:
-true if the initial segment of $(D r1) matches $(D r2), and $(D r1) has been
-advanced to the point past this segment; otherwise false, and $(D r1) is left
+true if the initial segment of `r1` matches `r2`, and `r1` has been
+advanced to the point past this segment; otherwise false, and `r1` is left
 in its original position.
  */
 bool skipOver(alias pred = "a == b", R1, R2)(ref R1 r1, R2 r2)
@@ -2950,12 +2950,12 @@ Returns:
 
 0 if the needle(s) do not occur at the beginning of the given range;
 otherwise the position of the matching needle, that is, 1 if the range starts
-with $(D withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
+with `withOneOfThese[0]`, 2 if it starts with `withOneOfThese[1]`, and so
 on.
 
-In the case where $(D doesThisStart) starts with multiple of the ranges or
-elements in $(D withOneOfThese), then the shortest one matches (if there are
-two which match which are of the same length (e.g. $(D "a") and $(D 'a')), then
+In the case where `doesThisStart` starts with multiple of the ranges or
+elements in `withOneOfThese`, then the shortest one matches (if there are
+two which match which are of the same length (e.g. `"a"` and `'a'`), then
 the left-most of them in the argument
 list matches).
  */
@@ -3225,8 +3225,8 @@ if (isInputRange!R &&
 }
 
 /* (Not yet documented.)
-Consume all elements from $(D r) that are equal to one of the elements
-$(D es).
+Consume all elements from `r` that are equal to one of the elements
+`es`.
  */
 void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 //if (is(typeof(binaryFun!pred(r1.front, es[0]))))
@@ -3254,7 +3254,7 @@ void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 }
 
 /**
-Interval option specifier for $(D until) (below) and others.
+Interval option specifier for `until` (below) and others.
  */
 enum OpenRight
 {
@@ -3353,7 +3353,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 }
 
 /**
-Lazily iterates $(D range) _until the element $(D e) for which
+Lazily iterates `range` _until the element `e` for which
 $(D pred(e, sentinel)) is true.
 
 Params:
@@ -3361,8 +3361,8 @@ Params:
     range = The $(XREF2 range, isInputRange, input range) to iterate over.
     sentinel = The element to stop at.
     openRight = Determines whether the element for which the given predicate is
-        true should be included in the resulting range ($(D OpenRight.no)), or
-        not ($(D OpenRight.yes)).
+        true should be included in the resulting range (`OpenRight.no`), or
+        not (`OpenRight.yes`).
 
 Returns:
     An $(XREF2 range, isInputRange, input range) that iterates over the

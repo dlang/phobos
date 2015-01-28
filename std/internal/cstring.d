@@ -32,7 +32,7 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Denis Shelomovskij
 
 Macros:
-COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
+COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, `core.$1.$2`)
 */
 module std.internal.cstring;
 
@@ -55,8 +55,8 @@ body
 Creates temporary $(I C string) with copy of passed text.
 
 Returned object is implicitly convertible to $(D const To*) and
-has two properties: $(D ptr) to access $(I C string) as $(D const To*)
-and $(D buffPtr) to access it as $(D To*).
+has two properties: `ptr` to access $(I C string) as $(D const To*)
+and `buffPtr` to access it as `To*`.
 
 The temporary $(I C string) is valid unless returned object is destroyed.
 Thus if returned object is assigned to a variable the temporary is
@@ -67,7 +67,7 @@ primary expression.
 Implementation_note:
 For small strings tempCString will use stack allocated buffer,
 for large strings (approximately 250 characters and more) it will
-allocate temporary one using C's $(D malloc).
+allocate temporary one using C's `malloc`.
 
 Note:
 This function is intended to be used in function call expression (like
@@ -211,13 +211,13 @@ pure nothrow @nogc unittest
 
 
 /**
-Copies text from $(D source) to $(D buff) performing conversion
+Copies text from `source` to `buff` performing conversion
 to different Unicode Transformation Format if needed.
 
-$(D buff) must be large enough to hold the result.
+`buff` must be large enough to hold the result.
 
 Returns:
-Slice of the provided buffer $(D buff) with the copy of $(D source).
+Slice of the provided buffer `buff` with the copy of `source`.
 */
 To[] copyEncoded(To, From)(in From[] source, To[] buff) @trusted nothrow @nogc
 if(isSomeChar!To && isSomeChar!From)

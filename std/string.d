@@ -2,7 +2,7 @@
 
 /**
 String handling functions. Note that many typical string functions are found in 
-$(D std.algorithm) because all D strings are bidirectional ranges.
+`std.algorithm` because all D strings are bidirectional ranges.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -56,9 +56,9 @@ $(TR $(TDNW Miscellaneous)
 )
 )
 
-Objects of types $(D _string), $(D wstring), and $(D dstring) are value types
+Objects of types $(D _string), `wstring`, and `dstring` are value types
 and cannot be mutated element-by-element. For using mutation during building
-strings, use $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D xxxstring)
+strings, use `char[]`, `wchar[]`, or `dchar[]`. The `xxxstring`
 types are preferable because they don't exhibit undesired aliasing, thus
 making code more robust.
 
@@ -137,7 +137,7 @@ class StringException : Exception
 
 
 /++
-    Returns a D-style array of $(D char) given a zero-terminated C-style string.
+    Returns a D-style array of `char` given a zero-terminated C-style string.
     The returned array will retain the same type qualifiers as the input.
 
     $(RED Important Note:) The returned array is a slice of the original buffer.
@@ -157,12 +157,12 @@ inout(char)[] fromStringz(inout(char)* cString) @system pure {
 }
 
 /++
-    Returns a C-style zero-terminated string equivalent to $(D s). $(D s)
-    must not contain embedded $(D '\0')'s as any C function will treat the first
-    $(D '\0') that it sees as the end of the string. If $(D s.empty) is
-    $(D true), then a string containing only $(D '\0') is returned.
+    Returns a C-style zero-terminated string equivalent to `s`. `s`
+    must not contain embedded `'\0'`'s as any C function will treat the first
+    `'\0'` that it sees as the end of the string. If `s.empty` is
+    `true`, then a string containing only `'\0'` is returned.
 
-    $(RED Important Note:) When passing a $(D char*) to a C function, and the C
+    $(RED Important Note:) When passing a `char*` to a C function, and the C
     function keeps it around for any reason, make sure that you keep a reference
     to it in your D code. Otherwise, it may go away during a garbage collection
     cycle and cause a nasty bug when the C code tries to use it.
@@ -272,10 +272,10 @@ pure nothrow unittest
 alias CaseSensitive = Flag!"caseSensitive";
 
 /++
-    Returns the index of the first occurrence of $(D c) in $(D s). If $(D c)
-    is not found, then $(D -1) is returned.
+    Returns the index of the first occurrence of `c` in `s`. If `c`
+    is not found, then `-1` is returned.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    `cs` indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t indexOf(Char)(in Char[] s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
@@ -371,14 +371,14 @@ ptrdiff_t indexOf(Char)(in Char[] s, in dchar c,
 }
 
 /++
-    Returns the index of the first occurrence of $(D c) in $(D s) with respect
-    to the start index $(D startIdx). If $(D c) is not found, then $(D -1) is
-    returned. If $(D c) is found the value of the returned index is at least
-    $(D startIdx). $(D startIdx) represents a codeunit index in $(D s). If the
-    sequence starting at $(D startIdx) does not represent a well formed codepoint,
+    Returns the index of the first occurrence of `c` in `s` with respect
+    to the start index `startIdx`. If `c` is not found, then `-1` is
+    returned. If `c` is found the value of the returned index is at least
+    `startIdx`. `startIdx` represents a codeunit index in `s`. If the
+    sequence starting at `startIdx` does not represent a well formed codepoint,
     then a $(XREF utf,UTFException) may be thrown.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    `cs` indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t indexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
@@ -437,10 +437,10 @@ ptrdiff_t indexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 }
 
 /++
-    Returns the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned.
+    Returns the index of the first occurrence of `sub` in `s`. If `sub`
+    is not found, then `-1` is returned.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    `cs` indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         in CaseSensitive cs = CaseSensitive.yes) @trusted
@@ -516,14 +516,14 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 }
 
 /++
-    Returns the index of the first occurrence of $(D sub) in $(D s) with
-    respect to the start index $(D startIdx). If $(D sub) is not found, then
-    $(D -1) is returned. If $(D sub) is found the value of the returned index
-    is at least $(D startIdx). $(D startIdx) represents a codeunit index in
-    $(D s). If the sequence starting at $(D startIdx) does not represent a well
+    Returns the index of the first occurrence of `sub` in `s` with
+    respect to the start index `startIdx`. If `sub` is not found, then
+    `-1` is returned. If `sub` is found the value of the returned index
+    is at least `startIdx`. `startIdx` represents a codeunit index in
+    `s`. If the sequence starting at `startIdx` does not represent a well
     formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    `cs` indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes)
@@ -600,10 +600,10 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 }
 
 /++
-    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c)
-    is not found, then $(D -1) is returned.
+    Returns the index of the last occurrence of `c` in `s`. If `c`
+    is not found, then `-1` is returned.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    `cs` indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
@@ -708,14 +708,14 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
 }
 
 /++
-    Returns the index of the last occurrence of $(D c) in $(D s). If $(D c) is
-    not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
-    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
+    Returns the index of the last occurrence of `c` in `s`. If `c` is
+    not found, then `-1` is returned. The `startIdx` slices `s` in
+    the following way $(D s[0 .. startIdx]). `startIdx` represents a
+    codeunit index in `s`. If the sequence ending at `startIdx` does not
     represent a well formed codepoint, then a $(XREF utf,UTFException) may be
     thrown.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    `cs` indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
@@ -764,10 +764,10 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 }
 
 /++
-    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned.
+    Returns the index of the last occurrence of `sub` in `s`. If `sub`
+    is not found, then `-1` is returned.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    `cs` indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
@@ -925,14 +925,14 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 }
 
 /++
-    Returns the index of the last occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-    the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
-    codeunit index in $(D s). If the sequence ending at $(D startIdx) does not
+    Returns the index of the last occurrence of `sub` in `s`. If `sub`
+    is not found, then `-1` is returned. The `startIdx` slices `s` in
+    the following way $(D s[0 .. startIdx]). `startIdx` represents a
+    codeunit index in `s`. If the sequence ending at `startIdx` does not
     represent a well formed codepoint, then a $(XREF utf,UTFException) may be
     thrown.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    `cs` indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
@@ -1115,8 +1115,8 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
 
 /**
     Returns the index of the first occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned.
+    needles) in `haystack`. If no element of `needles` is found,
+    then `-1` is returned.
 
     Params:
     haystack = String to search for needles in.
@@ -1183,10 +1183,10 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 
 /**
     Returns the index of the first occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned. The $(D startIdx) slices $(D s) in the following
-    way $(D haystack[startIdx .. $]). $(D startIdx) represents a codeunit
-    index in $(D haystack). If the sequence ending at $(D startIdx) does not
+    needles) in `haystack`. If no element of `needles` is found,
+    then `-1` is returned. The `startIdx` slices `s` in the following
+    way $(D haystack[startIdx .. $]). `startIdx` represents a codeunit
+    index in `haystack`. If the sequence ending at `startIdx` does not
     represent a well formed codepoint, then a $(XREF utf,UTFException) may be
     thrown.
 
@@ -1195,7 +1195,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
     needles = Strings to search for in haystack.
         startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
         the startIdx is greater equal the length of haystack the functions
-        returns $(D -1).
+        returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
@@ -1276,8 +1276,8 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 
 /**
     Returns the index of the last occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned.
+    needles) in `haystack`. If no element of `needles` is found,
+    then `-1` is returned.
 
     Params:
     haystack = String to search for needles in.
@@ -1358,10 +1358,10 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 
 /**
     Returns the index of the last occurence of any of the elements in $(D
-    needles) in $(D haystack). If no element of $(D needles) is found,
-    then $(D -1) is returned. The $(D stopIdx) slices $(D s) in the following
-    way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit index in
-    $(D s). If the sequence ending at $(D startIdx) does not represent a well
+    needles) in `haystack`. If no element of `needles` is found,
+    then `-1` is returned. The `stopIdx` slices `s` in the following
+    way $(D s[0 .. stopIdx]). `stopIdx` represents a codeunit index in
+    `s`. If the sequence ending at `startIdx` does not represent a well
     formed codepoint, then a $(XREF utf,UTFException) may be thrown.
 
     Params:
@@ -1369,7 +1369,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
     needles = Strings to search for in haystack.
         stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
         the stopIdx is greater equal the length of haystack the functions
-        returns $(D -1).
+        returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
@@ -1453,8 +1453,8 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 
 /**
     Returns the index of the first occurence of any character not an elements
-    in $(D needles) in $(D haystack). If all element of $(D haystack) are
-    element of $(D needles) $(D -1) is returned.
+    in `needles` in `haystack`. If all element of `haystack` are
+    element of `needles` `-1` is returned.
 
     Params:
     haystack = String to search for needles in.
@@ -1525,15 +1525,15 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
 
 /**
     Returns the index of the first occurence of any character not an elements
-    in $(D needles) in $(D haystack). If all element of $(D haystack) are
-    element of $(D needles) $(D -1) is returned.
+    in `needles` in `haystack`. If all element of `haystack` are
+    element of `needles` `-1` is returned.
 
     Params:
     haystack = String to search for needles in.
     needles = Strings to search for in haystack.
         startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
         the startIdx is greater equal the length of haystack the functions
-        returns $(D -1).
+        returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1609,8 +1609,8 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
 
 /**
     Returns the last index of the first occurence of any character that is not
-    an elements in $(D needles) in $(D haystack). If all element of
-    $(D haystack) are element of $(D needles) $(D -1) is returned.
+    an elements in `needles` in `haystack`. If all element of
+    `haystack` are element of `needles` `-1` is returned.
 
     Params:
     haystack = String to search for needles in.
@@ -1681,15 +1681,15 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 
 /**
     Returns the last index of the first occurence of any character that is not
-    an elements in $(D needles) in $(D haystack). If all element of
-    $(D haystack) are element of $(D needles) $(D -1) is returned.
+    an elements in `needles` in `haystack`. If all element of
+    `haystack` are element of `needles` `-1` is returned.
 
     Params:
     haystack = String to search for needles in.
     needles = Strings to search for in haystack.
         stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
         the stopIdx is greater equal the length of haystack the functions
-        returns $(D -1).
+        returns `-1`.
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
@@ -1762,8 +1762,8 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 
 /**
  * Returns the representation of a string, which has the same type
- * as the string except the character type is replaced by $(D ubyte),
- * $(D ushort), or $(D uint) depending on the character width.
+ * as the string except the character type is replaced by `ubyte`,
+ * `ushort`, or `uint` depending on the character width.
  */
 auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
@@ -1813,7 +1813,7 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
 
 
 /++
-    Capitalize the first character of $(D s) and convert the rest of $(D s)
+    Capitalize the first character of `s` and convert the rest of `s`
     to lowercase.
  +/
 S capitalize(S)(S s) @trusted pure
@@ -1893,9 +1893,9 @@ S capitalize(S)(S s) @trusted pure
 }
 
 /++
-    Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
-    $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
-    If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
+    Split `s` into an array of lines using `'\r'`, `'\n'`,
+    `"\r\n"`, $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
+    If `keepTerm` is set to `KeepTerminator.yes`, then the delimiter
     is included in the strings returned.
   +/
 alias KeepTerminator = Flag!"keepTerminator";
@@ -1995,9 +1995,9 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
 /++
     Strips leading whitespace (as defined by $(XREF uni, isWhite)).
 
-    Returns: $(D str) stripped of leading whitespace.
+    Returns: `str` stripped of leading whitespace.
 
-    Postconditions: $(D str) and the returned value
+    Postconditions: `str` and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
 C[] stripLeft(C)(C[] str) @safe pure @nogc
@@ -2032,9 +2032,9 @@ C[] stripLeft(C)(C[] str) @safe pure @nogc
 /++
     Strips trailing whitespace (as defined by $(XREF uni, isWhite)).
 
-    Returns: $(D str) stripped of trailing whitespace.
+    Returns: `str` stripped of trailing whitespace.
 
-    Postconditions: $(D str) and the returned value
+    Postconditions: `str` and the returned value
     will share the same head (see $(XREF array, sameHead)).
   +/
 C[] stripRight(C)(C[] str) @safe pure @nogc
@@ -2071,7 +2071,7 @@ C[] stripRight(C)(C[] str) @safe pure @nogc
     Strips both leading and trailing whitespace (as defined by
     $(XREF uni, isWhite)).
 
-    Returns: $(D str) stripped of trailing whitespace.
+    Returns: `str` stripped of trailing whitespace.
   +/
 C[] strip(C)(C[] str) @safe pure
     if (isSomeChar!C)
@@ -2146,13 +2146,13 @@ C[] strip(C)(C[] str) @safe pure
 
 
 /++
-    If $(D str) ends with $(D delimiter), then $(D str) is returned without
-    $(D delimiter) on its end. If it $(D str) does $(I not) end with
-    $(D delimiter), then it is returned unchanged.
+    If `str` ends with `delimiter`, then `str` is returned without
+    `delimiter` on its end. If it `str` does $(I not) end with
+    `delimiter`, then it is returned unchanged.
 
-    If no $(D delimiter) is given, then one trailing  $(D '\r'), $(D '\n'),
-    $(D "\r\n"), $(XREF uni, lineSep), or $(XREF uni, paraSep) is removed from
-    the end of $(D str). If $(D str) does not end with any of those characters,
+    If no `delimiter` is given, then one trailing  `'\r'`, `'\n'`,
+    `"\r\n"`, $(XREF uni, lineSep), or $(XREF uni, paraSep) is removed from
+    the end of `str`. If `str` does not end with any of those characters,
     then it is returned unchanged.
   +/
 C[] chomp(C)(C[] str) @safe pure nothrow @nogc
@@ -2295,9 +2295,9 @@ unittest
 
 
 /++
-    If $(D str) starts with $(D delimiter), then the part of $(D str) following
-    $(D delimiter) is returned. If it $(D str) does $(I not) start with
-    $(D delimiter), then it is returned unchanged.
+    If `str` starts with `delimiter`, then the part of `str` following
+    `delimiter` is returned. If it `str` does $(I not) start with
+    `delimiter`, then it is returned unchanged.
  +/
 C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
     if (isSomeChar!C1 && isSomeChar!C2)
@@ -2358,8 +2358,8 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
 
 
 /++
-    Returns $(D str) without its last character, if there is one. If $(D str)
-    ends with $(D "\r\n"), then both are removed. If $(D str) is empty, then
+    Returns `str` without its last character, if there is one. If `str`
+    ends with `"\r\n"`, then both are removed. If `str` is empty, then
     then it is returned unchanged.
  +/
 S chop(S)(S str) @safe pure
@@ -2413,9 +2413,9 @@ unittest
 
 
 /++
-    Left justify $(D s) in a field $(D width) characters wide. $(D fillChar)
+    Left justify `s` in a field `width` characters wide. `fillChar`
     is the character that will be used to fill up the space in the field that
-    $(D s) doesn't fill.
+    `s` doesn't fill.
   +/
 S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
@@ -2451,9 +2451,9 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
 
 
 /++
-    Right justify $(D s) in a field $(D width) characters wide. $(D fillChar)
+    Right justify `s` in a field `width` characters wide. `fillChar`
     is the character that will be used to fill up the space in the field that
-    $(D s) doesn't fill.
+    `s` doesn't fill.
   +/
 S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
@@ -2489,9 +2489,9 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
 
 
 /++
-    Center $(D s) in a field $(D width) characters wide. $(D fillChar)
+    Center `s` in a field `width` characters wide. `fillChar`
     is the character that will be used to fill up the space in the field that
-    $(D s) doesn't fill.
+    `s` doesn't fill.
   +/
 S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
@@ -2567,8 +2567,8 @@ S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
 
 
 /++
-    Replace each tab character in $(D s) with the number of spaces necessary
-    to align the following character at the next tab stop where $(D tabSize)
+    Replace each tab character in `s` with the number of spaces necessary
+    to align the following character at the next tab stop where `tabSize`
     is the distance between tab stops.
   +/
 S detab(S)(S s, size_t tabSize = 8) @trusted pure
@@ -2657,12 +2657,12 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
 }
 
 /++
-    Replaces spaces in $(D s) with the optimal number of tabs.
+    Replaces spaces in `s` with the optimal number of tabs.
     All spaces and tabs at the end of a line are removed.
 
     Params:
         s       = String to convert.
-        tabSize = Tab columns are $(D tabSize) spaces apart.
+        tabSize = Tab columns are `tabSize` spaces apart.
  +/
 S entab(S)(S s, size_t tabSize = 8) @trusted pure
     if (isSomeString!S)
@@ -2808,11 +2808,11 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
 
 
 /++
-    Replaces the characters in $(D str) which are keys in $(D transTable) with
-    their corresponding values in $(D transTable). $(D transTable) is an AA
-    where its keys are $(D dchar) and its values are either $(D dchar) or some
-    type of string. Also, if $(D toRemove) is given, the characters in it are
-    removed from $(D str) prior to translation. $(D str) itself is unaltered.
+    Replaces the characters in `str` which are keys in `transTable` with
+    their corresponding values in `transTable`. `transTable` is an AA
+    where its keys are `dchar` and its values are either `dchar` or some
+    type of string. Also, if `toRemove` is given, the characters in it are
+    removed from `str` prior to translation. `str` itself is unaltered.
     A copy with the changes is returned.
 
     See_Also:
@@ -2971,7 +2971,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
 }
 
 /++
-    This is an overload of $(D translate) which takes an existing buffer to write the contents to.
+    This is an overload of `translate` which takes an existing buffer to write the contents to.
 
     Params:
         str        = The original string.
@@ -3066,22 +3066,22 @@ private void translateImpl(C1, T, C2, Buffer)(C1[] str,
     cases where Unicode processing is not necessary.
 
     Unlike the other overloads of $(LREF _translate), this one does not take
-    an AA. Rather, it takes a $(D string) generated by $(LREF makeTrans).
+    an AA. Rather, it takes a `string` generated by $(LREF makeTrans).
 
-    The array generated by $(D makeTrans) is $(D 256) elements long such that
+    The array generated by `makeTrans` is `256` elements long such that
     the index is equal to the ASCII character being replaced and the value is
     equal to the character that it's being replaced with. Note that translate
     does not decode any of the characters, so you can actually pass it Extended
-    ASCII characters if you want to (ASCII only actually uses $(D 128)
+    ASCII characters if you want to (ASCII only actually uses `128`
     characters), but be warned that Extended ASCII characters are not valid
-    Unicode and therefore will result in a $(D UTFException) being thrown from
+    Unicode and therefore will result in a `UTFException` being thrown from
     most other Phobos functions.
 
     Also, because no decoding occurs, it is possible to use this overload to
     translate ASCII characters within a proper UTF-8 string without altering the
     other, non-ASCII characters. It's replacing any code unit greater than
-    $(D 127) with another code unit or replacing any code unit with another code
-    unit greater than $(D 127) which will cause UTF validation issues.
+    `127` with another code unit or replacing any code unit with another code
+    unit greater than `127` which will cause UTF validation issues.
 
     See_Also:
         $(LREF tr)
@@ -3197,7 +3197,7 @@ body
 }
 
 /++
-    This is an $(I $(RED ASCII-only)) overload of $(D translate) which takes an existing buffer to write the contents to.
+    This is an $(I $(RED ASCII-only)) overload of `translate` which takes an existing buffer to write the contents to.
 
     Params:
         str        = The original string.
@@ -3642,10 +3642,10 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
 
 
 /++
-    Replaces the characters in $(D str) which are in $(D from) with the
-    the corresponding characters in $(D to) and returns the resulting string.
+    Replaces the characters in `str` which are in `from` with the
+    the corresponding characters in `to` and returns the resulting string.
 
-    $(D tr) is based on
+    `tr` is based on
     $(WEB pubs.opengroup.org/onlinepubs/9699919799/utilities/_tr.html, Posix's tr),
     though it doesn't do everything that the Posix utility does.
 
@@ -3658,26 +3658,26 @@ S succ(S)(S s) @safe pure if (isSomeString!S)
     Modifiers:
         $(BOOKTABLE,
         $(TR $(TD Modifier) $(TD Description))
-        $(TR $(TD $(D 'c')) $(TD Complement the list of characters in $(D from)))
-        $(TR $(TD $(D 'd')) $(TD Removes matching characters with no corresponding
-                              replacement in $(D to)))
-        $(TR $(TD $(D 's')) $(TD Removes adjacent duplicates in the replaced
+        $(TR $(TD `'c'`) $(TD Complement the list of characters in `from`))
+        $(TR $(TD `'d'`) $(TD Removes matching characters with no corresponding
+                              replacement in `to`))
+        $(TR $(TD `'s'`) $(TD Removes adjacent duplicates in the replaced
                               characters))
         )
 
-    If the modifier $(D 'd') is present, then the number of characters in
-    $(D to) may be only $(D 0) or $(D 1).
+    If the modifier `'d'` is present, then the number of characters in
+    `to` may be only `0` or `1`.
 
-    If the modifier $(D 'd') is $(I not) present, and $(D to) is empty, then
-    $(D to) is taken to be the same as $(D from).
+    If the modifier `'d'` is $(I not) present, and `to` is empty, then
+    `to` is taken to be the same as `from`.
 
-    If the modifier $(D 'd') is $(I not) present, and $(D to) is shorter than
-    $(D from), then $(D to) is extended by replicating the last character in
-    $(D to).
+    If the modifier `'d'` is $(I not) present, and `to` is shorter than
+    `from`, then `to` is extended by replicating the last character in
+    `to`.
 
-    Both $(D from) and $(D to) may contain ranges using the $(D '-') character
-    (e.g. $(D "a-d") is synonymous with $(D "abcd").) Neither accept a leading
-    $(D '^') as meaning the complement of the string (use the $(D 'c') modifier
+    Both `from` and `to` may contain ranges using the `'-'` character
+    (e.g. `"a-d"` is synonymous with `"abcd"`.) Neither accept a leading
+    `'^'` as meaning the complement of the string (use the `'c'` modifier
     for that).
   +/
 C1[] tr(C1, C2, C3, C4 = immutable char)
@@ -3876,7 +3876,7 @@ unittest
  *
  * [in] bool bAllowSep
  * False by default, but when set to true it will accept the
- * separator characters $(D ',') and $(D '__') within the string, but these
+ * separator characters `','` and $(D '__') within the string, but these
  * characters should be stripped from the string before using any
  * of the conversion functions like toInt(), toFloat(), and etc
  * else an error will occur.
@@ -4704,11 +4704,11 @@ void main() {
     });
 }
 
-/** Assume the given array of integers $(D arr) is a well-formed UTF string and
+/** Assume the given array of integers `arr` is a well-formed UTF string and
 return it typed as a UTF string.
 
-$(D ubyte) becomes $(D char), $(D ushort) becomes $(D wchar) and $(D uint)
-becomes $(D dchar). Type qualifiers are preserved.
+`ubyte` becomes `char`, `ushort` becomes `wchar` and `uint`
+becomes `dchar`. Type qualifiers are preserved.
 
 See_Also: $(LREF representation)
 */

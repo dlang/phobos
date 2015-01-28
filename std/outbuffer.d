@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-Serialize data to $(D ubyte) arrays.
+Serialize data to `ubyte` arrays.
 
  * Macros:
  *      WIKI = Phobos/StdOutbuffer

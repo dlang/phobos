@@ -214,7 +214,7 @@ static ~this()
 
 
 /**
- * Thrown on calls to $(D receiveOnly) if a message other than the type
+ * Thrown on calls to `receiveOnly` if a message other than the type
  * the receiving thread expected is sent.
  */
 class MessageMismatch : Exception
@@ -227,7 +227,7 @@ class MessageMismatch : Exception
 
 
 /**
- * Thrown on calls to $(D receive) if the thread that spawned the receiving
+ * Thrown on calls to `receive` if the thread that spawned the receiving
  * thread has terminated and no more messages exist.
  */
 class OwnerTerminated : Exception
@@ -279,7 +279,7 @@ class PriorityMessageException : Exception
 
 /**
  * Thrown on mailbox crowding if the mailbox is configured with
- * $(D OnCrowding.throwException).
+ * `OnCrowding.throwException`.
  */
 class MailboxFull : Exception
 {
@@ -294,7 +294,7 @@ class MailboxFull : Exception
 
 
 /**
- * Thrown when a Tid is missing, e.g. when $(D ownerTid) doesn't
+ * Thrown when a Tid is missing, e.g. when `ownerTid` doesn't
  * find an owner thread.
  */
 class TidMissingException : Exception
@@ -363,7 +363,7 @@ public:
 /**
  * Return the Tid of the thread which spawned the caller's thread.
  *
- * Throws: A $(D TidMissingException) exception if
+ * Throws: A `TidMissingException` exception if
  * there is no owner thread.
  */
 @property Tid ownerTid()
@@ -419,10 +419,10 @@ private template isSpawnable(F, T...)
  * Starts fn(args) in a new logical thread.
  *
  * Executes the supplied function in a new logical thread represented by
- * $(D Tid).  The calling thread is designated as the owner of the new thread.
- * When the owner thread terminates an $(D OwnerTerminated) message will be
- * sent to the new thread, causing an $(D OwnerTerminated) exception to be
- * thrown on $(D receive()).
+ * `Tid`.  The calling thread is designated as the owner of the new thread.
+ * When the owner thread terminates an `OwnerTerminated` message will be
+ * sent to the new thread, causing an `OwnerTerminated` exception to be
+ * thrown on `receive()`.
  *
  * Params:
  *  fn   = The function to execute.
@@ -432,8 +432,8 @@ private template isSpawnable(F, T...)
  *  A Tid representing the new logical thread.
  *
  * Notes:
- *  $(D args) must not have unshared aliasing.  In other words, all arguments
- *  to $(D fn) must either be $(D shared) or $(D immutable) or have no
+ *  `args` must not have unshared aliasing.  In other words, all arguments
+ *  to `fn` must either be `shared` or `immutable` or have no
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
  *
@@ -585,7 +585,7 @@ unittest
  * Places the values as a message at the back of tid's message queue.
  *
  * Sends the supplied value to the thread represented by tid.  As with
- * $(XREF concurrency, spawn), $(D T) must not have unshared aliasing.
+ * $(XREF concurrency, spawn), `T` must not have unshared aliasing.
  */
 void send(T...)( Tid tid, T vals )
 {
@@ -598,7 +598,7 @@ void send(T...)( Tid tid, T vals )
 /**
  * Places the values as a message on the front of tid's message queue.
  *
- * Send a message to $(D tid) but place it at the front of $(D tid)'s message
+ * Send a message to `tid` but place it at the front of `tid`'s message
  * queue instead of at the back.  This function is typically used for
  * out-of-band communication, to signal exceptional conditions, etc.
  */
@@ -638,9 +638,9 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  * a message against a set of delegates and executing the first match found.
  *
  * If a delegate that accepts a $(XREF variant, Variant) is included as
- * the last argument to $(D receive), it will match any message that was not
+ * the last argument to `receive`, it will match any message that was not
  * matched by an earlier delegate.  If more than one argument is sent,
- * the $(D Variant) will contain a $(XREF typecons, Tuple) of all values
+ * the `Variant` will contain a $(XREF typecons, Tuple) of all values
  * sent.
  *
  * Example:
@@ -723,12 +723,12 @@ private template receiveOnlyRet(T...)
 }
 
 /**
- * Receives only messages with arguments of types $(D T).
+ * Receives only messages with arguments of types `T`.
  *
- * Throws:  $(D MessageMismatch) if a message of types other than $(D T)
+ * Throws:  `MessageMismatch` if a message of types other than `T`
  *          is received.
  *
- * Returns: The received message.  If $(D T.length) is greater than one,
+ * Returns: The received message.  If `T.length` is greater than one,
  *          the message will be packed into a $(XREF typecons, Tuple).
  *
  * Example:
@@ -815,10 +815,10 @@ unittest
 /**
  * Tries to receive but will give up if no matches arrive within duration.
  *
- * Same as $(D receive) except that rather than wait forever for a message,
+ * Same as `receive` except that rather than wait forever for a message,
  * it waits until either it receives a message or the given
- * $(CXREF time, Duration) has passed. It returns $(D true) if it received a
- * message and $(D false) if it timed out waiting for one.
+ * $(CXREF time, Duration) has passed. It returns `true` if it received a
+ * message and `false` if it timed out waiting for one.
  */
 bool receiveTimeout(T...)( Duration duration, T ops )
 in

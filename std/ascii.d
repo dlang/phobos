@@ -4,8 +4,8 @@
     Functions which operate on ASCII characters.
 
     All of the functions in std.ascii accept Unicode characters but effectively
-    ignore them if they're not ASCII. All $(D isX) functions return $(D false)
-    for non-ASCII characters, and all $(D toX) functions do nothing to non-ASCII
+    ignore them if they're not ASCII. All `isX` functions return `false`
+    for non-ASCII characters, and all `toX` functions do nothing to non-ASCII
     characters.
 
     For functions which operate on Unicode characters, see
@@ -63,7 +63,7 @@ else
 
 
 /++
-    Returns whether $(D c) is a letter or a number (0..9, a..z, A..Z).
+    Returns whether `c` is a letter or a number (0..9, a..z, A..Z).
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 {
@@ -81,7 +81,7 @@ unittest
 
 
 /++
-    Returns whether $(D c) is an ASCII letter (A..Z, a..z).
+    Returns whether `c` is an ASCII letter (A..Z, a..z).
   +/
 bool isAlpha(dchar c) @safe pure nothrow @nogc
 {
@@ -100,7 +100,7 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a lowercase ASCII letter (a..z).
+    Returns whether `c` is a lowercase ASCII letter (a..z).
   +/
 bool isLower(dchar c) @safe pure nothrow @nogc
 {
@@ -118,7 +118,7 @@ unittest
 
 
 /++
-    Returns whether $(D c) is an uppercase ASCII letter (A..Z).
+    Returns whether `c` is an uppercase ASCII letter (A..Z).
   +/
 bool isUpper(dchar c) @safe pure nothrow @nogc
 {
@@ -136,7 +136,7 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a digit (0..9).
+    Returns whether `c` is a digit (0..9).
   +/
 bool isDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -154,7 +154,7 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a digit in base 8 (0..7).
+    Returns whether `c` is a digit in base 8 (0..7).
   +/
 bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -172,7 +172,7 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a digit in base 16 (0..9, A..F, a..f).
+    Returns whether `c` is a digit in base 16 (0..9, A..F, a..f).
   +/
 bool isHexDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -190,7 +190,7 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a whitespace character. That includes the space,
+    Whether or not `c` is a whitespace character. That includes the space,
     tab, vertical tab, form feed, carriage return, and linefeed characters.
   +/
 bool isWhite(dchar c) @safe pure nothrow @nogc
@@ -209,7 +209,7 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a control character.
+    Returns whether `c` is a control character.
   +/
 bool isControl(dchar c) @safe pure nothrow @nogc
 {
@@ -228,7 +228,7 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a punctuation character. That includes all ASCII
+    Whether or not `c` is a punctuation character. That includes all ASCII
     characters which are not control characters, letters, digits, or whitespace.
   +/
 bool isPunctuation(dchar c) @safe pure nothrow @nogc
@@ -249,7 +249,7 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a printable character other than the space
+    Whether or not `c` is a printable character other than the space
     character.
   +/
 bool isGraphical(dchar c) @safe pure nothrow @nogc
@@ -270,7 +270,7 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a printable character - including the space
+    Whether or not `c` is a printable character - including the space
     character.
   +/
 bool isPrintable(dchar c) @safe pure nothrow @nogc
@@ -291,7 +291,7 @@ unittest
 
 
 /++
-    Whether or not $(D c) is in the ASCII character set - i.e. in the range
+    Whether or not `c` is in the ASCII character set - i.e. in the range
     0..0x7F.
   +/
 bool isASCII(dchar c) @safe pure nothrow @nogc
@@ -309,13 +309,13 @@ unittest
 
 
 /++
-    If $(D c) is an uppercase ASCII character, then its corresponding lowercase
-    letter is returned. Otherwise, $(D c) is returned.
+    If `c` is an uppercase ASCII character, then its corresponding lowercase
+    letter is returned. Otherwise, `c` is returned.
 
-    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    `C` can be any type which implicitly converts to `dchar`. In the case
     where it's a built-in type, or an enum of a built-in type,
-    $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
-    type, $(D dchar) is returned.
+    `Unqual!(OriginalType!C)` is returned, whereas if it's a user-defined
+    type, `dchar` is returned.
   +/
 auto toLower(C)(C c)
     if(is(C : dchar))
@@ -358,13 +358,13 @@ auto toLower(C)(C c)
 
 
 /++
-    If $(D c) is a lowercase ASCII character, then its corresponding uppercase
-    letter is returned. Otherwise, $(D c) is returned.
+    If `c` is a lowercase ASCII character, then its corresponding uppercase
+    letter is returned. Otherwise, `c` is returned.
 
-    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    `C` can be any type which implicitly converts to `dchar`. In the case
     where it's a built-in type, or an enum of a built-in type,
-    $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
-    type, $(D dchar) is returned.
+    `Unqual!(OriginalType!C)` is returned, whereas if it's a user-defined
+    type, `dchar` is returned.
   +/
 auto toUpper(C)(C c)
     if(is(C : dchar))

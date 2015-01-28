@@ -4,8 +4,8 @@
     _complex numbers, along with related mathematical operations and functions.
 
     $(LREF Complex) will eventually $(LINK2 ../deprecate.html, replace)
-    the built-in types $(D cfloat), $(D cdouble), $(D creal), $(D ifloat),
-    $(D idouble), and $(D ireal).
+    the built-in types `cfloat`, `cdouble`, `creal`, `ifloat`,
+    `idouble`, and `ireal`.
 
     Authors:    Lars Tandle Kyllingstad, Don Clugston
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
@@ -19,8 +19,8 @@ import std.traits;
 /** Helper function that returns a _complex number with the specified
     real and imaginary parts.
 
-    If neither $(D re) nor $(D im) are floating-point numbers, this
-    function returns a $(D Complex!double).  Otherwise, the return type
+    If neither `re` nor `im` are floating-point numbers, this
+    function returns a `Complex!double`.  Otherwise, the return type
     is deduced using $(D std.traits.CommonType!(R, I)).
 */
 auto complex(T)(T re)  @safe pure nothrow @nogc  if (is(T : double))
@@ -81,8 +81,8 @@ unittest
 }
 
 
-/** A complex number parametrised by a type $(D T), which must be either
-    $(D float), $(D double) or $(D real).
+/** A complex number parametrised by a type `T`, which must be either
+    `float`, `double` or `real`.
 */
 struct Complex(T)  if (isFloatingPoint!T)
 {
@@ -656,7 +656,7 @@ unittest
 
 /++
    Calculates the squared modulus of a complex number.
-   For genericity, if called on a real number, $(D sqAbs) returns its square.
+   For genericity, if called on a real number, `sqAbs` returns its square.
 +/
 T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 {
@@ -774,7 +774,7 @@ unittest{
 /** Calculates cos(y) + i sin(y).
 
     Note:
-    $(D expi) is included here for convenience and for easy migration of code
+    `expi` is included here for convenience and for easy migration of code
     that uses $(XREF math,_expi).  Unlike $(XREF math,_expi), which uses the
     x87 $(I fsincos) instruction when possible, this function is no faster
     than calculating cos(y) and sin(y) separately.

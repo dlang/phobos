@@ -2,7 +2,7 @@
 
 /**
  * Implements functionality to read Comma Separated Values and its variants
- * from a input range of $(D dchar).
+ * from a input range of `dchar`.
  *
  * Comma Separated Values provide a simple means to transfer and store
  * tabular data. It has been common for programs to use their own
@@ -42,7 +42,7 @@
  * }
  * -------
  *
- * When an input contains a header the $(D Contents) can be specified as an
+ * When an input contains a header the `Contents` can be specified as an
  * associative array. Passing null to signify that a header is present.
  *
  * -------
@@ -250,7 +250,7 @@ enum Malformed
  * Returns an input range for iterating over records found in $(D
  * input).
  *
- * The $(D Contents) of the input can be provided if all the records are the
+ * The `Contents` of the input can be provided if all the records are the
  * same type such as all integer data:
  *
  * -------
@@ -285,7 +285,7 @@ enum Malformed
  * }
  * -------
  *
- * Specifying $(D ErrorLevel) as Malformed.ignore will lift restrictions
+ * Specifying `ErrorLevel` as Malformed.ignore will lift restrictions
  * on the format. This example shows that an exception is not thrown when
  * finding a quote in a field not quoted.
  *
@@ -300,8 +300,8 @@ enum Malformed
  * Returns:
  *        An input range R as defined by $(XREF range, isInputRange). When $(D
  *        Contents) is a struct, class, or an associative array, the element
- *        type of R is $(D Contents), otherwise the element type of R is itself
- *        a range with element type $(D Contents).
+ *        type of R is `Contents`, otherwise the element type of R is itself
+ *        a range with element type `Contents`.
  *
  * Throws:
  *       $(LREF CSVException) When a quote is found in an unquoted field,
@@ -312,7 +312,7 @@ enum Malformed
  *       $(LREF HeaderMismatchException)  when a header is provided but a
  *       matching column is not found or the order did not match that found in
  *       the input. Read the exception documentation for specific details of
- *       when the exception is thrown for different types of $(D Contents).
+ *       when the exception is thrown for different types of `Contents`.
  */
 auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
@@ -326,10 +326,10 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
 }
 
 /**
- * An optional $(D header) can be provided. The first record will be read in
- * as the header. If $(D Contents) is a struct then the header provided is
- * expected to correspond to the fields in the struct. When $(D Contents) is
- * not a type which can contain the entire record, the $(D header) must be
+ * An optional `header` can be provided. The first record will be read in
+ * as the header. If `Contents` is a struct then the header provided is
+ * expected to correspond to the fields in the struct. When `Contents` is
+ * not a type which can contain the entire record, the `header` must be
  * provided in the same order as the input or an exception is thrown.
  *
  * Read only column "b":
@@ -374,8 +374,8 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  * Returns:
  *        An input range R as defined by $(XREF range, isInputRange). When $(D
  *        Contents) is a struct, class, or an associative array, the element
- *        type of R is $(D Contents), otherwise the element type of R is itself
- *        a range with element type $(D Contents).
+ *        type of R is `Contents`, otherwise the element type of R is itself
+ *        a range with element type `Contents`.
  *
  *        The returned range provides a header field for accessing the header
  *        from the input in array form.
@@ -396,7 +396,7 @@ auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException
  *       $(LREF HeaderMismatchException)  when a header is provided but a
  *       matching column is not found or the order did not match that found in
  *       the input. Read the exception documentation for specific details of
- *       when the exception is thrown for different types of $(D Contents).
+ *       when the exception is thrown for different types of `Contents`.
  */
 auto csvReader(Contents = string,
                Malformed ErrorLevel = Malformed.throwException,
@@ -777,7 +777,7 @@ private pure struct Input(Range, Malformed ErrorLevel)
  * Range for iterating CSV records.
  *
  * This range is returned by the $(LREF csvReader) functions. It can be
- * created in a similar manner to allow $(D ErrorLevel) be set to $(LREF
+ * created in a similar manner to allow `ErrorLevel` be set to $(LREF
  * Malformed).ignore if best guess processing should take place.
  */
 private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
@@ -936,14 +936,14 @@ public:
      * Part of an input range as defined by $(XREF range, isInputRange).
      *
      * Returns:
-     *      If $(D Contents) is a struct, will be filled with record data.
+     *      If `Contents` is a struct, will be filled with record data.
      *
-     *      If $(D Contents) is a class, will be filled with record data.
+     *      If `Contents` is a class, will be filled with record data.
      *
-     *      If $(D Contents) is a associative array, will be filled
+     *      If `Contents` is a associative array, will be filled
      *      with record data.
      *
-     *      If $(D Contents) is non-struct, a $(LREF CsvRecord) will be
+     *      If `Contents` is non-struct, a $(LREF CsvRecord) will be
      *      returned.
      */
     @property auto front()
@@ -1111,7 +1111,7 @@ public:
 
 /*
  * This input range is accessible through $(LREF CsvReader) when the
- * requested $(D Contents) type is neither a structure or an associative array.
+ * requested `Contents` type is neither a structure or an associative array.
  */
 private struct CsvRecord(Contents, Malformed ErrorLevel, Range, Separator)
     if (!is(Contents == class) && !is(Contents == struct))

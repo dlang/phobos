@@ -71,7 +71,7 @@ import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
 @trusted:
 
 /++
-    Gives the $(D sizeof) the largest type given.
+    Gives the `sizeof` the largest type given.
   +/
 template maxSize(T...)
 {
@@ -1194,7 +1194,7 @@ public:
     }
 
     /**
-       If the $(D VariantN) contains an array, applies $(D dg) to each
+       If the `VariantN` contains an array, applies `dg` to each
        element of the array in turn. Otherwise, throws an exception.
      */
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))

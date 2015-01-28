@@ -1,5 +1,5 @@
 /**
- * $(RED Deprecated. Please use $(D core.stdc.stdlib) or $(D core.sys.posix.stdlib)
+ * $(RED Deprecated. Please use `core.stdc.stdlib` or `core.sys.posix.stdlib`
  *       instead.  This module will be removed in December 2015.)
  * C's &lt;stdlib.h&gt;
  * D Programming Language runtime library

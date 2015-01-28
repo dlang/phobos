@@ -609,15 +609,15 @@ struct RBNode(V)
  *
  * To use a different comparison than $(D "a < b"), pass a different operator string
  * that can be used by $(XREF functional, binaryFun), or pass in a
- * function, delegate, functor, or any type where $(D less(a, b)) results in a $(D bool)
+ * function, delegate, functor, or any type where $(D less(a, b)) results in a `bool`
  * value.
  *
  * Note that less should produce a strict ordering.  That is, for two unequal
- * elements $(D a) and $(D b), $(D less(a, b) == !less(b, a)). $(D less(a, a)) should
- * always equal $(D false).
+ * elements `a` and `b`, $(D less(a, b) == !less(b, a)). $(D less(a, a)) should
+ * always equal `false`.
  *
- * If $(D allowDuplicates) is set to $(D true), then inserting the same element more than
- * once continues to add more elements.  If it is $(D false), duplicate elements are
+ * If `allowDuplicates` is set to `true`, then inserting the same element more than
+ * once continues to add more elements.  If it is `false`, duplicate elements are
  * ignored on insertion.  If duplicates are allowed, then new elements are
  * inserted after all existing duplicate elements.
  */
@@ -769,7 +769,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     /**
-     * The range type for $(D RedBlackTree)
+     * The range type for `RedBlackTree`
      */
     struct Range
     {
@@ -783,7 +783,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
 
         /**
-         * Returns $(D true) if the range is _empty
+         * Returns `true` if the range is _empty
          */
         @property bool empty() const
         {
@@ -827,7 +827,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
 
         /**
-         * Trivial _save implementation, needed for $(D isForwardRange).
+         * Trivial _save implementation, needed for `isForwardRange`.
          */
         @property Range save()
         {
@@ -900,7 +900,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     /**
-     * Check if any elements exist in the container.  Returns $(D false) if at least
+     * Check if any elements exist in the container.  Returns `false` if at least
      * one element exists.
      */
     @property bool empty()
@@ -973,7 +973,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     /++
-        $(D in) operator. Check to see if the given element exists in the
+        `in` operator. Check to see if the given element exists in the
         container.
 
        Complexity: $(BIGOH log(n))
@@ -1248,7 +1248,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     /++
-        Removes the given $(D Take!Range) from the container
+        Removes the given `Take!Range` from the container
 
         Returns: A range containing all of the elements that were after the
                  given range.
@@ -1303,7 +1303,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /++
        Removes elements from the container that are equal to the given values
        according to the less comparator. One element is removed for each value
-       given which is in the container. If $(D allowDuplicates) is true,
+       given which is in the container. If `allowDuplicates` is true,
        duplicates are removed only if duplicate values are given.
 
        Returns: The number of elements removed.
@@ -1703,7 +1703,7 @@ pure unittest
 }
 
 /++
-    Convenience function for creating a $(D RedBlackTree!E) from a list of
+    Convenience function for creating a `RedBlackTree!E` from a list of
     values.
   +/
 auto redBlackTree(E)(E[] elems...)

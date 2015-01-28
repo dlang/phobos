@@ -1,6 +1,6 @@
 
 /**
- * $(RED Deprecated. Please use $(D core.stdc.stdlib) or the core.sys.posix.*
+ * $(RED Deprecated. Please use `core.stdc.stdlib` or the core.sys.posix.*
  *       modules you need instead.  This module will be removed in December 2015.)
  * C's &lt;process.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
