@@ -337,8 +337,8 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_container_dlist.html \
 	$(DOC)\std_container_rbtree.html \
 	$(DOC)\std_container_slist.html \
-	$(DOC)\std_container_util.html \
 	$(DOC)\std_container_package.html \
+	$(DOC)\std_container_util.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
@@ -392,10 +392,10 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_zlib.html \
 	$(DOC)\std_net_isemail.html \
 	$(DOC)\std_net_curl.html \
+	$(DOC)\std_experimental_logger_core.html \
 	$(DOC)\std_experimental_logger_filelogger.html \
 	$(DOC)\std_experimental_logger_multilogger.html \
 	$(DOC)\std_experimental_logger_nulllogger.html \
-	$(DOC)\std_experimental_logger_core.html \
 	$(DOC)\std_experimental_logger_package.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
@@ -420,7 +420,10 @@ $(LIB) : $(SRC_TO_COMPILE) \
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
 		$(ZLIB) $(DRUNTIMELIB)
 
-UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
+UNITTEST_OBJS= \
+		unittest1.obj \
+		unittest2.obj \
+		unittest2a.obj \
 		unittestM.obj \
 		unittest3.obj \
 		unittest3a.obj \
@@ -647,9 +650,6 @@ $(DOC)\std_format.html : $(STDDOC) std\format.d
 $(DOC)\std_functional.html : $(STDDOC) std\functional.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_functional.html $(STDDOC) std\functional.d
 
-$(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_gc.html $(STDDOC) $(DRUNTIME)\src\core\memory.d
-
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
 
@@ -712,9 +712,6 @@ $(DOC)\std_string.html : $(STDDOC) std\string.d
 
 $(DOC)\std_system.html : $(STDDOC) std\system.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_system.html $(STDDOC) std\system.d
-
-$(DOC)\std_thread.html : $(STDDOC) $(DRUNTIME)\src\core\thread.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) -I$(DRUNTIME)\src $(DRUNTIME)\src\core\thread.d
 
 $(DOC)\std_traits.html : $(STDDOC) std\traits.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_traits.html $(STDDOC) std\traits.d
@@ -874,7 +871,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	$(MAKE) -f win64.mak clean
+	$(MAKE) -f win$(MODEL).mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
