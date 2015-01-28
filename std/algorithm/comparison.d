@@ -935,8 +935,8 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         // restore the path
 
         while (row || col) {
-            auto cIns = col == 0 ? CostType.max : matrix(row,col - 1);
-            auto cDel = row == 0 ? CostType.max : matrix(row - 1,col);
+            auto cIns = col == 0 ? CostType.max : matrix(row, col - 1);
+            auto cDel = row == 0 ? CostType.max : matrix(row - 1, col);
             auto cSub = row == 0 || col == 0
                 ? CostType.max
                 : matrix(row - 1, col - 1);
