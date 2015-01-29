@@ -3175,7 +3175,7 @@ body
         assert(translate(to!S("hello world"), makeTrans("hl", "q5")) == to!S("qe55o wor5d"));
         assert(translate(to!S("hello \U00010143 world"), makeTrans("hl", "q5")) ==
                to!S("qe55o \U00010143 wor5d"));
-        assert(translate(to!S("hello world"), makeTrans("ol", "1o")), to!S("heool wlrdd"));
+        assert(translate(to!S("hello world"), makeTrans("ol", "1o")) == to!S("heoo1 w1rod"));
         assert(translate(to!S("hello world"), makeTrans("", "")) == to!S("hello world"));
         assert(translate(to!S("hello world"), makeTrans("12345", "67890")) == to!S("hello world"));
         assert(translate(to!S("hello \U00010143 world"), makeTrans("12345", "67890")) ==

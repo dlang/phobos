@@ -4857,9 +4857,9 @@ body
                 enforce(i <= T.length);
             }
 
-            if (spec.sep)
+            if (spec.sep != null)
                 fmt.readUpToNextSpec(input);
-            auto sep = spec.sep ? spec.sep
+            auto sep = spec.sep != null ? spec.sep
                          : fmt.trailing;
             debug (unformatRange) {
             if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, sep);
