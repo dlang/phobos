@@ -1,19 +1,29 @@
 /**
 Implements logging facilities.
 
-Message logging is a common approach to expose runtime information of a
-program. Logging should be easy, but also flexible and powerful, therefore
-$(D D) provides a standard interface for logging.
-
-The easiest way to create a log message is to write
-$(D import std.logger; log("I am here");) this will print a message to the
-$(D stderr) device.  The message will contain the filename, the linenumber, the
-name of the surrounding function, the time and the message.
-
 Copyright: Copyright Robert "burner" Schadek 2013 --
 License: <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors: $(WEB http://www.svs.informatik.uni-oldenburg.de/60865.html, Robert burner Schadek)
 
+$(H3 Basic Logging)
+
+Message logging is a common approach to expose runtime information of a
+program. Logging should be easy, but also flexible and powerful, therefore
+$(D D) provides a standard interface for logging.
+
+The easiest way to create a log message is to write:
+-------------
+import std.experimental.logger;
+
+void main() {
+    log("Hello World");
+}
+-------------
+This will print a message to the $(D stderr) device. The message will contain
+the filename, the linenumber, the name of the surrounding function, the time
+and the message.
+
+More complex log call can go along the lines like:
 -------------
 log("Logging to the sharedLog with its default LogLevel");
 logf(LogLevel.info, 5 < 6, "%s to the sharedLog with its LogLevel.info", "Logging");
@@ -33,9 +43,11 @@ fLogger.critical("Logging to the fileLogger with its info LogLevel");
 fLogger.log(LogLevel.trace, 5 < 6, "Logging to the fileLogger"," with its default LogLevel if 5 is less than 6");
 fLogger.fatal("Logging to the fileLogger with its warning LogLevel");
 -------------
+Additionally, this example shows how a new $(D FileLogger) is created.
+Indivitual $(D Logger) and the global log functions share commonly named
+functions to log data.
 
-Top-level calls to logging-related functions go to the default $(D Logger)
-object called $(D sharedLog).
+The names of the functions are as follows:
 $(LI $(D log))
 $(LI $(D trace))
 $(LI $(D info))
@@ -54,6 +66,8 @@ sharedLog = new FileLogger("New_Default_Log_File.log");
 Additional $(D Logger) can be created by creating a new instance of the
 required $(D Logger).
 
+$(H3 Logging Fundamentals)
+$(H4 LogLevel)
 The $(D LogLevel) of an log call can be defined in two ways. The first is by
 calling $(D log) and passing the $(D LogLevel) explicit as the first argument.
 The second way of setting the $(D LogLevel) of a
@@ -65,14 +79,16 @@ $(D LogLevel) $(D fatal) by default an $(D Error) will be thrown.
 This behaviour can be modified by using the member $(D fatalHandler) to
 assign a custom delegate to handle log call with $(D LogLevel) $(D fatal).
 
-Conditional logging can be achieved be appending passing a $(D bool) as first
-argument to a log function.  If conditional logging is used the condition must
+$(H4 Conditional Logging)
+Conditional logging can be achieved be passing a $(D bool) as first
+argument to a log function. If conditional logging is used the condition must
 be $(D true) in order to have the log message logged.
 
 In order to combine an explicit $(D LogLevel) passing with conditional
 logging, the $(D LogLevel) has to be passed as first argument followed by the
 $(D bool).
 
+$(H4 Filtering Log Messages)
 Messages are logged if the $(D LogLevel) of the log message is greater than or
 equal to than the $(D LogLevel) of the used $(D Logger) and additionally if the
 $(D LogLevel) of the log message is greater equal to the global $(D LogLevel).
@@ -82,11 +98,25 @@ The global $(D LogLevel) is accessible by using $(D globalLogLevel).
 To assign the $(D LogLevel) of a $(D Logger) use the $(D logLevel) property of
 the logger.
 
+$(H4 Printf Sytle Logging)
 If $(D printf)-style logging is needed add a $(B f) to the logging call, such as
 $(D myLogger.infof("Hello %s", "world");) or $(fatalf("errno %d", 1337))
 The additional $(B f) enables $(D printf)-style logging for call combinations of
 explicit $(D LogLevel) and conditional logging functions and methods.
 
+$(H4 Thread Local Redirection)
+Calls to the free standing log functions are not directly forwarded to the
+global $(D Logger) $(D sharedLog). Actually, a thread local $(D Logger) of 
+type $(D StdForwardLogger) process the log call and then, by default, forward 
+the created $(D Logger.LogEntry) to the $(D sharedLog) $(D Logger).
+The thread local $(D Logger) is accessable by the $(D stdThreadLocalLog)
+property. This property allows to assign user defined $(D Logger). The default
+$(D LogLevel) of the $(D stdThreadLocalLog) $(D Logger) is $(D LogLevel.all)
+and it will therefore forward all messaged to the $(D sharedLog) $(D Logger).
+The $(D LogLevel) of the $(D stdThreadLocalLog) can be used to filter log
+calls before they reach the $(D sharedLog) $(D Logger).
+
+$(H3 User Defined Logger)
 To customize the $(D Logger) behavior, create a new $(D class) that inherits from
 the abstract $(D Logger) $(D class), and implements the $(D writeLogMsg)
 method.
@@ -112,6 +142,7 @@ To gain more precise control over the logging process, additionally to
 overwriting the $(D writeLogMsg) method the methods $(D beginLogMsg),
 $(D logMsgPart) and $(D finishLogMsg) can be overwritten.
 
+$(H3 Compile Time Disabeling of $(D Logger))
 In order to disable logging at compile time, pass $(D StdLoggerDisableLogging) as a
 version argument to the $(D D) compiler when compiling your program code.
 This will disable all logging functionality.
@@ -131,6 +162,7 @@ $(TABLE
 Such a version statement will only disable logging in the associated compile
 unit.
 
+$(H3 Provided Logger)
 By default four $(D Logger) implementations are given. The $(D FileLogger)
 logs data to files. It can also be used to log to $(D stdout) and $(D stderr)
 as these devices are files as well. A $(D Logger) that logs to $(D stdout) can
