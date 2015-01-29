@@ -231,7 +231,7 @@ private uint _ctfeSkipOp(ref string op)
     while (op.length)
     {
         immutable front = op[0];
-        if(front.isASCII && !(front.isAlphaNum || front == '_' || front == '.'))
+        if(front.isASCII() && !(front.isAlphaNum() || front == '_' || front == '.'))
             op = op[1..$];
         else
             break;
@@ -248,7 +248,7 @@ private uint _ctfeSkipInteger(ref string op)
     while (op.length)
     {
         immutable front = op[0];
-        if(front.isDigit)
+        if(front.isDigit())
             op = op[1..$];
         else
             break;
@@ -273,18 +273,18 @@ private uint _ctfeMatchUnary(string fun, string name)
 {
     if (!__ctfe) assert(false);
     import std.stdio;
-    fun._ctfeSkipOp;
+    fun._ctfeSkipOp();
     for (;;) 
     {
-        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger;
+        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger();
         if (h == 0)
         {
-            fun._ctfeSkipOp;
+            fun._ctfeSkipOp();
             break;
         }
         else if (h == 1)
         {
-            if(!fun._ctfeSkipOp)
+            if(!fun._ctfeSkipOp())
                 break;
         }
         else
@@ -320,18 +320,18 @@ unittest
 private uint _ctfeMatchBinary(string fun, string name1, string name2)
 {
     if (!__ctfe) assert(false);
-    fun._ctfeSkipOp;
+    fun._ctfeSkipOp();
     for (;;) 
     {
-        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger;
+        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger();
         if (h == 0)
         {
-            fun._ctfeSkipOp;
+            fun._ctfeSkipOp();
             break;
         }
         else if (h == 1)
         {
-            if(!fun._ctfeSkipOp)
+            if(!fun._ctfeSkipOp())
                 break;
         }
         else
