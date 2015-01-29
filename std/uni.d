@@ -7569,12 +7569,6 @@ public:
 /**
     Decomposes a Hangul syllable. If $(D ch) is not a composed syllable
     then this function returns $(LREF Grapheme) containing only $(D ch) as is.
-
-    Example:
-    ---
-    import std.algorithm;
-    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
-    ---
 */
 Grapheme decomposeHangul(dchar ch)
 {
@@ -7592,6 +7586,13 @@ Grapheme decomposeHangul(dchar ch)
         return Grapheme(partL, partV);
 }
 
+///
+unittest
+{
+    import std.algorithm;
+    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
+}
+
 /++
     Try to compose hangul syllable out of a leading consonant ($(D lead)),
     a $(D vowel) and optional $(D trailing) consonant jamos.
@@ -7600,17 +7601,6 @@ Grapheme decomposeHangul(dchar ch)
 
     If any of $(D lead) and $(D vowel) are not a valid hangul jamo
     of the respective $(CHARACTER) class returns dchar.init.
-
-    Example:
-    ---
-    assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
-    // leaving out T-vowel, or passing any codepoint
-    // that is not trailing consonant composes an LV-syllable
-    assert(composeJamo('\u1111', '\u1171') == '\uD4CC');
-    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
-    assert(composeJamo('\u1111', 'A') == dchar.init);
-    assert(composeJamo('A', '\u1171') == dchar.init);
-    ---
 +/
 dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc
 {
@@ -7623,6 +7613,18 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
     int indexLV = indexL * jamoNCount + indexV * jamoTCount;
     dchar syllable = jamoSBase + indexLV;
     return isJamoT(trailing) ? syllable + (trailing - jamoTBase) : syllable;
+}
+
+///
+unittest
+{
+    assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
+    // leaving out T-vowel, or passing any codepoint
+    // that is not trailing consonant composes an LV-syllable
+    assert(composeJamo('\u1111', '\u1171') == '\uD4CC');
+    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
+    assert(composeJamo('\u1111', 'A') == dchar.init);
+    assert(composeJamo('A', '\u1171') == dchar.init);
 }
 
 unittest
@@ -7683,20 +7685,6 @@ enum {
     Note:
     In cases where the string in question is already normalized,
     it is returned unmodified and no memory allocation happens.
-
-    Example:
-    ---
-    // any encoding works
-    wstring greet = "Hello world";
-    assert(normalize(greet) is greet); // the same exact slice
-
-    // An example of a character with all 4 forms being different:
-    // Greek upsilon with acute and hook symbol (code point 0x03D3)
-    assert(normalize!NFC("ϓ") == "\u03D3");
-    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
-    assert(normalize!NFKC("ϓ") == "\u038E");
-    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
-    ---
 +/
 inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 {
@@ -7787,6 +7775,21 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
     }while(anchors[0] != input.length);
     app.put(input[0..anchors[0]]);
     return cast(inout(C)[])app.data;
+}
+
+///
+unittest
+{
+    // any encoding works
+    wstring greet = "Hello world";
+    assert(normalize(greet) is greet); // the same exact slice
+
+    // An example of a character with all 4 forms being different:
+    // Greek upsilon with acute and hook symbol (code point 0x03D3)
+    assert(normalize!NFC("ϓ") == "\u03D3");
+    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
+    assert(normalize!NFKC("ϓ") == "\u038E");
+    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
 }
 
 unittest
@@ -7932,18 +7935,21 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 /**
     Tests if dchar $(D ch) is always allowed (Quick_Check=YES) in normalization
     form $(D norm).
-    ---
+*/
+public bool allowedIn(NormalizationForm norm)(dchar ch)
+{
+    return !notAllowedIn!norm(ch);
+}
+
+///
+unittest
+{
     // e.g. Cyrillic is always allowed, so is ASCII
     assert(allowedIn!NFC('я'));
     assert(allowedIn!NFD('я'));
     assert(allowedIn!NFKC('я'));
     assert(allowedIn!NFKD('я'));
     assert(allowedIn!NFC('Z'));
-    ---
-*/
-public bool allowedIn(NormalizationForm norm)(dchar ch)
-{
-    return !notAllowedIn!norm(ch);
 }
 
 // not user friendly name but more direct
@@ -8585,7 +8591,6 @@ unittest
     Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
 
-    Example:
     toUpper can be used as an argument to $(XREF algorithm, map) to produce an algorithm that can
     convert a range of characters to upper case without allocating memory.
     A string can then be produced by using $(XREF algorithm, copy) to send it to an $(XREF array, appender).
