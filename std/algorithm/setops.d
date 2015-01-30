@@ -44,10 +44,10 @@ module std.algorithm.setops;
 import std.range.primitives;
 
 // FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional; // : binaryFun;
 import std.traits;
 // FIXME
-import std.typetuple; // : TypeTuple, staticMap, allSatisfy, anySatisfy;
+import std.typetuple; // : staticMap, allSatisfy, anySatisfy;
 
 // cartesianProduct
 /**
@@ -372,7 +372,7 @@ auto cartesianProduct(RR...)(RR ranges)
             import std.algorithm : algoFormat; // FIXME
             import std.range : iota;
             return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
-                                    iota(0, current.length)));
+                                    iota(current.length)));
         }
         void popFront()
         {
@@ -387,10 +387,32 @@ auto cartesianProduct(RR...)(RR ranges)
                     r = ranges[i].save; // rollover
             }
         }
+        static if (allSatisfy!(hasLength, RR))
+        @property size_t length()
+        {
+            size_t length = 1;
+            foreach (i, ref r; current)
+            {
+                version(assert)
+                {
+                    if(length == 0)
+                        return 0;
+                    immutable rLength = r.length;
+                    immutable newLength = length * rLength;
+                    assert(newLength / length == rLength, "cartesianProduct: length overflow");
+                    length = newLength;
+                }
+                else
+                {
+                    length *= r.length;
+                }
+            }
+            return length;
+        }
         @property Result save()
         {
             Result copy = this;
-            foreach (i, r; ranges)
+            foreach (i, ref r; ranges)
             {
                 copy.ranges[i] = r.save;
                 copy.current[i] = current[i].save;
@@ -417,6 +439,8 @@ auto cartesianProduct(RR...)(RR ranges)
     auto cprod2 = cartesianProduct(p,p,p,q,p);
     assert(cprod2.empty);
     foreach (_; cprod2) {} // should not crash
+    // Issue 14084
+    assert(cprod.length == 0);
 }
 
 @safe unittest
@@ -425,12 +449,28 @@ auto cartesianProduct(RR...)(RR ranges)
     auto cprod = cartesianProduct([0,0], [1,1], [2,2]);
     assert(!cprod.empty);
     assert(cprod.init.empty);
+    // Issue 14084
+    assert(cprod.length == 8);
+    cprod.popFront;
+    assert(cprod.length == 7);
+}
+
+@safe unittest
+{
+    auto r = [1, 2];
+    auto c = cartesianProduct(r, r);
+    assert(c.length == 4);
+    c.popFront();
+    assert(c.length == 3);
 }
 
 @safe unittest
 {
     // Issue 13393
-    assert(!cartesianProduct([0],[0],[0]).save.empty);
+    auto cprod = cartesianProduct([0],[0],[0]);
+    assert(!cprod.save.empty);
+    // Issue 14084
+    assert(cprod.length == 1);
 }
 
 /// ditto
@@ -448,7 +488,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
     import std.range : iota;
 
     enum string denest = algoFormat("tuple(a[0], %(a[1][%d]%|,%))",
-                                iota(0, otherRanges.length+1));
+                                iota(otherRanges.length+1));
     return map!denest(
         cartesianProduct(range1, cartesianProduct(range2, otherRanges))
     );
