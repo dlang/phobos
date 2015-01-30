@@ -870,7 +870,7 @@ unittest
         static struct R
         {
             Tuple!(int, int) _front;
-            @property ref Tuple!(int, int) front() { return _front;  }
+            @property ref Tuple!(int, int) front() return { return _front;  }
             @property bool empty() { return _front[0] >= 10; }
             void popFront() { ++_front[0]; }
         }

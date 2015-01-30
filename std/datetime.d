@@ -745,7 +745,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(const ref SysTime rhs) @safe pure nothrow
+    ref SysTime opAssign(const ref SysTime rhs) return @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
@@ -757,7 +757,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(SysTime rhs) @safe pure nothrow
+    ref SysTime opAssign(SysTime rhs) return @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
@@ -8151,7 +8151,7 @@ public:
       +/
     static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null) @safe
         if(isSomeString!S)
-    {        
+    {
         import std.string : strip;
         import std.conv : to;
         import std.algorithm : startsWith, find;
@@ -12641,7 +12641,7 @@ public:
         import std.conv : to;
         import std.algorithm : all, startsWith;
         import std.format : format;
-     
+
         auto dstr = to!dstring(strip(isoExtString));
 
         enforce(dstr.length >= 10, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
@@ -12948,7 +12948,7 @@ private:
         Params:
             days = The number of days to add to this Date.
       +/
-    ref Date _addDays(long days) @safe pure nothrow
+    ref Date _addDays(long days) return @safe pure nothrow
     {
         dayOfGregorianCal = cast(int)(dayOfGregorianCal + days);
         return this;
@@ -14223,7 +14223,7 @@ private:
         Params:
             seconds = The number of seconds to add to this TimeOfDay.
       +/
-    ref TimeOfDay _addSeconds(long seconds) @safe pure nothrow
+    ref TimeOfDay _addSeconds(long seconds) return @safe pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_hour);
@@ -17145,7 +17145,7 @@ private:
         Params:
             seconds = The number of seconds to add to this $(LREF DateTime).
       +/
-    ref DateTime _addSeconds(long seconds) @safe pure nothrow
+    ref DateTime _addSeconds(long seconds) return @safe pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_tod._hour);
@@ -31070,7 +31070,7 @@ unittest
     import std.string;
     import std.typecons;
     import std.typetuple;
-    
+
     static struct Rand3Letters
     {
         enum empty = false;
