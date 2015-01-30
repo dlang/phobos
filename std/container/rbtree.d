@@ -716,7 +716,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     version(unittest)
     {
-        private enum doUnittest = isIntegral!T;
+        private enum doUnittest = isIntegral!T && (less == "a < b" || less == "a > b");
 
         // note, this must be final so it does not affect the vtable layout
         final bool arrayEqual(T[] arr)
