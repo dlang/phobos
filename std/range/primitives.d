@@ -555,7 +555,7 @@ unittest
         char c;
         enum empty = false;
         void popFront(){};
-        ref char front() @property
+        ref char front() return @property
         {
             return c;
         }
@@ -1856,8 +1856,8 @@ ElementType!R moveBack(R)(R r)
         int payload = 5;
         @property bool empty() { return false; }
         @property TestRange save() { return this; }
-        @property ref int front() { return payload; }
-        @property ref int back() { return payload; }
+        @property ref int front() return { return payload; }
+        @property ref int back() return { return payload; }
         void popFront() { }
         void popBack() { }
     }

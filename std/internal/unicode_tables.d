@@ -38,7 +38,7 @@ struct FullCaseEntry
     ubyte n, size;// n number in batch, size - size of batch
     ubyte entry_len;
 
-    @property auto value() const @trusted pure nothrow @nogc
+    @property auto value() const @trusted pure nothrow @nogc return
     {
         return seq[0..entry_len];
     }

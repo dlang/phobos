@@ -2702,7 +2702,7 @@ struct LockingTextReader
 
     /* Read a utf8 sequence from the file, removing the chars from the stream.
     Returns an empty result when at EOF. */
-    private char[] takeFront(ref char[4] buf)
+    private char[] takeFront(return ref char[4] buf)
     {
         import std.utf : stride, UTFException;
         {
@@ -3807,7 +3807,7 @@ __gshared
     {
         // Read stdin, sort lines, write to stdout
         import std.stdio, std.array, std.algorithm : sort, copy;
-    
+
         void main() {
             stdin                       // read from stdin
             .byLineCopy(KeepTerminator.yes) // copying each line

@@ -37,13 +37,13 @@ CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 
 ## Flags for dmd D compiler
 
-DFLAGS=-m$(MODEL) -O -release -w
+DFLAGS=-m$(MODEL) -O -release -w -dip25
 #DFLAGS=-m$(MODEL) -unittest -g
 #DFLAGS=-m$(MODEL) -unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-g -m$(MODEL) -O -w
+UDFLAGS=-g -m$(MODEL) -O -w -dip25
 
 ## C compiler, linker, librarian
 

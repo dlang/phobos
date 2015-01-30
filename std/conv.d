@@ -4610,7 +4610,7 @@ version(unittest)
     {
         int j;
         __std_conv_S s;
-        ref __std_conv_S foo() @property {s.i = j; return s;}
+        ref __std_conv_S foo() return @property {s.i = j; return s;}
         alias foo this;
     }
     static assert(is(__std_conv_SS : __std_conv_S));

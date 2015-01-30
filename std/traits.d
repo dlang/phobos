@@ -1291,7 +1291,7 @@ unittest
         int sharedF() shared { return 0; }
 
         int x;
-        ref int refF() { return x; }
+        ref int refF() return { return x; }
         int propertyF() @property { return 0; }
         int nothrowF() nothrow { return 0; }
         int nogcF() @nogc { return 0; }

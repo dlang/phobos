@@ -551,7 +551,7 @@ ulong getSize(in char[] name) @safe
         {
             return stat(path.tempCString(), buf);
         }
-        static stat_t* ptrOfLocalVariable(ref stat_t buf) @trusted
+        static stat_t* ptrOfLocalVariable(return ref stat_t buf) @trusted
         {
             return &buf;
         }
