@@ -108,6 +108,9 @@ import std.traits;
  */
 public struct UUID
 {
+    import std.typetuple : allSatisfy;
+    import std.traits : isIntegral;
+
     private:
         @safe pure nothrow char toChar(size_t i) const
         {
@@ -256,25 +259,28 @@ public struct UUID
             assert(ctfe.data == data);
         }
 
-/+
-        Not Working! DMD interprets the ubyte literals as ints, then complains the int can't
-        be converted to ubyte!
-
         /**
          * Construct a UUID struct from the 16 byte representation
          * of a UUID. Variadic constructor to allow a simpler syntax, see examples.
          * You need to pass exactly 16 ubytes.
-         *
-         * Examples:
-         * -------------------------
-         * auto tmp = UUID(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
-         * assert(tmp.data == cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,
-         *     12,13,14,15]);
-         * -------------------------
          */
-        @safe pure nothrow this()(ubyte[16] uuidData...)
+        @safe pure this(T...)(T uuidData)
+            if(uuidData.length == 16 && allSatisfy!(isIntegral, T))
         {
-            data = uuidData;
+            import std.conv : to;
+
+            foreach(idx, it; uuidData)
+            {
+                this.data[idx] = to!ubyte(it);
+            }
+        }
+
+        ///
+        unittest
+        {
+            auto tmp = UUID(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+            assert(tmp.data == cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,
+                12,13,14,15]);
         }
 
         unittest
@@ -292,8 +298,6 @@ public struct UUID
             //Too many arguments
             assert(!__traits(compiles, typeof(UUID(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,1))));
         }
-
-++/
 
         /**
          * <a name="UUID(string)"></a>
@@ -650,30 +654,31 @@ public struct UUID
         /**
          * All of the standard numeric operators are defined for
          * the UUID struct.
-         *
-         * Examples:
-         * -------------------------
-         * //compare UUIDs
-         * assert(UUID("00000000-0000-0000-0000-000000000000") == UUID.init);
-         *
-         * //UUIDs in associative arrays:
-         * int[UUID] test = [UUID("8a94f585-d180-44f7-8929-6fca0189c7d0") : 1,
-         *     UUID("7c351fd4-b860-4ee3-bbdc-7f79f3dfb00a") : 2,
-         *     UUID("9ac0a4e5-10ee-493a-86fc-d29eeb82ecc1") : 3];
-         *
-         * assert(test[UUID("9ac0a4e5-10ee-493a-86fc-d29eeb82ecc1")] == 3);
-         *
-         * //UUIDS can be sorted:
-         * import std.algorithm;
-         * UUID[] ids = [UUID("8a94f585-d180-44f7-8929-6fca0189c7d0"),
-         *               UUID("7c351fd4-b860-4ee3-bbdc-7f79f3dfb00a"),
-         *               UUID("9ac0a4e5-10ee-493a-86fc-d29eeb82ecc1")];
-         * sort(ids);
-         * -------------------------
          */
         @safe pure nothrow @nogc bool opEquals(in UUID s) const
         {
             return s.data == this.data;
+        }
+
+        ///
+        @safe pure unittest
+        {
+            //compare UUIDs
+            assert(UUID("00000000-0000-0000-0000-000000000000") == UUID.init);
+
+            //UUIDs in associative arrays:
+            int[UUID] test = [UUID("8a94f585-d180-44f7-8929-6fca0189c7d0") : 1,
+                UUID("7c351fd4-b860-4ee3-bbdc-7f79f3dfb00a") : 2,
+                UUID("9ac0a4e5-10ee-493a-86fc-d29eeb82ecc1") : 3];
+
+            assert(test[UUID("9ac0a4e5-10ee-493a-86fc-d29eeb82ecc1")] == 3);
+
+            //UUIDS can be sorted:
+            import std.algorithm;
+            UUID[] ids = [UUID("8a94f585-d180-44f7-8929-6fca0189c7d0"),
+                          UUID("7c351fd4-b860-4ee3-bbdc-7f79f3dfb00a"),
+                          UUID("9ac0a4e5-10ee-493a-86fc-d29eeb82ecc1")];
+            sort(ids);
         }
 
         /**
@@ -821,16 +826,6 @@ public struct UUID
  * CTFE:
  * CTFE is not supported.
  *
- * Examples:
- * ---------------------------------------
- * //Use default UUID.init namespace
- * auto simpleID = md5UUID("test.uuid.any.string");
- *
- * //use a name-based id as namespace
- * auto namespace = md5UUID("my.app");
- * auto id = md5UUID("some-description", namespace);
- * ---------------------------------------
- *
  * Note:
  * RFC 4122 isn't very clear on how UUIDs should be generated from names.
  * It is possible that different implementations return different UUIDs
@@ -887,6 +882,17 @@ public struct UUID
     return u;
 }
 
+///
+unittest
+{
+    //Use default UUID.init namespace
+    auto simpleID = md5UUID("test.uuid.any.string");
+
+    //use a name-based id as namespace
+    auto namespace = md5UUID("my.app");
+    auto id = md5UUID("some-description", namespace);
+}
+
 @safe pure unittest
 {
     auto simpleID = md5UUID("test.uuid.any.string");
@@ -932,16 +938,6 @@ public struct UUID
  *
  * CTFE:
  * CTFE is not supported.
- *
- * Examples:
- * ---------------------------------------
- * //Use default UUID.init namespace
- * auto simpleID = sha1UUID("test.uuid.any.string");
- *
- * //use a name-based id as namespace
- * auto namespace = sha1UUID("my.app");
- * auto id = sha1UUID("some-description", namespace);
- * ---------------------------------------
  *
  * Note:
  * RFC 4122 isn't very clear on how UUIDs should be generated from names.
@@ -1000,6 +996,17 @@ public struct UUID
     return u;
 }
 
+///
+unittest
+{
+    //Use default UUID.init namespace
+    auto simpleID = sha1UUID("test.uuid.any.string");
+
+    //use a name-based id as namespace
+    auto namespace = sha1UUID("my.app");
+    auto id = sha1UUID("some-description", namespace);
+}
+
 @safe pure unittest
 {
     auto simpleID = sha1UUID("test.uuid.any.string");
@@ -1036,17 +1043,6 @@ public struct UUID
  * CTFE:
  * This function is not supported at compile time.
  *
- * Examples:
- * ------------------------------------------
- * //simple call
- * auto uuid = randomUUID();
- *
- * //provide a custom RNG. Must be seeded manually.
- * Xorshift192 gen;
- *
- * gen.seed(unpredictableSeed);
- * auto uuid3 = randomUUID(gen);
- * ------------------------------------------
  */
 @trusted UUID randomUUID()
 {
@@ -1087,6 +1083,21 @@ public struct UUID
     u.data[6] |= 0b01000000;
 
     return u;
+}
+
+///
+unittest
+{
+    import std.random : Xorshift192, unpredictableSeed;
+
+    //simple call
+    auto uuid = randomUUID();
+
+    //provide a custom RNG. Must be seeded manually.
+    Xorshift192 gen;
+
+    gen.seed(unpredictableSeed);
+    auto uuid3 = randomUUID(gen);
 }
 
 /*
@@ -1146,25 +1157,6 @@ unittest
  * This function is supported in CTFE code. Note that error messages
  * caused by a malformed UUID parsed at compile time can be cryptic,
  * but errors are detected and reported at compile time.
- *
- * Examples:
- * -------------------------
- * auto id = parseUUID("8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46");
- * //no dashes
- * id = parseUUID("8ab3060e2cba4f23b74cb52db3bdfb46");
- * //dashes at different positions
- * id = parseUUID("8a-b3-06-0e2cba4f23b74c-b52db3bdfb-46");
- * //leading / trailing characters
- * id = parseUUID("{8ab3060e-2cba-4f23-b74c-b52db3bdfb46}");
- * //unicode
- * id = parseUUID("ü8ab3060e2cba4f23b74cb52db3bdfb46ü");
- * //multiple trailing/leading characters
- * id = parseUUID("///8ab3060e2cba4f23b74cb52db3bdfb46||");
- *
- * //Can also be used in CTFE, for example as UUID literals:
- * enum ctfeID = parseUUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
- * //here parsing is done at compile time, no runtime overhead!
- * -------------------------
  */
 UUID parseUUID(T)(T uuidString) if(isSomeString!T)
 {
@@ -1312,6 +1304,26 @@ UUID parseUUID(Range)(ref Range uuidRange) if(isInputRange!Range
         parserError(consumed, UUIDParsingException.Reason.invalidChar, "Unexpected character");
 
     return result;
+}
+
+///
+unittest
+{
+    auto id = parseUUID("8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46");
+    //no dashes
+    id = parseUUID("8ab3060e2cba4f23b74cb52db3bdfb46");
+    //dashes at different positions
+    id = parseUUID("8a-b3-06-0e2cba4f23b74c-b52db3bdfb-46");
+    //leading / trailing characters
+    id = parseUUID("{8ab3060e-2cba-4f23-b74c-b52db3bdfb46}");
+    //unicode
+    id = parseUUID("ü8ab3060e2cba4f23b74cb52db3bdfb46ü");
+    //multiple trailing/leading characters
+    id = parseUUID("///8ab3060e2cba4f23b74cb52db3bdfb46||");
+
+    //Can also be used in CTFE, for example as UUID literals:
+    enum ctfeID = parseUUID("8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
+    //here parsing is done at compile time, no runtime overhead!
 }
 
 @safe pure unittest
@@ -1482,29 +1494,6 @@ enum x500Namespace = UUID("6ba7b814-9dad-11d1-80b4-00c04fd430c8");
 
 /**
  * Regex string to extract UUIDs from text.
- *
- * Examples:
- * -------------------
- * import std.algorithm;
- * import std.regex;
- *
- * string test = "Lorem ipsum dolor sit amet, consetetur "
- *     "6ba7b814-9dad-11d1-80b4-00c04fd430c8 sadipscing \n"
- *     "elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore \r\n"
- *     "magna aliquyam erat, sed diam voluptua. "
- *     "8ab3060e-2cba-4f23-b74c-b52db3bdfb46 At vero eos et accusam et "
- *     "justo duo dolores et ea rebum.";
- *
- * auto r = regex(uuidRegex, "g");
- *
- * UUID[] found;
- * foreach(c; match(test, r))
- * {
- *     found ~= UUID(c.hit);
- * }
- *
- * writeln(found);
- * -------------------
  */
 enum uuidRegex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}"~
     "-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
@@ -1573,6 +1562,7 @@ public class UUIDParsingException : Exception
     }
 }
 
+///
 unittest
 {
     auto ex = new UUIDParsingException("foo", 10, UUIDParsingException.Reason.tooMuch);
