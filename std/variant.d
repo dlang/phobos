@@ -618,8 +618,11 @@ public:
         }
         else
         {
-            // Assignment should destruct previous value
-            fptr(OpID.destruct, &store, null);
+            static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
+            {
+                // Assignment should destruct previous value
+                fptr(OpID.destruct, &store, null);
+            }
 
             static if (T.sizeof <= size)
             {
