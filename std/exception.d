@@ -1616,7 +1616,7 @@ version(unittest) package
 }
 
 /** This $(D enum) is used to select the primitives of the range to handle by the
-  $(D handle) range wrapper. The values of the $(D enum) can be $(D OR)'d to
+  $(LREF handle) range wrapper. The values of the $(D enum) can be $(D OR)'d to
   select multiple primitives to be handled.
  */
 enum RangePrimitive
@@ -1630,7 +1630,7 @@ enum RangePrimitive
     length   = 0b00_0100_0000, /// Ditto
     opDollar = 0b00_1000_0000, /// Ditto
     opIndex  = 0b01_0000_0000, /// Ditto
-    //opSlice  = 0b10_0000_0000, // @@@BUG@@@ 14057
+    opSlice  = 0b10_0000_0000, /// Ditto
 }
 
 /** Handle exceptions thrown from range primitives.
@@ -1644,12 +1644,19 @@ Params:
     E = The type of $(D Throwable) to _handle.
     primitivesToHandle = Set of range primitives to _handle.
     handler = The callable that is called when a handled primitive throws a
-    $(D Throwable) of type $(D E). The handler must have the same return type
-    as the handled primitive and must accept arguments of the form $(D E, ref
-    IRange).
+    $(D Throwable) of type $(D E). The handler must accept arguments of
+    the form $(D E, ref IRange) and its return value is used as the primitive's
+    return value whenever $(D E) is thrown.
     input = The range to _handle.
 
 Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
+
+opSlice:
+Infinite ranges with slicing support must return an instance of
+$(XREF range_package, Take) when sliced with a specific lower and upper
+bound (see $(XREF range_primitives, hasSlicing)); $(D handle) deals with this
+by $(D take)ing 0 from the return value of the handler function and returning
+that when an exception is caught.
 */
 auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, IRange)(IRange input)
 if (isInputRange!IRange)
@@ -1797,6 +1804,56 @@ if (isInputRange!IRange)
                 }
             }
         }
+
+        static if (hasSlicing!IRange)
+        {
+            static if (primitivesToHandle & RangePrimitive.opSlice)
+            {
+                static if (hasLength!IRange)
+                {
+                    typeof(this) opSlice(size_t lower, size_t upper)
+                    {
+                        try
+                        {
+                            return typeof(this)(this.range[lower .. upper]);
+                        }
+                        catch(E exception)
+                        {
+                            return typeof(this)(handler(exception, this.range));
+                        }
+                    }
+                }
+                else static if (is(typeof(IRange.init[size_t.init .. $])))
+                {
+                    static struct DollarToken {}
+                    enum opDollar = DollarToken.init;
+
+                    typeof(this) opSlice(size_t lower, DollarToken)
+                    {
+                        try
+                        {
+                            return typeof(this)(this.range[lower .. $]);
+                        }
+                        catch(E exception)
+                        {
+                            return typeof(this)(handler(exception, this.range));
+                        }
+                    }
+
+                    auto opSlice(size_t lower, size_t upper)
+                    {
+                        try
+                        {
+                            return takeExactly(typeof(this)(this.range[lower .. $]), upper - 1);
+                        }
+                        catch(E exception)
+                        {
+                            return takeExactly(typeof(this)(handler(exception, this.range)), 0);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return Handler(input);
@@ -1911,10 +1968,34 @@ unittest
 
     save.save();
 
-    /+ @@@BUG@@@ #14057
     auto slice = f.handle!(Exception,
         RangePrimitive.opSlice, (e, r) => ThrowingRange())();
 
     auto sliced = slice[0 .. 1337]; // this would throw otherwise
-    +/
+
+    static struct Infinite
+    {
+        enum bool empty = false;
+        int front() { assert(false); }
+        void popFront() { assert(false); }
+        Infinite save() @property { assert(false); }
+        static struct DollarToken {}
+        enum opDollar = DollarToken.init;
+        Take!Infinite opSlice(size_t, size_t) { assert(false); }
+        Infinite opSlice(size_t, DollarToken)
+        {
+            throw new Exception("opSlice has thrown");
+        }
+    }
+
+    static assert(isInputRange!Infinite);
+    static assert(isInfinite!Infinite);
+    static assert(hasSlicing!Infinite);
+
+    assertThrown(Infinite()[0 .. $]);
+
+    auto infinite = Infinite.init.handle!(Exception,
+        RangePrimitive.opSlice, (e, r) => Infinite())();
+
+    auto infSlice = infinite[0 .. $]; // this would throw otherwise
 }
