@@ -2915,7 +2915,15 @@ void writeln(T...)(T args)
 
         // Specialization for strings - a very frequent case
         auto w = .trustedStdout.lockingTextWriter();
-        w.put(args[0]);
+
+        static if (isStaticArray!(typeof(args[0])))
+        {
+            w.put(args[0][]);
+        }
+        else
+        {
+            w.put(args[0]);
+        }
         w.put('\n');
     }
     else
@@ -2935,6 +2943,13 @@ unittest
     // bug 8040
     if (false) writeln(null);
     if (false) writeln(">", null, "<");
+
+    // Bugzilla 14041
+    if (false)
+    {
+        char[8] a;
+        writeln(a);
+    }
 }
 
 unittest
