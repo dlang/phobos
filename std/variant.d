@@ -1322,6 +1322,14 @@ unittest
     assert(aa["b"] == 3);
 }
 
+pure nothrow @nogc
+unittest
+{
+    Algebraic!(int, double) a;
+    a = 100;
+    a = 1.0;
+}
+
 
 /**
  * Algebraic data type restricted to a closed set of possible
