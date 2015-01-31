@@ -868,7 +868,7 @@ T toImpl(T, S)(S value)
     {
         import core.stdc.string : strlen;
         // It is unsafe because we cannot guarantee that the pointer is null terminated.
-        return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
+        return value ? cast(T) value[0 .. strlen(value)].dup : null;
     }
     else static if (isSomeString!T && is(S == enum))
     {
@@ -911,6 +911,13 @@ T toImpl(T, S)(S value)
         // other non-string values runs formatting
         return toStr!T(value);
     }
+}
+
+// Bugzilla 14042
+unittest
+{
+    immutable(char)* ptr = "hello".ptr;
+    auto result = ptr.to!(char[]);
 }
 
 /*
