@@ -1938,11 +1938,12 @@ private
                 assert( msg.convertsTo!(Tid) );
                 auto tid = msg.get!(Tid);
 
-                if( bool* depends = (tid in thisInfo.links) )
+                if( bool* pDepends = (tid in thisInfo.links) )
                 {
+                    auto depends = *pDepends;
                     thisInfo.links.remove( tid );
                     // Give the owner relationship precedence.
-                    if( *depends && tid != thisInfo.owner )
+                    if( depends && tid != thisInfo.owner )
                     {
                         auto e = new LinkTerminated( tid );
                         auto m = Message( MsgType.standard, e );
