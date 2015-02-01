@@ -618,8 +618,11 @@ public:
         }
         else
         {
-            // Assignment should destruct previous value
-            fptr(OpID.destruct, &store, null);
+            static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
+            {
+                // Assignment should destruct previous value
+                fptr(OpID.destruct, &store, null);
+            }
 
             static if (T.sizeof <= size)
             {
@@ -1317,6 +1320,14 @@ unittest
     assert(aa["b"] == 2);
     aa["b"] = 3;
     assert(aa["b"] == 3);
+}
+
+pure nothrow @nogc
+unittest
+{
+    Algebraic!(int, double) a;
+    a = 100;
+    a = 1.0;
 }
 
 
