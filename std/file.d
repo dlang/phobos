@@ -227,8 +227,8 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
 
         alias defaults =
             TypeTuple!(GENERIC_READ,
-                FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
+                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
         auto h = trustedCreateFileW(name, defaults);
 
@@ -329,6 +329,15 @@ version (linux) @safe unittest
     auto s = std.file.readText("/proc/sys/kernel/osrelease");
     assert(s.length > 0);
     //writefln("'%s'", s);
+}
+
+@safe unittest
+{
+    scope(exit) if (exists(deleteme)) remove(deleteme);
+    import std.stdio;
+    auto f = File(deleteme, "w");
+    f.write("abcd"); f.flush();
+    assert(read(deleteme) == "abcd");
 }
 
 /********************************************
