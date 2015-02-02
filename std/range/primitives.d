@@ -1941,9 +1941,18 @@ arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.save) is
 equivalent to $(D save(array)). The function does not duplicate the
 content of the array, it simply returns its argument.
- */
 
+User-defined types subtyping built-in arrays are supported and
+returned as their original type.
+ */
 @property T[] save(T)(T[] a) @safe pure nothrow
+{
+    return a;
+}
+
+/// Ditto
+@property T save(T)(T a)
+    if(is(T == struct) && is(T : U[], U))
 {
     return a;
 }
@@ -1955,6 +1964,24 @@ content of the array, it simply returns its argument.
     auto b = a.save;
     assert(b is a);
 }
+
+@safe pure nothrow @nogc unittest
+{
+    import std.typetuple : TypeTuple;
+
+    static struct Derived(SubType)
+    {
+        SubType sub;
+        alias sub this;
+    }
+
+    foreach(SubType; TypeTuple!(int[], string))
+    { // Fails for isForwardRange (and thus isRandomAccessRange) without the second overload of `save`
+        foreach(RangeConcept; TypeTuple!(isInputRange, isForwardRange, isRandomAccessRange, /+hasSlicing+/))
+            static assert(RangeConcept!(Derived!SubType) == RangeConcept!SubType, RangeConcept.stringof);
+    }
+}
+
 /**
 Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
