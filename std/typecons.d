@@ -664,7 +664,7 @@ template Tuple(Specs...)
         /**
          * Converts to string.
          */
-        void toString()(scope void delegate(const(char)[]) sink)
+        void toString(DG)(scope DG sink)
         {
             enum header = typeof(this).stringof ~ "(",
                  footer = ")",
