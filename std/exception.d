@@ -1618,6 +1618,12 @@ version(unittest) package
 /** This $(D enum) is used to select the primitives of the range to handle by the
   $(LREF handle) range wrapper. The values of the $(D enum) can be $(D OR)'d to
   select multiple primitives to be handled.
+
+  $(D RangePrimitive.access) is a shortcut for the access primitives; $(D front),
+  $(D back) and $(D opIndex).
+
+  $(D RangePrimitive.pop) is a shortcut for the mutating primitives;
+  $(D popFront) and $(D popBack).
  */
 enum RangePrimitive
 {
@@ -1631,12 +1637,15 @@ enum RangePrimitive
     opDollar = 0b00_1000_0000, /// Ditto
     opIndex  = 0b01_0000_0000, /// Ditto
     opSlice  = 0b10_0000_0000, /// Ditto
+    access   = front | back | opIndex, /// Ditto
+    pop      = popFront | popBack, /// Ditto
 }
 
 /** Handle exceptions thrown from range primitives.
 
 Use the $(LREF RangePrimitive) enum to specify which primitives to _handle.
-Multiple range primitives can be handled at once by using the $(D OR) operator.
+Multiple range primitives can be handled at once by using the $(D OR) operator
+or the pseudo-primitives $(D RangePrimitive.access) and $(D RangePrimitive.pop).
 All handled primitives must have return types or values compatible with the
 user-supplied handler.
 
@@ -1900,7 +1909,23 @@ unittest
 
     // Substitute 0 for cases of ConvException
     auto h = r.handle!(ConvException, RangePrimitive.front, (e, r) => 0);
-    assert(equal(h, [12, 0, 54, 2, 7, 9, 0, 6, 8]));
+    assert(h.equal([12, 0, 54, 2, 7, 9, 0, 6, 8]));
+}
+
+///
+unittest
+{
+    import std.algorithm : equal;
+    import std.range : retro;
+    import std.utf : UTFException;
+
+    auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
+
+    auto handled = str.handle!(UTFException, RangePrimitive.access,
+            (e, r) => ' '); // Replace invalid code points with spaces
+
+    assert(handled.equal("hello world")); // `front` is handled,
+    assert(handled.retro.equal("dlrow olleh")); // as well as `back`
 }
 
 unittest
@@ -1970,9 +1995,17 @@ unittest
     assertThrown(fb.popBack());
     assertThrown(fb.empty);
     assertThrown(fb.save);
+    assertThrown(fb[0]);
 
-    auto pfb = f.handle!(Exception,
-            RangePrimitive.popFront | RangePrimitive.popBack, (e, r) => -1)();
+    auto accessRange = f.handle!(Exception, RangePrimitive.access,
+            (e, r) => -1);
+    assert(accessRange.front == -1);
+    assert(accessRange.back == -1);
+    assert(accessRange[0] == -1);
+    assertThrown(accessRange.popFront());
+    assertThrown(accessRange.popBack());
+
+    auto pfb = f.handle!(Exception, RangePrimitive.pop, (e, r) => -1)();
 
     pfb.popFront(); // this would throw otherwise
     pfb.popBack(); // this would throw otherwise
