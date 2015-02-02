@@ -187,7 +187,7 @@ body
 {
     import core.bitop : bsr;
     immutable msbs = 7 - bsr(~c);
-    if (msbs < 2 || msbs > 4)
+    if (!~c || msbs < 2 || msbs > 4)
         throw new UTFException("Invalid UTF-8 sequence", index);
     return msbs;
 }
@@ -263,7 +263,7 @@ unittest // invalid start bytes
 {
     import std.exception: assertThrown;
     immutable char[] invalidStartBytes = [
-        //0b1111_1000, // indicating a sequence length of 5
+        0b1111_1000, // indicating a sequence length of 5
         0b1111_1100, // 6
         0b1111_1110, // 7
         0b1111_1111, // 8
