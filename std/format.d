@@ -302,7 +302,6 @@ $(I FormatChar):
     Floating point infinities are formatted as $(B inf) or
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
-    </dl>
 
     Examples:
     -------------------------
