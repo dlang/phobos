@@ -292,9 +292,12 @@ void put(R, E)(ref R r, E e)
     else static if (is(typeof(doPut(r, [e]))) && !isDynamicArray!R)
     {
         if (__ctfe)
-            doPut(r, [e]);
+        {
+            E[1] arr = [e];
+            doPut(r, arr[]);
+        }
         else
-            doPut(r, (&e)[0..1]);
+            doPut(r, (ref e) @trusted { return (&e)[0..1]; }(e));
     }
     //special case for char to string.
     else static if (isSomeChar!E && is(typeof(putChar(r, e))))
@@ -326,6 +329,13 @@ void put(R, E)(ref R r, E e)
     }
 }
 
+@safe pure nothrow @nogc unittest
+{
+    static struct R() { void put(in char[]) {} }
+    R!() r;
+    put(r, 'a');
+}
+
 //Helper function to handle chars as quickly and as elegantly as possible
 //Assumes r.put(e)/r(e) has already been tested
 private void putChar(R, E)(ref R r, E e)
@@ -350,17 +360,15 @@ if (isSomeChar!E)
     {
         enum w = wsCond && E.sizeof < wchar.sizeof;
         Select!(w, wchar, dchar) c = e;
-        if (__ctfe)
-            doPut(r, [c]);
-        else
-            doPut(r, (&c)[0..1]);
+        typeof(c)[1] arr = [c];
+        doPut(r, arr[]);
     }
     //Encode a wide char into a narrower string
     else static if (wsCond || csCond)
     {
         import std.utf : encode;
         /+static+/ Select!(wsCond, wchar[2], char[4]) buf; //static prevents purity.
-        doPut(r, buf.ptr[0 .. encode(buf, e)]); //the word ".ptr" added to enforce un-safety.
+        doPut(r, buf[0 .. encode(buf, e)]);
     }
     //Slowly encode a wide char into a series of narrower chars
     else static if (wcCond || ccCond)
@@ -379,6 +387,14 @@ pure unittest
 {
     auto f = delegate (const(char)[]) {};
     putChar(f, cast(dchar)'a');
+}
+
+
+@safe pure unittest
+{
+    static struct R() { void put(in char[]) {} }
+    R!() r;
+    putChar(r, 'a');
 }
 
 unittest
