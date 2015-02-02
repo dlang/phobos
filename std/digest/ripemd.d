@@ -726,7 +726,10 @@ unittest
     assert(result[0 .. 20] == result2 && result2 == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     debug
+    {
+        import std.exception;
         assertThrown!Error(md.finish(result[0 .. 19]));
+    }
 
     assert(md.length == 20);
 

@@ -661,7 +661,7 @@ public struct UUID
         }
 
         ///
-        @safe pure unittest
+        pure unittest
         {
             //compare UUIDs
             assert(UUID("00000000-0000-0000-0000-000000000000") == UUID.init);

@@ -3251,7 +3251,7 @@ auto zip(Ranges...)(Ranges ranges)
 }
 
 ///
-@safe unittest
+pure unittest
 {
     import std.algorithm : sort;
     int[] a = [ 1, 2, 3 ];
@@ -3398,7 +3398,7 @@ unittest
     +/
 }
 
-@safe unittest
+pure unittest
 {
     import std.algorithm : sort;
 
