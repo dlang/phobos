@@ -674,7 +674,8 @@ package template isNativeOutputRange(R, E)
         doPut(r, e);
     }));
 }
-//
+
+///
 @safe unittest
 {
     int[] r = new int[](4);
@@ -773,6 +774,7 @@ template isForwardRange(R)
     }));
 }
 
+///
 @safe unittest
 {
     static assert(!isForwardRange!(int));
@@ -785,15 +787,6 @@ Returns $(D true) if $(D R) is a bidirectional range. A bidirectional
 range is a forward range that also offers the primitives $(D back) and
 $(D popBack). The following code should compile for any bidirectional
 range.
-
-----
-R r;
-static assert(isForwardRange!R);           // is forward range
-r.popBack();                               // can invoke popBack
-auto t = r.back;                           // can get the back of the range
-auto w = r.front;
-static assert(is(typeof(t) == typeof(w))); // same type for front and back
-----
 
 The semantics of a bidirectional range (not checkable during
 compilation) are assumed to be the following ($(D r) is an object of
@@ -814,6 +807,18 @@ template isBidirectionalRange(R)
         auto w = r.front;
         static assert(is(typeof(t) == typeof(w)));
     }));
+}
+
+///
+unittest
+{
+    alias R = int[];
+    R r = [0,1];
+    static assert(isForwardRange!R);           // is forward range
+    r.popBack();                               // can invoke popBack
+    auto t = r.back;                           // can get the back of the range
+    auto w = r.front;
+    static assert(is(typeof(t) == typeof(w))); // same type for front and back
 }
 
 @safe unittest
@@ -850,29 +855,6 @@ either case, the range must either offer $(D length) or be
 infinite. The following code should compile for any random-access
 range.
 
-----
-// range is finite and bidirectional or infinite and forward.
-static assert(isBidirectionalRange!R ||
-              isForwardRange!R && isInfinite!R);
-
-R r = void;
-auto e = r[1]; // can index
-static assert(is(typeof(e) == typeof(r.front))); // same type for indexed and front
-static assert(!isNarrowString!R); // narrow strings cannot be indexed as ranges
-static assert(hasLength!R || isInfinite!R); // must have length or be infinite
-
-// $ must work as it does with arrays if opIndex works with $
-static if(is(typeof(r[$])))
-{
-    static assert(is(typeof(r.front) == typeof(r[$])));
-
-    // $ - 1 doesn't make sense with infinite ranges but needs to work
-    // with finite ones.
-    static if(!isInfinite!R)
-        static assert(is(typeof(r.front) == typeof(r[$ - 1])));
-}
-----
-
 The semantics of a random-access range (not checkable during
 compilation) are assumed to be the following ($(D r) is an object of
 type $(D R)): $(UL $(LI $(D r.opIndex(n)) returns a reference to the
@@ -905,6 +887,33 @@ template isRandomAccessRange(R)
                 static assert(is(typeof(r.front) == typeof(r[$ - 1])));
         }
     }));
+}
+
+///
+unittest
+{
+    alias R = int[];
+
+    // range is finite and bidirectional or infinite and forward.
+    static assert(isBidirectionalRange!R ||
+                  isForwardRange!R && isInfinite!R);
+
+    R r = [0,1];
+    auto e = r[1]; // can index
+    static assert(is(typeof(e) == typeof(r.front))); // same type for indexed and front
+    static assert(!isNarrowString!R); // narrow strings cannot be indexed as ranges
+    static assert(hasLength!R || isInfinite!R); // must have length or be infinite
+
+    // $ must work as it does with arrays if opIndex works with $
+    static if(is(typeof(r[$])))
+    {
+        static assert(is(typeof(r.front) == typeof(r[$])));
+
+        // $ - 1 doesn't make sense with infinite ranges but needs to work
+        // with finite ones.
+        static if(!isInfinite!R)
+            static assert(is(typeof(r.front) == typeof(r[$ - 1])));
+    }
 }
 
 @safe unittest
