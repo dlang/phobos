@@ -407,13 +407,6 @@ the same range results in a stride with a step that is the
 product of the two applications.
 
 Throws: $(D Exception) if $(D n == 0).
-
-Example:
-----
-int[] a = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ];
-assert(equal(stride(a, 3), [ 1, 4, 7, 10 ][]));
-assert(stride(stride(a, 2), 3) == stride(a, 6));
-----
  */
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
@@ -623,6 +616,16 @@ if (isInputRange!(Unqual!Range))
     }
 }
 
+///
+unittest
+{
+    import std.algorithm : equal;
+
+    int[] a = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ];
+    assert(equal(stride(a, 3), [ 1, 4, 7, 10 ][]));
+    assert(stride(stride(a, 2), 3) == stride(a, 6));
+}
+
 @safe unittest
 {
     import std.internal.test.dummyrange;
@@ -770,17 +773,6 @@ length), $(D Chain) offers them as well.
 If only one range is offered to $(D Chain) or $(D chain), the $(D
 Chain) type exits the picture by aliasing itself directly to that
 range's type.
-
-Example:
-----
-int[] arr1 = [ 1, 2, 3, 4 ];
-int[] arr2 = [ 5, 6 ];
-int[] arr3 = [ 7 ];
-auto s = chain(arr1, arr2, arr3);
-assert(s.length == 7);
-assert(s[5] == 6);
-assert(equal(s, [1, 2, 3, 4, 5, 6, 7][]));
-----
  */
 auto chain(Ranges...)(Ranges rs)
 if (Ranges.length > 0 &&
@@ -1100,6 +1092,20 @@ if (Ranges.length > 0 &&
     }
 }
 
+///
+unittest
+{
+    import std.algorithm : equal;
+
+    int[] arr1 = [ 1, 2, 3, 4 ];
+    int[] arr2 = [ 5, 6 ];
+    int[] arr3 = [ 7 ];
+    auto s = chain(arr1, arr2, arr3);
+    assert(s.length == 7);
+    assert(s[5] == 6);
+    assert(equal(s, [1, 2, 3, 4, 5, 6, 7][]));
+}
+
 @safe unittest
 {
     import std.internal.test.dummyrange;
@@ -1255,7 +1261,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                         break;
                 }
             }
-	
+
             auto next = _current == (Rs.length - 1) ? 0 : (_current + 1);
             final switch (next)
             {
@@ -2890,18 +2896,6 @@ private alias lengthType(R) = typeof(R.init.length.init);
    Iterate several ranges in lockstep. The element type is a proxy tuple
    that allows accessing the current element in the $(D n)th range by
    using $(D e[n]).
-
-   Example:
-   ----
-   int[] a = [ 1, 2, 3 ];
-   string[] b = [ "a", "b", "c" ];
-   // prints 1:a 2:b 3:c
-   foreach (e; zip(a, b))
-   {
-   write(e[0], ':', e[1], ' ');
-   }
-   ----
-
    $(D Zip) offers the lowest range facilities of all components, e.g. it
    offers random access iff all ranges offer random access, and also
    offers mutation and swapping if all ranges offer it. Due to this, $(D
@@ -3259,6 +3253,21 @@ pure unittest
     sort!((c, d) => c[0] > d[0])(zip(a, b));
     assert(a == [ 3, 2, 1 ]);
     assert(b == [ "c", "b", "a" ]);
+}
+
+///
+unittest
+{
+   int[] a = [ 1, 2, 3 ];
+   string[] b = [ "a", "b", "c" ];
+
+   size_t idx = 0;
+   foreach (e; zip(a, b))
+   {
+       assert(e[0] == a[idx]);
+       assert(e[1] == b[idx]);
+       ++idx;
+   }
 }
 
 /// Ditto
@@ -7380,31 +7389,6 @@ unittest
     $(D save) is ever called on the RefRange, then no operations on the saved
     range will affect the original.
 
-    Examples:
---------------------
-import std.algorithm;
-ubyte[] buffer = [1, 9, 45, 12, 22];
-auto found1 = find(buffer, 45);
-assert(found1 == [45, 12, 22]);
-assert(buffer == [1, 9, 45, 12, 22]);
-
-auto wrapped1 = refRange(&buffer);
-auto found2 = find(wrapped1, 45);
-assert(*found2.ptr == [45, 12, 22]);
-assert(buffer == [45, 12, 22]);
-
-auto found3 = find(wrapped2.save, 22);
-assert(*found3.ptr == [22]);
-assert(buffer == [45, 12, 22]);
-
-string str = "hello world";
-auto wrappedStr = refRange(&str);
-assert(str.front == 'h');
-str.popFrontN(5);
-assert(str == " world");
-assert(wrappedStr.front == ' ');
-assert(*wrappedStr.ptr == " world");
---------------------
   +/
 struct RefRange(R)
     if(isForwardRange!R)
@@ -7426,51 +7410,6 @@ public:
         one exception is when a $(D RefRange) is assigned $(D null) either
         directly or because $(D rhs) is $(D null). In that case, $(D RefRange)
         no longer refers to the original range but is $(D null).
-
-    Examples:
---------------------
-ubyte[] buffer1 = [1, 2, 3, 4, 5];
-ubyte[] buffer2 = [6, 7, 8, 9, 10];
-auto wrapped1 = refRange(&buffer1);
-auto wrapped2 = refRange(&buffer2);
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
-assert(buffer1 != buffer2);
-
-wrapped1 = wrapped2;
-
-//Everything points to the same stuff as before.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
-
-//But buffer1 has changed due to the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [6, 7, 8, 9, 10]);
-
-buffer2 = [11, 12, 13, 14, 15];
-
-//Everything points to the same stuff as before.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
-
-//But buffer2 has changed due to the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [11, 12, 13, 14, 15]);
-
-wrapped2 = null;
-
-//The pointer changed for wrapped2 but not wrapped1.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is null);
-assert(wrapped1.ptr !is wrapped2.ptr);
-
-//buffer2 is not affected by the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [11, 12, 13, 14, 15]);
---------------------
       +/
     auto opAssign(RefRange rhs)
     {
@@ -7779,7 +7718,7 @@ private:
     R* _range;
 }
 
-//Verify Example.
+/// Basic Example
 unittest
 {
     import std.algorithm;
@@ -7806,7 +7745,7 @@ unittest
     assert(*wrappedStr.ptr == " world");
 }
 
-//Verify opAssign Example.
+/// opAssign Example.
 unittest
 {
     ubyte[] buffer1 = [1, 2, 3, 4, 5];
