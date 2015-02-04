@@ -174,6 +174,15 @@ real digamma(real x)
     return std.internal.math.gammafunction.digamma(x);
 }
 
+/** Log Minus Digamma function
+ *
+ *  logmdigamma(x) = log(x) - digamma(x)
+ */
+real logmdigamma(real x)
+{
+    return std.internal.math.gammafunction.logmdigamma(x);
+}
+
 /** Incomplete beta integral
  *
  * Returns incomplete beta integral of the arguments, evaluated
