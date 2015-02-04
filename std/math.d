@@ -3009,7 +3009,7 @@ real log2(real x) @safe pure nothrow @nogc
 unittest
 {
     // check if values are equal to 19 decimal digits of precision
-    assert(equalsDigit(log2(1024), 10, 19));
+    assert(equalsDigit(log2(1024.0L), 10, 19));
 }
 
 /*****************************************
