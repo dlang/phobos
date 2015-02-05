@@ -1489,9 +1489,9 @@ if (isInputRange!InputRange)
     else static if (!isInfinite!R && hasSlicing!R && is(typeof(haystack[cast(size_t)0 .. $])))
     {
         size_t i = 0;
-        foreach (ref e; haystack)
+        for (auto h = haystack.save; !h.empty; h.popFront())
         {
-            if (predFun(e))
+            if (predFun(h.front))
                 return haystack[i .. $];
             ++i;
         }
