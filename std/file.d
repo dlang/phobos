@@ -556,16 +556,12 @@ ulong getSize(in char[] name) @safe
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, stat_t* buf) @trusted
+        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), buf);
-        }
-        static stat_t* ptrOfLocalVariable(return ref stat_t buf) @trusted
-        {
-            return &buf;
+            return stat(path.tempCString(), &buf);
         }
         stat_t statbuf = void;
-        cenforce(trustedStat(name, ptrOfLocalVariable(statbuf)) == 0, name);
+        cenforce(trustedStat(name, statbuf) == 0, name);
         return statbuf.st_size;
     }
 }
