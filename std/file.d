@@ -191,7 +191,53 @@ Returns: Untyped array of bytes _read.
 
 Throws: $(D FileException) on error.
  */
-void[] read(in char[] name, size_t upTo = size_t.max) @safe
+version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
+{
+    import std.algorithm : min;
+    import std.array : uninitializedArray;
+    import core.memory : GC;
+
+    // A few internal configuration parameters {
+    enum size_t
+        minInitialAlloc = 1024 * 4,
+        maxInitialAlloc = size_t.max / 2,
+        sizeIncrement = 1024 * 16,
+        maxSlackMemoryAllowed = 1024;
+    // }
+
+    immutable fd = core.sys.posix.fcntl.open(name.tempCString,
+            core.sys.posix.fcntl.O_RDONLY);
+    cenforce(fd != -1, name);
+    scope(exit) core.sys.posix.unistd.close(fd);
+
+    stat_t statbuf = void;
+    cenforce(fstat(fd, &statbuf) == 0, name);
+
+    immutable initialAlloc = to!size_t(statbuf.st_size
+        ? min(statbuf.st_size + 1, maxInitialAlloc)
+        : minInitialAlloc);
+    void[] result = uninitializedArray!(ubyte[])(initialAlloc);
+    scope(failure) delete result;
+    size_t size = 0;
+
+    for (;;)
+    {
+        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
+                min(result.length, upTo) - size);
+        cenforce(actual != -1, name);
+        if (actual == 0) break;
+        size += actual;
+        if (size < result.length) continue;
+        immutable newAlloc = size + sizeIncrement;
+        result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)[0 .. newAlloc];
+    }
+
+    return result.length - size >= maxSlackMemoryAllowed
+        ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
+        : result[0 .. size];
+}
+
+version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
@@ -199,120 +245,50 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
     {
         return &buf;
     }
-    version(Windows)
+
+    static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+                              SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
+                              DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
     {
-        static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
-                                  SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
-                                  DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
-        {
-            return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
-                               lpSecurityAttributes, dwCreationDisposition,
-                               dwFlagsAndAttributes, hTemplateFile);
+        return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
+                           lpSecurityAttributes, dwCreationDisposition,
+                           dwFlagsAndAttributes, hTemplateFile);
 
-        }
-        static trustedCloseHandle(HANDLE hObject) @trusted
-        {
-            return CloseHandle(hObject);
-        }
-        static trustedGetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh) @trusted
-        {
-            return GetFileSize(hFile, lpFileSizeHigh);
-        }
-        static trustedReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
-                               DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped) @trusted
-        {
-            return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead,
-                            lpNumberOfBytesRead, lpOverlapped);
-        }
-
-        alias defaults =
-            TypeTuple!(GENERIC_READ,
-                FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
-                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                HANDLE.init);
-        auto h = trustedCreateFileW(name, defaults);
-
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(trustedCloseHandle(h), name);
-        auto size = trustedGetFileSize(h, null);
-        cenforce(size != INVALID_FILE_SIZE, name);
-        size = min(upTo, size);
-        auto buf = uninitializedArray!(ubyte[])(size);
-        scope(failure) delete buf;
-
-        DWORD numread = void;
-        cenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
-                && numread == size, name);
-        return buf[0 .. size];
     }
-    else version(Posix)
+    static trustedCloseHandle(HANDLE hObject) @trusted
     {
-        import core.memory;
-        // A few internal configuration parameters {
-        enum size_t
-            minInitialAlloc = 1024 * 4,
-            maxInitialAlloc = size_t.max / 2,
-            sizeIncrement = 1024 * 16,
-            maxSlackMemoryAllowed = 1024;
-        // }
-
-        static trustedOpen(in char[] path, int oflag) @trusted
-        {
-            return core.sys.posix.fcntl.open(path.tempCString(), oflag);
-        }
-        static trustedFstat(int path, stat_t* buf) @trusted
-        {
-            return fstat(path, buf);
-        }
-        static trustedRead(int fildes, void* buf, size_t nbyte) @trusted
-        {
-            return core.sys.posix.unistd.read(fildes, buf, nbyte);
-        }
-        static trustedRealloc(void* p, size_t sz, uint ba = 0, const TypeInfo ti = null) @trusted
-        {
-            return GC.realloc(p, sz, ba, ti);
-        }
-        static trustedPtrAdd(void[] buf, size_t s) @trusted
-        {
-            return buf.ptr+s;
-        }
-        static trustedPtrSlicing(void* ptr, size_t lb, size_t ub) @trusted
-        {
-            return ptr[lb..ub];
-        }
-
-        immutable fd = trustedOpen(name,
-                core.sys.posix.fcntl.O_RDONLY);
-        cenforce(fd != -1, name);
-        scope(exit) core.sys.posix.unistd.close(fd);
-
-        stat_t statbuf = void;
-        cenforce(trustedFstat(fd, trustedRef(statbuf)) == 0, name);
-
-        immutable initialAlloc = to!size_t(statbuf.st_size
-            ? min(statbuf.st_size + 1, maxInitialAlloc)
-            : minInitialAlloc);
-        void[] result = uninitializedArray!(ubyte[])(initialAlloc);
-        scope(failure) delete result;
-        size_t size = 0;
-
-        for (;;)
-        {
-            immutable actual = trustedRead(fd, trustedPtrAdd(result, size),
-                    min(result.length, upTo) - size);
-            cenforce(actual != -1, name);
-            if (actual == 0) break;
-            size += actual;
-            if (size < result.length) continue;
-            immutable newAlloc = size + sizeIncrement;
-            result = trustedPtrSlicing(trustedRealloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN),
-                                       0, newAlloc);
-        }
-
-        return result.length - size >= maxSlackMemoryAllowed
-            ? trustedPtrSlicing(trustedRealloc(result.ptr, size, GC.BlkAttr.NO_SCAN), 0, size)
-            : result[0 .. size];
+        return CloseHandle(hObject);
     }
+    static trustedGetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh) @trusted
+    {
+        return GetFileSize(hFile, lpFileSizeHigh);
+    }
+    static trustedReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
+                           DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped) @trusted
+    {
+        return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead,
+                        lpNumberOfBytesRead, lpOverlapped);
+    }
+
+    alias defaults =
+        TypeTuple!(GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
+            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+            HANDLE.init);
+    auto h = trustedCreateFileW(name, defaults);
+
+    cenforce(h != INVALID_HANDLE_VALUE, name);
+    scope(exit) cenforce(trustedCloseHandle(h), name);
+    auto size = trustedGetFileSize(h, null);
+    cenforce(size != INVALID_FILE_SIZE, name);
+    size = min(upTo, size);
+    auto buf = uninitializedArray!(ubyte[])(size);
+    scope(failure) delete buf;
+
+    DWORD numread = void;
+    cenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
+            && numread == size, name);
+    return buf[0 .. size];
 }
 
 @safe unittest
