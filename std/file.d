@@ -2061,7 +2061,7 @@ public:
     /++
      + Returns the path to the file represented by this $(D DirEntry).
      +/
-    @property string name() const pure nothrow
+    @property string name() const @safe pure nothrow @nogc
     {
         return _name;
     }
