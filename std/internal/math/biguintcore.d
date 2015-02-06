@@ -82,10 +82,10 @@ template maxBigDigits(T) if (isIntegral!T)
     enum maxBigDigits = (T.sizeof+BigDigit.sizeof-1)/BigDigit.sizeof;
 }
 
-enum immutable(BigDigit) [] ZERO = [0];
-enum immutable(BigDigit) [] ONE = [1];
-enum immutable(BigDigit) [] TWO = [2];
-enum immutable(BigDigit) [] TEN = [10];
+static immutable BigDigit[] ZERO = [0];
+static immutable BigDigit[] ONE = [1];
+static immutable BigDigit[] TWO = [2];
+static immutable BigDigit[] TEN = [10];
 
 
 public:
@@ -108,12 +108,12 @@ private:
         opAssign(x);
     }
 
-    enum trustedAssumeUnique = function(BigDigit[] input) pure @trusted {
+    enum trustedAssumeUnique = function(BigDigit[] input) pure @trusted @nogc {
         return assumeUnique(input);
     };
 public:
     // Length in uints
-    @property size_t uintLength() pure nothrow const @safe
+    @property size_t uintLength() pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -125,7 +125,7 @@ public:
             ((data[$-1] & 0xFFFF_FFFF_0000_0000L) ? 1 : 0);
         }
     }
-    @property size_t ulongLength() pure nothrow const @safe
+    @property size_t ulongLength() pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -138,7 +138,7 @@ public:
     }
 
     // The value at (cast(ulong[])data)[n]
-    ulong peekUlong(int n) pure nothrow const @safe
+    ulong peekUlong(int n) pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -150,7 +150,7 @@ public:
             return data[n];
         }
     }
-    uint peekUint(int n) pure nothrow const @safe
+    uint peekUint(int n) pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -252,12 +252,12 @@ public:
         return (data[0] == ylo);
     }
 
-    bool isZero() pure const nothrow @safe
+    bool isZero() pure const nothrow @safe @nogc
     {
         return data.length == 1 && data[0] == 0;
     }
 
-    size_t numBytes() pure const @safe
+    size_t numBytes() pure const @safe @nogc
     {
         return data.length * BigDigit.sizeof;
     }
