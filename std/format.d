@@ -867,7 +867,7 @@ struct FormatSpec(Char)
                 // Get the matching balanced paren
                 for (uint innerParens;;)
                 {
-                    enforce(j < trailing.length,
+                    enforceFmt(j + 1 < trailing.length,
                         text("Incorrect format specifier: %", trailing[i .. $]));
                     if (trailing[j++] != '%')
                     {
@@ -875,7 +875,11 @@ struct FormatSpec(Char)
                         continue;
                     }
                     if (trailing[j] == '-') // for %-(
+                    {
                         ++j;    // skip
+                        enforceFmt(j < trailing.length,
+                            text("Incorrect format specifier: %", trailing[i .. $]));
+                    }
                     if (trailing[j] == ')')
                     {
                         if (innerParens-- == 0) break;
@@ -1197,6 +1201,19 @@ struct FormatSpec(Char)
     assert(a.data == "Number: \nString: ");
     assert(f.trailing == "");
     assert(f.spec == 's');
+}
+
+// Issue 14059
+unittest
+{
+    import std.array : appender;
+    auto a = appender!(string)();
+
+    auto f = FormatSpec!char("%-(%s%");
+    assertThrown(f.writeUpToNextSpec(a));
+
+    f = FormatSpec!char("%(%-");
+    assertThrown(f.writeUpToNextSpec(a));
 }
 
 /**
