@@ -867,7 +867,7 @@ struct FormatSpec(Char)
                 // Get the matching balanced paren
                 for (uint innerParens;;)
                 {
-                    enforce(j + 1 < trailing.length,
+                    enforceFmt(j + 1 < trailing.length,
                         text("Incorrect format specifier: %", trailing[i .. $]));
                     if (trailing[j++] != '%')
                     {
@@ -877,7 +877,7 @@ struct FormatSpec(Char)
                     if (trailing[j] == '-') // for %-(
                     {
                         ++j;    // skip
-                        enforce(j < trailing.length,
+                        enforceFmt(j < trailing.length,
                             text("Incorrect format specifier: %", trailing[i .. $]));
                     }
                     if (trailing[j] == ')')
