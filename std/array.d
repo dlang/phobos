@@ -74,10 +74,15 @@ import std.range.primitives;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
-Returns a newly allocated dynamic array consisting of a copy of the
-input range, static array, dynamic array, or class or struct with an
-$(D opApply) function $(D r).  Note that narrow strings are handled as
-a special case in an overload.
+ * Allocates an array and initializes it with copies of the elements
+ * of range $(D r).
+ *
+ * Narrow strings are handled as a special case in an overload.
+ *
+ * Params:
+ *      r = range (or aggregate with $(D opApply) function) whose elements are copied into the allocated array
+ * Returns:
+ *      allocated and initialized array
  */
 ForeachType!Range[] array(Range)(Range r)
 if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
@@ -85,6 +90,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     if (__ctfe)
     {
         // Compile-time version to avoid memcpy calls.
+        // Also used to infer attributes of array().
         typeof(return) result;
         foreach (e; r)
             result ~= e;
@@ -94,22 +100,22 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     alias E = ForeachType!Range;
     static if (hasLength!Range)
     {
+        auto length = r.length;
+        if (length == 0)
+            return null;
+
         import std.conv : emplaceRef;
-        if(r.length == 0) return null;
 
-        static auto trustedAllocateArray(size_t n) @trusted nothrow
-        {
-            return uninitializedArray!(Unqual!E[])(n);
-        }
-        auto result = trustedAllocateArray(r.length);
+        auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
 
+        // Every element of the uninitialized array must be initialized
         size_t i;
         foreach (e; r)
         {
             emplaceRef!E(result[i], e);
             ++i;
         }
-        return cast(E[])result;
+        return (() @trusted => cast(E[])result)();
     }
     else
     {
@@ -478,9 +484,28 @@ array.  In this case sizes may be specified for any number of dimensions from 0
 to the number in $(D T).
 
 uninitializedArray is nothrow and weakly pure.
+
+uninitializedArray is @system if the uninitialized element type has pointers.
 +/
+auto uninitializedArray(T, I...)(I sizes) nothrow @system
+if (isDynamicArray!T && allSatisfy!(isIntegral, I) && hasIndirections!(ElementEncodingType!T))
+{
+    enum isSize_t(E) = is (E : size_t);
+    alias toSize_t(E) = size_t;
+
+    static assert(allSatisfy!(isSize_t, I),
+        "Argument types in "~I.stringof~" are not all convertible to size_t: "
+        ~Filter!(templateNot!(isSize_t), I).stringof);
+
+    //Eagerlly transform non-size_t into size_t to avoid template bloat
+    alias ST = staticMap!(toSize_t, I);
+
+    return arrayAllocImpl!(false, T, ST)(sizes);
+}
+
+///
 auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
-if (isDynamicArray!T && allSatisfy!(isIntegral, I))
+if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
@@ -495,7 +520,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
 ///
-nothrow pure unittest
+@system nothrow pure unittest
 {
     double[] arr = uninitializedArray!(double[])(100);
     assert(arr.length == 100);
@@ -503,6 +528,9 @@ nothrow pure unittest
     double[][] matrix = uninitializedArray!(double[][])(42, 31);
     assert(matrix.length == 42);
     assert(matrix[0].length == 31);
+
+    char*[] ptrs = uninitializedArray!(char*[])(100);
+    assert(ptrs.length == 100);
 }
 
 /++
@@ -863,15 +891,17 @@ unittest
 private void copyBackwards(T)(T[] src, T[] dest)
 {
     import core.stdc.string;
+
     assert(src.length == dest.length);
 
-    void trustedMemmove(void* d, const void* s, size_t len) @trusted
+    if (!__ctfe || hasElaborateCopyConstructor!T)
     {
-        memmove(d, s, len);
+        /* insertInPlace relies on dest being uninitialized, so no postblits allowed,
+         * as this is a MOVE that overwrites the destination, not a COPY.
+         * BUG: insertInPlace will not work with ctfe and postblits
+         */
+        memmove(dest.ptr, src.ptr, src.length * T.sizeof);
     }
-
-    if (!__ctfe)
-        trustedMemmove(dest.ptr, src.ptr, src.length * T.sizeof);
     else
     {
         immutable len = src.length;
@@ -893,28 +923,10 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 {
     static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
-        import core.stdc.string;
         import std.conv : emplaceRef;
 
-        static auto trustedAllocateArray(size_t n) @trusted nothrow
-        {
-            return uninitializedArray!(T[])(n);
-        }
-
-        static void trustedMemcopy(T[] dest, T[] src) @trusted
-        {
-            assert(src.length == dest.length);
-            if (!__ctfe)
-            {
-                memcpy(dest.ptr, src.ptr, src.length * T.sizeof);
-            }
-            else
-            {
-                dest[] = src[];
-            }
-        }
-
         immutable oldLen = array.length;
+
         size_t to_insert = 0;
         foreach (i, E; U)
         {
@@ -923,25 +935,31 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
             else
                 to_insert += stuff[i].length;
         }
-        auto tmp = trustedAllocateArray(to_insert);
-        auto j = 0;
-        foreach (i, E; U)
+        if (to_insert)
         {
-            static if (is(E : T)) //ditto
+            array.length += to_insert;
+
+            // Takes arguments array, pos, stuff
+            // Spread apart array[] at pos by moving elements
+            (() @trusted { copyBackwards(array[pos..oldLen], array[pos+to_insert..$]); })();
+
+            // Initialize array[pos .. pos+to_insert] with stuff[]
+            auto j = 0;
+            foreach (i, E; U)
             {
-                emplaceRef!T(tmp[j++], stuff[i]);
-            }
-            else
-            {
-                foreach (v; stuff[i])
+                static if (is(E : T))
                 {
-                    emplaceRef!T(tmp[j++], v);
+                    emplaceRef!T(array[pos + j++], stuff[i]);
+                }
+                else
+                {
+                    foreach (v; stuff[i])
+                    {
+                        emplaceRef!T(array[pos + j++], v);
+                    }
                 }
             }
         }
-        array.length += to_insert;
-        copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
-        trustedMemcopy(array[pos..pos+to_insert], tmp);
     }
     else
     {
@@ -1006,7 +1024,20 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         foreach (i, E; U)
             to_insert += codeLength!T(stuff[i]);
         array.length += to_insert;
-        copyBackwards(array[pos..oldLen], array[pos+to_insert..$]);
+
+        @trusted static void moveToRight(T[] arr, size_t gap)
+        {
+            static assert(!hasElaborateCopyConstructor!T);
+            import core.stdc.string;
+            if (__ctfe)
+            {
+                for (size_t i = arr.length - gap; i; --i)
+                    arr[gap + i - 1] = arr[i - 1];
+            }
+            else
+                memmove(arr.ptr + gap, arr.ptr, (arr.length - gap) * T.sizeof);
+        }
+        moveToRight(array[pos .. $], to_insert);
         auto ptr = array.ptr + pos;
         foreach (i, E; U)
         {
@@ -1171,7 +1202,7 @@ unittest
 {
     import std.algorithm : equal;
     // insertInPlace interop with postblit
-    struct Int
+    static struct Int
     {
         int* payload;
         this(int k)
@@ -1198,6 +1229,18 @@ unittest
     assert(arr[0] == 1);
     insertInPlace(arr, 1, Int(2), Int(3));
     assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit
+
+    version (none) // illustrates that insertInPlace() will not work with CTFE and postblit
+    {
+        static bool testctfe()
+        {
+            Int[] arr = [Int(1), Int(4), Int(5)];
+            assert(arr[0] == 1);
+            insertInPlace(arr, 1, Int(2), Int(3));
+            return equal(arr, [1, 2, 3, 4, 5]);  //check it works with postblit
+        }
+        enum E = testctfe();
+    }
 }
 
 @safe unittest
@@ -1586,25 +1629,31 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     static if(hasCheapIteration!RoR && (hasLength!RoRElem || isNarrowString!RoRElem))
     {
         import std.conv : emplaceRef;
-        size_t length;
+        size_t length;          // length of result array
+        size_t rorLength;       // length of range ror
         foreach(r; ror.save)
-            length += r.length + sepArr.length;
-        length -= sepArr.length;
-        auto result = uninitializedArray!(RetTypeElement[])(length);
+        {
+            length += r.length;
+            ++rorLength;
+        }
+        if (!rorLength)
+            return null;
+        length += (rorLength - 1) * sepArr.length;
+
+        auto result = (() @trusted => uninitializedArray!(RetTypeElement[])(length))();
         size_t len;
-        foreach(e; ror.front)
-            emplaceRef(result[len++], e);
-        ror.popFront();
         foreach(r; ror)
         {
-            foreach(e; sepArr)
-                emplaceRef(result[len++], e);
+            if (len)  // if not first time thru loop
+            {
+                foreach(e; sepArr)
+                    emplaceRef(result[len++], e);
+            }
             foreach(e; r)
                 emplaceRef(result[len++], e);
         }
         assert(len == result.length);
-        static U trustedCast(U, V)(V v) @trusted { return cast(U) v; }
-        return trustedCast!RetType(result);
+        return (() @trusted => cast(RetType) result)();
     }
     else
     {
@@ -1646,23 +1695,28 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
         {
             import std.conv : emplaceRef;
             size_t length;
+            size_t rorLength;
             foreach(r; ror.save)
-                length += r.length + 1;
-            length -= 1;
+            {
+                length += r.length;
+                ++rorLength;
+            }
+            if (!rorLength)
+                return null;
+            length += rorLength - 1;
             auto result = uninitializedArray!(RetTypeElement[])(length);
+
+
             size_t len;
-            foreach(e; ror.front)
-                emplaceRef(result[len++], e);
-            ror.popFront();
             foreach(r; ror)
             {
-                emplaceRef(result[len++], sep);
+                if (len)
+                    emplaceRef(result[len++], sep);
                 foreach(e; r)
                     emplaceRef(result[len++], e);
             }
             assert(len == result.length);
-            static U trustedCast(U, V)(V v) @trusted { return cast(U) v; }
-            return trustedCast!RetType(result);
+            return (() @trusted => cast(RetType) result)();
         }
     }
     else
@@ -1697,14 +1751,14 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
         size_t length;
         foreach(r; ror.save)
             length += r.length;
-        auto result = uninitializedArray!(RetTypeElement[])(length);
+
+        auto result = (() @trusted => uninitializedArray!(RetTypeElement[])(length))();
         size_t len;
         foreach(r; ror)
             foreach(e; r)
                 emplaceRef(result[len++], e);
         assert(len == result.length);
-        static U trustedCast(U, V)(V v) @trusted { return cast(U) v; }
-        return trustedCast!RetType(result);
+        return (() @trusted => cast(RetType)result)();
     }
     else
     {
@@ -2617,7 +2671,7 @@ if (isDynamicArray!A)
     }
 
     // ensure we can add nelems elements, resizing as necessary
-    private void ensureAddable(size_t nelems) @safe pure nothrow
+    private void ensureAddable(size_t nelems) @trusted pure nothrow
     {
         if (!_data)
             _data = new Data;
@@ -2637,7 +2691,7 @@ if (isDynamicArray!A)
             else
             {
                 // avoid restriction of @disable this()
-                ()@trusted{ _data.arr = _data.arr[0 .. _data.capacity]; }();
+                _data.arr = _data.arr[0 .. _data.capacity];
                 foreach (i; _data.capacity .. reqlen)
                     _data.arr ~= Unqual!T.init;
             }
@@ -2653,9 +2707,7 @@ if (isDynamicArray!A)
             // first, try extending the current block
             if (_data.canExtend)
             {
-                auto u = ()@trusted{ return
-                    GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-                }();
+                auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
                 if (u)
                 {
                     // extend worked, update the capacity
@@ -2665,14 +2717,12 @@ if (isDynamicArray!A)
             }
 
             // didn't work, must reallocate
-            auto bi = ()@trusted{ return
-                GC.qalloc(newlen * T.sizeof, blockAttribute!T);
-            }();
+            auto bi = GC.qalloc(newlen * T.sizeof, blockAttribute!T);
             _data.capacity = bi.size / T.sizeof;
             import core.stdc.string : memcpy;
             if (len)
-                ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
-            _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
+                memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
+            _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
             _data.canExtend = true;
             // leave the old data, for safety reasons
         }
@@ -2720,16 +2770,8 @@ if (isDynamicArray!A)
             ensureAddable(1);
             immutable len = _data.arr.length;
 
-            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. len + 1];}
-            auto bigData = bigDataFun();
-
-            static if (is(Unqual!T == T))
-                alias uitem = item;
-            else
-                auto ref uitem() @trusted nothrow @property { return cast(Unqual!T)item; }
-
-            emplaceRef!(Unqual!T)(bigData[len], uitem);
-
+            auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
+            emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T)item);
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
         }
@@ -2766,12 +2808,15 @@ if (isDynamicArray!A)
             }
 
             // make sure we have enough space, then add the items
-            ensureAddable(items.length);
-            immutable len = _data.arr.length;
-            immutable newlen = len + items.length;
+            @trusted auto bigDataFun(size_t extra)
+            {
+                ensureAddable(extra);
+                return _data.arr.ptr[0 .. _data.arr.length + extra];
+            }
+            auto bigData = bigDataFun(items.length);
 
-            auto bigDataFun() @trusted nothrow { return _data.arr.ptr[0 .. newlen];}
-            auto bigData = bigDataFun();
+            immutable len = _data.arr.length;
+            immutable newlen = bigData.length;
 
             alias UT = Unqual!T;
 
@@ -2836,11 +2881,11 @@ if (isDynamicArray!A)
          * Note that clear is disabled for immutable or const element types, due to the
          * possibility that $(D Appender) might overwrite immutable data.
          */
-        void clear() @safe pure nothrow
+        void clear() @trusted pure nothrow
         {
             if (_data)
             {
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. 0]; }();
+                _data.arr = _data.arr.ptr[0 .. 0];
             }
         }
 
@@ -2849,13 +2894,13 @@ if (isDynamicArray!A)
          *
          * Throws: $(D Exception) if newlength is greater than the current array length.
          */
-        void shrinkTo(size_t newlength) @safe pure
+        void shrinkTo(size_t newlength) @trusted pure
         {
             import std.exception : enforce;
             if (_data)
             {
                 enforce(newlength <= _data.arr.length);
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlength]; }();
+                _data.arr = _data.arr.ptr[0 .. newlength];
             }
             else
                 enforce(newlength == 0);
