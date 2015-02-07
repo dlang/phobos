@@ -1520,17 +1520,25 @@ void mkdir(in char[] pathname) @safe
 // Same as mkdir but ignores "already exists" errors.
 // Returns: "true" if the directory was created,
 //   "false" if it already existed.
-private bool ensureDirExists(in char[] pathname)
+private bool ensureDirExists(in char[] pathname) @safe
 {
     version(Windows)
     {
-        if (CreateDirectoryW(pathname.tempCStringW(), null))
+        static auto trustedCreateDirectoryW(in char[] path) @trusted
+        {
+            return CreateDirectoryW(path.tempCStringW(), null);
+        }
+        if (trustedCreateDirectoryW(pathname))
             return true;
-        cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
+        wenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname);
     }
     else version(Posix)
     {
-        if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
+        static auto trustedMkdir(in char[] path, mode_t mode) @trusted
+        {
+            return core.sys.posix.sys.stat.mkdir(path.tempCString(), mode);
+        }
+        if (trustedMkdir(pathname, octal!777) == 0)
             return true;
         cenforce(errno == EEXIST, pathname);
     }
