@@ -418,7 +418,7 @@ public:
     }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
-    long toLong() pure nothrow const
+    long toLong() pure nothrow const @nogc
     {
         return (sign ? -1 : 1) *
           (data.ulongLength == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
