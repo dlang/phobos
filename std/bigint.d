@@ -154,6 +154,8 @@ public:
             else
             {
                 data = cast(ulong)BigUint.modInt(data, cast(uint)u);
+                if (data.isZero())
+                    sign = false;
             }
             // x%y always has the same sign as x.
             // This is not the same as mathematical mod.
@@ -1108,4 +1110,27 @@ unittest // 13963
 
     assert(x2 % ulong.max == x2);
     assert(-x2 % ulong.max == -x2);
+}
+
+unittest // 14124
+{
+    auto x = BigInt(-3);
+    x %= 3;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(-3);
+    x %= cast(ushort)3;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(-3);
+    x %= 3L;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(3);
+    x %= -3;
+    assert(!x.isNegative());
+    assert(x.isZero());
 }
