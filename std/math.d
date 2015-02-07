@@ -6226,7 +6226,53 @@ public:
  *      x =     the value to evaluate.
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */
-real poly(real x, const real[] A) @trusted pure nothrow @nogc
+Unqual!(CommonType!(T1, T2)) poly(T1, T2)(T1 x, in T2[] A) @trusted pure nothrow @nogc
+    if (isFloatingPoint!T1 && isFloatingPoint!T2)
+in
+{
+    assert(A.length > 0);
+}
+body
+{
+    static if(is(Unqual!T2 == real))
+    {
+        return polyImpl(x, A);
+    }
+    else
+    {
+        ptrdiff_t i = A.length - 1;
+        typeof(return) r = A[i];
+        while (--i >= 0)
+        {
+            r *= x;
+            r += A[i];
+        }
+        return r;        
+    }
+}
+
+///
+@safe nothrow @nogc unittest
+{
+    double x = 3.1;
+    static real[] pp = [56.1, 32.7, 6];
+
+    assert(poly(x, pp) == (56.1L + (32.7L + 6L * x) * x));
+}
+
+@safe nothrow @nogc unittest
+{
+    double x = 3.1;
+    static double[] pp = [56.1, 32.7, 6];
+    double y = x;
+    y *= 6.0;
+    y += 32.7;
+    y *= x;
+    y += 56.1;
+    assert(poly(x, pp) == y);
+}
+
+private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
 in
 {
     assert(A.length > 0);
@@ -6394,14 +6440,6 @@ body
     }
 }
 
-///
-@safe nothrow @nogc unittest
-{
-    real x = 3.1;
-    static real[] pp = [56.1, 32.7, 6];
-
-    assert( poly(x, pp) == (56.1L + (32.7L + 6L * x) * x) );
-}
 
 /**
    Computes whether $(D lhs) is approximately equal to $(D rhs)
