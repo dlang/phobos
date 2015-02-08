@@ -682,26 +682,20 @@ unittest
         tuple([2.0^^53+10.0, 1.0, 2.0^^-100], 2.0^^53+12.0),
         tuple([2.0^^53-4.0, 0.5, 2.0^^-54], 2.0^^53-3.0),
         tuple([M-2.0^^970, -1.0, M], 1.7976931348623157e+308),
-        
         tuple([double.max, double.max*2.^^-54], double.max),
         tuple([double.max, double.max*2.^^-53], double.infinity),
-
         tuple(iota(1, 1001).map!(a => 1.0/a).array , 7.4854708605503451),
         tuple(iota(1, 1001).map!(a => (-1.0)^^a/a).array, -0.69264743055982025), //0.693147180559945309417232121458176568075500134360255254120680...
         tuple(iota(1000).map!(a => 1.7.pow(a+1) - 1.7.pow(a)).chain([-(1.7.pow(1000))]).array , -1.0),
-        
         tuple(iota(1, 1001).map!(a => 1.0/a).retro.array , 7.4854708605503451),
         tuple(iota(1, 1001).map!(a => (-1.0)^^a/a).retro.array, -0.69264743055982025),
         tuple(iota(1000).map!(a => 1.7.pow(a+1) - 1.7.pow(a)).chain([-(1.7.pow(1000))]).retro.array , -1.0),
-
-
         tuple([double.infinity, -double.infinity, double.nan], double.nan),
         tuple([double.nan, double.infinity, -double.infinity], double.nan),
         tuple([double.infinity, double.nan, double.infinity], double.nan),
         tuple([double.infinity, double.infinity], double.infinity),
         tuple([double.infinity, -double.infinity], double.nan),
         tuple([-double.infinity, 1e308, 1e308, -double.infinity], -double.infinity),
-
         tuple([M-2.0^^970, 0.0, M], double.infinity),
         tuple([M-2.0^^970, 1.0, M], double.infinity),
         tuple([M, M], double.infinity),
