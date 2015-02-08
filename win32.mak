@@ -185,7 +185,7 @@ SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\pa
 SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
 	std\range\interfaces.d
 
-SRC_STD_NUMERIC= std\numeric\pacakge.d std\numeric\summation.d
+SRC_STD_NUMERIC= std\numeric\package.d std\numeric\summation.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
@@ -460,7 +460,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=93 -unittest -main -run std\csv.d
 	$(DMD) -cov=91 -unittest -main -run std\math.d
 	$(DMD) -cov=95 -unittest -main -run std\complex.d
-	$(DMD) -cov=70 -unittest -main -run std\numeric\pacakge.d
+	$(DMD) -cov=70 -unittest -main -run std\numeric\package.d
 	$(DMD) -cov=70 -unittest -main -run std\numeric\summation.d
 	$(DMD) -cov=94 -unittest -main -run std\bigint.d
 	$(DMD) -cov=95 -unittest -main -run std\bitmanip.d
@@ -712,7 +712,7 @@ $(DOC)\std_mmfile.html : $(STDDOC) std\mmfile.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mmfile.html $(STDDOC) std\mmfile.d
 
 $(DOC)\std_numeric.html : $(STDDOC) std\numeric\package.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_numeric_pacakge.html $(STDDOC) std\numeric\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_numeric_package.html $(STDDOC) std\numeric\package.d
 
 $(DOC)\std_numeric_summation.html : $(STDDOC) std\numeric\summation.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_numeric_summation.html $(STDDOC) std\numeric\summation.d

@@ -202,7 +202,7 @@ SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\pa
 SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
 	std\range\interfaces.d
 
-SRC_STD_NUMERIC= std\numeric\pacakge.d std\numeric\summation.d
+SRC_STD_NUMERIC= std\numeric\package.d std\numeric\summation.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
