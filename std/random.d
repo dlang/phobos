@@ -1726,18 +1726,22 @@ body
     {
         immutable T u = (rng.front - rng.min) * factor;
         rng.popFront();
-        static if (isIntegral!R)
+
+        import core.stdc.limits : CHAR_BIT;  // CHAR_BIT is always 8
+        static if (isIntegral!R && T.mant_dig >= (CHAR_BIT * R.sizeof))
         {
-            /* if RNG variates are integral, we're guaranteed
-             * by the definition of factor that u < 1.
+            /* If RNG variates are integral and T has enough precision to hold
+             * R without loss, we're guaranteed by the definition of factor
+             * that precisely u < 1.
              */
             return u;
         }
         else
         {
-            /* Otherwise we have to check, just in case a
-             * floating-point RNG returns a variate that is
-             * exactly equal to its maximum
+            /* Otherwise we have to check whether u is beyond the assumed range
+             * because of the loss of precision, or for another reason, a
+             * floating-point RNG can return a variate that is exactly equal to
+             * its maximum.
              */
             if (u < 1)
             {
