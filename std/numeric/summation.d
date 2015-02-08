@@ -829,7 +829,8 @@ F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
 
 
 /++
-$(LUCKY Kahan-Babuška-Neumaier summation algorithm). $(D КBN) gives more accurate results then $(D Kahan).
+$(LUCKY Kahan-Babuška-Neumaier summation algorithm). 
+$(D КBN) gives more accurate results then $(D Kahan).
 +/
 /++
 ---------------------
@@ -888,7 +889,8 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
 
 
 /++
-$(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
+$(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. 
+$(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
 +/
 /++
 ---------------------
@@ -982,8 +984,8 @@ unittest
     {
         I[] ar = [1, 2, 3, 4];
         I r = 10;
-        assert(r == ar.sumFast);
-        assert(r == ar.sumPairwise);
+        assert(r == ar.sumFast());
+        assert(r == ar.sumPairwise());
     }
 }
 
@@ -994,11 +996,11 @@ unittest
     {
         F[] ar = [1, 2, 3, 4];
         F r = 10;
-        assert(r == ar.sumFast);
-        assert(r == ar.sumPairwise);
-        assert(r == ar.sumKahan);
-        assert(r == ar.sumKBN);
-        assert(r == ar.sumKB2);
+        assert(r == ar.sumFast());
+        assert(r == ar.sumPairwise());
+        assert(r == ar.sumKahan());
+        assert(r == ar.sumKBN());
+        assert(r == ar.sumKB2());
     }
 }
 
@@ -1007,36 +1009,37 @@ unittest
     import std.complex;
     Complex!double[] ar = [complex(1.0, 2), complex(2, 3), complex(3, 4), complex(4, 5)];
     Complex!double r = complex(10, 14);
-    assert(r == ar.sumFast);
-    assert(r == ar.sumPairwise);
-    assert(r == ar.sumKahan);
-    assert(r == ar.sumKBN);
-    assert(r == ar.sumKB2);
+    assert(r == ar.sumFast());
+    assert(r == ar.sumPairwise());
+    assert(r == ar.sumKahan());
+    assert(r == ar.sumKBN());
+    assert(r == ar.sumKB2());
 }
 
-//BUG: DMD 2.066 Segmentation fault (core dumped)
-//unittest 
-//{
-//    import core.simd;
-//    static if (__traits(compiles, double2.init + double2.init))
-//    {
-//        double2[] ar = [double2([1.0, 2]), double2([2, 3]), double2([3, 4]), double2([4, 6])];
-//        assert(ar.sumFast.array == double2([10, 14]).array);
-//        assert(ar.sumPairwise.array == double2([10, 14]).array);
-//        assert(ar.sumKahan.array == double2([10, 14]).array);
-//    }
-//}
+//@@@BUG@@@: DMD 2.066 Segmentation fault (core dumped)
+version(none)
+unittest 
+{
+    import core.simd;
+    static if (__traits(compiles, double2.init + double2.init))
+    {
+        double2[] ar = [double2([1.0, 2]), double2([2, 3]), double2([3, 4]), double2([4, 6])];
+        assert(ar.sumFast().array == double2([10, 14]).array);
+        assert(ar.sumPairwise().array == double2([10, 14]).array);
+        assert(ar.sumKahan().array == double2([10, 14]).array);
+    }
+}
 
 unittest 
 {
     import std.algorithm : map;
     auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
     double r = 20000;
-    assert(r != ar.sumFast);
-    assert(r != ar.sumPairwise);
-    assert(r != ar.sumKahan);
-    assert(r == ar.sumKBN);
-    assert(r == ar.sumKB2);
+    assert(r != ar.sumFast());
+    assert(r != ar.sumPairwise());
+    assert(r != ar.sumKahan());
+    assert(r == ar.sumKBN());
+    assert(r == ar.sumKB2());
 }
 
 /++
