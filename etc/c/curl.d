@@ -116,7 +116,7 @@ alias socket_t curl_socket_t;
 
 /// jdrewsen - Would like to get socket error constant from std.socket by it is private atm.
 version(Windows) {
-  private import std.c.windows.windows, std.c.windows.winsock;
+  private import core.sys.windows.windows, core.sys.windows.winsock2;
   enum CURL_SOCKET_BAD = SOCKET_ERROR;
 }
 version(Posix) enum CURL_SOCKET_BAD = -1;
@@ -1250,7 +1250,12 @@ enum CurlOption {
   /** Set authentication type for authenticated TLS */
   tlsauth_type,
   /** the last unused */
-  lastentry
+  lastentry,
+
+  writedata = file, /// convenient alias
+  readdata = infile, /// ditto
+  headerdata = writeheader, /// ditto
+  rtspheader = httpheader, /// ditto
 }
 ///
 alias int CURLoption;
@@ -1473,7 +1478,7 @@ void  curl_formfree(curl_httppost *form);
  * Returns a malloc()'ed string that MUST be curl_free()ed after usage is
  * complete. DEPRECATED - see lib/README.curlx
  */
-char * curl_getenv(char *variable);
+char * curl_getenv(in char *variable);
 
 /**
  * Name: curl_version()
@@ -1580,7 +1585,7 @@ struct curl_slist
  * Appends a string to a linked list. If no list exists, it will be created
  * first. Returns the new list, after appending.
  */
-curl_slist * curl_slist_append(curl_slist *, char *);
+curl_slist * curl_slist_append(curl_slist *, in char *);
 
 /**
  * Name: curl_slist_free_all()
@@ -1869,7 +1874,7 @@ curl_version_info_data * curl_version_info(CURLversion );
  * into the equivalent human readable error string.  This is useful
  * for printing meaningful error messages.
  */
-char * curl_easy_strerror(CURLcode );
+const(char)* curl_easy_strerror(CURLcode );
 
 /**
  * Name: curl_share_strerror()
@@ -1880,7 +1885,7 @@ char * curl_easy_strerror(CURLcode );
  * into the equivalent human readable error string.  This is useful
  * for printing meaningful error messages.
  */
-char * curl_share_strerror(CURLSHcode );
+const(char)* curl_share_strerror(CURLSHcode );
 
 /**
  * Name: curl_easy_pause()
@@ -2197,7 +2202,7 @@ extern (C) CURLMsg * curl_multi_info_read(CURLM *multi_handle, int *msgs_in_queu
  *
  * Returns: A pointer to a zero-terminated error message.
  */
-extern (C) char * curl_multi_strerror(CURLMcode );
+extern (C) const(char)* curl_multi_strerror(CURLMcode );
 
 /**
  * Name:    curl_multi_socket() and

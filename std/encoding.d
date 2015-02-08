@@ -39,7 +39,7 @@ Macros:
     WIKI=Phobos/StdEncoding
 
 Copyright: Copyright Janice Caron 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   Janice Caron
 Source:    $(PHOBOSSRC std/_encoding.d)
 */
@@ -51,9 +51,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.encoding;
 
-import std.string;
 import std.traits;
-import std.range;
+import std.range.primitives;
 
 unittest
 {
@@ -1262,17 +1261,13 @@ bool isValidCodePoint(dchar c)
  explicitly specify the encoding type.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-
- Examples:
- -----------------------------------
- assert(encodingName!(Latin1Char) == "ISO-8859-1");
- -----------------------------------
  */
 @property string encodingName(T)()
 {
     return EncoderInstance!(T).encodingName;
 }
 
+///
 unittest
 {
     assert(encodingName!(char) == "UTF-8");
@@ -1291,22 +1286,19 @@ unittest
  explicitly specify the encoding type.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-
- Examples:
- -----------------------------------
- assert(canEncode!(Latin1Char)('A'));
- -----------------------------------
  */
 bool canEncode(E)(dchar c)
 {
     return EncoderInstance!(E).canEncode(c);
 }
 
+///
 unittest
 {
+     assert( canEncode!(Latin1Char)('A'));
     assert(!canEncode!(AsciiChar)('\u00A0'));
-    assert(canEncode!(Latin1Char)('\u00A0'));
-    assert(canEncode!(Windows1252Char)('\u20AC'));
+    assert( canEncode!(Latin1Char)('\u00A0'));
+    assert( canEncode!(Windows1252Char)('\u20AC'));
     assert(!canEncode!(Windows1252Char)('\u20AD'));
     assert(!canEncode!(Windows1252Char)('\uFFFD'));
     assert(!canEncode!(char)(cast(dchar)0x110000));
@@ -1327,15 +1319,16 @@ bool isValidCodeUnit(E)(E c)
     return EncoderInstance!(E).isValidCodeUnit(c);
 }
 
+///
 unittest
 {
-    assert(!isValidCodeUnit(cast(AsciiChar)0xA0));
-    assert( isValidCodeUnit(cast(Windows1252Char)0x80));
-    assert(!isValidCodeUnit(cast(Windows1252Char)0x81));
     assert(!isValidCodeUnit(cast(char)0xC0));
     assert(!isValidCodeUnit(cast(char)0xFF));
     assert( isValidCodeUnit(cast(wchar)0xD800));
     assert(!isValidCodeUnit(cast(dchar)0xD800));
+    assert(!isValidCodeUnit(cast(AsciiChar)0xA0));
+    assert( isValidCodeUnit(cast(Windows1252Char)0x80));
+    assert(!isValidCodeUnit(cast(Windows1252Char)0x81));
 }
 
 /**
@@ -1356,9 +1349,11 @@ bool isValid(E)(const(E)[] s)
     return s.length == validLength(s);
 }
 
+///
 unittest
 {
-    assert(isValid("\u20AC100"));
+    assert( isValid("\u20AC100"));
+	assert(!isValid(cast(char[3])[167, 133, 175]));
 }
 
 /**
@@ -1437,6 +1432,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
     return cast(immutable(E)[])array[0..offset];
 }
 
+///
 unittest
 {
     assert(sanitize("hello \xF0\x80world") == "hello \xEF\xBF\xBDworld");
@@ -1467,13 +1463,15 @@ body
     return before - s.length;
 }
 
+///
 unittest
 {
     assert(firstSequence("\u20AC1000") == "\u20AC".length);
+	assert(firstSequence("hel") == "h".length);
 }
 
 /**
- Returns the length the last encoded sequence.
+ Returns the length of the last encoded sequence.
 
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
@@ -1496,9 +1494,11 @@ body
     return t.length - s.length;
 }
 
+///
 unittest
 {
     assert(lastSequence("1000\u20AC") == "\u20AC".length);
+	assert(lastSequence("hellö") == "ö".length);
 }
 
 /**
@@ -1529,9 +1529,11 @@ body
     return t.length - s.length;
 }
 
+///
 unittest
 {
     assert(index("\u20AC100",1) == 3);
+    assert(index("hällo",2) == 3);
 }
 
 /**
@@ -1742,7 +1744,6 @@ body
 Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
  */
-
 size_t encode(E, R)(dchar c, auto ref R range)
 if (isNativeOutputRange!(R, E))
 {
@@ -1750,28 +1751,28 @@ if (isNativeOutputRange!(R, E))
     {
         if (c <= 0x7F)
         {
-            doPut(range, cast(char) c);
+            put(range, cast(char) c);
             return 1;
         }
         if (c <= 0x7FF)
         {
-            doPut(range, cast(char)(0xC0 | (c >> 6)));
-            doPut(range, cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xC0 | (c >> 6)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 2;
         }
         if (c <= 0xFFFF)
         {
-            doPut(range, cast(char)(0xE0 | (c >> 12)));
-            doPut(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            doPut(range, cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xE0 | (c >> 12)));
+            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 3;
         }
         if (c <= 0x10FFFF)
         {
-            doPut(range, cast(char)(0xF0 | (c >> 18)));
-            doPut(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
-            doPut(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
-            doPut(range, cast(char)(0x80 | (c & 0x3F)));
+            put(range, cast(char)(0xF0 | (c >> 18)));
+            put(range, cast(char)(0x80 | ((c >> 12) & 0x3F)));
+            put(range, cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            put(range, cast(char)(0x80 | (c & 0x3F)));
             return 4;
         }
         else
@@ -1783,16 +1784,16 @@ if (isNativeOutputRange!(R, E))
     {
         if (c <= 0xFFFF)
         {
-            range.doPut(cast(wchar) c);
+            range.put(cast(wchar) c);
             return 1;
         }
-        range.doPut(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
-        range.doPut(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
+        range.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
+        range.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
     else static if (is(Unqual!E == dchar))
     {
-        range.doPut(c);
+        range.put(c);
         return 1;
     }
     else
@@ -1800,8 +1801,10 @@ if (isNativeOutputRange!(R, E))
         static assert(0);
     }
 }
+
 unittest
 {
+    import std.array;
     Appender!(char[]) r;
     assert(encode!(char)('T', r) == 1);
     assert(encode!(wchar)('T', r) == 1);
@@ -1838,6 +1841,26 @@ in
 body
 {
     EncoderInstance!(E).encode(c,dg);
+}
+
+/**
+Encodes the contents of $(D s) in units of type $(D Tgt), writing the result to an
+output range.
+
+Returns: The number of $(D Tgt) elements written.
+Params:
+Tgt = Element type of $(D range).
+s = Input array.
+range = Output range.
+ */
+size_t encode(Tgt, Src, R)(in Src[] s, R range)
+{
+    size_t result;
+    foreach (c; s)
+    {
+        result += encode!(Tgt)(c, range);
+    }
+    return result;
 }
 
 /**
@@ -1882,6 +1905,7 @@ body
     return CodePoints!(E)(s);
 }
 
+///
 unittest
 {
     string s = "hello";
@@ -1910,19 +1934,6 @@ unittest
 
  Params:
     c = the code point to be encoded
-
- Examples:
- --------------------------------------------------------
- dchar d = '\u20AC';
- foreach(c;codeUnits!(char)(d))
- {
-     writefln("%X",c)
- }
- // will print
- // E2
- // 82
- // AC
- --------------------------------------------------------
  */
 CodeUnits!(E) codeUnits(E)(dchar c)
 in
@@ -1934,6 +1945,7 @@ body
     return CodeUnits!(E)(c);
 }
 
+///
 unittest
 {
     char[] a;
@@ -1948,25 +1960,7 @@ unittest
 }
 
 /**
-Encodes $(D c) in units of type $(D E) and writes the result to the
-output range $(D R). Returns the number of $(D E)s written.
- */
-
-size_t encode(Tgt, Src, R)(in Src[] s, R range)
-{
-    size_t result;
-    foreach (c; s)
-    {
-        result += encode!(Tgt)(c, range);
-    }
-    return result;
-}
-
-/**
- Convert a string from one encoding to another. (See also to!() below).
-
- The input to this function MUST be validly encoded.
- This is enforced by the function's in-contract.
+ Convert a string from one encoding to another.
 
  Supersedes:
  This function supersedes std.utf.toUTF8(), std.utf.toUTF16() and
@@ -1976,19 +1970,12 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
  Params:
-    s = the source string
-    r = the destination string
+    s = Source string. $(B Must) be validly encoded.
+        This is enforced by the function's in-contract.
+    r = Destination string
 
- Examples:
- --------------------------------------------------------
- wstring ws;
- transcode("hello world",ws);
-     // transcode from UTF-8 to UTF-16
-
- Latin1String ls;
- transcode(ws, ls);
-     // transcode from UTF-16 to ISO-8859-1
-  --------------------------------------------------------
+ See_Also:
+    $(XREF conv, to)
  */
 void transcode(Src,Dst)(immutable(Src)[] s,out immutable(Dst)[] r)
 in
@@ -2039,8 +2026,23 @@ body
     }
 }
 
+///
 unittest
 {
+    wstring ws;
+    // transcode from UTF-8 to UTF-16
+    transcode("hello world",ws);
+    assert(ws == "hello world"w);
+
+    Latin1String ls;
+    // transcode from UTF-16 to ISO-8859-1
+    transcode(ws, ls);
+    assert(ws == "hello world");
+}
+
+unittest
+{
+    import std.range;
     import std.typetuple;
     {
         import std.conv : to;
@@ -2077,41 +2079,6 @@ unittest
     }
 }
 
-/*
- Convert a string from one encoding to another. (See also transcode() above).
-
- The input to this function MUST be validly encoded.
- This is enforced by the function's in-contract.
-
- Supersedes:
- This function supersedes std.utf.toUTF8(), std.utf.toUTF16() and
- std.utf.toUTF32().
-
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-
- Params:
-    Dst = the destination encoding type
-    s = the source string
-
- Examples:
- -----------------------------------------------------------------------------
- auto ws = to!(wchar)("hello world");  // transcode from UTF-8 to UTF-16
- auto ls = to!(Latin1Char)(ws);            // transcode from UTF-16 to ISO-8859-1
- -----------------------------------------------------------------------------
- */
-// TODO: Commented out for no - to be moved to std.conv
-// Dst to(Dst,Src)(immutable(Src)[] s)
-// in
-// {
-//  assert(isValid(s));
-// }
-// body
-// {
-//  Dst r;
-//  transcode(s,r);
-//  return r;
-// }
-
 //=============================================================================
 
 /** The base class for exceptions thrown by this module */
@@ -2125,6 +2092,8 @@ class UnrecognizedEncodingException : EncodingException
 /** Abstract base class of all encoding schemes */
 abstract class EncodingScheme
 {
+    import std.uni : toLower;
+
     /**
      * Registers a subclass of EncodingScheme.
      *
@@ -2167,7 +2136,7 @@ abstract class EncodingScheme
      */
     static EncodingScheme create(string encodingName)
     {
-        auto p = std.string.toLower(encodingName) in supported;
+        auto p = toLower(encodingName) in supported;
         if (p is null)
             throw new EncodingException("Unrecognized Encoding: "~encodingName);
         string className = *p;

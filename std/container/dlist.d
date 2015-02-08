@@ -1,7 +1,136 @@
+/**
+This module implements a generic doubly-linked list container.
+
+This module is a submodule of $(LINK2 std_container_package.html, std.container).
+
+Source: $(PHOBOSSRC std/container/_dlist.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+*/
 module std.container.dlist;
 
-import std.exception, std.range, std.traits;
+import std.range.primitives;
+import std.traits;
+
 public import std.container.util;
+
+/+
+A DList Node without payload. Used to handle the sentinel node (henceforth "sentinode").
+
+Also used for parts of the code that don't depend on the payload type.
+ +/
+private struct BaseNode
+{
+    private BaseNode* _prev = null;
+    private BaseNode* _next = null;
+
+    /+
+    Gets the payload associated with this node.
+    This is trusted because all nodes are associated with a payload, even
+    the sentinel node.
+    It is also not possible to mix Nodes in DLists of different types.
+    This function is implemented as a member function here, as UFCS does not
+    work with pointers.
+    +/
+    ref inout(T) getPayload(T)() inout @trusted
+    {
+        return (cast(inout(DList!T.PayNode)*)&this)._payload;
+    }
+
+    // Helper: Given nodes p and n, connects them.
+    static void connect(BaseNode* p, BaseNode* n) @safe nothrow pure
+    {
+        p._next = n;
+        n._prev = p;
+    }
+}
+
+/+
+The base DList Range. Contains Range primitives that don't depend on payload type.
+ +/
+private struct DRange
+{
+    unittest
+    {
+        static assert(isBidirectionalRange!DRange);
+        static assert(is(ElementType!DRange == BaseNode*));
+    }
+
+nothrow @safe pure:
+    private BaseNode* _first;
+    private BaseNode* _last;
+
+    private this(BaseNode* first, BaseNode* last)
+    {
+        assert((first is null) == (last is null), "Dlist.Range.this: Invalid arguments");
+        _first = first;
+        _last = last;
+    }
+    private this(BaseNode* n)
+    {
+        this(n, n);
+    }
+
+    @property
+    bool empty() const
+    {
+        assert((_first is null) == (_last is null), "DList.Range: Invalidated state");
+        return !_first;
+    }
+
+    @property BaseNode* front()
+    {
+        assert(!empty, "DList.Range.front: Range is empty");
+        return _first;
+    }
+
+    void popFront()
+    {
+        assert(!empty, "DList.Range.popFront: Range is empty");
+        if (_first is _last)
+        {
+            _first = _last = null;
+        }
+        else
+        {
+            assert(_first._next && _first is _first._next._prev, "DList.Range: Invalidated state");
+            _first = _first._next;
+        }
+    }
+
+    @property BaseNode* back()
+    {
+        assert(!empty, "DList.Range.front: Range is empty");
+        return _last;
+    }
+
+    void popBack()
+    {
+        assert(!empty, "DList.Range.popBack: Range is empty");
+        if (_first is _last)
+        {
+            _first = _last = null;
+        }
+        else
+        {
+            assert(_last._prev && _last is _last._prev._next, "DList.Range: Invalidated state");
+            _last = _last._prev;
+        }
+    }
+
+    /// Forward range primitive.
+    @property DRange save() { return this; }
+}
 
 /**
 Implements a doubly-linked list.
@@ -10,29 +139,53 @@ $(D DList) uses reference semantics.
  */
 struct DList(T)
 {
-    private struct Node
+    import std.range : Take;
+
+    /*
+    A Node with a Payload. A PayNode.
+     */
+    struct PayNode
     {
+        BaseNode _base;
+        alias _base this;
+
         T _payload = T.init;
-        Node * _prev;
-        Node * _next;
+
+        inout(BaseNode)* asBaseNode() inout @trusted
+        {
+            return &_base;
+        }
     }
-    private Node* _root;
-    private void initialize() @safe nothrow pure
+
+    //The sentinel node
+    private BaseNode* _root;
+
+  private
+  {
+    //Construct as new PayNode, and returns it as a BaseNode.
+    static BaseNode* createNode()(ref T arg, BaseNode* prev = null, BaseNode* next = null)
+    {
+        return (new PayNode(BaseNode(prev, next), arg)).asBaseNode();
+    }
+
+    void initialize() nothrow @safe pure
     {
         if (_root) return;
-        _root = new Node();
+        //Note: We allocate a PayNode for safety reasons.
+        _root = (new PayNode()).asBaseNode();
         _root._next = _root._prev = _root;
     }
-    private ref inout(Node*) _first() @property @safe nothrow pure inout
+    ref inout(BaseNode*) _first() @property @safe nothrow pure inout
     {
         assert(_root);
         return _root._next;
     }
-    private ref inout(Node*) _last() @property @safe nothrow pure inout
+    ref inout(BaseNode*) _last() @property @safe nothrow pure inout
     {
         assert(_root);
         return _root._prev;
     }
+  } //end private
 
 /**
 Constructor taking a number of nodes
@@ -68,15 +221,15 @@ elements in $(D rhs).
         if (lroot is null) return rroot is rroot._next;
         if (rroot is null) return lroot is lroot._next;
 
-        const(Node)* pl = lhs._first;
-        const(Node)* pr = rhs._first;
+        const(BaseNode)* pl = lhs._first;
+        const(BaseNode)* pr = rhs._first;
         while (true)
         {
             if (pl is lroot) return pr is rroot;
             if (pr is rroot) return false;
 
             // !== because of NaN
-            if (!(pl._payload == pr._payload)) return false;
+            if (!(pl.getPayload!T() == pr.getPayload!T())) return false;
 
             pl = pl._next;
             pr = pr._next;
@@ -88,74 +241,33 @@ elements in $(D rhs).
      */
     struct Range
     {
-        private Node * _first;
-        private Node * _last;
-        private this(Node* first, Node* last)
-        {
-            assert(!!_first == !!_last, "Dlist.Range.this: Invalid arguments");
-            _first = first; _last = last;
-        }
-        private this(Node* n) { _first = _last = n; }
+        static assert(isBidirectionalRange!Range);
 
-        /// Input range primitives.
-        @property const nothrow
-        bool empty()
+        DRange _base;
+        alias _base this;
+
+        private this(BaseNode* first, BaseNode* last)
         {
-            assert(!!_first == !!_last, "DList.Range: Invalidated state");
-            return !_first;
+            _base = DRange(first, last);
+        }
+        private this(BaseNode* n)
+        {
+            this(n, n);
         }
 
-        /// ditto
         @property ref T front()
         {
-            assert(!empty, "DList.Range.front: Range is empty");
-            return _first._payload;
+            return _base.front.getPayload!T();
         }
 
-        /// ditto
-        void popFront()
-        {
-            assert(!empty, "DList.Range.popFront: Range is empty");
-            if (_first is _last)
-            {
-                _first = _last = null;
-            }
-            else
-            {
-                assert(_first._next && _first is _first._next._prev, "DList.Range: Invalidated state");
-                _first = _first._next;
-            }
-        }
-
-        /// Forward range primitive.
-        @property Range save() { return this; }
-
-        /// Bidirectional range primitives.
         @property ref T back()
         {
-            assert(!empty, "DList.Range.back: Range is empty");
-            return _last._payload;
+            return _base.back.getPayload!T();
         }
 
-        /// ditto
-        void popBack()
-        {
-            assert(!empty, "DList.Range.popBack: Range is empty");
-            if (_first is _last)
-            {
-                _first = _last = null;
-            }
-            else
-            {
-                assert(_last._prev && _last is _last._prev._next, "DList.Range: Invalidated state");
-                _last = _last._prev;
-            }
-        }
-    }
-
-    unittest
-    {
-        static assert(isBidirectionalRange!Range);
+        //Note: shadows base DRange.save.
+        //Necessary for static covariance.
+        @property Range save() { return this; }
     }
 
 /**
@@ -215,7 +327,7 @@ Complexity: $(BIGOH 1)
     @property ref inout(T) front() inout
     {
         assert(!empty, "DList.front: List is empty");
-        return _first._payload;
+        return _first.getPayload!T();
     }
 
 /**
@@ -226,7 +338,7 @@ Complexity: $(BIGOH 1)
     @property ref inout(T) back() inout
     {
         assert(!empty, "DList.back: List is empty");
-        return _last._payload;
+        return _last.getPayload!T();
     }
 
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
@@ -397,7 +509,7 @@ Complexity: $(BIGOH 1).
     {
         assert(!empty, "DList.removeFront: List is empty");
         assert(_root is _first._prev, "DList: Inconsistent state");
-        connect(_root, _first._next);
+        BaseNode.connect(_root, _first._next);
     }
 
     /// ditto
@@ -408,7 +520,7 @@ Complexity: $(BIGOH 1).
     {
         assert(!empty, "DList.removeBack: List is empty");
         assert(_last._next is _root, "DList: Inconsistent state");
-        connect(_last._prev, _root);
+        BaseNode.connect(_last._prev, _root);
     }
 
     /// ditto
@@ -437,7 +549,7 @@ Complexity: $(BIGOH howMany).
             p = p._next;
             ++result;
         }
-        connect(_root, p);
+        BaseNode.connect(_root, p);
         return result;
     }
 
@@ -455,7 +567,7 @@ Complexity: $(BIGOH howMany).
             p = p._prev;
             ++result;
         }
-        connect(p, _root);
+        BaseNode.connect(p, _root);
         return result;
     }
 
@@ -479,7 +591,7 @@ Complexity: $(BIGOH 1)
         assert(_root !is null, "Cannot remove from an un-initialized List");
         assert(r._first, "Remove: Range is empty");
 
-        connect(r._first._prev, r._last._next);
+        BaseNode.connect(r._first._prev, r._last._next);
         auto after = r._last._next;
         if (after is _root)
             return Range(null, null);
@@ -505,8 +617,8 @@ Complexity: $(BIGOH r.walkLength)
         assert(_root !is null, "Cannot remove from an un-initialized List");
         assert(r.source._first, "Remove: Range is empty");
 
-        Node* first = r.source._first;
-        Node* last = void;
+        BaseNode* first = r.source._first;
+        BaseNode* last = null;
         do
         {
             last = r.source._first;
@@ -522,64 +634,58 @@ Complexity: $(BIGOH r.walkLength)
     alias stableLinearRemove = linearRemove;
 
 private:
-    // Helper: Given nodes p and n, connects them.
-    void connect(Node* p, Node* n) @trusted nothrow pure
-    {
-        p._next = n;
-        n._prev = p;
-    }
 
     // Helper: Inserts stuff before the node n.
-    size_t insertBeforeNode(Stuff)(Node* n, ref Stuff stuff)
+    size_t insertBeforeNode(Stuff)(BaseNode* n, ref Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        auto p = new Node(stuff, n._prev, n);
+        auto p = createNode(stuff, n._prev, n);
         n._prev._next = p;
         n._prev = p;
         return 1;
     }
     // ditto
-    size_t insertBeforeNode(Stuff)(Node* n, ref Stuff stuff)
+    size_t insertBeforeNode(Stuff)(BaseNode* n, ref Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         if (stuff.empty) return 0;
         size_t result;
         Range r = createRange(stuff, result);
-        connect(n._prev, r._first);
-        connect(r._last, n);
+        BaseNode.connect(n._prev, r._first);
+        BaseNode.connect(r._last, n);
         return result;
     }
 
     // Helper: Inserts stuff after the node n.
-    size_t insertAfterNode(Stuff)(Node* n, ref Stuff stuff)
+    size_t insertAfterNode(Stuff)(BaseNode* n, ref Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
     {
-        auto p = new Node(stuff, n, n._next);
+        auto p = createNode(stuff, n, n._next);
         n._next._prev = p;
         n._next = p;
         return 1;
     }
     // ditto
-    size_t insertAfterNode(Stuff)(Node* n, ref Stuff stuff)
+    size_t insertAfterNode(Stuff)(BaseNode* n, ref Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         if (stuff.empty) return 0;
         size_t result;
         Range r = createRange(stuff, result);
-        connect(r._last, n._next);
-        connect(n, r._first);
+        BaseNode.connect(r._last, n._next);
+        BaseNode.connect(n, r._first);
         return result;
     }
 
     // Helper: Creates a chain of nodes from the range stuff.
     Range createRange(Stuff)(ref Stuff stuff, ref size_t result)
     {
-        Node* first = new Node(stuff.front);
-        Node* last = first;
+        BaseNode* first = createNode(stuff.front);
+        BaseNode* last = first;
         ++result;
         for ( stuff.popFront() ; !stuff.empty ; stuff.popFront() )
         {
-            auto p = new Node(stuff.front, last);
+            auto p = createNode(stuff.front, last);
             last = last._next = p;
             ++result;
         }
@@ -587,7 +693,7 @@ private:
     }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
 
@@ -606,7 +712,7 @@ unittest
     assert(equal(a4[], [0, 1]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
 
@@ -623,9 +729,10 @@ unittest
     assert(equal(list[],[4,5,6,7,0,1,2,3]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
+    import std.range : take;
 
     alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
@@ -681,7 +788,7 @@ unittest
     assert(equal(list[],[0,3]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
 
@@ -694,7 +801,7 @@ unittest
     assert(equal(dl[], ["a", "b", "c", "d", "e"]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
 
@@ -707,7 +814,7 @@ unittest
     assert(equal(dl[], ["e", "a", "c", "b", "d"]));
 }
 
-unittest
+@safe unittest
 {
     auto d = DList!int([1, 2, 3]);
     d.front = 5; //test frontAssign
@@ -718,7 +825,7 @@ unittest
 }
 
 // Issue 8895
-unittest
+@safe unittest
 {
     auto a = make!(DList!int)(1,2,3,4);
     auto b = make!(DList!int)(1,2,3,4);
@@ -729,7 +836,7 @@ unittest
     assert(!(a == d));
 }
 
-unittest
+@safe unittest
 {
     auto d = DList!int([1, 2, 3]);
     d.front = 5; //test frontAssign
@@ -739,7 +846,7 @@ unittest
     assert(r.back == 1);
 }
 
-unittest
+@safe unittest
 {
     auto a = DList!int();
     assert(a.removeFront(10) == 0);
@@ -748,7 +855,7 @@ unittest
     assert(a[].empty);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
 
@@ -784,7 +891,7 @@ unittest
     c.removeBack();
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm : equal;
 
@@ -796,7 +903,7 @@ unittest
     assert(a[].equal([1, 2, 3, 7]));
 }
 
-unittest //12566
+@safe unittest //12566
 {
     auto dl2 = DList!int([2,7]);
     dl2.removeFront();
@@ -805,15 +912,16 @@ unittest //12566
     assert(dl2.empty, "not empty?!");
 }
 
-unittest //13076
+@safe unittest //13076
 {
     DList!int list;
     assert(list.empty);
     list.clear();
 }
 
-unittest //13425
+@safe unittest //13425
 {
+    import std.range : drop, take;
     auto list = DList!int([1,2,3,4,5]);
     auto r = list[].drop(4); // r is a view of the last element of list
     assert(r.front == 5 && r.walkLength == 1);

@@ -1,7 +1,12 @@
 // Written in the D programming language.
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+ * Computes SHA1 and SHA2 hashes of arbitrary data. SHA hashes are 20 to 64 byte
+ * quantities (depending on the SHA algorithm) that are like a checksum or CRC,
+ * but are more robust.
+ *
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -13,11 +18,8 @@ $(TR $(TDNW OOP API) $(TD $(MYREF SHA1Digest))
 $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
 )
 )
+)
 
- * Computes SHA1 and SHA2 hashes of arbitrary data. SHA hashes are 20 to 64 byte
- * quantities (depending on the SHA algorithm) that are like a checksum or CRC,
- * but are more robust.
- *
  * SHA2 comes in several different versions, all supported by this module:
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *
@@ -27,7 +29,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
  * module.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * CTFE:
  * Digests do not work in CTFE
@@ -48,7 +50,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  *
  * Macros:
  *      WIKI = Phobos/StdSha1
- *      MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 /*          Copyright Kai Nacke 2012.
@@ -119,9 +120,7 @@ else version(D_InlineAsm_X86_64)
     private version = USE_SSSE3;
 }
 
-import std.ascii : hexDigits;
-import std.exception : assumeUnique;
-import core.bitop : bswap;
+version(LittleEndian) import core.bitop : bswap;
 version(USE_SSSE3) import core.cpuid : hasSSSE3Support = ssse3;
 version(USE_SSSE3) import std.internal.digest.sha_SSSE3 : transformSSSE3;
 
@@ -160,8 +159,8 @@ private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
 {
     version(LittleEndian)
     {
-        static import std.bitmanip;
-        return std.bitmanip.bigEndianToNative!ulong(val);
+        import std.bitmanip : bigEndianToNative;
+        return bigEndianToNative!ulong(val);
     }
     else
         return *cast(ulong*) &val;

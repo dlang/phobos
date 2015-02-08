@@ -4,8 +4,10 @@
 */
 
 
+/// Please import the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
 module std.c.osx.socket;
 
+version (OSX):
 private import core.stdc.stdint;
 public import core.sys.posix.arpa.inet;
 public import core.sys.posix.netdb;
@@ -16,35 +18,7 @@ public import core.sys.posix.sys.socket;
 
 extern(C):
 
-enum: int
-{
-    AF_IPX =        23,
-    AF_APPLETALK =  16,
-    PF_IPX =        AF_IPX,
-    PF_APPLETALK =  AF_APPLETALK,
-}
-
-enum: int
-{
-    SOCK_RDM =      4,
-}
-
-enum: int
-{
-    IPPROTO_IGMP =  2,
-    IPPROTO_GGP =   3,
-    IPPROTO_PUP =   12,
-    IPPROTO_IDP =   22,
-    IPPROTO_ND =    77,
-    IPPROTO_RAW =   255,
-
-    IPPROTO_MAX =   256,
-}
-
-int gethostbyname_r(in char* name, hostent* ret, void* buf, size_t buflen, hostent** result, int* h_errnop);
-int gethostbyname2_r(in char* name, int af, hostent* ret, void* buf, size_t buflen, hostent** result, int* h_errnop);
-
-// Not defined in OSX, but we'll use them anyway
+// Not defined in OSX, so these will be removed at the end of deprecation
 enum: int
 {
     SD_RECEIVE =  0,
@@ -80,11 +54,4 @@ enum: int
     //IPV6_LEAVE_ANYCAST =   28,
     IPV6_IPSEC_POLICY =    28,
     //IPV6_XFRM_POLICY =     35,
-}
-
-enum: uint
-{
-    INADDR_LOOPBACK =   0x7F000001,
-    INADDR_BROADCAST =  0xFFFFFFFF,
-    INADDR_NONE =       0xFFFFFFFF,
 }

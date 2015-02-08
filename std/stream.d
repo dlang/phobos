@@ -389,7 +389,7 @@ interface OutputStream {
 
 // not really abstract, but its instances will do nothing useful
 class Stream : InputStream, OutputStream {
-  private import std.string, std.digest.crc, std.c.stdlib, std.c.stdio;
+  private import std.string, std.digest.crc, core.stdc.stdlib, core.stdc.stdio;
 
   // stream abilities
   bool readable = false;        /// Indicates whether this stream can be read from.
@@ -1204,24 +1204,12 @@ class Stream : InputStream, OutputStream {
 
   // writes data to stream using printf() syntax,
   // returns number of bytes written
-  version (Win64)
-  size_t printf(const(char)[] format, ...) {
-    return vprintf(format, _argptr);
-  }
-  else version (X86_64)
   size_t printf(const(char)[] format, ...) {
     va_list ap;
-    va_start(ap, __va_argsave);
+    va_start(ap, format);
     auto result = vprintf(format, ap);
     va_end(ap);
     return result;
-  }
-  else
-  size_t printf(const(char)[] format, ...) {
-    va_list ap;
-    ap = cast(va_list) &format;
-    ap += format.sizeof;
-    return vprintf(format, ap);
   }
 
   private void doFormatCallback(dchar c) {
@@ -1913,7 +1901,7 @@ enum FileMode {
 }
 
 version (Windows) {
-  private import std.c.windows.windows;
+  private import core.sys.windows.windows;
   extern (Windows) {
     void FlushFileBuffers(HANDLE hFile);
     DWORD  GetFileType(HANDLE hFile);
