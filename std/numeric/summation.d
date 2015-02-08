@@ -1,14 +1,54 @@
 /++
  + License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
  + Authors: Ilya Yaroshenko
- + Source: $(PHOBOSSRC std/internal/math/_summation.d)
+ + Source: $(PHOBOSSRC std/numeric/_summation.d)
  +/
 module std.numeric.summation;
 
 import std.traits;
 import std.typecons;
 import std.range.primitives;
-import std.math : isNaN, isFinite, isInfinity, signbit;
+import std.math : isNaN, isFinite, isInfinity, signbit, frexp;
+
+
+/++
+Computes accurate sum of binary logarithms of input range $(D r).
++/
+ElementType!Range sumOfLog2s(Range)(Range r)
+    if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
+{
+    long exp = 0;
+    Unqual!(typeof(return)) x = 1;
+    foreach (e; r)
+    {
+        if (e < 0)
+            return typeof(return).nan;
+        int lexp = void;
+        x *= frexp(e, lexp);
+        exp += lexp;
+        if (x < 0.5)
+        {
+            x *= 2;
+            exp--;
+        }
+    }
+    return exp + log2(x);
+}
+
+///
+unittest
+{
+    assert(sumOfLog2s(new double[0]) == 0);
+    assert(sumOfLog2s([0.0L]) == -real.infinity);
+    assert(sumOfLog2s([-0.0L]) == -real.infinity);
+    assert(sumOfLog2s([2.0L]) == 1);
+    assert(sumOfLog2s([-2.0L]).isNaN());
+    assert(sumOfLog2s([real.nan]).isNaN());
+    assert(sumOfLog2s([-real.nan]).isNaN());
+    assert(sumOfLog2s([real.infinity]) == real.infinity);
+    assert(sumOfLog2s([-real.infinity]).isNaN());
+    assert(sumOfLog2s([ 0.25, 0.25, 0.25, 0.125 ]) == -9);
+}
 
 /++
 Summation algorithms for ranges of floating point numbers or $(D Complex).
@@ -1086,7 +1126,6 @@ F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0)
 
 template Algo(Summation summation)
 {
-    
     static if (summation == Summation.Fast)
         alias Algo = sumFast;
     else 
@@ -1109,5 +1148,4 @@ template Algo(Summation summation)
         alias Algo = sumPrecise;
     else 
     static assert(0);
-
 }
