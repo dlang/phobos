@@ -9,9 +9,9 @@ import std.traits;
 import std.typecons;
 import std.range.primitives;
 
-/**
+/++
 Computes sum of range.
-*/
++/
 //TODO: CTFE for Precise. Needs CTFEScopeBuffer.
 template fsum(F, Summation summation = Summation.Precise)
     if (isFloatingPoint!F && isMutable!F)
@@ -96,9 +96,9 @@ unittest {
     assert(r == ar.fsum); //Summation.Precise
 }
 
-/**
+/++
 $(D Fast), $(D Pairwise) and $(D Kahan) algorithms can be used for summation user defined types.
-*/
++/
 unittest 
 {
     static struct Quaternion(F) 
@@ -143,18 +143,18 @@ unittest
     assert(r == [p, q].fsum!(Summation.Kahan));
 }
 
-/**
+/++
 Data type for summation can be specified.
-*/
++/
 unittest {
     alias fs = fsum!double;
 //    static assert(is(typeof([1, 3, 2].fs()) == double));
     static assert(is(typeof([1.0,2.0].fsum!(float, Summation.KBN)()) == float), typeof([1.0,2.0].fsum!(float, Summation.KBN)()).stringof);
 }
 
-/**
+/++
 All summation algorithms available for complex numbers.
-*/
++/
 unittest 
 {
     import std.complex;
@@ -164,46 +164,46 @@ unittest
 }
 
 
-/**
+/++
 Summation algorithms for ranges of floating point numbers or $(D Complex).
-*/
++/
 enum Summation
 {
-    /**
+    /++
     Fast summation algorithm. 
-    */
+    +/
     Fast,
 
-    /**
+    /++
     Naive algorithm.
-    */
+    +/
     Naive,
 
-    /**
+    /++
     $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
-    */
+    +/
     Pairwise,
    
-    /**
+    /++
     $(LUCKY Kahan summation) algorithm.
-    */
+    +/
     Kahan,
    
-    /**
+    /++
     $(LUCKY Kahan-Babuška-Neumaier summation algorithm). $(D КBN) gives more accurate results then $(D Kahan).
-    */
+    +/
     KBN,
    
-    /**
+    /++
     $(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
-    */
+    +/
     KB2,
    
-    /**
+    /++
     Full precision summation algorithm.
     Returns the value of the sum, rounded to the nearest representable
     floating-point number using the $(LUCKY round-half-to-even rule).
-    */
+    +/
     Precise,
 }
 
