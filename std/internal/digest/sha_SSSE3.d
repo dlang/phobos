@@ -199,12 +199,12 @@ version(USE_SSSE3)
      */
     private nothrow pure string wrap(string[] insn)
     {
-        string s = "asm {";
+        string s = "asm pure nothrow @nogc {";
         foreach (t; insn) s ~= (t ~ "; \n");
         s ~= "}";
         return s;
         // Is not CTFE:
-        // return "asm { " ~ join(insn, "; \n") ~ "}";
+        // return "asm pure nothrow @nogc { " ~ join(insn, "; \n") ~ "}";
     }
 
     /**

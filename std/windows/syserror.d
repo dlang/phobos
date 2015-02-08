@@ -4,7 +4,7 @@
  * Convert Win32 error code to string.
  *
  * Copyright: Copyright Digital Mars 2006 - 2013.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Credits:   Based on code written by Regan Heath
  *
@@ -14,68 +14,153 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.windows.syserror;
+import std.traits : isSomeString;
+
+version (StdDdoc)
+{
+    private
+    {
+        alias DWORD = uint;
+        enum LANG_NEUTRAL = 0, SUBLANG_DEFAULT = 1;
+    }
+
+    /// Query the text for a Windows error code (as returned by $(LINK2
+    /// http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
+    /// $(D GetLastError))) as a D string.
+    string sysErrorString(
+        DWORD errCode,
+        // MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT) is the user's default language
+        int langId = LANG_NEUTRAL,
+        int subLangId = SUBLANG_DEFAULT) @trusted;
+
+    /*********************
+     * Thrown if errors that set $(LINK2
+     * http://msdn.microsoft.com/en-us/library/windows/desktop/ms679360.aspx,
+     * $(D GetLastError)) occur.
+     */
+    class WindowsException : Exception
+    {
+        private alias DWORD = int;
+        final @property DWORD code(); /// $(D GetLastError)'s return value.
+        @disable this(int dummy);
+    }
+
+    /++
+        If $(D !!value) is true, $(D value) is returned. Otherwise,
+        $(D new WindowsException(GetLastError(), msg)) is thrown.
+        $(D WindowsException) assumes that the last operation set
+        $(D GetLastError()) appropriately.
+
+        Example:
+        --------------------
+        wenforce(DeleteFileA("junk.tmp"), "DeleteFile failed");
+        --------------------
+     +/
+    T wenforce(T, S)(T value, lazy S msg = null,
+        string file = __FILE__, size_t line = __LINE__) @safe
+        if (isSomeString!S);
+}
+else:
+
 version (Windows):
 
 import std.windows.charset;
+import std.array : appender;
+import std.conv : to;
+import std.format : formattedWrite;
 import core.sys.windows.windows;
 
-// MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT) is the user's default language
 string sysErrorString(
-    uint errCode,
+    DWORD errCode,
+    // MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT) is the user's default language
     int langId = LANG_NEUTRAL,
     int subLangId = SUBLANG_DEFAULT) @trusted
 {
-    wchar* pWideMessage;
+    auto buf = appender!string();
 
-    DWORD length = FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        null,
-        errCode,
-        MAKELANGID(langId, subLangId),
-        cast(LPWSTR)&pWideMessage,
-        0,
-        null);
-
-    if(length == 0)
+    if (!putSysError(errCode, buf, MAKELANGID(langId, subLangId)))
     {
         throw new Exception(
             "failed getting error string for WinAPI error code: " ~
             sysErrorString(GetLastError()));
     }
 
-    scope(exit) LocalFree(cast(HLOCAL)pWideMessage);
+    return buf.data;
+}
 
-    /* Remove \r\n from error string */
-    if (length >= 2)
-        length -= 2;
+bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
+{
+    wchar *lpMsgBuf = null;
+    auto res = FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        null,
+        code,
+        langId,
+        cast(LPWSTR)&lpMsgBuf,
+        0,
+        null);
+    scope(exit) if (lpMsgBuf) LocalFree(lpMsgBuf);
 
-    static int wideToNarrow(wchar[] wide, char[] narrow) nothrow
+    if (lpMsgBuf)
     {
-        return WideCharToMultiByte(
-            CP_UTF8,
-            0, // No WC_COMPOSITECHECK, as system error messages are precomposed
-            wide.ptr,
-            cast(int)wide.length,
-            narrow.ptr,
-            cast(int)narrow.length,
-            null,
-            null);
+        import std.string : strip;
+        w.put(lpMsgBuf[0..res].strip());
+        return true;
     }
+    else
+        return false;
+}
 
-    auto wideMessage = pWideMessage[0 .. length];
 
-    int requiredCodeUnits = wideToNarrow(wideMessage, null);
+class WindowsException : Exception
+{
+    import core.sys.windows.windows;
 
-    // If FormatMessage with FORMAT_MESSAGE_FROM_SYSTEM succeeds,
-    // there's no reason for the returned UTF-16 to be invalid.
-    assert(requiredCodeUnits > 0);
+    final @property DWORD code() { return _code; } /// $(D GetLastError)'s return value.
+    private DWORD _code;
 
-    auto message = new char[requiredCodeUnits];
-    auto writtenLength = wideToNarrow(wideMessage, message);
+    this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted
+    {
+        _code = code;
 
-    assert(writtenLength > 0); // Ditto
+        auto buf = appender!string();
 
-    return cast(immutable)message[0 .. writtenLength];
+        if (str != null)
+        {
+            buf.put(str);
+            buf.put(": ");
+        }
+
+        auto success = putSysError(code, buf);
+        formattedWrite(buf, success ? " (error %d)" : "Error %d", code);
+
+        super(buf.data, file, line);
+    }
+}
+
+
+T wenforce(T, S)(T value, lazy S msg = null,
+    string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
+{
+    if (!value)
+        throw new WindowsException(GetLastError(), to!string(msg), file, line);
+    return value;
+}
+
+version(Windows)
+unittest
+{
+    import std.exception;
+    import std.string;
+    import std.algorithm : startsWith, endsWith;
+
+    auto e = collectException!WindowsException(
+        DeleteFileA("unexisting.txt").wenforce("DeleteFile")
+    );
+    assert(e.code == ERROR_FILE_NOT_FOUND);
+    assert(e.msg.startsWith("DeleteFile: "));
+    // can't test the entire message, as it depends on Windows locale
+    assert(e.msg.endsWith(" (error 2)"));
 }

@@ -44,10 +44,8 @@
 module std.base64;
 
 import std.exception;  // enforce
-import std.range;      // isInputRange, isOutputRange, isForwardRange, ElementType, hasLength
+import std.range.primitives;      // isInputRange, isOutputRange, isForwardRange, ElementType, hasLength
 import std.traits;     // isArray
-
-version(unittest) import std.algorithm, std.conv, std.file, std.stdio;
 
 
 /**
@@ -1422,6 +1420,11 @@ class Base64Exception : Exception
 
 unittest
 {
+    import std.algorithm : sort, equal;
+    import std.conv;
+    import std.file;
+    import std.stdio;
+
     alias Base64Re = Base64Impl!('!', '=', Base64.NoPadding);
 
     // Test vectors from RFC 4648
@@ -1527,6 +1530,8 @@ unittest
     }
 
     { // with OutputRange
+        import std.array;
+
         auto a = Appender!(char[])([]);
         auto b = Appender!(ubyte[])([]);
 
@@ -1602,7 +1607,7 @@ unittest
             string decode_file = std.file.deleteme ~ "-testingDecoder";
             std.file.write(decode_file, "\nZg==\nZm8=\nZm9v\nZm9vYg==\nZm9vYmE=\nZm9vYmFy");
 
-            auto witness = tv.keys.sort;
+            auto witness = sort(tv.keys);
             auto f = File(decode_file);
             scope(exit)
             {
@@ -1620,7 +1625,7 @@ unittest
 
         { // ForwardRange
             {
-                auto encoder = Base64.encoder(tv.values.sort);
+                auto encoder = Base64.encoder(sort(tv.values));
                 auto witness = ["", "Zg==", "Zm8=", "Zm9v", "Zm9vYg==", "Zm9vYmE=", "Zm9vYmFy"];
                 size_t i;
 
@@ -1634,7 +1639,7 @@ unittest
 
             {
                 auto decoder = Base64.decoder(["", "Zg==", "Zm8=", "Zm9v", "Zm9vYg==", "Zm9vYmE=", "Zm9vYmFy"]);
-                auto witness = tv.values.sort;
+                auto witness = sort(tv.values);
                 size_t i;
 
                 assert(decoder.front == witness[i++]); decoder.popFront();

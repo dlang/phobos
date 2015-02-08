@@ -15,7 +15,7 @@
  *  WIKI = Phobos/StdUri
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_uri.d)
  */
@@ -32,26 +32,27 @@ debug(uri) private import std.stdio;
 /* ====================== URI Functions ================ */
 
 private import std.ascii;
-private import std.c.stdlib;
+private import core.stdc.stdlib;
 private import std.utf;
 private import std.traits : isSomeChar;
 import core.exception : OutOfMemoryError;
 import std.exception : assumeUnique;
 
+/** This Exception is thrown if something goes wrong when encoding or
+decoding a URI.
+*/
 class URIException : Exception
 {
-    @safe pure nothrow this()
+    import std.array : empty;
+    @safe pure nothrow this(string msg, string file = __FILE__,
+        size_t line = __LINE__, Throwable next = null)
     {
-        super("URI Exception");
-    }
-
-    @safe pure nothrow this(string msg)
-    {
-        super("URI Exception: " ~ msg);
+        super("URI Exception" ~ (!msg.empty ? ": " ~ msg : ""), file, line,
+            next);
     }
 }
 
-enum
+private enum
 {
     URI_Alpha = 1,
     URI_Reserved = 2,
@@ -397,19 +398,19 @@ size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
      *  https://
      *  www.
      */
-    import std.string : icmp;
+    import std.uni : icmp;
 
     size_t i;
 
     if (s.length <= 4)
         return -1;
 
-    if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0) {
+    if (s.length > 7 && icmp(s[0 .. 7], "http://") == 0) {
         i = 7;
     }
     else
     {
-        if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
+        if (s.length > 8 && icmp(s[0 .. 8], "https://") == 0)
             i = 8;
         else
             return -1;
@@ -442,6 +443,7 @@ size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
     return i;
 }
 
+///
 unittest
 {
     string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
@@ -504,6 +506,7 @@ size_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
     return i;
 }
 
+///
 unittest
 {
     string s1 = "my.e-mail@www.example-domain.com with garbage added";
