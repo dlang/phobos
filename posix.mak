@@ -209,7 +209,7 @@ STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
 STD_CONTAINER_MODULES = $(addprefix std/container/, package array \
 		binaryheap dlist rbtree slist util)
 
-STD_NUMERIC_MODULES = $(addprefix std/container/, package summation)
+STD_NUMERIC_MODULES = $(addprefix std/numeric/, package summation)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
