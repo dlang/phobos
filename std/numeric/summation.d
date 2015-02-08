@@ -108,20 +108,20 @@ unittest
 
         /// + and - operator overloading
         Quaternion opBinary(string op)(auto ref Quaternion rhs) const
-        if (op == "+" || op == "-")
+            if (op == "+" || op == "-")
         {
             Quaternion ret = void;
-            foreach(i, ref e; ret.array)
+            foreach (i, ref e; ret.array)
                 mixin("e = array[i] "~op~" rhs.array[i];");
             return ret;
         }
 
         /// += and -= operator overloading
         Quaternion opOpAssign(string op)(auto ref Quaternion rhs)
-        if (op == "+" || op == "-")
+            if (op == "+" || op == "-")
         {
             Quaternion ret = void;
-            foreach(i, ref e; array)
+            foreach (i, ref e; array)
                 mixin("e "~op~"= rhs.array[i];");
             return this;
         }
@@ -361,7 +361,7 @@ public:
         if (.isFinite(x))
         {
             size_t i;
-            foreach(y; partials[])
+            foreach (y; partials[])
             {
                 F h = x + y;
                 if (.isInfinity(h))
@@ -414,7 +414,7 @@ public:
     void unsafePut(F x)
     {
         size_t i;
-        foreach(y; partials[])
+        foreach (y; partials[])
         {
             F h = x + y;
             debug(numeric) assert(h.isFinite);
@@ -441,7 +441,7 @@ public:
     {
         debug(numeric)
         {
-            foreach(y; partials[])
+            foreach (y; partials[])
             {
                 assert(y);
                 assert(y.isFinite);
@@ -515,10 +515,11 @@ public:
     //}
 
     ///Returns $(D Summator) with extended internal partial sums.
-    T opCast(T : Summator!P, P)() if (
-        isMutable!T &&
-        P.max_exp >= F.max_exp &&
-        P.mant_dig >= F.mant_dig
+    T opCast(T : Summator!P, P)() 
+        if (
+            isMutable!T &&
+            P.max_exp >= F.max_exp &&
+            P.mant_dig >= F.mant_dig
         )
     {
         static if (is(P == F))
@@ -529,7 +530,7 @@ public:
             ret.s = s;
             ret.o = o;
             ret.partials = scopeBuffer(ret.scopeBufferArray);
-            foreach(p; partials[])
+            foreach (p; partials[])
             {
                 ret.partials.put(p);
             }
@@ -603,7 +604,7 @@ public:
     {
         s += rhs.s;
         o += rhs.o;
-        foreach(f; rhs.partials[])
+        foreach (f; rhs.partials[])
             put(f);
     }
 
@@ -618,7 +619,7 @@ public:
     {
         s -= rhs.s;
         o -= rhs.o;
-        foreach(f; rhs.partials[])
+        foreach (f; rhs.partials[])
             put(-f);
     }
     import std.stdio, std.conv;
@@ -628,8 +629,8 @@ public:
         auto r1 = iota(  1, 501 ).map!(a => (-1.0).pow(a)/a);
         auto r2 = iota(501, 1001).map!(a => (-1.0).pow(a)/a);
         Summator!double s1 = 0.0, s2 = 0.0;
-        foreach(e; r1) s1 += e; 
-        foreach(e; r2) s2 -= e; 
+        foreach (e; r1) s1 += e; 
+        foreach (e; r2) s2 -= e; 
         s1 -= s2;
         assert(s1.sum == -0.69264743055982025);
     }
@@ -720,9 +721,9 @@ unittest
         tuple([M, M, -1e307], 1.6976931348623159e+308),
         tuple([1e16, 1., 1e-16], 10000000000000002.0),
     ];
-    foreach(test; tests)
+    foreach (test; tests)
     {
-        foreach(t; test[0]) summator.put(t);
+        foreach (t; test[0]) summator.put(t);
         auto r = test[1];
         import std.conv;
         assert(summator.isNaN() == r.isNaN(), summator.isNaN().to!string~" "~test[0].to!string);
@@ -780,7 +781,7 @@ Naive summation algorithm.
 +/
 F sumNaive(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
 {
-    foreach(x; r)
+    foreach (x; r)
     {
         s += x;
     }
@@ -833,7 +834,7 @@ F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
     F c = 0.0;
     F y; // do not declare in the loop (algo can be used for matrixes and etc)
     F t; // ditto
-    foreach(F x; r)
+    foreach (F x; r)
     {
         y = x - c;
         t = s + y;
@@ -869,7 +870,7 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
     F c = 0.0;
     static if (isFloatingPoint!F)
     {
-        foreach(F x; r)
+        foreach (F x; r)
         {
             F t = s + x;
             if (fabs(s) >= fabs(x))
@@ -881,7 +882,7 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
     }
     else
     {
-        foreach(F x; r)
+        foreach (F x; r)
         {
             F t = s + x;
             if (fabs(s.re) < fabs(x.re))
@@ -936,7 +937,7 @@ F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
     F ccs = 0.0;
     static if (isFloatingPoint!F)
     {
-        foreach(F x; r)
+        foreach (F x; r)
         {
             F t = s + x;
             F c = void;
@@ -955,7 +956,7 @@ F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
     }
     else
     {
-        foreach(F x; r)
+        foreach (F x; r)
         {
             F t = s + x;
             if (fabs(s.re) < fabs(x.re))
@@ -995,7 +996,7 @@ F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
 unittest 
 {
     import std.typetuple;
-    foreach(I; TypeTuple!(byte, uint, long))
+    foreach (I; TypeTuple!(byte, uint, long))
     {
         I[] ar = [1, 2, 3, 4];
         I r = 10;
@@ -1007,7 +1008,7 @@ unittest
 unittest 
 {
     import std.typetuple;
-    foreach(F; TypeTuple!(float, double, real))
+    foreach (F; TypeTuple!(float, double, real))
     {
         F[] ar = [1, 2, 3, 4];
         F r = 10;
@@ -1064,7 +1065,7 @@ F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0)
     static if (isFloatingPoint!F)
     {
         auto sum = Summator!F(seed);
-        foreach(e; r)
+        foreach (e; r)
         {
             sum.put(e);
         }
@@ -1077,13 +1078,13 @@ F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0)
         {
             auto s = r.save;
             auto sum = Summator!T(seed.re);
-            foreach(e; r)
+            foreach (e; r)
             {
                 sum.put(e.re);
             }
             T sumRe = sum.sum;
             sum = seed.im;
-            foreach(e; s)
+            foreach (e; s)
             {
                 sum.put(e.im);
             }
@@ -1093,7 +1094,7 @@ F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0)
         {
             auto sumRe = Summator!T(seed.re);
             auto sumIm = Summator!T(seed.im);
-            foreach(e; r)
+            foreach (e; r)
             {
                 sumRe.put(e.re);
                 sumIm.put(e.im);
