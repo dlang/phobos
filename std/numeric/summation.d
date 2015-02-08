@@ -8,22 +8,67 @@ module std.numeric.summation;
 import std.traits;
 import std.typecons;
 import std.range.primitives;
+import std.math : isNaN, isFinite, isInfinity, signbit;
+
+/++
+Summation algorithms for ranges of floating point numbers or $(D Complex).
++/
+enum Summation
+{
+    /++
+    Fast summation algorithm. 
+    +/
+    Fast,
+
+    /++
+    Naive algorithm.
+    +/
+    Naive,
+
+    /++
+    $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
+    +/
+    Pairwise,
+   
+    /++
+    $(LUCKY Kahan summation) algorithm.
+    +/
+    Kahan,
+   
+    /++
+    $(LUCKY Kahan-Babuška-Neumaier summation algorithm). $(D КBN) gives more accurate results then $(D Kahan).
+    +/
+    KBN,
+   
+    /++
+    $(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
+    +/
+    KB2,
+   
+    /++
+    Precise summation algorithm.
+    Returns the value of the sum, rounded to the nearest representable
+    floating-point number using the $(LUCKY round-half-to-even rule).
+    +/
+    Precise,
+}
 
 /++
 Computes sum of range.
 +/
-//TODO: CTFE for Precise. Needs CTFEScopeBuffer.
 template fsum(F, Summation summation = Summation.Precise)
     if (isFloatingPoint!F && isMutable!F)
 {
     alias sum = Algo!summation;
 
     F fsum(Range)(Range r)
+        if (isInputRange!Range)
     {
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
+        if (isInputRange!Range)
     {
         return sum!(Range, F)(r, seed);
     }
@@ -59,11 +104,13 @@ template fsum(Summation summation = Summation.Precise)
     alias sum = Algo!summation;
 
     Unqual!(ForeachType!Range) fsum(Range)(Range r)
+        if (isInputRange!Range)
     {
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
+        if (isInputRange!Range)
     {
         return sum!(F, Range)(r, seed);
     }
@@ -143,14 +190,6 @@ unittest
     assert(r == [p, q].fsum!(Summation.Kahan));
 }
 
-/++
-Data type for summation can be specified.
-+/
-unittest {
-    alias fs = fsum!double;
-//    static assert(is(typeof([1, 3, 2].fs()) == double));
-    static assert(is(typeof([1.0,2.0].fsum!(float, Summation.KBN)()) == float), typeof([1.0,2.0].fsum!(float, Summation.KBN)()).stringof);
-}
 
 /++
 All summation algorithms available for complex numbers.
@@ -161,50 +200,6 @@ unittest
     Complex!double[] ar = [complex(1.0, 2), complex(2, 3), complex(3, 4), complex(4, 5)];
     Complex!double r = complex(10, 14);
     assert(r == ar.fsum);
-}
-
-
-/++
-Summation algorithms for ranges of floating point numbers or $(D Complex).
-+/
-enum Summation
-{
-    /++
-    Fast summation algorithm. 
-    +/
-    Fast,
-
-    /++
-    Naive algorithm.
-    +/
-    Naive,
-
-    /++
-    $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
-    +/
-    Pairwise,
-   
-    /++
-    $(LUCKY Kahan summation) algorithm.
-    +/
-    Kahan,
-   
-    /++
-    $(LUCKY Kahan-Babuška-Neumaier summation algorithm). $(D КBN) gives more accurate results then $(D Kahan).
-    +/
-    KBN,
-   
-    /++
-    $(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
-    +/
-    KB2,
-   
-    /++
-    Full precision summation algorithm.
-    Returns the value of the sum, rounded to the nearest representable
-    floating-point number using the $(LUCKY round-half-to-even rule).
-    +/
-    Precise,
 }
 
 
@@ -224,8 +219,6 @@ Dickinson's post at <http://bugs.python.org/file10357/msum4.py>.
 See those links for more details, proofs and other references.
 IEEE 754R floating point semantics are assumed.
 +/
-    import std.math : isNaN, isFinite, isInfinity, signbit;
-
 struct Summator(F)
     if (isFloatingPoint!F && isMutable!F)
 {
@@ -412,14 +405,17 @@ public:
     Adds $(D x) to the internal partial sums.
     +/
     void unsafePut(F x)
-    {
+    in {
+        assert(.isFinite(x));
+    }
+    body {
         size_t i;
         foreach (y; partials[])
         {
             F h = x + y;
-            debug(numeric) assert(h.isFinite);
+            debug(numeric) assert(.isFinite(h));
             F l = fabs(x) < fabs(y) ? x - (h - y) : y - (h - x);
-            debug(numeric) assert(l.isFinite);
+            debug(numeric) assert(.isFinite(l));
             if (l)
             {
                 partials[i++] = l;
@@ -498,21 +494,20 @@ public:
         return partialsReduce(y, parts);
     }
 
-    ///++
-    //+/
-    //F partialsSum() const 
-    //{
-    //    debug(numeric) partialsDebug;
-    //    auto parts = partials[];
-    //    F y = 0;
-    //    //pick last
-    //    if (parts.length)
-    //    {
-    //        y = parts[$-1];
-    //        parts = parts[0..$-1];
-    //    }
-    //    return partialsReduce(y, parts);
-    //}
+    version(none)
+    F partialsSum() const 
+    {
+        debug(numeric) partialsDebug;
+        auto parts = partials[];
+        F y = 0;
+        //pick last
+        if (parts.length)
+        {
+            y = parts[$-1];
+            parts = parts[0..$-1];
+        }
+        return partialsReduce(y, parts);
+    }
 
     ///Returns $(D Summator) with extended internal partial sums.
     T opCast(T : Summator!P, P)() 
@@ -553,18 +548,16 @@ public:
     unittest
     {
         import std.math;
-        float  M = 2.0f .pow (float.max_exp-1);
-        double N = 2.0  .pow (float.max_exp-1);
-        auto s = Summator!float(0.0f); //float summator
+        float  M = 2.0f ^^ (float.max_exp-1);
+        double N = 2.0  ^^ (float.max_exp-1);
+        auto s = Summator!float(0); //float summator
         s += M;
         s += M;
         auto e = cast(Summator!double) s;
 
-        import std.conv;
-        assert(M+M == s.sum, " " ~s.sum.to!string~" "~M.to!string);
+        assert(M+M == s.sum);
         assert(M+M ==  float.infinity);
-
-        assert(N+N == e.sum, e.sum.to!string~" "~N.to!string);
+        assert(N+N == e.sum);
         assert(N+N != double.infinity);
     }
 
@@ -778,6 +771,7 @@ $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
 +/
 
 F sumPairwise(Range, F = Unqual!(ForeachType!Range))(Range r)
+    if (hasLength!Range && hasSlicing!Range)
 {
     import std.range : hasLength, hasSlicing;
     static assert(hasLength!Range && hasSlicing!Range);
@@ -1036,6 +1030,7 @@ unittest
     auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
     double r = 20000;
     assert(r != ar.sumFast());
+    //assert(r != ar.sumNaive()); //undefined
     assert(r != ar.sumPairwise());
     assert(r != ar.sumKahan());
     assert(r == ar.sumKBN());
