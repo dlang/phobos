@@ -534,9 +534,6 @@ public:
             {
                 ret.partials.put(p);
             }
-            //pragma(msg, P.max_exp);
-            //pragma(msg, F.max_exp);
-            pragma(msg, P.max_exp / F.max_exp);
             enum exp_diff = P.max_exp / F.max_exp;
             static if (exp_diff)
             {
@@ -544,10 +541,6 @@ public:
                 {
                     immutable f = ret.o / exp_diff;
                     immutable t = cast(int)(ret.o % exp_diff);
-                    import std.stdio;
-                    writeln(f);
-                    writeln(t);
-                    writeln((P(2) ^^ F.max_exp) * t);
                     ret.o = f;
                     ret.put((P(2) ^^ F.max_exp) * t);
                 }
@@ -622,7 +615,6 @@ public:
         foreach (f; rhs.partials[])
             put(-f);
     }
-    import std.stdio, std.conv;
     ///
     unittest {
         import std.math, std.algorithm, std.range;
@@ -638,9 +630,6 @@ public:
     ///Returns $(D true) if current sum is a NaN.
     bool isNaN() const
     {
-        import std.stdio;
-        writeln(s);
-        writeln(overflow);
         return .isNaN(s);
     }
 
@@ -719,10 +708,9 @@ unittest
     {
         foreach (t; test[0]) summator.put(t);
         auto r = test[1];
-        import std.conv;
-        assert(summator.isNaN() == r.isNaN(), summator.isNaN().to!string~" "~test[0].to!string);
+        assert(summator.isNaN() == r.isNaN());
         assert(summator.isFinite() == r.isFinite());
-        assert(summator.isInfinity() == r.isInfinity(), summator.isInfinity().to!string~" "~test[0].to!string);
+        assert(summator.isInfinity() == r.isInfinity());
         auto s = summator.sum;
         assert(s == r || s.isNaN && r.isNaN);
         summator = 0;
