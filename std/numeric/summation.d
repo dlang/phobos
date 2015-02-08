@@ -1,8 +1,12 @@
-/++
- + License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
- + Authors: Ilya Yaroshenko
- + Source: $(PHOBOSSRC std/numeric/_summation.d)
- +/
+/**
+This module contains basic summation algorithms.
+
+License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+Authors: $(WEB 9il.github.io, Ilya Yaroshenko)
+
+Source: $(PHOBOSSRC std/numeric/_summation.d)
+*/
 module std.numeric.summation;
 
 import std.traits;
@@ -809,7 +813,6 @@ alias sumFast = sumNaive;
 /++
 $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
 +/
-
 F sumPairwise(Range, F = Unqual!(ForeachType!Range))(Range r)
     if (hasLength!Range && hasSlicing!Range)
 {
