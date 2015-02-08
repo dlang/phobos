@@ -1,8 +1,8 @@
-/*
- * License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors: Ilya Yaroshenko
- * Source: $(PHOBOSSRC std/internal/math/_summation.d)
- */
+/++
+ + License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ + Authors: Ilya Yaroshenko
+ + Source: $(PHOBOSSRC std/internal/math/_summation.d)
+ +/
 module std.internal.math.summation;
 
 import std.traits : 
@@ -19,7 +19,8 @@ private template isComplex(C)
     enum isComplex = is(C : Complex!F, F);
 }
 
-private F fabs(F)(F f) //+-0, +-NaN, +-inf  no matter
+// FIXME: fabs in std.math avaliable only for for real.
+private F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
 {
     if(__ctfe)
     {
@@ -40,9 +41,9 @@ private F fabs(F)(F f) //+-0, +-NaN, +-inf  no matter
     }
 }
 
-/**
+/++
 Naive summation algorithm. 
-*/
++/
 F sumNaive(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
 if(
     isMutable!F &&
@@ -57,9 +58,9 @@ if(
     return s;
 }
 
-/**
+/++
 $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
-*/
++/
 F sumPairwise(Range, F = Unqual!(ForeachType!Range))(Range r)
 if(
     isMutable!F &&
@@ -78,10 +79,10 @@ if(
     }
 }
 
-/**
+/++
 $(LUCKY Kahan summation) algorithm.
-*/
-/**
++/
+/++
 ---------------------
 s := x[1]
 c := 0
@@ -92,7 +93,7 @@ FOR k := 2 TO n DO
     s := t
 END DO
 ---------------------
-*/
++/
 F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
 if(
     isMutable!F &&
@@ -114,10 +115,10 @@ if(
     return s;    
 }
 
-/**
+/++
 $(LUCKY Kahan-Babuška-Neumaier summation algorithm). $(D КBN) gives more accurate results then $(D Kahan).
-*/
-/**
++/
+/++
 ---------------------
 s := x[1]
 c := 0
@@ -132,7 +133,7 @@ FOR i := 2 TO n DO
 END DO
 s := s + c
 ---------------------
-*/
++/
 F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0) 
 if(
     isMutable!F &&
@@ -178,10 +179,10 @@ if(
     return s + c;
 }
 
-/**
+/++
 $(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
-*/
-/**
++/
+/++
 ---------------------
 s := 0 ; cs := 0 ; ccs := 0
 FOR j := 1 TO n DO
@@ -203,7 +204,7 @@ FOR j := 1 TO n DO
 END FOR
 RETURN s+cs+ccs
 ---------------------
-*/
++/
 F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0) 
 if(
     isMutable!F &&
@@ -335,20 +336,20 @@ unittest
     assert(r == ar.sumKB2);
 }
 
-/**
+/++
 Handler for full precise summation with $(D put) primitive.
 The current implementation re-establish special
 value semantics across iterations (i.e. handling -inf + inf).
-*/
-/*
++/
+/++
 Precise summation function as msum() by Raymond Hettinger in
 <http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/393090>,
 enhanced with the exact partials sum and roundoff from Mark
 Dickinson's post at <http://bugs.python.org/file10357/msum4.py>.
 See those links for more details, proofs and other references.
 
-Note: IEEE 754R floating point semantics are assumed.
-*/
+IEEE 754R floating point semantics are assumed.
++/
 struct Summator(F, bool CTFEable = false) 
 if(isFloatingPoint!F && is(Unqual!F == F))
 {
@@ -385,7 +386,7 @@ private:
         assert(partials[].map!fabs.isSorted);
     }
 
-    /**
+    /++
     Compute the sum of a list of nonoverlapping floats.
     On input, partials is a list of nonzero, nonspecial,
     nonoverlapping floats, strictly increasing in magnitude, but
@@ -395,7 +396,7 @@ private:
     rule).
     Two floating point values x and y are non-overlapping if the least significant nonzero
     bit of x is more significant than the most significant nonzero bit of y, or vice-versa.
-    */
+    +/
     static F partialsReduce(F s, in F[] partials)
     in
     {
@@ -552,10 +553,10 @@ public:
         }
     }
 
-    /**
+    /++
     Adds $(D x) to internal partial sums.
 
-    */
+    +/
     void unsafePut(F x)
     {
         size_t i;
@@ -578,10 +579,10 @@ public:
         }
     }
 
-    /**
+    /++
     Returns the value of the sum, rounded to the nearest representable 
     floating-point number using the round-half-to-even rule.
-    */
+    +/
     F sum() const 
     {
         debug(numeric) partialsDebug;
@@ -633,8 +634,8 @@ public:
         return partialsReduce(y, parts);
     }
 
-    /**
-    */
+    /++
+    +/
     F partialsSum() const 
     {
         debug(numeric) partialsDebug;
@@ -720,10 +721,10 @@ public:
         assert(N+N != double.infinity);
     }
 
-    /**
+    /++
     $(D cast(F)) operator overlaoding. Returns $(D cast(T)sum()).
     See also: $(D extendTo)
-    */
+    +/
     T opCast(T)() if(Unqual!T == F)
     {
         return sum();
