@@ -445,6 +445,9 @@ $(DOC_OUTPUT_DIR)/std_algorithm_%.html : std/algorithm/%.d $(STDDOC)
 $(DOC_OUTPUT_DIR)/std_range_%.html : std/range/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
+$(DOC_OUTPUT_DIR)/std_numeric_%.html : std/numeric/%.d $(STDDOC)
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+
 $(DOC_OUTPUT_DIR)/std_regex_%.html : std/regex/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
