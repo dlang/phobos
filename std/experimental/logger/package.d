@@ -142,7 +142,7 @@ To gain more precise control over the logging process, additionally to
 overwriting the $(D writeLogMsg) method the methods $(D beginLogMsg),
 $(D logMsgPart) and $(D finishLogMsg) can be overwritten.
 
-$(H3 Compile Time Disabeling of $(D Logger))
+$(H3 Compile Time Disabling of $(D Logger))
 In order to disable logging at compile time, pass $(D StdLoggerDisableLogging) as a
 version argument to the $(D D) compiler when compiling your program code.
 This will disable all logging functionality.
