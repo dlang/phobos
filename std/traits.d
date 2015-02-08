@@ -1833,7 +1833,7 @@ unittest
     {
         void test(string);
         real test(real);
-        int  test();
+        int  test(int);
         int  test() @property;
     }
     alias ov = TypeTuple!(__traits(getVirtualFunctions, Overloads, "test"));
@@ -1843,7 +1843,7 @@ unittest
     alias F_ov3 = FunctionTypeOf!(ov[3]);
     static assert(is(F_ov0* == void function(string)));
     static assert(is(F_ov1* == real function(real)));
-    static assert(is(F_ov2* == int function()));
+    static assert(is(F_ov2* == int function(int)));
     static assert(is(F_ov3* == int function() @property));
 
     alias F_dglit = FunctionTypeOf!((int a){ return a; });
