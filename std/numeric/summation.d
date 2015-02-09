@@ -119,17 +119,6 @@ template fsum(F, Summation summation = Summation.Precise)
     {
         return sum!(Range, F)(r, seed);
     }
-
-    //F fsum(Range)(Range r, F seed)
-    //    if (
-    //        isInputRange!Range &&
-    //        isImplicitlyConvertible!(Unqual!(ForeachType!Range), F) &&
-    //        !isInfinite!Range &&
-    //        (
-    //            summation != Summation.Pairwise ||
-    //            hasLength!Range && hasSlicing!Range
-    //        )
-    //    )
 }
 
 ///ditto
