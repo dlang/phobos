@@ -106,8 +106,8 @@ explicit $(D LogLevel) and conditional logging functions and methods.
 
 $(H4 Thread Local Redirection)
 Calls to the free standing log functions are not directly forwarded to the
-global $(D Logger) $(D sharedLog). Actually, a thread local $(D Logger) of 
-type $(D StdForwardLogger) process the log call and then, by default, forward 
+global $(D Logger) $(D sharedLog). Actually, a thread local $(D Logger) of
+type $(D StdForwardLogger) process the log call and then, by default, forward
 the created $(D Logger.LogEntry) to the $(D sharedLog) $(D Logger).
 The thread local $(D Logger) is accessable by the $(D stdThreadLocalLog)
 property. This property allows to assign user defined $(D Logger). The default

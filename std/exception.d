@@ -1966,7 +1966,7 @@ unittest
             return ThrowingRange();
         })();
 
-    save.save();
+    save.save;
 
     auto slice = f.handle!(Exception,
         RangePrimitive.opSlice, (e, r) => ThrowingRange())();

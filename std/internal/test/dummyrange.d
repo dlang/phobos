@@ -178,7 +178,7 @@ propagated properly from the base range(s) R to the higher order range
 H.  Useful in combination with DummyRange for testing several higher
 order ranges.
 */
-template propagatesRangeType(H, R...) 
+template propagatesRangeType(H, R...)
 {
     static if(allSatisfy!(isRandomAccessRange, R))
         enum bool propagatesRangeType = isRandomAccessRange!H;
@@ -190,7 +190,7 @@ template propagatesRangeType(H, R...)
         enum bool propagatesRangeType = isInputRange!H;
 }
 
-template propagatesLength(H, R...) 
+template propagatesLength(H, R...)
 {
     static if(allSatisfy!(hasLength, R))
         enum bool propagatesLength = hasLength!H;

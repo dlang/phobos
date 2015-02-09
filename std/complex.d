@@ -660,34 +660,34 @@ unittest
 +/
 T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 {
-	return z.re*z.re + z.im*z.im;
+    return z.re*z.re + z.im*z.im;
 }
 
 unittest
 {
     import std.math;
-	assert (sqAbs(complex(0.0)) == 0.0);
-	assert (sqAbs(complex(1.0)) == 1.0);
-	assert (sqAbs(complex(0.0, 1.0)) == 1.0);
-	assert (approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
-	assert (approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
-	assert (approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
+    assert (sqAbs(complex(0.0)) == 0.0);
+    assert (sqAbs(complex(1.0)) == 1.0);
+    assert (sqAbs(complex(0.0, 1.0)) == 1.0);
+    assert (approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
+    assert (approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
+    assert (approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
 }
 
 /// ditto
 T sqAbs(T)(T x) @safe pure nothrow @nogc
-	if (isFloatingPoint!T)
+    if (isFloatingPoint!T)
 {
-	return x*x;
+    return x*x;
 }
 
 unittest
 {
     import std.math;
-	assert (sqAbs(0.0) == 0.0);
-	assert (sqAbs(-1.0) == 1.0);
-	assert (approxEqual(sqAbs(-3.0L), 9.0L));
-	assert (approxEqual(sqAbs(-5.0f), 25.0f));
+    assert (sqAbs(0.0) == 0.0);
+    assert (sqAbs(-1.0) == 1.0);
+    assert (approxEqual(sqAbs(-3.0L), 9.0L));
+    assert (approxEqual(sqAbs(-5.0f), 25.0f));
 }
 
 
