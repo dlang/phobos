@@ -61,12 +61,12 @@ Summation algorithms for ranges of floating point numbers or $(D Complex).
 enum Summation
 {
     /++
-    Fast summation algorithm. 
+    Fast summation algorithm.
     +/
     Fast,
 
     /++
-    Naive algorithm.
+    Naive algorithm (one by one).
     +/
     Naive,
 
@@ -74,22 +74,22 @@ enum Summation
     $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
     +/
     Pairwise,
-   
+  
     /++
     $(LUCKY Kahan summation) algorithm.
     +/
     Kahan,
-   
+  
     /++
     $(LUCKY Kahan-Babuška-Neumaier summation algorithm). $(D КBN) gives more accurate results then $(D Kahan).
     +/
     KBN,
-   
+  
     /++
     $(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
     +/
     KB2,
-   
+  
     /++
     Precise summation algorithm.
     Returns the value of the sum, rounded to the nearest representable
@@ -107,41 +107,28 @@ template fsum(F, Summation summation = Summation.Precise)
     alias sum = Algo!summation;
 
     F fsum(Range)(Range r)
-        if (isInputRange!Range)
+        if (isSummable!(Range, F))
     {
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
-        if (isInputRange!Range)
+        if (isSummable!(Range, F))
     {
         return sum!(Range, F)(r, seed);
     }
 
     //F fsum(Range)(Range r, F seed)
     //    if (
-    //        isInputRange!Range && 
+    //        isInputRange!Range &&
     //        isImplicitlyConvertible!(Unqual!(ForeachType!Range), F) &&
     //        !isInfinite!Range &&
     //        (
-    //            summation != Summation.Pairwise || 
+    //            summation != Summation.Pairwise ||
     //            hasLength!Range && hasSlicing!Range
     //        )
     //    )
 }
-
-    //static assert(
-    //    __traits(compiles, 
-    //    {
-    //        F a = 0.0, b, c; 
-    //        c = a + b; 
-    //        c = a - b;
-    //        static if (summation != Summation.Pairwise)
-    //        {
-    //            a += b;
-    //            a -= b;
-    //        }
-    //    }), summation.stringof ~ " isn't implemented for " ~ F.stringof);
 
 ///ditto
 template fsum(Summation summation = Summation.Precise)
@@ -149,20 +136,20 @@ template fsum(Summation summation = Summation.Precise)
     alias sum = Algo!summation;
 
     Unqual!(ForeachType!Range) fsum(Range)(Range r)
-        if (isInputRange!Range)
+        if (isSummable!(Range, Unqual!(ForeachType!Range)))
     {
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
-        if (isInputRange!Range)
+        if (isSummable!(Range, F))
     {
         return sum!(F, Range)(r, seed);
     }
 }
 
 ///
-unittest 
+unittest
 {
     import std.math, std.algorithm, std.range;
     auto ar = 1000
@@ -172,7 +159,7 @@ unittest
 
     //Summation.Precise is default
     assert(ar.fsum  ==  -1.0);
-    assert(ar.retro.fsum  ==  -1.0);
+    assert(ar.retro.fsum!real  ==  -1.0);
 }
 
 ///
@@ -189,11 +176,11 @@ unittest {
 }
 
 /++
-$(D Fast), $(D Pairwise) and $(D Kahan) algorithms can be used for summation user defined types.
+$(D Naive), $(D Pairwise) and $(D Kahan) algorithms can be used for user defined types.
 +/
-unittest 
+unittest
 {
-    static struct Quaternion(F) 
+    static struct Quaternion(F)
         if (isFloatingPoint!F)
     {
         F[3] array;
@@ -219,7 +206,7 @@ unittest
         }
 
         ///constructor with single FP argument
-        this(F f) 
+        this(F f)
         {
             array[] = f;
         }
@@ -230,21 +217,26 @@ unittest
     p.array = [3, 4, 5];
     r.array = [3, 5, 7];
 
-    assert(r == [p, q].fsum!(Summation.Fast));
+    assert(r == [p, q].fsum!(Summation.Naive));
     assert(r == [p, q].fsum!(Summation.Pairwise));
     assert(r == [p, q].fsum!(Summation.Kahan));
 }
 
-
 /++
 All summation algorithms available for complex numbers.
 +/
-unittest 
+unittest
 {
     import std.complex;
     Complex!double[] ar = [complex(1.0, 2), complex(2, 3), complex(3, 4), complex(4, 5)];
     Complex!double r = complex(10, 14);
-    assert(r == ar.fsum);
+    assert(r == ar.fsum!(Summation.Fast));
+    assert(r == ar.fsum!(Summation.Naive));
+    assert(r == ar.fsum!(Summation.Pairwise));
+    assert(r == ar.fsum!(Summation.Kahan));
+    assert(r == ar.fsum!(Summation.KBN));
+    assert(r == ar.fsum!(Summation.KB2));
+    assert(r == ar.fsum); //Summation.Precise
 }
 
 
@@ -254,7 +246,8 @@ The current implementation re-establish special
 value semantics across iterations (i.e. handling -inf + inf).
 
 References: $(LINK2 http://www.cs.cmu.edu/afs/cs/project/quake/public/papers/robust-arithmetic.ps,
-"Adaptive Precision Floating-Point Arithmetic and Fast Robust Geometric Predicates", Jonathan Richard Shewchuk)
+    "Adaptive Precision Floating-Point Arithmetic and Fast Robust Geometric Predicates", Jonathan Richard Shewchuk),
+    $(LINK2 http://bugs.python.org/file10357/msum4.py, Mark Dickinson's post at bugs.python.org).
 +/
 /+
 Precise summation function as msum() by Raymond Hettinger in
@@ -272,11 +265,11 @@ struct Summator(F)
 private:
     enum F M = (cast(F)(2)) ^^ (F.max_exp - 1);
     F[32] scopeBufferArray = void;
-    ScopeBuffer!F partials;        
+    ScopeBuffer!F partials;       
     //sum for NaN and infinity.
     F s;
     //Overflow Degree. Count of 2^^F.max_exp minus count of -(2^^F.max_exp)
-    sizediff_t o; 
+    sizediff_t o;
 
 
     /++
@@ -298,7 +291,7 @@ private:
     body
     {
         bool _break = void;
-        foreach_reverse(i, y; partials) 
+        foreach_reverse(i, y; partials)
         {
             s = partialsReducePred(s, y, i ? partials[i-1] : 0, _break);
             if (_break)
@@ -393,7 +386,7 @@ public:
         }
     }
 
-    ///Adds $(D x) to internal partial sums.
+    ///Adds $(D x) to the internal partial sums.
     void put(F x)
     {
         if (.isFinite(x))
@@ -409,14 +402,14 @@ public:
                         F t = x; x = y; y = t;
                     }
                     //h == -F.infinity
-                    if (signbit(h)) 
+                    if (signbit(h))
                     {
                         x += M;
                         x += M;
                         o--;
                     }
                     //h == +F.infinity
-                    else 
+                    else
                     {
                         x -= M;
                         x -= M;
@@ -448,8 +441,11 @@ public:
 
     /++
     Adds $(D x) to the internal partial sums.
+    This operation doesn't re-establish special
+    value semantics across iterations (i.e. handling -inf + inf).
+    Preconditions: $(D isFinite(x)).
     +/
-    void unsafePut(F x)
+    package void unsafePut(F x)
     in {
         assert(.isFinite(x));
     }
@@ -474,8 +470,18 @@ public:
         }
     }
 
+    ///
+    unittest {
+        import std.math, std.algorithm, std.range;
+        auto r = iota(1, 1001).map!(a => (-1.0).pow(a)/a);
+        Summator!double s = 0.0;
+        foreach(e; r)
+            s.unsafePut(e);
+        assert(s.sum() == -0.69264743055982025);
+    }
+
     /++
-    Returns the value of the sum, rounded to the nearest representable 
+    Returns the value of the sum, rounded to the nearest representable
     floating-point number using the round-half-to-even rule.
     +/
     F sum() const
@@ -517,8 +523,8 @@ public:
                 {
                     // overflow, except in edge case...
                     x = h + l;
-                    y = parts.length && x - h == l && !signbit(l*parts[$-1]) ? 
-                        x * 2 : 
+                    y = parts.length && x - h == l && !signbit(l*parts[$-1]) ?
+                        x * 2 :
                         F.infinity * of;
                     parts = null;
                 }
@@ -540,7 +546,7 @@ public:
     }
 
     version(none)
-    F partialsSum() const 
+    F partialsSum() const
     {
         debug(numeric) partialsDebug;
         auto parts = partials[];
@@ -555,7 +561,7 @@ public:
     }
 
     ///Returns $(D Summator) with extended internal partial sums.
-    T opCast(T : Summator!P, P)() 
+    T opCast(T : Summator!P, P)()
         if (
             isMutable!T &&
             P.max_exp >= F.max_exp &&
@@ -594,20 +600,20 @@ public:
     {
         import std.math;
         float  M = 2.0f ^^ (float.max_exp-1);
-        double N = 2.0  ^^ (float.max_exp-1);
         auto s = Summator!float(0); //float summator
         s += M;
         s += M;
-        auto e = cast(Summator!double) s;
-
         assert(M+M == s.sum());
-        assert(M+M ==  float.infinity);
+        assert(M+M == float.infinity);
+
+        double N = 2.0  ^^ (float.max_exp-1);
+        auto e = cast(Summator!double) s;
         assert(N+N == e.sum());
-        assert(N+N != double.infinity);
+        assert(isFinite(N+N));
     }
 
     /++
-    $(D cast(F)) operator overlaoding. Returns $(D cast(T)sum()).
+    $(D cast(F)) operator overloading. Returns $(D cast(T)sum()).
     See also: $(D cast)
     +/
     T opCast(T)() if (is(Unqual!T == F))
@@ -615,7 +621,7 @@ public:
         return sum();
     }
 
-    ///The assignment operator $(D =) overlaoding.
+    ///The assignment operator $(D =) overloading.
     void opAssign(F rhs)
     {
         partials.length = 0;
@@ -624,7 +630,7 @@ public:
         if (rhs) put(rhs);
     }
 
-    /// += and -= operator overlaoding.
+    /// $(D +=) and $(D -=) operator overloading.
     void opOpAssign(string op : "+")(F f)
     {
         put(f);
@@ -653,14 +659,15 @@ public:
         foreach (f; rhs.partials[])
             put(-f);
     }
+
     ///
     unittest {
         import std.math, std.algorithm, std.range;
         auto r1 = iota(  1, 501 ).map!(a => (-1.0).pow(a)/a);
         auto r2 = iota(501, 1001).map!(a => (-1.0).pow(a)/a);
         Summator!double s1 = 0.0, s2 = 0.0;
-        foreach (e; r1) s1 += e; 
-        foreach (e; r2) s2 -= e; 
+        foreach (e; r1) s1 += e;
+        foreach (e; r2) s2 -= e;
         s1 -= s2;
         assert(s1.sum() == -0.69264743055982025);
     }
@@ -686,14 +693,14 @@ public:
     }
 }
 
-unittest 
+unittest
 {
     import std.range;
     import std.algorithm;
     import std.math;
 
     Summator!double summator = 0;
-    
+   
     enum double M = (cast(double)2) ^^ (double.max_exp - 1);
     Tuple!(double[], double)[] tests = [
         tuple(new double[0], 0.0),
@@ -758,13 +765,13 @@ unittest
 
 private:
 
-//template isComplex(C)
-//{
-//    import std.complex : Complex;
-//    enum isComplex = is(C : Complex!F, F);
-//}
+template isComplex(C)
+{
+    import std.complex : Complex;
+    enum bool isComplex = is(C : Complex!F, F);
+}
 
-// FIXME (perfomance issue): fabs in std.math avaliable only for for real.
+// FIXME (perfomance issue): fabs in std.math available only for for real.
 F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
 {
     if (__ctfe)
@@ -773,7 +780,7 @@ F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
     }
     else
     {
-        version(LDC) 
+        version(LDC)
         {
             import ldc.intrinsics : llvm_fabs;
             return llvm_fabs(f);
@@ -786,20 +793,26 @@ F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
     }
 }
 
-//if (
-//    isInputRange!Range && 
-//    isImplicitlyConvertible!(Unqual!(ForeachType!Range), F) &&
-//    !isInfinite!Range &&
-//    (
-//        summation != Summation.Pairwise || 
-//        hasLength!Range && hasSlicing!Range
-//    )
-//)
+template isSummable(Range, F)
+{
+    enum bool isSummable =
+        isInputRange!Range &&
+        isImplicitlyConvertible!(Unqual!(ForeachType!Range), F) &&
+        !isInfinite!Range &&
+        __traits(compiles,
+        {
+            F a = 0.1, b, c;
+            c = a + b;
+            c = a - b;
+            a += b;
+            a -= b;
+        });
+}
 
 /++
-Naive summation algorithm. 
+Naive summation algorithm.
 +/
-F sumNaive(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
+F sumNaive(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
 {
     foreach (x; r)
     {
@@ -849,7 +862,7 @@ s := t
 END DO
 ---------------------
 +/
-F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
+F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
 {
     F c = 0.0;
     F y; // do not declare in the loop (algo can be used for matrixes and etc)
@@ -862,12 +875,12 @@ F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
         c -= y;
         s = t;
     }
-    return s;    
+    return s;   
 }
 
 
 /++
-$(LUCKY Kahan-Babuška-Neumaier summation algorithm). 
+$(LUCKY Kahan-Babuška-Neumaier summation algorithm).
 $(D КBN) gives more accurate results then $(D Kahan).
 +/
 /++
@@ -886,7 +899,8 @@ END DO
 s := s + c
 ---------------------
 +/
-F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0) 
+F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
+    if (isFloatingPoint!F || isComplex!F)
 {
     F c = 0.0;
     static if (isFloatingPoint!F)
@@ -923,11 +937,11 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
         }
     }
     return s + c;
-}    
+}   
 
 
 /++
-$(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. 
+$(LUCKY Generalized Kahan-Babuška summation algorithm), order 2.
 $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
 +/
 /++
@@ -953,7 +967,8 @@ END FOR
 RETURN s+cs+ccs
 ---------------------
 +/
-F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0) 
+F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
+    if (isFloatingPoint!F || isComplex!F)
 {
     F cs = 0.0;
     F ccs = 0.0;
@@ -1012,51 +1027,27 @@ F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
         }
     }
     return s+cs+ccs; // no rounding in between
-}    
-
-
-unittest 
-{
-    import std.typetuple;
-    foreach (I; TypeTuple!(byte, uint, long))
-    {
-        I[] ar = [1, 2, 3, 4];
-        I r = 10;
-        assert(r == ar.sumFast());
-        assert(r == ar.sumPairwise());
-    }
 }
 
-unittest 
+unittest
 {
     import std.typetuple;
+    with(Summation)
     foreach (F; TypeTuple!(float, double, real))
     {
         F[] ar = [1, 2, 3, 4];
         F r = 10;
-        assert(r == ar.sumFast());
-        assert(r == ar.sumPairwise());
-        assert(r == ar.sumKahan());
-        assert(r == ar.sumKBN());
-        assert(r == ar.sumKB2());
+        assert(r == ar.fsum!Fast());
+        assert(r == ar.fsum!Pairwise());
+        assert(r == ar.fsum!Kahan());
+        assert(r == ar.fsum!KBN());
+        assert(r == ar.fsum!KB2());
     }
-}
-
-unittest 
-{
-    import std.complex;
-    Complex!double[] ar = [complex(1.0, 2), complex(2, 3), complex(3, 4), complex(4, 5)];
-    Complex!double r = complex(10, 14);
-    assert(r == ar.sumFast());
-    assert(r == ar.sumPairwise());
-    assert(r == ar.sumKahan());
-    assert(r == ar.sumKBN());
-    assert(r == ar.sumKB2());
 }
 
 //@@@BUG@@@: DMD 2.066 Segmentation fault (core dumped)
 version(none)
-unittest 
+unittest
 {
     import core.simd;
     static if (__traits(compiles, double2.init + double2.init))
@@ -1068,23 +1059,12 @@ unittest
     }
 }
 
-unittest 
-{
-    import std.algorithm : map;
-    auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
-    double r = 20000;
-    assert(r != ar.sumFast());
-    //assert(r != ar.sumNaive()); //undefined
-    assert(r != ar.sumPairwise());
-    assert(r != ar.sumKahan());
-    assert(r == ar.sumKBN());
-    assert(r == ar.sumKB2());
-}
 
 /++
 Precise summation.
 +/
-F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0) 
+F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0.0)
+    if (isFloatingPoint!F || isComplex!F)
 {
     static if (isFloatingPoint!F)
     {
@@ -1132,24 +1112,24 @@ template Algo(Summation summation)
 {
     static if (summation == Summation.Fast)
         alias Algo = sumFast;
-    else 
+    else
     static if (summation == Summation.Naive)
         alias Algo = sumNaive;
-    else 
+    else
     static if (summation == Summation.Pairwise)
         alias Algo = sumPairwise;
-    else 
+    else
     static if (summation == Summation.Kahan)
         alias Algo = sumKahan;
-    else 
+    else
     static if (summation == Summation.KBN)
         alias Algo = sumKBN;
-    else 
+    else
     static if (summation == Summation.KB2)
         alias Algo = sumKB2;
-    else 
+    else
     static if (summation == Summation.Precise)
         alias Algo = sumPrecise;
-    else 
+    else
     static assert(0);
 }
