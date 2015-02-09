@@ -167,15 +167,14 @@ unittest {
 // Fails for 32bit systems.
 // See also https://issues.dlang.org/show_bug.cgi?id=13474#c7
 // and https://github.com/D-Programming-Language/phobos/pull/2513
-version(none) 
-unittest {
-    import std.algorithm;
-    auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
-    const r = 20000;
-    assert(r != ar.fsum!(Summation.Naive));
-    assert(r != ar.fsum!(Summation.Pairwise));
-    assert(r != ar.fsum!(Summation.Kahan));
-}
+//unittest {
+//    import std.algorithm;
+//    auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
+//    const r = 20000;
+//    assert(r != ar.fsum!(Summation.Naive));
+//    assert(r != ar.fsum!(Summation.Pairwise));
+//    assert(r != ar.fsum!(Summation.Kahan));
+//}
 
 /++
 $(D Naive), $(D Pairwise) and $(D Kahan) algorithms can be used for user defined types.
