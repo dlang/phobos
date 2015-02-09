@@ -1991,14 +1991,15 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 {
     import std.algorithm : rndstuff; // FIXME
     import std.algorithm.comparison : equal;
+    import std.range : retro;
     import std.typetuple : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     int[] a = [ 1, 2, 3, 2, 6 ];
-    assert(find(std.range.retro(a), 5).empty);
-    assert(equal(find(std.range.retro(a), 2), [ 2, 3, 2, 1 ][]));
+    assert(find(retro(a), 5).empty);
+    assert(equal(find(retro(a), 2), [ 2, 3, 2, 1 ][]));
 
     foreach (T; TypeTuple!(int, double))
     {
@@ -2006,7 +2007,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
         if (!b.length) continue;
         b[$ / 2] = 200;
         b[$ / 4] = 200;
-        assert(find(std.range.retro(b), 200).length ==
+        assert(find(retro(b), 200).length ==
                 b.length - (b.length - 1) / 2);
     }
 }
