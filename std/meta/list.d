@@ -77,22 +77,22 @@ unittest
  * sequence of zero or more elements TList.
  * If not found, -1 is returned.
  */
-template staticIndexOf(T, TList...)
+template metaIndexOf(T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList).index;
+    enum metaIndexOf = genericIndexOf!(T, TList).index;
 }
 
 /// Ditto
-template staticIndexOf(alias T, TList...)
+template metaIndexOf(alias T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList).index;
+    enum metaIndexOf = genericIndexOf!(T, TList).index;
 }
 
 ///
 unittest
 {
     alias Types = MetaList!(int, long, double);
-    static assert(staticIndexOf!(long, Types) == 1);
+    static assert(metaIndexOf!(long, Types) == 1);
 }
 
 // [internal]
@@ -125,24 +125,24 @@ private template genericIndexOf(args...)
 
 unittest
 {
-    static assert(staticIndexOf!( byte, byte, short, int, long) ==  0);
-    static assert(staticIndexOf!(short, byte, short, int, long) ==  1);
-    static assert(staticIndexOf!(  int, byte, short, int, long) ==  2);
-    static assert(staticIndexOf!( long, byte, short, int, long) ==  3);
-    static assert(staticIndexOf!( char, byte, short, int, long) == -1);
-    static assert(staticIndexOf!(   -1, byte, short, int, long) == -1);
-    static assert(staticIndexOf!(void) == -1);
+    static assert(metaIndexOf!( byte, byte, short, int, long) ==  0);
+    static assert(metaIndexOf!(short, byte, short, int, long) ==  1);
+    static assert(metaIndexOf!(  int, byte, short, int, long) ==  2);
+    static assert(metaIndexOf!( long, byte, short, int, long) ==  3);
+    static assert(metaIndexOf!( char, byte, short, int, long) == -1);
+    static assert(metaIndexOf!(   -1, byte, short, int, long) == -1);
+    static assert(metaIndexOf!(void) == -1);
 
-    static assert(staticIndexOf!("abc", "abc", "def", "ghi", "jkl") ==  0);
-    static assert(staticIndexOf!("def", "abc", "def", "ghi", "jkl") ==  1);
-    static assert(staticIndexOf!("ghi", "abc", "def", "ghi", "jkl") ==  2);
-    static assert(staticIndexOf!("jkl", "abc", "def", "ghi", "jkl") ==  3);
-    static assert(staticIndexOf!("mno", "abc", "def", "ghi", "jkl") == -1);
-    static assert(staticIndexOf!( void, "abc", "def", "ghi", "jkl") == -1);
-    static assert(staticIndexOf!(42) == -1);
+    static assert(metaIndexOf!("abc", "abc", "def", "ghi", "jkl") ==  0);
+    static assert(metaIndexOf!("def", "abc", "def", "ghi", "jkl") ==  1);
+    static assert(metaIndexOf!("ghi", "abc", "def", "ghi", "jkl") ==  2);
+    static assert(metaIndexOf!("jkl", "abc", "def", "ghi", "jkl") ==  3);
+    static assert(metaIndexOf!("mno", "abc", "def", "ghi", "jkl") == -1);
+    static assert(metaIndexOf!( void, "abc", "def", "ghi", "jkl") == -1);
+    static assert(metaIndexOf!(42) == -1);
 
-    static assert(staticIndexOf!(void, 0, "void", void) == 2);
-    static assert(staticIndexOf!("void", 0, void, "void") == 2);
+    static assert(metaIndexOf!(void, 0, "void", void) == 2);
+    static assert(metaIndexOf!("void", 0, void, "void") == 2);
 }
 
 /**
