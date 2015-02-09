@@ -12,7 +12,7 @@ module std.numeric.summation;
 import std.traits;
 import std.typecons;
 import std.range.primitives;
-import std.math : isNaN, isFinite, isInfinity, signbit, frexp;
+import std.math : isNaN, isFinite, isInfinity, signbit, frexp, fabs;
 
 
 /++
@@ -158,12 +158,23 @@ unittest {
     import std.algorithm;
     auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
     const r = 20000;
-    assert(r != ar.fsum!(Summation.Naive));
-    assert(r != ar.fsum!(Summation.Pairwise));
-    assert(r != ar.fsum!(Summation.Kahan));
     assert(r == ar.fsum!(Summation.KBN));
     assert(r == ar.fsum!(Summation.KB2));
     assert(r == ar.fsum); //Summation.Precise
+}
+
+// FIXME
+// Fails for 32bit systems.
+// See also https://issues.dlang.org/show_bug.cgi?id=13474#c7
+// and https://github.com/D-Programming-Language/phobos/pull/2513
+version(none) 
+unittest {
+    import std.algorithm;
+    auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
+    const r = 20000;
+    assert(r != ar.fsum!(Summation.Naive));
+    assert(r != ar.fsum!(Summation.Pairwise));
+    assert(r != ar.fsum!(Summation.Kahan));
 }
 
 /++
@@ -764,6 +775,7 @@ template isComplex(C)
 
 // FIXME (perfomance issue): fabs in std.math available only for for real.
 F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
+    if (!is(Unqual!F == real))
 {
     if (__ctfe)
     {
