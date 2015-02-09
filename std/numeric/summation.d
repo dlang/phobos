@@ -12,7 +12,7 @@ module std.numeric.summation;
 import std.traits;
 import std.typecons;
 import std.range.primitives;
-import std.math : isNaN, isFinite, isInfinity, signbit, frexp, fabs;
+import std.math : isNaN, isFinite, isInfinity, signbit, frexp;
 
 
 /++
@@ -775,7 +775,6 @@ template isComplex(C)
 
 // FIXME (perfomance issue): fabs in std.math available only for for real.
 F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
-    if (!is(Unqual!F == real))
 {
     if (__ctfe)
     {
