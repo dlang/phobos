@@ -1353,7 +1353,7 @@ bool isValid(E)(const(E)[] s)
 unittest
 {
     assert( isValid("\u20AC100"));
-	assert(!isValid(cast(char[3])[167, 133, 175]));
+    assert(!isValid(cast(char[3])[167, 133, 175]));
 }
 
 /**
@@ -1467,7 +1467,7 @@ body
 unittest
 {
     assert(firstSequence("\u20AC1000") == "\u20AC".length);
-	assert(firstSequence("hel") == "h".length);
+    assert(firstSequence("hel") == "h".length);
 }
 
 /**
@@ -1498,7 +1498,7 @@ body
 unittest
 {
     assert(lastSequence("1000\u20AC") == "\u20AC".length);
-	assert(lastSequence("hellö") == "ö".length);
+    assert(lastSequence("hellö") == "ö".length);
 }
 
 /**

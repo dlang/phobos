@@ -354,7 +354,7 @@ unittest
 }
 
 // const
-unittest 
+unittest
 {
     char[10] tmpbuf = void;
     auto textbuf = ScopeBuffer!char(tmpbuf);

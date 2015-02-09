@@ -6247,7 +6247,7 @@ body
             r *= x;
             r += A[i];
         }
-        return r;        
+        return r;
     }
 }
 

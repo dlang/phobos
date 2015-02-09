@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
-String handling functions. Note that many typical string functions are found in 
+String handling functions. Note that many typical string functions are found in
 $(D std.algorithm) because all D strings are bidirectional ranges.
 
 $(SCRIPT inhibitQuickIndex = 1;)

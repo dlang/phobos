@@ -1434,8 +1434,8 @@ immutable real [7] Bn_n  = [
 *  digamma(x) = d/dx logGamma(x)
 *
 * References:
-*   1. Abramowitz, M., and Stegun, I. A. (1970). 
-*      Handbook of mathematical functions. Dover, New York, 
+*   1. Abramowitz, M., and Stegun, I. A. (1970).
+*      Handbook of mathematical functions. Dover, New York,
 *      pages 258-259, equations 6.3.6 and 6.3.18.
 */
 real digamma(real x)
@@ -1530,8 +1530,8 @@ unittest {
 *  logmdigamma(x) = log(x) - digamma(x)
 *
 * References:
-*   1. Abramowitz, M., and Stegun, I. A. (1970). 
-*      Handbook of mathematical functions. Dover, New York, 
+*   1. Abramowitz, M., and Stegun, I. A. (1970).
+*      Handbook of mathematical functions. Dover, New York,
 *      pages 258-259, equations 6.3.6 and 6.3.18.
 */
 real logmdigamma(real x)

@@ -938,7 +938,7 @@ unittest
 
     S5 s51;
     static assert(__traits(compiles, move(s51, s51)),
-                  "issue 13990, cannot move opaque class reference"); 
+                  "issue 13990, cannot move opaque class reference");
 }
 
 /// Ditto
@@ -1047,7 +1047,7 @@ unittest
 
     S5 s51;
     static assert(__traits(compiles, s51 = move(s51)),
-                  "issue 13990, cannot move opaque class reference"); 
+                  "issue 13990, cannot move opaque class reference");
 }
 
 unittest//Issue 6217
