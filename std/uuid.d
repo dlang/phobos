@@ -1094,8 +1094,8 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
     UUID u;
     foreach (ref E e ; u.asArrayOf!E())
     {
-        randomGen.popFront();
         e = randomGen.front;
+        randomGen.popFront();
     }
 
     //set variant
