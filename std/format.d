@@ -182,6 +182,7 @@ $(I FormatChar):
     $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
     numbers in a signed conversion with a space.)))
 
+<dl>
     <dt>$(I Width)
     <dd>
     Specifies the minimum field width.
@@ -296,6 +297,7 @@ $(I FormatChar):
         The hexadecimal digits, x and p are in upper case if the
         $(I FormatChar) is upper case.
     </dl>
+</dl>
 
     Floating point NaN's are formatted as $(B nan) if the
     $(I FormatChar) is lower case, or $(B NAN) if upper.
