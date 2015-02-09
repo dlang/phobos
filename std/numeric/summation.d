@@ -55,8 +55,9 @@ unittest
     assert(sumOfLog2s([ 0.25, 0.25, 0.25, 0.125 ]) == -9);
 }
 
+
 /++
-Summation algorithms for ranges of floating point numbers or $(D Complex).
+Summation algorithms.
 +/
 enum Summation
 {
@@ -74,29 +75,30 @@ enum Summation
     $(LUCKY Pairwise summation) algorithm. Range must be a finite sliceable range.
     +/
     Pairwise,
-  
+
     /++
     $(LUCKY Kahan summation) algorithm.
     +/
     Kahan,
-  
+
     /++
     $(LUCKY Kahan-Babuška-Neumaier summation algorithm). $(D КBN) gives more accurate results then $(D Kahan).
     +/
     KBN,
-  
+
     /++
     $(LUCKY Generalized Kahan-Babuška summation algorithm), order 2. $(D КB2) gives more accurate results then $(D Kahan) and $(D КBN).
     +/
     KB2,
-  
+
     /++
     Precise summation algorithm.
-    Returns the value of the sum, rounded to the nearest representable
+    The value of the sum is rounded to the nearest representable
     floating-point number using the $(LUCKY round-half-to-even rule).
     +/
     Precise,
 }
+
 
 /++
 Computes sum of range.
@@ -265,7 +267,7 @@ struct Summator(F)
 private:
     enum F M = (cast(F)(2)) ^^ (F.max_exp - 1);
     F[32] scopeBufferArray = void;
-    ScopeBuffer!F partials;       
+    ScopeBuffer!F partials;
     //sum for NaN and infinity.
     F s;
     //Overflow Degree. Count of 2^^F.max_exp minus count of -(2^^F.max_exp)
@@ -700,7 +702,7 @@ unittest
     import std.math;
 
     Summator!double summator = 0;
-   
+
     enum double M = (cast(double)2) ^^ (double.max_exp - 1);
     Tuple!(double[], double)[] tests = [
         tuple(new double[0], 0.0),
@@ -875,7 +877,7 @@ F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
         c -= y;
         s = t;
     }
-    return s;   
+    return s;
 }
 
 
@@ -937,7 +939,7 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
         }
     }
     return s + c;
-}   
+}
 
 
 /++
