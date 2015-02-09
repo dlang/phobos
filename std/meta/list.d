@@ -588,21 +588,21 @@ $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 Evaluation is $(I not) short-circuited if a false result is encountered; the
 template predicate must be instantiable with all the given items.
  */
-template allSatisfy(alias F, T...)
+template metaAll(alias F, T...)
 {
     static if (T.length == 0)
     {
-        enum allSatisfy = true;
+        enum metaAll = true;
     }
     else static if (T.length == 1)
     {
-        enum allSatisfy = F!(T[0]);
+        enum metaAll = F!(T[0]);
     }
     else
     {
-        enum allSatisfy =
-            allSatisfy!(F, T[ 0  .. $/2]) &&
-            allSatisfy!(F, T[$/2 ..  $ ]);
+        enum metaAll =
+            metaAll!(F, T[ 0  .. $/2]) &&
+            metaAll!(F, T[$/2 ..  $ ]);
     }
 }
 
@@ -611,8 +611,8 @@ unittest
 {
     import std.traits : isIntegral;
 
-    static assert(!allSatisfy!(isIntegral, int, double));
-    static assert( allSatisfy!(isIntegral, int, long));
+    static assert(!metaAll!(isIntegral, int, double));
+    static assert( metaAll!(isIntegral, int, long));
 }
 
 /**
@@ -622,21 +622,21 @@ $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 Evaluation is $(I not) short-circuited if a true result is encountered; the
 template predicate must be instantiable with all the given items.
  */
-template anySatisfy(alias F, T...)
+template metaAny(alias F, T...)
 {
     static if(T.length == 0)
     {
-        enum anySatisfy = false;
+        enum metaAny = false;
     }
     else static if (T.length == 1)
     {
-        enum anySatisfy = F!(T[0]);
+        enum metaAny = F!(T[0]);
     }
     else
     {
-        enum anySatisfy =
-            anySatisfy!(F, T[ 0  .. $/2]) ||
-            anySatisfy!(F, T[$/2 ..  $ ]);
+        enum metaAny =
+            metaAny!(F, T[ 0  .. $/2]) ||
+            metaAny!(F, T[$/2 ..  $ ]);
     }
 }
 
@@ -645,8 +645,8 @@ unittest
 {
     import std.traits : isIntegral;
 
-    static assert(!anySatisfy!(isIntegral, string, double));
-    static assert( anySatisfy!(isIntegral, int, double));
+    static assert(!metaAny!(isIntegral, string, double));
+    static assert( metaAny!(isIntegral, int, double));
 }
 
 
@@ -734,7 +734,7 @@ unittest
 
     alias isNoPointer = templateNot!isPointer;
     static assert(!isNoPointer!(int*));
-    static assert(allSatisfy!(isNoPointer, string, char, float));
+    static assert(metaAll!(isNoPointer, string, char, float));
 }
 
 unittest
