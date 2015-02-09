@@ -145,9 +145,6 @@ unittest
     static assert(staticIndexOf!("void", 0, void, "void") == 2);
 }
 
-/// Kept for backwards compatibility.
-alias IndexOf = staticIndexOf;
-
 /**
  * Returns a list created from TList with the first occurrence,
  * if any, of T removed.
