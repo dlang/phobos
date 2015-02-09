@@ -833,7 +833,7 @@ unittest
             ams[i].expandedData = new ubyte[](uniform(minSize, maxSize));
             foreach (ref ubyte c; ams[i].expandedData)
                 c = cast(ubyte)(uniform(0, 256));
-            ams[i].compressionMethod(CompressionMethod.deflate);
+            ams[i].compressionMethod = CompressionMethod.deflate;
             zip1.addMember(ams[i]);
         }
         auto zippedData = zip1.build();

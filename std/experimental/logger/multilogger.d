@@ -75,7 +75,7 @@ class MultiLogger : Logger
             if (this.logger[i].name == toRemove)
             {
                 Logger ret = this.logger[i].logger;
-                this.logger[i] = this.logger.back();
+                this.logger[i] = this.logger.back;
                 this.logger.popBack();
 
                 return ret;

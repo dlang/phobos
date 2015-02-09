@@ -106,8 +106,8 @@ struct JSONValue
     {
           string s = "{ \"language\": \"D\" }";
           JSONValue j = parseJSON(s);
-          assert(j.type() == JSON_TYPE.OBJECT);
-          assert(j["language"].type() == JSON_TYPE.STRING);
+          assert(j.type == JSON_TYPE.OBJECT);
+          assert(j["language"].type == JSON_TYPE.STRING);
     }
 
     /**
@@ -173,12 +173,10 @@ struct JSONValue
         JSONValue j = [ "language": "D" ];
 
         // get value
-        assert(j["language"].str() == "D");
-        // str() or str is ok
         assert(j["language"].str == "D");
 
         // change existing key to new string
-        j["language"].str("Perl");
+        j["language"].str = "Perl";
         assert(j["language"].str == "Perl");
     }
 
@@ -384,10 +382,10 @@ struct JSONValue
         j = JSONValue(42);
 
         j = JSONValue( [1, 2, 3] );
-        assert(j.type() == JSON_TYPE.ARRAY);
+        assert(j.type == JSON_TYPE.ARRAY);
 
         j = JSONValue( ["language": "D"] );
-        assert(j.type() == JSON_TYPE.OBJECT);
+        assert(j.type == JSON_TYPE.OBJECT);
     }
 
     void opAssign(T)(T arg) if(!isStaticArray!T && !is(T : JSONValue))
@@ -431,7 +429,7 @@ struct JSONValue
     unittest
     {
         JSONValue j = JSONValue( ["language": "D"] );
-        assert( j["language"].str() == "D" );
+        assert( j["language"].str == "D" );
     }
 
     /// Operator sets $(D value) for element of JSON object by $(D key)
