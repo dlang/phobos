@@ -182,119 +182,123 @@ $(I FormatChar):
     $(TR $(TD $(B ' ')) $(TD numeric) $(TD Prefix positive
     numbers in a signed conversion with a space.)))
 
-    <dt>$(I Width)
-    <dd>
-    Specifies the minimum field width.
-    If the width is a $(B *), an additional argument of type $(B int),
-    preceding the actual argument, is taken as the width.
-    If the width is negative, it is as if the $(B -) was given
-    as a $(I Flags) character.
-
-    <dt>$(I Precision)
-    <dd> Gives the precision for numeric conversions.
-    If the precision is a $(B *), an additional argument of type $(B int),
-    preceding the actual argument, is taken as the precision.
-    If it is negative, it is as if there was no $(I Precision) specifier.
-
-    <dt>$(I FormatChar)
-    <dd>
     <dl>
-        <dt>$(B 's')
-        <dd>The corresponding argument is formatted in a manner consistent
-        with its type:
+        <dt>$(I Width)
+        <dd>
+        Specifies the minimum field width.
+        If the width is a $(B *), an additional argument of type $(B int),
+        preceding the actual argument, is taken as the width.
+        If the width is negative, it is as if the $(B -) was given
+        as a $(I Flags) character.
+
+        <dt>$(I Precision)
+        <dd> Gives the precision for numeric conversions.
+        If the precision is a $(B *), an additional argument of type $(B int),
+        preceding the actual argument, is taken as the precision.
+        If it is negative, it is as if there was no $(I Precision) specifier.
+
+        <dt>$(I FormatChar)
+        <dd>
         <dl>
-            <dt>$(B bool)
-            <dd>The result is <tt>'true'</tt> or <tt>'false'</tt>.
-            <dt>integral types
-            <dd>The $(B %d) format is used.
-            <dt>floating point types
-            <dd>The $(B %g) format is used.
-            <dt>string types
-            <dd>The result is the string converted to UTF-8.
-            A $(I Precision) specifies the maximum number of characters
-            to use in the result.
-            <dt>structs
-            <dd>If the struct defines a $(B toString()) method the result is the
-            string returned from this function. Otherwise the result is
-            StructName(field<sub>0</sub>, field<sub>1</sub>, ...) where field<sub>n</sub>
-            is the nth element formatted with the default format.
-            <dt>classes derived from $(B Object)
-            <dd>The result is the string returned from the class instance's
-            $(B .toString()) method.
-            A $(I Precision) specifies the maximum number of characters
-            to use in the result.
-            <dt>unions
-            <dd>If the union defines a $(B toString()) method the result is the
-            string returned from this function. Otherwise the result is
-            the name of the union, without its contents.
-            <dt>non-string static and dynamic arrays
-            <dd>The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
-            where s<sub>n</sub> is the nth element
-            formatted with the default format.
-            <dt>associative arrays
-            <dd>The result is the equivalent of what the initializer
-            would look like for the contents of the associative array,
-            e.g.: ["red" : 10, "blue" : 20].
+            <dt>$(B 's')
+            <dd>The corresponding argument is formatted in a manner consistent
+            with its type:
+            <dl>
+                <dt>$(B bool)
+                <dd>The result is <tt>'true'</tt> or <tt>'false'</tt>.
+                <dt>integral types
+                <dd>The $(B %d) format is used.
+                <dt>floating point types
+                <dd>The $(B %g) format is used.
+                <dt>string types
+                <dd>The result is the string converted to UTF-8.
+                A $(I Precision) specifies the maximum number of characters
+                to use in the result.
+                <dt>structs
+                <dd>If the struct defines a $(B toString()) method the result is
+                the string returned from this function. Otherwise the result is
+                StructName(field<sub>0</sub>, field<sub>1</sub>, ...) where
+                field<sub>n</sub> is the nth element formatted with the default
+                format.
+                <dt>classes derived from $(B Object)
+                <dd>The result is the string returned from the class instance's
+                $(B .toString()) method.
+                A $(I Precision) specifies the maximum number of characters
+                to use in the result.
+                <dt>unions
+                <dd>If the union defines a $(B toString()) method the result is
+                the string returned from this function. Otherwise the result is
+                the name of the union, without its contents.
+                <dt>non-string static and dynamic arrays
+                <dd>The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
+                where s<sub>n</sub> is the nth element
+                formatted with the default format.
+                <dt>associative arrays
+                <dd>The result is the equivalent of what the initializer
+                would look like for the contents of the associative array,
+                e.g.: ["red" : 10, "blue" : 20].
+            </dl>
+
+            <dt>$(B 'c')
+            <dd>The corresponding argument must be a character type.
+
+            <dt>$(B 'b','d','o','x','X')
+            <dd> The corresponding argument must be an integral type
+            and is formatted as an integer. If the argument is a signed type
+            and the $(I FormatChar) is $(B d) it is converted to
+            a signed string of characters, otherwise it is treated as
+            unsigned. An argument of type $(B bool) is formatted as '1'
+            or '0'. The base used is binary for $(B b), octal for $(B o),
+            decimal
+            for $(B d), and hexadecimal for $(B x) or $(B X).
+            $(B x) formats using lower case letters, $(B X) uppercase.
+            If there are fewer resulting digits than the $(I Precision),
+            leading zeros are used as necessary.
+            If the $(I Precision) is 0 and the number is 0, no digits
+            result.
+
+            <dt>$(B 'e','E')
+            <dd> A floating point number is formatted as one digit before
+            the decimal point, $(I Precision) digits after, the $(I FormatChar),
+            &plusmn;, followed by at least a two digit exponent:
+            $(I d.dddddd)e$(I &plusmn;dd).
+            If there is no $(I Precision), six
+            digits are generated after the decimal point.
+            If the $(I Precision) is 0, no decimal point is generated.
+
+            <dt>$(B 'f','F')
+            <dd> A floating point number is formatted in decimal notation.
+            The $(I Precision) specifies the number of digits generated
+            after the decimal point. It defaults to six. At least one digit
+            is generated before the decimal point. If the $(I Precision)
+            is zero, no decimal point is generated.
+
+            <dt>$(B 'g','G')
+            <dd> A floating point number is formatted in either $(B e) or
+            $(B f) format for $(B g); $(B E) or $(B F) format for
+            $(B G).
+            The $(B f) format is used if the exponent for an $(B e) format
+            is greater than -5 and less than the $(I Precision).
+            The $(I Precision) specifies the number of significant
+            digits, and defaults to six.
+            Trailing zeros are elided after the decimal point, if the fractional
+            part is zero then no decimal point is generated.
+
+            <dt>$(B 'a','A')
+            <dd> A floating point number is formatted in hexadecimal
+            exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
+            There is one hexadecimal digit before the decimal point, and as
+            many after as specified by the $(I Precision).
+            If the $(I Precision) is zero, no decimal point is generated.
+            If there is no $(I Precision), as many hexadecimal digits as
+            necessary to exactly represent the mantissa are generated.
+            The exponent is written in as few digits as possible,
+            but at least one, is in decimal, and represents a power of 2 as in
+            $(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
+            The exponent for zero is zero.
+            The hexadecimal digits, x and p are in upper case if the
+            $(I FormatChar) is upper case.
         </dl>
-
-        <dt>$(B 'c')
-        <dd>The corresponding argument must be a character type.
-
-        <dt>$(B 'b','d','o','x','X')
-        <dd> The corresponding argument must be an integral type
-        and is formatted as an integer. If the argument is a signed type
-        and the $(I FormatChar) is $(B d) it is converted to
-        a signed string of characters, otherwise it is treated as
-        unsigned. An argument of type $(B bool) is formatted as '1'
-        or '0'. The base used is binary for $(B b), octal for $(B o),
-        decimal
-        for $(B d), and hexadecimal for $(B x) or $(B X).
-        $(B x) formats using lower case letters, $(B X) uppercase.
-        If there are fewer resulting digits than the $(I Precision),
-        leading zeros are used as necessary.
-        If the $(I Precision) is 0 and the number is 0, no digits
-        result.
-
-        <dt>$(B 'e','E')
-        <dd> A floating point number is formatted as one digit before
-        the decimal point, $(I Precision) digits after, the $(I FormatChar),
-        &plusmn;, followed by at least a two digit exponent: $(I d.dddddd)e$(I &plusmn;dd).
-        If there is no $(I Precision), six
-        digits are generated after the decimal point.
-        If the $(I Precision) is 0, no decimal point is generated.
-
-        <dt>$(B 'f','F')
-        <dd> A floating point number is formatted in decimal notation.
-        The $(I Precision) specifies the number of digits generated
-        after the decimal point. It defaults to six. At least one digit
-        is generated before the decimal point. If the $(I Precision)
-        is zero, no decimal point is generated.
-
-        <dt>$(B 'g','G')
-        <dd> A floating point number is formatted in either $(B e) or
-        $(B f) format for $(B g); $(B E) or $(B F) format for
-        $(B G).
-        The $(B f) format is used if the exponent for an $(B e) format
-        is greater than -5 and less than the $(I Precision).
-        The $(I Precision) specifies the number of significant
-        digits, and defaults to six.
-        Trailing zeros are elided after the decimal point, if the fractional
-        part is zero then no decimal point is generated.
-
-        <dt>$(B 'a','A')
-        <dd> A floating point number is formatted in hexadecimal
-        exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
-        There is one hexadecimal digit before the decimal point, and as
-        many after as specified by the $(I Precision).
-        If the $(I Precision) is zero, no decimal point is generated.
-        If there is no $(I Precision), as many hexadecimal digits as
-        necessary to exactly represent the mantissa are generated.
-        The exponent is written in as few digits as possible,
-        but at least one, is in decimal, and represents a power of 2 as in
-        $(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
-        The exponent for zero is zero.
-        The hexadecimal digits, x and p are in upper case if the
-        $(I FormatChar) is upper case.
     </dl>
 
     Floating point NaN's are formatted as $(B nan) if the
