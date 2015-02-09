@@ -21,6 +21,7 @@ Computes accurate sum of binary logarithms of input range $(D r).
 ElementType!Range sumOfLog2s(Range)(Range r)
     if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 {
+    import std.math : frexp, log2;
     long exp = 0;
     Unqual!(typeof(return)) x = 1;
     foreach (e; r)
@@ -599,9 +600,9 @@ public:
         s += M;
         auto e = cast(Summator!double) s;
 
-        assert(M+M == s.sum);
+        assert(M+M == s.sum());
         assert(M+M ==  float.infinity);
-        assert(N+N == e.sum);
+        assert(N+N == e.sum());
         assert(N+N != double.infinity);
     }
 
@@ -661,7 +662,7 @@ public:
         foreach (e; r1) s1 += e; 
         foreach (e; r2) s2 -= e; 
         s1 -= s2;
-        assert(s1.sum == -0.69264743055982025);
+        assert(s1.sum() == -0.69264743055982025);
     }
 
     ///Returns $(D true) if current sum is a NaN.

@@ -814,6 +814,7 @@ T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
         is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
+    import std.math : fabs; // FIXME
     auto r = findRoot(f, a, b, f(a), f(b), tolerance);
     // Return the first value if it is smaller or NaN
     return !(fabs(r[2]) > fabs(r[3])) ? r[0] : r[1];
@@ -872,6 +873,8 @@ in
 }
 body
 {
+    import std.math : fabs; // FIXME
+
     // Author: Don Clugston. This code is (heavily) modified from TOMS748
     // (www.netlib.org).  The changes to improve the worst-cast performance are
     // entirely original.
