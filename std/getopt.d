@@ -476,6 +476,8 @@ enum config {
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
+    /// Do not erase the endOfOptions separator from args
+    keepEndOfOptions,
     /// Makes the next option a required option
     required
 }
@@ -583,8 +585,9 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             auto a = args[i];
             if (endOfOptions.length && a == endOfOptions)
             {
-                // Consume the "--"
-                args = args.remove(i);
+                // Consume the "--" if keepEndOfOptions is not specified
+                if (!cfg.keepEndOfOptions)
+                    args = args.remove(i);
                 break;
             }
             if (!a.length || a[0] != optionChar)
@@ -887,8 +890,9 @@ private struct configuration
                 bool, "bundling", 1,
                 bool, "passThrough", 1,
                 bool, "stopOnFirstNonOption", 1,
+                bool, "keepEndOfOptions", 1,
                 bool, "required", 1,
-                ubyte, "", 3));
+                ubyte, "", 2));
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
@@ -958,6 +962,8 @@ private void setConfig(ref configuration cfg, config option)
     case config.required: cfg.required = true; break;
     case config.stopOnFirstNonOption:
         cfg.stopOnFirstNonOption = true; break;
+    case config.keepEndOfOptions:
+        cfg.keepEndOfOptions = true; break;
     default: assert(false);
     }
 }
@@ -1101,6 +1107,23 @@ unittest
     bool tb1 = true;
     getopt(args, "fb1", &fb1, "fb2", &fb2, "tb1", &tb1);
     assert(fb1 && fb2 && !tb1);
+
+    // test keepEndOfOptions
+
+    args = (["program.name", "--foo", "nonoption", "--bar", "--", "--baz"]).dup;
+    getopt(args,
+        std.getopt.config.keepEndOfOptions,
+        "foo", &foo,
+        "bar", &bar);
+    assert(args == ["program.name", "nonoption", "--", "--baz"]);
+
+    // Ensure old behavior without the keepEndOfOptions
+
+    args = (["program.name", "--foo", "nonoption", "--bar", "--", "--baz"]).dup;
+    getopt(args,
+        "foo", &foo,
+        "bar", &bar);
+    assert(args == ["program.name", "nonoption", "--baz"]);
 
     // test function callbacks
 
