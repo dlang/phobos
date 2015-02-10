@@ -1110,7 +1110,7 @@ unittest
 
     // test keepEndOfOptions
 
-    args = (["program.name", "--foo", "nonoption", "--bar", "--", "--baz"]).dup;
+    args = ["program.name", "--foo", "nonoption", "--bar", "--", "--baz"];
     getopt(args,
         std.getopt.config.keepEndOfOptions,
         "foo", &foo,
@@ -1119,7 +1119,7 @@ unittest
 
     // Ensure old behavior without the keepEndOfOptions
 
-    args = (["program.name", "--foo", "nonoption", "--bar", "--", "--baz"]).dup;
+    args = ["program.name", "--foo", "nonoption", "--bar", "--", "--baz"];
     getopt(args,
         "foo", &foo,
         "bar", &bar);
