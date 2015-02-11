@@ -1900,7 +1900,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
 }
 
 ///
-unittest
+pure @safe unittest
 {
     import std.algorithm : equal, map, splitter;
     import std.conv : to, ConvException;
@@ -1917,7 +1917,7 @@ unittest
 }
 
 ///
-unittest
+pure @safe unittest
 {
     import std.algorithm : equal;
     import std.range : retro;
@@ -1932,10 +1932,11 @@ unittest
     assert(handled.retro.equal("dlrow olleh")); // as well as `back`
 }
 
-unittest
+pure nothrow @safe unittest
 {
     static struct ThrowingRange
     {
+        pure @safe:
         @property bool empty()
         {
             throw new Exception("empty has thrown");
@@ -2045,6 +2046,7 @@ unittest
 
     static struct Infinite
     {
+        pure @safe:
         enum bool empty = false;
         int front() { assert(false); }
         void popFront() { assert(false); }
