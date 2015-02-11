@@ -3278,24 +3278,13 @@ terminating the main thread.
 */
 @property TaskPool taskPool() @trusted
 {
-    static bool initialized;
-    __gshared static TaskPool pool;
-
-    if(!initialized)
-    {
-        synchronized(typeid(TaskPool))
-        {
-            if(!pool)
-            {
-                pool = new TaskPool(defaultPoolThreads);
-                pool.isDaemon = true;
-            }
-        }
-
-        initialized = true;
-    }
-
-    return pool;
+    import std.concurrency : initOnce;
+    __gshared TaskPool pool;
+    return initOnce!pool({
+        auto p = new TaskPool(defaultPoolThreads);
+        p.isDaemon = true;
+        return p;
+    }());
 }
 
 private shared uint _defaultPoolThreads;
@@ -4572,7 +4561,7 @@ version(unittest)
 {
     struct __S_12733
     {
-        invariant() { assert(checksum == 1234567890); }    
+        invariant() { assert(checksum == 1234567890); }
         this(ulong u){n = u;}
         void opAssign(__S_12733 s){this.n = s.n;}
         ulong n;
@@ -4585,6 +4574,6 @@ version(unittest)
 unittest
 {
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
- 
+
     auto result = taskPool.amap!__genPair_12733(data);
 }

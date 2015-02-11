@@ -75,7 +75,6 @@ private
     import core.sync.mutex;
     import core.sync.condition;
     import std.algorithm;
-    import std.datetime;
     import std.exception;
     import std.range;
     import std.string;
@@ -1373,11 +1372,12 @@ private:
 
         override bool wait( Duration period ) nothrow
         {
+            import core.time;
             scope(exit) notified = false;
 
-            for( auto limit = Clock.currSystemTick + period;
+            for( auto limit = TickDuration.currSystemTick + period;
                  !notified && !period.isNegative;
-                 period = limit - Clock.currSystemTick )
+                 period = limit - TickDuration.currSystemTick )
             {
                 yield();
             }
@@ -2040,7 +2040,8 @@ private
 
             static if( timedWait )
             {
-                auto limit = Clock.currSystemTick + period;
+                import core.time;
+                auto limit = TickDuration.currSystemTick + period;
             }
 
             while( true )
@@ -2088,7 +2089,7 @@ private
                     {
                         static if( timedWait )
                         {
-                            period = limit - Clock.currSystemTick;
+                            period = limit - TickDuration.currSystemTick;
                         }
                         continue;
                     }
