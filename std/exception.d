@@ -1655,7 +1655,8 @@ Params:
     handler = The callable that is called when a handled primitive throws a
     $(D Throwable) of type $(D E). The handler must accept arguments of
     the form $(D E, ref IRange) and its return value is used as the primitive's
-    return value whenever $(D E) is thrown.
+    return value whenever $(D E) is thrown. For $(D opIndex), the handler can
+    optionally recieve a third argument; the index that caused the exception.
     input = The range to _handle.
 
 Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
@@ -1801,7 +1802,10 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                     }
                     catch(E exception)
                     {
-                        return handler(exception, this.range);
+                        static if (__traits(compiles, handler(exception, this.range, index)))
+                            return handler(exception, this.range, index);
+                        else
+                            return handler(exception, this.range);
                     }
                 }
                 else
@@ -1872,7 +1876,7 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
                         return typeof(this)(this.range[lower .. $]);
                 }
 
-                auto opSlice(size_t lower, size_t upper)
+                Take!Handler opSlice(size_t lower, size_t upper)
                 {
                     static if (primitivesToHandle & RangePrimitive.opSlice)
                     {
@@ -2019,6 +2023,12 @@ unittest
             RangePrimitive.opIndex, (e, r) => 1337)();
 
     assert(arr[0] == 1337);
+
+    auto arr2 = f.handle!(Exception,
+            RangePrimitive.opIndex, (e, r, i) => i)();
+
+    assert(arr2[0] == 0);
+    assert(arr2[1337] == 1337);
 
     auto save = f.handle!(Exception,
         RangePrimitive.save,
