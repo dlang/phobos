@@ -353,17 +353,10 @@ struct File
     private Impl* _p;
     private string _name;
 
-    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @trusted
+    package this(FILE* handle, string name, uint refs = 1, bool isPopened = false) @safe
     {
-        import core.stdc.stdlib : malloc;
-        import std.exception : enforce;
-
-        assert(!_p);
-        _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
-        _p.handle = handle;
-        _p.refs = refs;
-        _p.isPopened = isPopened;
-        _p.orientation = Orientation.unknown;
+        import std.internal.mmm : checkedMalloc;
+        _p = checkedMalloc!Impl(handle, refs, isPopened, Orientation.unknown);
         _name = name;
     }
 
