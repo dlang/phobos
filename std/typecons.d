@@ -43,8 +43,9 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            Kenji Hara
  */
 module std.typecons;
-import std.traits, std.range;
-import std.typetuple : TypeTuple, allSatisfy;
+import std.traits;
+// FIXME
+import std.typetuple; // : TypeTuple, allSatisfy;
 
 debug(Unique) import std.stdio;
 
@@ -67,15 +68,15 @@ public:
     // Deferred in case we get some language support for checking uniqueness.
     version(None)
     /**
-    Allows safe construction of $(D Unique). It creates the resource and 
-    guarantees unique ownership of it (unless $(D T) publishes aliases of 
+    Allows safe construction of $(D Unique). It creates the resource and
+    guarantees unique ownership of it (unless $(D T) publishes aliases of
     $(D this)).
     Note: Nested structs/classes cannot be created.
     Params:
     args = Arguments to pass to $(D T)'s constructor.
     ---
     static class C {}
-    auto u = Unique!(C).create(); 
+    auto u = Unique!(C).create();
     ---
     */
     static Unique!T create(A...)(auto ref A args)
@@ -116,12 +117,12 @@ public:
     /**
     Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
-    Typically used to transfer a $(D Unique) rvalue of derived type to 
+    Typically used to transfer a $(D Unique) rvalue of derived type to
     a $(D Unique) of base type.
     Example:
     ---
     class C : Object {}
-    
+
     Unique!C uc = new C;
     Unique!Object uo = uc.release;
     ---
@@ -133,7 +134,7 @@ public:
         _p = u._p;
         u._p = null;
     }
-    
+
     /// Transfer ownership from a $(D Unique) of a type that is convertible to our type.
     void opAssign(U)(Unique!U u)
     if (is(u.RefT:RefT))
@@ -144,7 +145,7 @@ public:
         _p = u._p;
         u._p = null;
     }
-    
+
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
@@ -227,7 +228,7 @@ unittest
     assert(!u.isEmpty);
     destroy(u);
     assert(deleted == 1);
-    
+
     Unique!C uc = new C;
     static assert(!__traits(compiles, {Unique!Object uo = uc;}));
     Unique!Object uo = new C;
@@ -400,7 +401,7 @@ template Tuple(Specs...)
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
-            import std.string : format;
+            import std.format : format;
 
             decl ~= format("alias _%s = Identity!(field[%s]);", i, i);
             if (name.length != 0)
@@ -437,7 +438,10 @@ template Tuple(Specs...)
         {
             auto lhs = typeof(tup1.field[i]).init;
             auto rhs = typeof(tup2.field[i]).init;
-            auto result = mixin("lhs "~op~" rhs");
+            static if (op == "=")
+                lhs = rhs;
+            else
+                auto result = mixin("lhs "~op~" rhs");
         }
     }));
 
@@ -521,9 +525,12 @@ template Tuple(Specs...)
         /**
          * Constructor taking one value for each field.
          */
-        this(Types values)
+        static if (Types.length > 0)
         {
-            field[] = values[];
+            this(Types values)
+            {
+                field[] = values[];
+            }
         }
 
         /**
@@ -657,47 +664,40 @@ template Tuple(Specs...)
         /**
          * Converts to string.
          */
-        static if (allSatisfy!(isPrintable, Types))
-        string toString()
+        void toString(DG)(scope DG sink)
         {
             enum header = typeof(this).stringof ~ "(",
                  footer = ")",
                  separator = ", ";
-
-            Appender!string w;
-            w.put(header);
-            foreach (i, Unused; Types)
+            sink(header);
+            foreach (i, Type; Types)
             {
                 static if (i > 0)
                 {
-                    w.put(separator);
+                    sink(separator);
                 }
                 // TODO: Change this once toString() works for shared objects.
-                static if (is(Unused == class) && is(Unused == shared))
-                    formattedWrite(w, "%s", field[i].stringof);
+                static if (is(Type == class) && is(typeof(Type.init) == shared))
+                {
+                    sink(Type.stringof);
+                }
                 else
                 {
                     import std.format : FormatSpec, formatElement;
-
-                    FormatSpec!char f;  // "%s"
-                    formatElement(w, field[i], f);
+                    FormatSpec!char f;
+                    formatElement(sink, field[i], f);
                 }
             }
-            w.put(footer);
-            return w.data;
+            sink(footer);
+        }
+
+        string toString()()
+        {
+            import std.conv : to;
+            return this.to!string;
         }
     }
 }
-
-private enum bool isPrintable(T) =
-    is(typeof({
-        import std.format : formattedWrite;
-
-        Appender!string w;
-        formattedWrite(w, "%s", T.init);
-    }));
-
-private alias Identity(alias T) = T;
 
 /**
     Return a copy of a Tuple with its fields in reverse order.
@@ -754,6 +754,7 @@ private template ReverseTupleSpecs(T...)
 
 unittest
 {
+    import std.conv;
     {
         Tuple!(int, "a", int, "b") nosh;
         static assert(nosh.length == 2);
@@ -778,16 +779,23 @@ unittest
         nosh[0] = 5;
         nosh[1] = 0;
         assert(nosh[0] == 5 && nosh[1] == 0);
-        assert(nosh.toString() == "Tuple!(int, real)(5, 0)", nosh.toString());
+        assert(nosh.to!string == "Tuple!(int, real)(5, 0)", nosh.to!string);
         Tuple!(int, int) yessh;
         nosh = yessh;
+    }
+    {
+        class A {}
+        Tuple!(int, shared A) nosh;
+        nosh[0] = 5;
+        assert(nosh[0] == 5 && nosh[1] is null);
+        assert(nosh.to!string == "Tuple!(int, shared(A))(5, shared(A))");
     }
     {
         Tuple!(int, string) t;
         t[0] = 10;
         t[1] = "str";
         assert(t[0] == 10 && t[1] == "str");
-        assert(t.toString() == `Tuple!(int, string)(10, "str")`, t.toString());
+        assert(t.to!string == `Tuple!(int, string)(10, "str")`, t.to!string);
     }
     {
         Tuple!(int, "a", double, "b") x;
@@ -862,7 +870,7 @@ unittest
         static struct R
         {
             Tuple!(int, int) _front;
-            @property ref Tuple!(int, int) front() { return _front;  }
+            @property ref Tuple!(int, int) front() return { return _front;  }
             @property bool empty() { return _front[0] >= 10; }
             void popFront() { ++_front[0]; }
         }
@@ -1074,22 +1082,113 @@ unittest
     static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
 }
 
+// Bugzilla 13837
+unittest
+{
+    // New behaviour, named arguments.
+    static assert(is(
+        typeof(tuple!("x")(1)) == Tuple!(int, "x")));
+    static assert(is(
+        typeof(tuple!("x")(1.0)) == Tuple!(double, "x")));
+    static assert(is(
+        typeof(tuple!("x")("foo")) == Tuple!(string, "x")));
+    static assert(is(
+        typeof(tuple!("x", "y")(1, 2.0)) == Tuple!(int, "x", double, "y")));
+
+    auto a = tuple!("a", "b", "c")("1", 2, 3.0f);
+    static assert(is(typeof(a.a) == string));
+    static assert(is(typeof(a.b) == int));
+    static assert(is(typeof(a.c) == float));
+
+    // Old behaviour, but with explicit type parameters.
+    static assert(is(
+        typeof(tuple!(int, double)(1, 2.0)) == Tuple!(int, double)));
+    static assert(is(
+        typeof(tuple!(const int)(1)) == Tuple!(const int)));
+    static assert(is(
+        typeof(tuple()) == Tuple!()));
+
+    // Nonsensical behaviour
+    static assert(!__traits(compiles, tuple!(1)(2)));
+    static assert(!__traits(compiles, tuple!("x")(1, 2)));
+    static assert(!__traits(compiles, tuple!("x", "y")(1)));
+    static assert(!__traits(compiles, tuple!("x")()));
+    static assert(!__traits(compiles, tuple!("x", int)(2)));
+}
+
+unittest
+{
+    class C {}
+    Tuple!(Rebindable!(const C)) a;
+    Tuple!(const C) b;
+    a = b;
+}
+
+@nogc unittest
+{
+    alias T = Tuple!(string, "s");
+    T x;
+    x = T.init;
+}
+
 /**
 Returns a $(D Tuple) object instantiated and initialized according to
 the arguments.
-
-Example:
-----
-auto value = tuple(5, 6.7, "hello");
-assert(value[0] == 5);
-assert(value[1] == 6.7);
-assert(value[2] == "hello");
-----
 */
 
-Tuple!T tuple(T...)(T args)
+template tuple(Names...)
 {
-    return typeof(return)(args);
+    auto tuple(Args...)(Args args)
+    {
+        static if (Names.length == 0)
+        {
+            // No specified names, just infer types from Args...
+            return Tuple!Args(args);
+        }
+        else static if (!is(typeof(Names[0]) : string))
+        {
+            // Names[0] isn't a string, must be explicit types.
+            return Tuple!Names(args);
+        }
+        else
+        {
+            // Names[0] is a string, so must be specifying names.
+            static assert(Names.length == Args.length,
+                "Insufficient number of names given.");
+
+            // Interleave(a, b).and(c, d) == (a, c, b, d)
+            // This is to get the interleaving of types and names for Tuple
+            // e.g. Tuple!(int, "x", string, "y")
+            template Interleave(A...)
+            {
+                template and(B...) if (B.length == 1)
+                {
+                    alias TypeTuple!(A[0], B[0]) and;
+                }
+
+                template and(B...) if (B.length != 1)
+                {
+                    alias TypeTuple!(A[0], B[0],
+                        Interleave!(A[1..$]).and!(B[1..$])) and;
+                }
+            }
+            return Tuple!(Interleave!(Args).and!(Names))(args);
+        }
+    }
+}
+
+///
+unittest
+{
+    auto value = tuple(5, 6.7, "hello");
+    assert(value[0] == 5);
+    assert(value[1] == 6.7);
+    assert(value[2] == "hello");
+
+    // Field names can be provided.
+    auto entry = tuple!("index", "value")(4, "Hello");
+    assert(entry.index == 4);
+    assert(entry.value == "Hello");
 }
 
 /**
@@ -1108,6 +1207,7 @@ template isTuple(T)
     }
 }
 
+///
 unittest
 {
     static assert(isTuple!(Tuple!()));
@@ -1115,7 +1215,10 @@ unittest
     static assert(isTuple!(Tuple!(int, real, string)));
     static assert(isTuple!(Tuple!(int, "x", real, "y")));
     static assert(isTuple!(Tuple!(int, Tuple!(real), string)));
+}
 
+unittest
+{
     static assert(isTuple!(const Tuple!(int)));
     static assert(isTuple!(immutable Tuple!(int)));
 
@@ -1126,6 +1229,50 @@ unittest
     static assert(!isTuple!(S));
 }
 
+// used by both Rebindable and UnqualRef
+private mixin template RebindableCommon(T, U, alias This)
+    if (is(T == class) || is(T == interface))
+{
+    private union
+    {
+        T original;
+        U stripped;
+    }
+
+    @trusted pure nothrow @nogc
+    {
+        void opAssign(T another)
+        {
+            stripped = cast(U) another;
+        }
+
+        void opAssign(typeof(this) another)
+        {
+            stripped = another.stripped;
+        }
+
+        static if (is(T == const U) && is(T == const shared U))
+        {
+            // safely assign immutable to const / const shared
+            void opAssign(This!(immutable U) another)
+            {
+                stripped = another.stripped;
+            }
+        }
+
+        this(T initializer)
+        {
+            opAssign(initializer);
+        }
+
+        @property ref inout(T) get() inout
+        {
+            return original;
+        }
+    }
+
+    alias get this;
+}
 
 /**
 $(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
@@ -1163,52 +1310,24 @@ risks usually associated with $(D cast).
  */
 template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
 {
-    static if (!is(T X == const U, U) && !is(T X == immutable U, U))
+    static if (is(T == const U, U) || is(T == immutable U, U))
     {
-        alias Rebindable = T;
-    }
-    else static if (isDynamicArray!T)
-    {
-        alias Rebindable = const(ElementEncodingType!T)[];
+        static if (isDynamicArray!T)
+        {
+            import std.range.primitives : ElementEncodingType;
+            alias Rebindable = const(ElementEncodingType!T)[];
+        }
+        else
+        {
+            struct Rebindable
+            {
+                mixin RebindableCommon!(T, U, Rebindable);
+            }
+        }
     }
     else
     {
-        struct Rebindable
-        {
-            private union
-            {
-                T original;
-                U stripped;
-            }
-            void opAssign(T another) @trusted pure nothrow
-            {
-                stripped = cast(U) another;
-            }
-            void opAssign(Rebindable another) @trusted pure nothrow
-            {
-                stripped = another.stripped;
-            }
-            static if (is(T == const U))
-            {
-                // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another) @trusted pure nothrow
-                {
-                    stripped = another.stripped;
-                }
-            }
-
-            this(T initializer) @safe pure nothrow
-            {
-                opAssign(initializer);
-            }
-
-            @property ref inout(T) get() @trusted inout pure nothrow
-            {
-                return original;
-            }
-
-            alias get this;
-        }
+        alias Rebindable = T;
     }
 }
 
@@ -1236,7 +1355,7 @@ Rebindable!T rebindable(T)(Rebindable!T obj)
 
 unittest
 {
-    interface CI { const int foo(); }
+    interface CI { int foo() const; }
     class C : CI {
       int foo() const { return 42; }
       @property int bar() const { return 23; }
@@ -1318,16 +1437,63 @@ unittest
 }
 
 /**
+    Similar to $(D Rebindable!(T)) but strips all qualifiers from the reference as
+    opposed to just constness / immutability. Primary intended use case is with
+    shared (having thread-local reference to shared class data)
+ */
+template UnqualRef(T)
+    if (is(T == class) || is(T == interface))
+{
+    static if (is(T == const U, U)
+        || is(T == immutable U, U)
+        || is(T == shared U, U)
+        || is(T == const shared U, U))
+    {
+        struct UnqualRef
+        {
+            mixin RebindableCommon!(T, U, UnqualRef);
+        }
+    }
+    else
+    {
+        alias UnqualRef = T;
+    }
+}
+
+///
+unittest
+{
+    class Data {}
+
+    static shared(Data) a;
+    static UnqualRef!(shared Data) b;
+
+    import core.thread;
+
+    auto thread = new core.thread.Thread({
+        a = new shared Data();
+        b = new shared Data();
+    });
+
+    thread.start();
+    thread.join();
+
+    assert(a !is null);
+    assert(b is null);
+}
+
+unittest
+{
+    class C { }
+    alias T = UnqualRef!(const shared C);
+    static assert (is(typeof(T.stripped) == C));
+}
+
+
+
+/**
   Order the provided members to minimize size while preserving alignment.
   Returns a declaration to be mixed in.
-
-Example:
----
-struct Banner {
-  mixin(alignForSize!(byte[6], double)(["name", "height"]));
-}
----
-
   Alignment is not always optimal for 80-bit reals, nor for structs declared
   as align(1).
 */
@@ -1359,6 +1525,14 @@ string alignForSize(E...)(string[] names...)
     return s;
 }
 
+///
+unittest
+{
+    struct Banner {
+        mixin(alignForSize!(byte[6], double)(["name", "height"]));
+    }
+}
+
 unittest
 {
     enum x = alignForSize!(int[], char[3], short, double[5])("x", "y","z", "w");
@@ -1382,15 +1556,6 @@ the absence of a value. If default constructed, a $(D
 Nullable!T) object starts in the null state. Assigning it renders it
 non-null. Calling $(D nullify) can nullify it again.
 
-Example:
-----
-Nullable!int a;
-assert(a.isNull);
-a = 5;
-assert(!a.isNull);
-assert(a == 5);
-----
-
 Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
 struct Nullable(T)
@@ -1405,6 +1570,23 @@ Constructor initializing $(D this) with $(D value).
     {
         _value = value;
         _isNull = false;
+    }
+
+    template toString()
+    {
+        import std.format : FormatSpec, formatValue;
+        // Needs to be a template because of DMD @@BUG@@ 13737.
+        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        {
+            if (isNull)
+            {
+                sink.formatValue("Nullable.null", fmt);
+            }
+            else
+            {
+                sink.formatValue(_value, fmt);
+            }
+        }
     }
 
 /**
@@ -1450,6 +1632,16 @@ Implicitly converts to $(D T).
 $(D this) must not be in the null state.
  */
     alias get this;
+}
+
+///
+unittest
+{
+    Nullable!int a;
+    assert(a.isNull);
+    a = 5;
+    assert(!a.isNull);
+    assert(a == 5);
 }
 
 unittest
@@ -1686,6 +1878,43 @@ unittest
     import std.datetime;
     Nullable!SysTime time = SysTime(0);
 }
+unittest
+{
+    import std.conv: to;
+    import std.array;
+
+    // Bugzilla 10915
+    Appender!string buffer;
+
+    Nullable!int ni;
+    assert(ni.to!string() == "Nullable.null");
+
+    struct Test { string s; }
+    alias NullableTest = Nullable!Test;
+
+    NullableTest nt = Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    NullableTest ntn = Test("null");
+    assert(ntn.to!string() == `Test("null")`);
+
+    class TestToString
+    {
+        double d;
+
+        this (double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    Nullable!TestToString ntts = new TestToString(2.5);
+    assert(ntts.to!string() == "2.5");
+}
 
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
@@ -1706,12 +1935,38 @@ Constructor initializing $(D this) with $(D value).
         _value = value;
     }
 
+    template toString()
+    {
+        import std.format : FormatSpec, formatValue;
+        // Needs to be a template because of DMD @@BUG@@ 13737.
+        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        {
+            if (isNull)
+            {
+                sink.formatValue("Nullable.null", fmt);
+            }
+            else
+            {
+                sink.formatValue(_value, fmt);
+            }
+        }
+    }
+
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
     @property bool isNull() const
     {
-        return _value == nullValue;
+        //Need to use 'is' if T is a nullable type and
+        //nullValue is null, or it's a compiler error
+        static if (is(CommonType!(T, typeof(null)) == T) && nullValue is null)
+        {
+            return _value is nullValue;
+        }
+        else
+        {
+            return _value == nullValue;
+        }
     }
 
 /**
@@ -1840,6 +2095,43 @@ unittest
         c = a;
     }
 }
+unittest
+{
+    import std.conv: to;
+
+    // Bugzilla 10915
+    Nullable!(int, 1) ni = 1;
+    assert(ni.to!string() == "Nullable.null");
+
+    struct Test { string s; }
+    alias NullableTest = Nullable!(Test, Test("null"));
+
+    NullableTest nt = Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    NullableTest ntn = Test("null");
+    assert(ntn.to!string() == "Nullable.null");
+
+    class TestToString
+    {
+        double d;
+
+        this(double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    alias NullableTestToString = Nullable!(TestToString, null);
+
+    NullableTestToString ntts = new TestToString(2.5);
+    assert(ntts.to!string() == "2.5");
+}
+
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
@@ -1857,6 +2149,23 @@ Constructor binding $(D this) with $(D value).
     this(T* value) @safe pure nothrow
     {
         _value = value;
+    }
+
+    template toString()
+    {
+        import std.format : FormatSpec, formatValue;
+        // Needs to be a template because of DMD @@BUG@@ 13737.
+        void toString()(scope void delegate(const(char)[]) sink, FormatSpec!char fmt)
+        {
+            if (isNull)
+            {
+                sink.formatValue("Nullable.null", fmt);
+            }
+            else
+            {
+                sink.formatValue(*_value, fmt);
+            }
+        }
     }
 
 /**
@@ -2012,6 +2321,40 @@ unittest
         c = a;
     }
 }
+unittest
+{
+    import std.conv: to;
+
+    // Bugzilla 10915
+    NullableRef!int nri;
+    assert(nri.to!string() == "Nullable.null");
+
+    struct Test
+    {
+        string s;
+    }
+    NullableRef!Test nt = new Test("test");
+    assert(nt.to!string() == `Test("test")`);
+
+    class TestToString
+    {
+        double d;
+
+        this(double d)
+        {
+            this.d = d;
+        }
+
+        override string toString()
+        {
+            return d.to!string();
+        }
+    }
+    TestToString tts = new TestToString(2.5);
+    NullableRef!TestToString ntts = &tts;
+    assert(ntts.to!string() == "2.5");
+}
+
 
 /**
 $(D BlackHole!Base) is a subclass of $(D Base) which automatically implements
@@ -2059,7 +2402,7 @@ unittest
     {
         interface I_1 { real test(); }
         auto o = new BlackHole!I_1;
-        assert(o.test().isNaN); // NaN
+        assert(o.test().isNaN()); // NaN
     }
     // doc example
     {
@@ -2194,7 +2537,7 @@ string generateLogger(C, alias fun)() @property
     string stmt;
 
     stmt ~= q{ struct Importer { import std.stdio; } };
-    stmt ~= `Importer.writeln$(LPAREN)"Log: ` ~ qname ~ `(", args, ")"$(RPAREN);`;
+    stmt ~= `Importer.writeln("Log: ` ~ qname ~ `(", args, ")");`;
     static if (!__traits(isAbstractFunction, fun))
     {
         static if (is(ReturnType!fun == void))
@@ -2256,7 +2599,7 @@ class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
 
 /*
  * Code-generating stuffs are encupsulated in this helper template so that
- * namespace pollusion, which can cause name confliction with Base's public
+ * namespace pollution, which can cause name confliction with Base's public
  * members, should be minimized.
  */
 private template AutoImplement_Helper(string myName, string baseName,
@@ -2267,30 +2610,15 @@ private static:
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-    // this would be deprecated by std.typelist.Filter
-    template staticFilter(alias pred, lst...)
-    {
-        static if (lst.length > 0)
-        {
-            alias tail = staticFilter!(pred, lst[1 .. $]);
-            //
-            static if (pred!(lst[0]))
-                alias staticFilter = TypeTuple!(lst[0], tail);
-            else
-                alias staticFilter = tail;
-        }
-        else
-            alias staticFilter = TypeTuple!();
-    }
-
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
         template Impl(names...)
         {
+            import std.typetuple : Filter;
             static if (names.length > 0)
             {
-                alias methods = staticFilter!(pred, MemberFunctionsTuple!(C, names[0]));
+                alias methods = Filter!(pred, MemberFunctionsTuple!(C, names[0]));
                 alias next = Impl!(names[1 .. $]);
 
                 static if (methods.length > 0)
@@ -2347,7 +2675,7 @@ private static:
     // overloaded function with the name.
     template INTERNAL_FUNCINFO_ID(string name, size_t i)
     {
-        import std.string : format;
+        import std.format : format;
 
         enum string INTERNAL_FUNCINFO_ID = format("F_%s_%s", name, i);
     }
@@ -2626,7 +2954,7 @@ private static:
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
-    import std.string;
+    import std.format;
 
     enum CONSTRUCTOR_NAME = "__ctor";
 
@@ -2714,7 +3042,7 @@ private static:
     public string generateFunction(
             string myFuncInfo, string name, func... )() @property
     {
-        import std.string : format;
+        import std.format : format;
 
         enum isCtor = (name == CONSTRUCTOR_NAME);
 
@@ -3699,24 +4027,10 @@ autoInit == RefCountedAutoInitialize.no), user code must call either
 $(D refCountedStore.isInitialized) or $(D refCountedStore.ensureInitialized)
 before attempting to access the payload. Not doing so results in null
 pointer dereference.
-
-Example:
-----
-// A pair of an $(D int) and a $(D size_t) - the latter being the
-// reference count - will be dynamically allocated
-auto rc1 = RefCounted!int(5);
-assert(rc1 == 5);
-// No more allocation, add just one extra reference count
-auto rc2 = rc1;
-// Reference semantics
-rc2 = 42;
-assert(rc1 == 42);
-// the pair will be freed when rc1 and rc2 go out of scope
-----
  */
 struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
-if (!is(T == class))
+if (!is(T == class) && !(is(T == interface)))
 {
     /// $(D RefCounted) storage implementation.
     struct RefCountedStore
@@ -3906,6 +4220,21 @@ assert(refCountedStore.isInitialized)).
     alias refCountedPayload this;
 }
 
+///
+unittest
+{
+    // A pair of an $(D int) and a $(D size_t) - the latter being the
+    // reference count - will be dynamically allocated
+    auto rc1 = RefCounted!int(5);
+    assert(rc1 == 5);
+    // No more allocation, add just one extra reference count
+    auto rc2 = rc1;
+    // Reference semantics
+    rc2 = 42;
+    assert(rc1 == 42);
+    // the pair will be freed when rc1 and rc2 go out of scope
+}
+
 unittest
 {
     RefCounted!int* p;
@@ -3991,54 +4320,93 @@ unittest
 
 /**
 Make proxy for $(D a).
-
-Example:
-----
-struct MyInt
-{
-    private int value;
-    mixin Proxy!value;
-
-    this(int n){ value = n; }
-}
-
-MyInt n = 10;
-
-// Enable operations that original type has.
-++n;
-assert(n == 11);
-assert(n * 2 == 22);
-
-void func(int n) { }
-
-// Disable implicit conversions to original type.
-//int x = n;
-//func(n);
-----
  */
 mixin template Proxy(alias a)
 {
-    auto ref opEquals(this X, B)(auto ref B b)
+    static if (is(typeof(this) == class))
     {
-        static if (is(immutable B == immutable typeof(this)))
+        override bool opEquals(Object o)
         {
-            import std.algorithm;
-            static assert(startsWith(a.stringof, "this."));
-            return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+            if (auto b = cast(typeof(this))o)
+            {
+                import std.algorithm : startsWith;
+                static assert(startsWith(a.stringof, "this."));
+                return a == mixin("b."~a.stringof[5..$]); // remove "this."
+            }
+            return false;
         }
-        else
-            return a == b;
-    }
 
-    auto ref opCmp(this X, B)(auto ref B b)
-        if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
+        bool opEquals(T)(T b)
+            if (is(typeof(a):T) || is(typeof(a.opEquals(b))) || is(typeof(b.opEquals(a))))
+        {
+            static if (is(typeof(a.opEquals(b))))
+                return a.opEquals(b);
+            else static if (is(typeof(b.opEquals(a))))
+                return b.opEquals(a);
+            else
+                return a == b;
+        }
+
+        override int opCmp(Object o)
+        {
+            if (auto b = cast(typeof(this))o)
+            {
+                import std.algorithm : startsWith;
+                static assert(startsWith(a.stringof, "this."));  // remove "this."
+                return a < mixin("b."~a.stringof[5..$]) ? -1
+                     : a > mixin("b."~a.stringof[5..$]) ? +1 : 0;
+            }
+            static if (is(typeof(a) == class))
+                return a.opCmp(o);
+            else
+                throw new Exception("Attempt to compare a "~typeid(this).toString~" and a "~typeid(o).toString);
+        }
+
+        int opCmp(T)(auto ref const T b)
+            if (is(typeof(a):T) || is(typeof(a.opCmp(b))) || is(typeof(b.opCmp(a))))
+        {
+            static if (is(typeof(a.opCmp(b))))
+                return a.opCmp(b);
+            else static if (is(typeof(b.opCmp(a))))
+                return -b.opCmp(b);
+            else
+                return a < b ? -1 : a > b ? +1 : 0;
+        }
+
+        override hash_t toHash() const nothrow @trusted
+        {
+            return typeid(typeof(a)).getHash(cast(const void*)&a);
+        }
+    }
+    else
     {
-        static if (is(typeof(a.opCmp(b))))
-            return a.opCmp(b);
-        else static if (is(typeof(b.opCmp(a))))
-            return -b.opCmp(a);
-        else
-            return a < b ? -1 : a > b ? +1 : 0;
+        auto ref opEquals(this X, B)(auto ref B b)
+        {
+            static if (is(immutable B == immutable typeof(this)))
+            {
+                import std.algorithm : startsWith;
+                static assert(startsWith(a.stringof, "this."));
+                return a == mixin("b."~a.stringof[5..$]);   // remove "this."
+            }
+            else
+                return a == b;
+        }
+
+        auto ref opCmp(this X, B)(auto ref B b)
+          if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
+        {
+            static if (is(typeof(a.opCmp(b))))
+                return a.opCmp(b);
+            else static if (is(typeof(b.opCmp(a))))
+                return -b.opCmp(a);
+            else
+                return a < b ? -1 : a > b ? +1 : 0;
+        }
+
+        hash_t toHash() const nothrow @trusted
+        {
+            return typeid(typeof(a)).getHash(cast(const void*)&a);
+        }
     }
 
     auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
@@ -4117,6 +4485,8 @@ mixin template Proxy(alias a)
         }
     }
 
+    import std.traits : isArray;
+
     static if (isArray!(typeof(a)))
     {
         auto opDollar() const { return a.length; }
@@ -4134,6 +4504,32 @@ mixin template Proxy(alias a)
         alias opDollar = a.opDollar;
     }
 }
+
+///
+unittest
+{
+    struct MyInt
+    {
+        private int value;
+        mixin Proxy!value;
+
+        this(int n){ value = n; }
+    }
+
+    MyInt n = 10;
+
+    // Enable operations that original type has.
+    ++n;
+    assert(n == 11);
+    assert(n * 2 == 22);
+
+    void func(int n) { }
+
+    // Disable implicit conversions to original type.
+    //int x = n;
+    //func(n);
+}
+
 unittest
 {
     static struct MyInt
@@ -4227,13 +4623,13 @@ unittest
     {
         int field;
 
-        @property const int val1(){ return field; }
-        @property void val1(int n){ field = n; }
+        @property int val1() const { return field; }
+        @property void val1(int n) { field = n; }
 
-        @property ref int val2(){ return field; }
+        @property ref int val2() { return field; }
 
-        const int func(int x, int y){ return x; }
-        void func1(ref int a){ a = 9; }
+        int func(int x, int y) const { return x; }
+        void func1(ref int a) { a = 9; }
 
         T ifti1(T)(T t) { return t; }
         void ifti2(Args...)(Args args) { }
@@ -4296,6 +4692,120 @@ unittest
     // template member function
     assert(h.tempfunc!int() == 0);
 }
+
+unittest // about Proxy inside a class
+{
+    class MyClass
+    {
+        int payload;
+        mixin Proxy!payload;
+        this(int i){ payload = i; }
+        string opCall(string msg){ return msg; }
+        int pow(int i){ return payload ^^ i; }
+    }
+
+    class MyClass2
+    {
+        MyClass payload;
+        mixin Proxy!payload;
+        this(int i){ payload = new MyClass(i); }
+    }
+
+    class MyClass3
+    {
+        int payload;
+        mixin Proxy!payload;
+        this(int i){ payload = i; }
+    }
+
+    // opEquals
+    Object a = new MyClass(5);
+    Object b = new MyClass(5);
+    Object c = new MyClass2(5);
+    Object d = new MyClass3(5);
+    assert(a == b);
+    assert((cast(MyClass)a) == 5);
+    assert(5 == (cast(MyClass)b));
+    assert(5 == cast(MyClass2)c);
+    assert(a != d);
+
+    assert(c != a);
+    // oops! above line is unexpected, isn't it?
+    // the reason is below.
+    // MyClass2.opEquals knows MyClass but,
+    // MyClass.opEquals doesn't know MyClass2.
+    // so, c.opEquals(a) is true, but a.opEquals(c) is false.
+    // furthermore, opEquals(T) couldn't be invoked.
+    assert((cast(MyClass2)c) != (cast(MyClass)a));
+
+    // opCmp
+    Object e = new MyClass2(7);
+    assert(a < cast(MyClass2)e); // OK. and
+    assert(e > a); // OK, but...
+    // assert(a < e); // RUNTIME ERROR!
+    // assert((cast(MyClass)a) < e); // RUNTIME ERROR!
+    assert(3 < cast(MyClass)a);
+    assert((cast(MyClass2)e) < 11);
+
+    // opCall
+    assert((cast(MyClass2)e)("hello") == "hello");
+
+    // opCast
+    assert((cast(MyClass)(cast(MyClass2)c)) == a);
+    assert((cast(int)(cast(MyClass2)c)) == 5);
+
+    // opIndex
+    class MyClass4
+    {
+        string payload;
+        mixin Proxy!payload;
+        this(string s){ payload = s; }
+    }
+    class MyClass5
+    {
+        MyClass4 payload;
+        mixin Proxy!payload;
+        this(string s){ payload = new MyClass4(s); }
+    }
+    auto f = new MyClass4("hello");
+    assert(f[1] == 'e');
+    auto g = new MyClass5("hello");
+    assert(f[1] == 'e');
+
+    // opSlice
+    assert(f[2..4] == "ll");
+
+    // opUnary
+    assert(-(cast(MyClass2)c) == -5);
+
+    // opBinary
+    assert((cast(MyClass)a) + (cast(MyClass2)c) == 10);
+    assert(5 + cast(MyClass)a == 10);
+
+    // opAssign
+    (cast(MyClass2)c) = 11;
+    assert((cast(MyClass2)c) == 11);
+    (cast(MyClass2)c) = new MyClass(13);
+    assert((cast(MyClass2)c) == 13);
+
+    // opOpAssign
+    assert((cast(MyClass2)c) += 4);
+    assert((cast(MyClass2)c) == 17);
+
+    // opDispatch
+    assert((cast(MyClass2)c).pow(2) == 289);
+
+    // opDollar
+    assert(f[2..$-1] == "ll");
+
+    // toHash
+    int[Object] hash;
+    hash[a] = 19;
+    hash[c] = 21;
+    assert(hash[b] == 19);
+    assert(hash[c] == 21);
+}
+
 unittest
 {
     struct MyInt
@@ -4388,12 +4898,16 @@ alias TypeInt2 = Typedef!int;
 // The two Typedefs are the same type.
 static assert(is(TypeInt1 == TypeInt2));
 
-alias TypeFloat1 = Typedef!(float, float.init, "a");
-alias TypeFloat2 = Typedef!(float, float.init, "b");
+alias MoneyEuros = Typedef!(float, float.init, "euros");
+alias MoneyDollars = Typedef!(float, float.init, "dollars");
 
 // The two Typedefs are _not_ the same type.
-static assert(!is(TypeFloat1 == TypeFloat2));
+static assert(!is(MoneyEuros == MoneyDollars));
 ----
+
+Note: If a library routine cannot handle the Typedef type,
+you can use the $(D TypedefType) template to extract the
+type which the Typedef wraps.
  */
 struct Typedef(T, T init = T.init, string cookie=null)
 {
@@ -4409,7 +4923,57 @@ struct Typedef(T, T init = T.init, string cookie=null)
         this(tdef.Typedef_payload);
     }
 
+    // We need to add special overload for cast(Typedef!X)exp,
+    // thus we can't simply inherit Proxy!Typedef_payload
+    T2 opCast(T2 : Typedef!(T, Unused), this X, T, Unused...)()
+    {
+        return T2(cast(T)Typedef_payload);
+    }
+
+    auto ref opCast(T2, this X)()
+    {
+        return cast(T2)Typedef_payload;
+    }
+
     mixin Proxy!Typedef_payload;
+}
+
+/**
+Get the underlying type which a $(D Typedef) wraps.
+If $(D T) is not a $(D Typedef) it will alias itself to $(D T).
+*/
+template TypedefType(T)
+{
+    static if (is(T : Typedef!Arg, Arg))
+        alias TypedefType = Arg;
+    else
+        alias TypedefType = T;
+}
+
+///
+unittest
+{
+    import std.typecons: Typedef, TypedefType;
+    import std.conv: to;
+
+    alias MyInt = Typedef!int;
+    static assert(is(TypedefType!MyInt == int));
+
+    /// Instantiating with a non-Typedef will return that type
+    static assert(is(TypedefType!int == int));
+
+    string num = "5";
+
+    // extract the needed type
+    MyInt myInt = MyInt( num.to!(TypedefType!MyInt) );
+    assert(myInt == 5);
+
+    // cast to the underlying type to get the value that's being wrapped
+    int x = cast(TypedefType!MyInt)myInt;
+
+    alias MyIntInit = Typedef!(int, 42);
+    static assert(is(TypedefType!MyIntInit == int));
+    static assert(MyIntInit() == 42);
 }
 
 unittest
@@ -4499,6 +5063,76 @@ unittest // Issue 12596
     TD x = TD(1);
     TD y = TD(x);
     assert(x == y);
+}
+
+unittest // about toHash
+{
+    import std.typecons;
+    {
+        alias TD = Typedef!int;
+        int[TD] td;
+        td[TD(1)] = 1;
+        assert(td[TD(1)] == 1);
+    }
+
+    {
+        alias TD = Typedef!(int[]);
+        int[TD] td;
+        td[TD([1,2,3,4])] = 2;
+        assert(td[TD([1,2,3,4])] == 2);
+    }
+
+    {
+        alias TD = Typedef!(int[][]);
+        int[TD] td;
+        td[TD([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])] = 3;
+        assert(td[TD([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])] == 3);
+    }
+
+    {
+        struct MyStruct{ int x; }
+        alias TD = Typedef!MyStruct;
+        int[TD] td;
+        td[TD(MyStruct(10))] = 4;
+        assert(TD(MyStruct(20)) !in td);
+        assert(td[TD(MyStruct(10))] == 4);
+    }
+
+    {
+        static struct MyStruct2
+        {
+            int x;
+            size_t toHash() const nothrow @safe { return x; }
+            bool opEquals(ref const MyStruct2 r) const { return r.x == x; }
+        }
+
+        alias TD = Typedef!MyStruct2;
+        int[TD] td;
+        td[TD(MyStruct2(50))] = 5;
+        assert(td[TD(MyStruct2(50))] == 5);
+    }
+
+    {
+        class MyClass{}
+        alias TD = Typedef!MyClass;
+        int[TD] td;
+        auto c = new MyClass;
+        td[TD(c)] = 6;
+        assert(TD(new MyClass) !in td);
+        assert(td[TD(c)] == 6);
+    }
+}
+
+unittest
+{
+    alias String = Typedef!(char[]);
+    alias CString = Typedef!(const(char)[]);
+    CString cs = "fubar";
+    String s = cast(String)cs;
+    assert(cs == s);
+    char[] s2 = cast(char[])cs;
+    const(char)[] cs2 = cast(const(char)[])s;
+    assert(s2 == cs2);
 }
 
 /**
@@ -4862,8 +5496,11 @@ bool) makes the flag's meaning visible in calls. Each yes/no flag has
 its own type, which makes confusions and mix-ups impossible.
 
 Example:
+
+Code calling $(D getLine) (usually far away from its definition) can't be
+understood without looking at the documentation, even by users familiar with
+the API:
 ----
-// Before
 string getLine(bool keepTerminator)
 {
     ...
@@ -4871,24 +5508,25 @@ string getLine(bool keepTerminator)
     ...
 }
 ...
-// Code calling getLine (usually far away from its definition) can't
-// be understood without looking at the documentation, even by users
-// familiar with the API. Assuming the reverse meaning
-// (i.e. "ignoreTerminator") and inserting the wrong code compiles and
-// runs with erroneous results.
 auto line = getLine(false);
+----
 
-// After
-string getLine(Flag!"KeepTerminator" keepTerminator)
+Assuming the reverse meaning (i.e. "ignoreTerminator") and inserting the wrong
+code compiles and runs with erroneous results.
+
+After replacing the boolean parameter with an instantiation of $(D Flag), code
+calling $(D getLine) can be easily read and understood even by people not
+fluent with the API:
+
+----
+string getLine(Flag!"keepTerminator" keepTerminator)
 {
     ...
     if (keepTerminator) ...
     ...
 }
 ...
-// Code calling getLine can be easily read and understood even by
-// people not fluent with the API.
-auto line = getLine(Flag!"KeepTerminator".yes);
+auto line = getLine(Flag!"keepTerminator".yes);
 ----
 
 Passing categorical data by means of unstructured $(D bool)
@@ -4898,9 +5536,19 @@ kinds of coupling. The author argues citing several studies that
 coupling has a negative effect on code quality. $(D Flag) offers a
 simple structuring method for passing yes/no flags to APIs.
 
-As a perk, the flag's name may be any string and as such can include
-characters not normally allowed in identifiers, such as
-spaces and dashes.
+An alias can be used to reduce the verbosity of the flag's type:
+----
+alias KeepTerminator = Flag!"keepTerminator";
+string getline(KeepTerminator keepTerminator)
+{
+    ...
+    if (keepTerminator) ...
+    ...
+}
+...
+// Code calling getLine can now refer to flag values using the shorter name:
+auto line = getLine(KeepTerminator.yes);
+----
  */
 template Flag(string name) {
     ///
@@ -4944,8 +5592,8 @@ struct No
         enum opDispatch = Flag!name.no;
     }
 }
-//template no(string name) { enum Flag!name no = Flag!name.no; }
 
+///
 unittest
 {
     Flag!"abc" flag1;
@@ -4960,3 +5608,296 @@ unittest
     assert(flag1 == Yes.abc);
 }
 
+/**
+Detect whether an enum is of integral type and has only "flag" values
+(i.e. values with a bit count of exactly 1).
+Additionally, a zero value is allowed for compatibility with enums including
+a "None" value.
+*/
+template isBitFlagEnum(E)
+{
+    static if (is(E Base == enum) && isIntegral!Base)
+    {
+        enum isBitFlagEnum = (E.min >= 0) &&
+        {
+            foreach (immutable flag; EnumMembers!E)
+            {
+                Base value = flag;
+                value &= value - 1;
+                if (value != 0) return false;
+            }
+            return true;
+        }();
+    }
+    else
+    {
+        enum isBitFlagEnum = false;
+    }
+}
+
+///
+@safe pure nothrow unittest
+{
+    enum A
+    {
+        None,
+        A = 1<<0,
+        B = 1<<1,
+        C = 1<<2,
+        D = 1<<3,
+    }
+
+    static assert(isBitFlagEnum!A);
+
+    enum B
+    {
+        A,
+        B,
+        C,
+        D // D == 3
+    }
+
+    static assert(!isBitFlagEnum!B);
+
+    enum C: double
+    {
+        A = 1<<0,
+        B = 1<<1
+    }
+
+    static assert(!isBitFlagEnum!C);
+}
+
+/**
+A typesafe structure for storing combination of enum values.
+
+This template defines a simple struct to represent bitwise OR combinations of
+enum values. It can be used if all the enum values are integral constants with
+a bit count of at most 1, or if the $(D unsafe) parameter is explicitly set to
+Yes.
+This is much safer than using the enum itself to store
+the OR combination, which can produce surprising effects like this:
+----
+enum E
+{
+    A = 1<<0,
+    B = 1<<1
+}
+E e = E.A | E.B;
+// will throw SwitchError
+final switch(e)
+{
+    case E.A:
+        return;
+    case E.B:
+        return;
+}
+----
+*/
+struct BitFlags(E, Flag!"unsafe" unsafe = No.unsafe) if (unsafe || isBitFlagEnum!(E))
+{
+@safe @nogc pure nothrow:
+private:
+    enum isBaseEnumType(T) = is(E == T);
+    alias Base = OriginalType!E;
+    Base mValue;
+    static struct Negation
+    {
+    @safe @nogc pure nothrow:
+    private:
+        Base mValue;
+
+        // Prevent non-copy construction outside the module.
+        @disable this();
+        this(Base value)
+        {
+            mValue = value;
+        }
+    }
+
+public:
+    this(E flag)
+    {
+        this = flag;
+    }
+
+    this(T...)(T flags)
+        if (allSatisfy!(isBaseEnumType, T))
+    {
+        this = flags;
+    }
+
+    bool opCast(B: bool)() const
+    {
+        return mValue != 0;
+    }
+
+    Base opCast(B)() const
+        if (isImplicitlyConvertible!(Base, B))
+    {
+        return mValue;
+    }
+
+    Negation opUnary(string op)() const
+        if (op == "~")
+    {
+        return Negation(~mValue);
+    }
+
+    auto ref opAssign(T...)(T flags)
+        if (allSatisfy!(isBaseEnumType, T))
+    {
+        mValue = 0;
+        foreach (E flag; flags)
+        {
+            mValue |= flag;
+        }
+        return this;
+    }
+
+    auto ref opAssign(E flag)
+    {
+        mValue = flag;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "|")(BitFlags flags)
+    {
+        mValue |= flags.mValue;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "&")(BitFlags  flags)
+    {
+        mValue &= flags.mValue;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "|")(E flag)
+    {
+        mValue |= flag;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "&")(E flag)
+    {
+        mValue &= flag;
+        return this;
+    }
+
+    auto ref opOpAssign(string op: "&")(Negation negatedFlags)
+    {
+        mValue &= negatedFlags.mValue;
+        return this;
+    }
+
+    auto opBinary(string op)(BitFlags flags) const
+        if (op == "|" || op == "&")
+    {
+        BitFlags result = this;
+        result.opOpAssign!op(flags);
+        return result;
+    }
+
+    auto opBinary(string op)(E flag) const
+        if (op == "|" || op == "&")
+    {
+        BitFlags result = this;
+        result.opOpAssign!op(flag);
+        return result;
+    }
+
+    auto opBinary(string op: "&")(Negation negatedFlags) const
+    {
+        BitFlags result = this;
+        result.opOpAssign!op(negatedFlags);
+        return result;
+    }
+
+    auto opBinaryRight(string op)(E flag) const
+        if (op == "|" || op == "&")
+    {
+        return opBinary!op(flag);
+    }
+}
+
+/// BitFlags can be manipulated with the usual operators
+@safe @nogc pure nothrow unittest
+{
+    // You can use such an enum with BitFlags straight away
+    enum Enum
+    {
+        None,
+        A = 1<<0,
+        B = 1<<1,
+        C = 1<<2
+    }
+    static assert(__traits(compiles, BitFlags!Enum));
+
+    // You need to specify the $(D unsafe) parameter for enum with custom values
+    enum UnsafeEnum
+    {
+        A,
+        B,
+        C,
+        D = B|C
+    }
+    static assert(!__traits(compiles, BitFlags!UnsafeEnum));
+    static assert(__traits(compiles, BitFlags!(UnsafeEnum, Yes.unsafe)));
+
+    immutable BitFlags!Enum flags_empty;
+    // A default constructed BitFlags has no value set
+    assert(!(flags_empty & Enum.A) && !(flags_empty & Enum.B) && !(flags_empty & Enum.C));
+
+    // Value can be set with the | operator
+    immutable BitFlags!Enum flags_A = flags_empty | Enum.A;
+
+    // And tested with the & operator
+    assert(flags_A & Enum.A);
+
+    // Which commutes
+    assert(Enum.A & flags_A);
+
+    // BitFlags can be variadically initialized
+    immutable BitFlags!Enum flags_AB = BitFlags!Enum(Enum.A, Enum.B);
+    assert((flags_AB & Enum.A) && (flags_AB & Enum.B) && !(flags_AB & Enum.C));
+
+    // Use the ~ operator for subtracting flags
+    immutable BitFlags!Enum flags_B = flags_AB & ~BitFlags!Enum(Enum.A);
+    assert(!(flags_B & Enum.A) && (flags_B & Enum.B) && !(flags_B & Enum.C));
+
+    // You can use the EnumMembers template to set all flags
+    immutable BitFlags!Enum flags_all = EnumMembers!Enum;
+
+    // use & between BitFlags for intersection
+    immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
+    assert (flags_B == (flags_BC & flags_AB));
+
+    // All the binary operators work in their assignment version
+    BitFlags!Enum temp = flags_empty;
+    temp |= flags_AB;
+    assert(temp == (flags_empty | flags_AB));
+    temp = flags_empty;
+    temp |= Enum.B;
+    assert(temp == (flags_empty | Enum.B));
+    temp = flags_empty;
+    temp &= flags_AB;
+    assert(temp == (flags_empty & flags_AB));
+    temp = flags_empty;
+    temp &= Enum.A;
+    assert(temp == (flags_empty & Enum.A));
+
+    // BitFlags with no value set evaluate to false
+    assert(!flags_empty);
+
+    // BitFlags with at least one value set evaluate to true
+    assert(flags_A);
+
+    // This can be useful to check intersection between BitFlags
+    assert(flags_A & flags_AB);
+    assert(flags_AB & Enum.A);
+
+    // Finally, you can of course get you raw value out of flags
+    auto value = cast(int)flags_A;
+    assert(value == Enum.A);
+}

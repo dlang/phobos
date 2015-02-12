@@ -13,7 +13,7 @@
  *
  * For very large numbers, consider using the $(WEB gmplib.org, GMP library) instead.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Don Clugston
  * Source: $(PHOBOSSRC std/_bigint.d)
  */
@@ -38,42 +38,13 @@ private import std.traits;
  * assignment is cheap, but operations such as x++ will cause heap
  * allocation. (But note that for most bigint operations, heap allocation is
  * inevitable anyway).
-
- Example:
-----------------------------------------------------
-        BigInt a = "9588669891916142";
-        BigInt b = "7452469135154800";
-        auto c = a * b;
-        assert(c == BigInt("71459266416693160362545788781600"));
-        auto d = b * a;
-        assert(d == BigInt("71459266416693160362545788781600"));
-        assert(d == c);
-        d = c * BigInt("794628672112");
-        assert(d == BigInt("56783581982794522489042432639320434378739200"));
-        auto e = c + d;
-        assert(e == BigInt("56783581982865981755459125799682980167520800"));
-        auto f = d + c;
-        assert(f == e);
-        auto g = f - c;
-        assert(g == d);
-        g = f - d;
-        assert(g == c);
-        e = 12345678;
-        g = c + e;
-        auto h = g / b;
-        auto i = g % b;
-        assert(h == a);
-        assert(i == e);
-        BigInt j = "-0x9A56_57f4_7B83_AB78";
-        j ^^= 11;
-----------------------------------------------------
  *
  */
 struct BigInt
 {
 private:
-        BigUint data;     // BigInt adds signed arithmetic to BigUint.
-        bool sign = false;
+    BigUint data;     // BigInt adds signed arithmetic to BigUint.
+    bool sign = false;
 public:
     /// Construct a BigInt from a decimal or hexadecimal string.
     /// The number must be in the form of a D decimal or hex literal:
@@ -163,8 +134,14 @@ public:
         else static if (op=="/")
         {
             assert(y!=0, "Division by zero");
-            static assert(!is(T == long) && !is(T == ulong));
-            data = BigUint.divInt(data, cast(uint)u);
+            static if (T.sizeof <= uint.sizeof)
+            {
+                data = BigUint.divInt(data, cast(uint)u);
+            }
+            else
+            {
+                data = BigUint.divInt(data, u);
+            }
             sign = data.isZero() ? false : sign ^ (y < 0);
         }
         else static if (op=="%")
@@ -177,6 +154,8 @@ public:
             else
             {
                 data = cast(ulong)BigUint.modInt(data, cast(uint)u);
+                if (data.isZero())
+                    sign = false;
             }
             // x%y always has the same sign as x.
             // This is not the same as mathematical mod.
@@ -280,15 +259,36 @@ public:
     }
 
     //
-    int opBinary(string op, T : int)(T y) pure nothrow const
+    auto opBinary(string op, T)(T y) pure nothrow const
         if (op == "%" && isIntegral!T)
     {
         assert(y!=0);
-        uint u = absUnsign(y);
-        int rem = BigUint.modInt(data, u);
-        // x%y always has the same sign as x.
-        // This is not the same as mathematical mod.
-        return sign ? -rem : rem;
+
+        // BigInt % long => long
+        // BigInt % ulong => BigInt
+        // BigInt % other_type => int
+        static if (is(Unqual!T == long) || is(Unqual!T == ulong))
+        {
+            auto r = this % BigInt(y);
+
+            static if (is(Unqual!T == long))
+            {
+                return r.toLong();
+            }
+            else
+            {
+                // return as-is to avoid overflow
+                return r;
+            }
+        }
+        else
+        {
+            uint u = absUnsign(y);
+            int rem = BigUint.modInt(data, u);
+            // x%y always has the same sign as x.
+            // This is not the same as mathematical mod.
+            return sign ? -rem : rem;
+        }
     }
 
     // Commutative operators
@@ -420,7 +420,7 @@ public:
     }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
-    long toLong() pure nothrow const
+    long toLong() pure nothrow const @nogc
     {
         return (sign ? -1 : 1) *
           (data.ulongLength == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
@@ -451,7 +451,7 @@ public:
 
     /** Convert the BigInt to string, passing it to 'sink'.
      *
-     * $(TABLE  The output format is controlled via formatString:
+     * $(TABLE  The output format is controlled via formatString:,
      * $(TR $(TD "d") $(TD  Decimal))
      * $(TR $(TD "x") $(TD  Hexadecimal, lower case))
      * $(TR $(TD "X") $(TD  Hexadecimal, upper case))
@@ -513,20 +513,7 @@ public:
             foreach (i; 0 .. difw)
                 sink(" ");
     }
-/+
-private:
-    /// Convert to a hexadecimal string, with an underscore every
-    /// 8 characters.
-    string toHex()
-    {
-        string buff = data.toHexString(1, '_');
-        if (isNegative())
-            buff[0] = '-';
-        else
-            buff = buff[1..$];
-        return buff;
-    }
-+/
+
     // Implement toHash so that BigInt works properly as an AA key.
     size_t toHash() const @trusted nothrow
     {
@@ -556,6 +543,45 @@ private:
     }
 }
 
+///
+unittest
+{
+    BigInt a = "9588669891916142";
+    BigInt b = "7452469135154800";
+    auto c = a * b;
+    assert(c == BigInt("71459266416693160362545788781600"));
+    auto d = b * a;
+    assert(d == BigInt("71459266416693160362545788781600"));
+    assert(d == c);
+    d = c * BigInt("794628672112");
+    assert(d == BigInt("56783581982794522489042432639320434378739200"));
+    auto e = c + d;
+    assert(e == BigInt("56783581982865981755459125799682980167520800"));
+    auto f = d + c;
+    assert(f == e);
+    auto g = f - c;
+    assert(g == d);
+    g = f - d;
+    assert(g == c);
+    e = 12345678;
+    g = c + e;
+    auto h = g / b;
+    auto i = g % b;
+    assert(h == a);
+    assert(i == e);
+    BigInt j = "-0x9A56_57f4_7B83_AB78";
+    j ^^= 11;
+}
+
+/** This function returns a $(D string) representation of a $(D BigInt).
+
+Params:
+    x = The $(D BigInt) to convert to a decimal $(D string).
+
+Returns:
+    A $(D string) that represents the $(D BigInt) as a decimal number.
+
+*/
 string toDecimalString(const(BigInt) x)
 {
     string outbuff="";
@@ -564,6 +590,15 @@ string toDecimalString(const(BigInt) x)
     return outbuff;
 }
 
+/** This function returns a $(D string) representation of a $(D BigInt).
+
+Params:
+    x = The $(D BigInt) to convert to a hexadecimal $(D string).
+
+Returns:
+    A $(D string) that represents the $(D BigInt) as a hexadecimal  number.
+
+*/
 string toHex(const(BigInt) x)
 {
     string outbuff="";
@@ -572,7 +607,16 @@ string toHex(const(BigInt) x)
     return outbuff;
 }
 
-// Returns the absolute value of x converted to the corresponding unsigned type
+/** Returns the absolute value of x converted to the corresponding unsigned
+type.
+
+Params:
+    x = The integral value to return the absolute value of.
+
+Returns:
+    The absolute value of x.
+
+*/
 Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
 {
     static if (isSigned!T)
@@ -993,4 +1037,100 @@ unittest // 11583
 {
     BigInt x = 0;
     assert((x > 0) == false);
+}
+
+unittest // 13391
+{
+    BigInt x1 = "123456789";
+    BigInt x2 = "123456789123456789";
+    BigInt x3 = "123456789123456789123456789";
+
+    import std.typetuple : TypeTuple;
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    {
+        assert((x1 * T.max) / T.max == x1);
+        assert((x2 * T.max) / T.max == x2);
+        assert((x3 * T.max) / T.max == x3);
+    }
+
+    assert(x1 / -123456789 == -1);
+    assert(x1 / 123456789U == 1);
+    assert(x1 / -123456789L == -1);
+    assert(x1 / 123456789UL == 1);
+    assert(x2 / -123456789123456789L == -1);
+    assert(x2 / 123456789123456789UL == 1);
+
+    assert(x1 / uint.max == 0);
+    assert(x1 / ulong.max == 0);
+    assert(x2 / ulong.max == 0);
+
+    x1 /= 123456789UL;
+    assert(x1 == 1);
+    x2 /= 123456789123456789UL;
+    assert(x2 == 1);
+}
+
+unittest // 13963
+{
+    BigInt x = 1;
+    import std.typetuple : TypeTuple;
+    foreach(Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
+    {
+        assert(is(typeof(x % Int(1)) == int));
+    }
+    assert(is(typeof(x % 1L) == long));
+    assert(is(typeof(x % 1UL) == BigInt));
+
+    auto x1 = BigInt(8);
+    auto x2 = -BigInt(long.min) + 1;
+
+    // long
+    assert(x1 % 2L == 0L);
+    assert(-x1 % 2L == 0L);
+
+    assert(x1 % 3L == 2L);
+    assert(x1 % -3L == 2L);
+    assert(-x1 % 3L == -2L);
+    assert(-x1 % -3L == -2L);
+
+    assert(x1 % 11L == 8L);
+    assert(x1 % -11L == 8L);
+    assert(-x1 % 11L == -8L);
+    assert(-x1 % -11L == -8L);
+
+    // ulong
+    assert(x1 % 2UL == BigInt(0));
+    assert(-x1 % 2UL == BigInt(0));
+
+    assert(x1 % 3UL == BigInt(2));
+    assert(-x1 % 3UL == -BigInt(2));
+
+    assert(x1 % 11UL == BigInt(8));
+    assert(-x1 % 11UL == -BigInt(8));
+
+    assert(x2 % ulong.max == x2);
+    assert(-x2 % ulong.max == -x2);
+}
+
+unittest // 14124
+{
+    auto x = BigInt(-3);
+    x %= 3;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(-3);
+    x %= cast(ushort)3;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(-3);
+    x %= 3L;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(3);
+    x %= -3;
+    assert(!x.isNegative());
+    assert(x.isZero());
 }

@@ -1422,21 +1422,25 @@ assert(fabs(gammaIncompleteCompl(100000, 100001) - 0.49831792109) < 0.0000000000
 }
 
 
+// DAC: These values are Bn / n for n=2,4,6,8,10,12,14.
+immutable real [7] Bn_n  = [
+    1.0L/(6*2), -1.0L/(30*4), 1.0L/(42*6), -1.0L/(30*8),
+    5.0L/(66*10), -691.0L/(2730*12), 7.0L/(6*14) ];
+
 /** Digamma function
 *
 *  The digamma function is the logarithmic derivative of the gamma function.
 *
 *  digamma(x) = d/dx logGamma(x)
 *
+* References:
+*   1. Abramowitz, M., and Stegun, I. A. (1970).
+*      Handbook of mathematical functions. Dover, New York,
+*      pages 258-259, equations 6.3.6 and 6.3.18.
 */
 real digamma(real x)
 {
    // Based on CEPHES, Stephen L. Moshier.
-
-    // DAC: These values are Bn / n for n=2,4,6,8,10,12,14.
-    static immutable real [7] Bn_n  = [
-        1.0L/(6*2), -1.0L/(30*4), 1.0L/(42*6), -1.0L/(30*8),
-        5.0L/(66*10), -691.0L/(2730*12), 7.0L/(6*14) ];
 
     real p, q, nz, s, w, y, z;
     long i, n;
@@ -1503,13 +1507,12 @@ done:
     return y;
 }
 
-version(unittest) import core.stdc.stdio;
 unittest {
     // Exact values
-    assert(digamma(1)== -EULERGAMMA);
+    assert(digamma(1.0)== -EULERGAMMA);
     assert(feqrel(digamma(0.25), -PI/2 - 3* LN2 - EULERGAMMA) >= real.mant_dig-7);
     assert(feqrel(digamma(1.0L/6), -PI/2 *sqrt(3.0L) - 2* LN2 -1.5*log(3.0L) - EULERGAMMA) >= real.mant_dig-7);
-    assert(digamma(-5).isNaN);
+    assert(digamma(-5.0).isNaN());
     assert(feqrel(digamma(2.5), -EULERGAMMA - 2*LN2 + 2.0 + 2.0L/3) >= real.mant_dig-9);
     assert(isIdentical(digamma(NaN(0xABC)), NaN(0xABC)));
 
@@ -1518,6 +1521,53 @@ unittest {
         for (int u=k; u>=1; --u) {
             y += 1.0L/u;
         }
-        assert(feqrel(digamma(k+1), -EULERGAMMA + y) >= real.mant_dig-2);
+        assert(feqrel(digamma(k+1.0), -EULERGAMMA + y) >= real.mant_dig-2);
     }
+}
+
+/** Log Minus Digamma function
+*
+*  logmdigamma(x) = log(x) - digamma(x)
+*
+* References:
+*   1. Abramowitz, M., and Stegun, I. A. (1970).
+*      Handbook of mathematical functions. Dover, New York,
+*      pages 258-259, equations 6.3.6 and 6.3.18.
+*/
+real logmdigamma(real x)
+{
+    if (x <= 0.0)
+    {
+        if (x == 0.0)
+        {
+            return real.infinity;
+        }
+        return real.nan;
+    }
+
+    real s = x;
+    real w = 0.0;
+    while ( s < 10.0 ) {
+        w += 1.0/s;
+        s += 1.0;
+    }
+
+    real y;
+    if ( s < 1.0e17 ) {
+        immutable real z = 1.0/(s * s);
+        y = z * poly(z, Bn_n);
+    } else
+        y = 0.0;
+
+    return x == s ? y + 0.5L/s : (log(x/s) + 0.5L/s + y + w);
+}
+
+unittest {
+    assert(logmdigamma(-5.0).isNaN());
+    assert(isIdentical(logmdigamma(NaN(0xABC)), NaN(0xABC)));
+    assert(logmdigamma(0.0) == real.infinity);
+    for(auto x = 0.01; x < 1.0; x += 0.1)
+        assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
+    for(auto x = 1.0; x < 15.0; x += 1.0)
+        assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
 }

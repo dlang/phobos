@@ -58,7 +58,7 @@
     time as a $(LREF SysTime). To print it, $(D toString) is
     sufficient, but if using $(D toISOString), $(D toISOExtString), or
     $(D toSimpleString), use the corresponding $(D fromISOString),
-    $(D fromISOExtString), or $(D fromISOExtString) to create a
+    $(D fromISOExtString), or $(D fromSimpleString) to create a
     $(LREF SysTime) from the string.
 
 --------------------
@@ -110,49 +110,28 @@ public import core.time;
 import core.exception;
 import core.stdc.time;
 
-import std.array;
-import std.algorithm;
-import std.ascii;
-import std.conv;
 import std.exception;
-import std.file;
-import std.functional;
-import std.math;
-import std.path;
-import std.range;
-import std.stdio;
-import std.string;
-import std.system;
+import std.range.primitives;
 import std.traits;
-import std.typecons;
-import std.utf;
+// FIXME
+import std.functional; //: unaryFun;
 
 version(Windows)
 {
     import core.sys.windows.windows;
-    import std.c.windows.winsock;
+    import core.sys.windows.winsock2;
     import std.windows.registry;
 }
 else version(Posix)
 {
-    import core.sys.posix.arpa.inet;
     import core.sys.posix.stdlib;
-    import core.sys.posix.time;
     import core.sys.posix.sys.time;
 }
 
 version(unittest)
 {
-    import core.stdc.string;
     import std.stdio;
-    import std.typetuple;
 }
-
-//I'd just alias it to indexOf, but
-//http://d.puremagic.com/issues/show_bug.cgi?id=6013 would mean that that would
-//pollute the global namespace. So, for now, I've created an alias which is
-//highly unlikely to conflict with anything that anyone else is doing.
-private alias std.string.indexOf stds_indexOf;
 
 unittest
 {
@@ -425,7 +404,7 @@ public:
         Throws:
             $(LREF DateTimeException) if it fails to get the time.
       +/
-    static @property TickDuration currSystemTick() @safe
+    static @property TickDuration currSystemTick() @safe nothrow
     {
         return TickDuration.currSystemTick;
     }
@@ -517,6 +496,8 @@ private:
   +/
 struct SysTime
 {
+    import std.typecons : Rebindable;
+
 public:
 
     /++
@@ -538,6 +519,7 @@ public:
 
     unittest
     {
+        import std.format : format;
         static void test(DateTime dt, immutable TimeZone tz, long expected)
         {
             auto sysTime = SysTime(dt, tz);
@@ -589,6 +571,7 @@ public:
 
     unittest
     {
+        import std.format : format;
         static void test(DateTime dt, Duration fracSecs, immutable TimeZone tz, long expected)
         {
             auto sysTime = SysTime(dt, fracSecs, tz);
@@ -651,6 +634,8 @@ public:
 
     /+deprecated+/ unittest
     {
+        import std.format : format;
+
         static void test(DateTime dt,
                          FracSec fracSec,
                          immutable TimeZone tz,
@@ -703,6 +688,7 @@ public:
     {
         static void test(Date d, immutable TimeZone tz, long expected)
         {
+            import std.format : format;
             auto sysTime = SysTime(d, tz);
             assert(sysTime._stdTime == expected);
             assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
@@ -741,6 +727,7 @@ public:
     {
         static void test(long stdTime, immutable TimeZone tz)
         {
+            import std.format : format;
             auto sysTime = SysTime(stdTime, tz);
             assert(sysTime._stdTime == stdTime);
             assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
@@ -758,7 +745,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(const ref SysTime rhs) @safe pure nothrow
+    ref SysTime opAssign(const ref SysTime rhs) return @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
@@ -770,7 +757,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(SysTime rhs) @safe pure nothrow
+    ref SysTime opAssign(SysTime rhs) return @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
@@ -798,6 +785,7 @@ public:
 
     unittest
     {
+        import std.range;
         assert(SysTime(DateTime.init, UTC()) == SysTime(0, UTC()));
         assert(SysTime(DateTime.init, UTC()) == SysTime(0));
         assert(SysTime(Date.init, UTC()) == SysTime(0));
@@ -863,6 +851,7 @@ public:
 
     unittest
     {
+        import std.range;
         assert(SysTime(DateTime.init, UTC()).opCmp(SysTime(0, UTC())) == 0);
         assert(SysTime(DateTime.init, UTC()).opCmp(SysTime(0)) == 0);
         assert(SysTime(Date.init, UTC()).opCmp(SysTime(0)) == 0);
@@ -930,8 +919,10 @@ public:
 
     unittest
     {
+        import std.range;
         static void test(SysTime sysTime, long expected)
         {
+            import std.format : format;
             assert(sysTime.year == expected,
                              format("Value given: %s", sysTime));
         }
@@ -1002,6 +993,7 @@ public:
 
     unittest
     {
+        import std.range;
         static void test(SysTime st, int year, in SysTime expected)
         {
             st.year = year;
@@ -1068,6 +1060,7 @@ public:
 
     unittest
     {
+        import std.format : format;
         foreach(st; testSysTimesBC)
         {
             auto msg = format("SysTime: %s", st);
@@ -1126,8 +1119,10 @@ public:
 
     unittest
     {
+        import std.range;
         static void test(SysTime st, int year, in SysTime expected)
         {
+            import std.format : format;
             st.yearBC = year;
             assert(st == expected, format("SysTime: %s", st));
         }
@@ -1198,8 +1193,10 @@ public:
 
     unittest
     {
+        import std.range;
         static void test(SysTime sysTime, Month expected)
         {
+            import std.format : format;
             assert(sysTime.month == expected,
                              format("Value given: %s", sysTime));
         }
@@ -1261,6 +1258,8 @@ public:
 
     unittest
     {
+        import std.range;
+
         static void test(SysTime st, Month month, in SysTime expected)
         {
             st.month = cast(Month)month;
@@ -1354,8 +1353,11 @@ public:
 
     unittest
     {
+        import std.range;
+
         static void test(SysTime sysTime, int expected)
         {
+            import std.format : format;
             assert(sysTime.day == expected,
                              format("Value given: %s", sysTime));
         }
@@ -1418,6 +1420,9 @@ public:
 
     unittest
     {
+        import std.format : format;
+        import std.range;
+
         foreach(day; chain(testDays))
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
@@ -1504,6 +1509,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         static void test(SysTime sysTime, int expected)
         {
             assert(sysTime.hour == expected,
@@ -1578,6 +1586,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         foreach(hour; chain(testHours))
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
@@ -1623,6 +1634,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         static void test(SysTime sysTime, int expected)
         {
             assert(sysTime.minute == expected,
@@ -1700,6 +1714,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         foreach(minute; testMinSecs)
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
@@ -1746,6 +1763,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         static void test(SysTime sysTime, int expected)
         {
             assert(sysTime.second == expected,
@@ -1825,6 +1845,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         foreach(second; testMinSecs)
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
@@ -1878,6 +1901,8 @@ public:
 
     unittest
     {
+        import std.range;
+
         assert(SysTime(0, UTC()).fracSecs == Duration.zero);
         assert(SysTime(1, UTC()).fracSecs == hnsecs(1));
         assert(SysTime(-1, UTC()).fracSecs == hnsecs(9_999_999));
@@ -1966,6 +1991,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         foreach(fracSec; testFracSecs)
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
@@ -2016,6 +2044,9 @@ public:
 
     /+deprecated+/ unittest
     {
+        import std.range;
+        import std.format : format;
+
         static void test(SysTime sysTime, FracSec expected, size_t line = __LINE__)
         {
             if(sysTime.fracSec != expected)
@@ -2103,6 +2134,9 @@ public:
 
     /+deprecated+/ unittest
     {
+        import std.range;
+        import std.format : format;
+
         foreach(fracSec; testFracSecs)
         {
             foreach(st; chain(testSysTimesBC, testSysTimesAD))
@@ -2403,9 +2437,10 @@ public:
 
         version(Posix)
         {
+            import std.utf : toUTFz;
             timeInfo.tm_gmtoff = cast(int)convert!("hnsecs", "seconds")(adjTime - _stdTime);
-            auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName).dup;
-            timeInfo.tm_zone = zone.toUTFz!(const(char)*)();
+            auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName);
+            timeInfo.tm_zone = zone.toUTFz!(char*)();
         }
 
         return timeInfo;
@@ -2413,6 +2448,7 @@ public:
 
     unittest
     {
+        import std.conv : to;
         version(Posix)
         {
             scope(exit) clearTZEnvVar();
@@ -4899,6 +4935,7 @@ public:
     {
         static void testST(SysTime orig, int hours, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
             orig.roll!"hours"(hours);
             if(orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
@@ -5116,6 +5153,7 @@ public:
     {
         static void testST(SysTime orig, int minutes, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
             orig.roll!"minutes"(minutes);
             if(orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
@@ -5326,6 +5364,7 @@ public:
     {
         static void testST(SysTime orig, int seconds, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
             orig.roll!"seconds"(seconds);
             if(orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
@@ -5545,6 +5584,7 @@ public:
     {
         static void testST(SysTime orig, int milliseconds, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
             orig.roll!"msecs"(milliseconds);
             if(orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
@@ -5650,6 +5690,7 @@ public:
     {
         static void testST(SysTime orig, long microseconds, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
             orig.roll!"usecs"(microseconds);
             if(orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
@@ -5779,6 +5820,7 @@ public:
     {
         static void testST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
             orig.roll!"hnsecs"(hnsecs);
             if(orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
@@ -5936,6 +5978,8 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        import std.format : format;
+
         SysTime retval = SysTime(this._stdTime, this._timezone);
 
         static if(is(Unqual!D == Duration))
@@ -6003,6 +6047,7 @@ public:
 
         static void testST(in SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
             auto result = orig + dur!"hnsecs"(hnsecs);
             if(result != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", result, expected), __FILE__, line);
@@ -6153,6 +6198,8 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        import std.format : format;
+
         static if(is(Unqual!D == Duration))
             auto hnsecs = duration.total!"hnsecs";
         else static if(is(Unqual!D == TickDuration))
@@ -6203,6 +6250,8 @@ public:
 
         static void testST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
+
             auto r = orig += dur!"hnsecs"(hnsecs);
             if(orig != expected)
                 throw new AssertError(format("Failed 1. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
@@ -6804,6 +6853,8 @@ public:
     {
         void test(Date date, SysTime st, size_t line = __LINE__)
         {
+            import std.format : format;
+
             if(date.dayOfGregorianCal != st.dayOfGregorianCal)
             {
                 throw new AssertError(format("Date [%s] SysTime [%s]", date.dayOfGregorianCal, st.dayOfGregorianCal),
@@ -7019,6 +7070,8 @@ public:
     {
         void testST(SysTime orig, int day, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
+
             orig.dayOfGregorianCal = day;
             if(orig != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", orig, expected), __FILE__, line);
@@ -7056,6 +7109,8 @@ public:
 
         void testST2(int day, in SysTime expected, size_t line = __LINE__)
         {
+            import std.format : format;
+
             st.dayOfGregorianCal = day;
             if(st != expected)
                 throw new AssertError(format("Failed. actual [%s] != expected [%s]", st, expected), __FILE__, line);
@@ -7665,6 +7720,7 @@ public:
       +/
     string toISOString() @safe const nothrow
     {
+        import std.format : format;
         try
         {
             immutable adjustedTime = adjTime;
@@ -7794,6 +7850,7 @@ public:
       +/
     string toISOExtString() @safe const nothrow
     {
+        import std.format : format;
         try
         {
             immutable adjustedTime = adjTime;
@@ -7927,6 +7984,7 @@ public:
       +/
     string toSimpleString() @safe const nothrow
     {
+        import std.format : format;
         try
         {
             immutable adjustedTime = adjTime;
@@ -8094,10 +8152,15 @@ public:
     static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null) @safe
         if(isSomeString!S)
     {
-        auto dstr = to!dstring(strip(isoString));
-        immutable skipFirst = dstr.startsWith("+", "-") != 0;
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : startsWith, find;
+        import std.format : format;
 
-        auto found = (skipFirst ? dstr[1..$] : dstr).find(".", "Z", "+", "-");
+        auto dstr = to!dstring(strip(isoString));
+        immutable skipFirst = dstr.startsWith('+', '-') != 0;
+
+        auto found = (skipFirst ? dstr[1..$] : dstr).find('.', 'Z', '+', '-');
         auto dateTimeStr = dstr[0 .. $ - found[0].length];
 
         dstring fracSecStr;
@@ -8107,7 +8170,7 @@ public:
         {
             if(found[1] == 1)
             {
-                auto foundTZ = found[0].find("Z", "+", "-");
+                auto foundTZ = found[0].find('Z', '+', '-');
 
                 if(foundTZ[1] != 0)
                 {
@@ -8310,12 +8373,17 @@ public:
     static SysTime fromISOExtString(S)(in S isoExtString, immutable TimeZone tz = null) @safe
         if(isSomeString!(S))
     {
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : countUntil, find;
+        import std.format : format;
+
         auto dstr = to!dstring(strip(isoExtString));
 
-        auto tIndex = dstr.stds_indexOf("T");
+        auto tIndex = dstr.countUntil('T');
         enforce(tIndex != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        auto found = dstr[tIndex + 1 .. $].find(".", "Z", "+", "-");
+        auto found = dstr[tIndex + 1 .. $].find('.', 'Z', '+', '-');
         auto dateTimeStr = dstr[0 .. $ - found[0].length];
 
         dstring fracSecStr;
@@ -8325,7 +8393,7 @@ public:
         {
             if(found[1] == 1)
             {
-                auto foundTZ = found[0].find("Z", "+", "-");
+                auto foundTZ = found[0].find('Z', '+', '-');
 
                 if(foundTZ[1] != 0)
                 {
@@ -8531,12 +8599,17 @@ public:
     static SysTime fromSimpleString(S)(in S simpleString, immutable TimeZone tz = null) @safe
         if(isSomeString!(S))
     {
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : countUntil, find;
+        import std.format : format;
+
         auto dstr = to!dstring(strip(simpleString));
 
-        auto spaceIndex = dstr.stds_indexOf(" ");
+        auto spaceIndex = dstr.countUntil(' ');
         enforce(spaceIndex != -1, new DateTimeException(format("Invalid Simple String: %s", simpleString)));
 
-        auto found = dstr[spaceIndex + 1 .. $].find(".", "Z", "+", "-");
+        auto found = dstr[spaceIndex + 1 .. $].find('.', 'Z', '+', '-');
         auto dateTimeStr = dstr[0 .. $ - found[0].length];
 
         dstring fracSecStr;
@@ -8546,7 +8619,7 @@ public:
         {
             if(found[1] == 1)
             {
-                auto foundTZ = found[0].find("Z", "+", "-");
+                auto foundTZ = found[0].find('Z', '+', '-');
 
                 if(foundTZ[1] != 0)
                 {
@@ -8789,7 +8862,7 @@ private:
 
 /++
     Represents a date in the
-    $(WEB http://en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic Gregorian Calendar)
+    $(WEB en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic Gregorian Calendar)
     ranging from
     32,768 B.C. to 32,767 A.D. Positive years are A.D. Non-positive years are
     B.C.
@@ -9020,6 +9093,8 @@ public:
 
     unittest
     {
+        import std.range;
+
         //Test A.D.
         foreach(gd; chain(testGregDaysBC, testGregDaysAD))
             assert(Date(gd.day) == gd.date);
@@ -9228,6 +9303,8 @@ public:
      +/
     @property ushort yearBC() @safe const pure
     {
+        import std.format : format;
+
         if(isAD)
             throw new DateTimeException(format("Year %s is A.D.", _year));
         return cast(ushort)((_year * -1) + 1);
@@ -9382,6 +9459,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         static void test(Date date, int expected)
         {
             assert(date.day == expected,
@@ -11183,6 +11263,8 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        import std.format : format;
+
         Date retval = this;
 
         static if(is(Unqual!D == Duration))
@@ -11281,6 +11363,8 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        import std.format : format;
+
         static if(is(Unqual!D == Duration))
             immutable days = duration.total!"days";
         else static if(is(Unqual!D == TickDuration))
@@ -11708,6 +11792,8 @@ public:
 
     unittest
     {
+        import std.range;
+
         foreach(year; filter!((a){return !yearIsLeapYear(a);})
                              (chain(testYearsBC, testYearsAD)))
         {
@@ -11865,6 +11951,8 @@ public:
 
     unittest
     {
+        import std.range;
+
         foreach(gd; chain(testGregDaysBC, testGregDaysAD))
             assert(gd.date.dayOfGregorianCal == gd.day);
 
@@ -12229,6 +12317,7 @@ public:
       +/
     string toISOString() @safe const pure nothrow
     {
+        import std.format : format;
         try
         {
             if(_year >= 0)
@@ -12284,6 +12373,7 @@ public:
       +/
     string toISOExtString() @safe const pure nothrow
     {
+        import std.format : format;
         try
         {
             if(_year >= 0)
@@ -12339,6 +12429,7 @@ public:
       +/
     string toSimpleString() @safe const pure nothrow
     {
+        import std.format : format;
         try
         {
             if(_year >= 0)
@@ -12423,6 +12514,12 @@ public:
     static Date fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
+        import std.ascii : isDigit;
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : all, startsWith;
+        import std.format : format;
+
         auto dstr = to!dstring(strip(isoString));
 
         enforce(dstr.length >= 8, new DateTimeException(format("Invalid ISO String: %s", isoString)));
@@ -12436,7 +12533,7 @@ public:
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"),
+            enforce(year.startsWith('-', '+'),
                     new DateTimeException(format("Invalid ISO String: %s", isoString)));
             enforce(all!isDigit(year[1..$]),
                     new DateTimeException(format("Invalid ISO String: %s", isoString)));
@@ -12539,6 +12636,12 @@ public:
     static Date fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!(S))
     {
+        import std.ascii : isDigit;
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : all, startsWith;
+        import std.format : format;
+
         auto dstr = to!dstring(strip(isoExtString));
 
         enforce(dstr.length >= 10, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
@@ -12556,7 +12659,7 @@ public:
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"),
+            enforce(year.startsWith('-', '+'),
                     new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
             enforce(all!isDigit(year[1..$]),
                     new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
@@ -12660,6 +12763,12 @@ public:
     static Date fromSimpleString(S)(in S simpleString) @safe pure
         if(isSomeString!(S))
     {
+        import std.ascii : isDigit;
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : all, startsWith;
+        import std.format : format;
+
         auto dstr = to!dstring(strip(simpleString));
 
         enforce(dstr.length >= 11, new DateTimeException(format("Invalid string format: %s", simpleString)));
@@ -12674,7 +12783,7 @@ public:
 
         if(year.length > 4)
         {
-            enforce(year.startsWith("-") || year.startsWith("+"),
+            enforce(year.startsWith('-', '+'),
                     new DateTimeException(format("Invalid string format: %s", simpleString)));
             enforce(all!isDigit(year[1..$]),
                     new DateTimeException(format("Invalid string format: %s", simpleString)));
@@ -12839,7 +12948,7 @@ private:
         Params:
             days = The number of days to add to this Date.
       +/
-    ref Date _addDays(long days) @safe pure nothrow
+    ref Date _addDays(long days) return @safe pure nothrow
     {
         dayOfGregorianCal = cast(int)(dayOfGregorianCal + days);
         return this;
@@ -13006,6 +13115,7 @@ private:
 
     @safe pure invariant()
     {
+        import std.format : format;
         assert(valid!"months"(_month),
                format("Invariant Failure: year [%s] month [%s] day [%s]", _year, _month, _day));
         assert(valid!"days"(_year, _month, _day),
@@ -13368,6 +13478,8 @@ public:
         if(units == "minutes" ||
            units == "seconds")
     {
+        import std.format : format;
+
         enum memberVarStr = units[0 .. $ - 1];
         value %= 60;
         mixin(format("auto newVal = cast(ubyte)(_%s) + value;", memberVarStr));
@@ -13562,6 +13674,8 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        import std.format : format;
+
         TimeOfDay retval = this;
 
         static if(is(Unqual!D == Duration))
@@ -13654,6 +13768,7 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        import std.format : format;
         static if(is(Unqual!D == Duration))
             immutable hnsecs = duration.total!"hnsecs";
         else static if(is(Unqual!D == TickDuration))
@@ -13762,6 +13877,7 @@ public:
       +/
     string toISOString() @safe const pure nothrow
     {
+        import std.format : format;
         try
             return format("%02d%02d%02d", _hour, _minute, _second);
         catch(Exception e)
@@ -13791,6 +13907,7 @@ public:
       +/
     string toISOExtString() @safe const pure nothrow
     {
+        import std.format : format;
         try
             return format("%02d:%02d:%02d", _hour, _minute, _second);
         catch(Exception e)
@@ -13848,6 +13965,12 @@ public:
     static TimeOfDay fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
+        import std.ascii : isDigit;
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : all;
+        import std.format : format;
+
         auto dstr = to!dstring(strip(isoString));
 
         enforce(dstr.length == 6, new DateTimeException(format("Invalid ISO String: %s", isoString)));
@@ -13950,6 +14073,12 @@ public:
     static TimeOfDay fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!S)
     {
+        import std.ascii : isDigit;
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : all;
+        import std.format : format;
+
         auto dstr = to!dstring(strip(isoExtString));
 
         enforce(dstr.length == 8, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
@@ -14094,7 +14223,7 @@ private:
         Params:
             seconds = The number of seconds to add to this TimeOfDay.
       +/
-    ref TimeOfDay _addSeconds(long seconds) @safe pure nothrow
+    ref TimeOfDay _addSeconds(long seconds) return @safe pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_hour);
@@ -14204,6 +14333,7 @@ private:
 
     @safe pure invariant()
     {
+        import std.format : format;
         assert(_valid(_hour, _minute, _second),
                format("Invariant Failure: hour [%s] minute [%s] second [%s]", _hour, _minute, _second));
     }
@@ -14835,6 +14965,9 @@ public:
 
     unittest
     {
+        import std.range;
+        import std.format : format;
+
         static void test(DateTime dateTime, int expected)
         {
             assert(dateTime.day == expected, format("Value given: %s", dateTime));
@@ -15818,6 +15951,8 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        import std.format : format;
+
         DateTime retval = this;
 
         static if(is(Unqual!D == Duration))
@@ -15914,6 +16049,8 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
+        import std.format : format;
+
         DateTime retval = this;
 
         static if(is(Unqual!D == Duration))
@@ -16512,6 +16649,7 @@ public:
       +/
     string toISOString() @safe const pure nothrow
     {
+        import std.format : format;
         try
             return format("%sT%s", _date.toISOString(), _tod.toISOString());
         catch(Exception e)
@@ -16564,6 +16702,7 @@ public:
       +/
     string toISOExtString() @safe const pure nothrow
     {
+        import std.format : format;
         try
             return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
         catch(Exception e)
@@ -16615,6 +16754,7 @@ public:
       +/
     string toSimpleString() @safe const pure nothrow
     {
+        import std.format : format;
         try
             return format("%s %s", _date.toSimpleString(), _tod.toString());
         catch(Exception e)
@@ -16695,10 +16835,15 @@ public:
     static DateTime fromISOString(S)(in S isoString) @safe pure
         if(isSomeString!S)
     {
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : countUntil;
+        import std.format : format;
+
         immutable dstr = to!dstring(strip(isoString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        auto t = dstr.stds_indexOf('T');
+        auto t = dstr.countUntil('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
@@ -16778,10 +16923,15 @@ public:
     static DateTime fromISOExtString(S)(in S isoExtString) @safe pure
         if(isSomeString!(S))
     {
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : countUntil;
+        import std.format : format;
+
         immutable dstr = to!dstring(strip(isoExtString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        auto t = dstr.stds_indexOf('T');
+        auto t = dstr.countUntil('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
@@ -16859,10 +17009,15 @@ public:
     static DateTime fromSimpleString(S)(in S simpleString) @safe pure
         if(isSomeString!(S))
     {
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : countUntil;
+        import std.format : format;
+
         immutable dstr = to!dstring(strip(simpleString));
 
         enforce(dstr.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
-        auto t = dstr.stds_indexOf(' ');
+        auto t = dstr.countUntil(' ');
 
         enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
 
@@ -16990,7 +17145,7 @@ private:
         Params:
             seconds = The number of seconds to add to this $(LREF DateTime).
       +/
-    ref DateTime _addSeconds(long seconds) @safe pure nothrow
+    ref DateTime _addSeconds(long seconds) return @safe pure nothrow
     {
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_tod._hour);
@@ -17369,7 +17524,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
        dur!"days"(5903));
 --------------------
       +/
-    @property typeof(end - begin) length() const pure nothrow
+    @property auto length() const pure nothrow
     {
         return _end - _begin;
     }
@@ -17836,6 +17991,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
       +/
     Interval intersection(in Interval interval) const
     {
+        import std.format : format;
+
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         auto begin = _begin > interval._begin ? _begin : interval._begin;
@@ -17868,6 +18025,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
       +/
     Interval intersection(in PosInfInterval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         return Interval(_begin > interval._begin ? _begin : interval._begin, _end);
@@ -17897,6 +18056,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).intersection(
       +/
     Interval intersection(in NegInfInterval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         return Interval(_begin, _end < interval._end ? _end : interval._end);
@@ -18011,6 +18172,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
       +/
     Interval merge(in Interval interval) const
     {
+        import std.format : format;
+
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -18044,6 +18207,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
       +/
     PosInfInterval!TP merge(in PosInfInterval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -18074,6 +18239,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).merge(
       +/
     NegInfInterval!TP merge(in NegInfInterval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -18647,6 +18814,7 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
+        import std.format : format;
         try
             return format("[%s - %s)", _begin, _end);
         catch(Exception e)
@@ -20578,6 +20746,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
       +/
     Interval!TP intersection(in Interval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         auto begin = _begin > interval._begin ? _begin : interval._begin;
@@ -20631,6 +20801,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
       +/
     Interval!TP intersection(in NegInfInterval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         return Interval!TP(_begin, interval._end);
@@ -20740,6 +20912,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
       +/
     PosInfInterval merge(in Interval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -21114,6 +21288,7 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
+        import std.format : format;
         try
             return format("[%s - ∞)", _begin);
         catch(Exception e)
@@ -22772,6 +22947,8 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
       +/
     Interval!TP intersection(in Interval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         auto end = _end < interval._end ? _end : interval._end;
@@ -22802,6 +22979,8 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
       +/
     Interval!TP intersection(in PosInfInterval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         return Interval!TP(interval._begin, _end);
@@ -22940,6 +23119,8 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
       +/
     NegInfInterval merge(in Interval!TP interval) const
     {
+        import std.format : format;
+
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -23312,6 +23493,7 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
+        import std.format : format;
         try
             return format("[-∞ - %s)", _end);
         catch(Exception e)
@@ -25161,6 +25343,8 @@ private:
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
+        import std.format : format;
+
         static if(dir == Direction.fwd)
         {
             enforce(newTP > _interval._begin,
@@ -25600,6 +25784,8 @@ private:
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
+        import std.format : format;
+
         enforce(newTP > _interval._begin,
                 new DateTimeException(format("Generated time point is before previous begin: prev [%s] new [%s]",
                                              interval._begin,
@@ -25699,6 +25885,7 @@ unittest
 //Test PosInfIntervalRange's popFront().
 unittest
 {
+    import std.range;
     auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
     auto expected = range.front;
 
@@ -25885,6 +26072,8 @@ private:
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
+        import std.format : format;
+
         enforce(newTP < _interval._end,
                 new DateTimeException(format("Generated time point is before previous end: prev [%s] new [%s]",
                                              interval._end,
@@ -25983,6 +26172,8 @@ unittest
 //Test NegInfIntervalRange's popFront().
 unittest
 {
+    import std.range;
+
     auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
     auto expected = range.front;
 
@@ -26179,7 +26370,42 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         version(Posix)
             return PosixTimeZone.getTimeZone(name);
         else version(Windows)
-            return WindowsTimeZone.getTimeZone(tzDatabaseNameToWindowsTZName(name));
+        {
+            import std.format : format;
+            auto windowsTZName = tzDatabaseNameToWindowsTZName(name);
+            if(windowsTZName != null)
+            {
+                try
+                    return WindowsTimeZone.getTimeZone(windowsTZName);
+                catch(DateTimeException dte)
+                {
+                    auto oldName = _getOldName(windowsTZName);
+                    if(oldName != null)
+                        return WindowsTimeZone.getTimeZone(oldName);
+                    throw dte;
+                }
+            }
+            else
+                throw new DateTimeException(format("%s does not have an equivalent Windows time zone.", name));
+        }
+    }
+
+    // The purpose of this is to handle the case where a Windows time zone is
+    // new and exists on an up-to-date Windows box but does not exist on Windows
+    // boxes which have not been properly updated. The "date added" is included
+    // on the theory that we'll be able to remove them at some point in the
+    // the future once enough time has passed, and that way, we know how much
+    // time has passed.
+    private static string _getOldName(string windowsTZName) @safe pure nothrow
+    {
+        switch(windowsTZName)
+        {
+            case "Belarus Standard Time": return "Kaliningrad Standard Time"; // Added 2014-10-08
+            case "Russia Time Zone 10": return "Magadan Standard Time"; // Added 2014-10-08
+            case "Russia Time Zone 11": return "Magadan Standard Time"; // Added 2014-10-08
+            case "Russia Time Zone 3": return "Russian Standard Time"; // Added 2014-10-08
+            default: return null;
+        }
     }
 
     //Since reading in the time zone files could be expensive, most unit tests
@@ -26187,6 +26413,12 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     //reads a time zone file.
     unittest
     {
+        import std.path : buildPath;
+        import std.file : exists, isFile;
+        import std.conv : to;
+        import std.format : format;
+
+
         version(Posix) scope(exit) clearTZEnvVar();
 
         static immutable(TimeZone) testTZ(string tzName,
@@ -26488,6 +26720,10 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             return PosixTimeZone.getInstalledTZNames(subName);
         else version(Windows)
         {
+            import std.array : appender;
+            import std.algorithm : startsWith, sort;
+            import std.format : format;
+
             auto windowsNames = WindowsTimeZone.getInstalledTZNames();
             auto retval = appender!(string[])();
 
@@ -26496,7 +26732,10 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                 auto tzName = windowsTZNameToTZDatabaseName(winName);
 
                 version(unittest)
+                {
+                    import std.string;
                     assert(tzName !is null, format("TZName which is missing: %s", winName));
+                }
 
                 if(tzName !is null && tzName.startsWith(subName))
                     retval.put(tzName);
@@ -26610,6 +26849,7 @@ public:
     {
         version(Posix)
         {
+            import std.conv : to;
             try
                 return to!string(tzname[0]);
             catch(Exception e)
@@ -26680,6 +26920,7 @@ public:
     {
         version(Posix)
         {
+            import std.conv : to;
             try
                 return to!string(tzname[1]);
             catch(Exception e)
@@ -26936,6 +27177,8 @@ public:
 
     unittest
     {
+        import std.format : format;
+
         assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
         assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
 
@@ -27402,6 +27645,8 @@ private:
       +/
     static string toISOString(Duration utcOffset) @safe pure
     {
+        import std.format : format;
+
         immutable absOffset = abs(utcOffset);
         enforce!DateTimeException(absOffset < dur!"minutes"(1440),
                                     "Offset from UTC must be within range (-24:00 - 24:00).");
@@ -27455,16 +27700,22 @@ private:
     static immutable(SimpleTimeZone) fromISOString(S)(S isoString) @safe pure
         if(isSomeString!S)
     {
+        import std.ascii : isDigit;
+        import std.string : strip;
+        import std.conv : to;
+        import std.algorithm : startsWith, countUntil, all;
+        import std.format : format;
+
         auto dstr = to!dstring(strip(isoString));
 
-        enforce(dstr.startsWith("-") || dstr.startsWith("+"), new DateTimeException("Invalid ISO String"));
+        enforce(dstr.startsWith('-', '+'), new DateTimeException("Invalid ISO String"));
 
-        auto sign = dstr.startsWith("-") ? -1 : 1;
+        auto sign = dstr.startsWith('-') ? -1 : 1;
 
         dstr.popFront();
         enforce(!dstr.empty, new DateTimeException("Invalid ISO String"));
 
-        immutable colon = dstr.stds_indexOf(":");
+        immutable colon = dstr.countUntil(':');
 
         dstring hoursStr;
         dstring minutesStr;
@@ -27646,6 +27897,11 @@ private:
   +/
 final class PosixTimeZone : TimeZone
 {
+    import std.stdio : File;
+    import std.path : buildNormalizedPath, extension;
+    import std.file : isDir, isFile, exists, dirEntries, SpanMode, DirEntry;
+    import std.string : strip, representation;
+    import std.algorithm : countUntil, canFind, startsWith;
 public:
 
     /++
@@ -27809,18 +28065,22 @@ assert(tz.dstName == "PDT");
     //     directory.
     static immutable(PosixTimeZone) getTimeZone(string name, string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
+        import std.algorithm : sort;
+        import std.range : retro;
+        import std.format : format;
+
         name = strip(name);
 
-        enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
+        enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
         immutable file = buildNormalizedPath(tzDatabaseDir, name);
 
-        enforce(file.exists, new DateTimeException(format("File %s does not exist.", file)));
+        enforce(file.exists(), new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
 
         auto tzFile = File(file);
-        immutable gmtZone = file.representation.canFind("GMT");
+        immutable gmtZone = file.representation().canFind("GMT");
 
         try
         {
@@ -28034,7 +28294,7 @@ assert(tz.dstName == "PDT");
                     tempTTInfo.tt_gmtoff = -tempTTInfo.tt_gmtoff;
 
                 auto abbrevChars = tzAbbrevChars[tempTTInfo.tt_abbrind .. $];
-                string abbrev = abbrevChars[0 .. abbrevChars.stds_indexOf("\0")].idup;
+                string abbrev = abbrevChars[0 .. abbrevChars.countUntil('\0')].idup;
 
                 ttInfo = new immutable(TTInfo)(tempTTInfos[i], abbrev);
             }
@@ -28123,12 +28383,20 @@ assert(tz.dstName == "PDT");
       +/
     static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
+        import std.array : appender;
+        import std.algorithm : sort;
+        import std.format : format;
+
         version(Posix)
             subName = strip(subName);
         else version(Windows)
+        {
+            import std.array : replace;
+            import std.path : dirSeparator;
             subName = replace(strip(subName), "/", dirSeparator);
+        }
 
-        enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
+        enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
         auto timezones = appender!(string[])();
@@ -28553,6 +28821,11 @@ else version(Windows)
 {
     final class WindowsTimeZone : TimeZone
     {
+        import std.format : format;
+        import std.conv : to;
+        import std.algorithm : sort;
+        import std.array : appender;
+
     public:
 
         @property override bool hasDST() @safe const nothrow
@@ -28581,6 +28854,8 @@ else version(Windows)
 
         static immutable(WindowsTimeZone) getTimeZone(string name) @trusted
         {
+            import std.utf : toUTF16;
+
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
             foreach (tzKeyName; baseKey.keyNames)
@@ -28888,6 +29163,7 @@ else version(Posix)
     void setTZEnvVar(string tzDatabaseName) @trusted nothrow
     {
         import std.internal.cstring : tempCString;
+        import std.path : buildNormalizedPath;
 
         try
         {
@@ -28949,7 +29225,6 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Africa/Banjul": return "Greenwich Standard Time";
         case "Africa/Bissau": return "Greenwich Standard Time";
         case "Africa/Blantyre": return "South Africa Standard Time";
-        case "Africa/Bogota": return "Line Islands Standard Time";
         case "Africa/Brazzaville": return "W. Central Africa Standard Time";
         case "Africa/Bujumbura": return "South Africa Standard Time";
         case "Africa/Cairo": return "Egypt Standard Time";
@@ -29043,7 +29318,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "America/Glace_Bay": return "Atlantic Standard Time";
         case "America/Godthab": return "Greenland Standard Time";
         case "America/Goose_Bay": return "Atlantic Standard Time";
-        case "America/Grand_Turk": return "Eastern Standard Time";
+        case "America/Grand_Turk": return "SA Western Standard Time";
         case "America/Grenada": return "SA Western Standard Time";
         case "America/Guadeloupe": return "SA Western Standard Time";
         case "America/Guatemala": return "Central America Standard Time";
@@ -29150,7 +29425,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Aden": return "Arab Standard Time";
         case "Asia/Almaty": return "Central Asia Standard Time";
         case "Asia/Amman": return "Jordan Standard Time";
-        case "Asia/Anadyr": return "Magadan Standard Time";
+        case "Asia/Anadyr": return "Russia Time Zone 11";
         case "Asia/Aqtau": return "West Asia Standard Time";
         case "Asia/Aqtobe": return "West Asia Standard Time";
         case "Asia/Ashgabat": return "West Asia Standard Time";
@@ -29162,7 +29437,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Bishkek": return "Central Asia Standard Time";
         case "Asia/Brunei": return "Singapore Standard Time";
         case "Asia/Calcutta": return "India Standard Time";
-        case "Asia/Chita": return "Yakutsk Standard Time";
+        case "Asia/Chita": return "North Asia East Standard Time";
         case "Asia/Choibalsan": return "Ulaanbaatar Standard Time";
         case "Asia/Colombo": return "Sri Lanka Standard Time";
         case "Asia/Damascus": return "Syria Standard Time";
@@ -29177,7 +29452,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Jayapura": return "Tokyo Standard Time";
         case "Asia/Jerusalem": return "Israel Standard Time";
         case "Asia/Kabul": return "Afghanistan Standard Time";
-        case "Asia/Kamchatka": return "Magadan Standard Time";
+        case "Asia/Kamchatka": return "Russia Time Zone 11";
         case "Asia/Karachi": return "Pakistan Standard Time";
         case "Asia/Katmandu": return "Nepal Standard Time";
         case "Asia/Khandyga": return "Yakutsk Standard Time";
@@ -29191,7 +29466,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Manila": return "Singapore Standard Time";
         case "Asia/Muscat": return "Arabian Standard Time";
         case "Asia/Nicosia": return "GTB Standard Time";
-        case "Asia/Novokuznetsk": return "N. Central Asia Standard Time";
+        case "Asia/Novokuznetsk": return "North Asia Standard Time";
         case "Asia/Novosibirsk": return "N. Central Asia Standard Time";
         case "Asia/Omsk": return "N. Central Asia Standard Time";
         case "Asia/Oral": return "West Asia Standard Time";
@@ -29208,7 +29483,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Asia/Seoul": return "Korea Standard Time";
         case "Asia/Shanghai": return "China Standard Time";
         case "Asia/Singapore": return "Singapore Standard Time";
-        case "Asia/Srednekolymsk": return "Magadan Standard Time";
+        case "Asia/Srednekolymsk": return "Russia Time Zone 10";
         case "Asia/Taipei": return "Taipei Standard Time";
         case "Asia/Tashkent": return "West Asia Standard Time";
         case "Asia/Tbilisi": return "Georgian Standard Time";
@@ -29261,6 +29536,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Etc/GMT-11": return "Central Pacific Standard Time";
         case "Etc/GMT-12": return "UTC+12";
         case "Etc/GMT-13": return "Tonga Standard Time";
+        case "Etc/GMT-14": return "Line Islands Standard Time";
         case "Etc/GMT-2": return "South Africa Standard Time";
         case "Etc/GMT-3": return "E. Africa Standard Time";
         case "Etc/GMT-4": return "Arabian Standard Time";
@@ -29297,7 +29573,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Europe/Madrid": return "Romance Standard Time";
         case "Europe/Malta": return "W. Europe Standard Time";
         case "Europe/Mariehamn": return "FLE Standard Time";
-        case "Europe/Minsk": return "Kaliningrad Standard Time";
+        case "Europe/Minsk": return "Belarus Standard Time";
         case "Europe/Monaco": return "W. Europe Standard Time";
         case "Europe/Moscow": return "Russian Standard Time";
         case "Europe/Oslo": return "W. Europe Standard Time";
@@ -29306,7 +29582,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Europe/Prague": return "Central Europe Standard Time";
         case "Europe/Riga": return "FLE Standard Time";
         case "Europe/Rome": return "W. Europe Standard Time";
-        case "Europe/Samara": return "Russian Standard Time";
+        case "Europe/Samara": return "Russia Time Zone 3";
         case "Europe/San_Marino": return "W. Europe Standard Time";
         case "Europe/Sarajevo": return "Central European Standard Time";
         case "Europe/Simferopol": return "Russian Standard Time";
@@ -29350,6 +29626,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
         case "Pacific/Guam": return "West Pacific Standard Time";
         case "Pacific/Honolulu": return "Hawaiian Standard Time";
         case "Pacific/Johnston": return "Hawaiian Standard Time";
+        case "Pacific/Kiritimati": return "Line Islands Standard Time";
         case "Pacific/Kosrae": return "Central Pacific Standard Time";
         case "Pacific/Kwajalein": return "UTC+12";
         case "Pacific/Majuro": return "UTC+12";
@@ -29375,6 +29652,7 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
 
 version(Windows) unittest
 {
+    import std.format : format;
     foreach(tzName; TimeZone.getInstalledTZNames())
         assert(tzDatabaseNameToWindowsTZName(tzName) !is null, format("TZName which failed: %s", tzName));
 }
@@ -29410,6 +29688,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Azores Standard Time": return "Atlantic/Azores";
         case "Bahia Standard Time": return "America/Bahia";
         case "Bangladesh Standard Time": return "Asia/Dhaka";
+        case "Belarus Standard Time": return "Europe/Minsk";
         case "Canada Central Standard Time": return "America/Regina";
         case "Cape Verde Standard Time": return "Atlantic/Cape_Verde";
         case "Caucasus Standard Time": return "Asia/Yerevan";
@@ -29451,7 +29730,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Kamchatka Standard Time": return "Asia/Kamchatka";
         case "Korea Standard Time": return "Asia/Seoul";
         case "Libya Standard Time": return "Africa/Tripoli";
-        case "Line Islands Standard Time": return "Africa/Bogota";
+        case "Line Islands Standard Time": return "Pacific/Kiritimati";
         case "Magadan Standard Time": return "Asia/Magadan";
         case "Mauritius Standard Time": return "Indian/Mauritius";
         // Same as with E. Europe Standard Time.
@@ -29479,6 +29758,9 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
         case "Pakistan Standard Time": return "Asia/Karachi";
         case "Paraguay Standard Time": return "America/Asuncion";
         case "Romance Standard Time": return "Europe/Paris";
+        case "Russia Time Zone 10": return "Asia/Srednekolymsk";
+        case "Russia Time Zone 11": return "Asia/Anadyr";
+        case "Russia Time Zone 3": return "Europe/Samara";
         case "Russian Standard Time": return "Europe/Moscow";
         case "SA Eastern Standard Time": return "America/Cayenne";
         case "SA Pacific Standard Time": return "America/Bogota";
@@ -29515,6 +29797,7 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
 
 version(Windows) unittest
 {
+    import std.format : format;
     foreach(tzName; WindowsTimeZone.getInstalledTZNames())
         assert(windowsTZNameToTZDatabaseName(tzName) !is null, format("TZName which failed: %s", tzName));
 }
@@ -29839,6 +30122,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 ///
 unittest
 {
+    import std.conv : to;
     int a;
     void f0() {}
     void f1() {auto b = a;}
@@ -30026,6 +30310,7 @@ static bool yearIsLeapYear(int year) @safe pure nothrow
 
 unittest
 {
+    import std.format : format;
     foreach(year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
                    2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
     {
@@ -30503,7 +30788,7 @@ unittest
 /++
     The given array of $(D char) or random-access range of $(D char) or
     $(D ubyte) is expected to be in the format specified in
-    $(WEB http://tools.ietf.org/html/rfc5322, RFC 5322) section 3.3 with the
+    $(WEB tools.ietf.org/html/rfc5322, RFC 5322) section 3.3 with the
     grammar rule $(I date-time). It is the date-time format commonly used in
     internet messages such as e-mail and HTTP. The corresponding
     $(LREF SysTime) will be returned.
@@ -30536,6 +30821,7 @@ unittest
   +/
 SysTime parseRFC822DateTime()(in char[] value) @safe
 {
+    import std.string : representation;
     return parseRFC822DateTime(value.representation);
 }
 
@@ -30544,6 +30830,13 @@ SysTime parseRFC822DateTime(R)(R value) @safe
     if(isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
        (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
+    import std.functional : not;
+    import std.ascii : isDigit;
+    import std.typecons : Rebindable;
+    import std.string : capitalize, format;
+    import std.conv : to;
+    import std.algorithm : find, all;
+
     void stripAndCheckLen(R valueBefore, size_t minLen, size_t line = __LINE__)
     {
         value = _stripCFWS(valueBefore);
@@ -30751,6 +31044,8 @@ unittest
 
 version(unittest) void testParse822(alias cr)(string str, SysTime expected, size_t line = __LINE__)
 {
+    import std.string;
+    import std.format : format;
     auto value = cr(str);
     auto result = parseRFC822DateTime(value);
     if(result != expected)
@@ -30768,6 +31063,14 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
 
 unittest
 {
+    import std.algorithm;
+    import std.ascii;
+    import std.format : format;
+    import std.range;
+    import std.string;
+    import std.typecons;
+    import std.typetuple;
+
     static struct Rand3Letters
     {
         enum empty = false;
@@ -30775,7 +31078,6 @@ unittest
         void popFront()
         {
             import std.random;
-            alias std.ascii.letters letters;
             _mon = rndGen.map!(a => letters[a % letters.length])().take(3).array().assumeUnique();
         }
         string _mon;
@@ -30786,7 +31088,7 @@ unittest
                            function(string a){return cast(ubyte[])a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias testParse822!cr test;
         alias testBadParse822!cr testBad;
@@ -31024,12 +31326,20 @@ unittest
             testBad(cast(string)currStr);
             testBad((cast(string)currStr) ~ "                                    ");
         }
-    }
+    }();
 }
 
 // Obsolete Format per section 4.3 of RFC 5322.
 unittest
 {
+    import std.algorithm;
+    import std.ascii;
+    import std.format : format;
+    import std.range;
+    import std.string;
+    import std.typecons;
+    import std.typetuple;
+
     auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
     auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
     auto std3 = SysTime(DateTime(1912, 12, 21, 13, 14, 15), UTC());
@@ -31043,7 +31353,7 @@ unittest
                            function(string a){return cast(ubyte[])a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
         alias testParse822!cr test;
         {
@@ -31230,7 +31540,7 @@ unittest
                 assert(collectExceptionMsg!DateTimeException(parseRFC822DateTime(value)) == tooShortMsg);
             }
         }
-    }
+    }();
 }
 
 
@@ -31243,6 +31553,7 @@ unittest
   +/
 bool validTimeUnits(string[] units...) @safe pure nothrow
 {
+    import std.algorithm : canFind;
     foreach(str; units)
     {
         if(!canFind(timeStrings[], str))
@@ -31270,7 +31581,10 @@ bool validTimeUnits(string[] units...) @safe pure nothrow
  +/
 int cmpTimeUnits(string lhs, string rhs) @safe pure
 {
-    auto tstrings = timeStrings.dup;
+    import std.format : format;
+    import std.algorithm : countUntil;
+
+    auto tstrings = timeStrings;
     immutable indexOfLHS = countUntil(tstrings, lhs);
     immutable indexOfRHS = countUntil(tstrings, rhs);
 
@@ -31332,7 +31646,8 @@ template CmpTimeUnits(string lhs, string rhs)
  +/
 private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
 {
-    auto tstrings = timeStrings.dup;
+    import std.algorithm : countUntil;
+    auto tstrings = timeStrings;
     immutable indexOfLHS = countUntil(tstrings, lhs);
     immutable indexOfRHS = countUntil(tstrings, rhs);
 
@@ -31346,6 +31661,11 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
 
 unittest
 {
+    import std.format : format;
+    import std.string;
+    import std.typecons;
+    import std.typetuple;
+
     static string genTest(size_t index)
     {
         auto currUnits = timeStrings[index];
@@ -31435,6 +31755,8 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
        units == "minutes" ||
        units == "seconds")
 {
+    import std.format : format;
+
     static if(units == "months")
     {
         if(!valid!units(value))
@@ -31475,6 +31797,7 @@ void enforceValid(string units)
                  (int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) @safe pure
     if(units == "days")
 {
+    import std.format : format;
     if(!valid!"days"(year, month, day))
         throw new DateTimeException(format("%s is not a valid day in %s in %s", day, month, year), file, line);
 }
@@ -31736,9 +32059,11 @@ unittest
 
 @safe unittest
 {
+    import std.math : isNaN;
+
     @safe static void func(TickDuration td)
     {
-        assert(!td.to!("seconds", real)().isNaN);
+        assert(!td.to!("seconds", real)().isNaN());
     }
 
     auto mt = measureTime!(func)();
@@ -31754,9 +32079,11 @@ unittest
 
 unittest
 {
+    import std.math : isNaN;
+
     static void func(TickDuration td)
     {
-        assert(!td.to!("seconds", real)().isNaN);
+        assert(!td.to!("seconds", real)().isNaN());
     }
 
     auto mt = measureTime!(func)();
@@ -32102,6 +32429,7 @@ unittest
   +/
 string monthToString(Month month) @safe pure
 {
+    import std.format : format;
     assert(month >= Month.jan && month <= Month.dec, format("Invalid month: %s", month));
     return _monthNames[month - Month.jan];
 }
@@ -32134,6 +32462,7 @@ unittest
   +/
 Month monthFromString(string monthStr) @safe pure
 {
+    import std.format : format;
     switch(monthStr)
     {
         case "Jan":
@@ -32189,7 +32518,8 @@ template nextSmallerTimeUnits(string units)
     if(validTimeUnits(units) &&
        timeStrings.front != units)
 {
-    enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings.dup, units) - 1];
+    import std.algorithm : countUntil;
+    enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings, units) - 1];
 }
 
 unittest
@@ -32214,7 +32544,8 @@ template nextLargerTimeUnits(string units)
     if(validTimeUnits(units) &&
        timeStrings.back != units)
 {
-    enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings.dup, units) + 1];
+    import std.algorithm : countUntil;
+    enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings, units) + 1];
 }
 
 unittest
@@ -32237,6 +32568,7 @@ unittest
   +/
 static string fracSecsToISOString(int hnsecs) @safe pure nothrow
 {
+    import std.format : format;
     assert(hnsecs >= 0);
 
     try
@@ -32290,6 +32622,11 @@ unittest
 static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
     if(isSomeString!S)
 {
+    import std.ascii : isDigit;
+    import std.string : representation;
+    import std.conv : to;
+    import std.algorithm : all;
+
     if(isoString.empty)
         return Duration.zero;
 
@@ -32452,9 +32789,14 @@ R _stripCFWS(R)(R range)
 
 unittest
 {
+    import std.algorithm;
+    import std.string;
+    import std.typecons;
+    import std.typetuple;
+
     foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
 
         assert(_stripCFWS(cr("")).empty);
@@ -32542,7 +32884,7 @@ unittest
         assert(equal(_stripCFWS(cr(" \n (hello) \n (hello) \n \n hello")), cr("hello")));
         assert(equal(_stripCFWS(cr(" \n \n (hello)\t\n (hello) \n hello")), cr("hello")));
         assert(equal(_stripCFWS(cr(" \n\t\n\t(hello)\t\n (hello) \n hello")), cr("hello")));
-    }
+    }();
 }
 
 // This is so that we don't have to worry about std.conv.to throwing. It also
@@ -32551,6 +32893,8 @@ unittest
 T _convDigits(T, R)(R str)
     if(isIntegral!T && isSigned!T) // The constraints on R were already covered by parseRFC822DateTime.
 {
+    import std.ascii : isDigit;
+
     assert(!str.empty);
     T num = 0;
     foreach(i; 0 .. str.length)
@@ -32566,6 +32910,8 @@ T _convDigits(T, R)(R str)
 
 unittest
 {
+    import std.conv : to;
+    import std.range;
     foreach(i; chain(iota(0, 101), [250, 999, 1000, 1001, 2345, 9999]))
     {
         scope(failure) writeln(i);
@@ -32745,6 +33091,8 @@ unittest
 
 version(unittest)
 {
+    import std.typecons;
+    import std.algorithm;
     //Variables to help in testing.
     Duration currLocalDiffFromUTC;
     immutable (TimeZone)[] testTZs;
@@ -33027,10 +33375,11 @@ version(unittest)
                                    : TimeZone.getTimeZone("America/Denver");
         immutable ot = otherTZ.utcToTZ(0);
 
-        auto diffs = [0, lt, ot];
-        auto diffAA = [0 : Rebindable!(immutable TimeZone)(UTC()),
-                       lt : Rebindable!(immutable TimeZone)(LocalTime()),
-                       ot : Rebindable!(immutable TimeZone)(otherTZ)];
+        auto diffs = [0L, lt, ot];
+        auto diffAA = [0L : Rebindable!(immutable TimeZone)(UTC())];
+        diffAA[lt] = Rebindable!(immutable TimeZone)(LocalTime());
+        diffAA[ot] = Rebindable!(immutable TimeZone)(otherTZ);
+
         sort(diffs);
         testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
 

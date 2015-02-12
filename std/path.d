@@ -32,11 +32,15 @@
     returned, it is usually a slice of an input string.  If a function
     allocates, this is explicitly mentioned in the documentation.
 
+    Upgrading:
+        $(WEB digitalmars.com/d/1.0/phobos/std_path.html#fnmatch) can
+        be replaced with $(D globMatch).
+
     Authors:
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
         Grzegorz Adam Hankiewicz,
-        Thomas Kühne,
+        Thomas K$(UUML)hne,
         $(WEB erdani.org, Andrei Alexandrescu)
     Copyright:
         Copyright (c) 2000-2014, the authors. All rights reserved.
@@ -50,25 +54,10 @@
 module std.path;
 
 
-import std.algorithm;
-import std.array;
-import std.conv;
-import std.file: getcwd;
-import std.range;
-import std.string;
+// FIXME
+import std.file; //: getcwd;
+import std.range.primitives;
 import std.traits;
-
-version(Posix)
-{
-    import core.exception;
-    import core.stdc.errno;
-    import core.sys.posix.pwd;
-    import core.sys.posix.stdlib;
-    private import core.exception : onOutOfMemoryError;
-}
-
-
-
 
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
@@ -420,6 +409,7 @@ C[] dirName(C)(C[] path)
     //TODO: @safe (BUG 6169) pure nothrow (because of to())
     if (isSomeChar!C)
 {
+    import std.conv : to;
     if (path.empty) return to!(typeof(return))(".");
 
     auto p = rtrimDirSeparators(path);
@@ -924,6 +914,7 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure // TODO: nothrow (because of to())
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
+    import std.conv : to;
     auto i = extSeparatorPos(path);
     if (i == -1)
     {
@@ -1059,6 +1050,7 @@ unittest
 
 unittest // non-documented
 {
+    import std.range;
     // ir() wraps an array in a plain (i.e. non-forward) input range, so that
     // we can test both code paths
     InputRange!(C[]) ir(C)(C[][] p...) { return inputRangeObject(p); }
@@ -1154,7 +1146,10 @@ unittest
     while at the same time resolving current/parent directory
     symbols ($(D ".") and $(D "..")) and removing superfluous
     directory separators.
+    It will return "." if the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
+
+    Using buildNormalizedPath on null paths will always return null.
 
     Note that this function does not resolve symbolic links.
 
@@ -1162,6 +1157,8 @@ unittest
 
     Examples:
     ---
+    assert (buildNormalizedPath("foo", "..") == ".");
+
     version (Posix)
     {
         assert (buildNormalizedPath("/foo/./bar/..//baz/") == "/foo/baz");
@@ -1186,7 +1183,20 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
     if (isSomeChar!C)
 {
-    import std.c.stdlib;
+    import core.stdc.stdlib;
+
+    //Remove empty fields
+    bool allEmpty = true;
+    foreach (ref const(C[]) path ; paths)
+    {
+        if (path !is null)
+        {
+            allEmpty = false;
+            break;
+        }
+    }
+    if (allEmpty) return null;
+
     auto paths2 = new const(C)[][](paths.length);
         //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
 
@@ -1367,7 +1377,14 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     // Return path, including root element and excluding the
     // final dir separator.
     immutable len = (relPart.ptr - fullPath.ptr) + (i > 0 ? i - 1 : 0);
-    fullPath = fullPath[0 .. len];
+    if (len == 0)
+    {
+        fullPath.length = 1;
+        fullPath[0] = '.';
+    }
+    else
+        fullPath = fullPath[0 .. len];
+
     version (Windows)
     {
         // On Windows, if the path is on the form `\\server\share`,
@@ -1384,6 +1401,18 @@ unittest
 {
     assert (buildNormalizedPath("") is null);
     assert (buildNormalizedPath("foo") == "foo");
+    assert (buildNormalizedPath(".") == ".");
+    assert (buildNormalizedPath(".", ".") == ".");
+    assert (buildNormalizedPath("foo", "..") == ".");
+    assert (buildNormalizedPath("", "") is null);
+    assert (buildNormalizedPath("", ".") == ".");
+    assert (buildNormalizedPath(".", "") == ".");
+    assert (buildNormalizedPath(null, "foo") == "foo");
+    assert (buildNormalizedPath("", "foo") == "foo");
+    assert (buildNormalizedPath("", "") == "");
+    assert (buildNormalizedPath("", null) == "");
+    assert (buildNormalizedPath(null, "") == "");
+    assert (buildNormalizedPath!(char)(null, null) == "");
 
     version (Posix)
     {
@@ -1406,6 +1435,15 @@ unittest
         assert (buildNormalizedPath("/foo", "/bar/..", "baz") == "/baz");
         assert (buildNormalizedPath("foo/./bar", "../../", "../baz") == "../baz");
         assert (buildNormalizedPath("/foo/./bar", "../../baz") == "/baz");
+
+        assert (buildNormalizedPath("foo", "", "bar") == "foo/bar");
+        assert (buildNormalizedPath("foo", null, "bar") == "foo/bar");
+
+        //Curent dir path
+        assert (buildNormalizedPath("./") == ".");
+        assert (buildNormalizedPath("././") == ".");
+        assert (buildNormalizedPath("./foo/..") == ".");
+        assert (buildNormalizedPath("foo/..") == ".");
     }
     else version (Windows)
     {
@@ -1452,6 +1490,15 @@ unittest
         assert (buildNormalizedPath(`c:\foo`, `bar\baz\`) == `c:\foo\bar\baz`);
         assert (buildNormalizedPath(`c:\foo`, `bar/..`) == `c:\foo`);
         assert (buildNormalizedPath(`\\server\share\foo`, `..\bar`) == `\\server\share\bar`);
+
+        assert (buildNormalizedPath("foo", "", "bar") == `foo\bar`);
+        assert (buildNormalizedPath("foo", null, "bar") == `foo\bar`);
+
+        //Curent dir path
+        assert (buildNormalizedPath(`.\`) == ".");
+        assert (buildNormalizedPath(`.\.\`) == ".");
+        assert (buildNormalizedPath(`.\foo\..`) == ".");
+        assert (buildNormalizedPath(`foo\..`) == ".");
     }
     else static assert (0);
 }
@@ -1737,6 +1784,7 @@ unittest
     // equal2 verifies that the range is the same both ways, i.e.
     // through front/popFront and back/popBack.
     import std.range;
+    import std.algorithm;
     bool equal2(R1, R2)(R1 r1, R2 r2)
     {
         static assert (isBidirectionalRange!R1);
@@ -2384,6 +2432,7 @@ bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
 in
 {
     // Verify that pattern[] is valid
+    import std.algorithm : balancedParens;
     assert(balancedParens(pattern, '[', ']', 0));
     assert(balancedParens(pattern, '{', '}', 0));
 }
@@ -2573,7 +2622,7 @@ bool isValidFilename(R)(R filename)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
-    import core.stdc.stdio;
+    import core.stdc.stdio : FILENAME_MAX;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
     foreach (c; filename)
     {
@@ -2618,6 +2667,7 @@ bool isValidFilename(R)(R filename)
 
 unittest
 {
+    import std.conv;
     auto valid = ["foo"];
     auto invalid = ["", "foo\0bar", "foo/bar"];
     auto pfdep = [`foo\bar`, "*.txt"];
@@ -2846,6 +2896,9 @@ string expandTilde(string inputPath)
     {
         import core.stdc.string : strlen;
         import core.stdc.stdlib : getenv, malloc, free;
+        import core.exception : onOutOfMemoryError;
+        import core.sys.posix.pwd : passwd, getpwnam_r;
+        import core.stdc.errno : errno, ERANGE;
 
         /*  Joins a path from a C string to the remainder of path.
 
@@ -2901,12 +2954,14 @@ string expandTilde(string inputPath)
             }
             else
             {
+                import std.string : indexOf;
+
                 assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
                 assert(path[0] == '~');
 
                 // Extract username, searching for path separator.
                 string username;
-                auto last_char = std.string.indexOf(path, dirSeparator[0]);
+                auto last_char = indexOf(path, dirSeparator[0]);
 
                 if (last_char == -1)
                 {

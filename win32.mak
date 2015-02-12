@@ -38,13 +38,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w
+DFLAGS=-O -release -w -dip25
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w
+UDFLAGS=-O -w -dip25
 
 ## C compiler
 
@@ -61,7 +61,7 @@ DMD=dmd
 ## Location of where to write the html documentation files
 
 DOCSRC = ../dlang.org
-STDDOC = $(DOCSRC)/std.ddoc
+STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc project.ddoc
 
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
@@ -108,52 +108,54 @@ SRC_STD_1_HEAVY= std\stdio.d std\stdiobase.d \
 	std\string.d std\format.d \
 	std\file.d
 
-SRC_STD_2_HEAVY= std\range.d
-
 SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\utf.d
 
 SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
-    std\bitmanip.d std\typecons.d \
-    std\uni.d std\base64.d std\ascii.d \
-    std\demangle.d std\uri.d std\mmfile.d std\getopt.d
+	std\bitmanip.d std\typecons.d \
+	std\uni.d std\base64.d std\ascii.d \
+	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
 SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
-    std\encoding.d std\xml.d \
-    std\random.d \
-    std\exception.d \
-    std\compiler.d \
-    std\system.d std\concurrency.d
+	std\encoding.d std\xml.d \
+	std\random.d \
+	std\exception.d \
+	std\compiler.d \
+	std\system.d std\concurrency.d
 
 SRC_STD_3b= std\datetime.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
-    std\digest\ripemd.d std\digest\digest.d
-    
+	std\digest\ripemd.d std\digest\digest.d
+
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
     std\container\dlist.d std\container\rbtree.d std\container\slist.d \
     std\container\util.d std\container\package.d
-    
+
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
-SRC_STD_5_HEAVY= std\algorithm.d
+SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
+	std\algorithm\iteration.d std\algorithm\mutation.d \
+	std\algorithm\searching.d std\algorithm\setops.d \
+	std\algorithm\sorting.d
+
+SRC_STD_5_HEAVY= $(SRC_STD_ALGO)
 
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\conv.d std\zip.d std\cstream.d \
-	$(SRC_STD_CONTAINER)
+	$(SRC_STD_CONTAINER) $(SRC_STD_LOGGER)
 
-SRC_STD_REST= std\regex.d \
-	std\stdint.d \
+SRC_STD_REST= std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
 	std\process.d
 
-SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
+SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
-	$(SRC_STD_5_HEAVY) $(SRC_STD_6) $(SRC_STD_REST)
+	$(SRC_STD_6) $(SRC_STD_REST)
 
 SRC=	unittest.d index.d
 
@@ -161,7 +163,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
-	std\mmfile.d \
+	std\metastrings.d std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
@@ -170,14 +172,25 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\signals.d std\typetuple.d std\traits.d \
 	std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
-	std\functional.d std\algorithm.d std\array.d std\typecons.d \
+	std\functional.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
-	std\range.d std\stdiobase.d std\parallelism.d \
-	std\regex.d \
+	std\stdiobase.d std\parallelism.d \
 	std\exception.d std\ascii.d
+
+SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
+	std\regex\internal\tests.d std\regex\internal\backtracking.d \
+	std\regex\internal\thompson.d std\regex\internal\kickstart.d \
+	std\regex\internal\generator.d
+
+SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
+	std\range\interfaces.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
 
+SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
+	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
+	std\experimental\logger\package.d
+    
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
 	std\c\locale.d std\c\wcharh.d
@@ -198,7 +211,8 @@ SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 
 SRC_STD_INTERNAL= std\internal\cstring.d std\internal\processinit.d \
 	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
-	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d
+	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d \
+	std\internal\test\dummyrange.d
 
 SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
 
@@ -213,6 +227,7 @@ SRC_ETC=
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
 SRC_TO_COMPILE_NOT_STD= \
+	$(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
@@ -225,6 +240,8 @@ SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_ETC_C)
 
 SRC_TO_COMPILE= $(SRC_STD_ALL) \
+	$(SRC_STD_ALGO) \
+	$(SRC_STD_RANGE) \
 	$(SRC_TO_COMPILE_NOT_STD)
 
 SRC_ZLIB= \
@@ -283,7 +300,13 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\core_sync_mutex.html \
 	$(DOC)\core_sync_rwmutex.html \
 	$(DOC)\core_sync_semaphore.html \
-	$(DOC)\std_algorithm.html \
+	$(DOC)\std_algorithm_package.html \
+	$(DOC)\std_algorithm_comparison.html \
+	$(DOC)\std_algorithm_iteration.html \
+	$(DOC)\std_algorithm_mutation.html \
+	$(DOC)\std_algorithm_searching.html \
+	$(DOC)\std_algorithm_setops.html \
+	$(DOC)\std_algorithm_sorting.html \
 	$(DOC)\std_array.html \
 	$(DOC)\std_ascii.html \
 	$(DOC)\std_base64.html \
@@ -298,6 +321,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_container_rbtree.html \
 	$(DOC)\std_container_slist.html \
 	$(DOC)\std_container_package.html \
+	$(DOC)\std_container_util.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
 	$(DOC)\std_digest_sha.html \
@@ -313,7 +337,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_file.html \
 	$(DOC)\std_format.html \
 	$(DOC)\std_functional.html \
-	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
@@ -325,7 +348,9 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
-	$(DOC)\std_range.html \
+	$(DOC)\std_range_package.html \
+	$(DOC)\std_range_primitives.html \
+	$(DOC)\std_range_interfaces.html \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
@@ -335,7 +360,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_stream.html \
 	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
-	$(DOC)\std_thread.html \
 	$(DOC)\std_traits.html \
 	$(DOC)\std_typecons.html \
 	$(DOC)\std_typetuple.html \
@@ -349,6 +373,11 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_zlib.html \
 	$(DOC)\std_net_isemail.html \
 	$(DOC)\std_net_curl.html \
+	$(DOC)\std_experimental_logger_core.html \
+	$(DOC)\std_experimental_logger_filelogger.html \
+	$(DOC)\std_experimental_logger_multilogger.html \
+	$(DOC)\std_experimental_logger_nulllogger.html \
+	$(DOC)\std_experimental_logger_package.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -372,13 +401,22 @@ $(LIB) : $(SRC_TO_COMPILE) \
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
 		$(ZLIB) $(DRUNTIMELIB)
 
-UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
-		unittest3.obj unittest3a.obj unittest3b.obj unittest4.obj \
-		unittest5.obj unittest6.obj unittest7.obj unittest8.obj
+UNITTEST_OBJS= \
+		unittest1.obj \
+		unittest2.obj \
+		unittest2a.obj \
+		unittest3.obj \
+		unittest3a.obj \
+		unittest3b.obj \
+		unittest4.obj \
+		unittest5.obj \
+		unittest6.obj \
+		unittest7.obj \
+		unittest8.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
@@ -390,7 +428,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
-	unittest
+	.\unittest.exe
 
 #unittest : unittest.exe
 #	unittest
@@ -408,7 +446,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=95 -unittest -main -run std\string.d
 	$(DMD) -cov=71 -unittest -main -run std\format.d
 	$(DMD) -cov=83 -unittest -main -run std\file.d
-	$(DMD) -cov=86 -unittest -main -run std\range.d
+	$(DMD) -cov=86 -unittest -main -run std\range\package.d
 	$(DMD) -cov=95 -unittest -main -run std\array.d
 	$(DMD) -cov=100 -unittest -main -run std\functional.d
 	$(DMD) -cov=96 -unittest -main -run std\path.d
@@ -443,7 +481,13 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=100 -unittest -main -run std\digest\md.d
 	$(DMD) -cov=100 -unittest -main -run std\digest\ripemd.d
 	$(DMD) -cov=75 -unittest -main -run std\digest\digest.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm.d
+	$(DMD) -cov=95 -unittest -main -run std\algorithm\package.d
+	$(DMD) -cov=95 -unittest -main -run std\algorithm\comparison.d
+	$(DMD) -cov=95 -unittest -main -run std\algorithm\iteration.d
+	$(DMD) -cov=95 -unittest -main -run std\algorithm\mutation.d
+	$(DMD) -cov=95 -unittest -main -run std\algorithm\searching.d
+	$(DMD) -cov=95 -unittest -main -run std\algorithm\setops.d
+	$(DMD) -cov=95 -unittest -main -run std\algorithm\sorting.d
 	$(DMD) -cov=83 -unittest -main -run std\variant.d
 	$(DMD) -cov=0  -unittest -main -run std\syserror.d
 	$(DMD) -cov=58 -unittest -main -run std\zlib.d
@@ -460,7 +504,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -cov=0  -unittest -main -run std\zip.d
 	$(DMD) -cov=92 -unittest -main -run std\cstream.d
-	$(DMD) -cov=77 -unittest -main -run std\regex.d
+	$(DMD) -cov=77 -unittest -main -run std\regex\tests.d
 	$(DMD) -cov=92 -unittest -main -run std\json.d
 	$(DMD) -cov=87 -unittest -main -run std\parallelism.d
 	$(DMD) -cov=50 -unittest -main -run std\mathspecial.d
@@ -544,8 +588,26 @@ $(DOC)\core_sync_rwmutex.html : $(STDDOC) $(DRUNTIME)\src\core\sync\rwmutex.d
 $(DOC)\core_sync_semaphore.html : $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_sync_semaphore.html $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d -I$(DRUNTIME)\src\
 
-$(DOC)\std_algorithm.html : $(STDDOC) std\algorithm.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm.html $(STDDOC) std\algorithm.d
+$(DOC)\std_algorithm_package.html : $(STDDOC) std\algorithm\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_package.html $(STDDOC) std\algorithm\package.d
+
+$(DOC)\std_algorithm_comparison.html : $(STDDOC) std\algorithm\comparison.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_comparison.html $(STDDOC) std\algorithm\comparison.d
+
+$(DOC)\std_algorithm_iteration.html : $(STDDOC) std\algorithm\iteration.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_iteration.html $(STDDOC) std\algorithm\iteration.d
+
+$(DOC)\std_algorithm_mutation.html : $(STDDOC) std\algorithm\mutation.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_mutation.html $(STDDOC) std\algorithm\mutation.d
+
+$(DOC)\std_algorithm_searching.html : $(STDDOC) std\algorithm\searching.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_searching.html $(STDDOC) std\algorithm\searching.d
+
+$(DOC)\std_algorithm_setops.html : $(STDDOC) std\algorithm\setops.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_setops.html $(STDDOC) std\algorithm\setops.d
+
+$(DOC)\std_algorithm_sorting.html : $(STDDOC) std\algorithm\sorting.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_sorting.html $(STDDOC) std\algorithm\sorting.d
 
 $(DOC)\std_array.html : $(STDDOC) std\array.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d
@@ -595,6 +657,15 @@ $(DOC)\std_container_util.html : $(STDDOC) std\container\util.d
 $(DOC)\std_container_package.html : $(STDDOC) std\container\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_package.html $(STDDOC) std\container\package.d
 
+$(DOC)\std_range_package.html : $(STDDOC) std\range\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_package.html $(STDDOC) std\range\package.d
+
+$(DOC)\std_range_primitives.html : $(STDDOC) std\range\primitives.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_primitives.html $(STDDOC) std\range\primitives.d
+
+$(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_interfaces.html $(STDDOC) std\range\interfaces.d
+
 $(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
 
@@ -618,9 +689,6 @@ $(DOC)\std_format.html : $(STDDOC) std\format.d
 
 $(DOC)\std_functional.html : $(STDDOC) std\functional.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_functional.html $(STDDOC) std\functional.d
-
-$(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_gc.html $(STDDOC) $(DRUNTIME)\src\core\memory.d
 
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
@@ -655,11 +723,11 @@ $(DOC)\std_process.html : $(STDDOC) std\process.d
 $(DOC)\std_random.html : $(STDDOC) std\random.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
 
-$(DOC)\std_range.html : $(STDDOC) std\range.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range.d
+$(DOC)\std_range.html : $(STDDOC) std\range\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range\package.d
 
-$(DOC)\std_regex.html : $(STDDOC) std\regex.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex.d
+$(DOC)\std_regex.html : $(STDDOC) std\regex\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex\package.d
 
 $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d
@@ -684,9 +752,6 @@ $(DOC)\std_string.html : $(STDDOC) std\string.d
 
 $(DOC)\std_system.html : $(STDDOC) std\system.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_system.html $(STDDOC) std\system.d
-
-$(DOC)\std_thread.html : $(STDDOC) $(DRUNTIME)\src\core\thread.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) -I$(DRUNTIME)\src $(DRUNTIME)\src\core\thread.d
 
 $(DOC)\std_traits.html : $(STDDOC) std\traits.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_traits.html $(STDDOC) std\traits.d
@@ -729,6 +794,21 @@ $(DOC)\std_net_isemail.html : $(STDDOC) std\net\isemail.d
 
 $(DOC)\std_net_curl.html : $(STDDOC) std\net\curl.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_net_curl.html $(STDDOC) std\net\curl.d
+
+$(DOC)\std_experimental_logger_core.html : $(STDDOC) std\experimental\logger\core.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_core.html $(STDDOC) std\experimental\logger\core.d
+
+$(DOC)\std_experimental_logger_multilogger.html : $(STDDOC) std\experimental\logger\multilogger.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_multilogger.html $(STDDOC) std\experimental\logger\multilogger.d
+
+$(DOC)\std_experimental_logger_filelogger.html : $(STDDOC) std\experimental\logger\filelogger.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_filelogger.html $(STDDOC) std\experimental\logger\filelogger.d
+
+$(DOC)\std_experimental_logger_nulllogger.html : $(STDDOC) std\experimental\logger\nulllogger.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_nulllogger.html $(STDDOC) std\experimental\logger\nulllogger.d
+
+$(DOC)\std_experimental_logger_package.html : $(STDDOC) std\experimental\logger\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_package.html $(STDDOC) std\experimental\logger\package.d
 
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
@@ -801,7 +881,8 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
 	$(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS)
+	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO) \
+	$(SRC_STD_LOGGER)
 	del phobos.zip
 	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -819,8 +900,12 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
+	zip32 -u phobos $(SRC_STD_LOGGER)
 	zip32 -u phobos $(SRC_STD_DIGEST)
 	zip32 -u phobos $(SRC_STD_CONTAINER)
+	zip32 -u phobos $(SRC_STD_REGEX)
+	zip32 -u phobos $(SRC_STD_RANGE)
+	zip32 -u phobos $(SRC_STD_ALGO)
 
 phobos.zip : zip
 

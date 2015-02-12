@@ -10,7 +10,6 @@ module std.internal.scopebuffer;
 
 //debug=ScopeBuffer;
 
-private import core.exception;
 private import core.stdc.stdlib : realloc;
 private import std.traits;
 
@@ -100,6 +99,8 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
               !hasElaborateAssign!T)
 {
     import core.stdc.string : memcpy;
+    import core.exception : onOutOfMemoryError;
+
 
     /**************************
      * Initialize with buf to use as scratch buffer space.
@@ -199,7 +200,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
      *  A slice into the temporary buffer that is only
      *  valid until the next put() or ScopeBuffer goes out of scope.
      */
-    @system T[] opSlice(size_t lower, size_t upper)
+    @system inout(T)[] opSlice(size_t lower, size_t upper) inout
         in
         {
             assert(lower <= bufLen);
@@ -212,7 +213,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
     }
 
     /// ditto
-    @system T[] opSlice()
+    @system inout(T)[] opSlice() inout
     {
         assert(used <= bufLen);
         return buf[0 .. used];
@@ -222,7 +223,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
      * Returns:
      *  the element at index i.
      */
-    ref T opIndex(size_t i)
+    ref inout(T) opIndex(size_t i) inout
     {
         assert(i < bufLen);
         return buf[i];
@@ -272,7 +273,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
         newsize |= wasResized;
         void *newBuf = realloc((bufLen & wasResized) ? buf : null, newsize * T.sizeof);
         if (!newBuf)
-            core.exception.onOutOfMemoryError();
+            onOutOfMemoryError();
         if (!(bufLen & wasResized))
         {
             memcpy(newBuf, buf, used * T.sizeof);
@@ -352,6 +353,19 @@ unittest
     assert(s == "hellobettyeven more");
 }
 
+// const
+unittest
+{
+    char[10] tmpbuf = void;
+    auto textbuf = ScopeBuffer!char(tmpbuf);
+    scope(exit) textbuf.free();
+    foreach(i; 0..10) textbuf.put('w');
+    const csb = textbuf;
+    const elem = csb[3];
+    const slice0 = csb[0..5];
+    const slice1 = csb[];
+}
+
 /*********************************
  * This is a slightly simpler way to create a ScopeBuffer instance
  * that uses type deduction.
@@ -391,4 +405,3 @@ unittest
     c.put(s1);
     c.put(s2);
 }
-

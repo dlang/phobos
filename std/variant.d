@@ -54,7 +54,7 @@
  * towards the garbage collector.
  *
  * Copyright: Copyright Andrei Alexandrescu 2007 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB erdani.org, Andrei Alexandrescu)
  * Source:    $(PHOBOSSRC std/_variant.d)
  */
@@ -197,7 +197,7 @@ private:
         ubyte[size] store;
         // conservatively mark the region as pointers
         static if (size >= (void*).sizeof)
-            void* p[size / (void*).sizeof];
+            void*[size / (void*).sizeof] p;
     }
 
     // internals
@@ -437,34 +437,30 @@ private:
             }
 
         case OpID.index:
-            // Added allowed!(...) prompted by a bug report by Chris
-            // Nicholson-Sauls.
-            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void) && allowed!(typeof(A.init[0])))
+            auto result = cast(Variant*) parm;
+            static if (isArray!(A) && !is(Unqual!(typeof(A.init[0])) == void))
             {
                 // array type; input and output are the same VariantN
-                auto result = cast(VariantN*) parm;
                 size_t index = result.convertsTo!(int)
                     ? result.get!(int) : result.get!(size_t);
                 *result = (*zis)[index];
                 break;
             }
-            else static if (isAssociativeArray!(A)
-                    && allowed!(typeof(A.init.values[0])))
+            else static if (isAssociativeArray!(A))
             {
-                auto result = cast(VariantN*) parm;
                 *result = (*zis)[result.get!(typeof(A.init.keys[0]))];
                 break;
             }
             else
             {
-                throw new VariantException(typeid(A), typeid(void[]));
+                throw new VariantException(typeid(A), result[0].type);
             }
 
         case OpID.indexAssign:
+            // array type; result comes first, index comes second
+            auto args = cast(Variant*) parm;
             static if (isArray!(A) && is(typeof((*zis)[0] = (*zis)[0])))
             {
-                // array type; result comes first, index comes second
-                auto args = cast(VariantN*) parm;
                 size_t index = args[1].convertsTo!(int)
                     ? args[1].get!(int) : args[1].get!(size_t);
                 (*zis)[index] = args[0].get!(typeof((*zis)[0]));
@@ -472,14 +468,13 @@ private:
             }
             else static if (isAssociativeArray!(A))
             {
-                auto args = cast(VariantN*) parm;
                 (*zis)[args[1].get!(typeof(A.init.keys[0]))]
                     = args[0].get!(typeof(A.init.values[0]));
                 break;
             }
             else
             {
-                throw new VariantException(typeid(A), typeid(void[]));
+                throw new VariantException(typeid(A), args[0].type);
             }
 
         case OpID.catAssign:
@@ -610,8 +605,6 @@ public:
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof ~ ". Valid types are "
                 ~ AllowedTypes.stringof);
-        // Assignment should destruct previous value
-        fptr(OpID.destruct, &store, null);
 
         static if (is(T : VariantN))
         {
@@ -625,6 +618,12 @@ public:
         }
         else
         {
+            static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
+            {
+                // Assignment should destruct previous value
+                fptr(OpID.destruct, &store, null);
+            }
+
             static if (T.sizeof <= size)
             {
                 // If T is a class we're only copying the reference, so it
@@ -675,22 +674,23 @@ public:
     /** Returns true if and only if the $(D_PARAM VariantN) object
      * holds a valid value (has been initialized with, or assigned
      * from, a valid value).
-     * Example:
-     * ----
-     * Variant a;
-     * assert(!a.hasValue);
-     * Variant b;
-     * a = b;
-     * assert(!a.hasValue); // still no value
-     * a = 5;
-     * assert(a.hasValue);
-     * ----
      */
-
     @property bool hasValue() const pure nothrow
     {
         // @@@BUG@@@ in compiler, the cast shouldn't be needed
         return cast(typeof(&handler!(void))) fptr != &handler!(void);
+    }
+
+    ///
+    unittest
+    {
+        Variant a;
+        assert(!a.hasValue);
+        Variant b;
+        a = b;
+        assert(!a.hasValue); // still no value
+        a = 5;
+        assert(a.hasValue);
     }
 
     /**
@@ -699,15 +699,6 @@ public:
      * value. Otherwise, returns $(D_PARAM null). In cases
      * where $(D_PARAM T) is statically disallowed, $(D_PARAM
      * peek) will not compile.
-     *
-     * Example:
-     * ----
-     * Variant a = 5;
-     * auto b = a.peek!(int);
-     * assert(b !is null);
-     * *b = 6;
-     * assert(a == 6);
-     * ----
      */
     @property inout(T)* peek(T)() inout
     {
@@ -720,6 +711,16 @@ public:
             return cast(inout T*)&store;
         else
             return *cast(inout T**)&store;
+    }
+
+    ///
+    unittest
+    {
+        Variant a = 5;
+        auto b = a.peek!(int);
+        assert(b !is null);
+        *b = 6;
+        assert(a == 6);
     }
 
     /**
@@ -748,32 +749,6 @@ public:
         return fptr(OpID.testConversion, null, &info) == 0;
     }
 
-    // private T[] testing123(T)(T*);
-
-    // /**
-    //  * A workaround for the fact that functions cannot return
-    //  * statically-sized arrays by value. Essentially $(D_PARAM
-    //  * DecayStaticToDynamicArray!(T[N])) is an alias for $(D_PARAM
-    //  * T[]) and $(D_PARAM DecayStaticToDynamicArray!(T)) is an alias
-    //  * for $(D_PARAM T).
-    //  */
-
-    // template DecayStaticToDynamicArray(T)
-    // {
-    //     static if (isStaticArray!(T))
-    //     {
-    //         alias DecayStaticToDynamicArray = typeof(testing123(&T[0]));
-    //     }
-    //     else
-    //     {
-    //         alias DecayStaticToDynamicArray = T;
-    //     }
-    // }
-
-    // static assert(is(DecayStaticToDynamicArray!(immutable(char)[21]) ==
-    //                  immutable(char)[]),
-    //               DecayStaticToDynamicArray!(immutable(char)[21]).stringof);
-
     /**
      * Returns the value stored in the $(D_PARAM VariantN) object,
      * implicitly converted to the requested type $(D_PARAM T), in
@@ -784,13 +759,22 @@ public:
 
     @property T get(T)() if (!is(T == const))
     {
-        union Buf
-        {
-            TypeInfo info;
-            T result;
-        }
         auto p = *cast(T**) &store;
-        Buf buf = { typeid(T) };
+
+        /* handler(OpID.get, ) expects the TypeInfo for T in the same buffer it
+         * writes the result to afterwards. Because T might have a non-trivial
+         * destructor, postblit or invariant, we cannot use a union.
+         */
+        struct Buf
+        {
+            T result;
+            // Make sure Buf.sizeof is big enough to store a TypeInfo in
+            void[T.sizeof < TypeInfo.sizeof ? TypeInfo.sizeof - T.sizeof : 0] init = void;
+        }
+        TypeInfo info = typeid(T);
+        Buf buf;
+        memcpy(&buf, &info, info.sizeof);
+
         if (fptr(OpID.get, &store, &buf))
         {
             throw new VariantException(type, typeid(T));
@@ -800,16 +784,26 @@ public:
 
     @property T get(T)() const if (is(T == const))
     {
-        union Buf
+        auto p = *cast(T**) &store;
+
+        /* handler(OpID.get, ) expects the TypeInfo for T in the same buffer it
+         * writes the result to afterwards. Because T might have a non-trivial
+         * destructor, postblit or invariant, we cannot use a union.
+         */
+        struct Buf
         {
-            TypeInfo info;
             static if (is(T == shared))
                 shared(Unqual!T) result;
             else
                 Unqual!T result;
+
+            // Make sure Buf.sizeof is big enough to store a TypeInfo in
+            void[T.sizeof < TypeInfo.sizeof ? TypeInfo.sizeof - T.sizeof : 0] init = void;
         }
-        auto p = *cast(T**) &store;
-        Buf buf = { typeid(T) };
+        TypeInfo info = typeid(T);
+        Buf buf;
+        memcpy(&buf, &info, info.sizeof);
+
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
@@ -936,43 +930,47 @@ public:
 
     private VariantN opArithmetic(T, string op)(T other)
     {
-        VariantN result;
-        static if (is(T == VariantN))
+        static if (isInstanceOf!(VariantN, T))
         {
-            if (convertsTo!(uint) && other.convertsTo!(uint))
-                result = mixin("get!(uint) " ~ op ~ " other.get!(uint)");
-            else if (convertsTo!(int) && other.convertsTo!(int))
-                result = mixin("get!(int) " ~ op ~ " other.get!(int)");
-            else if (convertsTo!(ulong) && other.convertsTo!(ulong))
-                result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
-            else if (convertsTo!(long) && other.convertsTo!(long))
-                result = mixin("get!(long) " ~ op ~ " other.get!(long)");
-            else if (convertsTo!(float) && other.convertsTo!(float))
-                result = mixin("get!(float) " ~ op ~ " other.get!(float)");
-            else if (convertsTo!(double) && other.convertsTo!(double))
-                result = mixin("get!(double) " ~ op ~ " other.get!(double)");
-            else
-                result = mixin("get!(real) " ~ op ~ " other.get!(real)");
+            string tryUseType(string tp)
+            {
+                import std.format : format;
+                return q{
+                    static if (allowed!%1$s && T.allowed!%1$s)
+                        if (convertsTo!%1$s && other.convertsTo!%1$s)
+                            return VariantN(get!%1$s %2$s other.get!%1$s);
+                }.format(tp, op);
+            }
+
+            mixin(tryUseType("uint"));
+            mixin(tryUseType("int"));
+            mixin(tryUseType("ulong"));
+            mixin(tryUseType("long"));
+            mixin(tryUseType("float"));
+            mixin(tryUseType("double"));
+            mixin(tryUseType("real"));
         }
         else
         {
-            if (is(typeof(T.max) : uint) && isUnsigned!T && convertsTo!(uint))
-                result = mixin("get!(uint) " ~ op ~ " other");
-            else if (is(typeof(T.max) : int) && !isUnsigned!T && convertsTo!(int))
-                result = mixin("get!(int) " ~ op ~ " other");
-            else if (is(typeof(T.max) : ulong) && isUnsigned!T
-                     && convertsTo!(ulong))
-                result = mixin("get!(ulong) " ~ op ~ " other");
-            else if (is(typeof(T.max) : long) && !isUnsigned!T && convertsTo!(long))
-                result = mixin("get!(long) " ~ op ~ " other");
-            else if (is(T : float) && convertsTo!(float))
-                result = mixin("get!(float) " ~ op ~ " other");
-            else if (is(T : double) && convertsTo!(double))
-                result = mixin("get!(double) " ~ op ~ " other");
-            else
-                result = mixin("get!(real) " ~ op ~ " other");
+            static if (allowed!T)
+                if (auto pv = peek!T) return VariantN(mixin("*pv " ~ op ~ " other"));
+            static if (allowed!uint && is(typeof(T.max) : uint) && isUnsigned!T)
+                if (convertsTo!uint) return VariantN(mixin("get!(uint) " ~ op ~ " other"));
+            static if (allowed!int && is(typeof(T.max) : int) && !isUnsigned!T)
+                if (convertsTo!int) return VariantN(mixin("get!(int) " ~ op ~ " other"));
+            static if (allowed!ulong && is(typeof(T.max) : ulong) && isUnsigned!T)
+                if (convertsTo!ulong) return VariantN(mixin("get!(ulong) " ~ op ~ " other"));
+            static if (allowed!long && is(typeof(T.max) : long) && !isUnsigned!T)
+                if (convertsTo!long) return VariantN(mixin("get!(long) " ~ op ~ " other"));
+            static if (allowed!float && is(T : float))
+                if (convertsTo!float) return VariantN(mixin("get!(float) " ~ op ~ " other"));
+            static if (allowed!double && is(T : double))
+                if (convertsTo!double) return VariantN(mixin("get!(double) " ~ op ~ " other"));
+            static if (allowed!real && is (T : real))
+                if (convertsTo!real) return VariantN(mixin("get!(real) " ~ op ~ " other"));
         }
-        return result;
+
+        throw new VariantException("No possible match found for VariantN "~op~" "~T.stringof);
     }
 
     private VariantN opLogic(T, string op)(T other)
@@ -1118,34 +1116,35 @@ public:
      * Array and associative array operations. If a $(D_PARAM
      * VariantN) contains an (associative) array, it can be indexed
      * into. Otherwise, an exception is thrown.
-     *
-     * Example:
-     * ----
-     * auto a = Variant(new int[10]);
-     * a[5] = 42;
-     * assert(a[5] == 42);
-     * int[int] hash = [ 42:24 ];
-     * a = hash;
-     * assert(a[42] == 24);
-     * ----
-     *
-     * Caveat:
-     *
-     * Due to limitations in current language, read-modify-write
-     * operations $(D_PARAM op=) will not work properly:
-     *
-     * ----
-     * Variant a = new int[10];
-     * a[5] = 42;
-     * a[5] += 8;
-     * assert(a[5] == 50); // fails, a[5] is still 42
-     * ----
      */
-    VariantN opIndex(K)(K i)
+    Variant opIndex(K)(K i)
     {
-        auto result = VariantN(i);
+        auto result = Variant(i);
         fptr(OpID.index, &store, &result) == 0 || assert(false);
         return result;
+    }
+
+    ///
+    unittest
+    {
+        auto a = Variant(new int[10]);
+        a[5] = 42;
+        assert(a[5] == 42);
+        int[int] hash = [ 42:24 ];
+        a = hash;
+        assert(a[42] == 24);
+    }
+
+    /** Caveat:
+    Due to limitations in current language, read-modify-write
+    operations $(D_PARAM op=) will not work properly:
+    */
+    unittest
+    {
+        Variant a = new int[10];
+        a[5] = 42;
+        a[5] += 8;
+        //assert(a[5] == 50); // will fail, a[5] is still 42
     }
 
     unittest
@@ -1158,9 +1157,9 @@ public:
     }
 
     /// ditto
-    VariantN opIndexAssign(T, N)(T value, N i)
+    Variant opIndexAssign(T, N)(T value, N i)
     {
-        VariantN[2] args = [ VariantN(value), VariantN(i) ];
+        Variant[2] args = [ Variant(value), Variant(i) ];
         fptr(OpID.indexAssign, &store, &args) == 0 || assert(false);
         return args[0];
     }
@@ -1266,6 +1265,49 @@ unittest
     assert(returned == elements);
 }
 
+// Issue #13352
+unittest
+{
+    alias TP = Algebraic!(long);
+    auto a = TP(1L);
+    auto b = TP(2L);
+    assert(!TP.allowed!ulong);
+    assert(a + b == 3L);
+    assert(a + 2 == 3L);
+    assert(1 + b == 3L);
+
+    alias TP2 = Algebraic!(long, string);
+    auto c = TP2(3L);
+    assert(a + c == 4L);
+}
+
+// Issue #13354
+unittest
+{
+    alias A = Algebraic!(string[]);
+    A a = ["a", "b"];
+    assert(a[0] == "a");
+    assert(a[1] == "b");
+    a[1] = "c";
+    assert(a[1] == "c");
+
+    alias AA = Algebraic!(int[string]);
+    AA aa = ["a": 1, "b": 2];
+    assert(aa["a"] == 1);
+    assert(aa["b"] == 2);
+    aa["b"] = 3;
+    assert(aa["b"] == 3);
+}
+
+pure nothrow @nogc
+unittest
+{
+    Algebraic!(int, double) a;
+    a = 100;
+    a = 1.0;
+}
+
+
 /**
  * Algebraic data type restricted to a closed set of possible
  * types. It's an alias for a $(D_PARAM VariantN) with an
@@ -1283,21 +1325,22 @@ unittest
  * Currently, $(D_PARAM Algebraic) does not allow recursive data
  * types. They will be allowed in a future iteration of the
  * implementation.
- *
- * Example:
- * ----
- * auto v = Algebraic!(int, double, string)(5);
- * assert(v.peek!(int));
- * v = 3.14;
- * assert(v.peek!(double));
- * // auto x = v.peek!(long); // won't compile, type long not allowed
- * // v = '1'; // won't compile, type char not allowed
- * ----
  */
 
 template Algebraic(T...)
 {
     alias Algebraic = VariantN!(maxSize!(T), T);
+}
+
+///
+unittest
+{
+    auto v = Algebraic!(int, double, string)(5);
+    assert(v.peek!(int));
+    v = 3.14;
+    assert(v.peek!(double));
+    // auto x = v.peek!(long); // won't compile, type long not allowed
+    // v = '1'; // won't compile, type char not allowed
 }
 
 /**
@@ -1314,37 +1357,11 @@ alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
 
 /**
  * Returns an array of variants constructed from $(D_PARAM args).
- * Example:
- * ----
- * auto a = variantArray(1, 3.14, "Hi!");
- * assert(a[1] == 3.14);
- * auto b = Variant(a); // variant array as variant
- * assert(b[1] == 3.14);
- * ----
- *
- * Code that needs functionality similar to the $(D_PARAM boxArray)
- * function in the $(D_PARAM std.boxer) module can achieve it like this:
- *
- * ----
- * // old
- * Box[] fun(...)
- * {
- *     ...
- *     return boxArray(_arguments, _argptr);
- * }
- * // new
- * Variant[] fun(T...)(T args)
- * {
- *     ...
- *     return variantArray(args);
- * }
- * ----
  *
  * This is by design. During construction the $(D_PARAM Variant) needs
  * static type information about the type being held, so as to store a
  * pointer to function for fast retrieval.
  */
-
 Variant[] variantArray(T...)(T args)
 {
     Variant[] result;
@@ -1354,6 +1371,37 @@ Variant[] variantArray(T...)(T args)
     }
     return result;
 }
+
+///
+unittest
+{
+    auto a = variantArray(1, 3.14, "Hi!");
+    assert(a[1] == 3.14);
+    auto b = Variant(a); // variant array as variant
+    assert(b[1] == 3.14);
+}
+
+/** Code that needs functionality similar to the $(D_PARAM boxArray)
+function in the $(D_PARAM std.boxer) module can achieve it like this:
+*/
+unittest
+{
+    /* old
+    Box[] fun(...)
+    {
+        // ...
+        return boxArray(_arguments, _argptr);
+    }
+    */
+    // new
+    Variant[] fun(T...)(T args)
+    {
+        // ...
+        return variantArray(args);
+    }
+}
+
+/**
 
 /**
  * Thrown in three cases:
@@ -1904,26 +1952,6 @@ unittest
  *
  * Duplicate overloads matching the same type in one of the visitors are disallowed.
  *
- * Example:
- * -----------------------
- *   Algebraic!(int, string) variant;
- *
- *   variant = 10;
- *   assert(variant.visit!((string s) => cast(int)s.length,
- *                         (int i)    => i)()
- *                         == 10);
- *   variant = "string";
- *   assert(variant.visit!((int i) => return i,
- *                         (string s) => cast(int)s.length)()
- *                         == 6);
- *
- *   // Error function usage
- *   Algebraic!(int, string) emptyVar;
- *   assert(variant.visit!((string s) => cast(int)s.length,
- *                         (int i)    => i,
- *                         () => -1)()
- *                         == -1);
- * ----------------------
  * Returns: The return type of visit is deduced from the visiting functions and must be
  * the same across all overloads.
  * Throws: If no parameter-less, error function is specified:
@@ -1937,6 +1965,28 @@ template visit(Handler ...)
     {
         return visitImpl!(true, VariantType, Handler)(variant);
     }
+}
+
+///
+unittest
+{
+    Algebraic!(int, string) variant;
+
+    variant = 10;
+    assert(variant.visit!((string s) => cast(int)s.length,
+                          (int i)    => i)()
+                          == 10);
+    variant = "string";
+    assert(variant.visit!((int i) => i,
+                          (string s) => cast(int)s.length)()
+                          == 6);
+
+    // Error function usage
+    Algebraic!(int, string) emptyVar;
+    auto rslt = emptyVar.visit!((string s) => cast(int)s.length,
+                          (int i)    => i,
+                          () => -1)();
+    assert(rslt == -1);
 }
 
 unittest
@@ -2006,22 +2056,6 @@ unittest
  * either $(D_PARAM variant) doesn't hold a value or holds a type
  * which isn't handled by the visiting functions.
  *
- * Example:
- * -----------------------
- *   Algebraic!(int, string) variant;
- *
- *   variant = 10;
- *   auto which = -1;
- *   variant.tryVisit!((int i) { which = 0; })();
- *   assert(which = 0);
- *
- *   // Error function usage
- *   variant = "test";
- *   variant.tryVisit!((int i) { which = 0; },
- *                     ()      { which = -100; })();
- *   assert(which == -100);
- * ----------------------
- *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
  * the same across all overloads.
  * Throws: If no parameter-less, error function is specified: $(D_PARAM VariantException) if
@@ -2037,6 +2071,23 @@ template tryVisit(Handler ...)
     {
         return visitImpl!(false, VariantType, Handler)(variant);
     }
+}
+
+///
+unittest
+{
+    Algebraic!(int, string) variant;
+
+    variant = 10;
+    auto which = -1;
+    variant.tryVisit!((int i) { which = 0; })();
+    assert(which == 0);
+
+    // Error function usage
+    variant = "test";
+    variant.tryVisit!((int i) { which = 0; },
+                      ()      { which = -100; })();
+    assert(which == -100);
 }
 
 unittest
@@ -2459,6 +2510,17 @@ unittest
         @disable this();
     }
     auto a = appender!(T[]);
+}
+
+unittest
+{
+    // Bugzilla 13871
+    alias A = Algebraic!(int, typeof(null));
+    static struct B { A value; }
+    alias C = std.variant.Algebraic!B;
+
+    C var;
+    var = C(B());
 }
 
 unittest

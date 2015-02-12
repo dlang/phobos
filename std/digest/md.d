@@ -1,6 +1,10 @@
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+ * Computes MD5 hashes of arbitrary data. MD5 hashes are 16 byte quantities that are like a
+ * checksum or CRC, but are more robust.
+ *
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -12,17 +16,15 @@ $(TR $(TDNW OOP API) $(TD $(MYREF MD5Digest))
 $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
 )
 )
+)
 
- * Computes MD5 hashes of arbitrary data. MD5 hashes are 16 byte quantities that are like a
- * checksum or CRC, but are more robust.
- *
  * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
  * differences between the template and the OOP API, see $(D std.digest.digest).
  *
  * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
  * module.
  *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
  * CTFE:
  * Digests do not work in CTFE
@@ -38,15 +40,12 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  *
  * Macros:
  * WIKI = Phobos/StdMd5
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 /* md5.d - RSA Data Security, Inc., MD5 message-digest algorithm
  * Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm.
  */
 module std.digest.md;
-
-import std.bitmanip, std.exception, std.string;
 
 public import std.digest.digest;
 
@@ -362,6 +361,8 @@ struct MD5
           */
         ubyte[16] finish() @trusted pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
+
             ubyte[16] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
@@ -556,7 +557,10 @@ unittest
     assert(result[0 .. 16] == result2 && result2 == cast(ubyte[])x"c3fcd3d76192e4007dfb496cca67e13b");
 
     debug
+    {
+        import std.exception;
         assertThrown!Error(md5.finish(result[0 .. 15]));
+    }
 
     assert(md5.length == 16);
 

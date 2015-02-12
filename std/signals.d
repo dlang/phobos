@@ -50,7 +50,7 @@
  *      SIGNALS=signals
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_signals.d)
  */
@@ -62,7 +62,7 @@
 module std.signals;
 
 import std.stdio;
-import std.c.stdlib : calloc, realloc, free;
+import core.stdc.stdlib : calloc, realloc, free;
 import core.exception : onOutOfMemoryError;
 
 // Special function for internal use only.
@@ -141,7 +141,7 @@ void main()
 
 mixin template Signal(T1...)
 {
-    static import std.c.stdlib;
+    static import core.stdc.stdlib;
     static import core.exception;
     /***
      * A slot is implemented as a delegate.
@@ -179,7 +179,7 @@ mixin template Signal(T1...)
             if (slots.length == 0)
             {
                 len = 4;
-                auto p = std.c.stdlib.calloc(slot_t.sizeof, len);
+                auto p = core.stdc.stdlib.calloc(slot_t.sizeof, len);
                 if (!p)
                     core.exception.onOutOfMemoryError();
                 slots = (cast(slot_t*)p)[0 .. len];
@@ -187,7 +187,7 @@ mixin template Signal(T1...)
             else
             {
                 len = len * 2 + 4;
-                auto p = std.c.stdlib.realloc(slots.ptr, slot_t.sizeof * len);
+                auto p = core.stdc.stdlib.realloc(slots.ptr, slot_t.sizeof * len);
                 if (!p)
                     core.exception.onOutOfMemoryError();
                 slots = (cast(slot_t*)p)[0 .. len];
@@ -252,7 +252,7 @@ mixin template Signal(T1...)
          * know that this object is destroyed so they are not left
          * with dangling references to it.
          */
-        if (slots)
+        if (slots.length)
         {
             foreach (slot; slots[0 .. slots_idx])
             {
@@ -261,7 +261,7 @@ mixin template Signal(T1...)
                     rt_detachDisposeEvent(o, &unhook);
                 }
             }
-            std.c.stdlib.free(slots.ptr);
+            core.stdc.stdlib.free(slots.ptr);
             slots = null;
         }
     }
@@ -386,20 +386,20 @@ unittest {
         a.s2.connect(&o2.watchInt);
         a.s3.connect(&o3.watchLong);
 
-        assert(!o1.i && !o1.l && !o1.str);
-        assert(!o2.i && !o2.l && !o2.str);
-        assert(!o3.i && !o3.l && !o3.str);
+        assert(!o1.i && !o1.l && o1.str == null);
+        assert(!o2.i && !o2.l && o2.str == null);
+        assert(!o3.i && !o3.l && o3.str == null);
 
         a.value1 = 11;
         assert(o1.i == 11 && !o1.l && o1.str == "str1");
-        assert(!o2.i && !o2.l && !o2.str);
-        assert(!o3.i && !o3.l && !o3.str);
+        assert(!o2.i && !o2.l && o2.str == null);
+        assert(!o3.i && !o3.l && o3.str == null);
         o1.i = -11; o1.str = "x1";
 
         a.value2 = 12;
         assert(o1.i == -11 && !o1.l && o1.str == "x1");
         assert(o2.i == 12 && !o2.l && o2.str == "str2");
-        assert(!o3.i && !o3.l && !o3.str);
+        assert(!o3.i && !o3.l && o3.str == null);
         o2.i = -12; o2.str = "x2";
 
         a.value3 = 13;
@@ -468,20 +468,20 @@ unittest {
     a.s5.connect(&o5.watchInt);
     a.s6.connect(&o6.watchLong);
 
-    assert(!o4.i && !o4.l && !o4.str);
-    assert(!o5.i && !o5.l && !o5.str);
-    assert(!o6.i && !o6.l && !o6.str);
+    assert(!o4.i && !o4.l && o4.str == null);
+    assert(!o5.i && !o5.l && o5.str == null);
+    assert(!o6.i && !o6.l && o6.str == null);
 
     a.value4 = 44;
     assert(o4.i == 44 && !o4.l && o4.str == "str4");
-    assert(!o5.i && !o5.l && !o5.str);
-    assert(!o6.i && !o6.l && !o6.str);
+    assert(!o5.i && !o5.l && o5.str == null);
+    assert(!o6.i && !o6.l && o6.str == null);
     o4.i = -44; o4.str = "x4";
 
     a.value5 = 45;
     assert(o4.i == -44 && !o4.l && o4.str == "x4");
     assert(o5.i == 45 && !o5.l && o5.str == "str5");
-    assert(!o6.i && !o6.l && !o6.str);
+    assert(!o6.i && !o6.l && o6.str == null);
     o5.i = -45; o5.str = "x5";
 
     a.value6 = 46;

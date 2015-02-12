@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
+/// Please import core.sys.windows.com instead. This module will be deprecated in DMD 2.068.
 module std.windows.iunknown;
-version (Windows):
 
 // Replaced by:
-public import std.c.windows.com;
+public import core.sys.windows.com;

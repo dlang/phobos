@@ -1,6 +1,24 @@
+/**
+This module implements a singly-linked list container.
+
+This module is a submodule of $(LINK2 std_container_package.html, std.container).
+
+Source: $(PHOBOSSRC std/container/_slist.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+*/
 module std.container.slist;
 
-import std.exception, std.range, std.traits;
 public import std.container.util;
 
 /**
@@ -10,6 +28,11 @@ public import std.container.util;
  */
 struct SList(T)
 {
+    import std.exception : enforce;
+    import std.range : Take;
+    import std.range.primitives;
+    import std.traits;
+
     private struct Node
     {
         Node * _next;
@@ -543,12 +566,14 @@ unittest
 
 unittest
 {
+    import std.range.primitives;
     auto s = SList!int(1, 2, 5, 10);
     assert(walkLength(s[]) == 4);
 }
 
 unittest
 {
+    import std.range : take;
     auto src = take([0, 1, 2, 3], 3);
     auto s = SList!int(src);
     assert(s == SList!int(0, 1, 2));
@@ -643,6 +668,7 @@ unittest
 
 unittest
 {
+    import std.range : take;
     auto s = SList!int(1, 2, 3, 4);
     auto r = take(s[], 2);
     assert(s.insertAfter(r, 5) == 1);
@@ -663,6 +689,7 @@ unittest
 
 unittest
 {
+    import std.range.primitives;
     auto s = SList!int(1, 2, 3, 4, 5);
     auto r = s[];
     popFrontN(r, 3);
@@ -683,6 +710,7 @@ unittest
 unittest
 {
     import std.algorithm : equal;
+    import std.range;
 
     auto s = SList!int(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
     auto r = s[];
@@ -696,6 +724,7 @@ unittest
 
 unittest
 {
+    import std.range.primitives;
     auto lst = SList!int(1, 5, 42, 9);
     assert(!lst.empty);
     assert(lst.front == 1);
