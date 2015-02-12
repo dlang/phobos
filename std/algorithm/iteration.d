@@ -298,6 +298,7 @@ private struct Cache(R, bool bidir)
 
     private
     {
+        import std.algorithm : algoFormat;
         import std.typetuple : TypeTuple;
 
         alias E  = ElementType!R;
@@ -2454,6 +2455,7 @@ template reduce(fun...) if (fun.length >= 1)
             return reducePreImpl(r, seed);
         else
         {
+            import std.algorithm : algoFormat;
             static assert(isTuple!S, algoFormat("Seed %s should be a Tuple", S.stringof));
             return reducePreImpl(r, seed.expand);
         }
@@ -2472,6 +2474,7 @@ template reduce(fun...) if (fun.length >= 1)
     private auto reduceImpl(bool mustInitialize, R, Args...)(R r, ref Args args)
     if (isIterable!R)
     {
+        import std.algorithm : algoFormat;
         static assert(Args.length == fun.length,
             algoFormat("Seed %s does not have the correct amount of fields (should be %s)", Args.stringof, fun.length));
         alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
@@ -2509,6 +2512,8 @@ private template ReduceSeedType(E)
 {
     static template ReduceSeedType(alias fun)
     {
+        import std.algorithm : algoFormat;
+
         E e = E.init;
         static alias ReduceSeedType = Unqual!(typeof(fun(e, e)));
 

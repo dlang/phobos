@@ -2573,6 +2573,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     if (isInputRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
+    import std.algorithm : algoFormat;
     import std.exception : enforce;
 
     alias T  = ElementType!Range;
