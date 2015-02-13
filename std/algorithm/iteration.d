@@ -298,7 +298,7 @@ private struct Cache(R, bool bidir)
 
     private
     {
-        import std.algorithm : algoFormat;
+        import std.algorithm.internal : algoFormat;
         import std.typetuple : TypeTuple;
 
         alias E  = ElementType!R;
@@ -2320,7 +2320,7 @@ unittest
 
 @safe unittest
 {
-    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.internal : algoFormat;
     import std.algorithm.comparison : equal;
 
     struct TransientRange
@@ -2455,7 +2455,7 @@ template reduce(fun...) if (fun.length >= 1)
             return reducePreImpl(r, seed);
         else
         {
-            import std.algorithm : algoFormat;
+            import std.algorithm.internal : algoFormat;
             static assert(isTuple!S, algoFormat("Seed %s should be a Tuple", S.stringof));
             return reducePreImpl(r, seed.expand);
         }
@@ -2474,7 +2474,7 @@ template reduce(fun...) if (fun.length >= 1)
     private auto reduceImpl(bool mustInitialize, R, Args...)(R r, ref Args args)
     if (isIterable!R)
     {
-        import std.algorithm : algoFormat;
+        import std.algorithm.internal : algoFormat;
         static assert(Args.length == fun.length,
             algoFormat("Seed %s does not have the correct amount of fields (should be %s)", Args.stringof, fun.length));
         alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
@@ -2512,7 +2512,7 @@ private template ReduceSeedType(E)
 {
     static template ReduceSeedType(alias fun)
     {
-        import std.algorithm : algoFormat;
+        import std.algorithm.internal : algoFormat;
 
         E e = E.init;
         static alias ReduceSeedType = Unqual!(typeof(fun(e, e)));
@@ -3558,7 +3558,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
 @safe unittest
 {
-    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.internal : algoFormat;
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
 
@@ -3595,7 +3595,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
 @safe unittest
 {
-    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.internal : algoFormat;
     import std.algorithm.comparison : equal;
     import std.range;
 
@@ -3752,7 +3752,7 @@ if (isSomeChar!C)
 
 @safe unittest
 {
-    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.internal : algoFormat;
     import std.algorithm.comparison : equal;
     import std.conv : text;
     import std.array : split;

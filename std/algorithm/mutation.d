@@ -702,7 +702,7 @@ void initializeAll(Range)(Range range)
     alias T = ElementType!Range;
     static if (hasElaborateAssign!T)
     {
-        import std.algorithm : addressOf; // FIXME
+        import std.algorithm.internal : addressOf;
         //Elaborate opAssign. Must go the memcpy road.
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,

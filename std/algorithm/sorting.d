@@ -333,7 +333,7 @@ Range partition(alias predicate,
 
 @safe unittest
 {
-    import std.algorithm : rndstuff; // FIXME
+    import std.algorithm.internal : rndstuff;
     static bool even(int a) { return (a & 1) == 0; }
 
     // test with random data
@@ -514,7 +514,7 @@ makeIndex(
     if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
             && is(ElementType!(RangeIndex) : ElementType!(Range)*))
 {
-    import std.algorithm : addressOf; // FIXME
+    import std.algorithm.internal : addressOf;
     import std.exception : enforce;
 
     // assume collection already ordered
@@ -923,7 +923,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : rndstuff; // FIXME
+    import std.algorithm.internal : rndstuff;
     import std.algorithm : swapRanges; // FIXME
     import std.random : Random, unpredictableSeed, uniform;
     import std.uni : toUpper;

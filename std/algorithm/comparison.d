@@ -1204,7 +1204,7 @@ MaxType!T max(T...)(T args)
         auto b = max(args[($+1)/2 .. $]);
     alias typeof(b) T1;
 
-    import std.algorithm : algoFormat;
+    import std.algorithm.internal : algoFormat;
     static assert (is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
@@ -1312,7 +1312,7 @@ MinType!T min(T...)(T args)
         auto b = min(args[($+1)/2 .. $]);
     alias typeof(b) T1;
 
-    import std.algorithm : algoFormat;
+    import std.algorithm.internal : algoFormat;
     static assert (is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 

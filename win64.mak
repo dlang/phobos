@@ -137,7 +137,7 @@ SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
 	std\algorithm\iteration.d std\algorithm\mutation.d \
 	std\algorithm\searching.d std\algorithm\setops.d \
-	std\algorithm\sorting.d
+	std\algorithm\sorting.d std\algorithm\internal.d
 
 SRC_STD_5_HEAVY= $(SRC_STD_ALGO)
 

@@ -196,17 +196,6 @@ import std.typetuple; // : TypeTuple, staticMap, allSatisfy, anySatisfy;
 
 version(unittest) debug(std_algorithm) import std.stdio;
 
-package T* addressOf(T)(ref T val) { return &val; }
-
-// Same as std.string.format, but "self-importing".
-// Helps reduce code and imports, particularly in static asserts.
-// Also helps with missing imports errors.
-package template algoFormat()
-{
-    import std.format : format;
-    alias algoFormat = format;
-}
-
 /**
 Forwards function arguments with saving ref-ness.
 */
@@ -313,63 +302,3 @@ enum SortOutput
     yes, /// Sort output
 }
 
-// Internal random array generators
-version(unittest)
-{
-    package enum size_t maxArraySize = 50;
-    package enum size_t minArraySize = maxArraySize - 1;
-
-    package string[] rndstuff(T : string)()
-    {
-        import std.random : Random, unpredictableSeed, uniform;
-
-        static Random rnd;
-        static bool first = true;
-        if (first)
-        {
-            rnd = Random(unpredictableSeed);
-            first = false;
-        }
-        string[] result =
-            new string[uniform(minArraySize, maxArraySize, rnd)];
-        string alpha = "abcdefghijABCDEFGHIJ";
-        foreach (ref s; result)
-        {
-            foreach (i; 0 .. uniform(0u, 20u, rnd))
-            {
-                auto j = uniform(0, alpha.length - 1, rnd);
-                s ~= alpha[j];
-            }
-        }
-        return result;
-    }
-
-    package int[] rndstuff(T : int)()
-    {
-        import std.random : Random, unpredictableSeed, uniform;
-
-        static Random rnd;
-        static bool first = true;
-        if (first)
-        {
-            rnd = Random(unpredictableSeed);
-            first = false;
-        }
-        int[] result = new int[uniform(minArraySize, maxArraySize, rnd)];
-        foreach (ref i; result)
-        {
-            i = uniform(-100, 100, rnd);
-        }
-        return result;
-    }
-
-    package double[] rndstuff(T : double)()
-    {
-        double[] result;
-        foreach (i; rndstuff!(int)())
-        {
-            result ~= i / 50.0;
-        }
-        return result;
-    }
-}

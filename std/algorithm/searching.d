@@ -1958,7 +1958,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 
 @safe unittest
 {
-    import std.algorithm : rndstuff; // FIXME
+    import std.algorithm.internal : rndstuff;
     import std.typetuple : TypeTuple;
     import std.uni : toUpper;
 
@@ -1989,7 +1989,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 
 @safe unittest
 {
-    import std.algorithm : rndstuff; // FIXME
+    import std.algorithm.internal : rndstuff;
     import std.algorithm.comparison : equal;
     import std.range : retro;
     import std.typetuple : TypeTuple;
@@ -2149,7 +2149,7 @@ template canFind(alias pred="a == b")
 
 @safe unittest
 {
-    import std.algorithm : rndstuff; // FIXME
+    import std.algorithm.internal : rndstuff;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto a = rndstuff!(int)();
@@ -2573,7 +2573,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     if (isInputRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
-    import std.algorithm : algoFormat;
+    import std.algorithm.internal : algoFormat;
     import std.exception : enforce;
 
     alias T  = ElementType!Range;
@@ -2627,7 +2627,7 @@ minCount(alias pred = "a < b", Range)(Range range)
     }
     else static if (hasLvalueElements!Range)
     {
-        import std.algorithm : addressOf; // FIXME
+        import std.algorithm.internal : addressOf;
         T* p = addressOf(range.front);
         for (range.popFront(); !range.empty; range.popFront())
         {
