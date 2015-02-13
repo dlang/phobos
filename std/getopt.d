@@ -974,8 +974,7 @@ unittest
     import std.math;
 
     uint paranoid = 2;
-    string[] args = (["program.name",
-                      "--paranoid", "--paranoid", "--paranoid"];
+    string[] args = ["program.name", "--paranoid", "--paranoid", "--paranoid"];
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
 
@@ -993,8 +992,7 @@ unittest
     string data = "file.dat";
     int length = 24;
     bool verbose = false;
-    args = (["program.name", "--length=5",
-                      "--file", "dat.file", "--verbose"];
+    args = ["program.name", "--length=5", "--file", "dat.file", "--verbose"];
     getopt(
         args,
         "length",  &length,
@@ -1007,8 +1005,7 @@ unittest
 
     //
     string[] outputFiles;
-    args = (["program.name", "--output=myfile.txt",
-             "--output", "yourfile.txt"];
+    args = ["program.name", "--output=myfile.txt", "--output", "yourfile.txt"];
     getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
            && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
