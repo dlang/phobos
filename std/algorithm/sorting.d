@@ -1871,9 +1871,9 @@ unittest
         return result;
     }
 
-    auto lowEnt = ([ 1.0, 0, 0 ]).dup,
-         midEnt = ([ 0.1, 0.1, 0.8 ]).dup,
-        highEnt = ([ 0.31, 0.29, 0.4 ]).dup;
+    auto lowEnt = [ 1.0, 0, 0 ],
+         midEnt = [ 0.1, 0.1, 0.8 ],
+        highEnt = [ 0.31, 0.29, 0.4 ];
     auto arr = new double[][3];
     arr[0] = midEnt;
     arr[1] = lowEnt;
@@ -1904,9 +1904,9 @@ unittest
         return result;
     }
 
-    auto lowEnt = ([ 1.0, 0, 0 ]).dup,
-        midEnt = ([ 0.1, 0.1, 0.8 ]).dup,
-        highEnt = ([ 0.31, 0.29, 0.4 ]).dup;
+    auto lowEnt = [ 1.0, 0, 0 ],
+        midEnt = [ 0.1, 0.1, 0.8 ],
+        highEnt = [ 0.31, 0.29, 0.4 ];
     auto arr = new double[][3];
     arr[0] = midEnt;
     arr[1] = lowEnt;
@@ -2020,31 +2020,31 @@ void topN(alias less = "a < b",
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //scope(failure) writeln(stderr, "Failure testing algorithm");
-    //auto v = ([ 25, 7, 9, 2, 0, 5, 21 ]).dup;
+    //auto v = [ 25, 7, 9, 2, 0, 5, 21 ];
     int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
     ptrdiff_t n = 3;
     topN!("a < b")(v, n);
     assert(reduce!max(v[0 .. n]) <= v[n]);
     assert(reduce!min(v[n + 1 .. $]) >= v[n]);
     //
-    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
+    v = [3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5];
     n = 3;
     topN(v, n);
     assert(reduce!max(v[0 .. n]) <= v[n]);
     assert(reduce!min(v[n + 1 .. $]) >= v[n]);
     //
-    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
+    v = [3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5];
     n = 1;
     topN(v, n);
     assert(reduce!max(v[0 .. n]) <= v[n]);
     assert(reduce!min(v[n + 1 .. $]) >= v[n]);
     //
-    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
+    v = [3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5];
     n = v.length - 1;
     topN(v, n);
     assert(v[n] == 7);
     //
-    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
+    v = [3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5];
     n = 0;
     topN(v, n);
     assert(v[n] == 1);
