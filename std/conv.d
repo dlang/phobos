@@ -243,7 +243,7 @@ arrays as long as keys and values can in turn be converted.
 
 Example:
 -------------------------
-int[] a = ([1, 2, 3]).dup;
+int[] a = [1, 2, 3];
 auto b = to!(float[])(a);
 assert(b == [1.0f, 2, 3]);
 string str = "1 2 3 4 5 6";
@@ -1432,7 +1432,7 @@ T toImpl(T, S)(S value)
     import std.exception;
 
     // array to array conversions
-    uint[] a = ([ 1u, 2, 3 ]).dup;
+    uint[] a = [ 1u, 2, 3 ];
     auto b = to!(float[])(a);
     assert(b == [ 1.0f, 2, 3 ]);
 

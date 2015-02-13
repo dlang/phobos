@@ -981,12 +981,12 @@ unittest
 
     enum Color { no, yes }
     Color color;
-    args = (["program.name", "--color=yes",]).dup;
+    args = ["program.name", "--color=yes",];
     getopt(args, "color", &color);
     assert(color, to!(string)(color));
 
     color = Color.no;
-    args = (["program.name", "--color", "yes",]).dup;
+    args = ["program.name", "--color", "yes",];
     getopt(args, "color", &color);
     assert(color, to!(string)(color));
 
@@ -1015,7 +1015,7 @@ unittest
 
     outputFiles = [];
     arraySep = ",";
-    args = (["program.name", "--output", "myfile.txt,yourfile.txt"]).dup;
+    args = ["program.name", "--output", "myfile.txt,yourfile.txt"];
     getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
            && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
@@ -1049,10 +1049,10 @@ unittest
             verbosityLevel = 2;
         }
     }
-    args = (["program.name", "--quiet"]).dup;
+    args = ["program.name", "--quiet"];
     getopt(args, "verbose", &myHandler, "quiet", &myHandler);
     assert(verbosityLevel == 0);
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     getopt(args, "verbose", &myHandler, "quiet", &myHandler);
     assert(verbosityLevel == 2);
 
@@ -1062,7 +1062,7 @@ unittest
         assert(option == "verbose");
         verbosityLevel = 2;
     }
-    args = (["program.name", "--verbose", "2"]).dup;
+    args = ["program.name", "--verbose", "2"];
     getopt(args, "verbose", &myHandler2);
     assert(verbosityLevel == 2);
 
@@ -1071,12 +1071,12 @@ unittest
     {
         verbosityLevel = 2;
     }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     getopt(args, "verbose", &myHandler3);
     assert(verbosityLevel == 2);
 
     bool foo, bar;
-    args = (["program.name", "--foo", "--bAr"]).dup;
+    args = ["program.name", "--foo", "--bAr"];
     getopt(args,
         std.getopt.config.caseSensitive,
         std.getopt.config.passThrough,
@@ -1086,7 +1086,7 @@ unittest
 
     // test stopOnFirstNonOption
 
-    args = (["program.name", "--foo", "nonoption", "--bar"]).dup;
+    args = ["program.name", "--foo", "nonoption", "--bar"];
     foo = bar = false;
     getopt(args,
         std.getopt.config.stopOnFirstNonOption,
@@ -1094,7 +1094,7 @@ unittest
         "bar", &bar);
     assert(foo && !bar && args[1] == "nonoption" && args[2] == "--bar");
 
-    args = (["program.name", "--foo", "nonoption", "--zab"]).dup;
+    args = ["program.name", "--foo", "nonoption", "--zab"];
     foo = bar = false;
     getopt(args,
         std.getopt.config.stopOnFirstNonOption,
@@ -1102,7 +1102,7 @@ unittest
         "bar", &bar);
     assert(foo && !bar && args[1] == "nonoption" && args[2] == "--zab");
 
-    args = (["program.name", "--fb1", "--fb2=true", "--tb1=false"]).dup;
+    args = ["program.name", "--fb1", "--fb2=true", "--tb1=false"];
     bool fb1, fb2;
     bool tb1 = true;
     getopt(args, "fb1", &fb1, "fb2", &fb2, "tb1", &tb1);
@@ -1138,17 +1138,17 @@ unittest
     }
 
     static void myStaticHandler1() { throw new MyEx(); }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     try { getopt(args, "verbose", &myStaticHandler1); assert(0); }
     catch (MyEx ex) { assert(ex.option is null && ex.value is null); }
 
     static void myStaticHandler2(string option) { throw new MyEx(option); }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     try { getopt(args, "verbose", &myStaticHandler2); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value is null); }
 
     static void myStaticHandler3(string option, string value) { throw new MyEx(option, value); }
-    args = (["program.name", "--verbose", "2"]).dup;
+    args = ["program.name", "--verbose", "2"];
     try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
 }
