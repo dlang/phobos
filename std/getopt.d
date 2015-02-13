@@ -975,7 +975,7 @@ unittest
 
     uint paranoid = 2;
     string[] args = (["program.name",
-                      "--paranoid", "--paranoid", "--paranoid"]).dup;
+                      "--paranoid", "--paranoid", "--paranoid"];
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
 
@@ -994,7 +994,7 @@ unittest
     int length = 24;
     bool verbose = false;
     args = (["program.name", "--length=5",
-                      "--file", "dat.file", "--verbose"]).dup;
+                      "--file", "dat.file", "--verbose"];
     getopt(
         args,
         "length",  &length,
@@ -1008,7 +1008,7 @@ unittest
     //
     string[] outputFiles;
     args = (["program.name", "--output=myfile.txt",
-             "--output", "yourfile.txt"]).dup;
+             "--output", "yourfile.txt"];
     getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
            && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
