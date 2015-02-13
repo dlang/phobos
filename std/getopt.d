@@ -805,17 +805,17 @@ unittest
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "-n" "foo,bar,baz"].dup;
+    args = ["program.name", "-n" "foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "--name=foo,bar,baz"].dup;
+    args = ["program.name", "--name=foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "--name", "foo,bar,baz"].dup;
+    args = ["program.name", "--name", "foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 }
@@ -830,12 +830,12 @@ unittest
 
     int[string] values;
     values = values.init;
-    auto args = ["program.name", "-vfoo=0,bar=1,baz=2"].dup;
+    auto args = ["program.name", "-vfoo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
     values = values.init;
-    args = ["program.name", "-v", "foo=0,bar=1,baz=2"].dup;
+    args = ["program.name", "-v", "foo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
@@ -845,7 +845,7 @@ unittest
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
     values = values.init;
-    args = ["program.name", "--values", "foo=0,bar=1,baz=2"].dup;
+    args = ["program.name", "--values", "foo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 }
