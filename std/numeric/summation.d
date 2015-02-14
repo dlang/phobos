@@ -7,7 +7,7 @@ Authors: $(WEB 9il.github.io, Ilya Yaroshenko)
 
 Source: $(PHOBOSSRC std/numeric/_summation.d)
 */
-module std.numeric.summation;
+module std.summation;
 
 import std.traits;
 import std.typecons;
@@ -330,7 +330,8 @@ private:
             {
                 l *= 2;
                 x = s + l;
-                if (l == x - s)
+                F t = x - s;
+                if (l == t)
                     s = x;
             }
             _break = true;
@@ -353,7 +354,8 @@ private:
             F l = (y - d) * 2;
             y = h * 2;
             d = h + l;
-            if (!.isInfinity(y) || partials.length > 1 && !signbit(l * partials[$-2]) && d - h == l)
+            F t = d - h;
+            if (!.isInfinity(y) || partials.length > 1 && !signbit(l * partials[$-2]) && t == l)
                 return 0;
         }
         return F.infinity * o;
@@ -548,7 +550,8 @@ public:
                 {
                     // overflow, except in edge case...
                     x = h + l;
-                    y = parts.length && x - h == l && !signbit(l*parts[$-1]) ?
+                    t = x - h;
+                    y = parts.length && t == l && !signbit(l*parts[$-1]) ?
                         x * 2 :
                         F.infinity * of;
                     parts = null;
