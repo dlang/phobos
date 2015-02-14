@@ -140,20 +140,6 @@ template fsum(Summation summation = Summation.Precise)
 }
 
 ///
-unittest
-{
-    import std.math, std.algorithm, std.range;
-    auto ar = 1000
-        .iota
-        .map!(n => 1.7.pow(n+1) - 1.7.pow(n))
-        ;
-
-    //Summation.Precise is default
-    assert(fsum(ar.chain([-(1.7.pow(1000))]))  ==  -1.0);
-    assert(fsum!real(-(1.7.pow(1000)), ar.retro)  ==  -1.0);
-}
-
-///
 unittest {
     import std.algorithm;
     auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
@@ -175,6 +161,20 @@ unittest {
     assert(r != ar.fsum!(Summation.Naive));
     assert(r != ar.fsum!(Summation.Kahan));
     assert(r != ar.fsum!(Summation.Pairwise));
+}
+
+///
+unittest
+{
+    import std.math, std.algorithm, std.range;
+    auto ar = 1000
+        .iota
+        .map!(n => 1.7.pow(n+1) - 1.7.pow(n))
+        ;
+
+    //Summation.Precise is default
+    assert(fsum(ar.chain([-(1.7.pow(1000))]))  ==  -1.0);
+    assert(fsum!real(-(1.7.pow(1000)), ar.retro)  ==  -1.0);
 }
 
 /++
