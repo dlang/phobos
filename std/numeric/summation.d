@@ -7,7 +7,7 @@ Authors: $(WEB 9il.github.io, Ilya Yaroshenko)
 
 Source: $(PHOBOSSRC std/numeric/_summation.d)
 */
-module std.numeric.summation;
+module std.summation;
 
 import std.traits;
 import std.typecons;
@@ -107,14 +107,14 @@ template fsum(F, Summation summation = Summation.Precise)
     if (isFloatingPoint!F && isMutable!F)
 {
     F fsum(Range)(Range r)
-        //if (isSummable!(Range, F))
+        if (isSummable!(Range, F))
     {
         alias sum = Algo!summation;
-        return sum!(Range, typeof(return))(r);
+        return sum!(Range, F)(r);
     }
 
-    F fsum(F, Range)(F seed, Range r)
-        //if (isSummable!(Range, F))
+    F fsum(Range)(F seed, Range r)
+        if (isSummable!(Range, F))
     {
         alias sum = Algo!summation;
         return sum!(Range, F)(r, seed);
@@ -125,17 +125,17 @@ template fsum(F, Summation summation = Summation.Precise)
 template fsum(Summation summation = Summation.Precise)
 {
     Unqual!(ForeachType!Range) fsum(Range)(Range r)
-        //if (isSummable!(Range, Unqual!(ForeachType!Range)))
+        if (isSummable!(Range, Unqual!(ForeachType!Range)))
     {
         alias sum = Algo!summation;
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
-        //if (isSummable!(Range, F))
+        if (isSummable!(Range, F))
     {
         alias sum = Algo!summation;
-        return sum!(F, Range)(r, seed);
+        return sum!(Range, F)(r, seed);
     }
 }
 
@@ -146,11 +146,11 @@ unittest
     auto ar = 1000
         .iota
         .map!(n => 1.7.pow(n+1) - 1.7.pow(n))
-        .chain([-(1.7.pow(1000))]);
+        ;
 
     //Summation.Precise is default
-    assert(ar.fsum  ==  -1.0);
-    assert(ar.retro.fsum!real  ==  -1.0);
+    assert(fsum(ar.chain([-(1.7.pow(1000))]))  ==  -1.0);
+    assert(fsum!real(-(1.7.pow(1000)), ar.array.retro)  ==  -1.0);
 }
 
 ///
@@ -158,7 +158,6 @@ unittest {
     import std.algorithm;
     auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
     const r = 20000;
-    assert(r != ar.fsum!(Summation.Pairwise));
     assert(r == ar.fsum!(Summation.KBN));
     assert(r == ar.fsum!(Summation.KB2));
     assert(r == ar.fsum); //Summation.Precise
@@ -168,20 +167,20 @@ unittest {
 // Fails for 32bit systems.
 // See also https://issues.dlang.org/show_bug.cgi?id=13474#c7
 // and https://github.com/D-Programming-Language/phobos/pull/2513
-version(none)
+//version(none)
 unittest {
     import std.algorithm;
     auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
     const r = 20000;
     assert(r != ar.fsum!(Summation.Naive));
     assert(r != ar.fsum!(Summation.Kahan));
+    assert(r != ar.fsum!(Summation.Pairwise));
 }
 
 /++
 $(D Naive), $(D Pairwise) and $(D Kahan) algorithms can be used for user defined types.
 +/
-unittest
-{
+unittest {
     static struct Quaternion(F)
         if (isFloatingPoint!F)
     {
@@ -232,12 +231,12 @@ unittest
     import std.complex;
     Complex!double[] ar = [complex(1.0, 2), complex(2, 3), complex(3, 4), complex(4, 5)];
     Complex!double r = complex(10, 14);
-    //assert(r == ar.fsum!(Summation.Fast));
-    //assert(r == ar.fsum!(Summation.Naive));
-    //assert(r == ar.fsum!(Summation.Pairwise));
-    //assert(r == ar.fsum!(Summation.Kahan));
-    //assert(r == ar.fsum!(Summation.KBN));
-    //assert(r == ar.fsum!(Summation.KB2));
+    assert(r == ar.fsum!(Summation.Fast));
+    assert(r == ar.fsum!(Summation.Naive));
+    assert(r == ar.fsum!(Summation.Pairwise));
+    assert(r == ar.fsum!(Summation.Kahan));
+    assert(r == ar.fsum!(Summation.KBN));
+    assert(r == ar.fsum!(Summation.KB2));
     assert(r == ar.fsum); //Summation.Precise
 }
 
@@ -421,7 +420,11 @@ public:
                     h = x + y;
                 }
                 debug(numeric) assert(h.isFinite);
-                F l = fabs(x) < fabs(y) ? x - (h - y) : y - (h - x);
+                F l;
+                if(fabs(x) < fabs(y))
+                    l = x - (h - y);
+                else
+                    l = y - (h - x);
                 debug(numeric) assert(l.isFinite);
                 if (l)
                 {
@@ -767,54 +770,54 @@ unittest
 
 private:
 
-//template isComplex(C)
-//{
-//    import std.complex : Complex;
-//    enum bool isComplex = is(C : Complex!F, F);
-//}
+template isComplex(C)
+{
+    import std.complex : Complex;
+    enum bool isComplex = is(C : Complex!F, F);
+}
 
-//// FIXME (perfomance issue): fabs in std.math available only for for real.
-//F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
-//{
-//    if (__ctfe)
-//    {
-//        return f < 0 ? -f : f;
-//    }
-//    else
-//    {
-//        version(LDC)
-//        {
-//            import ldc.intrinsics : llvm_fabs;
-//            return llvm_fabs(f);
-//        }
-//        else
-//        {
-//            import core.stdc.tgmath : fabs;
-//            return fabs(f);
-//        }
-//    }
-//}
+// FIXME (perfomance issue): fabs in std.math available only for for real.
+F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
+{
+    if (__ctfe)
+    {
+        return f < 0 ? -f : f;
+    }
+    else
+    {
+        version(LDC)
+        {
+            import ldc.intrinsics : llvm_fabs;
+            return llvm_fabs(f);
+        }
+        else
+        {
+            import core.stdc.tgmath : fabs;
+            return fabs(f);
+        }
+    }
+}
 
-//template isSummable(Range, F)
-//{
-//    enum bool isSummable =
-//        isInputRange!Range &&
-//        isImplicitlyConvertible!(Unqual!(ForeachType!Range), F) &&
-//        !isInfinite!Range &&
-//        __traits(compiles,
-//        {
-//            F a = 0.1, b, c;
-//            c = a + b;
-//            c = a - b;
-//            a += b;
-//            a -= b;
-//        });
-//}
+template isSummable(Range, F)
+{
+    enum bool isSummable =
+        isInputRange!Range &&
+        isImplicitlyConvertible!(Unqual!(ForeachType!Range), F) &&
+        !isInfinite!Range &&
+        __traits(compiles,
+        {
+            F a = 0.1, b, c;
+            c = a + b;
+            c = a - b;
+            a += b;
+            a -= b;
+        });
+}
 
 /++
 Naive summation algorithm.
 +/
-F sumNaive(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
+F sumNaive(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
 {
     foreach (x; r)
     {
@@ -864,7 +867,7 @@ s := t
 END DO
 ---------------------
 +/
-F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
+F sumKahan(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
 {
     F c = 0.0;
     F y; // do not declare in the loop (algo can be used for matrixes and etc)
@@ -901,8 +904,8 @@ END DO
 s := s + c
 ---------------------
 +/
-F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
-    //if (isFloatingPoint!F || isComplex!F)
+F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
+    if (isFloatingPoint!F || isComplex!F)
 {
     F c = 0.0;
     static if (isFloatingPoint!F)
@@ -969,8 +972,8 @@ END FOR
 RETURN s+cs+ccs
 ---------------------
 +/
-F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
-    //if (isFloatingPoint!F || isComplex!F)
+F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
+    if (isFloatingPoint!F || isComplex!F)
 {
     F cs = 0.0;
     F ccs = 0.0;
@@ -1065,8 +1068,8 @@ unittest
 /++
 Precise summation.
 +/
-F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0.0)
-    //if (isFloatingPoint!F || isComplex!F)
+F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0)
+    if (isFloatingPoint!F || isComplex!F)
 {
     static if (isFloatingPoint!F)
     {
