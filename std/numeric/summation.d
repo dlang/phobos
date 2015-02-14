@@ -12,7 +12,7 @@ module std.numeric.summation;
 import std.traits;
 import std.typecons;
 import std.range.primitives;
-import std.math : isNaN, isFinite, isInfinity, signbit, frexp;
+import std.math;
 
 
 /++
@@ -21,7 +21,6 @@ Computes accurate sum of binary logarithms of input range $(D r).
 ElementType!Range sumOfLog2s(Range)(Range r)
     if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 {
-    import std.math : frexp, log2;
     long exp = 0;
     Unqual!(typeof(return)) x = 1;
     foreach (e; r)
@@ -158,6 +157,7 @@ unittest {
     import std.algorithm;
     auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
     const r = 20000;
+    assert(r != ar.fsum!(Summation.Pairwise));
     assert(r == ar.fsum!(Summation.KBN));
     assert(r == ar.fsum!(Summation.KB2));
     assert(r == ar.fsum); //Summation.Precise
@@ -167,14 +167,14 @@ unittest {
 // Fails for 32bit systems.
 // See also https://issues.dlang.org/show_bug.cgi?id=13474#c7
 // and https://github.com/D-Programming-Language/phobos/pull/2513
-//unittest {
-//    import std.algorithm;
-//    auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
-//    const r = 20000;
-//    assert(r != ar.fsum!(Summation.Naive));
-//    assert(r != ar.fsum!(Summation.Pairwise));
-//    assert(r != ar.fsum!(Summation.Kahan));
-//}
+version(none)
+unittest {
+    import std.algorithm;
+    auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
+    const r = 20000;
+    assert(r != ar.fsum!(Summation.Naive));
+    assert(r != ar.fsum!(Summation.Kahan));
+}
 
 /++
 $(D Naive), $(D Pairwise) and $(D Kahan) algorithms can be used for user defined types.
@@ -772,27 +772,27 @@ template isComplex(C)
     enum bool isComplex = is(C : Complex!F, F);
 }
 
-// FIXME (perfomance issue): fabs in std.math available only for for real.
-F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
-{
-    if (__ctfe)
-    {
-        return f < 0 ? -f : f;
-    }
-    else
-    {
-        version(LDC)
-        {
-            import ldc.intrinsics : llvm_fabs;
-            return llvm_fabs(f);
-        }
-        else
-        {
-            import core.stdc.tgmath : fabs;
-            return fabs(f);
-        }
-    }
-}
+//// FIXME (perfomance issue): fabs in std.math available only for for real.
+//F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
+//{
+//    if (__ctfe)
+//    {
+//        return f < 0 ? -f : f;
+//    }
+//    else
+//    {
+//        version(LDC)
+//        {
+//            import ldc.intrinsics : llvm_fabs;
+//            return llvm_fabs(f);
+//        }
+//        else
+//        {
+//            import core.stdc.tgmath : fabs;
+//            return fabs(f);
+//        }
+//    }
+//}
 
 template isSummable(Range, F)
 {
