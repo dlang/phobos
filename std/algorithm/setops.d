@@ -1227,6 +1227,8 @@ private:
 
 public:
     alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
+    static assert(!is(CommonType!(staticMap!(.ElementType, Rs)) == void),
+        typeof(this).stringof ~ ": incompatible element types.");
 
     this(Rs rs)
     {
@@ -1255,7 +1257,7 @@ public:
         assert(false);
     }
 
-    @property ElementType front()
+    @property auto ref ElementType front()
     {
         assert(!empty);
         // Assume _crt is correct
@@ -1311,13 +1313,15 @@ SetUnion!(less, Rs) setUnion(alias less = "a < b", Rs...)
 
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
-    int[] c = [ 10 ];
+    double[] c = [ 10.5 ];
 
+    static assert(isForwardRange!(typeof(setUnion(a, b))));
     assert(setUnion(a, b).length == a.length + b.length);
     assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
     assert(equal(setUnion(a, c, b),
-                    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10][]));
-
-    static assert(isForwardRange!(typeof(setUnion(a, b))));
+                    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10.5][]));
+    auto u = setUnion(a, b);
+    u.front--;
+    assert(equal(u, [-1, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
 }
 
