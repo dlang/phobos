@@ -107,14 +107,14 @@ template fsum(F, Summation summation = Summation.Precise)
     if (isFloatingPoint!F && isMutable!F)
 {
     F fsum(Range)(Range r)
-        if (isSummable!(Range, F))
+        //if (isSummable!(Range, F))
     {
         alias sum = Algo!summation;
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
-        if (isSummable!(Range, F))
+        //if (isSummable!(Range, F))
     {
         alias sum = Algo!summation;
         return sum!(Range, F)(r, seed);
@@ -125,14 +125,14 @@ template fsum(F, Summation summation = Summation.Precise)
 template fsum(Summation summation = Summation.Precise)
 {
     Unqual!(ForeachType!Range) fsum(Range)(Range r)
-        if (isSummable!(Range, Unqual!(ForeachType!Range)))
+        //if (isSummable!(Range, Unqual!(ForeachType!Range)))
     {
         alias sum = Algo!summation;
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
-        if (isSummable!(Range, F))
+        //if (isSummable!(Range, F))
     {
         alias sum = Algo!summation;
         return sum!(F, Range)(r, seed);
@@ -232,12 +232,12 @@ unittest
     import std.complex;
     Complex!double[] ar = [complex(1.0, 2), complex(2, 3), complex(3, 4), complex(4, 5)];
     Complex!double r = complex(10, 14);
-    assert(r == ar.fsum!(Summation.Fast));
-    assert(r == ar.fsum!(Summation.Naive));
-    assert(r == ar.fsum!(Summation.Pairwise));
-    assert(r == ar.fsum!(Summation.Kahan));
-    assert(r == ar.fsum!(Summation.KBN));
-    assert(r == ar.fsum!(Summation.KB2));
+    //assert(r == ar.fsum!(Summation.Fast));
+    //assert(r == ar.fsum!(Summation.Naive));
+    //assert(r == ar.fsum!(Summation.Pairwise));
+    //assert(r == ar.fsum!(Summation.Kahan));
+    //assert(r == ar.fsum!(Summation.KBN));
+    //assert(r == ar.fsum!(Summation.KB2));
     assert(r == ar.fsum); //Summation.Precise
 }
 
@@ -441,46 +441,46 @@ public:
         }
     }
 
-    /++
-    Adds $(D x) to the internal partial sums.
-    This operation doesn't re-establish special
-    value semantics across iterations (i.e. handling -inf + inf).
-    Preconditions: $(D isFinite(x)).
-    +/
-    package void unsafePut(F x)
-    in {
-        assert(.isFinite(x));
-    }
-    body {
-        size_t i;
-        foreach (y; partials[])
-        {
-            F h = x + y;
-            debug(numeric) assert(.isFinite(h));
-            F l = fabs(x) < fabs(y) ? x - (h - y) : y - (h - x);
-            debug(numeric) assert(.isFinite(l));
-            if (l)
-            {
-                partials[i++] = l;
-            }
-            x = h;
-        }
-        partials.length = i;
-        if (x)
-        {
-            partials.put(x);
-        }
-    }
+    ///++
+    //Adds $(D x) to the internal partial sums.
+    //This operation doesn't re-establish special
+    //value semantics across iterations (i.e. handling -inf + inf).
+    //Preconditions: $(D isFinite(x)).
+    //+/
+    //package void unsafePut(F x)
+    //in {
+    //    assert(.isFinite(x));
+    //}
+    //body {
+    //    size_t i;
+    //    foreach (y; partials[])
+    //    {
+    //        F h = x + y;
+    //        debug(numeric) assert(.isFinite(h));
+    //        F l = fabs(x) < fabs(y) ? x - (h - y) : y - (h - x);
+    //        debug(numeric) assert(.isFinite(l));
+    //        if (l)
+    //        {
+    //            partials[i++] = l;
+    //        }
+    //        x = h;
+    //    }
+    //    partials.length = i;
+    //    if (x)
+    //    {
+    //        partials.put(x);
+    //    }
+    //}
 
-    ///
-    unittest {
-        import std.math, std.algorithm, std.range;
-        auto r = iota(1, 1001).map!(a => (-1.0).pow(a)/a);
-        Summator!double s = 0.0;
-        foreach(e; r)
-            s.unsafePut(e);
-        assert(s.sum() == -0.69264743055982025);
-    }
+    /////
+    //unittest {
+    //    import std.math, std.algorithm, std.range;
+    //    auto r = iota(1, 1001).map!(a => (-1.0).pow(a)/a);
+    //    Summator!double s = 0.0;
+    //    foreach(e; r)
+    //        s.unsafePut(e);
+    //    assert(s.sum() == -0.69264743055982025);
+    //}
 
     /++
     Returns the value of the sum, rounded to the nearest representable
@@ -767,11 +767,11 @@ unittest
 
 private:
 
-template isComplex(C)
-{
-    import std.complex : Complex;
-    enum bool isComplex = is(C : Complex!F, F);
-}
+//template isComplex(C)
+//{
+//    import std.complex : Complex;
+//    enum bool isComplex = is(C : Complex!F, F);
+//}
 
 //// FIXME (perfomance issue): fabs in std.math available only for for real.
 //F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
@@ -795,21 +795,21 @@ template isComplex(C)
 //    }
 //}
 
-template isSummable(Range, F)
-{
-    enum bool isSummable =
-        isInputRange!Range &&
-        isImplicitlyConvertible!(Unqual!(ForeachType!Range), F) &&
-        !isInfinite!Range &&
-        __traits(compiles,
-        {
-            F a = 0.1, b, c;
-            c = a + b;
-            c = a - b;
-            a += b;
-            a -= b;
-        });
-}
+//template isSummable(Range, F)
+//{
+//    enum bool isSummable =
+//        isInputRange!Range &&
+//        isImplicitlyConvertible!(Unqual!(ForeachType!Range), F) &&
+//        !isInfinite!Range &&
+//        __traits(compiles,
+//        {
+//            F a = 0.1, b, c;
+//            c = a + b;
+//            c = a - b;
+//            a += b;
+//            a -= b;
+//        });
+//}
 
 /++
 Naive summation algorithm.
@@ -902,7 +902,7 @@ s := s + c
 ---------------------
 +/
 F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
-    if (isFloatingPoint!F || isComplex!F)
+    //if (isFloatingPoint!F || isComplex!F)
 {
     F c = 0.0;
     static if (isFloatingPoint!F)
@@ -970,7 +970,7 @@ RETURN s+cs+ccs
 ---------------------
 +/
 F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0.0)
-    if (isFloatingPoint!F || isComplex!F)
+    //if (isFloatingPoint!F || isComplex!F)
 {
     F cs = 0.0;
     F ccs = 0.0;
@@ -1066,7 +1066,7 @@ unittest
 Precise summation.
 +/
 F sumPrecise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed = 0.0)
-    if (isFloatingPoint!F || isComplex!F)
+    //if (isFloatingPoint!F || isComplex!F)
 {
     static if (isFloatingPoint!F)
     {
