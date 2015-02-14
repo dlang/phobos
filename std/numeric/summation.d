@@ -7,7 +7,7 @@ Authors: $(WEB 9il.github.io, Ilya Yaroshenko)
 
 Source: $(PHOBOSSRC std/numeric/_summation.d)
 */
-module std.numeric.summation;
+module std.summation;
 
 import std.traits;
 import std.typecons;
@@ -150,7 +150,7 @@ unittest
 
     //Summation.Precise is default
     assert(fsum(ar.chain([-(1.7.pow(1000))]))  ==  -1.0);
-    assert(fsum!real(-(1.7.pow(1000)), ar.array.retro)  ==  -1.0);
+    assert(fsum!real(-(1.7.pow(1000)), ar.retro)  ==  -1.0);
 }
 
 ///
@@ -311,7 +311,8 @@ private:
     {
         F x = s;
         s = x + y;
-        F l = y - (s - x);
+        F d = s - x;
+        F l = y - d;
         debug(numeric)
         {
             assert(x.isFinite);
@@ -348,9 +349,11 @@ private:
             F x = o * M;
             F y = partials[$-1] / 2;
             F h = x + y;
-            F l = (y - (h - x)) * 2;
+            F d = h - x;
+            F l = (y - d) * 2;
             y = h * 2;
-            if (!.isInfinity(y) || partials.length > 1 && !signbit(l * partials[$-2]) && (h + l) - h == l)
+            d = h + l;
+            if (!.isInfinity(y) || partials.length > 1 && !signbit(l * partials[$-2]) && d - h == l)
                 return 0;
         }
         return F.infinity * o;
@@ -422,9 +425,15 @@ public:
                 debug(numeric) assert(h.isFinite);
                 F l;
                 if(fabs(x) < fabs(y))
-                    l = x - (h - y);
+                {
+                    F t = h - y;
+                    l = x - t;
+                }
                 else
-                    l = y - (h - x);
+                {
+                    F t = h - x;
+                    l = y - t;
+                }
                 debug(numeric) assert(l.isFinite);
                 if (l)
                 {
@@ -444,46 +453,56 @@ public:
         }
     }
 
-    ///++
-    //Adds $(D x) to the internal partial sums.
-    //This operation doesn't re-establish special
-    //value semantics across iterations (i.e. handling -inf + inf).
-    //Preconditions: $(D isFinite(x)).
-    //+/
-    //package void unsafePut(F x)
-    //in {
-    //    assert(.isFinite(x));
-    //}
-    //body {
-    //    size_t i;
-    //    foreach (y; partials[])
-    //    {
-    //        F h = x + y;
-    //        debug(numeric) assert(.isFinite(h));
-    //        F l = fabs(x) < fabs(y) ? x - (h - y) : y - (h - x);
-    //        debug(numeric) assert(.isFinite(l));
-    //        if (l)
-    //        {
-    //            partials[i++] = l;
-    //        }
-    //        x = h;
-    //    }
-    //    partials.length = i;
-    //    if (x)
-    //    {
-    //        partials.put(x);
-    //    }
-    //}
+    /++
+    Adds $(D x) to the internal partial sums.
+    This operation doesn't re-establish special
+    value semantics across iterations (i.e. handling -inf + inf).
+    Preconditions: $(D isFinite(x)).
+    +/
+    package void unsafePut(F x)
+    in {
+        assert(.isFinite(x));
+    }
+    body {
+        size_t i;
+        foreach (y; partials[])
+        {
+            F h = x + y;
+            debug(numeric) assert(.isFinite(h));
+            F l;
+            if(fabs(x) < fabs(y))
+            {
+                F t = h - y;
+                l = x - t;
+            }
+            else
+            {
+                F t = h - x;
+                l = y - t;
+            }
+            debug(numeric) assert(.isFinite(l));
+            if (l)
+            {
+                partials[i++] = l;
+            }
+            x = h;
+        }
+        partials.length = i;
+        if (x)
+        {
+            partials.put(x);
+        }
+    }
 
-    /////
-    //unittest {
-    //    import std.math, std.algorithm, std.range;
-    //    auto r = iota(1, 1001).map!(a => (-1.0).pow(a)/a);
-    //    Summator!double s = 0.0;
-    //    foreach(e; r)
-    //        s.unsafePut(e);
-    //    assert(s.sum() == -0.69264743055982025);
-    //}
+    ///
+    unittest {
+        import std.math, std.algorithm, std.range;
+        auto r = iota(1, 1001).map!(a => (-1.0).pow(a)/a);
+        Summator!double s = 0.0;
+        foreach(e; r)
+            s.unsafePut(e);
+        assert(s.sum() == -0.69264743055982025);
+    }
 
     /++
     Returns the value of the sum, rounded to the nearest representable
@@ -522,7 +541,8 @@ public:
                 y /= 2;
                 F x = of * M;
                 immutable F h = x + y;
-                F l = (y - (h - x)) * 2;
+                F t = h - x;
+                F l = (y - t) * 2;
                 y = h * 2;
                 if (y.isInfinity)
                 {
@@ -776,27 +796,27 @@ template isComplex(C)
     enum bool isComplex = is(C : Complex!F, F);
 }
 
-// FIXME (perfomance issue): fabs in std.math available only for for real.
-F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
-{
-    if (__ctfe)
-    {
-        return f < 0 ? -f : f;
-    }
-    else
-    {
-        version(LDC)
-        {
-            import ldc.intrinsics : llvm_fabs;
-            return llvm_fabs(f);
-        }
-        else
-        {
-            import core.stdc.tgmath : fabs;
-            return fabs(f);
-        }
-    }
-}
+//// FIXME (perfomance issue): fabs in std.math available only for for real.
+//F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
+//{
+//    if (__ctfe)
+//    {
+//        return f < 0 ? -f : f;
+//    }
+//    else
+//    {
+//        version(LDC)
+//        {
+//            import ldc.intrinsics : llvm_fabs;
+//            return llvm_fabs(f);
+//        }
+//        else
+//        {
+//            import core.stdc.tgmath : fabs;
+//            return fabs(f);
+//        }
+//    }
+//}
 
 template isSummable(Range, F)
 {
@@ -914,9 +934,17 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
         {
             F t = s + x;
             if (fabs(s) >= fabs(x))
-                c += (s-t)+x;
+            {
+                F d = s - t;
+                d += x;
+                c += d;
+            }
             else
-                c += (x-t)+s;
+            {
+                F d = x - t;
+                d += s;
+                c += d;
+            }
             s = t;
         }
     }
@@ -937,7 +965,9 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
                 s.im = x.im;
                 x.im = t_im;
             }
-            c += (s-t)+x;
+            F d = s - t;
+            d += x;
+            c += d;
             s = t;
         }
     }
@@ -984,15 +1014,29 @@ F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
             F t = s + x;
             F c = void;
             if (fabs(s) >= fabs(x))
-                c = (s-t)+x;
+            {
+                F d = s - t;
+                c = d + x;
+            }
             else
-                c = (x-t)+s;
+            {
+                F d = x - t;
+                c = d + s;
+            }
             s = t;
             t = cs + c;
             if (fabs(cs) >= fabs(c))
-                ccs += (cs-t)+c;
+            {
+                F d = cs - t;
+                d += c;
+                ccs += d;
+            }
             else
-                ccs += (c-t)+cs;
+            {
+                F d = c - t;
+                d += cs;
+                ccs += d;
+            }
             cs = t;
         }
     }
@@ -1027,11 +1071,15 @@ F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
                 cs.im = c.im;
                 c.im = t_im;
             }
-            ccs += (cs-t)+c;
+            F d = cs - t;
+            d += c;
+            ccs += d;
             cs = t;
         }
     }
-    return s+cs+ccs; // no rounding in between
+    cs += ccs;
+    s += cs;
+    return s;
 }
 
 unittest
