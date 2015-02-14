@@ -1897,46 +1897,82 @@ S capitalize(S)(S s) @trusted pure
     $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
     If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
     is included in the strings returned.
-  +/
+
+    Does not throw on invalid UTF; such is simply passed unchanged
+    to the output.
+
+  Params:
+    s = a string of $(D chars), $(D wchars), or $(D dchars)
+    keepTerm = whether delimiter is included or not in the results
+  Returns:
+    array of strings, each element is a line that is a slice of $(D s)
+ +/
 alias KeepTerminator = Flag!"keepTerminator";
 /// ditto
 S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pure
     if (isSomeString!S)
 {
-    import std.utf : decode;
     import std.uni : lineSep, paraSep;
     import std.array : appender;
 
     size_t iStart = 0;
-    size_t nextI = 0;
     auto retval = appender!(S[])();
 
-    for (size_t i; i < s.length; i = nextI)
+    for (size_t i; i < s.length; ++i)
     {
-        immutable c = decode(s, nextI);
-
-        if (c == '\r' || c == '\n' || c == lineSep || c == paraSep)
+        switch (s[i])
         {
-            immutable isWinEOL = c == '\r' && i + 1 < s.length && s[i + 1] == '\n';
-            auto iEnd = i;
+            case '\n':
+                retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes)]);
+                iStart = i + 1;
+                break;
 
-            if (keepTerm == KeepTerminator.yes)
+            case '\r':
+                if (i + 1 < s.length && s[i + 1] == '\n')
+                {
+                    retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes) * 2]);
+                    iStart = i + 2;
+                    ++i;
+                }
+                else
+                {
+                    goto case '\n';
+                }
+                break;
+
+            static if (s[i].sizeof == 1)
             {
-                iEnd = isWinEOL? nextI + 1 : nextI;
+                /* Manually decode:
+                 *  lineSep is E2 80 A8
+                 *  paraSep is E2 80 A9
+                 */
+                case 0xE2:
+                    if (i + 2 < s.length &&
+                        s[i + 1] == 0x80 &&
+                        (s[i + 2] == 0xA8 || s[i + 2] == 0xA9)
+                       )
+                    {
+                        retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes) * 3]);
+                        iStart = i + 3;
+                        i += 2;
+                    }
+                    else
+                        goto default;
+                    break;
+            }
+            else
+            {
+                case lineSep:
+                case paraSep:
+                    goto case '\n';
             }
 
-            retval.put(s[iStart .. iEnd]);
-            iStart = nextI;
-
-            if (isWinEOL)
-            {
-                ++nextI;
-                ++iStart;
-            }
+            default:
+                break;
         }
     }
 
-    if (iStart != nextI)
+    if (iStart != s.length)
         retval.put(s[iStart .. $]);
 
     return retval.data;
@@ -1953,10 +1989,10 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n");
+        auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\nmon\u2030day\n");
 
         auto lines = splitLines(s);
-        assert(lines.length == 9);
+        assert(lines.length == 10);
         assert(lines[0] == "");
         assert(lines[1] == "peter");
         assert(lines[2] == "");
@@ -1966,9 +2002,14 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
         assert(lines[6] == "cream");
         assert(lines[7] == "");
         assert(lines[8] == "sunday");
+        assert(lines[9] == "mon\u2030day");
+
+        ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
+        auto ulines = splitLines(cast(char[])u);
+        assert(cast(ubyte[])(ulines[0]) == u);
 
         lines = splitLines(s, KeepTerminator.yes);
-        assert(lines.length == 9);
+        assert(lines.length == 10);
         assert(lines[0] == "\r");
         assert(lines[1] == "peter\n");
         assert(lines[2] == "\r");
@@ -1978,15 +2019,16 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
         assert(lines[6] == "cream\n");
         assert(lines[7] == "\n");
         assert(lines[8] == "sunday\n");
+        assert(lines[9] == "mon\u2030day\n");
 
         s.popBack(); // Lop-off trailing \n
         lines = splitLines(s);
-        assert(lines.length == 9);
-        assert(lines[8] == "sunday");
+        assert(lines.length == 10);
+        assert(lines[9] == "mon\u2030day");
 
         lines = splitLines(s, KeepTerminator.yes);
-        assert(lines.length == 9);
-        assert(lines[8] == "sunday");
+        assert(lines.length == 10);
+        assert(lines[9] == "mon\u2030day");
     }
     });
 }
