@@ -42,6 +42,7 @@ ElementType!Range sumOfLog2s(Range)(Range r)
 ///
 unittest
 {
+    import std.math, std.numeric;
     assert(sumOfLog2s(new double[0]) == 0);
     assert(sumOfLog2s([0.0L]) == -real.infinity);
     assert(sumOfLog2s([-0.0L]) == -real.infinity);
@@ -105,17 +106,17 @@ Computes sum of range.
 template fsum(F, Summation summation = Summation.Precise)
     if (isFloatingPoint!F && isMutable!F)
 {
-    alias sum = Algo!summation;
-
     F fsum(Range)(Range r)
         if (isSummable!(Range, F))
     {
+        alias sum = Algo!summation;
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
         if (isSummable!(Range, F))
     {
+        alias sum = Algo!summation;
         return sum!(Range, F)(r, seed);
     }
 }
@@ -123,17 +124,17 @@ template fsum(F, Summation summation = Summation.Precise)
 ///ditto
 template fsum(Summation summation = Summation.Precise)
 {
-    alias sum = Algo!summation;
-
     Unqual!(ForeachType!Range) fsum(Range)(Range r)
         if (isSummable!(Range, Unqual!(ForeachType!Range)))
     {
+        alias sum = Algo!summation;
         return sum!(Range, typeof(return))(r);
     }
 
     F fsum(F, Range)(F seed, Range r)
         if (isSummable!(Range, F))
     {
+        alias sum = Algo!summation;
         return sum!(F, Range)(r, seed);
     }
 }
