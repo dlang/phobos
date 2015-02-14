@@ -36,15 +36,20 @@ DIR=\dmd2
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
 
+## Location of druntime tree
+
+DRUNTIME=..\druntime
+DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
+
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -w -dip25
+DFLAGS=-conf= -O -release -w -dip25 -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -w -dip25
+UDFLAGS=-conf= -O -w -dip25 -I$(DRUNTIME)\import
 
 ## C compiler
 
@@ -65,11 +70,6 @@ STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std.ddoc $(DOCSR
 
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
-
-## Location of druntime tree
-
-DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 
 ## Zlib library
 
@@ -94,10 +94,10 @@ targets : $(LIB)
 test : test.exe
 
 test.obj : test.d
-	$(DMD) -c test -g -unittest
+	$(DMD) -conf= -c test -g -unittest
 
 test.exe : test.obj $(LIB)
-	$(DMD) test.obj -g -L/map
+	$(DMD) -conf= test.obj -g -L/map
 
 #	ti_bit.obj ti_Abit.obj
 
@@ -439,93 +439,94 @@ unittest : $(LIB)
 #	unittest
 #
 #unittest.exe : unittest.d $(LIB)
-#	$(DMD) unittest -g
+#	$(DMD) -conf= unittest -g
 #	dmc unittest.obj -g
 
 cov : $(SRC_TO_COMPILE) $(LIB)
-#	$(DMD) -cov -unittest -ofcov.exe -main $(SRC_TO_COMPILE) $(LIB)
+#	$(DMD) -conf= -cov -unittest -ofcov.exe -main $(SRC_TO_COMPILE) $(LIB)
 #	cov
 	del *.lst
-	$(DMD) -cov=83 -unittest -main -run std\stdio.d
-	$(DMD) -cov=100 -unittest -main -run std\stdiobase.d
-	$(DMD) -cov=95 -unittest -main -run std\string.d
-	$(DMD) -cov=71 -unittest -main -run std\format.d
-	$(DMD) -cov=83 -unittest -main -run std\file.d
-	$(DMD) -cov=86 -unittest -main -run std\range\package.d
-	$(DMD) -cov=95 -unittest -main -run std\array.d
-	$(DMD) -cov=100 -unittest -main -run std\functional.d
-	$(DMD) -cov=96 -unittest -main -run std\path.d
-	$(DMD) -cov=41 -unittest -main -run std\outbuffer.d
-	$(DMD) -cov=89 -unittest -main -run std\utf.d
-	$(DMD) -cov=93 -unittest -main -run std\csv.d
-	$(DMD) -cov=91 -unittest -main -run std\math.d
-	$(DMD) -cov=95 -unittest -main -run std\complex.d
-	$(DMD) -cov=70 -unittest -main -run std\numeric\package.d
-	$(DMD) -cov=70 -unittest -main -run std\numeric\summation.d
-	$(DMD) -cov=94 -unittest -main -run std\bigint.d
-	$(DMD) -cov=95 -unittest -main -run std\bitmanip.d
-	$(DMD) -cov=82 -unittest -main -run std\typecons.d
-	$(DMD) -cov=44 -unittest -main -run std\uni.d
-	$(DMD) -cov=91 -unittest -main -run std\base64.d
-	$(DMD) -cov=100 -unittest -main -run std\ascii.d
-	$(DMD) -cov=0  -unittest -main -run std\demangle.d
-	$(DMD) -cov=57 -unittest -main -run std\uri.d
-	$(DMD) -cov=51 -unittest -main -run std\mmfile.d
-	$(DMD) -cov=95 -unittest -main -run std\getopt.d
-	$(DMD) -cov=92 -unittest -main -run std\signals.d
-	$(DMD) -cov=100 -unittest -main -run std\typetuple.d
-	$(DMD) -cov=85 -unittest -main -run std\traits.d
-	$(DMD) -cov=62 -unittest -main -run std\encoding.d
-	$(DMD) -cov=61 -unittest -main -run std\xml.d
-	$(DMD) -cov=79 -unittest -main -run std\random.d
-	$(DMD) -cov=92 -unittest -main -run std\exception.d
-	$(DMD) -cov=73 -unittest -main -run std\concurrency.d
-	$(DMD) -cov=95 -unittest -main -run std\datetime.d
-	$(DMD) -cov=96 -unittest -main -run std\uuid.d
-	$(DMD) -cov=100 -unittest -main -run std\digest\crc.d
-	$(DMD) -cov=55 -unittest -main -run std\digest\sha.d
-	$(DMD) -cov=100 -unittest -main -run std\digest\md.d
-	$(DMD) -cov=100 -unittest -main -run std\digest\ripemd.d
-	$(DMD) -cov=75 -unittest -main -run std\digest\digest.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm\package.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm\comparison.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm\iteration.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm\mutation.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm\searching.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm\setops.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm\sorting.d
-	$(DMD) -cov=83 -unittest -main -run std\variant.d
-	$(DMD) -cov=0  -unittest -main -run std\syserror.d
-	$(DMD) -cov=58 -unittest -main -run std\zlib.d
-	$(DMD) -cov=54 -unittest -main -run std\stream.d
-	$(DMD) -cov=53 -unittest -main -run std\socket.d
-	$(DMD) -cov=0  -unittest -main -run std\socketstream.d
-	$(DMD) -cov=95 -unittest -main -run std\container\array.d
-	$(DMD) -cov=68 -unittest -main -run std\container\binaryheap.d
-	$(DMD) -cov=91 -unittest -main -run std\container\dlist.d
-	$(DMD) -cov=93 -unittest -main -run std\container\rbtree.d
-	$(DMD) -cov=92 -unittest -main -run std\container\slist.d
-	$(DMD) -cov=100 -unittest -main -run std\container\util.d
-	$(DMD) -cov=100 -unittest -main -run std\container\package.d
-	$(DMD) -cov=90 -unittest -main -run std\conv.d
-	$(DMD) -cov=0  -unittest -main -run std\zip.d
-	$(DMD) -cov=92 -unittest -main -run std\cstream.d
-	$(DMD) -cov=77 -unittest -main -run std\regex\tests.d
-	$(DMD) -cov=92 -unittest -main -run std\json.d
-	$(DMD) -cov=87 -unittest -main -run std\parallelism.d
-	$(DMD) -cov=50 -unittest -main -run std\mathspecial.d
-	$(DMD) -cov=71 -unittest -main -run std\process.d
-	$(DMD) -cov=70 -unittest -main -run std\net\isemail.d
-	$(DMD) -cov=2  -unittest -main -run std\net\curl.d
-	$(DMD) -cov=60 -unittest -main -run std\windows\registry.d
-	$(DMD) -cov=0  -unittest -main -run std\internal\digest\sha_SSSE3.d
-	$(DMD) -cov=50 -unittest -main -run std\internal\math\biguintcore.d
-	$(DMD) -cov=75 -unittest -main -run std\internal\math\biguintnoasm.d
-#	$(DMD) -cov -unittest -main -run std\internal\math\biguintx86.d
-	$(DMD) -cov=94 -unittest -main -run std\internal\math\gammafunction.d
-	$(DMD) -cov=92 -unittest -main -run std\internal\math\errorfunction.d
-	$(DMD) -cov=31 -unittest -main -run std\internal\windows\advapi32.d
-	$(DMD) -cov=58 -unittest -main -run etc\c\zlib.d
+	$(DMD) -conf= -cov=83 -unittest -main -run std\stdio.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\stdiobase.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\string.d
+	$(DMD) -conf= -cov=71 -unittest -main -run std\format.d
+	$(DMD) -conf= -cov=83 -unittest -main -run std\file.d
+	$(DMD) -conf= -cov=86 -unittest -main -run std\range\package.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\array.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\functional.d
+	$(DMD) -conf= -cov=96 -unittest -main -run std\path.d
+	$(DMD) -conf= -cov=41 -unittest -main -run std\outbuffer.d
+	$(DMD) -conf= -cov=89 -unittest -main -run std\utf.d
+	$(DMD) -conf= -cov=93 -unittest -main -run std\csv.d
+	$(DMD) -conf= -cov=91 -unittest -main -run std\math.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\complex.d
+	$(DMD) -conf= -cov=70 -unittest -main -run std\numeric\package.d
+	$(DMD) -conf= -cov=70 -unittest -main -run std\numeric\summation.d
+	$(DMD) -conf= -cov=94 -unittest -main -run std\bigint.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\bitmanip.d
+	$(DMD) -conf= -cov=82 -unittest -main -run std\typecons.d
+	$(DMD) -conf= -cov=44 -unittest -main -run std\uni.d
+	$(DMD) -conf= -cov=91 -unittest -main -run std\base64.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\ascii.d
+	$(DMD) -conf= -cov=0  -unittest -main -run std\demangle.d
+	$(DMD) -conf= -cov=57 -unittest -main -run std\uri.d
+	$(DMD) -conf= -cov=51 -unittest -main -run std\mmfile.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\getopt.d
+	$(DMD) -conf= -cov=92 -unittest -main -run std\signals.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\typetuple.d
+	$(DMD) -conf= -cov=85 -unittest -main -run std\traits.d
+	$(DMD) -conf= -cov=62 -unittest -main -run std\encoding.d
+	$(DMD) -conf= -cov=61 -unittest -main -run std\xml.d
+	$(DMD) -conf= -cov=79 -unittest -main -run std\random.d
+	$(DMD) -conf= -cov=92 -unittest -main -run std\exception.d
+	$(DMD) -conf= -cov=73 -unittest -main -run std\concurrency.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime.d
+	$(DMD) -conf= -cov=96 -unittest -main -run std\uuid.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\digest\crc.d
+	$(DMD) -conf= -cov=55 -unittest -main -run std\digest\sha.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\digest\md.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\digest\ripemd.d
+	$(DMD) -conf= -cov=75 -unittest -main -run std\digest\digest.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\package.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\comparison.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\iteration.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\mutation.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\searching.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\setops.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\sorting.d
+	$(DMD) -conf= -cov=83 -unittest -main -run std\variant.d
+	$(DMD) -conf= -cov=0  -unittest -main -run std\syserror.d
+	$(DMD) -conf= -cov=58 -unittest -main -run std\zlib.d
+	$(DMD) -conf= -cov=54 -unittest -main -run std\stream.d
+	$(DMD) -conf= -cov=53 -unittest -main -run std\socket.d
+	$(DMD) -conf= -cov=0  -unittest -main -run std\socketstream.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\container\array.d
+	$(DMD) -conf= -cov=68 -unittest -main -run std\container\binaryheap.d
+	$(DMD) -conf= -cov=91 -unittest -main -run std\container\dlist.d
+	$(DMD) -conf= -cov=93 -unittest -main -run std\container\rbtree.d
+	$(DMD) -conf= -cov=92 -unittest -main -run std\container\slist.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\container\util.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\container\package.d
+	$(DMD) -conf= -cov=90 -unittest -main -run std\conv.d
+	$(DMD) -conf= -cov=0  -unittest -main -run std\zip.d
+	$(DMD) -conf= -cov=92 -unittest -main -run std\cstream.d
+	$(DMD) -conf= -cov=77 -unittest -main -run std\regex\tests.d
+	$(DMD) -conf= -cov=92 -unittest -main -run std\json.d
+	$(DMD) -conf= -cov=87 -unittest -main -run std\parallelism.d
+	$(DMD) -conf= -cov=50 -unittest -main -run std\mathspecial.d
+	$(DMD) -conf= -cov=71 -unittest -main -run std\process.d
+	$(DMD) -conf= -cov=70 -unittest -main -run std\net\isemail.d
+	$(DMD) -conf= -cov=2  -unittest -main -run std\net\curl.d
+	$(DMD) -conf= -cov=60 -unittest -main -run std\windows\registry.d
+	$(DMD) -conf= -cov=0  -unittest -main -run std\internal\digest\sha_SSSE3.d
+	$(DMD) -conf= -cov=50 -unittest -main -run std\internal\math\biguintcore.d
+	$(DMD) -conf= -cov=75 -unittest -main -run std\internal\math\biguintnoasm.d
+#	$(DMD) -conf= -cov -unittest -main -run std\internal\math\biguintx86.d
+	$(DMD) -conf= -cov=94 -unittest -main -run std\internal\math\gammafunction.d
+	$(DMD) -conf= -cov=92 -unittest -main -run std\internal\math\errorfunction.d
+	$(DMD) -conf= -cov=31 -unittest -main -run std\internal\windows\advapi32.d
+	$(DMD) -conf= -cov=58 -unittest -main -run etc\c\zlib.d
+>>>>>>> upstream/master
 
 html : $(DOCS)
 

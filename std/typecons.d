@@ -4030,7 +4030,7 @@ pointer dereference.
  */
 struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
-if (!is(T == class))
+if (!is(T == class) && !(is(T == interface)))
 {
     /// $(D RefCounted) storage implementation.
     struct RefCountedStore

@@ -274,7 +274,7 @@ private uint _ctfeMatchUnary(string fun, string name)
     if (!__ctfe) assert(false);
     import std.stdio;
     fun._ctfeSkipOp();
-    for (;;) 
+    for (;;)
     {
         immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger();
         if (h == 0)
@@ -321,7 +321,7 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
 {
     if (!__ctfe) assert(false);
     fun._ctfeSkipOp();
-    for (;;) 
+    for (;;)
     {
         immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger();
         if (h == 0)

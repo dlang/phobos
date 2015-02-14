@@ -476,6 +476,8 @@ enum config {
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
+    /// Do not erase the endOfOptions separator from args
+    keepEndOfOptions,
     /// Makes the next option a required option
     required
 }
@@ -583,8 +585,9 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             auto a = args[i];
             if (endOfOptions.length && a == endOfOptions)
             {
-                // Consume the "--"
-                args = args.remove(i);
+                // Consume the "--" if keepEndOfOptions is not specified
+                if (!cfg.keepEndOfOptions)
+                    args = args.remove(i);
                 break;
             }
             if (!a.length || a[0] != optionChar)
@@ -802,17 +805,17 @@ unittest
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "-n" "foo,bar,baz"].dup;
+    args = ["program.name", "-n" "foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "--name=foo,bar,baz"].dup;
+    args = ["program.name", "--name=foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "--name", "foo,bar,baz"].dup;
+    args = ["program.name", "--name", "foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 }
@@ -827,12 +830,12 @@ unittest
 
     int[string] values;
     values = values.init;
-    auto args = ["program.name", "-vfoo=0,bar=1,baz=2"].dup;
+    auto args = ["program.name", "-vfoo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
     values = values.init;
-    args = ["program.name", "-v", "foo=0,bar=1,baz=2"].dup;
+    args = ["program.name", "-v", "foo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
@@ -842,7 +845,7 @@ unittest
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
     values = values.init;
-    args = ["program.name", "--values", "foo=0,bar=1,baz=2"].dup;
+    args = ["program.name", "--values", "foo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 }
@@ -887,8 +890,9 @@ private struct configuration
                 bool, "bundling", 1,
                 bool, "passThrough", 1,
                 bool, "stopOnFirstNonOption", 1,
+                bool, "keepEndOfOptions", 1,
                 bool, "required", 1,
-                ubyte, "", 3));
+                ubyte, "", 2));
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
@@ -958,6 +962,8 @@ private void setConfig(ref configuration cfg, config option)
     case config.required: cfg.required = true; break;
     case config.stopOnFirstNonOption:
         cfg.stopOnFirstNonOption = true; break;
+    case config.keepEndOfOptions:
+        cfg.keepEndOfOptions = true; break;
     default: assert(false);
     }
 }
@@ -968,27 +974,25 @@ unittest
     import std.math;
 
     uint paranoid = 2;
-    string[] args = (["program.name",
-                      "--paranoid", "--paranoid", "--paranoid"]).dup;
+    string[] args = ["program.name", "--paranoid", "--paranoid", "--paranoid"];
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
 
     enum Color { no, yes }
     Color color;
-    args = (["program.name", "--color=yes",]).dup;
+    args = ["program.name", "--color=yes",];
     getopt(args, "color", &color);
     assert(color, to!(string)(color));
 
     color = Color.no;
-    args = (["program.name", "--color", "yes",]).dup;
+    args = ["program.name", "--color", "yes",];
     getopt(args, "color", &color);
     assert(color, to!(string)(color));
 
     string data = "file.dat";
     int length = 24;
     bool verbose = false;
-    args = (["program.name", "--length=5",
-                      "--file", "dat.file", "--verbose"]).dup;
+    args = ["program.name", "--length=5", "--file", "dat.file", "--verbose"];
     getopt(
         args,
         "length",  &length,
@@ -1001,15 +1005,14 @@ unittest
 
     //
     string[] outputFiles;
-    args = (["program.name", "--output=myfile.txt",
-             "--output", "yourfile.txt"]).dup;
+    args = ["program.name", "--output=myfile.txt", "--output", "yourfile.txt"];
     getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
            && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
 
     outputFiles = [];
     arraySep = ",";
-    args = (["program.name", "--output", "myfile.txt,yourfile.txt"]).dup;
+    args = ["program.name", "--output", "myfile.txt,yourfile.txt"];
     getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
            && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
@@ -1043,10 +1046,10 @@ unittest
             verbosityLevel = 2;
         }
     }
-    args = (["program.name", "--quiet"]).dup;
+    args = ["program.name", "--quiet"];
     getopt(args, "verbose", &myHandler, "quiet", &myHandler);
     assert(verbosityLevel == 0);
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     getopt(args, "verbose", &myHandler, "quiet", &myHandler);
     assert(verbosityLevel == 2);
 
@@ -1056,7 +1059,7 @@ unittest
         assert(option == "verbose");
         verbosityLevel = 2;
     }
-    args = (["program.name", "--verbose", "2"]).dup;
+    args = ["program.name", "--verbose", "2"];
     getopt(args, "verbose", &myHandler2);
     assert(verbosityLevel == 2);
 
@@ -1065,12 +1068,12 @@ unittest
     {
         verbosityLevel = 2;
     }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     getopt(args, "verbose", &myHandler3);
     assert(verbosityLevel == 2);
 
     bool foo, bar;
-    args = (["program.name", "--foo", "--bAr"]).dup;
+    args = ["program.name", "--foo", "--bAr"];
     getopt(args,
         std.getopt.config.caseSensitive,
         std.getopt.config.passThrough,
@@ -1080,7 +1083,7 @@ unittest
 
     // test stopOnFirstNonOption
 
-    args = (["program.name", "--foo", "nonoption", "--bar"]).dup;
+    args = ["program.name", "--foo", "nonoption", "--bar"];
     foo = bar = false;
     getopt(args,
         std.getopt.config.stopOnFirstNonOption,
@@ -1088,7 +1091,7 @@ unittest
         "bar", &bar);
     assert(foo && !bar && args[1] == "nonoption" && args[2] == "--bar");
 
-    args = (["program.name", "--foo", "nonoption", "--zab"]).dup;
+    args = ["program.name", "--foo", "nonoption", "--zab"];
     foo = bar = false;
     getopt(args,
         std.getopt.config.stopOnFirstNonOption,
@@ -1096,11 +1099,28 @@ unittest
         "bar", &bar);
     assert(foo && !bar && args[1] == "nonoption" && args[2] == "--zab");
 
-    args = (["program.name", "--fb1", "--fb2=true", "--tb1=false"]).dup;
+    args = ["program.name", "--fb1", "--fb2=true", "--tb1=false"];
     bool fb1, fb2;
     bool tb1 = true;
     getopt(args, "fb1", &fb1, "fb2", &fb2, "tb1", &tb1);
     assert(fb1 && fb2 && !tb1);
+
+    // test keepEndOfOptions
+
+    args = ["program.name", "--foo", "nonoption", "--bar", "--", "--baz"];
+    getopt(args,
+        std.getopt.config.keepEndOfOptions,
+        "foo", &foo,
+        "bar", &bar);
+    assert(args == ["program.name", "nonoption", "--", "--baz"]);
+
+    // Ensure old behavior without the keepEndOfOptions
+
+    args = ["program.name", "--foo", "nonoption", "--bar", "--", "--baz"];
+    getopt(args,
+        "foo", &foo,
+        "bar", &bar);
+    assert(args == ["program.name", "nonoption", "--baz"]);
 
     // test function callbacks
 
@@ -1115,17 +1135,17 @@ unittest
     }
 
     static void myStaticHandler1() { throw new MyEx(); }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     try { getopt(args, "verbose", &myStaticHandler1); assert(0); }
     catch (MyEx ex) { assert(ex.option is null && ex.value is null); }
 
     static void myStaticHandler2(string option) { throw new MyEx(option); }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     try { getopt(args, "verbose", &myStaticHandler2); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value is null); }
 
     static void myStaticHandler3(string option, string value) { throw new MyEx(option, value); }
-    args = (["program.name", "--verbose", "2"]).dup;
+    args = ["program.name", "--verbose", "2"];
     try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
 }

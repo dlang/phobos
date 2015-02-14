@@ -2968,6 +2968,31 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     return DirIterator(path, mode, followSymlink);
 }
 
+/// Duplicate functionality of D1's $(D std.file.listdir()):
+unittest
+{
+    string[] listdir(string pathname)
+    {
+        import std.file;
+        import std.path;
+        import std.algorithm;
+        import std.array;
+
+        return std.file.dirEntries(pathname, SpanMode.shallow)
+            .filter!(a => a.isFile)
+            .map!(a => std.path.baseName(a.name))
+            .array;
+    }
+
+    void main(string[] args)
+    {
+        import std.stdio;
+
+        string[] files = listdir(args[1]);
+        writefln("%s", files);
+     }
+}
+
 unittest
 {
     import std.algorithm;

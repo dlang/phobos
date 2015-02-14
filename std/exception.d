@@ -1618,6 +1618,12 @@ version(unittest) package
 /** This $(D enum) is used to select the primitives of the range to handle by the
   $(LREF handle) range wrapper. The values of the $(D enum) can be $(D OR)'d to
   select multiple primitives to be handled.
+
+  $(D RangePrimitive.access) is a shortcut for the access primitives; $(D front),
+  $(D back) and $(D opIndex).
+
+  $(D RangePrimitive.pop) is a shortcut for the mutating primitives;
+  $(D popFront) and $(D popBack).
  */
 enum RangePrimitive
 {
@@ -1631,12 +1637,15 @@ enum RangePrimitive
     opDollar = 0b00_1000_0000, /// Ditto
     opIndex  = 0b01_0000_0000, /// Ditto
     opSlice  = 0b10_0000_0000, /// Ditto
+    access   = front | back | opIndex, /// Ditto
+    pop      = popFront | popBack, /// Ditto
 }
 
 /** Handle exceptions thrown from range primitives.
 
 Use the $(LREF RangePrimitive) enum to specify which primitives to _handle.
-Multiple range primitives can be handled at once by using the $(D OR) operator.
+Multiple range primitives can be handled at once by using the $(D OR) operator
+or the pseudo-primitives $(D RangePrimitive.access) and $(D RangePrimitive.pop).
 All handled primitives must have return types or values compatible with the
 user-supplied handler.
 
@@ -1646,7 +1655,8 @@ Params:
     handler = The callable that is called when a handled primitive throws a
     $(D Throwable) of type $(D E). The handler must accept arguments of
     the form $(D E, ref IRange) and its return value is used as the primitive's
-    return value whenever $(D E) is thrown.
+    return value whenever $(D E) is thrown. For $(D opIndex), the handler can
+    optionally recieve a third argument; the index that caused the exception.
     input = The range to _handle.
 
 Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
@@ -1658,19 +1668,18 @@ bound (see $(XREF range_primitives, hasSlicing)); $(D handle) deals with this
 by $(D take)ing 0 from the return value of the handler function and returning
 that when an exception is caught.
 */
-auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, IRange)(IRange input)
-if (isInputRange!IRange)
+auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Range)(Range input)
+    if (isInputRange!Range)
 {
     static struct Handler
     {
-        IRange range;
-        alias range this;
+        private Range range;
 
-        static if (isForwardRange!IRange)
+        static if (isForwardRange!Range)
         {
-            static if (primitivesToHandle & RangePrimitive.save)
+            @property typeof(this) save()
             {
-                @property typeof(this) save()
+                static if (primitivesToHandle & RangePrimitive.save)
                 {
                     try
                     {
@@ -1681,66 +1690,74 @@ if (isInputRange!IRange)
                         return typeof(this)(handler(exception, this.range));
                     }
                 }
+                else
+                    return typeof(this)(range.save);
             }
         }
 
-        static if (isInfinite!IRange)
+        static if (isInfinite!Range)
         {
             enum bool empty = false;
         }
-        else static if (primitivesToHandle & RangePrimitive.empty)
+        else
         {
             @property bool empty()
             {
-                try
-                {
-                    return this.range.empty;
-                }
-                catch(E exception)
-                {
-                    return handler(exception, this.range);
-                }
-            }
-        }
-
-        static if (isInputRange!IRange)
-        {
-            static if (primitivesToHandle & RangePrimitive.front)
-            {
-                @property auto ref front()
+                static if (primitivesToHandle & RangePrimitive.empty)
                 {
                     try
                     {
-                        return this.range.front;
+                        return this.range.empty;
                     }
                     catch(E exception)
                     {
                         return handler(exception, this.range);
                     }
                 }
-            }
-
-            static if (primitivesToHandle & RangePrimitive.popFront)
-            {
-                void popFront()
-                {
-                    try
-                    {
-                        this.range.popFront();
-                    }
-                    catch(E exception)
-                    {
-                        handler(exception, this.range);
-                    }
-                }
+                else
+                    return this.range.empty;
             }
         }
 
-        static if (isBidirectionalRange!IRange)
+        @property auto ref front()
         {
-            static if (primitivesToHandle & RangePrimitive.back)
+            static if (primitivesToHandle & RangePrimitive.front)
             {
-                @property auto ref back()
+                try
+                {
+                    return this.range.front;
+                }
+                catch(E exception)
+                {
+                    return handler(exception, this.range);
+                }
+            }
+            else
+                return this.range.front;
+        }
+
+        void popFront()
+        {
+            static if (primitivesToHandle & RangePrimitive.popFront)
+            {
+                try
+                {
+                    this.range.popFront();
+                }
+                catch(E exception)
+                {
+                    handler(exception, this.range);
+                }
+            }
+            else
+                this.range.popFront();
+        }
+
+        static if (isBidirectionalRange!Range)
+        {
+            @property auto ref back()
+            {
+                static if (primitivesToHandle & RangePrimitive.back)
                 {
                     try
                     {
@@ -1751,11 +1768,13 @@ if (isInputRange!IRange)
                         return handler(exception, this.range);
                     }
                 }
+                else
+                    return this.range.back;
             }
 
-            static if (primitivesToHandle & RangePrimitive.popBack)
+            void popBack()
             {
-                void popBack()
+                static if (primitivesToHandle & RangePrimitive.popBack)
                 {
                     try
                     {
@@ -1766,14 +1785,16 @@ if (isInputRange!IRange)
                         handler(exception, this.range);
                     }
                 }
+                else
+                    this.range.popBack();
             }
         }
 
-        static if (isRandomAccessRange!IRange)
+        static if (isRandomAccessRange!Range)
         {
-            static if (primitivesToHandle & RangePrimitive.opIndex)
+            auto ref opIndex(size_t index)
             {
-                auto ref opIndex(size_t index)
+                static if (primitivesToHandle & RangePrimitive.opIndex)
                 {
                     try
                     {
@@ -1781,17 +1802,22 @@ if (isInputRange!IRange)
                     }
                     catch(E exception)
                     {
-                        return handler(exception, this.range);
+                        static if (__traits(compiles, handler(exception, this.range, index)))
+                            return handler(exception, this.range, index);
+                        else
+                            return handler(exception, this.range);
                     }
                 }
+                else
+                    return this.range[index];
             }
         }
 
-        static if (hasLength!IRange)
+        static if (hasLength!Range)
         {
-            static if (primitivesToHandle & RangePrimitive.length)
+            @property auto length()
             {
-                @property auto length()
+                static if (primitivesToHandle & RangePrimitive.length)
                 {
                     try
                     {
@@ -1802,16 +1828,18 @@ if (isInputRange!IRange)
                         return handler(exception, this.range);
                     }
                 }
+                else
+                    return this.range.length;
             }
         }
 
-        static if (hasSlicing!IRange)
+        static if (hasSlicing!Range)
         {
-            static if (primitivesToHandle & RangePrimitive.opSlice)
+            static if (hasLength!Range)
             {
-                static if (hasLength!IRange)
+                typeof(this) opSlice(size_t lower, size_t upper)
                 {
-                    typeof(this) opSlice(size_t lower, size_t upper)
+                    static if (primitivesToHandle & RangePrimitive.opSlice)
                     {
                         try
                         {
@@ -1822,13 +1850,18 @@ if (isInputRange!IRange)
                             return typeof(this)(handler(exception, this.range));
                         }
                     }
+                    else
+                        return typeof(this)(this.range[lower .. upper]);
                 }
-                else static if (is(typeof(IRange.init[size_t.init .. $])))
-                {
-                    static struct DollarToken {}
-                    enum opDollar = DollarToken.init;
+            }
+            else static if (is(typeof(Range.init[size_t.init .. $])))
+            {
+                static struct DollarToken {}
+                enum opDollar = DollarToken.init;
 
-                    typeof(this) opSlice(size_t lower, DollarToken)
+                typeof(this) opSlice(size_t lower, DollarToken)
+                {
+                    static if (primitivesToHandle & RangePrimitive.opSlice)
                     {
                         try
                         {
@@ -1839,8 +1872,13 @@ if (isInputRange!IRange)
                             return typeof(this)(handler(exception, this.range));
                         }
                     }
+                    else
+                        return typeof(this)(this.range[lower .. $]);
+                }
 
-                    auto opSlice(size_t lower, size_t upper)
+                Take!Handler opSlice(size_t lower, size_t upper)
+                {
+                    static if (primitivesToHandle & RangePrimitive.opSlice)
                     {
                         try
                         {
@@ -1851,6 +1889,8 @@ if (isInputRange!IRange)
                             return takeExactly(typeof(this)(handler(exception, this.range)), 0);
                         }
                     }
+                    else
+                        return takeExactly(typeof(this)(this.range[lower .. $]), upper - 1);
                 }
             }
         }
@@ -1860,7 +1900,7 @@ if (isInputRange!IRange)
 }
 
 ///
-unittest
+pure @safe unittest
 {
     import std.algorithm : equal, map, splitter;
     import std.conv : to, ConvException;
@@ -1873,13 +1913,30 @@ unittest
 
     // Substitute 0 for cases of ConvException
     auto h = r.handle!(ConvException, RangePrimitive.front, (e, r) => 0);
-    assert(equal(h, [12, 0, 54, 2, 7, 9, 0, 6, 8]));
+    assert(h.equal([12, 0, 54, 2, 7, 9, 0, 6, 8]));
 }
 
-unittest
+///
+pure @safe unittest
+{
+    import std.algorithm : equal;
+    import std.range : retro;
+    import std.utf : UTFException;
+
+    auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
+
+    auto handled = str.handle!(UTFException, RangePrimitive.access,
+            (e, r) => ' '); // Replace invalid code points with spaces
+
+    assert(handled.equal("hello world")); // `front` is handled,
+    assert(handled.retro.equal("dlrow olleh")); // as well as `back`
+}
+
+pure nothrow @safe unittest
 {
     static struct ThrowingRange
     {
+        pure @safe:
         @property bool empty()
         {
             throw new Exception("empty has thrown");
@@ -1943,9 +2000,17 @@ unittest
     assertThrown(fb.popBack());
     assertThrown(fb.empty);
     assertThrown(fb.save);
+    assertThrown(fb[0]);
 
-    auto pfb = f.handle!(Exception,
-            RangePrimitive.popFront | RangePrimitive.popBack, (e, r) => -1)();
+    auto accessRange = f.handle!(Exception, RangePrimitive.access,
+            (e, r) => -1);
+    assert(accessRange.front == -1);
+    assert(accessRange.back == -1);
+    assert(accessRange[0] == -1);
+    assertThrown(accessRange.popFront());
+    assertThrown(accessRange.popBack());
+
+    auto pfb = f.handle!(Exception, RangePrimitive.pop, (e, r) => -1)();
 
     pfb.popFront(); // this would throw otherwise
     pfb.popBack(); // this would throw otherwise
@@ -1960,13 +2025,19 @@ unittest
 
     assert(arr[0] == 1337);
 
+    auto arr2 = f.handle!(Exception,
+            RangePrimitive.opIndex, (e, r, i) => i)();
+
+    assert(arr2[0] == 0);
+    assert(arr2[1337] == 1337);
+
     auto save = f.handle!(Exception,
         RangePrimitive.save,
         function(Exception e, ref ThrowingRange r) {
             return ThrowingRange();
         })();
 
-    save.save();
+    save.save;
 
     auto slice = f.handle!(Exception,
         RangePrimitive.opSlice, (e, r) => ThrowingRange())();
@@ -1975,6 +2046,7 @@ unittest
 
     static struct Infinite
     {
+        pure @safe:
         enum bool empty = false;
         int front() { assert(false); }
         void popFront() { assert(false); }

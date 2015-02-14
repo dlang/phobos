@@ -23,7 +23,7 @@ SMTP) )
 )
 
 Note:
-You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"]) 
+You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"])
 to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
@@ -2688,19 +2688,19 @@ struct HTTP
      * Specify data to post when not using the onSend callback, with
      * user-specified Content-Type.
      * Params:
-     *	data = Data to post.
-     *	contentType = MIME type of the data, for example, "text/plain" or
-     *	    "application/octet-stream". See also:
+     *  data = Data to post.
+     *  contentType = MIME type of the data, for example, "text/plain" or
+     *      "application/octet-stream". See also:
      *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
      *      Internet media type) on Wikipedia.
-     *-----
+     * -----
      * import std.net.curl;
      * auto http = HTTP("http://onlineform.example.com");
      * auto data = "app=login&username=bob&password=s00perS3kret";
      * http.setPostData(data, "application/x-www-form-urlencoded");
      * http.onReceive = (ubyte[] data) { return data.length; };
      * http.perform();
-     *-----
+     * -----
      */
     void setPostData(const(void)[] data, string contentType)
     {

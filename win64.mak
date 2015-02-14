@@ -35,15 +35,20 @@ SDKDIR=\Program Files (x86)\Microsoft SDKs\Windows\v7.0A
 #CFLAGS=/Zi /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 
+## Location of druntime tree
+
+DRUNTIME=..\druntime
+DRUNTIMELIB=$(DRUNTIME)\lib\druntime$(MODEL).lib
+
 ## Flags for dmd D compiler
 
-DFLAGS=-m$(MODEL) -O -release -w -dip25
+DFLAGS=-conf= -m$(MODEL) -O -release -w -dip25 -I$(DRUNTIME)\import
 #DFLAGS=-m$(MODEL) -unittest -g
 #DFLAGS=-m$(MODEL) -unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-g -m$(MODEL) -O -w -dip25
+UDFLAGS=-conf= -g -m$(MODEL) -O -w -dip25 -I$(DRUNTIME)\import
 
 ## C compiler, linker, librarian
 
@@ -65,11 +70,6 @@ STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std.ddoc $(DOCSR
 
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
-
-## Location of druntime tree
-
-DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime$(MODEL).lib
 
 ## Zlib library
 
@@ -94,10 +94,10 @@ targets : $(LIB)
 test : test.exe
 
 test.obj : test.d
-	$(DMD) -c -m$(MODEL) test -g -unittest
+	$(DMD) -conf= -c -m$(MODEL) test -g -unittest
 
 test.exe : test.obj $(LIB)
-	$(DMD) test.obj -m$(MODEL) -g -L/map
+	$(DMD) -conf= test.obj -m$(MODEL) -g -L/map
 
 #	ti_bit.obj ti_Abit.obj
 
@@ -477,11 +477,11 @@ unittest : $(LIB)
 #	unittest
 #
 #unittest.exe : unittest.d $(LIB)
-#	$(DMD) unittest -g
+#	$(DMD) -conf= unittest -g
 #	dmc unittest.obj -g
 
 cov : $(SRC_TO_COMPILE) $(LIB)
-	$(DMD) -m$(MODEL) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
+	$(DMD) -conf= -m$(MODEL) -cov -unittest -ofcov.exe unittest.d $(SRC_TO_COMPILE) $(LIB)
 	cov
 
 html : $(DOCS)
