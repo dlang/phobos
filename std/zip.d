@@ -11,9 +11,7 @@
  *      $(LI Only supports compression modes 0 (no compression) and 8 (deflate).)
  *      $(LI Does not support encryption.)
  *      $(LI $(BUGZILLA 592))
- *      $(LI $(BUGZILLA 1832))
  *      $(LI $(BUGZILLA 2137))
- *      $(LI $(BUGZILLA 2138))
  *      )
  *
  * Macros:
