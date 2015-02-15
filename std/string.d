@@ -1901,11 +1901,18 @@ S capitalize(S)(S s) @trusted pure
     Does not throw on invalid UTF; such is simply passed unchanged
     to the output.
 
+    Allocates memory; use $(LREF splitterLines) for an alternative that
+    does not.
+
   Params:
     s = a string of $(D chars), $(D wchars), or $(D dchars)
     keepTerm = whether delimiter is included or not in the results
   Returns:
     array of strings, each element is a line that is a slice of $(D s)
+  See_Also:
+    $(LREF splitterLines)
+    $(XREF algorithm, splitter)
+    $(XREF regex, splitter)
  +/
 alias KeepTerminator = Flag!"keepTerminator";
 /// ditto
@@ -2033,6 +2040,224 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     });
 }
 
+/***********************************
+ *  Split an array or slicable range of characters into a range of lines
+    using $(D '\r'), $(D '\n'),
+    $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
+    If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
+    is included in the slices returned.
+
+    Does not throw on invalid UTF; such is simply passed unchanged
+    to the output.
+
+    Does not allocate memory.
+
+  Params:
+    r = array of $(D chars), $(D wchars), or $(D dchars) or a slicable range
+    keepTerm = whether delimiter is included or not in the results
+  Returns:
+    range of slices of the input range $(D r)
+
+  See_Also:
+    $(LREF splitLines)
+    $(XREF algorithm, splitter)
+    $(XREF regex, splitter)
+ */
+auto splitterLines(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
+if ((hasSlicing!Range && hasLength!Range) ||
+    isSomeString!Range)
+{
+    import std.uni : lineSep, paraSep;
+    import std.conv : unsigned;
+
+    static struct Result
+    {
+    private:
+        Range _input;
+        alias IndexType = typeof(unsigned(_input.length));
+        enum IndexType _unComputed = IndexType.max;
+        IndexType iStart = _unComputed;
+        IndexType iEnd = 0;
+        IndexType iNext = 0;
+
+    public:
+        this(Range input)
+        {
+            _input = input;
+        }
+
+        static if (isInfinite!Range)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty()
+            {
+                return iStart == _unComputed && iNext == _input.length;
+            }
+        }
+
+        @property Range front()
+        {
+            if (iStart == _unComputed)
+            {
+                iStart = iNext;
+              Loop:
+                for (IndexType i = iNext; ; ++i)
+                {
+                    if (i == _input.length)
+                    {
+                        iEnd = i;
+                        iNext = i;
+                        break Loop;
+                    }
+                    switch (_input[i])
+                    {
+                        case '\n':
+                            iEnd = i + (keepTerm == KeepTerminator.yes);
+                            iNext = i + 1;
+                            break Loop;
+
+                        case '\r':
+                            if (i + 1 < _input.length && _input[i + 1] == '\n')
+                            {
+                                iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
+                                iNext = i + 2;
+                                break Loop;
+                            }
+                            else
+                            {
+                                goto case '\n';
+                            }
+
+                        static if (_input[i].sizeof == 1)
+                        {
+                            /* Manually decode:
+                             *  lineSep is E2 80 A8
+                             *  paraSep is E2 80 A9
+                             */
+                            case 0xE2:
+                                if (i + 2 < _input.length &&
+                                    _input[i + 1] == 0x80 &&
+                                    (_input[i + 2] == 0xA8 || _input[i + 2] == 0xA9)
+                                   )
+                                {
+                                    iEnd = i + (keepTerm == KeepTerminator.yes) * 3;
+                                    iNext = i + 3;
+                                    break Loop;
+                                }
+                                else
+                                    goto default;
+                        }
+                        else
+                        {
+                            case lineSep:
+                            case paraSep:
+                                goto case '\n';
+                        }
+
+                        default:
+                            break;
+                    }
+                }
+            }
+            return _input[iStart .. iEnd];
+        }
+
+        void popFront()
+        {
+            if (iStart == _unComputed)
+            {
+                assert(!empty);
+                front();
+            }
+            iStart = _unComputed;
+        }
+
+        static if (isForwardRange!Range)
+        {
+            @property typeof(this) save()
+            {
+                auto ret = this;
+                ret._input = _input.save;
+                return ret;
+            }
+        }
+    }
+
+    return Result(r);
+}
+
+@safe pure unittest
+{
+    import std.conv : to;
+    import std.array : array;
+
+    debug(string) trustedPrintf("string.splitLines.unittest\n");
+
+    import std.exception;
+    assertCTFEable!(
+    {
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    {
+        auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\nmon\u2030day\n");
+
+        auto lines = s.splitterLines().array;
+        assert(lines.length == 10);
+        assert(lines[0] == "");
+        assert(lines[1] == "peter");
+        assert(lines[2] == "");
+        assert(lines[3] == "paul");
+        assert(lines[4] == "jerry");
+        assert(lines[5] == "ice");
+        assert(lines[6] == "cream");
+        assert(lines[7] == "");
+        assert(lines[8] == "sunday");
+        assert(lines[9] == "mon\u2030day");
+
+        ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
+        auto ulines = splitterLines(cast(char[])u).array;
+        assert(cast(ubyte[])(ulines[0]) == u);
+
+        lines = splitterLines!(KeepTerminator.yes)(s).array;
+        assert(lines.length == 10);
+        assert(lines[0] == "\r");
+        assert(lines[1] == "peter\n");
+        assert(lines[2] == "\r");
+        assert(lines[3] == "paul\r\n");
+        assert(lines[4] == "jerry\u2028");
+        assert(lines[5] == "ice\u2029");
+        assert(lines[6] == "cream\n");
+        assert(lines[7] == "\n");
+        assert(lines[8] == "sunday\n");
+        assert(lines[9] == "mon\u2030day\n");
+
+        s.popBack(); // Lop-off trailing \n
+        lines = splitterLines(s).array;
+        assert(lines.length == 10);
+        assert(lines[9] == "mon\u2030day");
+
+        lines = splitterLines!(KeepTerminator.yes)(s).array;
+        assert(lines.length == 10);
+        assert(lines[9] == "mon\u2030day");
+    }
+    });
+}
+
+///
+@nogc @safe pure unittest
+{
+    auto s = "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\nmon\u2030day\n";
+    auto lines = s.splitterLines();
+    static immutable witness = ["", "peter", "", "paul", "jerry", "ice", "cream", "", "sunday", "mon\u2030day"];
+    uint i;
+    foreach (line; lines)
+    {
+        assert(line == witness[i++]);
+    }
+    assert(i == witness.length);
+}
 
 /++
     Strips leading whitespace (as defined by $(XREF uni, isWhite)).
