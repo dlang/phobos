@@ -309,7 +309,7 @@ real erfc(real x)
  * The normal (or Gaussian, or bell-shaped) distribution is
  * defined as:
  *
- * normalDist(x) = 1/$(SQRT) $(PI) $(INTEGRATE -$(INFIN), x) exp( - $(POWER t, 2)/2) dt
+ * normalDist(x) = 1/$(SQRT)(2$(PI)) $(INTEGRATE -$(INFIN), x) exp( - $(POWER t, 2)/2) dt
  *   = 0.5 + 0.5 * erf(x/sqrt(2))
  *   = 0.5 * erfc(- x/sqrt(2))
  *
