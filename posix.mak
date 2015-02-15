@@ -284,6 +284,7 @@ install :
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
 
+.PHONY : unittest
 ifeq (1,$(BUILD_WAS_SPECIFIED))
 unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
 else
