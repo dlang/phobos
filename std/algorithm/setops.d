@@ -369,7 +369,7 @@ auto cartesianProduct(RR...)(RR ranges)
         }
         @property auto front()
         {
-            import std.algorithm : algoFormat; // FIXME
+            import std.algorithm.internal : algoFormat;
             import std.range : iota;
             return mixin(algoFormat("tuple(%(current[%d].front%|,%))",
                                     iota(0, current.length)));
@@ -443,7 +443,7 @@ auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
      * one level of tuples so that a ternary cartesian product, for example,
      * returns 3-element tuples instead of nested 2-element tuples.
      */
-    import std.algorithm : algoFormat; // FIXME
+    import std.algorithm.internal : algoFormat;
     import std.algorithm.iteration : map;
     import std.range : iota;
 
