@@ -4481,8 +4481,8 @@ version(Posix) unittest
 Allocator (currently defined only for Posix) using $(D $(LUCKY mmap)) and $(D
 $(LUCKY munmap)) directly. There is no additional structure: each call to $(D
 allocate(s)) issues a call to $(D mmap(null, s, PROT_READ | PROT_WRITE,
-MAP_PRIVATE | MAP_ANON, -1, 0)), and each call to $(D deallocate(b)) issues $(D
-munmap(b.ptr, b.length)). So $(D MmapAllocator) is usually intended for
+MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)), and each call to $(D deallocate(b)) issues
+$(D munmap(b.ptr, b.length)). So $(D MmapAllocator) is usually intended for
 allocating large chunks to be managed by fine-granular allocators.
 
 */
@@ -4501,6 +4501,8 @@ version(Posix) struct MmapAllocator
     /// Allocator API.
     void[] allocate(size_t bytes) shared
     {
+        version(OSX) import core.sys.osx.sys.mman : MAP_ANON;
+        else static assert(false, "Add import for MAP_ANON here.");
         auto p = mmap(null, bytes, PROT_READ | PROT_WRITE,
             MAP_PRIVATE | MAP_ANON, -1, 0);
         if (p is MAP_FAILED) return null;
@@ -5786,7 +5788,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 
     /// The array of allocators is publicly available for e.g. initialization
     /// and inspection.
-    Allocator buckets[(max - (min - 1)) / step];
+    Allocator[(max - (min - 1)) / step] buckets;
 
     /**
     The alignment offered is the same as $(D Allocator.alignment).
