@@ -871,7 +871,9 @@ F sumPairwise(Range, F = Unqual!(ForeachType!Range))(Range r)
 
 F sumPairwise(Range, F = Unqual!(ForeachType!Range))(Range r, F seed)
 {
-    return sumPairwise!Range(r) + seed;
+    F s = seed;
+    s += sumPairwise!Range(r);
+    return s;
 }
 
 
@@ -974,7 +976,8 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
             s = t;
         }
     }
-    return s + c;
+    s += c;
+    return s;
 }
 
 
