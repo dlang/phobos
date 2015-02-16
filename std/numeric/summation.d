@@ -7,13 +7,31 @@ Authors: $(WEB 9il.github.io, Ilya Yaroshenko)
 
 Source: $(PHOBOSSRC std/numeric/_summation.d)
 */
-module std.numeric.summation;
+module std.summation;
 
 import std.traits;
 import std.typecons;
 import std.range.primitives;
 import std.math;
 
+private template SummationType(F)
+    if (isFloatingPoint!F || isComplex!F)
+{
+    version(X86) //workaround for Issue 13474
+    {
+        static if(!is(Unqual!F == real) && (isComplex!F || !is(Unqual!(typeof(F.init.re)) == real)))
+            pragma(msg, "Warning: Summation algorithms on x86 use 80bit representation for single and double floating point numbers.");
+        static if(isComplex!F)
+        {
+            import std.complex : Complex;
+            alias SummationType = Complex!real;
+        }
+        else
+            alias SummationType = real;
+    }
+    else
+        alias SummationType = F;
+}
 
 /++
 Computes accurate sum of binary logarithms of input range $(D r).
@@ -153,14 +171,20 @@ unittest {
 // Fails for 32bit systems.
 // See also https://issues.dlang.org/show_bug.cgi?id=13474#c7
 // and https://github.com/D-Programming-Language/phobos/pull/2513
-//version(none)
-unittest {
-    import std.algorithm;
-    auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
-    const r = 20000;
-    assert(r != ar.fsum!(Summation.Naive));
-    assert(r != ar.fsum!(Summation.Kahan));
-    assert(r != ar.fsum!(Summation.Pairwise));
+version(X86)
+{
+
+}
+else
+{
+    unittest {
+        import std.algorithm;
+        auto ar = [1, 1e100, 1, -1e100].map!(a => a*10000);
+        const r = 20000;
+        assert(r != ar.fsum!(Summation.Naive));
+        assert(r != ar.fsum!(Summation.Kahan));
+        assert(r != ar.fsum!(Summation.Pairwise));
+    }
 }
 
 ///
@@ -258,13 +282,14 @@ Dickinson's post at <http://bugs.python.org/file10357/msum4.py>.
 See those links for more details, proofs and other references.
 IEEE 754R floating point semantics are assumed.
 +/
-struct Summator(F)
-    if (isFloatingPoint!F && isMutable!F)
+struct Summator(T)
+    if (isFloatingPoint!T && isMutable!T)
 {
     import std.internal.scopebuffer;
 
 private:
-    enum F M = (cast(F)(2)) ^^ (F.max_exp - 1);
+    alias F = SummationType!T;
+    enum F M = (cast(F)(2)) ^^ (T.max_exp - 1);
     F[32] scopeBufferArray = void;
     ScopeBuffer!F partials;
     //sum for NaN and infinity.
@@ -355,8 +380,16 @@ private:
             y = h * 2;
             d = h + l;
             F t = d - h;
-            if (!.isInfinity(y) || partials.length > 1 && !signbit(l * partials[$-2]) && t == l)
-                return 0;
+            version(X86)
+            {
+                if (!.isInfinity(cast(T)y) || !.isInfinity(sum()))
+                    return 0;
+            }
+            else
+            {
+                if (!.isInfinity(cast(T)y) || partials.length > 1 && !signbit(l * partials[$-2]) && t == l)
+                    return 0;
+            }
         }
         return F.infinity * o;
     }
@@ -393,15 +426,16 @@ public:
     }
 
     ///Adds $(D x) to the internal partial sums.
-    void put(F x)
+    void put(T _x)
     {
+        F x = _x;
         if (.isFinite(x))
         {
             size_t i;
             foreach (y; partials[])
             {
                 F h = x + y;
-                if (.isInfinity(h))
+                if (.isInfinity(cast(T)h))
                 {
                     if (fabs(x) < fabs(y))
                     {
@@ -499,18 +533,18 @@ public:
     ///
     unittest {
         import std.math, std.algorithm, std.range;
-        auto r = iota(1, 1001).map!(a => (-1.0).pow(a)/a);
-        Summator!double s = 0.0;
-        foreach(e; r)
-            s.unsafePut(e);
-        assert(s.sum() == -0.69264743055982025);
+        auto r = iota(1000).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
+        Summator!double s = 0;
+        put(s, r);
+        s -= 1.7.pow(1000);
+        assert(s.sum() == -1);
     }
 
     /++
     Returns the value of the sum, rounded to the nearest representable
     floating-point number using the round-half-to-even rule.
     +/
-    F sum() const
+    T sum() const
     {
         debug(numeric)
         {
@@ -546,7 +580,7 @@ public:
                 F t = h - x;
                 F l = (y - t) * 2;
                 y = h * 2;
-                if (y.isInfinity)
+                if (.isInfinity(cast(T)y))
                 {
                     // overflow, except in edge case...
                     x = h + l;
@@ -589,14 +623,14 @@ public:
     }
 
     ///Returns $(D Summator) with extended internal partial sums.
-    T opCast(T : Summator!P, P)()
+    C opCast(C : Summator!P, P)()
         if (
-            isMutable!T &&
-            P.max_exp >= F.max_exp &&
-            P.mant_dig >= F.mant_dig
+            isMutable!C &&
+            P.max_exp >= T.max_exp &&
+            P.mant_dig >= T.mant_dig
         )
     {
-        static if (is(P == F))
+        static if (is(P == T))
             return this;
         else
         {
@@ -608,7 +642,7 @@ public:
             {
                 ret.partials.put(p);
             }
-            enum exp_diff = P.max_exp / F.max_exp;
+            enum exp_diff = P.max_exp / T.max_exp;
             static if (exp_diff)
             {
                 if (ret.o)
@@ -616,7 +650,7 @@ public:
                     immutable f = ret.o / exp_diff;
                     immutable t = cast(int)(ret.o % exp_diff);
                     ret.o = f;
-                    ret.put((P(2) ^^ F.max_exp) * t);
+                    ret.put((P(2) ^^ T.max_exp) * t);
                 }
             }
             return ret;
@@ -628,23 +662,21 @@ public:
     {
         import std.math;
         float  M = 2.0f ^^ (float.max_exp-1);
+        double N = 2.0  ^^ (float.max_exp-1);
         auto s = Summator!float(0); //float summator
         s += M;
         s += M;
-        assert(M+M == s.sum());
-        assert(M+M == float.infinity);
-
-        double N = 2.0  ^^ (float.max_exp-1);
+        assert(float.infinity == s.sum());
         auto e = cast(Summator!double) s;
+        assert(isFinite(e.sum()));
         assert(N+N == e.sum());
-        assert(isFinite(N+N));
     }
 
     /++
     $(D cast(F)) operator overloading. Returns $(D cast(T)sum()).
     See also: $(D cast)
     +/
-    T opCast(T)() if (is(Unqual!T == F))
+    F opCast(C)() if (is(Unqual!C == T))
     {
         return sum();
     }
@@ -691,13 +723,14 @@ public:
     ///
     unittest {
         import std.math, std.algorithm, std.range;
-        auto r1 = iota(  1, 501 ).map!(a => (-1.0).pow(a)/a);
-        auto r2 = iota(501, 1001).map!(a => (-1.0).pow(a)/a);
+        auto r1 = iota(500).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
+        auto r2 = iota(500, 1000).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
         Summator!double s1 = 0.0, s2 = 0.0;
         foreach (e; r1) s1 += e;
         foreach (e; r2) s2 -= e;
         s1 -= s2;
-        assert(s1.sum() == -0.69264743055982025);
+        s1 -= 1.7.pow(1000);
+        assert(s1.sum() == -1);
     }
 
     ///Returns $(D true) if current sum is a NaN.
@@ -777,15 +810,25 @@ unittest
         tuple([M, M, -1e307], 1.6976931348623159e+308),
         tuple([1e16, 1., 1e-16], 10000000000000002.0),
     ];
-    foreach (test; tests)
+    foreach (i, test; tests)
     {
         foreach (t; test[0]) summator.put(t);
         auto r = test[1];
-        assert(summator.isNaN() == r.isNaN());
-        assert(summator.isFinite() == r.isFinite());
-        assert(summator.isInfinity() == r.isInfinity());
         auto s = summator.sum;
-        assert(s == r || s.isNaN && r.isNaN);
+        version(X86)
+        {
+            assert(summator.isNaN() == r.isNaN());
+            assert(summator.isFinite() == r.isFinite() || r == -double.max && s == -double.infinity || r == double.max && s == double.infinity);
+            assert(summator.isInfinity() == r.isInfinity() || r == -double.max && s == -double.infinity || r == double.max && s == double.infinity);
+            assert(s == r || nextDown(s) <= r && nextUp(s) >= r || s.isNaN && r.isNaN);            
+        }
+        else
+        {
+            assert(summator.isNaN() == r.isNaN());
+            assert(summator.isFinite() == r.isFinite());
+            assert(summator.isInfinity() == r.isInfinity());
+            assert(s == r || s.isNaN && r.isNaN);                        
+        }
         summator = 0;
     }
 }
@@ -799,27 +842,35 @@ template isComplex(C)
     enum bool isComplex = is(C : Complex!F, F);
 }
 
-//// FIXME (perfomance issue): fabs in std.math available only for for real.
-//F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
-//{
-//    if (__ctfe)
-//    {
-//        return f < 0 ? -f : f;
-//    }
-//    else
-//    {
-//        version(LDC)
-//        {
-//            import ldc.intrinsics : llvm_fabs;
-//            return llvm_fabs(f);
-//        }
-//        else
-//        {
-//            import core.stdc.tgmath : fabs;
-//            return fabs(f);
-//        }
-//    }
-//}
+version(X86)
+{
+
+}
+else
+{
+    // FIXME (perfomance issue): fabs in std.math available only for for real.
+    F fabs(F)(F f) //+-0, +-NaN, +-inf doesn't matter
+    {
+        if (__ctfe)
+        {
+            return f < 0 ? -f : f;
+        }
+        else
+        {
+            version(LDC)
+            {
+                import ldc.intrinsics : llvm_fabs;
+                return llvm_fabs(f);
+            }
+            else
+            {
+                import core.stdc.tgmath : fabs;
+                return fabs(f);
+            }
+        }
+    }    
+}
+
 
 template isSummable(Range, F)
 {
@@ -929,9 +980,11 @@ END DO
 s := s + c
 ---------------------
 +/
-F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
-    if (isFloatingPoint!F || isComplex!F)
+T sumKBN(Range, T = Unqual!(ForeachType!Range))(Range r, T _s = 0)
+    if (isFloatingPoint!T || isComplex!T)
 {
+    alias F = SummationType!T;
+    F s = _s;
     F c = 0.0;
     static if (isFloatingPoint!F)
     {
@@ -977,7 +1030,7 @@ F sumKBN(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
         }
     }
     s += c;
-    return s;
+    return cast(T)s;
 }
 
 
@@ -1008,9 +1061,11 @@ END FOR
 RETURN s+cs+ccs
 ---------------------
 +/
-F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
-    if (isFloatingPoint!F || isComplex!F)
+T sumKB2(Range, T = Unqual!(ForeachType!Range))(Range r, T _s = 0)
+    if (isFloatingPoint!T || isComplex!T)
 {
+    alias F = SummationType!T;
+    F s = _s;
     F cs = 0.0;
     F ccs = 0.0;
     static if (isFloatingPoint!F)
@@ -1085,7 +1140,7 @@ F sumKB2(Range, F = Unqual!(ForeachType!Range))(Range r, F s = 0)
     }
     cs += ccs;
     s += cs;
-    return s;
+    return cast(T)s;
 }
 
 unittest
