@@ -96,7 +96,8 @@ DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) $(STD_ALGO_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES) $(STD_LOGGER_MODULES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) \
+	$(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
@@ -186,33 +187,29 @@ LINKCURL:=$(if $(LIBCURL_STUB),-L$(LIBCURL_STUB),-L-lcurl)
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
-# Stuff in std/
-STD_MODULES = $(addprefix std/, array ascii base64 bigint \
-		bitmanip compiler complex concurrency conv		\
-		cstream csv datetime demangle encoding exception	\
-		file format functional getopt json math mathspecial	\
-		metastrings mmfile numeric outbuffer parallelism path	\
-		process random signals socket socketstream	\
-		stdint stdio stdiobase stream string syserror system traits		\
-		typecons typetuple uni uri utf uuid variant xml zip zlib)
+# Packages in std. Just mention the package name here and the actual files in
+# the package in STD_MODULES.
+STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
+	range regex)
 
-STD_NET_MODULES = $(addprefix std/net/, isemail curl)
-
-STD_LOGGER_MODULES = $(addprefix std/experimental/logger/, package core \
-        filelogger nulllogger multilogger)
-
-STD_REGEX_MODULES = $(addprefix std/regex/, package $(addprefix internal/, \
-	generator ir parser backtracking kickstart tests thompson))
-
-STD_ALGO_MODULES = $(addprefix std/algorithm/, package comparison iteration \
-	mutation searching setops sorting)
-
-STD_RANGE_MODULES = $(addprefix std/range/, package primitives interfaces)
-
-STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
-
-STD_CONTAINER_MODULES = $(addprefix std/container/, package array \
-		binaryheap dlist rbtree slist util)
+# Modules in std (including those in packages), in alphabetical order.
+STD_MODULES = $(addprefix std/, \
+  array ascii base64 bigint bitmanip compiler complex concurrency \
+  $(addprefix container/, array binaryheap dlist rbtree slist util) \
+  conv cstream csv datetime demangle \
+  $(addprefix digest/, digest crc md ripemd sha) \
+  encoding exception \
+  $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
+  file format functional getopt json math mathspecial \
+  metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
+  process random \
+  $(addprefix range/, primitives interfaces) \
+  $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
+  	kickstart tests thompson)) \
+  signals socket socketstream stdint stdio stdiobase stream \
+  string syserror system traits typecons typetuple uni uri utf uuid variant \
+  xml zip zlib $(addprefix algorithm/,comparison iteration \
+    mutation searching setops sorting))
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -240,18 +237,17 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	$(addprefix std/algorithm/, internal)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
-	$(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_REGEX_MODULES) \
-	$(STD_RANGE_MODULES) $(STD_ALGO_MODULES) $(STD_LOGGER_MODULES)
+D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) \
+  $(addsuffix /package,$(STD_PACKAGES))
 
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
 ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
-$(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32)) \
-	std/internal/windows/advapi32.d \
-	std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
-	std/c/linux/tipc.d std/net/isemail.d std/net/curl.d
+  $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) \
+  $(EXTRA_MODULES_WIN32)) std/internal/windows/advapi32.d \
+  std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
+  std/c/linux/tipc.d
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
@@ -426,57 +422,36 @@ endif
 ###########################################################
 # html documentation
 
-HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
-	$(SRC_DOCUMENTABLES))))
-BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, $(subst /,_,$(subst	\
-	.d,.html, $(SRC_DOCUMENTABLES))))
+# Package to html, e.g. std/algorithm -> std_algorithm.html
+P2HTML=$(addsuffix .html,$(subst /,_,$1))
+# D file to html, e.g. std/conv.d -> std_conv.html
+D2HTML=$(subst /,_,$(subst .d,.html,$1))
+
+HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, \
+	$(call D2HTML, $(SRC_DOCUMENTABLES)) \
+	$(call P2HTML, $(STD_PACKAGES)))
+BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, \
+	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 
 $(DOC_OUTPUT_DIR)/. :
 	mkdir -p $@
 
-$(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+# For each module, define a rule e.g.:
+# ../web/phobos/std_conv.html : std/conv.d $(STDDOC) ; ...
+$(foreach p,$(SRC_DOCUMENTABLES),$(eval \
+$(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
+  $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
-$(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
-	$(DDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_container_%.html : std/container/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_algorithm_%.html : std/algorithm/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_range_%.html : std/range/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_regex_%.html : std/regex/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_experimental_logger_%.html : std/experimental/logger/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_digest_%.html : std/digest/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+# For each package, define a rule e.g.:
+# ../web/phobos/std_algorithm.html : std/algorithm/package.d $(STDDOC) ; ...
+$(foreach p,$(STD_PACKAGES),$(eval \
+$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $p/package.d $(STDDOC) ;\
+  $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
 
 allmod :
-	echo $(SRC_DOCUMENTABLES)
+	@echo $(SRC_DOCUMENTABLES) $(addsuffix /package.d,$(STD_PACKAGES))
 
 rsync-prerelease : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/

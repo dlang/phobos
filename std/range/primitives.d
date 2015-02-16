@@ -1,5 +1,5 @@
 /**
-This module is a submodule of $(LINK2 std_range_package.html, std.range).
+This module is a submodule of $(LINK2 std_range.html, std.range).
 
 It provides basic range functionality by defining several templates for testing
 whether a given object is a _range, and what kind of _range it is:

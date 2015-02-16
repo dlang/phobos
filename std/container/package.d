@@ -136,7 +136,7 @@ The_primary_range_of_a_container:
 While some _containers offer direct access to their elements e.g. via
 $(D opIndex), $(D c.front) or $(D c.back), access
 and modification of a _container's contents is generally done through
-its primary $(LINK2 std_range_package.html, range) type,
+its primary $(LINK2 std_range.html, range) type,
 which is aliased as $(D C.Range). For example, the primary range type of
 $(D Array!int) is $(D Array!int.Range).
 
@@ -169,7 +169,7 @@ array.linearRemove(array[].find(2).takeOne());
 assert(array[].equal([1, 3]));
 ---
 
-When any $(LINK2 std_range_package.html, range) can be passed as an argument to
+When any $(LINK2 std_range.html, range) can be passed as an argument to
 a member function, the documention usually refers to the parameter's templated
 type as $(D Stuff).
 

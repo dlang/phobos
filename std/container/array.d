@@ -2,7 +2,7 @@
 This module provides an $(D Array) type with deterministic memory usage not
 reliant on the GC, as an alternative to the built-in arrays.
 
-This module is a submodule of $(LINK2 std_container_package.html, std.container).
+This module is a submodule of $(LINK2 std_container.html, std.container).
 
 Source: $(PHOBOSSRC std/container/_array.d)
 Macros:
