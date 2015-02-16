@@ -4803,6 +4803,39 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
         return pxe[4] == pye[4] && pxs[0] == pys[0];
     }
 }
+///ditto
+bool isIdentical(double x, double y) @trusted pure nothrow @nogc
+{
+    // We're doing a bitwise comparison so the endianness is irrelevant.
+    long*   pxs = cast(long *)&x;
+    long*   pys = cast(long *)&y;
+    return pxs[0] == pys[0];
+}
+
+///ditto
+bool isIdentical(float x, float y) @trusted pure nothrow @nogc
+{
+    //version(BUG_13457)
+    //{
+    //    return isIdentical(double(x), double(y)); //BUG 13457 
+    //}
+    //else
+    //{
+        // We're doing a bitwise comparison so the endianness is irrelevant.
+        int*   pxs = cast(int *)&x;
+        int*   pys = cast(int *)&y;
+        return pxs[0] == pys[0];
+    //}
+}
+
+//BUG_13457 check
+unittest {
+    float fn1 = NaN(0xABC);
+    float fn2 = NaN(0xABC);
+    assert(isIdentical(fn1, fn2));
+}
+
+
 
 /*********************************
  * Return 1 if sign bit of e is set, 0 if not.
@@ -5865,13 +5898,13 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
     assert(pow(two, dinf) == double.infinity);
     assert(isIdentical(pow(0.2f, dinf), +0.0));
     assert(pow(0.99999999L, rninf) == real.infinity);
-    assert(isIdentical(pow(1.000000001, rninf), +0.0));
+    assert(isIdentical(pow(1.000000001, rninf), +0.0L));
     assert(pow(dinf, 0.001) == dinf);
     assert(isIdentical(pow(dinf, -0.001), +0.0));
     assert(pow(rninf, 3.0L) == rninf);
     assert(pow(rninf, 2.0L) == real.infinity);
-    assert(isIdentical(pow(rninf, -3.0), -0.0));
-    assert(isIdentical(pow(rninf, -2.0), +0.0));
+    assert(isIdentical(pow(rninf, -3.0), -0.0L));
+    assert(isIdentical(pow(rninf, -2.0), +0.0L));
 
     // @@@BUG@@@ somewhere
     version(OSX) {} else assert(isNaN(pow(one, dinf)));
