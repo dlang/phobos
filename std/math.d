@@ -5882,13 +5882,13 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
     assert(pow(two, dinf) == double.infinity);
     assert(isIdentical(pow(0.2f, dinf), +0.0));
     assert(pow(0.99999999L, rninf) == real.infinity);
-    assert(isIdentical(pow(1.000000001, rninf), +0.0L));
+    assert(isIdentical(pow(1.000000001, rninf), +0.0));
     assert(pow(dinf, 0.001) == dinf);
     assert(isIdentical(pow(dinf, -0.001), +0.0));
     assert(pow(rninf, 3.0L) == rninf);
     assert(pow(rninf, 2.0L) == real.infinity);
-    assert(isIdentical(pow(rninf, -3.0), -0.0L));
-    assert(isIdentical(pow(rninf, -2.0), +0.0L));
+    assert(isIdentical(pow(rninf, -3.0), -0.0));
+    assert(isIdentical(pow(rninf, -2.0), +0.0));
 
     // @@@BUG@@@ somewhere
     version(OSX) {} else assert(isNaN(pow(one, dinf)));
