@@ -190,7 +190,7 @@ SRC_STD_NET= std\net\isemail.d std\net\curl.d
 SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
 	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
-    
+
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
 	std\c\locale.d std\c\wcharh.d
@@ -300,7 +300,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\core_sync_mutex.html \
 	$(DOC)\core_sync_rwmutex.html \
 	$(DOC)\core_sync_semaphore.html \
-	$(DOC)\std_algorithm_package.html \
+	$(DOC)\std_algorithm.html \
 	$(DOC)\std_algorithm_comparison.html \
 	$(DOC)\std_algorithm_iteration.html \
 	$(DOC)\std_algorithm_mutation.html \
@@ -320,7 +320,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_container_dlist.html \
 	$(DOC)\std_container_rbtree.html \
 	$(DOC)\std_container_slist.html \
-	$(DOC)\std_container_package.html \
+	$(DOC)\std_container.html \
 	$(DOC)\std_container_util.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_digest_crc.html \
@@ -348,7 +348,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
-	$(DOC)\std_range_package.html \
+	$(DOC)\std_range.html \
 	$(DOC)\std_range_primitives.html \
 	$(DOC)\std_range_interfaces.html \
 	$(DOC)\std_regex.html \
@@ -377,7 +377,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_experimental_logger_filelogger.html \
 	$(DOC)\std_experimental_logger_multilogger.html \
 	$(DOC)\std_experimental_logger_nulllogger.html \
-	$(DOC)\std_experimental_logger_package.html \
+	$(DOC)\std_experimental_logger.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -588,8 +588,8 @@ $(DOC)\core_sync_rwmutex.html : $(STDDOC) $(DRUNTIME)\src\core\sync\rwmutex.d
 $(DOC)\core_sync_semaphore.html : $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_sync_semaphore.html $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d -I$(DRUNTIME)\src\
 
-$(DOC)\std_algorithm_package.html : $(STDDOC) std\algorithm\package.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_package.html $(STDDOC) std\algorithm\package.d
+$(DOC)\std_algorithm.html : $(STDDOC) std\algorithm\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm.html $(STDDOC) std\algorithm\package.d
 
 $(DOC)\std_algorithm_comparison.html : $(STDDOC) std\algorithm\comparison.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_comparison.html $(STDDOC) std\algorithm\comparison.d
@@ -654,11 +654,11 @@ $(DOC)\std_container_slist.html : $(STDDOC) std\container\slist.d
 $(DOC)\std_container_util.html : $(STDDOC) std\container\util.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_util.html $(STDDOC) std\container\util.d
 
-$(DOC)\std_container_package.html : $(STDDOC) std\container\package.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container_package.html $(STDDOC) std\container\package.d
+$(DOC)\std_container.html : $(STDDOC) std\container\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_container.html $(STDDOC) std\container\package.d
 
-$(DOC)\std_range_package.html : $(STDDOC) std\range\package.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_package.html $(STDDOC) std\range\package.d
+$(DOC)\std_range.html : $(STDDOC) std\range\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range\package.d
 
 $(DOC)\std_range_primitives.html : $(STDDOC) std\range\primitives.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_primitives.html $(STDDOC) std\range\primitives.d
@@ -807,8 +807,8 @@ $(DOC)\std_experimental_logger_filelogger.html : $(STDDOC) std\experimental\logg
 $(DOC)\std_experimental_logger_nulllogger.html : $(STDDOC) std\experimental\logger\nulllogger.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_nulllogger.html $(STDDOC) std\experimental\logger\nulllogger.d
 
-$(DOC)\std_experimental_logger_package.html : $(STDDOC) std\experimental\logger\package.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger_package.html $(STDDOC) std\experimental\logger\package.d
+$(DOC)\std_experimental_logger.html : $(STDDOC) std\experimental\logger\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_logger.html $(STDDOC) std\experimental\logger\package.d
 
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
