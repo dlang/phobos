@@ -96,7 +96,7 @@ DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) $(STD_ALGO_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES) $(STD_LOGGER_MODULES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_RANGE_MODULES) $(STD_ALGO_MODULES) std/regex/package $(EXTRA_DOCUMENTABLES) $(STD_LOGGER_MODULES) $(STD_NUMERIC_MODULES))
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
@@ -191,7 +191,7 @@ STD_MODULES = $(addprefix std/, array ascii base64 bigint \
 		bitmanip compiler complex concurrency conv		\
 		cstream csv datetime demangle encoding exception	\
 		file format functional getopt json math mathspecial	\
-		metastrings mmfile numeric outbuffer parallelism path	\
+		metastrings mmfile outbuffer parallelism path	\
 		process random signals socket socketstream	\
 		stdint stdio stdiobase stream string syserror system traits		\
 		typecons typetuple uni uri utf uuid variant xml zip zlib)
@@ -213,6 +213,8 @@ STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
 
 STD_CONTAINER_MODULES = $(addprefix std/container/, package array \
 		binaryheap dlist rbtree slist util)
+
+STD_NUMERIC_MODULES = $(addprefix std/numeric/, package summation)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -242,7 +244,8 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 # Aggregate all D modules relevant to this build
 D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
 	$(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_REGEX_MODULES) \
-	$(STD_RANGE_MODULES) $(STD_ALGO_MODULES) $(STD_LOGGER_MODULES)
+	$(STD_RANGE_MODULES) $(STD_ALGO_MODULES) $(STD_LOGGER_MODULES) \
+	$(STD_NUMERIC_MODULES)
 
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
@@ -453,6 +456,9 @@ $(DOC_OUTPUT_DIR)/std_algorithm_%.html : std/algorithm/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_range_%.html : std/range/%.d $(STDDOC)
+	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_numeric_%.html : std/numeric/%.d $(STDDOC)
 	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_regex_%.html : std/regex/%.d $(STDDOC)

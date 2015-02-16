@@ -23,6 +23,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.numeric;
 
+public import std.numeric.summation;
+
 import std.complex;
 import std.exception;
 import std.math;
@@ -812,6 +814,7 @@ T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
         is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
+    import std.math : fabs; // FIXME
     auto r = findRoot(f, a, b, f(a), f(b), tolerance);
     // Return the first value if it is smaller or NaN
     return !(fabs(r[2]) > fabs(r[3])) ? r[0] : r[1];
@@ -870,6 +873,8 @@ in
 }
 body
 {
+    import std.math : fabs; // FIXME
+
     // Author: Don Clugston. This code is (heavily) modified from TOMS748
     // (www.netlib.org).  The changes to improve the worst-cast performance are
     // entirely original.
@@ -1583,6 +1588,7 @@ unittest
     }
 }
 
+
 /**
 Normalizes values in $(D range) by multiplying each element with a
 number chosen such that values sum up to $(D sum). If elements in $(D
@@ -1644,45 +1650,6 @@ unittest
     a = [ 0.0, 0.0 ];
     assert(!normalize(a));
     assert(a == [ 0.5, 0.5 ]);
-}
-
-/**
-Computes accurate sum of binary logarithms of input range $(D r).
- */
-ElementType!Range sumOfLog2s(Range)(Range r)
-    if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
-{
-    long exp = 0;
-    Unqual!(typeof(return)) x = 1;
-    foreach (e; r)
-    {
-        if (e < 0)
-            return typeof(return).nan;
-        int lexp = void;
-        x *= frexp(e, lexp);
-        exp += lexp;
-        if (x < 0.5)
-        {
-            x *= 2;
-            exp--;
-        }
-    }
-    return exp + log2(x);
-}
-
-///
-unittest
-{
-    assert(sumOfLog2s(new double[0]) == 0);
-    assert(sumOfLog2s([0.0L]) == -real.infinity);
-    assert(sumOfLog2s([-0.0L]) == -real.infinity);
-    assert(sumOfLog2s([2.0L]) == 1);
-    assert(sumOfLog2s([-2.0L]).isNaN());
-    assert(sumOfLog2s([real.nan]).isNaN());
-    assert(sumOfLog2s([-real.nan]).isNaN());
-    assert(sumOfLog2s([real.infinity]) == real.infinity);
-    assert(sumOfLog2s([-real.infinity]).isNaN());
-    assert(sumOfLog2s([ 0.25, 0.25, 0.25, 0.125 ]) == -9);
 }
 
 /**
