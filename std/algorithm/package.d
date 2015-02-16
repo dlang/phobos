@@ -183,13 +183,3 @@ public import std.algorithm.setops;
 public import std.algorithm.searching;
 public import std.algorithm.sorting;
 
-/**
-Specifies whether the output of certain algorithm is desired in sorted
-format.
- */
-enum SortOutput
-{
-    no,  /// Don't sort output
-    yes, /// Sort output
-}
-

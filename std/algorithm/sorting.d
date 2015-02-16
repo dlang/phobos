@@ -61,13 +61,22 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.sorting;
 
-import std.algorithm : SortOutput; // FIXME
 import std.algorithm.mutation : SwapStrategy;
 import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 // FIXME
 import std.range; // : SortedRange;
 import std.traits;
+
+/**
+Specifies whether the output of certain algorithm is desired in sorted
+format.
+ */
+enum SortOutput
+{
+    no,  /// Don't sort output
+    yes, /// Sort output
+}
 
 // completeSort
 /**
