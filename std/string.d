@@ -70,6 +70,7 @@ $(TR $(TDNW Miscellaneous)
          $(MYREF fromStringz)
          $(MYREF representation)
          $(MYREF splitLines)
+         $(MYREF splitterLines)
          $(MYREF toStringz)
     )
 )))
@@ -84,36 +85,37 @@ The following functions are publicly imported:
 
 $(BOOKTABLE ,
 $(TR $(TH Module) $(TH Functions) )
-    $(TR $(TD algorithm)
+$(LEADINGROW Publicly imported functions)
+    $(TR $(TD std.algorithm)
         $(TD
-         $(XREF algorithm, cmp)
-         $(XREF algorithm, count)
-         $(XREF algorithm, endsWith)
-         $(XREF algorithm, startsWith)
+         $(SHORTXREF algorithm, cmp)
+         $(SHORTXREF algorithm, count)
+         $(SHORTXREF algorithm, endsWith)
+         $(SHORTXREF algorithm, startsWith)
     ))
-    $(TR $(TD array)
+    $(TR $(TD std.array)
         $(TD
-         $(XREF array, join)
-         $(XREF array, split)
+         $(SHORTXREF array, join)
+         $(SHORTXREF array, split)
     ))
-    $(TR $(TD format)
+    $(TR $(TD std.format)
         $(TD
-         $(XREF format, format)
-         $(XREF format, sformat)
+         $(SHORTXREF format, format)
+         $(SHORTXREF format, sformat)
     ))
-    $(TR $(TD uni)
+    $(TR $(TD std.uni)
         $(TD
-         $(XREF uni, icmp)
-         $(XREF uni, toLower)
-         $(XREF uni, toLowerInPlace)
-         $(XREF uni, toUpper)
-         $(XREF uni, toUpperInPlace)
+         $(SHORTXREF uni, icmp)
+         $(SHORTXREF uni, toLower)
+         $(SHORTXREF uni, toLowerInPlace)
+         $(SHORTXREF uni, toUpper)
+         $(SHORTXREF uni, toUpperInPlace)
     ))
 )
 
-Not all functions for D _string handling are in this module. Functions related
-to Unicode and ASCII are found in $(LINK2 std_uni.html, std.uni) and
-$(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
+There is a rich set of functions for _string handling defined in other modules.
+Functions related to Unicode and ASCII are found in $(LINK2 std_uni.html, std.uni)
+and $(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
 wider generality than just strings can be found in $(LINK2 std_algorithm.html,
 std.algorithm) and $(LINK2 std_range.html, std.range).
 
@@ -131,6 +133,7 @@ See_Also:
     )
 
 Macros: WIKI = Phobos/StdString
+        SHORTXREF=$(XREF2 $1, $2, $(TT $2))
 
 Copyright: Copyright Digital Mars 2007-.
 
