@@ -5467,8 +5467,7 @@ Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
         case -1:
             return 1 / x;
         case -2:
-            F y = x * x;
-            return 1 / y;
+            return 1 / (x * x);
         default:
         }
 
