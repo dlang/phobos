@@ -3414,7 +3414,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             }
 
             import std.conv : to;
-            import std.algorithm : forward;
+            import std.functional : forward;
             template generateFun(size_t i)
             {
                 enum name = TargetMembers[i].name;
