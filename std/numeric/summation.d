@@ -199,8 +199,18 @@ unittest
 
     //Summation.Precise is default
     double d = 1.7.pow(1000);
-    assert(fsum(ar.chain([-d]))  ==  -1.0);
-    assert(fsum!real(-d, ar.retro)  ==  -1.0);
+    double s1 = fsum(ar.chain([-d]));
+    double s2 = fsum!real(-d, ar.retro);
+    version(X86)
+    {
+        assert(nextDown(-1.0) <= s1 && s1 <= nextUp(-1.0));
+        assert(nextDown(-1.0) <= s2 && s2 <= nextUp(-1.0));
+    }
+    else
+    {
+        assert(s1  ==  -1.0);
+        assert(s2  ==  -1.0);
+    }
 }
 
 /++
