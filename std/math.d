@@ -4781,51 +4781,35 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
  * Same as ==, except that positive and negative zero are not identical,
  * and two $(NAN)s are identical if they have the same 'payload'.
  */
-bool isIdentical(real x, real y) @trusted pure nothrow @nogc
+bool isIdentical(T1, T2)(T1 x, T2 y) @trusted pure nothrow @nogc
+    if (isFloatingPoint!T1 && isFloatingPoint!T2)
 {
-    // We're doing a bitwise comparison so the endianness is irrelevant.
-    long*   pxs = cast(long *)&x;
-    long*   pys = cast(long *)&y;
-    alias F = floatTraits!(real);
-    static if (F.realFormat == RealFormat.ieeeDouble)
+    alias T = CommonType!(T1, T2);
+    alias F = floatTraits!(T);
+    static if (F.realFormat == RealFormat.ieeeFloat)
     {
-        return pxs[0] == pys[0];
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple
-                 || F.realFormat == RealFormat.ibmExtended)
-    {
-        return pxs[0] == pys[0] && pxs[1] == pys[1];
-    }
-    else
-    {
-        ushort* pxe = cast(ushort *)&x;
-        ushort* pye = cast(ushort *)&y;
-        return pxe[4] == pye[4] && pxs[0] == pys[0];
-    }
-}
-
-///ditto
-bool isIdentical(double x, double y) @trusted pure nothrow @nogc
-{
-    // We're doing a bitwise comparison so the endianness is irrelevant.
-    long*   pxs = cast(long *)&x;
-    long*   pys = cast(long *)&y;
-    return pxs[0] == pys[0];
-}
-
-///ditto
-bool isIdentical(float x, float y) @trusted pure nothrow @nogc
-{
-    version(all)
-    {
-        return isIdentical(double(x), double(y)); //BUG 13457 
+        return isIdentical!(double, double)(x, y); //BUG_13457 workaround
     }
     else
     {
         // We're doing a bitwise comparison so the endianness is irrelevant.
-        int*   pxs = cast(int *)&x;
-        int*   pys = cast(int *)&y;
-        return pxs[0] == pys[0];
+        long*   pxs = cast(long *)&x;
+        long*   pys = cast(long *)&y;
+        static if (F.realFormat == RealFormat.ieeeDouble)
+        {
+            return pxs[0] == pys[0];
+        }
+        else static if (F.realFormat == RealFormat.ieeeQuadruple
+                     || F.realFormat == RealFormat.ibmExtended)
+        {
+            return pxs[0] == pys[0] && pxs[1] == pys[1];
+        }
+        else
+        {
+            ushort* pxe = cast(ushort *)&x;
+            ushort* pye = cast(ushort *)&y;
+            return pxe[4] == pye[4] && pxs[0] == pys[0];
+        }        
     }
 }
 
