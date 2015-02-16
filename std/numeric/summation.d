@@ -191,27 +191,16 @@ else
 ///
 unittest
 {
-    import std.math, std.algorithm, std.range;
-    auto ar = 1000
+    import core.stdc.tgmath, std.algorithm, std.range;
+    auto ar = 1000.0
         .iota
-        .map!(n => 1.7.pow(n+1) - 1.7.pow(n))
+        .map!(n => 1.7.pow(n+1.0) - 1.7.pow(n))
         .array
         ;
-
     //Summation.Precise is default
-    double d = 1.7.pow(1000);
-    double s1 = fsum(ar.chain([-d]));
-    double s2 = fsum!real(-d, ar.retro);
-    version(X86)
-    {
-        assert(nextDown(-1.0) <= s2 && s2 <= nextUp(-1.0));
-        assert(nextDown(-1.0) <= s1 && s1 <= nextUp(-1.0));
-    }
-    else
-    {
-        assert(s1  ==  -1.0);
-        assert(s2  ==  -1.0);
-    }
+    double d = 1.7.pow(1000.0);
+    assert(fsum(ar.chain([-d]))  ==  -1.0);
+    assert(fsum!real(-d, ar.retro)  ==  -1.0);
 }
 
 /++
@@ -545,11 +534,11 @@ public:
 
     ///
     unittest {
-        import std.math, std.algorithm, std.range;
-        auto r = iota(1000).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
+        import core.stdc.tgmath, std.algorithm, std.range;
+        auto r = iota(1000.0).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
         Summator!double s = 0;
         put(s, r);
-        s -= 1.7.pow(1000);
+        s -= 1.7.pow(1000.0);
         assert(s.sum() == -1);
     }
 
@@ -736,14 +725,14 @@ public:
 
     ///
     unittest {
-        import std.math, std.algorithm, std.range;
-        auto r1 = iota(500).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
-        auto r2 = iota(500, 1000).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
+        import core.stdc.tgmath, std.algorithm, std.range;
+        auto r1 = iota(500.0).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
+        auto r2 = iota(500.0, 1000.0).map!(a => 1.7.pow(a+1) - 1.7.pow(a));
         Summator!double s1 = 0.0, s2 = 0.0;
         foreach (e; r1) s1 += e;
         foreach (e; r2) s2 -= e;
         s1 -= s2;
-        s1 -= 1.7.pow(1000);
+        s1 -= 1.7.pow(1000.0);
         assert(s1.sum() == -1);
     }
 
@@ -772,7 +761,7 @@ unittest
 {
     import std.range;
     import std.algorithm;
-    import std.math;
+    import core.stdc.tgmath;
 
     Summator!double summator = 0;
 
@@ -795,10 +784,10 @@ unittest
         tuple([double.max, double.max*2.^^-53], double.infinity),
         tuple(iota(1, 1001).map!(a => 1.0/a).array , 7.4854708605503451),
         tuple(iota(1, 1001).map!(a => (-1.0)^^a/a).array, -0.69264743055982025), //0.693147180559945309417232121458176568075500134360255254120680...
-        tuple(iota(1000).map!(a => 1.7.pow(a+1) - 1.7.pow(a)).chain([-(1.7.pow(1000))]).array , -1.0),
+        tuple(iota(1000.0).map!(a => 1.7.pow(a+1) - 1.7.pow(a)).chain([-(1.7.pow(1000.0))]).array , -1.0),
         tuple(iota(1, 1001).map!(a => 1.0/a).retro.array , 7.4854708605503451),
         tuple(iota(1, 1001).map!(a => (-1.0)^^a/a).retro.array, -0.69264743055982025),
-        tuple(iota(1000).map!(a => 1.7.pow(a+1) - 1.7.pow(a)).chain([-(1.7.pow(1000))]).retro.array , -1.0),
+        tuple(iota(1000.0).map!(a => 1.7.pow(a+1) - 1.7.pow(a)).chain([-(1.7.pow(1000.0))]).retro.array , -1.0),
         tuple([double.infinity, -double.infinity, double.nan], double.nan),
         tuple([double.nan, double.infinity, -double.infinity], double.nan),
         tuple([double.infinity, double.nan, double.infinity], double.nan),
@@ -834,7 +823,7 @@ unittest
             assert(summator.isNaN() == r.isNaN());
             assert(summator.isFinite() == r.isFinite() || r == -double.max && s == -double.infinity || r == double.max && s == double.infinity);
             assert(summator.isInfinity() == r.isInfinity() || r == -double.max && s == -double.infinity || r == double.max && s == double.infinity);
-            assert(s == r || nextDown(s) <= r && nextUp(s) >= r || s.isNaN && r.isNaN);            
+            assert(nextDown(s) <= r && nextUp(s) >= r || s.isNaN && r.isNaN);            
         }
         else
         {
