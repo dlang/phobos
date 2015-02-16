@@ -9,7 +9,7 @@
 #
 # make BUILD=debug => makes debug build of the library
 #
-# make unittest => builds all unittests (for release) and runs them
+# make unittest => builds all unittests (for debug AND release) and runs them
 #
 # make BUILD=debug unittest => builds all unittests (for debug) and runs them
 #
@@ -70,7 +70,12 @@ ifeq (,$(MODEL))
 endif
 
 # Default to a release built, override with BUILD=debug
+ifeq (,$(BUILD))
+BUILD_WAS_SPECIFIED=0
 BUILD=release
+else
+BUILD_WAS_SPECIFIED=1
+endif
 
 ifneq ($(BUILD),release)
     ifneq ($(BUILD),debug)
@@ -280,7 +285,14 @@ install :
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
 
+.PHONY : unittest
+ifeq (1,$(BUILD_WAS_SPECIFIED))
 unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
+else
+unittest : unittest-debug unittest-release
+unittest-%:
+	$(MAKE) -f $(MAKEFILE) $(MAKEFLAGS) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
+endif
 
 depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 
