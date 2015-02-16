@@ -198,8 +198,9 @@ unittest
         ;
 
     //Summation.Precise is default
-    assert(fsum(ar.chain([-(1.7.pow(1000))]))  ==  -1.0);
-    assert(fsum!real(-(1.7.pow(1000)), ar.retro)  ==  -1.0);
+    double d = 1.7.pow(1000);
+    assert(fsum(ar.chain([-d]))  ==  -1.0);
+    assert(fsum!real(-d, ar.retro)  ==  -1.0);
 }
 
 /++
