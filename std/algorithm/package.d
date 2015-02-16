@@ -183,5 +183,6 @@ public import std.algorithm.setops;
 public import std.algorithm.searching;
 public import std.algorithm.sorting;
 
-private import std.functional;
+static import std.functional;
+deprecated("Please use std.functional.forward instead.")
 alias forward = std.functional.forward;
