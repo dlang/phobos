@@ -4803,6 +4803,7 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
         return pxe[4] == pye[4] && pxs[0] == pys[0];
     }
 }
+
 ///ditto
 bool isIdentical(double x, double y) @trusted pure nothrow @nogc
 {
@@ -4815,17 +4816,17 @@ bool isIdentical(double x, double y) @trusted pure nothrow @nogc
 ///ditto
 bool isIdentical(float x, float y) @trusted pure nothrow @nogc
 {
-    //version(BUG_13457)
-    //{
-    //    return isIdentical(double(x), double(y)); //BUG 13457 
-    //}
-    //else
-    //{
+    version(all)
+    {
+        return isIdentical(double(x), double(y)); //BUG 13457 
+    }
+    else
+    {
         // We're doing a bitwise comparison so the endianness is irrelevant.
         int*   pxs = cast(int *)&x;
         int*   pys = cast(int *)&y;
         return pxs[0] == pys[0];
-    //}
+    }
 }
 
 //BUG_13457 check
@@ -4834,7 +4835,6 @@ unittest {
     float fn2 = NaN(0xABC);
     assert(isIdentical(fn1, fn2));
 }
-
 
 
 /*********************************
