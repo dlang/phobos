@@ -125,7 +125,8 @@ interface InputRange(E) {
 ///
 unittest
 {
-    import std.algorithm : map, iota;
+    import std.algorithm : map;
+    import std.range : iota;
 
     void useRange(InputRange!int range) {
         // Function body.
