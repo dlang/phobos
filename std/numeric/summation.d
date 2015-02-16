@@ -7,7 +7,7 @@ Authors: $(WEB 9il.github.io, Ilya Yaroshenko)
 
 Source: $(PHOBOSSRC std/numeric/_summation.d)
 */
-module std.summation;
+module std.numeric.summation;
 
 import std.traits;
 import std.typecons;
