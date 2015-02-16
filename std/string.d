@@ -1,8 +1,7 @@
 // Written in the D programming language.
 
 /**
-String handling functions. Note that many typical string functions are found in
-$(D std.algorithm) because all D strings are bidirectional ranges.
+String handling functions.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -10,51 +9,70 @@ $(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions) )
 $(TR $(TDNW Searching)
-    $(TD $(MYREF indexOf) $(MYREF lastIndexOf) $(MYREF indexOfAny)
-    $(MYREF lastIndexOfAny) $(MYREF indexOfNeither) $(MYREF lastIndexOfNeither)
-    $(XREF _algorithm, startsWith) $(XREF _algorithm, endsWith)
-    $(MYREF inPattern) $(MYREF column)
-    $(LINK2 std_algorithm.html, std.algorithm search functions)
+    $(TD
+         $(MYREF column)
+         $(MYREF inPattern)
+         $(MYREF indexOf)
+         $(MYREF indexOfAny)
+         $(MYREF indexOfNeither)
+         $(MYREF lastIndexOf)
+         $(MYREF lastIndexOfAny)
+         $(MYREF lastIndexOfNeither)
     )
 )
-
 $(TR $(TDNW Comparison)
-    $(TD $(XREF _algorithm, cmp)
-    $(MYREF isNumeric) $(MYREF countchars)
-    $(LINK2 std_uni.html, std.uni comparison functions )
-    $(LINK2 std_ascii.html, std.ascii comparison functions )
+    $(TD
+         $(MYREF countchars)
+         $(MYREF isNumeric)
     )
 )
-
 $(TR $(TDNW Mutation)
-    $(TD $(MYREF toLower) $(MYREF toLowerInPlace) $(MYREF toUpper)
-    $(MYREF toUpperInPlace) $(MYREF capitalize) $(MYREF removechars)
-    $(MYREF squeeze) $(MYREF munch) $(XREF _range, retro)
+    $(TD
+         $(MYREF capitalize)
+         $(MYREF munch)
+         $(MYREF removechars)
+         $(MYREF squeeze)
+         $(MYREF toLower)
+         $(MYREF toLowerInPlace)
+         $(MYREF toUpper)
+         $(MYREF toUpperInPlace)
     )
 )
-
 $(TR $(TDNW Pruning and Filling)
-    $(TD $(MYREF stripLeft) $(MYREF stripRight) $(MYREF strip) $(MYREF chomp)
-    $(MYREF chompPrefix) $(MYREF chop) $(MYREF leftJustify) $(MYREF rightJustify)
-    $(MYREF center) $(MYREF detab) $(MYREF entab) $(MYREF wrap)
-    $(MYREF outdent) $(LINK2 std_array.html#popFront, popFront)
-    $(XREF _array, front) $(XREF _array, popBack) $(XREF _array, back)
+    $(TD
+         $(MYREF center)
+         $(MYREF chomp)
+         $(MYREF chompPrefix)
+         $(MYREF chop)
+         $(MYREF detab)
+         $(MYREF entab)
+         $(MYREF leftJustify)
+         $(MYREF outdent)
+         $(MYREF rightJustify)
+         $(MYREF strip)
+         $(MYREF stripLeft)
+         $(MYREF stripRight)
+         $(MYREF wrap)
     )
 )
-
 $(TR $(TDNW Substitution)
-    $(TD $(MYREF translate) $(MYREF soundex) $(MYREF abbrev) $(MYREF succ)
-    $(MYREF tr)
+    $(TD
+         $(MYREF abbrev)
+         $(MYREF soundex)
+         $(MYREF succ)
+         $(MYREF tr)
+         $(MYREF translate)
     )
 )
-
 $(TR $(TDNW Miscellaneous)
-    $(TD $(MYREF fromStringz) $(MYREF toStringz) $(MYREF splitLines)
-    $(MYREF representation) $(MYREF assumeUTF)
+    $(TD
+         $(MYREF assumeUTF)
+         $(MYREF fromStringz)
+         $(MYREF representation)
+         $(MYREF splitLines)
+         $(MYREF toStringz)
     )
-)
-)
-)
+)))
 
 Objects of types $(D _string), $(D wstring), and $(D dstring) are value types
 and cannot be mutated element-by-element. For using mutation during building
@@ -62,19 +80,55 @@ strings, use $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D xxxstring)
 types are preferable because they don't exhibit undesired aliasing, thus
 making code more robust.
 
+The following functions are publicly imported:
+
+$(BOOKTABLE ,
+$(TR $(TH Module) $(TH Functions) )
+    $(TR $(TD algorithm)
+        $(TD
+         $(XREF algorithm, cmp)
+         $(XREF algorithm, count)
+         $(XREF algorithm, endsWith)
+         $(XREF algorithm, startsWith)
+    ))
+    $(TR $(TD array)
+        $(TD
+         $(XREF array, join)
+         $(XREF array, split)
+    ))
+    $(TR $(TD format)
+        $(TD
+         $(XREF format, format)
+         $(XREF format, sformat)
+    ))
+    $(TR $(TD uni)
+        $(TD
+         $(XREF uni, icmp)
+         $(XREF uni, toLower)
+         $(XREF uni, toLowerInPlace)
+         $(XREF uni, toUpper)
+         $(XREF uni, toUpperInPlace)
+    ))
+)
+
 Not all functions for D _string handling are in this module. Functions related
 to Unicode and ASCII are found in $(LINK2 std_uni.html, std.uni) and
 $(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
-wider generality than just strings can be found in std.algorithm and std.range.
+wider generality than just strings can be found in $(LINK2 std_algorithm.html,
+std.algorithm) and $(LINK2 std_range.html, std.range).
 
-Functions
-$(XREF uni, icmp)
-$(XREF uni, toLower)
-$(XREF uni, toLowerInPlace)
-$(XREF uni, toUpper)
-$(XREF uni, toUpperInPlace)
-$(XREF format, format)
-are publicly imported.
+See_Also:
+    $(LIST
+    $(LINK2 std_algorithm.html, std.algorithm) and
+    $(LINK2 std_range.html, std.range)
+    for generic range algorithms
+    ,
+    $(LINK2 std_ascii.html, std.ascii)
+    for functions that work with ASCII strings
+    ,
+    $(LINK2 std_uni.html, std.uni)
+    for functions that work with unicode strings
+    )
 
 Macros: WIKI = Phobos/StdString
 
