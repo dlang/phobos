@@ -4786,7 +4786,7 @@ bool isIdentical(T1, T2)(T1 x, T2 y) @trusted pure nothrow @nogc
 {
     alias T = CommonType!(T1, T2);
     alias F = floatTraits!(T);
-    static if (F.realFormat == RealFormat.ieeeFloat)
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
         return isIdentical!(double, double)(x, y); //BUG_13457 workaround
     }
