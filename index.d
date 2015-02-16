@@ -149,7 +149,7 @@ $(BOOKTABLE ,
         $(TD 
             $(LINK2 std_traits.html, std.traits)$(BR)
             $(LINK2 std_typecons.html, std.typecons)$(BR)
-            $(LINK2 std_typetuple.html, std.typetuple)$(BR)
+            $(LINK2 std_meta_list.html, std.meta.list)$(BR)
             $(LINK2 core_demangle.html, core.demangle)
         )
         $(TD

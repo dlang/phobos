@@ -115,7 +115,7 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 	std\uni.d std\base64.d std\ascii.d \
 	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
-SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
+SRC_STD_3a= std\signals.d std\typetuple.d std\meta\list.d std\traits.d \
 	std\encoding.d std\xml.d \
 	std\random.d \
 	std\exception.d \
@@ -163,7 +163,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
-	std\metastrings.d std\mmfile.d \
+	std\meta\list.d std\metastrings.d std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
@@ -190,7 +190,7 @@ SRC_STD_NET= std\net\isemail.d std\net\curl.d
 SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
 	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
-    
+
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
 	std\c\locale.d std\c\wcharh.d
@@ -341,6 +341,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
+	$(DOC)\std_meta_list.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
 	$(DOC)\std_outbuffer.html \
@@ -468,6 +469,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=95 -unittest -main -run std\getopt.d
 	$(DMD) -conf= -cov=92 -unittest -main -run std\signals.d
 	$(DMD) -conf= -cov=100 -unittest -main -run std\typetuple.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\meta\list.d
 	$(DMD) -conf= -cov=85 -unittest -main -run std\traits.d
 	$(DMD) -conf= -cov=62 -unittest -main -run std\encoding.d
 	$(DMD) -conf= -cov=61 -unittest -main -run std\xml.d
@@ -701,6 +703,9 @@ $(DOC)\std_math.html : $(STDDOC) std\math.d
 
 $(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mathspecial.html $(STDDOC) std\mathspecial.d
+
+$(DOC)\std_meta_list.html : $(STDDOC) std\meta\list.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_meta_list.html $(STDDOC) std\meta\list.d
 
 $(DOC)\std_mmfile.html : $(STDDOC) std\mmfile.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mmfile.html $(STDDOC) std\mmfile.d

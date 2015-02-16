@@ -1,17 +1,16 @@
 // Written in the D programming language.
 
 /**
- * $(RED Deprecated. This module will be delisted in March 2017.
- * Please use $(LINK2 std_meta_list.html, std.meta.list) instead).
- * 
- * Templates with which to manipulate type tuples (also known as type lists).
+ * Templates with which to manipulate
+ * $(LINK2 ../template.html#TemplateArgumentList, $(I TemplateArgumentList))s.
+ * Such lists are known as type lists when they only contain types.
  *
- * Some operations on type tuples are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th type from the
- * type tuple. TL[$(I lwr) .. $(I upr)] returns a new type
- * list that is a slice of the old one.
+ * Some operations on template argument lists are built in to the language,
+ * such as $(D Args[$(I n)]) which gets the $(I n)th element from the
+ * _list. $(D Args[$(I lwr) .. $(I upr)]) returns a new
+ * _list that is a slice of the old one. This is analogous to array slicing syntax.
  *
- * Several templates in this module use or operate on eponymous templates that
+ * Several templates in this module use or operate on enum templates that
  * take a single argument and evaluate to a boolean constant. Such templates
  * are referred to as $(I template predicates).
  *
@@ -21,80 +20,79 @@
  *      Modern C++ Design),
  *   Andrei Alexandrescu (Addison-Wesley Professional, 2001)
  * Macros:
- *  WIKI = Phobos/StdTypeTuple
+ *  WIKI = Phobos/StdMeta
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_typetuple.d)
+ * Source:    $(PHOBOSSRC std/meta/_list.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-deprecated("Please use std.meta.list instead.")
-module std.typetuple;
+module std.meta.list;
 
 /**
- * Creates a typetuple out of a sequence of zero or more types.
+ * Aliases the given compile-time list of template arguments.
  */
-template TypeTuple(TList...)
-{
-    alias TypeTuple = TList;
-}
+alias MetaList(Args...) = Args;
 
 ///
 unittest
 {
-    import std.typetuple;
-    alias TL = TypeTuple!(int, double);
+    import std.meta.list;
+    alias TL = MetaList!(int, double);
 
     int foo(TL td)  // same as int foo(int, double);
     {
         return td[0] + cast(int)td[1];
     }
+    assert(foo(2, 3.5) == 5);
 }
 
 ///
 unittest
 {
-    alias TL = TypeTuple!(int, double);
+    alias numbers = MetaList!(1, 2, 3);
+    static int[3] arr = [numbers];
+    
+    assert(arr == [1, 2, 3]);
+}
 
-    alias Types = TypeTuple!(TL, char);
-    static assert(is(Types == TypeTuple!(int, double, char)));
+/// Lists do not nest:
+unittest
+{
+    alias TL = MetaList!(int, double);
+
+    alias Types = MetaList!(TL, char);
+    static assert(is(Types == MetaList!(int, double, char)));
 }
 
 /**
- * Returns the index of the first occurrence of type T in the
- * sequence of zero or more types TList.
+ * Returns the index of the first occurrence of T in the
+ * sequence of zero or more elements TList.
  * If not found, -1 is returned.
  */
-template staticIndexOf(T, TList...)
+template metaIndexOf(T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList).index;
+    enum metaIndexOf = genericIndexOf!(T, TList).index;
 }
 
 /// Ditto
-template staticIndexOf(alias T, TList...)
+template metaIndexOf(alias T, TList...)
 {
-    enum staticIndexOf = genericIndexOf!(T, TList).index;
+    enum metaIndexOf = genericIndexOf!(T, TList).index;
 }
 
 ///
 unittest
 {
-    import std.typetuple;
-    import std.stdio;
-
-    void foo()
-    {
-        writefln("The index of long is %s",
-                 staticIndexOf!(long, TypeTuple!(int, long, double)));
-        // prints: The index of long is 1
-    }
+    alias Types = MetaList!(int, long, double);
+    static assert(metaIndexOf!(long, Types) == 1);
 }
 
 // [internal]
@@ -127,31 +125,28 @@ private template genericIndexOf(args...)
 
 unittest
 {
-    static assert(staticIndexOf!( byte, byte, short, int, long) ==  0);
-    static assert(staticIndexOf!(short, byte, short, int, long) ==  1);
-    static assert(staticIndexOf!(  int, byte, short, int, long) ==  2);
-    static assert(staticIndexOf!( long, byte, short, int, long) ==  3);
-    static assert(staticIndexOf!( char, byte, short, int, long) == -1);
-    static assert(staticIndexOf!(   -1, byte, short, int, long) == -1);
-    static assert(staticIndexOf!(void) == -1);
+    static assert(metaIndexOf!( byte, byte, short, int, long) ==  0);
+    static assert(metaIndexOf!(short, byte, short, int, long) ==  1);
+    static assert(metaIndexOf!(  int, byte, short, int, long) ==  2);
+    static assert(metaIndexOf!( long, byte, short, int, long) ==  3);
+    static assert(metaIndexOf!( char, byte, short, int, long) == -1);
+    static assert(metaIndexOf!(   -1, byte, short, int, long) == -1);
+    static assert(metaIndexOf!(void) == -1);
 
-    static assert(staticIndexOf!("abc", "abc", "def", "ghi", "jkl") ==  0);
-    static assert(staticIndexOf!("def", "abc", "def", "ghi", "jkl") ==  1);
-    static assert(staticIndexOf!("ghi", "abc", "def", "ghi", "jkl") ==  2);
-    static assert(staticIndexOf!("jkl", "abc", "def", "ghi", "jkl") ==  3);
-    static assert(staticIndexOf!("mno", "abc", "def", "ghi", "jkl") == -1);
-    static assert(staticIndexOf!( void, "abc", "def", "ghi", "jkl") == -1);
-    static assert(staticIndexOf!(42) == -1);
+    static assert(metaIndexOf!("abc", "abc", "def", "ghi", "jkl") ==  0);
+    static assert(metaIndexOf!("def", "abc", "def", "ghi", "jkl") ==  1);
+    static assert(metaIndexOf!("ghi", "abc", "def", "ghi", "jkl") ==  2);
+    static assert(metaIndexOf!("jkl", "abc", "def", "ghi", "jkl") ==  3);
+    static assert(metaIndexOf!("mno", "abc", "def", "ghi", "jkl") == -1);
+    static assert(metaIndexOf!( void, "abc", "def", "ghi", "jkl") == -1);
+    static assert(metaIndexOf!(42) == -1);
 
-    static assert(staticIndexOf!(void, 0, "void", void) == 2);
-    static assert(staticIndexOf!("void", 0, void, "void") == 2);
+    static assert(metaIndexOf!(void, 0, "void", void) == 2);
+    static assert(metaIndexOf!("void", 0, void, "void") == 2);
 }
 
-/// Kept for backwards compatibility
-alias IndexOf = staticIndexOf;
-
 /**
- * Returns a typetuple created from TList with the first occurrence,
+ * Returns a list created from TList with the first occurrence,
  * if any, of T removed.
  */
 template Erase(T, TList...)
@@ -168,9 +163,9 @@ template Erase(alias T, TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, double, char);
+    alias Types = MetaList!(int, long, double, char);
     alias TL = Erase!(long, Types);
-    static assert(is(TL == TypeTuple!(int, double, char)));
+    static assert(is(TL == MetaList!(int, double, char)));
 }
 
 // [internal]
@@ -188,11 +183,11 @@ private template GenericErase(args...)
         static if (isSame!(e, head))
             alias result = tail;
         else
-            alias result = TypeTuple!(head, GenericErase!(e, tail).result);
+            alias result = MetaList!(head, GenericErase!(e, tail).result);
     }
     else
     {
-        alias result = TypeTuple!();
+        alias result = MetaList!();
     }
 }
 
@@ -209,7 +204,7 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all occurrences,
+ * Returns a list created from TList with all occurrences,
  * if any, of T removed.
  */
 template EraseAll(T, TList...)
@@ -226,10 +221,10 @@ template EraseAll(alias T, TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int);
+    alias Types = MetaList!(int, long, long, int);
 
     alias TL = EraseAll!(long, Types);
-    static assert(is(TL == TypeTuple!(int, int)));
+    static assert(is(TL == MetaList!(int, int)));
 }
 
 // [internal]
@@ -248,11 +243,11 @@ private template GenericEraseAll(args...)
         static if (isSame!(e, head))
             alias result = next;
         else
-            alias result = TypeTuple!(head, next);
+            alias result = MetaList!(head, next);
     }
     else
     {
-        alias result = TypeTuple!();
+        alias result = MetaList!();
     }
 }
 
@@ -269,8 +264,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all duplicate
- * types removed.
+ * Returns a list created from TList with all duplicate
+ * elements removed.
  */
 template NoDuplicates(TList...)
 {
@@ -278,16 +273,16 @@ template NoDuplicates(TList...)
         alias NoDuplicates = TList;
     else
         alias NoDuplicates =
-            TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
+            MetaList!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
 }
 
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int, float);
+    alias Types = MetaList!(int, long, long, int, float);
 
     alias TL = NoDuplicates!(Types);
-    static assert(is(TL == TypeTuple!(int, long, float)));
+    static assert(is(TL == MetaList!(int, long, float)));
 }
 
 unittest
@@ -300,8 +295,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the first occurrence
- * of type T, if found, replaced with type U.
+ * Returns a list created from TList with the first occurrence
+ * of T, if found, replaced with U.
  */
 template Replace(T, U, TList...)
 {
@@ -329,10 +324,10 @@ template Replace(alias T, alias U, TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int, float);
+    alias Types = MetaList!(int, long, long, int, float);
 
     alias TL = Replace!(long, char, Types);
-    static assert(is(TL == TypeTuple!(int, char, long, int, float)));
+    static assert(is(TL == MetaList!(int, char, long, int, float)));
 }
 
 // [internal]
@@ -349,14 +344,14 @@ private template GenericReplace(args...)
         alias tail = tuple[1 .. $];
 
         static if (isSame!(from, head))
-            alias result = TypeTuple!(to, tail);
+            alias result = MetaList!(to, tail);
         else
-            alias result = TypeTuple!(head,
+            alias result = MetaList!(head,
                 GenericReplace!(from, to, tail).result);
     }
     else
     {
-        alias result = TypeTuple!();
+        alias result = MetaList!();
     }
  }
 
@@ -380,8 +375,8 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
- * of type T, if found, replaced with type U.
+ * Returns a list created from TList with each occurrence
+ * of T, if found, replaced with U.
  */
 template ReplaceAll(T, U, TList...)
 {
@@ -409,10 +404,10 @@ template ReplaceAll(alias T, alias U, TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int, float);
+    alias Types = MetaList!(int, long, long, int, float);
 
     alias TL = ReplaceAll!(long, char, Types);
-    static assert(is(TL == TypeTuple!(int, char, char, int, float)));
+    static assert(is(TL == MetaList!(int, char, char, int, float)));
 }
 
 // [internal]
@@ -430,13 +425,13 @@ private template GenericReplaceAll(args...)
         alias next = GenericReplaceAll!(from, to, tail).result;
 
         static if (isSame!(from, head))
-            alias result = TypeTuple!(to, next);
+            alias result = MetaList!(to, next);
         else
-            alias result = TypeTuple!(head, next);
+            alias result = MetaList!(head, next);
     }
     else
     {
-        alias result = TypeTuple!();
+        alias result = MetaList!();
     }
 }
 
@@ -460,7 +455,7 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns a list created from TList with the order reversed.
  */
 template Reverse(TList...)
 {
@@ -471,7 +466,7 @@ template Reverse(TList...)
     else
     {
         alias Reverse =
-            TypeTuple!(
+            MetaList!(
                 Reverse!(TList[$/2 ..  $ ]),
                 Reverse!(TList[ 0  .. $/2]));
     }
@@ -480,10 +475,10 @@ template Reverse(TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int, float);
+    alias Types = MetaList!(int, long, long, int, float);
 
     alias TL = Reverse!(Types);
-    static assert(is(TL == TypeTuple!(float, int, long, long, int)));
+    static assert(is(TL == MetaList!(float, int, long, long, int)));
 }
 
 /**
@@ -506,14 +501,14 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = TypeTuple!(A, C, B);
+    alias Types = MetaList!(A, C, B);
 
     MostDerived!(Object, Types) x;  // x is declared as type C
     static assert(is(typeof(x) == C));
 }
 
 /**
- * Returns the typetuple TList with the types sorted so that the most
+ * Returns the list TList with the types sorted so that the most
  * derived types come first.
  */
 template DerivedToFront(TList...)
@@ -522,7 +517,7 @@ template DerivedToFront(TList...)
         alias DerivedToFront = TList;
     else
         alias DerivedToFront =
-            TypeTuple!(MostDerived!(TList[0], TList[1 .. $]),
+            MetaList!(MostDerived!(TList[0], TList[1 .. $]),
                        DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
                                 TList[0],
                                 TList[1 .. $])));
@@ -534,31 +529,31 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = TypeTuple!(A, C, B);
+    alias Types = MetaList!(A, C, B);
 
     alias TL = DerivedToFront!(Types);
-    static assert(is(TL == TypeTuple!(C, B, A)));
+    static assert(is(TL == MetaList!(C, B, A)));
 }
 
 /**
-Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D MetaList!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
-template staticMap(alias F, T...)
+template Map(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias staticMap = TypeTuple!();
+        alias Map = MetaList!();
     }
     else static if (T.length == 1)
     {
-        alias staticMap = TypeTuple!(F!(T[0]));
+        alias Map = MetaList!(F!(T[0]));
     }
     else
     {
-        alias staticMap =
-            TypeTuple!(
-                staticMap!(F, T[ 0  .. $/2]),
-                staticMap!(F, T[$/2 ..  $ ]));
+        alias Map =
+            MetaList!(
+                Map!(F, T[ 0  .. $/2]),
+                Map!(F, T[$/2 ..  $ ]));
     }
 }
 
@@ -566,8 +561,8 @@ template staticMap(alias F, T...)
 unittest
 {
     import std.traits : Unqual;
-    alias TL = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(TL == TypeTuple!(int, int, int)));
+    alias TL = Map!(Unqual, int, const int, immutable int);
+    static assert(is(TL == MetaList!(int, int, int)));
 }
 
 unittest
@@ -575,15 +570,15 @@ unittest
     import std.traits : Unqual;
 
     // empty
-    alias Empty = staticMap!(Unqual);
+    alias Empty = Map!(Unqual);
     static assert(Empty.length == 0);
 
     // single
-    alias Single = staticMap!(Unqual, const int);
-    static assert(is(Single == TypeTuple!int));
+    alias Single = Map!(Unqual, const int);
+    static assert(is(Single == MetaList!int));
 
-    alias T = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(T == TypeTuple!(int, int, int)));
+    alias T = Map!(Unqual, int, const int, immutable int);
+    static assert(is(T == MetaList!(int, int, int)));
 }
 
 /**
@@ -593,21 +588,21 @@ $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 Evaluation is $(I not) short-circuited if a false result is encountered; the
 template predicate must be instantiable with all the given items.
  */
-template allSatisfy(alias F, T...)
+template metaAll(alias F, T...)
 {
     static if (T.length == 0)
     {
-        enum allSatisfy = true;
+        enum metaAll = true;
     }
     else static if (T.length == 1)
     {
-        enum allSatisfy = F!(T[0]);
+        enum metaAll = F!(T[0]);
     }
     else
     {
-        enum allSatisfy =
-            allSatisfy!(F, T[ 0  .. $/2]) &&
-            allSatisfy!(F, T[$/2 ..  $ ]);
+        enum metaAll =
+            metaAll!(F, T[ 0  .. $/2]) &&
+            metaAll!(F, T[$/2 ..  $ ]);
     }
 }
 
@@ -616,8 +611,8 @@ unittest
 {
     import std.traits : isIntegral;
 
-    static assert(!allSatisfy!(isIntegral, int, double));
-    static assert( allSatisfy!(isIntegral, int, long));
+    static assert(!metaAll!(isIntegral, int, double));
+    static assert( metaAll!(isIntegral, int, long));
 }
 
 /**
@@ -627,21 +622,21 @@ $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 Evaluation is $(I not) short-circuited if a true result is encountered; the
 template predicate must be instantiable with all the given items.
  */
-template anySatisfy(alias F, T...)
+template metaAny(alias F, T...)
 {
     static if(T.length == 0)
     {
-        enum anySatisfy = false;
+        enum metaAny = false;
     }
     else static if (T.length == 1)
     {
-        enum anySatisfy = F!(T[0]);
+        enum metaAny = F!(T[0]);
     }
     else
     {
-        enum anySatisfy =
-            anySatisfy!(F, T[ 0  .. $/2]) ||
-            anySatisfy!(F, T[$/2 ..  $ ]);
+        enum metaAny =
+            metaAny!(F, T[ 0  .. $/2]) ||
+            metaAny!(F, T[$/2 ..  $ ]);
     }
 }
 
@@ -650,32 +645,32 @@ unittest
 {
     import std.traits : isIntegral;
 
-    static assert(!anySatisfy!(isIntegral, string, double));
-    static assert( anySatisfy!(isIntegral, int, double));
+    static assert(!metaAny!(isIntegral, string, double));
+    static assert( metaAny!(isIntegral, int, double));
 }
 
 
 /**
- * Filters a $(D TypeTuple) using a template predicate. Returns a
- * $(D TypeTuple) of the elements which satisfy the predicate.
+ * Filters a list using a template predicate. Returns a
+ * list of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
 {
     static if (TList.length == 0)
     {
-        alias Filter = TypeTuple!();
+        alias Filter = MetaList!();
     }
     else static if (TList.length == 1)
     {
         static if (pred!(TList[0]))
-            alias Filter = TypeTuple!(TList[0]);
+            alias Filter = MetaList!(TList[0]);
         else
-            alias Filter = TypeTuple!();
+            alias Filter = MetaList!();
     }
     else
     {
         alias Filter =
-            TypeTuple!(
+            MetaList!(
                 Filter!(pred, TList[ 0  .. $/2]),
                 Filter!(pred, TList[$/2 ..  $ ]));
     }
@@ -686,21 +681,21 @@ unittest
 {
     import std.traits : isNarrowString, isUnsigned;
 
-    alias Types1 = TypeTuple!(string, wstring, dchar[], char[], dstring, int);
+    alias Types1 = MetaList!(string, wstring, dchar[], char[], dstring, int);
     alias TL1 = Filter!(isNarrowString, Types1);
-    static assert(is(TL1 == TypeTuple!(string, wstring, char[])));
+    static assert(is(TL1 == MetaList!(string, wstring, char[])));
 
-    alias Types2 = TypeTuple!(int, byte, ubyte, dstring, dchar, uint, ulong);
+    alias Types2 = MetaList!(int, byte, ubyte, dstring, dchar, uint, ulong);
     alias TL2 = Filter!(isUnsigned, Types2);
-    static assert(is(TL2 == TypeTuple!(ubyte, uint, ulong)));
+    static assert(is(TL2 == MetaList!(ubyte, uint, ulong)));
 }
 
 unittest
 {
     import std.traits : isPointer;
 
-    static assert(is(Filter!(isPointer, int, void*, char[], int*) == TypeTuple!(void*, int*)));
-    static assert(is(Filter!isPointer == TypeTuple!()));
+    static assert(is(Filter!(isPointer, int, void*, char[], int*) == MetaList!(void*, int*)));
+    static assert(is(Filter!isPointer == MetaList!()));
 }
 
 
@@ -739,12 +734,12 @@ unittest
 
     alias isNoPointer = templateNot!isPointer;
     static assert(!isNoPointer!(int*));
-    static assert(allSatisfy!(isNoPointer, string, char, float));
+    static assert(metaAll!(isNoPointer, string, char, float));
 }
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; MetaList!(int, Map, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -795,7 +790,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; MetaList!(int, Map, 42))
     {
         static assert( Instantiate!(templateAnd!(), T));
         static assert( Instantiate!(templateAnd!(testAlways), T));
@@ -853,7 +848,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; MetaList!(int, Map, 42))
     {
         static assert( Instantiate!(templateOr!(testAlways), T));
         static assert( Instantiate!(templateOr!(testAlways, testAlways), T));

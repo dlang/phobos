@@ -40,7 +40,7 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-deprecated("Please use std.typecons instead. This module will be removed in March 2015.")
+deprecated("Please use std.typetuple instead. This module will be removed in March 2015.")
 module std.typelist;
 version(unittest) {
     import std.typetuple;
@@ -54,7 +54,7 @@ version(unittest) {
  * $(D TypeList)s are passed to other templates as alias parameters
  * To create an empty list use $(D TypeList!())
  *
- * $(D TypeList) efines several "methods":
+ * $(D TypeList) defines several "methods":
  *
  * $(D_PARAM toTuple), $(D_PARAM head), $(D_PARAM tail), $(D_PARAM length), $(D_PARAM isEmpty)
  *
