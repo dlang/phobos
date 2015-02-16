@@ -183,3 +183,5 @@ public import std.algorithm.setops;
 public import std.algorithm.searching;
 public import std.algorithm.sorting;
 
+private import std.functional;
+alias forward = std.functional.forward;
