@@ -195,6 +195,7 @@ unittest
     auto ar = 1000
         .iota
         .map!(n => 1.7.pow(n+1) - 1.7.pow(n))
+        .array
         ;
 
     //Summation.Precise is default
@@ -203,8 +204,8 @@ unittest
     double s2 = fsum!real(-d, ar.retro);
     version(X86)
     {
-        assert(nextDown(-1.0) <= s1 && s1 <= nextUp(-1.0));
         assert(nextDown(-1.0) <= s2 && s2 <= nextUp(-1.0));
+        assert(nextDown(-1.0) <= s1 && s1 <= nextUp(-1.0));
     }
     else
     {
