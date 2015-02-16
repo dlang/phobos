@@ -60,7 +60,7 @@ public import std.digest.crc;
 public import std.digest.sha;
 public import std.digest.md;
 
-int main(char[][] args)
+int main(string[] args)
 {
     // Bring in unit test for module by referencing function in it
 
@@ -91,7 +91,7 @@ int main(char[][] args)
 
     printf("args.length = %d\n", args.length);
     for (int i = 0; i < args.length; i++)
-        printf("args[%d] = '%s'\n", i, cast(char *)args[i]);
+        printf("args[%d] = '%.*s'\n", i, args[i].length, args[i].ptr);
 
     int[3] x;
     x[0] = 3;
