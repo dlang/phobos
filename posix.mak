@@ -142,29 +142,38 @@ endif
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
-# Packages in std. Just mention the package name here and the actual files in
-# the package in STD_MODULES.
-STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
-	range regex)
+# Given one or more packages, returns their respective libraries
+P2LIB=$(addprefix $(ROOT)/libphobos2_,$(addsuffix $(DOTLIB),$(subst /,_,$1)))
+# Given one or more packages, returns the modules they contain
+P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 
-# Modules in std (including those in packages), in alphabetical order.
-STD_MODULES = $(addprefix std/, \
-  array ascii base64 bigint bitmanip compiler complex concurrency concurrencybase \
-  $(addprefix container/, array binaryheap dlist rbtree slist util) \
-  conv cstream csv datetime demangle \
-  $(addprefix digest/, digest crc hmac md ripemd sha) \
-  encoding exception \
-  $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
-  file format functional getopt json math mathspecial \
-  meta metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
-  process random \
-  $(addprefix range/, primitives interfaces) \
-  $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
-	kickstart tests thompson)) \
-  signals socket socketstream stdint stdio stdiobase stream \
-  string syserror system traits typecons typetuple uni uri utf uuid variant \
-  xml zip zlib $(addprefix algorithm/,comparison iteration \
-    mutation searching setops sorting))
+# Packages in std. Just mention the package name here. The contents of package
+# xy/zz is in variable PACKAGE_xy_zz. This allows automation in iterating
+# packages and their modules.
+STD_PACKAGES = std $(addprefix std/,\
+  algorithm container digest experimental net range regex)
+
+# Modules broken down per package
+
+PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
+  concurrencybase conv cstream csv datetime demangle encoding exception file format \
+  functional getopt json math mathspecial meta metastrings mmfile numeric \
+  outbuffer parallelism path process random signals socket socketstream stdint \
+  stdio stdiobase stream string syserror system traits typecons typetuple uni \
+  uri utf uuid variant xml zip zlib
+PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
+  sorting
+PACKAGE_std_container = array binaryheap dlist package rbtree slist util
+PACKAGE_std_digest = crc digest hmac md ripemd sha
+PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
+  nulllogger multilogger package) $(addprefix allocator/,common)
+PACKAGE_std_net = curl isemail
+PACKAGE_std_range = interfaces package primitives
+PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
+  backtracking kickstart tests thompson)
+
+# Modules in std (including those in packages)
+STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)

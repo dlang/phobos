@@ -172,7 +172,7 @@ markAsUsed).))
 
 )
 
-The example below features an allocator modeled after $(WEB goo.gl/m7329l,
+The example below features an _allocator modeled after $(WEB goo.gl/m7329l,
 jemalloc), which uses a battery of free-list allocators spaced so as to keep
 internal fragmentation to a minimum. The $(D FList) definitions specify no
 bounds for the freelist because the $(D Segregator) does all size selection in
@@ -313,7 +313,7 @@ pointers on top of another allocator.))
 )
  */
 
-module std.allocator;
+module std.experimental.allocator;
 
 // Example in the synopsis above
 unittest
@@ -341,119 +341,11 @@ unittest
     tuMalloc.deallocate(c);
 }
 
+public import std.experimental.allocator.common;
+
 import std.algorithm, std.conv, std.exception, std.range, std.traits,
     std.typecons, std.typetuple;
 version(unittest) import std.random, std.stdio;
-
-/*
-Ternary by Timon Gehr and Andrei Alexandrescu.
-*/
-struct Ternary
-{
-    private ubyte value = 6;
-    private static Ternary make(ubyte b)
-    {
-        Ternary r = void;
-        r.value = b;
-        return r;
-    }
-
-    enum no = make(0), yes = make(2), unknown = make(6);
-
-    this(bool b) { value = b << 1; }
-
-    void opAssign(bool b) { value = b << 1; }
-
-    Ternary opUnary(string s)() if (s == "~")
-    {
-        return make(386 >> value & 6);
-    }
-
-    Ternary opBinary(string s)(Ternary rhs) if (s == "|")
-    {
-        return make(25512 >> value + rhs.value & 6);
-    }
-
-    Ternary opBinary(string s)(Ternary rhs) if (s == "&")
-    {
-        return make(26144 >> value + rhs.value & 6);
-    }
-
-    Ternary opBinary(string s)(Ternary rhs) if (s == "^")
-    {
-        return make(26504 >> value + rhs.value & 6);
-    }
-}
-
-unittest
-{
-    alias f = Ternary.no, t = Ternary.yes, u = Ternary.unknown;
-    auto truthTableAnd =
-    [
-        t, t, t,
-        t, u, u,
-        t, f, f,
-        u, t, u,
-        u, u, u,
-        u, f, f,
-        f, t, f,
-        f, u, f,
-        f, f, f,
-    ];
-
-    auto truthTableOr =
-    [
-        t, t, t,
-        t, u, t,
-        t, f, t,
-        u, t, t,
-        u, u, u,
-        u, f, u,
-        f, t, t,
-        f, u, u,
-        f, f, f,
-    ];
-
-    auto truthTableXor =
-    [
-        t, t, f,
-        t, u, u,
-        t, f, t,
-        u, t, u,
-        u, u, u,
-        u, f, u,
-        f, t, t,
-        f, u, u,
-        f, f, f,
-    ];
-
-    for (auto i = 0; i != truthTableAnd.length; i += 3)
-    {
-        assert((truthTableAnd[i] & truthTableAnd[i + 1])
-            == truthTableAnd[i + 2]);
-        assert((truthTableOr[i] | truthTableOr[i + 1])
-            == truthTableOr[i + 2]);
-        assert((truthTableXor[i] ^ truthTableXor[i + 1])
-            == truthTableXor[i + 2]);
-    }
-
-    Ternary a;
-    assert(a == Ternary.unknown);
-    static assert(!is(typeof({ if (a) {} })));
-    assert(!is(typeof({ auto b = Ternary(3); })));
-    a = true;
-    assert(a == Ternary.yes);
-    a = false;
-    assert(a == Ternary.no);
-    a = Ternary.unknown;
-    assert(a == Ternary.unknown);
-    Ternary b;
-    b = a;
-    assert(b == a);
-    assert(~Ternary.yes == Ternary.no);
-    assert(~Ternary.no == Ternary.yes);
-    assert(~Ternary.unknown == Ternary.unknown);
-}
 
 /**
 Returns the size in bytes of the state that needs to be allocated to hold an
@@ -6835,7 +6727,7 @@ unittest
     );
 
     import std.datetime;
-    writeln(benchmark!(
+    if (false) writeln(benchmark!(
         testSpeed!NullAllocator,
         testSpeed!Mallocator,
         testSpeed!GCAllocator,
