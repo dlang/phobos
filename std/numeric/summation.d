@@ -113,6 +113,7 @@ enum Summation
     Precise summation algorithm.
     The value of the sum is rounded to the nearest representable
     floating-point number using the $(LUCKY round-half-to-even rule).
+    Result can be differ from the exact value on $(D X86), $(D nextDown(proir) <= result &&  result <= nextUp(proir)).
     +/
     Precise,
 }
@@ -543,6 +544,7 @@ public:
     /++
     Returns the value of the sum, rounded to the nearest representable
     floating-point number using the round-half-to-even rule.
+    Result can be differ from the exact value on $(D X86), $(D nextDown(proir) <= result &&  result <= nextUp(proir)).
     +/
     T sum() const
     {
