@@ -2850,11 +2850,39 @@ true if the initial segment of $(D r1) matches $(D r2), and $(D r1) has been
 advanced to the point past this segment; otherwise false, and $(D r1) is left
 in its original position.
  */
-bool skipOver(alias pred = "a == b", R1, R2)(ref R1 r1, R2 r2)
+bool skipOver(R1, R2)(ref R1 r1, R2 r2)
+    if (isForwardRange!R1 && isInputRange!R2
+        && is(typeof(r1.front == r2.front)))
+{
+    static if (is(typeof(r1[0 .. $] == r2) : bool)
+        && is(typeof(r2.length > r1.length) : bool)
+        && is(typeof(r1 = r1[r2.length .. $])))
+    {
+        if (r2.length > r1.length || r1[0 .. r2.length] != r2)
+        {
+            return false;
+        }
+        r1 = r1[r2.length .. $];
+        return true;
+    }
+    else
+    {
+        return skipOver!((a, b) => a == b)(r1, r2);
+    }
+}
+
+/// Ditto
+bool skipOver(alias pred, R1, R2)(ref R1 r1, R2 r2)
     if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
         isForwardRange!R1 &&
         isInputRange!R2)
 {
+    static if (hasLength!R1 && hasLength!R2)
+    {
+        // Shortcut opportunity!
+        if (r2.length > r1.length)
+            return false;
+    }
     auto r = r1.save;
     while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
     {
@@ -2901,7 +2929,14 @@ true if the first element matches the given element according to the given
 predicate, and the range has been advanced by one element; otherwise false, and
 the range is left untouched.
  */
-bool skipOver(alias pred = "a == b", R, E)(ref R r, E e)
+bool skipOver(R, E)(ref R r, E e)
+    if (isInputRange!R && is(typeof(r.front == e) : bool))
+{
+    return skipOver!((a, b) => a == b)(r, e);
+}
+
+/// Ditto
+bool skipOver(alias pred, R, E)(ref R r, E e)
     if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
 {
     if (r.empty || !binaryFun!pred(r.front, e))
