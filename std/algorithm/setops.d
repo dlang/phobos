@@ -595,7 +595,7 @@ void largestPartialIntersection
             sorted);
 }
 
-import std.algorithm : SortOutput; // FIXME
+import std.algorithm.sorting : SortOutput; // FIXME
 
 // largestPartialIntersectionWeighted
 /**
