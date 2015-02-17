@@ -318,6 +318,58 @@ class OutBuffer
         va_end(ap);
     }
 
+    /**
+     * Formats and writes its arguments in text format to the OutBuffer.
+     *
+     * Params:
+     *  fmt = format string as described in $(XREF format, formattedWrite)
+     *  args = arguments to be formatted
+     *
+     * See_Also:
+     *  $(XREF stdio, writef);
+     *  $(XREF format, formattedWrite);
+     */
+    void writef(Char, A...)(in Char[] fmt, A args)
+    {
+        import std.format : formattedWrite;
+        formattedWrite(this, fmt, args);
+    }
+
+    ///
+    unittest
+    {
+        OutBuffer b = new OutBuffer();
+        b.writef("a%sb", 16);
+        assert(b.toString() == "a16b");
+    }
+
+    /**
+     * Formats and writes its arguments in text format to the OutBuffer,
+     * followed by a newline.
+     *
+     * Params:
+     *  fmt = format string as described in $(XREF format, formattedWrite)
+     *  args = arguments to be formatted
+     *
+     * See_Also:
+     *  $(XREF stdio, writefln);
+     *  $(XREF format, formattedWrite);
+     */
+    void writefln(Char, A...)(in Char[] fmt, A args)
+    {
+        import std.format : formattedWrite;
+        formattedWrite(this, fmt, args);
+        put('\n');
+    }
+
+    ///
+    unittest
+    {
+        OutBuffer b = new OutBuffer();
+        b.writefln("a%sb", 16);
+        assert(b.toString() == "a16b\n");
+    }
+
     /*****************************************
      * At offset index into buffer, create nbytes of space by shifting upwards
      * all data past index.
