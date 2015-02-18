@@ -17,7 +17,7 @@
 #
 # make install => copies library to /usr/lib
 #
-# make unittest/std/somemodule.d => only builds and unittests std.somemodule
+# make std/somemodule.test => only builds and unittests std.somemodule
 #
 
 ################################################################################
@@ -381,7 +381,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 	$(QUIET)$(RUN) $< $(call moduleName,$*)
 
 # target for quickly running a single unittest (using static phobos library)
-unittest/%.d : %.d $(LIB)
+%.test : %.d $(LIB)
 	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -run $<
 
 ################################################################################
