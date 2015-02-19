@@ -128,12 +128,7 @@ $(TR $(TDNW Mutation)
         $(SUBREF mutation, uninitializedFill)
     )
 )
-$(TR $(TDNW Utility)
-    $(TDNW -)
-    $(TD $(MYREF forward)
-    )
 ))
-)
 
 Many functions in this package are parameterized with a function or a
 $(GLOSSARY predicate). The predicate may be passed either as a
