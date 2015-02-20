@@ -3,11 +3,43 @@
 /**
    This module implements the formatting functionality for strings and
    I/O. It's comparable to C99's $(D vsprintf()) and uses a similar
-   format encoding scheme.
+   _format encoding scheme.
 
-   For an introductory look at $(B std.format)'s capabilities and how to use
+   For an introductory look at $(B std._format)'s capabilities and how to use
    this module see the dedicated
    $(LINK2 http://wiki.dlang.org/Defining_custom_print_format_specifiers, DWiki article).
+
+   This module centers around two functions:
+
+$(BOOKTABLE ,
+    $(TR $(TD $(D $(LREF formattedRead)))
+        $(TD Reads values according to the _format string from an InputRange.
+    ))
+    $(TR $(TD $(D $(LREF formattedWrite)))
+        $(TD Formats its arguments according to the _format string and puts them
+        to an OutputRange.
+    ))
+)
+
+   Please see the documentation of function $(D $(LREF formattedWrite)) for a
+   description of the _format string.
+
+   Two functions have been added for convenience:
+
+$(BOOKTABLE ,
+    $(TR $(TD $(D $(LREF _format)))
+        $(TD Returns a GC-allocated string with the formatting result.
+    ))
+    $(TR $(TD $(D $(LREF sformat)))
+        $(TD Puts the formatting result into a preallocated array.
+    ))
+)
+
+   These two functions are publicly imported by $(LINK2 std_string.html,
+   std.string) to be easily available.
+
+   The functions $(D $(LREF formatValue)) and $(D $(LREF unformatValue)) are
+   used for the plumbing.
 
    Macros: WIKI = Phobos/StdFormat
 
@@ -6552,12 +6584,12 @@ unittest
 }
 
 /*****************************************************
- * Format arguments into buffer <i>buf</i> which must be large
+ * Format arguments into buffer $(I buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  * Returns: The slice of $(D buf) containing the formatted string.
  *
  *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
- *        implementation. in November 2012.
+ *        implementation in November 2012.
  *        This is seamless for most code, but it makes it so that the only
  *        argument that can be a format string is the first one, so any
  *        code which used multiple format strings has broken. Please change
