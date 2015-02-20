@@ -20,7 +20,7 @@ Example:
 ----
 // Generate a uniformly-distributed integer in the range [0, 14]
 auto i = uniform(0, 15);
-// Generate a uniformly-distributed real in the range [0, 100$(RPAREN)
+// Generate a uniformly-distributed real in the range [0, 100)
 // using a specific random generator
 Random gen;
 auto r = uniform(0.0L, 100.0L, gen);
@@ -1221,7 +1221,7 @@ Example:
 auto gen = Random(unpredictableSeed);
 // Generate an integer in [0, 1023]
 auto a = uniform(0, 1024, gen);
-// Generate a float in [0, 1$(RPAREN)
+// Generate a float in [0, 1)
 auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
