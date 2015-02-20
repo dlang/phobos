@@ -41,6 +41,7 @@ $(TR $(TDNW Floating-point operations) $(TD
     $(MYREF approxEqual) $(MYREF feqrel) $(MYREF fdim) $(MYREF fmax)
     $(MYREF fmin) $(MYREF fma) $(MYREF nextDown) $(MYREF nextUp)
     $(MYREF nextafter) $(MYREF NaN) $(MYREF getNaNPayload)
+    $(MYREF totalOrder)
 ))
 $(TR $(TDNW Introspection) $(TD
     $(MYREF isFinite) $(MYREF isIdentical) $(MYREF isInfinity) $(MYREF isNaN)
@@ -6829,4 +6830,239 @@ real yl2xp1(real x, real y) @nogc @safe pure nothrow;       // y * log2(x + 1)
     // issue 6381: floor/ceil should be usable in pure function.
     auto x = floor(1.2);
     auto y = ceil(1.2);
+}
+
+/***********************************
+ * Defines a non-strict total order on all floating-point numbers.
+ *
+ * The order is defined as follows:
+ * $(UL
+ *      $(LI All numbers in [-$(INFIN), +$(INFIN)] are ordered
+ *          the same way as by $(D <=) operator, with the exception of
+ *          -0.0, which is less than +0.0;)
+ *      $(LI If the sign bit is set (that is, it's 'negative'), $(NAN) is less
+ *          than any number; if the sign bit is not set (it is 'positive'),
+ *          $(NAN) is greater than any number;)
+ *      $(LI $(NAN)s of the same sign are ordered by the payload ('negative'
+ *          ones - in reverse order).)
+ * )
+ *
+ * Returns:
+ *      $(D true) if $(D x) precedes $(D y) in the specified order or $(D x) and
+ *      $(D y) are identical; false otherwise.
+ *
+ * See_Also:
+ *      $(MYREF isIdentical)
+ * Standards: Conforms to IEEE 754-2008
+ */
+bool totalOrder(T)(T x, T y) @nogc @trusted pure nothrow
+    if (isFloatingPoint!T)
+{
+    alias F = floatTraits!T;
+
+    static if (F.realFormat == RealFormat.ieeeSingle
+               || F.realFormat == RealFormat.ieeeDouble)
+    {
+        static if (T.sizeof == 4)
+        {
+            alias UInt = uint;
+        }
+        else
+        {
+            alias UInt = ulong;
+        }
+
+        enum msb = ~(UInt.max >>> 1);
+
+        UInt*[2] vars = [cast(UInt*)&x, cast(UInt*)&y];
+
+        foreach (var; vars)
+        {
+            if (*var & msb)
+            {
+                *var = ~*var;
+            }
+            else
+            {
+                *var |= msb;
+            }
+        }
+
+        return *vars[0] <= *vars[1];
+    }
+    else static if (F.realFormat == RealFormat.ieeeExtended53
+                    || F.realFormat == RealFormat.ieeeExtended
+                    || F.realFormat == RealFormat.ieeeQuadruple)
+    {
+        static if (F.realFormat == RealFormat.ieeeQuadruple)
+        {
+            alias RemT = ulong;
+        }
+        else
+        {
+            alias RemT = ushort;
+        }
+
+        enum shift = ulong.sizeof / RemT.sizeof;
+
+        ubyte*[2] bytes = [cast(ubyte*)&x, cast(ubyte*)&y];
+
+        ulong*[2] bulk = [cast(ulong*)&x, cast(ulong*)&y];
+        RemT*[2] rem = [cast(ushort*)&x + shift, cast(ushort*)&y + shift];
+
+        foreach (i; 0 .. 2)
+        {
+            if (bytes[i][F.SIGNPOS_BYTE] & 0x80)
+            {
+                *bulk[i] = ~*bulk[i];
+                *rem[i] = ~*rem[i];
+            }
+            else
+            {
+                bytes[i][F.SIGNPOS_BYTE] |= 0x80;
+            }
+        }
+
+        version(LittleEndian)
+        {
+            return *rem[0] < *rem[1]
+                || (*rem[0] == *rem[1] && *bulk[0] <= *bulk[1]);
+        }
+        else
+        {
+            return *bulk[0] < *bulk[1]
+                || (*bulk[0] == *bulk[1] && *rem[0] <= *rem[1]);
+        }
+    }
+    else
+    {
+        // IBM Extended doubledouble does not follow the general
+        // sign-exponent-significand layout, so has to be handled generically
+
+        int xSign = signbit(x),
+            ySign = signbit(y);
+
+        if (xSign == 1)
+        {
+            if (ySign == 1)
+            {
+                return totalOrder(-y, -x);
+            }
+            else
+            {
+                return true;
+            }
+        }
+        else
+        {
+            if (ySign == 1)
+            {
+                return false;
+            }
+            else
+            {
+                // Both are positive
+                if (x <= y)
+                {
+                    return true;
+                }
+                else if (x > y)
+                {
+                    return false;
+                }
+                else if (isNaN(x))
+                {
+                    if (isNaN(y))
+                    {
+                        return getNaNPayload(x) <= getNaNPayload(y);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else // y is NaN, x is not
+                {
+                    return true;
+                }
+            }
+        }
+    }
+}
+
+/// Most numbers are ordered naturally.
+unittest
+{
+    assert(totalOrder(-double.infinity, -double.max));
+    assert(totalOrder(-double.max, -100.0));
+    assert(totalOrder(-100.0, -0.5));
+    assert(totalOrder(-0.5, 0.0));
+    assert(totalOrder(0.0, 0.5));
+    assert(totalOrder(0.5, 100.0));
+    assert(totalOrder(100.0, double.max));
+    assert(totalOrder(double.max, double.infinity));
+}
+
+/// The order is not strict.
+unittest
+{
+    assert(totalOrder(1.0, 1.0));
+}
+
+/// Positive and negative zeroes are distinct.
+unittest
+{
+    assert(totalOrder(-0.0, +0.0));
+    assert(!totalOrder(+0.0, -0.0));
+}
+
+/// Depending on the sign, $(NAN)s go to either end of the spectrum.
+unittest
+{
+    assert(totalOrder(-double.nan, -double.infinity));
+    assert(totalOrder(double.infinity, double.nan));
+    assert(totalOrder(-double.nan, double.nan));
+}
+
+/// $(NAN)s of the same sign are ordered by the payload.
+unittest
+{
+    assert(totalOrder(NaN(10), NaN(20)));
+    assert(!totalOrder(NaN(20), NaN(10)));
+
+    assert(totalOrder(-NaN(20), -NaN(10)));
+    assert(!totalOrder(-NaN(10), -NaN(20)));
+}
+
+unittest
+{
+    static void test(T)()
+        if (isFloatingPoint!T)
+    {
+        T[] values = [-cast(T)NaN(20), -T.nan, -T.infinity, -T.max, -T.max / 2,
+                      T(-16.0), T(-1.0).nextDown, T(-1.0), T(-1.0).nextUp,
+                      T(-0.5), -T.min_normal, (-T.min_normal).nextUp,
+                      -2 * T.min_normal * T.epsilon,
+                      -T.min_normal * T.epsilon,
+                      T(-0.0), T(0.0),
+                      T.min_normal * T.epsilon,
+                      2 * T.min_normal * T.epsilon,
+                      T.min_normal.nextDown, T.min_normal, T(0.5),
+                      T(1.0).nextDown, T(1.0), T(1.0).nextUp, T(16.0),
+                      T.max / 2, T.max, T.infinity, T.nan, cast(T)NaN(20)];
+
+        foreach (i, x; values[0 .. $ - 1])
+        {
+            foreach (y; values[i + 1 .. $])
+            {
+                assert(totalOrder(x, y));
+                assert(!totalOrder(y, x));
+            }
+            assert(totalOrder(x, x));
+        }
+    }
+
+    test!float;
+    test!double;
+    test!real;
 }
