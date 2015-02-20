@@ -533,13 +533,22 @@ real abs(Num)(Num y) @safe pure nothrow @nogc
  * Note that z * conj(z) = $(POWER z.re, 2) - $(POWER z.im, 2)
  * is always a real number
  */
-creal conj(creal z) @safe pure nothrow @nogc
+auto conj(Num)(Num z) @safe pure nothrow @nogc
+    if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
+            || is(Num* : const(creal*)))
 {
-    return z.re - z.im*1i;
+    //FIXME
+    //Issue 14206
+    static if(is(Num* : const(cdouble*)))
+        return cast(cdouble) conj(cast(creal)z);
+    else
+        return z.re - z.im*1fi;
 }
 
 /** ditto */
-ireal conj(ireal y) @safe pure nothrow @nogc
+auto conj(Num)(Num y) @safe pure nothrow @nogc
+    if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
+            || is(Num* : const(ireal*)))
 {
     return -y;
 }
@@ -547,8 +556,25 @@ ireal conj(ireal y) @safe pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    assert(conj(7 + 3i) == 7-3i);
+    creal c = 7 + 3Li;
+    assert(conj(c) == 7-3Li);
     ireal z = -3.2Li;
+    assert(conj(z) == -z);
+}
+//Issue 14206
+@safe pure nothrow @nogc unittest
+{
+    cdouble c = 7 + 3i;
+    assert(conj(c) == 7-3i);
+    idouble z = -3.2i;
+    assert(conj(z) == -z);
+}
+//Issue 14206
+@safe pure nothrow @nogc unittest
+{
+    cfloat c = 7f + 3fi;
+    assert(conj(c) == 7f-3fi);
+    ifloat z = -3.2fi;
     assert(conj(z) == -z);
 }
 
