@@ -505,7 +505,7 @@ auto abs(Num)(Num z) @safe pure nothrow @nogc
 }
 
 /// ditto
-real abs(Num)(Num y) @safe pure nothrow @nogc
+auto abs(Num)(Num y) @safe pure nothrow @nogc
     if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
             || is(Num* : const(ireal*)))
 {
@@ -522,7 +522,7 @@ real abs(Num)(Num y) @safe pure nothrow @nogc
     assert(abs(71.6Li) == 71.6L);
     assert(abs(-56) == 56);
     assert(abs(2321312L)  == 2321312L);
-    assert(abs(-1+1i) == sqrt(2.0L));
+    assert(abs(-1L+1i) == sqrt(2.0L));
 }
 
 /***********************************
@@ -3182,6 +3182,12 @@ real cbrt(real x) @trusted nothrow @nogc
  *      )
  */
 real fabs(real x) @safe pure nothrow @nogc;      /* intrinsic */
+//FIXME
+///ditto
+double fabs(double x) @safe pure nothrow @nogc { return fabs(cast(real)x); }
+//FIXME
+///ditto
+float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real)x); }
 
 
 /***********************************************************************
