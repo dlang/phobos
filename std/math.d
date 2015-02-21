@@ -2181,11 +2181,12 @@ creal expi(real y) @trusted pure nothrow @nogc
 T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
     if(isFloatingPoint!T)
 {
-    ushort* vu = cast(ushort*)&value;
+    Unqual!T vf = value;
+    ushort* vu = cast(ushort*)&vf;
     static if(is(Unqual!T == float))
-        int* vi = cast(int*)&value;
+        int* vi = cast(int*)&vf;
     else
-        long* vl = cast(long*)&value;
+        long* vl = cast(long*)&vf;
     int ex;
     alias F = floatTraits!T;
 
@@ -2215,19 +2216,19 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
         }
         else if (!*vl)
         {
-            // value is +-0.0
+            // vf is +-0.0
             exp = 0;
         }
         else
         {
             // subnormal
 
-            value *= F.RECIP_EPSILON;
+            vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
         }
-        return value;
+        return vf;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
@@ -2258,19 +2259,19 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
         else if ((vl[MANTISSA_LSB]
                        |(vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
-            // value is +-0.0
+            // vf is +-0.0
             exp = 0;
         }
         else
         {
             // subnormal
-            value *= F.RECIP_EPSILON;
+            vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
         }
-        return value;
+        return vf;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -2298,19 +2299,19 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
         }
         else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF))
         {
-            // value is +-0.0
+            // vf is +-0.0
             exp = 0;
         }
         else
         {
             // subnormal
-            value *= F.RECIP_EPSILON;
+            vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
-        return value;
+        return vf;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -2338,19 +2339,19 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
         }
         else if (!(*vi & 0x7FFF_FFFF))
         {
-            // value is +-0.0
+            // vf is +-0.0
             exp = 0;
         }
         else
         {
             // subnormal
-            value *= F.RECIP_EPSILON;
+            vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3F00);
         }
-        return value;
+        return vf;
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -2379,7 +2380,7 @@ unittest
 {
     import std.typetuple, std.typecons;
 
-    foreach (T; TypeTuple!(real, double, float))
+    foreach (T; TypeTuple!(real, double, float, const(real), immutable(double)))
     {
         Tuple!(T, T, int)[] vals =     // x,frexp,exp
             [
@@ -2409,13 +2410,13 @@ unittest
 
         static if (floatTraits!(T).realFormat == RealFormat.ieeeExtended)
         {
-            static T[3][] extendedvals = [ // x,frexp,exp
+            static T[3][] extendedvals2 = [ // x,frexp,exp
                 [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
                 [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
                 [T.min_normal,  .5,     -16381],
                 [T.min_normal/2.0L, .5,     -16382]    // subnormal
             ];
-            foreach(elem; extendedvals)
+            foreach(elem; extendedvals2)
             {
                 T x = elem[0];
                 T e = elem[1];
