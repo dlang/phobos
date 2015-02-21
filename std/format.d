@@ -12,6 +12,8 @@
    This module centers around two functions:
 
 $(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
     $(TR $(TD $(D $(LREF formattedRead)))
         $(TD Reads values according to the _format string from an InputRange.
     ))
@@ -27,6 +29,8 @@ $(BOOKTABLE ,
    Two functions have been added for convenience:
 
 $(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
     $(TR $(TD $(D $(LREF _format)))
         $(TD Returns a GC-allocated string with the formatting result.
     ))
