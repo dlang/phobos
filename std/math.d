@@ -6240,14 +6240,7 @@ body
     }
     else
     {
-        ptrdiff_t i = A.length - 1;
-        typeof(return) r = A[i];
-        while (--i >= 0)
-        {
-            r *= x;
-            r += A[i];
-        }
-        return r;
+        return polyImplBase(x, A);
     }
 }
 
@@ -6272,15 +6265,31 @@ body
     assert(poly(x, pp) == y);
 }
 
-private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
-in
-{
-    assert(A.length > 0);
+unittest {
+    static assert(poly(3.0, [1.0, 2.0, 3.0]) == 34);
 }
-body
+
+private Unqual!(CommonType!(T1, T2)) polyImplBase(T1, T2)(T1 x, in T2[] A) @trusted pure nothrow @nogc
+    if (isFloatingPoint!T1 && isFloatingPoint!T2)
+{
+    ptrdiff_t i = A.length - 1;
+    typeof(return) r = A[i];
+    while (--i >= 0)
+    {
+        r *= x;
+        r += A[i];
+    }
+    return r;
+}
+
+private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
 {
     version (D_InlineAsm_X86)
     {
+        if(__ctfe)
+        {
+            return polyImplBase(x, A);
+        }
         version (Windows)
         {
         // BUG: This code assumes a frame pointer in EBP.
@@ -6429,14 +6438,7 @@ body
     }
     else
     {
-        ptrdiff_t i = A.length - 1;
-        real r = A[i];
-        while (--i >= 0)
-        {
-            r *= x;
-            r += A[i];
-        }
-        return r;
+        return polyImplBase(x, A);
     }
 }
 
