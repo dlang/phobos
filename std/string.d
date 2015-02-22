@@ -1901,7 +1901,7 @@ S capitalize(S)(S s) @trusted pure
     Does not throw on invalid UTF; such is simply passed unchanged
     to the output.
 
-    Allocates memory; use $(LREF splitterLines) for an alternative that
+    Allocates memory; use $(LREF lineSplitter) for an alternative that
     does not.
 
   Params:
@@ -1910,7 +1910,7 @@ S capitalize(S)(S s) @trusted pure
   Returns:
     array of strings, each element is a line that is a slice of $(D s)
   See_Also:
-    $(LREF splitterLines)
+    $(LREF lineSplitter)
     $(XREF algorithm, splitter)
     $(XREF regex, splitter)
  +/
@@ -2063,7 +2063,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     $(XREF algorithm, splitter)
     $(XREF regex, splitter)
  */
-auto splitterLines(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
+auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
 if ((hasSlicing!Range && hasLength!Range) ||
     isSomeString!Range)
 {
@@ -2203,7 +2203,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
     {
         auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\nmon\u2030day\n");
 
-        auto lines = s.splitterLines().array;
+        auto lines = s.lineSplitter().array;
         assert(lines.length == 10);
         assert(lines[0] == "");
         assert(lines[1] == "peter");
@@ -2217,10 +2217,10 @@ if ((hasSlicing!Range && hasLength!Range) ||
         assert(lines[9] == "mon\u2030day");
 
         ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
-        auto ulines = splitterLines(cast(char[])u).array;
+        auto ulines = lineSplitter(cast(char[])u).array;
         assert(cast(ubyte[])(ulines[0]) == u);
 
-        lines = splitterLines!(KeepTerminator.yes)(s).array;
+        lines = lineSplitter!(KeepTerminator.yes)(s).array;
         assert(lines.length == 10);
         assert(lines[0] == "\r");
         assert(lines[1] == "peter\n");
@@ -2234,11 +2234,11 @@ if ((hasSlicing!Range && hasLength!Range) ||
         assert(lines[9] == "mon\u2030day\n");
 
         s.popBack(); // Lop-off trailing \n
-        lines = splitterLines(s).array;
+        lines = lineSplitter(s).array;
         assert(lines.length == 10);
         assert(lines[9] == "mon\u2030day");
 
-        lines = splitterLines!(KeepTerminator.yes)(s).array;
+        lines = lineSplitter!(KeepTerminator.yes)(s).array;
         assert(lines.length == 10);
         assert(lines[9] == "mon\u2030day");
     }
@@ -2249,7 +2249,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
 @nogc @safe pure unittest
 {
     auto s = "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\nmon\u2030day\n";
-    auto lines = s.splitterLines();
+    auto lines = s.lineSplitter();
     static immutable witness = ["", "peter", "", "paul", "jerry", "ice", "cream", "", "sunday", "mon\u2030day"];
     uint i;
     foreach (line; lines)
