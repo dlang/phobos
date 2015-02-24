@@ -9,6 +9,8 @@ $(LINK2 std_algorithm.html, std.algorithm) or $(LINK2 std_range.html,
 std.range).
 
 $(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
     $(TR $(TD $(D $(LREF adjoin)))
         $(TD Joins a couple of functions into one that executes the original
         functions independently and returns a tuple with all the results.

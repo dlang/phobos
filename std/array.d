@@ -5,6 +5,8 @@ Functions and types that manipulate built-in arrays and associative arrays.
 This module provides all kinds of functions to create, manipulate or convert arrays:
 
 $(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
     $(TR $(TD $(D $(LREF _array)))
         $(TD Returns a copy of the input in a newly allocated dynamic _array.
     ))
