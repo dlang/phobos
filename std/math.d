@@ -41,7 +41,7 @@ $(TR $(TDNW Floating-point operations) $(TD
     $(MYREF approxEqual) $(MYREF feqrel) $(MYREF fdim) $(MYREF fmax)
     $(MYREF fmin) $(MYREF fma) $(MYREF nextDown) $(MYREF nextUp)
     $(MYREF nextafter) $(MYREF NaN) $(MYREF getNaNPayload)
-    $(MYREF totalOrder)
+    $(MYREF cmp)
 ))
 $(TR $(TDNW Introspection) $(TD
     $(MYREF isFinite) $(MYREF isIdentical) $(MYREF isInfinity) $(MYREF isNaN)
@@ -6833,12 +6833,12 @@ real yl2xp1(real x, real y) @nogc @safe pure nothrow;       // y * log2(x + 1)
 }
 
 /***********************************
- * Defines a non-strict total order on all floating-point numbers.
+ * Defines a total order on all floating-point numbers.
  *
  * The order is defined as follows:
  * $(UL
  *      $(LI All numbers in [-$(INFIN), +$(INFIN)] are ordered
- *          the same way as by $(D <=) operator, with the exception of
+ *          the same way as by built-in comparison, with the exception of
  *          -0.0, which is less than +0.0;)
  *      $(LI If the sign bit is set (that is, it's 'negative'), $(NAN) is less
  *          than any number; if the sign bit is not set (it is 'positive'),
@@ -6848,14 +6848,14 @@ real yl2xp1(real x, real y) @nogc @safe pure nothrow;       // y * log2(x + 1)
  * )
  *
  * Returns:
- *      $(D true) if $(D x) precedes $(D y) in the specified order or $(D x) and
- *      $(D y) are identical; false otherwise.
+ *      -1 if $(D x) precedes $(D y) in the order specified above;
+ *      0 if $(D x) and $(D y) are identical, and 1 otherwise.
  *
  * See_Also:
  *      $(MYREF isIdentical)
  * Standards: Conforms to IEEE 754-2008
  */
-bool totalOrder(T)(T x, T y) @nogc @trusted pure nothrow
+int cmp(T)(T x, T y) @nogc @trusted pure nothrow
     if (isFloatingPoint!T)
 {
     alias F = floatTraits!T;
@@ -6888,7 +6888,7 @@ bool totalOrder(T)(T x, T y) @nogc @trusted pure nothrow
             }
         }
 
-        return *vars[0] <= *vars[1];
+        return *vars[0] < *vars[1] ? -1 : *vars[0] == *vars[1] ? 0 : 1;
     }
     else static if (F.realFormat == RealFormat.ieeeExtended53
                     || F.realFormat == RealFormat.ieeeExtended
@@ -6925,14 +6925,24 @@ bool totalOrder(T)(T x, T y) @nogc @trusted pure nothrow
 
         version(LittleEndian)
         {
-            return *rem[0] < *rem[1]
-                || (*rem[0] == *rem[1] && *bulk[0] <= *bulk[1]);
+            alias major = rem;
+            alias minor = bulk;
         }
         else
         {
-            return *bulk[0] < *bulk[1]
-                || (*bulk[0] == *bulk[1] && *rem[0] <= *rem[1]);
+            alias major = bulk;
+            alias minor = rem;
         }
+
+        return *major[0] < *major[1]
+                ? -1
+                : *major[0] > *major[1]
+                    ? 1
+                    : *minor[0] < *minor[1] 
+                        ? -1
+                        : *minor[0] > *minor[1]
+                            ? 1
+                            : 0;
     }
     else
     {
@@ -6946,44 +6956,52 @@ bool totalOrder(T)(T x, T y) @nogc @trusted pure nothrow
         {
             if (ySign == 1)
             {
-                return totalOrder(-y, -x);
+                return cmp(-y, -x);
             }
             else
             {
-                return true;
+                return -1;
             }
         }
         else
         {
             if (ySign == 1)
             {
-                return false;
+                return 1;
             }
             else
             {
                 // Both are positive
-                if (x <= y)
+                if (x < y)
                 {
-                    return true;
+                    return -1;
+                }
+                else if (x == y)
+                {
+                    return 0;
                 }
                 else if (x > y)
                 {
-                    return false;
+                    return 1;
                 }
                 else if (isNaN(x))
                 {
                     if (isNaN(y))
                     {
-                        return getNaNPayload(x) <= getNaNPayload(y);
+                        return getNaNPayload(x) < getNaNPayload(y)
+                                ? -1
+                                : getNaNPayload(x) == getNaNPayload(y)
+                                    ? 0
+                                    : 1;
                     }
                     else
                     {
-                        return false;
+                        return 1;
                     }
                 }
                 else // y is NaN, x is not
                 {
-                    return true;
+                    return -1;
                 }
             }
         }
@@ -6993,45 +7011,39 @@ bool totalOrder(T)(T x, T y) @nogc @trusted pure nothrow
 /// Most numbers are ordered naturally.
 unittest
 {
-    assert(totalOrder(-double.infinity, -double.max));
-    assert(totalOrder(-double.max, -100.0));
-    assert(totalOrder(-100.0, -0.5));
-    assert(totalOrder(-0.5, 0.0));
-    assert(totalOrder(0.0, 0.5));
-    assert(totalOrder(0.5, 100.0));
-    assert(totalOrder(100.0, double.max));
-    assert(totalOrder(double.max, double.infinity));
-}
+    assert(cmp(-double.infinity, -double.max) == -1);
+    assert(cmp(-double.max, -100.0) == -1);
+    assert(cmp(-100.0, -0.5) == -1);
+    assert(cmp(-0.5, 0.0) == -1);
+    assert(cmp(0.0, 0.5) == -1);
+    assert(cmp(0.5, 100.0) == -1);
+    assert(cmp(100.0, double.max) == -1);
+    assert(cmp(double.max, double.infinity) == -1);
 
-/// The order is not strict.
-unittest
-{
-    assert(totalOrder(1.0, 1.0));
+    assert(cmp(1.0, 1.0) == 0);
 }
 
 /// Positive and negative zeroes are distinct.
 unittest
 {
-    assert(totalOrder(-0.0, +0.0));
-    assert(!totalOrder(+0.0, -0.0));
+    assert(cmp(-0.0, +0.0) == -1);
+    assert(cmp(+0.0, -0.0) == 1);
 }
 
 /// Depending on the sign, $(NAN)s go to either end of the spectrum.
 unittest
 {
-    assert(totalOrder(-double.nan, -double.infinity));
-    assert(totalOrder(double.infinity, double.nan));
-    assert(totalOrder(-double.nan, double.nan));
+    assert(cmp(-double.nan, -double.infinity) == -1);
+    assert(cmp(double.infinity, double.nan) == -1);
+    assert(cmp(-double.nan, double.nan) == -1);
 }
 
 /// $(NAN)s of the same sign are ordered by the payload.
 unittest
 {
-    assert(totalOrder(NaN(10), NaN(20)));
-    assert(!totalOrder(NaN(20), NaN(10)));
+    assert(cmp(NaN(10), NaN(20)) == -1);
 
-    assert(totalOrder(-NaN(20), -NaN(10)));
-    assert(!totalOrder(-NaN(10), -NaN(20)));
+    assert(cmp(-NaN(20), -NaN(10)) == -1);
 }
 
 unittest
@@ -7055,10 +7067,10 @@ unittest
         {
             foreach (y; values[i + 1 .. $])
             {
-                assert(totalOrder(x, y));
-                assert(!totalOrder(y, x));
+                assert(cmp(x, y) == -1);
+                assert(cmp(y, x) == 1);
             }
-            assert(totalOrder(x, x));
+            assert(cmp(x, x) == 0);
         }
     }
 
