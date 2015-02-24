@@ -1646,7 +1646,7 @@ auto groupBy(alias pred, Range)(Range r)
     else static if (is(typeof(
             unaryFun!pred(ElementType!Range.init) ==
             unaryFun!pred(ElementType!Range.init))))
-        return GroupByImpl!((a,b) => pred(a) == pred(b), Range)(r);
+        return GroupByImpl!((a,b) => unaryFun!pred(a) == unaryFun!pred(b), Range)(r);
     else
         static assert(0, "groupBy expects either a binary predicate or "~
                          "a unary predicate on range elements of type: "~
@@ -1747,6 +1747,31 @@ unittest
         assert(e.equal(expected2.front));
         expected2.popFront();
     }
+}
+
+/// Showing an explicit version of `groupBy` that returns an associative array:
+/* FIXME: pure @safe nothrow*/ unittest
+{
+    import std.range : iota;
+    import std.array : array;
+    import std.typecons : tuple;
+
+    auto groupByExplicit(alias pred, Range)(Range r)
+    {
+        auto a = r.map!(pred, "a")
+            .groupBy!("a[0]")
+            .map!(inner => tuple(inner.front[0], inner.map!"a[1]"))
+            ;
+        alias KeyType = typeof(unaryFun!pred(ElementType!Range.init));
+        auto dict = ElementType!Range[][KeyType].init;
+        foreach (ref k, ref v; a) {
+            dict[k] ~= v.array;
+        }
+        return dict;
+    }
+
+    auto a = iota(10);
+    assert(groupByExplicit!"a/3"(a) == [0:[0, 1, 2], 1:[3, 4, 5], 2:[6, 7, 8], 3:[9]]);
 }
 
 /*FIXME: pure @safe nothrow*/ unittest
