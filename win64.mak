@@ -158,6 +158,10 @@ SRC_STD_7= \
 	std\mathspecial.d \
 	std\process.d
 
+SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
+	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
+	std\experimental\logger\package.d
+
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_math) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_3c) $(SRC_STD_4) \
@@ -203,10 +207,6 @@ SRC_STD_RANGE= std\range\package.d std\range\primitives.d \
 	std\range\interfaces.d
 
 SRC_STD_NET= std\net\isemail.d std\net\curl.d
-
-SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogger.d \
-	std\experimental\logger\multilogger.d std\experimental\logger\nulllogger.d \
-	std\experimental\logger\package.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
