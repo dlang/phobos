@@ -1647,7 +1647,8 @@ unittest
 }
 
 /**
-Computes accurate sum of binary logarithms of input range $(D r).
+Compute the sum of binary logarithms of the input range $(D r).
+The error of this method is much smaller than with a naive sum of log2.
  */
 ElementType!Range sumOfLog2s(Range)(Range r)
     if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
