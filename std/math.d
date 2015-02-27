@@ -374,7 +374,7 @@ else
 // Common code for math implementations.
 
 // Helper for floor/ceil
-T floorImpl(T)(T x) @trusted pure nothrow @nogc
+T floorImpl(T)(const T x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(T);
     // Take care not to trigger library calls from the compiler,
@@ -2178,14 +2178,15 @@ creal expi(real y) @trusted pure nothrow @nogc
  *      $(TR $(TD $(PLUSMN)$(NAN)) $(TD $(PLUSMN)$(NAN)) $(TD int.min))
  *      )
  */
-T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
+T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
     if(isFloatingPoint!T)
 {
-    ushort* vu = cast(ushort*)&value;
+    Unqual!T vf = value;
+    ushort* vu = cast(ushort*)&vf;
     static if(is(Unqual!T == float))
-        int* vi = cast(int*)&value;
+        int* vi = cast(int*)&vf;
     else
-        long* vl = cast(long*)&value;
+        long* vl = cast(long*)&vf;
     int ex;
     alias F = floatTraits!T;
 
@@ -2215,19 +2216,19 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
         }
         else if (!*vl)
         {
-            // value is +-0.0
+            // vf is +-0.0
             exp = 0;
         }
         else
         {
             // subnormal
 
-            value *= F.RECIP_EPSILON;
+            vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
         }
-        return value;
+        return vf;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
@@ -2258,19 +2259,19 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
         else if ((vl[MANTISSA_LSB]
                        |(vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
-            // value is +-0.0
+            // vf is +-0.0
             exp = 0;
         }
         else
         {
             // subnormal
-            value *= F.RECIP_EPSILON;
+            vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
         }
-        return value;
+        return vf;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -2298,19 +2299,19 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
         }
         else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF))
         {
-            // value is +-0.0
+            // vf is +-0.0
             exp = 0;
         }
         else
         {
             // subnormal
-            value *= F.RECIP_EPSILON;
+            vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
-        return value;
+        return vf;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -2338,19 +2339,19 @@ T frexp(T)(T value, out int exp) @trusted pure nothrow @nogc
         }
         else if (!(*vi & 0x7FFF_FFFF))
         {
-            // value is +-0.0
+            // vf is +-0.0
             exp = 0;
         }
         else
         {
             // subnormal
-            value *= F.RECIP_EPSILON;
+            vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3F00);
         }
-        return value;
+        return vf;
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -2426,6 +2427,21 @@ unittest
                 assert(exp == eptr);
 
             }
+        }
+    }
+}
+
+unittest
+{
+    import std.typetuple: TypeTuple;
+    void foo() {
+        foreach (T; TypeTuple!(real, double, float))
+        {
+            int exp;
+            const T a = 1;
+            immutable T b = 2;
+            auto c = frexp(a, exp);
+            auto d = frexp(b, exp);
         }
     }
 }
@@ -5399,7 +5415,7 @@ float nextDown(float x) @safe pure nothrow @nogc
  * exceptions will be raised if the function value is subnormal, and x is
  * not equal to y.
  */
-T nextafter(T)(T x, T y) @safe pure nothrow @nogc
+T nextafter(T)(const T x, const T y) @safe pure nothrow @nogc
 {
     if (x == y) return y;
     return ((y>x) ? nextUp(x) :  nextDown(x));
@@ -5917,7 +5933,7 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
  *      $(TR $(TD any)    $(TD $(NAN))     $(TD 0))
  *      )
  */
-int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
+int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
     if (isFloatingPoint!(X))
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
@@ -5947,7 +5963,7 @@ int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
         if (x == y)
             return X.mant_dig; // ensure diff!=0, cope with INF.
 
-        X diff = fabs(x - y);
+        Unqual!X diff = fabs(x - y);
 
         ushort *pa = cast(ushort *)(&x);
         ushort *pb = cast(ushort *)(&y);
@@ -6056,6 +6072,11 @@ int feqrel(X)(X x, X y) @trusted pure nothrow @nogc
        assert(feqrel(F.nan, F.infinity) == 0);
        assert(feqrel(F.infinity, -F.infinity) == 0);
        assert(feqrel(F.max, -F.max) == 0);
+
+
+       const F Const = 2;
+       immutable F Immutable = 2;
+       auto Compiles = feqrel(Const, Immutable);
     }
 
     assert(feqrel(7.1824L, 7.1824L) == real.mant_dig);
@@ -6085,7 +6106,7 @@ package: // Not public yet
  *   ieeeMean(x, y) = sqrt(x * y).
  *
  */
-T ieeeMean(T)(T x, T y)  @trusted pure nothrow @nogc
+T ieeeMean(T)(const T x, const T y)  @trusted pure nothrow @nogc
 in
 {
     // both x and y must have the same sign, and must not be NaN.
