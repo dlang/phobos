@@ -1644,13 +1644,13 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 
         auto result = (() @trusted => uninitializedArray!(RetTypeElement[])(length))();
         size_t len;
+        foreach(e; ror.front)
+            emplaceRef(result[len++], e);
+        ror.popFront();
         foreach(r; ror)
         {
-            if (len)  // if not first time thru loop
-            {
-                foreach(e; sepArr)
-                    emplaceRef(result[len++], e);
-            }
+            foreach(e; sepArr)
+                emplaceRef(result[len++], e);
             foreach(e; r)
                 emplaceRef(result[len++], e);
         }
@@ -1669,6 +1669,12 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
         }
         return result.data;
     }
+}
+
+unittest // Issue 14230
+{
+   string[] ary = ["","aa","bb","cc"]; // leaded by _empty_ element
+   assert(ary.join(" @") == " @aa @bb @cc"); // OK in 2.067b1 and olders
 }
 
 /// Ditto
@@ -1710,10 +1716,12 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
 
 
             size_t len;
+            foreach(e; ror.front)
+                emplaceRef(result[len++], e);
+            ror.popFront();
             foreach(r; ror)
             {
-                if (len)
-                    emplaceRef(result[len++], sep);
+                emplaceRef(result[len++], sep);
                 foreach(e; r)
                     emplaceRef(result[len++], e);
             }
@@ -1733,6 +1741,12 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
         }
         return result.data;
     }
+}
+
+unittest // Issue 14230
+{
+   string[] ary = ["","aa","bb","cc"];
+   assert(ary.join('@') == "@aa@bb@cc");
 }
 
 /// Ditto
