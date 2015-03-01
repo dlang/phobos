@@ -1201,11 +1201,7 @@ private template TimSortImpl(alias pred, R)
         size_t stackLen = 0;
 
         // Allocate temporary memory if not provided by user
-        if (temp.length < minTemp)
-        {
-            if (__ctfe) temp.length = minTemp;
-            else temp = uninitializedArray!(T[])(minTemp);
-        }
+        if (temp.length < minTemp) temp = uninitializedArray!(T[])(minTemp);
 
         for (size_t i = 0; i < range.length; )
         {
@@ -1225,26 +1221,37 @@ private template TimSortImpl(alias pred, R)
             stack[stackLen++] = Slice(i, runLen);
             i += runLen;
 
-            // Collapse stack so that (e1 >= e2 + e3 && e2 >= e3)
+            // Collapse stack so that (e1 > e2 + e3 && e2 > e3)
             // STACK is | ... e1 e2 e3 >
             while (stackLen > 1)
             {
-                immutable run3 = stackLen - 1;
-                immutable run2 = stackLen - 2;
-                immutable run1 = stackLen - 3;
-                if (stackLen >= 3 && stack[run1].length <= stack[run2].length + stack[run3].length)
+                immutable run1 = stackLen - 4;
+                immutable run2 = stackLen - 3;
+                immutable run3 = stackLen - 2;
+                immutable run4 = stackLen - 1;
+                
+                if (stackLen > 2 && stack[run2].length <= stack[run3].length + stack[run4].length || 
+                    stackLen > 3 && stack[run1].length <= stack[run3].length + stack[run2].length )
                 {
-                    immutable at = stack[run1].length <= stack[run3].length
-                        ? run1 : run2;
+                    immutable at = stack[run2].length < stack[run4].length ? run2 : run3;
                     mergeAt(range, stack[0 .. stackLen], at, minGallop, temp);
-                    --stackLen;
+                    
                 }
-                else if (stack[run2].length <= stack[run3].length)
+                else if (stack[run3].length > stack[run4].length) break;
+                else mergeAt(range, stack[0 .. stackLen], run3, minGallop, temp);
+                
+                stackLen -= 1;
+            }
+            
+            // Assert that the code above established the invariant correctly
+            debug
+            {
+                if (stackLen == 2) assert(stack[0].length > stack[1].length);
+                else if (stackLen > 2) foreach(k; 2 .. stackLen)
                 {
-                    mergeAt(range, stack[0 .. stackLen], run2, minGallop, temp);
-                    --stackLen;
+                    assert(stack[k - 2].length > stack[k - 1].length + stack[k].length);
+                    assert(stack[k - 1].length > stack[k].length);
                 }
-                else break;
             }
         }
 
@@ -1332,7 +1339,7 @@ private template TimSortImpl(alias pred, R)
     in
     {
         assert(stack.length >= 2);
-        assert(at == stack.length - 2 || at == stack.length - 3);
+        assert(stack.length - at == 2 || stack.length - at == 3);
     }
     body
     {
@@ -1342,7 +1349,7 @@ private template TimSortImpl(alias pred, R)
 
         // Pop run from stack
         stack[at] = Slice(base, len);
-        if (at == stack.length - 3) stack[$ - 2] = stack[$ - 1];
+        if (stack.length - at == 3) stack[$ - 2] = stack[$ - 1];
 
         // Merge runs (at, at + 1)
         return merge(range[base .. base + len], mid, minGallop, temp);
@@ -1767,6 +1774,14 @@ unittest
     sort!("a[0] < b[0]", SwapStrategy.stable)(zip(x, y));
     assert(x == [10, 20, 50, 60, 60]);
     assert(y == "aebcd"d);
+}
+
+unittest
+{
+    // Issue 14223
+    import std.range, std.array;
+    auto arr = chain(iota(0, 384), iota(0, 256), iota(0, 80), iota(0, 64), iota(0, 96)).array;
+    sort!("a < b", SwapStrategy.stable)(arr);
 }
 
 // schwartzSort
