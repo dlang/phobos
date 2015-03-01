@@ -2473,6 +2473,8 @@ random access and also offers a constructor taking an initial position
 $(D index). $(D Cycle) works with static arrays in addition to ranges,
 mostly for performance reasons.
 
+Note: The input range must not be empty.
+
 Tip: This is a great way to implement simple circular buffers.
 */
 struct Cycle(R)
@@ -2698,6 +2700,7 @@ nothrow:
 Cycle!R cycle(R)(R input)
     if (isForwardRange!R && !isInfinite!R)
 {
+    assert(!input.empty);
     return Cycle!R(input);
 }
 
@@ -2713,6 +2716,7 @@ Cycle!R cycle(R)(R input)
 Cycle!R cycle(R)(R input, size_t index = 0)
     if (isRandomAccessRange!R && !isInfinite!R)
 {
+    assert(!input.empty);
     return Cycle!R(input, index);
 }
 
@@ -2888,6 +2892,14 @@ unittest //10845
 @safe unittest // 12177
 {
     auto a = recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0");
+}
+
+// Issue 13390
+unittest
+{
+    import std.exception;
+    import core.exception : AssertError;
+    assertThrown!AssertError(cycle([0, 1, 2][0..0]));
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);
