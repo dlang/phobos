@@ -2973,12 +2973,19 @@ unittest
     ld = parse!real(s2);
     assert(s2.empty);
     x = *cast(longdouble *)&ld;
-    version (CRuntime_Microsoft)
-        ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
-    else version (Android)
-        ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+
+    static if(real.mant_dig == 64)
+    {
+        version (CRuntime_Microsoft)
+            ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+        else version (Android)
+            ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+        else
+            ld1 = strtold(s.ptr, null);
+    }
     else
         ld1 = strtold(s.ptr, null);
+
     x1 = *cast(longdouble *)&ld1;
     assert(x1 == x && ld1 == ld);
 
