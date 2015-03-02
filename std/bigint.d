@@ -99,7 +99,7 @@ public:
     }
 
     ///
-    BigInt opAssign(T:BigInt)(T x) pure
+    BigInt opAssign(T:BigInt)(T x) pure @nogc
     {
         data = x.data;
         sign = x.sign;
@@ -369,13 +369,13 @@ public:
     }
 
     ///
-    bool opEquals()(auto ref const BigInt y) const pure
+    bool opEquals()(auto ref const BigInt y) const pure @nogc
     {
        return sign == y.sign && y.data == data;
     }
 
     ///
-    bool opEquals(T)(T y) const pure if (isIntegral!T)
+    bool opEquals(T)(T y) const pure nothrow @nogc if (isIntegral!T)
     {
         if (sign != (y<0))
             return 0;
@@ -383,27 +383,27 @@ public:
     }
 
     ///
-    T opCast(T:bool)() pure const
+    T opCast(T:bool)() pure nothrow @nogc const
     {
         return !isZero();
     }
 
     ///
-    T opCast(T)() pure const if (is(Unqual!T == BigInt)) {
+    T opCast(T)() pure nothrow @nogc const if (is(Unqual!T == BigInt)) {
         return this;
     }
 
     // Hack to make BigInt's typeinfo.compare work properly.
     // Note that this must appear before the other opCmp overloads, otherwise
     // DMD won't find it.
-    int opCmp(ref const BigInt y) pure nothrow const
+    int opCmp(ref const BigInt y) pure nothrow @nogc const
     {
         // Simply redirect to the "real" opCmp implementation.
         return this.opCmp!BigInt(y);
     }
 
     ///
-    int opCmp(T)(T y) pure nothrow const if (isIntegral!T)
+    int opCmp(T)(T y) pure nothrow @nogc const if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
@@ -411,7 +411,7 @@ public:
         return sign? -cmp: cmp;
     }
     ///
-    int opCmp(T:BigInt)(const T y) pure nothrow const
+    int opCmp(T:BigInt)(const T y) pure nothrow @nogc const
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
@@ -420,7 +420,7 @@ public:
     }
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
-    long toLong() pure nothrow const @nogc
+    long toLong() @safe pure nothrow const @nogc
     {
         return (sign ? -1 : 1) *
           (data.ulongLength == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
@@ -429,7 +429,7 @@ public:
     }
     /// Returns the value of this BigInt as an int,
     /// or +- int.max if outside the representable range.
-    int toInt() pure nothrow const
+    int toInt() @safe pure nothrow @nogc const
     {
         return (sign ? -1 : 1) *
           (data.uintLength == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
@@ -438,13 +438,13 @@ public:
     }
     /// Number of significant uints which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
-    @property size_t uintLength() pure nothrow const
+    @property size_t uintLength() @safe pure nothrow @nogc const
     {
         return data.uintLength;
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
-    @property size_t ulongLength() pure nothrow const
+    @property size_t ulongLength() @safe pure nothrow @nogc const
     {
         return data.ulongLength;
     }
@@ -515,22 +515,22 @@ public:
     }
 
     // Implement toHash so that BigInt works properly as an AA key.
-    size_t toHash() const @trusted nothrow
+    size_t toHash() const @safe nothrow
     {
         return data.toHash() + sign;
     }
 
 private:
-    void negate() @safe pure nothrow
+    void negate() @safe pure nothrow @nogc
     {
         if (!data.isZero())
             sign = !sign;
     }
-    bool isZero() pure const nothrow @safe
+    bool isZero() pure const nothrow @nogc @safe
     {
         return data.isZero();
     }
-    bool isNegative() pure const nothrow @safe
+    bool isNegative() pure const nothrow @nogc @safe
     {
         return sign;
     }
