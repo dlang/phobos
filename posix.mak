@@ -287,7 +287,7 @@ unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
 else
 unittest : unittest-debug unittest-release
 unittest-%:
-	$(MAKE) -f $(MAKEFILE) $(MAKEFLAGS) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
+	$(MAKE) -f $(MAKEFILE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
 endif
 
 depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
