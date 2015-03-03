@@ -3955,7 +3955,7 @@ private template emplaceImpl(T)
             alias UArg = Unqual!Arg;
             alias E = ElementEncodingType!(typeof(T.init[]));
             alias UE = Unqual!E;
-            enum N = T.length;
+            enum n = T.length;
 
             static if (is(Arg : T))
             {
@@ -3965,9 +3965,11 @@ private template emplaceImpl(T)
                 else static if (is(UArg == UT))
                 {
                     import core.stdc.string : memcpy;
-                    memcpy(&chunk, &arg, T.sizeof);
+                    // This is known to be safe as the two values are the same
+                    // type and the source (arg) should be initialized
+                    () @trusted { memcpy(&chunk, &arg, T.sizeof); }();
                     static if (hasElaborateCopyConstructor!T)
-                        typeid(T).postblit(cast(void*)&chunk);
+                        _postblitRecurse(chunk);
                 }
                 else
                     .emplaceImpl!T(chunk, cast(T)arg);
@@ -3980,10 +3982,14 @@ private template emplaceImpl(T)
                 else static if (is(Unqual!(ElementEncodingType!Arg) == UE))
                 {
                     import core.stdc.string : memcpy;
-                    assert(N == chunk.length, "Array length missmatch in emplace");
-                    memcpy(cast(void*)&chunk, arg.ptr, T.sizeof);
+                    assert(n == chunk.length, "Array length missmatch in emplace");
+
+                    // This is unsafe as long as the length match is a
+                    // precondition and not an unconditional exception
+                    memcpy(&chunk, arg.ptr, T.sizeof);
+
                     static if (hasElaborateCopyConstructor!T)
-                        typeid(T).postblit(cast(void*)&chunk);
+                        _postblitRecurse(chunk);
                 }
                 else
                     .emplaceImpl!T(chunk, cast(E[])arg);
@@ -3996,12 +4002,16 @@ private template emplaceImpl(T)
                 else static if (is(UArg == Unqual!E))
                 {
                     import core.stdc.string : memcpy;
-                    //Note: We copy everything, and then postblit just once.
-                    //This is as exception safe as what druntime can provide us.
-                    foreach(i; 0 .. N)
-                        memcpy(cast(void*)&(chunk[i]), &arg, E.sizeof);
+
+                    foreach(i; 0 .. n)
+                    {
+                        // This is known to be safe as the two values are the same
+                        // type and the source (arg) should be initialized
+                        () @trusted { memcpy(&(chunk[i]), &arg, E.sizeof); }();
+                    }
+
                     static if (hasElaborateCopyConstructor!T)
-                        typeid(T).postblit(cast(void*)&chunk);
+                        _postblitRecurse(chunk);
                 }
                 else
                     //Alias this. Coerce.
@@ -4015,7 +4025,7 @@ private template emplaceImpl(T)
                 static if (!hasElaborateAssign!UT && is(typeof(chunk[] = arg)))
                     chunk[] = arg;
                 else
-                    foreach(i; 0 .. N)
+                    foreach(i; 0 .. n)
                         .emplaceImpl!E(chunk[i], arg);
             }
             else
@@ -4045,9 +4055,11 @@ private template emplaceImpl(T)
                 else
                 {
                     import core.stdc.string : memcpy;
-                    memcpy(&chunk, &args[0], T.sizeof);
+                    // This is known to be safe as the two values are the same
+                    // type and the source (args[0]) should be initialized
+                    () @trusted { memcpy(&chunk, &args[0], T.sizeof); }();
                     static if (hasElaborateCopyConstructor!T)
-                        typeid(T).postblit(&chunk);
+                        _postblitRecurse(chunk);
                 }
             }
             else
@@ -4970,13 +4982,43 @@ unittest //Constness
     emplaceRef!(IS[2])(ss, iss[]);
 }
 
-unittest
+pure nothrow @safe @nogc unittest
 {
     int i;
     emplaceRef(i);
     emplaceRef!int(i);
     emplaceRef(i, 5);
     emplaceRef!int(i, 5);
+}
+
+// Test attribute propagation for UDTs
+pure nothrow @safe /* @nogc */ unittest
+{
+    static struct Safe
+    {
+        this(this) pure nothrow @safe @nogc {}
+    }
+
+    Safe safe = void;
+    emplaceRef(safe, Safe());
+
+    Safe[1] safeArr = [Safe()];
+    Safe[1] uninitializedSafeArr = void;
+    emplaceRef(uninitializedSafeArr, safe);
+    emplaceRef(uninitializedSafeArr, safeArr);
+
+    static struct Unsafe
+    {
+        this(this) @system {}
+    }
+
+    Unsafe unsafe = void;
+    static assert(!__traits(compiles, emplaceRef(unsafe, Unsafe())));
+
+    Unsafe[1] unsafeArr = [Unsafe()];
+    Unsafe[1] uninitializedUnsafeArr = void;
+    static assert(!__traits(compiles, emplaceRef(uninitializedUnsafeArr, unsafe)));
+    static assert(!__traits(compiles, emplaceRef(uninitializedUnsafeArr, unsafeArr)));
 }
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
