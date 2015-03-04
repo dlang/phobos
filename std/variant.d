@@ -481,7 +481,7 @@ private:
             static if (!is(Unqual!(typeof((*zis)[0])) == void) && is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
             {
                 // array type; parm is the element to append
-                auto arg = cast(VariantN*) parm;
+                auto arg = cast(Variant*) parm;
                 alias E = typeof((*zis)[0]);
                 if (arg[0].convertsTo!(E))
                 {
@@ -1107,7 +1107,7 @@ public:
     ///ditto
     VariantN opCatAssign(T)(T rhs)
     {
-        auto toAppend = VariantN(rhs);
+        auto toAppend = Variant(rhs);
         fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
         return this;
     }
@@ -1297,6 +1297,15 @@ unittest
     assert(aa["b"] == 2);
     aa["b"] = 3;
     assert(aa["b"] == 3);
+}
+
+// Issue #14233
+unittest
+{
+    alias Atom = Algebraic!(string, This[]);
+
+    Atom[] values = [];
+    auto a = Atom(values);
 }
 
 pure nothrow @nogc
