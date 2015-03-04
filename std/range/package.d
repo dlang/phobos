@@ -404,17 +404,17 @@ Iterates range $(D r) with stride $(D n). If the range is a
 random-access range, moves by indexing into the range; otherwise,
 moves by successive calls to $(D popFront). Applying stride twice to
 the same range results in a stride with a step that is the
-product of the two applications.
-
-Throws: $(D Exception) if $(D n == 0).
+product of the two applications. It is an error for $(D n) to be 0.
  */
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
+in
 {
-    import std.exception : enforce;
+    assert(n != 0, "stride cannot have step zero.");
+}
+body
+{
     import std.algorithm : min;
-
-    enforce(n > 0, "Stride cannot have step zero.");
 
     static if (is(typeof(stride(r.source, n)) == Range))
     {
@@ -624,6 +624,21 @@ unittest
     int[] a = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ];
     assert(equal(stride(a, 3), [ 1, 4, 7, 10 ][]));
     assert(stride(stride(a, 2), 3) == stride(a, 6));
+}
+
+nothrow @nogc unittest
+{
+    int[4] testArr = [1,2,3,4];
+    //just checking it compiles
+    auto s = testArr[].stride(2);
+}
+
+debug unittest
+{//check the contract
+    int[4] testArr = [1,2,3,4];
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+    assertThrown!AssertError(testArr[].stride(0)); 
 }
 
 @safe unittest
@@ -4016,19 +4031,20 @@ unittest
 
    The two-argument overloads have $(D step = 1). If $(D begin < end && step <
    0) or $(D begin > end && step > 0) or $(D begin == end), then an empty range
-   is returned.
+   is returned. If $(D step == 0) then $(D begin == end) is an error.
 
    For built-in types, the range returned is a random access range. For
    user-defined types that support $(D ++), the range is an input
    range.
-
-   Throws:
-   $(D Exception) if $(D begin != end && step == 0), an exception is
-   thrown.
 */
 auto iota(B, E, S)(B begin, E end, S step)
 if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         && isIntegral!S)
+in
+{
+    assert(!(step == 0 && begin != end));
+}
+body
 {
     import std.conv : unsigned;
 
@@ -4043,12 +4059,9 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
         this(Value current, Value pastLast, StepType step)
         {
-            import std.exception : enforce;
-
             if ((current < pastLast && step >= 0) ||
                     (current > pastLast && step <= 0))
             {
-                enforce(step != 0);
                 this.step = step;
                 this.current = current;
                 if (step > 0)
@@ -4196,6 +4209,12 @@ auto iota(E)(E end)
 // Specialization for floating-point types
 auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
+in
+{
+    assert(step != 0, "iota: step must not be 0");
+    assert((end - begin) / step >= 0, "iota: incorrect startup parameters");
+}
+body
 {
     alias Value = Unqual!(CommonType!(B, E, S));
     static struct Result
@@ -4206,13 +4225,10 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
         this(Value start, Value end, Value step)
         {
             import std.conv : to;
-            import std.exception : enforce;
 
             this.start = start;
             this.step = step;
-            enforce(step != 0);
             immutable fcount = (end - start) / step;
-            enforce(fcount >= 0, "iota: incorrect startup parameters");
             count = to!size_t(fcount);
             auto pastEnd = start + count * step;
             if (step > 0)
@@ -4289,6 +4305,24 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
     assert(r[2] == 6);
     auto rf = iota(0.0, 0.5, 0.1);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
+}
+
+nothrow @nogc unittest
+{
+    auto t0 = iota(0, 10);
+    auto t1 = iota(0, 10, 2);
+    auto t2 = iota(1, 1, 0);
+    //float overloads use std.conv.to so can't be @nogc or nothrow
+}
+
+debug unittest
+{//check the contracts
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+    assertThrown!AssertError(iota(1,2,0));
+    assertThrown!AssertError(iota(0f,1f,0f));
+    assertThrown!AssertError(iota(1f,0f,0.1f));
+    assertThrown!AssertError(iota(0f,1f,-0.1f));
 }
 
 unittest
