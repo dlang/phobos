@@ -2954,6 +2954,11 @@ unittest
     }
 }
 
+@safe unittest
+{
+    if (false) writeln();
+}
+
 unittest
 {
     static import std.file;
