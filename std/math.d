@@ -525,6 +525,23 @@ auto abs(Num)(Num y) @safe pure nothrow @nogc
     assert(abs(-1L+1i) == sqrt(2.0L));
 }
 
+@safe pure nothrow @nogc unittest
+{
+    import std.typetuple;
+    foreach (T; TypeTuple!(float, double, real))
+    {
+        T f = 3;
+        assert(abs(f) == f);
+        assert(abs(-f) == f);
+    }
+    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    {
+        T f = -12+3i;
+        assert(abs(f) == hypot(f.re, f.im));
+        assert(abs(-f) == hypot(f.re, f.im));
+    }
+}
+
 /***********************************
  * Complex conjugate
  *
