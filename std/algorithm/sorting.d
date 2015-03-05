@@ -1225,17 +1225,16 @@ private template TimSortImpl(alias pred, R)
             // STACK is | ... e1 e2 e3 >
             while (stackLen > 1)
             {
-                immutable run1 = stackLen - 4;
-                immutable run2 = stackLen - 3;
-                immutable run3 = stackLen - 2;
                 immutable run4 = stackLen - 1;
+                immutable run3 = stackLen - 2;
+                immutable run2 = stackLen - 3;
+                immutable run1 = stackLen - 4;
                 
-                if (stackLen > 2 && stack[run2].length <= stack[run3].length + stack[run4].length || 
-                    stackLen > 3 && stack[run1].length <= stack[run3].length + stack[run2].length )
+                if ( (stackLen > 2 && stack[run2].length <= stack[run3].length + stack[run4].length) || 
+                     (stackLen > 3 && stack[run1].length <= stack[run3].length + stack[run2].length) )
                 {
                     immutable at = stack[run2].length < stack[run4].length ? run2 : run3;
                     mergeAt(range, stack[0 .. stackLen], at, minGallop, temp);
-                    
                 }
                 else if (stack[run3].length > stack[run4].length) break;
                 else mergeAt(range, stack[0 .. stackLen], run3, minGallop, temp);
@@ -1244,13 +1243,16 @@ private template TimSortImpl(alias pred, R)
             }
             
             // Assert that the code above established the invariant correctly
-            debug
+            version (assert)
             {
                 if (stackLen == 2) assert(stack[0].length > stack[1].length);
-                else if (stackLen > 2) foreach(k; 2 .. stackLen)
+                else if (stackLen > 2)
                 {
-                    assert(stack[k - 2].length > stack[k - 1].length + stack[k].length);
-                    assert(stack[k - 1].length > stack[k].length);
+                    foreach(k; 2 .. stackLen)
+                    {
+                        assert(stack[k - 2].length > stack[k - 1].length + stack[k].length);
+                        assert(stack[k - 1].length > stack[k].length);
+                    }
                 }
             }
         }
