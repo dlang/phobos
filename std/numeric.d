@@ -1163,7 +1163,7 @@ whileloop:
 }
 
 ///ditto
-Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
+Tuple!(T, T, R, R) findRoot(T, R, DF)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
 {
     return findRoot(f, ax, bx, fax, fbx, (T a, T b) => false);
 }
