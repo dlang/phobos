@@ -1792,10 +1792,8 @@ private
             }
         }
 
-
-        /*
-         *
-         */
+        ///
+        deprecated("isClosed can't be used with a const MessageBox")
         final @property bool isClosed() const
         {
             synchronized( m_lock )
@@ -1804,6 +1802,14 @@ private
             }
         }
 
+        ///
+        final @property bool isClosed()
+        {
+            synchronized( m_lock )
+            {
+                return m_closed;
+            }
+        }
 
         /*
          * Sets a limit on the maximum number of user messages allowed in the

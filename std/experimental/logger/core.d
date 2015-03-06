@@ -890,7 +890,7 @@ abstract class Logger
 
     By default an $(D Error) will be thrown.
     */
-    @property final void delegate() fatalHandler() const pure @safe @nogc
+    @property final void delegate() fatalHandler() pure @safe @nogc
     {
         synchronized (mutex) return this.fatalHandler_;
     }
