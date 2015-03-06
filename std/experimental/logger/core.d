@@ -880,7 +880,7 @@ abstract class Logger
     }
 
     /// Ditto
-    @property final void logLevel(const LogLevel lv) pure @safe @nogc
+    @property final void logLevel(const LogLevel lv) @safe @nogc
     {
         synchronized (mutex) this.logLevel_ = lv;
     }
@@ -890,13 +890,13 @@ abstract class Logger
 
     By default an $(D Error) will be thrown.
     */
-    @property final void delegate() fatalHandler() pure @safe @nogc
+    @property final void delegate() fatalHandler() @safe @nogc
     {
         synchronized (mutex) return this.fatalHandler_;
     }
 
     /// Ditto
-    @property final void fatalHandler(void delegate() @safe fh) pure @safe @nogc
+    @property final void fatalHandler(void delegate() @safe fh) @safe @nogc
     {
         synchronized (mutex) this.fatalHandler_ = fh;
     }
