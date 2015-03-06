@@ -1399,8 +1399,8 @@ private:
     private:
         final void switchContext() nothrow
         {
-            mutex.unlock();
-            scope(exit) mutex.lock();
+            mutex_nothrow.unlock_nothrow();
+            scope(exit) mutex_nothrow.lock_nothrow();
             yield();
         }
 
