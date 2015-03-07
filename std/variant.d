@@ -1299,6 +1299,12 @@ unittest
     assert(aa["b"] == 3);
 }
 
+// Issue #14198
+unittest
+{
+    Variant a = true;
+}
+
 // Issue #14233
 unittest
 {
