@@ -105,21 +105,13 @@ private
     T toStr(T, S)(S src)
         if (isSomeString!T)
     {
-        // workaround for Bugzilla 14198
-        static if (is(S == bool) && is(typeof({ T s = "string"; })))
-        {
-            return src ? "true" : "false";
-        }
-        else
-        {
-            import std.format : FormatSpec, formatValue;
-            import std.array : appender;
+        import std.format : FormatSpec, formatValue;
+        import std.array : appender;
 
-            auto w = appender!T();
-            FormatSpec!(ElementEncodingType!T) f;
-            formatValue(w, src, f);
-            return w.data;
-        }
+        auto w = appender!T();
+        FormatSpec!(ElementEncodingType!T) f;
+        formatValue(w, src, f);
+        return w.data;
     }
 
     template isExactSomeString(T)
