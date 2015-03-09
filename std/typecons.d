@@ -4323,6 +4323,10 @@ Make proxy for $(D a).
  */
 mixin template Proxy(alias a)
 {
+    private alias ValueType = typeof({ return a; }());
+    private enum bool accessibleFrom(T) =
+        is(typeof((ref T self){ cast(void)mixin("self." ~ a.stringof); }));
+
     static if (is(typeof(this) == class))
     {
         override bool opEquals(Object o)
@@ -4337,7 +4341,7 @@ mixin template Proxy(alias a)
         }
 
         bool opEquals(T)(T b)
-            if (is(typeof(a):T) || is(typeof(a.opEquals(b))) || is(typeof(b.opEquals(a))))
+            if (is(ValueType : T) || is(typeof(a.opEquals(b))) || is(typeof(b.opEquals(a))))
         {
             static if (is(typeof(a.opEquals(b))))
                 return a.opEquals(b);
@@ -4356,14 +4360,14 @@ mixin template Proxy(alias a)
                 return a < mixin("b."~a.stringof[5..$]) ? -1
                      : a > mixin("b."~a.stringof[5..$]) ? +1 : 0;
             }
-            static if (is(typeof(a) == class))
+            static if (is(ValueType == class))
                 return a.opCmp(o);
             else
                 throw new Exception("Attempt to compare a "~typeid(this).toString~" and a "~typeid(o).toString);
         }
 
         int opCmp(T)(auto ref const T b)
-            if (is(typeof(a):T) || is(typeof(a.opCmp(b))) || is(typeof(b.opCmp(a))))
+            if (is(ValueType : T) || is(typeof(a.opCmp(b))) || is(typeof(b.opCmp(a))))
         {
             static if (is(typeof(a.opCmp(b))))
                 return a.opCmp(b);
@@ -4373,9 +4377,16 @@ mixin template Proxy(alias a)
                 return a < b ? -1 : a > b ? +1 : 0;
         }
 
-        override hash_t toHash() const nothrow @trusted
+        static if (accessibleFrom!(const typeof(this)))
         {
-            return typeid(typeof(a)).getHash(cast(const void*)&a);
+            override hash_t toHash() const nothrow @trusted
+            {
+                static if (is(typeof(&a) == ValueType*))
+                    alias v = a;
+                else
+                    auto v = a;     // if a is (property) function
+                return typeid(ValueType).getHash(cast(const void*)&v);
+            }
         }
     }
     else
@@ -4403,9 +4414,16 @@ mixin template Proxy(alias a)
                 return a < b ? -1 : a > b ? +1 : 0;
         }
 
-        hash_t toHash() const nothrow @trusted
+        static if (accessibleFrom!(const typeof(this)))
         {
-            return typeid(typeof(a)).getHash(cast(const void*)&a);
+            hash_t toHash() const nothrow @trusted
+            {
+                static if (is(typeof(&a) == ValueType*))
+                    alias v = a;
+                else
+                    auto v = a;     // if a is (property) function
+                return typeid(ValueType).getHash(cast(const void*)&v);
+            }
         }
     }
 
@@ -4432,7 +4450,7 @@ mixin template Proxy(alias a)
     static if (!is(typeof(this) == class))
     {
         private import std.traits;
-        static if (isAssignable!(typeof(a)))
+        static if (isAssignable!ValueType)
         {
             auto ref opAssign(this X)(auto ref typeof(this) v)
             {
@@ -4487,7 +4505,7 @@ mixin template Proxy(alias a)
 
     import std.traits : isArray;
 
-    static if (isArray!(typeof(a)))
+    static if (isArray!ValueType)
     {
         auto opDollar() const { return a.length; }
     }
@@ -4856,6 +4874,25 @@ unittest
     bool[Name] names;
     names[Name("a")] = true;
     bool* b = Name("a") in names;
+}
+
+unittest
+{
+    // bug14213, using function for the payload
+    static struct S
+    {
+        int foo() { return 12; }
+        mixin Proxy!foo;
+    }
+    static class C
+    {
+        int foo() { return 12; }
+        mixin Proxy!foo;
+    }
+    S s;
+    assert(s + 1 == 13);
+    C c = new C();
+    assert(s * 2 == 24);
 }
 
 /**
