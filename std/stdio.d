@@ -2896,16 +2896,18 @@ unittest
  * arguments is valid and just prints a newline to the standard
  * output.
  */
+void writeln() @trusted
+{
+    import std.exception : enforce;
+    enforce(fputc('\n', .stdout._p.handle) == '\n');
+}
+
+///ditto
 void writeln(T...)(T args)
+if(T.length != 0)
 {
     import std.traits : isAggregateType;
-    static if (T.length == 0)
-    {
-        import std.exception : enforce;
-
-        enforce(fputc('\n', .stdout._p.handle) == '\n');
-    }
-    else static if (T.length == 1 &&
+    static if (T.length == 1 &&
                     is(typeof(args[0]) : const(char)[]) &&
                     !is(typeof(args[0]) == enum) &&
                     !is(Unqual!(typeof(args[0])) == typeof(null)) &&
@@ -2950,6 +2952,11 @@ unittest
         char[8] a;
         writeln(a);
     }
+}
+
+@safe unittest
+{
+    if (false) writeln();
 }
 
 unittest
