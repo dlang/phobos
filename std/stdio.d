@@ -2903,7 +2903,7 @@ void writeln(T...)(T args)
     {
         import std.exception : enforce;
 
-        enforce(fputc('\n', .stdout._p.handle) == '\n');
+        enforce(fputc('\n', .trustedStdout._p.handle) == '\n');
     }
     else static if (T.length == 1 &&
                     is(typeof(args[0]) : const(char)[]) &&
@@ -2933,7 +2933,7 @@ void writeln(T...)(T args)
     }
 }
 
-unittest
+@safe unittest
 {
     // Just make sure the call compiles
     if (false) writeln();
