@@ -489,7 +489,7 @@ struct Regex(Char)
         return NamedGroupRange(dict, 0, dict.length);
     }
 
-package:
+package(std.regex):
     import std.regex.internal.kickstart; //TODO: get rid of this dependency
     NamedGroup[] dict;  //maps name -> user group number
     uint ngroup;        //number of internal groups
@@ -546,7 +546,7 @@ package:
 //@@@BUG@@@ (unreduced) - public makes it inaccessible in std.regex.package (!)
 /*public*/ struct StaticRegex(Char)
 {
-package:
+package(std.regex):
     import std.regex.internal.backtracking;
     alias Matcher = BacktrackingMatcher!(true);
     alias MatchFn = bool function(ref Matcher!Char) @trusted;
@@ -565,7 +565,7 @@ public:
 
 // The stuff below this point is temporarrily part of IR module
 // but may need better place in the future (all internals)
-package:
+package(std.regex):
 
 //Simple UTF-string abstraction compatible with stream interface
 struct Input(Char)
