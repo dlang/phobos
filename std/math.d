@@ -4066,11 +4066,11 @@ private:
         // ARM FPSCR is a 32bit register
         enum : int
         {
-            INEXACT_MASK   = 0x1000,
-            UNDERFLOW_MASK = 0x0800,
-            OVERFLOW_MASK  = 0x0400,
-            DIVBYZERO_MASK = 0x0200,
-            INVALID_MASK   = 0x0100
+            INEXACT_MASK   = 0x10,
+            UNDERFLOW_MASK = 0x08,
+            OVERFLOW_MASK  = 0x04,
+            DIVBYZERO_MASK = 0x02,
+            INVALID_MASK   = 0x01
         }
     }
     else version(SPARC)
@@ -4277,8 +4277,8 @@ struct FloatingPointControl
         enum : RoundingMode
         {
             roundToNearest = 0x000000,
-            roundDown      = 0x400000,
-            roundUp        = 0x800000,
+            roundDown      = 0x800000,
+            roundUp        = 0x400000,
             roundToZero    = 0xC00000
         }
     }
