@@ -159,7 +159,7 @@ STD_PACKAGES = std $(addprefix std/,\
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   concurrencybase conv cstream csv datetime demangle encoding exception file format \
-  functional getopt json math mathspecial meta metastrings mmfile numeric \
+  functional getopt json math mathspecial meta metastrings mmfile \
   outbuffer parallelism path process random signals socket socketstream stdint \
   stdio stdiobase stream string syserror system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
@@ -177,6 +177,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
 PACKAGE_std_net = curl isemail
+PACKAGE_std_numeric = package summation
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking kickstart tests thompson)

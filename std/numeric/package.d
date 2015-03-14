@@ -23,6 +23,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.numeric;
 
+public import std.numeric.summation;
+
 import std.complex;
 import std.exception;
 import std.math;
@@ -1593,6 +1595,7 @@ unittest
     }
 }
 
+
 /**
 Normalizes values in $(D range) by multiplying each element with a
 number chosen such that values sum up to $(D sum). If elements in $(D
@@ -1654,46 +1657,6 @@ unittest
     a = [ 0.0, 0.0 ];
     assert(!normalize(a));
     assert(a == [ 0.5, 0.5 ]);
-}
-
-/**
-Compute the sum of binary logarithms of the input range $(D r).
-The error of this method is much smaller than with a naive sum of log2.
- */
-ElementType!Range sumOfLog2s(Range)(Range r)
-    if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
-{
-    long exp = 0;
-    Unqual!(typeof(return)) x = 1;
-    foreach (e; r)
-    {
-        if (e < 0)
-            return typeof(return).nan;
-        int lexp = void;
-        x *= frexp(e, lexp);
-        exp += lexp;
-        if (x < 0.5)
-        {
-            x *= 2;
-            exp--;
-        }
-    }
-    return exp + log2(x);
-}
-
-///
-unittest
-{
-    assert(sumOfLog2s(new double[0]) == 0);
-    assert(sumOfLog2s([0.0L]) == -real.infinity);
-    assert(sumOfLog2s([-0.0L]) == -real.infinity);
-    assert(sumOfLog2s([2.0L]) == 1);
-    assert(sumOfLog2s([-2.0L]).isNaN());
-    assert(sumOfLog2s([real.nan]).isNaN());
-    assert(sumOfLog2s([-real.nan]).isNaN());
-    assert(sumOfLog2s([real.infinity]) == real.infinity);
-    assert(sumOfLog2s([-real.infinity]).isNaN());
-    assert(sumOfLog2s([ 0.25, 0.25, 0.25, 0.125 ]) == -9);
 }
 
 /**
