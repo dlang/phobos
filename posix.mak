@@ -17,7 +17,7 @@
 #
 # make install => copies library to /usr/lib
 #
-# make unittest/std/somemodule.d => only builds and unittests std.somemodule
+# make std/somemodule.test => only builds and unittests std.somemodule
 #
 
 ################################################################################
@@ -283,7 +283,7 @@ install :
 
 .PHONY : unittest
 ifeq (1,$(BUILD_WAS_SPECIFIED))
-unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
+unittest : $(addsuffix .run,$(addprefix unittest/,$(D_MODULES)))
 else
 unittest : unittest-debug unittest-release
 unittest-%:
@@ -335,6 +335,10 @@ $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
 		-create -output $@
 endif
 
+################################################################################
+# Unittests
+################################################################################
+
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
@@ -372,8 +376,17 @@ endif
 # macro that returns the module name given the src path
 moduleName=$(subst /,.,$(1))
 
-unittest/%.d : $(ROOT)/unittest/test_runner
+# target for batch unittests (using shared phobos library and test_runner)
+unittest/%.run : $(ROOT)/unittest/test_runner
 	$(QUIET)$(RUN) $< $(call moduleName,$*)
+
+# target for quickly running a single unittest (using static phobos library)
+%.test : %.d $(LIB)
+	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -run $<
+
+################################################################################
+# More stuff
+################################################################################
 
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
