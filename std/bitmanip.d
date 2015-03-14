@@ -1260,7 +1260,6 @@ public:
      * these will be set to 0.
      *
      * This is the inverse of $(D opCast).
-     * $(RED Will be deprecated in 2.068. Please use the constructor instead.)
      */
     this(void[] v, size_t numbits) pure nothrow
     in
