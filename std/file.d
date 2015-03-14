@@ -3100,13 +3100,12 @@ unittest
 {
     import core.thread;
     import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
     immutable path = deleteme ~ "_dir";
     scope(exit) { if(path.exists) rmdirRecurse(path); }
 
     mkdir(path);
-    Thread.sleep(dur!"seconds"(2));
+    auto past = Clock.currTime() - 2.seconds;
+    auto future = past + 4.seconds;
     auto de = DirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
@@ -3120,12 +3119,11 @@ unittest
     assert(de.attributes == getAttributes(path));
     assert(de.linkAttributes == getLinkAttributes(path));
 
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
+    scope(failure) writefln("[%s] [%s] [%s] [%s]", past, de.timeLastAccessed, de.timeLastModified, future);
+    assert(de.timeLastAccessed > past);
+    assert(de.timeLastAccessed < future);
+    assert(de.timeLastModified > past);
+    assert(de.timeLastModified < future);
 
     assert(attrIsDir(de.attributes));
     assert(attrIsDir(de.linkAttributes));
@@ -3136,13 +3134,13 @@ unittest
 
     version(Windows)
     {
-        assert(de.timeCreated > before);
-        assert(de.timeCreated < now);
+        assert(de.timeCreated > past);
+        assert(de.timeCreated < future);
     }
     else version(Posix)
     {
-        assert(de.timeStatusChanged > before);
-        assert(de.timeStatusChanged < now);
+        assert(de.timeStatusChanged > past);
+        assert(de.timeStatusChanged < future);
         assert(de.attributes == de.statBuf.st_mode);
     }
 }
@@ -3152,13 +3150,12 @@ unittest
 {
     import core.thread;
     import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
     immutable path = deleteme ~ "_file";
     scope(exit) { if(path.exists) remove(path); }
 
     write(path, "hello world");
-    Thread.sleep(dur!"seconds"(2));
+    auto past = Clock.currTime() - 2.seconds;
+    auto future = past + 4.seconds;
     auto de = DirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
@@ -3172,12 +3169,11 @@ unittest
     assert(de.attributes == getAttributes(path));
     assert(de.linkAttributes == getLinkAttributes(path));
 
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
+    scope(failure) writefln("[%s] [%s] [%s] [%s]", past, de.timeLastAccessed, de.timeLastModified, future);
+    assert(de.timeLastAccessed > past);
+    assert(de.timeLastAccessed < future);
+    assert(de.timeLastModified > past);
+    assert(de.timeLastModified < future);
 
     assert(!attrIsDir(de.attributes));
     assert(!attrIsDir(de.linkAttributes));
@@ -3188,13 +3184,13 @@ unittest
 
     version(Windows)
     {
-        assert(de.timeCreated > before);
-        assert(de.timeCreated < now);
+        assert(de.timeCreated > past);
+        assert(de.timeCreated < future);
     }
     else version(Posix)
     {
-        assert(de.timeStatusChanged > before);
-        assert(de.timeStatusChanged < now);
+        assert(de.timeStatusChanged > past);
+        assert(de.timeStatusChanged < future);
         assert(de.attributes == de.statBuf.st_mode);
     }
 }
@@ -3204,8 +3200,6 @@ version(linux) unittest
 {
     import core.thread;
     import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
     immutable orig = deleteme ~ "_dir";
     mkdir(orig);
     immutable path = deleteme ~ "_slink";
@@ -3213,7 +3207,8 @@ version(linux) unittest
     scope(exit) { if(path.exists) remove(path); }
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(2));
+    auto past = Clock.currTime() - 2.seconds;
+    auto future = past + 4.seconds;
     auto de = DirEntry(path);
     assert(de.name == path);
     assert(de.isDir);
@@ -3227,12 +3222,11 @@ version(linux) unittest
     assert(de.attributes == getAttributes(path));
     assert(de.linkAttributes == getLinkAttributes(path));
 
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
+    scope(failure) writefln("[%s] [%s] [%s] [%s]", past, de.timeLastAccessed, de.timeLastModified, future);
+    assert(de.timeLastAccessed > past);
+    assert(de.timeLastAccessed < future);
+    assert(de.timeLastModified > past);
+    assert(de.timeLastModified < future);
 
     assert(attrIsDir(de.attributes));
     assert(!attrIsDir(de.linkAttributes));
@@ -3241,8 +3235,8 @@ version(linux) unittest
     assert(!attrIsSymlink(de.attributes));
     assert(attrIsSymlink(de.linkAttributes));
 
-    assert(de.timeStatusChanged > before);
-    assert(de.timeStatusChanged < now);
+    assert(de.timeStatusChanged > past);
+    assert(de.timeStatusChanged < future);
     assert(de.attributes == de.statBuf.st_mode);
 }
 
@@ -3251,8 +3245,6 @@ version(linux) unittest
 {
     import core.thread;
     import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
     immutable orig = deleteme ~ "_file";
     write(orig, "hello world");
     immutable path = deleteme ~ "_slink";
@@ -3260,7 +3252,8 @@ version(linux) unittest
     scope(exit) { if(path.exists) remove(path); }
 
     core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(2));
+    auto past = Clock.currTime() - 2.seconds;
+    auto future = past + 4.seconds;
     auto de = DirEntry(path);
     assert(de.name == path);
     assert(!de.isDir);
@@ -3274,12 +3267,11 @@ version(linux) unittest
     assert(de.attributes == getAttributes(path));
     assert(de.linkAttributes == getLinkAttributes(path));
 
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
+    scope(failure) writefln("[%s] [%s] [%s] [%s]", past, de.timeLastAccessed, de.timeLastModified, future);
+    assert(de.timeLastAccessed > past);
+    assert(de.timeLastAccessed < future);
+    assert(de.timeLastModified > past);
+    assert(de.timeLastModified < future);
 
     assert(!attrIsDir(de.attributes));
     assert(!attrIsDir(de.linkAttributes));
@@ -3288,8 +3280,8 @@ version(linux) unittest
     assert(!attrIsSymlink(de.attributes));
     assert(attrIsSymlink(de.linkAttributes));
 
-    assert(de.timeStatusChanged > before);
-    assert(de.timeStatusChanged < now);
+    assert(de.timeStatusChanged > past);
+    assert(de.timeStatusChanged < future);
     assert(de.attributes == de.statBuf.st_mode);
 }
 
