@@ -44,7 +44,7 @@ $(TR $(TDNW Pruning and Filling)
 
 $(TR $(TDNW Substitution)
     $(TD $(MYREF translate) $(MYREF soundex) $(MYREF abbrev) $(MYREF succ)
-    $(MYREF tr)
+    $(MYREF tr) $(XREF _array, replace) $(XREF _array, replaceInPlace)
     )
 )
 
@@ -68,6 +68,10 @@ $(LINK2 std_ascii.html, std.ascii), respectively. Other functions that have a
 wider generality than just strings can be found in std.algorithm and std.range.
 
 Functions
+$(XREF array, join)
+$(XREF array, replace)
+$(XREF array, replaceInPlace)
+$(XREF array, split)
 $(XREF uni, icmp)
 $(XREF uni, toLower)
 $(XREF uni, toLowerInPlace)
@@ -110,7 +114,7 @@ import std.typetuple;
 
 //public imports for backward compatibility
 public import std.algorithm : startsWith, endsWith, cmp, count;
-public import std.array : join, split;
+public import std.array : join, replace, replaceInPlace, split;
 
 /* ************* Exceptions *************** */
 
