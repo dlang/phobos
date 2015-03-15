@@ -96,6 +96,8 @@ $(LEADINGROW Publicly imported functions)
     $(TR $(TD std.array)
         $(TD
          $(SHORTXREF array, join)
+         $(SHORTXREF array, replace)
+         $(SHORTXREF array, replaceInPlace)
          $(SHORTXREF array, split)
     ))
     $(TR $(TD std.format)
@@ -167,7 +169,7 @@ import std.typetuple;
 
 //public imports for backward compatibility
 public import std.algorithm : startsWith, endsWith, cmp, count;
-public import std.array : join, split;
+public import std.array : join, replace, replaceInPlace, split;
 
 /* ************* Exceptions *************** */
 
