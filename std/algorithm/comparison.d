@@ -889,73 +889,78 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
     {
         auto slen = walkLength(s.save), tlen = walkLength(t.save);
         AllocMatrix(slen + 1, tlen + 1);
-        foreach (i; 1 .. rows)
+        foreach (row; 1 .. rows)
         {
             auto sfront = s.front;
             s.popFront();
             auto tt = t;
-            foreach (j; 1 .. cols)
+            foreach (col; 1 .. cols)
             {
-                auto cSub = matrix(i - 1,j - 1)
+                auto cSub = matrix(row - 1, col - 1)
                     + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
                 tt.popFront();
-                auto cIns = matrix(i,j - 1) + _insertionIncrement;
-                auto cDel = matrix(i - 1,j) + _deletionIncrement;
+                auto cIns = matrix(row, col - 1) + _insertionIncrement;
+                auto cDel = matrix(row - 1, col) + _deletionIncrement;
+
                 switch (min_index(cSub, cIns, cDel))
                 {
                     case 0:
-                        matrix(i,j) = cSub;
+                        matrix(row, col) = cSub;
                         break;
                     case 1:
-                        matrix(i,j) = cIns;
+                        matrix(row, col) = cIns;
                         break;
                     default:
-                        matrix(i,j) = cDel;
+                        matrix(row, col) = cDel;
                         break;
                 }
             }
         }
-        return matrix(slen,tlen);
+        return matrix(slen, tlen);
     }
 
-    EditOp[] path(Range s, Range t)
+    RefCounted!(EditOp[]) path(Range s, Range t)
     {
         distanceWithPath(s, t);
         return path();
     }
 
-    EditOp[] path()
+    RefCounted!(EditOp[]) path()
     {
         import std.algorithm.mutation : reverse;
 
-        EditOp[] result;
-        size_t i = rows - 1, j = cols - 1;
+        RefCounted!(EditOp[]) result;
+        size_t row = rows - 1, col = cols - 1, resultPos = max(rows, cols) - 1;
+        result.length = resultPos;
         // restore the path
-        while (i || j) {
-            auto cIns = j == 0 ? CostType.max : matrix(i,j - 1);
-            auto cDel = i == 0 ? CostType.max : matrix(i - 1,j);
-            auto cSub = i == 0 || j == 0
+
+        while (row || col) {
+            auto cIns = col == 0 ? CostType.max : matrix(row, col - 1);
+            auto cDel = row == 0 ? CostType.max : matrix(row - 1, col);
+            auto cSub = row == 0 || col == 0
                 ? CostType.max
-                : matrix(i - 1,j - 1);
+                : matrix(row - 1, col - 1);
+
+            --resultPos;
+
             switch (min_index(cSub, cIns, cDel)) {
             case 0:
-                result ~= matrix(i - 1,j - 1) == matrix(i,j)
+                result[resultPos] = matrix(row - 1, col - 1) == matrix(row, col)
                     ? EditOp.none
                     : EditOp.substitute;
-                --i;
-                --j;
+                --row;
+                --col;
                 break;
             case 1:
-                result ~= EditOp.insert;
-                --j;
+                result[resultPos] = EditOp.insert;
+                --col;
                 break;
             default:
-                result ~= EditOp.remove;
-                --i;
+                result[resultPos] = EditOp.remove;
+                --row;
                 break;
             }
         }
-        reverse(result);
         return result;
     }
 
@@ -969,21 +974,23 @@ private:
     // Treat _matrix as a rectangular array
     ref CostType matrix(size_t row, size_t col) { return _matrix[row * cols + col]; }
 
-    void AllocMatrix(size_t r, size_t c) {
+    void AllocMatrix(size_t r, size_t c)
+    {
         rows = r;
         cols = c;
-        if (_matrix.length < r * c) {
-            delete _matrix;
-            _matrix = new CostType[r * c];
+        if (_matrix.length < r * c)
+        {
+            _matrix.length = r * c;
             InitMatrix();
         }
     }
 
-    void InitMatrix() {
-        foreach (r; 0 .. rows)
-            matrix(r,0) = r * _deletionIncrement;
-        foreach (c; 0 .. cols)
-            matrix(0,c) = c * _insertionIncrement;
+    void InitMatrix()
+    {
+        foreach (row; 0 .. rows)
+            matrix(row, 0) = row * _deletionIncrement;
+        foreach (col; 0 .. cols)
+            matrix(0, col) = col * _insertionIncrement;
     }
 
     static uint min_index(CostType i0, CostType i1, CostType i2)
@@ -1001,68 +1008,73 @@ private:
     CostType distanceWithPath(Range s, Range t)
     {
         auto slen = walkLength(s.save), tlen = walkLength(t.save);
+
         AllocMatrix(slen + 1, tlen + 1);
-        foreach (i; 1 .. rows)
+
+        foreach (row; 1 .. rows)
         {
             auto sfront = s.front;
             auto tt = t.save;
-            foreach (j; 1 .. cols)
+            foreach (col; 1 .. cols)
             {
-                auto cSub = matrix(i - 1,j - 1)
+                auto cSub = matrix(row - 1, col - 1)
                     + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
                 tt.popFront();
-                auto cIns = matrix(i,j - 1) + _insertionIncrement;
-                auto cDel = matrix(i - 1,j) + _deletionIncrement;
+                auto cIns = matrix(row, col - 1) + _insertionIncrement;
+                auto cDel = matrix(row - 1, col) + _deletionIncrement;
                 switch (min_index(cSub, cIns, cDel))
                 {
                 case 0:
-                    matrix(i,j) = cSub;
+                    matrix(row, col) = cSub;
                     break;
                 case 1:
-                    matrix(i,j) = cIns;
+                    matrix(row, col) = cIns;
                     break;
                 default:
-                    matrix(i,j) = cDel;
+                    matrix(row, col) = cDel;
                     break;
                 }
             }
             s.popFront();
         }
-        return matrix(slen,tlen);
+        return matrix(slen, tlen);
     }
 
     CostType distanceLowMem(Range s, Range t, CostType slen, CostType tlen)
     {
         CostType lastdiag, olddiag;
+
         AllocMatrix(slen + 1, 1);
-        foreach (y; 1 .. slen + 1)
+
+        foreach (row; 1 .. slen + 1)
         {
-            _matrix[y] = y;
+            _matrix[row] = row;
         }
-        foreach (x; 1 .. tlen + 1)
+
+        foreach (col; 1 .. tlen + 1)
         {
             auto tfront = t.front;
             auto ss = s.save;
-            _matrix[0] = x;
-            lastdiag = x - 1;
-            foreach (y; 1 .. rows)
+            _matrix[0] = col;
+            lastdiag = col - 1;
+            foreach (row; 1 .. rows)
             {
-                olddiag = _matrix[y];
+                olddiag = _matrix[row];
                 auto cSub = lastdiag + (equals(ss.front, tfront) ? 0 : _substitutionIncrement);
                 ss.popFront();
-                auto cIns = _matrix[y - 1] + _insertionIncrement;
-                auto cDel = _matrix[y] + _deletionIncrement;
+                auto cIns = _matrix[row - 1] + _insertionIncrement;
+                auto cDel = _matrix[row] + _deletionIncrement;
                 switch (min_index(cSub, cIns, cDel))
                 {
-                case 0:
-                    _matrix[y] = cSub;
-                    break;
-                case 1:
-                    _matrix[y] = cIns;
-                    break;
-                default:
-                    _matrix[y] = cDel;
-                    break;
+                    case 0:
+                        _matrix[row] = cSub;
+                        break;
+                    case 1:
+                        _matrix[row] = cIns;
+                        break;
+                    default:
+                        _matrix[row] = cDel;
+                        break;
                 }
                 lastdiag = olddiag;
             }
@@ -1130,7 +1142,7 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 }
 
 ///
-@safe unittest
+unittest
 {
     import std.algorithm.iteration : filter;
     import std.uni : toUpper;
@@ -1149,11 +1161,8 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 /**
 Returns the Levenshtein distance and the edit path between $(D s) and
 $(D t).
-
-Allocates GC memory.
 */
-Tuple!(size_t, EditOp[])
-levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
+auto levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
@@ -1163,7 +1172,7 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 }
 
 ///
-@safe unittest
+unittest
 {
     string a = "Saturday", b = "Sunday";
     auto p = levenshteinDistanceAndPath(a, b);
@@ -1171,7 +1180,7 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
     assert(equal(p[1], "nrrnsnnn"));
 }
 
-@safe unittest
+unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
