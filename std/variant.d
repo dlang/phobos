@@ -930,7 +930,7 @@ public:
 
     private VariantN opArithmetic(T, string op)(T other)
     {
-        static if (isInstanceOf!(VariantN, T))
+        static if (isInstanceOf!(.VariantN, T))
         {
             string tryUseType(string tp)
             {
