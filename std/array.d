@@ -330,14 +330,17 @@ See_Also: $(XREF typecons, Tuple)
  */
 
 auto assocArray(Range)(Range r)
-    if (isInputRange!Range &&
-        ElementType!Range.length == 2 &&
-        isMutable!(ElementType!Range.Types[1]))
+    if (isInputRange!Range)
 {
     import std.typecons : isTuple;
-    static assert(isTuple!(ElementType!Range), "assocArray: argument must be a range of tuples");
-    alias KeyType = ElementType!Range.Types[0];
-    alias ValueType = ElementType!Range.Types[1];
+
+    alias E = ElementType!Range;
+    static assert(isTuple!E, "assocArray: argument must be a range of tuples");
+    static assert(E.length == 2, "assocArray: tuple dimension must be 2");
+    alias KeyType = E.Types[0];
+    alias ValueType = E.Types[1];
+    static assert(isMutable!ValueType, "assocArray: value type must be mutable");
+
     ValueType[KeyType] aa;
     foreach (t; r)
         aa[t[0]] = t[1];
