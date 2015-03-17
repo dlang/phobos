@@ -5338,3 +5338,229 @@ unittest
         auto y = castFrom!(long*).to!int(x);
     }
 }
+
+/**
+The function $(D isHexLitteral) checks the consistency of a string for the
+functions $(D hexString) and $(D hexBytes).
+The result is only true if the input string is composed of ASCII white
+characters (\f\n\r\t\v) or hexadecimal digits (regarless of the case).
+
+It can be used before calling the run time version of $(D hexString) and 
+$(D hexBytes) since they may throw an assert error if the input string is
+invalid.
+*/
+static bool isHexLitteral(StringType)(in StringType hexData)
+{
+    import std.ascii;
+    size_t i;
+    bool isH;
+    foreach(c; hexData)
+    {
+        isH = c.isHexDigit;
+        if (!isH && !c.isWhite)
+            return false;
+        i += isH;
+    }
+    return !(i & 1) & (i > 0);   
+}
+
+unittest
+{
+    import std.ascii;
+    // empty/whites
+    static assert( !"".isHexLitteral);
+    static assert( !" \r".isHexLitteral);
+    static assert( !whitespace.isHexLitteral);
+    static assert( !""w.isHexLitteral);
+    static assert( !" \r"w.isHexLitteral);
+    static assert( !""d.isHexLitteral);
+    static assert( !" \r"d.isHexLitteral); 
+    // odd x strings
+    static assert( !("5" ~ whitespace).isHexLitteral);
+    static assert( !"123".isHexLitteral);
+    static assert( !"1A3".isHexLitteral);
+    static assert( !"1 23".isHexLitteral);
+    static assert( !"\r\n\tC".isHexLitteral);
+    static assert( !"123"w.isHexLitteral);
+    static assert( !"1A3"w.isHexLitteral);
+    static assert( !"1 23"w.isHexLitteral);
+    static assert( !"\r\n\tC"w.isHexLitteral);
+    static assert( !"123"d.isHexLitteral);
+    static assert( !"1A3"d.isHexLitteral);
+    static assert( !"1 23"d.isHexLitteral);
+    static assert( !"\r\n\tC"d.isHexLitteral);
+    // even x strings with invalid charset
+    static assert( !"12gG".isHexLitteral);
+    static assert( !"2A  3q".isHexLitteral);
+    static assert( !"12gG"w.isHexLitteral);
+    static assert( !"2A  3q"w.isHexLitteral);
+    static assert( !"12gG"d.isHexLitteral);
+    static assert( !"2A  3q"d.isHexLitteral);
+    // valid x strings
+    static assert( ("5A" ~ whitespace).isHexLitteral);
+    static assert( ("5A 01A C FF de 1b").isHexLitteral);
+    static assert( ("0123456789abcdefABCDEF").isHexLitteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF").isHexLitteral);
+    static assert( ("5A 01A C FF de 1b"w).isHexLitteral);
+    static assert( ("0123456789abcdefABCDEF"w).isHexLitteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF"w).isHexLitteral);
+    static assert( ("5A 01A C FF de 1b"d).isHexLitteral);
+    static assert( ("0123456789abcdefABCDEF"d).isHexLitteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF"d).isHexLitteral);
+    // library version allows what's pointed by issue 10454
+    static assert( ("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF").isHexLitteral);
+}
+
+/**
+The $(D hexString) function is intended to replace the hexadecimal literal strings
+starting with $(D 'x'), which could be removed to simplify the core language.
+
+The function takes a string made of hexadecimal digits and it returns
+the matching $(D string) by converting each pair of digit to a character.
+The input string can also include some ASCII white characters, which can be used
+to keep the literal string readable in the source code.
+
+Params:
+hexData = the $(D string) to be converted.
+C = character type of the output string. By default the function returns a string
+but can also return a $(D wstring) or a $(D dstring) if the parameter is set to
+$(D wchar) or $(D dchar).
+ */
+@property @safe nothrow pure
+auto hexString(string hexData, C = char)()
+if (hexData.isHexLitteral && isSomeChar!C)
+{
+    return hexStrImpl!(C)(hexData);
+}
+
+/// Ditto
+@property @safe pure
+auto hexString(C = char)(string hexData)
+if (isSomeChar!C)
+{
+    if (hexData.isHexLitteral)
+        return hexStrImpl!(C)(hexData);
+    else
+        assert(0, "Invalid input string format in " ~ __FUNCTION__);
+}
+
+///
+unittest
+{
+    // conversion at compile time
+    auto string1 = hexString!"304A314B";
+    assert(string1 == "0J1K");
+    // conversion at run time
+    auto arbitraryData = "30 4A 31 4B";
+    auto string2 = hexString(arbitraryData);
+    assert(string2 == "0J1K");
+}
+
+/**
+The $(D hexBytes) function is similar to the $(D hexString) one except
+that it returns the hexadecimal data as an array of integral.
+
+Params:
+hexData = the $(D string) to be converted.
+T = the integer type of an array element. By default it is set to $(D ubyte) 
+but all the integer type, excepted $(D ulong) and $(D long), are accepted. 
+ */
+@property @trusted nothrow pure
+auto hexBytes(string hexData, T = ubyte)()
+if (hexData.isHexLitteral && isIntegral!T && (T.sizeof <= 4))
+{
+    static if (T.sizeof == 1)
+        return cast(T[]) hexStrImpl!char(hexData);
+    else static if (T.sizeof == 2)
+        return cast(T[]) hexStrImpl!wchar(hexData);
+    else
+        return cast(T[]) hexStrImpl!dchar(hexData);
+}
+
+/// ditto
+@property @trusted pure
+auto hexBytes(T = ubyte)(string hexData)
+if (isIntegral!T && (T.sizeof <= 4))
+{
+    if (hexData.isHexLitteral)
+    {
+        static if (T.sizeof == 1)
+            return cast(T[]) hexStrImpl!char(hexData);
+        else static if (T.sizeof == 2)
+            return cast(T[]) hexStrImpl!wchar(hexData);
+        else
+            return cast(T[]) hexStrImpl!dchar(hexData);
+    }
+    else assert(0, "Invalid input string format in " ~ __FUNCTION__);
+}
+
+
+///
+unittest
+{
+    // conversion at compile time
+    auto array1 = hexBytes!"304A314B";
+    assert(array1 == [0x30, 0x4A, 0x31, 0x4B]);
+    // conversion at run time
+    auto arbitraryData = "30 4A 31 4B";
+    auto array2 = hexBytes(arbitraryData);
+    assert(array2 == [0x30, 0x4A, 0x31, 0x4B]);
+}
+
+/*
+    takes a hexadecimal string literal and returns its representation.
+    hexData is granted to be a valid string by the caller.
+    C is granted to be a valid char type by the caller.
+*/
+@safe nothrow pure  
+private auto hexStrImpl(C)(string hexData)
+{
+    import std.ascii;
+    immutable(C)[] result; 
+    ubyte chr, cnt;
+    foreach(c; hexData) 
+        if (c.isHexDigit)
+        {
+            if (cnt == 0)
+            {
+                chr = 0;
+                if (c.isAlpha) 
+                    chr += (c.toLower - 'a' + 10) << 4;
+                else    
+                    chr += (c - '0') << 4;
+            }
+            else
+            {
+                if (c.isAlpha) 
+                    chr += (c.toLower - 'a' + 10); 
+                else    
+                    chr += (c - '0');
+                result ~= chr;
+            }
+            cnt = ++cnt & 1;       
+        }      
+    return result;         
+}
+
+unittest
+{
+    // compile time
+    assert(hexString!"46 47 48 49 4A 4B" == "FGHIJK");
+    assert(hexString!"30\r\n\t\f\v31 32 33 32 31 30" == "0123210");
+    assert(hexString!"ab cd" == hexString!"ABCD");    
+    // run-time
+    assert(hexString("46 47 48 49 4A 4B") == "FGHIJK"); 
+    assert(hexString("30\r\n\t\f\v31 32 33 32 31 30") == "0123210"); 
+}
+
+unittest
+{
+    // compile time
+    assert(hexBytes!"49 4A 4B" == [0x49, 0x4A, 0x4B]);
+    assert(hexBytes!"494A4B" == [0x49, 0x4A, 0x4B]);
+    assert(hexBytes!("494A4B", uint) == [0x49u, 0x4Au, 0x4Bu]);
+    assert(hexBytes!("FF FE FD", byte) == [-1, -2, -3]);
+    assert(hexBytes!("FF FE FD", short) == [255, 254, 253]);
+    // run-time
+    assert(hexBytes("49 4A 4B") == [0x49, 0x4A, 0x4B]);
+}
