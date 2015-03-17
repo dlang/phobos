@@ -5340,7 +5340,7 @@ unittest
 }
 
 /**
-The function $(D isHexLitteral) checks the consistency of a string for the
+The function $(D isHexLiteral) checks the consistency of a string for the
 functions $(D hexString) and $(D hexBytes).
 The result is only true if the input string is composed of ASCII white
 characters (\f\n\r\t\v) or hexadecimal digits (regarless of the case).
@@ -5349,7 +5349,7 @@ It can be used before calling the run time version of $(D hexString) and
 $(D hexBytes) since they may throw an assert error if the input string is
 invalid.
 */
-static bool isHexLitteral(StringType)(in StringType hexData)
+static bool isHexLiteral(StringType)(in StringType hexData)
 {
     import std.ascii;
     size_t i;
@@ -5368,47 +5368,47 @@ unittest
 {
     import std.ascii;
     // empty/whites
-    static assert( !"".isHexLitteral);
-    static assert( !" \r".isHexLitteral);
-    static assert( !whitespace.isHexLitteral);
-    static assert( !""w.isHexLitteral);
-    static assert( !" \r"w.isHexLitteral);
-    static assert( !""d.isHexLitteral);
-    static assert( !" \r"d.isHexLitteral); 
+    static assert( !"".isHexLiteral);
+    static assert( !" \r".isHexLiteral);
+    static assert( !whitespace.isHexLiteral);
+    static assert( !""w.isHexLiteral);
+    static assert( !" \r"w.isHexLiteral);
+    static assert( !""d.isHexLiteral);
+    static assert( !" \r"d.isHexLiteral); 
     // odd x strings
-    static assert( !("5" ~ whitespace).isHexLitteral);
-    static assert( !"123".isHexLitteral);
-    static assert( !"1A3".isHexLitteral);
-    static assert( !"1 23".isHexLitteral);
-    static assert( !"\r\n\tC".isHexLitteral);
-    static assert( !"123"w.isHexLitteral);
-    static assert( !"1A3"w.isHexLitteral);
-    static assert( !"1 23"w.isHexLitteral);
-    static assert( !"\r\n\tC"w.isHexLitteral);
-    static assert( !"123"d.isHexLitteral);
-    static assert( !"1A3"d.isHexLitteral);
-    static assert( !"1 23"d.isHexLitteral);
-    static assert( !"\r\n\tC"d.isHexLitteral);
+    static assert( !("5" ~ whitespace).isHexLiteral);
+    static assert( !"123".isHexLiteral);
+    static assert( !"1A3".isHexLiteral);
+    static assert( !"1 23".isHexLiteral);
+    static assert( !"\r\n\tC".isHexLiteral);
+    static assert( !"123"w.isHexLiteral);
+    static assert( !"1A3"w.isHexLiteral);
+    static assert( !"1 23"w.isHexLiteral);
+    static assert( !"\r\n\tC"w.isHexLiteral);
+    static assert( !"123"d.isHexLiteral);
+    static assert( !"1A3"d.isHexLiteral);
+    static assert( !"1 23"d.isHexLiteral);
+    static assert( !"\r\n\tC"d.isHexLiteral);
     // even x strings with invalid charset
-    static assert( !"12gG".isHexLitteral);
-    static assert( !"2A  3q".isHexLitteral);
-    static assert( !"12gG"w.isHexLitteral);
-    static assert( !"2A  3q"w.isHexLitteral);
-    static assert( !"12gG"d.isHexLitteral);
-    static assert( !"2A  3q"d.isHexLitteral);
+    static assert( !"12gG".isHexLiteral);
+    static assert( !"2A  3q".isHexLiteral);
+    static assert( !"12gG"w.isHexLiteral);
+    static assert( !"2A  3q"w.isHexLiteral);
+    static assert( !"12gG"d.isHexLiteral);
+    static assert( !"2A  3q"d.isHexLiteral);
     // valid x strings
-    static assert( ("5A" ~ whitespace).isHexLitteral);
-    static assert( ("5A 01A C FF de 1b").isHexLitteral);
-    static assert( ("0123456789abcdefABCDEF").isHexLitteral);
-    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF").isHexLitteral);
-    static assert( ("5A 01A C FF de 1b"w).isHexLitteral);
-    static assert( ("0123456789abcdefABCDEF"w).isHexLitteral);
-    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF"w).isHexLitteral);
-    static assert( ("5A 01A C FF de 1b"d).isHexLitteral);
-    static assert( ("0123456789abcdefABCDEF"d).isHexLitteral);
-    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF"d).isHexLitteral);
+    static assert( ("5A" ~ whitespace).isHexLiteral);
+    static assert( ("5A 01A C FF de 1b").isHexLiteral);
+    static assert( ("0123456789abcdefABCDEF").isHexLiteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF").isHexLiteral);
+    static assert( ("5A 01A C FF de 1b"w).isHexLiteral);
+    static assert( ("0123456789abcdefABCDEF"w).isHexLiteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF"w).isHexLiteral);
+    static assert( ("5A 01A C FF de 1b"d).isHexLiteral);
+    static assert( ("0123456789abcdefABCDEF"d).isHexLiteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF"d).isHexLiteral);
     // library version allows what's pointed by issue 10454
-    static assert( ("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF").isHexLitteral);
+    static assert( ("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF").isHexLiteral);
 }
 
 /**
@@ -5428,7 +5428,7 @@ $(D wchar) or $(D dchar).
  */
 @property @safe nothrow pure
 auto hexString(string hexData, C = char)()
-if (hexData.isHexLitteral && isSomeChar!C)
+if (hexData.isHexLiteral && isSomeChar!C)
 {
     return hexStrImpl!(C)(hexData);
 }
@@ -5438,7 +5438,7 @@ if (hexData.isHexLitteral && isSomeChar!C)
 auto hexString(C = char)(string hexData)
 if (isSomeChar!C)
 {
-    if (hexData.isHexLitteral)
+    if (hexData.isHexLiteral)
         return hexStrImpl!(C)(hexData);
     else
         assert(0, "Invalid input string format in " ~ __FUNCTION__);
@@ -5467,7 +5467,7 @@ but all the integer type, excepted $(D ulong) and $(D long), are accepted.
  */
 @property @trusted nothrow pure
 auto hexBytes(string hexData, T = ubyte)()
-if (hexData.isHexLitteral && isIntegral!T && (T.sizeof <= 4))
+if (hexData.isHexLiteral && isIntegral!T && (T.sizeof <= 4))
 {
     static if (T.sizeof == 1)
         return cast(T[]) hexStrImpl!char(hexData);
@@ -5482,7 +5482,7 @@ if (hexData.isHexLitteral && isIntegral!T && (T.sizeof <= 4))
 auto hexBytes(T = ubyte)(string hexData)
 if (isIntegral!T && (T.sizeof <= 4))
 {
-    if (hexData.isHexLitteral)
+    if (hexData.isHexLiteral)
     {
         static if (T.sizeof == 1)
             return cast(T[]) hexStrImpl!char(hexData);
