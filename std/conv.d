@@ -5520,12 +5520,14 @@ unittest
 private auto hexStrImpl(C)(string hexData)
 {
     import std.ascii;
-    immutable(C)[] result; 
-    ubyte chr, cnt;
+    C[] result; 
+    ubyte chr;
+    size_t cnt;
+    result.length = hexData.length / 2;
     foreach(c; hexData) 
         if (c.isHexDigit)
         {
-            if (cnt == 0)
+            if (! (cnt & 1))
             {
                 chr = 0;
                 if (c.isAlpha) 
@@ -5539,11 +5541,11 @@ private auto hexStrImpl(C)(string hexData)
                     chr += (c.toLower - 'a' + 10); 
                 else    
                     chr += (c - '0');
-                result ~= chr;
+                result[cnt / 2] = chr;
             }
-            cnt = ++cnt & 1;       
+            ++cnt;       
         }      
-    return result;         
+    return result[0..cnt / 2];         
 }
 
 unittest
