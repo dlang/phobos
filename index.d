@@ -73,11 +73,11 @@ $(BOOKTABLE ,
     $(LEADINGROW Data integrity)
     $(TR
         $(TD
-            $(LINK2 std_digest_crc, std.digest.crc)$(BR)
-            $(LINK2 std_digest_digest, std.digest.digest)$(BR)
-            $(LINK2 std_digest_md, std.digest.md)$(BR)
-            $(LINK2 std_digest_ripemd, std.digest.ripemd)$(BR)
-            $(LINK2 std_digest_sha, std.digest.sha)$(BR)
+            $(LINK2 std_digest_crc.html, std.digest.crc)$(BR)
+            $(LINK2 std_digest_digest.html, std.digest.digest)$(BR)
+            $(LINK2 std_digest_md.html, std.digest.md)$(BR)
+            $(LINK2 std_digest_ripemd.html, std.digest.ripemd)$(BR)
+            $(LINK2 std_digest_sha.html, std.digest.sha)$(BR)
         )
         $(TD Hash algorithms for verifying data integrity.
         )
@@ -160,17 +160,17 @@ $(BOOKTABLE ,
     $(LEADINGROW Multitasking)
     $(TR
         $(TD
-            $(LINK2 std_concurrency, std.concurrency)$(BR)
-            $(LINK2 std_parallelism, std.parallelism)$(BR)
-            $(LINK2 std_process, std.process)$(BR)
-            $(LINK2 core_atomic, core.atomic)$(BR)
-            $(LINK2 core_sync_barrier, core.sync.barrier)$(BR)
-            $(LINK2 core_sync_condition, core.sync.condition)$(BR)
-            $(LINK2 core_sync_exception, core.sync.exception)$(BR)
-            $(LINK2 core_sync_mutex, core.sync.mutex)$(BR)
-            $(LINK2 core_sync_rwmutex, core.sync.rwmutex)$(BR)
-            $(LINK2 core_sync_semaphore, core.sync.semaphore)$(BR)
-            $(LINK2 core_thread, core.thread)
+            $(LINK2 std_concurrency.html, std.concurrency)$(BR)
+            $(LINK2 std_parallelism.html, std.parallelism)$(BR)
+            $(LINK2 std_process.html, std.process)$(BR)
+            $(LINK2 core_atomic.html, core.atomic)$(BR)
+            $(LINK2 core_sync_barrier.html, core.sync.barrier)$(BR)
+            $(LINK2 core_sync_condition.html, core.sync.condition)$(BR)
+            $(LINK2 core_sync_exception.html, core.sync.exception)$(BR)
+            $(LINK2 core_sync_mutex.html, core.sync.mutex)$(BR)
+            $(LINK2 core_sync_rwmutex.html, core.sync.rwmutex)$(BR)
+            $(LINK2 core_sync_semaphore.html, core.sync.semaphore)$(BR)
+            $(LINK2 core_thread.html, core.thread)
         )
         $(TD These modules provide primitives for concurrent processing,
 	    multithreading, synchronization, and interacting with operating
@@ -216,9 +216,9 @@ $(BOOKTABLE ,
     $(LEADINGROW Paradigms)
     $(TR
         $(TD
-            $(LINK2 std_functional, std.functional)$(BR)
-            $(LINK2 std_algorithm, std.algorithm)$(BR)
-            $(LINK2 std_signals, std.signals)
+            $(LINK2 std_functional.html, std.functional)$(BR)
+            $(LINK2 std_algorithm.html, std.algorithm)$(BR)
+            $(LINK2 std_signals.html, std.signals)
         )
         $(TD $(D std.functional), along with the lazy algorithms of
             $(D std.algorithm), provides utilities for writing functional-style
@@ -256,12 +256,12 @@ $(BOOKTABLE ,
             $(LINK2 std_string.html, std.string)$(BR)
             $(LINK2 std_array.html, std.array)$(BR)
             $(LINK2 std_algorithm.html, std.algorithm)$(BR)
-            $(LINK2 std_uni, std.uni)$(BR)
-            $(LINK2 std_utf, std.utf)$(BR)
+            $(LINK2 std_uni.html, std.uni)$(BR)
+            $(LINK2 std_utf.html, std.utf)$(BR)
             $(LINK2 std_format.html, std.format)$(BR)
             $(LINK2 std_path.html, std.path)$(BR)
             $(LINK2 std_regex.html, std.regex)$(BR)
-            $(LINK2 std_ascii, std.ascii)$(BR)
+            $(LINK2 std_ascii.html, std.ascii)$(BR)
             $(LINK2 std_encoding.html, std.encoding)$(BR)
             $(LINK2 std_windows_charset.html, std.windows.charset)
         )
@@ -321,7 +321,7 @@ $(BOOKTABLE ,
     $(LEADINGROW Vector programming)
     $(TR
         $(TD
-            $(LINK2 core_simd, core.simd)$(BR)
+            $(LINK2 core_simd.html, core.simd)$(BR)
         )
         $(TD The $(D core.simd) module provides access to SIMD intrinsics in
         the compiler.)
@@ -331,4 +331,3 @@ $(BOOKTABLE ,
 Macros:
 	TITLE=Phobos Runtime Library
 	WIKI=Phobos
-
