@@ -5485,11 +5485,11 @@ if (isIntegral!T && (T.sizeof <= 4))
     if (hexData.isHexLiteral)
     {
         static if (T.sizeof == 1)
-            return cast(T[]) hexStrImpl!char(hexData);
+            return cast(immutable(T)[]) hexStrImpl!char(hexData);
         else static if (T.sizeof == 2)
-            return cast(T[]) hexStrImpl!wchar(hexData);
+            return cast(immutable(T)[]) hexStrImpl!wchar(hexData);
         else
-            return cast(T[]) hexStrImpl!dchar(hexData);
+            return cast(immutable(T)[]) hexStrImpl!dchar(hexData);
     }
     else assert(0, "Invalid input string format in " ~ __FUNCTION__);
 }
