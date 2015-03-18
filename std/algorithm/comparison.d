@@ -63,6 +63,15 @@ of the first matching value in $(D values), or $(D 0) if $(D value)
 is not _among $(D values). The predicate $(D pred) is used to
 compare values, and uses equality by default.
 
+Params:
+    pred = The predicate used to compare the values.
+    value = The value to search for.
+    values = The values to compare the value to.
+
+Returns:
+    0 if value was not found among the values, otherwise the index of the
+    found value plus one is returned.
+
 See_Also:
 $(LREF find) and $(LREF canFind) for finding a value in a
 range.
