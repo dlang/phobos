@@ -1328,7 +1328,7 @@ template hasLvalueElements(R)
 
 /**
 Returns $(D true) if $(D R) has a $(D length) member that returns an
-integral type. $(D R) does not have to be a range. Note that $(D
+$(D size_t) type. $(D R) does not have to be a range. Note that $(D
 length) is an optional primitive as no range must implement it. Some
 ranges do not store their length explicitly, some cannot compute it
 without actually exhausting the range (e.g. socket streams), and some
@@ -1347,7 +1347,7 @@ template hasLength(R)
     (inout int = 0)
     {
         R r = R.init;
-        static assert(is(typeof(r.length) : ulong));
+        static assert(is(typeof(r.length) : size_t));
     }));
 }
 
@@ -1358,7 +1358,7 @@ template hasLength(R)
     static assert( hasLength!(int[]));
     static assert( hasLength!(inout(int)[]));
 
-    struct A { ulong length; }
+    struct A { ubyte length; }
     struct B { size_t length() { return 0; } }
     struct C { @property size_t length() { return 0; } }
     static assert( hasLength!(A));
