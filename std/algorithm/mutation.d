@@ -881,6 +881,52 @@ void move(T)(ref T source, ref T target)
     }
 }
 
+///
+unittest
+{
+    Object obj1 = new Object;
+    Object obj2 = obj1;
+    Object obj3;
+
+    move(obj2, obj3);
+    assert(obj3 is obj1);
+}
+
+///
+unittest
+{
+    // Structs without destructors are simply copied
+    struct S1
+    {
+        int a = 1;
+        int b = 2;
+    }
+    S1 s11 = { 10, 11 };
+    S1 s12;
+
+    move(s11, s12);
+
+    assert(s11.a == 10 && s11.b == 11 &&
+           s12.a == 10 && s12.b == 11);
+
+    // But structs with destructors or postblits are reset to their .init value
+    // after copying to the target.
+    struct S2
+    {
+        int a = 1;
+        int b = 2;
+
+        ~this() { }
+    }
+    S2 s21 = { 3, 4 };
+    S2 s22;
+
+    move(s21, s22);
+
+    assert(s21.a == 1 && s21.b == 2 &&
+           s22.a == 3 && s22.b == 4);
+}
+
 unittest
 {
     import std.traits;
