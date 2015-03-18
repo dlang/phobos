@@ -7034,7 +7034,16 @@ unittest
 /++
     $(P Does basic case-insensitive comparison of strings $(D str1) and $(D str2).
     This function uses simpler comparison rule thus achieving better performance
-    then $(LREF icmp). However keep in mind the warning below.)
+    than $(LREF icmp). However keep in mind the warning below.)
+
+    Params:
+        str1 = a string or a $(D ForwardRange) of $(D dchar)s
+        str2 = a string or a $(D ForwardRange) of $(D dchar)s
+
+    Returns:
+        An $(D int) that is 0 if the strings match,
+        &lt;0 if $(D str1) is lexicographically "less" than $(D str2),
+        &gt;0 if $(D str1) is lexicographically "greater" than $(D str2)
 
     Warning:
     This function only handles 1:1 $(CODEPOINT) mapping
@@ -7054,6 +7063,10 @@ unittest
     assert(icmp("ΐ", "\u03B9\u0308\u0301") == 0);
     assert(icmp("ΌΎ", "όύ") == 0);
     ---
+
+    See_Also:
+        $(LREF icmp)
+        $(XREF algorithm, cmp)
 +/
 int sicmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
