@@ -1157,10 +1157,9 @@ if (isInputRange!Range1 && isInputRange!Range2
     }
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
     int[] b = new int[5];
     assert(moveAll(a, b) is b[3 .. $]);
@@ -1196,11 +1195,10 @@ if (isInputRange!Range1 && isInputRange!Range2
     return tuple(src, tgt);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-   int[] a = [ 1, 2, 3, 4, 5 ];
+    int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = new int[3];
     assert(moveSome(a, b)[0] is a[3 .. $]);
     assert(a[0 .. 3] == b);
