@@ -3095,202 +3095,81 @@ DirEntry dirEntry(in char[] name)
     return DirEntry(name.idup);
 }
 
-//Test dirEntry with a directory.
+
 unittest
 {
-    import core.thread;
     import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
-    immutable path = deleteme ~ "_dir";
-    scope(exit) { if(path.exists) rmdirRecurse(path); }
-
-    mkdir(path);
-    Thread.sleep(dur!"seconds"(2));
-    auto de = DirEntry(path);
-    assert(de.name == path);
-    assert(de.isDir);
-    assert(!de.isFile);
-    assert(!de.isSymlink);
-
-    assert(de.isDir == path.isDir);
-    assert(de.isFile == path.isFile);
-    assert(de.isSymlink == path.isSymlink);
-    assert(de.size == path.getSize());
-    assert(de.attributes == getAttributes(path));
-    assert(de.linkAttributes == getLinkAttributes(path));
-
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
-
-    assert(attrIsDir(de.attributes));
-    assert(attrIsDir(de.linkAttributes));
-    assert(!attrIsFile(de.attributes));
-    assert(!attrIsFile(de.linkAttributes));
-    assert(!attrIsSymlink(de.attributes));
-    assert(!attrIsSymlink(de.linkAttributes));
-
-    version(Windows)
+    immutable dpath = deleteme ~ "_dir";
+    immutable fpath = deleteme ~ "_file";
+    immutable sdpath = deleteme ~ "_sdir";
+    immutable sfpath = deleteme ~ "_sfile";
+    scope(exit)
     {
-        assert(de.timeCreated > before);
-        assert(de.timeCreated < now);
+        if (dpath.exists) rmdirRecurse(dpath);
+        if (fpath.exists) remove(fpath);
+        if (sdpath.exists) remove(sdpath);
+        if (sfpath.exists) remove(sfpath);
     }
-    else version(Posix)
+
+    mkdir(dpath);
+    write(fpath, "hello world");
+    version (Posix)
     {
-        assert(de.timeStatusChanged > before);
-        assert(de.timeStatusChanged < now);
-        assert(de.attributes == de.statBuf.st_mode);
+        core.sys.posix.unistd.symlink((dpath ~ '\0').ptr, (sdpath ~ '\0').ptr);
+        core.sys.posix.unistd.symlink((fpath ~ '\0').ptr, (sfpath ~ '\0').ptr);
     }
-}
 
-//Test dirEntry with a file.
-unittest
-{
-    import core.thread;
-    import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
-    immutable path = deleteme ~ "_file";
-    scope(exit) { if(path.exists) remove(path); }
-
-    write(path, "hello world");
-    Thread.sleep(dur!"seconds"(2));
-    auto de = DirEntry(path);
-    assert(de.name == path);
-    assert(!de.isDir);
-    assert(de.isFile);
-    assert(!de.isSymlink);
-
-    assert(de.isDir == path.isDir);
-    assert(de.isFile == path.isFile);
-    assert(de.isSymlink == path.isSymlink);
-    assert(de.size == path.getSize());
-    assert(de.attributes == getAttributes(path));
-    assert(de.linkAttributes == getLinkAttributes(path));
-
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
-
-    assert(!attrIsDir(de.attributes));
-    assert(!attrIsDir(de.linkAttributes));
-    assert(attrIsFile(de.attributes));
-    assert(attrIsFile(de.linkAttributes));
-    assert(!attrIsSymlink(de.attributes));
-    assert(!attrIsSymlink(de.linkAttributes));
-
-    version(Windows)
+    static struct Flags { bool dir, file, link; }
+    auto tests = [dpath : Flags(true), fpath : Flags(false, true)];
+    version (Posix)
     {
-        assert(de.timeCreated > before);
-        assert(de.timeCreated < now);
+        tests[sdpath] = Flags(true, false, true);
+        tests[sfpath] = Flags(false, true, true);
     }
-    else version(Posix)
+
+    auto past = Clock.currTime() - 2.seconds;
+    auto future = past + 4.seconds;
+
+    foreach (path, flags; tests)
     {
-        assert(de.timeStatusChanged > before);
-        assert(de.timeStatusChanged < now);
-        assert(de.attributes == de.statBuf.st_mode);
+        auto de = DirEntry(path);
+        assert(de.name == path);
+        assert(de.isDir == flags.dir);
+        assert(de.isFile == flags.file);
+        assert(de.isSymlink == flags.link);
+
+        assert(de.isDir == path.isDir);
+        assert(de.isFile == path.isFile);
+        assert(de.isSymlink == path.isSymlink);
+        assert(de.size == path.getSize());
+        assert(de.attributes == getAttributes(path));
+        assert(de.linkAttributes == getLinkAttributes(path));
+
+        scope(failure) writefln("[%s] [%s] [%s] [%s]", past, de.timeLastAccessed, de.timeLastModified, future);
+        assert(de.timeLastAccessed > past);
+        assert(de.timeLastAccessed < future);
+        assert(de.timeLastModified > past);
+        assert(de.timeLastModified < future);
+
+        assert(attrIsDir(de.attributes) == flags.dir);
+        assert(attrIsDir(de.linkAttributes) == (flags.dir && !flags.link));
+        assert(attrIsFile(de.attributes) == flags.file);
+        assert(attrIsFile(de.linkAttributes) == (flags.file && !flags.link));
+        assert(!attrIsSymlink(de.attributes));
+        assert(attrIsSymlink(de.linkAttributes) == flags.link);
+
+        version(Windows)
+        {
+            assert(de.timeCreated > past);
+            assert(de.timeCreated < future);
+        }
+        else version(Posix)
+        {
+            assert(de.timeStatusChanged > past);
+            assert(de.timeStatusChanged < future);
+            assert(de.attributes == de.statBuf.st_mode);
+        }
     }
-}
-
-//Test dirEntry with a symlink to a directory.
-version(linux) unittest
-{
-    import core.thread;
-    import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
-    immutable orig = deleteme ~ "_dir";
-    mkdir(orig);
-    immutable path = deleteme ~ "_slink";
-    scope(exit) { if(orig.exists) rmdirRecurse(orig); }
-    scope(exit) { if(path.exists) remove(path); }
-
-    core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(2));
-    auto de = DirEntry(path);
-    assert(de.name == path);
-    assert(de.isDir);
-    assert(!de.isFile);
-    assert(de.isSymlink);
-
-    assert(de.isDir == path.isDir);
-    assert(de.isFile == path.isFile);
-    assert(de.isSymlink == path.isSymlink);
-    assert(de.size == path.getSize());
-    assert(de.attributes == getAttributes(path));
-    assert(de.linkAttributes == getLinkAttributes(path));
-
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
-
-    assert(attrIsDir(de.attributes));
-    assert(!attrIsDir(de.linkAttributes));
-    assert(!attrIsFile(de.attributes));
-    assert(!attrIsFile(de.linkAttributes));
-    assert(!attrIsSymlink(de.attributes));
-    assert(attrIsSymlink(de.linkAttributes));
-
-    assert(de.timeStatusChanged > before);
-    assert(de.timeStatusChanged < now);
-    assert(de.attributes == de.statBuf.st_mode);
-}
-
-//Test dirEntry with a symlink to a file.
-version(linux) unittest
-{
-    import core.thread;
-    import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
-    immutable orig = deleteme ~ "_file";
-    write(orig, "hello world");
-    immutable path = deleteme ~ "_slink";
-    scope(exit) { if(orig.exists) remove(orig); }
-    scope(exit) { if(path.exists) remove(path); }
-
-    core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(2));
-    auto de = DirEntry(path);
-    assert(de.name == path);
-    assert(!de.isDir);
-    assert(de.isFile);
-    assert(de.isSymlink);
-
-    assert(de.isDir == path.isDir);
-    assert(de.isFile == path.isFile);
-    assert(de.isSymlink == path.isSymlink);
-    assert(de.size == path.getSize());
-    assert(de.attributes == getAttributes(path));
-    assert(de.linkAttributes == getLinkAttributes(path));
-
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
-
-    assert(!attrIsDir(de.attributes));
-    assert(!attrIsDir(de.linkAttributes));
-    assert(attrIsFile(de.attributes));
-    assert(!attrIsFile(de.linkAttributes));
-    assert(!attrIsSymlink(de.attributes));
-    assert(attrIsSymlink(de.linkAttributes));
-
-    assert(de.timeStatusChanged > before);
-    assert(de.timeStatusChanged < now);
-    assert(de.attributes == de.statBuf.st_mode);
 }
 
 
