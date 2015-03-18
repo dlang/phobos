@@ -5470,11 +5470,11 @@ auto hexBytes(string hexData, T = ubyte)()
 if (hexData.isHexLiteral && isIntegral!T && (T.sizeof <= 4))
 {
     static if (T.sizeof == 1)
-        return cast(T[]) hexStrImpl!char(hexData);
+        return cast(immutable(T)[]) hexStrImpl!char(hexData);
     else static if (T.sizeof == 2)
-        return cast(T[]) hexStrImpl!wchar(hexData);
+        return cast(immutable(T)[]) hexStrImpl!wchar(hexData);
     else
-        return cast(T[]) hexStrImpl!dchar(hexData);
+        return cast(immutable(T)[]) hexStrImpl!dchar(hexData);
 }
 
 /// ditto
