@@ -6421,9 +6421,17 @@ template genericDecodeGrapheme(bool getValue)
 public: // Public API continues
 
 /++
-    Returns the length of grapheme cluster starting at $(D index).
+    Computes the length of grapheme cluster starting at $(D index).
     Both the resulting length and the $(D index) are measured
     in $(S_LINK Code unit, code units).
+
+    Params:
+        C = type that is implicitly convertible to $(D dchars)
+        input = array of grapheme clusters
+        index = starting index into $(D input[])
+
+    Returns:
+        length of grapheme cluster
 
     Example:
     ---
