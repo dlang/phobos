@@ -5422,9 +5422,10 @@ to keep the literal string readable in the source code.
 
 Params:
 hexData = the $(D string) to be converted.
-C = character type of the output string. By default the function returns a string
-but can also return a $(D wstring) or a $(D dstring) if the parameter is set to
-$(D wchar) or $(D dchar).
+C = character type of the output string. 
+
+Returns:
+Either a $(D string), a $(D wstring) or a $(D dstring), according to $(D_PARAM C).
  */
 @property @safe nothrow pure
 auto hexString(string hexData, C = char)()
@@ -5463,7 +5464,10 @@ that it returns the hexadecimal data as an array of integral.
 Params:
 hexData = the $(D string) to be converted.
 T = the integer type of an array element. By default it is set to $(D ubyte) 
-but all the integer type, excepted $(D ulong) and $(D long), are accepted. 
+but all the integer type, excepted $(D ulong) and $(D long), are accepted.
+
+Returns:
+a $(D immutable(T)[]).
  */
 @property @trusted nothrow pure
 auto hexBytes(string hexData, T = ubyte)()
