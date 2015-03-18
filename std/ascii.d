@@ -72,7 +72,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isAlphaNum('A'));
     assert( isAlphaNum('1'));
@@ -103,7 +103,7 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isAlpha('A'));
     assert(!isAlpha('1'));
@@ -133,7 +133,7 @@ bool isLower(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isLower('a'));
     assert(!isLower('A'));
@@ -164,7 +164,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isUpper('A'));
     assert(!isUpper('a'));
@@ -195,7 +195,7 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isDigit('3'));
     assert( isDigit('8'));
@@ -227,7 +227,7 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isOctalDigit('0'));
     assert( isOctalDigit('7'));
@@ -256,7 +256,7 @@ bool isHexDigit(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isHexDigit('0'));
     assert( isHexDigit('A'));
@@ -288,7 +288,7 @@ bool isWhite(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isWhite(' '));
     assert( isWhite('\t'));
@@ -323,7 +323,7 @@ bool isControl(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isControl('\0'));
     assert( isControl('\022'));
@@ -362,7 +362,7 @@ bool isPunctuation(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isPunctuation('.'));
     assert( isPunctuation(','));
@@ -406,7 +406,7 @@ bool isGraphical(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isGraphical('1'));
     assert( isGraphical('a'));
@@ -442,7 +442,7 @@ bool isPrintable(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isPrintable(' '));  // whitespace is printable
     assert( isPrintable('1'));
@@ -477,7 +477,7 @@ bool isASCII(dchar c) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert( isASCII('a'));
     assert(!isASCII('á'));
@@ -518,7 +518,7 @@ auto toLower(C)(C c)
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert(toLower('a') == 'a');
     assert(toLower('A') == 'a');
@@ -580,7 +580,7 @@ auto toUpper(C)(C c)
 }
 
 ///
-unittest
+@safe pure nothrow @nogc unittest
 {
     assert(toUpper('a') == 'A');
     assert(toUpper('A') == 'A');
