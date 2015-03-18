@@ -201,6 +201,10 @@ unittest
     assert( isDigit('8'));
     assert(!isDigit('B'));
     assert(!isDigit('#'));
+
+    // N.B.: does not return true for non-ASCII Unicode numbers
+    assert(!isDigit('０')); // full-width digit zero (U+FF10)
+    assert(!isDigit('４')); // full-width digit four (U+FF14)
 }
 
 unittest
@@ -491,8 +495,8 @@ unittest
 /++
     Converts an ASCII letter to lowercase.
 
-    Params: c = Any type which implicitly converts to $(D dchar). In the case
-    where it's a built-in type, or an enum of a built-in type,
+    Params: c = A character of any type that implicitly converts to $(D dchar).
+    In the case where it's a built-in type, or an enum of a built-in type,
     $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
     type, $(D dchar) is returned.
 
