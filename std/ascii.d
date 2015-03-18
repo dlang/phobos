@@ -63,6 +63,7 @@ else
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether $(D c) is a letter or a number (0..9, a..z, A..Z).
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow @nogc
@@ -92,6 +93,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether $(D c) is an ASCII letter (A..Z, a..z).
   +/
 bool isAlpha(dchar c) @safe pure nothrow @nogc
@@ -122,6 +124,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether $(D c) is a lowercase ASCII letter (a..z).
   +/
 bool isLower(dchar c) @safe pure nothrow @nogc
@@ -152,6 +155,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether $(D c) is an uppercase ASCII letter (A..Z).
   +/
 bool isUpper(dchar c) @safe pure nothrow @nogc
@@ -182,6 +186,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether $(D c) is a digit (0..9).
   +/
 bool isDigit(dchar c) @safe pure nothrow @nogc
@@ -209,6 +214,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether $(D c) is a digit in base 8 (0..7).
   +/
 bool isOctalDigit(dchar c) @safe pure nothrow @nogc
@@ -237,6 +243,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether $(D c) is a digit in base 16 (0..9, A..F, a..f).
   +/
 bool isHexDigit(dchar c) @safe pure nothrow @nogc
@@ -266,8 +273,10 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a whitespace character. That includes the space,
-    tab, vertical tab, form feed, carriage return, and linefeed characters.
+    Params: c = The character to test.
+    Returns: Whether or not $(D c) is a whitespace character. That includes the
+    space, tab, vertical tab, form feed, carriage return, and linefeed
+    characters.
   +/
 bool isWhite(dchar c) @safe pure nothrow @nogc
 {
@@ -301,6 +310,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether $(D c) is a control character.
   +/
 bool isControl(dchar c) @safe pure nothrow @nogc
@@ -337,6 +347,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether or not $(D c) is a punctuation character. That includes
     all ASCII characters which are not control characters, letters, digits, or
     whitespace.
@@ -381,6 +392,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether or not $(D c) is a printable character other than the
     space character.
   +/
@@ -416,6 +428,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether or not $(D c) is a printable character - including the
     space character.
   +/
@@ -450,6 +463,7 @@ unittest
 
 
 /++
+    Params: c = The character to test.
     Returns: Whether or not $(D c) is in the ASCII character set - i.e. in the
     range 0..0x7F.
   +/
@@ -475,13 +489,15 @@ unittest
 
 
 /++
-    If $(D c) is an uppercase ASCII character, then its corresponding lowercase
-    letter is returned. Otherwise, $(D c) is returned.
+    Converts an ASCII letter to lowercase.
 
-    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    Params: c = Any type which implicitly converts to $(D dchar). In the case
     where it's a built-in type, or an enum of a built-in type,
     $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
     type, $(D dchar) is returned.
+
+    Returns: The corresponding lowercase letter, if $(D c) is an uppercase
+    ASCII character, otherwise $(D c) itself.
   +/
 auto toLower(C)(C c)
     if(is(C : dchar))
@@ -535,13 +551,15 @@ unittest
 
 
 /++
-    If $(D c) is a lowercase ASCII character, then its corresponding uppercase
-    letter is returned. Otherwise, $(D c) is returned.
+    Converts an ASCII letter to uppercase.
 
-    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    Params: c = Any type which implicitly converts to $(D dchar). In the case
     where it's a built-in type, or an enum of a built-in type,
     $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
     type, $(D dchar) is returned.
+
+    Returns: The corresponding uppercase letter, if $(D c) is a lowercase ASCII
+    character, otherwise $(D c) itself.
   +/
 auto toUpper(C)(C c)
     if(is(C : dchar))
