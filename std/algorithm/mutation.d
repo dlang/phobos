@@ -1951,12 +1951,6 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     }
 }
 
-// Not yet documented
-void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
-{
-    lhs.proxySwap(rhs);
-}
-
 @safe unittest
 {
     debug(std_algorithm) scope(success)
@@ -2109,6 +2103,12 @@ unittest
     }
     B b1, b2;
     swap(b1, b2);
+}
+
+// Not yet documented
+void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
+{
+    lhs.proxySwap(rhs);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
