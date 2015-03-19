@@ -4159,7 +4159,7 @@ body
 
     alias Value = CommonType!(Unqual!B, Unqual!E);
     alias StepType = Unqual!S;
-    alias IndexType = typeof(unsigned((end - begin) / step));
+    alias IndexType = size_t;
 
     static struct Result
     {
@@ -4223,11 +4223,11 @@ body
         {
             if (step > 0)
             {
-                return unsigned((pastLast - current) / step);
+                return cast(size_t)unsigned((pastLast - current) / step);
             }
             else
             {
-                return unsigned((current - pastLast) / -step);
+                return cast(size_t)unsigned((current - pastLast) / -step);
             }
         }
 
@@ -4251,7 +4251,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
     import std.conv : unsigned;
 
     alias Value = CommonType!(Unqual!B, Unqual!E);
-    alias IndexType = typeof(unsigned(end - begin));
+    alias IndexType = size_t;
 
     static struct Result
     {
@@ -4298,7 +4298,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         }
         @property IndexType length() const
         {
-            return unsigned(pastLast - current);
+            return cast(size_t)unsigned(pastLast - current);
         }
 
         alias opDollar = length;
@@ -4448,6 +4448,7 @@ unittest
     import std.algorithm : count, equal;
 
     static assert(hasLength!(typeof(iota(0, 2))));
+    static assert(hasLength!(typeof(iota(0L, 2L))));
     auto r = iota(0, 10, 1);
     assert(r[$ - 1] == 9);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
