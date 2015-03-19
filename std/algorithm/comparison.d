@@ -1159,6 +1159,15 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 Returns the Levenshtein distance and the edit path between $(D s) and
 $(D t).
 
+Params:
+    equals = The binary predicate to compare the elements of the two ranges.
+    s = The original range.
+    t = The transformation target
+
+Returns:
+    The minimal amount of edits to transform s into t and the sequence of
+    edits to effect this transformation.
+
 Allocates GC memory.
 */
 Tuple!(size_t, EditOp[])
