@@ -685,11 +685,18 @@ Compares two ranges for equality, as defined by predicate $(D pred)
 template equal(alias pred = "a == b")
 {
     /++
-    Returns $(D true) if and only if the two ranges compare equal element
-    for element, according to binary predicate $(D pred). The ranges may
-    have different element types, as long as $(D pred(a, b)) evaluates to
-    $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
-    $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
+    This function compares to ranges for equality. The ranges may have
+    different element types, as long as $(D pred(a, b)) evaluates to $(D bool)
+    for $(D a) in $(D r1) and $(D b) in $(D r2). 
+    Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
+
+    Params:
+        r1 = The first range to be compared. 
+        r2 = The second range to be compared.
+
+    Returns: 
+        $(D true) if and only if the two ranges compare equal element
+        for element, according to binary predicate $(D pred).
 
     See_Also:
         $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
