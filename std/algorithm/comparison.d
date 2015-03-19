@@ -1194,7 +1194,15 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 
 // max
 /**
-Returns the maximum of the passed-in values.
+Iterates the passed arguments and return the maximum value.
+
+Params:
+    args = The values to select the maximum from. At least two arguments must
+    be passed.
+
+Returns:
+    The maximum of the passed-in args. The type of the returned value is
+    the type among the passed arguments that is able to store the largest value.
 */
 MaxType!T max(T...)(T args)
     if (T.length >= 2)
