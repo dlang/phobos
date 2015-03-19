@@ -1095,6 +1095,14 @@ the minimal amount of edit operations necessary to transform $(D s)
 into $(D t).  Performs $(BIGOH s.length * t.length) evaluations of $(D
 equals) and occupies $(BIGOH s.length * t.length) storage.
 
+Params:
+    equals = The binary predicate to compare the elements of the two ranges.
+    s = The original range.
+    t = The transformation target
+
+Returns:
+    The minimal number of edits to transform s into t.
+
 Allocates GC memory.
 */
 size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
