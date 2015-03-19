@@ -304,45 +304,6 @@ The choice of zero-based indexing instead of one-base indexing was
 motivated by the ability to use value tuples with various compile-time
 loop constructs (e.g. type tuple iteration), all of which use
 zero-based indexing.
-
-Example:
-
-----
-Tuple!(int, int) point;
-// assign coordinates
-point[0] = 5;
-point[1] = 6;
-// read coordinates
-auto x = point[0];
-auto y = point[1];
-----
-
-Tuple members can be named. It is legal to mix named and unnamed
-members. The method above is still applicable to all fields.
-
-Example:
-
-----
-alias Entry = Tuple!(int, "index", string, "value");
-Entry e;
-e.index = 4;
-e.value = "Hello";
-assert(e[1] == "Hello");
-assert(e[0] == 4);
-----
-
-Tuples with named fields are distinct types from tuples with unnamed
-fields, i.e. each naming imparts a separate type for the tuple. Two
-tuple differing in naming only are still distinct, even though they
-might have the same structure.
-
-Example:
-
-----
-Tuple!(int, "x", int, "y") point1;
-Tuple!(int, int) point2;
-assert(!is(typeof(point1) == typeof(point2))); // passes
-----
 */
 template Tuple(Specs...)
 {
@@ -467,33 +428,26 @@ template Tuple(Specs...)
     struct Tuple
     {
         /**
-         * The type of the tuple's components.
+         * The types of the tuple's components.
          */
         alias Types = staticMap!(extractType, fieldSpecs);
 
         /**
          * The names of the tuple's components. Unnamed fields have empty names.
-         *
-         * Examples:
-         * ----
-         * alias Fields = Tuple!(int, "id", string, float);
-         * static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
-         * ----
          */
         alias fieldNames = staticMap!(extractName, fieldSpecs);
+        ///
+        unittest
+        {
+            alias Fields = Tuple!(int, "id", string, float);
+            static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+        }
 
         /**
          * Use $(D t.expand) for a tuple $(D t) to expand it into its
          * components. The result of $(D expand) acts as if the tuple components
          * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
          * single value.)
-         *
-         * Examples:
-         * ----
-         * auto t = tuple(1, " hello ", 2.3);
-         * writeln(t);        // Tuple!(int, string, double)(1, " hello ", 2.3)
-         * writeln(t.expand); // 1 hello 2.3
-         * ----
          */
         Types expand;
         mixin(injectNamedFields());
@@ -518,6 +472,22 @@ template Tuple(Specs...)
             // This is mostly to make t[n] work.
             alias _Tuple_super this;
         }
+        
+        ///
+        unittest
+        {
+            auto t1 = tuple(1, " hello ", 2.3);
+            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
+            
+            void takeSeveralTypes(int n, string s, bool b) 
+            {
+                assert(n == 4 && s == "test" && b == false);
+            }
+            
+            auto t2 = tuple(4, "test", false);
+            //t.expand acting as a list of values
+            takeSeveralTypes(t2.expand);
+        }
 
         // backwards compatibility
         alias field = expand;
@@ -532,15 +502,17 @@ template Tuple(Specs...)
                 field[] = values[];
             }
         }
+        
+        ///
+        unittest
+        {
+            alias ISD = Tuple!(int, string, double);
+            auto tup = ISD(1, "test", 3.2);
+            assert(tup.toString() == `Tuple!(int, string, double)(1, "test", 3.2)`);
+        }
 
         /**
          * Constructor taking a compatible array.
-         *
-         * Examples:
-         * ----
-         * int[2] ints;
-         * Tuple!(int, int) t = ints;
-         * ----
          */
         this(U, size_t n)(U[n] values)
         if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
@@ -550,33 +522,87 @@ template Tuple(Specs...)
                 field[i] = values[i];
             }
         }
+        
+        ///
+        unittest
+        {
+            int[2] ints;
+            Tuple!(int, int) t = ints;
+        }
 
         /**
-         * Constructor taking a compatible tuple.
+         * Constructor taking a compatible `Tuple`. Two `Tuples` are compatible
+         * $(B iff) they are both of the same length, and, for each type `T` on the
+         * left-hand side, the corresponding type `U` on the right-hand side can
+         * implicitly convert to `T`.
          */
         this(U)(U another)
         if (areBuildCompatibleTuples!(typeof(this), U))
         {
             field[] = another.field[];
         }
+        
+        ///
+        unittest
+        {
+            alias IntVec = Tuple!(int, int, int);
+            alias DubVec = Tuple!(double, double, double);
+            
+            IntVec iv = tuple(1, 1, 1);
+            
+            //Ok, int can implicitly convert to double
+            DubVec dv = iv;
+            //Error: double cannot implicitly convert to int
+            //IntVec iv2 = dv;
+        }
 
         /**
-         * Comparison for equality.
+         * Comparison for equality. Two `Tuples` are considered equal
+         * $(B iff) they fulfill the following criteria:
+         *
+         * $(UL 
+         *   $(LI Each `Tuple` is the same length.)
+         *   $(LI For each type `T` on the left-hand side and each type 
+         *        `U` on the right-hand side, values of type `T` can be 
+         *        compared with values of type `U`.)
+         *   $(LI For each value `v1` on the left-hand side and each value 
+         *        `v2` on the right-hand side, the expression `v1 == v2` is 
+         *        true.))
          */
         bool opEquals(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
             return field[] == rhs.field[];
         }
+        
         /// ditto
         bool opEquals(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
             return field[] == rhs.field[];
         }
+        
+        ///
+        unittest
+        {
+            Tuple!(int, string) t1 = tuple(1, "test");
+            Tuple!(double, string) t2 =  tuple(1.0, "test");
+            //Ok, int can be compared with double and
+            //both have a value of 1
+            assert(t1 == t2);
+        }
 
         /**
          * Comparison for ordering.
+         *
+         * Returns:
+         * For any values `v1` on the right-hand side and `v2` on the
+         * left-hand side:
+         *
+         * $(UL
+         *   $(LI A negative integer if the expression `v1 < v2` is true.)
+         *   $(LI A positive integer if the expression `v1 > v2` is true.)
+         *   $(LI 0 if the expression `v1 == v2` is true.))
          */
         int opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
@@ -590,6 +616,7 @@ template Tuple(Specs...)
             }
             return 0;
         }
+        
         /// ditto
         int opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
@@ -603,9 +630,24 @@ template Tuple(Specs...)
             }
             return 0;
         }
+        
+        /**  
+            The first `v1` for which `v1 > v2` is true determines
+            the result. This could lead to unexpected behaviour.
+         */
+        unittest
+        {
+            auto tup1 = tuple(1, 1, 1);
+            auto tup2 = tuple(1, 100, 100);
+            assert(tup1 < tup2);
+            
+            //Only the first result matters for comparison
+            tup1[0] = 2;
+            assert(tup1 > tup2);
+        }
 
         /**
-         * Assignment from another tuple. Each element of the source must be
+         * Assignment from another `Tuple`. Each element of the source must be
          * implicitly assignable to the respective element of the target.
          */
         void opAssign(R)(auto ref R rhs)
@@ -634,23 +676,24 @@ template Tuple(Specs...)
         }
 
         /**
-         * Takes a slice of the tuple.
-         *
-         * Examples:
-         * ----
-         * Tuple!(int, string, float, double) a;
-         * a[1] = "abc";
-         * a[2] = 4.5;
-         * auto s = a.slice!(1, 3);
-         * static assert(is(typeof(s) == Tuple!(string, float)));
-         * assert(s[0] == "abc" && s[1] == 4.5);
-         * ----
+         * Takes a slice of the `Tuple`.
          */
         @property
         ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
         if (from <= to && to <= Types.length)
         {
             return *cast(typeof(return)*) &(field[from]);
+        }
+        
+        ///
+        unittest
+        {
+            Tuple!(int, string, float, double) a;
+            a[1] = "abc";
+            a[2] = 4.5;
+            auto s = a.slice!(1, 3);
+            static assert(is(typeof(s) == Tuple!(string, float)));
+            assert(s[0] == "abc" && s[1] == 4.5);
         }
 
         size_t toHash() const nothrow @trusted
@@ -660,10 +703,7 @@ template Tuple(Specs...)
                 h += typeid(T).getHash(cast(const void*)&field[i]);
             return h;
         }
-
-        /**
-         * Converts to string.
-         */
+        
         void toString(DG)(scope DG sink)
         {
             enum header = typeof(this).stringof ~ "(",
@@ -691,6 +731,9 @@ template Tuple(Specs...)
             sink(footer);
         }
 
+        /**
+         * Converts to string.
+         */
         string toString()()
         {
             import std.conv : to;
@@ -699,8 +742,47 @@ template Tuple(Specs...)
     }
 }
 
+///
+unittest
+{
+    Tuple!(int, int) point;
+    // assign coordinates
+    point[0] = 5;
+    point[1] = 6;
+    // read coordinates
+    auto x = point[0];
+    auto y = point[1];
+}
+
+/** 
+    Tuple members can be named. It is legal to mix named and unnamed
+    members. The method above is still applicable to all fields.
+ */
+unittest
+{
+    alias Entry = Tuple!(int, "index", string, "value");
+    Entry e;
+    e.index = 4;
+    e.value = "Hello";
+    assert(e[1] == "Hello");
+    assert(e[0] == 4);
+}
+
 /**
-    Return a copy of a Tuple with its fields in reverse order.
+    A `Tuple` with named fields is distinct types from a `Tuple` with unnamed
+    fields, i.e. each naming imparts a separate type for the `Tuple`. Two
+    `Tuple` differing in naming only are still distinct, even though they
+    might have the same structure.
+ */
+unittest
+{
+    Tuple!(int, "x", int, "y") point1;
+    Tuple!(int, int) point2;
+    assert(!is(typeof(point1) == typeof(point2)));
+}
+
+/**
+    Return a copy of a `Tuple` with its fields in reverse order.
  */
 ReverseTupleType!T reverse(T)(T t)
     if (isTuple!T)
@@ -1135,7 +1217,6 @@ unittest
 Returns a $(D Tuple) object instantiated and initialized according to
 the arguments.
 */
-
 template tuple(Names...)
 {
     auto tuple(Args...)(Args args)
@@ -1192,8 +1273,7 @@ unittest
 }
 
 /**
-Returns $(D true) if and only if $(D T) is an instance of the
-$(D Tuple) struct template.
+Returns $(D true) if and only if $(D T) is an instance of $(D std.typecons.Tuple).
  */
 template isTuple(T)
 {
