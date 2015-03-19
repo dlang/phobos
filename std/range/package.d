@@ -2492,7 +2492,7 @@ an entire $(D front)/$(D popFront)/$(D empty) structure.
 $(D fun) maybe be passed either a template alias parameter (existing
 function, delegate, struct type defining static $(D opCall)... ) or
 a run-time value argument (delegate, function object... ).
-The result range models an InputRange ($(XREF range, isInputRange).
+The result range models an InputRange ($(XREF range, isInputRange)).
 The resulting range will call $(D fun()) on every call to $(D front),
 and only when $(D front) is called, regardless of how the range is
 iterated.
