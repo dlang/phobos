@@ -5544,8 +5544,9 @@ private auto hexStrImpl(C)(string hexData)
                 result[cnt / 2] = chr;
             }
             ++cnt;       
-        }      
-    return result[0..cnt / 2];         
+        }     
+    result.length = cnt / 2; 
+    return result;         
 }
 
 unittest
