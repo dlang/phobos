@@ -5425,7 +5425,7 @@ hexData = the $(D string) to be converted.
 C = character type of the output string. 
 
 Returns:
-Either a $(D string), a $(D wstring) or a $(D dstring), according to $(D_PARAM C).
+Either a $(D char[]), a $(D wchar[]) or a $(D dchar[]), according to $(D_PARAM C).
  */
 @property @safe nothrow pure
 auto hexString(string hexData, C = char)()
@@ -5467,18 +5467,18 @@ T = the integer type of an array element. By default it is set to $(D ubyte)
 but all the integer type, excepted $(D ulong) and $(D long), are accepted.
 
 Returns:
-a $(D immutable(T)[]).
+an array of T.
  */
 @property @trusted nothrow pure
 auto hexBytes(string hexData, T = ubyte)()
 if (hexData.isHexLiteral && isIntegral!T && (T.sizeof <= 4))
 {
     static if (T.sizeof == 1)
-        return cast(immutable(T)[]) hexStrImpl!char(hexData);
+        return cast(T[]) hexStrImpl!char(hexData);
     else static if (T.sizeof == 2)
-        return cast(immutable(T)[]) hexStrImpl!wchar(hexData);
+        return cast(T[]) hexStrImpl!wchar(hexData);
     else
-        return cast(immutable(T)[]) hexStrImpl!dchar(hexData);
+        return cast(T[]) hexStrImpl!dchar(hexData);
 }
 
 /// ditto
@@ -5489,11 +5489,11 @@ if (isIntegral!T && (T.sizeof <= 4))
     if (hexData.isHexLiteral)
     {
         static if (T.sizeof == 1)
-            return cast(immutable(T)[]) hexStrImpl!char(hexData);
+            return cast(T[]) hexStrImpl!char(hexData);
         else static if (T.sizeof == 2)
-            return cast(immutable(T)[]) hexStrImpl!wchar(hexData);
+            return cast(T[]) hexStrImpl!wchar(hexData);
         else
-            return cast(immutable(T)[]) hexStrImpl!dchar(hexData);
+            return cast(T[]) hexStrImpl!dchar(hexData);
     }
     else assert(0, "Invalid input string format in " ~ __FUNCTION__);
 }
