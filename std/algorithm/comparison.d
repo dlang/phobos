@@ -484,10 +484,19 @@ unittest
                            )());
 }
 
-/**
-Returns $(D val), if it is between $(D lower) and $(D upper).
-Otherwise returns the nearest of the two. Equivalent to $(D max(lower,
-min(upper,val))).
+/** Clamps a value into the given bounds.
+
+This functions is equivalent to $(D max(lower, min(upper,val))).
+
+Params:
+    val = The value to _clamp.
+    lower = The _lower bound of the _clamp.
+    upper = The _upper bound of the _clamp.
+
+Returns:
+    Returns $(D val), if it is between $(D lower) and $(D upper).
+    Otherwise returns the nearest of the two. 
+
 */
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 in
