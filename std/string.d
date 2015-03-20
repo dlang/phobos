@@ -1952,16 +1952,19 @@ S capitalize(S)(S s) @trusted pure
 }
 
 /++
-    Split $(D s) into an array of lines using $(D '\r'), $(D '\n'),
-    $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
-    If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
-    is included in the strings returned.
+    Split $(D s) into an array of lines according to the unicode standard using
+    $(D '\r'), $(D '\n'), $(D "\r\n"), $(XREF uni, lineSep), 
+    $(XREF uni, paraSep), $(D U+0085) (NEL), $(D '\v')  and $(D '\f')
+    as delimiters. If $(D keepTerm) is set to $(D KeepTerminator.yes), then the
+    delimiter is included in the strings returned.
 
     Does not throw on invalid UTF; such is simply passed unchanged
     to the output.
 
     Allocates memory; use $(LREF lineSplitter) for an alternative that
     does not.
+    
+    Adheres to $(WEB http://www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
   Params:
     s = a string of $(D chars), $(D wchars), or $(D dchars)
@@ -1988,7 +1991,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     {
         switch (s[i])
         {
-            case '\n':
+            case '\v', '\f', '\n':
                 retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes)]);
                 iStart = i + 1;
                 break;
@@ -2025,11 +2028,25 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
                     else
                         goto default;
                     break;
+                /* Manually decode:
+                 *  NEL is C2 85 
+                 */
+                case 0xC2:
+                    if(i + 1 < s.length && s[i + 1] == 0x85)
+                    {
+                        retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes) * 2]);
+                        iStart = i + 2;
+                        i += 1;
+                    }
+                    else 
+                        goto default;
+                    break;
             }
             else
             {
                 case lineSep:
                 case paraSep:
+                case '\u0085':
                     goto case '\n';
             }
 
@@ -2055,10 +2072,12 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
     {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\nmon\u2030day\n");
-
+        auto s = to!S(
+            "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n" ~
+            "mon\u2030day\nschadenfreude\vkindergarten\f\vcookies\u0085"
+        );
         auto lines = splitLines(s);
-        assert(lines.length == 10);
+        assert(lines.length == 14);
         assert(lines[0] == "");
         assert(lines[1] == "peter");
         assert(lines[2] == "");
@@ -2069,13 +2088,18 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
         assert(lines[7] == "");
         assert(lines[8] == "sunday");
         assert(lines[9] == "mon\u2030day");
+        assert(lines[10] == "schadenfreude");
+        assert(lines[11] == "kindergarten");
+        assert(lines[12] == "");
+        assert(lines[13] == "cookies");
+        
 
         ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
         auto ulines = splitLines(cast(char[])u);
         assert(cast(ubyte[])(ulines[0]) == u);
 
         lines = splitLines(s, KeepTerminator.yes);
-        assert(lines.length == 10);
+        assert(lines.length == 14);
         assert(lines[0] == "\r");
         assert(lines[1] == "peter\n");
         assert(lines[2] == "\r");
@@ -2086,28 +2110,34 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
         assert(lines[7] == "\n");
         assert(lines[8] == "sunday\n");
         assert(lines[9] == "mon\u2030day\n");
+        assert(lines[10] == "schadenfreude\v");
+        assert(lines[11] == "kindergarten\f");
+        assert(lines[12] == "\v");
+        assert(lines[13] == "cookies\u0085");
 
         s.popBack(); // Lop-off trailing \n
         lines = splitLines(s);
-        assert(lines.length == 10);
+        assert(lines.length == 14);
         assert(lines[9] == "mon\u2030day");
 
         lines = splitLines(s, KeepTerminator.yes);
-        assert(lines.length == 10);
-        assert(lines[9] == "mon\u2030day");
+        assert(lines.length == 14);
+        assert(lines[13] == "cookies");
     }
     });
 }
 
 /***********************************
  *  Split an array or slicable range of characters into a range of lines
-    using $(D '\r'), $(D '\n'),
-    $(D "\r\n"), $(XREF uni, lineSep), and $(XREF uni, paraSep) as delimiters.
-    If $(D keepTerm) is set to $(D KeepTerminator.yes), then the delimiter
-    is included in the slices returned.
+    using $(D '\r'), $(D '\n'), $(D '\v'), $(D '\f'), $(D "\r\n"), 
+    $(XREF uni, lineSep), $(XREF uni, paraSep) and $(D '\u0085') (NEL) 
+    as delimiters. If $(D keepTerm) is set to $(D KeepTerminator.yes), then the
+    delimiter is included in the slices returned.
 
     Does not throw on invalid UTF; such is simply passed unchanged
     to the output.
+    
+    Adheres to $(WEB http://www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
     Does not allocate memory.
 
@@ -2173,7 +2203,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
                     }
                     switch (_input[i])
                     {
-                        case '\n':
+                        case '\v', '\f', '\n':
                             iEnd = i + (keepTerm == KeepTerminator.yes);
                             iNext = i + 1;
                             break Loop;
@@ -2208,9 +2238,22 @@ if ((hasSlicing!Range && hasLength!Range) ||
                                 }
                                 else
                                     goto default;
+                            /* Manually decode:
+                            *  NEL is C2 85 
+                            */
+                            case 0xC2:
+                                if(i + 1 < _input.length && _input[i + 1] == 0x85)
+                                {
+                                    iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
+                                    iNext = i + 2;
+                                    break Loop;
+                                }
+                                else 
+                                    goto default;
                         }
                         else
                         {
+                            case '\u0085':
                             case lineSep:
                             case paraSep:
                                 goto case '\n';
@@ -2253,17 +2296,19 @@ if ((hasSlicing!Range && hasLength!Range) ||
     import std.conv : to;
     import std.array : array;
 
-    debug(string) trustedPrintf("string.splitLines.unittest\n");
+    debug(string) trustedPrintf("string.lineSplitter.unittest\n");
 
     import std.exception;
     assertCTFEable!(
     {
     foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
-        auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\nmon\u2030day\n");
-
-        auto lines = s.lineSplitter().array;
-        assert(lines.length == 10);
+        auto s = to!S(
+            "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\n" ~
+            "sunday\nmon\u2030day\nschadenfreude\vkindergarten\f\vcookies\u0085"    
+        ); 
+        auto lines = lineSplitter(s).array;
+        assert(lines.length == 14);
         assert(lines[0] == "");
         assert(lines[1] == "peter");
         assert(lines[2] == "");
@@ -2274,13 +2319,18 @@ if ((hasSlicing!Range && hasLength!Range) ||
         assert(lines[7] == "");
         assert(lines[8] == "sunday");
         assert(lines[9] == "mon\u2030day");
+        assert(lines[10] == "schadenfreude");
+        assert(lines[11] == "kindergarten");
+        assert(lines[12] == "");
+        assert(lines[13] == "cookies");
+        
 
         ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
         auto ulines = lineSplitter(cast(char[])u).array;
         assert(cast(ubyte[])(ulines[0]) == u);
 
         lines = lineSplitter!(KeepTerminator.yes)(s).array;
-        assert(lines.length == 10);
+        assert(lines.length == 14);
         assert(lines[0] == "\r");
         assert(lines[1] == "peter\n");
         assert(lines[2] == "\r");
@@ -2291,15 +2341,19 @@ if ((hasSlicing!Range && hasLength!Range) ||
         assert(lines[7] == "\n");
         assert(lines[8] == "sunday\n");
         assert(lines[9] == "mon\u2030day\n");
+        assert(lines[10] == "schadenfreude\v");
+        assert(lines[11] == "kindergarten\f");
+        assert(lines[12] == "\v");
+        assert(lines[13] == "cookies\u0085");
 
         s.popBack(); // Lop-off trailing \n
         lines = lineSplitter(s).array;
-        assert(lines.length == 10);
+        assert(lines.length == 14);
         assert(lines[9] == "mon\u2030day");
 
         lines = lineSplitter!(KeepTerminator.yes)(s).array;
-        assert(lines.length == 10);
-        assert(lines[9] == "mon\u2030day");
+        assert(lines.length == 14);
+        assert(lines[13] == "cookies");
     }
     });
 }
