@@ -5343,7 +5343,7 @@ unittest
 The function $(D isHexLiteral) checks the consistency of a string for the
 functions $(D hexString) and $(D hexBytes).
 The result is only true if the input string is composed of ASCII white
-characters (\f\n\r\t\v) or hexadecimal digits (regarless of the case).
+characters (\f\n\r\t\v) or hexadecimal digits (regardless of the case).
 
 It can be used before calling the run time version of $(D hexString) and 
 $(D hexBytes) since they may throw an assert error if the input string is
@@ -5357,11 +5357,22 @@ static bool isHexLiteral(StringType)(in StringType hexData)
     foreach(c; hexData)
     {
         isH = c.isHexDigit;
-        if (!isH && !c.isWhite)
+        if ((!isH) & (!c.isWhite))
             return false;
         i += isH;
     }
     return !(i & 1) & (i > 0);   
+}
+
+///
+unittest
+{
+    // test all the hex digits
+    static assert( ("0123456789abcdefABCDEF").isHexLiteral);
+    // empty or white strings are not valid
+    static assert( !"\r\n\t".isHexLiteral);
+    // but are accepted if the count of hex digits is even
+    static assert( "A\r\n\tB".isHexLiteral);     
 }
 
 unittest
@@ -5412,13 +5423,15 @@ unittest
 }
 
 /**
-The $(D hexString) function is intended to replace the hexadecimal literal strings
-starting with $(D 'x'), which could be removed to simplify the core language.
+The $(D hexString) function allows to convert a hex litteral to a string.
 
 The function takes a string made of hexadecimal digits and it returns
 the matching $(D string) by converting each pair of digit to a character.
 The input string can also include some ASCII white characters, which can be used
-to keep the literal string readable in the source code.
+to keep the literal string readable in the source code. 
+
+The function is intended to replace the hexadecimal literal strings
+starting with $(D 'x'), which could be removed to simplify the core language.
 
 Params:
 hexData = the $(D string) to be converted.
@@ -5464,7 +5477,7 @@ that it returns the hexadecimal data as an array of integral.
 Params:
 hexData = the $(D string) to be converted.
 T = the integer type of an array element. By default it is set to $(D ubyte) 
-but all the integer type, excepted $(D ulong) and $(D long), are accepted.
+but all the integer types, excepted $(D ulong) and $(D long), are accepted.
 
 Returns:
 an array of T.
@@ -5497,7 +5510,6 @@ if (isIntegral!T && (T.sizeof <= 4))
     }
     else assert(0, "Invalid input string format in " ~ __FUNCTION__);
 }
-
 
 ///
 unittest
