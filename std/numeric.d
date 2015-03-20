@@ -845,7 +845,7 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  *
  * fax = Value of $(D f(ax)).
  *
- * fbx = Value of $(D f(bx)). (D fax) and $(D fbx) should have opposite signs. 
+ * fbx = Value of $(D f(bx)). $(D fax) and $(D fbx) should have opposite signs. 
  * ($(D f(ax)) and $(D f(bx)) are commonly known in advance.)
  *
  *
