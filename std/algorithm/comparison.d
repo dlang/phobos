@@ -545,9 +545,7 @@ body
 Performs three-way lexicographical comparison on two input ranges
 according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
 lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
-corresponding element $(D e2) in $(D r2). If $(D binaryFun!pred(e1,
-e2)), $(D cmp) returns a negative value. If $(D binaryFun!pred(e2,
-e1)), $(D cmp) returns a positive value. If one of the ranges has been
+corresponding element $(D e2) in $(D r2). If one of the ranges has been
 finished, $(D cmp) returns a negative value if $(D r1) has fewer
 elements than $(D r2), a positive value if $(D r1) has more elements
 than $(D r2), and $(D 0) if the ranges have the same number of
@@ -555,6 +553,18 @@ elements.
 
 If the ranges are strings, $(D cmp) performs UTF decoding
 appropriately and compares the ranges one code point at a time.
+
+Params:
+    pred = The predicate used for comparison.
+    r1 = The first range.
+    r2 = The second range.
+
+Returns:
+    0 if both ranges compare equal. -1 if the first differing element of $(D
+    r1) is less than the corresponding element of $(D r2) according to $(D
+    pred). 1 if the first differing element of $(D r2) is less than the
+    corresponding element of $(D r1) according to $(D pred).
+
 */
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
 if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
