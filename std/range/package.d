@@ -638,7 +638,7 @@ debug unittest
     int[4] testArr = [1,2,3,4];
     import std.exception : assertThrown;
     import core.exception : AssertError;
-    assertThrown!AssertError(testArr[].stride(0)); 
+    assertThrown!AssertError(testArr[].stride(0));
 }
 
 @safe unittest
@@ -4145,6 +4145,33 @@ unittest
    For built-in types, the range returned is a random access range. For
    user-defined types that support $(D ++), the range is an input
    range.
+
+    Example:
+    ---
+    void main()
+    {
+        import std.stdio;
+
+        // The following groups all produce the same output of:
+        // 0 1 2 3 4
+
+        foreach (i; 0..5)
+            writef("%s ", i);
+        writeln();
+
+        import std.range : iota;
+        foreach (i; iota(0, 5))
+            writef("%s ", i);
+        writeln();
+
+        writefln("%(%s %|%)", iota(0, 5));
+
+        import std.algorithm : map, copy;
+        import std.format;
+        iota(0, 5).map!(i => format("%s ", i)).copy(stdout.lockingTextWriter());
+        writeln();
+    }
+    ---
 */
 auto iota(B, E, S)(B begin, E end, S step)
 if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
