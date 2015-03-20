@@ -135,14 +135,14 @@ trait also checks for random access).
 auto cache(Range)(Range range)
 if (isInputRange!Range)
 {
-    return Cache!(Range, false)(range);
+    return _Cache!(Range, false)(range);
 }
 
 /// ditto
 auto cacheBidirectional(Range)(Range range)
 if (isBidirectionalRange!Range)
 {
-    return Cache!(Range, true)(range);
+    return _Cache!(Range, true)(range);
 }
 
 ///
@@ -287,7 +287,7 @@ same cost or side effects.
     assert(r.source.initialized == true);
 }
 
-private struct Cache(R, bool bidir)
+private struct _Cache(R, bool bidir)
 {
     import core.exception : RangeError;
 
@@ -4186,4 +4186,3 @@ private struct UniqResult(alias pred, Range)
         }
     }
 }
-
