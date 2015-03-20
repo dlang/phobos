@@ -163,7 +163,7 @@ struct DList(T)
   private
   {
     //Construct as new PayNode, and returns it as a BaseNode.
-    static BaseNode* createNode()(ref T arg, BaseNode* prev = null, BaseNode* next = null)
+    static BaseNode* createNode(Stuff)(ref Stuff arg, BaseNode* prev = null, BaseNode* next = null)
     {
         return (new PayNode(BaseNode(prev, next), arg)).asBaseNode();
     }
@@ -927,4 +927,12 @@ private:
     assert(r.front == 5 && r.walkLength == 1);
     r = list.linearRemove(r.take(1));
     assert(r.empty); // fails
+}
+
+@safe unittest //14300
+{
+    interface ITest {}
+    static class Test : ITest {}
+
+    DList!ITest().insertBack(new Test());
 }
