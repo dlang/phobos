@@ -2196,6 +2196,20 @@ void main()
 }
 ---
 
+$(XREF algorithm, joiner) can be used to join chunks together into a single
+range lazily.
+Example:
+---
+import std.algorithm, std.stdio;
+void main()
+{
+    //Range of ranges
+    static assert(is(typeof(stdin.byChunk(4096).front) == ubyte[]));
+    //Range of elements
+    static assert(is(typeof(stdin.byChunk(4096).joiner.front) == ubyte));
+}
+---
+
 Returns: A call to $(D byChunk) returns a range initialized with the $(D File)
 object and the appropriate buffer.
 
