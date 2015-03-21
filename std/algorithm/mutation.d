@@ -1995,24 +1995,18 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     }
 }
 
-// Not yet documented
-void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
-{
-    lhs.proxySwap(rhs);
-}
-
+///
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    // Swapping POD (plain old data) types:
     int a = 42, b = 34;
     swap(a, b);
     assert(a == 34 && b == 42);
 
+    // Swapping structs with indirection:
     static struct S { int x; char c; int[] y; }
     S s1 = { 0, 'z', [ 1, 2 ] };
     S s2 = { 42, 'a', [ 4, 6 ] };
-    //writeln(s2.tupleof.stringof);
     swap(s1, s2);
     assert(s1.x == 42);
     assert(s1.c == 'a');
@@ -2022,12 +2016,15 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     assert(s2.c == 'z');
     assert(s2.y == [ 1, 2 ]);
 
+    // Immutables cannot be swapped:
     immutable int imm1, imm2;
     static assert(!__traits(compiles, swap(imm1, imm2)));
 }
 
+///
 @safe unittest
 {
+    // Non-copyable types can still be swapped.
     static struct NoCopy
     {
         this(this) { assert(0); }
@@ -2037,14 +2034,17 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     NoCopy nc1, nc2;
     nc1.n = 127; nc1.s = "abc";
     nc2.n = 513; nc2.s = "uvwxyz";
+
     swap(nc1, nc2);
     assert(nc1.n == 513 && nc1.s == "uvwxyz");
     assert(nc2.n == 127 && nc2.s == "abc");
+
     swap(nc1, nc1);
     swap(nc2, nc2);
     assert(nc1.n == 513 && nc1.s == "uvwxyz");
     assert(nc2.n == 127 && nc2.s == "abc");
 
+    // Types containing non-copyable fields can also be swapped.
     static struct NoCopyHolder
     {
         NoCopy noCopy;
@@ -2052,14 +2052,17 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     NoCopyHolder h1, h2;
     h1.noCopy.n = 31; h1.noCopy.s = "abc";
     h2.noCopy.n = 65; h2.noCopy.s = null;
+
     swap(h1, h2);
     assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
     assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
+
     swap(h1, h1);
     swap(h2, h2);
     assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
     assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
 
+    // Const types cannot be swapped.
     const NoCopy const1, const2;
     static assert(!__traits(compiles, swap(const1, const2)));
 }
@@ -2153,6 +2156,12 @@ unittest
     }
     B b1, b2;
     swap(b1, b2);
+}
+
+// Not yet documented
+void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
+{
+    lhs.proxySwap(rhs);
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
