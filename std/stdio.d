@@ -56,7 +56,7 @@ version (OSX)
 version (FreeBSD)
 {
     version = GENERIC_IO;
-    version = NO_GETDELIM;
+    version = HAS_GETDELIM;
 }
 
 version (Solaris)
