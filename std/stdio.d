@@ -1649,6 +1649,7 @@ Allows to directly use range operations on lines of a file.
         private:
             File file;
             Char[] line;
+            Char[] buffer;
             Terminator terminator;
             KeepTerminator keepTerminator;
 
@@ -1676,7 +1677,12 @@ Allows to directly use range operations on lines of a file.
             {
                 import std.algorithm : endsWith;
                 assert(file.isOpen);
+                line = buffer;
                 file.readln(line, terminator);
+                if (line.length > buffer.length)
+                {
+                    buffer = line;
+                }
                 if (line.empty)
                 {
                     file.detach();
@@ -4151,7 +4157,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         buf.length = 0;                // end of file
         return 0;
     }
-    if (s <= GC.sizeOf(buf.ptr))
+    if (s <= buf.length || s <= GC.sizeOf(buf.ptr))
     {
         buf = buf.ptr[0 .. s];
         buf[] = lineptr[0 .. s];
