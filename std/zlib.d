@@ -114,12 +114,17 @@ unittest
     assert(crc == 0x2520577b);
 }
 
-/*********************************************
- * Compresses the data in srcbuf[] using compression _level level.
- * The default value
- * for level is 6, legal values are 1..9, with 1 being the least compression
- * and 9 being the most.
- * Returns the compressed data.
+/**
+ * $(P Compress data)
+ *
+ * Params:
+ *     srcbuf = buffer containing the data to compress
+ *     level = compression level. Legal values are 1..9, with 1 being the
+ *             least compression and 9 being the most. The default value
+ *             is 6.
+ *
+ * Returns:
+ *     the compressed data
  */
 
 const(void)[] compress(const(void)[] srcbuf, int level)
@@ -145,9 +150,9 @@ body
  * ditto
  */
 
-const(void)[] compress(const(void)[] buf)
+const(void)[] compress(const(void)[] srcbuf)
 {
-    return compress(buf, Z_DEFAULT_COMPRESSION);
+    return compress(srcbuf, Z_DEFAULT_COMPRESSION);
 }
 
 /*********************************************
