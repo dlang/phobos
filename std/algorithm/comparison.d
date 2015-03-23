@@ -205,13 +205,9 @@ private template indexOfFirstOvershadowingChoiceOnLast(choices...)
 Executes and returns one of a collection of handlers based on the type of the
 switch object.
 
-$(D choices) needs to be composed of function or delegate handlers that accept
-one argument. The first choice that $(D switchObject) can be casted to the type
+The first choice that $(D switchObject) can be casted to the type
 of argument it accepts will be called with $(D switchObject) casted to that
 type, and the value it'll return will be returned by $(D castSwitch).
-
-There can also be a choice that accepts zero arguments. That choice will be
-invoked if $(D switchObject) is null.
 
 If a choice's return type is void, the choice must throw an exception, unless
 all the choices are void. In that case, castSwitch itself will return void.
@@ -219,6 +215,15 @@ all the choices are void. In that case, castSwitch itself will return void.
 Throws: If none of the choice matches, a $(D SwitchError) will be thrown.  $(D
 SwitchError) will also be thrown if not all the choices are void and a void
 choice was executed without throwing anything.
+
+Params:
+    choices = The $(D choices) needs to be composed of function or delegate
+        handlers that accept one argument. There can also be a choice that
+        accepts zero arguments. That choice will be invoked if the $(D
+        switchObject) is null.
+
+Returns:
+    The value of the selected choice.
 
 Note: $(D castSwitch) can only be used with object types.
 */
