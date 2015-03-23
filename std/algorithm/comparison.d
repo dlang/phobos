@@ -541,7 +541,7 @@ body
     static assert(is(typeof(clamp(-1L, -2L, 2UL)) == long));
 
     // user-defined types
-    import std.datetime;
+    import std.datetime : Date;
     assert(clamp(Date(1982, 1, 4), Date(1012, 12, 21), Date(2012, 12, 21)) == Date(1982, 1, 4));
     assert(clamp(Date(1982, 1, 4), Date.min, Date.max) == Date(1982, 1, 4));
     // UFCS style
@@ -588,7 +588,7 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
     }
 }
 
-// Specialization for strings (for speed purposes)
+/// ditto
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
 {
     import core.stdc.string : memcmp;
@@ -663,11 +663,8 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
 {
     int result;
 
-    debug(string) printf("string.cmp.unittest\n");
     result = cmp("abc", "abc");
     assert(result == 0);
-    //    result = cmp(null, null);
-    //    assert(result == 0);
     result = cmp("", "");
     assert(result == 0);
     result = cmp("abc", "abcd");
@@ -797,7 +794,8 @@ range of range (of range...) comparisons.
 {
     import std.algorithm.iteration : map;
     import std.math : approxEqual;
-    import std.internal.test.dummyrange;
+    import std.internal.test.dummyrange : ReferenceForwardRange, 
+        ReferenceInputRange, ReferenceInfiniteForwardRange;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -906,7 +904,7 @@ enum EditOp : char
     remove = 'r'
 }
 
-struct Levenshtein(Range, alias equals, CostType = size_t)
+private struct Levenshtein(Range, alias equals, CostType = size_t)
 {
     void deletionIncrement(CostType n)
     {
@@ -1300,7 +1298,7 @@ MaxType!T max(T...)(T args)
     assert(max(a, f) == 5);
 
     //Test user-defined types
-    import std.datetime;
+    import std.datetime : Date;
     assert(max(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(2012, 12, 21));
     assert(max(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(2012, 12, 21));
     assert(max(Date(1982, 1, 4), Date.min) == Date(1982, 1, 4));
