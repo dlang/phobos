@@ -87,9 +87,20 @@ unittest
     assert(adler == 0xdc0037);
 }
 
-/*********************************
- * Compute the CRC32 checksum of the data in buf[]. crc is the starting value
- * when computing a cumulative checksum.
+/**
+ * $(P Compute the CRC32 checksum of a buffer's worth of data.)
+ *
+ * Params:
+ *     crc = the starting checksum for the computation. Use 0
+ *             for a new checksum. Use the output of this function
+ *             for a cumulative checksum.
+ *     buf = buffer containing input data
+ *
+ * Returns:
+ *     A $(D uint) checksum for the provided input data and starting checksum
+ *
+ * See_Also:
+ *     $(LINK http://en.wikipedia.org/wiki/Cyclic_redundancy_check)
  */
 
 uint crc32(uint crc, const(void)[] buf)
