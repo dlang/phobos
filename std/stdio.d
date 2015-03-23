@@ -44,26 +44,31 @@ version (linux)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
+    version = HAS_GETDELIM;
 }
 
 version (OSX)
 {
     version = GENERIC_IO;
+    version = HAS_GETDELIM;
 }
 
 version (FreeBSD)
 {
     version = GENERIC_IO;
+    version = HAS_GETDELIM;
 }
 
 version (Solaris)
 {
     version = GENERIC_IO;
+    version = NO_GETDELIM;
 }
 
 version (Android)
 {
     version = GENERIC_IO;
+    version = NO_GETDELIM;
 }
 
 version(Windows)
@@ -161,8 +166,6 @@ else version (GCC_IO)
         int fgetwc_unlocked(_iobuf*);
         void flockfile(FILE*);
         void funlockfile(FILE*);
-        ptrdiff_t getline(char**, size_t*, FILE*);
-        ptrdiff_t getdelim (char**, size_t*, int, FILE*);
 
         private size_t fwrite_unlocked(const(void)* ptr,
                 size_t size, size_t n, _iobuf *stream);
@@ -211,6 +214,13 @@ else version (GENERIC_IO)
 else
 {
     static assert(0, "unsupported C I/O system");
+}
+
+version(HAS_GETDELIM) extern(C) nothrow @nogc
+{
+    ptrdiff_t getdelim(char**, size_t*, int, FILE*);
+    // getline() always comes together with getdelim()
+    ptrdiff_t getline(char**, size_t*, FILE*);
 }
 
 //------------------------------------------------------------------------------
@@ -327,12 +337,14 @@ struct File
 {
     import std.traits : isScalarType, isArray;
     import std.range.primitives : ElementEncodingType;
+    enum Orientation { unknown, narrow, wide }
 
     private struct Impl
     {
         FILE * handle = null; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
         bool isPopened; // true iff the stream has been created by popen()
+        Orientation orientation;
     }
     private Impl* _p;
     private string _name;
@@ -347,6 +359,7 @@ struct File
         _p.handle = handle;
         _p.refs = refs;
         _p.isPopened = isPopened;
+        _p.orientation = Orientation.unknown;
         _name = name;
     }
 
@@ -1410,7 +1423,14 @@ for every line.
         static if (is(C == char))
         {
             enforce(_p && _p.handle, "Attempt to read from an unopened file.");
-            return readlnImpl(_p.handle, buf, terminator);
+            if (_p.orientation == Orientation.unknown)
+            {
+                import core.stdc.wchar_ : fwide;
+                auto w = fwide(_p.handle, 0);
+                if (w < 0) _p.orientation = Orientation.narrow;
+                else if (w > 0) _p.orientation = Orientation.wide;
+            }
+            return readlnImpl(_p.handle, buf, terminator, _p.orientation);
         }
         else
         {
@@ -1589,13 +1609,12 @@ Allows to directly use range operations on lines of a file.
     private:
         import std.typecons;
 
-        /* Ref-counting stops the source range's ByLineImpl
+        /* Ref-counting stops the source range's Impl
          * from getting out of sync after the range is copied, e.g.
          * when accessing range.front, then using std.range.take,
          * then accessing range.front again. */
-        alias Impl = RefCounted!(ByLineImpl!(Char, Terminator),
-            RefCountedAutoInitialize.no);
-        Impl impl;
+        alias PImpl = RefCounted!(Impl, RefCountedAutoInitialize.no);
+        PImpl impl;
 
         static if (isScalarType!Terminator)
             enum defTerm = '\n';
@@ -1606,7 +1625,7 @@ Allows to directly use range operations on lines of a file.
         this(File f, KeepTerminator kt = KeepTerminator.no,
                 Terminator terminator = defTerm)
         {
-            impl = Impl(f, kt, terminator);
+            impl = PImpl(f, kt, terminator);
         }
 
         @property bool empty()
@@ -1623,78 +1642,67 @@ Allows to directly use range operations on lines of a file.
         {
             impl.refCountedPayload.popFront();
         }
-    }
 
-    private struct ByLineImpl(Char, Terminator)
-    {
     private:
-        File file;
-        Char[] line;
-        Terminator terminator;
-        KeepTerminator keepTerminator;
-
-    public:
-        this(File f, KeepTerminator kt, Terminator terminator)
+        struct Impl
         {
-            file = f;
-            this.terminator = terminator;
-            keepTerminator = kt;
-            popFront();
-        }
+        private:
+            File file;
+            Char[] line;
+            Char[] buffer;
+            Terminator terminator;
+            KeepTerminator keepTerminator;
 
-        // Range primitive implementations.
-        @property bool empty()
-        {
-            if (line !is null) return false;
-            if (!file.isOpen) return true;
-
-            // First read ever, must make sure stream is not empty. We
-            // do so by reading a character and putting it back. Doing
-            // so is guaranteed to work on all files opened in all
-            // buffering modes.
-            auto fp = file.getFP();
-            auto c = fgetc(fp);
-            if (c == -1)
+        public:
+            this(File f, KeepTerminator kt, Terminator terminator)
             {
-                file.detach();
-                return true;
+                file = f;
+                this.terminator = terminator;
+                keepTerminator = kt;
+                popFront();
             }
-            ungetc(c, fp) == c
-                || assert(false, "Bug in cstdlib implementation");
-            return false;
-        }
 
-        @property Char[] front()
-        {
-            return line;
-        }
-
-        void popFront()
-        {
-            import std.algorithm : endsWith;
-
-            assert(file.isOpen);
-            assumeSafeAppend(line);
-            file.readln(line, terminator);
-            if (line.empty)
+            // Range primitive implementations.
+            @property bool empty()
             {
-                file.detach();
-                line = null;
+                return line is null;
             }
-            else if (keepTerminator == KeepTerminator.no
-                    && std.algorithm.endsWith(line, terminator))
+
+            @property Char[] front()
             {
-                static if (isScalarType!Terminator)
-                    enum tlen = 1;
-                else static if (isArray!Terminator)
+                return line;
+            }
+
+            void popFront()
+            {
+                import std.algorithm : endsWith;
+                assert(file.isOpen);
+                line = buffer;
+                file.readln(line, terminator);
+                if (line.length > buffer.length)
                 {
-                    static assert(
-                        is(Unqual!(ElementEncodingType!Terminator) == Char));
-                    const tlen = terminator.length;
+                    buffer = line;
                 }
-                else
-                    static assert(false);
-                line = line.ptr[0 .. line.length - tlen];
+                if (line.empty)
+                {
+                    file.detach();
+                    line = null;
+                }
+                else if (keepTerminator == KeepTerminator.no
+                        && std.algorithm.endsWith(line, terminator))
+                {
+                    static if (isScalarType!Terminator)
+                        enum tlen = 1;
+                    else static if (isArray!Terminator)
+                    {
+                        static assert(
+                            is(Unqual!(ElementEncodingType!Terminator) == Char));
+                        const tlen = terminator.length;
+                    }
+                    else
+                        static assert(false);
+                    line = line.ptr[0 .. line.length - tlen];
+                }
             }
         }
     }
@@ -1775,6 +1783,22 @@ the contents may well have changed).
         return ByLine!(Char, Terminator)(this, keepTerminator, terminator);
     }
 
+    unittest
+    {
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hi");
+        scope(success) std.file.remove(deleteme);
+
+        import std.typetuple;
+        foreach (T; TypeTuple!(char, wchar, dchar))
+        {
+            auto blc = File(deleteme).byLine!(T, T);
+            assert(blc.front == "hi");
+            // check front is cached
+            assert(blc.front is blc.front);
+        }
+    }
+
     private struct ByLineCopy(Char, Terminator)
     {
     private:
@@ -1812,14 +1836,14 @@ the contents may well have changed).
 
     private struct ByLineCopyImpl(Char, Terminator)
     {
-        ByLineImpl!(Unqual!Char, Terminator) impl;
+        ByLine!(Unqual!Char, Terminator).Impl impl;
         bool gotFront;
         Char[] line;
 
     public:
         this(File f, KeepTerminator kt, Terminator terminator)
         {
-            impl = ByLineImpl!(Unqual!Char, Terminator)(f, kt, terminator);
+            impl = ByLine!(Unqual!Char, Terminator).Impl(f, kt, terminator);
         }
 
         @property bool empty()
@@ -3877,7 +3901,7 @@ unittest
 
 // Private implementation of readln
 version (DIGITAL_MARS_STDIO)
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation /*ignored*/)
 {
     import core.memory;
     import core.stdc.string : memcpy;
@@ -4022,7 +4046,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 }
 
 version (MICROSOFT_STDIO)
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation /*ignored*/)
 {
     import core.memory;
     import std.array : appender, uninitializedArray;
@@ -4060,15 +4084,15 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     return buf.length;
 }
 
-version (GCC_IO)
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+version (HAS_GETDELIM)
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation)
 {
     import core.memory;
     import core.stdc.stdlib : free;
     import core.stdc.wchar_ : fwide;
     import std.utf : encode;
 
-    if (fwide(fps, 0) > 0)
+    if (orientation == File.Orientation.wide)
     {
         /* Stream is in wide characters.
          * Read them and convert to chars.
@@ -4127,10 +4151,19 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         }
     }
 
-    char *lineptr = null;
-    size_t n = 0;
+    static char *lineptr = null;
+    static size_t n = 0;
+    scope(exit)
+    {
+        if (n > 128 * 1024)
+        {
+            // Bound memory used by readln
+            free(lineptr);
+            n = 0;
+        }
+    }
+
     auto s = getdelim(&lineptr, &n, terminator, fps);
-    scope(exit) free(lineptr);
     if (s < 0)
     {
         if (ferror(fps))
@@ -4138,10 +4171,9 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         buf.length = 0;                // end of file
         return 0;
     }
-    buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
-    if (s <= buf.length)
+    if (s <= buf.length || s <= GC.sizeOf(buf.ptr))
     {
-        buf.length = s;
+        buf = buf.ptr[0 .. s];
         buf[] = lineptr[0 .. s];
     }
     else
@@ -4151,8 +4183,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     return s;
 }
 
-version (GENERIC_IO)
-private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+version (NO_GETDELIM)
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orientation orientation)
 {
     import core.stdc.wchar_ : fwide;
     import std.utf : encode;
@@ -4160,7 +4192,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
     auto fp = cast(_iobuf*)fps;
-    if (fwide(fps, 0) > 0)
+    if (orientation == File.Orientation.wide)
     {
         /* Stream is in wide characters.
          * Read them and convert to chars.
