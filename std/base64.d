@@ -361,8 +361,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Returns:
      *  The number of times the output range's $(D put) method was invoked.
      */
-    size_t encode(R1, R2)(in R1 source, R2 range) if (isArray!R1 && is(ElementType!R1 : ubyte) &&
-                                                      !is(R2 == char[]))
+    size_t encode(R1, R2)(in R1 source, ref R2 range)
+        if (isArray!R1 && is(ElementType!R1 : ubyte) &&
+            !is(R2 == char[]) && isOutputRange!(R2, char))
     out(result)
     {
         assert(result == encodeLength(source.length), "The number of put is different from the length of Base64");
@@ -417,6 +418,24 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         return pcount;
     }
 
+    ///
+    unittest
+    {
+        struct OutputRange
+        {
+            char[] result;
+            void put(const(char) ch) { result ~= ch; }
+        }
+
+        ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
+
+        // This overload of encode() returns the number of calls to the output
+        // range's put method.
+        OutputRange output;
+        assert(Base64.encode(data, output) == 8);
+        assert(output.result == "Gis8TV1u");
+    }
+
 
     // InputRange to OutputRange
 
@@ -424,9 +443,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     /**
      * ditto
      */
-    size_t encode(R1, R2)(R1 source, R2 range) if (!isArray!R1 && isInputRange!R1 &&
-                                                   is(ElementType!R1 : ubyte) && hasLength!R1 &&
-                                                   !is(R2 == char[]) && isOutputRange!(R2, char))
+    size_t encode(R1, R2)(R1 source, ref R2 range)
+        if (!isArray!R1 && isInputRange!R1 && is(ElementType!R1 : ubyte) &&
+            hasLength!R1 && !is(R2 == char[]) && isOutputRange!(R2, char))
     out(result)
     {
         // @@@BUG@@@ Workaround for DbC problem.
@@ -1088,8 +1107,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  $(D Base64Exception) if $(D_PARAM source) contains characters outside the
      *  base alphabet of the current Base64 encoding scheme.
      */
-    size_t decode(R1, R2)(in R1 source, R2 range) if (isArray!R1 && is(ElementType!R1 : dchar) &&
-                                                      !is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
+    size_t decode(R1, R2)(in R1 source, ref R2 range)
+        if (isArray!R1 && is(ElementType!R1 : dchar) &&
+            !is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     out(result)
     {
         immutable expect = realDecodeLength(source);
@@ -1149,6 +1169,21 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         return pcount;
     }
 
+    ///
+    unittest
+    {
+        struct OutputRange
+        {
+            ubyte[] result;
+            void put(ubyte b) { result ~= b; }
+        }
+        OutputRange output;
+
+        // This overload of decode() returns the number of calls to put().
+        assert(Base64.decode("Gis8TV1u", output) == 6);
+        assert(output.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
+    }
+
 
     // InputRange to OutputRange
 
@@ -1156,9 +1191,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     /**
      * ditto
      */
-    size_t decode(R1, R2)(R1 source, R2 range) if (!isArray!R1 && isInputRange!R1 &&
-                                                   is(ElementType!R1 : dchar) && hasLength!R1 &&
-                                                   !is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
+    size_t decode(R1, R2)(R1 source, ref R2 range)
+        if (!isArray!R1 && isInputRange!R1 && is(ElementType!R1 : dchar) &&
+            hasLength!R1 && !is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     out(result)
     {
         // @@@BUG@@@ Workaround for DbC problem.
@@ -1880,4 +1915,52 @@ unittest
             assert(equal(Base64Re.decoder(Base64Re.encoder(cast(ubyte[])u)), u));
         }
     }
+}
+
+// Regression control for the output range ref bug in encode.
+unittest
+{
+    struct InputRange
+    {
+        ubyte[] impl = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
+        @property bool empty() { return impl.length == 0; }
+        @property ubyte front() { return impl[0]; }
+        void popFront() { impl = impl[1 .. $]; }
+        @property size_t length() { return impl.length; }
+    }
+
+    struct OutputRange
+    {
+        char[] result;
+        void put(char b) { result ~= b; }
+    }
+
+    InputRange ir;
+    OutputRange or;
+    assert(Base64.encode(ir, or) == 8);
+    assert(or.result == "Gis8TV1u");
+}
+
+// Regression control for the output range ref bug in decode.
+unittest
+{
+    struct InputRange
+    {
+        const(char)[] impl = "Gis8TV1u";
+        @property bool empty() { return impl.length == 0; }
+        @property dchar front() { return impl[0]; }
+        void popFront() { impl = impl[1 .. $]; }
+        @property size_t length() { return impl.length; }
+    }
+
+    struct OutputRange
+    {
+        ubyte[] result;
+        void put(ubyte b) { result ~= b; }
+    }
+
+    InputRange ir;
+    OutputRange or;
+    assert(Base64.decode(ir, or) == 6);
+    assert(or.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
 }
