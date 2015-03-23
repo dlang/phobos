@@ -80,6 +80,14 @@ unittest
  */
 alias Base64 = Base64Impl!('+', '/');
 
+///
+unittest
+{
+    ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
+    assert(Base64.encode(data) == "g9cwegE/");
+    assert(Base64.decode("g9cwegE/") == data);
+}
+
 
 /**
  * Variation of Base64 encoding that is safe for use in URLs and filenames.
@@ -87,6 +95,14 @@ alias Base64 = Base64Impl!('+', '/');
  * See $(D $(LREF Base64Impl)) for a description of available methods.
  */
 alias Base64URL = Base64Impl!('-', '_');
+
+///
+unittest
+{
+    ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
+    assert(Base64URL.encode(data) == "g9cwegE_");
+    assert(Base64URL.decode("g9cwegE_") == data);
+}
 
 
 /**
@@ -154,6 +170,18 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             return (sourceLength / 3) * 4 + (sourceLength % 3 == 0 ? 0 : sourceLength % 3 == 1 ? 2 : 3);
         else
             return (sourceLength / 3 + (sourceLength % 3 ? 1 : 0)) * 4;
+    }
+
+    ///
+    unittest
+    {
+        ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
+
+        // Allocate a buffer large enough to hold the encoded string.
+        auto buf = new char[encodeLength(data.length)];
+
+        Base64.encode(data, buf);
+        assert(buf == "Gis8TV1u");
     }
 
 
@@ -225,6 +253,22 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
         // encode method can't assume buffer length. So, slice needed.
         return buffer[0..bufptr - buffer.ptr];
+    }
+
+    ///
+    unittest
+    {
+        ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
+        char[32] buffer;    // much bigger than necessary
+
+        // Just to be sure...
+        auto encodedLength = Base64.encodeLength(data.length);
+        assert(buffer.length >= encodedLength);
+
+        // encode() returns a slice to the provided buffer.
+        auto encoded = Base64.encode(data, buffer[]);
+        assert(encoded is buffer[0 .. encodedLength]);
+        assert(encoded == "g9cwegE/");
     }
 
 
@@ -451,6 +495,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     /**
      * Encodes $(D_PARAM source) to newly-allocated buffer.
      *
+     * This convenience method alleviates the need to manually manage output
+     * buffers.
+     *
      * Params:
      *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
      *           range) to _encode.
@@ -462,6 +509,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     pure char[] encode(Range)(Range source) if (isArray!Range && is(ElementType!Range : ubyte))
     {
         return encode(source, new char[encodeLength(source.length)]);
+    }
+
+    ///
+    unittest
+    {
+        ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
+        assert(Base64.encode(data) == "Gis8TV1u");
     }
 
 
@@ -814,6 +868,18 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             return (sourceLength / 4) * 3;
     }
 
+    ///
+    unittest
+    {
+        auto encoded = "Gis8TV1u";
+
+        // Allocate a sufficiently large buffer to hold to decoded result.
+        auto buffer = new ubyte[Base64.decodeLength(encoded.length)];
+
+        Base64.decode(encoded, buffer);
+        assert(buffer == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
+    }
+
 
     // Used in decode contracts. Calculates the actual size the decoded
     // result should have, taking into account trailing padding.
@@ -912,6 +978,21 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         return buffer[0..bufptr - buffer.ptr];
     }
 
+    ///
+    unittest
+    {
+        auto encoded = "Gis8TV1u";
+        ubyte[32] buffer;   // much bigger than necessary
+
+        // Just to be sure...
+        auto decodedLength = Base64.decodeLength(encoded.length);
+        assert(buffer.length >= decodedLength);
+
+        // decode() returns a slice of the given buffer.
+        auto decoded = Base64.decode(encoded, buffer[]);
+        assert(decoded is buffer[0 .. decodedLength]);
+        assert(decoded == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
+    }
 
     // InputRange to ubyte[]
 
@@ -1147,6 +1228,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     /**
      * Decodes $(D_PARAM source) into newly-allocated buffer.
      *
+     * This convenience method alleviates the need to manually manage decoding
+     * buffers.
+     *
      * Params:
      *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
      *           range) to _decode.
@@ -1158,6 +1242,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     pure ubyte[] decode(Range)(Range source) if (isArray!Range && is(ElementType!Range : dchar))
     {
         return decode(source, new ubyte[decodeLength(source.length)]);
+    }
+
+    ///
+    unittest
+    {
+        auto data = "Gis8TV1u";
+        assert(Base64.decode(data) == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
     }
 
 
@@ -1178,6 +1269,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * This range will be a $(LINK2 std_range_primitives.html#isForwardRange,
      * forward range) if the underlying data source is at least a forward
      * range.
+     *
+     * Note: This struct is not intended to be created in user code directly;
+     * use the $(LREF decoder) function instead.
      */
     struct Decoder(Range) if (isInputRange!Range && (is(ElementType!Range : const(char)[]) ||
                                                      is(ElementType!Range : const(ubyte)[])))
@@ -1294,6 +1388,9 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * This range will be a $(LINK2 std_range_primitives.html#isForwardRange,
      * forward range) if the underlying data source is at least a forward
      * range.
+     *
+     * Note: This struct is not intended to be created in user code directly;
+     * use the $(LREF decoder) function instead.
      */
     struct Decoder(Range) if (isInputRange!Range && is(ElementType!Range : char))
     {
