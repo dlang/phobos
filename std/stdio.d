@@ -4159,6 +4159,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         {
             // Bound memory used by readln
             free(lineptr);
+            lineptr = null;
             n = 0;
         }
     }
