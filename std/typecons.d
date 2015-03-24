@@ -5150,7 +5150,7 @@ type `typeof(scoped!Class(args))`, and be initialized with a call to
 scoped. See below for an example.
 
 Note:
-It's illegal to move a class reference even if you are sure there
+It's illegal to move a class instance even if you are sure there
 are no pointers to it. As such, it is illegal to move a scoped object.
  */
 template scoped(T)
@@ -5251,6 +5251,10 @@ unittest
     auto a4 = makeScopedA(1);
     
     // Restrictions
+    static assert(!is(typeof({
+        import std.algorithm : move;
+        auto e0 = a1.move; // illegal, scoped objects can't be moved
+    })));
     static assert(!is(typeof({
         auto e1 = a1; // illegal, scoped objects can't be copied
         assert([a1][0].x == 42); // ditto
