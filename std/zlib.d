@@ -315,7 +315,14 @@ class Compress
   public:
 
     /**
-     * Construct. level is the same as for D.zlib.compress(). header can be used to make a gzip compatible stream.
+     * Construct.
+     *
+     * Params:
+     *    level = the same as for $(D std.zlib.compress())
+     *    header = can be used to make a gzip compatible stream. Defaults to HeaderFormat.deflate.
+     *
+     * See_Also:
+     *    $(LREF compress), $(LREF HeaderFormat)
      */
     this(int level, HeaderFormat header = HeaderFormat.deflate)
     in
@@ -346,8 +353,12 @@ class Compress
 
     /**
      * Compress the data in buf and return the compressed data.
-     * The buffers
-     * returned from successive calls to this should be concatenated together.
+     * Params:
+     *    buf = data to compress
+     *
+     * Returns:
+     *    the compressed data. The buffers returned from successive calls to this should be concatenated together.
+     *
      */
     const(void)[] compress(const(void)[] buf)
     {   int err;
