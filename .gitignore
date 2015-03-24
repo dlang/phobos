@@ -1,3 +1,8 @@
+/etc/c/zlib/*.obj
+/etc/c/zlib/zlib.lib
+/phobos.json
+/phobos.lib
+
 generated
 GNUmakefile
 .DS_Store

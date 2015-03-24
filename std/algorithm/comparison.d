@@ -205,13 +205,9 @@ private template indexOfFirstOvershadowingChoiceOnLast(choices...)
 Executes and returns one of a collection of handlers based on the type of the
 switch object.
 
-$(D choices) needs to be composed of function or delegate handlers that accept
-one argument. The first choice that $(D switchObject) can be casted to the type
+The first choice that $(D switchObject) can be casted to the type
 of argument it accepts will be called with $(D switchObject) casted to that
 type, and the value it'll return will be returned by $(D castSwitch).
-
-There can also be a choice that accepts zero arguments. That choice will be
-invoked if $(D switchObject) is null.
 
 If a choice's return type is void, the choice must throw an exception, unless
 all the choices are void. In that case, castSwitch itself will return void.
@@ -219,6 +215,15 @@ all the choices are void. In that case, castSwitch itself will return void.
 Throws: If none of the choice matches, a $(D SwitchError) will be thrown.  $(D
 SwitchError) will also be thrown if not all the choices are void and a void
 choice was executed without throwing anything.
+
+Params:
+    choices = The $(D choices) needs to be composed of function or delegate
+        handlers that accept one argument. There can also be a choice that
+        accepts zero arguments. That choice will be invoked if the $(D
+        switchObject) is null.
+
+Returns:
+    The value of the selected choice.
 
 Note: $(D castSwitch) can only be used with object types.
 */
@@ -484,10 +489,19 @@ unittest
                            )());
 }
 
-/**
-Returns $(D val), if it is between $(D lower) and $(D upper).
-Otherwise returns the nearest of the two. Equivalent to $(D max(lower,
-min(upper,val))).
+/** Clamps a value into the given bounds.
+
+This functions is equivalent to $(D max(lower, min(upper,val))).
+
+Params:
+    val = The value to _clamp.
+    lower = The _lower bound of the _clamp.
+    upper = The _upper bound of the _clamp.
+
+Returns:
+    Returns $(D val), if it is between $(D lower) and $(D upper).
+    Otherwise returns the nearest of the two. 
+
 */
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 in
@@ -532,7 +546,7 @@ body
     static assert(is(typeof(clamp(-1L, -2L, 2UL)) == long));
 
     // user-defined types
-    import std.datetime;
+    import std.datetime : Date;
     assert(clamp(Date(1982, 1, 4), Date(1012, 12, 21), Date(2012, 12, 21)) == Date(1982, 1, 4));
     assert(clamp(Date(1982, 1, 4), Date.min, Date.max) == Date(1982, 1, 4));
     // UFCS style
@@ -545,9 +559,7 @@ body
 Performs three-way lexicographical comparison on two input ranges
 according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
 lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
-corresponding element $(D e2) in $(D r2). If $(D binaryFun!pred(e1,
-e2)), $(D cmp) returns a negative value. If $(D binaryFun!pred(e2,
-e1)), $(D cmp) returns a positive value. If one of the ranges has been
+corresponding element $(D e2) in $(D r2). If one of the ranges has been
 finished, $(D cmp) returns a negative value if $(D r1) has fewer
 elements than $(D r2), a positive value if $(D r1) has more elements
 than $(D r2), and $(D 0) if the ranges have the same number of
@@ -555,6 +567,18 @@ elements.
 
 If the ranges are strings, $(D cmp) performs UTF decoding
 appropriately and compares the ranges one code point at a time.
+
+Params:
+    pred = The predicate used for comparison.
+    r1 = The first range.
+    r2 = The second range.
+
+Returns:
+    0 if both ranges compare equal. -1 if the first differing element of $(D
+    r1) is less than the corresponding element of $(D r2) according to $(D
+    pred). 1 if the first differing element of $(D r2) is less than the
+    corresponding element of $(D r1) according to $(D pred).
+
 */
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
 if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
@@ -569,7 +593,7 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
     }
 }
 
-// Specialization for strings (for speed purposes)
+/// ditto
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
 {
     import core.stdc.string : memcmp;
@@ -644,11 +668,8 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
 {
     int result;
 
-    debug(string) printf("string.cmp.unittest\n");
     result = cmp("abc", "abc");
     assert(result == 0);
-    //    result = cmp(null, null);
-    //    assert(result == 0);
     result = cmp("", "");
     assert(result == 0);
     result = cmp("abc", "abcd");
@@ -778,7 +799,8 @@ range of range (of range...) comparisons.
 {
     import std.algorithm.iteration : map;
     import std.math : approxEqual;
-    import std.internal.test.dummyrange;
+    import std.internal.test.dummyrange : ReferenceForwardRange, 
+        ReferenceInputRange, ReferenceInfiniteForwardRange;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -887,7 +909,7 @@ enum EditOp : char
     remove = 'r'
 }
 
-struct Levenshtein(Range, alias equals, CostType = size_t)
+private struct Levenshtein(Range, alias equals, CostType = size_t)
 {
     void deletionIncrement(CostType n)
     {
@@ -1095,6 +1117,14 @@ the minimal amount of edit operations necessary to transform $(D s)
 into $(D t).  Performs $(BIGOH s.length * t.length) evaluations of $(D
 equals) and occupies $(BIGOH s.length * t.length) storage.
 
+Params:
+    equals = The binary predicate to compare the elements of the two ranges.
+    s = The original range.
+    t = The transformation target
+
+Returns:
+    The minimal number of edits to transform s into t.
+
 Allocates GC memory.
 */
 size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
@@ -1210,7 +1240,15 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 
 // max
 /**
-Returns the maximum of the passed-in values.
+Iterates the passed arguments and return the maximum value.
+
+Params:
+    args = The values to select the maximum from. At least two arguments must
+    be passed.
+
+Returns:
+    The maximum of the passed-in args. The type of the returned value is
+    the type among the passed arguments that is able to store the largest value.
 */
 MaxType!T max(T...)(T args)
     if (T.length >= 2)
@@ -1273,7 +1311,7 @@ MaxType!T max(T...)(T args)
     assert(max(a, f) == 5);
 
     //Test user-defined types
-    import std.datetime;
+    import std.datetime : Date;
     assert(max(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(2012, 12, 21));
     assert(max(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(2012, 12, 21));
     assert(max(Date(1982, 1, 4), Date.min) == Date(1982, 1, 4));

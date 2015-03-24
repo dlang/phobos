@@ -19,14 +19,24 @@ import std.traits;
 /** Helper function that returns a _complex number with the specified
     real and imaginary parts.
 
-    If neither $(D re) nor $(D im) are floating-point numbers, this
-    function returns a $(D Complex!double).  Otherwise, the return type
-    is deduced using $(D std.traits.CommonType!(R, I)).
+    Params:
+        R = (template parameter) type of real part of complex number
+        I = (template parameter) type of imaginary part of complex number
+
+        re = real part of complex number to be constructed
+        im = (optional) imaginary part of complex number
+
+    Returns:
+        $(D Complex) instance with real and imaginary parts set
+        to the values provided as input.  If neither $(D re) nor
+        $(D im) are floating-point numbers, the return type will
+        be $(D Complex!double).  Otherwise, the return type is
+        deduced using $(D std.traits.CommonType!(R, I)).
 */
-auto complex(T)(T re)  @safe pure nothrow @nogc  if (is(T : double))
+auto complex(R)(R re)  @safe pure nothrow @nogc  if (is(R : double))
 {
-    static if (isFloatingPoint!T)
-        return Complex!T(re, 0);
+    static if (isFloatingPoint!R)
+        return Complex!R(re, 0);
     else
         return Complex!double(re, 0);
 }

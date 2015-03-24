@@ -480,7 +480,19 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
 
 
 /***********************************
- * Calculates the absolute value
+ * Calculates the absolute value of a number
+ *
+ * Params:
+ *     Num = (template parameter) type of number
+ *       x = real number value
+ *       z = complex number value
+ *       y = imaginary number value
+ *
+ * Returns:
+ *     The absolute value of the number.  If floating-point or integral,
+ *     the return type will be the same as the input; if complex or
+ *     imaginary, the returned value will be the corresponding floating
+ *     point type.
  *
  * For complex numbers, abs(z) = sqrt( $(POWER z.re, 2) + $(POWER z.im, 2) )
  * = hypot(z.re, z.im).

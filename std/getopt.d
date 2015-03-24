@@ -445,7 +445,7 @@ unittest
 
     bool foo;
     bool bar;
-    auto rslt = getopt(args, "foo|f" "Some information about foo.", &foo, "bar|b",
+    auto rslt = getopt(args, "foo|f", "Some information about foo.", &foo, "bar|b",
         "Some help message about bar.", &bar);
 
     if (rslt.helpWanted)
