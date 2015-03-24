@@ -301,9 +301,12 @@ accessible with the syntax $(D obj[0]) for the first field, $(D obj[1])
 for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
-motivated by the ability to use value tuples with various compile-time
-loop constructs (e.g. type tuple iteration), all of which use
+motivated by the ability to use value `Tuples` with various compile-time
+loop constructs (e.g. $(XREF typetuple, TypeTuple) iteration), all of which use
 zero-based indexing.
+
+Params:
+    Specs = A list of types (and optionally, member names) that the `Tuple` contains.
 */
 template Tuple(Specs...)
 {
@@ -428,14 +431,22 @@ template Tuple(Specs...)
     struct Tuple
     {
         /**
-         * The types of the tuple's components.
+         * The types of the `Tuple's` components.
          */
         alias Types = staticMap!(extractType, fieldSpecs);
+        
+        ///
+        unittest
+        {
+            alias Fields = Tuple!(int, "id", string, float);
+            static assert(is(Fields.Types == TypeTuple!(int, string, float)));
+        }
 
         /**
-         * The names of the tuple's components. Unnamed fields have empty names.
+         * The names of the `Tuple's` components. Unnamed fields have empty names.
          */
         alias fieldNames = staticMap!(extractName, fieldSpecs);
+        
         ///
         unittest
         {
@@ -444,13 +455,29 @@ template Tuple(Specs...)
         }
 
         /**
-         * Use $(D t.expand) for a tuple $(D t) to expand it into its
-         * components. The result of $(D expand) acts as if the tuple components
+         * Use $(D t.expand) for a `Tuple` $(D t) to expand it into its
+         * components. The result of $(D expand) acts as if the `Tuple's` components
          * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
          * single value.)
          */
         Types expand;
         mixin(injectNamedFields());
+        
+        ///
+        unittest
+        {
+            auto t1 = tuple(1, " hello ", 2.3);
+            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
+            
+            void takeSeveralTypes(int n, string s, bool b) 
+            {
+                assert(n == 4 && s == "test" && b == false);
+            }
+            
+            auto t2 = tuple(4, "test", false);
+            //t.expand acting as a list of values
+            takeSeveralTypes(t2.expand);
+        }
 
         static if (is(Specs))
         {
@@ -472,28 +499,19 @@ template Tuple(Specs...)
             // This is mostly to make t[n] work.
             alias _Tuple_super this;
         }
-        
-        ///
-        unittest
-        {
-            auto t1 = tuple(1, " hello ", 2.3);
-            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
-            
-            void takeSeveralTypes(int n, string s, bool b) 
-            {
-                assert(n == 4 && s == "test" && b == false);
-            }
-            
-            auto t2 = tuple(4, "test", false);
-            //t.expand acting as a list of values
-            takeSeveralTypes(t2.expand);
-        }
 
         // backwards compatibility
         alias field = expand;
 
         /**
          * Constructor taking one value for each field.
+         *
+         * Params:
+         *     values = A list of values that are either the same
+         *              types as those given by the `Types` field
+         *              of this `Tuple`, or can implicitly convert 
+         *              to those types. They must be in the same 
+         *              order as they appear in `Types`.
          */
         static if (Types.length > 0)
         {
@@ -513,6 +531,10 @@ template Tuple(Specs...)
 
         /**
          * Constructor taking a compatible array.
+         *
+         * Params:
+         *     values = A compatible static array to build the `Tuple` from.
+         *              Array slices are not supported.
          */
         this(U, size_t n)(U[n] values)
         if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
@@ -535,6 +557,10 @@ template Tuple(Specs...)
          * $(B iff) they are both of the same length, and, for each type `T` on the
          * left-hand side, the corresponding type `U` on the right-hand side can
          * implicitly convert to `T`.
+         *
+         * Params:
+         *     another = A compatible `Tuple` to build from. Its type must be
+         *               compatible with the target `Tuple's` type.
          */
         this(U)(U another)
         if (areBuildCompatibleTuples!(typeof(this), U))
@@ -568,6 +594,13 @@ template Tuple(Specs...)
          *   $(LI For each value `v1` on the left-hand side and each value 
          *        `v2` on the right-hand side, the expression `v1 == v2` is 
          *        true.))
+         *
+         * Params:
+         *     rhs = The `Tuple` to compare against. It must meeting the criteria
+         *           for comparison between `Tuples`.
+         *
+         * Returns:
+         *     true if both `Tuples` are equal, otherwise false.
          */
         bool opEquals(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "=="))
@@ -594,6 +627,10 @@ template Tuple(Specs...)
 
         /**
          * Comparison for ordering.
+         *
+         * Params:
+         *     rhs = The `Tuple` to compare against. It must meet the criteria
+         *           for comparison between `Tuples`.
          *
          * Returns:
          * For any values `v1` on the right-hand side and `v2` on the
@@ -647,8 +684,12 @@ template Tuple(Specs...)
         }
 
         /**
-         * Assignment from another `Tuple`. Each element of the source must be
-         * implicitly assignable to the respective element of the target.
+         * Assignment from another `Tuple`.
+         *
+         * Params:
+         *     rhs = The source `Tuple` to assign from. Each element of the 
+         *           source `Tuple` must be implicitly assignable to each
+         *           respective element of the target `Tuple`.
          */
         void opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
@@ -676,7 +717,16 @@ template Tuple(Specs...)
         }
 
         /**
-         * Takes a slice of the `Tuple`.
+         * Takes a slice of this `Tuple`.
+         *
+         * Params:
+         *     from = A `size_t` designating the starting position to slice from.
+         *     to = A `size_t` designating the ending position.
+         *
+         * Returns:
+         *     A new `Tuple` that is a slice from `[from, to$(RPAREN)` of the original. 
+         *     It has the same types and values as the range `[from, to$(RPAREN)` in 
+         *     the original.
          */
         @property
         ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
@@ -696,6 +746,12 @@ template Tuple(Specs...)
             assert(s[0] == "abc" && s[1] == 4.5);
         }
 
+        /**
+            Creates a hash of this `Tuple`.
+            
+            Returns:
+                A unique `size_t` representing the hash of this `Tuple`.
+         */
         size_t toHash() const nothrow @trusted
         {
             size_t h = 0;
@@ -733,6 +789,9 @@ template Tuple(Specs...)
 
         /**
          * Converts to string.
+         *
+         * Returns:
+         *     The string representation of this `Tuple`.
          */
         string toString()()
         {
@@ -782,7 +841,13 @@ unittest
 }
 
 /**
-    Return a copy of a `Tuple` with its fields in reverse order.
+    Create a copy of a `Tuple` with its fields in reverse order.
+    
+    Params:
+        t = The `Tuple` to copy.
+    
+    Returns:
+        A copy of `t` with its fields in reverse order.
  */
 ReverseTupleType!T reverse(T)(T t)
     if (isTuple!T)
@@ -1214,8 +1279,21 @@ unittest
 }
 
 /**
-Returns a $(D Tuple) object instantiated and initialized according to
-the arguments.
+    Constructs a $(D Tuple) object instantiated and initialized according to
+    the given arguments.
+    
+    Params:
+        Names = A list of strings naming each successive field of the `Tuple`.
+                Each name matches up with the corresponding field given by `Args`.
+                A name does not have to be provided for every field, but as
+                the names must proceed in order, it is not possible to skip
+                one field and name the next after it.
+                
+        args = Values to initialize the `Tuple` with. The `Tuple's` type will
+               be inferred from the types of the values given.
+    
+    Returns:
+        A new `Tuple` with its type inferred from the arguments given.
 */
 template tuple(Names...)
 {
@@ -1273,7 +1351,13 @@ unittest
 }
 
 /**
-Returns $(D true) if and only if $(D T) is an instance of $(D std.typecons.Tuple).
+    Returns $(D true) if and only if $(D T) is an instance of $(D std.typecons.Tuple).
+    
+    Params:
+        T = The type to check.
+        
+    Returns:
+        true if `T` is a `Tuple` type, false otherwise.
  */
 template isTuple(T)
 {
@@ -4399,7 +4483,19 @@ unittest
 }
 
 /**
-Make proxy for $(D a).
+    Creates a proxy for the value `a` that will forward all operations
+    while disabling implicit conversions. The aliased item `a` must be 
+    an $(B lvalue). This is useful for creating a new type from the 
+    "base" type (though this is $(B not) a subtype-supertype 
+    relationship; the new type is not related to the old type in any way, 
+    by design).
+    
+    The new type supports all operations that the underlying type does,
+    including all operators such as `+`, `--`, `<`, `[]`, etc.
+    
+    Params:
+        a = The value to act as a proxy for all operations. It must
+            be an lvalue.
  */
 mixin template Proxy(alias a)
 {
@@ -4626,6 +4722,63 @@ unittest
     // Disable implicit conversions to original type.
     //int x = n;
     //func(n);
+}
+
+///The proxied value must be an $(B lvalue).
+unittest
+{
+    struct NewIntType
+    {
+        //Won't work; the literal '1' is
+        //is an rvalue, not an lvalue
+        //mixin Proxy!1; 
+        
+        //Okay, n is an lvalue
+        int n;
+        mixin Proxy!n;
+        
+        this(int n) { this.n = n; }
+    }
+    
+    NewIntType nit = 0;
+    nit++;
+    assert(nit == 1);
+    
+    
+    struct NewObjectType
+    {
+        //Ok, "new Object" is an lvalue.
+        //This code is a bit weird, though.
+        mixin Proxy!(new Object);
+    }
+    
+    NewObjectType not;
+    assert(__traits(compiles, not.toHash()));
+}
+
+/**
+    There is one exception to the fact that the new type is not related to the
+    old type. Pseudo member functions that use 
+    $(LINK2 http://ddili.org/ders/d.en/ufcs.html, Universal Function Call Syntax)
+    are usable with the new type; they will be forwarded on to the proxied value.
+ */
+unittest
+{
+    import std.math;
+    
+    float f = 1.0;
+    assert(!f.isInfinity);
+    
+    struct NewFloat
+    {
+        float _;
+        mixin Proxy!_;
+        
+        this(float f) { _ = f; }
+    }
+ 
+    NewFloat nf = 1.0f;
+    assert(!nf.isInfinity);
 }
 
 unittest
