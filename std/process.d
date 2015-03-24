@@ -990,7 +990,7 @@ unittest
     auto env = ["foo" : "bar"];
     assert (wait(spawnShell(cmd~redir, env)) == 0);
     auto f = File(tmpFile, "a");
-    version(Win64) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
+    version(CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
     assert (wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
     f.close();
     auto output = std.file.readText(tmpFile);
