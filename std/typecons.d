@@ -4399,7 +4399,19 @@ unittest
 }
 
 /**
-Make proxy for $(D a).
+    Creates a proxy for the value `a` that will forward all operations
+    while disabling implicit conversions. The aliased item `a` must be 
+    an $(B lvalue). This is useful for creating a new type from the 
+    "base" type (though this is $(B not) a subtype-supertype 
+    relationship; the new type is not related to the old type in any way, 
+    by design).
+    
+    The new type supports all operations that the underlying type does,
+    including all operators such as `+`, `--`, `<`, `[]`, etc.
+    
+    Params:
+        a = The value to act as a proxy for all operations. It must
+            be an lvalue.
  */
 mixin template Proxy(alias a)
 {
@@ -4626,6 +4638,65 @@ unittest
     // Disable implicit conversions to original type.
     //int x = n;
     //func(n);
+}
+
+///The proxied value must be an $(B lvalue).
+unittest
+{
+    struct NewIntType
+    {
+        //Won't work; the literal '1' is
+        //is an rvalue, not an lvalue
+        //mixin Proxy!1; 
+        
+        //Okay, n is an lvalue
+        int n;
+        mixin Proxy!n;
+        
+        this(int n) { this.n = n; }
+    }
+    
+    NewIntType nit = 0;
+    nit++;
+    assert(nit == 1);
+    
+    
+    struct NewObjectType
+    {
+        Object obj;
+        //Ok, obj is an lvalue
+        mixin Proxy!obj;
+        
+        this (Object o) { obj = o; }
+    }
+    
+    NewObjectType not = new Object();
+    assert(__traits(compiles, not.toHash()));
+}
+
+/**
+    There is one exception to the fact that the new type is not related to the
+    old type. $(LINK2 http://dlang.org/function.html#pseudo-member, Pseudo-member)
+    functions are usable with the new type; they will be forwarded on to the 
+    proxied value.
+ */
+unittest
+{
+    import std.math;
+    
+    float f = 1.0;
+    assert(!f.isInfinity);
+    
+    struct NewFloat
+    {
+        float _;
+        mixin Proxy!_;
+        
+        this(float f) { _ = f; }
+    }
+ 
+    NewFloat nf = 1.0f;
+    assert(!nf.isInfinity);
 }
 
 unittest
