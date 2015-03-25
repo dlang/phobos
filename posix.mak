@@ -208,7 +208,7 @@ STD_MODULES = $(addprefix std/, \
   	kickstart tests thompson)) \
   signals socket socketstream stdint stdio stdiobase stream \
   string syserror system traits typecons typetuple uni uri utf uuid variant \
-  xml zip zlib $(addprefix algorithm/,comparison iteration \
+  xml zip zlib $(addprefix algorithm/,comparison internal iteration \
     mutation searching setops sorting))
 
 # OS-specific D modules
