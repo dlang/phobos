@@ -4165,12 +4165,12 @@ version(unittest) private struct __conv_EmplaceTest
 version(unittest) private class __conv_EmplaceTestClass
 {
     int i = 3;
-    this(int i)
+    this(int i) @nogc @safe pure nothrow
     {
         assert(this.i == 3 && i == 5);
         this.i = i;
     }
-    this(int i, ref int j)
+    this(int i, ref int j) @nogc @safe pure nothrow
     {
         assert(i == 5 && j == 6);
         this.i = i;
@@ -4963,15 +4963,10 @@ unittest
     emplaceRef!int(i, 5);
 }
 
-private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
+private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
 {
-    import std.exception : enforce;
-    enforce!ConvException(chunk.length >= typeSize,
-        convFormat("emplace: Chunk size too small: %s < %s size = %s",
-        chunk.length, typeName, typeSize));
-    enforce!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
-        convFormat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
-        chunk.ptr, typeAlignment, typeName));
+    assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
+    assert((cast(size_t)chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
 }
 
 /**
@@ -5013,10 +5008,11 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
     return result;
 }
 
-unittest
+@nogc pure nothrow unittest
 {
     int var = 6;
-    auto k = emplace!__conv_EmplaceTestClass(new void[__traits(classInstanceSize, __conv_EmplaceTestClass)], 5, var);
+    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
+    auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
     assert(k.i == 5);
     assert(var == 7);
 }
