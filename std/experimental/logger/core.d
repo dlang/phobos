@@ -479,7 +479,7 @@ template defaultLogFunction(LogLevel ll)
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy A args) @safe
-        if (args.length > 0 && !is(Unqual!(A[0]) : bool))
+        if ((args.length > 0 && !is(Unqual!(A[0]) : bool)) || args.length == 0)
     {
         static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
         {
@@ -1921,6 +1921,9 @@ version (unittest)
     assert(tl1.line == __LINE__ - 1);
 
     log(LogLevel.warning, true);
+    assert(tl1.line == __LINE__ - 1);
+
+    trace();
     assert(tl1.line == __LINE__ - 1);
 }
 
