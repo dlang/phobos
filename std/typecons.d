@@ -1576,9 +1576,17 @@ unittest
 
 /**
   Order the provided members to minimize size while preserving alignment.
-  Returns a declaration to be mixed in.
   Alignment is not always optimal for 80-bit reals, nor for structs declared
   as align(1).
+  
+  Params:
+      E = A list of the types to be aligned, representing fields 
+          of an aggregate such as a `struct` or `class`.
+      
+      names = The names of the fields that are to be aligned.
+      
+  Returns:
+      A string to be mixed in to an aggregate, such as a `struct` or `class`.
 */
 string alignForSize(E...)(string[] names...)
 {
