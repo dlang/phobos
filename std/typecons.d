@@ -1520,6 +1520,9 @@ unittest
     Similar to $(D Rebindable!(T)) but strips all qualifiers from the reference as
     opposed to just constness / immutability. Primary intended use case is with
     shared (having thread-local reference to shared class data)
+    
+    Params:
+        T = A class or interface type.
  */
 template UnqualRef(T)
     if (is(T == class) || is(T == interface))
