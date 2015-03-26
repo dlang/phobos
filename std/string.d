@@ -1953,7 +1953,7 @@ S capitalize(S)(S s) @trusted pure
 
 /++
     Split $(D s) into an array of lines according to the unicode standard using
-    $(D '\r'), $(D '\n'), $(D "\r\n"), $(XREF uni, lineSep), 
+    $(D '\r'), $(D '\n'), $(D "\r\n"), $(XREF uni, lineSep),
     $(XREF uni, paraSep), $(D U+0085) (NEL), $(D '\v')  and $(D '\f')
     as delimiters. If $(D keepTerm) is set to $(D KeepTerminator.yes), then the
     delimiter is included in the strings returned.
@@ -1963,7 +1963,7 @@ S capitalize(S)(S s) @trusted pure
 
     Allocates memory; use $(LREF lineSplitter) for an alternative that
     does not.
-    
+
     Adheres to $(WEB http://www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
   Params:
@@ -2029,7 +2029,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
                         goto default;
                     break;
                 /* Manually decode:
-                 *  NEL is C2 85 
+                 *  NEL is C2 85
                  */
                 case 0xC2:
                     if(i + 1 < s.length && s[i + 1] == 0x85)
@@ -2038,7 +2038,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
                         iStart = i + 2;
                         i += 1;
                     }
-                    else 
+                    else
                         goto default;
                     break;
             }
@@ -2092,7 +2092,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
         assert(lines[11] == "kindergarten");
         assert(lines[12] == "");
         assert(lines[13] == "cookies");
-        
+
 
         ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
         auto ulines = splitLines(cast(char[])u);
@@ -2129,14 +2129,14 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
 
 /***********************************
  *  Split an array or slicable range of characters into a range of lines
-    using $(D '\r'), $(D '\n'), $(D '\v'), $(D '\f'), $(D "\r\n"), 
-    $(XREF uni, lineSep), $(XREF uni, paraSep) and $(D '\u0085') (NEL) 
+    using $(D '\r'), $(D '\n'), $(D '\v'), $(D '\f'), $(D "\r\n"),
+    $(XREF uni, lineSep), $(XREF uni, paraSep) and $(D '\u0085') (NEL)
     as delimiters. If $(D keepTerm) is set to $(D KeepTerminator.yes), then the
     delimiter is included in the slices returned.
 
     Does not throw on invalid UTF; such is simply passed unchanged
     to the output.
-    
+
     Adheres to $(WEB http://www.unicode.org/versions/Unicode7.0.0/ch05.pdf, Unicode 7.0).
 
     Does not allocate memory.
@@ -2239,7 +2239,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
                                 else
                                     goto default;
                             /* Manually decode:
-                            *  NEL is C2 85 
+                            *  NEL is C2 85
                             */
                             case 0xC2:
                                 if(i + 1 < _input.length && _input[i + 1] == 0x85)
@@ -2248,7 +2248,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
                                     iNext = i + 2;
                                     break Loop;
                                 }
-                                else 
+                                else
                                     goto default;
                         }
                         else
@@ -2305,8 +2305,8 @@ if ((hasSlicing!Range && hasLength!Range) ||
     {
         auto s = to!S(
             "\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\n" ~
-            "sunday\nmon\u2030day\nschadenfreude\vkindergarten\f\vcookies\u0085"    
-        ); 
+            "sunday\nmon\u2030day\nschadenfreude\vkindergarten\f\vcookies\u0085"
+        );
         auto lines = lineSplitter(s).array;
         assert(lines.length == 14);
         assert(lines[0] == "");
@@ -2323,7 +2323,7 @@ if ((hasSlicing!Range && hasLength!Range) ||
         assert(lines[11] == "kindergarten");
         assert(lines[12] == "");
         assert(lines[13] == "cookies");
-        
+
 
         ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
         auto ulines = lineSplitter(cast(char[])u).array;
@@ -5089,6 +5089,12 @@ return it typed as a UTF string.
 
 $(D ubyte) becomes $(D char), $(D ushort) becomes $(D wchar) and $(D uint)
 becomes $(D dchar). Type qualifiers are preserved.
+
+Params:
+    arr = array of bytes, ubytes, shorts, ushorts, ints, or uints
+
+Returns:
+    arr retyped as an array of chars, wchars, or dchars
 
 See_Also: $(LREF representation)
 */
