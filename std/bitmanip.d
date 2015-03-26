@@ -28,7 +28,7 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import std.range.primitives;
-import std.system;
+public import std.system : Endian;
 import std.traits;
 
 version(unittest)
