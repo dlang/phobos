@@ -296,14 +296,17 @@ unittest
 Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
 values together, notably when returning multiple values from a
-function. If $(D obj) is a tuple, the individual members are
+function. If $(D obj) is a `Tuple`, the individual members are
 accessible with the syntax $(D obj[0]) for the first field, $(D obj[1])
 for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
-motivated by the ability to use value tuples with various compile-time
-loop constructs (e.g. type tuple iteration), all of which use
+motivated by the ability to use value `Tuple`s with various compile-time
+loop constructs (e.g. $(XREF typetuple, TypeTuple) iteration), all of which use
 zero-based indexing.
+
+Params:
+    Specs = A list of types (and optionally, member names) that the `Tuple` contains.
 */
 template Tuple(Specs...)
 {
@@ -428,14 +431,22 @@ template Tuple(Specs...)
     struct Tuple
     {
         /**
-         * The types of the tuple's components.
+         * The types of the `Tuple`'s components.
          */
         alias Types = staticMap!(extractType, fieldSpecs);
+        
+        ///
+        unittest
+        {
+            alias Fields = Tuple!(int, "id", string, float);
+            static assert(is(Fields.Types == TypeTuple!(int, string, float)));
+        }
 
         /**
-         * The names of the tuple's components. Unnamed fields have empty names.
+         * The names of the `Tuple`'s components. Unnamed fields have empty names.
          */
         alias fieldNames = staticMap!(extractName, fieldSpecs);
+        
         ///
         unittest
         {
@@ -444,13 +455,29 @@ template Tuple(Specs...)
         }
 
         /**
-         * Use $(D t.expand) for a tuple $(D t) to expand it into its
-         * components. The result of $(D expand) acts as if the tuple components
+         * Use $(D t.expand) for a `Tuple` $(D t) to expand it into its
+         * components. The result of $(D expand) acts as if the `Tuple`'s components
          * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
          * single value.)
          */
         Types expand;
         mixin(injectNamedFields());
+        
+        ///
+        unittest
+        {
+            auto t1 = tuple(1, " hello ", 2.3);
+            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
+            
+            void takeSeveralTypes(int n, string s, bool b) 
+            {
+                assert(n == 4 && s == "test" && b == false);
+            }
+            
+            auto t2 = tuple(4, "test", false);
+            //t.expand acting as a list of values
+            takeSeveralTypes(t2.expand);
+        }
 
         static if (is(Specs))
         {
@@ -472,28 +499,19 @@ template Tuple(Specs...)
             // This is mostly to make t[n] work.
             alias _Tuple_super this;
         }
-        
-        ///
-        unittest
-        {
-            auto t1 = tuple(1, " hello ", 2.3);
-            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
-            
-            void takeSeveralTypes(int n, string s, bool b) 
-            {
-                assert(n == 4 && s == "test" && b == false);
-            }
-            
-            auto t2 = tuple(4, "test", false);
-            //t.expand acting as a list of values
-            takeSeveralTypes(t2.expand);
-        }
 
         // backwards compatibility
         alias field = expand;
 
         /**
          * Constructor taking one value for each field.
+         *
+         * Params:
+         *     values = A list of values that are either the same
+         *              types as those given by the `Types` field
+         *              of this `Tuple`, or can implicitly convert 
+         *              to those types. They must be in the same 
+         *              order as they appear in `Types`.
          */
         static if (Types.length > 0)
         {
@@ -513,6 +531,10 @@ template Tuple(Specs...)
 
         /**
          * Constructor taking a compatible array.
+         *
+         * Params:
+         *     values = A compatible static array to build the `Tuple` from.
+         *              Array slices are not supported.
          */
         this(U, size_t n)(U[n] values)
         if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
@@ -531,10 +553,14 @@ template Tuple(Specs...)
         }
 
         /**
-         * Constructor taking a compatible `Tuple`. Two `Tuples` are compatible
+         * Constructor taking a compatible `Tuple`. Two `Tuple`s are compatible
          * $(B iff) they are both of the same length, and, for each type `T` on the
          * left-hand side, the corresponding type `U` on the right-hand side can
          * implicitly convert to `T`.
+         *
+         * Params:
+         *     another = A compatible `Tuple` to build from. Its type must be
+         *               compatible with the target `Tuple`'s type.
          */
         this(U)(U another)
         if (areBuildCompatibleTuples!(typeof(this), U))
@@ -557,7 +583,7 @@ template Tuple(Specs...)
         }
 
         /**
-         * Comparison for equality. Two `Tuples` are considered equal
+         * Comparison for equality. Two `Tuple`s are considered equal
          * $(B iff) they fulfill the following criteria:
          *
          * $(UL 
@@ -568,6 +594,13 @@ template Tuple(Specs...)
          *   $(LI For each value `v1` on the left-hand side and each value 
          *        `v2` on the right-hand side, the expression `v1 == v2` is 
          *        true.))
+         *
+         * Params:
+         *     rhs = The `Tuple` to compare against. It must meeting the criteria
+         *           for comparison between `Tuple`s.
+         *
+         * Returns:
+         *     true if both `Tuple`s are equal, otherwise false.
          */
         bool opEquals(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "=="))
@@ -594,6 +627,10 @@ template Tuple(Specs...)
 
         /**
          * Comparison for ordering.
+         *
+         * Params:
+         *     rhs = The `Tuple` to compare against. It must meet the criteria
+         *           for comparison between `Tuple`s.
          *
          * Returns:
          * For any values `v1` on the right-hand side and `v2` on the
@@ -647,8 +684,12 @@ template Tuple(Specs...)
         }
 
         /**
-         * Assignment from another `Tuple`. Each element of the source must be
-         * implicitly assignable to the respective element of the target.
+         * Assignment from another `Tuple`.
+         *
+         * Params:
+         *     rhs = The source `Tuple` to assign from. Each element of the 
+         *           source `Tuple` must be implicitly assignable to each
+         *           respective element of the target `Tuple`.
          */
         void opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
@@ -676,7 +717,16 @@ template Tuple(Specs...)
         }
 
         /**
-         * Takes a slice of the `Tuple`.
+         * Takes a slice of this `Tuple`.
+         *
+         * Params:
+         *     from = A `size_t` designating the starting position of the slice.
+         *     to = A `size_t` designating the ending position (exclusive) of the slice.
+         *
+         * Returns:
+         *     A new `Tuple` that is a slice from `[from, to$(RPAREN)` of the original. 
+         *     It has the same types and values as the range `[from, to$(RPAREN)` in 
+         *     the original.
          */
         @property
         ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
@@ -696,6 +746,12 @@ template Tuple(Specs...)
             assert(s[0] == "abc" && s[1] == 4.5);
         }
 
+        /**
+            Creates a hash of this `Tuple`.
+            
+            Returns:
+                A `size_t` representing the hash of this `Tuple`.
+         */
         size_t toHash() const nothrow @trusted
         {
             size_t h = 0;
@@ -733,6 +789,9 @@ template Tuple(Specs...)
 
         /**
          * Converts to string.
+         *
+         * Returns:
+         *     The string representation of this `Tuple`.
          */
         string toString()()
         {
@@ -755,7 +814,7 @@ unittest
 }
 
 /** 
-    Tuple members can be named. It is legal to mix named and unnamed
+    `Tuple` members can be named. It is legal to mix named and unnamed
     members. The method above is still applicable to all fields.
  */
 unittest
@@ -769,9 +828,9 @@ unittest
 }
 
 /**
-    A `Tuple` with named fields is distinct types from a `Tuple` with unnamed
+    A `Tuple` with named fields is a distinct type from a `Tuple` with unnamed
     fields, i.e. each naming imparts a separate type for the `Tuple`. Two
-    `Tuple` differing in naming only are still distinct, even though they
+    `Tuple`s differing in naming only are still distinct, even though they
     might have the same structure.
  */
 unittest
@@ -782,7 +841,13 @@ unittest
 }
 
 /**
-    Return a copy of a `Tuple` with its fields in reverse order.
+    Create a copy of a `Tuple` with its fields in reverse order.
+    
+    Params:
+        t = The `Tuple` to copy.
+    
+    Returns:
+        A copy of `t` with its fields in reverse order.
  */
 ReverseTupleType!T reverse(T)(T t)
     if (isTuple!T)
@@ -1214,8 +1279,21 @@ unittest
 }
 
 /**
-Returns a $(D Tuple) object instantiated and initialized according to
-the arguments.
+    Constructs a $(D Tuple) object instantiated and initialized according to
+    the given arguments.
+    
+    Params:
+        Names = A list of strings naming each successive field of the `Tuple`.
+                Each name matches up with the corresponding field given by `Args`.
+                A name does not have to be provided for every field, but as
+                the names must proceed in order, it is not possible to skip
+                one field and name the next after it.
+                
+        args = Values to initialize the `Tuple` with. The `Tuple`'s type will
+               be inferred from the types of the values given.
+    
+    Returns:
+        A new `Tuple` with its type inferred from the arguments given.
 */
 template tuple(Names...)
 {
@@ -1273,7 +1351,13 @@ unittest
 }
 
 /**
-Returns $(D true) if and only if $(D T) is an instance of $(D std.typecons.Tuple).
+    Returns $(D true) if and only if $(D T) is an instance of $(D std.typecons.Tuple).
+    
+    Params:
+        T = The type to check.
+        
+    Returns:
+        true if `T` is a `Tuple` type, false otherwise.
  */
 template isTuple(T)
 {
