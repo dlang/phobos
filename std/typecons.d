@@ -1361,32 +1361,14 @@ refer to another object. For completeness, $(D Rebindable!(T)) aliases
 itself away to $(D T) if $(D T) is a non-const object type. However,
 $(D Rebindable!(T)) does not compile if $(D T) is a non-class type.
 
-Regular $(D const) object references cannot be reassigned:
-
-----
-class Widget { int x; int y() const { return x; } }
-const a = new Widget;
-a.y();          // fine
-a.x = 5;        // error! can't modify const a
-a = new Widget; // error! can't modify const a
-----
-
-However, $(D Rebindable!(Widget)) does allow reassignment, while
-otherwise behaving exactly like a $(D const Widget):
-
-----
-auto a = Rebindable!(const Widget)(new Widget);
-a.y();          // fine
-a.x = 5;        // error! can't modify const a
-a = new Widget; // fine
-----
-
 You may want to use $(D Rebindable) when you want to have mutable
 storage referring to $(D const) objects, for example an array of
 references that must be sorted in place. $(D Rebindable) does not
 break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
+Params:
+    T = An object, interface, or array slice type.
  */
 template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
 {
@@ -1411,9 +1393,45 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArra
     }
 }
 
+///Regular $(D const) object references cannot be reassigned.
+unittest
+{
+    class Widget { int x; int y() const { return x; } }
+    const a = new Widget;
+    // Fine
+    a.y();
+    // error! can't modify const a
+    // a.x = 5;
+    // error! can't modify const a
+    // a = new Widget;
+}
+
+/**
+    However, $(D Rebindable!(Widget)) does allow reassignment, 
+    while otherwise behaving exactly like a $(D const Widget).
+ */
+unittest
+{
+    class Widget { int x; int y() const { return x; } }
+    auto a = Rebindable!(const Widget)(new Widget);
+    // Fine
+    a.y();
+    // error! can't modify const a
+    // a.x = 5;
+    // Fine
+    a = new Widget;
+}
+
 /**
 Convenience function for creating a $(D Rebindable) using automatic type
 inference.
+
+Params:
+    obj = A reference to an object or interface, or an array slice
+          to initialize the `Rebindable` with.
+          
+Returns:
+    A newly constructed `Rebindable` initialized with the given reference.
 */
 Rebindable!T rebindable(T)(T obj)
 if (is(T == class) || is(T == interface) || isDynamicArray!T)
@@ -1427,6 +1445,12 @@ if (is(T == class) || is(T == interface) || isDynamicArray!T)
 This function simply returns the $(D Rebindable) object passed in.  It's useful
 in generic programming cases when a given object may be either a regular
 $(D class) or a $(D Rebindable).
+
+Params:
+    obj = An instance of Rebindable!T.
+
+Returns:
+    `obj` without any modification.
 */
 Rebindable!T rebindable(T)(Rebindable!T obj)
 {
