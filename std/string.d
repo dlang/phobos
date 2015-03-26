@@ -4894,22 +4894,65 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
 }
 
 /******************************************
- * Removes indentation from a multi-line string or an array of single-line strings.
+ * Removes one level of indentation from a multi-line string.
  *
  * This uniformly outdents the text as much as possible.
  * Whitespace-only lines are always converted to blank lines.
  *
- * A StringException will be thrown if inconsistent indentation prevents
- * the input from being outdented.
+ * Does not allocate memory if it does not throw.
  *
- * Works at compile-time.
+ * Params:
+ *     str = multi-line string
+ *
+ * Returns:
+ *      outdented string
+ *
+ * Throws:
+ *     StringException if indentation is done with different sequences
+ *     of whitespace characters.
  */
 S outdent(S)(S str) @safe pure if(isSomeString!S)
 {
     return str.splitLines(KeepTerminator.yes).outdent().join();
 }
 
-/// ditto
+///
+@safe pure unittest
+{
+    enum pretty = q{
+       import std.stdio;
+       void main() {
+           writeln("Hello");
+       }
+    }.outdent();
+
+    enum ugly = q{
+import std.stdio;
+void main() {
+    writeln("Hello");
+}
+};
+
+    assert(pretty == ugly);
+}
+
+
+/******************************************
+ * Removes one level of indentation from an array of single-line strings.
+ *
+ * This uniformly outdents the text as much as possible.
+ * Whitespace-only lines are always converted to blank lines.
+ *
+ * Params:
+ *     lines = array of single-line strings
+ *
+ * Returns:
+ *      lines[] is rewritten in place with outdented lines
+ *
+ * Throws:
+ *     StringException if indentation is done with different sequences
+ *     of whitespace characters.
+ */
 S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
 {
     import std.algorithm : startsWith;
@@ -4967,26 +5010,6 @@ S[] outdent(S)(S[] lines) @safe pure if(isSomeString!S)
     }
 
     return lines;
-}
-
-///
-@safe pure unittest
-{
-    enum pretty = q{
-       import std.stdio;
-       void main() {
-           writeln("Hello");
-       }
-    }.outdent();
-
-    enum ugly = q{
-import std.stdio;
-void main() {
-    writeln("Hello");
-}
-};
-
-    assert(pretty == ugly);
 }
 
 @safe pure unittest
