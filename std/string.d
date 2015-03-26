@@ -4717,8 +4717,16 @@ string[string] abbrev(string[] values) @safe pure
  * starting from 0.
  *
  * Tab characters are expanded into enough spaces to bring the _column number
- * to the next multiple of tabsize, and carriage returns and newlines reset the
- * running _column number back to 0.
+ * to the next multiple of tabsize.
+ * If there are multiple lines in the string, the _column number of the last
+ * line is returned.
+ *
+ * Params:
+ *    str = string to be analyzed
+ *    tabsize = number of columns a tab character represents
+ *
+ * Returns:
+ *    column number
  */
 
 size_t column(S)(S str, in size_t tabsize = 8) @safe pure @nogc if (isSomeString!S)
@@ -4806,7 +4814,7 @@ unittest
  *  indent = string to use to _indent following lines of the paragraph
  *  tabsize = column spacing of tabs
  * Returns:
- *  The resulting paragraph.
+ *  resulting paragraph as an allocated string
  */
 
 S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
