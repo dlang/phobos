@@ -689,6 +689,7 @@ else
 
 public enum dchar lineSep = '\u2028'; /// Constant $(CODEPOINT) (0x2028) - line separator.
 public enum dchar paraSep = '\u2029'; /// Constant $(CODEPOINT) (0x2029) - paragraph separator.
+public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next line.
 
 // test the intro example
 unittest
