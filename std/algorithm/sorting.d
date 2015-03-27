@@ -198,15 +198,21 @@ Like $(D isSorted), returns $(D true) if the given $(D values) are ordered
 according to the comparison operation $(D less). Unlike $(D isSorted), takes values
 directly instead of structured in a range.
 
-The predicate must be a strict ordering just like with $(D isSorted). For
-example, $(D "a <= b") is incorrect and will cause failed assertions.
+$(D ordered) allows repeated values, e.g. $(D ordered(1, 1, 2)) is $(D true). To verify
+that the values are ordered strictly monotonically, use $(D strictlyOrdered);
+$(D strictlyOrdered(1, 1, 2)) is $(D false).
+
+With either function, the predicate must be a strict ordering just like with $(D isSorted). For
+example, using $(D "a <= b") instead of $(D "a < b") is incorrect and will cause failed
+assertions.
 
 Params:
     values = The tested value
     less = The comparison predicate
 
 Returns:
-    $(D true) if the values are ordered.
+    $(D true) if the values are ordered; $(D ordered) allows for duplicates,
+    $(D strictlyOrdered) does not.
 */
 
 bool ordered(alias less = "a < b", T...)(T values)
@@ -228,15 +234,37 @@ if ((T.length == 2 && is(typeof(binaryFun!less(values[1], values[0])) : bool))
     return true;
 }
 
+/// ditto
+bool strictlyOrdered(alias less = "a < b", T...)(T values)
+if (is(typeof(ordered!less(values))))
+{
+    foreach (i, _; T[0 .. $ - 1])
+    {
+        if (!binaryFun!less(values[i], values[i + 1]))
+        {
+            return false;
+        }
+        assert(!binaryFun!less(values[i + 1], values[i]),
+            __FUNCTION__ ~ ": incorrect non-strict predicate.");
+    }
+    return true;
+}
+
 ///
 unittest
 {
     assert(ordered(42, 42, 43));
+    assert(!strictlyOrdered(43, 42, 45));
+    assert(ordered(42, 42, 43));
+    assert(!strictlyOrdered(42, 42, 43));
     assert(!ordered(43, 42, 45));
     // Ordered lexicographically
     assert(ordered("Jane", "Jim", "Joe"));
+    assert(strictlyOrdered("Jane", "Jim", "Joe"));
     // Incidentally also ordered by length decreasing
     assert(ordered!((a, b) => a.length > b.length)("Jane", "Jim", "Joe"));
+    // ... but not strictly so: "Jim" and "Joe" have the same length
+    assert(!strictlyOrdered!((a, b) => a.length > b.length)("Jane", "Jim", "Joe"));
 }
 
 // partition
