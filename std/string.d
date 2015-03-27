@@ -4722,46 +4722,68 @@ string[string] abbrev(string[] values) @safe pure
  * line is returned.
  *
  * Params:
- *    str = string to be analyzed
+ *    str = string or InputRange to be analyzed
  *    tabsize = number of columns a tab character represents
  *
  * Returns:
  *    column number
  */
 
-size_t column(S)(S str, in size_t tabsize = 8) @safe pure @nogc if (isSomeString!S)
+size_t column(Range)(Range str, in size_t tabsize = 8)
+    if (isSomeString!Range ||
+        isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)))
 {
-    import std.uni : lineSep, paraSep;
-
-    size_t column;
-
-    foreach (dchar c; str)
+    static if (is(Unqual!(ElementEncodingType!Range) == char))
     {
-        switch (c)
-        {
-        case '\t':
-            column = (column + tabsize) / tabsize * tabsize;
-            break;
+        // decoding needed for chars
+        import std.utf: byDchar;
 
-        case '\r':
-        case '\n':
-        case paraSep:
-        case lineSep:
-            column = 0;
-            break;
-
-        default:
-            column++;
-            break;
-        }
+        return str.byDchar.column(tabsize);
     }
-    return column;
+    else
+    {
+        // decoding not needed for wchars and dchars
+        import std.uni : lineSep, paraSep, nelSep;
+
+        size_t column;
+
+        foreach (const c; str)
+        {
+            switch (c)
+            {
+                case '\t':
+                    column = (column + tabsize) / tabsize * tabsize;
+                    break;
+
+                case '\r':
+                case '\n':
+                case paraSep:
+                case lineSep:
+                case nelSep:
+                    column = 0;
+                    break;
+
+                default:
+                    column++;
+                    break;
+            }
+        }
+        return column;
+    }
 }
 
 ///
 unittest
 {
+    import std.utf : byChar, byWchar, byDchar;
+
     assert(column("1234 ") == 5);
+    assert(column("1234 "w) == 5);
+    assert(column("1234 "d) == 5);
+
+    assert(column("1234 ".byChar()) == 5);
+    assert(column("1234 "w.byWchar()) == 5);
+    assert(column("1234 "d.byDchar()) == 5);
 
     // Tab stops are set at 8 spaces by default; tab characters insert enough
     // spaces to bring the column position to the next multiple of 8.
@@ -4776,10 +4798,14 @@ unittest
     assert(column("\t1", 4) == 5);
     assert(column("123\t", 4) == 4);
 
-    // Newlines and carriage returns reset the column number.
+    // New lines reset the column number.
     assert(column("abc\n") == 0);
     assert(column("abc\n1") == 1);
     assert(column("abcdefg\r1234") == 4);
+    assert(column("abc\u20281") == 1);
+    assert(column("abc\u20291") == 1);
+    assert(column("abc\u00851") == 1);
+    assert(column("abc\u00861") == 5);
 }
 
 @safe @nogc unittest
