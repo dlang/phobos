@@ -315,11 +315,13 @@ class Compress
   public:
 
     /**
-     * Construct.
+     * Constructor.
      *
      * Params:
-     *    level = the same as for $(D std.zlib.compress())
-     *    header = can be used to make a gzip compatible stream. Defaults to HeaderFormat.deflate.
+     *    level = compression level. Legal values are 1..9, with 1 being the least
+     *            compression and 9 being the most. The default value is 6.
+     *    header = sets the compression type to one of the options available
+     *             in $(LREF HeaderFormat). Defaults to HeaderFormat.deflate.
      *
      * See_Also:
      *    $(LREF compress), $(LREF HeaderFormat)
