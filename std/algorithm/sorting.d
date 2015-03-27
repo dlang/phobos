@@ -193,6 +193,52 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
     assert(isSorted(s));   // bidirectional
 }
 
+/**
+Like $(D isSorted), returns $(D true) if the given $(D values) are ordered
+according to the comparison operation $(D less). Unlike $(D isSorted), takes values
+directly instead of structured in a range.
+
+The predicate must be a strict ordering just like with $(D isSorted). For
+example, $(D "a <= b") is incorrect and will cause failed assertions.
+
+Params:
+    values = The tested value
+    less = The comparison predicate
+
+Returns:
+    $(D true) if the values are ordered.
+*/
+
+bool ordered(alias less = "a < b", T...)(T values)
+if ((T.length == 2 && is(typeof(binaryFun!less(values[1], values[0])) : bool))
+    ||
+    (T.length > 2 && is(typeof(ordered!less(values[0 .. 1 + $ / 2])))
+        && is(typeof(ordered!less(values[$ / 2 .. $]))))
+    )
+{
+    foreach (i, _; T[0 .. $ - 1])
+    {
+        if (binaryFun!less(values[i + 1], values[i]))
+        {
+            assert(!binaryFun!less(values[i], values[i + 1]),
+                __FUNCTION__ ~ ": incorrect non-strict predicate.");
+            return false;
+        }
+    }
+    return true;
+}
+
+///
+unittest
+{
+    assert(ordered(42, 42, 43));
+    assert(!ordered(43, 42, 45));
+    // Ordered lexicographically
+    assert(ordered("Jane", "Jim", "Joe"));
+    // Incidentally also ordered by length decreasing
+    assert(ordered!((a, b) => a.length > b.length)("Jane", "Jim", "Joe"));
+}
+
 // partition
 /**
 Partitions a range in two using $(D pred) as a
@@ -1229,8 +1275,8 @@ private template TimSortImpl(alias pred, R)
                 immutable run3 = stackLen - 2;
                 immutable run2 = stackLen - 3;
                 immutable run1 = stackLen - 4;
-                
-                if ( (stackLen > 2 && stack[run2].length <= stack[run3].length + stack[run4].length) || 
+
+                if ( (stackLen > 2 && stack[run2].length <= stack[run3].length + stack[run4].length) ||
                      (stackLen > 3 && stack[run1].length <= stack[run3].length + stack[run2].length) )
                 {
                     immutable at = stack[run2].length < stack[run4].length ? run2 : run3;
@@ -1238,10 +1284,10 @@ private template TimSortImpl(alias pred, R)
                 }
                 else if (stack[run3].length > stack[run4].length) break;
                 else mergeAt(range, stack[0 .. stackLen], run3, minGallop, temp);
-                
+
                 stackLen -= 1;
             }
-            
+
             // Assert that the code above established the invariant correctly
             version (assert)
             {

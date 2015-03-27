@@ -221,6 +221,7 @@ Params:
         handlers that accept one argument. There can also be a choice that
         accepts zero arguments. That choice will be invoked if the $(D
         switchObject) is null.
+    switchObject = the object against which the tests are being made.
 
 Returns:
     The value of the selected choice.
@@ -500,7 +501,7 @@ Params:
 
 Returns:
     Returns $(D val), if it is between $(D lower) and $(D upper).
-    Otherwise returns the nearest of the two. 
+    Otherwise returns the nearest of the two.
 
 */
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
@@ -708,14 +709,14 @@ template equal(alias pred = "a == b")
     /++
     This function compares to ranges for equality. The ranges may have
     different element types, as long as $(D pred(a, b)) evaluates to $(D bool)
-    for $(D a) in $(D r1) and $(D b) in $(D r2). 
+    for $(D a) in $(D r1) and $(D b) in $(D r2).
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
 
     Params:
-        r1 = The first range to be compared. 
+        r1 = The first range to be compared.
         r2 = The second range to be compared.
 
-    Returns: 
+    Returns:
         $(D true) if and only if the two ranges compare equal element
         for element, according to binary predicate $(D pred).
 
@@ -799,7 +800,7 @@ range of range (of range...) comparisons.
 {
     import std.algorithm.iteration : map;
     import std.math : approxEqual;
-    import std.internal.test.dummyrange : ReferenceForwardRange, 
+    import std.internal.test.dummyrange : ReferenceForwardRange,
         ReferenceInputRange, ReferenceInfiniteForwardRange;
 
     debug(std_algorithm) scope(success)
