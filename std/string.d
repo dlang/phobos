@@ -2531,16 +2531,26 @@ C[] strip(C)(C[] str) @safe pure
     $(D delimiter), then it is returned unchanged.
 
     If no $(D delimiter) is given, then one trailing  $(D '\r'), $(D '\n'),
-    $(D "\r\n"), $(XREF uni, lineSep), or $(XREF uni, paraSep) is removed from
-    the end of $(D str). If $(D str) does not end with any of those characters,
+    $(D "\r\n"), $(D '\f'), $(D '\v'), $(XREF uni, lineSep), $(XREF uni, paraSep), or $(XREF uni, nelSep)
+    is removed from the end of $(D str). If $(D str) does not end with any of those characters,
     then it is returned unchanged.
+
+    Params:
+        str = string or indexable range of characters
+        delimiter = string of characters to be sliced off end of str[]
+
+    Returns:
+        slice of str
   +/
-C[] chomp(C)(C[] str) @safe pure nothrow @nogc
-    if (isSomeChar!C)
+Range chomp(Range)(Range str)
+    if (isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+        isSomeString!Range)
 {
-    import std.uni : lineSep, paraSep;
+    import std.uni : lineSep, paraSep, nelSep;
     if (str.empty)
         return str;
+
+    alias C = ElementEncodingType!Range;
 
     switch (str[$ - 1])
     {
@@ -2550,26 +2560,35 @@ C[] chomp(C)(C[] str) @safe pure nothrow @nogc
                 return str[0 .. $ - 2];
             goto case;
         }
-        case '\r':
+        case '\r', '\v', '\f':
             return str[0 .. $ - 1];
 
-        //Pops off the last character if it's lineSep or paraSep.
+        // Pop off the last character if lineSep, paraSep, or nelSep
         static if (is(C : const char))
         {
-            //In UTF-8, lineSep and paraSep are [226, 128, 168], and
-            //[226, 128, 169] respectively, so their first two bytes are the same.
-            case 168: //Last byte of lineSep
-            case 169: //Last byte of paraSep
-            {
-                if (str.length > 2 && str[$ - 2] == 128 && str[$ - 3] == 226)
+            /* Manually decode:
+             *  lineSep is E2 80 A8
+             *  paraSep is E2 80 A9
+             */
+            case 0xA8: // Last byte of lineSep
+            case 0xA9: // Last byte of paraSep
+                if (str.length > 2 && str[$ - 2] == 0x80 && str[$ - 3] == 0xE2)
                     return str [0 .. $ - 3];
                 goto default;
-            }
+
+            /* Manually decode:
+             *  NEL is C2 85
+             */
+            case 0x85:
+                if (str.length > 1 && str[$ - 2] == 0xC2)
+                    return str [0 .. $ - 2];
+                goto default;
         }
         else
         {
             case lineSep:
             case paraSep:
+            case nelSep:
                 return str[0 .. $ - 1];
         }
         default:
@@ -2578,11 +2597,15 @@ C[] chomp(C)(C[] str) @safe pure nothrow @nogc
 }
 
 /// Ditto
-C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter) @safe pure
-    if (isSomeChar!C1 && isSomeChar!C2)
+Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
+    if ((isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+         isSomeString!Range) &&
+        isSomeChar!C2)
 {
     if (delimiter.empty)
         return chomp(str);
+
+    alias C1 = ElementEncodingType!Range;
 
     static if (is(Unqual!C1 == Unqual!C2))
     {
@@ -2595,7 +2618,12 @@ C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter) @safe pure
     {
         auto orig = str;
 
-        foreach_reverse (dchar c; delimiter)
+        static if (isSomeString!Range)
+            alias C = dchar;    // because strings auto-decode
+        else
+            alias C = C1;       // and ranges do not
+
+        foreach_reverse (C c; delimiter)
         {
             if (str.empty || str.back != c)
                 return orig;
@@ -2611,13 +2639,16 @@ C1[] chomp(C1, C2)(C1[] str, const(C2)[] delimiter) @safe pure
 @safe pure unittest
 {
     import std.utf : decode;
-    import std.uni : lineSep, paraSep;
+    import std.uni : lineSep, paraSep, nelSep;
     assert(chomp(" hello world  \n\r") == " hello world  \n");
     assert(chomp(" hello world  \r\n") == " hello world  ");
+    assert(chomp(" hello world  \f") == " hello world  ");
+    assert(chomp(" hello world  \v") == " hello world  ");
     assert(chomp(" hello world  \n\n") == " hello world  \n");
     assert(chomp(" hello world  \n\n ") == " hello world  \n\n ");
     assert(chomp(" hello world  \n\n" ~ [lineSep]) == " hello world  \n\n");
     assert(chomp(" hello world  \n\n" ~ [paraSep]) == " hello world  \n\n");
+    assert(chomp(" hello world  \n\n" ~ [ nelSep]) == " hello world  \n\n");
     assert(chomp(" hello world") == " hello world");
     assert(chomp("") == "");
 
@@ -2653,8 +2684,11 @@ unittest
         assert(chomp(to!S("hello\nxxx\n")) == "hello\nxxx");
         assert(chomp(to!S("hello\u2028")) == "hello");
         assert(chomp(to!S("hello\u2029")) == "hello");
+        assert(chomp(to!S("hello\u0085")) == "hello");
         assert(chomp(to!S("hello\u2028\u2028")) == "hello\u2028");
         assert(chomp(to!S("hello\u2029\u2029")) == "hello\u2029");
+        assert(chomp(to!S("hello\u2029\u2129")) == "hello\u2029\u2129");
+        assert(chomp(to!S("hello\u2029\u0185")) == "hello\u2029\u0185");
 
         foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
@@ -2671,6 +2705,15 @@ unittest
         }();
     }
     });
+
+    // Ranges
+    import std.utf : byChar, byWchar, byDchar;
+    import std.array;
+    assert(chomp("hello world\r\n" .byChar ).array == "hello world");
+    assert(chomp("hello world\r\n"w.byWchar).array == "hello world"w);
+    assert(chomp("hello world\r\n"d.byDchar).array == "hello world"d);
+
+    assert(chomp("hello world"d.byDchar, "ld").array == "hello wor"d);
 }
 
 
