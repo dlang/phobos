@@ -4838,7 +4838,7 @@ unittest
  *  columns = maximum number of _columns in the paragraph
  *  firstindent = string used to _indent first line of the paragraph
  *  indent = string to use to _indent following lines of the paragraph
- *  tabsize = column spacing of tabs
+ *  tabsize = column spacing of tabs in firstindent[] and indent[]
  * Returns:
  *  resulting paragraph as an allocated string
  */
@@ -4847,15 +4847,16 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
         S indent = null, in size_t tabsize = 8) @safe pure if (isSomeString!S)
 {
     typeof(s.dup) result;
-    int spaces;
     bool inword;
     bool first = true;
     size_t wordstart;
 
+    const indentcol = column(indent, tabsize);
+
     result.length = firstindent.length + s.length;
     result.length = firstindent.length;
     result[] = firstindent[];
-    auto col = column(result.idup, tabsize);
+    auto col = column(firstindent, tabsize);
     foreach (size_t i, dchar c; s)
     {
         if (std.uni.isWhite(c))
@@ -4869,7 +4870,7 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
                 {
                     result ~= '\n';
                     result ~= indent;
-                    col = column(indent, tabsize);
+                    col = indentcol;
                 }
                 else
                 {
@@ -4924,6 +4925,8 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
     assert(wrap(" abcd   df ", 3) == "abcd\ndf\n");
     assert(wrap("x") == "x\n");
     assert(wrap("u u") == "u u\n");
+    assert(wrap("abcd", 3) == "\nabcd\n");
+    assert(wrap("a de", 10, "\t", "   ", 8) == "\ta\n   de\n");
     });
 }
 
