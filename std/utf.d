@@ -3649,3 +3649,36 @@ int impureVariable;
         foreach (c; range.byDchar()) { }
     }
 }
+
+/***************************************
+ * Select byChar, byWchar, or byDchar based on the type C.
+ *
+ * Params:
+ *    C = char, wchar, or dchar
+ *
+ * Returns:
+ *    corresponding alias to $(LREF byChar), $(LREF byWchar), or $(LREF byDchar)
+ */
+
+template byUTF(C) if (isSomeChar!C)
+{
+    static if (is(C : const(char)))
+        alias byChar byUTF;
+    else static if (is(C : const(wchar)))
+        alias byWchar byUTF;
+    else static if (is(C : const(dchar)))
+        alias byDchar byUTF;
+    else
+        static assert(0);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    foreach (c; "h".byUTF!char())
+        assert(c == 'h');
+    foreach (c; "h".byUTF!wchar())
+        assert(c == 'h');
+    foreach (c; "h".byUTF!dchar())
+        assert(c == 'h');
+}
