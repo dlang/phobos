@@ -183,9 +183,9 @@ void systimeToISOString(OutputRange)(OutputRange o, const ref SysTime time)
 
 /** This function logs data.
 
-In order for the data to be processed the $(D LogLevel) of the log call must
+In order for the data to be processed, the $(D LogLevel) of the log call must
 be greater or equal to the $(D LogLevel) of the $(D sharedLog) and the
-$(D defaultLogLevel) additionally the condition passed must be $(D true).
+$(D defaultLogLevel); additionally the condition passed must be $(D true).
 
 Params:
   ll = The $(D LogLevel) used by this log call.
@@ -762,7 +762,7 @@ abstract class Logger
 
     /** This constructor takes a name of type $(D string), and a $(D LogLevel).
 
-    Every subclass of $(D Logger) has to call this constructor from there
+    Every subclass of $(D Logger) has to call this constructor from their
     constructor. It sets the $(D LogLevel), the name of the $(D Logger), and
     creates a fatal handler. The fatal handler will throw an $(D Error) if a
     log call is made with a $(D LogLevel) $(D LogLevel.fatal).
@@ -1711,7 +1711,7 @@ $(D Logger).
 */
 /* Implementation note:
 For any public logging call, the global log level shall only be queried once on
-entry. Otherwise when another threads changes the level, we wouls work with
+entry. Otherwise when another threads changes the level, we would work with
 different levels at different spots in the code.
 */
 @property LogLevel globalLogLevel() @safe @nogc
