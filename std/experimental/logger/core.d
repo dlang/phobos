@@ -1852,7 +1852,7 @@ version (unittest)
         string msg = null;
         LogLevel lvl;
 
-        this(const LogLevel lv = LogLevel.info) @safe
+        this(const LogLevel lv = LogLevel.all) @safe
         {
             super(lv);
         }
