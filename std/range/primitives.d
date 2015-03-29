@@ -139,6 +139,12 @@ $(D r.front) is allowed only if calling $(D r.empty) has, or would
 have, returned $(D false).) $(LI $(D r.popFront) advances to the next
 element in the range. Calling $(D r.popFront) is allowed only if
 calling $(D r.empty) has, or would have, returned $(D false).))
+
+Params:
+    R = type to be tested
+
+Returns:
+    true if R is an InputRange, false if not
  */
 template isInputRange(R)
 {
@@ -152,6 +158,7 @@ template isInputRange(R)
     }));
 }
 
+///
 @safe unittest
 {
     struct A {}
@@ -161,12 +168,12 @@ template isInputRange(R)
         @property bool empty();
         @property int front();
     }
-    static assert(!isInputRange!(A));
-    static assert( isInputRange!(B));
+    static assert(!isInputRange!A);
+    static assert( isInputRange!B);
     static assert( isInputRange!(int[]));
     static assert( isInputRange!(char[]));
     static assert(!isInputRange!(char[4]));
-    static assert( isInputRange!(inout(int)[])); // bug 7824
+    static assert( isInputRange!(inout(int)[]));
 }
 
 /+
