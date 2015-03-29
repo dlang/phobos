@@ -6542,7 +6542,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * Params: fmt  = Format string. For detailed specification, see $(XREF format,formattedWrite).
+ * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  */
 string format(Char, Args...)(in Char[] fmt, Args args)
