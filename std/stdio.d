@@ -723,10 +723,10 @@ $(D rawRead) always reads in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
-        import std.exception : enforce, errnoEnforce;
+        import std.exception : Exception, errnoEnforce;
 
         if (!buffer.length)
-            enforce(false, "rawRead must take a non-empty buffer");
+            throw new Exception("rawRead must take a non-empty buffer");
         version(Windows)
         {
             immutable fd = ._fileno(_p.handle);
