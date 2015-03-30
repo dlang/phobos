@@ -37,56 +37,10 @@ public import std.meta.predicates;
 // shouldn't go into release
 public import std.meta.internal;
 
-/**
- * Returns the type from TList that is the most derived from type T.
- * If none are found, T is returned.
- */
-template MostDerived(T, TList...)
-{
-    static if (TList.length == 0)
-        alias MostDerived = T;
-    else static if (is(TList[0] : T))
-        alias MostDerived = MostDerived!(TList[0], TList[1 .. $]);
-    else
-        alias MostDerived = MostDerived!(T, TList[1 .. $]);
-}
+static import std.traits;
 
-///
-unittest
-{
-    class A { }
-    class B : A { }
-    class C : B { }
-    alias Types = MetaList!(A, C, B);
+deprecated("Use std.traits.MostDerived instead")
+alias MostDerived = std.traits.MostDerived;
 
-    MostDerived!(Object, Types) x;  // x is declared as type C
-    static assert(is(typeof(x) == C));
-}
-
-/**
- * Returns the list TList with the types sorted so that the most
- * derived types come first.
- */
-template DerivedToFront(TList...)
-{
-    static if (TList.length == 0)
-        alias DerivedToFront = TList;
-    else
-        alias DerivedToFront =
-            MetaList!(MostDerived!(TList[0], TList[1 .. $]),
-                       DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
-                                TList[0],
-                                TList[1 .. $])));
-}
-
-///
-unittest
-{
-    class A { }
-    class B : A { }
-    class C : B { }
-    alias Types = MetaList!(A, C, B);
-
-    alias TL = DerivedToFront!(Types);
-    static assert(is(TL == MetaList!(C, B, A)));
-}
+deprecated("Use std.traits.DerivedToFront instead")
+alias DerivedToFront = std.traits.DerivedToFront;

@@ -6383,3 +6383,63 @@ unittest
     static assert(is(typeof(a) == real));
     static assert(is(typeof(b) == real));
 }
+
+/**
+ * Returns the type from type list that is the most derived from type T.
+ * If none are found, T is returned.
+ */
+template MostDerived(T, TList...)
+{
+    static if (TList.length == 0)
+        alias MostDerived = T;
+    else static if (is(TList[0] : T))
+        alias MostDerived = MostDerived!(TList[0], TList[1 .. $]);
+    else
+        alias MostDerived = MostDerived!(T, TList[1 .. $]);
+}
+
+///
+unittest
+{
+    import std.meta.list;
+
+    class A { }
+    class B : A { }
+    class C : B { }
+    alias Types = MetaList!(A, C, B);
+
+    MostDerived!(Object, Types) x;  // x is declared as type C
+    static assert(is(typeof(x) == C));
+}
+
+/**
+ * Returns the type list based on TList with the types sorted so that
+ * the most derived types come first.
+ */
+template DerivedToFront(TList...)
+{
+    import std.meta.list;
+
+    static if (TList.length == 0)
+        alias DerivedToFront = TList;
+    else
+        alias DerivedToFront =
+            MetaList!(MostDerived!(TList[0], TList[1 .. $]),
+                       DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
+                                TList[0],
+                                TList[1 .. $])));
+}
+
+///
+unittest
+{
+    import std.meta.list;
+
+    class A { }
+    class B : A { }
+    class C : B { }
+    alias Types = MetaList!(A, C, B);
+
+    alias TL = DerivedToFront!(Types);
+    static assert(is(TL == MetaList!(C, B, A)));
+}
