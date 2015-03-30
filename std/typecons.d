@@ -65,8 +65,7 @@ else
     alias RefT = T*;
 
 public:
-    // Deferred in case we get some language support for checking uniqueness.
-    version(None)
+
     /**
     Allows safe construction of $(D Unique). It creates the resource and
     guarantees unique ownership of it (unless $(D T) publishes aliases of
@@ -80,40 +79,69 @@ public:
     ---
     */
     static Unique!T create(A...)(auto ref A args)
-    if (__traits(compiles, new T(args)))
     {
+        import core.memory : GC;
+        import core.stdc.stdlib : malloc;
+        import std.conv : emplace;
+        import std.exception : enforce;
+
         debug(Unique) writeln("Unique.create for ", T.stringof);
         Unique!T u;
-        u._p = new T(args);
+
+        // TODO: May need to fix alignment?
+        // Does emplace still need to mess with alignment if
+        // the memory is coming from malloc, or does malloc handle that?
+
+        static if (is(T == class))
+            immutable size_t allocSize = __traits(classInstanceSize, T);
+        else
+            immutable size_t allocSize = T.sizeof;
+
+        void* rawMemory = enforce(malloc(allocSize), "malloc returned null");
+        u._p = cast(RefT)rawMemory;
+
+        static if (is(T == class)) {
+            // Hacked together from conv.emplace because it only seems to provide
+            // ways to init a class from an **array** of raw memory,
+            // not a malloc'd pointer.
+            // A possible better solution would be to create a conv.emplace
+            // that takes a pointer instead of an array.
+
+            // Initialize to the pre-ctor state
+            void[] init = typeid(T).init[];
+            assert(init.length <= allocSize);
+
+            // Forgive the hackishness, but we just need to get
+            // the data from init into our newly malloc'd memory.
+            import core.stdc.string : memcpy;
+            memcpy(rawMemory, init.ptr, init.length);
+
+            // Call the ctor if any
+            static if (is(typeof(u._p.__ctor(args))))
+            {
+                // T defines a genuine constructor accepting args
+                // Go the classic route: write .init first, then call ctor
+                u._p.__ctor(args);
+            }
+            else
+            {
+                static assert(args.length == 0 && !is(typeof(&T.__ctor)),
+                        "Don't know how to initialize an object of type "
+                        ~ T.stringof ~ " with arguments " ~ Args.stringof);
+            }
+        }
+        else {
+            emplace!T(u._p, args);
+        }
+
+
+        static if (hasIndirections!T)
+            GC.addRange(rawMemory, allocSize);
+
         return u;
     }
 
-    /**
-    Constructor that takes an rvalue.
-    It will ensure uniqueness, as long as the rvalue
-    isn't just a view on an lvalue (e.g., a cast).
-    Typical usage:
-    ----
-    Unique!Foo f = new Foo;
-    ----
-    */
-    this(RefT p)
-    {
-        debug(Unique) writeln("Unique constructor with rvalue");
-        _p = p;
-    }
-    /**
-    Constructor that takes an lvalue. It nulls its source.
-    The nulling will ensure uniqueness as long as there
-    are no previous aliases to the source.
-    */
-    this(ref RefT p)
-    {
-        _p = p;
-        debug(Unique) writeln("Unique constructor nulling source");
-        p = null;
-        assert(p is null);
-    }
+
     /**
     Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
@@ -149,23 +177,40 @@ public:
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        if (_p !is null) delete _p;
-        _p = null;
+        release();
     }
+
     /** Returns whether the resource exists. */
     @property bool isEmpty() const
     {
         return _p is null;
     }
-    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
-    Unique release()
+
+    /** Frees the underlying pointer and nulls it */
+    void release()
     {
+        import core.stdc.stdlib : free;
+
         debug(Unique) writeln("Release");
-        auto u = Unique(_p);
-        assert(_p is null);
-        debug(Unique) writeln("return from Release");
-        return u;
+
+        if (_p !is null)
+        {
+            destroy(_p);
+
+            static if (hasIndirections!T)
+            {
+                import core.memory : GC;
+                GC.removeRange(cast(void*)_p);
+            }
+
+            free(cast(void*)_p);
+            _p = null;
+        }
     }
+
+    /** Returns the underlying pointer for use by non-owning code. */
+    RefT get() { return _p; }
+
     /** Forwards member access to contents. */
     RefT opDot() { return _p; }
 
@@ -189,7 +234,7 @@ unittest
     Unique!S produce()
     {
         // Construct a unique instance of S on the heap
-        Unique!S ut = new S(5);
+        Unique!S ut = Unique!S.create(5);
         // Implicit transfer of ownership
         return ut;
     }
@@ -210,30 +255,45 @@ unittest
     assert(u1.i == 6);
     //consume(u1); // Error: u1 is not copyable
     // Transfer ownership of the resource
-    consume(u1.release);
+    import std.algorithm : move;
+    consume(move(u1));
     assert(u1.isEmpty);
+}
+
+/// Quick test that init works correctly for objects
+unittest
+{
+    static class C
+    {
+        this() { i = 4; }
+        int i;
+    }
+
+    Unique!C uc = Unique!C.create();
+    assert(uc.i == 4);
 }
 
 unittest
 {
     // test conversion to base ref
+    int created = 0;
     int deleted = 0;
     class C
     {
+        this() { created++; }
         ~this(){deleted++;}
     }
     // constructor conversion
-    Unique!Object u = Unique!C(new C);
-    static assert(!__traits(compiles, {u = new C;}));
+    Unique!Object u = Unique!C.create();
     assert(!u.isEmpty);
     destroy(u);
     assert(deleted == 1);
 
-    Unique!C uc = new C;
-    static assert(!__traits(compiles, {Unique!Object uo = uc;}));
-    Unique!Object uo = new C;
+    Unique!C uc = Unique!(C).create();
+    Unique!Object uo = Unique!C.create();
     // opAssign conversion, deleting uo resource first
-    uo = uc.release;
+    import std.algorithm : move;
+    uo = move(uc);
     assert(uc.isEmpty);
     assert(!uo.isEmpty);
     assert(deleted == 2);
@@ -250,15 +310,17 @@ unittest
     alias UBar = Unique!(Bar);
     UBar g(UBar u)
     {
+        import std.algorithm : move;
         debug(Unique) writeln("inside g");
-        return u.release;
+        return move(u);
     }
-    auto ub = UBar(new Bar);
+    auto ub = UBar.create();
     assert(!ub.isEmpty);
     assert(ub.val == 4);
     static assert(!__traits(compiles, {auto ub3 = g(ub);}));
     debug(Unique) writeln("Calling g");
-    auto ub2 = g(ub.release);
+    import std.algorithm : move;
+    auto ub2 = g(move(ub));
     debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
@@ -266,6 +328,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : move;
+
     debug(Unique) writeln("Unique struct");
     struct Foo
     {
@@ -277,15 +341,15 @@ unittest
     UFoo f(UFoo u)
     {
         debug(Unique) writeln("inside f");
-        return u.release;
+        return move(u);
     }
 
-    auto uf = UFoo(new Foo);
+    auto uf = UFoo.create();
     assert(!uf.isEmpty);
     assert(uf.val == 3);
     static assert(!__traits(compiles, {auto uf3 = f(uf);}));
     debug(Unique) writeln("Unique struct: calling f");
-    auto uf2 = f(uf.release);
+    auto uf2 = f(move(uf));
     debug(Unique) writeln("Unique struct: returned from f");
     assert(uf.isEmpty);
     assert(!uf2.isEmpty);
