@@ -32,7 +32,7 @@ distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
 
 Upgrading:
-        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand) can
+        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand Phobos D1 $(D rand()) can
         be replaced with $(D uniform!uint()).
 
 Source:    $(PHOBOSSRC std/_random.d)
@@ -45,12 +45,12 @@ WIKI = Phobos/StdRandom
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Joseph Rushton Wakeling 2012.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
-           Masahiro Nakagawa (Xorshift randome generator)
+           Masahiro Nakagawa (Xorshift random generator)
            $(WEB braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
 Credits:   The entire random number library architecture is derived from the
            excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
-           researchers at the Fermi laboratory(excluding Xorshift).
+           researchers at the Fermi laboratory (excluding Xorshift).
 */
 /*
          Copyright Andrei Alexandrescu 2008 - 2009.
