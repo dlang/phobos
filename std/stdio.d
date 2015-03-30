@@ -725,7 +725,8 @@ $(D rawRead) always reads in binary mode on Windows.
     {
         import std.exception : enforce, errnoEnforce;
 
-        enforce(buffer.length, "rawRead must take a non-empty buffer");
+        if (!buffer.length)
+            enforce(false, "rawRead must take a non-empty buffer");
         version(Windows)
         {
             immutable fd = ._fileno(_p.handle);
@@ -741,10 +742,13 @@ $(D rawRead) always reads in binary mode on Windows.
                 scope(exit) __fhnd_info[fd] = info;
             }
         }
-        immutable result =
+        immutable fread_result =
             fread(buffer.ptr, T.sizeof, buffer.length, _p.handle);
+        immutable fread_success = (fread_result == buffer.length);
+        if (fread_success)
+            return buffer;
         errnoEnforce(!error);
-        return result ? buffer[0 .. result] : null;
+        return buffer[0 .. fread_result];
     }
 
     unittest
