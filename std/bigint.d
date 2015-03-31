@@ -205,10 +205,10 @@ public:
             else if ((y > 0) == (op=="<<"))
             {
                 // Sign never changes during left shift
-                data = data.opShl(u);
+                data = data.doOpShl(u);
             } else
             {
-                data = data.opShr(u);
+                data = data.doOpShr(u);
                 if (data.isZero())
                     sign = false;
             }
