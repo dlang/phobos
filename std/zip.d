@@ -17,6 +17,29 @@
  * Macros:
  *      WIKI = Phobos/StdZip
  *
+ * Examples:
+ * ---
+import std.digest.crc, std.file, std.stdio, std.zip;
+
+void main(string[] args)
+{
+    // read a zip file into memory
+    auto zip = new ZipArchive(read(args[1]));
+    writeln("Archive: ", args[1]);
+    writefln("%-10s  %-8s  Name", "Length", "CRC-32");
+    // iterate over all zip members
+    foreach (name, am; zip.directory)
+    {
+        // print some data about each member
+        writefln("%10s  %08x  %s", am.expandedSize, am.crc32, name);
+        assert(am.expandedData.length == 0);
+        // decompress the archive member
+        zip.expand(am);
+        assert(am.expandedData.length == am.expandedSize);
+    }
+}
+ * ---
+ *
  * Copyright: Copyright Digital Mars 2000 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright)
