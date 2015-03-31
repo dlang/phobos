@@ -6208,3 +6208,143 @@ public:
     auto value = cast(int)flags_A;
     assert(value == Enum.A);
 }
+
+/**
+   Type constructor for head-const variables.
+
+   Head-const variables cannot be directly mutated or rebound, but references
+   reached through the variable are typed with their original mutability.
+
+   It is equivalent to $(D final) variables in D1 and Java,
+   as well as $(D readonly) variables in C#.
+ */
+struct HeadConst(T)
+    if(!is(T == const) && !is(T == immutable))
+{
+    private:
+    T data;
+
+    public:
+    /// $(D HeadConst) subtypes $(D T) as an rvalue.
+    inout(T) HeadConst_get() inout pure nothrow @nogc @safe
+    {
+        return data;
+    }
+
+    alias HeadConst_get this; /// Ditto
+
+    ///
+    this(T data)
+    {
+        this.data = data;
+    }
+
+    /// Ditto
+    this(Args...)(auto ref Args args)
+        if(__traits(compiles, T(args)))
+    {
+        this.data = args;
+    }
+
+    // Making `opAssign` a template like this gives better error messages.
+    /// Assignment is disabled.
+    @disable void opAssign(Other)(Other other);
+}
+
+/// Ditto
+template HeadConst(T) if(is(T == const) || is(T == immutable))
+{
+    alias HeadConst = T;
+}
+
+/// $(D HeadConst) can be used to create class references which cannot be rebound:
+pure nothrow @safe unittest
+{
+    static class A
+    {
+        int i;
+
+        this(int i) pure nothrow @nogc @safe
+        {
+            this.i = i;
+        }
+    }
+
+    HeadConst!A a = new A(42);
+    assert(a.i == 42);
+
+    // a = new C(24); // Reassignment is illegal,
+    a.i = 24; // But fields are still mutable.
+
+    assert(a.i == 24);
+}
+
+/// $(D HeadConst) can also be used to create read-only data fields without using transitive immutability:
+pure nothrow @safe unittest
+{
+    static class A
+    {
+        int i;
+
+        this(int i) pure nothrow @nogc @safe
+        {
+            this.i = i;
+        }
+    }
+
+    static class B
+    {
+        HeadConst!A a;
+
+        this(A a) pure nothrow @nogc @safe
+        {
+            this.a = a; // Construction, thus allowed.
+        }
+    }
+
+    auto b = new B(new A(42));
+    assert(b.a.i == 42);
+
+    // b.a = new A(24); // Reassignment is illegal,
+    b.a.i = 24; // but `a` is still mutable.
+
+    assert(b.a.i == 24);
+}
+
+pure nothrow @safe unittest
+{
+    static class A { int i; }
+    static assert(!is(HeadConst!A == A));
+    static assert(is(HeadConst!(const A) == const A));
+    static assert(is(HeadConst!(immutable A) == immutable A));
+
+    HeadConst!A a = new A;
+    static assert(!__traits(compiles, a = new A));
+
+    assert(a.i == 0);
+    a.i = 42;
+    assert(a.i == 42);
+
+    HeadConst!int i = 42;
+    static assert(!__traits(compiles, i = 24));
+    assert(i == 42);
+    int iCopy = i;
+    assert(iCopy == 42);
+
+    static struct S
+    {
+    	int i;
+
+    	pure nothrow @safe:
+        this(int i){}
+        this(string s){}
+        this(int i, string s, float f){ this.i = i; }
+    }
+
+    HeadConst!S sint = 42;
+    HeadConst!S sstr = "foo";
+    static assert(!__traits(compiles, sint = sstr));
+
+    auto sboth = HeadConst!S(42, "foo", 3.14);
+    assert(sboth.i == 42);
+}
