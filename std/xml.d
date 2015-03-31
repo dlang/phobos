@@ -686,7 +686,7 @@ class Element : Item
     this(string name, string interior=null)
     {
         this(new Tag(name));
-        if (interior.length != 0) opCatAssign(new Text(interior));
+        if (interior.length != 0) this ~= new Text(interior);
     }
 
     /**
@@ -715,7 +715,7 @@ class Element : Item
      * element ~= new Text("hello");
      * --------------
      */
-    void opCatAssign(Text item)
+    void opOpAssign(string op : "~") (Text item)
     {
         texts ~= item;
         appendItem(item);
@@ -733,7 +733,7 @@ class Element : Item
      * element ~= new CData("hello");
      * --------------
      */
-    void opCatAssign(CData item)
+    void opOpAssign(string op : "~") (CData item)
     {
         cdatas ~= item;
         appendItem(item);
@@ -751,7 +751,7 @@ class Element : Item
      * element ~= new Comment("hello");
      * --------------
      */
-    void opCatAssign(Comment item)
+    void opOpAssign(string op : "~") (Comment item)
     {
         comments ~= item;
         appendItem(item);
@@ -769,7 +769,7 @@ class Element : Item
      * element ~= new ProcessingInstruction("hello");
      * --------------
      */
-    void opCatAssign(ProcessingInstruction item)
+    void opOpAssign(string op : "~") (ProcessingInstruction item)
     {
         pis ~= item;
         appendItem(item);
@@ -789,7 +789,7 @@ class Element : Item
      *    // appends element representing <br />
      * --------------
      */
-    void opCatAssign(Element item)
+    void opOpAssign(string op : "~") (Element item)
     {
         elements ~= item;
         appendItem(item);
@@ -804,16 +804,16 @@ class Element : Item
 
     private void parse(ElementParser xml)
     {
-        xml.onText = (string s) { opCatAssign(new Text(s)); };
-        xml.onCData = (string s) { opCatAssign(new CData(s)); };
-        xml.onComment = (string s) { opCatAssign(new Comment(s)); };
-        xml.onPI = (string s) { opCatAssign(new ProcessingInstruction(s)); };
+        xml.onText = (string s) { this ~= new Text(s); };
+        xml.onCData = (string s) { this ~= new CData(s); };
+        xml.onComment = (string s) { this ~= new Comment(s); };
+        xml.onPI = (string s) { this ~= new ProcessingInstruction(s); };
 
         xml.onStartTag[null] = (ElementParser xml)
         {
             auto e = new Element(xml.tag);
             e.parse(xml);
-            opCatAssign(e);
+            this ~= e;
         };
 
         xml.parse();
