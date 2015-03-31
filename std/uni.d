@@ -1637,7 +1637,8 @@ unittest
 }
 //============================================================================
 
-@safe:
+@safe
+{
 // hope to see simillar stuff in public interface... once Allocators are out
 //@@@BUG moveFront and friends? dunno, for now it's POD-only
 
@@ -3628,8 +3629,8 @@ version(unittest)
     }
 }
 
+}
 
-@system:
 unittest// vs single dchar
 {
     import std.conv;
@@ -8212,6 +8213,175 @@ unittest //12428
     toUpper(s);
 
     assert(s == "abcdefghij");
+}
+
+
+// generic toUpper/toLower on whole range, returns range
+private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str)
+    // Accept range of dchar's
+    if (isInputRange!Range &&
+        isSomeChar!(ElementEncodingType!Range) &&
+        ElementEncodingType!Range.sizeof == dchar.sizeof)
+{
+    static struct ToCaserImpl
+    {
+        @property bool empty()
+        {
+            return !nLeft && r.empty;
+        }
+
+        @property auto front()
+        {
+            if (!nLeft)
+            {
+                dchar c = r.front;
+                const idx = indexFn(c);
+                if (idx == ushort.max)
+                {
+                    buf[0] = c;
+                    nLeft = 1;
+                }
+                else if (idx < maxIdx)
+                {
+                    buf[0] = tableFn(idx);
+                    nLeft = 1;
+                }
+                else
+                {
+                    auto val = tableFn(idx);
+                    // unpack length + codepoint
+                    nLeft = val >> 24;
+                    assert(nLeft <= buf.length);
+                    buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
+                    foreach (j; 1 .. nLeft)
+                        buf[nLeft - j - 1] = tableFn(idx + j);
+                }
+            }
+            return buf[nLeft - 1];
+        }
+
+        void popFront()
+        {
+            if (!nLeft)
+                front();
+            assert(nLeft);
+            --nLeft;
+            if (!nLeft)
+                r.popFront();
+        }
+
+        static if (isForwardRange!Range)
+        {
+            @property auto save()
+            {
+                auto ret = this;
+                ret.r = r.save;
+                return ret;
+            }
+        }
+
+      private:
+        Range r;
+        uint nLeft;
+        dchar[3] buf = void;
+    }
+
+    return ToCaserImpl(str);
+}
+
+/*********************
+ * Convert input range or string to upper or lower case.
+ *
+ * Does not allocate memory.
+ * Characters in UTF-8 or UTF-16 format that cannot be decoded
+ * are treated as $(XREF utf, replacementDchar).
+ *
+ * Params:
+ *      str = string or range of characters
+ *
+ * Returns:
+ *      an InputRange of dchars
+ *
+ * See_Also:
+ *      $(LREF toUpper), $(LREF toLower)
+ */
+
+auto toLowerCase(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
+    {
+        import std.utf : byDchar;
+
+        // Decode first
+        return toCaser!LowerTriple(str.byDchar);
+    }
+    else
+    {
+        return toCaser!LowerTriple(str);
+    }
+}
+
+/// ditto
+auto toUpperCase(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
+    {
+        import std.utf : byDchar;
+
+        // Decode first
+        return toCaser!UpperTriple(str.byDchar);
+    }
+    else
+    {
+        return toCaser!UpperTriple(str);
+    }
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm: equal;
+
+    assert("hEllo".toUpperCase.equal("HELLO"));
+}
+
+unittest
+{
+    import std.array;
+
+    auto a = "HELLo".toLowerCase;
+    auto savea = a.save;
+    auto s = a.array;
+    assert(s == "hello");
+    s = savea.array;
+    assert(s == "hello");
+
+    string[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
+    string[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
+
+    foreach (i, slwr; lower)
+    {
+        import std.utf : byChar;
+
+        auto sx = slwr.toUpperCase.byChar.array;
+        assert(sx == toUpper(slwr));
+        auto sy = upper[i].toLowerCase.byChar.array;
+        assert(sy == toLower(upper[i]));
+    }
+
+    // Not necessary to call r.front
+    for (auto r = lower[3].toUpperCase; !r.empty; r.popFront())
+    {
+    }
+
+    import std.algorithm : equal;
+
+    "HELLo"w.toLowerCase.equal("hello"d);
+    "HELLo"w.toUpperCase.equal("HELLO"d);
+    "HELLo"d.toLowerCase.equal("hello"d);
+    "HELLo"d.toUpperCase.equal("HELLO"d);
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
