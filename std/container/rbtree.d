@@ -918,7 +918,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
         Complexity: $(BIGOH 1).
     +/
-    @property size_t length()
+    @property size_t length() const
     {
         return _length;
     }
@@ -1783,4 +1783,11 @@ pure unittest
     auto rt4 = redBlackTree!string("hello", "hello");
     assert(rt4.length == 1);
     assert(array(rt4[]) == ["hello"]);
+}
+
+//constness checks
+unittest
+{
+    const rt1 = redBlackTree(5,4,3,2,1);
+    static assert(is(typeof(rt1.length)));
 }
