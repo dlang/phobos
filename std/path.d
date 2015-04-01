@@ -62,21 +62,39 @@ import std.traits;
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
 */
-version(Posix)          enum string dirSeparator = "/";
-else version(Windows)   enum string dirSeparator = "\\";
-else static assert (0, "unsupported platform");
+enum string dirSeparatorPosix = "/";
+enum string dirSeparatorDos = "\\";
 
+/// ditto
+version(Posix)          enum string dirSeparator = dirSeparatorPosix;
+else version(Windows)   enum string dirSeparator = dirSeparatorDos;
+else static assert (0, "unsupported platform");
 
 
 
 /** Path separator string.  A colon under POSIX, a semicolon
     under Windows.
 */
+enum string pathSeparatorPosix = ":";
+enum string pathSeparatorDos = ";";
+
+/// ditto
 version(Posix)          enum string pathSeparator = ":";
 else version(Windows)   enum string pathSeparator = ";";
 else static assert (0, "unsupported platform");
 
+/// Defines how should be built the path, either Posix or Dos style
+enum PathStyle : bool
+{
+    /// Use backslash as directory separator, semicolon as path separator
+    dos,
 
+    /// Use slash as directory separator, colon as path separator
+    posix
+}
+
+version(Posix)          enum PathStyle pathStyle = PathStyle.posix;
+else version(Windows)   enum PathStyle pathStyle = PathStyle.dos;
 
 
 /** Determines whether the given character is a directory separator.
@@ -84,11 +102,22 @@ else static assert (0, "unsupported platform");
     On Windows, this includes both $(D `\`) and $(D `/`).
     On POSIX, it's just $(D `/`).
 */
-bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
+bool isDirSeparator(PathStyle ps=pathStyle)(dchar c)  @safe pure nothrow @nogc
 {
     if (c == '/') return true;
-    version(Windows) if (c == '\\') return true;
+    static if (ps == PathStyle.dos)
+    {
+        if (c == '\\') return true;
+    }
     return false;
+}
+
+unittest
+{
+    assert(isDirSeparator!(PathStyle.dos)('/') == true);
+    assert(isDirSeparator!(PathStyle.posix)('/') == true);
+    assert(isDirSeparator!(PathStyle.dos)('\\') == true);
+    assert(isDirSeparator!(PathStyle.posix)('\\') == false);
 }
 
 
@@ -98,31 +127,31 @@ bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
     the drive letter from the rest of the path.  On POSIX, this always
     returns false.
 */
-private bool isDriveSeparator(dchar c)  @safe pure nothrow @nogc
+private bool isDriveSeparator(PathStyle ps=pathStyle)(dchar c)  @safe pure nothrow @nogc
 {
-    version(Windows) return c == ':';
+    static if (ps == PathStyle.dos) return c == ':';
     else return false;
 }
 
 
 /*  Combines the isDirSeparator and isDriveSeparator tests. */
-version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow @nogc
+private bool isSeparator(PathStyle ps : PathStyle.dos)(dchar c)  @safe pure nothrow @nogc
 {
-    return isDirSeparator(c) || isDriveSeparator(c);
+    return isDirSeparator!ps(c) || isDriveSeparator!ps(c);
 }
-version(Posix) private alias isSeparator = isDirSeparator;
+private alias isSeparator(PathStyle ps : PathStyle.posix) = isDirSeparator!(ps);
 
 
 /*  Helper function that determines the position of the last
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ptrdiff_t lastSeparator(R)(const R path)
+private ptrdiff_t lastSeparator(PathStyle ps=pathStyle, R)(const R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && !isSeparator(path[i])) --i;
+    while (i >= 0 && !isSeparator(ps)(path[i])) --i;
     return i;
 }
 
@@ -178,7 +207,7 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private auto ltrimDirSeparators(R)(inout R path)
+private auto ltrimDirSeparators(PathStyle ps=pathStyle, R)(inout R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
