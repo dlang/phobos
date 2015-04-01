@@ -289,21 +289,21 @@ Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target).
 
 Preconditions: $(D target) shall have enough room to accomodate
-$(D source).
+the entirety of $(D source).
 
 See_Also:
     $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
  */
-Range2 copy(Range1, Range2)(Range1 source, Range2 target)
-if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
+TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
+if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange))
 {
-    static Range2 genericImpl(Range1 source, Range2 target)
+    static TargetRange genericImpl(SourceRange source, TargetRange target)
     {
         // Specialize for 2 random access ranges.
         // Typically 2 random access ranges are faster iterated by common
         // index then by x.popFront(), y.popFront() pair
-        static if (isRandomAccessRange!Range1 && hasLength!Range1
-            && hasSlicing!Range2 && isRandomAccessRange!Range2 && hasLength!Range2)
+        static if (isRandomAccessRange!SourceRange && hasLength!SourceRange
+            && hasSlicing!TargetRange && isRandomAccessRange!TargetRange && hasLength!TargetRange)
         {
             assert(target.length >= source.length,
                 "Cannot copy a source range into a smaller target range.");
@@ -321,7 +321,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     }
 
     import std.traits : isArray;
-    static if (isArray!Range1 && isArray!Range2 &&
+    static if (isArray!SourceRange && isArray!TargetRange &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
         immutable overlaps = () @trusted {
@@ -339,9 +339,9 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             // generic implementation.
             assert(target.length >= source.length,
                 "Cannot copy a source array into a smaller target array.");
-            target[0..source.length] = source[];
+            target[0 .. source.length] = source[];
 
-            return target[source.length..$];
+            return target[source.length .. $];
         }
     }
     else
@@ -355,9 +355,9 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
     int[] a = [ 1, 5 ];
     int[] b = [ 9, 8 ];
-    int[] buf = new int[a.length + b.length + 10];
-    auto rem = copy(a, buf);    // copy a into buf
-    rem = copy(b, rem);         // copy b into remainder of buf
+    int[] buf = new int[](a.length + b.length + 10);
+    auto rem = a.copy(buf);    // copy a into buf
+    rem = b.copy(rem);         // copy b into remainder of buf
     assert(buf[0 .. a.length + b.length] == [1, 5, 9, 8]);
     assert(rem.length == 10);   // unused slots in buf
 }
@@ -370,7 +370,7 @@ range elements, different types of ranges are accepted:
 {
     float[] src = [ 1.0f, 5 ];
     double[] dest = new double[src.length];
-    copy(src, dest);
+    src.copy(dest);
 }
 
 /**
@@ -381,21 +381,23 @@ $(XREF range, take):
 {
     import std.range;
     int[] src = [ 1, 5, 8, 9, 10 ];
-    auto dest = new int[3];
-    copy(take(src, dest.length), dest);
-    assert(dest[0 .. $] == [ 1, 5, 8 ]);
+    auto dest = new int[](3);
+    src.take(dest.length).copy(dest);
+    assert(dest == [ 1, 5, 8 ]);
 }
 
 /**
-To _copy just those elements from a range that satisfy a predicate you
-may want to use $(LREF filter):
+To _copy just those elements from a range that satisfy a predicate,
+use $(LREF filter):
 */
 @safe unittest
 {
     import std.algorithm.iteration : filter;
     int[] src = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
     auto dest = new int[src.length];
-    auto rem = copy(src.filter!(a => (a & 1) == 1), dest);
+    auto rem = src
+        .filter!(a => (a & 1) == 1)
+        .copy(dest);
     assert(dest[0 .. $ - rem.length] == [ 1, 5, 9, 1 ]);
 }
 
@@ -408,7 +410,7 @@ $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
     import std.algorithm, std.range;
     int[] src = [1, 2, 4];
     int[] dest = [0, 0, 0, 0, 0];
-    copy(src.retro, dest.retro);
+    src.retro.copy(dest.retro);
     assert(dest == [0, 0, 1, 2, 4]);
 }
 
