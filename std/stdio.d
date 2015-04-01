@@ -742,13 +742,15 @@ $(D rawRead) always reads in binary mode on Windows.
                 scope(exit) __fhnd_info[fd] = info;
             }
         }
-        immutable fread_result =
+        immutable freadResult =
             fread(buffer.ptr, T.sizeof, buffer.length, _p.handle);
-        immutable fread_success = (fread_result == buffer.length);
-        if (fread_success)
-            return buffer;
-        errnoEnforce(!error);
-        return buffer[0 .. fread_result];
+        assert (freadResult <= buffer.length); // fread return guarantee
+        if (freadResult != buffer.length) // error or eof
+        {
+            errnoEnforce(!error);
+            return buffer[0 .. freadResult];
+        }
+        return buffer;
     }
 
     unittest
