@@ -1,13 +1,13 @@
 module std.experimental.allocator.common;
-import std.traits;
+import std.algorithm, std.traits;
 
 /*
 Ternary by Timon Gehr and Andrei Alexandrescu.
 */
 struct Ternary
 {
-    private ubyte value = 6;
-    private static Ternary make(ubyte b)
+    package ubyte value = 6;
+    package static Ternary make(ubyte b)
     {
         Ternary r = void;
         r.value = b;
@@ -143,4 +143,211 @@ unittest
     static assert(stateSize!C2 == 4 * size_t.sizeof);
     static class C3 { char c; }
     static assert(stateSize!C3 == 2 * size_t.sizeof + char.sizeof);
+}
+
+/**
+$(D chooseAtRuntime) is a compile-time constant of type $(D size_t) that several
+parameterized structures in this module recognize to mean deferral to runtime of
+the exact value. For example, $(D HeapBlock!(Allocator, 4096)) (described in
+detail below) defines a block allocator with block size of 4096 bytes, whereas
+$(D HeapBlock!(Allocator, chooseAtRuntime)) defines a block allocator that has a
+field storing the block size, initialized by the user.
+*/
+enum chooseAtRuntime = size_t.max - 1;
+
+/**
+$(D unbounded) is a compile-time constant of type $(D size_t) that several
+parameterized structures in this module recognize to mean "infinite" bounds for
+the parameter. For example, $(D Freelist) (described in detail below) accepts a
+$(D maxNodes) parameter limiting the number of freelist items. If $(D unbounded)
+is passed for $(D maxNodes), then there is no limit and no checking for the
+number of nodes.
+*/
+enum unbounded = size_t.max;
+
+/**
+The alignment that is guaranteed to accommodate any D object allocation on the
+current platform.
+*/
+enum uint platformAlignment = std.algorithm.max(double.alignof, real.alignof);
+
+/**
+The default good size allocation is deduced as $(D n) rounded up to the
+allocator's alignment.
+*/
+size_t goodAllocSize(A)(auto ref A a, size_t n)
+{
+    return n.roundUpToMultipleOf(a.alignment);
+}
+
+/**
+Returns s rounded up to a multiple of base.
+*/
+package size_t roundUpToMultipleOf(size_t s, uint base)
+{
+    assert(base);
+    auto rem = s % base;
+    return rem ? s + base - rem : s;
+}
+
+unittest
+{
+    assert(10.roundUpToMultipleOf(11) == 11);
+    assert(11.roundUpToMultipleOf(11) == 11);
+    assert(12.roundUpToMultipleOf(11) == 22);
+    assert(118.roundUpToMultipleOf(11) == 121);
+}
+
+package size_t divideRoundUp(size_t a, size_t b)
+{
+    assert(b);
+    return (a + b - 1) / b;
+}
+
+/**
+Returns s rounded up to a multiple of base.
+*/
+package void[] roundStartToMultipleOf(void[] s, uint base)
+{
+    assert(base);
+    auto p = cast(void*) roundUpToMultipleOf(
+        cast(size_t) s.ptr, base);
+    auto end = s.ptr + s.length;
+    return p[0 .. end - p];
+}
+
+unittest
+{
+    void[] p;
+    assert(roundStartToMultipleOf(p, 16) is null);
+    p = new ulong[10];
+    assert(roundStartToMultipleOf(p, 16) is p);
+}
+
+/**
+Returns $(D s) rounded up to the nearest power of 2.
+*/
+package size_t roundUpToPowerOf2(size_t s)
+{
+    import std.typetuple;
+    assert(s <= (size_t.max >> 1) + 1);
+    --s;
+    static if (size_t.sizeof == 4)
+        alias Shifts = TypeTuple!(1, 2, 4, 8, 16);
+    else
+        alias Shifts = TypeTuple!(1, 2, 4, 8, 16, 32);
+    foreach (i; Shifts)
+    {
+        s |= s >> i;
+    }
+    return s + 1;
+}
+
+unittest
+{
+    assert(0.roundUpToPowerOf2 == 0);
+    assert(1.roundUpToPowerOf2 == 1);
+    assert(2.roundUpToPowerOf2 == 2);
+    assert(3.roundUpToPowerOf2 == 4);
+    assert(7.roundUpToPowerOf2 == 8);
+    assert(8.roundUpToPowerOf2 == 8);
+    assert(10.roundUpToPowerOf2 == 16);
+    assert(11.roundUpToPowerOf2 == 16);
+    assert(12.roundUpToPowerOf2 == 16);
+    assert(118.roundUpToPowerOf2 == 128);
+    assert((size_t.max >> 1).roundUpToPowerOf2 == (size_t.max >> 1) + 1);
+    assert(((size_t.max >> 1) + 1).roundUpToPowerOf2 == (size_t.max >> 1) + 1);
+}
+
+/*
+*/
+bool alignedAt(void* ptr, uint alignment)
+{
+    return cast(size_t) ptr % alignment == 0;
+}
+
+/*
+*/
+void* alignDownTo(void* ptr, uint alignment)
+{
+    assert(alignment.isPowerOf2);
+    return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
+}
+
+package bool isPowerOf2(uint x)
+{
+    return (x & (x - 1)) == 0;
+}
+
+package bool isGoodStaticAlignment(uint x)
+{
+    return x.isPowerOf2 && x > 0;
+}
+
+package bool isGoodDynamicAlignment(uint x)
+{
+    return x.isPowerOf2 && x >= (void*).sizeof;
+}
+
+/**
+The default $(D reallocate) function first attempts to use $(D expand). If $(D
+Allocator.expand) is not defined or returns $(D false), $(D reallocate)
+allocates a new block of memory of appropriate size and copies data from the old
+block to the new block. Finally, if $(D Allocator) defines $(D deallocate), $(D
+reallocate) uses it to free the old memory block.
+
+$(D reallocate) does not attempt to use $(D Allocator.reallocate) even if
+defined. This is deliberate so allocators may use it internally within their own
+implementation of $(D reallocate).
+
+*/
+bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
+{
+    if (b.length == s) return true;
+    static if (hasMember!(Allocator, "expand"))
+    {
+        if (b.length <= s && a.expand(b, s - b.length)) return true;
+    }
+    auto newB = a.allocate(s);
+    if (newB.length <= b.length) newB[] = b[0 .. newB.length];
+    else newB[0 .. b.length] = b[];
+    static if (hasMember!(Allocator, "deallocate"))
+        a.deallocate(b);
+    b = newB;
+    return true;
+}
+
+/**
+
+The default $(D alignedReallocate) function first attempts to use $(D expand).
+If $(D Allocator.expand) is not defined or returns $(D false),  $(D
+alignedReallocate) allocates a new block of memory of appropriate size and
+copies data from the old block to the new block. Finally, if $(D Allocator)
+defines $(D deallocate), $(D alignedReallocate) uses it to free the old memory
+block.
+
+$(D alignedReallocate) does not attempt to use $(D Allocator.reallocate) even if
+defined. This is deliberate so allocators may use it internally within their own
+implementation of $(D reallocate).
+
+*/
+bool alignedReallocate(Allocator)(ref Allocator alloc,
+        ref void[] b, size_t s, uint a)
+{
+    static if (hasMember!(Allocator, "expand"))
+    {
+        if (b.length <= s && b.ptr.alignedAt(a)
+            && alloc.expand(b, s - b.length)) return true;
+    }
+    else
+    {
+        if (b.length == s) return true;
+    }
+    auto newB = alloc.alignedAllocate(s, a);
+    if (newB.length <= b.length) newB[] = b[0 .. newB.length];
+    else newB[0 .. b.length] = b[];
+    static if (hasMember!(Allocator, "deallocate"))
+        alloc.deallocate(b);
+    b = newB;
+    return true;
 }
