@@ -315,6 +315,10 @@ pointers on top of another allocator.))
 
 module std.experimental.allocator;
 
+public import std.experimental.allocator.common,
+    std.experimental.allocator.null_allocator,
+    std.experimental.allocator.gc_allocator;
+
 // Example in the synopsis above
 unittest
 {
@@ -341,112 +345,9 @@ unittest
     tuMalloc.deallocate(c);
 }
 
-public import std.experimental.allocator.common;
-
 import std.algorithm, std.conv, std.exception, std.range, std.traits,
     std.typecons, std.typetuple;
 version(unittest) import std.random, std.stdio;
-
-/**
-D's built-in garbage-collected allocator.
- */
-struct GCAllocator
-{
-    unittest { testAllocator!(() => GCAllocator.it); }
-    private import core.memory;
-
-    /**
-    The alignment is a static constant equal to $(D platformAlignment), which
-    ensures proper alignment for any D data type.
-    */
-    enum uint alignment = platformAlignment;
-
-    /**
-    Standard allocator methods per the semantics defined above. The $(D deallocate) and $(D reallocate) methods are $(D @system) because they may move memory around, leaving dangling pointers in user code.
-    */
-    @trusted void[] allocate(size_t bytes) shared
-    {
-        auto p = GC.malloc(bytes);
-        return p ? p[0 .. bytes] : null;
-    }
-
-    /// Ditto
-    @trusted bool expand(ref void[] b, size_t delta) shared
-    {
-        if (delta == 0) return true;
-        if (b is null)
-        {
-            b = allocate(delta);
-            return b !is null;
-        }
-        auto newSize = GC.extend(b.ptr, b.length + delta,
-            b.length + delta);
-        if (newSize == 0)
-        {
-            // expansion unsuccessful
-            return false;
-        }
-        assert(newSize >= b.length + delta);
-        b = b.ptr[0 .. newSize];
-        return true;
-    }
-
-    /// Ditto
-    @system bool reallocate(ref void[] b, size_t newSize) shared
-    {
-        import core.exception : OutOfMemoryError;
-        try
-        {
-            auto p = cast(ubyte*) GC.realloc(b.ptr, newSize);
-            b = p[0 .. newSize];
-        }
-        catch (OutOfMemoryError)
-        {
-            // leave the block in place, tell caller
-            return false;
-        }
-        return true;
-    }
-
-    /// Ditto
-    void[] resolveInternalPointer(void* p) shared
-    {
-        auto r = GC.addrOf(p);
-        if (!r) return null;
-        return r[0 .. GC.sizeOf(r)];
-    }
-
-    /// Ditto
-    @system void deallocate(void[] b) shared
-    {
-        GC.free(b.ptr);
-    }
-
-    /**
-    Returns the global instance of this allocator type. The garbage collected allocator is thread-safe, therefore all of its methods and $(D it) itself are $(D shared).
-    */
-    static shared GCAllocator it;
-
-    // Leave it undocummented for now.
-    @trusted void collect() shared
-    {
-        GC.collect();
-    }
-}
-
-///
-unittest
-{
-    auto buffer = GCAllocator.it.allocate(1024 * 1024 * 4);
-    scope(exit) GCAllocator.it.deallocate(buffer); // or leave it to collection
-    //...
-}
-
-unittest
-{
-    auto b = GCAllocator.it.allocate(10000);
-    assert(GCAllocator.it.expand(b, 1));
-}
 
 /**
    The C heap allocator.
@@ -6247,121 +6148,6 @@ unittest
     }
 
     assert(a.empty);
-}
-
-void testAllocator(alias make)()
-{
-    alias A = typeof(make());
-    auto a = make();
-
-    // Test alignment
-    static assert(A.alignment.isPowerOf2);
-
-    // Test goodAllocSize
-    assert(a.goodAllocSize(1) >= A.alignment);
-    assert(a.goodAllocSize(11) >= 11.roundUpToMultipleOf(A.alignment));
-    assert(a.goodAllocSize(111) >= 111.roundUpToMultipleOf(A.alignment));
-
-    // Test allocate
-    auto b1 = a.allocate(1);
-    assert(b1.length == 1);
-    static if (hasMember!(A, "zeroesAllocations"))
-    {
-        assert((cast(byte*) b1.ptr) == 0);
-    }
-    auto b2 = a.allocate(2);
-    assert(b2.length == 2);
-    assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
-
-    // Test alignedAllocate
-    static if (hasMember!(A, "alignedAllocate"))
-    {{
-        auto b3 = a.alignedAllocate(1, 256);
-        assert(b3.length == 1);
-        assert(b3.ptr.alignedAt(256));
-        assert(a.alignedReallocate(b3, 2, 512));
-        assert(b3.ptr.alignedAt(512));
-        static if (hasMember!(A, "alignedDeallocate"))
-        {
-            a.alignedDeallocate(b3);
-        }
-    }}
-    else
-    {
-        static assert(!hasMember!(A, "alignedDeallocate"));
-        static assert(!hasMember!(A, "alignedReallocate"));
-    }
-
-    static if (hasMember!(A, "allocateAll"))
-    {{
-        auto aa = make();
-        if (aa.allocateAll())
-        {
-            // Can't get any more memory
-            assert(!aa.allocate(1));
-        }
-        auto ab = make();
-        auto b4 = ab.allocateAll();
-        assert(b4.length);
-        // Can't get any more memory
-        assert(!ab.allocate(1));
-    }}
-
-    static if (hasMember!(A, "expand"))
-    {{
-        assert(a.expand(b1, 0));
-        auto len = b1.length;
-        if (a.expand(b1, 102))
-        {
-            assert(b1.length == len + 102, text(b1.length, " != ", len + 102));
-        }
-        auto aa = make();
-        void[] b5 = null;
-        assert(aa.expand(b5, 0));
-        assert(b5 is null);
-        assert(aa.expand(b5, 1));
-        assert(b5.length == 1);
-    }}
-
-    void[] b6 = null;
-    assert(a.reallocate(b6, 0));
-    assert(b6.length == 0);
-    assert(a.reallocate(b6, 1));
-    assert(b6.length == 1, text(b6.length));
-
-    // Test owns
-    static if (hasMember!(A, "owns"))
-    {{
-        assert(!a.owns(null));
-        assert(a.owns(b1));
-        assert(a.owns(b2));
-        assert(a.owns(b6));
-    }}
-
-    static if (hasMember!(A, "resolveInternalPointer"))
-    {{
-        assert(a.resolveInternalPointer(null) is null);
-        auto p = a.resolveInternalPointer(b1.ptr);
-        assert(p.ptr is b1.ptr && p.length >= b1.length);
-        p = a.resolveInternalPointer(b1.ptr + b1.length / 2);
-        assert(p.ptr is b1.ptr && p.length >= b1.length);
-        p = a.resolveInternalPointer(b2.ptr);
-        assert(p.ptr is b2.ptr && p.length >= b2.length);
-        p = a.resolveInternalPointer(b2.ptr + b2.length / 2);
-        assert(p.ptr is b2.ptr && p.length >= b2.length);
-        p = a.resolveInternalPointer(b6.ptr);
-        assert(p.ptr is b6.ptr && p.length >= b6.length);
-        p = a.resolveInternalPointer(b6.ptr + b6.length / 2);
-        assert(p.ptr is b6.ptr && p.length >= b6.length);
-        static int[10] b7 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b7.ptr) is null);
-        assert(a.resolveInternalPointer(b7.ptr + b7.length / 2) is null);
-        assert(a.resolveInternalPointer(b7.ptr + b7.length) is null);
-        int[3] b8 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b8.ptr).ptr is null);
-        assert(a.resolveInternalPointer(b8.ptr + b8.length / 2) is null);
-        assert(a.resolveInternalPointer(b8.ptr + b8.length) is null);
-    }}
 }
 
 //version (std_allocator_benchmark)

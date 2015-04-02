@@ -1,3 +1,5 @@
+module std.experimental.allocator.null_allocator;
+
 /*
   _   _       _ _          _ _                 _
  | \ | |     | | |   /\   | | |               | |
@@ -6,6 +8,7 @@
  | |\  | |_| | | |/ ____ \| | | (_) | (_| (_| | || (_) | |
  |_| \_|\__,_|_|_/_/    \_\_|_|\___/ \___\__,_|\__\___/|_|
 */
+
 /**
 $(D NullAllocator) is an emphatically empty implementation of the allocator
 interface. Although it has no direct use, it is useful as a "terminator" in
@@ -75,6 +78,6 @@ unittest
     auto b = NullAllocator.it.allocate(100);
     assert(b is null);
     NullAllocator.it.deallocate(b);
-    assert(NullAllocator.it.deallocateAll());
+    NullAllocator.it.deallocateAll();
     assert(!NullAllocator.it.owns(null));
 }
