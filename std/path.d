@@ -102,7 +102,7 @@ else version(Windows)   enum PathStyle pathStyle = PathStyle.dos;
     On Windows, this includes both $(D `\`) and $(D `/`).
     On POSIX, it's just $(D `/`).
 */
-bool isDirSeparator(PathStyle ps=pathStyle)(dchar c)  @safe pure nothrow @nogc
+bool isDirSeparator(PathStyle ps = pathStyle)(dchar c)  @safe pure nothrow @nogc
 {
     if (c == '/') return true;
     static if (ps == PathStyle.dos)
@@ -127,7 +127,7 @@ unittest
     the drive letter from the rest of the path.  On POSIX, this always
     returns false.
 */
-private bool isDriveSeparator(PathStyle ps=pathStyle)(dchar c)  @safe pure nothrow @nogc
+private bool isDriveSeparator(PathStyle ps = pathStyle)(dchar c)  @safe pure nothrow @nogc
 {
     static if (ps == PathStyle.dos) return c == ':';
     else return false;
@@ -146,90 +146,91 @@ private alias isSeparator(PathStyle ps : PathStyle.posix) = isDirSeparator!(ps);
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ptrdiff_t lastSeparator(PathStyle ps=pathStyle, R)(const R path)
+private ptrdiff_t lastSeparator(PathStyle ps = pathStyle, R)(const R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && !isSeparator(ps)(path[i])) --i;
+    while (i >= 0 && !isSeparator!ps(path[i])) --i;
     return i;
 }
 
 
-version (Windows)
+private bool isUNC(PathStyle ps = pathStyle, R)(const R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R) &&
+        ps == PathStyle.dos)
 {
-    private bool isUNC(R)(const R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-    {
-        return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
-            && !isDirSeparator(path[2]);
-    }
+    return path.length >= 3 && isDirSeparator!ps(path[0]) && isDirSeparator!ps(path[1])
+        && !isDirSeparator!ps(path[2]);
+}
 
-    private ptrdiff_t uncRootLength(R)(const R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-        in { assert (isUNC(path)); }
-        body
+private ptrdiff_t uncRootLength(PathStyle ps = pathStyle, R)(const R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R) &&
+        ps == PathStyle.dos)
+    in { assert (isUNC!ps(path)); }
+    body
+{
+    ptrdiff_t i = 3;
+    while (i < path.length && !isDirSeparator!ps(path[i])) ++i;
+    if (i < path.length)
     {
-        ptrdiff_t i = 3;
-        while (i < path.length && !isDirSeparator(path[i])) ++i;
-        if (i < path.length)
+        auto j = i;
+        do { ++j; } while (j < path.length && isDirSeparator!ps(path[j]));
+        if (j < path.length)
         {
-            auto j = i;
-            do { ++j; } while (j < path.length && isDirSeparator(path[j]));
-            if (j < path.length)
-            {
-                do { ++j; } while (j < path.length && !isDirSeparator(path[j]));
-                i = j;
-            }
+            do { ++j; } while (j < path.length && !isDirSeparator!ps(path[j]));
+            i = j;
         }
-        return i;
     }
+    return i;
+}
 
-    private bool hasDrive(R)(const R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-    {
-        return path.length >= 2 && isDriveSeparator(path[1]);
-    }
+private bool hasDrive(PathStyle ps = pathStyle, R)(const R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R) &&
+        ps == PathStyle.dos)
+{
+    return path.length >= 2 && isDriveSeparator!ps(path[1]);
+}
 
-    private bool isDriveRoot(R)(const R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-    {
-        return path.length >= 3 && isDriveSeparator(path[1])
-            && isDirSeparator(path[2]);
-    }
+private bool isDriveRoot(PathStyle ps = pathStyle, R)(const R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R) &&
+        ps == PathStyle.dos)
+{
+    return path.length >= 3 && isDriveSeparator!ps(path[1])
+        && isDirSeparator!ps(path[2]);
 }
 
 
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private auto ltrimDirSeparators(PathStyle ps=pathStyle, R)(inout R path)
+private auto ltrimDirSeparators(PathStyle ps = pathStyle, R)(inout R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     int i = 0;
-    while (i < path.length && isDirSeparator(path[i])) ++i;
+    while (i < path.length && isDirSeparator!ps(path[i])) ++i;
     return path[i .. path.length];
 }
 
-private auto rtrimDirSeparators(R)(inout R path)
+private auto rtrimDirSeparators(PathStyle ps = pathStyle, R)(inout R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && isDirSeparator(path[i])) --i;
+    while (i >= 0 && isDirSeparator!ps(path[i])) --i;
     return path[0 .. i+1];
 }
 
-private auto trimDirSeparators(R)(inout R path)
+private auto trimDirSeparators(PathStyle ps = pathStyle, R)(inout R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
-    return ltrimDirSeparators(rtrimDirSeparators(path));
+    return ltrimDirSeparators!ps(rtrimDirSeparators!ps(path));
 }
 
 
@@ -302,38 +303,41 @@ else static assert (0);
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-auto baseName(R)(R path)
+auto baseName(PathStyle ps = pathStyle, R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
-    auto p1 = stripDrive!(BaseOf!R)(path);
+    auto p1 = stripDrive!(ps, BaseOf!R)(path);
     if (p1.empty)
     {
-        version (Windows) if (isUNC!(BaseOf!R)(path))
+        static if (ps == PathStyle.dos)
         {
-            return path[0..1];
-        }
+            if (isUNC!(ps, BaseOf!R)(path))
+            {
+                return path[0..1];
+            }
+        } 
         static if (is(StringTypeOf!R))
             return StringTypeOf!R.init[];   // which is null
         else
             return p1; // which is empty
     }
 
-    auto p2 = rtrimDirSeparators(p1);
+    auto p2 = rtrimDirSeparators!ps(p1);
     if (p2.empty) return p1[0 .. 1];
 
-    return p2[lastSeparator(p2)+1 .. p2.length];
+    return p2[lastSeparator!ps(p2)+1 .. p2.length];
 }
 
 /// ditto
-inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
+inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, PathStyle ps = pathStyle, C, C1)
     (inout(C)[] path, in C1[] suffix)
     @safe pure //TODO: nothrow (because of filenameCmp())
     if (isSomeChar!C && isSomeChar!C1)
 {
-    auto p = baseName(path);
+    auto p = baseName!ps(path);
     if (p.length > suffix.length
-        && filenameCmp!cs(p[$-suffix.length .. $], suffix) == 0)
+        && filenameCmp!(cs, ps)(p[$-suffix.length .. $], suffix) == 0)
     {
         return p[0 .. $-suffix.length];
     }
@@ -434,38 +438,38 @@ unittest
     the POSIX requirements for the 'dirname' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] dirName(C)(C[] path)
+C[] dirName(PathStyle ps = pathStyle, C)(C[] path)
     //TODO: @safe (BUG 6169) pure nothrow (because of to())
     if (isSomeChar!C)
 {
     import std.conv : to;
     if (path.empty) return to!(typeof(return))(".");
 
-    auto p = rtrimDirSeparators(path);
+    auto p = rtrimDirSeparators!ps(path);
     if (p.empty) return path[0 .. 1];
 
-    version (Windows)
+    static if (ps == PathStyle.dos)
     {
-        if (isUNC(p) && uncRootLength(p) == p.length)
+        if (isUNC!ps(p) && uncRootLength!ps(p) == p.length)
             return p;
-        if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
+        if (p.length == 2 && isDriveSeparator!ps(p[1]) && path.length > 2)
             return path[0 .. 3];
     }
 
-    auto i = lastSeparator(p);
+    auto i = lastSeparator!ps(p);
     if (i == -1) return to!(typeof(return))(".");
     if (i == 0) return p[0 .. 1];
 
-    version (Windows)
+    static if (ps == PathStyle.dos)
     {
         // If the directory part is either d: or d:\, don't
         // chop off the last symbol.
-        if (isDriveSeparator(p[i]) || isDriveSeparator(p[i-1]))
+        if (isDriveSeparator!ps(p[i]) || isDriveSeparator!ps(p[i-1]))
             return p[0 .. i+1];
     }
 
     // Remove any remaining trailing (back)slashes.
-    return rtrimDirSeparators(p[0 .. i]);
+    return rtrimDirSeparators!ps(p[0 .. i]);
 }
 
 
@@ -527,30 +531,30 @@ unittest
     }
     ---
 */
-inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
+inout(C)[] rootName(PathStyle ps = pathStyle, C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
 {
     if (path.empty) return null;
 
-    version (Posix)
+    static if (ps == PathStyle.posix)
     {
-        if (isDirSeparator(path[0])) return path[0 .. 1];
+        if (isDirSeparator!ps(path[0])) return path[0 .. 1];
     }
-    else version (Windows)
+    else static if (ps == PathStyle.dos)
     {
-        if (isDirSeparator(path[0]))
+        if (isDirSeparator!ps(path[0]))
         {
-            if (isUNC(path)) return path[0 .. uncRootLength(path)];
+            if (isUNC!ps(path)) return path[0 .. uncRootLength!ps(path)];
             else return path[0 .. 1];
         }
-        else if (path.length >= 3 && isDriveSeparator(path[1]) &&
-            isDirSeparator(path[2]))
+        else if (path.length >= 3 && isDriveSeparator!ps(path[1]) &&
+            isDirSeparator!ps(path[2]))
         {
             return path[0 .. 3];
         }
     }
     else static assert (0, "unsupported platform");
 
-    assert (!isRooted(path));
+    assert (!isRooted!ps(path));
     return null;
 }
 
