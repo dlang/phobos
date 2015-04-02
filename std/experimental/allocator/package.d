@@ -1217,6 +1217,24 @@ unittest
     )(20)[].map!(t => t.to!("seconds", double)));
 }
 
+unittest
+{
+    auto a = allocatorObject(Mallocator.it);
+    auto b = a.allocate(100);
+    assert(b.length == 100);
+
+    FreeList!(GCAllocator, 0, 8, 1) fl;
+    auto sa = allocatorObject(fl);
+    b = a.allocate(101);
+    assert(b.length == 101);
+
+    FallbackAllocator!(InSituRegion!(10240, 64), GCAllocator) fb;
+    // Doesn't work yet...
+    //a = allocatorObject(fb);
+    //b = a.allocate(102);
+    //assert(b.length == 102);
+}
+
 __EOF__
 
 version(none) struct TemplateAllocator
