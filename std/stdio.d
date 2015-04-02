@@ -304,14 +304,6 @@ manner, such that as soon as the last $(D File) variable bound to a
 given $(D FILE*) goes out of scope, the underlying $(D FILE*) is
 automatically closed.
 
-Bugs:
-$(D File) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
-instead of UTF-8 ($(BUGZILLA 7648)) thus must not be used in $(I Windows)
-or cross-platform applications other than with an immediate ASCII string as
-a file name to prevent accidental changes to result in incorrect behavior.
-One can use $(XREF file, read)/$(XREF file, write)/$(XREF stream, _File)
-instead.
-
 Example:
 ----
 // test.d
@@ -381,16 +373,98 @@ The destructor automatically closes the file as soon as no $(D File)
 object refers to it anymore.
 
 Throws: $(D ErrnoException) if the file could not be opened.
+        $(D WindowsException) on Windows, if the CreateFileW return INVALID_HANDLE_VALUE.
  */
     this(string name, in char[] stdioOpenmode = "rb") @safe
     {
         import std.conv : text;
         import std.exception : errnoEnforce;
 
-        this(errnoEnforce(.fopen(name, stdioOpenmode),
-                        text("Cannot open file `", name, "' in mode `",
-                                stdioOpenmode, "'")),
+        version(Windows)
+        {
+            static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess,
+                DWORD dwShareMode, SECURITY_ATTRIBUTES *lpSecurityAttributes,
+                DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes,
+                HANDLE hTemplateFile) @trusted
+            {
+                import std.internal.cstring : tempCStringW;
+                return CreateFileW(fileName.tempCStringW(), dwDesiredAccess,
+                    dwShareMode, lpSecurityAttributes, dwCreationDisposition,
+                    dwFlagsAndAttributes, hTemplateFile);
+            }
+
+            static trustedHandleToFD(HANDLE h, in char[] stdioOpenmode) @trusted
+            {
+                version (DIGITAL_MARS_STDIO)
+                    return _handleToFD(h, FHND_DEVICE);
+                else // MSVCRT
+                {
+                    int mode;
+                    modeLoop:
+                    foreach (c; stdioOpenmode)
+                        switch (c)
+                        {
+                            case 'r': mode |= _O_RDONLY; break;
+                            case '+': mode &=~_O_RDONLY; break;
+                            case 'a': mode |= _O_APPEND; break;
+                            case 'b': mode |= _O_BINARY; break;
+                            case 't': mode |= _O_TEXT;   break;
+                            case ',': break modeLoop;
+                            default: break;
+                        }
+                    return _open_osfhandle(cast(intptr_t)h, mode);
+                }
+            }
+
+            DWORD access, creation;
+            modeLoop:
+            foreach (c; stdioOpenmode)
+                switch (c)
+                {
+                    case 'r':
+                        access = GENERIC_READ;
+                        creation = OPEN_EXISTING;
+                        break;
+                    case 'w':
+                        access = GENERIC_WRITE;
+                        creation = CREATE_ALWAYS;
+                        break;
+                    case 'a':
+                        access = FILE_APPEND_DATA;
+                        creation = OPEN_ALWAYS;
+                        break;
+                    case '+':
+                        if (access & FILE_APPEND_DATA)
+                            access |= GENERIC_READ;
+                        else
+                            access = GENERIC_READ | GENERIC_WRITE;
+                        break;
+                    case ',': break modeLoop;
+                    default: break;
+                }
+
+            auto h = trustedCreateFileW(name, access, FILE_SHARE_READ, null,
+                creation,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                cast(HANDLE) null);
+
+            wenforce(h != INVALID_HANDLE_VALUE,
+                text("Cannot open file `", name, "' in mode '",
+                    stdioOpenmode, "'"));
+
+            auto fd = trustedHandleToFD(h, stdioOpenmode);
+            errnoEnforce(fd >= 0,
+                text("Cannot open file `", name, "' in mode '",
+                    stdioOpenmode, "'"));
+            fdopen(fd, stdioOpenmode, name);
+        }
+        else
+        {
+            this(errnoEnforce(.fopen(name, stdioOpenmode),
+                text("Cannot open file `", name, "' in mode '",
+                    stdioOpenmode, "'")),
                 name);
+        }
     }
 
     ~this() @safe
