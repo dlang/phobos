@@ -168,7 +168,7 @@ PACKAGE_std_digest = crc digest hmac md ripemd sha
 PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
   nulllogger multilogger package) $(addprefix allocator/,\
   affix_allocator common fallback_allocator free_list gc_allocator heap_block \
-  mallocator null_allocator region)
+  mallocator mmap_allocator null_allocator region)
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
