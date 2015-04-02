@@ -2925,11 +2925,6 @@ if (isDynamicArray!A)
                 enforce(newlength == 0);
         }
     }
-    else
-    {
-        /// Clear is not available for const/immutable data.
-        @disable void clear();
-    }
 
     void toString()(scope void delegate(const(char)[]) sink)
     {
@@ -3392,8 +3387,6 @@ unittest // check against .clear UFCS hijacking
 {
     Appender!string app;
     static assert(!__traits(compiles, app.clear()));
-    /*static assert(__traits(compiles, clear(app)),
-        "Remove me when object.clear is removed!");*/
 }
 
 unittest
