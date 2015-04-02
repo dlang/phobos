@@ -745,35 +745,6 @@ unittest
     //alloc.dump();
 }
 
-string forward(string p, string[] names...)
-{
-    string r;
-    foreach (n; names)
-    {
-        r ~= "static if (hasMember!(typeof("~p~"), `"~n~"`)"
-            ~ ") auto ref "~n~"(T_...)(T_ t_) { return "~p~"."~n~"(t_); }\n";
-    }
-    return r;
-}
-
-unittest
-{
-    struct A
-    {
-        static int fun(int, string) { return 42; }
-        static int gun(int, string, double) { return 43; }
-    }
-    struct B
-    {
-        A a;
-        //pragma(msg, forward("a", "fun", "gun"));
-        mixin(forward("a", "fun", "gun"));
-    }
-    B b;
-    assert(b.fun(1, "a") == 42);
-    assert(b.gun(1, "a", 3) == 43);
-}
-
 unittest
 {
     void test(Allocator)()
