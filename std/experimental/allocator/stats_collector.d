@@ -489,3 +489,42 @@ public:
         static if (hasPerAllocationState) _root = null;
     }
 }
+
+unittest
+{
+    void test(Allocator)()
+    {
+        import std.range : walkLength;
+        import std.stdio : writeln;
+        Allocator a;
+        auto b1 = a.allocate(100);
+        assert(a.numAllocate == 1);
+        auto b2 = a.allocate(101);
+        assert(a.numAllocate == 2);
+        assert(a.bytesAllocated == 201);
+        auto b3 = a.allocate(202);
+        assert(a.numAllocate == 3);
+        assert(a.bytesAllocated == 403);
+
+        assert(walkLength(a.byAllocation) == 3);
+
+        foreach (ref e; a.byAllocation)
+        {
+            if (false) writeln(e);
+        }
+
+        a.deallocate(b2);
+        assert(a.numDeallocate == 1);
+        a.deallocate(b1);
+        assert(a.numDeallocate == 2);
+        a.deallocate(b3);
+        assert(a.numDeallocate == 3);
+        assert(a.numAllocate == a.numDeallocate);
+        assert(a.bytesDeallocated == 403);
+    }
+
+    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.free_list;
+    test!(StatsCollector!Mallocator)();
+    test!(StatsCollector!(FreeList!(Mallocator, 128)))();
+}
