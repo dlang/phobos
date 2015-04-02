@@ -167,7 +167,8 @@ PACKAGE_std_container = array binaryheap dlist package rbtree slist util
 PACKAGE_std_digest = crc digest hmac md ripemd sha
 PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
   nulllogger multilogger package) $(addprefix allocator/,\
-  affix_allocator allocator_list common fallback_allocator free_list \
+  affix_allocator allocator_list bucketizer common fallback_allocator \
+  free_list \
   gc_allocator heap_block mallocator mmap_allocator null_allocator region \
   segregator stats_collector)
 PACKAGE_std_net = curl isemail
