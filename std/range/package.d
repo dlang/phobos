@@ -8271,14 +8271,14 @@ unittest // issue 14373
     then the original range is returned rather than a $(LREF RefRange).
   +/
 auto refRange(R)(R* range)
-    if(!is(R == class))
+    if(isInputRange!R && !is(R == class))
 {
     return RefRange!R(range);
 }
 
 /// ditto
 auto refRange(R)(R* range)
-    if(is(R == class))
+    if(isInputRange!R && is(R == class))
 {
     return *range;
 }
