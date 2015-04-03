@@ -101,39 +101,11 @@ public:
         if (!rawMemory)
             onOutOfMemoryError();
 
-        u._p = cast(RefT)rawMemory;
-
         static if (is(T == class)) {
-            // Hacked together from conv.emplace because it only seems to provide
-            // ways to init a class from an **array** of raw memory,
-            // not a malloc'd pointer.
-            // A possible better solution would be to create a conv.emplace
-            // that takes a pointer instead of an array.
-
-            // Initialize to the pre-ctor state
-            void[] init = typeid(T).init[];
-            assert(init.length <= allocSize);
-
-            // Forgive the hackishness, but we just need to get
-            // the data from init into our newly malloc'd memory.
-            import core.stdc.string : memcpy;
-            memcpy(rawMemory, init.ptr, init.length);
-
-            // Call the ctor if any
-            static if (is(typeof(u._p.__ctor(args))))
-            {
-                // T defines a genuine constructor accepting args
-                // Go the classic route: write .init first, then call ctor
-                u._p.__ctor(args);
-            }
-            else
-            {
-                static assert(args.length == 0 && !is(typeof(&T.__ctor)),
-                        "Don't know how to initialize an object of type "
-                        ~ T.stringof ~ " with arguments " ~ Args.stringof);
-            }
+            u._p = emplace!T(rawMemory[0 .. allocSize], args);
         }
         else {
+            u._p = cast(RefT)rawMemory;
             emplace!T(u._p, args);
         }
 
