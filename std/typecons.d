@@ -97,7 +97,10 @@ public:
         else
             immutable size_t allocSize = T.sizeof;
 
-        void* rawMemory = enforce(malloc(allocSize), "malloc returned null");
+        void* rawMemory = malloc(allocSize);
+        if (!rawMemory)
+            onOutOfMemoryError();
+
         u._p = cast(RefT)rawMemory;
 
         static if (is(T == class)) {
