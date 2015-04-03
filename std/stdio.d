@@ -481,6 +481,13 @@ Throws: $(D ErrnoException) if the file could not be opened.
         }
     }
 
+    unittest
+    {
+        // Issue 7648
+        File("Фёдор.txt", "wb").writeln("Петруха с тобой?");
+        scope(exit) remove("Фёдор.txt");
+    }
+
     ~this() @safe
     {
         detach();
