@@ -833,7 +833,20 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                     isNegative = true;
                 }
 
-                readInteger();
+                // might be '-inf'
+                if(c == 'i' || c == 'I')
+                {
+                    isFloat = true;
+                    number.put(c);
+                    checkChar!(false, false)('n');
+                    number.put('n');
+                    checkChar!(false, false)('f');
+                    number.put('f');
+                }
+                else
+                {
+                    readInteger();
+                }
 
                 if(testChar('.'))
                 {
@@ -888,10 +901,26 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 
             case 'n':
             case 'N':
-                value.type_tag = JSON_TYPE.NULL;
-                checkChar!(false, false)('u');
-                checkChar!(false, false)('l');
-                checkChar!(false, false)('l');
+                if (peekChar() == 'a' || peekChar == 'A') {
+                    value.type_tag = JSON_TYPE.FLOAT;
+                    value.store.floating = double.nan;
+                    checkChar!(false, false)('a');
+                    checkChar!(false, false)('n');
+                }
+                else {
+                    value.type_tag = JSON_TYPE.NULL;
+                    checkChar!(false, false)('u');
+                    checkChar!(false, false)('l');
+                    checkChar!(false, false)('l');
+                }
+                break;
+
+            case 'i':
+            case 'I':
+                value.type_tag = JSON_TYPE.FLOAT;
+                value.store.floating = double.infinity;
+                checkChar!(false, false)('n');
+                checkChar!(false, false)('f');
                 break;
 
             default:
@@ -1324,6 +1353,31 @@ unittest {
   const jv = parseJSON(json);
   assert(jv.toString == json);
   assert(jv.toPrettyString == json);
+}
+
+// test that parseJSON handles floating-point nan, inf, and -inf.
+unittest {
+    import std.math : isNaN, isInfinity;
+    auto json = parseJSON(`{"a": nan, "b": inf, "c": -inf}`);
+    assert(json.object["a"].floating.isNaN);
+    assert(json.object["b"].floating.isInfinity && json.object["b"].floating > 0);
+    assert(json.object["c"].floating.isInfinity && json.object["c"].floating < 0);
+
+    auto json2 = parseJSON(`{"a": NaN, "b": Inf, "c": -INF}`);
+    assert(json2.object["a"].floating.isNaN);
+    assert(json2.object["b"].floating.isInfinity && json.object["b"].floating > 0);
+    assert(json2.object["c"].floating.isInfinity && json.object["c"].floating < 0);
+
+    // make sure std.json can parse its own output
+    double toJsonAndBack(double val) {
+        return JSONValue(val).toString().parseJSON().floating;
+    }
+
+    assert(toJsonAndBack(double.nan).isNaN);
+    assert(toJsonAndBack(double.infinity).isInfinity);
+    assert(toJsonAndBack(double.infinity) > 0);
+    assert(toJsonAndBack(-double.infinity).isInfinity);
+    assert(toJsonAndBack(-double.infinity) < 0);
 }
 
 deprecated unittest
