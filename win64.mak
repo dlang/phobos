@@ -481,6 +481,14 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 
 html : $(DOCS)
 
+################### Win32 COFF support #########################
+
+# default to 32-bit compiler relative to 64-bit compiler, link and lib are architecture agnostic
+CC32=$(CC)\..\..\cl
+
+phobos32mscoff:
+	$(MAKE) -f win64.mak "DMD=$(DMD)" "MAKE=$(MAKE)" MODEL=32mscoff "CC=\$(CC32)"\"" "AR=\$(AR)"\"" "VCDIR=$(VCDIR)" "SDKDIR=$(SDKDIR)"
+
 ######################################################
 
 $(ZLIB): $(SRC_ZLIB)
