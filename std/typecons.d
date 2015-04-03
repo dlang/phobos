@@ -83,7 +83,7 @@ public:
         import core.memory : GC;
         import core.stdc.stdlib : malloc;
         import std.conv : emplace;
-        import std.exception : enforce;
+        import core.exception : onOutOfMemoryError;
 
         debug(Unique) writeln("Unique.create for ", T.stringof);
         Unique!T u;
