@@ -73,7 +73,7 @@ version (Posix)         enum string osDefaultDirSeparator = DirSeparator.posix;
 else version (Windows)  enum string osDefaultDirSeparator = DirSeparator.dos;
 else static assert (0, "unsupported platform");
 
-DirSeparator dirSeparator (PathStyle ps = DirSeparator.osDefault)()
+DirSeparator dirSeparator (PathStyle ps = PathStyle.osDefault)()
 {
     static if (ps == PathStyle.dos)        return DirSeparator.dos;
     else static if (ps == PathStyle.posix) return DirSeparator.posix;
@@ -95,7 +95,7 @@ version (Posix)         enum string osDefaultPathSeparator = PathSeparator.posix
 else version (Windows)  enum string osDefaultPathSeparator = PathSeparator.dos;
 else static assert (0, "unsupported platform");
 
-PathSeparator pathSeparator (PathStyle ps = PathSeparator.osDefault)()
+PathSeparator pathSeparator (PathStyle ps = PathStyle.osDefault)()
 {
     static if (ps == PathStyle.dos)        return PathSeparator.dos;
     else static if (ps == PathStyle.posix) return PathSeparator.posix;
@@ -163,6 +163,8 @@ private bool isSeparator(dchar c, PathStyle ps = PathStyle.osDefault)  @safe pur
         return isDirSeparator(c, ps) || isDriveSeparator(c, ps);
     else if (ps == PathStyle.posix)
         return isDirSeparator(c, ps);
+    else
+        assert (0);
 }
 
 
@@ -175,7 +177,7 @@ private ptrdiff_t lastSeparator(PathStyle ps = PathStyle.osDefault, R)(const R p
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && !isSeparator!ps(path[i])) --i;
+    while (i >= 0 && !isSeparator(path[i], ps)) --i;
     return i;
 }
 
@@ -712,9 +714,9 @@ private ptrdiff_t extSeparatorPos(PathStyle ps = PathStyle.osDefault, R)(const R
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && !isSeparator!ps(path[i]))
+    while (i >= 0 && !isSeparator(path[i], ps))
     {
-        if (path[i] == '.' && i > 0 && !isSeparator!ps(path[i-1])) return i;
+        if (path[i] == '.' && i > 0 && !isSeparator(path[i-1], ps)) return i;
         --i;
     }
     return -1;
@@ -1315,7 +1317,7 @@ immutable(C)[] buildNormalizedPath(PathStyle ps = PathStyle.osDefault, C)(const(
         {
             foreach (i, c; rootElement)
             {
-                if (isDirSeparator(c))
+                if (isDirSeparator(c, ps))
                 {
                     static assert (dirSeparator.length == 1);
                     fullPath[i] = dirSeparator[0];
@@ -1327,9 +1329,9 @@ immutable(C)[] buildNormalizedPath(PathStyle ps = PathStyle.osDefault, C)(const(
 
         // If the root element doesn't end with a dir separator,
         // we add one.
-        if (!isDirSeparator!ps(rootElement[$-1]))
+        if (!isDirSeparator(rootElement[$-1], ps))
         {
-            static assert (dirSeparator.length == 1);
+            static assert (dirSeparator!ps.length == 1);
             fullPath[rootElement.length] = dirSeparator[0];
             relPart = fullPath[rootElement.length + 1 .. $];
         }
@@ -1355,16 +1357,16 @@ immutable(C)[] buildNormalizedPath(PathStyle ps = PathStyle.osDefault, C)(const(
             // Fake a dir separator between path segments
             immutable c = (j == path.length ? dirSeparator[0] : path[j]);
 
-            if (isDirSeparator!ps(c))
+            if (isDirSeparator(c, ps))
             {
                 final switch (prev)
                 {
                     case Prev.doubleDot:
                         if (hasParents)
                         {
-                            while (i > 0 && !isDirSeparator!ps(relPart[i-1])) --i;
+                            while (i > 0 && !isDirSeparator(relPart[i-1], ps)) --i;
                             if (i > 0) --i; // skip the dir separator
-                            while (i > 0 && !isDirSeparator!ps(relPart[i-1])) --i;
+                            while (i > 0 && !isDirSeparator(relPart[i-1], ps)) --i;
                             if (i == 0) hasParents = rooted;
                         }
                         else
@@ -1376,7 +1378,7 @@ immutable(C)[] buildNormalizedPath(PathStyle ps = PathStyle.osDefault, C)(const(
                         }
                         break;
                     case Prev.dot:
-                        while (i > 0 && !isDirSeparator!ps(relPart[i-1])) --i;
+                        while (i > 0 && !isDirSeparator(relPart[i-1], ps)) --i;
                         break;
                     case Prev.nonSpecial:
                         static assert (dirSeparator.length == 1);
@@ -2307,7 +2309,7 @@ unittest
 int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault, PathStyle ps = PathStyle.osDefault)(dchar a, dchar b)
     @safe pure nothrow
 {
-    if (isDirSeparator!ps(a) && isDirSeparator!ps(b)) return 0;
+    if (isDirSeparator(a, ps) && isDirSeparator(b, ps)) return 0;
     static if (!cs)
     {
         import std.uni;
