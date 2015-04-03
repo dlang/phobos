@@ -84,7 +84,7 @@ else version(Windows)   enum string pathSeparator = ";";
 else static assert (0, "unsupported platform");
 
 /// Defines how should be built the path, either Posix or Dos style
-enum PathStyle : bool
+enum PathStyle : byte
 {
     /// Use backslash as directory separator, semicolon as path separator
     dos,
@@ -102,10 +102,10 @@ else version(Windows)   enum PathStyle pathStyle = PathStyle.dos;
     On Windows, this includes both $(D `\`) and $(D `/`).
     On POSIX, it's just $(D `/`).
 */
-bool isDirSeparator(PathStyle ps = pathStyle)(dchar c)  @safe pure nothrow @nogc
+bool isDirSeparator(dchar c, PathStyle ps = pathStyle)  @safe pure nothrow @nogc
 {
     if (c == '/') return true;
-    static if (ps == PathStyle.dos)
+    if (ps == PathStyle.dos)
     {
         if (c == '\\') return true;
     }
@@ -114,10 +114,10 @@ bool isDirSeparator(PathStyle ps = pathStyle)(dchar c)  @safe pure nothrow @nogc
 
 unittest
 {
-    assert(isDirSeparator!(PathStyle.dos)('/') == true);
-    assert(isDirSeparator!(PathStyle.posix)('/') == true);
-    assert(isDirSeparator!(PathStyle.dos)('\\') == true);
-    assert(isDirSeparator!(PathStyle.posix)('\\') == false);
+    assert(isDirSeparator('/', PathStyle.dos) == true);
+    assert(isDirSeparator('/', PathStyle.posix) == true);
+    assert(isDirSeparator('\\', PathStyle.dos) == true);
+    assert(isDirSeparator('\\', PathStyle.posix) == false);
 }
 
 
@@ -127,19 +127,21 @@ unittest
     the drive letter from the rest of the path.  On POSIX, this always
     returns false.
 */
-private bool isDriveSeparator(PathStyle ps = pathStyle)(dchar c)  @safe pure nothrow @nogc
+private bool isDriveSeparator(dchar c, PathStyle ps = pathStyle)  @safe pure nothrow @nogc
 {
-    static if (ps == PathStyle.dos) return c == ':';
+    if (ps == PathStyle.dos) return c == ':';
     else return false;
 }
 
 
 /*  Combines the isDirSeparator and isDriveSeparator tests. */
-private bool isSeparator(PathStyle ps : PathStyle.dos)(dchar c)  @safe pure nothrow @nogc
+private bool isSeparator(dchar c, PathStyle ps = pathStyle)  @safe pure nothrow @nogc
 {
-    return isDirSeparator!ps(c) || isDriveSeparator!ps(c);
+    if (ps == PathStyle.dos)
+        return isDirSeparator(c, ps) || isDriveSeparator(c, ps);
+    else if (ps == PathStyle.posix)
+        return isDirSeparator(c, ps);
 }
-private alias isSeparator(PathStyle ps : PathStyle.posix) = isDirSeparator!(ps);
 
 
 /*  Helper function that determines the position of the last
@@ -161,8 +163,8 @@ private bool isUNC(PathStyle ps = pathStyle, R)(const R path)
         isNarrowString!R) &&
         ps == PathStyle.dos)
 {
-    return path.length >= 3 && isDirSeparator!ps(path[0]) && isDirSeparator!ps(path[1])
-        && !isDirSeparator!ps(path[2]);
+    return path.length >= 3 && isDirSeparator(path[0], ps) && isDirSeparator(path[1], ps)
+        && !isDirSeparator(path[2], ps);
 }
 
 private ptrdiff_t uncRootLength(PathStyle ps = pathStyle, R)(const R path)
@@ -173,14 +175,14 @@ private ptrdiff_t uncRootLength(PathStyle ps = pathStyle, R)(const R path)
     body
 {
     ptrdiff_t i = 3;
-    while (i < path.length && !isDirSeparator!ps(path[i])) ++i;
+    while (i < path.length && !isDirSeparator(path[i], ps)) ++i;
     if (i < path.length)
     {
         auto j = i;
-        do { ++j; } while (j < path.length && isDirSeparator!ps(path[j]));
+        do { ++j; } while (j < path.length && isDirSeparator(path[j], ps));
         if (j < path.length)
         {
-            do { ++j; } while (j < path.length && !isDirSeparator!ps(path[j]));
+            do { ++j; } while (j < path.length && !isDirSeparator(path[j], ps));
             i = j;
         }
     }
@@ -192,7 +194,7 @@ private bool hasDrive(PathStyle ps = pathStyle, R)(const R path)
         isNarrowString!R) &&
         ps == PathStyle.dos)
 {
-    return path.length >= 2 && isDriveSeparator!ps(path[1]);
+    return path.length >= 2 && isDriveSeparator(path[1], ps);
 }
 
 private bool isDriveRoot(PathStyle ps = pathStyle, R)(const R path)
@@ -200,8 +202,8 @@ private bool isDriveRoot(PathStyle ps = pathStyle, R)(const R path)
         isNarrowString!R) &&
         ps == PathStyle.dos)
 {
-    return path.length >= 3 && isDriveSeparator!ps(path[1])
-        && isDirSeparator!ps(path[2]);
+    return path.length >= 3 && isDriveSeparator(path[1], ps)
+        && isDirSeparator(path[2], ps);
 }
 
 
@@ -213,7 +215,7 @@ private auto ltrimDirSeparators(PathStyle ps = pathStyle, R)(inout R path)
         isNarrowString!R)
 {
     int i = 0;
-    while (i < path.length && isDirSeparator!ps(path[i])) ++i;
+    while (i < path.length && isDirSeparator(path[i], ps)) ++i;
     return path[i .. path.length];
 }
 
@@ -222,7 +224,7 @@ private auto rtrimDirSeparators(PathStyle ps = pathStyle, R)(inout R path)
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && isDirSeparator!ps(path[i])) --i;
+    while (i >= 0 && isDirSeparator(path[i], ps)) --i;
     return path[0 .. i+1];
 }
 
@@ -452,7 +454,7 @@ C[] dirName(PathStyle ps = pathStyle, C)(C[] path)
     {
         if (isUNC!ps(p) && uncRootLength!ps(p) == p.length)
             return p;
-        if (p.length == 2 && isDriveSeparator!ps(p[1]) && path.length > 2)
+        if (p.length == 2 && isDriveSeparator(p[1], ps) && path.length > 2)
             return path[0 .. 3];
     }
 
@@ -464,7 +466,7 @@ C[] dirName(PathStyle ps = pathStyle, C)(C[] path)
     {
         // If the directory part is either d: or d:\, don't
         // chop off the last symbol.
-        if (isDriveSeparator!ps(p[i]) || isDriveSeparator!ps(p[i-1]))
+        if (isDriveSeparator(p[i], ps) || isDriveSeparator(p[i-1], ps))
             return p[0 .. i+1];
     }
 
@@ -537,17 +539,17 @@ inout(C)[] rootName(PathStyle ps = pathStyle, C)(inout(C)[] path)  @safe pure no
 
     static if (ps == PathStyle.posix)
     {
-        if (isDirSeparator!ps(path[0])) return path[0 .. 1];
+        if (isDirSeparator(path[0], ps)) return path[0 .. 1];
     }
     else static if (ps == PathStyle.dos)
     {
-        if (isDirSeparator!ps(path[0]))
+        if (isDirSeparator(path[0], ps))
         {
             if (isUNC!ps(path)) return path[0 .. uncRootLength!ps(path)];
             else return path[0 .. 1];
         }
-        else if (path.length >= 3 && isDriveSeparator!ps(path[1]) &&
-            isDirSeparator!ps(path[2]))
+        else if (path.length >= 3 && isDriveSeparator(path[1], ps) &&
+            isDirSeparator(path[2], ps))
         {
             return path[0 .. 3];
         }
