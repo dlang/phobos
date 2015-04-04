@@ -1235,6 +1235,38 @@ unittest
     //assert(b.length == 102);
 }
 
+///
+unittest
+{
+    /// Define an allocator bound to the built-in GC.
+    shared ISharedAllocator alloc = allocatorObject(GCAllocator.it);
+    auto b = alloc.allocate(42);
+    assert(b.length == 42);
+    assert(alloc.deallocate(b) == Ternary.yes);
+
+    // Define an elaborate allocator and bind it to the class API.
+    // Note that the same variable "alloc" is used.
+    alias FList = FreeList!(GCAllocator, 0, unbounded);
+    alias A = ThreadLocal!(
+        Segregator!(
+            8, FreeList!(GCAllocator, 0, 8),
+            128, Bucketizer!(FList, 1, 128, 16),
+            256, Bucketizer!(FList, 129, 256, 32),
+            512, Bucketizer!(FList, 257, 512, 64),
+            1024, Bucketizer!(FList, 513, 1024, 128),
+            2048, Bucketizer!(FList, 1025, 2048, 256),
+            3584, Bucketizer!(FList, 2049, 3584, 512),
+            4072 * 1024, AllocatorList!(
+                () => HeapBlock!(4096)(GCAllocator.it.allocate(4072 * 1024))),
+            GCAllocator
+        )
+    );
+
+    auto alloc2 = allocatorObject(A.it);
+    b = alloc.allocate(101);
+    assert(alloc.deallocate(b) == Ternary.yes);
+}
+
 __EOF__
 
 version(none) struct TemplateAllocator

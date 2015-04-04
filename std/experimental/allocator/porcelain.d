@@ -12,26 +12,28 @@ See_Also: $(LREF ISharedAllocator)
 interface IAllocator
 {
     /**
-    Returns the alignment offered. $(COMMENT By default this method returns $(D platformAlignment).)
+    Returns the alignment offered. $(COMMENT By default this method returns
+    $(D platformAlignment).)
     */
     @property uint alignment();
 
     /**
     Returns the good allocation size that guarantees zero internal
-    fragmentation. $(COMMENT By default returns $(D s) rounded up to the nearest multiple
-    of $(D alignment).)
+    fragmentation. $(COMMENT By default returns $(D s) rounded up to the nearest
+    multiple of $(D alignment).)
     */
     size_t goodAllocSize(size_t s);
 
     /**
     Allocates memory. The default returns $(D null).
     */
-    void[] allocate(size_t);
+    void[] allocate(size_t, TypeInfo ti = null);
 
     /**
     Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
     the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership not
-    supported by the allocator. $(COMMENT By default returns $(D Ternary.unknown).)
+    supported by the allocator. $(COMMENT By default returns $(D
+    Ternary.unknown).)
     */
     Ternary owns(void[] b);
 
@@ -59,8 +61,8 @@ interface IAllocator
     Ternary deallocateAll();
 
     /**
-    Allocates and returns all memory available to this allocator. $(COMMENT By default
-    returns $(D null).)
+    Allocates and returns all memory available to this allocator. $(COMMENT By
+    default returns $(D null).)
     */
     void[] allocateAll();
 }
@@ -80,7 +82,7 @@ interface ISharedAllocator
     size_t goodAllocSize(size_t s) shared;
 
     /// Ditto
-    void[] allocate(size_t) shared;
+    void[] allocate(size_t, TypeInfo ti = null) shared;
 
     /// Ditto
     Ternary owns(void[] b) shared;
@@ -158,29 +160,6 @@ auto allocatorObject(A)(auto ref A a)
     }
 }
 
-unittest
-{
-    import std.experimental.allocator.mallocator;
-    import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.free_list;
-    import std.experimental.allocator.region;
-    import std.experimental.allocator.fallback_allocator;
-    auto a = allocatorObject(Mallocator.it);
-    auto b = a.allocate(100);
-    assert(b.length == 100);
-
-    FreeList!(GCAllocator, 0, 8, 1) fl;
-    auto sa = allocatorObject(fl);
-    b = a.allocate(101);
-    assert(b.length == 101);
-
-    FallbackAllocator!(InSituRegion!(10240, 64), GCAllocator) fb;
-    // Doesn't work yet...
-    //a = allocatorObject(fb);
-    //b = a.allocate(102);
-    //assert(b.length == 102);
-}
-
 /**
 
 Implementation of $(D CAllocator) using $(D Allocator). This adapts a
@@ -221,7 +200,7 @@ class CAllocatorImpl(Allocator)
         /**
         Returns $(D impl.allocate(s)).
         */
-        override void[] allocate(size_t s)
+        override void[] allocate(size_t s, TypeInfo ti = null)
         {
             return impl.allocate(s);
         }
@@ -307,41 +286,3 @@ class CAllocatorImpl(Allocator)
         mixin Impl!();
 }
 
-///
-unittest
-{
-    /// Define an allocator bound to the built-in GC.
-    import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.free_list;
-    import std.experimental.allocator.segregator;
-    import std.experimental.allocator.bucketizer;
-    import std.experimental.allocator.allocator_list;
-    import std.experimental.allocator.heap_block;
-    import std.experimental.allocator : ThreadLocal;
-    shared ISharedAllocator alloc = allocatorObject(GCAllocator.it);
-    auto b = alloc.allocate(42);
-    assert(b.length == 42);
-    assert(alloc.deallocate(b) == Ternary.yes);
-
-    // Define an elaborate allocator and bind it to the class API.
-    // Note that the same variable "alloc" is used.
-    alias FList = FreeList!(GCAllocator, 0, unbounded);
-    alias A = ThreadLocal!(
-        Segregator!(
-            8, FreeList!(GCAllocator, 0, 8),
-            128, Bucketizer!(FList, 1, 128, 16),
-            256, Bucketizer!(FList, 129, 256, 32),
-            512, Bucketizer!(FList, 257, 512, 64),
-            1024, Bucketizer!(FList, 513, 1024, 128),
-            2048, Bucketizer!(FList, 1025, 2048, 256),
-            3584, Bucketizer!(FList, 2049, 3584, 512),
-            4072 * 1024, AllocatorList!(
-                () => HeapBlock!(4096)(GCAllocator.it.allocate(4072 * 1024))),
-            GCAllocator
-        )
-    );
-
-    auto alloc2 = allocatorObject(A.it);
-    b = alloc.allocate(101);
-    assert(alloc.deallocate(b) == Ternary.yes);
-}
