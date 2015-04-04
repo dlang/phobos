@@ -1290,6 +1290,15 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
     return lhs.ptr == rhs.ptr;
 }
 
+///
+@safe pure nothrow unittest
+{
+	auto a = [1, 2, 3, 4, 5];
+	auto b = a[0..2];
+
+	assert(a.sameHead(b));
+}
+
 
 /++
     Returns whether the $(D back)s of $(D lhs) and $(D rhs) both refer to the
