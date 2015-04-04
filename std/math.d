@@ -6332,7 +6332,7 @@ body
     double x = 3.1;
     static real[] pp = [56.1, 32.7, 6];
 
-    assert(poly(x, pp) == (56.1L + (32.7L + 6L * x) * x));
+    assert(poly(x, pp) == (56.1L + (32.7L + 6.0L * x) * x));
 }
 
 @safe nothrow @nogc unittest
