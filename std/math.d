@@ -6864,44 +6864,35 @@ int cmp(T)(T x, T y) @nogc @trusted pure nothrow
                || F.realFormat == RealFormat.ieeeDouble)
     {
         static if (T.sizeof == 4)
-        {
             alias UInt = uint;
-        }
         else
-        {
             alias UInt = ulong;
-        }
 
         enum msb = ~(UInt.max >>> 1);
 
         UInt*[2] vars = [cast(UInt*)&x, cast(UInt*)&y];
 
         foreach (var; vars)
-        {
             if (*var & msb)
-            {
                 *var = ~*var;
-            }
             else
-            {
                 *var |= msb;
-            }
-        }
 
-        return *vars[0] < *vars[1] ? -1 : *vars[0] == *vars[1] ? 0 : 1;
+        if (*vars[0] < *vars[1])
+            return -1;
+        else if (*vars[0] > *vars[1])
+            return 1;
+        else
+            return 0;
     }
     else static if (F.realFormat == RealFormat.ieeeExtended53
                     || F.realFormat == RealFormat.ieeeExtended
                     || F.realFormat == RealFormat.ieeeQuadruple)
     {
         static if (F.realFormat == RealFormat.ieeeQuadruple)
-        {
             alias RemT = ulong;
-        }
         else
-        {
             alias RemT = ushort;
-        }
 
         enum shift = ulong.sizeof / RemT.sizeof;
 
@@ -6911,7 +6902,6 @@ int cmp(T)(T x, T y) @nogc @trusted pure nothrow
         RemT*[2] rem = [cast(ushort*)&x + shift, cast(ushort*)&y + shift];
 
         foreach (i; 0 .. 2)
-        {
             if (bytes[i][F.SIGNPOS_BYTE] & 0x80)
             {
                 *bulk[i] = ~*bulk[i];
@@ -6921,7 +6911,6 @@ int cmp(T)(T x, T y) @nogc @trusted pure nothrow
             {
                 bytes[i][F.SIGNPOS_BYTE] |= 0x80;
             }
-        }
 
         version(LittleEndian)
         {
@@ -6934,15 +6923,16 @@ int cmp(T)(T x, T y) @nogc @trusted pure nothrow
             alias minor = rem;
         }
 
-        return *major[0] < *major[1]
-                ? -1
-                : *major[0] > *major[1]
-                    ? 1
-                    : *minor[0] < *minor[1] 
-                        ? -1
-                        : *minor[0] > *minor[1]
-                            ? 1
-                            : 0;
+        if (*major[0] < *major[1])
+            return -1;
+        else if (*major[0] > *major[1])
+            return 1;
+        else if (*minor[0] < *minor[1])
+            return -1;
+        else if (*minor[0] > *minor[1])
+            return 1;
+        else
+            return 0;
     }
     else
     {
@@ -6953,58 +6943,30 @@ int cmp(T)(T x, T y) @nogc @trusted pure nothrow
             ySign = signbit(y);
 
         if (xSign == 1)
-        {
             if (ySign == 1)
-            {
                 return cmp(-y, -x);
-            }
             else
-            {
                 return -1;
-            }
-        }
-        else
-        {
-            if (ySign == 1)
-            {
-                return 1;
-            }
-            else
-            {
-                // Both are positive
-                if (x < y)
-                {
+        else if (ySign == 1)
+            return 1;
+        else if (x < y)
+            return -1;
+        else if (x == y)
+            return 0;
+        else if (x > y)
+            return 1;
+        else if (isNaN(x))
+            if (isNaN(y))
+                if (getNaNPayload(x) < getNaNPayload(y))
                     return -1;
-                }
-                else if (x == y)
-                {
-                    return 0;
-                }
-                else if (x > y)
-                {
+                else if (getNaNPayload(x) > getNaNPayload(y))
                     return 1;
-                }
-                else if (isNaN(x))
-                {
-                    if (isNaN(y))
-                    {
-                        return getNaNPayload(x) < getNaNPayload(y)
-                                ? -1
-                                : getNaNPayload(x) == getNaNPayload(y)
-                                    ? 0
-                                    : 1;
-                    }
-                    else
-                    {
-                        return 1;
-                    }
-                }
-                else // y is NaN, x is not
-                {
-                    return -1;
-                }
-            }
-        }
+                else
+                    return 0;
+            else
+                return 1;
+        else // y is NaN, x is not
+            return -1;
     }
 }
 
