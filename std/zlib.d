@@ -315,7 +315,16 @@ class Compress
   public:
 
     /**
-     * Construct. level is the same as for D.zlib.compress(). header can be used to make a gzip compatible stream.
+     * Constructor.
+     *
+     * Params:
+     *    level = compression level. Legal values are 1..9, with 1 being the least
+     *            compression and 9 being the most. The default value is 6.
+     *    header = sets the compression type to one of the options available
+     *             in $(LREF HeaderFormat). Defaults to HeaderFormat.deflate.
+     *
+     * See_Also:
+     *    $(LREF compress), $(LREF HeaderFormat)
      */
     this(int level, HeaderFormat header = HeaderFormat.deflate)
     in
@@ -346,8 +355,12 @@ class Compress
 
     /**
      * Compress the data in buf and return the compressed data.
-     * The buffers
-     * returned from successive calls to this should be concatenated together.
+     * Params:
+     *    buf = data to compress
+     *
+     * Returns:
+     *    the compressed data. The buffers returned from successive calls to this should be concatenated together.
+     *
      */
     const(void)[] compress(const(void)[] buf)
     {   int err;
