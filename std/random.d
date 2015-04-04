@@ -2330,7 +2330,7 @@ struct RandomSample(Range, UniformRNG = void)
     private double _Vprime;
     private Range _input;
     private size_t _index;
-    private enum Skip { None, A, D };
+    private enum Skip { None, A, D }
     private Skip _skip = Skip.None;
 
     // If we're using the default thread-local random number generator then
