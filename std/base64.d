@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Support for MIME Base64 encoding and decoding.
+ * Support for Base64 encoding and decoding.
  *
  * This module provides two default implementations of Base64 encoding,
  * $(D $(LREF Base64)) with a standard encoding alphabet, and a variant
