@@ -1850,14 +1850,7 @@ Allows to directly use range operations on lines of a file.
         }
 
     private:
-        File file;
-        Char[] line;
-        Char[] buf; // keeps the terminator to allow reusage of memory in readln
-        Terminator terminator;
-        KeepTerminator keepTerminator;
-
-    public:
-        this(File f, KeepTerminator kt, Terminator terminator)
+        struct Impl
         {
         private:
             File file;
@@ -1881,19 +1874,7 @@ Allows to directly use range operations on lines of a file.
                 return line is null;
             }
 
-        @property Char[] front()
-        {
-            return line;
-        }
-
-        void popFront()
-        {
-            import std.algorithm : endsWith;
-
-            assert(file.isOpen);
-            file.readln(buf, terminator);
-            line = buf;
-            if (line.empty)
+            @property Char[] front()
             {
                 return line;
             }
@@ -4127,6 +4108,8 @@ unittest
 // roll our own appender, but with "safe" arrays
 private struct ReadlnAppender
 {
+    import core.stdc.string;
+
     char[] buf;
     size_t cap;
     size_t pos;
@@ -4553,7 +4536,7 @@ unittest
 
     std.file.write(deleteme, "abcd\n0123456789abcde\n1234\n");
     File f = File(deleteme, "rb");
-    
+
     char[] ln = new char[2];
     assert(ln.capacity > 5);
     char* lnptr = ln.ptr;
