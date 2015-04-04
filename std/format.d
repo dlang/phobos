@@ -345,7 +345,7 @@ $(I FormatChar):
 
     Examples:
     -------------------------
-    import core.stdc.stdio;
+    import std.array;
     import std.format;
 
     void main()
