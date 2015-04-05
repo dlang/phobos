@@ -6942,11 +6942,10 @@ int cmp(T)(T x, T y) @nogc @trusted pure nothrow
         int xSign = signbit(x),
             ySign = signbit(y);
 
-        if (xSign == 1)
-            if (ySign == 1)
-                return cmp(-y, -x);
-            else
-                return -1;
+        if (xSign == 1 && ySign == 1)
+            return cmp(-y, -x);
+        else if (xSign == 1)
+            return -1;
         else if (ySign == 1)
             return 1;
         else if (x < y)
@@ -6955,18 +6954,16 @@ int cmp(T)(T x, T y) @nogc @trusted pure nothrow
             return 0;
         else if (x > y)
             return 1;
-        else if (isNaN(x))
-            if (isNaN(y))
-                if (getNaNPayload(x) < getNaNPayload(y))
-                    return -1;
-                else if (getNaNPayload(x) > getNaNPayload(y))
-                    return 1;
-                else
-                    return 0;
-            else
-                return 1;
-        else // y is NaN, x is not
+        else if (isNaN(x) && !isNaN(y))
+            return 1;
+        else if (isNaN(y) && !isNaN(x))
             return -1;
+        else if (getNaNPayload(x) < getNaNPayload(y))
+            return -1;
+        else if (getNaNPayload(x) > getNaNPayload(y))
+            return 1;
+        else
+            return 0;
     }
 }
 
