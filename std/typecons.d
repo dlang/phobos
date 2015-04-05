@@ -52,9 +52,11 @@ debug(Unique) import std.stdio;
 /**
 Encapsulates unique ownership of a resource.  Resource of type $(D T) is
 deleted at the end of the scope, unless it is transferred.  The
-transfer can be explicit, by calling $(D release), or implicit, when
-returning Unique from a function. The resource can be a polymorphic
-class object, in which case Unique behaves polymorphically too.
+transfer can be explicit, using
+$(LINK2 http://dlang.org/phobos/std_algorithm_mutation.html#.move, $(D std.algorithm.move)),
+or implicit, when returning Unique from a function that created it.
+The resource can be a polymorphic class object,
+in which case Unique behaves polymorphically too.
 */
 struct Unique(T)
 {
@@ -71,6 +73,7 @@ public:
     guarantees unique ownership of it (unless $(D T) publishes aliases of
     $(D this)).
     Note: Nested structs/classes cannot be created.
+          Instead use $(D Unique!T(new T())).
     Params:
     args = Arguments to pass to $(D T)'s constructor.
     ---
@@ -79,41 +82,40 @@ public:
     ---
     */
     static Unique!T create(A...)(auto ref A args)
+        if (__traits(compiles, new T(args)))
     {
-        import core.memory : GC;
-        import core.stdc.stdlib : malloc;
-        import std.conv : emplace;
-        import core.exception : onOutOfMemoryError;
-
         debug(Unique) writeln("Unique.create for ", T.stringof);
         Unique!T u;
-
-        // TODO: May need to fix alignment?
-        // Does emplace still need to mess with alignment if
-        // the memory is coming from malloc, or does malloc handle that?
-
-        static if (is(T == class))
-            immutable size_t allocSize = __traits(classInstanceSize, T);
-        else
-            immutable size_t allocSize = T.sizeof;
-
-        void* rawMemory = malloc(allocSize);
-        if (!rawMemory)
-            onOutOfMemoryError();
-
-        static if (is(T == class)) {
-            u._p = emplace!T(rawMemory[0 .. allocSize], args);
-        }
-        else {
-            u._p = cast(RefT)rawMemory;
-            emplace!T(u._p, args);
-        }
-
-
-        static if (hasIndirections!T)
-            GC.addRange(rawMemory, allocSize);
-
+        u._p = new T(args);
         return u;
+    }
+
+    /**
+    Constructor that takes an rvalue.
+    It will ensure uniqueness, as long as the rvalue
+    isn't just a view on an lvalue (e.g., a cast).
+    Typical usage:
+    ----
+    Unique!Foo f = new Foo;
+    ----
+    */
+    this(RefT p)
+    {
+        debug(Unique) writeln("Unique constructor with rvalue");
+        _p = p;
+    }
+
+    /**
+    Constructor that takes an lvalue. It nulls its source.
+    The nulling will ensure uniqueness as long as there
+    are no previous aliases to the source.
+    */
+    this(ref RefT p)
+    {
+        _p = p;
+        debug(Unique) writeln("Unique constructor nulling source");
+        p = null;
+        assert(p is null);
     }
 
 
@@ -164,21 +166,13 @@ public:
     /** Frees the underlying pointer and nulls it */
     void release()
     {
-        import core.stdc.stdlib : free;
-
         debug(Unique) writeln("Release");
-
         if (_p !is null)
         {
+            import core.memory : GC;
+
             destroy(_p);
-
-            static if (hasIndirections!T)
-            {
-                import core.memory : GC;
-                GC.removeRange(cast(void*)_p);
-            }
-
-            free(cast(void*)_p);
+            GC.free(cast(void*)_p);
             _p = null;
         }
     }
@@ -235,19 +229,6 @@ unittest
     assert(u1.isEmpty);
 }
 
-/// Quick test that init works correctly for objects
-unittest
-{
-    static class C
-    {
-        this() { i = 4; }
-        int i;
-    }
-
-    Unique!C uc = Unique!C.create();
-    assert(uc.i == 4);
-}
-
 unittest
 {
     // test conversion to base ref
@@ -259,25 +240,37 @@ unittest
         ~this(){deleted++;}
     }
     // constructor conversion
-    Unique!Object u = Unique!C.create();
+    Unique!Object u = new C();
     assert(!u.isEmpty);
     destroy(u);
     assert(deleted == 1);
 
-    Unique!C uc = Unique!(C).create();
-    Unique!Object uo = Unique!C.create();
+    Unique!C uc = new C();
+    Unique!Object uo = new C();
     // opAssign conversion, deleting uo resource first
     import std.algorithm : move;
     uo = move(uc);
     assert(uc.isEmpty);
     assert(!uo.isEmpty);
     assert(deleted == 2);
+    assert(created == 3);
+}
+
+unittest
+{
+    // Test implicit return from a function
+    static Unique!Object foo()
+    {
+        return Unique!Object.create();
+    }
+    auto bar = foo();
+    assert(bar.get() !is null);
 }
 
 unittest
 {
     debug(Unique) writeln("Unique class");
-    class Bar
+    static class Bar
     {
         ~this() { debug(Unique) writeln("    Bar destructor"); }
         int val() const { return 4; }
@@ -306,7 +299,7 @@ unittest
     import std.algorithm : move;
 
     debug(Unique) writeln("Unique struct");
-    struct Foo
+    static struct Foo
     {
         ~this() { debug(Unique) writeln("    Foo destructor"); }
         int val() const { return 3; }
