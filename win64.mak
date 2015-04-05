@@ -489,6 +489,9 @@ CC32=$(CC)\..\..\cl
 phobos32mscoff:
 	$(MAKE) -f win64.mak "DMD=$(DMD)" "MAKE=$(MAKE)" MODEL=32mscoff "CC=\$(CC32)"\"" "AR=\$(AR)"\"" "VCDIR=$(VCDIR)" "SDKDIR=$(SDKDIR)"
 
+unittest32mscoff:
+	$(MAKE) -f win64.mak "DMD=$(DMD)" "MAKE=$(MAKE)" MODEL=32mscoff "CC=\$(CC32)"\"" "AR=\$(AR)"\"" "VCDIR=$(VCDIR)" "SDKDIR=$(SDKDIR)" unittest
+
 ######################################################
 
 $(ZLIB): $(SRC_ZLIB)
