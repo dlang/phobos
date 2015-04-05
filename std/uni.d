@@ -2400,6 +2400,7 @@ public:
 
 private:
 
+  package(std)  // used from: std.regex.internal.parser
     ref intersect(U)(U rhs)
         if(isCodepointSet!U)
     {
@@ -2434,6 +2435,7 @@ private:
     }
 
     // same as the above except that skip & drop parts are swapped
+  package(std)  // used from: std.regex.internal.parser
     ref sub(U)(U rhs)
         if(isCodepointSet!U)
     {
@@ -2447,6 +2449,7 @@ private:
         return this;
     }
 
+  package(std)  // used from: std.regex.internal.parse
     ref add(U)(U rhs)
         if(isCodepointSet!U)
     {
