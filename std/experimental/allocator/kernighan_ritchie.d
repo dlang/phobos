@@ -1,7 +1,8 @@
 /**
-Contains a number of artifacts related to the famed allocator described by Brian
-Kernighan and Dennis Ritchie in section 8.7 of the book "The C Programming
-Language" Second Edition, Prentice Hall, 1988.
+Contains a number of artifacts related to the
+$(WEB stackoverflow.com/questions/13159564/explain-this-implementation-of-malloc-from-the-kr-book
+famed allocator) described by Brian Kernighan and Dennis Ritchie in section 8.7
+of the book "The C Programming Language" Second Edition, Prentice Hall, 1988.
 */
 module std.experimental.allocator.kernighan_ritchie;
 

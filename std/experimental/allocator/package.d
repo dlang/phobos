@@ -620,7 +620,7 @@ unittest
     assert(t.empty);
 }
 
-/**
+/*
 
 $(D InternalPointersTree) adds a primitive on top of another allocator: calling
 $(D resolveInternalPointer(p)) returns the block within which the internal

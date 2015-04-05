@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
-module std.typed_allocator;
-import std.algorithm, std.allocator, std.range, std.stdio, std.traits, std.conv;
+module std.experimental.allocator.typed;
+import std.algorithm, std.experimental.allocator, std.range, std.stdio, std.traits, std.conv;
 
 /**
 */
