@@ -1293,10 +1293,10 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
 ///
 @safe pure nothrow unittest
 {
-	auto a = [1, 2, 3, 4, 5];
-	auto b = a[0..2];
+    auto a = [1, 2, 3, 4, 5];
+    auto b = a[0..2];
 
-	assert(a.sameHead(b));
+    assert(a.sameHead(b));
 }
 
 
@@ -1314,10 +1314,10 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 ///
 @safe pure nothrow unittest
 {
-	auto a = [1, 2, 3, 4, 5];
-	auto b = a[3..$];
+    auto a = [1, 2, 3, 4, 5];
+    auto b = a[3..$];
 
-	assert(a.sameTail(b));
+    assert(a.sameTail(b));
 }
 
 @safe pure nothrow unittest
@@ -1388,19 +1388,19 @@ if (isInputRange!S && !isDynamicArray!S)
 ///
 unittest
 {
-	auto a = "abc";
-	auto s = replicate(a, 3);
+    auto a = "abc";
+    auto s = replicate(a, 3);
 
-	assert(s == "abcabcabc");
+    assert(s == "abcabcabc");
 
-	auto b = [1, 2, 3];
-	auto c = replicate(b, 3);
+    auto b = [1, 2, 3];
+    auto c = replicate(b, 3);
 
-	assert(c == [1, 2, 3, 1, 2, 3, 1, 2, 3]);
+    assert(c == [1, 2, 3, 1, 2, 3, 1, 2, 3]);
 
-	auto d = replicate(b, 0);
+    auto d = replicate(b, 0);
 
-	assert(d == []);
+    assert(d == []);
 }
 
 unittest
@@ -1515,11 +1515,11 @@ unittest //safety, purity, ctfe ...
 ///
 unittest
 {
-	assert(split("hello world") == ["hello","world"]);
-	assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
+    assert(split("hello world") == ["hello","world"]);
+    assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
 
-	auto a = split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]);
-	assert(a == [[1], [4, 5, 1], [4, 5]]);
+    auto a = split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]);
+    assert(a == [[1], [4, 5, 1], [4, 5]]);
 }
 
 /++
@@ -2621,10 +2621,10 @@ body
 ///
 unittest
 {
-	auto a = [1, 2, 3, 4, 5];
-	auto b = replaceSlice(a, a[1..4], [0, 0, 0]);
+    auto a = [1, 2, 3, 4, 5];
+    auto b = replaceSlice(a, a[1..4], [0, 0, 0]);
 
-	assert(b == [1, 0, 0, 0, 5]);
+    assert(b == [1, 0, 0, 0, 5]);
 }
 
 unittest
