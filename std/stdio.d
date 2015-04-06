@@ -4165,7 +4165,7 @@ private struct ReadlnAppender
     }
     void putonly(char[] b)
     {
-        // assume this is the only put call
+        assert(pos == 0);   // assume this is the only put call
         if (b.length > cap)
         {
             buf = b.dup;
