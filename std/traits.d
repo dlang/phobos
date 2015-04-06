@@ -234,9 +234,22 @@ private
         return Demangle!uint(atts, mstr);
     }
 
-    alias IntegralTypeList      = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
-    alias SignedIntTypeList     = TypeTuple!(byte, short, int, long);
-    alias UnsignedIntTypeList   = TypeTuple!(ubyte, ushort, uint, ulong);
+    static if (is(ucent))
+    {
+        alias CentTypeList         = TypeTuple!(cent, ucent);
+        alias SignedCentTypeList   = TypeTuple!(cent);
+        alias UnsignedCentTypeList = TypeTuple!(ucent);
+    }
+    else
+    {
+        alias CentTypeList         = TypeTuple!();
+        alias SignedCentTypeList   = TypeTuple!();
+        alias UnsignedCentTypeList = TypeTuple!();
+    }
+
+    alias IntegralTypeList      = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList);
+    alias SignedIntTypeList     = TypeTuple!(byte, short, int, long, SignedCentTypeList);
+    alias UnsignedIntTypeList   = TypeTuple!(ubyte, ushort, uint, ulong, UnsignedCentTypeList);
     alias FloatingPointTypeList = TypeTuple!(float, double, real);
     alias ImaginaryTypeList     = TypeTuple!(ifloat, idouble, ireal);
     alias ComplexTypeList       = TypeTuple!(cfloat, cdouble, creal);
@@ -3982,31 +3995,35 @@ template ImplicitConversionTargets(T)
 {
     static if (is(T == bool))
         alias ImplicitConversionTargets =
-            TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
+            TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList,
                        float, double, real, char, wchar, dchar);
     else static if (is(T == byte))
         alias ImplicitConversionTargets =
-            TypeTuple!(short, ushort, int, uint, long, ulong,
+            TypeTuple!(short, ushort, int, uint, long, ulong, CentTypeList,
                        float, double, real, char, wchar, dchar);
     else static if (is(T == ubyte))
         alias ImplicitConversionTargets =
-            TypeTuple!(short, ushort, int, uint, long, ulong,
+            TypeTuple!(short, ushort, int, uint, long, ulong, CentTypeList,
                        float, double, real, char, wchar, dchar);
     else static if (is(T == short))
         alias ImplicitConversionTargets =
-            TypeTuple!(int, uint, long, ulong, float, double, real);
+            TypeTuple!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T == ushort))
         alias ImplicitConversionTargets =
-            TypeTuple!(int, uint, long, ulong, float, double, real);
+            TypeTuple!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T == int))
         alias ImplicitConversionTargets =
-            TypeTuple!(long, ulong, float, double, real);
+            TypeTuple!(long, ulong, CentTypeList, float, double, real);
     else static if (is(T == uint))
         alias ImplicitConversionTargets =
-            TypeTuple!(long, ulong, float, double, real);
+            TypeTuple!(long, ulong, CentTypeList, float, double, real);
     else static if (is(T == long))
         alias ImplicitConversionTargets = TypeTuple!(float, double, real);
     else static if (is(T == ulong))
+        alias ImplicitConversionTargets = TypeTuple!(float, double, real);
+    else static if (is(cent) && is(T == cent))
+        alias ImplicitConversionTargets = TypeTuple!(float, double, real);
+    else static if (is(ucent) && is(T == ucent))
         alias ImplicitConversionTargets = TypeTuple!(float, double, real);
     else static if (is(T == float))
         alias ImplicitConversionTargets = TypeTuple!(double, real);
@@ -4015,14 +4032,14 @@ template ImplicitConversionTargets(T)
     else static if (is(T == char))
         alias ImplicitConversionTargets =
             TypeTuple!(wchar, dchar, byte, ubyte, short, ushort,
-                       int, uint, long, ulong, float, double, real);
+                       int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T == wchar))
         alias ImplicitConversionTargets =
-            TypeTuple!(dchar, short, ushort, int, uint, long, ulong,
+            TypeTuple!(dchar, short, ushort, int, uint, long, ulong, CentTypeList,
                        float, double, real);
     else static if (is(T == dchar))
         alias ImplicitConversionTargets =
-            TypeTuple!(int, uint, long, ulong, float, double, real);
+            TypeTuple!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = TypeTuple!(typeof(null));
     else static if(is(T : Object))
@@ -5994,6 +6011,7 @@ template Unsigned(T)
             static if (is(T == short)) alias Impl = ushort;
             static if (is(T == int  )) alias Impl = uint;
             static if (is(T == long )) alias Impl = ulong;
+            static if (is(ucent) && is(T == cent )) alias Impl = ucent;
         }
         else
             static assert(false, "Type " ~ T.stringof ~
@@ -6021,6 +6039,15 @@ unittest
     //struct S {}
     //alias U2 = Unsigned!S;
     //alias U3 = Unsigned!double;
+    static if (is(ucent))
+    {
+        alias U4 = Unsigned!cent;
+        alias U5 = Unsigned!(const(cent));
+        alias U6 = Unsigned!(immutable(cent));
+        static assert(is(U4 == ucent));
+        static assert(is(U5 == const(ucent)));
+        static assert(is(U6 == immutable(ucent)));
+    }
 }
 
 /**
@@ -6058,6 +6085,8 @@ unittest
     static assert(is(Largest!(ulong, double) == ulong));
     static assert(is(Largest!(double, ulong) == double));
     static assert(is(Largest!(uint, byte, double, short) == double));
+    static if (is(ucent))
+        static assert(is(Largest!(uint, ubyte, ucent, ushort) == ucent));
 }
 
 /**
@@ -6078,6 +6107,7 @@ template Signed(T)
             static if (is(T == ushort)) alias Impl = short;
             static if (is(T == uint  )) alias Impl = int;
             static if (is(T == ulong )) alias Impl = long;
+            static if (is(ucent) && is(T == ucent )) alias Impl = cent;
         }
         else
             static assert(false, "Type " ~ T.stringof ~
@@ -6096,6 +6126,11 @@ unittest
     static assert(is(S2 == const(int)));
     alias S3 = Signed!(immutable(uint));
     static assert(is(S3 == immutable(int)));
+    static if (is(ucent))
+    {
+        alias S4 = Signed!ucent;
+        static assert(is(S4 == cent));
+    }
 }
 
 unittest
