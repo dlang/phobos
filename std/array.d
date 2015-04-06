@@ -1512,6 +1512,14 @@ unittest //safety, purity, ctfe ...
     assertCTFEable!dg;
 }
 
+///
+unittest
+{
+	assert(split("hello world") == ["hello","world"]);
+	assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
+	assert(split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]) == [[1], [4, 5, 1], [4, 5]]);
+}
+
 /++
 Alias for $(XREF algorithm, _splitter).
  +/
