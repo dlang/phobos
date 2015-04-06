@@ -1384,6 +1384,25 @@ if (isInputRange!S && !isDynamicArray!S)
     return join(std.range.repeat(s, n));
 }
 
+
+///
+unittest
+{
+	auto a = "abc";
+	auto s = replicate(a, 3);
+
+	assert(s == "abcabcabc");
+
+	auto b = [1, 2, 3];
+	auto c = replicate(b, 3);
+
+	assert(c == [1, 2, 3, 1, 2, 3, 1, 2, 3]);
+
+	auto d = replicate(b, 0);
+
+	assert(d == []);
+}
+
 unittest
 {
     import std.conv : to;
