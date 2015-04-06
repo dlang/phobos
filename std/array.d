@@ -1311,6 +1311,15 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
     return lhs.ptr + lhs.length == rhs.ptr + rhs.length;
 }
 
+///
+@safe pure nothrow unittest
+{
+	auto a = [1, 2, 3, 4, 5];
+	auto b = a[3..$];
+
+	assert(a.sameTail(b));
+}
+
 @safe pure nothrow unittest
 {
     foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
