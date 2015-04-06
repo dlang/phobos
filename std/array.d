@@ -1517,7 +1517,9 @@ unittest
 {
 	assert(split("hello world") == ["hello","world"]);
 	assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
-	assert(split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]) == [[1], [4, 5, 1], [4, 5]]);
+
+	auto a = split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]);
+	assert(a == [[1], [4, 5, 1], [4, 5]]);
 }
 
 /++
@@ -2614,6 +2616,15 @@ body
         s[so + slice.length .. s.length];
 
     return cast(inout(T)[]) result;
+}
+
+///
+unittest
+{
+	auto a = [1, 2, 3, 4, 5];
+	auto b = replaceSlice(a, a[1..4], [0, 0, 0]);
+
+	assert(b == [1, 0, 0, 0, 5]);
 }
 
 unittest
