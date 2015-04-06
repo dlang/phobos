@@ -1469,10 +1469,13 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     // Forward on to formatIntegral to handle both U and const(U)
     // Saves duplication of code for both versions.
-    static if (isSigned!U)
-        formatIntegral(w, cast( long) val, f, base, Unsigned!U.max);
+    static if (is(ucent) && (is(U == cent) || is(U == ucent)))
+        alias C = U;
+    else static if (isSigned!U)
+        alias C = long;
     else
-        formatIntegral(w, cast(ulong) val, f, base, U.max);
+        alias C = ulong;
+    formatIntegral(w, cast(C) val, f, base, Unsigned!U.max);
 }
 
 ///
@@ -1498,10 +1501,13 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
     }
 
     // All unsigned integral types should fit in ulong.
-    formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
+    static if (is(ucent) && is(typeof(arg) == ucent))
+        formatUnsigned(w, (cast(ucent) arg) & mask, fs, base, negative);
+    else
+        formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
 }
 
-private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Char fs, uint base, bool negative)
+private void formatUnsigned(Writer, T, Char)(Writer w, T arg, ref FormatSpec!Char fs, uint base, bool negative)
 {
     if (fs.precision == fs.UNSPECIFIED)
     {
