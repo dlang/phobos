@@ -10,6 +10,10 @@
 #		Delete unneeded files created by build process
 #	make unittest
 #		Build phobos64.lib, build and run unit tests
+#	make phobos32mscoff
+#		Build phobos32mscoff.lib
+#	make unittest32mscoff
+#		Build phobos32mscoff.lib, build and run unit tests
 #	make cov
 #		Build for coverage tests, run coverage tests
 #	make html
@@ -483,12 +487,15 @@ html : $(DOCS)
 
 ################### Win32 COFF support #########################
 
-# default to 32-bit compiler relative to 64-bit compiler, link and lib are architecture agnostic
+# default to 32-bit compiler relative to the location of the 64-bit compiler,
+# link and lib are architecture agnostic
 CC32=$(CC)\..\..\cl
 
+# build phobos32mscoff.lib
 phobos32mscoff:
 	$(MAKE) -f win64.mak "DMD=$(DMD)" "MAKE=$(MAKE)" MODEL=32mscoff "CC=\$(CC32)"\"" "AR=\$(AR)"\"" "VCDIR=$(VCDIR)" "SDKDIR=$(SDKDIR)"
 
+# run unittests for 32-bit COFF version
 unittest32mscoff:
 	$(MAKE) -f win64.mak "DMD=$(DMD)" "MAKE=$(MAKE)" MODEL=32mscoff "CC=\$(CC32)"\"" "AR=\$(AR)"\"" "VCDIR=$(VCDIR)" "SDKDIR=$(SDKDIR)" unittest
 
