@@ -3383,7 +3383,7 @@ unittest
     assert(reference[] == arr[]);
 }
 
-unittest // check against .clear UFCS hijacking
+unittest // clear method is supported only for mutable element types
 {
     Appender!string app;
     static assert(!__traits(compiles, app.clear()));
