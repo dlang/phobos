@@ -2590,6 +2590,7 @@ int ilogb(real x)  @trusted nothrow @nogc
         Lzeronan:
             mov     EAX,0x80000000      ;
             fstp    ST(0)               ;
+            jmp     Ldone               ;
 
         Linfinity:
             mov     EAX,0x7FFFFFFF      ;
