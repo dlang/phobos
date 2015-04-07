@@ -2764,7 +2764,8 @@ unittest
 version(unittest)
 {
     // Issue 10647
-    private string generateDoNothing(C, alias fun)() @property
+    // Add prefix "issue10647_" as a workaround for issue 1238
+    private string issue10647_generateDoNothing(C, alias fun)() @property
     {
         string stmt;
 
@@ -2778,25 +2779,25 @@ version(unittest)
         return stmt;
     }
 
-    private template isAlwaysTrue(alias fun)
+    private template issue10647_isAlwaysTrue(alias fun)
     {
-        enum isAlwaysTrue = true;
+        enum issue10647_isAlwaysTrue = true;
     }
 
     // Do nothing template
-    private template DoNothing(Base)
+    private template issue10647_DoNothing(Base)
     {
-        alias DoNothing = AutoImplement!(Base, generateDoNothing, isAlwaysTrue);
+        alias issue10647_DoNothing = AutoImplement!(Base, issue10647_generateDoNothing, issue10647_isAlwaysTrue);
     }
 
     // A class to be overridden
-    private class Foo{
+    private class issue10647_Foo{
         void bar(int a) { }
     }
 }
 unittest
 {
-    auto foo = new DoNothing!Foo();
+    auto foo = new issue10647_DoNothing!issue10647_Foo();
     foo.bar(13);
 }
 
