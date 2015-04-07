@@ -3383,12 +3383,6 @@ unittest
     assert(reference[] == arr[]);
 }
 
-unittest // check against .clear UFCS hijacking
-{
-    Appender!string app;
-    static assert(!__traits(compiles, app.clear()));
-}
-
 unittest
 {
     static struct D//dynamic
