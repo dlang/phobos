@@ -43,6 +43,9 @@ $(T2 sum,
         Same as $(D reduce), but specialized for accurate summation.)
 $(T2 uniq,
         Iterates over the unique elements in a range, which is assumed sorted.)
+$(T2 butlast,
+        Takes a range of elements and returns the same range with the last
+        element removed.)
 )
 
 Copyright: Andrei Alexandrescu 2008-.
@@ -4185,4 +4188,244 @@ private struct UniqResult(alias pred, Range)
             assert(equal(retro(u), [10,9,8,7,6,5,4,3,2,1]));
         }
     }
+}
+
+/**
+ * Takes a range of elements and returns the same range with the last element
+ * removed. If the input range is empty, an empty range is returned.
+ *
+ * Params:
+ *     r = Range of elements
+ */
+auto butlast(R)(R r)
+    if ((hasSlicing!R && hasLength!R) || isNarrowString!R)
+{
+    if (!r.empty)
+    {
+        return r[0 .. $-1];
+    }
+    else
+    {
+        return r;
+    }
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto l = [1,2,3,4];
+    assert(equal(butlast(l), [1,2,3]));
+    l.length = 0;
+    assert(equal(butlast(l), l));
+}
+
+/// ditto
+auto butlast(R)(R r)
+    if (!((hasSlicing!R && hasLength!R) || isNarrowString!R) &&
+        isBidirectionalRange!R)
+{
+    if (!r.empty)
+    {
+        r.popBack;
+    }
+    return r;
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.container.dlist;
+    auto l = [1,2,3,4];
+    assert(equal(butlast(DList!int(l)[]), [1,2,3]));
+    l.length = 0;
+    assert(equal(butlast(DList!int(l)[]), l));
+}
+
+/// ditto
+auto butlast(R)(R r)
+    if (!((hasSlicing!R && hasLength!R) || isNarrowString!R) &&
+        !isBidirectionalRange!R &&
+        hasLength!R)
+{
+    static struct Result
+    {
+    private:
+        R source;
+    public:
+        this(R input)
+        {
+            source = input;
+        }
+
+        static if (isInfinite!R)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty()
+            {
+                return source.length <= 1;
+            }
+        }
+
+        @property auto length()
+        {
+            return empty ? 0 : source.length-1;
+        }
+
+        @property auto front()
+        {
+            return source.front();
+        }
+
+        void popFront()
+        {
+            assert(!empty);
+            source.popFront();
+        }
+
+        static if (isForwardRange!R)
+        {
+            @property typeof(this) save()
+            {
+                auto ret = this;
+                ret.source = source.save;
+                return ret;
+            }
+        }
+    }
+    return Result(r);
+}
+
+///
+unittest
+{
+    import std.algorithm.comparison : equal;
+    class PersistantList(T)
+    {
+    private:
+        T item;
+        int size;
+        PersistantList!T next;
+
+    public:
+        this(R)(R r)
+        {
+            if (!r.empty)
+            {
+                item = r.front;
+                r.popFront();
+                next = new PersistantList!T(r);
+                size = next.size+1;
+            }
+            else
+            {
+                size = 0;
+            }
+        }
+
+        struct Range
+        {
+            private PersistantList!T head;
+            private this(PersistantList!T h) { head = h; }
+
+            @property bool empty() { return head.size == 0; }
+            @property auto length() { return head.size; }
+            @property auto front() { return head.item; }
+            void popFront() { head = head.next; }
+            @property auto save() { return this; }
+        }
+
+        Range opSlice()
+        {
+            return Range(this);
+        }
+    }
+
+    auto l = [1,2,3,4];
+    auto p = new PersistantList!int(l);
+    assert(equal(butlast(p[]), [1,2,3]));
+    l.length = 0;
+    p = new PersistantList!int(l);
+    assert(equal(butlast(p[]), l));
+}
+
+/// ditto
+auto butlast(R)(R r)
+    if (!((hasSlicing!R && hasLength!R) || isNarrowString!R) &&
+        !isBidirectionalRange!R &&
+        !hasLength!R)
+{
+    import core.exception : RangeError;
+
+    static struct Result
+    {
+    private:
+        R source;
+        alias E  = ElementType!R;
+        alias UE = Unqual!E;
+        UE cache;
+
+    public:
+        this(R input)
+        {
+            source = input;
+            if (!source.empty)
+            {
+                cache = source.front;
+                source.popFront();
+            }
+        }
+
+        static if (isInfinite!R)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty()
+            {
+                return source.empty;
+            }
+        }
+
+        @property auto front()
+        {
+            version(assert) if (empty) throw new RangeError();
+            return cache;
+        }
+
+        void popFront()
+        {
+            assert(!empty);
+            cache = source.front;
+            source.popFront();
+        }
+
+        static if (isForwardRange!R)
+        {
+            @property typeof(this) save()
+            {
+                auto ret = this;
+                ret.source = source.save;
+                return ret;
+            }
+        }
+
+    }
+    return Result(r);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.container.slist;
+    auto l = [1,2,3,4];
+    assert(equal(butlast(SList!int(l)[]), [1,2,3]));
+    l.length = 0;
+    assert(equal(butlast(SList!int(l)[]), l));
 }
