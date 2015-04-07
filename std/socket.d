@@ -34,6 +34,7 @@
  */
 
 /**
+ * Socket primitives.
  * Example: See $(SAMPLESRC listener.d) and $(SAMPLESRC htmlget.d)
  * License: $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Christopher E. Miller, $(WEB klickverbot.at, David Nadlinger),
@@ -181,6 +182,14 @@ string formatSocketError(int err) @trusted
                 return "Socket error " ~ to!string(err);
         }
         else version (FreeBSD)
+        {
+            auto errs = strerror_r(err, buf.ptr, buf.length);
+            if (errs == 0)
+                cs = buf.ptr;
+            else
+                return "Socket error " ~ to!string(err);
+        }
+        else version (Solaris)
         {
             auto errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
@@ -1007,7 +1016,7 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options) @trusted
 
 private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addrinfo* hints) @system
 {
-	import std.array : appender;
+        import std.array : appender;
 
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
@@ -1655,6 +1664,23 @@ public:
     }
 
     /**
+     * Compares with another InternetAddress of same type for equality
+     * Returns: true if the InternetAddresses share the same address and
+     * port number.
+     * Examples:
+     * --------------
+     * InternetAddress addr1,addr2;
+     * if (addr1 == addr2) { }
+     * --------------
+     */
+    override bool opEquals(Object o) const
+    {
+        auto other = cast(InternetAddress)o;
+        return other && this.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr &&
+            this.sin.sin_port == other.sin.sin_port;
+    }
+
+    /**
      * Parse an IPv4 address string in the dotted-decimal form $(I a.b.c.d)
      * and return the number.
      * Returns: If the string is not a legitimate IPv4 address,
@@ -2161,7 +2187,7 @@ private:
 
         final size_t capacity() @property const pure nothrow @nogc
         {
-            return set.length / FD_NFDBITS;
+            return set.length * FD_NFDBITS;
         }
 
         int maxfd;
@@ -2211,7 +2237,7 @@ public:
             auto length = set.length;
             if (index >= length)
             {
-                while (length < index)
+                while (index >= length)
                     length *= 2;
                 set.length = length;
                 set.length = set.capacity;
@@ -2406,6 +2432,17 @@ unittest
             testPair[1].receive(b[]);
         }
     });
+}
+
+unittest // Issue 14012, 14013
+{
+    auto set = new SocketSet(1);
+    assert(set.max >= 0);
+
+    enum LIMIT = 4096;
+    foreach (n; 0..LIMIT)
+        set.add(cast(socket_t)n);
+    assert(set.max >= LIMIT);
 }
 
 /// The level at which a socket option is defined:

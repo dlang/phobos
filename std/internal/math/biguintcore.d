@@ -82,10 +82,10 @@ template maxBigDigits(T) if (isIntegral!T)
     enum maxBigDigits = (T.sizeof+BigDigit.sizeof-1)/BigDigit.sizeof;
 }
 
-enum immutable(BigDigit) [] ZERO = [0];
-enum immutable(BigDigit) [] ONE = [1];
-enum immutable(BigDigit) [] TWO = [2];
-enum immutable(BigDigit) [] TEN = [10];
+static immutable BigDigit[] ZERO = [0];
+static immutable BigDigit[] ONE = [1];
+static immutable BigDigit[] TWO = [2];
+static immutable BigDigit[] TEN = [10];
 
 
 public:
@@ -99,7 +99,7 @@ private:
         assert( data.length >= 1 && (data.length == 1 || data[$-1] != 0 ));
     }
     immutable(BigDigit) [] data = ZERO;
-    this(immutable(BigDigit) [] x) pure nothrow @safe
+    this(immutable(BigDigit) [] x) pure nothrow @nogc @safe
     {
        data = x;
     }
@@ -108,12 +108,12 @@ private:
         opAssign(x);
     }
 
-    enum trustedAssumeUnique = function(BigDigit[] input) pure @trusted {
+    enum trustedAssumeUnique = function(BigDigit[] input) pure @trusted @nogc {
         return assumeUnique(input);
     };
 public:
     // Length in uints
-    @property size_t uintLength() pure nothrow const @safe
+    @property size_t uintLength() pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -125,7 +125,7 @@ public:
             ((data[$-1] & 0xFFFF_FFFF_0000_0000L) ? 1 : 0);
         }
     }
-    @property size_t ulongLength() pure nothrow const @safe
+    @property size_t ulongLength() pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == uint.sizeof)
         {
@@ -138,7 +138,7 @@ public:
     }
 
     // The value at (cast(ulong[])data)[n]
-    ulong peekUlong(int n) pure nothrow const @safe
+    ulong peekUlong(int n) pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -150,7 +150,7 @@ public:
             return data[n];
         }
     }
-    uint peekUint(int n) pure nothrow const @safe
+    uint peekUint(int n) pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
@@ -191,13 +191,13 @@ public:
             }
         }
     }
-    void opAssign(Tdummy = void)(BigUint y) pure nothrow @safe
+    void opAssign(Tdummy = void)(BigUint y) pure nothrow @nogc @safe
     {
         this.data = y.data;
     }
 
     ///
-    int opCmp(Tdummy = void)(const BigUint y) pure const @safe
+    int opCmp(Tdummy = void)(const BigUint y) pure nothrow @nogc const @safe
     {
         if (data.length != y.data.length)
             return (data.length > y.data.length) ?  1 : -1;
@@ -208,7 +208,7 @@ public:
     }
 
     ///
-    int opCmp(Tulong)(Tulong y) pure const @safe if(is (Tulong == ulong))
+    int opCmp(Tulong)(Tulong y) pure nothrow @nogc const @safe if(is (Tulong == ulong))
     {
         if (data.length > maxBigDigits!Tulong)
             return 1;
@@ -234,12 +234,12 @@ public:
         return 0;
     }
 
-    bool opEquals(Tdummy = void)(ref const BigUint y) pure const @safe
+    bool opEquals(Tdummy = void)(ref const BigUint y) pure nothrow @nogc const @safe
     {
            return y.data[] == data[];
     }
 
-    bool opEquals(Tdummy = void)(ulong y) pure const @safe
+    bool opEquals(Tdummy = void)(ulong y) pure nothrow @nogc const @safe
     {
         if (data.length > 2)
             return false;
@@ -252,18 +252,18 @@ public:
         return (data[0] == ylo);
     }
 
-    bool isZero() pure const nothrow @safe
+    bool isZero() pure const nothrow @safe @nogc
     {
         return data.length == 1 && data[0] == 0;
     }
 
-    size_t numBytes() pure const @safe
+    size_t numBytes() pure nothrow const @safe @nogc
     {
         return data.length * BigDigit.sizeof;
     }
 
     // the extra bytes are added to the start of the string
-    char [] toDecimalString(int frontExtraBytes) const pure
+    char [] toDecimalString(int frontExtraBytes) const pure nothrow
     {
         auto predictlength = 20+20*(data.length/2); // just over 19
         char [] buff = new char[frontExtraBytes + predictlength];
@@ -279,7 +279,7 @@ public:
      *  Separator characters do not contribute to the minPadding.
      */
     char [] toHexString(int frontExtraBytes, char separator = 0,
-            int minPadding=0, char padChar = '0') const pure @safe
+            int minPadding=0, char padChar = '0') const pure nothrow @safe
     {
         // Calculate number of extra padding bytes
         size_t extraPad = (minPadding > data.length * 2 * BigDigit.sizeof)
@@ -392,6 +392,7 @@ public:
     }
 
     // return true if OK; false if erroneous characters found
+    // FIXME: actually throws `ConvException` on error.
     bool fromDecimalString(const(char)[] s) pure @trusted
     {
         //Strip leading zeros
@@ -912,7 +913,7 @@ public:
 
 } // end BigUint
 
-@safe pure unittest
+@safe pure nothrow unittest
 {
     // ulong comparison test
     BigUint a = [1];
@@ -1507,7 +1508,7 @@ private:
 // buff.length must be data.length*8 if separator is zero,
 // or data.length*9 if separator is non-zero. It will be completely filled.
 char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0)
-    pure @safe
+    pure nothrow @safe
 {
     int x=0;
     for (ptrdiff_t i=data.length - 1; i>=0; --i)
@@ -1535,7 +1536,7 @@ char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0)
  * Returns:
  *    the lowest index of buff which was used.
  */
-size_t biguintToDecimal(char [] buff, BigDigit [] data) pure
+size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
 {
     ptrdiff_t sofar = buff.length;
     // Might be better to divide by (10^38/2^32) since that gives 38 digits for
@@ -2162,7 +2163,7 @@ private:
 // Returns the highest value of i for which left[i]!=right[i],
 // or 0 if left[] == right[]
 size_t highestDifferentDigit(const BigDigit [] left, const BigDigit [] right)
-pure nothrow @safe
+pure nothrow @nogc @safe
 {
     assert(left.length == right.length);
     for (ptrdiff_t i = left.length - 1; i>0; --i)
@@ -2174,7 +2175,7 @@ pure nothrow @safe
 }
 
 // Returns the lowest value of i for which x[i]!=0.
-int firstNonZeroDigit(const BigDigit [] x) pure nothrow @safe
+int firstNonZeroDigit(const BigDigit [] x) pure nothrow @nogc @safe
 {
     int k = 0;
     while (x[k]==0)

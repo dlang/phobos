@@ -9,7 +9,7 @@
 #
 # make BUILD=debug => makes debug build of the library
 #
-# make unittest => builds all unittests (for release) and runs them
+# make unittest => builds all unittests (for debug AND release) and runs them
 #
 # make BUILD=debug unittest => builds all unittests (for debug) and runs them
 #
@@ -17,7 +17,7 @@
 #
 # make install => copies library to /usr/lib
 #
-# make unittest/std/somemodule.d => only builds and unittests std.somemodule
+# make std/somemodule.test => only builds and unittests std.somemodule
 #
 
 ################################################################################
@@ -53,7 +53,11 @@ ifeq (,$(OS))
 endif
 
 ifeq (,$(MODEL))
-    uname_M:=$(shell uname -m)
+    ifeq ($(OS),solaris)
+        uname_M:=$(shell isainfo -n)
+    else
+        uname_M:=$(shell uname -m)
+    endif
     ifneq (,$(findstring $(uname_M),x86_64 amd64))
         MODEL:=64
     endif
@@ -66,7 +70,12 @@ ifeq (,$(MODEL))
 endif
 
 # Default to a release built, override with BUILD=debug
+ifeq (,$(BUILD))
+BUILD_WAS_SPECIFIED=0
 BUILD=release
+else
+BUILD_WAS_SPECIFIED=1
+endif
 
 ifneq ($(BUILD),release)
     ifneq ($(BUILD),debug)
@@ -87,17 +96,21 @@ DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(EXTRA_DOCUMENTABLES))
-STDDOC = $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) \
+	$(EXTRA_DOCUMENTABLES))
+STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/.generated/modlist-prerelease.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
-DDOC=$(DMD) -m$(MODEL) -w -c -o- -version=StdDdoc \
+DDOC=$(DMD) -conf= -m$(MODEL) -w -c -o- -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Set DRUNTIME name and full path
+ifneq (,$(DRUNTIME))
+	CUSTOM_DRUNTIME=1
+endif
 ifeq (,$(findstring win,$(OS)))
 	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
-	DRUNTIMESO = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL)so.a
+	DRUNTIMESO = $(basename $(DRUNTIME))so.a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
@@ -129,7 +142,7 @@ ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 endif
 
 # Set DFLAGS
-DFLAGS=-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -m$(MODEL) $(PIC)
+DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -dip25 -m$(MODEL) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -174,27 +187,29 @@ LINKCURL:=$(if $(LIBCURL_STUB),-L$(LIBCURL_STUB),-L-lcurl)
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
-# Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint \
-		bitmanip compiler complex concurrency conv		\
-		cstream csv datetime demangle encoding exception	\
-		file format functional getopt json math mathspecial	\
-		metastrings mmfile numeric outbuffer parallelism path	\
-		process random signals socket socketstream	\
-		stdint stdio stdiobase stream string syserror system traits		\
-		typecons typetuple uni uri utf uuid variant xml zip zlib)
+# Packages in std. Just mention the package name here and the actual files in
+# the package in STD_MODULES.
+STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
+	range regex)
 
-STD_NET_MODULES = $(addprefix std/net/, isemail curl)
-
-STD_REGEX_MODULES = $(addprefix std/regex/, package $(addprefix internal/, \
-	generator ir parser backtracking kickstart tests thompson))
-
-STD_RANGE_MODULES = $(addprefix std/range/, package constraints interfaces)
-
-STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
-
-STD_CONTAINER_MODULES = $(addprefix std/container/, package array \
-		binaryheap dlist rbtree slist util)
+# Modules in std (including those in packages), in alphabetical order.
+STD_MODULES = $(addprefix std/, \
+  array ascii base64 bigint bitmanip compiler complex concurrency \
+  $(addprefix container/, array binaryheap dlist rbtree slist util) \
+  conv cstream csv datetime demangle \
+  $(addprefix digest/, digest crc md ripemd sha) \
+  encoding exception \
+  $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
+  file format functional getopt json math mathspecial \
+  metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
+  process random \
+  $(addprefix range/, primitives interfaces) \
+  $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
+  	kickstart tests thompson)) \
+  signals socket socketstream stdint stdio stdiobase stream \
+  string syserror system traits typecons typetuple uni uri utf uuid variant \
+  xml zip zlib $(addprefix algorithm/,comparison iteration \
+    mutation searching setops sorting))
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -218,19 +233,21 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	gammafunction errorfunction) $(addprefix std/internal/, \
 	cstring processinit unicode_tables scopebuffer\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
-	$(addprefix std/internal/test/, dummyrange)
+	$(addprefix std/internal/test/, dummyrange) \
+	$(addprefix std/algorithm/, internal)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) \
-	$(STD_DIGEST_MODULES) $(STD_CONTAINER_MODULES) $(STD_REGEX_MODULES) $(STD_RANGE_MODULES)
+D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) \
+  $(addsuffix /package,$(STD_PACKAGES))
+
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
 ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
-$(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32)) \
-	std/internal/windows/advapi32.d \
-	std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
-	std/c/linux/tipc.d std/net/isemail.d std/net/curl.d
+  $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) \
+  $(EXTRA_MODULES_WIN32)) std/internal/windows/advapi32.d \
+  std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
+  std/c/linux/tipc.d
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
@@ -264,7 +281,14 @@ install :
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release INSTALL_DIR=$(INSTALL_DIR) \
 		DMD=$(DMD) install2
 
-unittest : $(addsuffix .d,$(addprefix unittest/,$(D_MODULES)))
+.PHONY : unittest
+ifeq (1,$(BUILD_WAS_SPECIFIED))
+unittest : $(addsuffix .run,$(addprefix unittest/,$(D_MODULES)))
+else
+unittest : unittest-debug unittest-release
+unittest-%:
+	$(MAKE) -f $(MAKEFILE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
+endif
 
 depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
 
@@ -311,6 +335,10 @@ $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
 		-create -output $@
 endif
 
+################################################################################
+# Unittests
+################################################################################
+
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
@@ -348,8 +376,17 @@ endif
 # macro that returns the module name given the src path
 moduleName=$(subst /,.,$(1))
 
-unittest/%.d : $(ROOT)/unittest/test_runner
+# target for batch unittests (using shared phobos library and test_runner)
+unittest/%.run : $(ROOT)/unittest/test_runner
 	$(QUIET)$(RUN) $< $(call moduleName,$*)
+
+# target for quickly running a single unittest (using static phobos library)
+%.test : %.d $(LIB)
+	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -run $<
+
+################################################################################
+# More stuff
+################################################################################
 
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
@@ -362,7 +399,7 @@ clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
-	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
+	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) index.d win32.mak win64.mak
 
 install2 : all
 	$(eval lib_dir=$(if $(filter $(OS),osx), lib, lib$(MODEL)))
@@ -378,6 +415,9 @@ endif
 	cp -r etc/* $(INSTALL_DIR)/src/phobos/etc/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
+ifeq (1,$(CUSTOM_DRUNTIME))
+# We consider a custom-set DRUNTIME a sign they build druntime themselves
+else
 # This rule additionally produces $(DRUNTIMESO). Add a fake dependency
 # to always invoke druntime's make. Use FORCE instead of .PHONY to
 # avoid rebuilding phobos when $(DRUNTIME) didn't change.
@@ -390,48 +430,41 @@ endif
 
 FORCE:
 
+endif
+
 ###########################################################
 # html documentation
 
-HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
-	$(SRC_DOCUMENTABLES))))
-BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, $(subst /,_,$(subst	\
-	.d,.html, $(SRC_DOCUMENTABLES))))
+# Package to html, e.g. std/algorithm -> std_algorithm.html
+P2HTML=$(addsuffix .html,$(subst /,_,$1))
+# D file to html, e.g. std/conv.d -> std_conv.html
+D2HTML=$(subst /,_,$(subst .d,.html,$1))
+
+HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, \
+	$(call D2HTML, $(SRC_DOCUMENTABLES)) \
+	$(call P2HTML, $(STD_PACKAGES)))
+BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, \
+	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 
 $(DOC_OUTPUT_DIR)/. :
 	mkdir -p $@
 
-$(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+# For each module, define a rule e.g.:
+# ../web/phobos/std_conv.html : std/conv.d $(STDDOC) ; ...
+$(foreach p,$(SRC_DOCUMENTABLES),$(eval \
+$(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
+  $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
-$(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
-	$(DDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_container_%.html : std/container/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_range_%.html : std/range/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/std_digest_%.html : std/digest/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
-
-$(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DDOC) project.ddoc $(STDDOC) -Df$@ $<
+# For each package, define a rule e.g.:
+# ../web/phobos/std_algorithm.html : std/algorithm/package.d $(STDDOC) ; ...
+$(foreach p,$(STD_PACKAGES),$(eval \
+$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $p/package.d $(STDDOC) ;\
+  $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
+
+allmod :
+	@echo $(SRC_DOCUMENTABLES) $(addsuffix /package.d,$(STD_PACKAGES))
 
 rsync-prerelease : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/

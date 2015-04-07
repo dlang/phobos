@@ -1,7 +1,7 @@
 //Written in the D programming language
 /*
     Implementation of Thompson NFA std.regex engine.
-    Key point is evaluation of all possible threads (state) at each step 
+    Key point is evaluation of all possible threads (state) at each step
     in a breadth-first manner, thereby geting some nice properties:
         - looking at each character only once
         - merging of equivalent threads, that gives matching process linear time complexity

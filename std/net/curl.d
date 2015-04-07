@@ -1,8 +1,13 @@
 // Written in the D programming language.
 
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
+libcurl). The libcurl library must be installed on the system in order to use
+this module.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -15,10 +20,11 @@ $(TR $(TDNW Low level) $(TD $(MYREF HTTP) $(MYREF FTP) $(MYREF
 SMTP) )
 )
 )
+)
 
-Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
-libcurl). The libcurl library must be installed on the system in order to use
-this module.
+Note:
+You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"])
+to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org
@@ -132,9 +138,6 @@ stopped before it has finished then return something less than data.length from
 the onReceive callback. See $(LREF onReceiveHeader)/$(LREF onReceive) for more
 information. Finally the HTTP request is effected by calling perform(), which is
 synchronous.
-
-Macros:
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
 
 Source: $(PHOBOSSRC std/net/_curl.d)
 
@@ -386,6 +389,10 @@ unittest
  *
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * $(D CurlException) on error.
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -900,7 +907,7 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
 }
 
 alias KeepTerminator = Flag!"keepTerminator";
-/++
+/+
 struct ByLineBuffer(Char)
 {
     bool linePresent;
@@ -2232,13 +2239,11 @@ struct HTTP
        After the HTTP client has been setup and possibly assigned callbacks the
        $(D perform()) method will start performing the request towards the
        specified server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(bool throwOnError = true)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         p.status.reset();
 
@@ -2683,19 +2688,19 @@ struct HTTP
      * Specify data to post when not using the onSend callback, with
      * user-specified Content-Type.
      * Params:
-     *	data = Data to post.
-     *	contentType = MIME type of the data, for example, "text/plain" or
-     *	    "application/octet-stream". See also:
+     *  data = Data to post.
+     *  contentType = MIME type of the data, for example, "text/plain" or
+     *      "application/octet-stream". See also:
      *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
      *      Internet media type) on Wikipedia.
-     *-----
+     * -----
      * import std.net.curl;
      * auto http = HTTP("http://onlineform.example.com");
      * auto data = "app=login&username=bob&password=s00perS3kret";
      * http.setPostData(data, "application/x-www-form-urlencoded");
      * http.onReceive = (ubyte[] data) { return data.length; };
      * http.perform();
-     *-----
+     * -----
      */
     void setPostData(const(void)[] data, string contentType)
     {
@@ -2939,13 +2944,11 @@ struct FTP
        After a FTP client has been setup and possibly assigned callbacks the $(D
        perform()) method will start performing the actual communication with the
        server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(bool throwOnError = true)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3273,10 +3276,12 @@ struct SMTP
 
     /**
         Performs the request as configured.
+        Params:
+        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    void perform()
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
-        p.curl.perform();
+        return p.curl.perform(throwOnError);
     }
 
     /// The URL to specify the location of the resource.
@@ -3556,6 +3561,10 @@ class CurlTimeoutException : CurlException
 /// Equal to $(ECXREF curl, CURLcode)
 alias CurlCode = CURLcode;
 
+import std.typecons : Flag;
+/// Flag to specify whether or not an exception is thrown on error.
+alias ThrowOnError = Flag!"throwOnError";
+
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
@@ -3788,14 +3797,24 @@ struct Curl
     /**
        perform the curl request by doing the HTTP,FTP etc. as it has
        been setup beforehand.
+
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(bool throwOnError = true)
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         throwOnStopped();
         CurlCode code = curl_easy_perform(this.handle);
         if (throwOnError)
             _check(code);
         return code;
+    }
+
+    // Explicitly undocumented. It will be removed in November 2015.
+    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
+    CurlCode perform(bool throwOnError)
+    {
+        return perform(cast(ThrowOnError)throwOnError);
     }
 
     /**
@@ -4396,7 +4415,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     CurlCode code;
     try
     {
-        code = client._perform(false);
+        code = client.perform(ThrowOnError.no);
     }
     catch (Exception ex)
     {

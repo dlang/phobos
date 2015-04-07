@@ -44,6 +44,7 @@
  +/
 module std.exception;
 
+import std.range;
 import std.traits;
 
 import core.stdc.errno;
@@ -83,13 +84,9 @@ void assertNotThrown(T : Throwable = Exception, E)
     }
     catch (T t)
     {
-        import std.array : empty;
-        import std.format : format;
-        immutable message = msg.empty ? t.msg : msg;
-        immutable tail = message.empty ? "." : ": " ~ message;
-        throw new AssertError(format("assertNotThrown failed: %s was thrown%s",
-                                     T.stringof, tail),
-                              file, line, t);
+        immutable message = msg.length == 0 ? t.msg : msg;
+        immutable tail = message.length == 0 ? "." : ": " ~ message;
+        throw new AssertError("assertNotThrown failed: " ~ T.stringof ~ " was thrown" ~ tail, file, line, t);
     }
 }
 ///
@@ -231,10 +228,8 @@ void assertThrown(T : Throwable = Exception, E)
         expression();
     catch (T)
         return;
-    import std.array : empty;
-    import std.format : format;
-    throw new AssertError(format("assertThrown failed: No %s was thrown%s%s",
-                                 T.stringof, msg.empty ? "." : ": ", msg),
+    throw new AssertError("assertThrown failed: No " ~ T.stringof ~ " was thrown"
+                                 ~ (msg.length == 0 ? "." : ": ") ~ msg,
                           file, line);
 }
 ///
@@ -923,7 +918,7 @@ T assumeWontThrow(T)(lazy T expr,
     }
     catch(Exception e)
     {
-        import std.range.constraints : empty;
+        import std.range.primitives : empty;
         immutable tail = msg.empty ? "." : ": " ~ msg;
         throw new AssertError("assumeWontThrow failed: Expression did throw" ~
                               tail, file, line);
@@ -989,12 +984,12 @@ check if $(D source) points to $(D target), $(I not) what $(D target) references
 If $(D source) is or contains a union, then there may be either false positives or
 false negatives:
 
-$(D doesPointTo) will return $(D true) if it is absolutly certain
+$(D doesPointTo) will return $(D true) if it is absolutely certain
 $(D source) points to $(D target). It may produce false negatives, but never
 false positives. This function should be prefered when trying to validate
 input data.
 
-$(D mayPointTo) will return $(D false) if it is absolutly certain
+$(D mayPointTo) will return $(D false) if it is absolutely certain
 $(D source) does not point to $(D target). It may produce false positives, but never
 false negatives. This function should be prefered for defensively choosing a
 code path.
@@ -1274,7 +1269,7 @@ unittest
     assert(!doesPointTo(darr[0 .. 1], darr));
 
     //But they do point their elements
-    foreach(i; 0 .. 4)
+    foreach (i; 0 .. 4)
         assert(doesPointTo(darr, darr[i]));
     assert(doesPointTo(darr[0..3], darr[2]));
     assert(!doesPointTo(darr[0..3], darr[3]));
@@ -1432,7 +1427,7 @@ class ErrnoException : Exception
         {
             auto s = core.stdc.string.strerror(errno);
         }
-        super(msg~" ("~s[0..s.strlen].idup~")", file, line);
+        super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
     }
 }
 
@@ -1500,7 +1495,7 @@ class ErrnoException : Exception
 CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 expression, lazy scope T2 errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
     try
     {
         return expression();
@@ -1516,7 +1511,7 @@ CommonType!(T1, T2) ifThrown(E : Throwable = Exception, T1, T2)(lazy scope T1 ex
 CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, scope T2 delegate(E) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
     try
     {
         return expression();
@@ -1532,7 +1527,7 @@ CommonType!(T1, T2) ifThrown(E : Throwable, T1, T2)(lazy scope T1 expression, sc
 CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate(Exception) errorHandler)
 {
     static assert(!is(typeof(return) == void),
-            "The error handler's return value("~T2.stringof~") does not have a common type with the expression("~T1.stringof~").");
+            "The error handler's return value(" ~ T2.stringof ~ ") does not have a common type with the expression(" ~ T1.stringof ~ ").");
     try
     {
         return expression();
@@ -1618,4 +1613,461 @@ version(unittest) package
 {
     static assert({ cast(void)dg(); return true; }());
     cast(void)dg();
+}
+
+/** This $(D enum) is used to select the primitives of the range to handle by the
+  $(LREF handle) range wrapper. The values of the $(D enum) can be $(D OR)'d to
+  select multiple primitives to be handled.
+
+  $(D RangePrimitive.access) is a shortcut for the access primitives; $(D front),
+  $(D back) and $(D opIndex).
+
+  $(D RangePrimitive.pop) is a shortcut for the mutating primitives;
+  $(D popFront) and $(D popBack).
+ */
+enum RangePrimitive
+{
+    front    = 0b00_0000_0001, ///
+    back     = 0b00_0000_0010, /// Ditto
+    popFront = 0b00_0000_0100, /// Ditto
+    popBack  = 0b00_0000_1000, /// Ditto
+    empty    = 0b00_0001_0000, /// Ditto
+    save     = 0b00_0010_0000, /// Ditto
+    length   = 0b00_0100_0000, /// Ditto
+    opDollar = 0b00_1000_0000, /// Ditto
+    opIndex  = 0b01_0000_0000, /// Ditto
+    opSlice  = 0b10_0000_0000, /// Ditto
+    access   = front | back | opIndex, /// Ditto
+    pop      = popFront | popBack, /// Ditto
+}
+
+/** Handle exceptions thrown from range primitives.
+
+Use the $(LREF RangePrimitive) enum to specify which primitives to _handle.
+Multiple range primitives can be handled at once by using the $(D OR) operator
+or the pseudo-primitives $(D RangePrimitive.access) and $(D RangePrimitive.pop).
+All handled primitives must have return types or values compatible with the
+user-supplied handler.
+
+Params:
+    E = The type of $(D Throwable) to _handle.
+    primitivesToHandle = Set of range primitives to _handle.
+    handler = The callable that is called when a handled primitive throws a
+    $(D Throwable) of type $(D E). The handler must accept arguments of
+    the form $(D E, ref IRange) and its return value is used as the primitive's
+    return value whenever $(D E) is thrown. For $(D opIndex), the handler can
+    optionally recieve a third argument; the index that caused the exception.
+    input = The range to _handle.
+
+Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
+
+opSlice:
+Infinite ranges with slicing support must return an instance of
+$(XREF range, Take) when sliced with a specific lower and upper
+bound (see $(XREF range_primitives, hasSlicing)); $(D handle) deals with this
+by $(D take)ing 0 from the return value of the handler function and returning
+that when an exception is caught.
+*/
+auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Range)(Range input)
+    if (isInputRange!Range)
+{
+    static struct Handler
+    {
+        private Range range;
+
+        static if (isForwardRange!Range)
+        {
+            @property typeof(this) save()
+            {
+                static if (primitivesToHandle & RangePrimitive.save)
+                {
+                    try
+                    {
+                        return typeof(this)(range.save);
+                    }
+                    catch(E exception)
+                    {
+                        return typeof(this)(handler(exception, this.range));
+                    }
+                }
+                else
+                    return typeof(this)(range.save);
+            }
+        }
+
+        static if (isInfinite!Range)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty()
+            {
+                static if (primitivesToHandle & RangePrimitive.empty)
+                {
+                    try
+                    {
+                        return this.range.empty;
+                    }
+                    catch(E exception)
+                    {
+                        return handler(exception, this.range);
+                    }
+                }
+                else
+                    return this.range.empty;
+            }
+        }
+
+        @property auto ref front()
+        {
+            static if (primitivesToHandle & RangePrimitive.front)
+            {
+                try
+                {
+                    return this.range.front;
+                }
+                catch(E exception)
+                {
+                    return handler(exception, this.range);
+                }
+            }
+            else
+                return this.range.front;
+        }
+
+        void popFront()
+        {
+            static if (primitivesToHandle & RangePrimitive.popFront)
+            {
+                try
+                {
+                    this.range.popFront();
+                }
+                catch(E exception)
+                {
+                    handler(exception, this.range);
+                }
+            }
+            else
+                this.range.popFront();
+        }
+
+        static if (isBidirectionalRange!Range)
+        {
+            @property auto ref back()
+            {
+                static if (primitivesToHandle & RangePrimitive.back)
+                {
+                    try
+                    {
+                        return this.range.back;
+                    }
+                    catch(E exception)
+                    {
+                        return handler(exception, this.range);
+                    }
+                }
+                else
+                    return this.range.back;
+            }
+
+            void popBack()
+            {
+                static if (primitivesToHandle & RangePrimitive.popBack)
+                {
+                    try
+                    {
+                        this.range.popBack();
+                    }
+                    catch(E exception)
+                    {
+                        handler(exception, this.range);
+                    }
+                }
+                else
+                    this.range.popBack();
+            }
+        }
+
+        static if (isRandomAccessRange!Range)
+        {
+            auto ref opIndex(size_t index)
+            {
+                static if (primitivesToHandle & RangePrimitive.opIndex)
+                {
+                    try
+                    {
+                        return this.range[index];
+                    }
+                    catch(E exception)
+                    {
+                        static if (__traits(compiles, handler(exception, this.range, index)))
+                            return handler(exception, this.range, index);
+                        else
+                            return handler(exception, this.range);
+                    }
+                }
+                else
+                    return this.range[index];
+            }
+        }
+
+        static if (hasLength!Range)
+        {
+            @property auto length()
+            {
+                static if (primitivesToHandle & RangePrimitive.length)
+                {
+                    try
+                    {
+                        return this.range.length;
+                    }
+                    catch(E exception)
+                    {
+                        return handler(exception, this.range);
+                    }
+                }
+                else
+                    return this.range.length;
+            }
+        }
+
+        static if (hasSlicing!Range)
+        {
+            static if (hasLength!Range)
+            {
+                typeof(this) opSlice(size_t lower, size_t upper)
+                {
+                    static if (primitivesToHandle & RangePrimitive.opSlice)
+                    {
+                        try
+                        {
+                            return typeof(this)(this.range[lower .. upper]);
+                        }
+                        catch(E exception)
+                        {
+                            return typeof(this)(handler(exception, this.range));
+                        }
+                    }
+                    else
+                        return typeof(this)(this.range[lower .. upper]);
+                }
+            }
+            else static if (is(typeof(Range.init[size_t.init .. $])))
+            {
+                static struct DollarToken {}
+                enum opDollar = DollarToken.init;
+
+                typeof(this) opSlice(size_t lower, DollarToken)
+                {
+                    static if (primitivesToHandle & RangePrimitive.opSlice)
+                    {
+                        try
+                        {
+                            return typeof(this)(this.range[lower .. $]);
+                        }
+                        catch(E exception)
+                        {
+                            return typeof(this)(handler(exception, this.range));
+                        }
+                    }
+                    else
+                        return typeof(this)(this.range[lower .. $]);
+                }
+
+                Take!Handler opSlice(size_t lower, size_t upper)
+                {
+                    static if (primitivesToHandle & RangePrimitive.opSlice)
+                    {
+                        try
+                        {
+                            return takeExactly(typeof(this)(this.range[lower .. $]), upper - 1);
+                        }
+                        catch(E exception)
+                        {
+                            return takeExactly(typeof(this)(handler(exception, this.range)), 0);
+                        }
+                    }
+                    else
+                        return takeExactly(typeof(this)(this.range[lower .. $]), upper - 1);
+                }
+            }
+        }
+    }
+
+    return Handler(input);
+}
+
+///
+pure @safe unittest
+{
+    import std.algorithm : equal, map, splitter;
+    import std.conv : to, ConvException;
+
+    auto s = "12,1337z32,54,2,7,9,1z,6,8";
+
+    // The next line composition will throw when iterated
+    // as some elements of the input do not convert to integer
+    auto r = s.splitter(',').map!(a => to!int(a));
+
+    // Substitute 0 for cases of ConvException
+    auto h = r.handle!(ConvException, RangePrimitive.front, (e, r) => 0);
+    assert(h.equal([12, 0, 54, 2, 7, 9, 0, 6, 8]));
+}
+
+///
+pure @safe unittest
+{
+    import std.algorithm : equal;
+    import std.range : retro;
+    import std.utf : UTFException;
+
+    auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
+
+    auto handled = str.handle!(UTFException, RangePrimitive.access,
+            (e, r) => ' '); // Replace invalid code points with spaces
+
+    assert(handled.equal("hello world")); // `front` is handled,
+    assert(handled.retro.equal("dlrow olleh")); // as well as `back`
+}
+
+pure nothrow @safe unittest
+{
+    static struct ThrowingRange
+    {
+        pure @safe:
+        @property bool empty()
+        {
+            throw new Exception("empty has thrown");
+        }
+
+        @property int front()
+        {
+            throw new Exception("front has thrown");
+        }
+
+        @property int back()
+        {
+            throw new Exception("back has thrown");
+        }
+
+        void popFront()
+        {
+            throw new Exception("popFront has thrown");
+        }
+
+        void popBack()
+        {
+            throw new Exception("popBack has thrown");
+        }
+
+        int opIndex(size_t)
+        {
+            throw new Exception("opIndex has thrown");
+        }
+
+        ThrowingRange opSlice(size_t, size_t)
+        {
+            throw new Exception("opSlice has thrown");
+        }
+
+        @property size_t length()
+        {
+            throw new Exception("length has thrown");
+        }
+
+        alias opDollar = length;
+
+        @property ThrowingRange save()
+        {
+            throw new Exception("save has thrown");
+        }
+    }
+
+    static assert(isInputRange!ThrowingRange);
+    static assert(isForwardRange!ThrowingRange);
+    static assert(isBidirectionalRange!ThrowingRange);
+    static assert(hasSlicing!ThrowingRange);
+    static assert(hasLength!ThrowingRange);
+
+    auto f = ThrowingRange();
+    auto fb = f.handle!(Exception, RangePrimitive.front | RangePrimitive.back,
+            (e, r) => -1)();
+    assert(fb.front == -1);
+    assert(fb.back == -1);
+    assertThrown(fb.popFront());
+    assertThrown(fb.popBack());
+    assertThrown(fb.empty);
+    assertThrown(fb.save);
+    assertThrown(fb[0]);
+
+    auto accessRange = f.handle!(Exception, RangePrimitive.access,
+            (e, r) => -1);
+    assert(accessRange.front == -1);
+    assert(accessRange.back == -1);
+    assert(accessRange[0] == -1);
+    assertThrown(accessRange.popFront());
+    assertThrown(accessRange.popBack());
+
+    auto pfb = f.handle!(Exception, RangePrimitive.pop, (e, r) => -1)();
+
+    pfb.popFront(); // this would throw otherwise
+    pfb.popBack(); // this would throw otherwise
+
+    auto em = f.handle!(Exception,
+            RangePrimitive.empty, (e, r) => false)();
+
+    assert(!em.empty);
+
+    auto arr = f.handle!(Exception,
+            RangePrimitive.opIndex, (e, r) => 1337)();
+
+    assert(arr[0] == 1337);
+
+    auto arr2 = f.handle!(Exception,
+            RangePrimitive.opIndex, (e, r, i) => i)();
+
+    assert(arr2[0] == 0);
+    assert(arr2[1337] == 1337);
+
+    auto save = f.handle!(Exception,
+        RangePrimitive.save,
+        function(Exception e, ref ThrowingRange r) {
+            return ThrowingRange();
+        })();
+
+    save.save;
+
+    auto slice = f.handle!(Exception,
+        RangePrimitive.opSlice, (e, r) => ThrowingRange())();
+
+    auto sliced = slice[0 .. 1337]; // this would throw otherwise
+
+    static struct Infinite
+    {
+        pure @safe:
+        enum bool empty = false;
+        int front() { assert(false); }
+        void popFront() { assert(false); }
+        Infinite save() @property { assert(false); }
+        static struct DollarToken {}
+        enum opDollar = DollarToken.init;
+        Take!Infinite opSlice(size_t, size_t) { assert(false); }
+        Infinite opSlice(size_t, DollarToken)
+        {
+            throw new Exception("opSlice has thrown");
+        }
+    }
+
+    static assert(isInputRange!Infinite);
+    static assert(isInfinite!Infinite);
+    static assert(hasSlicing!Infinite);
+
+    assertThrown(Infinite()[0 .. $]);
+
+    auto infinite = Infinite.init.handle!(Exception,
+        RangePrimitive.opSlice, (e, r) => Infinite())();
+
+    auto infSlice = infinite[0 .. $]; // this would throw otherwise
 }

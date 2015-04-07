@@ -32,11 +32,15 @@
     returned, it is usually a slice of an input string.  If a function
     allocates, this is explicitly mentioned in the documentation.
 
+    Upgrading:
+        $(WEB digitalmars.com/d/1.0/phobos/std_path.html#fnmatch) can
+        be replaced with $(D globMatch).
+
     Authors:
         Lars Tandle Kyllingstad,
         $(WEB digitalmars.com, Walter Bright),
         Grzegorz Adam Hankiewicz,
-        Thomas Kühne,
+        Thomas K$(UUML)hne,
         $(WEB erdani.org, Andrei Alexandrescu)
     Copyright:
         Copyright (c) 2000-2014, the authors. All rights reserved.
@@ -52,7 +56,7 @@ module std.path;
 
 // FIXME
 import std.file; //: getcwd;
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 
 /** String used to separate directory names in a path.  Under
@@ -1142,7 +1146,10 @@ unittest
     while at the same time resolving current/parent directory
     symbols ($(D ".") and $(D "..")) and removing superfluous
     directory separators.
+    It will return "." if the path leads to the starting directory.
     On Windows, slashes are replaced with backslashes.
+
+    Using buildNormalizedPath on null paths will always return null.
 
     Note that this function does not resolve symbolic links.
 
@@ -1150,6 +1157,8 @@ unittest
 
     Examples:
     ---
+    assert (buildNormalizedPath("foo", "..") == ".");
+
     version (Posix)
     {
         assert (buildNormalizedPath("/foo/./bar/..//baz/") == "/foo/baz");
@@ -1175,6 +1184,19 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     if (isSomeChar!C)
 {
     import core.stdc.stdlib;
+
+    //Remove empty fields
+    bool allEmpty = true;
+    foreach (ref const(C[]) path ; paths)
+    {
+        if (path !is null)
+        {
+            allEmpty = false;
+            break;
+        }
+    }
+    if (allEmpty) return null;
+
     auto paths2 = new const(C)[][](paths.length);
         //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
 
@@ -1355,7 +1377,14 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     // Return path, including root element and excluding the
     // final dir separator.
     immutable len = (relPart.ptr - fullPath.ptr) + (i > 0 ? i - 1 : 0);
-    fullPath = fullPath[0 .. len];
+    if (len == 0)
+    {
+        fullPath.length = 1;
+        fullPath[0] = '.';
+    }
+    else
+        fullPath = fullPath[0 .. len];
+
     version (Windows)
     {
         // On Windows, if the path is on the form `\\server\share`,
@@ -1372,6 +1401,18 @@ unittest
 {
     assert (buildNormalizedPath("") is null);
     assert (buildNormalizedPath("foo") == "foo");
+    assert (buildNormalizedPath(".") == ".");
+    assert (buildNormalizedPath(".", ".") == ".");
+    assert (buildNormalizedPath("foo", "..") == ".");
+    assert (buildNormalizedPath("", "") is null);
+    assert (buildNormalizedPath("", ".") == ".");
+    assert (buildNormalizedPath(".", "") == ".");
+    assert (buildNormalizedPath(null, "foo") == "foo");
+    assert (buildNormalizedPath("", "foo") == "foo");
+    assert (buildNormalizedPath("", "") == "");
+    assert (buildNormalizedPath("", null) == "");
+    assert (buildNormalizedPath(null, "") == "");
+    assert (buildNormalizedPath!(char)(null, null) == "");
 
     version (Posix)
     {
@@ -1394,6 +1435,15 @@ unittest
         assert (buildNormalizedPath("/foo", "/bar/..", "baz") == "/baz");
         assert (buildNormalizedPath("foo/./bar", "../../", "../baz") == "../baz");
         assert (buildNormalizedPath("/foo/./bar", "../../baz") == "/baz");
+
+        assert (buildNormalizedPath("foo", "", "bar") == "foo/bar");
+        assert (buildNormalizedPath("foo", null, "bar") == "foo/bar");
+
+        //Curent dir path
+        assert (buildNormalizedPath("./") == ".");
+        assert (buildNormalizedPath("././") == ".");
+        assert (buildNormalizedPath("./foo/..") == ".");
+        assert (buildNormalizedPath("foo/..") == ".");
     }
     else version (Windows)
     {
@@ -1440,6 +1490,15 @@ unittest
         assert (buildNormalizedPath(`c:\foo`, `bar\baz\`) == `c:\foo\bar\baz`);
         assert (buildNormalizedPath(`c:\foo`, `bar/..`) == `c:\foo`);
         assert (buildNormalizedPath(`\\server\share\foo`, `..\bar`) == `\\server\share\bar`);
+
+        assert (buildNormalizedPath("foo", "", "bar") == `foo\bar`);
+        assert (buildNormalizedPath("foo", null, "bar") == `foo\bar`);
+
+        //Curent dir path
+        assert (buildNormalizedPath(`.\`) == ".");
+        assert (buildNormalizedPath(`.\.\`) == ".");
+        assert (buildNormalizedPath(`.\foo\..`) == ".");
+        assert (buildNormalizedPath(`foo\..`) == ".");
     }
     else static assert (0);
 }
@@ -2895,12 +2954,14 @@ string expandTilde(string inputPath)
             }
             else
             {
+                import std.string : indexOf;
+
                 assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));
                 assert(path[0] == '~');
 
                 // Extract username, searching for path separator.
                 string username;
-                auto last_char = std.string.indexOf(path, dirSeparator[0]);
+                auto last_char = indexOf(path, dirSeparator[0]);
 
                 if (last_char == -1)
                 {

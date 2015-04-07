@@ -1,8 +1,11 @@
 /**
-These _range-construction tools are implemented using templates; but sometimes
-an object-based interface for ranges is needed. For this purpose, this module
+This module is a submodule of $(LINK2 std_range.html, std.range).
+
+The main $(D std.range) module provides template-based tools for working with
+ranges, but sometimes an object-based interface for ranges is needed, such as
+when runtime polymorphism is required. For this purpose, this submodule
 provides a number of object and $(D interface) definitions that can be used to
-wrap around _range objects created by the above templates.
+wrap around _range objects created by the $(D std.range) templates.
 
 $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF InputRange)))
@@ -65,7 +68,7 @@ to $(WEB fantascienza.net/leonardo/so/, Leonardo Maffi).
 */
 module std.range.interfaces;
 
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 import std.typetuple;
 
@@ -75,22 +78,6 @@ import std.typetuple;
  * needs to accept a generic range as a parameter.  Note that
  * $(LREF isInputRange) and friends check for conformance to structural
  * interfaces, not for implementation of these $(D interface) types.
- *
- * Examples:
- * ---
- * void useRange(InputRange!int range) {
- *     // Function body.
- * }
- *
- * // Create a range type.
- * auto squares = map!"a * a"(iota(10));
- *
- * // Wrap it in an interface.
- * auto squaresWrapped = inputRangeObject(squares);
- *
- * // Use it.
- * useRange(squaresWrapped);
- * ---
  *
  * Limitations:
  *
@@ -133,6 +120,26 @@ interface InputRange(E) {
     /// Ditto
     int opApply(int delegate(size_t, E));
 
+}
+
+///
+unittest
+{
+    import std.algorithm : map;
+    import std.range : iota;
+
+    void useRange(InputRange!int range) {
+        // Function body.
+    }
+
+    // Create a range type.
+    auto squares = map!"a * a"(iota(10));
+
+    // Wrap it in an interface.
+    auto squaresWrapped = inputRangeObject(squares);
+
+    // Use it.
+    useRange(squaresWrapped);
 }
 
 /**Interface for a forward range of type $(D E).*/
@@ -434,16 +441,6 @@ InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R) {
 
 /**Convenience function for creating an $(D OutputRangeObject) with a base range
  * of type $(D R) that accepts types $(D E).
-
- Examples:
- ---
- import std.array;
- uint[] outputArray;
- auto app = appender(&outputArray);
- auto appWrapped = outputRangeObject!(uint, uint[])(app);
- static assert(is(typeof(appWrapped) : OutputRange!(uint[])));
- static assert(is(typeof(appWrapped) : OutputRange!(uint)));
- ---
 */
 template outputRangeObject(E...) {
 
@@ -453,12 +450,21 @@ template outputRangeObject(E...) {
     }
 }
 
+///
+unittest
+{
+     import std.array;
+     auto app = appender!(uint[])();
+     auto appWrapped = outputRangeObject!(uint, uint[])(app);
+     static assert(is(typeof(appWrapped) : OutputRange!(uint[])));
+     static assert(is(typeof(appWrapped) : OutputRange!(uint)));
+}
 
-unittest 
+unittest
 {
     import std.internal.test.dummyrange;
-	import std.algorithm : equal;
-	import std.array;
+    import std.algorithm : equal;
+    import std.array;
 
     static void testEquality(R)(iInputRange r1, R r2) {
         assert(equal(r1, r2));

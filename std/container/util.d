@@ -1,3 +1,22 @@
+/**
+This module contains some common utilities used by containers.
+
+This module is a submodule of $(LINK2 std_container.html, std.container).
+
+Source: $(PHOBOSSRC std/container/_util.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+*/
 module std.container.util;
 
 /**
@@ -11,7 +30,19 @@ if (is(T == struct) || is(T == class))
     T make(Args...)(Args arguments)
     if (is(T == struct) && __traits(compiles, T(arguments)))
     {
-        return T(arguments);
+        // constructing an std.container.Array without arguments,
+        // does not initialize its payload and is equivalent
+        // to a null reference. We therefore construct an empty container
+        // by passing an empty array to its constructor.
+        // Issue #13872.
+        static if(arguments.length == 0)
+        {
+            import std.range;
+            alias ET = ElementType!(T.Range);
+            return T(ET[].init);
+        }
+        else
+            return T(arguments);
     }
 
     T make(Args...)(Args arguments)
@@ -20,6 +51,7 @@ if (is(T == struct) || is(T == class))
         return new T(arguments);
     }
 }
+
 
 ///
 unittest
@@ -120,4 +152,30 @@ unittest
 
     auto rbtmin = make!(RedBlackTree, "a < b", false)(3, 2, 2, 1);
     assert(equal(rbtmin[], [1, 2, 3]));
+}
+
+// Issue 13872
+unittest
+{
+    import std.container;
+
+    auto tree1 = make!(RedBlackTree!int)();
+    auto refToTree1 = tree1;
+    refToTree1.insert(1);
+    assert(1 in tree1);
+
+    auto array1 = make!(Array!int)();
+    auto refToArray1 = array1;
+    refToArray1.insertBack(1);
+    assert(!array1.empty);
+
+    auto slist = make!(SList!int)();
+    auto refToSlist = slist;
+    refToSlist.insert(1);
+    assert(!slist.empty);
+
+    auto dlist = make!(DList!int)();
+    auto refToDList = dlist;
+    refToDList.insert(1);
+    assert(!dlist.empty);
 }

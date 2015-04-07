@@ -1,6 +1,9 @@
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+Cyclic Redundancy Check (32-bit) implementation.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -12,8 +15,8 @@ $(TR $(TDNW OOP API) $(TD $(MYREF CRC32Digest))
 $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
 )
 )
+)
 
- * Cyclic Redundancy Check (32-bit) implementation.
  *
  * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
  * differences between the template and the OOP API, see $(D std.digest.digest).
@@ -38,7 +41,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
  *
  * Macros:
  * WIKI = Phobos/StdUtilDigestCRC32
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  *
  * Standards:
  * Implements the 'common' IEEE CRC32 variant

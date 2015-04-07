@@ -9,7 +9,7 @@
  *      WIKI=Phobos/StdCFenv
  */
 
-deprecated("Please import core.stdc.fenv instead. This module will be removed in December 2015.")
+/// Please import core.stdc.fenv instead. This module will be deprecated in DMD 2.068.
 module std.c.fenv;
 
 public import core.stdc.fenv;

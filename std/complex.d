@@ -19,31 +19,24 @@ import std.traits;
 /** Helper function that returns a _complex number with the specified
     real and imaginary parts.
 
-    If neither $(D re) nor $(D im) are floating-point numbers, this
-    function returns a $(D Complex!double).  Otherwise, the return type
-    is deduced using $(D std.traits.CommonType!(R, I)).
+    Params:
+        R = (template parameter) type of real part of complex number
+        I = (template parameter) type of imaginary part of complex number
 
-    Examples:
-    ---
-    auto c = complex(2.0);
-    static assert (is(typeof(c) == Complex!double));
-    assert (c.re == 2.0);
-    assert (c.im == 0.0);
+        re = real part of complex number to be constructed
+        im = (optional) imaginary part of complex number
 
-    auto w = complex(2);
-    static assert (is(typeof(w) == Complex!double));
-    assert (w == c);
-
-    auto z = complex(1, 3.14L);
-    static assert (is(typeof(z) == Complex!real));
-    assert (z.re == 1.0L);
-    assert (z.im == 3.14L);
-    ---
+    Returns:
+        $(D Complex) instance with real and imaginary parts set
+        to the values provided as input.  If neither $(D re) nor
+        $(D im) are floating-point numbers, the return type will
+        be $(D Complex!double).  Otherwise, the return type is
+        deduced using $(D std.traits.CommonType!(R, I)).
 */
-auto complex(T)(T re)  @safe pure nothrow @nogc  if (is(T : double))
+auto complex(R)(R re)  @safe pure nothrow @nogc  if (is(R : double))
 {
-    static if (isFloatingPoint!T)
-        return Complex!T(re, 0);
+    static if (isFloatingPoint!R)
+        return Complex!R(re, 0);
     else
         return Complex!double(re, 0);
 }
@@ -58,6 +51,7 @@ auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
         return Complex!double(re, im);
 }
 
+///
 unittest
 {
     auto a = complex(1.0);
@@ -141,7 +135,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         // Formatting with std.string.format specs: the precision and width
         // specifiers apply to both the real and imaginary parts of the
         // complex number.
-        import std.string : format;
+        import std.format : format;
         assert(format("%.2f", c)  == "1.20+3.40i");
         assert(format("%4.1f", c) == " 1.2+ 3.4i");
     }
@@ -676,34 +670,34 @@ unittest
 +/
 T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 {
-	return z.re*z.re + z.im*z.im;
+    return z.re*z.re + z.im*z.im;
 }
 
 unittest
 {
     import std.math;
-	assert (sqAbs(complex(0.0)) == 0.0);
-	assert (sqAbs(complex(1.0)) == 1.0);
-	assert (sqAbs(complex(0.0, 1.0)) == 1.0);
-	assert (approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
-	assert (approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
-	assert (approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
+    assert (sqAbs(complex(0.0)) == 0.0);
+    assert (sqAbs(complex(1.0)) == 1.0);
+    assert (sqAbs(complex(0.0, 1.0)) == 1.0);
+    assert (approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
+    assert (approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
+    assert (approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
 }
 
 /// ditto
 T sqAbs(T)(T x) @safe pure nothrow @nogc
-	if (isFloatingPoint!T)
+    if (isFloatingPoint!T)
 {
-	return x*x;
+    return x*x;
 }
 
 unittest
 {
     import std.math;
-	assert (sqAbs(0.0) == 0.0);
-	assert (sqAbs(-1.0) == 1.0);
-	assert (approxEqual(sqAbs(-3.0L), 9.0L));
-	assert (approxEqual(sqAbs(-5.0f), 25.0f));
+    assert (sqAbs(0.0) == 0.0);
+    assert (sqAbs(-1.0) == 1.0);
+    assert (approxEqual(sqAbs(-3.0L), 9.0L));
+    assert (approxEqual(sqAbs(-5.0f), 25.0f));
 }
 
 
@@ -866,7 +860,7 @@ unittest
 // Issue 10881: support %f formatting of complex numbers
 unittest
 {
-    import std.string : format;
+    import std.format : format;
 
     auto x = complex(1.2, 3.4);
     assert(format("%.2f", x) == "1.20+3.40i");

@@ -1,6 +1,25 @@
+/**
+This module implements a generic doubly-linked list container.
+
+This module is a submodule of $(LINK2 std_container.html, std.container).
+
+Source: $(PHOBOSSRC std/container/_dlist.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+*/
 module std.container.dlist;
 
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 
 public import std.container.util;
@@ -44,9 +63,9 @@ private struct DRange
     unittest
     {
         static assert(isBidirectionalRange!DRange);
-        static assert(is(ElementType!DRange == BaseNode*));       
+        static assert(is(ElementType!DRange == BaseNode*));
     }
- 
+
 nothrow @safe pure:
     private BaseNode* _first;
     private BaseNode* _last;
@@ -129,9 +148,9 @@ struct DList(T)
     {
         BaseNode _base;
         alias _base this;
-    
+
         T _payload = T.init;
-    
+
         inout(BaseNode)* asBaseNode() inout @trusted
         {
             return &_base;
@@ -144,7 +163,7 @@ struct DList(T)
   private
   {
     //Construct as new PayNode, and returns it as a BaseNode.
-    static BaseNode* createNode()(ref T arg, BaseNode* prev = null, BaseNode* next = null)
+    static BaseNode* createNode(Stuff)(ref Stuff arg, BaseNode* prev = null, BaseNode* next = null)
     {
         return (new PayNode(BaseNode(prev, next), arg)).asBaseNode();
     }
@@ -908,4 +927,12 @@ private:
     assert(r.front == 5 && r.walkLength == 1);
     r = list.linearRemove(r.take(1));
     assert(r.empty); // fails
+}
+
+@safe unittest //14300
+{
+    interface ITest {}
+    static class Test : ITest {}
+
+    DList!ITest().insertBack(new Test());
 }

@@ -1,3 +1,22 @@
+/**
+This module implements a red-black tree container.
+
+This module is a submodule of $(LINK2 std_container.html, std.container).
+
+Source: $(PHOBOSSRC std/container/_rbtree.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+*/
 module std.container.rbtree;
 
 // FIXME
@@ -5,9 +24,9 @@ import std.functional; // : binaryFun;
 
 public import std.container.util;
 
-version(unittest) version = RBDoChecks;
+version(unittest) debug = RBDoChecks;
 
-//version = RBDoChecks;
+//debug = RBDoChecks;
 
 /*
  * Implementation for a Red Black node for use in a Red Black Tree (see below)
@@ -605,7 +624,7 @@ struct RBNode(V)
 final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     if(is(typeof(binaryFun!less(T.init, T.init))))
 {
-    import std.range.constraints;
+    import std.range.primitives;
     import std.range : Take;
     import std.typetuple : allSatisfy;
     import std.traits;
@@ -675,7 +694,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         static if(allowDuplicates)
         {
             result.setColor(_end);
-            version(RBDoChecks)
+            debug(RBDoChecks)
                 check();
             ++_length;
             return result;
@@ -689,7 +708,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
                 ++_length;
                 result.setColor(_end);
             }
-            version(RBDoChecks)
+            debug(RBDoChecks)
                 check();
             return Tuple!(bool, "added", Node, "n")(added, result);
         }
@@ -697,7 +716,12 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     version(unittest)
     {
-        private enum doUnittest = isIntegral!T;
+        static if(is(typeof(less) == string))
+        {
+            private enum doUnittest = isIntegral!T && (less == "a < b" || less == "a > b");
+        }
+        else
+            enum doUnittest = false;
 
         // note, this must be final so it does not affect the vtable layout
         final bool arrayEqual(T[] arr)
@@ -819,7 +843,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     static if(doUnittest) unittest
     {
         import std.algorithm : equal;
-        import std.range.constraints;
+        import std.range.primitives;
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
         auto r = ts[];
@@ -894,7 +918,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
         Complexity: $(BIGOH 1).
     +/
-    @property size_t length()
+    @property size_t length() const
     {
         return _length;
     }
@@ -1119,7 +1143,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         auto n = _begin;
         auto result = n.value;
         _begin = n.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
         return result;
     }
@@ -1146,7 +1170,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         scope(success)
             --_length;
         _begin = _begin.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
     }
 
@@ -1164,7 +1188,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             _begin = _begin.remove(_end);
         else
             lastnode.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
     }
 
@@ -1204,7 +1228,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             b = b.remove(_end);
             --_length;
         }
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
         return Range(e, _end);
     }
@@ -1503,7 +1527,7 @@ assert(equal(rbt[], [5]));
         assert(equal(re, [3]));
     }
 
-    version(RBDoChecks)
+    debug(RBDoChecks)
     {
         /*
          * Print the tree.  This prints a sideways view of the tree in ASCII form,
@@ -1759,4 +1783,11 @@ pure unittest
     auto rt4 = redBlackTree!string("hello", "hello");
     assert(rt4.length == 1);
     assert(array(rt4[]) == ["hello"]);
+}
+
+//constness checks
+unittest
+{
+    const rt1 = redBlackTree(5,4,3,2,1);
+    static assert(is(typeof(rt1.length)));
 }

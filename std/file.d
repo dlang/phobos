@@ -24,7 +24,7 @@ import std.conv;
 import std.datetime;
 import std.exception;
 import std.path;
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 import std.typecons;
 import std.typetuple;
@@ -191,7 +191,53 @@ Returns: Untyped array of bytes _read.
 
 Throws: $(D FileException) on error.
  */
-void[] read(in char[] name, size_t upTo = size_t.max) @safe
+version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
+{
+    import std.algorithm : min;
+    import std.array : uninitializedArray;
+    import core.memory : GC;
+
+    // A few internal configuration parameters {
+    enum size_t
+        minInitialAlloc = 1024 * 4,
+        maxInitialAlloc = size_t.max / 2,
+        sizeIncrement = 1024 * 16,
+        maxSlackMemoryAllowed = 1024;
+    // }
+
+    immutable fd = core.sys.posix.fcntl.open(name.tempCString,
+            core.sys.posix.fcntl.O_RDONLY);
+    cenforce(fd != -1, name);
+    scope(exit) core.sys.posix.unistd.close(fd);
+
+    stat_t statbuf = void;
+    cenforce(fstat(fd, &statbuf) == 0, name);
+
+    immutable initialAlloc = to!size_t(statbuf.st_size
+        ? min(statbuf.st_size + 1, maxInitialAlloc)
+        : minInitialAlloc);
+    void[] result = uninitializedArray!(ubyte[])(initialAlloc);
+    scope(failure) delete result;
+    size_t size = 0;
+
+    for (;;)
+    {
+        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
+                min(result.length, upTo) - size);
+        cenforce(actual != -1, name);
+        if (actual == 0) break;
+        size += actual;
+        if (size < result.length) continue;
+        immutable newAlloc = size + sizeIncrement;
+        result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)[0 .. newAlloc];
+    }
+
+    return result.length - size >= maxSlackMemoryAllowed
+        ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
+        : result[0 .. size];
+}
+
+version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
@@ -199,120 +245,50 @@ void[] read(in char[] name, size_t upTo = size_t.max) @safe
     {
         return &buf;
     }
-    version(Windows)
+
+    static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+                              SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
+                              DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
     {
-        static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
-                                  SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
-                                  DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
-        {
-            return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
-                               lpSecurityAttributes, dwCreationDisposition,
-                               dwFlagsAndAttributes, hTemplateFile);
+        return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
+                           lpSecurityAttributes, dwCreationDisposition,
+                           dwFlagsAndAttributes, hTemplateFile);
 
-        }
-        static trustedCloseHandle(HANDLE hObject) @trusted
-        {
-            return CloseHandle(hObject);
-        }
-        static trustedGetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh) @trusted
-        {
-            return GetFileSize(hFile, lpFileSizeHigh);
-        }
-        static trustedReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
-                               DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped) @trusted
-        {
-            return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead,
-                            lpNumberOfBytesRead, lpOverlapped);
-        }
-
-        alias defaults =
-            TypeTuple!(GENERIC_READ,
-                FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                HANDLE.init);
-        auto h = trustedCreateFileW(name, defaults);
-
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(trustedCloseHandle(h), name);
-        auto size = trustedGetFileSize(h, null);
-        cenforce(size != INVALID_FILE_SIZE, name);
-        size = min(upTo, size);
-        auto buf = uninitializedArray!(ubyte[])(size);
-        scope(failure) delete buf;
-
-        DWORD numread = void;
-        cenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
-                && numread == size, name);
-        return buf[0 .. size];
     }
-    else version(Posix)
+    static trustedCloseHandle(HANDLE hObject) @trusted
     {
-        import core.memory;
-        // A few internal configuration parameters {
-        enum size_t
-            minInitialAlloc = 1024 * 4,
-            maxInitialAlloc = size_t.max / 2,
-            sizeIncrement = 1024 * 16,
-            maxSlackMemoryAllowed = 1024;
-        // }
-
-        static trustedOpen(in char[] path, int oflag) @trusted
-        {
-            return core.sys.posix.fcntl.open(path.tempCString(), oflag);
-        }
-        static trustedFstat(int path, stat_t* buf) @trusted
-        {
-            return fstat(path, buf);
-        }
-        static trustedRead(int fildes, void* buf, size_t nbyte) @trusted
-        {
-            return core.sys.posix.unistd.read(fildes, buf, nbyte);
-        }
-        static trustedRealloc(void* p, size_t sz, uint ba = 0, const TypeInfo ti = null) @trusted
-        {
-            return GC.realloc(p, sz, ba, ti);
-        }
-        static trustedPtrAdd(void[] buf, size_t s) @trusted
-        {
-            return buf.ptr+s;
-        }
-        static trustedPtrSlicing(void* ptr, size_t lb, size_t ub) @trusted
-        {
-            return ptr[lb..ub];
-        }
-
-        immutable fd = trustedOpen(name,
-                core.sys.posix.fcntl.O_RDONLY);
-        cenforce(fd != -1, name);
-        scope(exit) core.sys.posix.unistd.close(fd);
-
-        stat_t statbuf = void;
-        cenforce(trustedFstat(fd, trustedRef(statbuf)) == 0, name);
-
-        immutable initialAlloc = to!size_t(statbuf.st_size
-            ? min(statbuf.st_size + 1, maxInitialAlloc)
-            : minInitialAlloc);
-        void[] result = uninitializedArray!(ubyte[])(initialAlloc);
-        scope(failure) delete result;
-        size_t size = 0;
-
-        for (;;)
-        {
-            immutable actual = trustedRead(fd, trustedPtrAdd(result, size),
-                    min(result.length, upTo) - size);
-            cenforce(actual != -1, name);
-            if (actual == 0) break;
-            size += actual;
-            if (size < result.length) continue;
-            immutable newAlloc = size + sizeIncrement;
-            result = trustedPtrSlicing(trustedRealloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN),
-                                       0, newAlloc);
-        }
-
-        return result.length - size >= maxSlackMemoryAllowed
-            ? trustedPtrSlicing(trustedRealloc(result.ptr, size, GC.BlkAttr.NO_SCAN), 0, size)
-            : result[0 .. size];
+        return CloseHandle(hObject);
     }
+    static trustedGetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh) @trusted
+    {
+        return GetFileSize(hFile, lpFileSizeHigh);
+    }
+    static trustedReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
+                           DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped) @trusted
+    {
+        return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead,
+                        lpNumberOfBytesRead, lpOverlapped);
+    }
+
+    alias defaults =
+        TypeTuple!(GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
+            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+            HANDLE.init);
+    auto h = trustedCreateFileW(name, defaults);
+
+    cenforce(h != INVALID_HANDLE_VALUE, name);
+    scope(exit) cenforce(trustedCloseHandle(h), name);
+    auto size = trustedGetFileSize(h, null);
+    cenforce(size != INVALID_FILE_SIZE, name);
+    size = min(upTo, size);
+    auto buf = uninitializedArray!(ubyte[])(size);
+    scope(failure) delete buf;
+
+    DWORD numread = void;
+    cenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
+            && numread == size, name);
+    return buf[0 .. size];
 }
 
 @safe unittest
@@ -329,6 +305,15 @@ version (linux) @safe unittest
     auto s = std.file.readText("/proc/sys/kernel/osrelease");
     assert(s.length > 0);
     //writefln("'%s'", s);
+}
+
+@safe unittest
+{
+    scope(exit) if (exists(deleteme)) remove(deleteme);
+    import std.stdio;
+    auto f = File(deleteme, "w");
+    f.write("abcd"); f.flush();
+    assert(read(deleteme) == "abcd");
 }
 
 /********************************************
@@ -479,7 +464,11 @@ void rename(in char[] from, in char[] to) @trusted
                             to)));
     }
     else version(Posix)
+    {
+        import core.stdc.stdio;
+
         cenforce(core.stdc.stdio.rename(from.tempCString(), to.tempCString()) == 0, to);
+    }
 }
 
 @safe unittest
@@ -506,8 +495,12 @@ void remove(in char[] name) @trusted
         cenforce(DeleteFileW(name.tempCStringW()), name);
     }
     else version(Posix)
+    {
+        import core.stdc.stdio;
+
         cenforce(core.stdc.stdio.remove(name.tempCString()) == 0,
             "Failed to remove file " ~ name);
+    }
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name) @trusted
@@ -543,7 +536,7 @@ ulong getSize(in char[] name) @safe
         {
             return stat(path.tempCString(), buf);
         }
-        static stat_t* ptrOfLocalVariable(ref stat_t buf) @trusted
+        static stat_t* ptrOfLocalVariable(return ref stat_t buf) @trusted
         {
             return &buf;
         }
@@ -1888,6 +1881,14 @@ else version (FreeBSD)
 
         return buffer.assumeUnique;
     }
+    else version (Solaris)
+    {
+        import core.sys.posix.unistd : getpid;
+        import std.string : format;
+
+        // Only Solaris 10 and later
+        return readLink(format("/proc/%d/path/a.out", getpid()));
+    }
     else version (Android)
     {
         return readLink("/proc/self/exe");
@@ -2205,13 +2206,21 @@ else version(Posix)
             //of DT_UNKNOWN in case we don't ever actually
             //need the dtype, thus potentially avoiding the
             //cost of calling lstat).
-            if(fd.d_type != DT_UNKNOWN)
+            static if (__traits(compiles, fd.d_type != DT_UNKNOWN))
             {
-                _dType = fd.d_type;
-                _dTypeSet = true;
+                if(fd.d_type != DT_UNKNOWN)
+                {
+                    _dType = fd.d_type;
+                    _dTypeSet = true;
+                }
+                else
+                    _dTypeSet = false;
             }
             else
+            {
+                // e.g. Solaris does not have the d_type member
                 _dTypeSet = false;
+            }
         }
 
         @property string name() const pure nothrow
@@ -2445,22 +2454,43 @@ unittest
     }
 }
 
+alias PreserveAttributes = Flag!"preserveAttributes";
+
+version (StdDdoc)
+{
+    /// Defaults to PreserveAttributes.yes on Windows, and the opposite on all other platforms.
+    PreserveAttributes preserveAttributesDefault;
+}
+else version(Windows)
+{
+    enum preserveAttributesDefault = PreserveAttributes.yes;
+}
+else
+{
+    enum preserveAttributesDefault = PreserveAttributes.no;
+}
+
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
+File attributes are preserved, if $(D preserve) equals $(D PreserveAttributes.yes).
+On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
 Throws: $(D FileException) on error.
  */
-void copy(in char[] from, in char[] to)
+void copy(in char[] from, in char[] to, PreserveAttributes preserve = preserveAttributesDefault)
 {
     version(Windows)
     {
+        assert(preserve == Yes.preserve);
         immutable result = CopyFileW(from.tempCStringW(), to.tempCStringW(), false);
         if (!result)
             throw new FileException(to.idup);
     }
     else version(Posix)
     {
+        import core.stdc.stdio;
+
         immutable fd = core.sys.posix.fcntl.open(from.tempCString(), O_RDONLY);
         cenforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
@@ -2496,6 +2526,8 @@ void copy(in char[] from, in char[] to)
                 assert(size >= toxfer);
                 size -= toxfer;
             }
+            if (preserve)
+                cenforce(fchmod(fdw, statbuf.st_mode) == 0, from);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
@@ -2520,6 +2552,16 @@ unittest
     assert(readText(t2) == "2");
 }
 
+version(Posix) unittest //issue 11434
+{
+    auto t1 = deleteme, t2 = deleteme~"2";
+    scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
+    write(t1, "1");
+    setAttributes(t1, octal!767);
+    copy(t1, t2, Yes.preserveAttributes);
+    assert(readText(t2) == "1");
+    assert(getAttributes(t2) == octal!100767);
+}
 
 /++
     Remove directory and all of its content and subdirectories,
@@ -2926,6 +2968,31 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     return DirIterator(path, mode, followSymlink);
 }
 
+/// Duplicate functionality of D1's $(D std.file.listdir()):
+unittest
+{
+    string[] listdir(string pathname)
+    {
+        import std.file;
+        import std.path;
+        import std.algorithm;
+        import std.array;
+
+        return std.file.dirEntries(pathname, SpanMode.shallow)
+            .filter!(a => a.isFile)
+            .map!(a => std.path.baseName(a.name))
+            .array;
+    }
+
+    void main(string[] args)
+    {
+        import std.stdio;
+
+        string[] files = listdir(args[1]);
+        writefln("%s", files);
+     }
+}
+
 unittest
 {
     import std.algorithm;
@@ -2936,7 +3003,7 @@ unittest
                                    // called from a shared library on Android,
                                    // ie an apk
     else
-        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID()); // needs to be relative
+        string testdir = "deleteme.dmd.unittest.std.file" ~ to!string(thisProcessID); // needs to be relative
     mkdirRecurse(buildPath(testdir, "somedir"));
     scope(exit) rmdirRecurse(testdir);
     write(buildPath(testdir, "somefile"), null);
@@ -3028,202 +3095,81 @@ DirEntry dirEntry(in char[] name)
     return DirEntry(name.idup);
 }
 
-//Test dirEntry with a directory.
+
 unittest
 {
-    import core.thread;
     import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
-    immutable path = deleteme ~ "_dir";
-    scope(exit) { if(path.exists) rmdirRecurse(path); }
-
-    mkdir(path);
-    Thread.sleep(dur!"seconds"(2));
-    auto de = DirEntry(path);
-    assert(de.name == path);
-    assert(de.isDir);
-    assert(!de.isFile);
-    assert(!de.isSymlink);
-
-    assert(de.isDir == path.isDir);
-    assert(de.isFile == path.isFile);
-    assert(de.isSymlink == path.isSymlink);
-    assert(de.size == path.getSize());
-    assert(de.attributes == getAttributes(path));
-    assert(de.linkAttributes == getLinkAttributes(path));
-
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
-
-    assert(attrIsDir(de.attributes));
-    assert(attrIsDir(de.linkAttributes));
-    assert(!attrIsFile(de.attributes));
-    assert(!attrIsFile(de.linkAttributes));
-    assert(!attrIsSymlink(de.attributes));
-    assert(!attrIsSymlink(de.linkAttributes));
-
-    version(Windows)
+    immutable dpath = deleteme ~ "_dir";
+    immutable fpath = deleteme ~ "_file";
+    immutable sdpath = deleteme ~ "_sdir";
+    immutable sfpath = deleteme ~ "_sfile";
+    scope(exit)
     {
-        assert(de.timeCreated > before);
-        assert(de.timeCreated < now);
+        if (dpath.exists) rmdirRecurse(dpath);
+        if (fpath.exists) remove(fpath);
+        if (sdpath.exists) remove(sdpath);
+        if (sfpath.exists) remove(sfpath);
     }
-    else version(Posix)
+
+    mkdir(dpath);
+    write(fpath, "hello world");
+    version (Posix)
     {
-        assert(de.timeStatusChanged > before);
-        assert(de.timeStatusChanged < now);
-        assert(de.attributes == de.statBuf.st_mode);
+        core.sys.posix.unistd.symlink((dpath ~ '\0').ptr, (sdpath ~ '\0').ptr);
+        core.sys.posix.unistd.symlink((fpath ~ '\0').ptr, (sfpath ~ '\0').ptr);
     }
-}
 
-//Test dirEntry with a file.
-unittest
-{
-    import core.thread;
-    import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
-    immutable path = deleteme ~ "_file";
-    scope(exit) { if(path.exists) remove(path); }
-
-    write(path, "hello world");
-    Thread.sleep(dur!"seconds"(2));
-    auto de = DirEntry(path);
-    assert(de.name == path);
-    assert(!de.isDir);
-    assert(de.isFile);
-    assert(!de.isSymlink);
-
-    assert(de.isDir == path.isDir);
-    assert(de.isFile == path.isFile);
-    assert(de.isSymlink == path.isSymlink);
-    assert(de.size == path.getSize());
-    assert(de.attributes == getAttributes(path));
-    assert(de.linkAttributes == getLinkAttributes(path));
-
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
-
-    assert(!attrIsDir(de.attributes));
-    assert(!attrIsDir(de.linkAttributes));
-    assert(attrIsFile(de.attributes));
-    assert(attrIsFile(de.linkAttributes));
-    assert(!attrIsSymlink(de.attributes));
-    assert(!attrIsSymlink(de.linkAttributes));
-
-    version(Windows)
+    static struct Flags { bool dir, file, link; }
+    auto tests = [dpath : Flags(true), fpath : Flags(false, true)];
+    version (Posix)
     {
-        assert(de.timeCreated > before);
-        assert(de.timeCreated < now);
+        tests[sdpath] = Flags(true, false, true);
+        tests[sfpath] = Flags(false, true, true);
     }
-    else version(Posix)
+
+    auto past = Clock.currTime() - 2.seconds;
+    auto future = past + 4.seconds;
+
+    foreach (path, flags; tests)
     {
-        assert(de.timeStatusChanged > before);
-        assert(de.timeStatusChanged < now);
-        assert(de.attributes == de.statBuf.st_mode);
+        auto de = DirEntry(path);
+        assert(de.name == path);
+        assert(de.isDir == flags.dir);
+        assert(de.isFile == flags.file);
+        assert(de.isSymlink == flags.link);
+
+        assert(de.isDir == path.isDir);
+        assert(de.isFile == path.isFile);
+        assert(de.isSymlink == path.isSymlink);
+        assert(de.size == path.getSize());
+        assert(de.attributes == getAttributes(path));
+        assert(de.linkAttributes == getLinkAttributes(path));
+
+        scope(failure) writefln("[%s] [%s] [%s] [%s]", past, de.timeLastAccessed, de.timeLastModified, future);
+        assert(de.timeLastAccessed > past);
+        assert(de.timeLastAccessed < future);
+        assert(de.timeLastModified > past);
+        assert(de.timeLastModified < future);
+
+        assert(attrIsDir(de.attributes) == flags.dir);
+        assert(attrIsDir(de.linkAttributes) == (flags.dir && !flags.link));
+        assert(attrIsFile(de.attributes) == flags.file);
+        assert(attrIsFile(de.linkAttributes) == (flags.file && !flags.link));
+        assert(!attrIsSymlink(de.attributes));
+        assert(attrIsSymlink(de.linkAttributes) == flags.link);
+
+        version(Windows)
+        {
+            assert(de.timeCreated > past);
+            assert(de.timeCreated < future);
+        }
+        else version(Posix)
+        {
+            assert(de.timeStatusChanged > past);
+            assert(de.timeStatusChanged < future);
+            assert(de.attributes == de.statBuf.st_mode);
+        }
     }
-}
-
-//Test dirEntry with a symlink to a directory.
-version(linux) unittest
-{
-    import core.thread;
-    import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
-    immutable orig = deleteme ~ "_dir";
-    mkdir(orig);
-    immutable path = deleteme ~ "_slink";
-    scope(exit) { if(orig.exists) rmdirRecurse(orig); }
-    scope(exit) { if(path.exists) remove(path); }
-
-    core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(2));
-    auto de = DirEntry(path);
-    assert(de.name == path);
-    assert(de.isDir);
-    assert(!de.isFile);
-    assert(de.isSymlink);
-
-    assert(de.isDir == path.isDir);
-    assert(de.isFile == path.isFile);
-    assert(de.isSymlink == path.isSymlink);
-    assert(de.size == path.getSize());
-    assert(de.attributes == getAttributes(path));
-    assert(de.linkAttributes == getLinkAttributes(path));
-
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
-
-    assert(attrIsDir(de.attributes));
-    assert(!attrIsDir(de.linkAttributes));
-    assert(!attrIsFile(de.attributes));
-    assert(!attrIsFile(de.linkAttributes));
-    assert(!attrIsSymlink(de.attributes));
-    assert(attrIsSymlink(de.linkAttributes));
-
-    assert(de.timeStatusChanged > before);
-    assert(de.timeStatusChanged < now);
-    assert(de.attributes == de.statBuf.st_mode);
-}
-
-//Test dirEntry with a symlink to a file.
-version(linux) unittest
-{
-    import core.thread;
-    import std.stdio : writefln;
-    auto before = Clock.currTime();
-    Thread.sleep(dur!"seconds"(2));
-    immutable orig = deleteme ~ "_file";
-    write(orig, "hello world");
-    immutable path = deleteme ~ "_slink";
-    scope(exit) { if(orig.exists) remove(orig); }
-    scope(exit) { if(path.exists) remove(path); }
-
-    core.sys.posix.unistd.symlink((orig ~ "\0").ptr, (path ~ "\0").ptr);
-    Thread.sleep(dur!"seconds"(2));
-    auto de = DirEntry(path);
-    assert(de.name == path);
-    assert(!de.isDir);
-    assert(de.isFile);
-    assert(de.isSymlink);
-
-    assert(de.isDir == path.isDir);
-    assert(de.isFile == path.isFile);
-    assert(de.isSymlink == path.isSymlink);
-    assert(de.size == path.getSize());
-    assert(de.attributes == getAttributes(path));
-    assert(de.linkAttributes == getLinkAttributes(path));
-
-    auto now = Clock.currTime();
-    scope(failure) writefln("[%s] [%s] [%s] [%s]", before, de.timeLastAccessed, de.timeLastModified, now);
-    assert(de.timeLastAccessed > before);
-    assert(de.timeLastAccessed < now);
-    assert(de.timeLastModified > before);
-    assert(de.timeLastModified < now);
-
-    assert(!attrIsDir(de.attributes));
-    assert(!attrIsDir(de.linkAttributes));
-    assert(attrIsFile(de.attributes));
-    assert(!attrIsFile(de.linkAttributes));
-    assert(!attrIsSymlink(de.attributes));
-    assert(attrIsSymlink(de.linkAttributes));
-
-    assert(de.timeStatusChanged > before);
-    assert(de.timeStatusChanged < now);
-    assert(de.attributes == de.statBuf.st_mode);
 }
 
 

@@ -20,7 +20,7 @@ Example:
 ----
 // Generate a uniformly-distributed integer in the range [0, 14]
 auto i = uniform(0, 15);
-// Generate a uniformly-distributed real in the range [0, 100$(RPAREN)
+// Generate a uniformly-distributed real in the range [0, 100)
 // using a specific random generator
 Random gen;
 auto r = uniform(0.0L, 100.0L, gen);
@@ -30,6 +30,10 @@ In addition to random number generators, this module features
 distributions, which skew a generator's output statistical
 distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
+
+Upgrading:
+        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand Phobos D1 $(D rand())) can
+        be replaced with $(D uniform!uint()).
 
 Source:    $(PHOBOSSRC std/_random.d)
 
@@ -41,12 +45,12 @@ WIKI = Phobos/StdRandom
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Joseph Rushton Wakeling 2012.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
-           Masahiro Nakagawa (Xorshift randome generator)
+           Masahiro Nakagawa (Xorshift random generator)
            $(WEB braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
 Credits:   The entire random number library architecture is derived from the
            excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
-           researchers at the Fermi laboratory(excluding Xorshift).
+           researchers at the Fermi laboratory (excluding Xorshift).
 */
 /*
          Copyright Andrei Alexandrescu 2008 - 2009.
@@ -56,13 +60,16 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.random;
 
-import std.algorithm, std.conv, std.exception,
-       std.math, std.numeric, std.range, std.traits,
-       core.stdc.time, core.thread, core.time;
-import std.string : format;
 
-version(unittest) import std.typetuple;
+import std.range.primitives;
+import std.traits;
 
+version(unittest)
+{
+    static import std.typetuple;
+    package alias PseudoRngTypes = std.typetuple.TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
+                                              Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+}
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
 // From "Inner Loops" by Rick Booth, Addison-Wesley
@@ -356,6 +363,7 @@ $(D x0).
     {
         static if (c == 0)
         {
+            import std.exception : enforce;
             enforce(x0, "Invalid (zero) seed for "
                     ~ LinearCongruentialEngine.stringof);
         }
@@ -455,6 +463,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48271, 0, 2147483647);
 
 unittest
 {
+    import std.range;
     static assert(isForwardRange!MinstdRand);
     static assert(isUniformRNG!MinstdRand);
     static assert(isUniformRNG!MinstdRand0);
@@ -506,7 +515,7 @@ unittest
     assert(rnd.front == 399268537);
 
     // Check .save works
-    foreach (Type; TypeTuple!(MinstdRand0, MinstdRand))
+    foreach (Type; std.typetuple.TypeTuple!(MinstdRand0, MinstdRand))
     {
         auto rnd1 = Type(unpredictableSeed);
         auto rnd2 = rnd1.save;
@@ -622,6 +631,7 @@ Parameters for the generator.
         mti = n;
         if(range.empty && j < n)
         {
+            import std.format : format;
             throw new Exception(format("MersenneTwisterEngine.seed: Input range didn't provide enough"~
                 " elements: Need %s elemnets.", n));
         }
@@ -731,6 +741,8 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
 
 nothrow unittest
 {
+    import std.algorithm;
+    import std.range;
     static assert(isUniformRNG!Mt19937);
     static assert(isUniformRNG!(Mt19937, uint));
     static assert(isSeedable!Mt19937);
@@ -743,6 +755,10 @@ nothrow unittest
 
 unittest
 {
+    import std.exception;
+    import std.range;
+    import std.algorithm;
+
     Mt19937 gen;
 
     assertThrown(gen.seed(map!((a) => unpredictableSeed)(repeat(0, 623))));
@@ -770,8 +786,9 @@ unittest
 
 unittest
 {
+    import std.range;
     // Check .save works
-    foreach(Type; TypeTuple!(Mt19937))
+    foreach(Type; std.typetuple.TypeTuple!(Mt19937))
     {
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
@@ -789,7 +806,7 @@ unittest
                                                         0x9d2c5680, 15,
                                                         0xefc60000, 18);
 
-    foreach (R; TypeTuple!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+    foreach (R; std.typetuple.TypeTuple!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
         auto a = R();
 }
 
@@ -1027,6 +1044,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
 
 unittest
 {
+    import std.range;
     static assert(isForwardRange!Xorshift);
     static assert(isUniformRNG!Xorshift);
     static assert(isUniformRNG!(Xorshift, uint));
@@ -1043,7 +1061,7 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    alias XorshiftTypes = TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+    alias XorshiftTypes = std.typetuple.TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
 
     foreach (I, Type; XorshiftTypes)
     {
@@ -1085,11 +1103,6 @@ unittest
  * }
  * ----
  */
-version(unittest)
-{
-    package alias PseudoRngTypes = TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
-                                              Xorshift96, Xorshift128, Xorshift160, Xorshift192);
-}
 
 unittest
 {
@@ -1105,6 +1118,9 @@ A "good" seed for initializing random number engines. Initializing
 with $(D_PARAM unpredictableSeed) makes engines generate different
 random number sequences every run.
 
+Returns:
+A single unsigned integer seed value, different on each successive call
+
 Example:
 
 ----
@@ -1116,6 +1132,7 @@ auto n = rnd.front;
 
 @property uint unpredictableSeed() @trusted
 {
+    import core.thread : Thread, getpid, TickDuration;
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded)
@@ -1157,9 +1174,15 @@ unittest
 Global random number generator used by various functions in this
 module whenever no generator is specified. It is allocated per-thread
 and initialized to an unpredictable value for each thread.
+
+Returns:
+A singleton instance of the default random number generator
  */
 @property ref Random rndGen() @safe
 {
+    import std.algorithm : map;
+    import std.range : repeat;
+
     static Random result;
     static bool initialized;
     if (!initialized)
@@ -1181,13 +1204,24 @@ either side). Valid values for $(D boundaries) are $(D "[]"), $(D
 is closed to the left and open to the right. The version that does not
 take $(D urng) uses the default generator $(D rndGen).
 
+Params:
+    a = lower bound of the _uniform distribution
+    b = upper bound of the _uniform distribution
+    urng = (optional) random number generator to use;
+           if not specified, defaults to $(D rndGen)
+
+Returns:
+    A single random variate drawn from the _uniform distribution
+    between $(D a) and $(D b), whose type is the common type of
+    these parameters
+
 Example:
 
 ----
 auto gen = Random(unpredictableSeed);
 // Generate an integer in [0, 1023]
 auto a = uniform(0, 1024, gen);
-// Generate a float in [0, 1$(RPAREN)
+// Generate a float in [0, 1)
 auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
@@ -1233,9 +1267,12 @@ auto uniform(string boundaries = "[)",
 (T1 a, T2 b, ref UniformRandomNumberGenerator urng)
 if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGenerator)
 {
+    import std.exception : enforce;
+    import std.conv : text;
     alias NumberType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
+        import std.math : nextafter;
         NumberType _a = nextafter(cast(NumberType) a, NumberType.infinity);
     }
     else
@@ -1244,6 +1281,7 @@ if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGen
     }
     static if (boundaries[1] == ')')
     {
+        import std.math : nextafter;
         NumberType _b = nextafter(cast(NumberType) b, -NumberType.infinity);
     }
     else
@@ -1328,6 +1366,8 @@ auto uniform(string boundaries = "[)", T1, T2, RandomGen)
 if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
      isUniformRNG!RandomGen)
 {
+    import std.exception : enforce;
+    import std.conv : text, unsigned;
     alias ResultType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
@@ -1385,6 +1425,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 
 @safe unittest
 {
+    import std.conv : to;
     auto gen = Mt19937(unpredictableSeed);
     static assert(isForwardRange!(typeof(gen)));
 
@@ -1395,7 +1436,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach (T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach (T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
@@ -1449,7 +1490,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 
     auto reproRng = Xorshift(239842);
 
-    foreach (T; TypeTuple!(char, wchar, dchar, byte, ubyte, short,
+    foreach (T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short,
                           ushort, int, uint, long, ulong))
     {
         T lo = T.min + 10, hi = T.max - 10;
@@ -1519,8 +1560,16 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 
 /**
 Generates a uniformly-distributed number in the range $(D [T.min,
-T.max]) for any integral type $(D T). If no random number generator is
-passed, uses the default $(D rndGen).
+T.max]) for any integral or character type $(D T). If no random
+number generator is passed, uses the default $(D rndGen).
+
+Params:
+    urng = (optional) random number generator to use;
+           if not specified, defaults to $(D rndGen)
+
+Returns:
+    Random variate drawn from the _uniform distribution across all
+    possible values of the integral or character type $(D T).
  */
 auto uniform(T, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
@@ -1560,7 +1609,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 
 @safe unittest
 {
-    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach(T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
     {
         T init = uniform!T();
@@ -1581,6 +1630,14 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 /**
 Returns a uniformly selected member of enum $(D E). If no random number
 generator is passed, uses the default $(D rndGen).
+
+Params:
+    urng = (optional) random number generator to use;
+           if not specified, defaults to $(D rndGen)
+
+Returns:
+    Random variate drawn with equal probability from any
+    of the possible values of the enum $(D E).
  */
 auto uniform(E, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
@@ -1625,6 +1682,15 @@ if (is(E == enum))
  * $(D uniform01) offers a faster generation of random variates than
  * the equivalent $(D uniform!"[$(RPAREN)"(0.0, 1.0)) and so may be preferred
  * for some applications.
+ *
+ * Params:
+ *     urng = (optional) random number generator to use;
+ *            if not specified, defaults to $(D rndGen)
+ *
+ * Returns:
+ *     Floating-point random variate of type $(D T) drawn from the _uniform
+ *     distribution across the half-open interval [0, 1$(RPAREN).
+ *
  */
 T uniform01(T = double)()
     if (isFloatingPoint!T)
@@ -1660,18 +1726,22 @@ body
     {
         immutable T u = (rng.front - rng.min) * factor;
         rng.popFront();
-        static if (isIntegral!R)
+
+        import core.stdc.limits : CHAR_BIT;  // CHAR_BIT is always 8
+        static if (isIntegral!R && T.mant_dig >= (CHAR_BIT * R.sizeof))
         {
-            /* if RNG variates are integral, we're guaranteed
-             * by the definition of factor that u < 1.
+            /* If RNG variates are integral and T has enough precision to hold
+             * R without loss, we're guaranteed by the definition of factor
+             * that precisely u < 1.
              */
             return u;
         }
         else
         {
-            /* Otherwise we have to check, just in case a
-             * floating-point RNG returns a variate that is
-             * exactly equal to its maximum
+            /* Otherwise we have to check whether u is beyond the assumed range
+             * because of the loss of precision, or for another reason, a
+             * floating-point RNG can return a variate that is exactly equal to
+             * its maximum.
              */
             if (u < 1)
             {
@@ -1690,8 +1760,8 @@ body
     foreach (UniformRNG; PseudoRngTypes)
     {
 
-        foreach (T; TypeTuple!(float, double, real))
-        {
+        foreach (T; std.typetuple.TypeTuple!(float, double, real))
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             UniformRNG rng = UniformRNG(unpredictableSeed);
 
             auto a = uniform01();
@@ -1715,7 +1785,7 @@ body
             while (--i && uniform01!T(rng) == init) {}
             assert(i > 0);
             assert(i < 50);
-        }
+        }();
     }
 }
 
@@ -1727,6 +1797,7 @@ $(D 1). If $(D useThis) is provided, it is used as storage.
 F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
     if(isFloatingPoint!F)
 {
+    import std.numeric : normalize;
     useThis.length = n;
     foreach (ref e; useThis)
     {
@@ -1738,19 +1809,26 @@ F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
 
 @safe unittest
 {
+    import std.math;
+    import std.algorithm;
     static assert(is(CommonType!(double, int) == double));
     auto a = uniformDistribution(5);
-    enforce(a.length == 5);
-    enforce(approxEqual(reduce!"a + b"(a), 1));
+    assert(a.length == 5);
+    assert(approxEqual(reduce!"a + b"(a), 1));
     a = uniformDistribution(10, a);
-    enforce(a.length == 10);
-    enforce(approxEqual(reduce!"a + b"(a), 1));
+    assert(a.length == 10);
+    assert(approxEqual(reduce!"a + b"(a), 1));
 }
 
 /**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.  If no RNG is specified, $(D rndGen)
 will be used.
+
+Params:
+    r = random-access range whose elements are to be shuffled
+    gen = (optional) random number generator to use; if not
+          specified, defaults to $(D rndGen)
  */
 
 void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
@@ -1768,6 +1846,7 @@ void randomShuffle(Range)(Range r)
 
 unittest
 {
+    import std.algorithm;
     foreach(RandomGen; PseudoRngTypes)
     {
         // Also tests partialShuffle indirectly.
@@ -1793,10 +1872,19 @@ $(D partialShuffle) was called.
 
 $(D r) must be a random-access range with length.  $(D n) must be less than
 or equal to $(D r.length).  If no RNG is specified, $(D rndGen) will be used.
+
+Params:
+    r = random-access range whose elements are to be shuffled
+    n = number of elements of $(D r) to shuffle (counting from the beginning);
+        must be less than $(D r.length)
+    gen = (optional) random number generator to use; if not
+          specified, defaults to $(D rndGen)
 */
 void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     if(isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
+    import std.exception : enforce;
+    import std.algorithm : swapAt;
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
@@ -1813,6 +1901,7 @@ void partialShuffle(Range)(Range r, in size_t n)
 
 unittest
 {
+    import std.algorithm;
     foreach(RandomGen; PseudoRngTypes)
     {
         auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -1832,6 +1921,20 @@ unittest
 /**
 Rolls a dice with relative probabilities stored in $(D
 proportions). Returns the index in $(D proportions) that was chosen.
+
+Params:
+    rnd = (optional) random number generator to use; if not
+          specified, defaults to $(D rndGen)
+    proportions = forward range or list of individual values
+                  whose elements correspond to the probabilities
+                  with which to choose the corresponding index
+                  value
+
+Returns:
+    Random variate drawn from the index values
+    [0, ... $(D proportions.length) - 1], with the probability
+    of getting an individual index value $(D i) being proportional to
+    $(D proportions[i]).
 
 Example:
 
@@ -1870,9 +1973,17 @@ if (isNumeric!Num)
 }
 
 private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
-if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
+    if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
+in
 {
-    double sum = reduce!((a,b) { assert(b >= 0); return a + b; })(0.0, proportions.save);
+    import std.algorithm : all;
+    assert(proportions.save.all!"a >= 0");
+}
+body
+{
+    import std.exception : enforce;
+    import std.algorithm : reduce;
+    double sum = reduce!"a + b"(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
     immutable point = uniform(0.0, sum, rng);
     assert(point < sum);
@@ -1908,6 +2019,16 @@ must be a random-access range with length.
 
 If no random number generator is passed to $(D randomCover), the
 thread-global RNG rndGen will be used internally.
+
+Params:
+    r = random-access range to cover
+    rng = (optional) random number generator to use;
+          if not specified, defaults to $(D rndGen)
+
+Returns:
+    Range whose elements consist of the elements of $(D r),
+    in random order.  Will be a forward range if both $(D r) and
+    $(D rng) are forward ranges, an input range otherwise.
 
 Example:
 ----
@@ -1959,7 +2080,10 @@ struct RandomCover(Range, UniformRNG = void)
         {
             _input = input;
             _chosen.length = _input.length;
-            _alreadyChosen = 0;
+            if (_chosen.length == 0)
+            {
+                _alreadyChosen = 1;
+            }
         }
     }
     else
@@ -1971,7 +2095,10 @@ struct RandomCover(Range, UniformRNG = void)
             _input = input;
             _rng = rng;
             _chosen.length = _input.length;
-            _alreadyChosen = 0;
+            if (_chosen.length == 0)
+            {
+                _alreadyChosen = 1;
+            }
         }
 
         this(Range input, UniformRNG rng)
@@ -1999,7 +2126,6 @@ struct RandomCover(Range, UniformRNG = void)
     {
         if (_alreadyChosen == 0)
         {
-            _chosen[] = false;
             popFront();
         }
         return _input[_current];
@@ -2070,8 +2196,10 @@ auto randomCover(Range)(Range r)
 
 unittest
 {
+    import std.algorithm;
+    import std.conv;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-    foreach (UniformRNG; TypeTuple!(void, PseudoRngTypes))
+    foreach (UniformRNG; std.typetuple.TypeTuple!(void, PseudoRngTypes))
     {
         static if (is(UniformRNG == void))
         {
@@ -2101,6 +2229,15 @@ unittest
     }
 }
 
+unittest
+{
+    // Bugzilla 12589
+    int[] r = [];
+    auto rc = randomCover(r);
+    assert(rc.length == 0);
+    assert(rc.empty);
+}
+
 // RandomSample
 /**
 Selects a random subsample out of $(D r), containing exactly $(D n)
@@ -2108,6 +2245,28 @@ elements. The order of elements is the same as in the original
 range. The total length of $(D r) must be known. If $(D total) is
 passed in, the total number of sample is considered to be $(D
 total). Otherwise, $(D RandomSample) uses $(D r.length).
+
+Params:
+    r = range to sample from
+    n = number of elements to include in the sample;
+        must be less than or equal to the total number
+        of elements in $(D r) and/or the parameter
+        $(D total) (if provided)
+    total = (semi-optional) number of elements of $(D r)
+            from which to select the sample (counting from
+            the beginning); must be less than or equal to
+            the total number of elements in $(D r) itself.
+            May be omitted if $(D r) has the $(D .length)
+            property and the sample is to be drawn from
+            all elements of $(D r).
+    rng = (optional) random number generator to use;
+          if not specified, defaults to $(D rndGen)
+
+Returns:
+    Range whose elements consist of a randomly selected subset of
+    the elements of $(D r), in the same order as these elements
+    appear in $(D r) itself.  Will be a forward range if both $(D r)
+    and $(D rng) are forward ranges, an input range otherwise.
 
 $(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
 (see Vitter $(WEB dx.doi.org/10.1145/358105.893, 1984), $(WEB
@@ -2171,7 +2330,7 @@ struct RandomSample(Range, UniformRNG = void)
     private double _Vprime;
     private Range _input;
     private size_t _index;
-    private enum Skip { None, A, D };
+    private enum Skip { None, A, D }
     private Skip _skip = Skip.None;
 
     // If we're using the default thread-local random number generator then
@@ -2229,6 +2388,8 @@ struct RandomSample(Range, UniformRNG = void)
 
     private void initialize(size_t howMany, size_t total)
     {
+        import std.exception : enforce;
+        import std.conv : text;
         _available = total;
         _toSelect = howMany;
         enforce(_toSelect <= _available,
@@ -2432,6 +2593,7 @@ Variable names are chosen to match those in Vitter's paper.
 */
     private size_t skipD()
     {
+        import std.math : isNaN, trunc;
         // Confirm that the check in Step D1 is valid and we
         // haven't been sent here by mistake
         assert((_alphaInverse * _toSelect) <= _available);
@@ -2443,7 +2605,7 @@ Variable names are chosen to match those in Vitter's paper.
             size_t qu1 = 1 + _available - _toSelect;
             double x, y1;
 
-            assert(!_Vprime.isNaN);
+            assert(!_Vprime.isNaN());
 
             while (true)
             {
@@ -2576,6 +2738,9 @@ auto randomSample(Range, UniformRNG)(Range r, size_t n, auto ref UniformRNG rng)
 
 unittest
 {
+    import std.exception;
+    import std.range;
+    import std.conv : text;
     // For test purposes, an infinite input range
     struct TestInputRange
     {

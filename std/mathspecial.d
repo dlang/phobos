@@ -168,10 +168,34 @@ unittest {
  *  The digamma function is the logarithmic derivative of the gamma function.
  *
  *  digamma(x) = d/dx logGamma(x)
+ *
+ *  See_Also: $(LREF logmdigamma), $(LREF logmdigammaInverse).
  */
 real digamma(real x)
 {
     return std.internal.math.gammafunction.digamma(x);
+}
+
+/** Log Minus Digamma function
+ *
+ *  logmdigamma(x) = log(x) - digamma(x)
+ * 
+ *  See_Also: $(LREF digamma), $(LREF logmdigammaInverse).
+ */
+real logmdigamma(real x)
+{
+    return std.internal.math.gammafunction.logmdigamma(x);
+}
+
+/** Inverse of the Log Minus Digamma function
+ * 
+ *  Given y, the function finds x such log(x) - digamma(x) = y.
+ * 
+ *  See_Also: $(LREF logmdigamma), $(LREF digamma).
+ */
+real logmdigammaInverse(real x)
+{
+    return std.internal.math.gammafunction.logmdigammaInverse(x);
 }
 
 /** Incomplete beta integral
@@ -300,7 +324,7 @@ real erfc(real x)
  * The normal (or Gaussian, or bell-shaped) distribution is
  * defined as:
  *
- * normalDist(x) = 1/$(SQRT) $(PI) $(INTEGRATE -$(INFIN), x) exp( - $(POWER t, 2)/2) dt
+ * normalDist(x) = 1/$(SQRT)(2$(PI)) $(INTEGRATE -$(INFIN), x) exp( - $(POWER t, 2)/2) dt
  *   = 0.5 + 0.5 * erf(x/sqrt(2))
  *   = 0.5 * erfc(- x/sqrt(2))
  *

@@ -9,7 +9,7 @@
  *      WIKI=Phobos/StdCStddef
  */
 
-deprecated("Please import core.stdc.stddef instead. This module will be removed in December 2015.")
+/// Please import core.stdc.stddef instead. This module will be deprecated in DMD 2.068.
 module std.c.stddef;
 
 public import core.stdc.stddef;

@@ -26,7 +26,7 @@ module std.numeric;
 import std.complex;
 import std.exception;
 import std.math;
-import std.range.constraints;
+import std.range.primitives;
 import std.traits;
 import std.typecons;
 
@@ -85,6 +85,8 @@ public enum CustomFloatFlags
 // 64-bit version of core.bitop.bsr
 private int bsr64(ulong value)
 {
+    import core.bitop : bsr;
+
     union Ulong
     {
         ulong raw;
@@ -128,29 +130,6 @@ private template CustomFloatParams(uint precision, uint exponentWidth, CustomFlo
  * for storage only; all operations on them are performed by first implicitly
  * extracting them to $(D real) first. After the operation is completed the
  * result can be stored in a custom floating-point value via assignment.
- *
- * Example:
- * ----
- * // Define a 16-bit floating point values
- * CustomFloat!16                                x;     // Using the number of bits
- * CustomFloat!(10, 5)                           y;     // Using the precision and exponent width
- * CustomFloat!(10, 5,CustomFloatFlags.ieee)     z;     // Using the precision, exponent width and format flags
- * CustomFloat!(10, 5,CustomFloatFlags.ieee, 15) w;     // Using the precision, exponent width, format flags and exponent offset bias
- *
- * // Use the 16-bit floats mostly like normal numbers
- * w = x*y - 1;
- * writeln(w);
- *
- * // Functions calls require conversion
- * z = sin(+x)           + cos(+y);                     // Use unary plus to concisely convert to a real
- * z = sin(x.re)         + cos(y.re);                   // Or use the .re property to convert to a real
- * z = sin(x.get!float)  + cos(y.get!float);            // Or use get!T
- * z = sin(cast(float)x) + cos(cast(float)y);           // Or use cast(T) to explicitly convert
- *
- * // Define a 8-bit custom float for storing probabilities
- * alias Probability = CustomFloat!(4, 4, CustomFloatFlags.ieee^CustomFloatFlags.probability^CustomFloatFlags.signed );
- * auto p = Probability(0.5);
- * ----
  */
 template CustomFloat(uint bits)
     if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
@@ -163,6 +142,28 @@ template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags 
     if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
 {
     alias CustomFloat = CustomFloat!(CustomFloatParams!(precision, exponentWidth, flags));
+}
+
+///
+unittest
+{
+    // Define a 16-bit floating point values
+    CustomFloat!16                                x;     // Using the number of bits
+    CustomFloat!(10, 5)                           y;     // Using the precision and exponent width
+    CustomFloat!(10, 5,CustomFloatFlags.ieee)     z;     // Using the precision, exponent width and format flags
+    CustomFloat!(10, 5,CustomFloatFlags.ieee, 15) w;     // Using the precision, exponent width, format flags and exponent offset bias
+
+    // Use the 16-bit floats mostly like normal numbers
+    w = x*y - 1;
+
+    // Functions calls require conversion
+    z = sin(+x)           + cos(+y);                     // Use unary plus to concisely convert to a real
+    z = sin(x.get!float)  + cos(y.get!float);            // Or use get!T
+    z = sin(cast(float)x) + cos(cast(float)y);           // Or use cast(T) to explicitly convert
+
+    // Define a 8-bit custom float for storing probabilities
+    alias Probability = CustomFloat!(4, 4, CustomFloatFlags.ieee^CustomFloatFlags.probability^CustomFloatFlags.signed );
+    auto p = Probability(0.5);
 }
 
 /// ditto
@@ -630,6 +631,7 @@ public:
 
 unittest
 {
+    import std.typetuple;
     alias FPTypes =
         TypeTuple!(
             CustomFloat!(5, 10),
@@ -677,18 +679,6 @@ calculation intended to ultimately yield a result of type $(D F)
 real)). When doing a multi-step computation, you may want to store
 intermediate results as $(D FPTemporary!F).
 
-Example:
-----
-// Average numbers in an array
-double avg(in double[] a)
-{
-    if (a.length == 0) return 0;
-    FPTemporary!double result = 0;
-    foreach (e; a) result += e;
-    return result / a.length;
-}
-----
-
 The necessity of $(D FPTemporary) stems from the optimized
 floating-point operations and registers present in virtually all
 processors. When adding numbers in the example above, the addition may
@@ -711,22 +701,27 @@ template FPTemporary(F)
     alias FPTemporary = real;
 }
 
+///
+unittest
+{
+    // Average numbers in an array
+    double avg(in double[] a)
+    {
+        if (a.length == 0) return 0;
+        FPTemporary!double result = 0;
+        foreach (e; a) result += e;
+        return result / a.length;
+    }
+
+    auto a = [1.0, 2.0, 3.0];
+    assert(approxEqual(avg(a), 2));
+}
+
 /**
 Implements the $(WEB tinyurl.com/2zb9yr, secant method) for finding a
 root of the function $(D fun) starting from points $(D [xn_1, x_n])
 (ideally close to the root). $(D Num) may be $(D float), $(D double),
 or $(D real).
-
-Example:
-
-----
-float f(float x)
-{
-    return cos(x) - x*x*x;
-}
-auto x = secantMethod!(f)(0f, 1f);
-assert(approxEqual(x, 0.865474));
-----
 */
 template secantMethod(alias fun)
 {
@@ -747,6 +742,17 @@ template secantMethod(alias fun)
         }
         return xn;
     }
+}
+
+///
+unittest
+{
+    float f(float x)
+    {
+        return cos(x) - x*x*x;
+    }
+    auto x = secantMethod!(f)(0f, 1f);
+    assert(approxEqual(x, 0.865474));
 }
 
 unittest
@@ -777,7 +783,8 @@ public:
 /**  Find a real root of a real function f(x) via bracketing.
  *
  * Given a function $(D f) and a range $(D [a..b]) such that $(D f(a))
- * and $(D f(b)) have opposite signs, returns the value of $(D x) in
+ * and $(D f(b)) have opposite signs or at least one of them equals ±0, 
+ * returns the value of $(D x) in
  * the range which is closest to a root of $(D f(x)).  If $(D f(x))
  * has more than one root in the range, one will be chosen
  * arbitrarily.  If $(D f(x)) returns NaN, NaN will be returned;
@@ -806,7 +813,13 @@ T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
         is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
-    auto r = findRoot(f, a, b, f(a), f(b), tolerance);
+    immutable fa = f(a);
+    if(fa == 0)
+        return a;
+    immutable fb = f(b);
+    if(fb == 0)
+        return b;
+    immutable r = findRoot(f, a, b, fa, fb, tolerance);
     // Return the first value if it is smaller or NaN
     return !(fabs(r[2]) > fabs(r[3])) ? r[0] : r[1];
 }
@@ -832,8 +845,8 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  *
  * fax = Value of $(D f(ax)).
  *
- * fbx = Value of $(D f(bx)). ($(D f(ax)) and $(D f(bx)) are commonly
- * known in advance.)
+ * fbx = Value of $(D f(bx)). $(D fax) and $(D fbx) should have opposite signs. 
+ * ($(D f(ax)) and $(D f(bx)) are commonly known in advance.)
  *
  *
  * tolerance = Defines an early termination condition. Receives the
@@ -859,7 +872,7 @@ Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax
     )
 in
 {
-    assert(!ax.isNaN && !bx.isNaN, "Limits must not be NaN");
+    assert(!ax.isNaN() && !bx.isNaN(), "Limits must not be NaN");
     assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
 }
 body
@@ -888,7 +901,7 @@ body
     void bracket(T c)
     {
         R fc = f(c);
-        if (fc == 0 || fc.isNaN) // Exact solution, or NaN
+        if (fc == 0 || fc.isNaN()) // Exact solution, or NaN
         {
             a = c;
             fa = fc;
@@ -924,22 +937,22 @@ body
         if (( ((a - b) == a) && b!=0) || (a!=0 && ((b - a) == b)))
         {
             // Catastrophic cancellation
-            if (a == 0) 
+            if (a == 0)
                 a = copysign(T(0), b);
-            else if (b == 0) 
+            else if (b == 0)
                 b = copysign(T(0), a);
-            else if (signbit(a) != signbit(b)) 
+            else if (signbit(a) != signbit(b))
                 return 0;
             T c = ieeeMean(a, b);
             return c;
         }
         // avoid overflow
-        if (b - a > T.max)    
+        if (b - a > T.max)
             return b / 2 + a / 2;
-        if (fb - fa > R.max)  
+        if (fb - fa > R.max)
             return a - (b - a) / 2;
         T c = a - (fa / (fb - fa)) * (b - a);
-        if (c == a || c == b) 
+        if (c == a || c == b)
             return (a + b) / 2;
         return c;
     }
@@ -964,22 +977,22 @@ body
         {
             immutable T pc = a0 + (a1 + a2 * (c - b))*(c - a);
             immutable T pdc = a1 + a2*((2 * c) - (a + b));
-            if (pdc == 0) 
+            if (pdc == 0)
                 return a - a0 / a1;
-            else 
+            else
                 c = c - pc / pdc;
         }
         return c;
     }
 
     // On the first iteration we take a secant step:
-    if (fa == 0 || fa.isNaN)
+    if (fa == 0 || fa.isNaN())
     {
         done = true;
         b = a;
         fb = fa;
     }
-    else if (fb == 0 || fb.isNaN)
+    else if (fb == 0 || fb.isNaN())
     {
         done = true;
         a = b;
@@ -1027,7 +1040,7 @@ whileloop:
                 immutable d32 = (d31 - q21) * fd / (fd - fa);
                 immutable q33 = (d32 - q22) * fa / (fe - fa);
                 c = a + (q31 + q32 + q33);
-                if (c.isNaN || (c <= a) || (c >= b))
+                if (c.isNaN() || (c <= a) || (c >= b))
                 {
                     // DAC: If the interpolation predicts a or b, it's
                     // probable that it's the actual root. Only allow this if
@@ -1051,7 +1064,7 @@ whileloop:
                 // DAC: Alefeld doesn't explain why the number of newton steps
                 // should vary.
                 c = newtonQuadratic(distinct ? 3 : 2);
-                if (c.isNaN || (c <= a) || (c >= b))
+                if (c.isNaN() || (c <= a) || (c >= b))
                 {
                     // Failure, try a secant step:
                     c = secant_interpolate(a, b, fa, fb);
@@ -1084,19 +1097,19 @@ whileloop:
 
         // DAC: If the secant predicts a value equal to an endpoint, it's
         // probably false.
-        if (c==a || c==b || c.isNaN || fabs(c - u) > (b - a) / 2)
+        if (c==a || c==b || c.isNaN() || fabs(c - u) > (b - a) / 2)
         {
             if ((a-b) == a || (b-a) == b)
             {
-                if ((a>0 && b<0) || (a<0 && b>0)) 
+                if ((a>0 && b<0) || (a<0 && b>0))
                     c = 0;
                 else
                 {
-                    if (a==0) 
+                    if (a==0)
                         c = ieeeMean(copysign(T(0), b), b);
-                    else if (b==0) 
+                    else if (b==0)
                         c = ieeeMean(copysign(T(0), a), a);
-                    else 
+                    else
                         c = ieeeMean(a, b);
                 }
             }
@@ -1129,7 +1142,7 @@ whileloop:
         // pathological function. Perform a number of bisections equal to the
         // total number of consecutive bad iterations.
 
-        if ((b - a) < T(0.25) * (b0 - a0)) 
+        if ((b - a) < T(0.25) * (b0 - a0))
             baditer = 1;
         foreach (int QQ; 0..baditer)
         {
@@ -1143,9 +1156,9 @@ whileloop:
             {
                 T usea = a;
                 T useb = b;
-                if (a == 0) 
+                if (a == 0)
                     usea = copysign(T(0), b);
-                else if (b == 0) 
+                else if (b == 0)
                     useb = copysign(T(0), a);
                 w = ieeeMean(usea, useb);
             }
@@ -1157,7 +1170,7 @@ whileloop:
 }
 
 ///ditto
-Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
+Tuple!(T, T, R, R) findRoot(T, R, DF)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
 {
     return findRoot(f, ax, bx, fax, fbx, (T a, T b) => false);
 }
@@ -1178,7 +1191,7 @@ nothrow unittest
     {
         //numCalls=0;
         //++numProblems;
-        assert(!x1.isNaN && !x2.isNaN);
+        assert(!x1.isNaN() && !x2.isNaN());
         assert(signbit(x1) != signbit(x2));
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
           (real lo, real hi) { return false; });
@@ -1195,9 +1208,9 @@ nothrow unittest
     real cubicfn(real x) @nogc @safe nothrow pure
     {
         //++numCalls;
-        if (x>float.max) 
+        if (x>float.max)
             x = float.max;
-        if (x<-double.max) 
+        if (x<-double.max)
             x = -double.max;
         // This has a single real root at -59.286543284815
         return 0.386*x*x*x + 23*x*x + 15.7*x + 525.2;
@@ -1374,6 +1387,9 @@ nothrow unittest
    printf("POWER TOTAL = %d avg = %f ", powercalls,
         (1.0*powercalls)/powerProblems);
 */
+    //Issue 14231
+    auto xp = findRoot((float x) => x, 0f, 1f);
+    auto xn = findRoot((float x) => x, -1f, -0f);
 }
 
 //regression control
@@ -1440,7 +1456,7 @@ unittest
         assert(euclideanDistance(a, b) == 5);
         assert(euclideanDistance(a, b, 5) == 5);
         assert(euclideanDistance(a, b, 4) == 5);
-        assert(euclideanDistance(a, b, 2) == 3);        
+        assert(euclideanDistance(a, b, 2) == 3);
     }
 }
 
@@ -1627,6 +1643,7 @@ bool normalize(R)(R range, ElementType!(R) sum = 1)
     return true;
 }
 
+///
 unittest
 {
     double[] a = [];
@@ -1640,13 +1657,14 @@ unittest
 }
 
 /**
-Computes accurate sum of binary logarithms of input range $(D r).
+Compute the sum of binary logarithms of the input range $(D r).
+The error of this method is much smaller than with a naive sum of log2.
  */
-ElementType!Range sumOfLog2s(Range)(Range r) 
+ElementType!Range sumOfLog2s(Range)(Range r)
     if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 {
     long exp = 0;
-    Unqual!(typeof(return)) x = 1; 
+    Unqual!(typeof(return)) x = 1;
     foreach (e; r)
     {
         if (e < 0)
@@ -1654,26 +1672,27 @@ ElementType!Range sumOfLog2s(Range)(Range r)
         int lexp = void;
         x *= frexp(e, lexp);
         exp += lexp;
-        if (x < 0.5) 
+        if (x < 0.5)
         {
             x *= 2;
             exp--;
         }
     }
-    return exp + log2(x); 
+    return exp + log2(x);
 }
 
+///
 unittest
 {
     assert(sumOfLog2s(new double[0]) == 0);
     assert(sumOfLog2s([0.0L]) == -real.infinity);
     assert(sumOfLog2s([-0.0L]) == -real.infinity);
     assert(sumOfLog2s([2.0L]) == 1);
-    assert(sumOfLog2s([-2.0L]).isNaN);
-    assert(sumOfLog2s([real.nan]).isNaN);
-    assert(sumOfLog2s([-real.nan]).isNaN);
+    assert(sumOfLog2s([-2.0L]).isNaN());
+    assert(sumOfLog2s([real.nan]).isNaN());
+    assert(sumOfLog2s([-real.nan]).isNaN());
     assert(sumOfLog2s([real.infinity]) == real.infinity);
-    assert(sumOfLog2s([-real.infinity]).isNaN);
+    assert(sumOfLog2s([-real.infinity]).isNaN());
     assert(sumOfLog2s([ 0.25, 0.25, 0.25, 0.125 ]) == -9);
 }
 
@@ -1756,6 +1775,7 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
     return result;
 }
 
+///
 unittest
 {
     double[] p = [ 0.0, 0, 0, 1 ];
@@ -1836,6 +1856,7 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     return result / 2;
 }
 
+///
 unittest
 {
     double[] p = [ 0.0, 0, 0, 1 ];
@@ -1848,52 +1869,6 @@ unittest
     assert(approxEqual(jensenShannonDivergence(p2, p1), 0.0186218));
     assert(approxEqual(jensenShannonDivergence(p2, p1, 0.005), 0.00602366));
 }
-
-// template tabulateFixed(alias fun, uint n,
-//         real maxError, real left, real right)
-// {
-//     ReturnType!(fun) tabulateFixed(ParameterTypeTuple!(fun) arg)
-//     {
-//         alias num = ParameterTypeTuple!(fun)[0];
-//         static num[n] table;
-//         alias x = arg[0];
-//         enforce(left <= x && x < right);
-//         immutable i = cast(uint) (table.length
-//                 * ((x - left) / (right - left)));
-//         assert(i < n);
-//         if (isNaN(table[i])) {
-//             // initialize it
-//             auto x1 = left + i * (right - left) / n;
-//             auto x2 = left + (i + 1) * (right - left) / n;
-//             immutable y1 = fun(x1), y2 = fun(x2);
-//             immutable y = 2 * y1 * y2 / (y1 + y2);
-//             num wyda(num xx) { return fun(xx) - y; }
-//             auto bestX = findRoot(&wyda, x1, x2);
-//             table[i] = fun(bestX);
-//             immutable leftError = abs((table[i] - y1) / y1);
-//             enforce(leftError <= maxError, text(leftError, " > ", maxError));
-//             immutable rightError = abs((table[i] - y2) / y2);
-//             enforce(rightError <= maxError, text(rightError, " > ", maxError));
-//         }
-//         return table[i];
-//     }
-// }
-
-// unittest
-// {
-//     enum epsilon = 0.01;
-//     alias fasttanh = tabulateFixed!(tanh, 700, epsilon, 0.2, 3);
-//     uint testSize = 100000;
-//     auto rnd = Random(unpredictableSeed);
-//     foreach (i; 0 .. testSize) {
-//         immutable x = uniform(rnd, 0.2F, 3.0F);
-//         immutable float y = fasttanh(x), w = tanh(x);
-//         immutable e = abs(y - w) / w;
-//         //writefln("%.20f", e);
-//         enforce(e <= epsilon, text("x = ", x, ", fasttanh(x) = ", y,
-//                         ", tanh(x) = ", w, ", relerr = ", e));
-//     }
-// }
 
 /**
 The so-called "all-lengths gap-weighted string kernel" computes a
@@ -2036,16 +2011,6 @@ so-called normalized kernel) is bounded in $(D [0, 1]), reaches $(D 0)
 only for ranges that don't match in any position, and $(D 1) only for
 identical ranges.
 
-Example:
-----
-string[] s = ["Hello", "brave", "new", "world"];
-string[] t = ["Hello", "new", "world"];
-assert(gapWeightedSimilarity(s, s, 1) == 15);
-assert(gapWeightedSimilarity(t, t, 1) == 7);
-assert(gapWeightedSimilarity(s, t, 1) == 7);
-assert(gapWeightedSimilarityNormalized(s, t, 1) == 7. / sqrt(15. * 7));
-----
-
 The optional parameters $(D sSelfSim) and $(D tSelfSim) are meant for
 avoiding duplicate computation. Many applications may have already
 computed $(D gapWeightedSimilarity(s, s, lambda)) and/or $(D
@@ -2076,6 +2041,7 @@ gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
            sqrt(cast(typeof(return)) sSelfSim * tSelfSim);
 }
 
+///
 unittest
 {
     string[] s = ["Hello", "brave", "new", "world"];
@@ -2093,19 +2059,6 @@ manner by first revealing the matches of length 1, then gapped matches
 of length 2, and so on. The memory requirement is $(BIGOH s.length *
 t.length). The time complexity is $(BIGOH s.length * t.length) time
 for computing each step. Continuing on the previous example:
-
-----
-string[] s = ["Hello", "brave", "new", "world"];
-string[] t = ["Hello", "new", "world"];
-auto simIter = gapWeightedSimilarityIncremental(s, t, 1);
-assert(simIter.front == 3); // three 1-length matches
-simIter.popFront();
-assert(simIter.front == 3); // three 2-length matches
-simIter.popFront();
-assert(simIter.front == 1); // one 3-length match
-simIter.popFront();
-assert(simIter.empty);     // no more match
-----
 
 The implementation is based on the pseudocode in Fig. 4 of the paper
 $(WEB jmlr.csail.mit.edu/papers/volume6/rousu05a/rousu05a.pdf,
@@ -2309,6 +2262,21 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
     return typeof(return)(r1, r2, penalty);
 }
 
+///
+unittest
+{
+    string[] s = ["Hello", "brave", "new", "world"];
+    string[] t = ["Hello", "new", "world"];
+    auto simIter = gapWeightedSimilarityIncremental(s, t, 1.0);
+    assert(simIter.front == 3); // three 1-length matches
+    simIter.popFront();
+    assert(simIter.front == 3); // three 2-length matches
+    simIter.popFront();
+    assert(simIter.front == 1); // one 3-length match
+    simIter.popFront();
+    assert(simIter.empty);     // no more match
+}
+
 unittest
 {
     import std.conv: text;
@@ -2405,69 +2373,13 @@ T gcd(T)(T a, T b)
     }
 }
 
+///
 unittest
 {
     assert(gcd(2 * 5 * 7 * 7, 5 * 7 * 11) == 5 * 7);
     const int a = 5 * 13 * 23 * 23, b = 13 * 59;
     assert(gcd(a, b) == 13);
 }
-
-/*
- *  Copyright (C) 2004-2009 by Digital Mars, www.digitalmars.com
- *  Written by Andrei Alexandrescu, www.erdani.org
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-/+
-/**
-Primes generator
-*/
-struct Primes(UIntType)
-{
-    private UIntType[] found = [ 2 ];
-
-    UIntType front() { return found[$ - 1]; }
-
-    void popFront()
-    {
-      outer:
-        for (UIntType candidate = front + 1 + (front != 2); ; candidate += 2)
-        {
-            UIntType stop = cast(uint) sqrt(cast(double) candidate);
-            foreach (e; found)
-            {
-                if (e > stop) break;
-                if (candidate % e == 0) continue outer;
-            }
-            // found!
-            found ~= candidate;
-            break;
-        }
-    }
-
-    enum bool empty = false;
-}
-
-unittest
-{
-    foreach (e; take(10, Primes!(uint)())) writeln(e);
-}
-+/
 
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,
 // though floats seem accurate enough for all practical purposes, since
@@ -3192,4 +3104,3 @@ unittest
     static assert(isComplexLike!(Complex!double));
     static assert(!isComplexLike!(uint));
 }
-
