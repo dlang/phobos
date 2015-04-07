@@ -386,6 +386,20 @@ Throws: $(D ErrnoException) if the file could not be opened.
                         text("Cannot open file `", name, "' in mode `",
                                 stdioOpenmode, "'")),
                 name);
+
+        // MSVCRT workaround (issue 14422)
+        version (MICROSOFT_STDIO)
+        {
+            bool append, update;
+            foreach (c; stdioOpenmode)
+                if (c == 'a')
+                    append = true;
+                else
+                if (c == '+')
+                    update = true;
+            if (append && !update)
+                seek(size);
+        }
     }
 
     ~this() @safe
