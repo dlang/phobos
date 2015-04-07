@@ -50,9 +50,12 @@ import std.typetuple; // : TypeTuple, allSatisfy;
 debug(Unique) import std.stdio;
 
 /**
-Encapsulates unique ownership of a resource.  Resource of type $(D T) is
-deleted at the end of the scope, unless it is transferred.  The
-transfer can be explicit, using
+Encapsulates unique ownership of a resource.
+
+Like C++'s $(LINK2 http://en.cppreference.com/w/cpp/memory/unique_ptr, std::unique_ptr),
+a $(D Unique) maintains sole ownership of a given resource of type $(D T) until
+ownership is transferred or the $(D Unique) falls out of scope.
+Such a transfer can be explicit, using
 $(LINK2 http://dlang.org/phobos/std_algorithm_mutation.html#.move, $(D std.algorithm.move)),
 or implicit, when returning Unique from a function that created it.
 The resource can be a polymorphic class object,
@@ -66,19 +69,21 @@ static if (is(T:Object))
 else
     alias RefT = T*;
 
-public:
-
     /**
     Allows safe construction of $(D Unique). It creates the resource and
     guarantees unique ownership of it (unless $(D T) publishes aliases of
     $(D this)).
+
     Note: Nested structs/classes cannot be created.
-          Instead use $(D Unique!T(new T())).
+          Instead use $(D Unique!T.fromNested(new T)).
+
     Params:
-    args = Arguments to pass to $(D T)'s constructor.
+        args = Arguments to pass to $(D T)'s constructor.
+
+    Example:
     ---
-    static class C {}
-    auto u = Unique!(C).create();
+    static class C { }
+    auto u = Unique!C.create();
     ---
     */
     static Unique!T create(A...)(auto ref A args)
@@ -91,31 +96,28 @@ public:
     }
 
     /**
-    Constructor that takes an rvalue.
-    It will ensure uniqueness, as long as the rvalue
-    isn't just a view on an lvalue (e.g., a cast).
-    Typical usage:
-    ----
-    Unique!Foo f = new Foo;
-    ----
-    */
-    this(RefT p)
-    {
-        debug(Unique) writeln("Unique constructor with rvalue");
-        _p = p;
-    }
+    Allows construction of a $(D Unique) for a nested class or struct.
+    Currently, references to non-static nested objects can only be created
+    using $(D new) in their original context.
 
-    /**
-    Constructor that takes an lvalue. It nulls its source.
-    The nulling will ensure uniqueness as long as there
-    are no previous aliases to the source.
-    */
-    this(ref RefT p)
+    To ensure uniqueness, be sure to provide the direct result of $(D new).
+
+    Example:
+    ----
+    auto foo()
     {
-        _p = p;
-        debug(Unique) writeln("Unique constructor nulling source");
-        p = null;
-        assert(p is null);
+        class Bar { }
+        auto u = Unique!Bar.fromNested(new Bar);
+        return u;
+    }
+    ----
+    */
+    static Unique!T fromNested(RefT p)
+    {
+        debug(Unique) writeln("Unique created with rvalue");
+        Unique!T u;
+        u._p = p;
+        return u;
     }
 
 
@@ -124,12 +126,13 @@ public:
 
     Typically used to transfer a $(D Unique) rvalue of derived type to
     a $(D Unique) of base type.
+
     Example:
     ---
-    class C : Object {}
+    class C : Object { }
 
-    Unique!C uc = new C;
-    Unique!Object uo = uc.release;
+    Unique!C uc = Unique!C.create();
+    Unique!Object uo = move(uc);
     ---
     */
     this(U)(Unique!U u)
@@ -157,13 +160,7 @@ public:
         release();
     }
 
-    /** Returns whether the resource exists. */
-    @property bool isEmpty() const
-    {
-        return _p is null;
-    }
-
-    /** Frees the underlying pointer and nulls it */
+    /** Frees the underlying $(D RefT) and nulls it */
     void release()
     {
         debug(Unique) writeln("Release");
@@ -177,11 +174,20 @@ public:
         }
     }
 
-    /** Returns the underlying pointer for use by non-owning code. */
+    /**
+    Returns the underlying $(D RefT) for use by non-owning code.
+
+    The holder of a $(D Unique!T) is the <em>owner</em> of that $(D T).
+    For code that does not own the resource (and therefore does not affect
+    its life cycle), pass a plain old reference.
+    */
     RefT get() { return _p; }
 
-    /** Forwards member access to contents. */
-    RefT opDot() { return _p; }
+    /**
+    Allows you to dereference the underlying $(D RefT)
+    and treat it like a $(D RefT) in other ways (such as comparing to null)
+    */
+    alias _p this;
 
     /**
     Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
@@ -192,7 +198,43 @@ private:
     RefT _p;
 }
 
-///
+unittest
+{
+    // The simplest stuff
+    static struct S
+    {
+        int i;
+        this(int i) { this.i = i; }
+    }
+
+    // Some quick tests around alias this
+    auto u = Unique!S.create(42);
+    assert(u.i == 42);
+    assert(u !is null);
+    u.destroy();
+    assert(u is null);
+    assert(!u); // Since null pointers coerce to false
+
+    auto i = Unique!int.create(25);
+    assert(*i == 25);
+
+    // opAssign still kicks in, preventing this from compiling:
+    // i = null;
+}
+
+unittest
+{
+    // Test that we can return a Unique to a nested class
+    auto foo()
+    {
+        class Nested { }
+        // Cannot compile:
+        // return Unique!Nested.create();
+        return Unique!Nested.fromNested(new Nested);
+    }
+    assert(foo() !is null);
+}
+
 unittest
 {
     static struct S
@@ -200,6 +242,8 @@ unittest
         int i;
         this(int i){this.i = i;}
     }
+
+    // Test implicit return from a function
     Unique!S produce()
     {
         // Construct a unique instance of S on the heap
@@ -207,31 +251,47 @@ unittest
         // Implicit transfer of ownership
         return ut;
     }
+
     // Borrow a unique resource by ref
+    // Note that references to Unique should not be passed around to
+    // code that does not play a role in the Unique's life cycle.
+    // (This is what .get() is for)
     void increment(ref Unique!S ur)
     {
         ur.i++;
     }
+
+    // See above
+    void correctIncrement(S* r)
+    {
+        r.i++;
+    }
+
     void consume(Unique!S u2)
     {
-        assert(u2.i == 6);
+        assert(u2.i == 7);
         // Resource automatically deleted here
     }
+
     Unique!S u1;
-    assert(u1.isEmpty);
+    assert(u1 is null);
     u1 = produce();
     increment(u1);
     assert(u1.i == 6);
-    //consume(u1); // Error: u1 is not copyable
+    correctIncrement(u1.get());
+    assert(u1.i == 7);
+
+    // consume(u1); // Error: u1 is not copyable
+
     // Transfer ownership of the resource
     import std.algorithm : move;
     consume(move(u1));
-    assert(u1.isEmpty);
+    assert(u1 is null);
 }
 
 unittest
 {
-    // test conversion to base ref
+    // test conversion to base ref, and use with nested clases
     int created = 0;
     int deleted = 0;
     class C
@@ -239,63 +299,59 @@ unittest
         this() { created++; }
         ~this(){deleted++;}
     }
-    // constructor conversion
-    Unique!Object u = new C();
-    assert(!u.isEmpty);
+    Unique!Object u = Unique!C.fromNested(new C);
+    assert(u !is null);
     destroy(u);
+    assert(created == 1);
     assert(deleted == 1);
 
-    Unique!C uc = new C();
-    Unique!Object uo = new C();
+    Unique!C uc = Unique!C.fromNested(new C);
+    Unique!Object uo = Unique!Object.fromNested(new C);
     // opAssign conversion, deleting uo resource first
     import std.algorithm : move;
     uo = move(uc);
-    assert(uc.isEmpty);
-    assert(!uo.isEmpty);
+    assert(uc is null);
+    assert(uo !is null);
     assert(deleted == 2);
     assert(created == 3);
 }
 
 unittest
 {
-    // Test implicit return from a function
-    static Unique!Object foo()
-    {
-        return Unique!Object.create();
-    }
-    auto bar = foo();
-    assert(bar.get() !is null);
-}
+    // FIXME: Isn't this a bit redundant?
+    // I believe all of these bases are covered in the tests above.
 
-unittest
-{
     debug(Unique) writeln("Unique class");
     static class Bar
     {
         ~this() { debug(Unique) writeln("    Bar destructor"); }
         int val() const { return 4; }
     }
+
     alias UBar = Unique!(Bar);
+
     UBar g(UBar u)
     {
         import std.algorithm : move;
         debug(Unique) writeln("inside g");
         return move(u);
     }
+
     auto ub = UBar.create();
-    assert(!ub.isEmpty);
+    assert(ub !is null);
     assert(ub.val == 4);
-    static assert(!__traits(compiles, {auto ub3 = g(ub);}));
-    debug(Unique) writeln("Calling g");
+
     import std.algorithm : move;
+    debug(Unique) writeln("Calling g");
     auto ub2 = g(move(ub));
     debug(Unique) writeln("Returned from g");
-    assert(ub.isEmpty);
-    assert(!ub2.isEmpty);
+    assert(ub is null);
+    assert(ub2 !is null);
 }
 
 unittest
 {
+    // Same as above, but for a struct
     import std.algorithm : move;
 
     debug(Unique) writeln("Unique struct");
@@ -313,14 +369,13 @@ unittest
     }
 
     auto uf = UFoo.create();
-    assert(!uf.isEmpty);
+    assert(uf !is null);
     assert(uf.val == 3);
-    static assert(!__traits(compiles, {auto uf3 = f(uf);}));
     debug(Unique) writeln("Unique struct: calling f");
     auto uf2 = f(move(uf));
     debug(Unique) writeln("Unique struct: returned from f");
-    assert(uf.isEmpty);
-    assert(!uf2.isEmpty);
+    assert(uf is null);
+    assert(uf2 !is null);
 }
 
 
