@@ -55,6 +55,7 @@ $(TR $(TDNW Substitution)
     $(TD
          $(MYREF abbrev)
          $(MYREF soundex)
+         $(MYREF soundexer)
          $(MYREF succ)
          $(MYREF tr)
          $(MYREF translate)
@@ -4497,17 +4498,16 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
  * of names.
  *
  * Params:
- *  string = String to convert to Soundex representation.
- *  buffer = Optional 4 char array to put the resulting Soundex
- *      characters into. If null, the return value
- *      buffer will be allocated on the heap.
+ *  str = String or InputRange to convert to Soundex representation.
+ *
  * Returns:
  *  The four character array with the Soundex result in it.
- *  Returns null if there is no Soundex representation for the string.
+ *  The array has zero's in it if there is no Soundex representation for the string.
  *
  * See_Also:
  *  $(LINK2 http://en.wikipedia.org/wiki/Soundex, Wikipedia),
  *  $(LUCKY The Soundex Indexing System)
+ *  $(LREF soundex)
  *
  * Bugs:
  *  Only works well with English names.
@@ -4515,7 +4515,77 @@ bool isNumeric(const(char)[] s, in bool bAllowSep = false) @safe pure
  *  but this one is the standard one.
  */
 
-char[] soundex(const(char)[] string, char[] buffer = null)
+char[4] soundexer(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    alias C = Unqual!(ElementEncodingType!Range);
+
+    static immutable dex =
+        // ABCDEFGHIJKLMNOPQRSTUVWXYZ
+          "01230120022455012623010202";
+
+    char[4] result = void;
+    size_t b = 0;
+    C lastc;
+    foreach (C c; str)
+    {
+        if (c >= 'a' && c <= 'z')
+            c -= 'a' - 'A';
+        else if (c >= 'A' && c <= 'Z')
+        {
+        }
+        else
+        {
+            lastc = lastc.init;
+            continue;
+        }
+        if (b == 0)
+        {
+            result[0] = cast(char)c;
+            b++;
+            lastc = dex[c - 'A'];
+        }
+        else
+        {
+            if (c == 'H' || c == 'W')
+                continue;
+            if (c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U')
+                lastc = lastc.init;
+            c = dex[c - 'A'];
+            if (c != '0' && c != lastc)
+            {
+                result[b] = cast(char)c;
+                b++;
+                lastc = c;
+            }
+            if (b == 4)
+                goto Lret;
+        }
+    }
+    if (b == 0)
+        result[] = 0;
+    else
+        result[b .. 4] = '0';
+  Lret:
+    return result;
+}
+
+/*****************************
+ * Like $(LREF soundexer), but with different parameters
+ * and return value.
+ *
+ * Params:
+ *  str = String to convert to Soundex representation.
+ *  buffer = Optional 4 char array to put the resulting Soundex
+ *      characters into. If null, the return value
+ *      buffer will be allocated on the heap.
+ * Returns:
+ *  The four character array with the Soundex result in it.
+ *  Returns null if there is no Soundex representation for the string.
+ * See_Also:
+ *  $(LREF soundexer)
+ */
+char[] soundex(const(char)[] str, char[] buffer = null)
     @safe pure nothrow
 in
 {
@@ -4533,57 +4603,15 @@ out (result)
 }
 body
 {
-    static immutable dex =
-        // ABCDEFGHIJKLMNOPQRSTUVWXYZ
-        "01230120022455012623010202";
-
-    int b = 0;
-    char lastc;
-    foreach (char cs; string)
-    {   auto c = cs;        // necessary because cs is final
-
-        if (c >= 'a' && c <= 'z')
-            c -= 'a' - 'A';
-        else if (c >= 'A' && c <= 'Z')
-        {
-        }
-        else
-        {
-            lastc = lastc.init;
-            continue;
-        }
-        if (b == 0)
-        {
-            if (!buffer.ptr)
-                buffer = new char[4];
-            buffer[0] = c;
-            b++;
-            lastc = dex[c - 'A'];
-        }
-        else
-        {
-            if (c == 'H' || c == 'W')
-                continue;
-            if (c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U')
-                lastc = lastc.init;
-            c = dex[c - 'A'];
-            if (c != '0' && c != lastc)
-            {
-                buffer[b] = c;
-                b++;
-                lastc = c;
-            }
-        }
-        if (b == 4)
-            goto Lret;
-    }
-    if (b == 0)
-        buffer = null;
-    else
-        buffer[b .. 4] = '0';
-  Lret:
+    char[4] result = soundexer(str);
+    if (result[0] == 0)
+        return null;
+    if (!buffer.ptr)
+        buffer = new char[4];
+    buffer[] = result[];
     return buffer;
 }
+
 
 @safe pure nothrow unittest
 {
@@ -4630,6 +4658,11 @@ body
     assert(soundex("johnsons") == "J525");
     assert(soundex("Hardin") == "H635");
     assert(soundex("Martinez") == "M635");
+
+    import std.utf;
+    assert(soundexer("Martinez".byChar ) == "M635");
+    assert(soundexer("Martinez".byWchar) == "M635");
+    assert(soundexer("Martinez".byDchar) == "M635");
     });
 }
 
