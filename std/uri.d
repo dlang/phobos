@@ -38,20 +38,21 @@ private import std.traits : isSomeChar;
 import core.exception : OutOfMemoryError;
 import std.exception : assumeUnique;
 
+/** This Exception is thrown if something goes wrong when encoding or
+decoding a URI.
+*/
 class URIException : Exception
 {
-    @safe pure nothrow this()
+    import std.array : empty;
+    @safe pure nothrow this(string msg, string file = __FILE__,
+        size_t line = __LINE__, Throwable next = null)
     {
-        super("URI Exception");
-    }
-
-    @safe pure nothrow this(string msg)
-    {
-        super("URI Exception: " ~ msg);
+        super("URI Exception" ~ (!msg.empty ? ": " ~ msg : ""), file, line,
+            next);
     }
 }
 
-enum
+private enum
 {
     URI_Alpha = 1,
     URI_Reserved = 2,
@@ -442,6 +443,7 @@ size_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
     return i;
 }
 
+///
 unittest
 {
     string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
@@ -504,6 +506,7 @@ size_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
     return i;
 }
 
+///
 unittest
 {
     string s1 = "my.e-mail@www.example-domain.com with garbage added";

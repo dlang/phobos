@@ -1,6 +1,10 @@
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+ * This module describes the digest APIs used in Phobos. All digests follow these APIs.
+ * Additionally, this module contains useful helper methods which can be used with every _digest type.
+ *
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -16,10 +20,8 @@ $(TR $(TDNW Helper functions) $(TD $(MYREF toHexString))
 $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDigest))
 )
 )
+)
 
- * This module describes the digest APIs used in Phobos. All digests follow these APIs.
- * Additionally, this module contains useful helper methods which can be used with every _digest type.
- *
  * APIs:
  * There are two APIs for digests: The template API and the OOP API. The template API uses structs
  * and template helpers like $(LREF isDigest). The OOP API implements digests as classes inheriting
@@ -44,11 +46,6 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * Johannes Pfau
  *
  * Source:    $(PHOBOSSRC std/_digest/_digest.d)
- *
- * Macros:
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
- * MYREF2 = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$2">$1</a>&nbsp;</font>
- * MYREF3 = <a href="#$2">$(D $1)</a>
  *
  * CTFE:
  * Digests do not work in CTFE

@@ -1,8 +1,13 @@
 // Written in the D programming language.
 
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
+libcurl). The libcurl library must be installed on the system in order to use
+this module.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -15,10 +20,11 @@ $(TR $(TDNW Low level) $(TD $(MYREF HTTP) $(MYREF FTP) $(MYREF
 SMTP) )
 )
 )
+)
 
-Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
-libcurl). The libcurl library must be installed on the system in order to use
-this module.
+Note:
+You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"])
+to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org
@@ -132,9 +138,6 @@ stopped before it has finished then return something less than data.length from
 the onReceive callback. See $(LREF onReceiveHeader)/$(LREF onReceive) for more
 information. Finally the HTTP request is effected by calling perform(), which is
 synchronous.
-
-Macros:
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
 
 Source: $(PHOBOSSRC std/net/_curl.d)
 
@@ -386,6 +389,10 @@ unittest
  *
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * $(D CurlException) on error.
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -900,7 +907,7 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
 }
 
 alias KeepTerminator = Flag!"keepTerminator";
-/++
+/+
 struct ByLineBuffer(Char)
 {
     bool linePresent;
@@ -2681,19 +2688,19 @@ struct HTTP
      * Specify data to post when not using the onSend callback, with
      * user-specified Content-Type.
      * Params:
-     *	data = Data to post.
-     *	contentType = MIME type of the data, for example, "text/plain" or
-     *	    "application/octet-stream". See also:
+     *  data = Data to post.
+     *  contentType = MIME type of the data, for example, "text/plain" or
+     *      "application/octet-stream". See also:
      *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
      *      Internet media type) on Wikipedia.
-     *-----
+     * -----
      * import std.net.curl;
      * auto http = HTTP("http://onlineform.example.com");
      * auto data = "app=login&username=bob&password=s00perS3kret";
      * http.setPostData(data, "application/x-www-form-urlencoded");
      * http.onReceive = (ubyte[] data) { return data.length; };
      * http.perform();
-     *-----
+     * -----
      */
     void setPostData(const(void)[] data, string contentType)
     {

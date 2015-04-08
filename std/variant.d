@@ -481,7 +481,7 @@ private:
             static if (!is(Unqual!(typeof((*zis)[0])) == void) && is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
             {
                 // array type; parm is the element to append
-                auto arg = cast(VariantN*) parm;
+                auto arg = cast(Variant*) parm;
                 alias E = typeof((*zis)[0]);
                 if (arg[0].convertsTo!(E))
                 {
@@ -605,8 +605,6 @@ public:
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof ~ ". Valid types are "
                 ~ AllowedTypes.stringof);
-        // Assignment should destruct previous value
-        fptr(OpID.destruct, &store, null);
 
         static if (is(T : VariantN))
         {
@@ -620,6 +618,12 @@ public:
         }
         else
         {
+            static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
+            {
+                // Assignment should destruct previous value
+                fptr(OpID.destruct, &store, null);
+            }
+
             static if (T.sizeof <= size)
             {
                 // If T is a class we're only copying the reference, so it
@@ -670,22 +674,23 @@ public:
     /** Returns true if and only if the $(D_PARAM VariantN) object
      * holds a valid value (has been initialized with, or assigned
      * from, a valid value).
-     * Example:
-     * ----
-     * Variant a;
-     * assert(!a.hasValue);
-     * Variant b;
-     * a = b;
-     * assert(!a.hasValue); // still no value
-     * a = 5;
-     * assert(a.hasValue);
-     * ----
      */
-
     @property bool hasValue() const pure nothrow
     {
         // @@@BUG@@@ in compiler, the cast shouldn't be needed
         return cast(typeof(&handler!(void))) fptr != &handler!(void);
+    }
+
+    ///
+    unittest
+    {
+        Variant a;
+        assert(!a.hasValue);
+        Variant b;
+        a = b;
+        assert(!a.hasValue); // still no value
+        a = 5;
+        assert(a.hasValue);
     }
 
     /**
@@ -694,15 +699,6 @@ public:
      * value. Otherwise, returns $(D_PARAM null). In cases
      * where $(D_PARAM T) is statically disallowed, $(D_PARAM
      * peek) will not compile.
-     *
-     * Example:
-     * ----
-     * Variant a = 5;
-     * auto b = a.peek!(int);
-     * assert(b !is null);
-     * *b = 6;
-     * assert(a == 6);
-     * ----
      */
     @property inout(T)* peek(T)() inout
     {
@@ -715,6 +711,16 @@ public:
             return cast(inout T*)&store;
         else
             return *cast(inout T**)&store;
+    }
+
+    ///
+    unittest
+    {
+        Variant a = 5;
+        auto b = a.peek!(int);
+        assert(b !is null);
+        *b = 6;
+        assert(a == 6);
     }
 
     /**
@@ -742,32 +748,6 @@ public:
         TypeInfo info = typeid(T);
         return fptr(OpID.testConversion, null, &info) == 0;
     }
-
-    // private T[] testing123(T)(T*);
-
-    // /**
-    //  * A workaround for the fact that functions cannot return
-    //  * statically-sized arrays by value. Essentially $(D_PARAM
-    //  * DecayStaticToDynamicArray!(T[N])) is an alias for $(D_PARAM
-    //  * T[]) and $(D_PARAM DecayStaticToDynamicArray!(T)) is an alias
-    //  * for $(D_PARAM T).
-    //  */
-
-    // template DecayStaticToDynamicArray(T)
-    // {
-    //     static if (isStaticArray!(T))
-    //     {
-    //         alias DecayStaticToDynamicArray = typeof(testing123(&T[0]));
-    //     }
-    //     else
-    //     {
-    //         alias DecayStaticToDynamicArray = T;
-    //     }
-    // }
-
-    // static assert(is(DecayStaticToDynamicArray!(immutable(char)[21]) ==
-    //                  immutable(char)[]),
-    //               DecayStaticToDynamicArray!(immutable(char)[21]).stringof);
 
     /**
      * Returns the value stored in the $(D_PARAM VariantN) object,
@@ -950,7 +930,7 @@ public:
 
     private VariantN opArithmetic(T, string op)(T other)
     {
-        static if (isInstanceOf!(VariantN, T))
+        static if (isInstanceOf!(.VariantN, T))
         {
             string tryUseType(string tp)
             {
@@ -1127,7 +1107,7 @@ public:
     ///ditto
     VariantN opCatAssign(T)(T rhs)
     {
-        auto toAppend = VariantN(rhs);
+        auto toAppend = Variant(rhs);
         fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
         return this;
     }
@@ -1136,34 +1116,35 @@ public:
      * Array and associative array operations. If a $(D_PARAM
      * VariantN) contains an (associative) array, it can be indexed
      * into. Otherwise, an exception is thrown.
-     *
-     * Example:
-     * ----
-     * auto a = Variant(new int[10]);
-     * a[5] = 42;
-     * assert(a[5] == 42);
-     * int[int] hash = [ 42:24 ];
-     * a = hash;
-     * assert(a[42] == 24);
-     * ----
-     *
-     * Caveat:
-     *
-     * Due to limitations in current language, read-modify-write
-     * operations $(D_PARAM op=) will not work properly:
-     *
-     * ----
-     * Variant a = new int[10];
-     * a[5] = 42;
-     * a[5] += 8;
-     * assert(a[5] == 50); // fails, a[5] is still 42
-     * ----
      */
     Variant opIndex(K)(K i)
     {
         auto result = Variant(i);
         fptr(OpID.index, &store, &result) == 0 || assert(false);
         return result;
+    }
+
+    ///
+    unittest
+    {
+        auto a = Variant(new int[10]);
+        a[5] = 42;
+        assert(a[5] == 42);
+        int[int] hash = [ 42:24 ];
+        a = hash;
+        assert(a[42] == 24);
+    }
+
+    /** Caveat:
+    Due to limitations in current language, read-modify-write
+    operations $(D_PARAM op=) will not work properly:
+    */
+    unittest
+    {
+        Variant a = new int[10];
+        a[5] = 42;
+        a[5] += 8;
+        //assert(a[5] == 50); // will fail, a[5] is still 42
     }
 
     unittest
@@ -1318,6 +1299,29 @@ unittest
     assert(aa["b"] == 3);
 }
 
+// Issue #14198
+unittest
+{
+    Variant a = true;
+}
+
+// Issue #14233
+unittest
+{
+    alias Atom = Algebraic!(string, This[]);
+
+    Atom[] values = [];
+    auto a = Atom(values);
+}
+
+pure nothrow @nogc
+unittest
+{
+    Algebraic!(int, double) a;
+    a = 100;
+    a = 1.0;
+}
+
 
 /**
  * Algebraic data type restricted to a closed set of possible
@@ -1336,21 +1340,22 @@ unittest
  * Currently, $(D_PARAM Algebraic) does not allow recursive data
  * types. They will be allowed in a future iteration of the
  * implementation.
- *
- * Example:
- * ----
- * auto v = Algebraic!(int, double, string)(5);
- * assert(v.peek!(int));
- * v = 3.14;
- * assert(v.peek!(double));
- * // auto x = v.peek!(long); // won't compile, type long not allowed
- * // v = '1'; // won't compile, type char not allowed
- * ----
  */
 
 template Algebraic(T...)
 {
     alias Algebraic = VariantN!(maxSize!(T), T);
+}
+
+///
+unittest
+{
+    auto v = Algebraic!(int, double, string)(5);
+    assert(v.peek!(int));
+    v = 3.14;
+    assert(v.peek!(double));
+    // auto x = v.peek!(long); // won't compile, type long not allowed
+    // v = '1'; // won't compile, type char not allowed
 }
 
 /**
@@ -1367,37 +1372,11 @@ alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
 
 /**
  * Returns an array of variants constructed from $(D_PARAM args).
- * Example:
- * ----
- * auto a = variantArray(1, 3.14, "Hi!");
- * assert(a[1] == 3.14);
- * auto b = Variant(a); // variant array as variant
- * assert(b[1] == 3.14);
- * ----
- *
- * Code that needs functionality similar to the $(D_PARAM boxArray)
- * function in the $(D_PARAM std.boxer) module can achieve it like this:
- *
- * ----
- * // old
- * Box[] fun(...)
- * {
- *     ...
- *     return boxArray(_arguments, _argptr);
- * }
- * // new
- * Variant[] fun(T...)(T args)
- * {
- *     ...
- *     return variantArray(args);
- * }
- * ----
  *
  * This is by design. During construction the $(D_PARAM Variant) needs
  * static type information about the type being held, so as to store a
  * pointer to function for fast retrieval.
  */
-
 Variant[] variantArray(T...)(T args)
 {
     Variant[] result;
@@ -1407,6 +1386,37 @@ Variant[] variantArray(T...)(T args)
     }
     return result;
 }
+
+///
+unittest
+{
+    auto a = variantArray(1, 3.14, "Hi!");
+    assert(a[1] == 3.14);
+    auto b = Variant(a); // variant array as variant
+    assert(b[1] == 3.14);
+}
+
+/** Code that needs functionality similar to the $(D_PARAM boxArray)
+function in the $(D_PARAM std.boxer) module can achieve it like this:
+*/
+unittest
+{
+    /* old
+    Box[] fun(...)
+    {
+        // ...
+        return boxArray(_arguments, _argptr);
+    }
+    */
+    // new
+    Variant[] fun(T...)(T args)
+    {
+        // ...
+        return variantArray(args);
+    }
+}
+
+/**
 
 /**
  * Thrown in three cases:
@@ -1957,26 +1967,6 @@ unittest
  *
  * Duplicate overloads matching the same type in one of the visitors are disallowed.
  *
- * Example:
- * -----------------------
- *   Algebraic!(int, string) variant;
- *
- *   variant = 10;
- *   assert(variant.visit!((string s) => cast(int)s.length,
- *                         (int i)    => i)()
- *                         == 10);
- *   variant = "string";
- *   assert(variant.visit!((int i) => return i,
- *                         (string s) => cast(int)s.length)()
- *                         == 6);
- *
- *   // Error function usage
- *   Algebraic!(int, string) emptyVar;
- *   assert(variant.visit!((string s) => cast(int)s.length,
- *                         (int i)    => i,
- *                         () => -1)()
- *                         == -1);
- * ----------------------
  * Returns: The return type of visit is deduced from the visiting functions and must be
  * the same across all overloads.
  * Throws: If no parameter-less, error function is specified:
@@ -1990,6 +1980,28 @@ template visit(Handler ...)
     {
         return visitImpl!(true, VariantType, Handler)(variant);
     }
+}
+
+///
+unittest
+{
+    Algebraic!(int, string) variant;
+
+    variant = 10;
+    assert(variant.visit!((string s) => cast(int)s.length,
+                          (int i)    => i)()
+                          == 10);
+    variant = "string";
+    assert(variant.visit!((int i) => i,
+                          (string s) => cast(int)s.length)()
+                          == 6);
+
+    // Error function usage
+    Algebraic!(int, string) emptyVar;
+    auto rslt = emptyVar.visit!((string s) => cast(int)s.length,
+                          (int i)    => i,
+                          () => -1)();
+    assert(rslt == -1);
 }
 
 unittest
@@ -2059,22 +2071,6 @@ unittest
  * either $(D_PARAM variant) doesn't hold a value or holds a type
  * which isn't handled by the visiting functions.
  *
- * Example:
- * -----------------------
- *   Algebraic!(int, string) variant;
- *
- *   variant = 10;
- *   auto which = -1;
- *   variant.tryVisit!((int i) { which = 0; })();
- *   assert(which = 0);
- *
- *   // Error function usage
- *   variant = "test";
- *   variant.tryVisit!((int i) { which = 0; },
- *                     ()      { which = -100; })();
- *   assert(which == -100);
- * ----------------------
- *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
  * the same across all overloads.
  * Throws: If no parameter-less, error function is specified: $(D_PARAM VariantException) if
@@ -2090,6 +2086,23 @@ template tryVisit(Handler ...)
     {
         return visitImpl!(false, VariantType, Handler)(variant);
     }
+}
+
+///
+unittest
+{
+    Algebraic!(int, string) variant;
+
+    variant = 10;
+    auto which = -1;
+    variant.tryVisit!((int i) { which = 0; })();
+    assert(which == 0);
+
+    // Error function usage
+    variant = "test";
+    variant.tryVisit!((int i) { which = 0; },
+                      ()      { which = -100; })();
+    assert(which == -100);
 }
 
 unittest
@@ -2512,6 +2525,17 @@ unittest
         @disable this();
     }
     auto a = appender!(T[]);
+}
+
+unittest
+{
+    // Bugzilla 13871
+    alias A = Algebraic!(int, typeof(null));
+    static struct B { A value; }
+    alias C = std.variant.Algebraic!B;
+
+    C var;
+    var = C(B());
 }
 
 unittest

@@ -221,7 +221,7 @@ class MmFile
                 assert(0);
             }
 
-            if (filename)
+            if (filename != null)
             {
                 hFile = CreateFileW(filename.tempCStringW(),
                         dwDesiredAccess2,
@@ -242,7 +242,7 @@ class MmFile
             wenforce(hFileMap, "CreateFileMapping");
             scope(failure) CloseHandle(hFileMap);
 
-            if (size == 0 && filename)
+            if (size == 0 && filename != null)
             {
                 uint sizehi;
                 uint sizelow = GetFileSize(hFile, &sizehi);
@@ -328,7 +328,7 @@ class MmFile
             else
             {
                 fd = -1;
-                version(linux) import core.sys.linux.sys.mman : MAP_ANON;                
+                version(linux) import core.sys.linux.sys.mman : MAP_ANON;
                 flags |= MAP_ANON;
             }
             this.size = size;

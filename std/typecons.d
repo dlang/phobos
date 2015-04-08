@@ -296,53 +296,17 @@ unittest
 Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
 values together, notably when returning multiple values from a
-function. If $(D obj) is a tuple, the individual members are
+function. If $(D obj) is a `Tuple`, the individual members are
 accessible with the syntax $(D obj[0]) for the first field, $(D obj[1])
 for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
-motivated by the ability to use value tuples with various compile-time
-loop constructs (e.g. type tuple iteration), all of which use
+motivated by the ability to use value `Tuple`s with various compile-time
+loop constructs (e.g. $(XREF typetuple, TypeTuple) iteration), all of which use
 zero-based indexing.
 
-Example:
-
-----
-Tuple!(int, int) point;
-// assign coordinates
-point[0] = 5;
-point[1] = 6;
-// read coordinates
-auto x = point[0];
-auto y = point[1];
-----
-
-Tuple members can be named. It is legal to mix named and unnamed
-members. The method above is still applicable to all fields.
-
-Example:
-
-----
-alias Entry = Tuple!(int, "index", string, "value");
-Entry e;
-e.index = 4;
-e.value = "Hello";
-assert(e[1] == "Hello");
-assert(e[0] == 4);
-----
-
-Tuples with named fields are distinct types from tuples with unnamed
-fields, i.e. each naming imparts a separate type for the tuple. Two
-tuple differing in naming only are still distinct, even though they
-might have the same structure.
-
-Example:
-
-----
-Tuple!(int, "x", int, "y") point1;
-Tuple!(int, int) point2;
-assert(!is(typeof(point1) == typeof(point2))); // passes
-----
+Params:
+    Specs = A list of types (and optionally, member names) that the `Tuple` contains.
 */
 template Tuple(Specs...)
 {
@@ -467,36 +431,53 @@ template Tuple(Specs...)
     struct Tuple
     {
         /**
-         * The type of the tuple's components.
+         * The types of the `Tuple`'s components.
          */
         alias Types = staticMap!(extractType, fieldSpecs);
+        
+        ///
+        unittest
+        {
+            alias Fields = Tuple!(int, "id", string, float);
+            static assert(is(Fields.Types == TypeTuple!(int, string, float)));
+        }
 
         /**
-         * The names of the tuple's components. Unnamed fields have empty names.
-         *
-         * Examples:
-         * ----
-         * alias Fields = Tuple!(int, "id", string, float);
-         * static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
-         * ----
+         * The names of the `Tuple`'s components. Unnamed fields have empty names.
          */
         alias fieldNames = staticMap!(extractName, fieldSpecs);
+        
+        ///
+        unittest
+        {
+            alias Fields = Tuple!(int, "id", string, float);
+            static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+        }
 
         /**
-         * Use $(D t.expand) for a tuple $(D t) to expand it into its
-         * components. The result of $(D expand) acts as if the tuple components
+         * Use $(D t.expand) for a `Tuple` $(D t) to expand it into its
+         * components. The result of $(D expand) acts as if the `Tuple`'s components
          * were listed as a list of values. (Ordinarily, a $(D Tuple) acts as a
          * single value.)
-         *
-         * Examples:
-         * ----
-         * auto t = tuple(1, " hello ", 2.3);
-         * writeln(t);        // Tuple!(int, string, double)(1, " hello ", 2.3)
-         * writeln(t.expand); // 1 hello 2.3
-         * ----
          */
         Types expand;
         mixin(injectNamedFields());
+        
+        ///
+        unittest
+        {
+            auto t1 = tuple(1, " hello ", 2.3);
+            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
+            
+            void takeSeveralTypes(int n, string s, bool b) 
+            {
+                assert(n == 4 && s == "test" && b == false);
+            }
+            
+            auto t2 = tuple(4, "test", false);
+            //t.expand acting as a list of values
+            takeSeveralTypes(t2.expand);
+        }
 
         static if (is(Specs))
         {
@@ -524,6 +505,13 @@ template Tuple(Specs...)
 
         /**
          * Constructor taking one value for each field.
+         *
+         * Params:
+         *     values = A list of values that are either the same
+         *              types as those given by the `Types` field
+         *              of this `Tuple`, or can implicitly convert 
+         *              to those types. They must be in the same 
+         *              order as they appear in `Types`.
          */
         static if (Types.length > 0)
         {
@@ -532,15 +520,21 @@ template Tuple(Specs...)
                 field[] = values[];
             }
         }
+        
+        ///
+        unittest
+        {
+            alias ISD = Tuple!(int, string, double);
+            auto tup = ISD(1, "test", 3.2);
+            assert(tup.toString() == `Tuple!(int, string, double)(1, "test", 3.2)`);
+        }
 
         /**
          * Constructor taking a compatible array.
          *
-         * Examples:
-         * ----
-         * int[2] ints;
-         * Tuple!(int, int) t = ints;
-         * ----
+         * Params:
+         *     values = A compatible static array to build the `Tuple` from.
+         *              Array slices are not supported.
          */
         this(U, size_t n)(U[n] values)
         if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
@@ -550,33 +544,102 @@ template Tuple(Specs...)
                 field[i] = values[i];
             }
         }
+        
+        ///
+        unittest
+        {
+            int[2] ints;
+            Tuple!(int, int) t = ints;
+        }
 
         /**
-         * Constructor taking a compatible tuple.
+         * Constructor taking a compatible `Tuple`. Two `Tuple`s are compatible
+         * $(B iff) they are both of the same length, and, for each type `T` on the
+         * left-hand side, the corresponding type `U` on the right-hand side can
+         * implicitly convert to `T`.
+         *
+         * Params:
+         *     another = A compatible `Tuple` to build from. Its type must be
+         *               compatible with the target `Tuple`'s type.
          */
         this(U)(U another)
         if (areBuildCompatibleTuples!(typeof(this), U))
         {
             field[] = another.field[];
         }
+        
+        ///
+        unittest
+        {
+            alias IntVec = Tuple!(int, int, int);
+            alias DubVec = Tuple!(double, double, double);
+            
+            IntVec iv = tuple(1, 1, 1);
+            
+            //Ok, int can implicitly convert to double
+            DubVec dv = iv;
+            //Error: double cannot implicitly convert to int
+            //IntVec iv2 = dv;
+        }
 
         /**
-         * Comparison for equality.
+         * Comparison for equality. Two `Tuple`s are considered equal
+         * $(B iff) they fulfill the following criteria:
+         *
+         * $(UL 
+         *   $(LI Each `Tuple` is the same length.)
+         *   $(LI For each type `T` on the left-hand side and each type 
+         *        `U` on the right-hand side, values of type `T` can be 
+         *        compared with values of type `U`.)
+         *   $(LI For each value `v1` on the left-hand side and each value 
+         *        `v2` on the right-hand side, the expression `v1 == v2` is 
+         *        true.))
+         *
+         * Params:
+         *     rhs = The `Tuple` to compare against. It must meeting the criteria
+         *           for comparison between `Tuple`s.
+         *
+         * Returns:
+         *     true if both `Tuple`s are equal, otherwise false.
          */
         bool opEquals(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
             return field[] == rhs.field[];
         }
+        
         /// ditto
         bool opEquals(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
             return field[] == rhs.field[];
         }
+        
+        ///
+        unittest
+        {
+            Tuple!(int, string) t1 = tuple(1, "test");
+            Tuple!(double, string) t2 =  tuple(1.0, "test");
+            //Ok, int can be compared with double and
+            //both have a value of 1
+            assert(t1 == t2);
+        }
 
         /**
          * Comparison for ordering.
+         *
+         * Params:
+         *     rhs = The `Tuple` to compare against. It must meet the criteria
+         *           for comparison between `Tuple`s.
+         *
+         * Returns:
+         * For any values `v1` on the right-hand side and `v2` on the
+         * left-hand side:
+         *
+         * $(UL
+         *   $(LI A negative integer if the expression `v1 < v2` is true.)
+         *   $(LI A positive integer if the expression `v1 > v2` is true.)
+         *   $(LI 0 if the expression `v1 == v2` is true.))
          */
         int opCmp(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "<"))
@@ -590,6 +653,7 @@ template Tuple(Specs...)
             }
             return 0;
         }
+        
         /// ditto
         int opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
@@ -603,10 +667,29 @@ template Tuple(Specs...)
             }
             return 0;
         }
+        
+        /**  
+            The first `v1` for which `v1 > v2` is true determines
+            the result. This could lead to unexpected behaviour.
+         */
+        unittest
+        {
+            auto tup1 = tuple(1, 1, 1);
+            auto tup2 = tuple(1, 100, 100);
+            assert(tup1 < tup2);
+            
+            //Only the first result matters for comparison
+            tup1[0] = 2;
+            assert(tup1 > tup2);
+        }
 
         /**
-         * Assignment from another tuple. Each element of the source must be
-         * implicitly assignable to the respective element of the target.
+         * Assignment from another `Tuple`.
+         *
+         * Params:
+         *     rhs = The source `Tuple` to assign from. Each element of the 
+         *           source `Tuple` must be implicitly assignable to each
+         *           respective element of the target `Tuple`.
          */
         void opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
@@ -634,17 +717,16 @@ template Tuple(Specs...)
         }
 
         /**
-         * Takes a slice of the tuple.
+         * Takes a slice of this `Tuple`.
          *
-         * Examples:
-         * ----
-         * Tuple!(int, string, float, double) a;
-         * a[1] = "abc";
-         * a[2] = 4.5;
-         * auto s = a.slice!(1, 3);
-         * static assert(is(typeof(s) == Tuple!(string, float)));
-         * assert(s[0] == "abc" && s[1] == 4.5);
-         * ----
+         * Params:
+         *     from = A `size_t` designating the starting position of the slice.
+         *     to = A `size_t` designating the ending position (exclusive) of the slice.
+         *
+         * Returns:
+         *     A new `Tuple` that is a slice from `[from, to$(RPAREN)` of the original. 
+         *     It has the same types and values as the range `[from, to$(RPAREN)` in 
+         *     the original.
          */
         @property
         ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
@@ -652,7 +734,24 @@ template Tuple(Specs...)
         {
             return *cast(typeof(return)*) &(field[from]);
         }
+        
+        ///
+        unittest
+        {
+            Tuple!(int, string, float, double) a;
+            a[1] = "abc";
+            a[2] = 4.5;
+            auto s = a.slice!(1, 3);
+            static assert(is(typeof(s) == Tuple!(string, float)));
+            assert(s[0] == "abc" && s[1] == 4.5);
+        }
 
+        /**
+            Creates a hash of this `Tuple`.
+            
+            Returns:
+                A `size_t` representing the hash of this `Tuple`.
+         */
         size_t toHash() const nothrow @trusted
         {
             size_t h = 0;
@@ -660,11 +759,8 @@ template Tuple(Specs...)
                 h += typeid(T).getHash(cast(const void*)&field[i]);
             return h;
         }
-
-        /**
-         * Converts to string.
-         */
-        void toString()(scope void delegate(const(char)[]) sink)
+        
+        void toString(DG)(scope DG sink)
         {
             enum header = typeof(this).stringof ~ "(",
                  footer = ")",
@@ -691,6 +787,12 @@ template Tuple(Specs...)
             sink(footer);
         }
 
+        /**
+         * Converts to string.
+         *
+         * Returns:
+         *     The string representation of this `Tuple`.
+         */
         string toString()()
         {
             import std.conv : to;
@@ -699,8 +801,53 @@ template Tuple(Specs...)
     }
 }
 
+///
+unittest
+{
+    Tuple!(int, int) point;
+    // assign coordinates
+    point[0] = 5;
+    point[1] = 6;
+    // read coordinates
+    auto x = point[0];
+    auto y = point[1];
+}
+
+/** 
+    `Tuple` members can be named. It is legal to mix named and unnamed
+    members. The method above is still applicable to all fields.
+ */
+unittest
+{
+    alias Entry = Tuple!(int, "index", string, "value");
+    Entry e;
+    e.index = 4;
+    e.value = "Hello";
+    assert(e[1] == "Hello");
+    assert(e[0] == 4);
+}
+
 /**
-    Return a copy of a Tuple with its fields in reverse order.
+    A `Tuple` with named fields is a distinct type from a `Tuple` with unnamed
+    fields, i.e. each naming imparts a separate type for the `Tuple`. Two
+    `Tuple`s differing in naming only are still distinct, even though they
+    might have the same structure.
+ */
+unittest
+{
+    Tuple!(int, "x", int, "y") point1;
+    Tuple!(int, int) point2;
+    assert(!is(typeof(point1) == typeof(point2)));
+}
+
+/**
+    Create a copy of a `Tuple` with its fields in reverse order.
+    
+    Params:
+        t = The `Tuple` to copy.
+    
+    Returns:
+        A copy of `t` with its fields in reverse order.
  */
 ReverseTupleType!T reverse(T)(T t)
     if (isTuple!T)
@@ -870,7 +1017,7 @@ unittest
         static struct R
         {
             Tuple!(int, int) _front;
-            @property ref Tuple!(int, int) front() { return _front;  }
+            @property ref Tuple!(int, int) front() return { return _front;  }
             @property bool empty() { return _front[0] >= 10; }
             void popFront() { ++_front[0]; }
         }
@@ -1124,24 +1271,30 @@ unittest
     a = b;
 }
 
+@nogc unittest
+{
+    alias T = Tuple!(string, "s");
+    T x;
+    x = T.init;
+}
+
 /**
-Returns a $(D Tuple) object instantiated and initialized according to
-the arguments.
-
-Example:
-----
-auto value = tuple(5, 6.7, "hello");
-assert(value[0] == 5);
-assert(value[1] == 6.7);
-assert(value[2] == "hello");
-
-// Field names can be provided.
-auto entry = tuple!("index", "value")(4, "Hello");
-assert(entry.index == 4);
-assert(entry.value == "Hello");
-----
+    Constructs a $(D Tuple) object instantiated and initialized according to
+    the given arguments.
+    
+    Params:
+        Names = A list of strings naming each successive field of the `Tuple`.
+                Each name matches up with the corresponding field given by `Args`.
+                A name does not have to be provided for every field, but as
+                the names must proceed in order, it is not possible to skip
+                one field and name the next after it.
+                
+        args = Values to initialize the `Tuple` with. The `Tuple`'s type will
+               be inferred from the types of the values given.
+    
+    Returns:
+        A new `Tuple` with its type inferred from the arguments given.
 */
-
 template tuple(Names...)
 {
     auto tuple(Args...)(Args args)
@@ -1183,9 +1336,28 @@ template tuple(Names...)
     }
 }
 
+///
+unittest
+{
+    auto value = tuple(5, 6.7, "hello");
+    assert(value[0] == 5);
+    assert(value[1] == 6.7);
+    assert(value[2] == "hello");
+
+    // Field names can be provided.
+    auto entry = tuple!("index", "value")(4, "Hello");
+    assert(entry.index == 4);
+    assert(entry.value == "Hello");
+}
+
 /**
-Returns $(D true) if and only if $(D T) is an instance of the
-$(D Tuple) struct template.
+    Returns $(D true) if and only if $(D T) is an instance of $(D std.typecons.Tuple).
+    
+    Params:
+        T = The type to check.
+        
+    Returns:
+        true if `T` is a `Tuple` type, false otherwise.
  */
 template isTuple(T)
 {
@@ -1199,6 +1371,7 @@ template isTuple(T)
     }
 }
 
+///
 unittest
 {
     static assert(isTuple!(Tuple!()));
@@ -1206,7 +1379,10 @@ unittest
     static assert(isTuple!(Tuple!(int, real, string)));
     static assert(isTuple!(Tuple!(int, "x", real, "y")));
     static assert(isTuple!(Tuple!(int, Tuple!(real), string)));
+}
 
+unittest
+{
     static assert(isTuple!(const Tuple!(int)));
     static assert(isTuple!(immutable Tuple!(int)));
 
@@ -1269,32 +1445,14 @@ refer to another object. For completeness, $(D Rebindable!(T)) aliases
 itself away to $(D T) if $(D T) is a non-const object type. However,
 $(D Rebindable!(T)) does not compile if $(D T) is a non-class type.
 
-Regular $(D const) object references cannot be reassigned:
-
-----
-class Widget { int x; int y() const { return x; } }
-const a = new Widget;
-a.y();          // fine
-a.x = 5;        // error! can't modify const a
-a = new Widget; // error! can't modify const a
-----
-
-However, $(D Rebindable!(Widget)) does allow reassignment, while
-otherwise behaving exactly like a $(D const Widget):
-
-----
-auto a = Rebindable!(const Widget)(new Widget);
-a.y();          // fine
-a.x = 5;        // error! can't modify const a
-a = new Widget; // fine
-----
-
 You may want to use $(D Rebindable) when you want to have mutable
 storage referring to $(D const) objects, for example an array of
 references that must be sorted in place. $(D Rebindable) does not
 break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
+Params:
+    T = An object, interface, or array slice type.
  */
 template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
 {
@@ -1319,9 +1477,45 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArra
     }
 }
 
+///Regular $(D const) object references cannot be reassigned.
+unittest
+{
+    class Widget { int x; int y() const { return x; } }
+    const a = new Widget;
+    // Fine
+    a.y();
+    // error! can't modify const a
+    // a.x = 5;
+    // error! can't modify const a
+    // a = new Widget;
+}
+
+/**
+    However, $(D Rebindable!(Widget)) does allow reassignment, 
+    while otherwise behaving exactly like a $(D const Widget).
+ */
+unittest
+{
+    class Widget { int x; int y() const { return x; } }
+    auto a = Rebindable!(const Widget)(new Widget);
+    // Fine
+    a.y();
+    // error! can't modify const a
+    // a.x = 5;
+    // Fine
+    a = new Widget;
+}
+
 /**
 Convenience function for creating a $(D Rebindable) using automatic type
 inference.
+
+Params:
+    obj = A reference to an object or interface, or an array slice
+          to initialize the `Rebindable` with.
+          
+Returns:
+    A newly constructed `Rebindable` initialized with the given reference.
 */
 Rebindable!T rebindable(T)(T obj)
 if (is(T == class) || is(T == interface) || isDynamicArray!T)
@@ -1335,6 +1529,12 @@ if (is(T == class) || is(T == interface) || isDynamicArray!T)
 This function simply returns the $(D Rebindable) object passed in.  It's useful
 in generic programming cases when a given object may be either a regular
 $(D class) or a $(D Rebindable).
+
+Params:
+    obj = An instance of Rebindable!T.
+
+Returns:
+    `obj` without any modification.
 */
 Rebindable!T rebindable(T)(Rebindable!T obj)
 {
@@ -1428,6 +1628,9 @@ unittest
     Similar to $(D Rebindable!(T)) but strips all qualifiers from the reference as
     opposed to just constness / immutability. Primary intended use case is with
     shared (having thread-local reference to shared class data)
+    
+    Params:
+        T = A class or interface type.
  */
 template UnqualRef(T)
     if (is(T == class) || is(T == interface))
@@ -1481,17 +1684,17 @@ unittest
 
 /**
   Order the provided members to minimize size while preserving alignment.
-  Returns a declaration to be mixed in.
-
-Example:
----
-struct Banner {
-  mixin(alignForSize!(byte[6], double)(["name", "height"]));
-}
----
-
   Alignment is not always optimal for 80-bit reals, nor for structs declared
   as align(1).
+  
+  Params:
+      E = A list of the types to be aligned, representing fields 
+          of an aggregate such as a `struct` or `class`.
+      
+      names = The names of the fields that are to be aligned.
+      
+  Returns:
+      A string to be mixed in to an aggregate, such as a `struct` or `class`.
 */
 string alignForSize(E...)(string[] names...)
 {
@@ -1521,6 +1724,14 @@ string alignForSize(E...)(string[] names...)
     return s;
 }
 
+///
+unittest
+{
+    struct Banner {
+        mixin(alignForSize!(byte[6], double)(["name", "height"]));
+    }
+}
+
 unittest
 {
     enum x = alignForSize!(int[], char[3], short, double[5])("x", "y","z", "w");
@@ -1543,15 +1754,6 @@ Defines a value paired with a distinctive "null" state that denotes
 the absence of a value. If default constructed, a $(D
 Nullable!T) object starts in the null state. Assigning it renders it
 non-null. Calling $(D nullify) can nullify it again.
-
-Example:
-----
-Nullable!int a;
-assert(a.isNull);
-a = 5;
-assert(!a.isNull);
-assert(a == 5);
-----
 
 Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
@@ -1629,6 +1831,16 @@ Implicitly converts to $(D T).
 $(D this) must not be in the null state.
  */
     alias get this;
+}
+
+///
+unittest
+{
+    Nullable!int a;
+    assert(a.isNull);
+    a = 5;
+    assert(!a.isNull);
+    assert(a == 5);
 }
 
 unittest
@@ -3401,7 +3613,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             }
 
             import std.conv : to;
-            import std.algorithm : forward;
+            import std.functional : forward;
             template generateFun(size_t i)
             {
                 enum name = TargetMembers[i].name;
@@ -4014,24 +4226,10 @@ autoInit == RefCountedAutoInitialize.no), user code must call either
 $(D refCountedStore.isInitialized) or $(D refCountedStore.ensureInitialized)
 before attempting to access the payload. Not doing so results in null
 pointer dereference.
-
-Example:
-----
-// A pair of an $(D int) and a $(D size_t) - the latter being the
-// reference count - will be dynamically allocated
-auto rc1 = RefCounted!int(5);
-assert(rc1 == 5);
-// No more allocation, add just one extra reference count
-auto rc2 = rc1;
-// Reference semantics
-rc2 = 42;
-assert(rc1 == 42);
-// the pair will be freed when rc1 and rc2 go out of scope
-----
  */
 struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
-if (!is(T == class))
+if (!is(T == class) && !(is(T == interface)))
 {
     /// $(D RefCounted) storage implementation.
     struct RefCountedStore
@@ -4221,6 +4419,21 @@ assert(refCountedStore.isInitialized)).
     alias refCountedPayload this;
 }
 
+///
+unittest
+{
+    // A pair of an $(D int) and a $(D size_t) - the latter being the
+    // reference count - will be dynamically allocated
+    auto rc1 = RefCounted!int(5);
+    assert(rc1 == 5);
+    // No more allocation, add just one extra reference count
+    auto rc2 = rc1;
+    // Reference semantics
+    rc2 = 42;
+    assert(rc1 == 42);
+    // the pair will be freed when rc1 and rc2 go out of scope
+}
+
 unittest
 {
     RefCounted!int* p;
@@ -4305,34 +4518,26 @@ unittest
 }
 
 /**
-Make proxy for $(D a).
-
-Example:
-----
-struct MyInt
-{
-    private int value;
-    mixin Proxy!value;
-
-    this(int n){ value = n; }
-}
-
-MyInt n = 10;
-
-// Enable operations that original type has.
-++n;
-assert(n == 11);
-assert(n * 2 == 22);
-
-void func(int n) { }
-
-// Disable implicit conversions to original type.
-//int x = n;
-//func(n);
-----
+    Creates a proxy for the value `a` that will forward all operations
+    while disabling implicit conversions. The aliased item `a` must be 
+    an $(B lvalue). This is useful for creating a new type from the 
+    "base" type (though this is $(B not) a subtype-supertype 
+    relationship; the new type is not related to the old type in any way, 
+    by design).
+    
+    The new type supports all operations that the underlying type does,
+    including all operators such as `+`, `--`, `<`, `[]`, etc.
+    
+    Params:
+        a = The value to act as a proxy for all operations. It must
+            be an lvalue.
  */
 mixin template Proxy(alias a)
 {
+    private alias ValueType = typeof({ return a; }());
+    private enum bool accessibleFrom(T) =
+        is(typeof((ref T self){ cast(void)mixin("self." ~ a.stringof); }));
+
     static if (is(typeof(this) == class))
     {
         override bool opEquals(Object o)
@@ -4347,7 +4552,7 @@ mixin template Proxy(alias a)
         }
 
         bool opEquals(T)(T b)
-            if (is(typeof(a):T) || is(typeof(a.opEquals(b))) || is(typeof(b.opEquals(a))))
+            if (is(ValueType : T) || is(typeof(a.opEquals(b))) || is(typeof(b.opEquals(a))))
         {
             static if (is(typeof(a.opEquals(b))))
                 return a.opEquals(b);
@@ -4366,14 +4571,14 @@ mixin template Proxy(alias a)
                 return a < mixin("b."~a.stringof[5..$]) ? -1
                      : a > mixin("b."~a.stringof[5..$]) ? +1 : 0;
             }
-            static if (is(typeof(a) == class))
+            static if (is(ValueType == class))
                 return a.opCmp(o);
             else
                 throw new Exception("Attempt to compare a "~typeid(this).toString~" and a "~typeid(o).toString);
         }
 
         int opCmp(T)(auto ref const T b)
-            if (is(typeof(a):T) || is(typeof(a.opCmp(b))) || is(typeof(b.opCmp(a))))
+            if (is(ValueType : T) || is(typeof(a.opCmp(b))) || is(typeof(b.opCmp(a))))
         {
             static if (is(typeof(a.opCmp(b))))
                 return a.opCmp(b);
@@ -4383,9 +4588,16 @@ mixin template Proxy(alias a)
                 return a < b ? -1 : a > b ? +1 : 0;
         }
 
-        override hash_t toHash() const nothrow @trusted
+        static if (accessibleFrom!(const typeof(this)))
         {
-            return typeid(typeof(a)).getHash(cast(const void*)&a);
+            override hash_t toHash() const nothrow @trusted
+            {
+                static if (is(typeof(&a) == ValueType*))
+                    alias v = a;
+                else
+                    auto v = a;     // if a is (property) function
+                return typeid(ValueType).getHash(cast(const void*)&v);
+            }
         }
     }
     else
@@ -4413,9 +4625,16 @@ mixin template Proxy(alias a)
                 return a < b ? -1 : a > b ? +1 : 0;
         }
 
-        hash_t toHash() const nothrow @trusted
+        static if (accessibleFrom!(const typeof(this)))
         {
-            return typeid(typeof(a)).getHash(cast(const void*)&a);
+            hash_t toHash() const nothrow @trusted
+            {
+                static if (is(typeof(&a) == ValueType*))
+                    alias v = a;
+                else
+                    auto v = a;     // if a is (property) function
+                return typeid(ValueType).getHash(cast(const void*)&v);
+            }
         }
     }
 
@@ -4442,7 +4661,7 @@ mixin template Proxy(alias a)
     static if (!is(typeof(this) == class))
     {
         private import std.traits;
-        static if (isAssignable!(typeof(a)))
+        static if (isAssignable!ValueType)
         {
             auto ref opAssign(this X)(auto ref typeof(this) v)
             {
@@ -4497,7 +4716,7 @@ mixin template Proxy(alias a)
 
     import std.traits : isArray;
 
-    static if (isArray!(typeof(a)))
+    static if (isArray!ValueType)
     {
         auto opDollar() const { return a.length; }
     }
@@ -4513,6 +4732,90 @@ mixin template Proxy(alias a)
     {
         alias opDollar = a.opDollar;
     }
+}
+
+///
+unittest
+{
+    struct MyInt
+    {
+        private int value;
+        mixin Proxy!value;
+
+        this(int n){ value = n; }
+    }
+
+    MyInt n = 10;
+
+    // Enable operations that original type has.
+    ++n;
+    assert(n == 11);
+    assert(n * 2 == 22);
+
+    void func(int n) { }
+
+    // Disable implicit conversions to original type.
+    //int x = n;
+    //func(n);
+}
+
+///The proxied value must be an $(B lvalue).
+unittest
+{
+    struct NewIntType
+    {
+        //Won't work; the literal '1' is
+        //is an rvalue, not an lvalue
+        //mixin Proxy!1; 
+        
+        //Okay, n is an lvalue
+        int n;
+        mixin Proxy!n;
+        
+        this(int n) { this.n = n; }
+    }
+    
+    NewIntType nit = 0;
+    nit++;
+    assert(nit == 1);
+    
+    
+    struct NewObjectType
+    {
+        Object obj;
+        //Ok, obj is an lvalue
+        mixin Proxy!obj;
+        
+        this (Object o) { obj = o; }
+    }
+    
+    NewObjectType not = new Object();
+    assert(__traits(compiles, not.toHash()));
+}
+
+/**
+    There is one exception to the fact that the new type is not related to the
+    old type. $(LINK2 http://dlang.org/function.html#pseudo-member, Pseudo-member)
+    functions are usable with the new type; they will be forwarded on to the 
+    proxied value.
+ */
+unittest
+{
+    import std.math;
+    
+    float f = 1.0;
+    assert(!f.isInfinity);
+    
+    struct NewFloat
+    {
+        float _;
+        mixin Proxy!_;
+        
+        this(float f) { _ = f; }
+    }
+ 
+    NewFloat nf = 1.0f;
+    assert(!nf.isInfinity);
 }
 
 unittest
@@ -4841,6 +5144,25 @@ unittest
     bool[Name] names;
     names[Name("a")] = true;
     bool* b = Name("a") in names;
+}
+
+unittest
+{
+    // bug14213, using function for the payload
+    static struct S
+    {
+        int foo() { return 12; }
+        mixin Proxy!foo;
+    }
+    static class C
+    {
+        int foo() { return 12; }
+        mixin Proxy!foo;
+    }
+    S s;
+    assert(s + 1 == 13);
+    C c = new C();
+    assert(s * 2 == 24);
 }
 
 /**
@@ -5577,8 +5899,8 @@ struct No
         enum opDispatch = Flag!name.no;
     }
 }
-//template no(string name) { enum Flag!name no = Flag!name.no; }
 
+///
 unittest
 {
     Flag!"abc" flag1;

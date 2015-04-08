@@ -3,6 +3,51 @@
 /**
 Functions that manipulate other functions.
 
+This module provides functions for compile time function composition. These
+functions are helpful when constructing predicates for the algorithms in
+$(LINK2 std_algorithm.html, std.algorithm) or $(LINK2 std_range.html,
+std.range).
+
+$(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
+    $(TR $(TD $(D $(LREF adjoin)))
+        $(TD Joins a couple of functions into one that executes the original
+        functions independently and returns a tuple with all the results.
+    ))
+    $(TR $(TD $(D $(LREF compose)), $(D $(LREF pipe)))
+        $(TD Join a couple of functions into one that executes the original
+        functions one after the other, using one function's result for the next
+        function's argument.
+    ))
+    $(TR $(TD $(D $(LREF forward)))
+        $(TD Forwards function arguments while saving ref-ness.
+    ))
+    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+        $(TD Ready-made predicate functions to compare two values.
+    ))
+    $(TR $(TD $(D $(LREF memoize)))
+        $(TD Creates a function that caches its result for fast re-evalation.
+    ))
+    $(TR $(TD $(D $(LREF not)))
+        $(TD Creates a function that negates another.
+    ))
+    $(TR $(TD $(D $(LREF partial)))
+        $(TD Creates a function that binds the first argument of a given function
+        to a given value.
+    ))
+    $(TR $(TD $(D $(LREF reverseArgs)), $(D $(LREF binaryReverseArgs)))
+        $(TD Predicate that reverses the order of its arguments.
+    ))
+    $(TR $(TD $(D $(LREF toDelegate)))
+        $(TD Converts a callable to a delegate.
+    ))
+    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
+        $(TD Create a unary or binary function from a string. Most often
+        used when defining algorithms on ranges.
+    ))
+)
+
 Macros:
 
 WIKI = Phobos/StdFunctional
@@ -231,7 +276,7 @@ private uint _ctfeSkipOp(ref string op)
     while (op.length)
     {
         immutable front = op[0];
-        if(front.isASCII && !(front.isAlphaNum || front == '_' || front == '.'))
+        if(front.isASCII() && !(front.isAlphaNum() || front == '_' || front == '.'))
             op = op[1..$];
         else
             break;
@@ -248,7 +293,7 @@ private uint _ctfeSkipInteger(ref string op)
     while (op.length)
     {
         immutable front = op[0];
-        if(front.isDigit)
+        if(front.isDigit())
             op = op[1..$];
         else
             break;
@@ -273,18 +318,18 @@ private uint _ctfeMatchUnary(string fun, string name)
 {
     if (!__ctfe) assert(false);
     import std.stdio;
-    fun._ctfeSkipOp;
-    for (;;) 
+    fun._ctfeSkipOp();
+    for (;;)
     {
-        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger;
+        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger();
         if (h == 0)
         {
-            fun._ctfeSkipOp;
+            fun._ctfeSkipOp();
             break;
         }
         else if (h == 1)
         {
-            if(!fun._ctfeSkipOp)
+            if(!fun._ctfeSkipOp())
                 break;
         }
         else
@@ -320,18 +365,18 @@ unittest
 private uint _ctfeMatchBinary(string fun, string name1, string name2)
 {
     if (!__ctfe) assert(false);
-    fun._ctfeSkipOp;
-    for (;;) 
+    fun._ctfeSkipOp();
+    for (;;)
     {
-        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger;
+        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger();
         if (h == 0)
         {
-            fun._ctfeSkipOp;
+            fun._ctfeSkipOp();
             break;
         }
         else if (h == 1)
         {
-            if(!fun._ctfeSkipOp)
+            if(!fun._ctfeSkipOp())
                 break;
         }
         else
@@ -747,7 +792,7 @@ $(XREF typecons, Tuple) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
 
-Note: In the special case where where only a single function is provided
+Note: In the special case where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
@@ -1013,7 +1058,7 @@ template memoize(alias fun, uint maxSize)
             initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
         }
 
-        import core.bitop : bts;
+        import core.bitop : bt, bts;
         import std.conv : emplace;
 
         size_t hash;
@@ -1021,14 +1066,21 @@ template memoize(alias fun, uint maxSize)
             hash = hashOf(arg, hash);
         // cuckoo hashing
         immutable idx1 = hash % maxSize;
-        if (!bts(initialized.ptr, idx1))
-            return emplace(&memo[idx1], args, fun(args)).res;
+        if (!bt(initialized.ptr, idx1))
+        {
+            emplace(&memo[idx1], args, fun(args));
+            bts(initialized.ptr, idx1); // only set to initialized after setting args and value (bugzilla 14025)
+            return memo[idx1].res;
+        }
         else if (memo[idx1].args == args)
             return memo[idx1].res;
         // FNV prime
         immutable idx2 = (hash * 16777619) % maxSize;
-        if (!bts(initialized.ptr, idx2))
+        if (!bt(initialized.ptr, idx2))
+        {
             emplace(&memo[idx2], memo[idx1]);
+            bts(initialized.ptr, idx2); // only set to initialized after setting args and value (bugzilla 14025)
+        }
         else if (memo[idx2].args == args)
             return memo[idx2].res;
         else if (idx1 != idx2)
@@ -1352,3 +1404,102 @@ unittest {
         static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
     }
 }
+
+/**
+Forwards function arguments with saving ref-ness.
+*/
+template forward(args...)
+{
+    import std.typetuple;
+
+    static if (args.length)
+    {
+    	import std.algorithm.mutation : move;
+
+        alias arg = args[0];
+        static if (__traits(isRef, arg))
+            alias fwd = arg;
+        else
+            @property fwd()(){ return move(arg); }
+        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+    }
+    else
+        alias forward = TypeTuple!();
+}
+
+///
+@safe unittest
+{
+    class C
+    {
+        static int foo(int n) { return 1; }
+        static int foo(ref int n) { return 2; }
+    }
+    int bar()(auto ref int x) { return C.foo(forward!x); }
+
+    assert(bar(1) == 1);
+    int i;
+    assert(bar(i) == 2);
+}
+
+///
+@safe unittest
+{
+    void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
+
+    // forwards all arguments which are bound to parameter tuple
+    void bar(Args...)(auto ref Args args) { return foo(forward!args); }
+
+    // forwards all arguments with swapping order
+    void baz(Args...)(auto ref Args args) { return foo(forward!args[$/2..$], forward!args[0..$/2]); }
+
+    string s;
+    bar(1, s);
+    assert(s == "Hello");
+    baz(s, 2);
+    assert(s == "HelloHello");
+}
+
+@safe unittest
+{
+    auto foo(TL...)(auto ref TL args)
+    {
+        string result = "";
+        foreach (i, _; args)
+        {
+            //pragma(msg, "[",i,"] ", __traits(isRef, args[i]) ? "L" : "R");
+            result ~= __traits(isRef, args[i]) ? "L" : "R";
+        }
+        return result;
+    }
+
+    string bar(TL...)(auto ref TL args)
+    {
+        return foo(forward!args);
+    }
+    string baz(TL...)(auto ref TL args)
+    {
+        int x;
+        return foo(forward!args[3], forward!args[2], 1, forward!args[1], forward!args[0], x);
+    }
+
+    struct S {}
+    S makeS(){ return S(); }
+    int n;
+    string s;
+    assert(bar(S(), makeS(), n, s) == "RRLL");
+    assert(baz(S(), makeS(), n, s) == "LLRRRL");
+}
+
+@safe unittest
+{
+    ref int foo(return ref int a) { return a; }
+    ref int bar(Args)(auto ref Args args)
+    {
+        return foo(forward!args);
+    }
+    static assert(!__traits(compiles, { auto x1 = bar(3); })); // case of NG
+    int value = 3;
+    auto x2 = bar(value); // case of OK
+}
+

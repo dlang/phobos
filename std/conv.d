@@ -105,13 +105,21 @@ private
     T toStr(T, S)(S src)
         if (isSomeString!T)
     {
-        import std.format : FormatSpec, formatValue;
-        import std.array : appender;
+        // workaround for Bugzilla 14198
+        static if (is(S == bool) && is(typeof({ T s = "string"; })))
+        {
+            return src ? "true" : "false";
+        }
+        else
+        {
+            import std.format : FormatSpec, formatValue;
+            import std.array : appender;
 
-        auto w = appender!T();
-        FormatSpec!(ElementEncodingType!T) f;
-        formatValue(w, src, f);
-        return w.data;
+            auto w = appender!T();
+            FormatSpec!(ElementEncodingType!T) f;
+            formatValue(w, src, f);
+            return w.data;
+        }
     }
 
     template isExactSomeString(T)
@@ -243,7 +251,7 @@ arrays as long as keys and values can in turn be converted.
 
 Example:
 -------------------------
-int[] a = ([1, 2, 3]).dup;
+int[] a = [1, 2, 3];
 auto b = to!(float[])(a);
 assert(b == [1.0f, 2, 3]);
 string str = "1 2 3 4 5 6";
@@ -819,7 +827,7 @@ $(UL
 T toImpl(T, S)(S value)
     if (!(isImplicitlyConvertible!(S, T) &&
           !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
-        isExactSomeString!T)
+        !isInfinite!S && isExactSomeString!T)
 {
     static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
@@ -868,7 +876,7 @@ T toImpl(T, S)(S value)
     {
         import core.stdc.string : strlen;
         // It is unsafe because we cannot guarantee that the pointer is null terminated.
-        return value ? cast(T) value[0 .. strlen(value)].dup : cast(string)null;
+        return value ? cast(T) value[0 .. strlen(value)].dup : null;
     }
     else static if (isSomeString!T && is(S == enum))
     {
@@ -911,6 +919,13 @@ T toImpl(T, S)(S value)
         // other non-string values runs formatting
         return toStr!T(value);
     }
+}
+
+// Bugzilla 14042
+unittest
+{
+    immutable(char)* ptr = "hello".ptr;
+    auto result = ptr.to!(char[]);
 }
 
 /*
@@ -1092,7 +1107,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 {
     // Conversion representing associative array with string
     int[string] a = ["0":1, "1":2];
-    assert(to!string(a) == `["0":1, "1":2]` || 
+    assert(to!string(a) == `["0":1, "1":2]` ||
            to!string(a) == `["1":2, "0":1]`);
 }
 
@@ -1425,7 +1440,7 @@ T toImpl(T, S)(S value)
     import std.exception;
 
     // array to array conversions
-    uint[] a = ([ 1u, 2, 3 ]).dup;
+    uint[] a = [ 1u, 2, 3 ];
     auto b = to!(float[])(a);
     assert(b == [ 1.0f, 2, 3 ]);
 
@@ -1795,17 +1810,6 @@ T toImpl(T, S)(S value)
 /***************************************************************
  Rounded conversion from floating point to integral.
 
-Example:
----------------
-assert(roundTo!int(3.14) == 3);
-assert(roundTo!int(3.49) == 3);
-assert(roundTo!int(3.5) == 4);
-assert(roundTo!int(3.999) == 4);
-assert(roundTo!int(-3.14) == -3);
-assert(roundTo!int(-3.49) == -3);
-assert(roundTo!int(-3.5) == -4);
-assert(roundTo!int(-3.999) == -4);
----------------
 Rounded conversions do not work with non-integral target types.
  */
 
@@ -1821,9 +1825,9 @@ template roundTo(Target)
     }
 }
 
+///
 unittest
 {
-    import std.exception;
     assert(roundTo!int(3.14) == 3);
     assert(roundTo!int(3.49) == 3);
     assert(roundTo!int(3.5) == 4);
@@ -1833,7 +1837,11 @@ unittest
     assert(roundTo!int(-3.5) == -4);
     assert(roundTo!int(-3.999) == -4);
     assert(roundTo!(const int)(to!(const double)(-3.999)) == -4);
+}
 
+unittest
+{
+    import std.exception;
     // boundary values
     foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
     {
@@ -1852,21 +1860,7 @@ unittest
  * could not convert the entire input. It still throws if an overflow
  * occurred during conversion or if no character of the input
  * was meaningfully converted.
- *
- * Example:
- * --------------
- * string test = "123 \t  76.14";
- * auto a = parse!uint(test);
- * assert(a == 123);
- * assert(test == " \t  76.14"); // parse bumps string
- * munch(test, " \t\n\r"); // skip ws
- * assert(test == "76.14");
- * auto b = parse!double(test);
- * assert(b == 76.14);
- * assert(test == "");
- * --------------
  */
-
 Target parse(Target, Source)(ref Source s)
     if (isInputRange!Source &&
         isSomeChar!(ElementType!Source) &&
@@ -1891,6 +1885,21 @@ Target parse(Target, Source)(ref Source s)
     }
 Lerr:
     throw parseError("bool should be case-insensitive 'true' or 'false'");
+}
+
+///
+unittest
+{
+    import std.string : munch;
+    string test = "123 \t  76.14";
+    auto a = parse!uint(test);
+    assert(a == 123);
+    assert(test == " \t  76.14"); // parse bumps string
+    munch(test, " \t\n\r"); // skip ws
+    assert(test == "76.14");
+    auto b = parse!double(test);
+    assert(b == 76.14);
+    assert(test == "");
 }
 
 unittest
@@ -1984,9 +1993,11 @@ Target parse(Target, Source)(ref Source s)
                 if (c > 9)
                     break;
 
-                if (v < Target.max/10 ||
-                    (v == Target.max/10 && c <= maxLastDigit + sign))
+                if (v >= 0 && (v < Target.max/10 ||
+                    (v == Target.max/10 && c <= maxLastDigit + sign)))
                 {
+                    // Note: `v` can become negative here in case of parsing
+                    // the most negative value:
                     v = cast(Target) (v * 10 + c);
                     s.popFront();
                 }
@@ -2186,6 +2197,15 @@ Lerr:
     assertCTFEable!({ string s =  "1234abc"; assert(parse!uint(s) ==  1234 && s == "abc"); });
 }
 
+// Issue 13931
+@safe pure unittest
+{
+    import std.exception;
+
+    assertThrown!ConvOverflowException("-21474836480".to!int());
+    assertThrown!ConvOverflowException("-92233720368547758080".to!long());
+}
+
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
     if (isSomeChar!(ElementType!Source) &&
@@ -2373,7 +2393,7 @@ Target parse(Target, Source)(ref Source p)
 
     ConvException bailOut()(string msg = null, string fn = __FILE__, size_t ln = __LINE__)
     {
-        if (!msg)
+        if (msg == null)
             msg = "Floating point conversion error";
         return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
@@ -2970,7 +2990,7 @@ unittest
 @safe pure unittest
 {
     import std.exception;
- 
+
     // Bugzilla 4959
     {
         auto s = "0 ";
@@ -3641,16 +3661,6 @@ user specifically asks for a $(D long) with the $(D L) suffix, always
 give the $(D long). Give an unsigned iff it is asked for with the $(D
 U) or $(D u) suffix. _Octals created from integers preserve the type
 of the passed-in integral.
-
-Example:
-----
-// same as 0177
-auto x = octal!177;
-// octal is a compile-time device
-enum y = octal!160;
-// Create an unsigned octal
-auto z = octal!"1_000_000u";
-----
  */
 @property int octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
@@ -3686,15 +3696,20 @@ template octal(alias s)
     enum auto octal = octal!(typeof(s), to!string(s));
 }
 
+///
+unittest
+{
+    // same as 0177
+    auto x = octal!177;
+    // octal is a compile-time device
+    enum y = octal!160;
+    // Create an unsigned octal
+    auto z = octal!"1_000_000u";
+}
+
 /*
     Takes a string, num, which is an octal literal, and returns its
     value, in the type T specified.
-
-    So:
-
-    int a = octal!(int, "10");
-
-    assert(a == 8);
 */
 @property T octal(T, string num)()
     if (isOctalLiteral!num)
@@ -3715,6 +3730,14 @@ template octal(alias s)
     }
 
     return value;
+}
+
+///
+unittest
+{
+    int a = octal!(int, "10");
+
+    assert(a == 8);
 }
 
 /*
@@ -4142,12 +4165,12 @@ version(unittest) private struct __conv_EmplaceTest
 version(unittest) private class __conv_EmplaceTestClass
 {
     int i = 3;
-    this(int i)
+    this(int i) @nogc @safe pure nothrow
     {
         assert(this.i == 3 && i == 5);
         this.i = i;
     }
-    this(int i, ref int j)
+    this(int i, ref int j) @nogc @safe pure nothrow
     {
         assert(i == 5 && j == 6);
         this.i = i;
@@ -4602,7 +4625,7 @@ version(unittest)
     {
         int j;
         __std_conv_S s;
-        ref __std_conv_S foo() @property {s.i = j; return s;}
+        ref __std_conv_S foo() return @property {s.i = j; return s;}
         alias foo this;
     }
     static assert(is(__std_conv_SS : __std_conv_S));
@@ -4940,15 +4963,10 @@ unittest
     emplaceRef!int(i, 5);
 }
 
-private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
+private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
 {
-    import std.exception : enforce;
-    enforce!ConvException(chunk.length >= typeSize,
-        convFormat("emplace: Chunk size too small: %s < %s size = %s",
-        chunk.length, typeName, typeSize));
-    enforce!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
-        convFormat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
-        chunk.ptr, typeAlignment, typeName));
+    assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
+    assert((cast(size_t)chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
 }
 
 /**
@@ -4972,7 +4990,7 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
     auto result = cast(T) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
-    (cast(byte[]) chunk)[0 .. classSize] = typeid(T).init[];
+    chunk[0 .. classSize] = typeid(T).init[];
 
     // Call the ctor if any
     static if (is(typeof(result.__ctor(args))))
@@ -4990,10 +5008,11 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
     return result;
 }
 
-unittest
+@nogc pure nothrow unittest
 {
     int var = 6;
-    auto k = emplace!__conv_EmplaceTestClass(new void[__traits(classInstanceSize, __conv_EmplaceTestClass)], 5, var);
+    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
+    auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
     assert(k.i == 5);
     assert(var == 7);
 }
@@ -5017,6 +5036,7 @@ T* emplace(T, Args...)(void[] chunk, auto ref Args args)
     return emplace(cast(T*) chunk.ptr, args);
 }
 
+///
 unittest
 {
     struct S
@@ -5242,4 +5262,75 @@ unittest
     enum Test { a = 0 }
     ulong l = 0;
     auto t = l.to!Test;
+}
+
+/**
+    A wrapper on top of the built-in cast operator that allows one to restrict
+    casting of the original type of the value.
+
+    A common issue with using a raw cast is that it may silently continue to
+    compile even if the value's type has changed during refactoring,
+    which breaks the initial assumption about the cast.
+
+    Params:
+        From  = The type to cast from. The programmer must ensure it is legal
+                to make this cast.
+        To    = The type to cast to
+        value = The value to cast. It must be of type $(D From),
+                otherwise a compile-time error is emitted.
+
+    Returns:
+        the value after the cast, returned by reference if possible
+ */
+template castFrom(From)
+{
+    auto ref to(To, T)(auto ref T value) @system
+    {
+        static assert (
+            is(From == T),
+            "the value to cast is not of specified type '" ~ From.stringof ~
+                 "', it is of type '" ~ T.stringof ~ "'"
+        );
+
+        static assert (
+            is(typeof(cast(To)value)),
+            "can't cast from '" ~ From.stringof ~ "' to '" ~ To.stringof ~ "'"
+        );
+
+        return cast(To) value;
+    }
+}
+
+///
+unittest
+{
+    // Regular cast, which has been verified to be legal by the programmer:
+    {
+        long x;
+        auto y = cast(int) x;
+    }
+
+    // However this will still compile if 'x' is changed to be a pointer:
+    {
+        long* x;
+        auto y = cast(int) x;
+    }
+
+    // castFrom provides a more reliable alternative to casting:
+    {
+        long x;
+        auto y = castFrom!long.to!int(x);
+    }
+
+    // Changing the type of 'x' will now issue a compiler error,
+    // allowing bad casts to be caught before it's too late:
+    {
+        long* x;
+        static assert (
+            !__traits(compiles, castFrom!long.to!int(x))
+        );
+
+        // if cast is still needed, must be changed to:
+        auto y = castFrom!(long*).to!int(x);
+    }
 }

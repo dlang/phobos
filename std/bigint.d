@@ -1,4 +1,4 @@
-/** Arbitrary-precision ('bignum') arithmetic
+/** Arbitrary-precision ('bignum') arithmetic.
  *
  * Performance is optimized for numbers below ~1000 decimal digits.
  * For X86 machines, highly optimised assembly routines are used.
@@ -29,51 +29,22 @@ private import std.internal.math.biguintcore;
 private import std.format : FormatSpec, FormatException;
 private import std.traits;
 
-/** A struct representing an arbitrary precision integer
+/** A struct representing an arbitrary precision integer.
  *
- * All arithmetic operations are supported, except
- * unsigned shift right (>>>). Bitwise operations (|, &, ^, ~) are supported, and behave as if BigInt was an infinite length 2's complement number.
+ * All arithmetic operations are supported, except unsigned shift right (>>>).
+ * Bitwise operations (|, &, ^, ~) are supported, and behave as if BigInt was
+ * an infinite length 2's complement number.
  *
  * BigInt implements value semantics using copy-on-write. This means that
  * assignment is cheap, but operations such as x++ will cause heap
  * allocation. (But note that for most bigint operations, heap allocation is
- * inevitable anyway).
-
- Example:
-----------------------------------------------------
-        BigInt a = "9588669891916142";
-        BigInt b = "7452469135154800";
-        auto c = a * b;
-        assert(c == BigInt("71459266416693160362545788781600"));
-        auto d = b * a;
-        assert(d == BigInt("71459266416693160362545788781600"));
-        assert(d == c);
-        d = c * BigInt("794628672112");
-        assert(d == BigInt("56783581982794522489042432639320434378739200"));
-        auto e = c + d;
-        assert(e == BigInt("56783581982865981755459125799682980167520800"));
-        auto f = d + c;
-        assert(f == e);
-        auto g = f - c;
-        assert(g == d);
-        g = f - d;
-        assert(g == c);
-        e = 12345678;
-        g = c + e;
-        auto h = g / b;
-        auto i = g % b;
-        assert(h == a);
-        assert(i == e);
-        BigInt j = "-0x9A56_57f4_7B83_AB78";
-        j ^^= 11;
-----------------------------------------------------
- *
+ * inevitable anyway.)
  */
 struct BigInt
 {
 private:
-        BigUint data;     // BigInt adds signed arithmetic to BigUint.
-        bool sign = false;
+    BigUint data;     // BigInt adds signed arithmetic to BigUint.
+    bool sign = false;
 public:
     /// Construct a BigInt from a decimal or hexadecimal string.
     /// The number must be in the form of a D decimal or hex literal:
@@ -106,7 +77,7 @@ public:
         sign = neg;
     }
 
-    ///
+    /// Construct a BigInt from a built-in integral type.
     this(T)(T x) pure nothrow if (isIntegral!T)
     {
         data = data.init; // @@@: Workaround for compiler bug
@@ -114,12 +85,28 @@ public:
     }
 
     ///
+    unittest
+    {
+        ulong data = 1_000_000_000_000;
+        auto bigData = BigInt(data);
+        assert(data == BigInt("1_000_000_000_000"));
+    }
+
+    /// Construct a BigInt from another BigInt.
     this(T)(T x) pure nothrow if (is(Unqual!T == BigInt))
     {
         opAssign(x);
     }
 
     ///
+    unittest
+    {
+        const(BigInt) b1 = BigInt("1_234_567_890");
+        BigInt b2 = BigInt(b1);
+        assert(b2 == BigInt("1_234_567_890"));
+    }
+
+    /// Assignment from built-in integer types.
     BigInt opAssign(T)(T x) pure nothrow if (isIntegral!T)
     {
         data = cast(ulong)absUnsign(x);
@@ -128,14 +115,34 @@ public:
     }
 
     ///
-    BigInt opAssign(T:BigInt)(T x) pure
+    unittest
+    {
+        auto b = BigInt("123");
+        b = 456;
+        assert(b == BigInt("456"));
+    }
+
+    /// Assignment from another BigInt.
+    BigInt opAssign(T:BigInt)(T x) pure @nogc
     {
         data = x.data;
         sign = x.sign;
         return this;
     }
 
-    // BigInt op= integer
+    ///
+    unittest
+    {
+        auto b1 = BigInt("123");
+        auto b2 = BigInt("456");
+        b2 = b1;
+        assert(b2 == BigInt("123"));
+    }
+
+    /**
+     * Implements assignment operators from built-in integers of the form
+     * $(D BigInt op= integer).
+     */
     BigInt opOpAssign(string op, T)(T y) pure nothrow
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
           || op==">>" || op=="<<" || op=="^^" || op=="|" || op=="&" || op=="^") && isIntegral!T)
@@ -183,6 +190,8 @@ public:
             else
             {
                 data = cast(ulong)BigUint.modInt(data, cast(uint)u);
+                if (data.isZero())
+                    sign = false;
             }
             // x%y always has the same sign as x.
             // This is not the same as mathematical mod.
@@ -218,7 +227,21 @@ public:
         return this;
     }
 
-    // BigInt op= BigInt
+    ///
+    unittest
+    {
+        auto b = BigInt("1_000_000_000");
+
+        b += 12345;
+        assert(b == BigInt("1_000_012_345"));
+
+        b /= 5;
+        assert(b == BigInt("200_002_469"));
+    }
+
+    /**
+     * Implements assignment operators of the form $(D BigInt op= BigInt).
+     */
     BigInt opOpAssign(string op, T)(T y) pure nothrow
         if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")
             && is (T: BigInt))
@@ -265,7 +288,18 @@ public:
         return this;
     }
 
-    // BigInt op BigInt
+    ///
+    unittest
+    {
+        auto x = BigInt("123");
+        auto y = BigInt("321");
+        x += y;
+        assert(x == BigInt("444"));
+    }
+
+    /**
+     * Implements binary operators between BigInts.
+     */
     BigInt opBinary(string op, T)(T y) pure nothrow const
         if ((op=="+" || op == "*" || op=="-" || op=="|" || op=="&" || op=="^" ||
             op=="/" || op=="%")
@@ -275,7 +309,18 @@ public:
         return r.opOpAssign!(op)(y);
     }
 
-    // BigInt op integer
+    ///
+    unittest
+    {
+        auto x = BigInt("123");
+        auto y = BigInt("456");
+        BigInt z = x * y;
+        assert(z == BigInt("56088"));
+    }
+
+    /**
+     * Implements binary operators between BigInt's and built-in integers.
+     */
     BigInt opBinary(string op, T)(T y) pure nothrow const
         if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="|" || op=="&" ||
             op=="^"|| op==">>" || op=="<<" || op=="^^")
@@ -285,26 +330,102 @@ public:
         return r.opOpAssign!(op)(y);
     }
 
-    //
-    int opBinary(string op, T : int)(T y) pure nothrow const
+    ///
+    unittest
+    {
+        auto x = BigInt("123");
+        x *= 300;
+        assert(x == BigInt("36900"));
+    }
+
+    /**
+        Implements a narrowing remainder operation with built-in integer types.
+
+        This binary operator returns a narrower, built-in integer type
+        where applicable, according to the following table.
+
+        $(TABLE ,
+        $(TR $(TD `BigInt`) $(TD $(CODE_PERCENT)) $(TD `long`) $(TD $(RARR)) $(TD `long`))
+        $(TR $(TD `BigInt`) $(TD $(CODE_PERCENT)) $(TD `ulong`) $(TD $(RARR)) $(TD `BigInt`))
+        $(TR $(TD `BigInt`) $(TD $(CODE_PERCENT)) $(TD other type) $(TD $(RARR)) $(TD `int`))
+        )
+     */
+    auto opBinary(string op, T)(T y) pure nothrow const
         if (op == "%" && isIntegral!T)
     {
         assert(y!=0);
-        uint u = absUnsign(y);
-        int rem = BigUint.modInt(data, u);
-        // x%y always has the same sign as x.
-        // This is not the same as mathematical mod.
-        return sign ? -rem : rem;
+
+        // BigInt % long => long
+        // BigInt % ulong => BigInt
+        // BigInt % other_type => int
+        static if (is(Unqual!T == long) || is(Unqual!T == ulong))
+        {
+            auto r = this % BigInt(y);
+
+            static if (is(Unqual!T == long))
+            {
+                return r.toLong();
+            }
+            else
+            {
+                // return as-is to avoid overflow
+                return r;
+            }
+        }
+        else
+        {
+            uint u = absUnsign(y);
+            int rem = BigUint.modInt(data, u);
+            // x%y always has the same sign as x.
+            // This is not the same as mathematical mod.
+            return sign ? -rem : rem;
+        }
     }
 
-    // Commutative operators
+    ///
+    unittest
+    {
+        auto  x  = BigInt("1_000_000_500");
+        long  l  = 1_000_000L;
+        ulong ul = 2_000_000UL;
+        int   i  = 500_000;
+        short s  = 30_000;
+
+        assert(is(typeof(x % l)  == long)   && x % l  == 500L);
+        assert(is(typeof(x % ul) == BigInt) && x % ul == BigInt(500));
+        assert(is(typeof(x % i)  == int)    && x % i  == 500);
+        assert(is(typeof(x % s)  == int)    && x % s  == 10500);
+    }
+
+    /**
+        Implements operators with built-in integers on the left-hand side and
+        BigInt on the right-hand side.
+     */
     BigInt opBinaryRight(string op, T)(T y) pure nothrow const
         if ((op=="+" || op=="*" || op=="|" || op=="&" || op=="^") && isIntegral!T)
     {
         return opBinary!(op)(y);
     }
 
+    ///
+    unittest
+    {
+        auto x = BigInt("100");
+        BigInt y = 123 + x;
+        assert(y == BigInt("223"));
+
+        BigInt z = 123 - x;
+        assert(z == BigInt("23"));
+
+        // Dividing a built-in integer type by BigInt always results in
+        // something that fits in a built-in type, so the built-in type is
+        // returned, not BigInt.
+        assert(is(typeof(1000 / x) == int));
+        assert(1000 / x == 10);
+    }
+
     //  BigInt = integer op BigInt
+    /// ditto
     BigInt opBinaryRight(string op, T)(T y) pure nothrow const
         if (op == "-" && isIntegral!T)
     {
@@ -320,6 +441,7 @@ public:
     }
 
     //  integer = integer op BigInt
+    /// ditto
     T opBinaryRight(string op, T)(T x) pure nothrow const
         if ((op=="%" || op=="/") && isIntegral!T)
     {
@@ -342,7 +464,11 @@ public:
             return cast(T)(x / data.peekUlong(0));
         }
     }
+
     // const unary operations
+    /**
+        Implements BigInt unary operators.
+     */
     BigInt opUnary(string op)() pure nothrow const if (op=="+" || op=="-" || op=="~")
     {
        static if (op=="-")
@@ -360,6 +486,7 @@ public:
     }
 
     // non-const unary operations
+    /// ditto
     BigInt opUnary(string op)() pure nothrow if (op=="++" || op=="--")
     {
         static if (op=="++")
@@ -375,13 +502,26 @@ public:
     }
 
     ///
-    bool opEquals()(auto ref const BigInt y) const pure
+    unittest
+    {
+        auto x = BigInt("1234");
+        assert(-x == BigInt("-1234"));
+
+        ++x;
+        assert(x == BigInt("1235"));
+    }
+
+    /**
+        Implements BigInt equality test with other BigInt's and built-in
+        integer types.
+     */
+    bool opEquals()(auto ref const BigInt y) const pure @nogc
     {
        return sign == y.sign && y.data == data;
     }
 
-    ///
-    bool opEquals(T)(T y) const pure if (isIntegral!T)
+    /// ditto
+    bool opEquals(T)(T y) const pure nothrow @nogc if (isIntegral!T)
     {
         if (sign != (y<0))
             return 0;
@@ -389,75 +529,171 @@ public:
     }
 
     ///
-    T opCast(T:bool)() pure const
+    unittest
+    {
+        auto x = BigInt("12345");
+        auto y = BigInt("12340");
+        int z = 12345;
+        int w = 54321;
+
+        assert(x == x);
+        assert(x != y);
+        assert(x == y + 5);
+        assert(x == z);
+        assert(x != w);
+    }
+
+    /**
+        Implements casting to bool.
+     */
+    T opCast(T:bool)() pure nothrow @nogc const
     {
         return !isZero();
     }
 
     ///
-    T opCast(T)() pure const if (is(Unqual!T == BigInt)) {
+    unittest
+    {
+        // Non-zero values are regarded as true
+        auto x = BigInt("1");
+        auto y = BigInt("10");
+        assert(x);
+        assert(y);
+
+        // Zero value is regarded as false
+        auto z = BigInt("0");
+        assert(!z);
+    }
+
+    /**
+        Implements casting to/from qualified BigInt's.
+
+        Warning: Casting to/from $(D const) or $(D immutable) may break type
+        system guarantees. Use with care.
+     */
+    T opCast(T)() pure nothrow @nogc const if (is(Unqual!T == BigInt)) {
         return this;
+    }
+
+    ///
+    unittest
+    {
+        const(BigInt) x = BigInt("123");
+        BigInt y = cast() x;    // cast away const
+        assert(y == x);
     }
 
     // Hack to make BigInt's typeinfo.compare work properly.
     // Note that this must appear before the other opCmp overloads, otherwise
     // DMD won't find it.
-    int opCmp(ref const BigInt y) pure nothrow const
+    /**
+        Implements 3-way comparisons of BigInt with BigInt or BigInt with
+        built-in integers.
+     */
+    int opCmp(ref const BigInt y) pure nothrow @nogc const
     {
         // Simply redirect to the "real" opCmp implementation.
         return this.opCmp!BigInt(y);
     }
 
-    ///
-    int opCmp(T)(T y) pure nothrow const if (isIntegral!T)
+    /// ditto
+    int opCmp(T)(T y) pure nothrow @nogc const if (isIntegral!T)
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
         int cmp = data.opCmp(cast(ulong)absUnsign(y));
         return sign? -cmp: cmp;
     }
-    ///
-    int opCmp(T:BigInt)(const T y) pure nothrow const
+    /// ditto
+    int opCmp(T:BigInt)(const T y) pure nothrow @nogc const
     {
         if (sign!=y.sign)
             return sign ? -1 : 1;
         int cmp = data.opCmp(y.data);
         return sign? -cmp: cmp;
     }
-    /// Returns the value of this BigInt as a long,
-    /// or +- long.max if outside the representable range.
-    long toLong() pure nothrow const
+
+    ///
+    unittest
+    {
+        auto x = BigInt("100");
+        auto y = BigInt("10");
+        int z = 50;
+        const int w = 200;
+
+        assert(y < x);
+        assert(x > z);
+        assert(z > y);
+        assert(x < w);
+    }
+
+    /**
+        Returns: The value of this BigInt as a long, or +/- long.max if outside
+        the representable range.
+     */
+    long toLong() @safe pure nothrow const @nogc
     {
         return (sign ? -1 : 1) *
           (data.ulongLength == 1  && (data.peekUlong(0) <= sign+cast(ulong)(long.max)) // 1+long.max = |long.min|
           ? cast(long)(data.peekUlong(0))
           : long.max);
     }
-    /// Returns the value of this BigInt as an int,
-    /// or +- int.max if outside the representable range.
-    int toInt() pure nothrow const
+
+    ///
+    unittest
+    {
+        auto b = BigInt("12345");
+        long l = b.toLong();
+        assert(l == 12345);
+    }
+
+    /**
+        Returns: The value of this BigInt as an int, or +/- int.max if outside
+        the representable range.
+     */
+    int toInt() @safe pure nothrow @nogc const
     {
         return (sign ? -1 : 1) *
           (data.uintLength == 1  && (data.peekUint(0) <= sign+cast(uint)(int.max)) // 1+int.max = |int.min|
           ? cast(int)(data.peekUint(0))
           : int.max);
     }
+
+    ///
+    unittest
+    {
+        auto big = BigInt("5_000_000");
+        auto i = big.toInt();
+        assert(i == 5_000_000);
+
+        // Numbers that are too big to fit into an int will be clamped to int.max.
+        auto tooBig = BigInt("5_000_000_000");
+        i = tooBig.toInt();
+        assert(i == int.max);
+    }
+
     /// Number of significant uints which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
-    @property size_t uintLength() pure nothrow const
+    @property size_t uintLength() @safe pure nothrow @nogc const
     {
         return data.uintLength;
     }
+
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
-    @property size_t ulongLength() pure nothrow const
+    @property size_t ulongLength() @safe pure nothrow @nogc const
     {
         return data.ulongLength;
     }
 
-    /** Convert the BigInt to string, passing it to 'sink'.
+    /** Convert the BigInt to string, passing it to the given sink.
      *
-     * $(TABLE  The output format is controlled via formatString:
+     * Params:
+     *  sink = A delegate for accepting possibly piecewise segments of the
+     *      formatted string.
+     *  formatString = A format string specifying the output format.
+     *
+     * $(TABLE  Available output formats:,
      * $(TR $(TD "d") $(TD  Decimal))
      * $(TR $(TD "x") $(TD  Hexadecimal, lower case))
      * $(TR $(TD "X") $(TD  Hexadecimal, upper case))
@@ -471,6 +707,8 @@ public:
         f.writeUpToNextSpec(sink);
         toString(sink, f);
     }
+
+    /// ditto
     void toString(scope void delegate(const(char)[]) sink, ref FormatSpec!char f) const
     {
         auto hex = (f.spec == 'x' || f.spec == 'X');
@@ -519,37 +757,57 @@ public:
             foreach (i; 0 .. difw)
                 sink(" ");
     }
-/+
-private:
-    /// Convert to a hexadecimal string, with an underscore every
-    /// 8 characters.
-    string toHex()
+
+    /**
+        $(D toString) is rarely directly invoked; the usual way of using it is via
+        $(LINK2 std_format.html#format, std.format.format):
+     */
+    unittest
     {
-        string buff = data.toHexString(1, '_');
-        if (isNegative())
-            buff[0] = '-';
-        else
-            buff = buff[1..$];
-        return buff;
+        import std.format : format;
+
+        auto x = BigInt("1_000_000");
+        x *= 12345;
+
+        assert(format("%d", x) == "12345000000");
+        assert(format("%X", x) == "2_DFD1C040");
     }
-+/
+
     // Implement toHash so that BigInt works properly as an AA key.
-    size_t toHash() const @trusted nothrow
+    /**
+        Returns: A unique hash of the BigInt's value suitable for use in a hash
+        table.
+     */
+    size_t toHash() const @safe nothrow
     {
         return data.toHash() + sign;
     }
 
+    /**
+        $(D toHash) is rarely directly invoked; it is implicitly used when
+        BigInt is used as the key of an associative array.
+     */
+    unittest
+    {
+        string[BigInt] aa;
+        aa[BigInt(123)] = "abc";
+        aa[BigInt(456)] = "def";
+
+        assert(aa[BigInt(123)] == "abc");
+        assert(aa[BigInt(456)] == "def");
+    }
+
 private:
-    void negate() @safe pure nothrow
+    void negate() @safe pure nothrow @nogc
     {
         if (!data.isZero())
             sign = !sign;
     }
-    bool isZero() pure const nothrow @safe
+    bool isZero() pure const nothrow @nogc @safe
     {
         return data.isZero();
     }
-    bool isNegative() pure const nothrow @safe
+    bool isNegative() pure const nothrow @nogc @safe
     {
         return sign;
     }
@@ -562,6 +820,44 @@ private:
     }
 }
 
+///
+unittest
+{
+    BigInt a = "9588669891916142";
+    BigInt b = "7452469135154800";
+    auto c = a * b;
+    assert(c == BigInt("71459266416693160362545788781600"));
+    auto d = b * a;
+    assert(d == BigInt("71459266416693160362545788781600"));
+    assert(d == c);
+    d = c * BigInt("794628672112");
+    assert(d == BigInt("56783581982794522489042432639320434378739200"));
+    auto e = c + d;
+    assert(e == BigInt("56783581982865981755459125799682980167520800"));
+    auto f = d + c;
+    assert(f == e);
+    auto g = f - c;
+    assert(g == d);
+    g = f - d;
+    assert(g == c);
+    e = 12345678;
+    g = c + e;
+    auto h = g / b;
+    auto i = g % b;
+    assert(h == a);
+    assert(i == e);
+    BigInt j = "-0x9A56_57f4_7B83_AB78";
+    j ^^= 11;
+}
+
+/**
+Params:
+    x = The $(D BigInt) to convert to a decimal $(D string).
+
+Returns:
+    A $(D string) that represents the $(D BigInt) as a decimal number.
+
+*/
 string toDecimalString(const(BigInt) x)
 {
     string outbuff="";
@@ -570,6 +866,26 @@ string toDecimalString(const(BigInt) x)
     return outbuff;
 }
 
+///
+unittest
+{
+    auto x = BigInt("123");
+    x *= 1000;
+    x += 456;
+
+    auto xstr = x.toDecimalString();
+    assert(xstr == "123456");
+}
+
+/**
+Params:
+    x = The $(D BigInt) to convert to a hexadecimal $(D string).
+
+Returns:
+    A $(D string) that represents the $(D BigInt) as a hexadecimal (base 16)
+    number.
+
+*/
 string toHex(const(BigInt) x)
 {
     string outbuff="";
@@ -578,7 +894,27 @@ string toHex(const(BigInt) x)
     return outbuff;
 }
 
-// Returns the absolute value of x converted to the corresponding unsigned type
+///
+unittest
+{
+    auto x = BigInt("123");
+    x *= 1000;
+    x += 456;
+
+    auto xstr = x.toHex();
+    assert(xstr == "1E240");
+}
+
+/** Returns the absolute value of x converted to the corresponding unsigned
+type.
+
+Params:
+    x = The integral value to return the absolute value of.
+
+Returns:
+    The absolute value of x.
+
+*/
 Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
 {
     static if (isSigned!T)
@@ -1030,4 +1366,69 @@ unittest // 13391
     assert(x1 == 1);
     x2 /= 123456789123456789UL;
     assert(x2 == 1);
+}
+
+unittest // 13963
+{
+    BigInt x = 1;
+    import std.typetuple : TypeTuple;
+    foreach(Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
+    {
+        assert(is(typeof(x % Int(1)) == int));
+    }
+    assert(is(typeof(x % 1L) == long));
+    assert(is(typeof(x % 1UL) == BigInt));
+
+    auto x1 = BigInt(8);
+    auto x2 = -BigInt(long.min) + 1;
+
+    // long
+    assert(x1 % 2L == 0L);
+    assert(-x1 % 2L == 0L);
+
+    assert(x1 % 3L == 2L);
+    assert(x1 % -3L == 2L);
+    assert(-x1 % 3L == -2L);
+    assert(-x1 % -3L == -2L);
+
+    assert(x1 % 11L == 8L);
+    assert(x1 % -11L == 8L);
+    assert(-x1 % 11L == -8L);
+    assert(-x1 % -11L == -8L);
+
+    // ulong
+    assert(x1 % 2UL == BigInt(0));
+    assert(-x1 % 2UL == BigInt(0));
+
+    assert(x1 % 3UL == BigInt(2));
+    assert(-x1 % 3UL == -BigInt(2));
+
+    assert(x1 % 11UL == BigInt(8));
+    assert(-x1 % 11UL == -BigInt(8));
+
+    assert(x2 % ulong.max == x2);
+    assert(-x2 % ulong.max == -x2);
+}
+
+unittest // 14124
+{
+    auto x = BigInt(-3);
+    x %= 3;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(-3);
+    x %= cast(ushort)3;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(-3);
+    x %= 3L;
+    assert(!x.isNegative());
+    assert(x.isZero());
+
+    x = BigInt(3);
+    x %= -3;
+    assert(!x.isNegative());
+    assert(x.isZero());
 }

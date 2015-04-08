@@ -1,7 +1,7 @@
 /**
 This module implements a generic doubly-linked list container.
 
-This module is a submodule of $(LINK2 std_container_package, std.container).
+This module is a submodule of $(LINK2 std_container.html, std.container).
 
 Source: $(PHOBOSSRC std/container/_dlist.d)
 Macros:
@@ -63,9 +63,9 @@ private struct DRange
     unittest
     {
         static assert(isBidirectionalRange!DRange);
-        static assert(is(ElementType!DRange == BaseNode*));       
+        static assert(is(ElementType!DRange == BaseNode*));
     }
- 
+
 nothrow @safe pure:
     private BaseNode* _first;
     private BaseNode* _last;
@@ -148,9 +148,9 @@ struct DList(T)
     {
         BaseNode _base;
         alias _base this;
-    
+
         T _payload = T.init;
-    
+
         inout(BaseNode)* asBaseNode() inout @trusted
         {
             return &_base;
@@ -163,7 +163,7 @@ struct DList(T)
   private
   {
     //Construct as new PayNode, and returns it as a BaseNode.
-    static BaseNode* createNode()(ref T arg, BaseNode* prev = null, BaseNode* next = null)
+    static BaseNode* createNode(Stuff)(ref Stuff arg, BaseNode* prev = null, BaseNode* next = null)
     {
         return (new PayNode(BaseNode(prev, next), arg)).asBaseNode();
     }
@@ -927,4 +927,12 @@ private:
     assert(r.front == 5 && r.walkLength == 1);
     r = list.linearRemove(r.take(1));
     assert(r.empty); // fails
+}
+
+@safe unittest //14300
+{
+    interface ITest {}
+    static class Test : ITest {}
+
+    DList!ITest().insertBack(new Test());
 }

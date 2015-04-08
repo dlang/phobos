@@ -1,6 +1,10 @@
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+ * Computes RIPEMD-160 hashes of arbitrary data. RIPEMD-160 hashes are 20 byte quantities
+ * that are like a checksum or CRC, but are more robust.
+ *
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -12,10 +16,8 @@ $(TR $(TDNW OOP API) $(TD $(MYREF RIPEMD160Digest))
 $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
 )
 )
+)
 
- * Computes RIPEMD-160 hashes of arbitrary data. RIPEMD-160 hashes are 20 byte quantities
- * that are like a checksum or CRC, but are more robust.
- *
  * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
  * differences between the template and the OOP API, see $(D std.digest.digest).
  *
@@ -42,7 +44,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  *
  * Macros:
  * WIKI = Phobos/StdRipemd
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 module std.digest.ripemd;
@@ -725,7 +726,10 @@ unittest
     assert(result[0 .. 20] == result2 && result2 == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     debug
+    {
+        import std.exception;
         assertThrown!Error(md.finish(result[0 .. 19]));
+    }
 
     assert(md.length == 20);
 

@@ -1,8 +1,6 @@
 // Written in the D programming language.
 
 /++
-    $(SECTION Overview)
-
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
@@ -691,6 +689,7 @@ else
 
 public enum dchar lineSep = '\u2028'; /// Constant $(CODEPOINT) (0x2028) - line separator.
 public enum dchar paraSep = '\u2029'; /// Constant $(CODEPOINT) (0x2029) - paragraph separator.
+public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next line.
 
 // test the intro example
 unittest
@@ -1638,7 +1637,8 @@ unittest
 }
 //============================================================================
 
-@safe:
+@safe
+{
 // hope to see simillar stuff in public interface... once Allocators are out
 //@@@BUG moveFront and friends? dunno, for now it's POD-only
 
@@ -2241,7 +2241,11 @@ public:
 
 
 
-    /// Obtains a set that is the inversion of this set. See also $(LREF inverted).
+    /**
+     * Obtains a set that is the inversion of this set.
+     *
+     * See_Also: $(LREF inverted)
+     */
     auto opUnary(string op: "!")()
     {
         return this.inverted;
@@ -3625,8 +3629,8 @@ version(unittest)
     }
 }
 
+}
 
-@system:
 unittest// vs single dchar
 {
     import std.conv;
@@ -4406,7 +4410,7 @@ public template buildTrie(Value, Key, Args...)
         In other words $(LREF mapTrieIndex) should be a
         monotonically increasing function that maps $(D Key) to an integer.
 
-        See also: $(XREF _algorithm, sort),
+        See_Also: $(XREF _algorithm, sort),
         $(XREF _range, SortedRange),
         $(XREF _algorithm, setUnion).
     */
@@ -6083,7 +6087,7 @@ template SetSearcher(alias table, string kind)
         $(D unicode.InBlockName), to search a script
         use $(D unicode.ScriptName).
 
-        See also $(LREF block), $(LREF script)
+        See_Also: $(LREF block), $(LREF script)
         and (not included in this search) $(LREF hangulSyllableType).
 
         Example:
@@ -6134,8 +6138,6 @@ template SetSearcher(alias table, string kind)
     /**
         Narrows down the search for sets of $(CODEPOINTS) to all Unicode blocks.
 
-        See also $(S_LINK Unicode properties, table of properties).
-
         Note:
         Here block names are unambiguous as no scripts are searched
         and thus to search use simply $(D unicode.block.BlockName) notation.
@@ -6147,6 +6149,8 @@ template SetSearcher(alias table, string kind)
         // use .block for explicitness
         assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
         ---
+
+        See_Also: $(S_LINK Unicode properties, table of properties).
     */
     struct block
     {
@@ -6419,9 +6423,17 @@ template genericDecodeGrapheme(bool getValue)
 public: // Public API continues
 
 /++
-    Returns the length of grapheme cluster starting at $(D index).
+    Computes the length of grapheme cluster starting at $(D index).
     Both the resulting length and the $(D index) are measured
     in $(S_LINK Code unit, code units).
+
+    Params:
+        C = type that is implicitly convertible to $(D dchars)
+        input = array of grapheme clusters
+        index = starting index into $(D input[])
+
+    Returns:
+        length of grapheme cluster
 
     Example:
     ---
@@ -6711,7 +6723,8 @@ unittest
     // the usual range manipulation is possible
     assert(wideOne[].filter!isMark.equal("\u0308"));
     ---
-    $(P See also $(LREF decodeGrapheme), $(LREF graphemeStride). )
+
+    See_Also: $(LREF decodeGrapheme), $(LREF graphemeStride)
 +/
 @trusted struct Grapheme
 {
@@ -6803,7 +6816,7 @@ public:
         // still could be useful though
         assert(g[].equal("A\u0301B"));
         ---
-        See also $(LREF Grapheme.valid) below.
+        See_Also: $(LREF Grapheme.valid)
     +/
     ref opOpAssign(string op)(dchar ch)
     {
@@ -7031,7 +7044,16 @@ unittest
 /++
     $(P Does basic case-insensitive comparison of strings $(D str1) and $(D str2).
     This function uses simpler comparison rule thus achieving better performance
-    then $(LREF icmp). However keep in mind the warning below.)
+    than $(LREF icmp). However keep in mind the warning below.)
+
+    Params:
+        str1 = a string or a $(D ForwardRange) of $(D dchar)s
+        str2 = a string or a $(D ForwardRange) of $(D dchar)s
+
+    Returns:
+        An $(D int) that is 0 if the strings match,
+        &lt;0 if $(D str1) is lexicographically "less" than $(D str2),
+        &gt;0 if $(D str1) is lexicographically "greater" than $(D str2)
 
     Warning:
     This function only handles 1:1 $(CODEPOINT) mapping
@@ -7051,6 +7073,10 @@ unittest
     assert(icmp("ΐ", "\u03B9\u0308\u0301") == 0);
     assert(icmp("ΌΎ", "όύ") == 0);
     ---
+
+    See_Also:
+        $(LREF icmp)
+        $(XREF algorithm, cmp)
 +/
 int sicmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
@@ -7441,7 +7467,8 @@ public dchar compose(dchar first, dchar second) pure nothrow
     Note:
     This function also decomposes hangul syllables
     as prescribed by the standard.
-    See also $(LREF decomposeHangul) for a restricted version
+
+    See_Also: $(LREF decomposeHangul) for a restricted version
     that takes into account only hangul syllables  but
     no other decompositions.
 
@@ -7565,12 +7592,6 @@ public:
 /**
     Decomposes a Hangul syllable. If $(D ch) is not a composed syllable
     then this function returns $(LREF Grapheme) containing only $(D ch) as is.
-
-    Example:
-    ---
-    import std.algorithm;
-    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
-    ---
 */
 Grapheme decomposeHangul(dchar ch)
 {
@@ -7588,6 +7609,13 @@ Grapheme decomposeHangul(dchar ch)
         return Grapheme(partL, partV);
 }
 
+///
+unittest
+{
+    import std.algorithm;
+    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
+}
+
 /++
     Try to compose hangul syllable out of a leading consonant ($(D lead)),
     a $(D vowel) and optional $(D trailing) consonant jamos.
@@ -7596,17 +7624,6 @@ Grapheme decomposeHangul(dchar ch)
 
     If any of $(D lead) and $(D vowel) are not a valid hangul jamo
     of the respective $(CHARACTER) class returns dchar.init.
-
-    Example:
-    ---
-    assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
-    // leaving out T-vowel, or passing any codepoint
-    // that is not trailing consonant composes an LV-syllable
-    assert(composeJamo('\u1111', '\u1171') == '\uD4CC');
-    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
-    assert(composeJamo('\u1111', 'A') == dchar.init);
-    assert(composeJamo('A', '\u1171') == dchar.init);
-    ---
 +/
 dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc
 {
@@ -7619,6 +7636,18 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
     int indexLV = indexL * jamoNCount + indexV * jamoTCount;
     dchar syllable = jamoSBase + indexLV;
     return isJamoT(trailing) ? syllable + (trailing - jamoTBase) : syllable;
+}
+
+///
+unittest
+{
+    assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
+    // leaving out T-vowel, or passing any codepoint
+    // that is not trailing consonant composes an LV-syllable
+    assert(composeJamo('\u1111', '\u1171') == '\uD4CC');
+    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
+    assert(composeJamo('\u1111', 'A') == dchar.init);
+    assert(composeJamo('A', '\u1171') == dchar.init);
 }
 
 unittest
@@ -7679,20 +7708,6 @@ enum {
     Note:
     In cases where the string in question is already normalized,
     it is returned unmodified and no memory allocation happens.
-
-    Example:
-    ---
-    // any encoding works
-    wstring greet = "Hello world";
-    assert(normalize(greet) is greet); // the same exact slice
-
-    // An example of a character with all 4 forms being different:
-    // Greek upsilon with acute and hook symbol (code point 0x03D3)
-    assert(normalize!NFC("ϓ") == "\u03D3");
-    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
-    assert(normalize!NFKC("ϓ") == "\u038E");
-    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
-    ---
 +/
 inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 {
@@ -7783,6 +7798,21 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
     }while(anchors[0] != input.length);
     app.put(input[0..anchors[0]]);
     return cast(inout(C)[])app.data;
+}
+
+///
+unittest
+{
+    // any encoding works
+    wstring greet = "Hello world";
+    assert(normalize(greet) is greet); // the same exact slice
+
+    // An example of a character with all 4 forms being different:
+    // Greek upsilon with acute and hook symbol (code point 0x03D3)
+    assert(normalize!NFC("ϓ") == "\u03D3");
+    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
+    assert(normalize!NFKC("ϓ") == "\u038E");
+    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
 }
 
 unittest
@@ -7928,18 +7958,21 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 /**
     Tests if dchar $(D ch) is always allowed (Quick_Check=YES) in normalization
     form $(D norm).
-    ---
+*/
+public bool allowedIn(NormalizationForm norm)(dchar ch)
+{
+    return !notAllowedIn!norm(ch);
+}
+
+///
+unittest
+{
     // e.g. Cyrillic is always allowed, so is ASCII
     assert(allowedIn!NFC('я'));
     assert(allowedIn!NFD('я'));
     assert(allowedIn!NFKC('я'));
     assert(allowedIn!NFKD('я'));
     assert(allowedIn!NFC('Z'));
-    ---
-*/
-public bool allowedIn(NormalizationForm norm)(dchar ch)
-{
-    return !notAllowedIn!norm(ch);
 }
 
 // not user friendly name but more direct
@@ -8180,6 +8213,175 @@ unittest //12428
     toUpper(s);
 
     assert(s == "abcdefghij");
+}
+
+
+// generic toUpper/toLower on whole range, returns range
+private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str)
+    // Accept range of dchar's
+    if (isInputRange!Range &&
+        isSomeChar!(ElementEncodingType!Range) &&
+        ElementEncodingType!Range.sizeof == dchar.sizeof)
+{
+    static struct ToCaserImpl
+    {
+        @property bool empty()
+        {
+            return !nLeft && r.empty;
+        }
+
+        @property auto front()
+        {
+            if (!nLeft)
+            {
+                dchar c = r.front;
+                const idx = indexFn(c);
+                if (idx == ushort.max)
+                {
+                    buf[0] = c;
+                    nLeft = 1;
+                }
+                else if (idx < maxIdx)
+                {
+                    buf[0] = tableFn(idx);
+                    nLeft = 1;
+                }
+                else
+                {
+                    auto val = tableFn(idx);
+                    // unpack length + codepoint
+                    nLeft = val >> 24;
+                    assert(nLeft <= buf.length);
+                    buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
+                    foreach (j; 1 .. nLeft)
+                        buf[nLeft - j - 1] = tableFn(idx + j);
+                }
+            }
+            return buf[nLeft - 1];
+        }
+
+        void popFront()
+        {
+            if (!nLeft)
+                front();
+            assert(nLeft);
+            --nLeft;
+            if (!nLeft)
+                r.popFront();
+        }
+
+        static if (isForwardRange!Range)
+        {
+            @property auto save()
+            {
+                auto ret = this;
+                ret.r = r.save;
+                return ret;
+            }
+        }
+
+      private:
+        Range r;
+        uint nLeft;
+        dchar[3] buf = void;
+    }
+
+    return ToCaserImpl(str);
+}
+
+/*********************
+ * Convert input range or string to upper or lower case.
+ *
+ * Does not allocate memory.
+ * Characters in UTF-8 or UTF-16 format that cannot be decoded
+ * are treated as $(XREF utf, replacementDchar).
+ *
+ * Params:
+ *      str = string or range of characters
+ *
+ * Returns:
+ *      an InputRange of dchars
+ *
+ * See_Also:
+ *      $(LREF toUpper), $(LREF toLower)
+ */
+
+auto toLowerCase(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
+    {
+        import std.utf : byDchar;
+
+        // Decode first
+        return toCaser!LowerTriple(str.byDchar);
+    }
+    else
+    {
+        return toCaser!LowerTriple(str);
+    }
+}
+
+/// ditto
+auto toUpperCase(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
+    {
+        import std.utf : byDchar;
+
+        // Decode first
+        return toCaser!UpperTriple(str.byDchar);
+    }
+    else
+    {
+        return toCaser!UpperTriple(str);
+    }
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm: equal;
+
+    assert("hEllo".toUpperCase.equal("HELLO"));
+}
+
+unittest
+{
+    import std.array;
+
+    auto a = "HELLo".toLowerCase;
+    auto savea = a.save;
+    auto s = a.array;
+    assert(s == "hello");
+    s = savea.array;
+    assert(s == "hello");
+
+    string[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
+    string[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
+
+    foreach (i, slwr; lower)
+    {
+        import std.utf : byChar;
+
+        auto sx = slwr.toUpperCase.byChar.array;
+        assert(sx == toUpper(slwr));
+        auto sy = upper[i].toLowerCase.byChar.array;
+        assert(sy == toLower(upper[i]));
+    }
+
+    // Not necessary to call r.front
+    for (auto r = lower[3].toUpperCase; !r.empty; r.popFront())
+    {
+    }
+
+    import std.algorithm : equal;
+
+    "HELLo"w.toLowerCase.equal("hello"d);
+    "HELLo"w.toUpperCase.equal("HELLO"d);
+    "HELLo"d.toLowerCase.equal("hello"d);
+    "HELLo"d.toUpperCase.equal("HELLO"d);
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
@@ -8580,6 +8782,10 @@ unittest
     Warning:
     Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
+
+    toUpper can be used as an argument to $(XREF algorithm, map) to produce an algorithm that can
+    convert a range of characters to upper case without allocating memory.
+    A string can then be produced by using $(XREF algorithm, copy) to send it to an $(XREF array, appender).
 +/
 @safe pure nothrow @nogc
 dchar toUpper(dchar c)
@@ -8599,6 +8805,18 @@ dchar toUpper(dchar c)
         return toUpperTab(idx);
     }
     return c;
+}
+
+///
+unittest
+{
+    import std.algorithm;
+    import std.uni;
+    import std.array;
+
+    auto abuf = appender!(char[])();
+    "hello".map!toUpper.copy(&abuf);
+    assert(abuf.data == "HELLO");
 }
 
 @trusted unittest

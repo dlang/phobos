@@ -1,5 +1,5 @@
 /**
-This module is a submodule of $(LINK2 std_range_package.html, std.range).
+This module is a submodule of $(LINK2 std_range.html, std.range).
 
 The main $(D std.range) module provides template-based tools for working with
 ranges, but sometimes an object-based interface for ranges is needed, such as
@@ -79,22 +79,6 @@ import std.typetuple;
  * $(LREF isInputRange) and friends check for conformance to structural
  * interfaces, not for implementation of these $(D interface) types.
  *
- * Examples:
- * ---
- * void useRange(InputRange!int range) {
- *     // Function body.
- * }
- *
- * // Create a range type.
- * auto squares = map!"a * a"(iota(10));
- *
- * // Wrap it in an interface.
- * auto squaresWrapped = inputRangeObject(squares);
- *
- * // Use it.
- * useRange(squaresWrapped);
- * ---
- *
  * Limitations:
  *
  * These interfaces are not capable of forwarding $(D ref) access to elements.
@@ -136,6 +120,26 @@ interface InputRange(E) {
     /// Ditto
     int opApply(int delegate(size_t, E));
 
+}
+
+///
+unittest
+{
+    import std.algorithm : map;
+    import std.range : iota;
+
+    void useRange(InputRange!int range) {
+        // Function body.
+    }
+
+    // Create a range type.
+    auto squares = map!"a * a"(iota(10));
+
+    // Wrap it in an interface.
+    auto squaresWrapped = inputRangeObject(squares);
+
+    // Use it.
+    useRange(squaresWrapped);
 }
 
 /**Interface for a forward range of type $(D E).*/
@@ -437,16 +441,6 @@ InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R) {
 
 /**Convenience function for creating an $(D OutputRangeObject) with a base range
  * of type $(D R) that accepts types $(D E).
-
- Examples:
- ---
- import std.array;
- uint[] outputArray;
- auto app = appender(&outputArray);
- auto appWrapped = outputRangeObject!(uint, uint[])(app);
- static assert(is(typeof(appWrapped) : OutputRange!(uint[])));
- static assert(is(typeof(appWrapped) : OutputRange!(uint)));
- ---
 */
 template outputRangeObject(E...) {
 
@@ -456,12 +450,21 @@ template outputRangeObject(E...) {
     }
 }
 
+///
+unittest
+{
+     import std.array;
+     auto app = appender!(uint[])();
+     auto appWrapped = outputRangeObject!(uint, uint[])(app);
+     static assert(is(typeof(appWrapped) : OutputRange!(uint[])));
+     static assert(is(typeof(appWrapped) : OutputRange!(uint)));
+}
 
-unittest 
+unittest
 {
     import std.internal.test.dummyrange;
-	import std.algorithm : equal;
-	import std.array;
+    import std.algorithm : equal;
+    import std.array;
 
     static void testEquality(R)(iInputRange r1, R r2) {
         assert(equal(r1, r2));
