@@ -98,11 +98,14 @@ private:
     {
         assert( data.length >= 1 && (data.length == 1 || data[$-1] != 0 ));
     }
+
     immutable(BigDigit) [] data = ZERO;
+
     this(immutable(BigDigit) [] x) pure nothrow @nogc @safe
     {
        data = x;
     }
+  package(std)  // used from: std.bigint
     this(T)(T x) pure nothrow @safe if (isIntegral!T)
     {
         opAssign(x);
