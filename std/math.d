@@ -620,6 +620,12 @@ auto conj(Num)(Num y) @safe pure nothrow @nogc
  */
 
 real cos(real x) @safe pure nothrow @nogc;       /* intrinsic */
+//FIXME
+///ditto
+double cos(double x) @safe pure nothrow @nogc { return cos(cast(real)x); }
+//FIXME
+///ditto
+float cos(float x) @safe pure nothrow @nogc { return cos(cast(real)x); }
 
 /***********************************
  * Returns $(WEB en.wikipedia.org/wiki/Sine, sine) of x. x is in $(WEB en.wikipedia.org/wiki/Radian, radians).
@@ -642,6 +648,12 @@ real cos(real x) @safe pure nothrow @nogc;       /* intrinsic */
  */
 
 real sin(real x) @safe pure nothrow @nogc;       /* intrinsic */
+//FIXME
+///ditto
+double sin(double x) @safe pure nothrow @nogc { return sin(cast(real)x); }
+//FIXME
+///ditto
+float sin(float x) @safe pure nothrow @nogc { return sin(cast(real)x); }
 
 ///
 unittest
@@ -1439,6 +1451,12 @@ unittest
  * indeterminate.
  */
 long rndtol(real x) @nogc @safe pure nothrow;    /* intrinsic */
+//FIXME
+///ditto
+long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
+//FIXME
+///ditto
+long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
 
 
 /*****************************************
@@ -2593,30 +2611,40 @@ alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
  */
 
 real ldexp(real n, int exp) @nogc @safe pure nothrow;    /* intrinsic */
+//FIXME
+///ditto
+double ldexp(double n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)n, exp); }
+//FIXME
+///ditto
+float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)n, exp); }
 
 ///
 @nogc @safe pure nothrow unittest
 {
-    real r;
+    import std.typetuple;
+    foreach(T; TypeTuple!(float, double, real))
+    {
+        T r;
 
-    r = ldexp(3.0L, 3);
-    assert(r == 24);
+        r = ldexp(3.0L, 3);
+        assert(r == 24);
 
-    r = ldexp(cast(real) 3.0, cast(int) 3);
-    assert(r == 24);
+        r = ldexp(cast(T)3.0, cast(int) 3);
+        assert(r == 24);
 
-    real n = 3.0;
-    int exp = 3;
-    r = ldexp(n, exp);
-    assert(r == 24);
+        T n = 3.0;
+        int exp = 3;
+        r = ldexp(n, exp);
+        assert(r == 24);        
+    }
 }
 
 @safe pure nothrow @nogc unittest
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
     {
-        assert(ldexp(1, -16384) == 0x1p-16384L);
-        assert(ldexp(1, -16382) == 0x1p-16382L);
+        assert(ldexp(1.0L, -16384) == 0x1p-16384L);
+        assert(ldexp(1.0L, -16382) == 0x1p-16382L);
         int x;
         real n = frexp(0x1p-16384L, x);
         assert(n==0.5L);
@@ -2625,8 +2653,8 @@ real ldexp(real n, int exp) @nogc @safe pure nothrow;    /* intrinsic */
     }
     else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     {
-        assert(ldexp(1, -1024) == 0x1p-1024L);
-        assert(ldexp(1, -1022) == 0x1p-1022L);
+        assert(ldexp(1.0L, -1024) == 0x1p-1024L);
+        assert(ldexp(1.0L, -1022) == 0x1p-1022L);
         int x;
         real n = frexp(0x1p-1024L, x);
         assert(n==0.5L);
@@ -2634,6 +2662,28 @@ real ldexp(real n, int exp) @nogc @safe pure nothrow;    /* intrinsic */
         assert(ldexp(n, x)==0x1p-1024L);
     }
     else static assert(false, "Floating point type real not supported");
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(ldexp(1.0, -1024) == 0x1p-1024);
+    assert(ldexp(1.0, -1022) == 0x1p-1022);
+    int x;
+    double n = frexp(0x1p-1024, x);
+    assert(n==0.5);
+    assert(x==-1023);
+    assert(ldexp(n, x)==0x1p-1024);
+}
+
+@safe pure nothrow @nogc unittest
+{
+    assert(ldexp(1.0f, -128) == 0x1p-128f);
+    assert(ldexp(1.0f, -126) == 0x1p-126f);
+    int x;
+    float n = frexp(0x1p-128f, x);
+    assert(n==0.5f);
+    assert(x==-127);
+    assert(ldexp(n, x)==0x1p-128f);
 }
 
 unittest
@@ -3635,6 +3685,12 @@ real nearbyint(real x) @trusted nothrow @nogc
  * the same operation, but does not set the FE_INEXACT exception.
  */
 real rint(real x) @safe pure nothrow @nogc;      /* intrinsic */
+//FIXME
+///ditto
+double rint(double x) @safe pure nothrow @nogc { return rint(cast(real)x); }
+//FIXME
+///ditto
+float rint(float x) @safe pure nothrow @nogc { return rint(cast(real)x); }
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
