@@ -1453,10 +1453,10 @@ unittest
 long rndtol(real x) @nogc @safe pure nothrow;    /* intrinsic */
 //FIXME
 ///ditto
-double rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
+long rndtol(double x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
 //FIXME
 ///ditto
-float rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
+long rndtol(float x) @safe pure nothrow @nogc { return rndtol(cast(real)x); }
 
 
 /*****************************************
