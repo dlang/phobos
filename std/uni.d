@@ -8251,6 +8251,8 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str
                     auto val = tableFn(idx);
                     // unpack length + codepoint
                     nLeft = val >> 24;
+                    if (nLeft == 0)
+                        nLeft = 1;
                     assert(nLeft <= buf.length);
                     buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
                     foreach (j; 1 .. nLeft)
@@ -8382,6 +8384,198 @@ unittest
     "HELLo"w.toUpperCase.equal("HELLO"d);
     "HELLo"d.toLowerCase.equal("hello"d);
     "HELLo"d.toUpperCase.equal("HELLO"d);
+
+    import std.utf : byChar;
+    assert(toLower("\u1Fe2") == toLowerCase("\u1Fe2").byChar.array);
+}
+
+import std.stdio;
+// generic capitalizer on whole range, returns range
+private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUpper,
+                           Range)(Range str)
+    // Accept range of dchar's
+    if (isInputRange!Range &&
+        isSomeChar!(ElementEncodingType!Range) &&
+        ElementEncodingType!Range.sizeof == dchar.sizeof)
+{
+    static struct ToCapitalizerImpl
+    {
+        @property bool empty()
+        {
+            return lower ? lwr.empty : !nLeft && r.empty;
+        }
+
+        @property auto front()
+        {
+            if (lower)
+                return lwr.front;
+
+            if (!nLeft)
+            {
+                dchar c = r.front;
+                const idx = indexFnUpper(c);
+                if (idx == ushort.max)
+                {
+                    buf[0] = c;
+                    nLeft = 1;
+                }
+                else if (idx < maxIdxUpper)
+                {
+                    buf[0] = tableFnUpper(idx);
+                    nLeft = 1;
+                }
+                else
+                {
+                    auto val = tableFnUpper(idx);
+                    // unpack length + codepoint
+                    nLeft = val >> 24;
+                    if (nLeft == 0)
+                        nLeft = 1;
+                    assert(nLeft <= buf.length);
+                    buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
+                    foreach (j; 1 .. nLeft)
+                        buf[nLeft - j - 1] = tableFnUpper(idx + j);
+                }
+            }
+            return buf[nLeft - 1];
+        }
+
+        void popFront()
+        {
+            if (lower)
+                lwr.popFront();
+            else
+            {
+                if (!nLeft)
+                    front();
+                assert(nLeft);
+                --nLeft;
+                if (!nLeft)
+                {
+                    r.popFront();
+                    lwr = r.toLowerCase();
+                    lower = true;
+                }
+            }
+        }
+
+        static if (isForwardRange!Range)
+        {
+            @property auto save()
+            {
+                auto ret = this;
+                ret.r = r.save;
+                ret.lwr = lwr.save;
+                return ret;
+            }
+        }
+
+      private:
+        Range r;
+        typeof(r.toLowerCase) lwr; // range representing the lower case rest of string
+        bool lower = false;     // false for first character, true for rest of string
+        dchar[3] buf = void;
+        uint nLeft = 0;
+    }
+
+    return ToCapitalizerImpl(str);
+}
+
+/*********************
+ * Capitalize input range or string, meaning convert the first
+ * character to upper case and subsequent characters to lower case.
+ *
+ * Does not allocate memory.
+ * Characters in UTF-8 or UTF-16 format that cannot be decoded
+ * are treated as $(XREF utf, replacementDchar).
+ *
+ * Params:
+ *      str = string or range of characters
+ *
+ * Returns:
+ *      an InputRange of dchars
+ *
+ * See_Also:
+ *      $(LREF toUpper), $(LREF toLower)
+ *      $(LREF toUpperCase), $(LREF toLowerCase)
+ */
+
+auto toCapitalized(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
+    {
+        import std.utf : byDchar;
+
+        // Decode first
+        return toCapitalizer!UpperTriple(str.byDchar);
+    }
+    else
+    {
+        return toCapitalizer!UpperTriple(str);
+    }
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm: equal;
+
+    assert("hEllo".toCapitalized.equal("Hello"));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    auto r = "hEllo".toCapitalized();
+    assert(r.front == 'H');
+}
+
+unittest
+{
+    import std.array;
+
+    auto a = "hELLo".toCapitalized;
+    auto savea = a.save;
+    auto s = a.array;
+    assert(s == "Hello");
+    s = savea.array;
+    assert(s == "Hello");
+
+    string[2][] cases =
+    [
+        ["", ""],
+        ["h", "H"],
+        ["H", "H"],
+        ["3", "3"],
+        ["123", "123"],
+        ["h123A", "H123a"],
+        ["феж", "Феж"],
+        ["\u1Fe2", "\u03a5\u0308\u0300"],
+    ];
+
+    foreach (i; 0 .. cases.length)
+    {
+        import std.utf : byChar;
+
+        auto r = cases[i][0].toCapitalized.byChar.array;
+        auto result = cases[i][1];
+        assert(r == result);
+    }
+
+    // Don't call r.front
+    for (auto r = "\u1Fe2".toCapitalized; !r.empty; r.popFront())
+    {
+    }
+
+    import std.algorithm : equal;
+
+    "HELLo"w.toCapitalized.equal("Hello"d);
+    "hElLO"w.toCapitalized.equal("Hello"d);
+    "hello"d.toCapitalized.equal("Hello"d);
+    "HELLO"d.toCapitalized.equal("Hello"d);
+
+    import std.utf : byChar;
+    assert(toCapitalized("\u0130").byChar.array == toUpperCase("\u0130").byChar.array);
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
