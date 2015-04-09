@@ -832,6 +832,19 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
     assert(isSorted(a));
 }
 
+// Issue 14340
+@safe unittest
+{
+    import std.algorithm.searching : count;
+
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    int[] a = [0, 2, 1, 0];
+    optimisticInsertionSort!((x, y) => a.count(x) < a.count(y), int[])(a);
+    assert(isSorted!((x, y) => a.count(x) < a.count(y), int[])(a));
+}
+
 // sort
 /**
 Sorts a random-access range according to the predicate $(D less). Performs
