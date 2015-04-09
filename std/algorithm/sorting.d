@@ -796,14 +796,19 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
         static if (hasAssignableElements!Range)
         {
-            auto temp = r[i];
+            for (; j < maxJ && pred(r[j + 1], r[i]); ++j) {}
 
-            for (; j < maxJ && pred(r[j + 1], temp); ++j)
+            if (i != j)
             {
-                r[j] = r[j + 1];
-            }
+                auto temp = r[i];
 
-            r[j] = temp;
+                for (size_t k = i; k < j; ++k)
+                {
+                    r[k] = r[k + 1];
+                }
+
+                r[j] = temp;
+            }
         }
         else
         {
