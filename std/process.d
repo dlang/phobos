@@ -908,6 +908,19 @@ unittest // Reopening the standard streams (issue 13258)
     assert(lines == ["foo", "bar"]);
 }
 
+version (Windows)
+unittest // MSVCRT workaround (issue 14422)
+{
+    auto fn = uniqueTempPath();
+    std.file.write(fn, "AAAAAAAAAA");
+
+    auto f = File(fn, "a");
+    spawnProcess(["cmd", "/c", "echo BBBBB"], std.stdio.stdin, f).wait();
+
+    auto data = readText(fn);
+    assert(data == "AAAAAAAAAABBBBB\r\n", data);
+}
+
 /**
 A variation on $(LREF spawnProcess) that runs the given _command through
 the current user's preferred _command interpreter (aka. shell).
