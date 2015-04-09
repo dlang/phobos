@@ -2213,7 +2213,7 @@ Lerr:
     {
         this (string s) { str = s; }
         char front() const @property { return str[front_index]; }
-        char popFront() @property { return str[front_index++]; }
+        char popFront() { return str[front_index++]; }
         bool empty() const @property { return str.length <= front_index; }
         string str;
         size_t front_index = 0;
