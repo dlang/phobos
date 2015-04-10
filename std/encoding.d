@@ -1,4 +1,4 @@
-// Written in the D programming language.
+﻿// Written in the D programming language.
 
 /**
 Classes and functions for handling and transcoding between various encodings.
@@ -8,13 +8,17 @@ for arbitrary _encoding and decoding of characters, arbitrary transcoding
 between strings of different type, as well as validation and sanitization.
 
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
-(also known as LATIN-1), and WINDOWS-1252.
+(also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250 and WINDOWS-1252.
 
 $(UL
 $(LI The type $(D AsciiChar) represents an ASCII character.)
 $(LI The type $(D AsciiString) represents an ASCII string.)
 $(LI The type $(D Latin1Char) represents an ISO-8859-1 character.)
 $(LI The type $(D Latin1String) represents an ISO-8859-1 string.)
+$(LI The type $(D Latin2Char) represents an ISO-8859-2 character.)
+$(LI The type $(D Latin2String) represents an ISO-8859-2 string.)
+$(LI The type $(D Windows1250Char) represents a Windows-1250 character.)
+$(LI The type $(D Windows1250String) represents a Windows-1250 string.)
 $(LI The type $(D Windows1252Char) represents a Windows-1252 character.)
 $(LI The type $(D Windows1252String) represents a Windows-1252 string.))
 
@@ -28,9 +32,9 @@ e.g.
 ----------------------------------------------------
 
 This library supplies $(D EncodingScheme) subclasses for ASCII,
-ISO-8859-1 (also known as LATIN-1), WINDOWS-1252, UTF-8, and (on
-little-endian architectures) UTF-16LE and UTF-32LE; or (on big-endian
-architectures) UTF-16BE and UTF-32BE.
+ISO-8859-1 (also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250,
+WINDOWS-1252, UTF-8, and (on little-endian architectures) UTF-16LE and
+UTF-32LE; or (on big-endian architectures) UTF-16BE and UTF-32BE.
 
 This library provides a mechanism whereby other modules may add $(D
 EncodingScheme) subclasses for any other _encoding.
@@ -335,6 +339,13 @@ unittest
         AsciiString w;
         transcode(v,w);
         assert(cast(string)w == "?100");
+        s = "\u017Dlu\u0165ou\u010Dk\u00FD k\u016F\u0148";
+        Latin2String x;
+        transcode(s,x);
+        assert(x == cast(Latin2Char[])[0xae, 'l', 'u', 0xbb, 'o', 'u', 0xe8, 'k', 0xfd, ' ', 'k', 0xf9, 0xf2]);
+        Windows1250String y;
+        transcode(s,y);
+        assert(y == cast(Windows1250Char[])[0x8e, 'l', 'u', 0x9d, 'o', 'u', 0xe8, 'k', 0xfd, ' ', 'k', 0xf9, 0xf2]);
     }
 
     // Make sure we can count properly
@@ -758,7 +769,7 @@ template EncoderInstance(CharType : Latin1Char)
     }
     body
     {
-                return 1;
+        return 1;
     }
 
     void encodeViaWrite()(dchar c)
@@ -785,6 +796,235 @@ template EncoderInstance(CharType : Latin1Char)
     dchar decodeReverseViaRead()()
     {
         return read();
+    }
+
+    @property EString replacementSequence()
+    {
+        return cast(EString)("?");
+    }
+
+    mixin EncoderFunctions;
+}
+
+//=============================================================================
+//          ISO-8859-2
+//=============================================================================
+
+/** Defines an Latin2-encoded character. */
+enum Latin2Char : ubyte { init }
+/**
+Defines an Latin2-encoded string (as an array of $(D
+immutable(Latin2Char))).
+ */
+alias Latin2String = immutable(Latin2Char)[]; ///
+
+template EncoderInstance(CharType : Latin2Char)
+{
+    alias E = Latin2Char;
+    alias EString = Latin2String;
+
+    @property string encodingName()
+    {
+        return "ISO-8859-2";
+    }
+
+    immutable wstring charMap =
+        "\u00a0\u0104\u02d8\u0141\u00a4\u013d\u015a\u00a7"~
+        "\u00a8\u0160\u015e\u0164\u0179\u00ad\u017d\u017b"~
+        "\u00b0\u0105\u02db\u0142\u00b4\u013e\u015b\u02c7"~
+        "\u00b8\u0161\u015f\u0165\u017a\u02dd\u017e\u017c"~
+        "\u0154\u00c1\u00c2\u0102\u00c4\u0139\u0106\u00c7"~
+        "\u010c\u00c9\u0118\u00cb\u011a\u00cd\u00ce\u010e"~
+        "\u0110\u0143\u0147\u00d3\u00d4\u0150\u00d6\u00d7"~
+        "\u0158\u016e\u00da\u0170\u00dc\u00dd\u0162\u00df"~
+        "\u0155\u00e1\u00e2\u0103\u00e4\u013a\u0107\u00e7"~
+        "\u010d\u00e9\u0119\u00eb\u011b\u00ed\u00ee\u010f"~
+        "\u0111\u0144\u0148\u00f3\u00f4\u0151\u00f6\u00f7"~
+        "\u0159\u016f\u00fa\u0171\u00fc\u00fd\u0163\u02d9"
+    ;
+
+    bool canEncode(dchar c)
+    {
+        if (c < 0xA0) return true;
+        if (c >= 0xFFFD) return false;
+        foreach(wchar d;charMap) { if (c == d) return true; }
+        return false;
+    }
+
+    bool isValidCodeUnit(Latin2Char c)
+    {
+        return true;
+    }
+
+    size_t encodedLength(dchar c)
+    in
+    {
+        assert(canEncode(c));
+    }
+    body
+    {
+        return 1;
+    }
+
+    void encodeViaWrite()(dchar c)
+    {
+        if (c < 0xA0) {}
+        else if (c >= 0xFFFD) { c = '?'; }
+        else
+        {
+            ptrdiff_t n = -1;
+            foreach (i, wchar d; charMap)
+            {
+                if (c == d)
+                {
+                    n = i;
+                    break;
+                }
+            }
+            c = n == -1 ? '?' : 0xA0 + cast(dchar) n;
+        }
+
+        write(cast(Latin2Char)c);
+    }
+
+    void skipViaRead()()
+    {
+        read();
+    }
+
+    dchar decodeViaRead()()
+    {
+        Latin2Char c = read();
+        return (c >= 0xA0) ? charMap[c-0xA0] : c;
+    }
+
+    dchar safeDecodeViaRead()()
+    {
+        Latin2Char c = read();
+        return (c >= 0xA0) ? charMap[c-0xA0] : c;
+    }
+
+    dchar decodeReverseViaRead()()
+    {
+        Latin2Char c = read();
+        return (c >= 0xA0) ? charMap[c-0xA0] : c;
+    }
+
+    @property EString replacementSequence()
+    {
+        return cast(EString)("?");
+    }
+
+    mixin EncoderFunctions;
+}
+
+//=============================================================================
+//          WINDOWS-1250
+//=============================================================================
+
+/** Defines a Windows1250-encoded character. */
+enum Windows1250Char : ubyte { init }
+/**
+Defines an Windows1250-encoded string (as an array of $(D
+immutable(Windows1250Char))).
+ */
+alias Windows1250String = immutable(Windows1250Char)[]; ///
+
+template EncoderInstance(CharType : Windows1250Char)
+{
+    alias E = Windows1250Char;
+    alias EString = Windows1250String;
+
+    @property string encodingName()
+    {
+        return "windows-1250";
+    }
+
+    immutable wstring charMap =
+        "\u20ac\uFFFD\u201a\uFFFD\u201e\u2026\u2020\u2021"~
+        "\uFFFD\u2030\u0160\u2039\u015a\u0164\u017d\u0179"~
+        "\uFFFD\u2018\u2019\u201c\u201d\u2022\u2013\u2014"~
+        "\uFFFD\u2122\u0161\u203a\u015b\u0165\u017e\u017a"~
+        "\u00a0\u02c7\u02d8\u0141\u00a4\u0104\u00a6\u00a7"~
+        "\u00a8\u00a9\u015e\u00ab\u00ac\u00ad\u00ae\u017b"~
+        "\u00b0\u00b1\u02db\u0142\u00b4\u00b5\u00b6\u00b7"~
+        "\u00b8\u0105\u015f\u00bb\u013d\u02dd\u013e\u017c"~
+        "\u0154\u00c1\u00c2\u0102\u00c4\u0139\u0106\u00c7"~
+        "\u010c\u00c9\u0118\u00cb\u011a\u00cd\u00ce\u010e"~
+        "\u0110\u0143\u0147\u00d3\u00d4\u0150\u00d6\u00d7"~
+        "\u0158\u016e\u00da\u0170\u00dc\u00dd\u0162\u00df"~
+        "\u0155\u00e1\u00e2\u0103\u00e4\u013a\u0107\u00e7"~
+        "\u010d\u00e9\u0119\u00eb\u011b\u00ed\u00ee\u010f"~
+        "\u0111\u0144\u0148\u00f3\u00f4\u0151\u00f6\u00f7"~
+        "\u0159\u016f\u00fa\u0171\u00fc\u00fd\u0163\u02d9"
+    ;
+
+    bool canEncode(dchar c)
+    {
+        if (c < 0x80) return true;
+        if (c >= 0xFFFD) return false;
+        foreach(wchar d;charMap) { if (c == d) return true; }
+        return false;
+    }
+
+    bool isValidCodeUnit(Windows1250Char c)
+    {
+        if (c < 0x80) return true;
+        return (charMap[c-0x80] != 0xFFFD);
+    }
+
+    size_t encodedLength(dchar c)
+    in
+    {
+        assert(canEncode(c));
+    }
+    body
+    {
+        return 1;
+    }
+
+    void encodeViaWrite()(dchar c)
+    {
+        if (c < 0x80) {}
+        else if (c >= 0xFFFD) { c = '?'; }
+        else
+        {
+            ptrdiff_t n = -1;
+            foreach (i, wchar d; charMap)
+            {
+                if (c == d)
+                {
+                    n = i;
+                    break;
+                }
+            }
+            c = n == -1 ? '?' : 0x80 + cast(dchar) n;
+        }
+        write(cast(Windows1250Char)c);
+    }
+
+    void skipViaRead()()
+    {
+        read();
+    }
+
+    dchar decodeViaRead()()
+    {
+        Windows1250Char c = read();
+        return (c >= 0x80) ? charMap[c-0x80] : c;
+    }
+
+    dchar safeDecodeViaRead()()
+    {
+        Windows1250Char c = read();
+        dchar d = (c >= 0x80) ? charMap[c-0x80] : c;
+        return d == 0xFFFD ? INVALID_SEQUENCE : d;
+    }
+
+    dchar decodeReverseViaRead()()
+    {
+        Windows1250Char c = read();
+        return (c >= 0x80) ? charMap[c-0x80] : c;
     }
 
     @property EString replacementSequence()
@@ -1097,7 +1337,7 @@ template EncoderInstance(CharType : wchar)
     }
     body
     {
-                return (c < 0x10000) ? 1 : 2;
+        return (c < 0x10000) ? 1 : 2;
     }
 
     void encodeViaWrite()(dchar c)
@@ -1194,7 +1434,7 @@ template EncoderInstance(CharType : dchar)
     }
     body
     {
-                return 1;
+        return 1;
     }
 
     void encodeViaWrite()(dchar c)
@@ -1244,7 +1484,8 @@ Returns true if c is a valid code point
  Supersedes:
  This function supersedes $(D std.utf.startsValidDchar()).
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     c = the code point to be tested
@@ -1260,7 +1501,8 @@ bool isValidCodePoint(dchar c)
  The type of encoding cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding type.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
  */
 @property string encodingName(T)()
 {
@@ -1275,6 +1517,8 @@ unittest
     assert(encodingName!(dchar) == "UTF-32");
     assert(encodingName!(AsciiChar) == "ASCII");
     assert(encodingName!(Latin1Char) == "ISO-8859-1");
+    assert(encodingName!(Latin2Char) == "ISO-8859-2");
+    assert(encodingName!(Windows1250Char) == "windows-1250");
     assert(encodingName!(Windows1252Char) == "windows-1252");
 }
 
@@ -1285,7 +1529,8 @@ unittest
  The type of encoding cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding type.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
  */
 bool canEncode(E)(dchar c)
 {
@@ -1295,9 +1540,14 @@ bool canEncode(E)(dchar c)
 ///
 unittest
 {
-     assert( canEncode!(Latin1Char)('A'));
+    assert( canEncode!(Latin1Char)('A'));
+    assert( canEncode!(Latin2Char)('A'));
     assert(!canEncode!(AsciiChar)('\u00A0'));
     assert( canEncode!(Latin1Char)('\u00A0'));
+    assert( canEncode!(Latin2Char)('\u00A0'));
+    assert( canEncode!(Windows1250Char)('\u20AC'));
+    assert(!canEncode!(Windows1250Char)('\u20AD'));
+    assert(!canEncode!(Windows1250Char)('\uFFFD'));
     assert( canEncode!(Windows1252Char)('\u20AC'));
     assert(!canEncode!(Windows1252Char)('\u20AD'));
     assert(!canEncode!(Windows1252Char)('\uFFFD'));
@@ -1309,7 +1559,8 @@ unittest
  not be legal in ASCII, because ASCII code units must always be in the range
  0x00 to 0x7F.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     c = the code unit to be tested
@@ -1327,6 +1578,8 @@ unittest
     assert( isValidCodeUnit(cast(wchar)0xD800));
     assert(!isValidCodeUnit(cast(dchar)0xD800));
     assert(!isValidCodeUnit(cast(AsciiChar)0xA0));
+    assert( isValidCodeUnit(cast(Windows1250Char)0x80));
+    assert(!isValidCodeUnit(cast(Windows1250Char)0x81));
     assert( isValidCodeUnit(cast(Windows1252Char)0x80));
     assert(!isValidCodeUnit(cast(Windows1252Char)0x81));
 }
@@ -1339,7 +1592,8 @@ unittest
  function returns a bool indicating whether the input was valid or not,
  whereas the older function would throw an exception.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string to be tested
@@ -1360,7 +1614,8 @@ unittest
  Returns the length of the longest possible substring, starting from
  the first code unit, which is validly encoded.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string to be tested
@@ -1388,7 +1643,8 @@ size_t validLength(E)(const(E)[] s)
  character repertoire contains it, otherwise invalid sequences will be
  replaced with '?'.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string to be sanitized
@@ -1439,15 +1695,16 @@ unittest
 }
 
 /**
-Returns the length of the first encoded sequence.
+ Returns the length of the first encoded sequence.
 
-The input to this function MUST be validly encoded.
-This is enforced by the function's in-contract.
+ The input to this function MUST be validly encoded.
+ This is enforced by the function's in-contract.
 
-Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
-Params:
-s = the string to be sliced
+ Params:
+ s = the string to be sliced
  */
 size_t firstSequence(E)(const(E)[] s)
 in
@@ -1476,7 +1733,8 @@ unittest
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string to be sliced
@@ -1510,7 +1768,8 @@ unittest
  Supersedes:
  This function supersedes std.utf.toUTFindex().
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string to be counted
@@ -1549,7 +1808,8 @@ unittest
  This function supersedes std.utf.decode(), however, note that the
  function codePoints() supersedes it more conveniently.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string whose first code point is to be decoded
@@ -1575,7 +1835,8 @@ body
  The input to this function MUST be validly encoded.
  This is enforced by the function's in-contract.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string whose first code point is to be decoded
@@ -1601,7 +1862,8 @@ body
  If an invalid sequence is found at the start of the string, this
  function will remove it, and return the value INVALID_SEQUENCE.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string whose first code point is to be decoded
@@ -1625,7 +1887,8 @@ body
  The type of the output cannot be deduced. Therefore, it is necessary to
  explicitly specify the encoding as a template parameter.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     c = the code point to be encoded
@@ -1656,7 +1919,8 @@ body
  This function supersedes std.utf.encode(), however, note that the
  function codeUnits() supersedes it more conveniently.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     c = the code point to be encoded
@@ -1688,7 +1952,8 @@ body
  This function supersedes std.utf.encode(), however, note that the
  function codeUnits() supersedes it more conveniently.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     c     = the code point to be encoded
@@ -1827,7 +2092,8 @@ unittest
  This function supersedes std.utf.encode(), however, note that the
  function codeUnits() supersedes it more conveniently.
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     c  = the code point to be encoded
@@ -1878,7 +2144,8 @@ size_t encode(Tgt, Src, R)(in Src[] s, R range)
  Supersedes:
  This function supersedes std.utf.decode().
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = the string to be decoded
@@ -1930,7 +2197,8 @@ unittest
  Supersedes:
  This function supersedes std.utf.encode().
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     c = the code point to be encoded
@@ -1967,7 +2235,8 @@ unittest
  std.utf.toUTF32()
  (but note that to!() supersedes it more conveniently).
 
- Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
+ WINDOWS-1252
 
  Params:
     s = Source string. $(B Must) be validly encoded.
@@ -2049,7 +2318,7 @@ unittest
 
         string asciiCharString = to!string(iota(0, 128, 1));
 
-        alias Types = TypeTuple!(string, Latin1String, AsciiString, Windows1252String, dstring, wstring);
+        alias Types = TypeTuple!(string, Latin1String, Latin2String, AsciiString, Windows1250String, Windows1252String, dstring, wstring);
         foreach(S; Types)
             foreach(D; Types)
             {
@@ -2450,7 +2719,7 @@ class EncodingSchemeASCII : EncodingScheme
 
         override size_t encodedLength(dchar c)
         {
-                return std.encoding.encodedLength!(AsciiChar)(c);
+            return std.encoding.encodedLength!(AsciiChar)(c);
         }
 
         override size_t encode(dchar c, ubyte[] buffer)
@@ -2534,12 +2803,12 @@ class EncodingSchemeLatin1 : EncodingScheme
 
         override size_t encodedLength(dchar c)
         {
-                return std.encoding.encodedLength!(Latin1Char)(c);
+            return std.encoding.encodedLength!(Latin1Char)(c);
         }
 
         override size_t encode(dchar c, ubyte[] buffer)
         {
-                auto r = cast(Latin1Char[])buffer;
+            auto r = cast(Latin1Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
@@ -2554,6 +2823,150 @@ class EncodingSchemeLatin1 : EncodingScheme
         override dchar safeDecode(ref const(ubyte)[] s)
         {
             auto t = cast(const(Latin1Char)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override @property immutable(ubyte)[] replacementSequence()
+        {
+            return cast(immutable(ubyte)[])"?";
+        }
+    }
+}
+
+/**
+ EncodingScheme to handle Latin-2
+
+ This scheme recognises the following names:
+                 "Latin 2",
+                 "ISO-8859-2",
+                 "ISO_8859-2",
+                 "ISO_8859-2:1999",
+                 "Windows-28592"
+ */
+class EncodingSchemeLatin2 : EncodingScheme
+{
+    shared static this()
+    {
+        EncodingScheme.register("std.encoding.EncodingSchemeLatin2");
+    }
+
+    const
+    {
+        override string[] names()
+        {
+            return
+            [
+                cast(string)
+                "Latin 2",
+                "ISO-8859-2",
+                "ISO_8859-2",
+                "ISO_8859-2:1999",
+                "Windows-28592"
+            ];
+        }
+
+        override string toString()
+        {
+            return "ISO-8859-2";
+        }
+
+        override bool canEncode(dchar c)
+        {
+            return std.encoding.canEncode!(Latin2Char)(c);
+        }
+
+        override size_t encodedLength(dchar c)
+        {
+            return std.encoding.encodedLength!(Latin2Char)(c);
+        }
+
+        override size_t encode(dchar c, ubyte[] buffer)
+        {
+            auto r = cast(Latin2Char[])buffer;
+            return std.encoding.encode(c,r);
+        }
+
+        override dchar decode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Latin2Char)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Latin2Char)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override @property immutable(ubyte)[] replacementSequence()
+        {
+            return cast(immutable(ubyte)[])"?";
+        }
+    }
+}
+
+/**
+ EncodingScheme to handle Windows-1250
+
+ This scheme recognises the following names:
+                 "windows-1250"
+ */
+class EncodingSchemeWindows1250 : EncodingScheme
+{
+    shared static this()
+    {
+        EncodingScheme.register("std.encoding.EncodingSchemeWindows1250");
+    }
+
+    const
+    {
+        override string[] names()
+        {
+            return
+            [
+                cast(string)
+                "windows-1250"
+            ];
+        }
+
+        override string toString()
+        {
+            return "windows-1250";
+        }
+
+        override bool canEncode(dchar c)
+        {
+            return std.encoding.canEncode!(Windows1250Char)(c);
+        }
+
+        override size_t encodedLength(dchar c)
+        {
+                return std.encoding.encodedLength!(Windows1250Char)(c);
+        }
+
+        override size_t encode(dchar c, ubyte[] buffer)
+        {
+                auto r = cast(Windows1250Char[])buffer;
+            return std.encoding.encode(c,r);
+        }
+
+        override dchar decode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Windows1250Char)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Windows1250Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;
@@ -2602,12 +3015,12 @@ class EncodingSchemeWindows1252 : EncodingScheme
 
         override size_t encodedLength(dchar c)
         {
-                return std.encoding.encodedLength!(Windows1252Char)(c);
+            return std.encoding.encodedLength!(Windows1252Char)(c);
         }
 
         override size_t encode(dchar c, ubyte[] buffer)
         {
-                auto r = cast(Windows1252Char[])buffer;
+            auto r = cast(Windows1252Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
@@ -2670,12 +3083,12 @@ class EncodingSchemeUtf8 : EncodingScheme
 
         override size_t encodedLength(dchar c)
         {
-                return std.encoding.encodedLength!(char)(c);
+            return std.encoding.encodedLength!(char)(c);
         }
 
         override size_t encode(dchar c, ubyte[] buffer)
         {
-                auto r = cast(char[])buffer;
+            auto r = cast(char[])buffer;
             return std.encoding.encode(c,r);
         }
 
@@ -2738,12 +3151,12 @@ class EncodingSchemeUtf16Native : EncodingScheme
 
         override size_t encodedLength(dchar c)
         {
-                return std.encoding.encodedLength!(wchar)(c);
+            return std.encoding.encodedLength!(wchar)(c);
         }
 
         override size_t encode(dchar c, ubyte[] buffer)
         {
-                auto r = cast(wchar[])buffer;
+            auto r = cast(wchar[])buffer;
             return wchar.sizeof * std.encoding.encode(c,r);
         }
 
@@ -2833,12 +3246,12 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
         override size_t encodedLength(dchar c)
         {
-                return std.encoding.encodedLength!(dchar)(c);
+            return std.encoding.encodedLength!(dchar)(c);
         }
 
         override size_t encode(dchar c, ubyte[] buffer)
         {
-                auto r = cast(dchar[])buffer;
+            auto r = cast(dchar[])buffer;
             return dchar.sizeof * std.encoding.encode(c,r);
         }
 
