@@ -288,6 +288,9 @@ struct JSONValue
         }
         else static if(isFloatingPoint!T)
         {
+            import std.math : isNaN, isInfinity;
+            enforce!JSONException(!arg.isNaN, "NaN is not a valid JSON value");
+            enforce!JSONException(!arg.isInfinity, "Infinity is not a valid JSON value");
             type_tag = JSON_TYPE.FLOAT;
             store.floating = arg;
         }
@@ -1396,4 +1399,18 @@ EOF";
 
     auto e = collectException!JSONException(parseJSON(s));
     assert(e.msg == "Unexpected character 'p'. (Line 5:3)", e.msg);
+}
+
+unittest
+{
+    // Bugzilla #14399: std.json cannot parse its own output for nan.
+    // current solution is to throw on attempting to construct a JSONValue from nan/inf
+    import std.exception : assertThrown;
+    assertThrown!JSONException(JSONValue(double.nan));
+    assertThrown!JSONException(JSONValue(float.infinity));
+    assertThrown!JSONException(JSONValue(-real.infinity));
+
+    // make sure it throws for opAssign too
+    JSONValue json;
+    assertThrown!JSONException(json = double.nan);
 }
