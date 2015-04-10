@@ -14,9 +14,9 @@ class NullLogger : Logger
 
     Params:
       lv = The $(D LogLevel) for the $(D NullLogger). By default the $(D LogLevel)
-      for $(D NullLogger) is $(D LogLevel.info).
+      for $(D NullLogger) is $(D LogLevel.all).
     */
-    this(const LogLevel lv = LogLevel.info) @safe
+    this(const LogLevel lv = LogLevel.all) @safe
     {
         super(lv);
         this.fatalHandler = delegate() {};
