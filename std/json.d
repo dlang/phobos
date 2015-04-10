@@ -57,6 +57,22 @@ import std.conv;
 import std.range.primitives;
 import std.array;
 import std.traits;
+import std.typecons : Flag;
+
+/**
+String literals used to represent special float values within JSON strings.
+*/
+enum JSONFloatLiteral : string
+{
+    nan         = "NaN",       /// string representation of floating-point NaN
+    inf         = "Infinite",  /// string representation of floating-point Infinity
+    negativeInf = "-Infinite", /// string representation of floating-point negative Infinity
+}
+
+/**
+Flag that enables encoding special float values (NaN/Inf) as strings.
+*/
+alias SpecialFloats = Flag!"SpecialFloats";
 
 /**
 JSON type enumeration
@@ -595,16 +611,18 @@ struct JSONValue
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue.
-    string toString() const
+    /// $(I specialFloats) will enable encoding NaN/Inf as strings.
+    string toString(in SpecialFloats specialFloats = SpecialFloats.no) const
     {
-        return toJSON(&this);
+        return toJSON(&this, false, specialFloats);
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue, like $(D toString), but
     /// also passes $(I true) as $(I pretty) argument.
-    string toPrettyString() const
+    /// $(I specialFloats) will enable encoding NaN/Inf as strings.
+    string toPrettyString(in SpecialFloats specialFloats = SpecialFloats.no) const
     {
-        return toJSON(&this, true);
+        return toJSON(&this, true, specialFloats);
     }
 }
 
@@ -833,20 +851,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                     isNegative = true;
                 }
 
-                // might be '-inf'
-                if(c == 'i' || c == 'I')
-                {
-                    isFloat = true;
-                    number.put(c);
-                    checkChar!(false, false)('n');
-                    number.put('n');
-                    checkChar!(false, false)('f');
-                    number.put('f');
-                }
-                else
-                {
-                    readInteger();
-                }
+                readInteger();
 
                 if(testChar('.'))
                 {
@@ -901,26 +906,10 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 
             case 'n':
             case 'N':
-                if (peekChar() == 'a' || peekChar == 'A') {
-                    value.type_tag = JSON_TYPE.FLOAT;
-                    value.store.floating = double.nan;
-                    checkChar!(false, false)('a');
-                    checkChar!(false, false)('n');
-                }
-                else {
-                    value.type_tag = JSON_TYPE.NULL;
-                    checkChar!(false, false)('u');
-                    checkChar!(false, false)('l');
-                    checkChar!(false, false)('l');
-                }
-                break;
-
-            case 'i':
-            case 'I':
-                value.type_tag = JSON_TYPE.FLOAT;
-                value.store.floating = double.infinity;
-                checkChar!(false, false)('n');
-                checkChar!(false, false)('f');
+                value.type_tag = JSON_TYPE.NULL;
+                checkChar!(false, false)('u');
+                checkChar!(false, false)('l');
+                checkChar!(false, false)('l');
                 break;
 
             default:
@@ -941,8 +930,9 @@ Any Object types will be serialized in a key-sorted order.
 
 If $(D pretty) is false no whitespaces are generated.
 If $(D pretty) is true serialized string is formatted to be human-readable.
+If $(D specialFloats) is SpecialFloats.yes, encode special floats (NaN/Infinity) as strings.
 */
-string toJSON(in JSONValue* root, in bool pretty = false)
+string toJSON(in JSONValue* root, in bool pretty = false, in SpecialFloats specialFloats = SpecialFloats.no)
 {
     auto json = appender!string();
 
@@ -1064,7 +1054,31 @@ string toJSON(in JSONValue* root, in bool pretty = false)
                 break;
 
             case JSON_TYPE.FLOAT:
-                json.put(to!string(value.store.floating));
+                import std.math : isNaN, isInfinity;
+
+                auto val = value.store.floating;
+
+                if (val.isNaN) {
+                    if (specialFloats) {
+                        toString(JSONFloatLiteral.nan);
+                    }
+                    else {
+                        throw new JSONException(
+                            "Cannot encode NaN. Consider passing the specialFloats flag.");
+                    }
+                }
+                else if (val.isInfinity) {
+                    if (specialFloats) {
+                        toString((val > 0) ?  JSONFloatLiteral.inf : JSONFloatLiteral.negativeInf);
+                    }
+                    else {
+                        throw new JSONException(
+                            "Cannot encode Infinity. Consider passing the specialFloats flag.");
+                    }
+                }
+                else {
+                    json.put(to!string(val));
+                }
                 break;
 
             case JSON_TYPE.TRUE:
@@ -1355,31 +1369,6 @@ unittest {
   assert(jv.toPrettyString == json);
 }
 
-// test that parseJSON handles floating-point nan, inf, and -inf.
-unittest {
-    import std.math : isNaN, isInfinity;
-    auto json = parseJSON(`{"a": nan, "b": inf, "c": -inf}`);
-    assert(json.object["a"].floating.isNaN);
-    assert(json.object["b"].floating.isInfinity && json.object["b"].floating > 0);
-    assert(json.object["c"].floating.isInfinity && json.object["c"].floating < 0);
-
-    auto json2 = parseJSON(`{"a": NaN, "b": Inf, "c": -INF}`);
-    assert(json2.object["a"].floating.isNaN);
-    assert(json2.object["b"].floating.isInfinity && json.object["b"].floating > 0);
-    assert(json2.object["c"].floating.isInfinity && json.object["c"].floating < 0);
-
-    // make sure std.json can parse its own output
-    double toJsonAndBack(double val) {
-        return JSONValue(val).toString().parseJSON().floating;
-    }
-
-    assert(toJsonAndBack(double.nan).isNaN);
-    assert(toJsonAndBack(double.infinity).isInfinity);
-    assert(toJsonAndBack(double.infinity) > 0);
-    assert(toJsonAndBack(-double.infinity).isInfinity);
-    assert(toJsonAndBack(-double.infinity) < 0);
-}
-
 deprecated unittest
 {
     // Bugzilla 12332
@@ -1450,4 +1439,20 @@ EOF";
 
     auto e = collectException!JSONException(parseJSON(s));
     assert(e.msg == "Unexpected character 'p'. (Line 5:3)", e.msg);
+}
+
+// handling of special float values (NaN, Inf, -Inf)
+unittest
+{
+    import std.exception : assertThrown;
+
+    // when passing SpecialFloats.yes, encode NaN/Inf as strings
+    assert(JSONValue(float.nan).toString(SpecialFloats.yes)       == q{"NaN"});
+    assert(JSONValue(double.infinity).toString(SpecialFloats.yes) == q{"Infinite"});
+    assert(JSONValue(-real.infinity).toString(SpecialFloats.yes)  == q{"-Infinite"});
+
+    // when passing SpecialFloats.no, thow on converting NaN/Inf
+    assertThrown!JSONException(JSONValue(float.nan).toString);
+    assertThrown!JSONException(JSONValue(double.infinity).toString);
+    assertThrown!JSONException(JSONValue(-real.infinity).toString);
 }
