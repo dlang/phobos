@@ -4256,6 +4256,49 @@ if (!is(T == class) && !(is(T == interface)))
             _store._count = 1;
         }
 
+        private void move(ref T source)
+        {
+            import core.memory : GC;
+            import core.stdc.stdlib : malloc;
+            import core.stdc.string : memcpy;
+            import std.exception : enforce;
+
+            _store = cast(Impl*) enforce(malloc(Impl.sizeof));
+            static if (hasIndirections!T)
+                GC.addRange(&_store._payload, T.sizeof);
+
+            // Can't use std.algorithm.move(source, _store._payload)
+            // here because it requires the target to be initialized.
+            // Might be worth to add this as `moveEmplace`
+
+            // Can avoid destructing result.
+            static if (hasElaborateAssign!T || !isAssignable!T)
+                memcpy(&_store._payload, &source, T.sizeof);
+            else
+                _store._payload = source;
+
+            // If the source defines a destructor or a postblit hook, we must obliterate the
+            // object in order to avoid double freeing and undue aliasing
+            static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+            {
+                import std.algorithm.searching : endsWith;
+
+                static T empty;
+                static if (T.tupleof.length > 0 &&
+                           T.tupleof[$-1].stringof.endsWith("this"))
+                {
+                    // If T is nested struct, keep original context pointer
+                    memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+                }
+                else
+                {
+                    memcpy(&source, &empty, T.sizeof);
+                }
+            }
+
+            _store._count = 1;
+        }
+
         /**
            Returns $(D true) if and only if the underlying store has been
            allocated and initialized.
@@ -4303,6 +4346,12 @@ Postcondition: $(D refCountedStore.isInitialized)
     this(A...)(auto ref A args) if (A.length > 0)
     {
         _refCounted.initialize(args);
+    }
+
+    /// Ditto
+    this(T val)
+    {
+        _refCounted.move(val);
     }
 
 /**
@@ -4515,6 +4564,51 @@ unittest
     RefCounted!int b;
     b = a; //This should not assert either
     assert(b == 5);
+}
+
+/**
+ * Initializes a `RefCounted` with `val`. The template parameter
+ * `T` of `RefCounted` is inferred from `val`.
+ * This function can be used to move non-copyable values to the heap.
+ * It also disables the `autoInit` option of `RefCounted`.
+ *
+ * Params:
+ *   val = The value to be reference counted
+ * Returns:
+ *   An initialized $(D RefCounted) containing $(D val).
+ * See_Also:
+ *   $(WEB http://en.cppreference.com/w/cpp/memory/shared_ptr/make_shared, C++'s make_shared)
+ */
+RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
+{
+    typeof(return) res;
+    res._refCounted.move(val);
+    return res;
+}
+
+///
+unittest
+{
+    static struct File
+    {
+        string name;
+        @disable this(this); // not copyable
+        ~this() { name = null; }
+    }
+
+    auto file = File("name");
+    assert(file.name == "name");
+    // file cannot be copied and has unique ownership
+    static assert(!__traits(compiles, {auto file2 = file;}));
+
+    // make the file refcounted to share ownership
+    import std.algorithm.mutation : move;
+    auto rcFile = refCounted(move(file));
+    assert(rcFile.name == "name");
+    assert(file.name == null);
+    auto rcFile2 = rcFile;
+    assert(rcFile.refCountedStore.refCount == 2);
+    // file gets properly closed when last reference is dropped
 }
 
 /**
