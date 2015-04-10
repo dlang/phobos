@@ -2692,7 +2692,6 @@ class EncodingSchemeASCII : EncodingScheme
         {
             return
             [
-                cast(string)
                 "ANSI_X3.4-1968",
                 "ANSI_X3.4-1986",
                 "ASCII",
@@ -2778,7 +2777,6 @@ class EncodingSchemeLatin1 : EncodingScheme
         {
             return
             [
-                cast(string)
                 "CP819",
                 "IBM819",
                 "ISO-8859-1",
@@ -2858,12 +2856,11 @@ class EncodingSchemeLatin2 : EncodingScheme
         {
             return
             [
-                cast(string)
                 "Latin 2",
                 "ISO-8859-2",
                 "ISO_8859-2",
                 "ISO_8859-2:1999",
-                "Windows-28592"
+                "windows-28592"
             ];
         }
 
@@ -2930,7 +2927,6 @@ class EncodingSchemeWindows1250 : EncodingScheme
         {
             return
             [
-                cast(string)
                 "windows-1250"
             ];
         }
@@ -2998,7 +2994,6 @@ class EncodingSchemeWindows1252 : EncodingScheme
         {
             return
             [
-                cast(string)
                 "windows-1252"
             ];
         }
@@ -3066,7 +3061,6 @@ class EncodingSchemeUtf8 : EncodingScheme
         {
             return
             [
-                cast(string)
                 "UTF-8"
             ];
         }
