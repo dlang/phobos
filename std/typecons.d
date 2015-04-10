@@ -4244,12 +4244,14 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
+            import core.exception : onOutOfMemoryError;
             import core.memory : GC;
             import core.stdc.stdlib : malloc;
             import std.conv : emplace;
-            import std.exception : enforce;
 
-            _store = cast(Impl*) enforce(malloc(Impl.sizeof));
+            _store = cast(Impl*)malloc(Impl.sizeof);
+            if (_store is null)
+                onOutOfMemoryError();
             static if (hasIndirections!T)
                 GC.addRange(&_store._payload, T.sizeof);
             emplace(&_store._payload, args);
@@ -4258,12 +4260,14 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void move(ref T source)
         {
+            import core.exception : onOutOfMemoryError;
             import core.memory : GC;
             import core.stdc.stdlib : malloc;
             import core.stdc.string : memcpy;
-            import std.exception : enforce;
 
-            _store = cast(Impl*) enforce(malloc(Impl.sizeof));
+            _store = cast(Impl*)malloc(Impl.sizeof);
+            if (_store is null)
+                onOutOfMemoryError();
             static if (hasIndirections!T)
                 GC.addRange(&_store._payload, T.sizeof);
 
