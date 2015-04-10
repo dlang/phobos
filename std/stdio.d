@@ -38,6 +38,7 @@ else version (CRuntime_DigitalMars)
 {
     // Specific to the way Digital Mars C does stdio
     version = DIGITAL_MARS_STDIO;
+    version(Windows) version = DIGITAL_MARS_STDIO_ON_WINDOWS;
 }
 
 version (linux)
@@ -380,8 +381,10 @@ Throws: $(D ErrnoException) if the file could not be opened.
         import std.conv : text;
         import std.exception : errnoEnforce;
 
-        version(Windows)
+        version(DIGITAL_MARS_STDIO_ON_WINDOWS)
         {
+            // Workaround for Issue 7648
+            
             static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess,
                 DWORD dwShareMode, SECURITY_ATTRIBUTES *lpSecurityAttributes,
                 DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes,
@@ -393,27 +396,9 @@ Throws: $(D ErrnoException) if the file could not be opened.
                     dwFlagsAndAttributes, hTemplateFile);
             }
 
-            static trustedHandleToFD(HANDLE h, in char[] stdioOpenmode) @trusted
+            static trustedHandleToFD(HANDLE h, int flags) @trusted
             {
-                version (DIGITAL_MARS_STDIO)
-                    return _handleToFD(h, FHND_DEVICE);
-                else // MSVCRT
-                {
-                    int mode;
-                    modeLoop:
-                    foreach (c; stdioOpenmode)
-                        switch (c)
-                        {
-                            case 'r': mode |= _O_RDONLY; break;
-                            case '+': mode &=~_O_RDONLY; break;
-                            case 'a': mode |= _O_APPEND; break;
-                            case 'b': mode |= _O_BINARY; break;
-                            case 't': mode |= _O_TEXT;   break;
-                            case ',': break modeLoop;
-                            default: break;
-                        }
-                    return _open_osfhandle(cast(intptr_t)h, mode);
-                }
+                return _handleToFD(h, flags);
             }
 
             DWORD access, creation;
@@ -443,7 +428,9 @@ Throws: $(D ErrnoException) if the file could not be opened.
                     default: break;
                 }
 
-            auto h = trustedCreateFileW(name, access, FILE_SHARE_READ, null,
+            auto h = trustedCreateFileW(name, access,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, 
+                null,
                 creation,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 cast(HANDLE) null);
@@ -452,7 +439,7 @@ Throws: $(D ErrnoException) if the file could not be opened.
                 text("Cannot open file `", name, "' in mode '",
                     stdioOpenmode, "'"));
 
-            auto fd = trustedHandleToFD(h, stdioOpenmode);
+            auto fd = trustedHandleToFD(h, FHND_DEVICE);
             errnoEnforce(fd >= 0,
                 text("Cannot open file `", name, "' in mode '",
                     stdioOpenmode, "'"));
@@ -479,13 +466,6 @@ Throws: $(D ErrnoException) if the file could not be opened.
                     seek(size);
             }
         }
-    }
-
-    unittest
-    {
-        // Issue 7648
-        File("Фёдор.txt", "wb").writeln("Петруха с тобой?");
-        scope(exit) remove("Фёдор.txt");
     }
 
     ~this() @safe
@@ -4632,11 +4612,6 @@ version(unittest) string testFilename(string file = __FILE__, size_t line = __LI
     import std.conv : text;
     import std.path : baseName;
 
-    // Non-ASCII characters can't be used because of snn.lib @@@BUG8643@@@
-    version(DIGITAL_MARS_STDIO)
-        return text("deleteme-.", baseName(file), ".", line);
-    else
-
-        // filename intentionally contains non-ASCII (Russian) characters
-        return text("deleteme-детка.", baseName(file), ".", line);
+    // filename intentionally contains non-ASCII (Russian) characters for test Issue 7648
+    return text("deleteme-детка.", baseName(file), ".", line);
 }
