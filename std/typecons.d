@@ -2343,7 +2343,10 @@ struct NullableRef(T)
     private T* _value;
 
 /**
-Constructor binding $(D this) with $(D value).
+Constructor binding $(D this) to $(D value).
+
+Params:
+    value = The value to bind to.
  */
     this(T* value) @safe pure nothrow
     {
@@ -2369,18 +2372,46 @@ Constructor binding $(D this) with $(D value).
 
 /**
 Binds the internal state to $(D value).
+
+Params:
+    value = A pointer to a value of type `T` to bind this `NullableRef` to.
  */
     void bind(T* value) @safe pure nothrow
     {
         _value = value;
     }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr = new int(42);
+        assert(nr == 42);
+        
+        int* n = new int(1);
+        nr.bind(n);
+        assert(nr == 1);
+    }
 
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
+
+Returns:
+    true if `this` is in the null state, otherwise false.
  */
     @property bool isNull() const @safe pure nothrow
     {
         return _value is null;
+    }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr;
+        assert(nr.isNull);
+        
+        int* n = new int(42);
+        nr.bind(n);
+        assert(!nr.isNull && nr == 42);
     }
 
 /**
@@ -2390,9 +2421,25 @@ Forces $(D this) to the null state.
     {
         _value = null;
     }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr = new int(42);
+        assert(!nr.isNull);
+        
+        nr.nullify();
+        assert(nr.isNull);
+    }
 
 /**
 Assigns $(D value) to the internally-held state.
+
+Params:
+    value = A value of type `T` to assign to this `NullableRef`.
+            If the internal state of this `NullableRef` has not
+            been initialized, an error will be thrown in
+            non-release mode.
  */
     void opAssign()(T value)
         if (isAssignable!T) //@@@9416@@@
@@ -2400,6 +2447,21 @@ Assigns $(D value) to the internally-held state.
         enum message = "Called `opAssign' on null NullableRef!" ~ T.stringof ~ ".";
         assert(!isNull, message);
         *_value = value;
+    }
+    
+    ///
+    unittest
+    {
+        import std.exception: assertThrown, assertNotThrown;
+        
+        NullableRef!int nr;
+        assert(nr.isNull);
+        assertThrown!Throwable(nr = 42);
+        
+        nr.bind(new int(0));
+        assert(!nr.isNull);
+        assertNotThrown!Throwable(nr = 42);
+        assert(nr == 42);
     }
 
 /**
@@ -2411,6 +2473,20 @@ This function is also called for the implicit conversion to $(D T).
         enum message = "Called `get' on null NullableRef!" ~ T.stringof ~ ".";
         assert(!isNull, message);
         return *_value;
+    }
+    
+    ///
+    unittest
+    {
+        import std.exception: assertThrown, assertNotThrown;
+        
+        NullableRef!int nr;
+        //`get` is implicitly called. Will throw 
+        //an error in non-release mode
+        assertThrown!Throwable(nr == 0);
+        
+        nr.bind(new int(0));
+        assertNotThrown!Throwable(nr == 0);
     }
 
 /**
