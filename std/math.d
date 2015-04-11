@@ -2605,6 +2605,38 @@ int ilogb(real x)  @trusted nothrow @nogc
 alias FP_ILOGB0   = core.stdc.math.FP_ILOGB0;
 alias FP_ILOGBNAN = core.stdc.math.FP_ILOGBNAN;
 
+@trusted nothrow @nogc unittest
+{
+    assert(ilogb(real.nan) == FP_ILOGBNAN);
+    assert(ilogb(-real.nan) == FP_ILOGBNAN);
+    assert(ilogb(0.0) == FP_ILOGB0);
+    assert(ilogb(-0.0) == FP_ILOGB0);
+    assert(ilogb(real.infinity) == int.max);
+    assert(ilogb(-real.infinity) == int.max);
+    assert(ilogb(2.0) == 1);
+    assert(ilogb(2.0001) == 1);
+    assert(ilogb(1.9999) == 0);
+    assert(ilogb(0.5) == -1);
+    assert(ilogb(123.123) == 6);
+    assert(ilogb(-123.123) == 6);
+    assert(ilogb(0.123) == -4);
+    assert(ilogb(-double.min_normal) == -1022);
+    assert(ilogb(-float.min_normal) == -126);
+    // subnormals
+    assert(ilogb(nextUp(-double.min_normal)) == -1023);
+    assert(ilogb(nextUp(-0.0)) == -1074);
+    assert(ilogb(nextUp(-float.min_normal)) == -127);
+    assert(ilogb(nextUp(-0.0F)) == -149);
+    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended) {
+        assert(ilogb(-real.min_normal) == -16382);
+        assert(ilogb(nextUp(-real.min_normal)) == -16383);
+        assert(ilogb(nextUp(-0.0L)) == -16445);
+    } else static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble) {
+        assert(ilogb(-real.min_normal) == -1022);
+        assert(ilogb(nextUp(-real.min_normal)) == -1023);
+        assert(ilogb(nextUp(-0.0L)) == -1074);
+    }
+}
 
 /*******************************************
  * Compute n * 2$(SUPERSCRIPT exp)
