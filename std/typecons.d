@@ -2565,33 +2565,37 @@ The name came from
 $(WEB search.cpan.org/~sburke/Class-_BlackHole-0.04/lib/Class/_BlackHole.pm, Class::_BlackHole)
 Perl module by Sean M. Burke.
 
-Example:
---------------------
-abstract class C
-{
-    int m_value;
-    this(int v) { m_value = v; }
-    int value() @property { return m_value; }
-
-    abstract real realValue() @property;
-    abstract void doSomething();
-}
-
-void main()
-{
-    auto c = new BlackHole!C(42);
-    writeln(c.value);     // prints "42"
-
-    // Abstract functions are implemented as do-nothing:
-    writeln(c.realValue); // prints "NaN"
-    c.doSomething();      // does nothing
-}
---------------------
+Params:
+    Base = A non-final class for `BlackHole` to inherit from.
 
 See_Also:
-  AutoImplement, generateEmptyFunction
+  $(LREF AutoImplement), $(LREF generateEmptyFunction)
  */
 alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFunction);
+
+///
+unittest
+{
+    import std.math: isNaN;
+
+    static abstract class C
+    {
+        int m_value;
+        this(int v) { m_value = v; }
+        int value() @property { return m_value; }
+
+        abstract real realValue() @property;
+        abstract void doSomething();
+    }
+
+    auto c = new BlackHole!C(42);
+    assert(c.value == 42);
+
+    // Returns real.init which is NaN
+    assert(c.realValue.isNaN);
+    // Abstract functions are implemented as do-nothing
+    c.doSomething();
+}
 
 unittest
 {
