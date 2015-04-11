@@ -3413,7 +3413,7 @@ private static:
 
 
 /**
-Predefined how-policies for $(D AutoImplement).  These templates are used by
+Predefined how-policies for $(D AutoImplement).  These templates are also used by
 $(D BlackHole) and $(D WhiteHole), respectively.
  */
 template generateEmptyFunction(C, func.../+[BUG 4217]+/)
