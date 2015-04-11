@@ -328,26 +328,37 @@ pure nothrow unittest
 alias CaseSensitive = Flag!"caseSensitive";
 
 /++
-    Returns the index of the first occurrence of $(D c) in $(D s). If $(D c)
-    is not found, then $(D -1) is returned.
+    Searches for character in range.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    Params:
+        s = string or InputRange of characters to search in correct UTF format
+        c = character to search for
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns:
+        the index of the first occurrence of $(D c) in $(D s). If $(D c)
+        is not found, then $(D -1) is returned.
+        If the parameters are not valid UTF, the result will still
+        be in the range [-1 .. s.length], but will not be reliable otherwise.
   +/
-ptrdiff_t indexOf(Char)(in Char[] s, in dchar c,
+ptrdiff_t indexOf(Range)(Range s, in dchar c,
         in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     import std.ascii : toLower, isASCII;
     import std.uni : toLower;
+    import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
+    alias Char = Unqual!(ElementEncodingType!Range);
+
     if (cs == CaseSensitive.yes)
     {
-        static if (Char.sizeof == 1)
+        static if (Char.sizeof == 1 && isSomeString!Range)
         {
             import core.stdc.string : memchr;
             if (std.ascii.isASCII(c) && !__ctfe)
             {                                               // Plain old ASCII
                 auto trustedmemchr() @trusted { return cast(Char*)memchr(s.ptr, c, s.length); }
-                auto p = trustedmemchr();
+                const p = trustedmemchr();
                 if (p)
                     return p - s.ptr;
                 else
@@ -355,12 +366,75 @@ ptrdiff_t indexOf(Char)(in Char[] s, in dchar c,
             }
         }
 
-        // c is a universal character
-        foreach (ptrdiff_t i, dchar c2; s)
+        static if (Char.sizeof == 1)
         {
-            if (c == c2)
-                return i;
+            if (c <= 0x7F)
+            {
+                ptrdiff_t i;
+                foreach (const c2; s)
+                {
+                    if (c == c2)
+                        return i;
+                    ++i;
+                }
+            }
+            else
+            {
+                ptrdiff_t i;
+                foreach (const c2; s.byDchar())
+                {
+                    if (c == c2)
+                        return i;
+                    i += codeLength!Char(c2);
+                }
+            }
         }
+        else static if (Char.sizeof == 2)
+        {
+            if (c <= 0xFFFF)
+            {
+                ptrdiff_t i;
+                foreach (const c2; s)
+                {
+                    if (c == c2)
+                        return i;
+                    ++i;
+                }
+            }
+            else if (c <= 0x10FFFF)
+            {
+                // Encode UTF-16 surrogate pair
+                const wchar c1 = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+                const wchar c2 = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
+                ptrdiff_t i;
+                for (auto r = s.byCodeUnit(); !r.empty; r.popFront())
+                {
+                    if (c1 == r.front)
+                    {
+                        r.popFront();
+                        if (r.empty)    // invalid UTF - missing second of pair
+                            break;
+                        if (c2 == r.front)
+                            return i;
+                        ++i;
+                    }
+                    ++i;
+                }
+            }
+        }
+        else static if (Char.sizeof == 4)
+        {
+            ptrdiff_t i;
+            foreach (const c2; s)
+            {
+                if (c == c2)
+                    return i;
+                ++i;
+            }
+        }
+        else
+            static assert(0);
+        return -1;
     }
     else
     {
@@ -368,22 +442,24 @@ ptrdiff_t indexOf(Char)(in Char[] s, in dchar c,
         {                                                   // Plain old ASCII
             auto c1 = cast(char) std.ascii.toLower(c);
 
-            foreach (ptrdiff_t i, c2; s)
+            ptrdiff_t i;
+            foreach (const c2; s.byCodeUnit())
             {
-                auto c3 = std.ascii.toLower(c2);
-                if (c1 == c3)
+                if (c1 == std.ascii.toLower(c2))
                     return i;
+                ++i;
             }
         }
         else
         {                                                   // c is a universal character
             auto c1 = std.uni.toLower(c);
 
-            foreach (ptrdiff_t i, dchar c2; s)
+            ptrdiff_t i;
+            foreach (const c2; s.byDchar())
             {
-                auto c3 = std.uni.toLower(c2);
-                if (c1 == c3)
+                if (c1 == std.uni.toLower(c2))
                     return i;
+                i += codeLength!Char(c2);
             }
         }
     }
@@ -396,6 +472,7 @@ ptrdiff_t indexOf(Char)(in Char[] s, in dchar c,
     debug(string) trustedPrintf("string.indexOf.unittest\n");
 
     import std.exception;
+    import std.utf : byChar, byWchar, byDchar;
     assertCTFEable!(
     {
     foreach (S; TypeTuple!(string, wstring, dstring))
@@ -422,6 +499,17 @@ ptrdiff_t indexOf(Char)(in Char[] s, in dchar c,
         assert(indexOf("hello\U00010143\u0100\U00010143", '\u0100', cs) == 9);
         assert(indexOf("hello\U00010143\u0100\U00010143"w, '\u0100', cs) == 7);
         assert(indexOf("hello\U00010143\u0100\U00010143"d, '\u0100', cs) == 6);
+
+        assert(indexOf("hello\U00010143\u0100\U00010143".byChar, '\u0100', cs) == 9);
+        assert(indexOf("hello\U00010143\u0100\U00010143".byWchar, '\u0100', cs) == 7);
+        assert(indexOf("hello\U00010143\u0100\U00010143".byDchar, '\u0100', cs) == 6);
+
+        assert(indexOf("hello\U000007FF\u0100\U00010143".byChar, 'l',      cs) == 2);
+        assert(indexOf("hello\U000007FF\u0100\U00010143".byChar, '\u0100', cs) == 7);
+        assert(indexOf("hello\U0000EFFF\u0100\U00010143".byChar, '\u0100', cs) == 8);
+
+        assert(indexOf("hello\U00010100".byWchar, '\U00010100', cs) == 5);
+        assert(indexOf("hello\U00010100".byWchar, '\U00010101', cs) == -1);
     }
     });
 }
