@@ -740,7 +740,7 @@ enum Latin1Char : ubyte { init }
 Defines an Latin1-encoded string (as an array of $(D
 immutable(Latin1Char))).
  */
-alias Latin1String = immutable(Latin1Char)[]; ///
+alias Latin1String = immutable(Latin1Char)[];
 
 template EncoderInstance(CharType : Latin1Char)
 {
@@ -816,7 +816,7 @@ enum Latin2Char : ubyte { init }
 Defines an Latin2-encoded string (as an array of $(D
 immutable(Latin2Char))).
  */
-alias Latin2String = immutable(Latin2Char)[]; ///
+alias Latin2String = immutable(Latin2Char)[];
 
 template EncoderInstance(CharType : Latin2Char)
 {
@@ -928,7 +928,7 @@ enum Windows1250Char : ubyte { init }
 Defines an Windows1250-encoded string (as an array of $(D
 immutable(Windows1250Char))).
  */
-alias Windows1250String = immutable(Windows1250Char)[]; ///
+alias Windows1250String = immutable(Windows1250Char)[];
 
 template EncoderInstance(CharType : Windows1250Char)
 {
@@ -1045,7 +1045,7 @@ enum Windows1252Char : ubyte { init }
 Defines an Windows1252-encoded string (as an array of $(D
 immutable(Windows1252Char))).
  */
-alias Windows1252String = immutable(Windows1252Char)[]; ///
+alias Windows1252String = immutable(Windows1252Char)[];
 
 template EncoderInstance(CharType : Windows1252Char)
 {
