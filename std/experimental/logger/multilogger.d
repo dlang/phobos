@@ -27,14 +27,14 @@ class MultiLogger : Logger
 
     Params:
       lv = The $(D LogLevel) for the $(D MultiLogger). By default the
-      $(D LogLevel) for $(D MultiLogger) is $(D LogLevel.info).
+      $(D LogLevel) for $(D MultiLogger) is $(D LogLevel.all).
 
     Example:
     -------------
     auto l1 = new MultiLogger(LogLevel.trace);
     -------------
     */
-    this(const LogLevel lv = LogLevel.info) @safe
+    this(const LogLevel lv = LogLevel.all) @safe
     {
         super(lv);
     }

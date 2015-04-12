@@ -44,7 +44,7 @@ fLogger.log(LogLevel.trace, 5 < 6, "Logging to the fileLogger"," with its defaul
 fLogger.fatal("Logging to the fileLogger with its warning LogLevel");
 -------------
 Additionally, this example shows how a new $(D FileLogger) is created.
-Indivitual $(D Logger) and the global log functions share commonly named
+Individual $(D Logger) and the global log functions share commonly named
 functions to log data.
 
 The names of the functions are as follows:

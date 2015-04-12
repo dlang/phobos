@@ -19,6 +19,7 @@
  *
  * Examples:
  * ---
+// Read existing zip file.
 import std.digest.crc, std.file, std.stdio, std.zip;
 
 void main(string[] args)
@@ -37,6 +38,26 @@ void main(string[] args)
         zip.expand(am);
         assert(am.expandedData.length == am.expandedSize);
     }
+}
+
+// Create and write new zip file.
+import std.file: write;
+import std.string: representation;
+
+void main()
+{
+    char[] data = "Test data.\n".dup;
+    // Create an ArchiveMember for the test file.
+    ArchiveMember am = new ArchiveMember();
+    am.name = "test.txt";
+    am.expandedData(data.representation);
+    // Create an archive and add the member.
+    ZipArchive zip = new ZipArchive();
+    zip.addMember(am);
+    // Build the archive
+    void[] compressed_data = zip.build();
+    // Write to a file
+    write("test.zip", compressed_data);
 }
  * ---
  *

@@ -2343,7 +2343,10 @@ struct NullableRef(T)
     private T* _value;
 
 /**
-Constructor binding $(D this) with $(D value).
+Constructor binding $(D this) to $(D value).
+
+Params:
+    value = The value to bind to.
  */
     this(T* value) @safe pure nothrow
     {
@@ -2369,18 +2372,46 @@ Constructor binding $(D this) with $(D value).
 
 /**
 Binds the internal state to $(D value).
+
+Params:
+    value = A pointer to a value of type `T` to bind this `NullableRef` to.
  */
     void bind(T* value) @safe pure nothrow
     {
         _value = value;
     }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr = new int(42);
+        assert(nr == 42);
+        
+        int* n = new int(1);
+        nr.bind(n);
+        assert(nr == 1);
+    }
 
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
+
+Returns:
+    true if `this` is in the null state, otherwise false.
  */
     @property bool isNull() const @safe pure nothrow
     {
         return _value is null;
+    }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr;
+        assert(nr.isNull);
+        
+        int* n = new int(42);
+        nr.bind(n);
+        assert(!nr.isNull && nr == 42);
     }
 
 /**
@@ -2390,9 +2421,25 @@ Forces $(D this) to the null state.
     {
         _value = null;
     }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr = new int(42);
+        assert(!nr.isNull);
+        
+        nr.nullify();
+        assert(nr.isNull);
+    }
 
 /**
 Assigns $(D value) to the internally-held state.
+
+Params:
+    value = A value of type `T` to assign to this `NullableRef`.
+            If the internal state of this `NullableRef` has not
+            been initialized, an error will be thrown in
+            non-release mode.
  */
     void opAssign()(T value)
         if (isAssignable!T) //@@@9416@@@
@@ -2400,6 +2447,21 @@ Assigns $(D value) to the internally-held state.
         enum message = "Called `opAssign' on null NullableRef!" ~ T.stringof ~ ".";
         assert(!isNull, message);
         *_value = value;
+    }
+    
+    ///
+    unittest
+    {
+        import std.exception: assertThrown, assertNotThrown;
+        
+        NullableRef!int nr;
+        assert(nr.isNull);
+        assertThrown!Throwable(nr = 42);
+        
+        nr.bind(new int(0));
+        assert(!nr.isNull);
+        assertNotThrown!Throwable(nr = 42);
+        assert(nr == 42);
     }
 
 /**
@@ -2411,6 +2473,20 @@ This function is also called for the implicit conversion to $(D T).
         enum message = "Called `get' on null NullableRef!" ~ T.stringof ~ ".";
         assert(!isNull, message);
         return *_value;
+    }
+    
+    ///
+    unittest
+    {
+        import std.exception: assertThrown, assertNotThrown;
+        
+        NullableRef!int nr;
+        //`get` is implicitly called. Will throw 
+        //an error in non-release mode
+        assertThrown!Throwable(nr == 0);
+        
+        nr.bind(new int(0));
+        assertNotThrown!Throwable(nr == 0);
     }
 
 /**
@@ -2565,33 +2641,37 @@ The name came from
 $(WEB search.cpan.org/~sburke/Class-_BlackHole-0.04/lib/Class/_BlackHole.pm, Class::_BlackHole)
 Perl module by Sean M. Burke.
 
-Example:
---------------------
-abstract class C
-{
-    int m_value;
-    this(int v) { m_value = v; }
-    int value() @property { return m_value; }
-
-    abstract real realValue() @property;
-    abstract void doSomething();
-}
-
-void main()
-{
-    auto c = new BlackHole!C(42);
-    writeln(c.value);     // prints "42"
-
-    // Abstract functions are implemented as do-nothing:
-    writeln(c.realValue); // prints "NaN"
-    c.doSomething();      // does nothing
-}
---------------------
+Params:
+    Base = A non-final class for `BlackHole` to inherit from.
 
 See_Also:
-  AutoImplement, generateEmptyFunction
+  $(LREF AutoImplement), $(LREF generateEmptyFunction)
  */
 alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFunction);
+
+///
+unittest
+{
+    import std.math: isNaN;
+
+    static abstract class C
+    {
+        int m_value;
+        this(int v) { m_value = v; }
+        int value() @property { return m_value; }
+
+        abstract real realValue() @property;
+        abstract void doSomething();
+    }
+
+    auto c = new BlackHole!C(42);
+    assert(c.value == 42);
+
+    // Returns real.init which is NaN
+    assert(c.realValue.isNaN);
+    // Abstract functions are implemented as do-nothing
+    c.doSomething();
+}
 
 unittest
 {
@@ -2638,32 +2718,35 @@ unittest
 
 /**
 $(D WhiteHole!Base) is a subclass of $(D Base) which automatically implements
-all abstract member functions as throw-always functions.  Each auto-implemented
-function fails with throwing an $(D Error) and does never return.  Useful for
-trapping use of not-yet-implemented functions.
+all abstract member functions as functions that always fail. These functions 
+simply throw an $(D Error) and never return. `Whitehole` is useful for 
+trapping the use of class member functions that haven't been implemented.
 
 The name came from
 $(WEB search.cpan.org/~mschwern/Class-_WhiteHole-0.04/lib/Class/_WhiteHole.pm, Class::_WhiteHole)
 Perl module by Michael G Schwern.
 
-Example:
---------------------
-class C
-{
-    abstract void notYetImplemented();
-}
-
-void main()
-{
-    auto c = new WhiteHole!C;
-    c.notYetImplemented(); // throws an Error
-}
---------------------
+Params:
+    Base = A non-final class for `WhiteHole` to inherit from.
 
 See_Also:
-  AutoImplement, generateAssertTrap
+  $(LREF AutoImplement), $(LREF generateAssertTrap)
  */
 alias WhiteHole(Base) = AutoImplement!(Base, generateAssertTrap, isAbstractFunction);
+
+///
+unittest
+{
+    import std.exception: assertThrown;
+
+    static class C
+    {
+        abstract void notYetImplemented();
+    }
+
+    auto c = new WhiteHole!C;
+    assertThrown!NotImplementedError(c.notYetImplemented()); // throws an Error
+}
 
 // / ditto
 class NotImplementedError : Error
@@ -3413,7 +3496,7 @@ private static:
 
 
 /**
-Predefined how-policies for $(D AutoImplement).  These templates are used by
+Predefined how-policies for $(D AutoImplement).  These templates are also used by
 $(D BlackHole) and $(D WhiteHole), respectively.
  */
 template generateEmptyFunction(C, func.../+[BUG 4217]+/)

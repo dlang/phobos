@@ -391,6 +391,20 @@ Throws: $(D ErrnoException) if the file could not be opened.
                         text("Cannot open file `", name, "' in mode `",
                                 stdioOpenmode, "'")),
                 name);
+
+        // MSVCRT workaround (issue 14422)
+        version (MICROSOFT_STDIO)
+        {
+            bool append, update;
+            foreach (c; stdioOpenmode)
+                if (c == 'a')
+                    append = true;
+                else
+                if (c == '+')
+                    update = true;
+            if (append && !update)
+                seek(size);
+        }
     }
 
     ~this() @safe
@@ -728,9 +742,10 @@ $(D rawRead) always reads in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
-        import std.exception : enforce, errnoEnforce;
+        import std.exception : Exception, errnoEnforce;
 
-        enforce(buffer.length, "rawRead must take a non-empty buffer");
+        if (!buffer.length)
+            throw new Exception("rawRead must take a non-empty buffer");
         version(Windows)
         {
             immutable fd = ._fileno(_p.handle);
@@ -746,10 +761,15 @@ $(D rawRead) always reads in binary mode on Windows.
                 scope(exit) __fhnd_info[fd] = info;
             }
         }
-        immutable result =
+        immutable freadResult =
             fread(buffer.ptr, T.sizeof, buffer.length, _p.handle);
-        errnoEnforce(!error);
-        return result ? buffer[0 .. result] : null;
+        assert (freadResult <= buffer.length); // fread return guarantee
+        if (freadResult != buffer.length) // error or eof
+        {
+            errnoEnforce(!error);
+            return buffer[0 .. freadResult];
+        }
+        return buffer;
     }
 
     unittest
