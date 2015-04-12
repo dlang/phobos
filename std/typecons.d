@@ -2718,32 +2718,35 @@ unittest
 
 /**
 $(D WhiteHole!Base) is a subclass of $(D Base) which automatically implements
-all abstract member functions as throw-always functions.  Each auto-implemented
-function fails with throwing an $(D Error) and does never return.  Useful for
-trapping use of not-yet-implemented functions.
+all abstract member functions as functions that always fail. These functions 
+simply throw an $(D Error) and never return. `Whitehole` is useful for 
+trapping the use of class member functions that haven't been implemented.
 
 The name came from
 $(WEB search.cpan.org/~mschwern/Class-_WhiteHole-0.04/lib/Class/_WhiteHole.pm, Class::_WhiteHole)
 Perl module by Michael G Schwern.
 
-Example:
---------------------
-class C
-{
-    abstract void notYetImplemented();
-}
-
-void main()
-{
-    auto c = new WhiteHole!C;
-    c.notYetImplemented(); // throws an Error
-}
---------------------
+Params:
+    Base = A non-final class for `WhiteHole` to inherit from.
 
 See_Also:
-  AutoImplement, generateAssertTrap
+  $(LREF AutoImplement), $(LREF generateAssertTrap)
  */
 alias WhiteHole(Base) = AutoImplement!(Base, generateAssertTrap, isAbstractFunction);
+
+///
+unittest
+{
+    import std.exception: assertThrown;
+
+    static class C
+    {
+        abstract void notYetImplemented();
+    }
+
+    auto c = new WhiteHole!C;
+    assertThrown!NotImplementedError(c.notYetImplemented()); // throws an Error
+}
 
 // / ditto
 class NotImplementedError : Error
