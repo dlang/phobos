@@ -2982,7 +2982,7 @@ private:
     }
 
     CowArray!SP data;
-};
+}
 
 @system unittest
 {
@@ -7408,7 +7408,7 @@ enum UnicodeDecomposition {
          typically suitable only for fuzzy matching and internal processing.
     */
     Compatibility
-};
+}
 
 /**
     Shorthand aliases for character decomposition type, passed as a
@@ -7417,7 +7417,7 @@ enum UnicodeDecomposition {
 enum {
     Canonical = UnicodeDecomposition.Canonical,
     Compatibility = UnicodeDecomposition.Compatibility
-};
+}
 
 /++
     Try to canonically compose 2 $(CHARACTERS).
@@ -7699,7 +7699,7 @@ enum {
     NFKC = NormalizationForm.NFKC,
     ///ditto
     NFKD = NormalizationForm.NFKD
-};
+}
 
 /++
     Returns $(D input) string normalized to the chosen form.
