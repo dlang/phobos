@@ -178,7 +178,7 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private auto ltrimDirSeparators(R)(inout R path)
+private auto ltrimDirSeparators(R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
@@ -187,7 +187,7 @@ private auto ltrimDirSeparators(R)(inout R path)
     return path[i .. path.length];
 }
 
-private auto rtrimDirSeparators(R)(inout R path)
+private auto rtrimDirSeparators(R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
@@ -196,7 +196,7 @@ private auto rtrimDirSeparators(R)(inout R path)
     return path[0 .. i+1];
 }
 
-private auto trimDirSeparators(R)(inout R path)
+private auto trimDirSeparators(R)(R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
@@ -2595,9 +2595,6 @@ unittest
 
 /** Checks that the given file or directory name is valid.
 
-    This function returns $(D true) if and only if $(D filename) is not
-    empty, not too long, and does not contain invalid characters.
-
     The maximum length of $(D filename) is given by the constant
     $(D core.stdc.stdio.FILENAME_MAX).  (On Windows, this number is
     defined as the maximum number of UTF-16 code points, and the
@@ -2617,10 +2614,20 @@ unittest
 
     On POSIX, $(D filename) may not contain a forward slash ($(D '/')) or
     the null character ($(D '\0')).
+
+    Params:
+        filename = string to check
+
+    Returns:
+        $(D true) if and only if $(D filename) is not
+        empty, not too long, and does not contain invalid characters.
+
 */
-bool isValidFilename(R)(R filename)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+bool isValidFilename(Range)(Range filename)
+    if (is(StringTypeOf!Range) ||
+        isRandomAccessRange!Range &&
+        hasLength!Range && hasSlicing!Range &&
+        isSomeChar!(ElementEncodingType!Range))
 {
     import core.stdc.stdio : FILENAME_MAX;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
@@ -2664,7 +2671,16 @@ bool isValidFilename(R)(R filename)
     return true;
 }
 
+///
+@safe pure @nogc nothrow
+unittest
+{
+    import std.utf : byCodeUnit;
 
+    assert(isValidFilename("hello.exe".byCodeUnit));
+}
+
+@safe pure
 unittest
 {
     import std.conv;
@@ -2692,8 +2708,20 @@ unittest
 
     static struct DirEntry { string s; alias s this; }
     assert(isValidFilename(DirEntry("file.ext")));
-}
 
+    version (Windows)
+    {
+        immutable string cases = "<>:\"/\\|?*";
+        foreach (i; 0 .. 31 + cases.length)
+        {
+            char[3] buf;
+            buf[0] = 'a';
+            buf[1] = i <= 31 ? cast(char)i : cases[i - 32];
+            buf[2] = 'b';
+            assert(!isValidFilename(buf[]));
+        }
+    }
+}
 
 
 
@@ -2716,18 +2744,30 @@ unittest
         $(LI If $(D path) starts with $(D `\\?\`) (long UNC path), the
             only requirement for the rest of the string is that it does
             not contain the null character.)
-        $(LI If $(D path) starts with $(D `\\.\`) (Win32 device namespace)
+        $(LI If $(D path) starts with $(D `\\.\`) (Windows device namespace)
             this function returns $(D false); such paths are beyond the scope
             of this module.)
     )
+
+    Params:
+        path = string or Range of characters to check
+
+    Returns:
+        true if $(D path) is a valid _path.
 */
-bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+bool isValidPath(Range)(Range path)
+    if (is(StringTypeOf!Range) ||
+        isRandomAccessRange!Range &&
+        hasLength!Range && hasSlicing!Range &&
+        isSomeChar!(ElementEncodingType!Range))
 {
+    alias C = Unqual!(ElementEncodingType!Range);
+
     if (path.empty) return false;
 
     // Check whether component is "." or "..", or whether it satisfies
     // isValidFilename.
-    bool isValidComponent(in C[] component)  @safe pure nothrow
+    bool isValidComponent(Range component)
     {
         assert (component.length > 0);
         if (component[0] == '.')
@@ -2741,7 +2781,7 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
     if (path.length == 1)
         return isDirSeparator(path[0]) || isValidComponent(path);
 
-    const(C)[] remainder;
+    Range remainder;
     version (Windows)
     {
         if (isDirSeparator(path[0]) && isDirSeparator(path[1]))
@@ -2797,7 +2837,6 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
         remainder = path;
     }
     else static assert (0);
-    assert (remainder !is null);
     remainder = ltrimDirSeparators(remainder);
 
     // Check that each component satisfies isValidComponent.
@@ -2815,10 +2854,14 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
 }
 
 
+///
+@safe pure @nogc nothrow
 unittest
 {
     assert (isValidPath("/foo/bar"));
     assert (!isValidPath("/foo\0/bar"));
+    assert (isValidPath("/"));
+    assert (isValidPath("a"));
 
     version (Windows)
     {
@@ -2843,7 +2886,11 @@ unittest
         assert (!isValidPath("\\\\?\\foo\0bar"));
 
         assert (!isValidPath(`\\.\PhysicalDisk1`));
+        assert (!isValidPath(`\\`));
     }
+
+    import std.utf : byCodeUnit;
+    assert (isValidPath("/foo/bar".byCodeUnit));
 }
 
 
