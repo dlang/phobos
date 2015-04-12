@@ -138,10 +138,12 @@ template This2Variant(V, T...)
  * limited type universe (e.g., $(D_PARAM Algebraic!(int, double,
  * string)) only accepts these three types and rejects anything
  * else).) $(LI $(B Variant): An open discriminated union allowing an
- * unbounded set of types. The restriction is that the size of the
- * stored type cannot be larger than the largest built-in type. This
- * means that $(D_PARAM Variant) can accommodate all primitive types
- * and all user-defined types except for large $(D_PARAM struct)s.) )
+ * unbounded set of types. If any of the types in the $(D_PARAM Variant)
+ * are larger than the largest built-in type, they will automatically
+ * be boxed. This means that even large types will only be the size
+ * of a pointer within the $(D_PARAM Variant), but this also implies some
+ * overhead. $(D_PARAM Variant) can accommodate all primitive types and 
+ * all user-defined types.))
  *
  * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
  * VariantN)'s interface. (See their respective documentations below.)
@@ -151,7 +153,8 @@ template This2Variant(V, T...)
  * and with the list of allowed types ($(D_PARAM AllowedTypes)). If
  * the list is empty, then any type up of size up to $(D_PARAM
  * maxDataSize) (rounded up for alignment) can be stored in a
- * $(D_PARAM VariantN) object.
+ * $(D_PARAM VariantN) object without being boxed (types larger
+ * than this will be boxed).
  *
  */
 
@@ -170,9 +173,7 @@ private:
 
     /** Tells whether a type $(D_PARAM T) is statically allowed for
      * storage inside a $(D_PARAM VariantN) object by looking
-     * $(D_PARAM T) up in $(D_PARAM AllowedTypes). If $(D_PARAM
-     * AllowedTypes) is empty, all types of size up to $(D_PARAM
-     * maxSize) are allowed.
+     * $(D_PARAM T) up in $(D_PARAM AllowedTypes).
      */
     public template allowed(T)
     {
@@ -1362,10 +1363,10 @@ unittest
 $(D_PARAM Variant) is an alias for $(D_PARAM VariantN) instantiated
 with the largest of $(D_PARAM creal), $(D_PARAM char[]), and $(D_PARAM
 void delegate()). This ensures that $(D_PARAM Variant) is large enough
-to hold all of D's predefined types, including all numeric types,
+to hold all of D's predefined types unboxed, including all numeric types,
 pointers, delegates, and class references.  You may want to use
 $(D_PARAM VariantN) directly with a different maximum size either for
-storing larger types, or for saving memory.
+storing larger types unboxed, or for saving memory.
  */
 
 alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
