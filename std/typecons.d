@@ -70,32 +70,6 @@ else
     alias RefT = T*;
 
     /**
-    Allows safe construction of $(D Unique). It creates the resource and
-    guarantees unique ownership of it (unless $(D T) publishes aliases of
-    $(D this)).
-
-    Note: Nested structs/classes cannot be created.
-          Instead use $(D Unique!T.fromNested(new T)).
-
-    Params:
-        args = Arguments to pass to $(D T)'s constructor.
-
-    Example:
-    ---
-    static class C { }
-    auto u = Unique!C.create();
-    ---
-    */
-    static Unique!T create(A...)(auto ref A args)
-        if (__traits(compiles, new T(args)))
-    {
-        debug(Unique) writeln("Unique.create for ", T.stringof);
-        Unique!T u;
-        u._p = new T(args);
-        return u;
-    }
-
-    /**
     Allows construction of a $(D Unique) for a nested class or struct.
     Currently, references to non-static nested objects can only be created
     using $(D new) in their original context.
@@ -131,7 +105,7 @@ else
     ---
     class C : Object { }
 
-    Unique!C uc = Unique!C.create();
+    Unique!C uc = unique!C();
     Unique!Object uo = move(uc);
     ---
     */
@@ -177,7 +151,7 @@ else
     /**
     Returns the underlying $(D RefT) for use by non-owning code.
 
-    The holder of a $(D Unique!T) is the <em>owner</em> of that $(D T).
+    The holder of a $(D Unique!T) is the $(I owner) of that $(D T).
     For code that does not own the resource (and therefore does not affect
     its life cycle), pass a plain old reference.
     */
@@ -200,31 +174,8 @@ private:
 
 unittest
 {
-    // The simplest stuff
-    static struct S
-    {
-        int i;
-        this(int i) { this.i = i; }
-    }
-
-    // Some quick tests around alias this
-    auto u = Unique!S.create(42);
-    assert(u.i == 42);
-    assert(u !is null);
-    u.destroy();
-    assert(u is null);
-    assert(!u); // Since null pointers coerce to false
-
-    auto i = Unique!int.create(25);
-    assert(*i == 25);
-
-    // opAssign still kicks in, preventing this from compiling:
-    // i = null;
-}
-
-unittest
-{
-    // Test that we can return a Unique to a nested class
+    // Gives an error about RTInfo!(Nested) being recursvely expanded
+    // if placed in the class for use as a documented unittest
     auto foo()
     {
         class Nested { }
@@ -233,6 +184,71 @@ unittest
         return Unique!Nested.fromNested(new Nested);
     }
     assert(foo() !is null);
+}
+
+unittest
+{
+    // Ditto...
+    import std.algorithm;
+
+    static class C : Object { }
+
+    Unique!C uc = unique!C();
+    Unique!Object uo = move(uc);
+}
+
+
+/**
+Allows safe construction of $(D Unique). It creates the resource and
+guarantees unique ownership of it (unless $(D T) publishes aliases of
+$(D this)).
+
+Note: Nested structs/classes cannot be created.
+      Instead use $(D fromNested).
+
+Params:
+    args = Arguments to pass to $(D T)'s constructor.
+
+*/
+Unique!T unique(T, A...)(auto ref A args)
+    if (__traits(compiles, new T(args)))
+{
+    debug(Unique) writeln("Unique.create for ", T.stringof);
+    Unique!T u;
+    u._p = new T(args);
+    return u;
+}
+
+///
+unittest
+{
+    struct S { }
+    auto u = unique!S();
+    assert(u !is null);
+}
+
+unittest
+{
+    // Some real simple stuff
+    static struct S
+    {
+        int i;
+        this(int i) { this.i = i; }
+    }
+
+    // Some quick tests around alias this
+    auto u = unique!S(42);
+    assert(u.i == 42);
+    assert(u !is null);
+    u.destroy();
+    assert(u is null);
+    assert(!u); // Since null pointers coerce to false
+
+    auto i = unique!int(25);
+    assert(*i == 25);
+
+    // opAssign still kicks in, preventing this from compiling:
+    // i = null;
 }
 
 unittest
@@ -247,7 +263,7 @@ unittest
     Unique!S produce()
     {
         // Construct a unique instance of S on the heap
-        Unique!S ut = Unique!S.create(5);
+        Unique!S ut = unique!S(5);
         // Implicit transfer of ownership
         return ut;
     }
@@ -337,7 +353,7 @@ unittest
         return move(u);
     }
 
-    auto ub = UBar.create();
+    auto ub = unique!Bar();
     assert(ub !is null);
     assert(ub.val == 4);
 
@@ -368,7 +384,7 @@ unittest
         return move(u);
     }
 
-    auto uf = UFoo.create();
+    auto uf = unique!Foo();
     assert(uf !is null);
     assert(uf.val == 3);
     debug(Unique) writeln("Unique struct: calling f");
