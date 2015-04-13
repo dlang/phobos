@@ -2460,21 +2460,39 @@ if ((hasSlicing!Range && hasLength!Range) ||
 /++
     Strips leading whitespace (as defined by $(XREF uni, isWhite)).
 
+    Params:
+        str = string or ForwardRange of characters
+
     Returns: $(D str) stripped of leading whitespace.
 
     Postconditions: $(D str) and the returned value
     will share the same tail (see $(XREF array, sameTail)).
   +/
-C[] stripLeft(C)(C[] str) @safe pure @nogc
-    if (isSomeChar!C)
+Range stripLeft(Range)(Range str)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
-    foreach (i, dchar c; str)
-    {
-        if (!std.uni.isWhite(c))
-            return str[i .. $];
-    }
+    import std.ascii : isASCII, isWhite;
+    import std.uni : isWhite;
+    import std.utf : decodeFront;
 
-    return str[$ .. $]; //Empty string with correct type.
+    while (!str.empty)
+    {
+        auto c = str.front;
+        if (std.ascii.isASCII(c))
+        {
+            if (!std.ascii.isWhite(c))
+                break;
+            str.popFront();
+        }
+        else
+        {
+            auto save = str.save;
+            auto dc = decodeFront(str);
+            if (!std.uni.isWhite(dc))
+                return save;
+        }
+    }
+    return str;
 }
 
 ///
@@ -2491,6 +2509,11 @@ C[] stripLeft(C)(C[] str) @safe pure @nogc
            "hello world" ~ [lineSep]);
     assert(stripLeft([paraSep] ~ "hello world" ~ paraSep) ==
            "hello world" ~ [paraSep]);
+
+    import std.utf : byChar;
+    import std.array;
+    assert(stripLeft("     hello world     "w.byChar).array ==
+           "hello world     ");
 }
 
 
