@@ -402,6 +402,8 @@ Throws: $(D ErrnoException) if the file could not be opened.
             }
 
             DWORD access, creation;
+            int flags = FHND_DEVICE | FHND_TEXT;
+
             modeLoop:
             foreach (c; stdioOpenmode)
                 switch (c)
@@ -424,6 +426,12 @@ Throws: $(D ErrnoException) if the file could not be opened.
                         else
                             access = GENERIC_READ | GENERIC_WRITE;
                         break;
+                    case 'b':
+                        flags &= ~FHND_TEXT;
+                        break;
+                    case 't':
+                        flags |= FHND_TEXT;
+                        break;
                     case ',': break modeLoop;
                     default: break;
                 }
@@ -439,7 +447,7 @@ Throws: $(D ErrnoException) if the file could not be opened.
                 text("Cannot open file `", name, "' in mode '",
                     stdioOpenmode, "'"));
 
-            auto fd = trustedHandleToFD(h, FHND_DEVICE);
+            auto fd = trustedHandleToFD(h, flags);
             errnoEnforce(fd >= 0,
                 text("Cannot open file `", name, "' in mode '",
                     stdioOpenmode, "'"));
