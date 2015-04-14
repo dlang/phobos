@@ -70,9 +70,12 @@ enum JSONFloatLiteral : string
 }
 
 /**
-Flag that enables encoding special float values (NaN/Inf) as strings.
+Flags that control how json is encoded and parsed.
 */
-alias JsonSpecialFloats = Flag!"JsonSpecialFloats";
+enum JsonOptions {
+    none,                       /// standard parsing
+    specialFloatLiterals = 0x1, /// encode NaN and Inf float values as strings
+}
 
 /**
 JSON type enumeration
@@ -611,25 +614,30 @@ struct JSONValue
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue.
-    /// $(I specialFloats) will enable encoding NaN/Inf as strings.
-    string toString(in JsonSpecialFloats specialFloats = JsonSpecialFloats.no) const
+    /// $(I options) can be used to tweak the conversion behavior.
+    string toString(in JsonOptions options = JsonOptions.none) const
     {
-        return toJSON(&this, false, specialFloats);
+        return toJSON(&this, false, options);
     }
 
     /// Implicitly calls $(D toJSON) on this JSONValue, like $(D toString), but
     /// also passes $(I true) as $(I pretty) argument.
-    /// $(I specialFloats) will enable encoding NaN/Inf as strings.
-    string toPrettyString(in JsonSpecialFloats specialFloats = JsonSpecialFloats.no) const
+    /// $(I options) can be used to tweak the conversion behavior
+    string toPrettyString(in JsonOptions options = JsonOptions.none) const
     {
-        return toJSON(&this, true, specialFloats);
+        return toJSON(&this, true, options);
     }
 }
 
 /**
 Parses a serialized string and returns a tree of JSON values.
+Throws a $(XREF json,JSONException) if the depth exceeds the max depth.
+Params:
+    json = json-formatted string to parse
+    maxDepth = maximum depth of nesting allowed, -1 disables depth checking
+    options = enable decoding string representations of NaN/Inf as float values
 */
-JSONValue parseJSON(T)(T json, int maxDepth = -1, JsonSpecialFloats specialFloats = JsonSpecialFloats.no)
+JSONValue parseJSON(T)(T json, int maxDepth = -1, JsonOptions options = JsonOptions.none)
 if(isInputRange!T)
 {
     import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
@@ -842,7 +850,9 @@ if(isInputRange!T)
                 auto str = parseString();
 
                 // if special float parsing is enabled, check if string represents NaN/Inf
-                if (specialFloats && tryGetSpecialFloat(str, value.store.floating)) {
+                if ((options & JsonOptions.specialFloatLiterals) && 
+                    tryGetSpecialFloat(str, value.store.floating)) 
+                {
                     // found a special float, its value was placed in value.store.floating
                     value.type_tag = JSON_TYPE.FLOAT;
                     break;
@@ -951,11 +961,15 @@ if(isInputRange!T)
 
 /**
 Parses a serialized string and returns a tree of JSON values.
+Throws a $(XREF json,JSONException) if the depth exceeds the max depth.
+Params:
+    json = json-formatted string to parse
+    options = enable decoding string representations of NaN/Inf as float values
 */
-JSONValue parseJSON(T)(T json, JsonSpecialFloats specialFloats)
+JSONValue parseJSON(T)(T json, JsonOptions options)
 if(isInputRange!T)
 {
-    return parseJSON!T(json, -1, specialFloats);
+    return parseJSON!T(json, -1, options);
 }
 
 /**
@@ -965,9 +979,9 @@ Any Object types will be serialized in a key-sorted order.
 
 If $(D pretty) is false no whitespaces are generated.
 If $(D pretty) is true serialized string is formatted to be human-readable.
-If $(D specialFloats) is JsonSpecialFloats.yes, encode special floats (NaN/Infinity) as strings.
+Set the $(specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
 */
-string toJSON(in JSONValue* root, in bool pretty = false, in JsonSpecialFloats specialFloats = JsonSpecialFloats.no)
+string toJSON(in JSONValue* root, in bool pretty = false, in JsonOptions options = JsonOptions.none)
 {
     auto json = appender!string();
 
@@ -1094,21 +1108,21 @@ string toJSON(in JSONValue* root, in bool pretty = false, in JsonSpecialFloats s
                 auto val = value.store.floating;
 
                 if (val.isNaN) {
-                    if (specialFloats) {
+                    if (options & JsonOptions.specialFloatLiterals) {
                         toString(JSONFloatLiteral.nan);
                     }
                     else {
                         throw new JSONException(
-                            "Cannot encode NaN. Consider passing the specialFloats flag.");
+                            "Cannot encode NaN. Consider passing the specialFloatLiterals flag.");
                     }
                 }
                 else if (val.isInfinity) {
-                    if (specialFloats) {
+                    if (options & JsonOptions.specialFloatLiterals) {
                         toString((val > 0) ?  JSONFloatLiteral.inf : JSONFloatLiteral.negativeInf);
                     }
                     else {
                         throw new JSONException(
-                            "Cannot encode Infinity. Consider passing the specialFloats flag.");
+                            "Cannot encode Infinity. Consider passing the specialFloatLiterals flag.");
                     }
                 }
                 else {
@@ -1489,26 +1503,26 @@ unittest
         negativeInfString = '"' ~ JSONFloatLiteral.negativeInf ~ '"',
     }
 
-    // when passing JsonSpecialFloats.yes, encode NaN/Inf as strings
-    assert(JSONValue(float.nan).toString(JsonSpecialFloats.yes)       == nanString);
-    assert(JSONValue(double.infinity).toString(JsonSpecialFloats.yes) == infString);
-    assert(JSONValue(-real.infinity).toString(JsonSpecialFloats.yes)  == negativeInfString);
+    // with the specialFloatLiterals option, encode NaN/Inf as strings
+    assert(JSONValue(float.nan).toString(JsonOptions.specialFloatLiterals)       == nanString);
+    assert(JSONValue(double.infinity).toString(JsonOptions.specialFloatLiterals) == infString);
+    assert(JSONValue(-real.infinity).toString(JsonOptions.specialFloatLiterals)  == negativeInfString);
 
-    // when passing JsonSpecialFloats.no, thow on converting NaN/Inf
+    // without the specialFloatLiterals option, throw on encoding NaN/Inf
     assertThrown!JSONException(JSONValue(float.nan).toString);
     assertThrown!JSONException(JSONValue(double.infinity).toString);
     assertThrown!JSONException(JSONValue(-real.infinity).toString);
 
-    // when parsing json with JsonSpecialFloats.yes, decode special strings as floats
-    JSONValue jvNan    = parseJSON(nanString, JsonSpecialFloats.yes);
-    JSONValue jvInf    = parseJSON(infString, JsonSpecialFloats.yes);
-    JSONValue jvNegInf = parseJSON(negativeInfString, JsonSpecialFloats.yes);
+    // when parsing json with specialFloatLiterals option, decode special strings as floats
+    JSONValue jvNan    = parseJSON(nanString, JsonOptions.specialFloatLiterals);
+    JSONValue jvInf    = parseJSON(infString, JsonOptions.specialFloatLiterals);
+    JSONValue jvNegInf = parseJSON(negativeInfString, JsonOptions.specialFloatLiterals);
 
     assert(jvNan.floating.isNaN);
     assert(jvInf.floating.isInfinity    && jvInf.floating > 0);
     assert(jvNegInf.floating.isInfinity && jvNegInf.floating < 0);
 
-    // when parsing json with JsonSpecialFloats.no, decode special strings as strings
+    // when parsing json without the specialFloatLiterals option, decode special strings as strings
     jvNan    = parseJSON(nanString);
     jvInf    = parseJSON(infString);
     jvNegInf = parseJSON(negativeInfString);
