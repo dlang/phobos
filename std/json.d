@@ -57,7 +57,6 @@ import std.conv;
 import std.range.primitives;
 import std.array;
 import std.traits;
-import std.typecons : Flag;
 
 /**
 String literals used to represent special float values within JSON strings.
