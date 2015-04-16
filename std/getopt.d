@@ -570,7 +570,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             if (cfg.required && !optWasHandled)
             {
                 throw new GetOptException("Required option " ~ option ~
-                    "was not supplied");
+                    " was not supplied");
             }
             cfg.required = false;
 
