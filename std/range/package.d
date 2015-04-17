@@ -7601,7 +7601,7 @@ unittest
 
   +/
 struct RefRange(R)
-    if(isForwardRange!R)
+    if(isInputRange!R)
 {
 public:
 
@@ -7705,7 +7705,9 @@ public:
 
     version(StdDdoc)
     {
-        /++ +/
+        /++
+            Only defined if $(D isForwardRange!R) is $(D true).
+          +/
         @property auto save() {assert(0);}
         /++ Ditto +/
         @property auto save() const {assert(0);}
@@ -7714,7 +7716,7 @@ public:
         /++ Ditto +/
         auto opSlice() const {assert(0);}
     }
-    else
+    else static if(isForwardRange!R)
     {
         static if(isSafe!((R* r) => (*r).save))
         {
@@ -8252,40 +8254,36 @@ unittest
     auto cWrapper = refRange(&c);
     static assert(is(typeof(cWrapper) == C));
     assert(cWrapper is c);
+}
 
-    struct S
+unittest // issue 14373
+{
+    static struct R
     {
-        @property int front() @safe const pure nothrow { return 0; }
-        @property bool empty() @safe const pure nothrow { return false; }
-        void popFront() @safe pure nothrow { }
-
-        int i = 27;
+        @property int front() {return 0;}
+        void popFront() {empty = true;}
+        bool empty = false;
     }
-    static assert(isInputRange!S);
-    static assert(!isForwardRange!S);
-
-    auto s = S(42);
-    auto sWrapper = refRange(&s);
-    static assert(is(typeof(sWrapper) == S));
-    assert(sWrapper == s);
+    R r;
+    refRange(&r).popFront();
+    assert(r.empty);
 }
 
 /++
     Helper function for constructing a $(LREF RefRange).
 
-    If the given range is not a forward range or it is a class type (and thus is
-    already a reference type), then the original range is returned rather than
-    a $(LREF RefRange).
+    If the given range is a class type (and thus is already a reference type),
+    then the original range is returned rather than a $(LREF RefRange).
   +/
 auto refRange(R)(R* range)
-    if(isForwardRange!R && !is(R == class))
+    if(isInputRange!R && !is(R == class))
 {
     return RefRange!R(range);
 }
 
+/// ditto
 auto refRange(R)(R* range)
-    if((!isForwardRange!R && isInputRange!R) ||
-       is(R == class))
+    if(isInputRange!R && is(R == class))
 {
     return *range;
 }
