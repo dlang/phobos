@@ -2836,8 +2836,13 @@ Cycle!R cycle(R)(R input)
 @safe unittest
 {
     import std.algorithm : equal;
+    import std.range : cycle, take;
 
-    assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
+    // Here we create an infinitive cyclic sequence from [1, 2]
+    // (i.e. get here [1, 2, 1, 2, 1, 2 and so on]) then
+    // take 5 elements of this sequence (so we have [1, 2, 1, 2, 1]) 
+    // and compare them with the expected values for equality.
+    assert(cycle([1, 2]).take(5).equal([ 1, 2, 1, 2, 1 ]));
 }
 
 /// Ditto
