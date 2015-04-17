@@ -70,32 +70,6 @@ else
     alias RefT = T*;
 
     /**
-    Allows construction of a $(D Unique) for a nested class or struct.
-    Currently, references to non-static nested objects can only be created
-    using $(D new) in their original context.
-
-    To ensure uniqueness, be sure to provide the direct result of $(D new).
-
-    Example:
-    ----
-    auto foo()
-    {
-        class Bar { }
-        auto u = Unique!Bar.fromNested(new Bar);
-        return u;
-    }
-    ----
-    */
-    static Unique!T fromNested(RefT p)
-    {
-        debug(Unique) writeln("Unique created with rvalue");
-        Unique!T u;
-        u._p = p;
-        return u;
-    }
-
-
-    /**
     Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
     Typically used to transfer a $(D Unique) rvalue of derived type to
@@ -137,13 +111,21 @@ else
     /** Frees the underlying $(D RefT) and nulls it */
     void release()
     {
+        import core.stdc.stdlib : free;
+
         debug(Unique) writeln("Release");
+
         if (_p !is null)
         {
-            import core.memory : GC;
-
             destroy(_p);
-            GC.free(cast(void*)_p);
+
+            static if (hasIndirections!T)
+            {
+                import core.memory : GC;
+                GC.removeRange(cast(void*)_p);
+            }
+
+            free(cast(void*)_p);
             _p = null;
         }
     }
@@ -174,20 +156,6 @@ private:
 
 unittest
 {
-    // Gives an error about RTInfo!(Nested) being recursvely expanded
-    // if placed in the class for use as a documented unittest
-    auto foo()
-    {
-        class Nested { }
-        // Cannot compile:
-        // return Unique!Nested.create();
-        return Unique!Nested.fromNested(new Nested);
-    }
-    assert(foo() !is null);
-}
-
-unittest
-{
     // Ditto...
     import std.algorithm;
 
@@ -203,8 +171,7 @@ Allows safe construction of $(D Unique). It creates the resource and
 guarantees unique ownership of it (unless $(D T) publishes aliases of
 $(D this)).
 
-Note: Nested structs/classes cannot be created.
-      Instead use $(D fromNested).
+Note: Nested classes cannot be created at present time.
 
 Params:
     args = Arguments to pass to $(D T)'s constructor.
@@ -214,8 +181,41 @@ Unique!T unique(T, A...)(auto ref A args)
     if (__traits(compiles, new T(args)))
 {
     debug(Unique) writeln("Unique.create for ", T.stringof);
+
+    import core.memory : GC;
+    import core.stdc.stdlib : malloc;
+    import std.conv : emplace;
+    import core.exception : onOutOfMemoryError;
+
+    debug(Unique) writeln("Unique.create for ", T.stringof);
     Unique!T u;
-    u._p = new T(args);
+
+    // TODO: May need to fix alignment?
+    // Does emplace still need to mess with alignment if
+    // the memory is coming from malloc, or does malloc handle that?
+
+    static if (is(T == class))
+        immutable size_t allocSize = __traits(classInstanceSize, T);
+    else
+        immutable size_t allocSize = T.sizeof;
+
+    void* rawMemory = malloc(allocSize);
+    if (!rawMemory)
+        onOutOfMemoryError();
+
+    static if (is(T == class)) {
+        u._p = emplace!T(rawMemory[0 .. allocSize], args);
+    }
+    else {
+        import std.algorithm : move;
+        auto temp = T(args);
+        u._p = cast(T*)rawMemory;
+        *u._p = move(temp);
+    }
+
+    static if (hasIndirections!T)
+        GC.addRange(rawMemory, allocSize);
+
     return u;
 }
 
@@ -303,33 +303,6 @@ unittest
     import std.algorithm : move;
     consume(move(u1));
     assert(u1 is null);
-}
-
-unittest
-{
-    // test conversion to base ref, and use with nested clases
-    int created = 0;
-    int deleted = 0;
-    class C
-    {
-        this() { created++; }
-        ~this(){deleted++;}
-    }
-    Unique!Object u = Unique!C.fromNested(new C);
-    assert(u !is null);
-    destroy(u);
-    assert(created == 1);
-    assert(deleted == 1);
-
-    Unique!C uc = Unique!C.fromNested(new C);
-    Unique!Object uo = Unique!Object.fromNested(new C);
-    // opAssign conversion, deleting uo resource first
-    import std.algorithm : move;
-    uo = move(uc);
-    assert(uc is null);
-    assert(uo !is null);
-    assert(deleted == 2);
-    assert(created == 3);
 }
 
 unittest
