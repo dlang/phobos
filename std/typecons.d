@@ -159,8 +159,7 @@ else
     bool opCast(T : bool)() const { return !empty; }
 
     /**
-    Allows you to dereference the underlying $(D RefT)
-    and treat it like a $(D RefT) in other ways (such as comparing to null)
+    Allows you to reference the underlying $(D RefT)
     */
     alias get this;
 
@@ -265,6 +264,7 @@ unittest
 
     auto i = unique!int(25);
     assert(i.get() == 25);
+    assert(i == 25);
 
     // opAssign still kicks in, preventing this from compiling:
     // i = null;
@@ -304,7 +304,7 @@ unittest
 
     void consume(Unique!S u2)
     {
-        assert(u2.i == 7);
+        assert(u2.i == 8);
         // Resource automatically deleted here
     }
 
@@ -314,7 +314,9 @@ unittest
     increment(u1);
     assert(u1.i == 6);
     correctIncrement(u1.get());
-    assert(u1.i == 7);
+    // yay alias this
+    correctIncrement(u1);
+    assert(u1.i == 8);
 
     // consume(u1); // Error: u1 is not copyable
 
