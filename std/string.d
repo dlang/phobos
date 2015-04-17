@@ -4763,6 +4763,13 @@ body
  * in one of a known set of strings, and the program will helpfully
  * autocomplete the string once sufficient characters have been
  * entered that uniquely identify it.
+ *
+ * Params:
+ *      array of the strings to find abbreviations for
+ *
+ * Returns:
+ *      associative array in GC allocated memory
+ *
  * Example:
  * ---
  * import std.stdio;
@@ -4772,7 +4779,7 @@ body
  * {
  *    static string[] list = [ "food", "foxy" ];
  *
- *    auto abbrevs = std.string.abbrev(list);
+ *    string[string] abbrevs = std.string.abbrev(list);
  *
  *    foreach (key, value; abbrevs)
  *    {
@@ -4789,17 +4796,45 @@ body
  * </pre>
  */
 
-string[string] abbrev(string[] values) @safe pure
+S[S] abbrev(S)(S[] values)
+    if (isSomeString!S)
 {
     import std.algorithm : sort;
+    import std.utf : stride;
+    import core.stdc.stdlib;
 
-    string[string] result;
+    S[S] result;
 
-    // Make a copy when sorting so we follow COW principles.
-    values = values.dup;
-    sort(values);
-
+    // Make a copy so it can be sorted in place
     size_t values_length = values.length;
+
+    S* vptr;
+    S[] vsorted;
+    if (__ctfe)
+        vsorted = values.dup;
+    else
+    {
+        void alloc() @trusted nothrow @nogc
+        {
+            import core.exception : onOutOfMemoryError;
+            vptr = cast(S*)malloc(values_length * S.sizeof);
+            if (!vptr)
+                onOutOfMemoryError();
+            vsorted = vptr[0 .. values_length];
+            vsorted[] = values[];
+        }
+        alloc();
+    }
+    scope (exit)
+    {
+        if (!__ctfe)
+        {
+            (()@trusted => free(vptr))();
+        }
+    }
+
+    sort(vsorted);
+
     size_t lasti = values_length;
     size_t nexti;
 
@@ -4808,13 +4843,13 @@ string[string] abbrev(string[] values) @safe pure
 
     for (size_t i = 0; i < values_length; i = nexti)
     {
-        string value = values[i];
+        string value = vsorted[i];
 
         // Skip dups
         for (nexti = i + 1; nexti < values_length; nexti++)
         {
-            nv = values[nexti];
-            if (value != values[nexti])
+            nv = vsorted[nexti];
+            if (value != nv)
                 break;
         }
 
@@ -4836,7 +4871,7 @@ string[string] abbrev(string[] values) @safe pure
     return result;
 }
 
-@trusted pure unittest
+@trusted unittest
 {
     import std.conv : to;
     import std.algorithm : sort;
