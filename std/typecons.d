@@ -131,19 +131,38 @@ else
     }
 
     /**
-    Returns the underlying $(D RefT) for use by non-owning code.
+    Returns a reference to the underlying $(D RefT) for use by non-owning code.
 
     The holder of a $(D Unique!T) is the $(I owner) of that $(D T).
     For code that does not own the resource (and therefore does not affect
     its life cycle), pass a plain old reference.
     */
-    RefT get() { return _p; }
+    ref T get() return
+    {
+        import std.exception : enforce;
+
+        enforce(!empty, "You cannot get anything from an empty Unique");
+
+        static if (is(T == class))
+            return _p;
+        else
+            return *_p;
+    }
+
+    // Ditto
+
+    @property bool empty() const
+    {
+        return _p is null;
+    }
+
+    bool opCast(T : bool)() const { return !empty; }
 
     /**
     Allows you to dereference the underlying $(D RefT)
     and treat it like a $(D RefT) in other ways (such as comparing to null)
     */
-    alias _p this;
+    alias get this;
 
     /**
     Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
@@ -224,7 +243,7 @@ unittest
 {
     struct S { }
     auto u = unique!S();
-    assert(u !is null);
+    assert(!u.empty());
 }
 
 unittest
@@ -239,13 +258,13 @@ unittest
     // Some quick tests around alias this
     auto u = unique!S(42);
     assert(u.i == 42);
-    assert(u !is null);
+    assert(!u.empty);
     u.destroy();
-    assert(u is null);
+    assert(u.empty);
     assert(!u); // Since null pointers coerce to false
 
     auto i = unique!int(25);
-    assert(*i == 25);
+    assert(i.get() == 25);
 
     // opAssign still kicks in, preventing this from compiling:
     // i = null;
@@ -278,7 +297,7 @@ unittest
     }
 
     // See above
-    void correctIncrement(S* r)
+    void correctIncrement(ref S r)
     {
         r.i++;
     }
@@ -290,7 +309,7 @@ unittest
     }
 
     Unique!S u1;
-    assert(u1 is null);
+    assert(!u1);
     u1 = produce();
     increment(u1);
     assert(u1.i == 6);
@@ -302,7 +321,7 @@ unittest
     // Transfer ownership of the resource
     import std.algorithm : move;
     consume(move(u1));
-    assert(u1 is null);
+    assert(!u1);
 }
 
 unittest
@@ -327,15 +346,15 @@ unittest
     }
 
     auto ub = unique!Bar();
-    assert(ub !is null);
+    assert(ub);
     assert(ub.val == 4);
 
     import std.algorithm : move;
     debug(Unique) writeln("Calling g");
     auto ub2 = g(move(ub));
     debug(Unique) writeln("Returned from g");
-    assert(ub is null);
-    assert(ub2 !is null);
+    assert(!ub);
+    assert(ub2);
 }
 
 unittest
@@ -358,13 +377,13 @@ unittest
     }
 
     auto uf = unique!Foo();
-    assert(uf !is null);
+    assert(uf);
     assert(uf.val == 3);
     debug(Unique) writeln("Unique struct: calling f");
     auto uf2 = f(move(uf));
     debug(Unique) writeln("Unique struct: returned from f");
-    assert(uf is null);
-    assert(uf2 !is null);
+    assert(!uf);
+    assert(uf2);
 }
 
 
