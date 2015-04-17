@@ -466,6 +466,13 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     return -1;
 }
 
+ptrdiff_t indexOf(T, size_t n)(ref T[n] s, in dchar c,
+        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+    if (isSomeChar!T)
+{
+    return indexOf(s[], c, cs);
+}
+
 @safe pure unittest
 {
     import std.conv : to;
@@ -511,6 +518,9 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
         assert(indexOf("hello\U00010100".byWchar, '\U00010100', cs) == 5);
         assert(indexOf("hello\U00010100".byWchar, '\U00010101', cs) == -1);
     }
+
+    char[10] fixedSizeArray = "0123456789";
+    assert(indexOf(fixedSizeArray, '2') == 2);
     });
 }
 
