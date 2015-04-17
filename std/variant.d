@@ -660,6 +660,18 @@ public:
         return this;
     }
 
+    // Allow assignment from another variant which is a subset of this one
+    VariantN opAssign(T : VariantN!(Tsize, Types), size_t Tsize, Types...)(T rhs)
+        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
+    {
+        // discover which type rhs is actually storing
+        foreach (V; T.AllowedTypes)
+            if (rhs.type == typeid(V))
+                return this = rhs.get!V;
+        assert(0, T.AllowedTypes.stringof);
+    }
+
+
     Variant opCall(P...)(auto ref P params)
     {
         Variant[P.length + 1] pack;
@@ -1321,6 +1333,20 @@ unittest
     Algebraic!(int, double) a;
     a = 100;
     a = 1.0;
+}
+
+// Issue 14457
+unittest
+{
+    alias A = Algebraic!(int, float, double);
+    alias B = Algebraic!(int, float);
+
+    A a = 1;
+    B b = 6f;
+    a = b;
+
+    assert(a.type == typeid(float));
+    assert(a.get!float == 6f);
 }
 
 
