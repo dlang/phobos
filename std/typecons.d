@@ -1764,6 +1764,9 @@ struct Nullable(T)
 
 /**
 Constructor initializing $(D this) with $(D value).
+
+Params:
+    value = The value to initialize this `Nullable` with.
  */
     this(inout T value) inout
     {
@@ -1789,12 +1792,25 @@ Constructor initializing $(D this) with $(D value).
     }
 
 /**
-Returns $(D true) if and only if $(D this) is in the null state.
+Check if `this` is in the null state.
+
+Returns:
+    true $(B iff) `this` is in the null state, otherwise false.
  */
     @property bool isNull() const @safe pure nothrow
     {
         return _isNull;
     }
+    
+///
+unittest
+{
+    Nullable!int ni;
+    assert(ni.isNull);
+    
+    ni = 0;
+    assert(!ni.isNull);
+}
 
 /**
 Forces $(D this) to the null state.
@@ -1804,10 +1820,23 @@ Forces $(D this) to the null state.
         .destroy(_value);
         _isNull = true;
     }
+    
+///
+unittest
+{
+    Nullable!int ni = 0;
+    assert(!ni.isNull);
+    
+    ni.nullify();
+    assert(ni.isNull);
+}
 
 /**
 Assigns $(D value) to the internally-held state. If the assignment
 succeeds, $(D this) becomes non-null.
+
+Params:
+    value = A value of type `T` to assign to this `Nullable`.
  */
     void opAssign()(T value)
     {
@@ -1816,8 +1845,31 @@ succeeds, $(D this) becomes non-null.
     }
 
 /**
+    If this `Nullable` wraps a type that already has a null value
+    (such as a pointer), then assigning the null value to this
+    `Nullable` is no different than assigning any other value of
+    type `T`, and the resulting code will look very strange. It 
+    is strongly recommended that this be avoided by instead using
+    the version of `Nullable` that takes an additional `nullValue`
+    template argument.
+ */
+unittest
+{
+    //Passes
+    Nullable!(int*) npi;
+    assert(npi.isNull);
+    
+    //Passes?!
+    npi = null;
+    assert(!npi.isNull);
+}
+
+/**
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
+
+Returns:
+    The value held internally by this `Nullable`.
  */
     @property ref inout(T) get() inout @safe pure nothrow
     {
@@ -1825,6 +1877,20 @@ This function is also called for the implicit conversion to $(D T).
         assert(!isNull, message);
         return _value;
     }
+    
+///
+unittest
+{
+    import std.exception: assertThrown, assertNotThrown;
+    
+    Nullable!int ni;
+    //`get` is implicitly called. Will throw 
+    //an AssertError in non-release mode
+    assertThrown!Throwable(ni == 0);
+    
+    ni = 0;
+    assertNotThrown!Throwable(ni == 0);
+}
 
 /**
 Implicitly converts to $(D T).
@@ -1836,11 +1902,33 @@ $(D this) must not be in the null state.
 ///
 unittest
 {
-    Nullable!int a;
-    assert(a.isNull);
-    a = 5;
-    assert(!a.isNull);
-    assert(a == 5);
+    struct CustomerRecord
+    {
+        string name;
+        string address;
+        int customerNum;
+    }
+    
+    Nullable!CustomerRecord getByName(string name)
+    {
+        //A bunch of hairy stuff
+        
+        return Nullable!CustomerRecord.init;
+    }
+    
+    auto queryResult = getByName("Doe, John");
+    if (!queryResult.isNull)
+    {
+        //Process Mr. Doe's customer record
+        auto address = queryResult.address;
+        auto customerNum = queryResult.customerNum;
+        
+        //Do some things with this customer's info
+    }
+    else
+    {
+        //Add the customer to the database
+    }
 }
 
 unittest
@@ -2121,6 +2209,12 @@ particular value. For example, $(D Nullable!(uint, uint.max)) is an
 $(D uint) that sets aside the value $(D uint.max) to denote a null
 state. $(D Nullable!(T, nullValue)) is more storage-efficient than $(D
 Nullable!T) because it does not need to store an extra $(D bool).
+
+Params:
+    T = The wrapped type for which Nullable provides a null value.
+    
+    nullValue = The null value which denotes the null state of this
+                `Nullable`. Must be of type `T`.
  */
 struct Nullable(T, T nullValue)
 {
@@ -2128,6 +2222,9 @@ struct Nullable(T, T nullValue)
 
 /**
 Constructor initializing $(D this) with $(D value).
+
+Params:
+    value = The value to initialize this `Nullable` with.
  */
     this(T value)
     {
@@ -2152,7 +2249,10 @@ Constructor initializing $(D this) with $(D value).
     }
 
 /**
-Returns $(D true) if and only if $(D this) is in the null state.
+Check if `this` is in the null state.
+
+Returns:
+    true $(B iff) `this` is in the null state, otherwise false.
  */
     @property bool isNull() const
     {
@@ -2167,6 +2267,17 @@ Returns $(D true) if and only if $(D this) is in the null state.
             return _value == nullValue;
         }
     }
+    
+///
+unittest
+{
+    Nullable!(int, -1) ni;
+    //Initialized to "null" state
+    assert(ni.isNull);
+    
+    ni = 0;
+    assert(!ni.isNull);
+}
 
 /**
 Forces $(D this) to the null state.
@@ -2175,19 +2286,59 @@ Forces $(D this) to the null state.
     {
         _value = nullValue;
     }
+    
+///
+unittest
+{
+    Nullable!(int, -1) ni = 0;
+    assert(!ni.isNull);
+    
+    ni = -1;
+    assert(ni.isNull);
+}
 
 /**
-Assigns $(D value) to the internally-held state. No null checks are
-made. Note that the assignment may leave $(D this) in the null state.
+Assigns $(D value) to the internally-held state. If the assignment
+succeeds, $(D this) becomes non-null. No null checks are made. Note 
+that the assignment may leave $(D this) in the null state.
+
+Params:
+    value = A value of type `T` to assign to this `Nullable`.
+            If it is `nullvalue`, then the internal state of
+            this `Nullable` will be set to null.
  */
     void opAssign()(T value)
     {
         _value = value;
     }
+    
+/**
+    If this `Nullable` wraps a type that already has a null value
+    (such as a pointer), and that null value is not given for
+    `nullValue`, then assigning the null value to this `Nullable` 
+    is no different than assigning any other value of type `T`, 
+    and the resulting code will look very strange. It is strongly 
+    recommended that this be avoided by using `T`'s "built in"
+    null value for `nullValue`.
+ */
+unittest
+{
+    //Passes
+    enum nullVal = cast(int*)0xCAFEBABE;
+    Nullable!(int*, nullVal) npi;
+    assert(npi.isNull);
+    
+    //Passes?!
+    npi = null;
+    assert(!npi.isNull);
+}
 
 /**
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
+
+Returns:
+    The value held internally by this `Nullable`.
  */
     @property ref inout(T) get() inout
     {
@@ -2197,14 +2348,58 @@ This function is also called for the implicit conversion to $(D T).
         assert(!isNull, message);
         return _value;
     }
+    
+///
+unittest
+{
+    import std.exception: assertThrown, assertNotThrown;
+    
+    Nullable!(int, -1) ni;
+    //`get` is implicitly called. Will throw 
+    //an error in non-release mode
+    assertThrown!Throwable(ni == 0);
+    
+    ni = 0;
+    assertNotThrown!Throwable(ni == 0);
+}
 
 /**
 Implicitly converts to $(D T).
-Gets the value. $(D this) must not be in the null state.
+$(D this) must not be in the null state.
  */
     alias get this;
 }
 
+///
+unittest
+{
+    Nullable!(size_t, size_t.max) indexOf(string[] haystack, string needle)
+    {
+        //Find the needle, returning -1 if not found
+        
+        return Nullable!(size_t, size_t.max).init;
+    }
+    
+    void sendLunchInvite(string name)
+    {
+    }
+    
+    //It's safer than C...
+    auto coworkers = ["Jane", "Jim", "Marry", "Fred"];
+    auto pos = indexOf(coworkers, "Bob");
+    if (!pos.isNull)
+    {
+        //Send Bob an invitation to lunch
+        sendLunchInvite(coworkers[pos]);
+    }
+    else
+    {
+        //Bob not found; report the error
+    }
+    
+    //And there's no overhead
+    static assert(Nullable!(size_t, size_t.max).sizeof == size_t.sizeof);
+}
 unittest
 {
     import std.exception : assertThrown;
