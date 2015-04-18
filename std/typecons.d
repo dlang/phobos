@@ -433,10 +433,41 @@ template Tuple(Specs...)
         U u = U.init;
         T t = u;
     }));
+
     /+ Helper for partial instanciation +/
     template isBuildableFrom(U)
     {
         enum isBuildableFrom(T) = isBuildable!(T, U);
+    }
+
+    /+ Determine whether or not all given types in T have a common lvalue type. +/
+    template CommonLvalueType(T...)
+    {
+        static if (T.length == 0)
+            alias CommonLvalueType = void;
+        else static if (T.length == 1)
+            alias CommonLvalueType = T[0];
+        else static if (is(T[0] == T[1]))
+            alias CommonLvalueType = CommonLvalueType!(T[1 .. $]);
+        else static if (is(Unqual!(T[0]) == Unqual!(T[1])) && !is(T[0] == shared) && !is(T[1] == shared))
+            alias CommonLvalueType = CommonLvalueType!(const(Unqual!(T[0])), T[2 .. $]);
+        else
+            alias CommonLvalueType = void;
+    }
+
+    unittest
+    {
+        static assert(is(CommonLvalueType!int == int));
+        static assert(is(CommonLvalueType!(int, int) == int));
+        static assert(is(CommonLvalueType!(int, int, int) == int));
+        static assert(is(CommonLvalueType!(immutable int, immutable int, immutable int) == immutable(int)));
+        static assert(is(CommonLvalueType!(immutable int, int) == const(int)));
+        static assert(is(CommonLvalueType!(int, immutable int) == const(int)));
+        static assert(is(CommonLvalueType!(immutable int, const int, int) == const(int)));
+
+        static assert(is(CommonLvalueType!() == void));
+        static assert(is(CommonLvalueType!(int, long) == void));
+        static assert(is(CommonLvalueType!(int, long, float) == void));
     }
 
     struct Tuple
@@ -758,6 +789,64 @@ template Tuple(Specs...)
         }
 
         /**
+         * Iterate fields in tuple as a _range.
+         *
+         * Only available when all field types are exactly the same in
+         * unqualified form. When the field types are all the same but with
+         * different mutability, the element type of the _range is `const`.
+         *
+         * Not available for the empty tuple.
+         *
+         * Returns:
+         *     Slice of the fields inside this tuple; the lifetime of the
+         *     slice must be no longer than the lifetime of the tuple.
+         */
+        static if (Types.length && !is(CommonLvalueType!Types == void))
+        {
+            CommonLvalueType!Types[] range() @system
+            {
+                return (&expand[0])[0 .. Types.length];
+            }
+
+            ///
+            nothrow unittest
+            {
+                import std.algorithm : sort;
+                auto t = tuple(3, 1, 2);
+                t.range.sort();
+                assert(t == tuple(1, 2, 3));
+            }
+
+            ///
+            pure unittest
+            {
+                import std.algorithm : copy, map, splitter;
+                import std.conv : to;
+
+                auto strCoords = "100,200,-500";
+                Tuple!(int, "x", int, "y", int, "z") coords;
+
+                strCoords.splitter(',')
+                    .map!(to!int)
+                    .copy(coords.range);
+
+                assert(coords.x == 100);
+                assert(coords.y == 200);
+                assert(coords.z == -500);
+            }
+
+            nothrow pure @nogc unittest
+            {
+                auto t = tuple(1, 2, 3);
+                auto lhs = t.range;
+                static immutable rhs = [1, 2, 3];
+                assert(lhs == rhs);
+
+                static assert(is(typeof(Tuple!(int, immutable int).init.range[0]) == const(int)));
+            }
+        }
+
+        /**
             Creates a hash of this `Tuple`.
 
             Returns:
@@ -903,6 +992,10 @@ template Tuple(Specs...)
             }
         }
     }
+
+    // Tuple.range depends on this being true
+    static if (Tuple.Types.length > 1 && !is(CommonLvalueType!(Tuple.Types) == void))
+        static assert(Tuple.init.expand[1].offsetof == Tuple.Types[0].sizeof);
 }
 
 ///
