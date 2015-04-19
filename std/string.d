@@ -40,6 +40,7 @@ $(TR $(TDNW Pruning and Filling)
          $(MYREF chomp)
          $(MYREF chompPrefix)
          $(MYREF chop)
+         $(MYREF detabber)
          $(MYREF detab)
          $(MYREF entab)
          $(MYREF leftJustify)
@@ -3076,65 +3077,148 @@ S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
 
 /++
     Replace each tab character in $(D s) with the number of spaces necessary
-    to align the following character at the next tab stop where $(D tabSize)
-    is the distance between tab stops.
+    to align the following character at the next tab stop.
+
+    Params:
+        s = string
+        tabSize = distance between tab stops
+
+    Returns:
+        GC allocated string with tabs replaced with spaces
   +/
-S detab(S)(S s, size_t tabSize = 8) @trusted pure
+S detab(S)(S s, size_t tabSize = 8) pure
     if (isSomeString!S)
 {
-    import std.utf : encode;
-    import std.uni : lineSep, paraSep;
+    import std.array;
+    return detabber(s, tabSize).array;
+}
+
+/++
+    Replace each tab character in $(D r) with the number of spaces necessary
+    to align the following character at the next tab stop.
+
+    Params:
+        r = string or forward range
+        tabSize = distance between tab stops
+
+    Returns:
+        lazy forward range with tabs replaced with spaces
+  +/
+auto detabber(Range)(Range r, size_t tabSize = 8)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    import std.uni : lineSep, paraSep, nelSep;
+    import std.utf : codeUnitLimit, decodeFront;
 
     assert(tabSize > 0);
-    alias C = Unqual!(typeof(s[0]));
-    bool changes = false;
-    C[] result;
-    int column;
-    size_t nspaces;
+    alias C = Unqual!(ElementEncodingType!Range);
 
-    foreach (size_t i, dchar c; s)
+    static struct Result
     {
-        switch (c)
+    private:
+        Range _input;
+        size_t _tabSize;
+        size_t nspaces;
+        int column;
+        size_t index;
+
+    public:
+
+        this(Range input, size_t tabSize)
         {
-        case '\t':
-            nspaces = tabSize - (column % tabSize);
-            if (!changes)
+            _input = input;
+            _tabSize = tabSize;
+        }
+
+        static if (isInfinite!Range)
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty()
             {
-                changes = true;
-                result = null;
-                result.length = s.length + nspaces - 1;
-                result.length = i + nspaces;
-                result[0 .. i] = s[0 .. i];
-                result[i .. i + nspaces] = ' ';
+                return _input.empty && nspaces == 0;
+            }
+        }
+
+        @property C front()
+        {
+            if (nspaces)
+                return ' ';
+            static if (isSomeString!Range)
+                C c = _input[0];
+            else
+                C c = _input.front;
+            if (index)
+                return c;
+            dchar dc;
+            if (c < codeUnitLimit!(immutable(C)[]))
+            {
+                dc = c;
+                index = 1;
             }
             else
             {
-                ptrdiff_t j = result.length;
-                result.length = j + nspaces;
-                result[j .. j + nspaces] = ' ';
+                auto r = _input.save;
+                dc = decodeFront(r, index);     // lookahead to decode
             }
-            column += nspaces;
-            break;
-
-        case '\r':
-        case '\n':
-        case paraSep:
-        case lineSep:
-            column = 0;
-            goto L1;
-
-        default:
-            column++;
-        L1:
-            if (changes)
+            switch (dc)
             {
-                std.utf.encode(result, c);
+                case '\r':
+                case '\n':
+                case paraSep:
+                case lineSep:
+                case nelSep:
+                    column = 0;
+                    break;
+
+                case '\t':
+                    nspaces = _tabSize - (column % _tabSize);
+                    column += nspaces;
+                    c = ' ';
+                    break;
+
+                default:
+                    ++column;
+                    break;
             }
-            break;
+            return c;
+        }
+
+        void popFront()
+        {
+            if (!index)
+                front();
+            if (nspaces)
+                --nspaces;
+            if (!nspaces)
+            {
+                static if (isSomeString!Range)
+                   _input = _input[1 .. $];
+                else
+                    _input.popFront();
+                --index;
+            }
+        }
+
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
         }
     }
 
-    return changes ? cast(S) result : s;
+    return Result(r, tabSize);
+}
+
+///
+@trusted pure unittest
+{
+    import std.array;
+
+    assert(detabber(" \n\tx", 9).array == " \n         x");
 }
 
 @trusted pure unittest
@@ -3160,8 +3244,29 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
         assert(detab("\t", 9) == "         ");
         assert(detab(  "  ab\t asdf ") == "  ab     asdf ");
         assert(detab(  "  \U00010000b\tasdf ") == "  \U00010000b    asdf ");
+        assert(detab("\r\t", 9) == "\r         ");
+        assert(detab("\n\t", 9) == "\n         ");
+        assert(detab("\u0085\t", 9) == "\u0085         ");
+        assert(detab("\u2028\t", 9) == "\u2028         ");
+        assert(detab(" \u2029\t", 9) == " \u2029         ");
     }
     });
+}
+
+///
+@trusted pure unittest
+{
+    import std.utf;
+    import std.array;
+
+    assert(detabber(" \u2029\t".byChar, 9).array == " \u2029         ");
+    auto r = "hel\tx".byWchar.detabber();
+    assert(r.front == 'h' && r.front == 'h');
+    auto s = r.save;
+    r.popFront();
+    r.popFront();
+    assert(r.front == 'l');
+    assert(s.front == 'h');
 }
 
 /++
