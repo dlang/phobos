@@ -200,7 +200,7 @@ class StringException : Exception
     The original data is not changed and not copied.
 +/
 
-inout(char)[] fromStringz(inout(char)* cString) @system pure {
+inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
     import core.stdc.string : strlen;
     return cString ? cString[0 .. strlen(cString)] : null;
 }
