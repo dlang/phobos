@@ -4263,7 +4263,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import core.memory : GC;
             import core.stdc.stdlib : malloc;
-            import core.stdc.string : memcpy;
+            import core.stdc.string : memcpy, memset;
 
             _store = cast(Impl*)malloc(Impl.sizeof);
             if (_store is null)
@@ -4285,19 +4285,17 @@ if (!is(T == class) && !(is(T == interface)))
             // object in order to avoid double freeing and undue aliasing
             static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
             {
-                import std.algorithm.searching : endsWith;
-
-                static T empty;
-                static if (T.tupleof.length > 0 &&
-                           T.tupleof[$-1].stringof.endsWith("this"))
-                {
-                    // If T is nested struct, keep original context pointer
-                    memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-                }
+                // If T is nested struct, keep original context pointer
+                static if (__traits(isNested, T))
+                    enum sz = T.sizeof - (void*).sizeof;
                 else
-                {
-                    memcpy(&source, &empty, T.sizeof);
-                }
+                    enum sz = T.sizeof;
+
+                auto init = typeid(T).init();
+                if (init.ptr is null) // null ptr means initialize to 0s
+                    memset(&source, 0, sz);
+                else
+                    memcpy(&source, init.ptr, sz);
             }
 
             _store._count = 1;
