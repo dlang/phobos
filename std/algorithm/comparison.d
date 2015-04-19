@@ -221,6 +221,7 @@ Params:
         handlers that accept one argument. There can also be a choice that
         accepts zero arguments. That choice will be invoked if the $(D
         switchObject) is null.
+    switchObject = the object against which the tests are being made.
 
 Returns:
     The value of the selected choice.
