@@ -58,7 +58,7 @@ WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) \
-	$(EXTRA_DOCUMENTABLES))
+	$(EXTRA_DOCUMENTABLES) std/experimental/testing/gen_ut_main std/experimental/testing/gen_ut_main_mixin)
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/.generated/modlist-prerelease.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
