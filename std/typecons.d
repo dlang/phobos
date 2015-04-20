@@ -104,17 +104,9 @@ else
 
     ~this()
     {
-        debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        release();
-    }
-
-    /** Frees the underlying $(D RefT) and nulls it */
-    void release()
-    {
         import core.stdc.stdlib : free;
 
-        debug(Unique) writeln("Release");
-
+        debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
         if (_p !is null)
         {
             destroy(_p);
@@ -128,6 +120,19 @@ else
             free(cast(void*)_p);
             _p = null;
         }
+    }
+
+    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
+    deprecated("Please use std.algorithm.move to transfer ownership.")
+    Unique release()
+    {
+        import std.algorithm : move;
+
+        debug(Unique) writeln("Release");
+        Unique u = move(this);
+        assert(_p is null);
+        debug(Unique) writeln("return from Release");
+        return u;
     }
 
     /**
