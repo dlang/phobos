@@ -1001,8 +1001,6 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     {
         import std.algorithm : equal;
 
-        if (this is rhs) return true;
-
         RedBlackTree that = cast(RedBlackTree)rhs;
         if (that is null) return false;
 
