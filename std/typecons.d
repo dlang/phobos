@@ -142,19 +142,22 @@ else
     For code that does not own the resource (and therefore does not affect
     its life cycle), pass a plain old reference.
     */
-    ref T get() return
+    ref T get() return @safe
+        if (!is(T == class))
     {
         import std.exception : enforce;
-
-        enforce(!empty, "You cannot get anything from an empty Unique");
-
-        static if (is(T == class))
-            return _p;
-        else
-            return *_p;
+        enforce(!empty, "You cannot get a struct reference from an empty Unique");
+        return *_p;
     }
 
-    // Ditto
+    /// Ditto
+    /// Note that getting a reference for a class is currently unsafe
+    /// as there is currently no way to stop escaping class pointers (see DIP69)
+    T get() @system
+        if (is(T == class))
+    {
+        return _p;
+    }
 
     @property bool empty() const
     {
