@@ -1915,15 +1915,15 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 
 
 /**
- * Returns the representation of a string, which has the same type
+ * Returns the _representation of a string, which has the same type
  * as the string except the character type is replaced by $(D ubyte),
  * $(D ushort), or $(D uint) depending on the character width.
  *
  * Params:
- *     s = The string to return the representation of.
+ *     s = The string to return the _representation of.
  *
  * Returns:
- *     The representation of the passed string.
+ *     The _representation of the passed string.
  */
 auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
@@ -1977,7 +1977,7 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  * to lowercase.
  *
  * Params:
- *     s = The string to capitalize.
+ *     s = The string to _capitalize.
  *
  * Returns:
  *     The capitalized string.

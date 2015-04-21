@@ -5280,8 +5280,8 @@ template castFrom(From)
 {
     /**
         Params:
-            To    = The type to cast to.
-            value = The value to cast. It must be of type $(D From),
+            To    = The type _to cast _to.
+            value = The value _to cast. It must be of type $(D From),
                     otherwise a compile-time error is emitted.
 
         Returns:
