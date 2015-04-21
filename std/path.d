@@ -62,21 +62,61 @@ import std.traits;
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
 */
-version(Posix)          enum string dirSeparator = "/";
-else version(Windows)   enum string dirSeparator = "\\";
+enum DirSeparator : string
+{
+    dos = "\\",
+    posix = "/",
+    osDefault = osDefaultDirSeparator
+}
+
+version (Posix)         enum string osDefaultDirSeparator = DirSeparator.posix;
+else version (Windows)  enum string osDefaultDirSeparator = DirSeparator.dos;
 else static assert (0, "unsupported platform");
 
+DirSeparator dirSeparator (PathStyle ps = PathStyle.osDefault)()
+{
+    static if (ps == PathStyle.dos)        return DirSeparator.dos;
+    else static if (ps == PathStyle.posix) return DirSeparator.posix;
+}
 
 
 
 /** Path separator string.  A colon under POSIX, a semicolon
     under Windows.
 */
-version(Posix)          enum string pathSeparator = ":";
-else version(Windows)   enum string pathSeparator = ";";
+enum PathSeparator : string
+{
+    dos = ";",
+    posix = ":",
+    osDefault = osDefaultPathSeparator
+}
+
+version (Posix)         enum string osDefaultPathSeparator = PathSeparator.posix;
+else version (Windows)  enum string osDefaultPathSeparator = PathSeparator.dos;
 else static assert (0, "unsupported platform");
 
+PathSeparator pathSeparator (PathStyle ps = PathStyle.osDefault)()
+{
+    static if (ps == PathStyle.dos)        return PathSeparator.dos;
+    else static if (ps == PathStyle.posix) return PathSeparator.posix;
+}
 
+
+/// Defines how should be built the path, either Posix or Dos style
+enum PathStyle : byte
+{
+    /// Use backslash as directory separator, semicolon as path separator
+    dos,
+
+    /// Use slash as directory separator, colon as path separator
+    posix,
+
+    osDefault = osDefaultPathStyle
+}
+
+version (Posix)         enum PathStyle osDefaultPathStyle = PathStyle.posix;
+else version (Windows)  enum PathStyle osDefaultPathStyle = PathStyle.dos;
+else static assert (0, "unsupported platform");
 
 
 /** Determines whether the given character is a directory separator.
@@ -84,11 +124,22 @@ else static assert (0, "unsupported platform");
     On Windows, this includes both $(D `\`) and $(D `/`).
     On POSIX, it's just $(D `/`).
 */
-bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
+bool isDirSeparator(dchar c, PathStyle ps = PathStyle.osDefault)  @safe pure nothrow @nogc
 {
     if (c == '/') return true;
-    version(Windows) if (c == '\\') return true;
+    if (ps == PathStyle.dos)
+    {
+        if (c == '\\') return true;
+    }
     return false;
+}
+
+unittest
+{
+    assert(isDirSeparator('/', PathStyle.dos) == true);
+    assert(isDirSeparator('/', PathStyle.posix) == true);
+    assert(isDirSeparator('\\', PathStyle.dos) == true);
+    assert(isDirSeparator('\\', PathStyle.posix) == false);
 }
 
 
@@ -98,109 +149,114 @@ bool isDirSeparator(dchar c)  @safe pure nothrow @nogc
     the drive letter from the rest of the path.  On POSIX, this always
     returns false.
 */
-private bool isDriveSeparator(dchar c)  @safe pure nothrow @nogc
+private bool isDriveSeparator(dchar c, PathStyle ps = PathStyle.osDefault)  @safe pure nothrow @nogc
 {
-    version(Windows) return c == ':';
+    if (ps == PathStyle.dos) return c == ':';
     else return false;
 }
 
 
 /*  Combines the isDirSeparator and isDriveSeparator tests. */
-version(Windows) private bool isSeparator(dchar c)  @safe pure nothrow @nogc
+private bool isSeparator(dchar c, PathStyle ps = PathStyle.osDefault)  @safe pure nothrow @nogc
 {
-    return isDirSeparator(c) || isDriveSeparator(c);
+    if (ps == PathStyle.dos)
+        return isDirSeparator(c, ps) || isDriveSeparator(c, ps);
+    else if (ps == PathStyle.posix)
+        return isDirSeparator(c, ps);
+    else
+        assert (0);
 }
-version(Posix) private alias isSeparator = isDirSeparator;
 
 
 /*  Helper function that determines the position of the last
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ptrdiff_t lastSeparator(R)(const R path)
+private ptrdiff_t lastSeparator(PathStyle ps = PathStyle.osDefault, R)(const R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && !isSeparator(path[i])) --i;
+    while (i >= 0 && !isSeparator(path[i], ps)) --i;
     return i;
 }
 
 
-version (Windows)
+private bool isUNC(PathStyle ps = PathStyle.osDefault, R)(const R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R) &&
+        ps == PathStyle.dos)
 {
-    private bool isUNC(R)(const R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-    {
-        return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
-            && !isDirSeparator(path[2]);
-    }
+    return path.length >= 3 && isDirSeparator(path[0], ps) && isDirSeparator(path[1], ps)
+        && !isDirSeparator(path[2], ps);
+}
 
-    private ptrdiff_t uncRootLength(R)(const R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-        in { assert (isUNC(path)); }
-        body
+private ptrdiff_t uncRootLength(PathStyle ps = PathStyle.osDefault, R)(const R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R) &&
+        ps == PathStyle.dos)
+    in { assert (isUNC!ps(path)); }
+    body
+{
+    ptrdiff_t i = 3;
+    while (i < path.length && !isDirSeparator(path[i], ps)) ++i;
+    if (i < path.length)
     {
-        ptrdiff_t i = 3;
-        while (i < path.length && !isDirSeparator(path[i])) ++i;
-        if (i < path.length)
+        auto j = i;
+        do { ++j; } while (j < path.length && isDirSeparator(path[j], ps));
+        if (j < path.length)
         {
-            auto j = i;
-            do { ++j; } while (j < path.length && isDirSeparator(path[j]));
-            if (j < path.length)
-            {
-                do { ++j; } while (j < path.length && !isDirSeparator(path[j]));
-                i = j;
-            }
+            do { ++j; } while (j < path.length && !isDirSeparator(path[j], ps));
+            i = j;
         }
-        return i;
     }
+    return i;
+}
 
-    private bool hasDrive(R)(const R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-    {
-        return path.length >= 2 && isDriveSeparator(path[1]);
-    }
+private bool hasDrive(PathStyle ps = PathStyle.osDefault, R)(const R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R) &&
+        ps == PathStyle.dos)
+{
+    return path.length >= 2 && isDriveSeparator(path[1], ps);
+}
 
-    private bool isDriveRoot(R)(const R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-    {
-        return path.length >= 3 && isDriveSeparator(path[1])
-            && isDirSeparator(path[2]);
-    }
+private bool isDriveRoot(PathStyle ps = PathStyle.osDefault, R)(const R path)
+    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R) &&
+        ps == PathStyle.dos)
+{
+    return path.length >= 3 && isDriveSeparator(path[1], ps)
+        && isDirSeparator(path[2], ps);
 }
 
 
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private auto ltrimDirSeparators(R)(inout R path)
+private auto ltrimDirSeparators(PathStyle ps = PathStyle.osDefault, R)(inout R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     int i = 0;
-    while (i < path.length && isDirSeparator(path[i])) ++i;
+    while (i < path.length && isDirSeparator(path[i], ps)) ++i;
     return path[i .. path.length];
 }
 
-private auto rtrimDirSeparators(R)(inout R path)
+private auto rtrimDirSeparators(PathStyle ps = PathStyle.osDefault, R)(inout R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && isDirSeparator(path[i])) --i;
+    while (i >= 0 && isDirSeparator(path[i], ps)) --i;
     return path[0 .. i+1];
 }
 
-private auto trimDirSeparators(R)(inout R path)
+private auto trimDirSeparators(PathStyle ps = PathStyle.osDefault, R)(inout R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
-    return ltrimDirSeparators(rtrimDirSeparators(path));
+    return ltrimDirSeparators!ps(rtrimDirSeparators!ps(path));
 }
 
 
@@ -273,38 +329,41 @@ else static assert (0);
     the POSIX requirements for the 'basename' shell utility)
     (with suitable adaptations for Windows paths).
 */
-auto baseName(R)(R path)
+auto baseName(PathStyle ps = PathStyle.osDefault, R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
-    auto p1 = stripDrive!(BaseOf!R)(path);
+    auto p1 = stripDrive!(ps, BaseOf!R)(path);
     if (p1.empty)
     {
-        version (Windows) if (isUNC!(BaseOf!R)(path))
+        static if (ps == PathStyle.dos)
         {
-            return path[0..1];
-        }
+            if (isUNC!(ps, BaseOf!R)(path))
+            {
+                return path[0..1];
+            }
+        } 
         static if (is(StringTypeOf!R))
             return StringTypeOf!R.init[];   // which is null
         else
             return p1; // which is empty
     }
 
-    auto p2 = rtrimDirSeparators(p1);
+    auto p2 = rtrimDirSeparators!ps(p1);
     if (p2.empty) return p1[0 .. 1];
 
-    return p2[lastSeparator(p2)+1 .. p2.length];
+    return p2[lastSeparator!ps(p2)+1 .. p2.length];
 }
 
 /// ditto
-inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
+inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, PathStyle ps = PathStyle.osDefault, C, C1)
     (inout(C)[] path, in C1[] suffix)
     @safe pure //TODO: nothrow (because of filenameCmp())
     if (isSomeChar!C && isSomeChar!C1)
 {
-    auto p = baseName(path);
+    auto p = baseName!ps(path);
     if (p.length > suffix.length
-        && filenameCmp!cs(p[$-suffix.length .. $], suffix) == 0)
+        && filenameCmp!(cs, ps)(p[$-suffix.length .. $], suffix) == 0)
     {
         return p[0 .. $-suffix.length];
     }
@@ -405,38 +464,38 @@ unittest
     the POSIX requirements for the 'dirname' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] dirName(C)(C[] path)
+C[] dirName(PathStyle ps = PathStyle.osDefault, C)(C[] path)
     //TODO: @safe (BUG 6169) pure nothrow (because of to())
     if (isSomeChar!C)
 {
     import std.conv : to;
     if (path.empty) return to!(typeof(return))(".");
 
-    auto p = rtrimDirSeparators(path);
+    auto p = rtrimDirSeparators!ps(path);
     if (p.empty) return path[0 .. 1];
 
-    version (Windows)
+    static if (ps == PathStyle.dos)
     {
-        if (isUNC(p) && uncRootLength(p) == p.length)
+        if (isUNC!ps(p) && uncRootLength!ps(p) == p.length)
             return p;
-        if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
+        if (p.length == 2 && isDriveSeparator(p[1], ps) && path.length > 2)
             return path[0 .. 3];
     }
 
-    auto i = lastSeparator(p);
+    auto i = lastSeparator!ps(p);
     if (i == -1) return to!(typeof(return))(".");
     if (i == 0) return p[0 .. 1];
 
-    version (Windows)
+    static if (ps == PathStyle.dos)
     {
         // If the directory part is either d: or d:\, don't
         // chop off the last symbol.
-        if (isDriveSeparator(p[i]) || isDriveSeparator(p[i-1]))
+        if (isDriveSeparator(p[i], ps) || isDriveSeparator(p[i-1], ps))
             return p[0 .. i+1];
     }
 
     // Remove any remaining trailing (back)slashes.
-    return rtrimDirSeparators(p[0 .. i]);
+    return rtrimDirSeparators!ps(p[0 .. i]);
 }
 
 
@@ -498,30 +557,30 @@ unittest
     }
     ---
 */
-inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
+inout(C)[] rootName(PathStyle ps = PathStyle.osDefault, C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
 {
     if (path.empty) return null;
 
-    version (Posix)
+    static if (ps == PathStyle.posix)
     {
-        if (isDirSeparator(path[0])) return path[0 .. 1];
+        if (isDirSeparator(path[0], ps)) return path[0 .. 1];
     }
-    else version (Windows)
+    else static if (ps == PathStyle.dos)
     {
-        if (isDirSeparator(path[0]))
+        if (isDirSeparator(path[0], ps))
         {
-            if (isUNC(path)) return path[0 .. uncRootLength(path)];
+            if (isUNC!ps(path)) return path[0 .. uncRootLength!ps(path)];
             else return path[0 .. 1];
         }
-        else if (path.length >= 3 && isDriveSeparator(path[1]) &&
-            isDirSeparator(path[2]))
+        else if (path.length >= 3 && isDriveSeparator(path[1], ps) &&
+            isDirSeparator(path[2], ps))
         {
             return path[0 .. 3];
         }
     }
     else static assert (0, "unsupported platform");
 
-    assert (!isRooted(path));
+    assert (!isRooted!ps(path));
     return null;
 }
 
@@ -561,15 +620,15 @@ unittest
     }
     ---
 */
-inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow @nogc
+inout(C)[] driveName(PathStyle ps = PathStyle.osDefault, C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
-    version (Windows)
+    static if (ps == PathStyle.dos)
     {
-        if (hasDrive(path))
+        if (hasDrive!ps(path))
             return path[0 .. 2];
-        else if (isUNC(path))
-            return path[0 .. uncRootLength(path)];
+        else if (isUNC!ps(path))
+            return path[0 .. uncRootLength!ps(path)];
     }
     return null;
 }
@@ -607,14 +666,14 @@ unittest
     }
     ---
 */
-auto stripDrive(R)(inout R path)
+auto stripDrive(PathStyle ps = PathStyle.osDefault, R)(inout R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
-    version(Windows)
+    static if (ps == PathStyle.dos)
     {
-        if (hasDrive!(BaseOf!R)(path))      return path[2 .. path.length];
-        else if (isUNC!(BaseOf!R)(path))    return path[uncRootLength!(BaseOf!R)(path) .. path.length];
+        if (hasDrive!(ps, BaseOf!R)(path))      return path[2 .. path.length];
+        else if (isUNC!(ps, BaseOf!R)(path))    return path[uncRootLength!(ps, BaseOf!R)(path) .. path.length];
     }
     return path;
 }
@@ -650,14 +709,14 @@ unittest
 /*  Helper function that returns the position of the filename/extension
     separator dot in path.  If not found, returns -1.
 */
-private ptrdiff_t extSeparatorPos(R)(const R path)
+private ptrdiff_t extSeparatorPos(PathStyle ps = PathStyle.osDefault, R)(const R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && !isSeparator(path[i]))
+    while (i >= 0 && !isSeparator(path[i], ps))
     {
-        if (path[i] == '.' && i > 0 && !isSeparator(path[i-1])) return i;
+        if (path[i] == '.' && i > 0 && !isSeparator(path[i-1], ps)) return i;
         --i;
     }
     return -1;
@@ -678,11 +737,11 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
     assert (extension(".file.ext")      == ".ext");
     ---
 */
-auto extension(R)(R path)
+auto extension(PathStyle ps = PathStyle.osDefault, R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
-    auto i = extSeparatorPos!(BaseOf!R)(path);
+    auto i = extSeparatorPos!(ps, BaseOf!R)(path);
     if (i == -1)
     {
         static if (is(StringTypeOf!R))
@@ -757,10 +816,10 @@ unittest
     assert (stripExtension("dir/file.ext")   == "dir/file");
     ---
 */
-inout(C)[] stripExtension(C)(inout(C)[] path)  @safe pure nothrow @nogc
+inout(C)[] stripExtension(PathStyle ps = PathStyle.osDefault, C)(inout(C)[] path)  @safe pure nothrow @nogc
     if (isSomeChar!C)
 {
-    auto i = extSeparatorPos(path);
+    auto i = extSeparatorPos!ps(path);
     if (i == -1) return path;
     else return path[0 .. i];
 }
@@ -825,27 +884,27 @@ unittest
     assert (setExtension("file.old", ".new") == "file.new");
     ---
 */
-immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
+immutable(Unqual!C1)[] setExtension(PathStyle ps = PathStyle.osDefault, C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
     if (ext.length > 0 && ext[0] != '.')
-        return cast(typeof(return))(stripExtension(path)~'.'~ext);
+        return cast(typeof(return))(stripExtension!ps(path)~'.'~ext);
     else
-        return cast(typeof(return))(stripExtension(path)~ext);
+        return cast(typeof(return))(stripExtension!ps(path)~ext);
 }
 
 ///ditto
-immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
+immutable(C1)[] setExtension(PathStyle ps = PathStyle.osDefault, C1, C2)(immutable(C1)[] path, const(C2)[] ext)
     @trusted pure nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     if (ext.length == 0)
-        return stripExtension(path);
+        return stripExtension!ps(path);
 
     // Optimised for the case where path is immutable and has no extension
     if (ext.length > 0 && ext[0] == '.') ext = ext[1 .. $];
-    auto i = extSeparatorPos(path);
+    auto i = extSeparatorPos!ps(path);
     if (i == -1)
     {
         path ~= '.';
@@ -910,12 +969,12 @@ unittest
     assert (defaultExtension("file.old", ".new") == "file.old");
     ---
 */
-immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
+immutable(Unqual!C1)[] defaultExtension(PathStyle ps = PathStyle.osDefault, C1, C2)(in C1[] path, in C2[] ext)
     @trusted pure // TODO: nothrow (because of to())
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     import std.conv : to;
-    auto i = extSeparatorPos(path);
+    auto i = extSeparatorPos!ps(path);
     if (i == -1)
     {
         if (ext.length > 0 && ext[0] == '.')
@@ -965,7 +1024,7 @@ unittest
     range.
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
-    buildPath(Range)(Range segments)
+    buildPath(PathStyle ps = PathStyle.osDefault, Range)(Range segments)
         if (isInputRange!Range && isSomeString!(ElementType!Range))
 {
     if (segments.empty) return null;
@@ -993,24 +1052,24 @@ immutable(ElementEncodingType!(ElementType!Range))[]
         }
         if (pos > 0)
         {
-            if (isRooted(segment))
+            if (isRooted!ps(segment))
             {
-                version (Posix)
+                static if (ps == PathStyle.posix)
                 {
                     pos = 0;
                 }
-                else version (Windows)
+                else static if (ps == PathStyle.dos)
                 {
-                    if (isAbsolute(segment))
+                    if (isAbsolute!ps(segment))
                         pos = 0;
                     else
                     {
-                        pos = rootName(buf[0 .. pos]).length;
-                        if (pos > 0 && isDirSeparator(buf[pos-1])) --pos;
+                        pos = rootName!ps(buf[0 .. pos]).length;
+                        if (pos > 0 && isDirSeparator(buf[pos-1], ps)) --pos;
                     }
                 }
             }
-            else if (!isDirSeparator(buf[pos-1]))
+            else if (!isDirSeparator(buf[pos-1], ps))
                 buf[pos++] = dirSeparator[0];
         }
         buf[pos .. pos + segment.length] = segment[];
@@ -1021,11 +1080,11 @@ immutable(ElementEncodingType!(ElementType!Range))[]
 }
 
 /// ditto
-immutable(C)[] buildPath(C)(const(C[])[] paths...)
+immutable(C)[] buildPath(PathStyle ps = PathStyle.osDefault, C)(const(C[])[] paths...)
     @safe pure nothrow
     if (isSomeChar!C)
 {
-    return buildPath!(typeof(paths))(paths);
+    return buildPath!(ps, typeof(paths))(paths);
 }
 
 ///
@@ -1179,7 +1238,7 @@ unittest
     }
     ---
 */
-immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
+immutable(C)[] buildNormalizedPath(PathStyle ps = PathStyle.osDefault, C)(const(C[])[] paths...)
     @trusted pure nothrow
     if (isSomeChar!C)
 {
@@ -1210,13 +1269,13 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     {
         auto p = paths[i];
         if (p.empty) continue;
-        else if (isRooted(p))
+        else if (isRooted!ps(p))
         {
-            immutable thisIsAbsolute = isAbsolute(p);
+            immutable thisIsAbsolute = isAbsolute!ps(p);
             if (thisIsAbsolute || !seenAbsolute)
             {
                 if (thisIsAbsolute) seenAbsolute = true;
-                rootElement = rootName(p);
+                rootElement = rootName!ps(p);
                 paths2[0] = p[rootElement.length .. $];
                 numPaths = 1;
                 segmentLengthSum = paths2[0].length;
@@ -1250,15 +1309,15 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     {
         // For Windows, we also need to perform normalization on
         // the root element.
-        version (Posix)
+        static if (ps == PathStyle.posix)
         {
             fullPath[0 .. rootElement.length] = rootElement[];
         }
-        else version (Windows)
+        else static if (ps == PathStyle.dos)
         {
             foreach (i, c; rootElement)
             {
-                if (isDirSeparator(c))
+                if (isDirSeparator(c, ps))
                 {
                     static assert (dirSeparator.length == 1);
                     fullPath[i] = dirSeparator[0];
@@ -1270,9 +1329,9 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
 
         // If the root element doesn't end with a dir separator,
         // we add one.
-        if (!isDirSeparator(rootElement[$-1]))
+        if (!isDirSeparator(rootElement[$-1], ps))
         {
-            static assert (dirSeparator.length == 1);
+            static assert (dirSeparator!ps.length == 1);
             fullPath[rootElement.length] = dirSeparator[0];
             relPart = fullPath[rootElement.length + 1 .. $];
         }
@@ -1289,7 +1348,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     ptrdiff_t i;
     foreach (path; paths2)
     {
-        path = trimDirSeparators(path);
+        path = trimDirSeparators!ps(path);
 
         enum Prev { nonSpecial, dirSep, dot, doubleDot }
         Prev prev = Prev.dirSep;
@@ -1298,16 +1357,16 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
             // Fake a dir separator between path segments
             immutable c = (j == path.length ? dirSeparator[0] : path[j]);
 
-            if (isDirSeparator(c))
+            if (isDirSeparator(c, ps))
             {
                 final switch (prev)
                 {
                     case Prev.doubleDot:
                         if (hasParents)
                         {
-                            while (i > 0 && !isDirSeparator(relPart[i-1])) --i;
+                            while (i > 0 && !isDirSeparator(relPart[i-1], ps)) --i;
                             if (i > 0) --i; // skip the dir separator
-                            while (i > 0 && !isDirSeparator(relPart[i-1])) --i;
+                            while (i > 0 && !isDirSeparator(relPart[i-1], ps)) --i;
                             if (i == 0) hasParents = rooted;
                         }
                         else
@@ -1319,7 +1378,7 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
                         }
                         break;
                     case Prev.dot:
-                        while (i > 0 && !isDirSeparator(relPart[i-1])) --i;
+                        while (i > 0 && !isDirSeparator(relPart[i-1], ps)) --i;
                         break;
                     case Prev.nonSpecial:
                         static assert (dirSeparator.length == 1);
@@ -1385,13 +1444,13 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     else
         fullPath = fullPath[0 .. len];
 
-    version (Windows)
+    static if (ps == PathStyle.dos)
     {
         // On Windows, if the path is on the form `\\server\share`,
         // with no further segments, normalization will have turned it
         // into `\\server\share\`.  If so, we need to remove the final
         // backslash.
-        if (isUNC(fullPath) && uncRootLength(fullPath) == fullPath.length - 1)
+        if (isUNC!ps(fullPath) && uncRootLength!ps(fullPath) == fullPath.length - 1)
             fullPath = fullPath[0 .. $-1];
     }
     return cast(typeof(return)) fullPath;
@@ -1643,7 +1702,7 @@ unittest
     }
     ---
 */
-auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
+auto pathSplitter(PathStyle ps = PathStyle.osDefault, C)(const(C)[] path)  @safe pure nothrow
     if (isSomeChar!C)
 {
     static struct PathSplitter
@@ -1676,9 +1735,9 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             else
             {
                 ptrdiff_t i = 0;
-                while (i < _path.length && !isDirSeparator(_path[i])) ++i;
+                while (i < _path.length && !isDirSeparator!ps(_path[i])) ++i;
                 _front = _path[0 .. i];
-                _path = ltrimDirSeparators(_path[i .. $]);
+                _path = ltrimDirSeparators!ps(_path[i .. $]);
             }
         }
 
@@ -1707,9 +1766,9 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             else
             {
                 auto i = (cast(ptrdiff_t) _path.length) - 1;
-                while (i >= 0 && !isDirSeparator(_path[i])) --i;
+                while (i >= 0 && !isDirSeparator!ps(_path[i])) --i;
                 _back = _path[i + 1 .. $];
-                _path = rtrimDirSeparators(_path[0 .. i+1]);
+                _path = rtrimDirSeparators!ps(_path[0 .. i+1]);
             }
         }
         @property auto save() { return this; }
@@ -1729,7 +1788,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             _path = p;
 
             // If path is rooted, first element is special
-            version (Windows)
+            static if (ps == PathStyle.dos)
             {
                 if (isUNC(_path))
                 {
@@ -1753,7 +1812,7 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
                     popFront();
                 }
             }
-            else version (Posix)
+            else static if (ps == PathStyle.posix)
             {
                 if (_path.length >= 1 && isDirSeparator(_path[0]))
                 {
@@ -1874,13 +1933,13 @@ unittest
     }
     ---
 */
-bool isRooted(R)(inout R path)
+bool isRooted(PathStyle ps = PathStyle.osDefault, R)(inout R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
-    version (Posix)         return false;
-    else version (Windows)  return isAbsolute!(BaseOf!R)(path);
+    static if (ps == PathStyle.posix)    return false;
+    else static if (ps == PathStyle.dos) return isAbsolute!(ps, BaseOf!R)(path);
 }
 
 
@@ -1942,25 +2001,25 @@ unittest
     }
     ---
 */
-version (StdDdoc)
+
+bool isAbsolute(PathStyle ps = PathStyle.osDefault, R)(const R path) @safe pure nothrow @nogc
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R));
+
+bool isAbsolute(PathStyle ps : PathStyle.dos, R)(const R path) @safe pure nothrow @nogc
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
-    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            is(StringTypeOf!R));
+    return isDriveRoot!(BaseOf!R)(path) || isUNC!(BaseOf!R)(path);
 }
-else version (Windows)
+
+bool isAbsolute(PathStyle ps : PathStyle.posix, R)(const R path) @safe pure nothrow @nogc
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
-    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            is(StringTypeOf!R))
-    {
-        return isDriveRoot!(BaseOf!R)(path) || isUNC!(BaseOf!R)(path);
-    }
+    return isRooted!(ps, BaseOf!R)(path);
 }
-else version (Posix)
-{
-    alias isAbsolute = isRooted;
-}
+
 
 
 unittest
@@ -2034,14 +2093,14 @@ unittest
     Throws:
     $(D Exception) if the specified _base directory is not absolute.
 */
-string absolutePath(string path, lazy string base = getcwd())
+string absolutePath(PathStyle ps = PathStyle.osDefault)(string path, lazy string base = getcwd())
     @safe pure
 {
     if (path.empty)  return null;
-    if (isAbsolute(path))  return path;
+    if (isAbsolute!ps(path))  return path;
     immutable baseVar = base;
-    if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
-    return buildPath(baseVar, path);
+    if (!isAbsolute!ps(baseVar)) throw new Exception("Base directory must be absolute");
+    return buildPath!ps(baseVar, path);
 }
 
 
@@ -2125,21 +2184,21 @@ unittest
     Throws:
     $(D Exception) if the specified _base directory is not absolute.
 */
-string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
+string relativePath(CaseSensitive cs = CaseSensitive.osDefault, PathStyle ps = PathStyle.osDefault)
     (string path, lazy string base = getcwd())
     //TODO: @safe  (object.reserve(T[]) should be @trusted)
 {
-    if (!isAbsolute(path)) return path;
+    if (!isAbsolute!ps(path)) return path;
     immutable baseVar = base;
-    if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
+    if (!isAbsolute!ps(baseVar)) throw new Exception("Base directory must be absolute");
 
     // Find common root with current working directory
     string result;
     if (!__ctfe) result.reserve(baseVar.length + path.length);
 
-    auto basePS = pathSplitter(baseVar);
-    auto pathPS = pathSplitter(path);
-    if (filenameCmp!cs(basePS.front, pathPS.front) != 0) return path;
+    auto basePS = pathSplitter!ps(baseVar);
+    auto pathPS = pathSplitter!ps(path);
+    if (filenameCmp!(cs, ps)(basePS.front, pathPS.front) != 0) return path;
 
     basePS.popFront();
     pathPS.popFront();
@@ -2247,10 +2306,10 @@ unittest
     }
     ---
 */
-int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b)
+int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault, PathStyle ps = PathStyle.osDefault)(dchar a, dchar b)
     @safe pure nothrow
 {
-    if (isDirSeparator(a) && isDirSeparator(b)) return 0;
+    if (isDirSeparator(a, ps) && isDirSeparator(b, ps)) return 0;
     static if (!cs)
     {
         import std.uni;
@@ -2320,7 +2379,7 @@ unittest
     }
     ---
 */
-int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, C1, C2)
+int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, PathStyle ps = PathStyle.osDefault, C1, C2)
     (const(C1)[] filename1, const(C2)[] filename2)
     @safe pure //TODO: nothrow (because of std.array.front())
     if (isSomeChar!C1 && isSomeChar!C2)
@@ -2329,7 +2388,7 @@ int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, C1, C2)
     {
         if (filename1.empty) return -(cast(int) !filename2.empty);
         if (filename2.empty) return  (cast(int) !filename1.empty);
-        auto c = filenameCharCmp!cs(filename1.front, filename2.front);
+        auto c = filenameCharCmp!(cs, ps)(filename1.front, filename2.front);
         if (c != 0) return c;
         filename1.popFront();
         filename2.popFront();
@@ -2425,7 +2484,7 @@ unittest
     }
     -----
  */
-bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
+bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, PathStyle ps = PathStyle.osDefault, C)
     (const(C)[] path, const(C)[] pattern)
     @safe pure nothrow
     if (isSomeChar!C)
@@ -2450,7 +2509,7 @@ body
                     return true;
                 foreach (j; ni .. path.length)
                 {
-                    if (globMatch!(cs, C)(path[j .. path.length],
+                    if (globMatch!(cs, ps, C)(path[j .. path.length],
                                     pattern[pi + 1 .. pattern.length]))
                         return true;
                 }
@@ -2480,7 +2539,7 @@ body
                     pc = pattern[pi];
                     if (pc == ']')
                         break;
-                    if (!anymatch && (filenameCharCmp!cs(nc, pc) == 0))
+                    if (!anymatch && (filenameCharCmp!(cs, ps)(nc, pc) == 0))
                         anymatch = true;
                     pi++;
                 }
@@ -2510,7 +2569,7 @@ body
 
                     if (pi0 == pi)
                     {
-                        if (globMatch!(cs, C)(path[ni..$], pattern[piRemain..$]))
+                        if (globMatch!(cs, ps, C)(path[ni..$], pattern[piRemain..$]))
                         {
                             return true;
                         }
@@ -2518,7 +2577,7 @@ body
                     }
                     else
                     {
-                        if (globMatch!(cs, C)(path[ni..$],
+                        if (globMatch!(cs, ps, C)(path[ni..$],
                                         pattern[pi0..pi-1]
                                         ~ pattern[piRemain..$]))
                         {
@@ -2535,7 +2594,7 @@ body
             default:
                 if (ni == path.length)
                     return false;
-                if (filenameCharCmp!cs(pc, path[ni]) != 0)
+                if (filenameCharCmp!(cs, ps)(pc, path[ni]) != 0)
                     return false;
                 ni++;
                 break;
@@ -2618,7 +2677,7 @@ unittest
     On POSIX, $(D filename) may not contain a forward slash ($(D '/')) or
     the null character ($(D '\0')).
 */
-bool isValidFilename(R)(R filename)
+bool isValidFilename(PathStyle ps = PathStyle.osDefault, R)(R filename)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
@@ -2626,7 +2685,7 @@ bool isValidFilename(R)(R filename)
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
     foreach (c; filename)
     {
-        version (Windows)
+        static if (ps == PathStyle.dos)
         {
             switch (c)
             {
@@ -2648,13 +2707,13 @@ bool isValidFilename(R)(R filename)
                     break;
             }
         }
-        else version (Posix)
+        else static if (ps == PathStyle.posix)
         {
             if (c == 0 || c == '/') return false;
         }
         else static assert (0);
     }
-    version (Windows)
+    static if (ps == PathStyle.dos)
     {
         auto last = filename[filename.length - 1];
         if (last == '.' || last == ' ') return false;
@@ -2721,7 +2780,7 @@ unittest
             of this module.)
     )
 */
-bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+bool isValidPath(PathStyle ps = PathStyle.osDefault, C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
 {
     if (path.empty) return false;
 
@@ -2735,16 +2794,16 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
             if (component.length == 1) return true;
             else if (component.length == 2 && component[1] == '.') return true;
         }
-        return isValidFilename(component);
+        return isValidFilename!ps(component);
     }
 
     if (path.length == 1)
-        return isDirSeparator(path[0]) || isValidComponent(path);
+        return isDirSeparator!ps(path[0]) || isValidComponent!ps(path);
 
     const(C)[] remainder;
-    version (Windows)
+    static if (ps == PathStyle.dos)
     {
-        if (isDirSeparator(path[0]) && isDirSeparator(path[1]))
+        if (isDirSeparator!ps(path[0]) && isDirSeparator!ps(path[1]))
         {
             // Some kind of UNC path
             if (path.length < 5)
@@ -2755,7 +2814,7 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
             else if (path[2] == '?')
             {
                 // Long UNC path
-                if (!isDirSeparator(path[3])) return false;
+                if (!isDirSeparator!ps(path[3])) return false;
                 foreach (c; path[4 .. $])
                 {
                     if (c == '\0') return false;
@@ -2771,17 +2830,17 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
             {
                 // Normal UNC path, i.e. \\server\share\...
                 size_t i = 2;
-                while (i < path.length && !isDirSeparator(path[i])) ++i;
-                if (i == path.length || !isValidFilename(path[2 .. i]))
+                while (i < path.length && !isDirSeparator!ps(path[i])) ++i;
+                if (i == path.length || !isValidFilename!ps(path[2 .. i]))
                     return false;
                 ++i; // Skip a single dir separator
                 size_t j = i;
-                while (j < path.length && !isDirSeparator(path[j])) ++j;
-                if (!isValidFilename(path[i .. j])) return false;
+                while (j < path.length && !isDirSeparator!ps(path[j])) ++j;
+                if (!isValidFilename!ps(path[i .. j])) return false;
                 remainder = path[j .. $];
             }
         }
-        else if (isDriveSeparator(path[1]))
+        else if (isDriveSeparator!ps(path[1]))
         {
             import std.ascii;
             if (!isAlpha(path[0])) return false;
@@ -2792,22 +2851,22 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
             remainder = path;
         }
     }
-    else version (Posix)
+    else static if (ps == PathStyle.posix)
     {
         remainder = path;
     }
     else static assert (0);
     assert (remainder !is null);
-    remainder = ltrimDirSeparators(remainder);
+    remainder = ltrimDirSeparators!ps(remainder);
 
     // Check that each component satisfies isValidComponent.
     while (!remainder.empty)
     {
         size_t i = 0;
-        while (i < remainder.length && !isDirSeparator(remainder[i])) ++i;
+        while (i < remainder.length && !isDirSeparator!ps(remainder[i])) ++i;
         assert (i > 0);
-        if (!isValidComponent(remainder[0 .. i])) return false;
-        remainder = ltrimDirSeparators(remainder[i .. $]);
+        if (!isValidComponent!ps(remainder[0 .. i])) return false;
+        remainder = ltrimDirSeparators!ps(remainder[i .. $]);
     }
 
     // All criteria passed
