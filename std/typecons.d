@@ -234,7 +234,7 @@ Unique!T unique(T, A...)(auto ref A args)
     }
     else {
         u._p = cast(T*)rawMemory;
-        emplace!T(rawMemory, args);
+        emplace!T(u._p, args);
     }
 
     static if (hasIndirections!T)
