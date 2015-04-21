@@ -230,10 +230,8 @@ Unique!T unique(T, A...)(auto ref A args)
         u._p = emplace!T(rawMemory[0 .. allocSize], args);
     }
     else {
-        import std.algorithm : move;
-        auto temp = T(args);
         u._p = cast(T*)rawMemory;
-        *u._p = move(temp);
+        emplace!T(rawMemory, args);
     }
 
     static if (hasIndirections!T)
