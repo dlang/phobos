@@ -668,7 +668,7 @@ public:
     }
 
     // Allow assignment from another variant which is a subset of this one
-    VariantN opAssign(T : VariantN!(Tsize, Types), size_t Tsize, Types...)(T rhs)
+    VariantN opAssign(T : VariantN!(tsize, Types), size_t tsize, Types...)(T rhs)
         if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
     {
         // discover which type rhs is actually storing
