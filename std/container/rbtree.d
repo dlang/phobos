@@ -19,8 +19,7 @@ Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 */
 module std.container.rbtree;
 
-// FIXME
-import std.functional; // : binaryFun;
+import std.functional : binaryFun;
 
 public import std.container.util;
 
@@ -631,89 +630,6 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     alias _less = binaryFun!less;
 
-    // BUG: this must come first in the struct due to issue 2810
-
-    // add an element to the tree, returns the node added, or the existing node
-    // if it has already been added and allowDuplicates is false
-
-    private auto _add(Elem n)
-    {
-        Node result;
-        static if(!allowDuplicates)
-            bool added = true;
-
-        if(!_end.left)
-        {
-            _end.left = _begin = result = allocate(n);
-        }
-        else
-        {
-            Node newParent = _end.left;
-            Node nxt = void;
-            while(true)
-            {
-                if(_less(n, newParent.value))
-                {
-                    nxt = newParent.left;
-                    if(nxt is null)
-                    {
-                        //
-                        // add to right of new parent
-                        //
-                        newParent.left = result = allocate(n);
-                        break;
-                    }
-                }
-                else
-                {
-                    static if(!allowDuplicates)
-                    {
-                        if(!_less(newParent.value, n))
-                        {
-                            result = newParent;
-                            added = false;
-                            break;
-                        }
-                    }
-                    nxt = newParent.right;
-                    if(nxt is null)
-                    {
-                        //
-                        // add to right of new parent
-                        //
-                        newParent.right = result = allocate(n);
-                        break;
-                    }
-                }
-                newParent = nxt;
-            }
-            if(_begin.left)
-                _begin = _begin.left;
-        }
-
-        static if(allowDuplicates)
-        {
-            result.setColor(_end);
-            debug(RBDoChecks)
-                check();
-            ++_length;
-            return result;
-        }
-        else
-        {
-            import std.typecons : Tuple;
-
-            if(added)
-            {
-                ++_length;
-                result.setColor(_end);
-            }
-            debug(RBDoChecks)
-                check();
-            return Tuple!(bool, "added", Node, "n")(added, result);
-        }
-    }
-
     version(unittest)
     {
         static if(is(typeof(less) == string))
@@ -904,6 +820,87 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
     }
 
+    // add an element to the tree, returns the node added, or the existing node
+    // if it has already been added and allowDuplicates is false
+    private auto _add(Elem n)
+    {
+        Node result;
+        static if(!allowDuplicates)
+            bool added = true;
+
+        if(!_end.left)
+        {
+            _end.left = _begin = result = allocate(n);
+        }
+        else
+        {
+            Node newParent = _end.left;
+            Node nxt = void;
+            while(true)
+            {
+                if(_less(n, newParent.value))
+                {
+                    nxt = newParent.left;
+                    if(nxt is null)
+                    {
+                        //
+                        // add to right of new parent
+                        //
+                        newParent.left = result = allocate(n);
+                        break;
+                    }
+                }
+                else
+                {
+                    static if(!allowDuplicates)
+                    {
+                        if(!_less(newParent.value, n))
+                        {
+                            result = newParent;
+                            added = false;
+                            break;
+                        }
+                    }
+                    nxt = newParent.right;
+                    if(nxt is null)
+                    {
+                        //
+                        // add to right of new parent
+                        //
+                        newParent.right = result = allocate(n);
+                        break;
+                    }
+                }
+                newParent = nxt;
+            }
+            if(_begin.left)
+                _begin = _begin.left;
+        }
+
+        static if(allowDuplicates)
+        {
+            result.setColor(_end);
+            debug(RBDoChecks)
+                check();
+            ++_length;
+            return result;
+        }
+        else
+        {
+            import std.typecons : Tuple;
+
+            if(added)
+            {
+                ++_length;
+                result.setColor(_end);
+            }
+            debug(RBDoChecks)
+                check();
+            return Tuple!(bool, "added", Node, "n")(added, result);
+        }
+    }
+
+
     /**
      * Check if any elements exist in the container.  Returns $(D false) if at least
      * one element exists.
@@ -998,18 +995,18 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
      * Compares two trees for equality.
      *
-     * Complexity: $(BIGOH n*log(n))
+     * Complexity: $(BIGOH n)
      */
     override bool opEquals(Object rhs)
     {
         import std.algorithm : equal;
+
         RedBlackTree that = cast(RedBlackTree)rhs;
         if (that is null) return false;
 
         // If there aren't the same number of nodes, we can't be equal.
         if (this._length != that._length) return false;
 
-        // FIXME: use a more efficient algo (if one exists?)
         auto thisRange = this[];
         auto thatRange = that[];
         return equal!(function(Elem a, Elem b) => !_less(a,b) && !_less(b,a))
@@ -1024,10 +1021,11 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         auto t4 = new RedBlackTree(1,2,3,4,5);
         auto o = new Object();
 
-        assert(t1==t2);
-        assert(t1!=t3);
-        assert(t1!=t4);
-        assert(t1!=o);  // pathological case, must not crash
+        assert(t1 == t1);
+        assert(t1 == t2);
+        assert(t1 != t3);
+        assert(t1 != t4);
+        assert(t1 != o);  // pathological case, must not crash
     }
 
     /**
