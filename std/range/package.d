@@ -7142,6 +7142,17 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         }
         return false;
     }
+
+// groupBy
+/**
+Returns a range of subranges of elements that are equivalent according to the
+sorting relation.
+ */
+    auto groupBy()()
+    {
+        import std.algorithm.iteration : chunkBy;
+        return _input.chunkBy!((a, b) => !predFun(a, b) && !predFun(b, a));
+    }
 }
 
 ///
@@ -7269,6 +7280,14 @@ that break its sortedness, $(D SortedRange) will work erratically.
 {
     immutable(int)[] arr = [ 1, 2, 3 ];
     auto s = assumeSorted(arr);
+}
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] arr = [100, 101, 102, 200, 201, 300];
+    auto s = assumeSorted!((a, b) => a / 100 < b / 100)(arr);
+    assert(s.groupBy.equal!equal([[100, 101, 102], [200, 201], [300]]));
 }
 
 // Test on an input range
