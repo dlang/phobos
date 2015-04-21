@@ -581,6 +581,13 @@ public:
         opAssign(value);
     }
 
+	/// Allows assignment from a subset algebraic type
+	this(T : VariantN!(tsize, Types), size_t tsize, Types...)(T value)
+        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
+	{
+		opAssign(value);
+	}
+
     static if (!AllowedTypes.length || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes))
     {
         this(this)
