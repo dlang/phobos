@@ -4422,10 +4422,15 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         return 0;
     }
 
-    ReadlnAppender app;
-    app.initialize(buf);
-    app.putbuf(lineptr[0 .. s]);
-    buf = app.data;
+    if (s <= buf.length)
+    {
+        buf = buf.ptr[0 .. s];
+        buf[] = lineptr[0 .. s];
+    }
+    else
+    {
+        buf = lineptr[0 .. s].dup;
+    }
     return s;
 }
 
