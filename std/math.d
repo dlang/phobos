@@ -7007,8 +7007,8 @@ unittest
 
 unittest
 {
-    static void test(T)()
-        if (isFloatingPoint!T)
+    import std.typetuple;
+    foreach (T; TypeTuple!(float, double, real))
     {
         T[] values = [-cast(T)NaN(20), -T.nan, -T.infinity, -T.max, -T.max / 2,
                       T(-16.0), T(-1.0).nextDown, T(-1.0), T(-1.0).nextUp,
@@ -7032,8 +7032,4 @@ unittest
             assert(cmp(x, x) == 0);
         }
     }
-
-    test!float;
-    test!double;
-    test!real;
 }
