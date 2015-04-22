@@ -3097,7 +3097,7 @@ private:
         *dest = (val<<8) | (*dest & 0xFF);
 }
 
-uint read24(const ubyte* ptr, size_t idx) pure nothrow @nogc
+uint read24(const ubyte* ptr, size_t idx) @safe pure nothrow @nogc
 {
     static if(hasUnalignedReads)
         return __ctfe ? safeRead24(ptr, idx) : unalignedRead24(ptr, idx);
@@ -3105,7 +3105,7 @@ uint read24(const ubyte* ptr, size_t idx) pure nothrow @nogc
         return safeRead24(ptr, idx);
 }
 
-void write24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
+void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
 {
     static if(hasUnalignedReads)
         return __ctfe ? safeWrite24(ptr, val, idx) : unalignedWrite24(ptr, val, idx);
@@ -3320,7 +3320,7 @@ private:
     uint[] data;
 }
 
-@trusted unittest// Uint24 tests //@@@BUG@@ iota is system ?!
+@safe unittest// Uint24 tests
 {
     import std.algorithm;
     import std.conv;
@@ -3410,7 +3410,7 @@ version(unittest)
     private alias AllSets = TypeTuple!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
 
-@trusted unittest// core set primitives test
+@safe unittest// core set primitives test
 {
     import std.conv;
     foreach(CodeList; AllSets)
@@ -3487,7 +3487,7 @@ version(unittest)
 
 
 //test constructor to work with any order of intervals
-@system unittest //@@@BUG@@@ iota is @system
+@safe unittest
 {
     import std.conv, std.range, std.algorithm;
     import std.typecons;
@@ -3529,7 +3529,7 @@ version(unittest)
 }
 
 
-@trusted unittest
+@safe unittest
 {   // full set operations
     import std.conv;
     foreach(CodeList; AllSets)
@@ -3634,7 +3634,7 @@ version(unittest)
 
 }
 
-unittest// vs single dchar
+@safe unittest// vs single dchar
 {
     import std.conv;
     CodepointSet a = CodepointSet(10, 100, 120, 200);
@@ -3642,7 +3642,7 @@ unittest// vs single dchar
     assert((a & 'B') == CodepointSet(66, 67));
 }
 
-unittest// iteration & opIndex
+@safe unittest// iteration & opIndex
 {
     import std.conv;
     import std.typecons;
@@ -4299,7 +4299,7 @@ public template codepointTrie(T, sizes...)
     }
 }
 
-unittest // codepointTrie example
+pure unittest // codepointTrie example
 {
     import std.algorithm;
     // pick characters from the Greek script
@@ -5221,7 +5221,7 @@ public auto utfMatcher(Char, Set)(Set set) @trusted
 
 
 //a range of code units, packed with index to speed up forward iteration
-package auto decoder(C)(C[] s, size_t offset=0) @trusted
+package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
     if(is(C : wchar) || is(C : char))
 {
     static struct Decoder
@@ -5250,7 +5250,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @trusted
     Expose UTF string $(D s) as a random-access
     range of $(S_LINK Code unit, code units).
 */
-package auto units(C)(C[] s)
+package auto units(C)(C[] s) @safe pure nothrow @nogc
     if(is(C : wchar) || is(C : char))
 {
     static struct Units
@@ -5571,8 +5571,8 @@ struct sliceBits(size_t from, size_t to)
     }
 }
 
-uint low_8(uint x) { return x&0xFF; }
-@safe pure nothrow uint midlow_8(uint x){ return (x&0xFF00)>>8; }
+@safe pure nothrow @nogc uint low_8(uint x) { return x&0xFF; }
+@safe pure nothrow @nogc uint midlow_8(uint x){ return (x&0xFF00)>>8; }
 alias lo8 = assumeSize!(low_8, 8);
 alias mlo8 = assumeSize!(midlow_8, 8);
 
@@ -5734,7 +5734,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 
 //============================================================================
 
-@trusted int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+@safe pure int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     import std.ascii : toLower;
     import std.algorithm : cmp, map, filter;
@@ -5744,12 +5744,12 @@ template idxTypes(Key, size_t fullBits, Prefix...)
         b.map!toLower.filter!pred);
 }
 
-unittest
+@safe pure unittest
 {
     assert(!comparePropertyName("foo-bar", "fooBar"));
 }
 
-bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pure if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     return comparePropertyName(a, b) < 0;
 }
@@ -5812,7 +5812,7 @@ package ubyte[] compressIntervals(Range)(Range intervals)
     return storage;
 }
 
-unittest
+@safe pure unittest
 {
     import std.typecons;
     auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
@@ -5839,7 +5839,7 @@ unittest
     return DecompressedIntervals(data);
 }
 
-@trusted struct DecompressedIntervals
+@safe struct DecompressedIntervals
 {
 pure:
     const(ubyte)[] _stream;
@@ -7383,12 +7383,12 @@ unittest
     // placed after a "ring below" in a sequence
     ---
 +/
-ubyte combiningClass(dchar ch)
+ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 {
     return combiningClassTrie[ch];
 }
 
-unittest
+@safe pure nothrow @nogc unittest
 {
     foreach(ch; 0..0x80)
         assert(combiningClass(ch) == 0);
