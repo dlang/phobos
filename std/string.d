@@ -2924,39 +2924,129 @@ unittest
     Left justify $(D s) in a field $(D width) characters wide. $(D fillChar)
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
+
+    Params:
+        s = string
+        width = minimum field width
+        fillChar = used to pad end up to $(D width) characters
+
+    Returns:
+        GC allocated string
+
+    See_Also:
+        $(LREF leftJustifier), which does not allocate
   +/
-S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
+S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
     if (isSomeString!S)
 {
-    import std.utf : canSearchInCodeUnits;
-    import std.conv : to;
-
-    alias C = ElementEncodingType!S;
-
-    if (canSearchInCodeUnits!C(fillChar))
-    {
-        immutable len = s.walkLength();
-        if (len >= width)
-            return s;
-
-        auto retval = new Unqual!(C)[width - len + s.length];
-        retval[0 .. s.length] = s[];
-        retval[s.length .. $] = cast(C)fillChar;
-        return cast(S)retval;
-    }
-    else
-    {
-        auto dstr = to!dstring(s);
-        if (dstr.length >= width)
-            return s;
-
-        auto retval = new dchar[](width);
-        retval[0 .. dstr.length] = dstr[];
-        retval[dstr.length .. $] = fillChar;
-        return to!S(retval);
-    }
+    import std.array;
+    return leftJustifier(s, width, fillChar).array;
 }
 
+/++
+    Left justify $(D s) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D s) doesn't fill.
+
+    Params:
+        s = string or range of characters
+        width = minimum field width
+        fillChar = used to pad end up to $(D width) characters
+
+    Returns:
+        a lazy range of the left justified result
+
+    See_Also:
+        $(LREF rightJustifier)
+  +/
+
+auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    alias C = Unqual!(ElementEncodingType!Range);
+
+    static if (C.sizeof == 1)
+    {
+        import std.utf : byDchar, byChar;
+        return leftJustifier(r.byDchar, width, fillChar).byChar;
+    }
+    else static if (C.sizeof == 2)
+    {
+        import std.utf : byDchar, byWchar;
+        return leftJustifier(r.byDchar, width, fillChar).byWchar;
+    }
+    else static if (C.sizeof == 4)
+    {
+        static struct Result
+        {
+          private:
+            Range _input;
+            size_t _width;
+            dchar _fillChar;
+            size_t len;
+
+          public:
+            this(Range input, size_t width, dchar fillChar)
+            {
+                _input = input;
+                _width = width;
+                _fillChar = fillChar;
+            }
+
+            @property bool empty()
+            {
+                return len >= _width && _input.empty;
+            }
+
+            @property C front()
+            {
+                return _input.empty ? _fillChar : _input.front;
+            }
+
+            void popFront()
+            {
+                ++len;
+                if (!_input.empty)
+                    _input.popFront();
+            }
+
+            static if (isForwardRange!Range)
+            {
+                @property typeof(this) save()
+                {
+                    auto ret = this;
+                    ret._input = _input.save;
+                    return ret;
+                }
+            }
+        }
+
+        return Result(r, width, fillChar);
+    }
+    else
+        static assert(0);
+}
+
+///
+@safe pure @nogc nothrow
+unittest
+{
+    import std.algorithm : equal;
+    import std.utf : byChar;
+    assert(leftJustifier("hello", 2).equal("hello".byChar));
+    assert(leftJustifier("hello", 7).equal("hello  ".byChar));
+    assert(leftJustifier("hello", 7, 'x').equal("helloxx".byChar));
+}
+
+unittest
+{
+    auto r = "hello".leftJustifier(8);
+    r.popFront();
+    auto save = r.save;
+    r.popFront();
+    assert(r.front == 'l');
+    assert(save.front == 'e');
+}
 
 /++
     Right justify $(D s) in a field $(D width) characters wide. $(D fillChar)
