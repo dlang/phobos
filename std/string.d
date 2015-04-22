@@ -3632,7 +3632,14 @@ body
     }
 
     auto buffer = new char[count];
-    translateImplAscii(str, transTable, remTable, buffer, toRemove);
+
+    size_t i = 0;
+    foreach (char c; str)
+    {
+        if (!remTable[c])
+            buffer[i++] = transTable[c];
+    }
+
     return cast(C[])(buffer);
 }
 
@@ -3738,7 +3745,11 @@ body
     foreach (char c; toRemove)
         remTable[c] = true;
 
-    translateImplAscii(str, transTable, remTable, buffer, toRemove);
+    foreach (char c; str)
+    {
+        if (!remTable[c])
+            put(buffer, transTable[c]);
+    }
 }
 
 ///
@@ -3755,28 +3766,6 @@ body
     assert(buffer.data == "h5 rd");
 }
 
-private void translateImplAscii(C = immutable char, Buffer)(in char[] str,
-        in char[] transTable, ref bool[256] remTable, Buffer buffer,
-        in char[] toRemove = null) @trusted pure
-{
-    static if (isOutputRange!(Buffer, char))
-    {
-        foreach (char c; str)
-        {
-            if (!remTable[c])
-                put(buffer, transTable[c]);
-        }
-    }
-    else
-    {
-        size_t i = 0;
-        foreach (char c; str)
-        {
-            if (!remTable[c])
-                buffer[i++] = transTable[c];
-        }
-    }
-}
 
 /***********************************************
  * See if character c is in the pattern.
