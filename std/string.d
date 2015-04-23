@@ -3181,108 +3181,269 @@ S detab(S)(S s, size_t tabSize = 8) @trusted pure
     Params:
         s       = String to convert.
         tabSize = Tab columns are $(D tabSize) spaces apart.
+
+    Returns:
+        GC allocated string with spaces replaced with tabs;
+        use $(LREF entabber) to not allocate.
+
+    See_Also:
+        $(LREF entabber)
  +/
-S entab(S)(S s, size_t tabSize = 8) @trusted pure
+S entab(S)(S s, size_t tabSize = 8) @trusted
     if (isSomeString!S)
 {
-    import std.utf : encode;
-    import std.uni : lineSep, paraSep;
-    import std.exception : assumeUnique;
-
-    bool changes = false;
-    alias C = Unqual!(typeof(s[0]));
-    C[] result;
-
-    int nspaces = 0;
-    int nwhite = 0;
-    size_t column = 0;         // column number
-
-    foreach (size_t i, dchar c; s)
-    {
-
-        void change()
-        {
-            changes = true;
-            result = null;
-            result.length = s.length;
-            result.length = i;
-            result[0 .. i] = s[0 .. i];
-        }
-
-        switch (c)
-        {
-        case '\t':
-            nwhite++;
-            if (nspaces)
-            {
-                if (!changes)
-                    change();
-
-                ptrdiff_t j = result.length - nspaces;
-                auto ntabs = (((column - nspaces) % tabSize) + nspaces) / tabSize;
-                result.length = j + ntabs;
-                result[j .. j + ntabs] = '\t';
-                nwhite += ntabs - nspaces;
-                nspaces = 0;
-            }
-            column = (column + tabSize) / tabSize * tabSize;
-            break;
-
-        case '\r':
-        case '\n':
-        case paraSep:
-        case lineSep:
-            // Truncate any trailing spaces or tabs
-            if (nwhite)
-            {
-                if (!changes)
-                    change();
-                result = result[0 .. result.length - nwhite];
-            }
-            break;
-
-        default:
-            if (nspaces >= 2 && (column % tabSize) == 0)
-            {
-                if (!changes)
-                    change();
-
-                auto j = result.length - nspaces;
-                auto ntabs = (nspaces + tabSize - 1) / tabSize;
-                result.length = j + ntabs;
-                result[j .. j + ntabs] = '\t';
-                nwhite += ntabs - nspaces;
-                nspaces = 0;
-            }
-            if (c == ' ')
-            {   nwhite++;
-                nspaces++;
-            }
-            else
-            {   nwhite = 0;
-                nspaces = 0;
-            }
-            column++;
-            break;
-        }
-        if (changes)
-        {
-            std.utf.encode(result, c);
-        }
-    }
-
-    // Truncate any trailing spaces or tabs
-    if (nwhite)
-    {
-        if (changes)
-            result = result[0 .. result.length - nwhite];
-        else
-            s = s[0 .. s.length - nwhite];
-    }
-    return changes ? assumeUnique(result) : s;
+    import std.array;
+    return cast(S)(entabber(s, tabSize).array);
 }
 
-@safe pure unittest
+///
+unittest
+{
+    assert(entab("        x \n") == "\tx\n");
+}
+
+/++
+    Replaces spaces in range $(D r) with the optimal number of tabs.
+    All spaces and tabs at the end of a line are removed.
+
+    Params:
+        r = string or forward range
+        tabSize = distance between tab stops
+
+    Returns:
+        lazy forward range with spaces replaced with tabs
+
+    See_Also:
+        $(LREF entab)
+  +/
+auto entabber(Range)(Range r, size_t tabSize = 8)
+    if (isForwardRange!Range)
+{
+    import std.uni : lineSep, paraSep, nelSep;
+    import std.utf : codeUnitLimit, decodeFront;
+
+    assert(tabSize > 0);
+    alias C = Unqual!(ElementEncodingType!Range);
+
+    static struct Result
+    {
+    private:
+        Range _input;
+        size_t _tabSize;
+        size_t nspaces;
+        size_t ntabs;
+        int column;
+        size_t index;
+
+        @property C getFront()
+        {
+            static if (isSomeString!Range)
+                return _input[0];       // avoid autodecode
+            else
+                return _input.front;
+        }
+
+    public:
+
+        this(Range input, size_t tabSize)
+        {
+            _input = input;
+            _tabSize = tabSize;
+        }
+
+        @property bool empty()
+        {
+            if (ntabs || nspaces)
+                return false;
+
+            /* Since trailing spaces are removed,
+             * look ahead for anything that is not a trailing space
+             */
+            static if (isSomeString!Range)
+            {
+                foreach (c; _input)
+                {
+                    if (c != ' ' && c != '\t')
+                        return false;
+                }
+                return true;
+            }
+            else
+            {
+                if (_input.empty)
+                    return true;
+                C c = _input.front;
+                if (c != ' ' && c != '\t')
+                    return false;
+                auto t = _input.save;
+                t.popFront();
+                foreach (c2; t)
+                {
+                    if (c2 != ' ' && c2 != '\t')
+                        return false;
+                }
+                return true;
+            }
+        }
+
+        @property C front()
+        {
+            //writefln("   front(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront());
+            if (ntabs)
+                return '\t';
+            if (nspaces)
+                return ' ';
+            C c = getFront();
+            if (index)
+                return c;
+            dchar dc;
+            if (c < codeUnitLimit!(immutable(C)[]))
+            {
+                index = 1;
+                dc = c;
+                if (c == ' ' || c == '\t')
+                {
+                    // Consume input until a non-blank is encountered
+                    size_t startcol = column;
+                    C cx;
+                    static if (isSomeString!Range)
+                    {
+                        while (1)
+                        {
+                            assert(_input.length);
+                            cx = _input[0];
+                            if (cx == ' ')
+                                ++column;
+                            else if (cx == '\t')
+                                column += _tabSize - (column % _tabSize);
+                            else
+                                break;
+                            _input = _input[1 .. $];
+                        }
+                    }
+                    else
+                    {
+                        while (1)
+                        {
+                            assert(!_input.empty);
+                            cx = _input.front;
+                            if (cx == ' ')
+                                ++column;
+                            else if (cx == '\t')
+                                column += _tabSize - (column % _tabSize);
+                            else
+                                break;
+                            _input.popFront();
+                        }
+                    }
+                    // Compute ntabs+nspaces to get from startcol to column
+                    auto n = column - startcol;
+                    if (n == 1)
+                    {
+                        nspaces = 1;
+                    }
+                    else
+                    {
+                        ntabs = column / _tabSize - startcol / _tabSize;
+                        if (ntabs == 0)
+                            nspaces = column - startcol;
+                        else
+                            nspaces = column % _tabSize;
+                    }
+                    //writefln("\tstartcol = %s, column = %s, _tabSize = %s", startcol, column, _tabSize);
+                    //writefln("\tntabs = %s, nspaces = %s", ntabs, nspaces);
+                    if (cx < codeUnitLimit!(immutable(C)[]))
+                    {
+                        dc = cx;
+                        index = 1;
+                    }
+                    else
+                    {
+                        auto r = _input.save;
+                        dc = decodeFront(r, index);     // lookahead to decode
+                    }
+                    switch (dc)
+                    {
+                        case '\r':
+                        case '\n':
+                        case paraSep:
+                        case lineSep:
+                        case nelSep:
+                            column = 0;
+                            // Spaces followed by newline are ignored
+                            ntabs = 0;
+                            nspaces = 0;
+                            return cx;
+
+                        default:
+                            ++column;
+                            break;
+                    }
+                    return ntabs ? '\t' : ' ';
+                }
+            }
+            else
+            {
+                auto r = _input.save;
+                dc = decodeFront(r, index);     // lookahead to decode
+            }
+            //writefln("dc = x%x", dc);
+            switch (dc)
+            {
+                case '\r':
+                case '\n':
+                case paraSep:
+                case lineSep:
+                case nelSep:
+                    column = 0;
+                    break;
+
+                default:
+                    ++column;
+                    break;
+            }
+            return c;
+        }
+
+        void popFront()
+        {
+            //writefln("popFront(): ntabs = %s nspaces = %s index = %s front = '%s'", ntabs, nspaces, index, getFront());
+            if (!index)
+                front();
+            if (ntabs)
+                --ntabs;
+            else if (nspaces)
+                --nspaces;
+            else if (!ntabs && !nspaces)
+            {
+                static if (isSomeString!Range)
+                   _input = _input[1 .. $];
+                else
+                    _input.popFront();
+                --index;
+            }
+        }
+
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
+    }
+
+    return Result(r, tabSize);
+}
+
+///
+unittest
+{
+    import std.array;
+    assert(entabber("        x \n").array == "\tx\n");
+}
+
+@safe pure
+unittest
 {
     import std.conv : to;
 
@@ -3317,11 +3478,33 @@ S entab(S)(S s, size_t tabSize = 8) @trusted pure
     assert(entab("a\r\n") == "a\r\n");
     assert(entab("a\u2028") == "a\u2028");
     assert(entab("a\u2029") == "a\u2029");
+    assert(entab("a\u0085") == "a\u0085");
     assert(entab("a  ") == "a");
     assert(entab("a\t") == "a");
     assert(entab("\uFF28\uFF45\uFF4C\uFF4C567      \t\uFF4F \t") ==
                  "\uFF28\uFF45\uFF4C\uFF4C567\t\t\uFF4F");
+    assert(entab(" \naa") == "\naa");
+    assert(entab(" \r aa") == "\r aa");
+    assert(entab(" \u2028 aa") == "\u2028 aa");
+    assert(entab(" \u2029 aa") == "\u2029 aa");
+    assert(entab(" \u0085 aa") == "\u0085 aa");
     });
+}
+
+@safe pure
+unittest
+{
+    import std.utf : byChar;
+    import std.array;
+    assert(entabber(" \u0085 aa".byChar).array == "\u0085 aa");
+    assert(entabber(" \u2028\t aa \t".byChar).array == "\u2028\t aa");
+
+    auto r = entabber("1234", 4);
+    r.popFront();
+    auto rsave = r.save;
+    r.popFront();
+    assert(r.front == '3');
+    assert(rsave.front == '2');
 }
 
 
