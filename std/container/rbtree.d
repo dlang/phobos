@@ -73,7 +73,7 @@ struct RBNode(V)
     /**
      * Get the left child
      */
-    @property Node left()
+    @property inout(RBNode)* left() inout
     {
         return _left;
     }
@@ -81,7 +81,7 @@ struct RBNode(V)
     /**
      * Get the right child
      */
-    @property Node right()
+    @property inout(RBNode)* right() inout
     {
         return _right;
     }
@@ -89,7 +89,7 @@ struct RBNode(V)
     /**
      * Get the parent
      */
-    @property Node parent()
+    @property inout(RBNode)* parent() inout
     {
         return _parent;
     }
@@ -665,7 +665,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     alias Elem = T;
 
     // used for convenience
-    private alias Node = RBNode!Elem.Node;
+    private alias RBNode = .RBNode!Elem;
+    private alias Node = RBNode.Node;
 
     private Node   _end;
     private Node   _begin;
@@ -679,7 +680,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static private Node allocate()
     {
-        return new RBNode!Elem;
+        return new RBNode;
     }
 
     static private Node allocate(Elem v)
@@ -783,12 +784,12 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     // find a node based on an element value
-    private Node _find(Elem e)
+    private inout(RBNode)* _find(Elem e) inout
     {
         static if(allowDuplicates)
         {
-            Node cur = _end.left;
-            Node result = null;
+            inout(RBNode)* cur = _end.left;
+            inout(RBNode)* result = null;
             while(cur)
             {
                 if(_less(cur.value, e))
@@ -806,7 +807,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
         else
         {
-            Node cur = _end.left;
+            inout(RBNode)* cur = _end.left;
             while(cur)
             {
                 if(_less(cur.value, e))
@@ -980,7 +981,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
        Complexity: $(BIGOH log(n))
      +/
-    bool opBinaryRight(string op)(Elem e) if (op == "in")
+    bool opBinaryRight(string op)(Elem e) const if (op == "in")
     {
         return _find(e) !is null;
     }
@@ -1788,4 +1789,5 @@ unittest
 {
     const rt1 = redBlackTree(5,4,3,2,1);
     static assert(is(typeof(rt1.length)));
+    static assert(is(typeof(5 in rt1)));
 }
