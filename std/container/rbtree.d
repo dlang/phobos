@@ -513,9 +513,9 @@ struct RBNode(V)
     /**
      * Return the leftmost descendant of this node.
      */
-    @property Node leftmost()
+    @property inout(RBNode)* leftmost() inout
     {
-        Node result = &this;
+        inout(RBNode)* result = &this;
         while(result._left !is null)
             result = result._left;
         return result;
@@ -524,9 +524,9 @@ struct RBNode(V)
     /**
      * Return the rightmost descendant of this node
      */
-    @property Node rightmost()
+    @property inout(RBNode)* rightmost() inout
     {
-        Node result = &this;
+        inout(RBNode)* result = &this;
         while(result._right !is null)
             result = result._right;
         return result;
@@ -538,9 +538,9 @@ struct RBNode(V)
      * You should never call this on the marker node, as it is assumed that
      * there is a valid next node.
      */
-    @property Node next()
+    @property inout(RBNode)* next() inout
     {
-        Node n = &this;
+        inout(RBNode)* n = &this;
         if(n.right is null)
         {
             while(!n.isLeftNode)
@@ -557,9 +557,9 @@ struct RBNode(V)
      * You should never call this on the leftmost node of the tree as it is
      * assumed that there is a valid previous node.
      */
-    @property Node prev()
+    @property inout(RBNode)* prev() inout
     {
-        Node n = &this;
+        inout(RBNode)* n = &this;
         if(n.left is null)
         {
             while(n.isLeftNode)
@@ -598,6 +598,16 @@ struct RBNode(V)
             copy.right = _right.dup();
         return copy;
     }
+}
+
+//constness checks
+unittest
+{
+    const RBNode!int n;
+    static assert(is(typeof(n.leftmost)));
+    static assert(is(typeof(n.rightmost)));
+    static assert(is(typeof(n.next)));
+    static assert(is(typeof(n.prev)));
 }
 
 /**
