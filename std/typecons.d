@@ -200,7 +200,9 @@ Allows safe construction of $(D Unique). It creates the resource and
 guarantees unique ownership of it (unless $(D T) publishes aliases of
 $(D this)).
 
-Note: Nested classes cannot be created at present time.
+Note: Nested classes and structs cannot be created at present time,
+      as there is no way to transfer the closure's frame pointer
+      into this function.
 
 Params:
     args = Arguments to pass to $(D T)'s constructor.
