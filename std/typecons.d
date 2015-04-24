@@ -102,6 +102,7 @@ else
         u._p = null;
     }
 
+    /// Destroying a $(D Unique) frees the underlying resource.
     ~this()
     {
         import core.stdc.stdlib : free;
@@ -122,7 +123,7 @@ else
         }
     }
 
-    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
+    /// Transfer ownership to a $(D Unique) rvalue.
     deprecated("Please use std.algorithm.move to transfer ownership.")
     Unique release()
     {
@@ -142,7 +143,7 @@ else
     For code that does not own the resource (and therefore does not affect
     its life cycle), pass a plain old reference.
     */
-    ref T get() return @safe
+    ref T get()() return @safe
         if (!is(T == class))
     {
         import std.exception : enforce;
@@ -150,30 +151,32 @@ else
         return *_p;
     }
 
-    /// Ditto
-    /// Note that getting a reference for a class is currently unsafe
-    /// as there is currently no way to stop escaping class pointers (see DIP69)
-    T get() @system
+    /**
+    Returns a the underlying $(D T) for use by non-owning code.
+
+    Note that getting a class reference is currently unsafe
+    as there is currently no way to stop it from escaping. (see DIP69)
+    */
+    T get()() @system
         if (is(T == class))
     {
         return _p;
     }
 
+    /// Returns true if the $(D Unique) currently owns an underlying $(D T)
     @property bool empty() const
     {
         return _p is null;
     }
 
+    /// Allows the $(D Unique) to cast to a boolean value matching
+    /// that of $(D Unique.empty)
     bool opCast(T : bool)() const { return !empty; }
 
-    /**
-    Allows you to reference the underlying $(D RefT)
-    */
+    /// Forwards the underlying $(D RefT)
     alias get this;
 
-    /**
-    Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
-    */
+    /// Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
     @disable this(this);
 
 private:
