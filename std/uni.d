@@ -830,13 +830,13 @@ struct MultiArray(Types...)
         storage = data;
     }
 
-    @property auto slice(size_t n)()inout pure nothrow
+    @property auto slice(size_t n)()inout pure nothrow @nogc
     {
         auto ptr = raw_ptr!n;
         return packedArrayView!(Types[n])(ptr, sz[n]);
     }
 
-    @property auto ptr(size_t n)()inout pure nothrow
+    @property auto ptr(size_t n)()inout pure nothrow @nogc
     {
         auto ptr = raw_ptr!n;
         return inout(PackedPtr!(Types[n]))(ptr);
