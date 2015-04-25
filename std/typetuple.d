@@ -507,6 +507,7 @@ unittest
  * Returns the type from TList that is the most derived from type T.
  * If none are found, T is returned.
  */
+deprecated("Use std.traits.MostDerived instead")
 template MostDerived(T, TList...)
 {
     static if (TList.length == 0)
@@ -535,6 +536,7 @@ unittest
  * Returns the typetuple TList with the types sorted so that the most
  * derived types come first.
  */
+deprecated("Use std.traits.DerivedToFront instead")
 template DerivedToFront(TList...)
 {
     static if (TList.length == 0)
