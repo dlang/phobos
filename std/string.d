@@ -3412,40 +3412,11 @@ unittest
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
+S center(S)(S s, size_t width, dchar fillChar = ' ')
     if (isSomeString!S)
 {
-    import std.utf : canSearchInCodeUnits;
-    import std.conv : to;
-
-    alias C = ElementEncodingType!S;
-
-    if (canSearchInCodeUnits!C(fillChar))
-    {
-        immutable len = s.walkLength();
-        if (len >= width)
-            return s;
-
-        auto retval = new Unqual!C[width - len + s.length];
-        immutable left = (retval.length - s.length) / 2;
-        retval[0 .. left] = cast(C)fillChar;
-        retval[left .. left + s.length] = s[];
-        retval[left + s.length .. $] = cast(C)fillChar;
-        return to!S(retval);
-    }
-    else
-    {
-        auto dstr = to!dstring(s);
-        if (dstr.length >= width)
-            return s;
-
-        auto retval = new dchar[](width);
-        immutable left = (retval.length - dstr.length) / 2;
-        retval[0 .. left] = fillChar;
-        retval[left .. left + dstr.length] = dstr[];
-        retval[left + dstr.length .. $] = fillChar;
-        return to!S(retval);
-    }
+    import std.array;
+    return centerJustifier(s, width, fillChar).array;
 }
 
 @trusted pure
@@ -3484,6 +3455,104 @@ unittest
     }
     });
 }
+
+/++
+    Center justify $(D r) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D r) doesn't fill.
+
+    Params:
+        r = string or forward range of characters
+        width = minimum field width
+        fillChar = used to pad end up to $(D width) characters
+
+    Returns:
+        a lazy range of the center justified result
+
+    See_Also:
+        $(LREF leftJustifier)
+        $(LREF rightJustifier)
+  +/
+
+auto centerJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    alias C = Unqual!(ElementEncodingType!Range);
+
+    static if (C.sizeof == 1)
+    {
+        import std.utf : byDchar, byChar;
+        return centerJustifier(r.byDchar, width, fillChar).byChar;
+    }
+    else static if (C.sizeof == 2)
+    {
+        import std.utf : byDchar, byWchar;
+        return centerJustifier(r.byDchar, width, fillChar).byWchar;
+    }
+    else static if (C.sizeof == 4)
+    {
+        import std.range : chain, repeat, walkLength;
+
+        auto len = walkLength(r.save, width);
+        if (len > width)
+            len = width;
+        const nleft = (width - len) / 2;
+        const nright = width - len - nleft;
+        return chain(repeat(fillChar, nleft), r, repeat(fillChar, nright));
+    }
+    else
+        static assert(0);
+}
+
+///
+@safe pure @nogc nothrow
+unittest
+{
+    import std.algorithm : equal;
+    import std.utf : byChar;
+    assert(centerJustifier("hello", 2).equal("hello".byChar));
+    assert(centerJustifier("hello", 8).equal(" hello  ".byChar));
+    assert(centerJustifier("hello", 7, 'x').equal("xhellox".byChar));
+}
+
+unittest
+{
+    static auto byFwdRange(dstring s)
+    {
+        static struct FRange
+        {
+            dstring str;
+            this(dstring s) { str = s; }
+            @property bool empty() { return str.length == 0; }
+            @property dchar front() { return str[0]; }
+            void popFront() { str = str[1 .. $]; }
+            @property FRange save() { return this; }
+        }
+        return FRange(s);
+    }
+
+    auto r = centerJustifier(byFwdRange("hello"d), 6);
+    r.popFront();
+    auto save = r.save;
+    r.popFront();
+    assert(r.front == 'l');
+    assert(save.front == 'e');
+
+    auto t = "hello".centerJustifier(7);
+    t.popFront();
+    assert(t.front == 'h');
+    t.popFront();
+    assert(t.front == 'e');
+
+    auto u = byFwdRange("hello"d).centerJustifier(6);
+    u.popFront();
+    u.popFront();
+    u.popFront();
+    u.popFront();
+    u.popFront();
+    u.popFront();
+}
+
 
 /++
     Replace each tab character in $(D s) with the number of spaces necessary
