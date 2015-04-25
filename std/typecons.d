@@ -70,11 +70,13 @@ Params:
 */
 struct Unique(T)
 {
-/** Represents a reference to $(D T). Resolves to $(D T*) if $(D T) is a value type. */
-static if (is(T:Object))
-    alias RefT = T;
-else
-    alias RefT = T*;
+    /// Represents a reference to $(D T).
+    /// When $(D T) is a class or interface, $(D RefT) is an alias for $(D T).
+    /// Otherwise, $(D RefT) is $(D T*) (pointer to $(D T)).
+    static if (is(T == class) || is(T == interface))
+        alias RefT = T;
+    else
+        alias RefT = T*;
 
     /**
     Construct $(D Unique) from a type that is convertible to our type.
@@ -109,7 +111,10 @@ else
         debug(Unique) writeln("Unique destructor of ", _p is null? null : _p);
         if (_p !is null)
         {
-            destroy(_p);
+            static if (is(T == class) || is(T == interface))
+                destroy(_p);
+            else
+                destroy(*_p);
 
             static if (hasIndirections!T)
             {
@@ -146,36 +151,34 @@ else
     The holder of a $(D Unique!T) is the $(I owner) of that $(D T).
     For code that does not own the resource (and therefore does not affect
     its life cycle), pass a plain old reference.
-    */
-    ref T get()() return @safe
-        if (!is(T == class))
-    {
-        import std.exception : enforce;
-        enforce(!empty, "You cannot get a struct reference from an empty Unique");
-        return *_p;
-    }
-
-    /**
-    Returns a the underlying $(D T) for use by non-owning code.
 
     Note that getting a class reference is currently unsafe
     as there is currently no way to stop it from escaping. (see DIP69)
     */
-    T get()() @system
-        if (is(T == class))
+    inout(T) get()() inout @system
+        if (is(T == class) || is(T == interface))
     {
         return _p;
     }
 
-    /// Returns true if the $(D Unique) currently owns an underlying $(D T)
+    /// Ditto
+    ref inout(T) get()() inout return @safe
+        if (!is(T == class) && !is(T == interface))
+    {
+        assert(_p !is null, "Uninitialized or invalidated Unique reference cannot be dereferenced");
+        return *_p;
+    }
+
+    /// $(D true) if the $(D Unique) currently owns an underlying $(D T).
+    deprecated("Please use cast(bool) to check for an uninitialized or invalidated reference.")
     @property bool empty() const
     {
         return _p is null;
     }
 
-    /// Allows the $(D Unique) to cast to a boolean value matching
-    /// that of $(D Unique.empty)
-    bool opCast(T : bool)() const { return !empty; }
+    /// $(D false) if this reference is uninitialized or invalidated, $(D true) otherwise.
+    /// See_Also: $(LREF isValidUnique) for an explicit way to check validity
+    bool opCast(T : bool)() const { return _p !is null; }
 
     /// $(D Unique!T) is a subtype of $(D T).
     alias get this;
@@ -240,7 +243,7 @@ unittest
     assert(u.i == 42);
 }
 
-/// $(D Unique!T) supports the subtype conversions of $(D T):
+/// $(D Unique!T) supports the supertype conversions of $(D T):
 unittest
 {
     import std.algorithm : move;
@@ -265,6 +268,10 @@ unittest
     Unique!Object newOwner = move(u);
     assert(!u); // invalidated by the move
     assert(newOwner);
+
+    // Use `isValidUnique` when a more explicit check is desirable
+    bool isValid = newOwner.isValidUnique;
+    assert(isValid);
 }
 
 unittest
@@ -274,15 +281,19 @@ unittest
     {
         int i;
         this(int i) { this.i = i; }
+
+        static bool destroyed = false;
+        ~this() { destroyed = true; }
     }
 
     // Some quick tests around alias this
     auto u = unique!S(42);
     assert(u.i == 42);
-    assert(!u.empty);
-    u.destroy();
-    assert(u.empty);
-    assert(!u); // Since null pointers coerce to false
+    assert(u);
+    assert(!S.destroyed);
+    destroy(u);
+    assert(S.destroyed);
+    assert(!u);
 
     auto i = unique!int(25);
     assert(i.get() == 25);
@@ -407,6 +418,37 @@ unittest
     assert(uf2);
 }
 
+/**
+ * Check whether a $(D Unique) reference is valid.
+ *
+ * $(D Unique!T) references are considered valid while they refer to
+ * an initialized $(D T).
+ * See_Also:
+ *    $(LREF .Unique.opCast) for use in if-statements and other
+ *    conditional contexts
+ */
+bool isValidUnique(T)(ref const Unique!T u) @property
+{
+    return u._p !is null;
+}
+
+///
+unittest
+{
+    import std.algorithm.mutation : move;
+
+    Unique!int u;
+    assert(!u.isValidUnique);
+    u = unique!int(42);
+    assert(u.isValidUnique); // `u` refers to an initialized `int`
+
+    Unique!int u2 = move(u);
+    assert(!u.isValidUnique); // `u` was destroyed by the explicit move
+
+    // `u2` is the new owner of the `int`
+    assert(u2.isValidUnique);
+    assert(u2 == 42);
+}
 
 /**
 Tuple of values, for example $(D Tuple!(int, string)) is a record that
