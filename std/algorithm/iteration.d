@@ -294,7 +294,7 @@ private struct _Cache(R, bool bidir)
     private
     {
         import std.algorithm.internal : algoFormat;
-        import std.typetuple : TypeTuple;
+        import std.meta : TypeTuple;
 
         alias E  = ElementType!R;
         alias UE = Unqual!E;
@@ -430,14 +430,14 @@ template map(fun...) if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
-        import std.typetuple : staticMap;
+        import std.meta : staticMap;
 
         alias AppliedReturnType(alias f) = typeof(f(r.front));
 
         static if (fun.length > 1)
         {
             import std.functional : adjoin;
-            import std.typetuple : staticIndexOf;
+            import std.meta : staticIndexOf;
 
             alias _funs = staticMap!(unaryFun, fun);
             alias _fun = adjoin!_funs;
@@ -817,7 +817,7 @@ See_Also: $(XREF range,tee)
  */
 template each(alias pred = "a")
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     alias BinaryArgs = TypeTuple!(pred, "i", "a");
 
     enum isRangeUnaryIterable(R) =
@@ -2445,7 +2445,7 @@ See_Also:
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
-    import std.typetuple : staticMap;
+    import std.meta : staticMap;
 
     alias binfuns = staticMap!(binaryFun, fun);
     static if (fun.length > 1)
@@ -3756,7 +3756,7 @@ if (isSomeChar!C)
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         import std.conv : to;

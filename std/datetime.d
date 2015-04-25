@@ -31077,7 +31077,7 @@ unittest
     import std.range;
     import std.string;
     import std.typecons;
-    import std.typetuple;
+    import std.meta;
 
     static struct Rand3Letters
     {
@@ -31346,7 +31346,7 @@ unittest
     import std.range;
     import std.string;
     import std.typecons;
-    import std.typetuple;
+    import std.meta;
 
     auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
     auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
@@ -31672,7 +31672,7 @@ unittest
     import std.format : format;
     import std.string;
     import std.typecons;
-    import std.typetuple;
+    import std.meta;
 
     static string genTest(size_t index)
     {
@@ -32800,7 +32800,7 @@ unittest
     import std.algorithm;
     import std.string;
     import std.typecons;
-    import std.typetuple;
+    import std.meta;
 
     foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))

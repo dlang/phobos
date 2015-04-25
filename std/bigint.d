@@ -1263,7 +1263,7 @@ unittest // 11148
     assert(__traits(compiles, foo(cbi)));
     assert(__traits(compiles, foo(ibi)));
 
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     import std.conv : to;
 
     foreach (T1; TypeTuple!(BigInt, const(BigInt), immutable(BigInt)))
@@ -1343,7 +1343,7 @@ unittest // 13391
     BigInt x2 = "123456789123456789";
     BigInt x3 = "123456789123456789123456789";
 
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert((x1 * T.max) / T.max == x1);
@@ -1371,7 +1371,7 @@ unittest // 13391
 unittest // 13963
 {
     BigInt x = 1;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     foreach(Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
     {
         assert(is(typeof(x % Int(1)) == int));

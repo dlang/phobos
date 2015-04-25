@@ -22,7 +22,7 @@ module std.utf;
 
 import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
-import std.typetuple;  // TypeTuple
+import std.meta;  // TypeTuple
 
 //debug=utf;           // uncomment to turn on debugging printf's
 

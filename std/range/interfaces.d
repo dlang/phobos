@@ -70,7 +70,7 @@ module std.range.interfaces;
 
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
+import std.meta;
 
 /**These interfaces are intended to provide virtual function-based wrappers
  * around input ranges with element type E.  This is useful where a well-defined

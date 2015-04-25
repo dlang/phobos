@@ -9,7 +9,7 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.typetuple, std.traits, std.range;
+import std.exception, std.uni, std.meta, std.traits, std.range;
 
 // just a common trait, may be moved elsewhere
 alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);

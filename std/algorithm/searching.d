@@ -481,7 +481,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
     import std.exception : assertThrown;
     import std.utf : UTFException;
     import std.range;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     assert(commonPrefix([1, 2, 3], [1, 2, 3, 4, 5]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4, 5], [1, 2, 3]) == [1, 2, 3]);
@@ -1065,7 +1065,7 @@ if (isBidirectionalRange!R &&
 @safe unittest
 {
     import std.algorithm.iteration : filterBidirectional;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     import std.conv : to;
 
     debug(std_algorithm) scope(success)
@@ -1367,7 +1367,7 @@ if (isInputRange!InputRange &&
 
 @safe pure unittest
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     foreach(R; TypeTuple!(string, wstring, dstring))
     {
         foreach(E; TypeTuple!(char, wchar, dchar))
@@ -1411,7 +1411,7 @@ if (isInputRange!InputRange &&
 @safe unittest
 {
     import std.exception : assertCTFEable;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     void dg() @safe pure nothrow
     {
@@ -1959,7 +1959,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     import std.uni : toUpper;
 
     debug(std_algorithm) scope(success)
@@ -1992,7 +1992,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     import std.algorithm.internal : rndstuff;
     import std.algorithm.comparison : equal;
     import std.range : retro;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2090,7 +2090,7 @@ $(LREF among) for checking a value against multiple possibilities.
  +/
 template canFind(alias pred="a == b")
 {
-    import std.typetuple : allSatisfy;
+    import std.meta : allSatisfy;
 
     /++
     Returns $(D true) if and only if any value $(D v) found in the
@@ -2688,7 +2688,7 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3171,7 +3171,7 @@ if (isInputRange!R &&
     import std.algorithm.iteration : filter;
     import std.conv : to;
     import std.range;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");

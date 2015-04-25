@@ -64,7 +64,7 @@ import core.vararg;
 import std.exception;
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
+import std.meta;
 
 version(CRuntime_DigitalMars)
 {

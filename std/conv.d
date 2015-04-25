@@ -25,7 +25,7 @@ public import std.ascii : LetterCase;
 
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
+import std.meta;
 
 private string convFormat(Char, Args...)(in Char[] fmt, Args args)
 {

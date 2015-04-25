@@ -649,7 +649,7 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 module std.uni;
 
 import core.stdc.stdlib;
-import std.traits, std.typetuple;
+import std.traits, std.meta;
 import std.range.primitives;
 
 

@@ -512,7 +512,7 @@ unittest
 {
     import std.conv : to;
     import std.typecons : tuple;
-    import std.typetuple;
+    import std.meta;
 
     static struct PutC(C)
     {
@@ -609,7 +609,7 @@ unittest
 unittest
 {
     import std.format;
-    import std.typetuple;
+    import std.meta;
     struct PutC(C)
     {
         void put(C){}
@@ -2055,7 +2055,7 @@ if (isNarrowString!(C[]))
 
 @safe pure unittest
 {
-    import std.typetuple;
+    import std.meta;
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
@@ -2128,7 +2128,7 @@ if (isNarrowString!(T[]))
 
 @safe pure unittest
 {
-    import std.typetuple;
+    import std.meta;
 
     foreach(S; TypeTuple!(string, wstring, dstring))
     {

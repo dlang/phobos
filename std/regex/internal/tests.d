@@ -6,7 +6,7 @@ module std.regex.internal.tests;
 package(std.regex):
 
 import std.algorithm, std.conv, std.exception, std.range, std.typecons,
-    std.typetuple, std.regex;
+    std.meta, std.regex;
 
 import std.regex.internal.parser : Escapables; // characters that need escaping
 

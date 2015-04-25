@@ -43,7 +43,7 @@
 deprecated("Please use std.typetuple instead. This module will be removed in March 2015.")
 module std.typelist;
 version(unittest) {
-    import std.typetuple;
+    import std.meta;
 }
 
 /**

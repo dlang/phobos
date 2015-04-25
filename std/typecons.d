@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import std.traits;
 // FIXME
-import std.typetuple; // : TypeTuple, allSatisfy;
+import std.meta; // : TypeTuple, allSatisfy;
 
 debug(Unique) import std.stdio;
 
@@ -418,7 +418,7 @@ Params:
 */
 template Tuple(Specs...)
 {
-    import std.typetuple : staticMap;
+    import std.meta : staticMap;
 
     // Parse (type,name) pairs (FieldSpecs) out of the specified
     // arguments. Some fields would have name, others not.
@@ -542,7 +542,7 @@ template Tuple(Specs...)
          * The types of the `Tuple`'s components.
          */
         alias Types = staticMap!(extractType, fieldSpecs);
-        
+
         ///
         unittest
         {
@@ -554,7 +554,7 @@ template Tuple(Specs...)
          * The names of the `Tuple`'s components. Unnamed fields have empty names.
          */
         alias fieldNames = staticMap!(extractName, fieldSpecs);
-        
+
         ///
         unittest
         {
@@ -570,18 +570,18 @@ template Tuple(Specs...)
          */
         Types expand;
         mixin(injectNamedFields());
-        
+
         ///
         unittest
         {
             auto t1 = tuple(1, " hello ", 2.3);
             assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
-            
-            void takeSeveralTypes(int n, string s, bool b) 
+
+            void takeSeveralTypes(int n, string s, bool b)
             {
                 assert(n == 4 && s == "test" && b == false);
             }
-            
+
             auto t2 = tuple(4, "test", false);
             //t.expand acting as a list of values
             takeSeveralTypes(t2.expand);
@@ -617,8 +617,8 @@ template Tuple(Specs...)
          * Params:
          *     values = A list of values that are either the same
          *              types as those given by the `Types` field
-         *              of this `Tuple`, or can implicitly convert 
-         *              to those types. They must be in the same 
+         *              of this `Tuple`, or can implicitly convert
+         *              to those types. They must be in the same
          *              order as they appear in `Types`.
          */
         static if (Types.length > 0)
@@ -628,7 +628,7 @@ template Tuple(Specs...)
                 field[] = values[];
             }
         }
-        
+
         ///
         unittest
         {
@@ -652,7 +652,7 @@ template Tuple(Specs...)
                 field[i] = values[i];
             }
         }
-        
+
         ///
         unittest
         {
@@ -675,15 +675,15 @@ template Tuple(Specs...)
         {
             field[] = another.field[];
         }
-        
+
         ///
         unittest
         {
             alias IntVec = Tuple!(int, int, int);
             alias DubVec = Tuple!(double, double, double);
-            
+
             IntVec iv = tuple(1, 1, 1);
-            
+
             //Ok, int can implicitly convert to double
             DubVec dv = iv;
             //Error: double cannot implicitly convert to int
@@ -694,13 +694,13 @@ template Tuple(Specs...)
          * Comparison for equality. Two `Tuple`s are considered equal
          * $(B iff) they fulfill the following criteria:
          *
-         * $(UL 
+         * $(UL
          *   $(LI Each `Tuple` is the same length.)
-         *   $(LI For each type `T` on the left-hand side and each type 
-         *        `U` on the right-hand side, values of type `T` can be 
+         *   $(LI For each type `T` on the left-hand side and each type
+         *        `U` on the right-hand side, values of type `T` can be
          *        compared with values of type `U`.)
-         *   $(LI For each value `v1` on the left-hand side and each value 
-         *        `v2` on the right-hand side, the expression `v1 == v2` is 
+         *   $(LI For each value `v1` on the left-hand side and each value
+         *        `v2` on the right-hand side, the expression `v1 == v2` is
          *        true.))
          *
          * Params:
@@ -715,14 +715,14 @@ template Tuple(Specs...)
         {
             return field[] == rhs.field[];
         }
-        
+
         /// ditto
         bool opEquals(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
             return field[] == rhs.field[];
         }
-        
+
         ///
         unittest
         {
@@ -761,7 +761,7 @@ template Tuple(Specs...)
             }
             return 0;
         }
-        
+
         /// ditto
         int opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
@@ -775,8 +775,8 @@ template Tuple(Specs...)
             }
             return 0;
         }
-        
-        /**  
+
+        /**
             The first `v1` for which `v1 > v2` is true determines
             the result. This could lead to unexpected behaviour.
          */
@@ -785,7 +785,7 @@ template Tuple(Specs...)
             auto tup1 = tuple(1, 1, 1);
             auto tup2 = tuple(1, 100, 100);
             assert(tup1 < tup2);
-            
+
             //Only the first result matters for comparison
             tup1[0] = 2;
             assert(tup1 > tup2);
@@ -795,7 +795,7 @@ template Tuple(Specs...)
          * Assignment from another `Tuple`.
          *
          * Params:
-         *     rhs = The source `Tuple` to assign from. Each element of the 
+         *     rhs = The source `Tuple` to assign from. Each element of the
          *           source `Tuple` must be implicitly assignable to each
          *           respective element of the target `Tuple`.
          */
@@ -832,8 +832,8 @@ template Tuple(Specs...)
          *     to = A `size_t` designating the ending position (exclusive) of the slice.
          *
          * Returns:
-         *     A new `Tuple` that is a slice from `[from, to$(RPAREN)` of the original. 
-         *     It has the same types and values as the range `[from, to$(RPAREN)` in 
+         *     A new `Tuple` that is a slice from `[from, to$(RPAREN)` of the original.
+         *     It has the same types and values as the range `[from, to$(RPAREN)` in
          *     the original.
          */
         @property
@@ -842,7 +842,7 @@ template Tuple(Specs...)
         {
             return *cast(typeof(return)*) &(field[from]);
         }
-        
+
         ///
         unittest
         {
@@ -856,7 +856,7 @@ template Tuple(Specs...)
 
         /**
             Creates a hash of this `Tuple`.
-            
+
             Returns:
                 A `size_t` representing the hash of this `Tuple`.
          */
@@ -867,7 +867,7 @@ template Tuple(Specs...)
                 h += typeid(T).getHash(cast(const void*)&field[i]);
             return h;
         }
-        
+
         void toString(DG)(scope DG sink)
         {
             enum header = typeof(this).stringof ~ "(",
@@ -921,7 +921,7 @@ unittest
     auto y = point[1];
 }
 
-/** 
+/**
     `Tuple` members can be named. It is legal to mix named and unnamed
     members. The method above is still applicable to all fields.
  */
@@ -950,17 +950,17 @@ unittest
 
 /**
     Create a copy of a `Tuple` with its fields in reverse order.
-    
+
     Params:
         t = The `Tuple` to copy.
-    
+
     Returns:
         A copy of `t` with its fields in reverse order.
  */
 ReverseTupleType!T reverse(T)(T t)
     if (isTuple!T)
 {
-    import std.typetuple : Reverse;
+    import std.meta : Reverse;
     // @@@BUG@@@ Cannot be an internal function due to forward reference issues.
 
     // @@@BUG@@@ 9929 Need 'this' when calling template with expanded tuple
@@ -1389,17 +1389,17 @@ unittest
 /**
     Constructs a $(D Tuple) object instantiated and initialized according to
     the given arguments.
-    
+
     Params:
         Names = A list of strings naming each successive field of the `Tuple`.
                 Each name matches up with the corresponding field given by `Args`.
                 A name does not have to be provided for every field, but as
                 the names must proceed in order, it is not possible to skip
                 one field and name the next after it.
-                
+
         args = Values to initialize the `Tuple` with. The `Tuple`'s type will
                be inferred from the types of the values given.
-    
+
     Returns:
         A new `Tuple` with its type inferred from the arguments given.
 */
@@ -1460,10 +1460,10 @@ unittest
 
 /**
     Returns $(D true) if and only if $(D T) is an instance of $(D std.typecons.Tuple).
-    
+
     Params:
         T = The type to check.
-        
+
     Returns:
         true if `T` is a `Tuple` type, false otherwise.
  */
@@ -1599,7 +1599,7 @@ unittest
 }
 
 /**
-    However, $(D Rebindable!(Widget)) does allow reassignment, 
+    However, $(D Rebindable!(Widget)) does allow reassignment,
     while otherwise behaving exactly like a $(D const Widget).
  */
 unittest
@@ -1621,7 +1621,7 @@ inference.
 Params:
     obj = A reference to an object or interface, or an array slice
           to initialize the `Rebindable` with.
-          
+
 Returns:
     A newly constructed `Rebindable` initialized with the given reference.
 */
@@ -1736,7 +1736,7 @@ unittest
     Similar to $(D Rebindable!(T)) but strips all qualifiers from the reference as
     opposed to just constness / immutability. Primary intended use case is with
     shared (having thread-local reference to shared class data)
-    
+
     Params:
         T = A class or interface type.
  */
@@ -1794,13 +1794,13 @@ unittest
   Order the provided members to minimize size while preserving alignment.
   Alignment is not always optimal for 80-bit reals, nor for structs declared
   as align(1).
-  
+
   Params:
-      E = A list of the types to be aligned, representing fields 
+      E = A list of the types to be aligned, representing fields
           of an aggregate such as a `struct` or `class`.
-      
+
       names = The names of the fields that are to be aligned.
-      
+
   Returns:
       A string to be mixed in to an aggregate, such as a `struct` or `class`.
 */
@@ -3200,7 +3200,7 @@ private static:
     {
         template Impl(names...)
         {
-            import std.typetuple : Filter;
+            import std.meta : Filter;
             static if (names.length > 0)
             {
                 alias methods = Filter!(pred, MemberFunctionsTuple!(C, names[0]));
@@ -3884,7 +3884,7 @@ unittest
 template wrap(Targets...)
 if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 {
-    import std.typetuple : staticMap;
+    import std.meta : staticMap;
 
     // strict upcast
     auto wrap(Source)(inout Source src) @trusted pure nothrow
@@ -4057,7 +4057,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 template wrap(Targets...)
 if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
 {
-    import std.typetuple : staticMap;
+    import std.meta : staticMap;
 
     alias wrap = .wrap!(staticMap!(Unqual, Targets));
 }
@@ -4291,7 +4291,7 @@ unittest
 // Make a tuple of non-static function symbols
 private template GetOverloadedMethods(T)
 {
-    import std.typetuple : Filter;
+    import std.meta : Filter;
 
     alias allMembers = TypeTuple!(__traits(allMembers, T));
     template follows(size_t i = 0)
@@ -4316,7 +4316,7 @@ private template GetOverloadedMethods(T)
                     enum isMethod = false;
             }
             alias follows = TypeTuple!(
-                std.typetuple.Filter!(isMethod, __traits(getOverloads, T, name)),
+                Filter!(isMethod, __traits(getOverloads, T, name)),
                 follows!(i + 1));
         }
     }
@@ -5001,15 +5001,15 @@ unittest
 
 /**
     Creates a proxy for the value `a` that will forward all operations
-    while disabling implicit conversions. The aliased item `a` must be 
-    an $(B lvalue). This is useful for creating a new type from the 
-    "base" type (though this is $(B not) a subtype-supertype 
-    relationship; the new type is not related to the old type in any way, 
+    while disabling implicit conversions. The aliased item `a` must be
+    an $(B lvalue). This is useful for creating a new type from the
+    "base" type (though this is $(B not) a subtype-supertype
+    relationship; the new type is not related to the old type in any way,
     by design).
-    
+
     The new type supports all operations that the underlying type does,
     including all operators such as `+`, `--`, `<`, `[]`, etc.
-    
+
     Params:
         a = The value to act as a proxy for all operations. It must
             be an lvalue.
@@ -5248,29 +5248,29 @@ unittest
     {
         //Won't work; the literal '1' is
         //is an rvalue, not an lvalue
-        //mixin Proxy!1; 
-        
+        //mixin Proxy!1;
+
         //Okay, n is an lvalue
         int n;
         mixin Proxy!n;
-        
+
         this(int n) { this.n = n; }
     }
-    
+
     NewIntType nit = 0;
     nit++;
     assert(nit == 1);
-    
-    
+
+
     struct NewObjectType
     {
         Object obj;
         //Ok, obj is an lvalue
         mixin Proxy!obj;
-        
+
         this (Object o) { obj = o; }
     }
-    
+
     NewObjectType not = new Object();
     assert(__traits(compiles, not.toHash()));
 }
@@ -5278,24 +5278,24 @@ unittest
 /**
     There is one exception to the fact that the new type is not related to the
     old type. $(LINK2 http://dlang.org/function.html#pseudo-member, Pseudo-member)
-    functions are usable with the new type; they will be forwarded on to the 
+    functions are usable with the new type; they will be forwarded on to the
     proxied value.
  */
 unittest
 {
     import std.math;
-    
+
     float f = 1.0;
     assert(!f.isInfinity);
-    
+
     struct NewFloat
     {
         float _;
         mixin Proxy!_;
-        
+
         this(float f) { _ = f; }
     }
- 
+
     NewFloat nf = 1.0f;
     assert(!nf.isInfinity);
 }

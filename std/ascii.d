@@ -30,7 +30,7 @@ version (unittest)
     // FIXME: When dmd bug #314 is fixed, make these selective.
     import std.range; // : chain;
     import std.traits; // : functionAttributes, FunctionAttribute, isSafe;
-    import std.typetuple; // : TypeTuple;
+    import std.meta; // : TypeTuple;
 }
 
 

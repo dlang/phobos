@@ -539,7 +539,7 @@ auto abs(Num)(Num y) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach (T; TypeTuple!(float, double, real))
     {
         T f = 3;
@@ -2451,7 +2451,7 @@ unittest
 
 unittest
 {
-    import std.typetuple, std.typecons;
+    import std.meta, std.typecons;
 
     foreach (T; TypeTuple!(real, double, float))
     {
@@ -2506,7 +2506,7 @@ unittest
 
 unittest
 {
-    import std.typetuple: TypeTuple;
+    import std.meta: TypeTuple;
     void foo() {
         foreach (T; TypeTuple!(real, double, float))
         {
@@ -4647,7 +4647,7 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 
 @safe pure nothrow @nogc unittest
 {
-    import std.typetuple;
+    import std.meta;
 
     foreach(T; TypeTuple!(float, double, real))
     {
@@ -4810,7 +4810,7 @@ int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 ///
 @safe pure nothrow @nogc unittest
 {
-    import std.typetuple;
+    import std.meta;
 
     foreach (T; TypeTuple!(float, double, real))
     {
@@ -5043,7 +5043,7 @@ R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    import std.typetuple;
+    import std.meta;
 
     foreach (X; TypeTuple!(float, double, real, int, long))
     {

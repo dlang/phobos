@@ -162,7 +162,7 @@ import std.typecons : Flag;
 
 import std.range.primitives;
 import std.traits;
-import std.typetuple;
+import std.meta;
 
 //public imports for backward compatibility
 public import std.algorithm : startsWith, endsWith, cmp, count;

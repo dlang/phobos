@@ -2691,7 +2691,7 @@ unittest
     else version (Posix) valid ~= pfdep;
     else static assert (0);
 
-    import std.typetuple;
+    import std.meta;
     foreach (T; TypeTuple!(char[], const(char)[], string, wchar[],
         const(wchar)[], wstring, dchar[], const(dchar)[], dstring))
     {

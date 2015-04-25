@@ -132,7 +132,7 @@ efficient search, but one that only supports matching on equality:
 
 @safe unittest
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);

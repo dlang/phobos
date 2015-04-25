@@ -545,7 +545,7 @@ unittest
     result = decode("%41%42%43");
     debug(uri) writeln(result);
 
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     foreach (StringType; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         import std.conv : to;

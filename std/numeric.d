@@ -114,7 +114,7 @@ private template CustomFloatParams(uint bits)
 
 private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
     alias CustomFloatParams =
         TypeTuple!(
             precision,
@@ -175,7 +175,7 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
         precision + exponentWidth > 0)
 {
     import std.bitmanip;
-    import std.typetuple;
+    import std.meta;
 private:
     // get the correct unsigned bitfield type to support > 32 bits
     template uType(uint bits)
@@ -631,7 +631,7 @@ public:
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     alias FPTypes =
         TypeTuple!(
             CustomFloat!(5, 10),
@@ -1448,7 +1448,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
@@ -1538,7 +1538,7 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
@@ -1582,7 +1582,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
@@ -1732,7 +1732,7 @@ if (isInputRange!Range &&
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(double, const double, immutable double))
     {
         T[] p = [ 0.0, 0, 0, 1 ];

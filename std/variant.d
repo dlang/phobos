@@ -66,7 +66,7 @@
 module std.variant;
 
 import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
-    std.typetuple;
+    std.meta;
 
 /++
     Gives the $(D sizeof) the largest type given.

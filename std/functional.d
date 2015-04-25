@@ -862,7 +862,7 @@ unittest
 
 unittest
 {
-    import std.typetuple : staticMap;
+    import std.meta : staticMap;
     import std.typecons : Tuple, tuple;
     alias funs = staticMap!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
     alias afun = adjoin!funs;
@@ -1410,7 +1410,7 @@ Forwards function arguments with saving ref-ness.
 */
 template forward(args...)
 {
-    import std.typetuple;
+    import std.meta;
 
     static if (args.length)
     {

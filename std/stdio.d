@@ -1353,7 +1353,7 @@ void main()
     {
         static import std.file;
         import std.algorithm : equal;
-        import std.typetuple : TypeTuple;
+        import std.meta : TypeTuple;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
@@ -1995,7 +1995,7 @@ the contents may well have changed).
         std.file.write(deleteme, "hi");
         scope(success) std.file.remove(deleteme);
 
-        import std.typetuple;
+        import std.meta;
         foreach (T; TypeTuple!(char, wchar, dchar))
         {
             auto blc = File(deleteme).byLine!(T, T);
@@ -3491,7 +3491,7 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
 
 unittest
 {
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     //we can't actually test readln, so at the very least,
     //we test compilability
@@ -3748,7 +3748,7 @@ struct lines
 unittest
 {
     static import std.file;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);

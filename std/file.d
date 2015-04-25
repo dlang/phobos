@@ -27,7 +27,7 @@ import std.path;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
-import std.typetuple;
+import std.meta;
 import std.internal.cstring;
 
 version (Windows)

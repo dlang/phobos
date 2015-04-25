@@ -424,7 +424,7 @@ public import std.container.dlist;
 public import std.container.rbtree;
 public import std.container.slist;
 
-import std.typetuple;
+import std.meta;
 
 
 /* The following documentation and type $(D TotalContainer) are

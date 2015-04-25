@@ -5,7 +5,7 @@ Used with the dummy ranges for testing higher order ranges.
 module std.internal.test.dummyrange;
 
 import std.typecons;
-import std.typetuple;
+import std.meta;
 import std.range.primitives;
 
 enum RangeType

@@ -2043,7 +2043,7 @@ unittest
 unittest
 {
     import std.range;
-    import std.typetuple;
+    import std.meta;
     {
         import std.conv : to;
 

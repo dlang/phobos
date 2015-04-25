@@ -171,7 +171,7 @@ import std.stream;
 import std.string;
 import std.traits;
 import std.typecons;
-import std.typetuple;
+import std.meta;
 
 import std.internal.cstring;
 

@@ -736,7 +736,7 @@ unittest
 {
     import std.algorithm.iteration : filter;
     import std.traits : hasElaborateAssign;
-    import std.typetuple : TypeTuple;
+    import std.meta : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");

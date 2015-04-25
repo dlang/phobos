@@ -68,7 +68,7 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import std.traits;
-import std.typetuple;
+import std.meta;
 import std.functional;
 static import std.algorithm; // FIXME, remove with alias of splitter
 

@@ -2160,7 +2160,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
@@ -2276,7 +2276,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
@@ -2450,7 +2450,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar/*,
                           float, double*/))
@@ -2580,7 +2580,7 @@ private template isFloatOrDouble(T)
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(float, double))
     {
         static assert(isFloatOrDouble!(T));
@@ -2609,7 +2609,7 @@ private template canSwapEndianness(T)
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach(T; TypeTuple!(bool, ubyte, byte, ushort, short, uint, int, ulong,
                           long, char, wchar, dchar, float, double))
     {
@@ -3700,7 +3700,7 @@ unittest
 {
     import std.format : format;
     import std.array;
-    import std.typetuple;
+    import std.meta;
     foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
     {
         auto toWrite = appender!(ubyte[])();
@@ -3775,7 +3775,7 @@ unittest
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countTrailingZeros(cast(T)0) == 8 * T.sizeof);
@@ -3856,7 +3856,7 @@ unittest
 
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countBitsSet(cast(T)0) == 0);
@@ -3957,7 +3957,7 @@ unittest
     import std.algorithm : equal;
     import std.range: iota;
 
-    import std.typetuple;
+    import std.meta;
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(bitsSet(cast(T)0).empty);

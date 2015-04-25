@@ -175,7 +175,7 @@ public import std.array;
 public import std.typecons : Flag, Yes, No;
 
 import std.traits;
-import std.typetuple;
+import std.meta;
 
 
 /**
@@ -853,7 +853,7 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            import std.typetuple : anySatisfy;
+            import std.meta : anySatisfy;
 
             static if (anySatisfy!(isInfinite, R))
             {

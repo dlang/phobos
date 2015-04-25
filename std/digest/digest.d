@@ -62,7 +62,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
 module std.digest.digest;
 
 import std.traits;
-import std.typetuple : allSatisfy;
+import std.meta : allSatisfy;
 public import std.ascii : LetterCase;
 
 

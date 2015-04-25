@@ -126,7 +126,7 @@ import std.traits;
  */
 public struct UUID
 {
-    import std.typetuple : allSatisfy;
+    import std.meta : allSatisfy;
     import std.traits : isIntegral;
 
     private:
@@ -418,7 +418,7 @@ public struct UUID
         @safe pure unittest
         {
             import std.exception;
-            import std.typetuple;
+            import std.meta;
             import std.conv : to;
 
             foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
@@ -1355,7 +1355,7 @@ unittest
 @safe pure unittest
 {
     import std.exception;
-    import std.typetuple;
+    import std.meta;
     import std.conv : to;
 
     struct TestRange(bool forward)
