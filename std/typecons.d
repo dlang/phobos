@@ -84,7 +84,7 @@ else
     ---
     */
     this(U)(Unique!U u)
-    if (is(u.RefT:RefT))
+        if (is(u.RefT : RefT))
     {
         debug(Unique) writeln("Unique constructor converting from ", U.stringof);
         _p = u._p;
@@ -93,7 +93,7 @@ else
 
     /// Transfer ownership from a $(D Unique) of a type that is convertible to our type.
     void opAssign(U)(Unique!U u)
-    if (is(u.RefT:RefT))
+        if (is(u.RefT : RefT))
     {
         debug(Unique) writeln("Unique opAssign converting from ", U.stringof);
         // first delete any resource we own
@@ -107,7 +107,7 @@ else
     {
         import core.stdc.stdlib : free;
 
-        debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
+        debug(Unique) writeln("Unique destructor of ", _p is null? null : _p);
         if (_p !is null)
         {
             destroy(_p);
@@ -234,10 +234,10 @@ Unique!T unique(T, A...)(auto ref A args)
     if (!rawMemory)
         onOutOfMemoryError();
 
-    static if (is(T == class)) {
+    static if (is(T == class))
         u._p = emplace!T(rawMemory[0 .. allocSize], args);
-    }
-    else {
+    else
+    {
         u._p = cast(T*)rawMemory;
         emplace!T(u._p, args);
     }
@@ -349,7 +349,7 @@ unittest
         int val() const { return 4; }
     }
 
-    alias UBar = Unique!(Bar);
+    alias UBar = Unique!Bar;
 
     UBar g(UBar u)
     {
