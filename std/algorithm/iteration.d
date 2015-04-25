@@ -430,20 +430,20 @@ template map(fun...) if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
-        import std.meta : staticMap;
+        import std.meta : Map;
 
         alias AppliedReturnType(alias f) = typeof(f(r.front));
 
         static if (fun.length > 1)
         {
             import std.functional : adjoin;
-            import std.meta : staticIndexOf;
+            import std.meta : indexOf;
 
-            alias _funs = staticMap!(unaryFun, fun);
+            alias _funs = Map!(unaryFun, fun);
             alias _fun = adjoin!_funs;
 
-            alias ReturnTypes = staticMap!(AppliedReturnType, _funs);
-            static assert(staticIndexOf!(void, ReturnTypes) == -1,
+            alias ReturnTypes = Map!(AppliedReturnType, _funs);
+            static assert(indexOf!(void, ReturnTypes) == -1,
                           "All mapping functions must not return void.");
         }
         else
@@ -2445,9 +2445,9 @@ See_Also:
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
-    import std.meta : staticMap;
+    import std.meta : Map;
 
-    alias binfuns = staticMap!(binaryFun, fun);
+    alias binfuns = Map!(binaryFun, fun);
     static if (fun.length > 1)
         import std.typecons : tuple, isTuple;
 
@@ -2469,7 +2469,7 @@ template reduce(fun...) if (fun.length >= 1)
     {
         import std.exception : enforce;
         alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
-        alias Args = staticMap!(ReduceSeedType!E, binfuns);
+        alias Args = Map!(ReduceSeedType!E, binfuns);
 
         static if (isInputRange!R)
         {
@@ -2509,7 +2509,7 @@ template reduce(fun...) if (fun.length >= 1)
 
     private auto reducePreImpl(R, Args...)(R r, ref Args args)
     {
-        alias Result = staticMap!(Unqual, Args);
+        alias Result = Map!(Unqual, Args);
         static if (is(Result == Args))
             alias result = args;
         else

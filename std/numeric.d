@@ -516,7 +516,7 @@ public:
         if (__traits(compiles, cast(real)input))
     {
         import std.conv: text;
-        static if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
+        static if (indexOf!(Unqual!F, float, double, real) >= 0)
             auto value = ToBinary!(Unqual!F)(input);
         else
             auto value = ToBinary!(real    )(input);
@@ -546,7 +546,7 @@ public:
 
     /// Fetches the stored value either as a $(D float), $(D double) or $(D real).
     @property F get(F)()
-        if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
+        if (indexOf!(Unqual!F, float, double, real) >= 0)
     {
         import std.conv: text;
 

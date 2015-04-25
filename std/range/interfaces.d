@@ -263,7 +263,7 @@ private string putMethods(E...)()
 /**Implements the $(D OutputRange) interface for all types E and wraps the
  * $(D put) method for each type $(D E) in a virtual function.
  */
-class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
+class OutputRangeObject(R, E...) : Map!(OutputRange, E) {
     // @BUG 4689:  There should be constraints on this template class, but
     // DMD won't let me put them in.
     private R _range;

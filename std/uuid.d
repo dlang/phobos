@@ -126,7 +126,7 @@ import std.traits;
  */
 public struct UUID
 {
-    import std.meta : allSatisfy;
+    import std.meta : all;
     import std.traits : isIntegral;
 
     private:
@@ -288,7 +288,7 @@ public struct UUID
          * You need to pass exactly 16 ubytes.
          */
         @safe pure this(T...)(T uuidData)
-            if(uuidData.length == 16 && allSatisfy!(isIntegral, T))
+            if(uuidData.length == 16 && std.meta.algorithm.all!(isIntegral, T))
         {
             import std.conv : to;
 

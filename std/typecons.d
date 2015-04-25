@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import std.traits;
 // FIXME
-import std.meta; // : MetaList, allSatisfy;
+import std.meta; // : MetaList, std.meta.algorithm.all;
 
 debug(Unique) import std.stdio;
 
@@ -418,7 +418,7 @@ Params:
 */
 template Tuple(Specs...)
 {
-    import std.meta : staticMap;
+    import std.meta : Map;
 
     // Parse (type,name) pairs (FieldSpecs) out of the specified
     // arguments. Some fields would have name, others not.
@@ -458,7 +458,7 @@ template Tuple(Specs...)
 
     alias fieldSpecs = parseSpecs!Specs;
 
-    // Used with staticMap.
+    // Used with Map.
     alias extractType(alias spec) = spec.Type;
     alias extractName(alias spec) = spec.name;
 
@@ -471,7 +471,7 @@ template Tuple(Specs...)
     string injectNamedFields()
     {
         string decl = "";
-        foreach (i, name; staticMap!(extractName, fieldSpecs))
+        foreach (i, name; Map!(extractName, fieldSpecs))
         {
             import std.format : format;
 
@@ -487,7 +487,7 @@ template Tuple(Specs...)
     // Returns Specs for a subtuple this[from .. to] preserving field
     // names if any.
     alias sliceSpecs(size_t from, size_t to) =
-        staticMap!(expandSpec, fieldSpecs[from .. to]);
+        Map!(expandSpec, fieldSpecs[from .. to]);
 
     template expandSpec(alias spec)
     {
@@ -541,7 +541,7 @@ template Tuple(Specs...)
         /**
          * The types of the `Tuple`'s components.
          */
-        alias Types = staticMap!(extractType, fieldSpecs);
+        alias Types = Map!(extractType, fieldSpecs);
 
         ///
         unittest
@@ -553,7 +553,7 @@ template Tuple(Specs...)
         /**
          * The names of the `Tuple`'s components. Unnamed fields have empty names.
          */
-        alias fieldNames = staticMap!(extractName, fieldSpecs);
+        alias fieldNames = Map!(extractName, fieldSpecs);
 
         ///
         unittest
@@ -645,7 +645,7 @@ template Tuple(Specs...)
          *              Array slices are not supported.
          */
         this(U, size_t n)(U[n] values)
-        if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
+        if (n == Types.length && std.meta.algorithm.all!(isBuildableFrom!U, Types))
         {
             foreach (i, _; Types)
             {
@@ -3882,9 +3882,9 @@ unittest
  * wrap $(D src) object, then return it.
  */
 template wrap(Targets...)
-if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
+if (Targets.length >= 1 && std.meta.algorithm.all!(isMutable, Targets))
 {
-    import std.meta : staticMap;
+    import std.meta : Map;
 
     // strict upcast
     auto wrap(Source)(inout Source src) @trusted pure nothrow
@@ -3895,7 +3895,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
     }
     // structural upcast
     template wrap(Source)
-    if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
+    if (!std.meta.algorithm.all!(Bind!(isImplicitlyConvertible, Source), Targets))
     {
         auto wrap(inout Source src)
         {
@@ -4049,17 +4049,17 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
 
         public:
             mixin mixinAll!(
-                staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+                Map!(generateFun, staticIota!(0, TargetMembers.length)));
         }
     }
 }
 /// ditto
 template wrap(Targets...)
-if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
+if (Targets.length >= 1 && !std.meta.algorithm.all!(isMutable, Targets))
 {
-    import std.meta : staticMap;
+    import std.meta : Map;
 
-    alias wrap = .wrap!(staticMap!(Unqual, Targets));
+    alias wrap = .wrap!(Map!(Unqual, Targets));
 }
 
 // Internal class to support dynamic cross-casting
@@ -6511,7 +6511,7 @@ public:
     }
 
     this(T...)(T flags)
-        if (allSatisfy!(isBaseEnumType, T))
+        if (std.meta.algorithm.all!(isBaseEnumType, T))
     {
         this = flags;
     }
@@ -6534,7 +6534,7 @@ public:
     }
 
     auto ref opAssign(T...)(T flags)
-        if (allSatisfy!(isBaseEnumType, T))
+        if (std.meta.algorithm.all!(isBaseEnumType, T))
     {
         mValue = 0;
         foreach (E flag; flags)

@@ -2090,7 +2090,7 @@ $(LREF among) for checking a value against multiple possibilities.
  +/
 template canFind(alias pred="a == b")
 {
-    import std.meta : allSatisfy;
+    import std.meta : all;
 
     /++
     Returns $(D true) if and only if any value $(D v) found in the
@@ -2125,8 +2125,7 @@ template canFind(alias pred="a == b")
     same operation.
      +/
     size_t canFind(Range, Ranges...)(Range haystack, Ranges needles)
-    if (Ranges.length > 1 &&
-        allSatisfy!(isForwardRange, Ranges) &&
+    if (Ranges.length > 1 && all!(isForwardRange, Ranges) &&
         is(typeof(find!pred(haystack, needles))))
     {
         return find!pred(haystack, needles)[1];

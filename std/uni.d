@@ -924,7 +924,7 @@ private:
     enum dim = Types.length;
     size_t[dim] offsets;// offset for level x
     size_t[dim] sz;// size of level x
-    alias bitWidth = staticMap!(bitSizeOf, Types);
+    alias bitWidth = Map!(bitSizeOf, Types);
     size_t[] storage;
 }
 
@@ -4136,7 +4136,7 @@ template callableWith(T)
 */
 template isValidPrefixForTrie(Key, Prefix...)
 {
-    enum isValidPrefixForTrie = allSatisfy!(callableWith!Key, Prefix); // TODO: tighten the screws
+    enum isValidPrefixForTrie = std.meta.algorithm.all!(callableWith!Key, Prefix); // TODO: tighten the screws
 }
 
 /*
@@ -4748,7 +4748,7 @@ template Utf8Matcher()
     mixin template DefMatcher()
     {
         import std.format : format;
-        enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
+        enum hasASCII = indexOf!(1, Sizes) >= 0;
         alias UniSizes = Erase!(1, Sizes);
 
         //generate dispatch code sequence for unicode parts
@@ -4854,11 +4854,11 @@ template Utf8Matcher()
 
     struct Impl(Sizes...)
     {
-        static assert(allSatisfy!(validSize, Sizes),
+        static assert(std.meta.algorithm.all!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         //pick tables for chosen sizes
-        alias OurTabs = staticMap!(Table, Sizes);
+        alias OurTabs = Map!(Table, Sizes);
         OurTabs tables;
         mixin DefMatcher;
         //static disptach helper UTF size ==> table
@@ -4930,7 +4930,7 @@ template Utf8Matcher()
 
     struct CherryPick(I, Sizes...)
     {
-        static assert(allSatisfy!(validSize, Sizes),
+        static assert(std.meta.algorithm.all!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         I* m;
@@ -5082,7 +5082,7 @@ template Utf16Matcher()
         if(Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
-        static assert(allSatisfy!(validSize, Sizes),
+        static assert(std.meta.algorithm.all!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
         static if(Sizes.length > 1)
             enum sizeFlags = Sizes[0] | Sizes[1];
@@ -5183,7 +5183,7 @@ template Utf16Matcher()
             return m.lookupUni!mode(inp);
         }
         mixin DefMatcher;
-        static assert(allSatisfy!(validSize, Sizes),
+        static assert(std.meta.algorithm.all!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
     }
 }

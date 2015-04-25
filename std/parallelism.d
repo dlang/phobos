@@ -232,7 +232,7 @@ private template MapType(R, functions...)
 
     ElementType!R e = void;
     alias MapType =
-        typeof(adjoin!(staticMap!(unaryFun, functions))(e));
+        typeof(adjoin!(Map!(unaryFun, functions))(e));
 }
 
 private template ReduceType(alias fun, R, E)
@@ -254,7 +254,7 @@ private template isSafeTask(F)
         (functionAttributes!F & (FunctionAttribute.safe | FunctionAttribute.trusted)) != 0 &&
         (functionAttributes!F & FunctionAttribute.ref_) == 0 &&
         (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
-        allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
+        std.meta.algorithm.all!(noUnsharedAliasing, ParameterTypeTuple!F);
 }
 
 unittest
@@ -332,7 +332,7 @@ template reduceAdjoin(functions...)
     {
         T reduceAdjoin(T, U)(T lhs, U rhs)
         {
-            alias funs = staticMap!(binaryFun, functions);
+            alias funs = Map!(binaryFun, functions);
 
             foreach(i, Unused; typeof(lhs.expand))
             {
@@ -354,7 +354,7 @@ private template reduceFinish(functions...)
     {
         T reduceFinish(T)(T lhs, T rhs)
         {
-            alias funs = staticMap!(binaryFun, functions);
+            alias funs = Map!(binaryFun, functions);
 
             foreach(i, Unused; typeof(lhs.expand))
             {
@@ -562,7 +562,7 @@ struct Task(alias fun, Args...)
     }
 
     // Work around DMD bug 6588, allow immutable elements.
-    static if(allSatisfy!(isAssignable, Args))
+    static if(std.meta.algorithm.all!(isAssignable, Args))
     {
         typeof(this) opAssign(typeof(this) rhs)
         {
@@ -1652,7 +1652,7 @@ public:
         auto amap(Args...)(Args args)
         if(isRandomAccessRange!(Args[0]))
         {
-            alias fun = adjoin!(staticMap!(unaryFun, functions));
+            alias fun = adjoin!(Map!(unaryFun, functions));
 
             alias range = args[0];
             immutable len = range.length;
@@ -1838,7 +1838,7 @@ public:
         {
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                     "Work unit size must be smaller than buffer size.");
-            alias fun = adjoin!(staticMap!(unaryFun, functions));
+            alias fun = adjoin!(Map!(unaryFun, functions));
 
             static final class Map
             {
@@ -2460,7 +2460,7 @@ public:
                 }
                 else
                 {
-                    typeof(adjoin!(staticMap!(binaryFun, functions))(e, e)) seed = void;
+                    typeof(adjoin!(Map!(binaryFun, functions))(e, e)) seed = void;
                     foreach (i, T; seed.Types)
                     {
                         emplaceRef(seed.expand[i], e);

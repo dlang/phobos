@@ -180,11 +180,11 @@ order ranges.
 */
 template propagatesRangeType(H, R...)
 {
-    static if(allSatisfy!(isRandomAccessRange, R))
+    static if(std.meta.algorithm.all!(isRandomAccessRange, R))
         enum bool propagatesRangeType = isRandomAccessRange!H;
-    else static if(allSatisfy!(isBidirectionalRange, R))
+    else static if(std.meta.algorithm.all!(isBidirectionalRange, R))
         enum bool propagatesRangeType = isBidirectionalRange!H;
-    else static if(allSatisfy!(isForwardRange, R))
+    else static if(std.meta.algorithm.all!(isForwardRange, R))
         enum bool propagatesRangeType = isForwardRange!H;
     else
         enum bool propagatesRangeType = isInputRange!H;
@@ -192,7 +192,7 @@ template propagatesRangeType(H, R...)
 
 template propagatesLength(H, R...)
 {
-    static if(allSatisfy!(hasLength, R))
+    static if(std.meta.algorithm.all!(hasLength, R))
         enum bool propagatesLength = hasLength!H;
     else
         enum bool propagatesLength = !hasLength!H;

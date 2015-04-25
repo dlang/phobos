@@ -5663,7 +5663,7 @@ Returns:
 See_Also: $(LREF representation)
 */
 auto assumeUTF(T)(T[] arr) pure
-    if(staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
+    if(std.meta.list.indexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
     import std.utf : validate;
     alias ToUTFType(U) = MetaList!(char, wchar, dchar)[U.sizeof / 2];

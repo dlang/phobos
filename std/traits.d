@@ -615,8 +615,8 @@ private template fqnType(T,
 
             string result = join(
                 map!(a => format("%s%s", a[0], a[1]))(
-                    zip([staticMap!(storageClassesString, parameterStC)],
-                        [staticMap!(fullyQualifiedName, parameters)])
+                    zip([Map!(storageClassesString, parameterStC)],
+                        [Map!(fullyQualifiedName, parameters)])
                 ),
                 ", "
             );
@@ -1613,7 +1613,7 @@ unittest
 /**
 $(RED Deprecated. It's badly named and provides redundant functionality. It was
 also badly broken prior to 2.060 (bug# 8362), so any code which uses it
-probably needs to be changed anyway. Please use $(D allSatisfy(isSafe, ...))
+probably needs to be changed anyway. Please use $(D std.meta.algorithm.all(isSafe, ...))
 instead. This will be removed in June 2015.)
 
 $(D true) all functions are $(D isSafe).
@@ -1629,7 +1629,7 @@ static assert( areAllSafe!(add, sub));
 static assert(!areAllSafe!(sub, mul));
 -------------
 */
-deprecated("Please use allSatisfy(isSafe, ...) instead.")
+deprecated("Please use std.meta.algorithm.all(isSafe, ...) instead.")
 template areAllSafe(funcs...)
     if (funcs.length > 0)
 {
@@ -2088,7 +2088,7 @@ template hasNested(T)
         enum hasNested = hasNested!(typeof(T.init[0]));
     else static if(is(T == class) || is(T == struct) || is(T == union))
         enum hasNested = isNested!T ||
-            anySatisfy!(.hasNested, FieldTypeTuple!T);
+            std.meta.algorithm.any!(.hasNested, FieldTypeTuple!T);
     else
         enum hasNested = false;
 }
@@ -2218,9 +2218,9 @@ private enum NameOf(alias T) = T.stringof;
 template FieldNameTuple(T)
 {
     static if (is(T == struct) || is(T == union))
-        alias FieldNameTuple = staticMap!(NameOf, T.tupleof[0 .. $ - isNested!T]);
+        alias FieldNameTuple = Map!(NameOf, T.tupleof[0 .. $ - isNested!T]);
     else static if (is(T == class))
-        alias FieldNameTuple = staticMap!(NameOf, T.tupleof);
+        alias FieldNameTuple = Map!(NameOf, T.tupleof);
     else
         alias FieldNameTuple = MetaList!"";
 }
@@ -2692,7 +2692,7 @@ template hasAliasing(T...)
                                   && !is(FunctionTypeOf!T == immutable);
         }
         enum hasAliasing = hasRawAliasing!T || hasObjects!T ||
-            anySatisfy!(isAliasingDelegate, T, RepresentationTypeTuple!T);
+            std.meta.algorithm.any!(isAliasingDelegate, T, RepresentationTypeTuple!T);
     }
 }
 
@@ -2781,7 +2781,7 @@ $(LI an associative array.) $(LI a delegate.))
 template hasIndirections(T)
 {
     static if (is(T == struct) || is(T == union))
-        enum hasIndirections = anySatisfy!(.hasIndirections, FieldTypeTuple!T);
+        enum hasIndirections = std.meta.algorithm.any!(.hasIndirections, FieldTypeTuple!T);
     else static if (isStaticArray!T && is(T : E[N], E, size_t N))
         enum hasIndirections = is(E == void) ? true : hasIndirections!E;
     else static if (isFunctionPointer!T)
@@ -2914,7 +2914,7 @@ template hasUnsharedAliasing(T...)
 
         enum hasUnsharedAliasing =
             hasRawUnsharedAliasing!(T[0]) ||
-            anySatisfy!(unsharedDelegate, RepresentationTypeTuple!(T[0])) ||
+            std.meta.algorithm.any!(unsharedDelegate, RepresentationTypeTuple!(T[0])) ||
             hasUnsharedObjects!(T[0]) ||
             hasUnsharedAliasing!(T[1..$]);
     }
@@ -3072,7 +3072,7 @@ template hasElaborateCopyConstructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
-            || anySatisfy!(.hasElaborateCopyConstructor, FieldTypeTuple!S);
+            || std.meta.algorithm.any!(.hasElaborateCopyConstructor, FieldTypeTuple!S);
     }
     else
     {
@@ -3129,7 +3129,7 @@ template hasElaborateAssign(S)
     {
         enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
                                   is(typeof(S.init.opAssign(lvalueOf!S))) ||
-            anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
+            std.meta.algorithm.any!(.hasElaborateAssign, FieldTypeTuple!S);
     }
     else
     {
@@ -3214,7 +3214,7 @@ template hasElaborateDestructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateDestructor = hasMember!(S, "__dtor")
-            || anySatisfy!(.hasElaborateDestructor, FieldTypeTuple!S);
+            || std.meta.algorithm.any!(.hasElaborateDestructor, FieldTypeTuple!S);
     }
     else
     {
@@ -3257,7 +3257,7 @@ template hasMember(T, string name)
     static if (is(T == struct) || is(T == class) || is(T == union) || is(T == interface))
     {
         enum bool hasMember =
-            staticIndexOf!(name, __traits(allMembers, T)) != -1 ||
+            indexOf!(name, __traits(allMembers, T)) != -1 ||
             __traits(compiles, { mixin("alias Sym = Identity!(T."~name~");"); });
     }
     else
@@ -3903,7 +3903,7 @@ private template maxAlignment(U...) if (isTypeTuple!U)
     else
     {
         import std.algorithm : max;
-        enum maxAlignment = max(staticMap!(.maxAlignment, U));
+        enum maxAlignment = max(Map!(.maxAlignment, U));
     }
 }
 
@@ -4627,7 +4627,7 @@ template IntegralTypeOf(T)
     else
         alias X = OriginalType!T;
 
-    static if (staticIndexOf!(Unqual!X, IntegralTypeList) >= 0)
+    static if (indexOf!(Unqual!X, IntegralTypeList) >= 0)
     {
         alias IntegralTypeOf = X;
     }
@@ -4661,7 +4661,7 @@ template FloatingPointTypeOf(T)
     else
         alias X = OriginalType!T;
 
-    static if (staticIndexOf!(Unqual!X, FloatingPointTypeList) >= 0)
+    static if (indexOf!(Unqual!X, FloatingPointTypeList) >= 0)
     {
         alias FloatingPointTypeOf = X;
     }
@@ -4720,7 +4720,7 @@ unittest
 template UnsignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
-               staticIndexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
+               indexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
         alias UnsignedTypeOf = X;
     else
         static assert(0, T.stringof~" is not an unsigned type.");
@@ -4731,7 +4731,7 @@ template UnsignedTypeOf(T)
 template SignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
-               staticIndexOf!(Unqual!X, SignedIntTypeList) >= 0)
+               indexOf!(Unqual!X, SignedIntTypeList) >= 0)
         alias SignedTypeOf = X;
     else static if (is(FloatingPointTypeOf!T X))
         alias SignedTypeOf = X;
@@ -4748,7 +4748,7 @@ template CharTypeOf(T)
     else
         alias X = OriginalType!T;
 
-    static if (staticIndexOf!(Unqual!X, CharTypeList) >= 0)
+    static if (indexOf!(Unqual!X, CharTypeList) >= 0)
     {
         alias CharTypeOf = X;
     }

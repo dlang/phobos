@@ -140,7 +140,7 @@ template This2Variant(V, T...)
  * are larger than the largest built-in type, they will automatically
  * be boxed. This means that even large types will only be the size
  * of a pointer within the $(D_PARAM Variant), but this also implies some
- * overhead. $(D_PARAM Variant) can accommodate all primitive types and 
+ * overhead. $(D_PARAM Variant) can accommodate all primitive types and
  * all user-defined types.))
  *
  * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
@@ -179,7 +179,7 @@ private:
             = is(T == VariantN)
             ||
             //T.sizeof <= size &&
-            (AllowedTypes.length == 0 || staticIndexOf!(T, AllowedTypes) >= 0);
+            (AllowedTypes.length == 0 || indexOf!(T, AllowedTypes) >= 0);
     }
 
     // Each internal operation is encoded with an identifier. See
@@ -295,10 +295,10 @@ private:
         {
             alias UA = Unqual!A;
             alias MutaTypes = MetaList!(UA, ImplicitConversionTargets!UA);
-            alias ConstTypes = staticMap!(ConstOf, MutaTypes);
-            alias SharedTypes = staticMap!(SharedOf, MutaTypes);
-            alias SharedConstTypes = staticMap!(SharedConstOf, MutaTypes);
-            alias ImmuTypes  = staticMap!(ImmutableOf, MutaTypes);
+            alias ConstTypes = Map!(ConstOf, MutaTypes);
+            alias SharedTypes = Map!(SharedOf, MutaTypes);
+            alias SharedConstTypes = Map!(SharedConstOf, MutaTypes);
+            alias ImmuTypes  = Map!(ImmutableOf, MutaTypes);
 
             static if (is(A == immutable))
                 alias AllTypes = MetaList!(ImmuTypes, ConstTypes, SharedConstTypes);
@@ -524,7 +524,7 @@ private:
                 // otherwise we run into issues such as with const values.
                 // We still get the actual type from the Variant though
                 // to ensure that we retain const correctness.
-                Tuple!(staticMap!(Unqual, ParamTypes)) t;
+                Tuple!(Map!(Unqual, ParamTypes)) t;
                 enforce(t.length == argCount,
                         text("Argument count mismatch: ",
                              A.stringof, " expects ", t.length,
@@ -581,12 +581,12 @@ public:
 
     /// Allows assignment from a subset algebraic type
     this(T : VariantN!(tsize, Types), size_t tsize, Types...)(T value)
-        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
+        if (!is(T : VariantN) && Types.length > 0 && std.meta.algorithm.all!(allowed, Types))
     {
         opAssign(value);
     }
 
-    static if (!AllowedTypes.length || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes))
+    static if (!AllowedTypes.length || std.meta.algorithm.any!(hasElaborateCopyConstructor, AllowedTypes))
     {
         this(this)
         {
@@ -594,7 +594,7 @@ public:
         }
     }
 
-    static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
+    static if (!AllowedTypes.length || std.meta.algorithm.any!(hasElaborateDestructor, AllowedTypes))
     {
         ~this()
         {
@@ -624,7 +624,7 @@ public:
         }
         else
         {
-            static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
+            static if (!AllowedTypes.length || std.meta.algorithm.any!(hasElaborateDestructor, AllowedTypes))
             {
                 // Assignment should destruct previous value
                 fptr(OpID.destruct, &store, null);
@@ -667,7 +667,7 @@ public:
 
     // Allow assignment from another variant which is a subset of this one
     VariantN opAssign(T : VariantN!(tsize, Types), size_t tsize, Types...)(T rhs)
-        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
+        if (!is(T : VariantN) && Types.length > 0 && std.meta.algorithm.all!(allowed, Types))
     {
         // discover which type rhs is actually storing
         foreach (V; T.AllowedTypes)

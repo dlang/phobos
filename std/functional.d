@@ -542,6 +542,8 @@ unittest
 */
 template reverseArgs(alias pred)
 {
+    import std.meta.list : Reverse;
+
     auto reverseArgs(Args...)(auto ref Args args)
         if (is(typeof(pred(Reverse!args))))
     {
@@ -862,9 +864,9 @@ unittest
 
 unittest
 {
-    import std.meta : staticMap;
+    import std.meta : Map;
     import std.typecons : Tuple, tuple;
-    alias funs = staticMap!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
+    alias funs = Map!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
     alias afun = adjoin!funs;
     assert(afun(5) == tuple(5, 10, 15, 25, -5));
 

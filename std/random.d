@@ -66,7 +66,7 @@ import std.traits;
 
 version(unittest)
 {
-    static import std.meta;
+    import std.meta;
     package alias PseudoRngTypes = MetaList!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
                                               Xorshift96, Xorshift128, Xorshift160, Xorshift192);
 }

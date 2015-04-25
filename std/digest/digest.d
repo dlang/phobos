@@ -62,7 +62,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
 module std.digest.digest;
 
 import std.traits;
-import std.meta : allSatisfy;
+static import std.meta.algorithm; // : all
 public import std.ascii : LetterCase;
 
 
@@ -427,7 +427,7 @@ unittest
  * Params:
  *  data= one or more arrays of any type
  */
-DigestType!Hash digest(Hash, T...)(scope const T data) if(allSatisfy!(isArray, typeof(data)))
+DigestType!Hash digest(Hash, T...)(scope const T data) if(std.meta.algorithm.all!(isArray, typeof(data)))
 {
     Hash hash;
     hash.start();
@@ -486,7 +486,7 @@ unittest
  *  data= one or more arrays of any type
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, T...)(scope const T data)
-    if(allSatisfy!(isArray, typeof(data)))
+    if(std.meta.algorithm.all!(isArray, typeof(data)))
 {
     return toHexString!order(digest!Hash(data));
 }

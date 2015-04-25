@@ -635,7 +635,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 {
     import std.range.primitives;
     import std.range : Take;
-    import std.meta : allSatisfy;
+    import std.meta : all;
     import std.traits;
 
     alias _less = binaryFun!less;
@@ -1334,7 +1334,7 @@ assert(equal(rbt[], [5]));
 --------------------
       +/
     size_t removeKey(U...)(U elems)
-        if(allSatisfy!(isImplicitlyConvertibleToElem, U))
+        if(std.meta.algorithm.all!(isImplicitlyConvertibleToElem, U))
     {
         Elem[U.length] toRemove;
 

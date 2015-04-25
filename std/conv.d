@@ -88,17 +88,17 @@ private
 {
     template isImaginary(T)
     {
-        enum bool isImaginary = staticIndexOf!(Unqual!T,
+        enum bool isImaginary = indexOf!(Unqual!T,
                 ifloat, idouble, ireal) >= 0;
     }
     template isComplex(T)
     {
-        enum bool isComplex = staticIndexOf!(Unqual!T,
+        enum bool isComplex = indexOf!(Unqual!T,
                 cfloat, cdouble, creal) >= 0;
     }
     template isNarrowInteger(T)
     {
-        enum bool isNarrowInteger = staticIndexOf!(Unqual!T,
+        enum bool isNarrowInteger = indexOf!(Unqual!T,
                 byte, ubyte, short, ushort) >= 0;
     }
 
@@ -3046,7 +3046,7 @@ string up one position.
  */
 Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
-        staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
+        indexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
