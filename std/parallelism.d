@@ -416,6 +416,10 @@ private struct AbstractTask
     }
 }
 
+/// Used for $(D Task.finish)
+alias Blocking = Flag!"blocking";
+
+
 /**
 $(D Task) represents the fundamental unit of work.  A $(D Task) may be
 executed in parallel with any other $(D Task).  Using this struct directly
@@ -3110,7 +3114,7 @@ public:
               thread that is a member of the same $(D TaskPool) that
               $(D finish) is being called on will result in a deadlock.
      */
-    void finish(bool blocking = false) @trusted
+    void finish(Blocking blocking = Blocking.no) @trusted
     {
         {
             queueLock();
@@ -3138,6 +3142,12 @@ public:
                 t.join();
             }
         }
+    }
+
+    deprecated("Please use Blocking.yes or Blocking.no instead of a boolean.")
+    void finish(bool blocking = false) @trusted
+    {
+        finish(cast(Blocking)blocking);
     }
 
     /// Returns the number of worker threads in the pool.
@@ -4122,14 +4132,14 @@ unittest
         auto pool2 = new TaskPool();
         auto tSlow2 = task!slowFun();
         pool2.put(tSlow2);
-        pool2.finish(true); // blocking
+        pool2.finish(Blocking.yes);
         assert(tSlow2.done);
 
         // Test fix for Bug 8582 by making pool size zero.
         auto pool3 = new TaskPool(0);
         auto tSlow3 = task!slowFun();
         pool3.put(tSlow3);
-        pool3.finish(true); // blocking
+        pool3.finish(Blocking.yes);
         assert(tSlow3.done);
 
         // This is correct because no thread will terminate unless pool2.status
