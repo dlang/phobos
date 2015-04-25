@@ -57,9 +57,16 @@ a $(D Unique) maintains sole ownership of a given resource of type $(D T) until
 ownership is transferred or the $(D Unique) falls out of scope.
 Such a transfer can be explicit, using
 $(LINK2 http://dlang.org/phobos/std_algorithm_mutation.html#.move, $(D std.algorithm.move)),
-or implicit, when returning Unique from a function that created it.
+or implicit, when returning $(D Unique) from a function that created it.
 The resource can be a polymorphic class object,
-in which case Unique behaves polymorphically too.
+in which case $(D Unique) behaves polymorphically too.
+
+Note: Nested classes and structs cannot be created at present time,
+      as there is no way to transfer the closure's frame pointer
+      into this function.
+
+Params:
+    args = Arguments to pass to $(D T)'s constructor.
 */
 struct Unique(T)
 {
@@ -70,18 +77,10 @@ else
     alias RefT = T*;
 
     /**
-    Constructor that takes a $(D Unique) of a type that is convertible to our type.
+    Construct $(D Unique) from a type that is convertible to our type.
 
     Typically used to transfer a $(D Unique) rvalue of derived type to
     a $(D Unique) of base type.
-
-    Example:
-    ---
-    class C : Object { }
-
-    Unique!C uc = unique!C();
-    Unique!Object uo = move(uc);
-    ---
     */
     this(U)(Unique!U u)
         if (is(u.RefT : RefT))
@@ -137,7 +136,12 @@ else
     }
 
     /**
-    Returns a reference to the underlying $(D RefT) for use by non-owning code.
+    Returns a reference to the underlying $(D T) for use by non-owning code.
+
+    When $(D T) is a class or interface type and this $(D Unique) reference
+    is uninitialized or invalidated by an explicit move, get returns $(D null).
+    For all other types, get is illegal on an uninitialized or invalidated
+    reference.
 
     The holder of a $(D Unique!T) is the $(I owner) of that $(D T).
     For code that does not own the resource (and therefore does not affect
@@ -173,52 +177,26 @@ else
     /// that of $(D Unique.empty)
     bool opCast(T : bool)() const { return !empty; }
 
-    /// Forwards the underlying $(D RefT)
+    /// $(D Unique!T) is a subtype of $(D T).
     alias get this;
 
-    /// Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
+    /// $(D Unique) references cannot be copied.
     @disable this(this);
 
 private:
     RefT _p;
 }
 
-unittest
-{
-    // Ditto...
-    import std.algorithm;
-
-    static class C : Object { }
-
-    Unique!C uc = unique!C();
-    Unique!Object uo = move(uc);
-}
-
-
-/**
-Allows safe construction of $(D Unique). It creates the resource and
-guarantees unique ownership of it (unless $(D T) publishes aliases of
-$(D this)).
-
-Note: Nested classes and structs cannot be created at present time,
-      as there is no way to transfer the closure's frame pointer
-      into this function.
-
-Params:
-    args = Arguments to pass to $(D T)'s constructor.
-
-*/
+/// Ditto
 Unique!T unique(T, A...)(auto ref A args)
     if (__traits(compiles, new T(args)))
 {
-    debug(Unique) writeln("Unique.create for ", T.stringof);
-
     import core.memory : GC;
     import core.stdc.stdlib : malloc;
     import std.conv : emplace;
     import core.exception : onOutOfMemoryError;
 
-    debug(Unique) writeln("Unique.create for ", T.stringof);
+    debug(Unique) writeln("unique() for ", T.stringof);
     Unique!T u;
 
     // TODO: May need to fix alignment?
@@ -248,12 +226,45 @@ Unique!T unique(T, A...)(auto ref A args)
     return u;
 }
 
-///
+/// Use unique to construct _unique resources:
 unittest
 {
-    struct S { }
-    auto u = unique!S();
-    assert(!u.empty());
+    struct S
+    {
+        int i;
+        this(int i) { this.i = i; }
+    }
+
+    auto u = unique!S(42);
+    assert(u);
+    assert(u.i == 42);
+}
+
+/// $(D Unique!T) supports the subtype conversions of $(D T):
+unittest
+{
+    import std.algorithm : move;
+
+    static interface I {}
+    static class Base : I {}
+    static class Derived : Base {}
+
+    Unique!Derived d = unique!Derived();
+    Unique!Base b = move(d);
+    Unique!I i = move(b);
+}
+
+/// Use $(D cast(bool)) to check if a reference is valid:
+unittest
+{
+    import std.algorithm.mutation : move;
+    Unique!Object u;
+    assert(!u); // uninitialized
+    u = unique!Object();
+    assert(u);
+    Unique!Object newOwner = move(u);
+    assert(!u); // invalidated by the move
+    assert(newOwner);
 }
 
 unittest
@@ -339,9 +350,6 @@ unittest
 
 unittest
 {
-    // FIXME: Isn't this a bit redundant?
-    // I believe all of these bases are covered in the tests above.
-
     debug(Unique) writeln("Unique class");
     static class Bar
     {
