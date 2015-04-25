@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import std.traits;
 // FIXME
-import std.meta; // : TypeTuple, allSatisfy;
+import std.meta; // : MetaList, allSatisfy;
 
 debug(Unique) import std.stdio;
 
@@ -410,7 +410,7 @@ for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
 motivated by the ability to use value `Tuple`s with various compile-time
-loop constructs (e.g. $(XREF typetuple, TypeTuple) iteration), all of which use
+loop constructs (e.g. $(XREF typetuple, MetaList) iteration), all of which use
 zero-based indexing.
 
 Params:
@@ -426,20 +426,20 @@ template Tuple(Specs...)
     {
         static if (Specs.length == 0)
         {
-            alias parseSpecs = TypeTuple!();
+            alias parseSpecs = MetaList!();
         }
         else static if (is(Specs[0]))
         {
             static if (is(typeof(Specs[1]) : string))
             {
                 alias parseSpecs =
-                    TypeTuple!(FieldSpec!(Specs[0 .. 2]),
+                    MetaList!(FieldSpec!(Specs[0 .. 2]),
                                parseSpecs!(Specs[2 .. $]));
             }
             else
             {
                 alias parseSpecs =
-                    TypeTuple!(FieldSpec!(Specs[0]),
+                    MetaList!(FieldSpec!(Specs[0]),
                                parseSpecs!(Specs[1 .. $]));
             }
         }
@@ -493,11 +493,11 @@ template Tuple(Specs...)
     {
         static if (spec.name.length == 0)
         {
-            alias expandSpec = TypeTuple!(spec.Type);
+            alias expandSpec = MetaList!(spec.Type);
         }
         else
         {
-            alias expandSpec = TypeTuple!(spec.Type, spec.name);
+            alias expandSpec = MetaList!(spec.Type, spec.name);
         }
     }
 
@@ -547,7 +547,7 @@ template Tuple(Specs...)
         unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
-            static assert(is(Fields.Types == TypeTuple!(int, string, float)));
+            static assert(is(Fields.Types == MetaList!(int, string, float)));
         }
 
         /**
@@ -559,7 +559,7 @@ template Tuple(Specs...)
         unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
-            static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+            static assert(Fields.fieldNames == MetaList!("id", "", ""));
         }
 
         /**
@@ -994,11 +994,11 @@ private template ReverseTupleSpecs(T...)
     {
         static if (is(typeof(T[$-1]) : string))
         {
-            alias ReverseTupleSpecs = TypeTuple!(T[$-2], T[$-1], ReverseTupleSpecs!(T[0 .. $-2]));
+            alias ReverseTupleSpecs = MetaList!(T[$-2], T[$-1], ReverseTupleSpecs!(T[0 .. $-2]));
         }
         else
         {
-            alias ReverseTupleSpecs = TypeTuple!(T[$-1], ReverseTupleSpecs!(T[0 .. $-1]));
+            alias ReverseTupleSpecs = MetaList!(T[$-1], ReverseTupleSpecs!(T[0 .. $-1]));
         }
     }
     else
@@ -1334,7 +1334,7 @@ unittest
     static assert(T.fieldNames[1] == "foo");
 
     alias Fields = Tuple!(int, "id", string, float);
-    static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+    static assert(Fields.fieldNames == MetaList!("id", "", ""));
 }
 
 // Bugzilla 13837
@@ -1430,12 +1430,12 @@ template tuple(Names...)
             {
                 template and(B...) if (B.length == 1)
                 {
-                    alias TypeTuple!(A[0], B[0]) and;
+                    alias MetaList!(A[0], B[0]) and;
                 }
 
                 template and(B...) if (B.length != 1)
                 {
-                    alias TypeTuple!(A[0], B[0],
+                    alias MetaList!(A[0], B[0],
                         Interleave!(A[1..$]).and!(B[1..$])) and;
                 }
             }
@@ -1720,7 +1720,7 @@ unittest
     immutable(char[]) s7654;
     Rebindable!(typeof(s7654)) r7654 = s7654;
 
-    foreach (T; TypeTuple!(char, wchar, char, int))
+    foreach (T; MetaList!(char, wchar, char, int))
     {
         static assert(is(Rebindable!(immutable(T[])) == immutable(T)[]));
         static assert(is(Rebindable!(const(T[])) == const(T)[]));
@@ -2218,7 +2218,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; MetaList!(S1, S2))
     {
         S a;
         S b = a;
@@ -2589,7 +2589,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; MetaList!(S1, S2))
     {
         S a;
         S b = a;
@@ -2891,7 +2891,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; MetaList!(S1, S2))
     {
         S a;
         S b = a;
@@ -3207,12 +3207,12 @@ private static:
                 alias next = Impl!(names[1 .. $]);
 
                 static if (methods.length > 0)
-                    alias Impl = TypeTuple!(OverloadSet!(names[0], methods), next);
+                    alias Impl = MetaList!(OverloadSet!(names[0], methods), next);
                 else
                     alias Impl = next;
             }
             else
-                alias Impl = TypeTuple!();
+                alias Impl = MetaList!();
         }
 
         alias enumerateOverloads = Impl!(__traits(allMembers, C));
@@ -3564,9 +3564,9 @@ private static:
     template CountUp(size_t n)
     {
         static if (n > 0)
-            alias CountUp = TypeTuple!(CountUp!(n - 1), n - 1);
+            alias CountUp = MetaList!(CountUp!(n - 1), n - 1);
         else
-            alias CountUp = TypeTuple!();
+            alias CountUp = MetaList!();
     }
 
 
@@ -3705,7 +3705,7 @@ private static:
             /* Declare keywords: args, self and parent. */
             string preamble;
 
-            preamble ~= "alias args = TypeTuple!(" ~ enumerateParameters!(nparams) ~ ");\n";
+            preamble ~= "alias args = MetaList!(" ~ enumerateParameters!(nparams) ~ ");\n";
             if (!isCtor)
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
@@ -3918,17 +3918,17 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
         template Concat(size_t i = 0)
         {
             static if (i >= Targets.length)
-                alias Concat = TypeTuple!();
+                alias Concat = MetaList!();
             else
             {
-                alias Concat = TypeTuple!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
+                alias Concat = MetaList!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
             }
         }
         // Remove duplicated functions based on the identifier name and function type covariance
         template Uniq(members...)
         {
             static if (members.length == 0)
-                alias Uniq = TypeTuple!();
+                alias Uniq = MetaList!();
             else
             {
                 alias func = members[0];
@@ -3956,14 +3956,14 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                                !is(DerivedFunctionType!(typex, remain[0].type) == void))
                     {
                         alias F = DerivedFunctionType!(typex, remain[0].type);
-                        alias Uniq = TypeTuple!(FuncInfo!(name, F), remain[1 .. $]);
+                        alias Uniq = MetaList!(FuncInfo!(name, F), remain[1 .. $]);
                     }
                     else
-                        alias Uniq = TypeTuple!(FuncInfo!(name, typex), remain);
+                        alias Uniq = MetaList!(FuncInfo!(name, typex), remain);
                 }
                 else
                 {
-                    alias Uniq = TypeTuple!(FuncInfo!(name, type), Uniq!(members[1 .. $]));
+                    alias Uniq = MetaList!(FuncInfo!(name, type), Uniq!(members[1 .. $]));
                 }
             }
         }
@@ -4017,7 +4017,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 }
                 static @property mod()
                 {
-                    alias type = TypeTuple!(TargetMembers[i].type)[0];
+                    alias type = MetaList!(TargetMembers[i].type)[0];
                     string r;
                     static if (is(type == immutable))       r ~= " immutable";
                     else
@@ -4293,12 +4293,12 @@ private template GetOverloadedMethods(T)
 {
     import std.meta : Filter;
 
-    alias allMembers = TypeTuple!(__traits(allMembers, T));
+    alias allMembers = MetaList!(__traits(allMembers, T));
     template follows(size_t i = 0)
     {
         static if (i >= allMembers.length)
         {
-            alias follows = TypeTuple!();
+            alias follows = MetaList!();
         }
         else static if (!__traits(compiles, mixin("T."~allMembers[i])))
         {
@@ -4315,7 +4315,7 @@ private template GetOverloadedMethods(T)
                 else
                     enum isMethod = false;
             }
-            alias follows = TypeTuple!(
+            alias follows = MetaList!(
                 Filter!(isMethod, __traits(getOverloads, T, name)),
                 follows!(i + 1));
         }
@@ -4542,17 +4542,17 @@ package template staticIota(int beg, int end)
     {
         static if (beg >= end)
         {
-            alias staticIota = TypeTuple!();
+            alias staticIota = MetaList!();
         }
         else
         {
-            alias staticIota = TypeTuple!(+beg);
+            alias staticIota = MetaList!(+beg);
         }
     }
     else
     {
         enum mid = beg + (end - beg) / 2;
-        alias staticIota = TypeTuple!(staticIota!(beg, mid), staticIota!(mid, end));
+        alias staticIota = MetaList!(staticIota!(beg, mid), staticIota!(mid, end));
     }
 }
 
@@ -5312,7 +5312,7 @@ unittest
         static immutable arr = [1,2,3];
     }
 
-    foreach (T; TypeTuple!(MyInt, const MyInt, immutable MyInt))
+    foreach (T; MetaList!(MyInt, const MyInt, immutable MyInt))
     {
         T m = 10;
         static assert(!__traits(compiles, { int x = m; }));
@@ -5357,7 +5357,7 @@ unittest
         this(immutable int[] arr) immutable { value = arr; }
     }
 
-    foreach (T; TypeTuple!(MyArray, const MyArray, immutable MyArray))
+    foreach (T; MetaList!(MyArray, const MyArray, immutable MyArray))
     {
       static if (is(T == immutable) && !is(typeof({ T a = [1,2,3,4]; })))
         T a = [1,2,3,4].idup;   // workaround until qualified ctor is properly supported
@@ -6089,7 +6089,7 @@ unittest // Issue 6580 testcase
             byte[size] arr;
             alignmentTest();
         }
-        foreach(i; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        foreach(i; MetaList!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
             test!i();
     }
 }

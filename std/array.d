@@ -275,7 +275,7 @@ unittest
         int i;
     }
 
-    foreach(T; TypeTuple!(S, const S, immutable S))
+    foreach(T; MetaList!(S, const S, immutable S))
     {
         auto arr = [T(1), T(2), T(3), T(4)];
         assert(array(arr) == arr);
@@ -1163,10 +1163,10 @@ unittest
                 new AssertError("testStr failure 3", file, line));
     }
 
-    foreach (T; TypeTuple!(char, wchar, dchar,
+    foreach (T; MetaList!(char, wchar, dchar,
         immutable(char), immutable(wchar), immutable(dchar)))
     {
-        foreach (U; TypeTuple!(char, wchar, dchar,
+        foreach (U; MetaList!(char, wchar, dchar,
             immutable(char), immutable(wchar), immutable(dchar)))
         {
             testStr!(T[], U[])();
@@ -1304,7 +1304,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 
 @safe pure nothrow unittest
 {
-    foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    foreach(T; MetaList!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
     {
         T a = [1, 2, 3, 4, 5];
         T b = a;
@@ -1372,7 +1372,7 @@ unittest
 
     debug(std_array) printf("array.replicate.unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s;
         immutable S t = "abc";
@@ -1440,7 +1440,7 @@ unittest
     static auto makeEntry(S)(string l, string[] r)
     {return tuple(l.to!S(), r.to!(S[])());}
 
-    foreach (S; TypeTuple!(string, wstring, dstring,))
+    foreach (S; MetaList!(string, wstring, dstring,))
     {
         auto entries =
         [
@@ -1532,7 +1532,7 @@ unittest
     import std.algorithm : cmp;
 
     debug(std_array) printf("array.split\n");
-    foreach (S; TypeTuple!(string, wstring, dstring,
+    foreach (S; MetaList!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
                     const(char)[], const(wchar)[], const(dchar)[],
@@ -1806,18 +1806,18 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 {
     import std.conv : to;
 
-    foreach (T; TypeTuple!(string,wstring,dstring))
+    foreach (T; MetaList!(string,wstring,dstring))
     {
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        foreach (S; TypeTuple!(char,wchar,dchar))
+        foreach (S; MetaList!(char,wchar,dchar))
         {
             auto jarr = arr.join(to!S(' '));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
         }
-        foreach (S; TypeTuple!(string,wstring,dstring))
+        foreach (S; MetaList!(string,wstring,dstring))
         {
             auto jarr = arr.join(to!S(" "));
             static assert(is(typeof(jarr) == T));
@@ -1825,11 +1825,11 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
         }
     }
 
-    foreach (T; TypeTuple!(string,wstring,dstring))
+    foreach (T; MetaList!(string,wstring,dstring))
     {
         auto arr2 = "Здравствуй\u047CМир\u047CUnicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
-        foreach (S; TypeTuple!(wchar,dchar))
+        foreach (S; MetaList!(wchar,dchar))
         {
             auto jarr = arr.join(to!S('\u047C'));
             static assert(is(typeof(jarr) == T));
@@ -1849,7 +1849,7 @@ unittest
 
     debug(std_array) printf("array.join.unittest\n");
 
-    foreach(R; TypeTuple!(string, wstring, dstring))
+    foreach(R; MetaList!(string, wstring, dstring))
     {
         R word1 = "日本語";
         R word2 = "paul";
@@ -1866,7 +1866,7 @@ unittest
         auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
-        foreach(S; TypeTuple!(string, wstring, dstring))
+        foreach(S; MetaList!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
@@ -2044,9 +2044,9 @@ unittest
 
     debug(std_array) printf("array.replace.unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+        foreach (T; MetaList!(string, wstring, dstring, char[], wchar[], dchar[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
             auto from = to!T("foo");
@@ -2081,7 +2081,7 @@ unittest
         this(C[] arr){ desired = arr; }
         void put(C[] part){ assert(skipOver(desired, part)); }
     }
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         alias Char = ElementEncodingType!S;
         S s = to!S("yet another dummy text, yet another ...");
@@ -2410,10 +2410,10 @@ unittest
 
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+        foreach (T; MetaList!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
@@ -2518,10 +2518,10 @@ unittest
 
     debug(std_array) printf("array.replaceLast.unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
+        foreach (T; MetaList!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
@@ -3137,7 +3137,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     catch (Exception) assert(0);
 
     // Issue 5663 & 9725 tests
-    foreach (S; TypeTuple!(char[], const(char)[], string))
+    foreach (S; MetaList!(char[], const(char)[], string))
     {
         {
             Appender!S app5663i;

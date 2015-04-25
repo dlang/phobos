@@ -65,7 +65,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.traits, std.typetuple;
+import std.traits, std.meta.list;
 
 
 private template needOpCallAlias(alias fun)
@@ -110,7 +110,7 @@ template unaryFun(alias fun, string parmName = "a")
     {
         static if (!fun._ctfeMatchUnary(parmName))
         {
-            import std.traits, std.typecons, std.typetuple;
+            import std.traits, std.typecons, std.meta.list;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
         auto unaryFun(ElementType)(auto ref ElementType __a)
@@ -202,7 +202,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     {
         static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
         {
-            import std.traits, std.typecons, std.typetuple;
+            import std.traits, std.typecons, std.meta.list;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
         auto binaryFun(ElementType1, ElementType2)
@@ -1421,10 +1421,10 @@ template forward(args...)
             alias fwd = arg;
         else
             @property fwd()(){ return move(arg); }
-        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+        alias forward = MetaList!(fwd, forward!(args[1..$]));
     }
     else
-        alias forward = TypeTuple!();
+        alias forward = MetaList!();
 }
 
 ///

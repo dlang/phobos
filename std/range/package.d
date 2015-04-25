@@ -2166,7 +2166,7 @@ auto takeNone(R)(R range)
 
     import std.format : format;
 
-    foreach(range; TypeTuple!([1, 2, 3, 4, 5],
+    foreach(range; MetaList!([1, 2, 3, 4, 5],
                               "hello world",
                               "hello world"w,
                               "hello world"d,
@@ -2180,7 +2180,7 @@ auto takeNone(R)(R range)
         static assert(is(typeof(range) == typeof(takeNone(range))), typeof(range).stringof);
     }
 
-    foreach(range; TypeTuple!(NormalStruct([1, 2, 3]),
+    foreach(range; MetaList!(NormalStruct([1, 2, 3]),
                               InitStruct([1, 2, 3])))
     {
         static assert(takeNone(range).empty, typeof(range).stringof);
@@ -4589,7 +4589,7 @@ unittest
     assert(iota(uint.max, 0u, -1).length == uint.max);
 
     // Issue 8920
-    foreach (Type; TypeTuple!(byte, ubyte, short, ushort,
+    foreach (Type; MetaList!(byte, ubyte, short, ushort,
         int, uint, long, ulong))
     {
         Type val;
@@ -4607,7 +4607,7 @@ unittest
 
 @safe unittest
 {
-    foreach(range; TypeTuple!(iota(2, 27, 4),
+    foreach(range; MetaList!(iota(2, 27, 4),
                               iota(3, 9),
                               iota(2.7, 12.3, .1),
                               iota(3.2, 9.7)))
@@ -6369,12 +6369,12 @@ unittest
     assert(saved[0 .. 0].empty);
     assert(saved[3 .. 3].empty);
 
-    alias data = TypeTuple!("one", "two", "three", "four");
+    alias data = MetaList!("one", "two", "three", "four");
     static joined =
         ["one two", "one two three", "one two three four"];
     string[] joinedRange = joined;
 
-    foreach(argCount; TypeTuple!(2, 3, 4))
+    foreach(argCount; MetaList!(2, 3, 4))
     {
         auto values = only(data[0 .. argCount]);
         alias Values = typeof(values);
@@ -6628,7 +6628,7 @@ pure @safe nothrow unittest
         }
     }
 
-    foreach (DummyType; TypeTuple!(AllDummyRanges, HasSlicing))
+    foreach (DummyType; MetaList!(AllDummyRanges, HasSlicing))
     {
         alias R = typeof(enumerate(DummyType.init));
         static assert(isInputRange!R);
@@ -6694,7 +6694,7 @@ pure @safe nothrow unittest
         assert(shifted.empty);
     }
 
-    foreach(T; TypeTuple!(ubyte, byte, uint, int))
+    foreach(T; MetaList!(ubyte, byte, uint, int))
     {
         auto inf = 42.repeat().enumerate(T.max);
         alias Inf = typeof(inf);
@@ -6721,7 +6721,7 @@ pure @safe unittest
 {
     import std.algorithm : equal;
     static immutable int[] values = [0, 1, 2, 3, 4];
-    foreach(T; TypeTuple!(ubyte, ushort, uint, ulong))
+    foreach(T; MetaList!(ubyte, ushort, uint, ulong))
     {
         auto enumerated = values.enumerate!T();
         static assert(is(typeof(enumerated.front.index) == T));
@@ -6762,7 +6762,7 @@ version(none) // @@@BUG@@@ 10939
         }
 
         SignedLengthRange svalues;
-        foreach(Enumerator; TypeTuple!(ubyte, byte, ushort, short, uint, int, ulong, long))
+        foreach(Enumerator; MetaList!(ubyte, byte, ushort, short, uint, int, ulong, long))
         {
             assertThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max));
             assertNotThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max - values.length));
@@ -6773,7 +6773,7 @@ version(none) // @@@BUG@@@ 10939
             assertThrown!RangeError(svalues.enumerate!Enumerator(Enumerator.max - values.length + 1));
         }
 
-        foreach(Enumerator; TypeTuple!(byte, short, int))
+        foreach(Enumerator; MetaList!(byte, short, int))
         {
             assertThrown!RangeError(repeat(0, uint.max).enumerate!Enumerator());
         }
@@ -8597,14 +8597,14 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     auto result3 = txt.tee(asink3).array;
     assert(equal(txt, result3) && equal(result3, asink3));
 
-    foreach (CharType; TypeTuple!(char, wchar, dchar))
+    foreach (CharType; MetaList!(char, wchar, dchar))
     {
         auto appSink = appender!(CharType[])();
         auto appResult = txt.tee(appSink).array;
         assert(equal(txt, appResult) && equal(appResult, appSink.data));
     }
 
-    foreach (StringType; TypeTuple!(string, wstring, dstring))
+    foreach (StringType; MetaList!(string, wstring, dstring))
     {
         auto appSink = appender!StringType();
         auto appResult = txt.tee(appSink).array;

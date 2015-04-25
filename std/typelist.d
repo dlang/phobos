@@ -27,7 +27,7 @@
  *
  *     alias Map!(StripPtr, list) StripPointers;
  * }
- * static assert(is (Synopsis!(char**, void***).StripPointers.toTuple == TypeTuple!(char, void)));
+ * static assert(is (Synopsis!(char**, void***).StripPointers.toTuple == MetaList!(char, void)));
  * ----
  *
  * Copyright: Copyright Bartosz Milewski 2008- 2009.
@@ -91,10 +91,10 @@ template TypeList(T...)
 }
 
 unittest {
-    static assert (is (TypeList!(void*, int).toTuple == TypeTuple!(void*, int)));
+    static assert (is (TypeList!(void*, int).toTuple == MetaList!(void*, int)));
     static assert (is (TypeList!(void*, int).head == void*));
-    static assert (is (TypeList!(void*, int).tail.toTuple == TypeTuple!(int)));
-    static assert (is (TypeList!(int).tail.toTuple == TypeTuple!()));
+    static assert (is (TypeList!(void*, int).tail.toTuple == MetaList!(int)));
+    static assert (is (TypeList!(int).tail.toTuple == MetaList!()));
     static assert (TypeList!(int).tail.isEmpty);
 
     static assert (TypeList!(void*, int).length == 2);
@@ -116,9 +116,9 @@ template AppendTypes(alias List, T...)
 
 unittest {
     static assert (is (AppendTypes!(TypeList!(void*, int), long, short).toTuple
-                       == TypeTuple!(void*, int, long, short)));
+                       == MetaList!(void*, int, long, short)));
     static assert (is (AppendTypes!(TypeList!(void*, int)).toTuple
-                       == TypeTuple!(void*, int)));
+                       == MetaList!(void*, int)));
     static assert (AppendTypes!(TypeList!()).isEmpty);
 }
 
@@ -132,9 +132,9 @@ template Append(alias Left, alias Right)
 
 unittest {
     static assert (is (Append!(TypeList!(void*, int), TypeList!(long, short)).toTuple
-                       == TypeTuple!(void*, int, long, short)));
+                       == MetaList!(void*, int, long, short)));
     static assert (is (Append!(TypeList!(void*, int), TypeList!()).toTuple
-                       == TypeTuple!(void*, int)));
+                       == MetaList!(void*, int)));
     static assert (Append!(TypeList!(), TypeList!()).isEmpty);
 }
 
@@ -151,12 +151,12 @@ template Cons(T, alias List)
 
 unittest {
     static assert (is (Cons!(long, TypeList!(void*, int)).toTuple
-                       == TypeTuple!(long, void*, int)));
+                       == MetaList!(long, void*, int)));
     static assert (is (Cons!(long, TypeList!(void*, int)).head
                        == long));
-    static assert (is (Cons!(int, TypeList!()).toTuple == TypeTuple!(int)));
+    static assert (is (Cons!(int, TypeList!()).toTuple == MetaList!(int)));
     static assert (is (Cons!(char[], Cons!(int, TypeList!())).toTuple
-                    == TypeTuple!(char[], int)));
+                    == MetaList!(char[], int)));
 }
 
 /**
@@ -230,7 +230,7 @@ version(unittest) {
 
 unittest {
     static assert (is (MakePtr!(int) == int*));
-    static assert (is (Map!(MakePtr, void *, char) == TypeTuple!(void**, char*)));
+    static assert (is (Map!(MakePtr, void *, char) == MetaList!(void**, char*)));
 }
 
 /**
@@ -257,8 +257,8 @@ template Filter(alias Pred, alias List)
 }
 
 unittest {
-    static assert(is(Filter!(IsPointer, int, void*, char[], int*) == TypeTuple!(void*, int*)));
-    static assert(is(Filter!(IsPointer) == TypeTuple!()));
+    static assert(is(Filter!(IsPointer, int, void*, char[], int*) == MetaList!(void*, int*)));
+    static assert(is(Filter!(IsPointer) == MetaList!()));
 }
 
 template FoldRight(alias F, alias Init, alias List)
@@ -291,8 +291,8 @@ version(unittest) {
 
 unittest {
     // *** Compiler bugs
-    //static assert (snoC!(int, TypeList!(long)).toTuple == TypeTuple!(long, int));
-    //static assert (FoldRight!(snoC, TypeList!(), TypeList!(int, long)).toTuple == TypeTuple!(long, int));
+    //static assert (snoC!(int, TypeList!(long)).toTuple == MetaList!(long, int));
+    //static assert (FoldRight!(snoC, TypeList!(), TypeList!(int, long)).toTuple == MetaList!(long, int));
     static assert (!FoldRight!(snoC, TypeList!(), TypeList!(int)).isEmpty);
     static assert (FoldRight!(Inc, 0, TypeList!(int, long)) == 2);
 }

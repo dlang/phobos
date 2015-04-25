@@ -2692,7 +2692,7 @@ unittest
     else static assert (0);
 
     import std.meta;
-    foreach (T; TypeTuple!(char[], const(char)[], string, wchar[],
+    foreach (T; MetaList!(char[], const(char)[], string, wchar[],
         const(wchar)[], wstring, dchar[], const(dchar)[], dstring))
     {
         foreach (fn; valid)

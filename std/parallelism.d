@@ -2510,7 +2510,7 @@ public:
                 // since we're assuming functions are associative anyhow.
 
                 // This is so that loops can be unrolled automatically.
-                enum ilpTuple = TypeTuple!(0, 1, 2, 3, 4, 5);
+                enum ilpTuple = MetaList!(0, 1, 2, 3, 4, 5);
                 enum nILP = ilpTuple.length;
                 immutable subSize = (upperBound - lowerBound) / nILP;
 

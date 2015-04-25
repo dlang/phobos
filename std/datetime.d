@@ -31092,7 +31092,7 @@ unittest
         static auto start() { Rand3Letters retval; retval.popFront(); return retval; }
     }
 
-    foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
+    foreach(cr; MetaList!(function(string a){return cast(char[])a;},
                            function(string a){return cast(ubyte[])a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
@@ -31357,7 +31357,7 @@ unittest
     auto tooLate1 = SysTime(Date(10_000, 1, 1), UTC());
     auto tooLate2 = SysTime(DateTime(12_007, 12, 31, 12, 22, 19), UTC());
 
-    foreach(cr; TypeTuple!(function(string a){return cast(char[])a;},
+    foreach(cr; MetaList!(function(string a){return cast(char[])a;},
                            function(string a){return cast(ubyte[])a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
@@ -31689,7 +31689,7 @@ unittest
     }
 
     static assert(timeStrings.length == 10);
-    foreach(n; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+    foreach(n; MetaList!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
         mixin(genTest(n));
 }
 
@@ -32802,7 +32802,7 @@ unittest
     import std.typecons;
     import std.meta;
 
-    foreach(cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
+    foreach(cr; MetaList!(function(string a){return cast(ubyte[])a;},
                            function(string a){return map!(b => cast(char)b)(a.representation);}))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);

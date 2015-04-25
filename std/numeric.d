@@ -114,9 +114,9 @@ private template CustomFloatParams(uint bits)
 
 private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
 {
-    import std.meta : TypeTuple;
+    import std.meta : MetaList;
     alias CustomFloatParams =
-        TypeTuple!(
+        MetaList!(
             precision,
             exponentWidth,
             flags,
@@ -633,7 +633,7 @@ unittest
 {
     import std.meta;
     alias FPTypes =
-        TypeTuple!(
+        MetaList!(
             CustomFloat!(5, 10),
             CustomFloat!(5, 11, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
             CustomFloat!(1, 15, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
@@ -1449,7 +1449,7 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 unittest
 {
     import std.meta;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    foreach(T; MetaList!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1539,7 +1539,7 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 unittest
 {
     import std.meta;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    foreach(T; MetaList!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 6.0, ];
@@ -1583,7 +1583,7 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 unittest
 {
     import std.meta;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    foreach(T; MetaList!(double, const double, immutable double))
     {
         T[] a = [ 1.0, 2.0, ];
         T[] b = [ 4.0, 3.0, ];
@@ -1733,7 +1733,7 @@ if (isInputRange!Range &&
 unittest
 {
     import std.meta;
-    foreach(T; TypeTuple!(double, const double, immutable double))
+    foreach(T; MetaList!(double, const double, immutable double))
     {
         T[] p = [ 0.0, 0, 0, 1 ];
         assert(entropy(p) == 0);

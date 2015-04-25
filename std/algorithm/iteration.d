@@ -294,15 +294,15 @@ private struct _Cache(R, bool bidir)
     private
     {
         import std.algorithm.internal : algoFormat;
-        import std.meta : TypeTuple;
+        import std.meta : MetaList;
 
         alias E  = ElementType!R;
         alias UE = Unqual!E;
 
         R source;
 
-        static if (bidir) alias CacheTypes = TypeTuple!(UE, UE);
-        else              alias CacheTypes = TypeTuple!UE;
+        static if (bidir) alias CacheTypes = MetaList!(UE, UE);
+        else              alias CacheTypes = MetaList!UE;
         CacheTypes caches;
 
         static assert(isAssignable!(UE, E) && is(UE : E),
@@ -817,8 +817,8 @@ See_Also: $(XREF range,tee)
  */
 template each(alias pred = "a")
 {
-    import std.meta : TypeTuple;
-    alias BinaryArgs = TypeTuple!(pred, "i", "a");
+    import std.meta : MetaList;
+    alias BinaryArgs = MetaList!(pred, "i", "a");
 
     enum isRangeUnaryIterable(R) =
         is(typeof(unaryFun!pred(R.init.front)));
@@ -3756,8 +3756,8 @@ if (isSomeChar!C)
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
-    import std.meta : TypeTuple;
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    import std.meta : MetaList;
+    foreach(S; MetaList!(string, wstring, dstring))
     {
         import std.conv : to;
         S a = " a     bcd   ef gh ";

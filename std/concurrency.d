@@ -1903,7 +1903,7 @@ private
 
             static if( isImplicitlyConvertible!(T[0], Duration) )
             {
-                alias Ops = TypeTuple!(T[1 .. $]);
+                alias Ops = MetaList!(T[1 .. $]);
                 alias ops = vals[1 .. $];
                 assert( vals[0] >= msecs(0) );
                 enum timedWait = true;
@@ -1911,7 +1911,7 @@ private
             }
             else
             {
-                alias Ops = TypeTuple!(T);
+                alias Ops = MetaList!(T);
                 alias ops = vals[0 .. $];
                 enum timedWait = false;
             }

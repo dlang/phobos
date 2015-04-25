@@ -484,7 +484,7 @@ unittest
     import std.conv, std.regex;
     @trusted void test_fixed(alias Kick)()
     {
-        foreach(i, v; TypeTuple!(char, wchar, dchar))
+        foreach(i, v; MetaList!(char, wchar, dchar))
         {
             alias Char = v;
             alias String = immutable(v)[];
@@ -510,7 +510,9 @@ unittest
     }
     @trusted void test_flex(alias Kick)()
     {
-        foreach(i, v;TypeTuple!(char, wchar, dchar))
+        import std.meta.list;
+
+        foreach(i, v; MetaList!(char, wchar, dchar))
         {
             alias Char = v;
             alias String = immutable(v)[];

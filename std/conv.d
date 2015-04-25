@@ -332,12 +332,12 @@ template to(T)
 @safe pure unittest
 {
     import std.exception;
-    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (T; MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assertThrown!ConvException(to!T(" 0"));
         assertThrown!ConvException(to!T(" 0", 8));
     }
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; MetaList!(float, double, real))
     {
         assertThrown!ConvException(to!T(" 0"));
     }
@@ -404,12 +404,12 @@ T toImpl(T, S)(S value)
 {
     import std.exception;
     // Conversion between same size
-    foreach (S; TypeTuple!(byte, short, int, long))
+    foreach (S; MetaList!(byte, short, int, long))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias U = Unsigned!S;
 
-        foreach (Sint; TypeTuple!(S, const S, immutable S))
-        foreach (Uint; TypeTuple!(U, const U, immutable U))
+        foreach (Sint; MetaList!(S, const S, immutable S))
+        foreach (Uint; MetaList!(U, const U, immutable U))
         {
             // positive overflow
             Uint un = Uint.max;
@@ -424,8 +424,8 @@ T toImpl(T, S)(S value)
     }();
 
     // Conversion between different size
-    foreach (i, S1; TypeTuple!(byte, short, int, long))
-    foreach (   S2; TypeTuple!(byte, short, int, long)[i+1..$])
+    foreach (i, S1; MetaList!(byte, short, int, long))
+    foreach (   S2; MetaList!(byte, short, int, long)[i+1..$])
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias U1 = Unsigned!S1;
         alias U2 = Unsigned!S2;
@@ -433,8 +433,8 @@ T toImpl(T, S)(S value)
         static assert(U1.sizeof < S2.sizeof);
 
         // small unsigned to big signed
-        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
-        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
+        foreach (Uint; MetaList!(U1, const U1, immutable U1))
+        foreach (Sint; MetaList!(S2, const S2, immutable S2))
         {
             Uint un = Uint.max;
             assertNotThrown(to!Sint(un));
@@ -442,8 +442,8 @@ T toImpl(T, S)(S value)
         }
 
         // big unsigned to small signed
-        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
-        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
+        foreach (Uint; MetaList!(U2, const U2, immutable U2))
+        foreach (Sint; MetaList!(S1, const S1, immutable S1))
         {
             Uint un = Uint.max;
             assertThrown(to!Sint(un));
@@ -452,16 +452,16 @@ T toImpl(T, S)(S value)
         static assert(S1.sizeof < U2.sizeof);
 
         // small signed to big unsigned
-        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
-        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
+        foreach (Sint; MetaList!(S1, const S1, immutable S1))
+        foreach (Uint; MetaList!(U2, const U2, immutable U2))
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
         }
 
         // big signed to small unsigned
-        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
-        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
+        foreach (Sint; MetaList!(S2, const S2, immutable S2))
+        foreach (Uint; MetaList!(U1, const U1, immutable U1))
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
@@ -752,8 +752,8 @@ T toImpl(T, S)(S value)
     class C : B, I, J {}
     class D : I {}
 
-    foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
-    foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
+    foreach (m1; MetaList!(0,1,2,3,4)) // enumerate modifiers
+    foreach (m2; MetaList!(0,1,2,3,4)) // ditto
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;
@@ -962,15 +962,15 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     void dg()
     {
         // string to string conversion
-        alias Chars = TypeTuple!(char, wchar, dchar);
+        alias Chars = MetaList!(char, wchar, dchar);
         foreach (LhsC; Chars)
         {
-            alias LhStrings = TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]);
+            alias LhStrings = MetaList!(LhsC[], const(LhsC)[], immutable(LhsC)[]);
             foreach (Lhs; LhStrings)
             {
                 foreach (RhsC; Chars)
                 {
-                    alias RhStrings = TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[]);
+                    alias RhStrings = MetaList!(RhsC[], const(RhsC)[], immutable(RhsC)[]);
                     foreach (Rhs; RhStrings)
                     {
                         Lhs s1 = to!Lhs("wyda");
@@ -1031,7 +1031,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 {
     // Conversion representing character value with string
     alias AllChars =
-        TypeTuple!( char, const( char), immutable( char),
+        MetaList!( char, const( char), immutable( char),
                    wchar, const(wchar), immutable(wchar),
                    dchar, const(dchar), immutable(dchar));
     foreach (Char1; AllChars)
@@ -1060,14 +1060,14 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     import std.exception;
     // Conversion representing integer values with string
 
-    foreach (Int; TypeTuple!(ubyte, ushort, uint, ulong))
+    foreach (Int; MetaList!(ubyte, ushort, uint, ulong))
     {
         assert(to!string(Int(0)) == "0");
         assert(to!string(Int(9)) == "9");
         assert(to!string(Int(123)) == "123");
     }
 
-    foreach (Int; TypeTuple!(byte, short, int, long))
+    foreach (Int; MetaList!(byte, short, int, long))
     {
         assert(to!string(Int(0)) == "0");
         assert(to!string(Int(9)) == "9");
@@ -1168,7 +1168,7 @@ unittest
     enum EC : char { a = 'x', b = 'y' }
     enum ES : string { a = "aaa", b = "bbb" }
 
-    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    foreach (E; MetaList!(EB, EU, EI, EF, EC, ES))
     {
         assert(to! string(E.a) == "a"c);
         assert(to!wstring(E.a) == "a"w);
@@ -1196,7 +1196,7 @@ unittest
     assert(to!string(E.doo) == "foo");
     assert(to!string(E.bar) == "bar");
 
-    foreach (S; TypeTuple!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
+    foreach (S; MetaList!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
     {
         auto s1 = to!S(E.foo);
         auto s2 = to!S(E.foo);
@@ -1205,7 +1205,7 @@ unittest
         assert(s1 is s2);
     }
 
-    foreach (S; TypeTuple!(char[], wchar[], dchar[]))
+    foreach (S; MetaList!(char[], wchar[], dchar[]))
     {
         auto s1 = to!S(E.foo);
         auto s2 = to!S(E.foo);
@@ -1289,7 +1289,7 @@ body
 
 @safe pure nothrow unittest
 {
-    foreach (Int; TypeTuple!(uint, ulong))
+    foreach (Int; MetaList!(uint, ulong))
     {
         assert(to!string(Int(16), 16) == "10");
         assert(to!string(Int(15), 2u) == "1111");
@@ -1299,7 +1299,7 @@ body
         assert(to!string(Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
     }
 
-    foreach (Int; TypeTuple!(int, long))
+    foreach (Int; MetaList!(int, long))
     {
         assert(to!string(Int(-10), 10u) == "-10");
     }
@@ -1609,9 +1609,9 @@ private void testFloatingToIntegral(Floating, Integral)()
 
 @safe pure unittest
 {
-    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
-    alias AllFloats = TypeTuple!(float, double, real);
-    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
+    alias AllInts = MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong);
+    alias AllFloats = MetaList!(float, double, real);
+    alias AllNumerics = MetaList!(AllInts, AllFloats);
     // test with same type
     {
         foreach (T; AllNumerics)
@@ -1685,9 +1685,9 @@ private void testFloatingToIntegral(Floating, Integral)()
 }
 /*@safe pure */unittest
 {
-    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
-    alias AllFloats = TypeTuple!(float, double, real);
-    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
+    alias AllInts = MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong);
+    alias AllFloats = MetaList!(float, double, real);
+    alias AllNumerics = MetaList!(AllInts, AllFloats);
     // test conversions to string
     {
         foreach (T; AllNumerics)
@@ -1762,7 +1762,7 @@ T toImpl(T, S)(S value, uint radix)
 
 @safe pure unittest
 {
-    foreach (Str; TypeTuple!(string, wstring, dstring))
+    foreach (Str; MetaList!(string, wstring, dstring))
     {
         Str a = "123";
         assert(to!int(a) == 123);
@@ -1843,7 +1843,7 @@ unittest
 {
     import std.exception;
     // boundary values
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
+    foreach (Int; MetaList!(byte, ubyte, short, ushort, int, uint))
     {
         assert(roundTo!Int(Int.min - 0.4L) == Int.min);
         assert(roundTo!Int(Int.max + 0.4L) == Int.max);
@@ -2022,7 +2022,7 @@ Lerr:
 
 @safe pure unittest
 {
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (Int; MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         {
             assert(to!Int("0") == 0);
@@ -2118,7 +2118,7 @@ Lerr:
 {
     import std.exception;
     // parsing error check
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (Int; MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         {
             immutable string[] errors1 =
@@ -2157,7 +2157,7 @@ Lerr:
     }
 
     // positive overflow check
-    foreach (i, Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (i, Int; MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         immutable string[] errors =
         [
@@ -2175,7 +2175,7 @@ Lerr:
     }
 
     // negative overflow check
-    foreach (i, Int; TypeTuple!(byte, short, int, long))
+    foreach (i, Int; MetaList!(byte, short, int, long))
     {
         immutable string[] errors =
         [
@@ -2370,7 +2370,7 @@ unittest
     enum EC : char { a = 'a', b = 'b', c = 'c' }
     enum ES : string { a = "aaa", b = "bbb", c = "ccc" }
 
-    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    foreach (E; MetaList!(EB, EU, EI, EF, EC, ES))
     {
         assert(to!E("a"c) == E.a);
         assert(to!E("b"w) == E.b);
@@ -2819,7 +2819,7 @@ unittest
         return f;
     }
 
-    foreach (Float; TypeTuple!(float, double, real))
+    foreach (Float; MetaList!(float, double, real))
     {
         assert(to!Float("123") == Literal!Float(123));
         assert(to!Float("+123") == Literal!Float(+123));
@@ -3067,9 +3067,9 @@ Target parse(Target, Source)(ref Source s)
 
 @safe pure unittest
 {
-    foreach (Str; TypeTuple!(string, wstring, dstring))
+    foreach (Str; MetaList!(string, wstring, dstring))
     {
-        foreach (Char; TypeTuple!(char, wchar, dchar))
+        foreach (Char; MetaList!(char, wchar, dchar))
         {
             static if (is(Unqual!Char == dchar) ||
                        Char.sizeof == ElementEncodingType!Str.sizeof)
@@ -5169,28 +5169,28 @@ unittest
 
 unittest
 {
-    foreach(T; TypeTuple!(byte, ubyte))
+    foreach(T; MetaList!(byte, ubyte))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ubyte));
         static assert(is(typeof(unsigned(cast(const T)1)) == ubyte));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == ubyte));
     }
 
-    foreach(T; TypeTuple!(short, ushort))
+    foreach(T; MetaList!(short, ushort))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ushort));
         static assert(is(typeof(unsigned(cast(const T)1)) == ushort));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == ushort));
     }
 
-    foreach(T; TypeTuple!(int, uint))
+    foreach(T; MetaList!(int, uint))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == uint));
         static assert(is(typeof(unsigned(cast(const T)1)) == uint));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == uint));
     }
 
-    foreach(T; TypeTuple!(long, ulong))
+    foreach(T; MetaList!(long, ulong))
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ulong));
         static assert(is(typeof(unsigned(cast(const T)1)) == ulong));
@@ -5207,7 +5207,7 @@ auto unsigned(T)(T x) if (isSomeChar!T)
 
 unittest
 {
-    foreach(T; TypeTuple!(char, wchar, dchar))
+    foreach(T; MetaList!(char, wchar, dchar))
     {
         static assert(is(typeof(unsigned(cast(T)'A')) == T));
         static assert(is(typeof(unsigned(cast(const T)'A')) == T));
@@ -5243,28 +5243,28 @@ unittest
 
 unittest
 {
-    foreach(T; TypeTuple!(byte, ubyte))
+    foreach(T; MetaList!(byte, ubyte))
     {
         static assert(is(typeof(signed(cast(T)1)) == byte));
         static assert(is(typeof(signed(cast(const T)1)) == byte));
         static assert(is(typeof(signed(cast(immutable T)1)) == byte));
     }
 
-    foreach(T; TypeTuple!(short, ushort))
+    foreach(T; MetaList!(short, ushort))
     {
         static assert(is(typeof(signed(cast(T)1)) == short));
         static assert(is(typeof(signed(cast(const T)1)) == short));
         static assert(is(typeof(signed(cast(immutable T)1)) == short));
     }
 
-    foreach(T; TypeTuple!(int, uint))
+    foreach(T; MetaList!(int, uint))
     {
         static assert(is(typeof(signed(cast(T)1)) == int));
         static assert(is(typeof(signed(cast(const T)1)) == int));
         static assert(is(typeof(signed(cast(immutable T)1)) == int));
     }
 
-    foreach(T; TypeTuple!(long, ulong))
+    foreach(T; MetaList!(long, ulong))
     {
         static assert(is(typeof(signed(cast(T)1)) == long));
         static assert(is(typeof(signed(cast(const T)1)) == long));

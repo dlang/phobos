@@ -132,7 +132,7 @@ efficient search, but one that only supports matching on equality:
 
 @safe unittest
 {
-    import std.meta : TypeTuple;
+    import std.meta : MetaList;
 
     if (auto pos = 3.among(1, 2, 3))
         assert(pos == 3);
@@ -144,7 +144,7 @@ efficient search, but one that only supports matching on equality:
     assert(position);
     assert(position == 1);
 
-    alias values = TypeTuple!("foo", "bar", "baz");
+    alias values = MetaList!("foo", "bar", "baz");
     auto arr = [values];
     assert(arr[0 .. "foo".among(values)] == ["foo"]);
     assert(arr[0 .. "bar".among(values)] == ["foo", "bar"]);

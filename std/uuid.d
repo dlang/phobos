@@ -421,7 +421,7 @@ public struct UUID
             import std.meta;
             import std.conv : to;
 
-            foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+            foreach(S; MetaList!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
                                   dchar[], const(dchar)[], immutable(dchar)[],
                                   immutable(char[]), immutable(wchar[]), immutable(dchar[])))
@@ -1406,7 +1406,7 @@ unittest
             return parseUUID(to!T(input));
     }
 
-    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
+    foreach(S; MetaList!(char[], const(char)[], immutable(char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[],
                           immutable(char[]), immutable(wchar[]), immutable(dchar[]),

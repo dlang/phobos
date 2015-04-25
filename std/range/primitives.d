@@ -538,7 +538,7 @@ unittest
     putChar(p, cast(dchar)'a');
 
     //Source Char
-    foreach (SC; TypeTuple!(char, wchar, dchar))
+    foreach (SC; MetaList!(char, wchar, dchar))
     {
         SC ch = 'I';
         dchar dh = '♥';
@@ -546,10 +546,10 @@ unittest
         immutable(SC)[][] ss = ["日本語", "が", "好き", "ですか", "？"];
 
         //Target Char
-        foreach (TC; TypeTuple!(char, wchar, dchar))
+        foreach (TC; MetaList!(char, wchar, dchar))
         {
             //Testing PutC and PutS
-            foreach (Type; TypeTuple!(PutC!TC, PutS!TC))
+            foreach (Type; MetaList!(PutC!TC, PutS!TC))
             (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
                 Type type;
                 auto sink = new Type();
@@ -642,7 +642,7 @@ unittest
     }
     void foo()
     {
-        foreach(C; TypeTuple!(char, wchar, dchar))
+        foreach(C; MetaList!(char, wchar, dchar))
         {
             formattedWrite((C c){},        "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
             formattedWrite((const(C)[]){}, "", 1, 'a', cast(wchar)'a', cast(dchar)'a', "a"c, "a"w, "a"d);
@@ -2057,7 +2057,7 @@ if (isNarrowString!(C[]))
 {
     import std.meta;
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; MetaList!(string, wstring, dstring))
     {
         S s = "\xC2\xA9hello";
         s.popFront();
@@ -2130,7 +2130,7 @@ if (isNarrowString!(T[]))
 {
     import std.meta;
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; MetaList!(string, wstring, dstring))
     {
         S s = "hello\xE2\x89\xA0";
         s.popBack();

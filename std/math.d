@@ -540,13 +540,13 @@ auto abs(Num)(Num y) @safe pure nothrow @nogc
 @safe pure nothrow @nogc unittest
 {
     import std.meta;
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; MetaList!(float, double, real))
     {
         T f = 3;
         assert(abs(f) == f);
         assert(abs(-f) == f);
     }
-    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    foreach (T; MetaList!(cfloat, cdouble, creal))
     {
         T f = -12+3i;
         assert(abs(f) == hypot(f.re, f.im));
@@ -2453,7 +2453,7 @@ unittest
 {
     import std.meta, std.typecons;
 
-    foreach (T; TypeTuple!(real, double, float))
+    foreach (T; MetaList!(real, double, float))
     {
         Tuple!(T, T, int)[] vals =     // x,frexp,exp
             [
@@ -2506,9 +2506,9 @@ unittest
 
 unittest
 {
-    import std.meta: TypeTuple;
+    import std.meta: MetaList;
     void foo() {
-        foreach (T; TypeTuple!(real, double, float))
+        foreach (T; MetaList!(real, double, float))
         {
             int exp;
             const T a = 1;
@@ -2654,8 +2654,8 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
 ///
 @nogc @safe pure nothrow unittest
 {
-    import std.typetuple;
-    foreach(T; TypeTuple!(float, double, real))
+    import std.meta.list;
+    foreach(T; MetaList!(float, double, real))
     {
         T r;
 
@@ -4649,7 +4649,7 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 {
     import std.meta;
 
-    foreach(T; TypeTuple!(float, double, real))
+    foreach(T; MetaList!(float, double, real))
     {
         // CTFE-able tests
         assert(isNaN(T.init));
@@ -4812,7 +4812,7 @@ int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
     import std.meta;
 
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; MetaList!(float, double, real))
     {
         T f;
         for (f = 1.0; !isSubnormal(f); f /= 2)
@@ -5045,9 +5045,9 @@ R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
 {
     import std.meta;
 
-    foreach (X; TypeTuple!(float, double, real, int, long))
+    foreach (X; MetaList!(float, double, real, int, long))
     {
-        foreach (Y; TypeTuple!(float, double, real))
+        foreach (Y; MetaList!(float, double, real))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             X x = 21;
             Y y = 23.8;

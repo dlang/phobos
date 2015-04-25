@@ -1353,12 +1353,12 @@ void main()
     {
         static import std.file;
         import std.algorithm : equal;
-        import std.meta : TypeTuple;
+        import std.meta : MetaList;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
-        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        foreach (String; MetaList!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
@@ -1996,7 +1996,7 @@ the contents may well have changed).
         scope(success) std.file.remove(deleteme);
 
         import std.meta;
-        foreach (T; TypeTuple!(char, wchar, dchar))
+        foreach (T; MetaList!(char, wchar, dchar))
         {
             auto blc = File(deleteme).byLine!(T, T);
             assert(blc.front == "hi");
@@ -3377,7 +3377,7 @@ unittest
     // stdout.open(file, "w");
     // assert(stdout.isOpen);
     // writefln("Hello, %s world number %s!", "nice", 42);
-    // foreach (F ; TypeTuple!(ifloat, idouble, ireal))
+    // foreach (F ; MetaList!(ifloat, idouble, ireal))
     // {
     //     F a = 5i;
     //     F b = a % 2;
@@ -3491,7 +3491,7 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
 
 unittest
 {
-    import std.meta : TypeTuple;
+    import std.meta : MetaList;
 
     //we can't actually test readln, so at the very least,
     //we test compilability
@@ -3499,12 +3499,12 @@ unittest
     {
         readln();
         readln('\t');
-        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        foreach (String; MetaList!(string, char[], wstring, wchar[], dstring, dchar[]))
         {
             readln!String();
             readln!String('\t');
         }
-        foreach (String; TypeTuple!(char[], wchar[], dchar[]))
+        foreach (String; MetaList!(char[], wchar[], dchar[]))
         {
             String buf;
             readln(buf);
@@ -3748,7 +3748,7 @@ struct lines
 unittest
 {
     static import std.file;
-    import std.meta : TypeTuple;
+    import std.meta : MetaList;
 
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
@@ -3757,7 +3757,7 @@ unittest
     scope(exit) { std.file.remove(deleteme); }
 
     alias TestedWith =
-          TypeTuple!(string, wstring, dstring,
+          MetaList!(string, wstring, dstring,
                      char[], wchar[], dchar[]);
     foreach (T; TestedWith) {
         // test looping with an empty file
@@ -3800,8 +3800,8 @@ unittest
 
     // test with ubyte[] inputs
     //@@@BUG 2612@@@
-    //alias TestedWith2 = TypeTuple!(immutable(ubyte)[], ubyte[]);
-    alias TestedWith2 = TypeTuple!(immutable(ubyte)[], ubyte[]);
+    //alias TestedWith2 = MetaList!(immutable(ubyte)[], ubyte[]);
+    alias TestedWith2 = MetaList!(immutable(ubyte)[], ubyte[]);
     foreach (T; TestedWith2) {
         // test looping with an empty file
         std.file.write(deleteme, "");
@@ -3843,7 +3843,7 @@ unittest
 
     }
 
-    foreach (T; TypeTuple!(ubyte[]))
+    foreach (T; MetaList!(ubyte[]))
     {
         // test looping with a file with three lines, last without a newline
         // using a counter too this time

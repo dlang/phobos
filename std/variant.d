@@ -103,28 +103,28 @@ template AssociativeArray(T : V[K], K, V)
 template This2Variant(V, T...)
 {
     static if (T.length == 0)
-        alias This2Variant = TypeTuple!();
+        alias This2Variant = MetaList!();
     else static if (is(AssociativeArray!(T[0]).Key == This))
     {
         static if (is(AssociativeArray!(T[0]).Value == This))
             alias This2Variant =
-                TypeTuple!(V[V],
+                MetaList!(V[V],
                            This2Variant!(V, T[1 .. $]));
         else
             alias This2Variant =
-                TypeTuple!(AssociativeArray!(T[0]).Value[V],
+                MetaList!(AssociativeArray!(T[0]).Value[V],
                            This2Variant!(V, T[1 .. $]));
     }
     else static if (is(AssociativeArray!(T[0]).Value == This))
         alias This2Variant =
-            TypeTuple!(V[AssociativeArray!(T[0]).Key],
+            MetaList!(V[AssociativeArray!(T[0]).Key],
                        This2Variant!(V, T[1 .. $]));
     else static if (is(T[0] == This[]))
-        alias This2Variant = TypeTuple!(V[], This2Variant!(V, T[1 .. $]));
+        alias This2Variant = MetaList!(V[], This2Variant!(V, T[1 .. $]));
     else static if (is(T[0] == This*))
-        alias This2Variant = TypeTuple!(V*, This2Variant!(V, T[1 .. $]));
+        alias This2Variant = MetaList!(V*, This2Variant!(V, T[1 .. $]));
     else
-        alias This2Variant = TypeTuple!(T[0], This2Variant!(V, T[1 .. $]));
+        alias This2Variant = MetaList!(T[0], This2Variant!(V, T[1 .. $]));
 }
 
 /**
@@ -294,27 +294,27 @@ private:
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
             alias UA = Unqual!A;
-            alias MutaTypes = TypeTuple!(UA, ImplicitConversionTargets!UA);
+            alias MutaTypes = MetaList!(UA, ImplicitConversionTargets!UA);
             alias ConstTypes = staticMap!(ConstOf, MutaTypes);
             alias SharedTypes = staticMap!(SharedOf, MutaTypes);
             alias SharedConstTypes = staticMap!(SharedConstOf, MutaTypes);
             alias ImmuTypes  = staticMap!(ImmutableOf, MutaTypes);
 
             static if (is(A == immutable))
-                alias AllTypes = TypeTuple!(ImmuTypes, ConstTypes, SharedConstTypes);
+                alias AllTypes = MetaList!(ImmuTypes, ConstTypes, SharedConstTypes);
             else static if (is(A == shared))
             {
                 static if (is(A == const))
                     alias AllTypes = SharedConstTypes;
                 else
-                    alias AllTypes = TypeTuple!(SharedTypes, SharedConstTypes);
+                    alias AllTypes = MetaList!(SharedTypes, SharedConstTypes);
             }
             else
             {
                 static if (is(A == const))
                     alias AllTypes = ConstTypes;
                 else
-                    alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
+                    alias AllTypes = MetaList!(MutaTypes, ConstTypes);
             }
 
             foreach (T ; AllTypes)
@@ -1266,7 +1266,7 @@ unittest
     }
 
     static assert(S.sizeof >= Variant.sizeof);
-    alias Types = TypeTuple!(string, int, S);
+    alias Types = MetaList!(string, int, S);
     alias MyVariant = VariantN!(maxSize!Types, Types);
 
     auto v = MyVariant(S.init);
@@ -1485,7 +1485,7 @@ static class VariantException : Exception
 unittest
 {
     alias W1 = This2Variant!(char, int, This[int]);
-    alias W2 = TypeTuple!(int, char[int]);
+    alias W2 = MetaList!(int, char[int]);
     static assert(is(W1 == W2));
 
     alias var_t = Algebraic!(void, string);
@@ -2315,24 +2315,24 @@ unittest
 
     int i = 10;
     v = i;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; MetaList!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!int) == 10);
         assert(v.get!(qual!float) == 10.0f);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; MetaList!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
     }
 
     const(int) ci = 20;
     v = ci;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; MetaList!(ConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; MetaList!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2340,12 +2340,12 @@ unittest
 
     immutable(int) ii = ci;
     v = ii;
-    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
+    foreach (qual; MetaList!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; TypeTuple!(MutableOf, SharedOf))
+    foreach (qual; MetaList!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2353,12 +2353,12 @@ unittest
 
     int[] ai = [1,2,3];
     v = ai;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; MetaList!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!(int[])) == [1,2,3]);
         assert(v.get!(qual!(int)[]) == [1,2,3]);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; MetaList!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2366,12 +2366,12 @@ unittest
 
     const(int[]) cai = [4,5,6];
     v = cai;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; MetaList!(ConstOf))
     {
         assert(v.get!(qual!(int[])) == [4,5,6]);
         assert(v.get!(qual!(int)[]) == [4,5,6]);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; MetaList!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2385,7 +2385,7 @@ unittest
     assert(v.get!(const(int)[]) == [7,8,9]);
     //assert(v.get!(shared(const(int[]))) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
     //assert(v.get!(shared(const(int))[]) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
-    foreach (qual; TypeTuple!(MutableOf))
+    foreach (qual; MetaList!(MutableOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2395,13 +2395,13 @@ unittest
     class B : A {}
     B b = new B();
     v = b;
-    foreach (qual; TypeTuple!(MutableOf, ConstOf))
+    foreach (qual; MetaList!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!B) is b);
         assert(v.get!(qual!A) is b);
         assert(v.get!(qual!Object) is b);
     }
-    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; MetaList!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2410,13 +2410,13 @@ unittest
 
     const(B) cb = new B();
     v = cb;
-    foreach (qual; TypeTuple!(ConstOf))
+    foreach (qual; MetaList!(ConstOf))
     {
         assert(v.get!(qual!B) is cb);
         assert(v.get!(qual!A) is cb);
         assert(v.get!(qual!Object) is cb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; MetaList!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2425,13 +2425,13 @@ unittest
 
     immutable(B) ib = new immutable(B)();
     v = ib;
-    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
+    foreach (qual; MetaList!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is ib);
         assert(v.get!(qual!A) is ib);
         assert(v.get!(qual!Object) is ib);
     }
-    foreach (qual; TypeTuple!(MutableOf, SharedOf))
+    foreach (qual; MetaList!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2440,13 +2440,13 @@ unittest
 
     shared(B) sb = new shared B();
     v = sb;
-    foreach (qual; TypeTuple!(SharedOf, SharedConstOf))
+    foreach (qual; MetaList!(SharedOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is sb);
         assert(v.get!(qual!A) is sb);
         assert(v.get!(qual!Object) is sb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, ConstOf))
+    foreach (qual; MetaList!(MutableOf, ImmutableOf, ConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2455,13 +2455,13 @@ unittest
 
     shared(const(B)) scb = new shared const B();
     v = scb;
-    foreach (qual; TypeTuple!(SharedConstOf))
+    foreach (qual; MetaList!(SharedConstOf))
     {
         assert(v.get!(qual!B) is scb);
         assert(v.get!(qual!A) is scb);
         assert(v.get!(qual!Object) is scb);
     }
-    foreach (qual; TypeTuple!(MutableOf, ConstOf, ImmutableOf, SharedOf))
+    foreach (qual; MetaList!(MutableOf, ConstOf, ImmutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));

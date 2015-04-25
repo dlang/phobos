@@ -88,7 +88,7 @@ enum RegexOption: uint {
     singleline = 0x20
 }
 //do not reorder this list
-alias RegexOptionNames = TypeTuple!('g', 'i', 'x', 'U', 'm', 's');
+alias RegexOptionNames = MetaList!('g', 'i', 'x', 'U', 'm', 's');
 static assert( RegexOption.max < 0x80);
 // flags that allow guide execution of engine
 enum RegexInfo : uint { oneShot = 0x80 }

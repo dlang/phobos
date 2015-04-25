@@ -157,7 +157,7 @@ struct DummyRange(ReturnBy _r, Length _l, RangeType _rt)
 
 enum dummyLength = 10;
 
-alias AllDummyRanges = TypeTuple!(
+alias AllDummyRanges = MetaList!(
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),

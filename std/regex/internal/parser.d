@@ -155,7 +155,7 @@ unittest
 }
 
 
-alias Escapables = TypeTuple!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
+alias Escapables = MetaList!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
     ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
 
 //test if a given string starts with hex number of maxDigit that's a valid codepoint

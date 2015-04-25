@@ -428,11 +428,11 @@ unittest
 {
     import std.meta;
 
-    foreach (EncloseSafe; TypeTuple!(false, true))
-    foreach (EnclosePure; TypeTuple!(false, true))
+    foreach (EncloseSafe; MetaList!(false, true))
+    foreach (EnclosePure; MetaList!(false, true))
     {
-        foreach (BodySafe; TypeTuple!(false, true))
-        foreach (BodyPure; TypeTuple!(false, true))
+        foreach (BodySafe; MetaList!(false, true))
+        foreach (BodyPure; MetaList!(false, true))
         {
             enum code =
                 "delegate void() " ~
