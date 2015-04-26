@@ -9,6 +9,7 @@ $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
 $(TR $(TDNW Template API) $(TD $(MYREF isDigest) $(MYREF DigestType) $(MYREF hasPeek)
+  $(MYREF hasBlockSize)
   $(MYREF ExampleDigest) $(MYREF _digest) $(MYREF hexDigest) $(MYREF makeDigest)
 )
 )
@@ -383,7 +384,26 @@ unittest
     myFunction!CRC32();
 }
 
-private template isDigestibleRange(Range)
+/**
+ * Checks whether the digest has a $(D blockSize) member, which contains the
+ * digest's internal block size in bits. It is primarily used by $(XREF digest.hmac, HMAC).
+ */
+
+template hasBlockSize(T)
+if (isDigest!T)
+{
+    enum bool hasBlockSize = __traits(compiles, { size_t blockSize = T.blockSize; });
+}
+
+///
+unittest
+{
+    import std.digest.md, std.digest.hmac;
+    static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
+    static assert(hasBlockSize!(HMAC!MD5) && HMAC!MD5.blockSize == 512);
+}
+
+package template isDigestibleRange(Range)
 {
     import std.digest.md;
     import std.range : isInputRange, ElementType;

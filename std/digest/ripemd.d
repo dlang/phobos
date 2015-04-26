@@ -440,6 +440,8 @@ struct RIPEMD160
         }
 
     public:
+        enum blockSize = 512;
+
         /**
          * Use this to feed the digest with data.
          * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
