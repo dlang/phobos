@@ -912,7 +912,7 @@ struct MultiArray(Types...)
     }
 
 private:
-    @property auto raw_ptr(size_t n)()inout
+    @property auto raw_ptr(size_t n)()inout pure nothrow @nogc
     {
         static if(n == 0)
             return storage.ptr;
