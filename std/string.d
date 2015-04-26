@@ -591,29 +591,94 @@ ptrdiff_t indexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 }
 
 /++
-    Returns the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
-    is not found, then $(D -1) is returned.
+    Searches for substring in $(D s).
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    Params:
+        s = string or ForwardRange of characters to search in correct UTF format
+        sub = substring to search for
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns:
+        the index of the first occurrence of $(D sub) in $(D s). If $(D sub)
+        is not found, then $(D -1) is returned.
+        If the arguments are not valid UTF, the result will still
+        be in the range [-1 .. s.length], but will not be reliable otherwise.
+
+    Bugs:
+        Does not work with case insensitive strings where the mapping of
+        tolower and toupper is not 1:1.
   +/
-ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in CaseSensitive cs = CaseSensitive.yes) @trusted
-    if (isSomeChar!Char1 && isSomeChar!Char2)
+ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) && isSomeChar!Char)
 {
     import std.uni : toLower;
-    import std.algorithm : find;
-    const(Char1)[] balance;
-    if (cs == CaseSensitive.yes)
+    alias Char1 = Unqual!(ElementEncodingType!Range);
+
+    static if (isSomeString!Range)
     {
-        balance = std.algorithm.find(s, sub);
+        import std.algorithm : find;
+
+        const(Char1)[] balance;
+        if (cs == CaseSensitive.yes)
+        {
+            balance = std.algorithm.find(s, sub);
+        }
+        else
+        {
+            balance = std.algorithm.find!
+                ((a, b) => std.uni.toLower(a) == std.uni.toLower(b))
+                (s, sub);
+        }
+        return balance.empty ? -1 : balance.ptr - s.ptr;
     }
     else
     {
-        balance = std.algorithm.find!
-            ((a, b) => std.uni.toLower(a) == std.uni.toLower(b))
-            (s, sub);
+        if (s.empty)
+            return -1;
+        if (sub.empty)
+            return 0;                   // degenerate case
+
+        import std.utf : byDchar, codeLength;
+        auto subr = sub.byDchar;        // decode sub[] by dchar's
+        dchar sub0 = subr.front;        // cache first character of sub[]
+        subr.popFront();
+
+        // Special case for single character search
+        if (subr.empty)
+            return indexOf(s, sub0, cs);
+
+        if (cs == CaseSensitive.no)
+            sub0 = toLower(sub0);
+
+        /* Classic double nested loop search algorithm
+         */
+        ptrdiff_t index = 0;            // count code unit index into s
+        for (auto sbydchar = s.byDchar(); !sbydchar.empty; sbydchar.popFront())
+        {
+            dchar c2 = sbydchar.front;
+            if (cs == CaseSensitive.no)
+                c2 = toLower(c2);
+            if (c2 == sub0)
+            {
+                auto s2 = sbydchar.save;        // why s must be a forward range
+                foreach (c; subr.save)
+                {
+                    s2.popFront();
+                    if (s2.empty)
+                        return -1;
+                    if (cs == CaseSensitive.yes ? c != s2.front
+                                                : toLower(c) != toLower(s2.front)
+                       )
+                        goto Lnext;
+                }
+                return index;
+            }
+          Lnext:
+            index += codeLength!Char1(c2);
+        }
+        return -1;
     }
-    return balance.empty ? -1 : balance.ptr - s.ptr;
 }
 
 @safe pure unittest
@@ -667,6 +732,23 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         }
     }
     });
+}
+
+@safe pure @nogc nothrow
+unittest
+{
+    import std.utf : byWchar;
+
+    foreach (cs; EnumMembers!CaseSensitive)
+    {
+        assert(indexOf("".byWchar, "", cs) == -1);
+        assert(indexOf("hello".byWchar, "", cs) == 0);
+        assert(indexOf("hello".byWchar, "l", cs) == 2);
+        assert(indexOf("heLLo".byWchar, "LL", cs) == 2);
+        assert(indexOf("hello".byWchar, "lox", cs) == -1);
+        assert(indexOf("hello".byWchar, "betty", cs) == -1);
+        assert(indexOf("hello\U00010143\u0100*\U00010143".byWchar, "\u0100*", cs) == 7);
+    }
 }
 
 /++
