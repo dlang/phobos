@@ -342,7 +342,7 @@ alias CaseSensitive = Flag!"caseSensitive";
         be in the range [-1 .. s.length], but will not be reliable otherwise.
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = CaseSensitive.yes)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     import std.ascii : toLower, isASCII;
@@ -525,22 +525,44 @@ ptrdiff_t indexOf(T, size_t n)(ref T[n] s, in dchar c,
 }
 
 /++
-    Returns the index of the first occurrence of $(D c) in $(D s) with respect
-    to the start index $(D startIdx). If $(D c) is not found, then $(D -1) is
-    returned. If $(D c) is found the value of the returned index is at least
-    $(D startIdx). $(D startIdx) represents a codeunit index in $(D s). If the
-    sequence starting at $(D startIdx) does not represent a well formed codepoint,
-    then a $(XREF utf,UTFException) may be thrown.
+    Searches for character in range starting at index startIdx.
 
-    $(D cs) indicates whether the comparisons are case sensitive.
+    Params:
+        s = string or InputRange of characters to search in correct UTF format
+        c = character to search for
+        startIdx = starting index to a well-formed code point
+        cs = CaseSensitive.yes or CaseSensitive.no
+
+    Returns:
+        the index of the first occurrence of $(D c) in $(D s). If $(D c)
+        is not found, then $(D -1) is returned.
+        If the parameters are not valid UTF, the result will still
+        be in the range [-1 .. s.length], but will not be reliable otherwise.
   +/
-ptrdiff_t indexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
-    if (isSomeChar!Char)
+ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
+        in CaseSensitive cs = CaseSensitive.yes)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
-    if (startIdx < s.length)
+    static if (isSomeString!Range || (hasSlicing!Range && hasLength!Range))
     {
-        ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
+        if (startIdx < s.length)
+        {
+            ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
+            if (foundIdx != -1)
+            {
+                return foundIdx + cast(ptrdiff_t)startIdx;
+            }
+        }
+    }
+    else
+    {
+        foreach (i; 0 .. startIdx)
+        {
+            if (s.empty)
+                return -1;
+            s.popFront();
+        }
+        ptrdiff_t foundIdx = indexOf(s, c, cs);
         if (foundIdx != -1)
         {
             return foundIdx + cast(ptrdiff_t)startIdx;
@@ -553,6 +575,11 @@ ptrdiff_t indexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 {
     import std.conv : to;
     debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
+
+    import std.utf : byCodeUnit, byChar, byWchar;
+    assert("hello".byCodeUnit.indexOf(cast(dchar)'l', 1) == 2);
+    assert("hello".byWchar.indexOf(cast(dchar)'l', 1) == 2);
+    assert("hello".byWchar.indexOf(cast(dchar)'l', 6) == -1);
 
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
