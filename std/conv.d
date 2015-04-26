@@ -5024,6 +5024,48 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
     return result;
 }
 
+/**
+Constructs an object of $(D class) type $(D T) at the location $(D obj)
+references. The constructor is passed the arguments $(D Args).
+
+$(D obj) must not be a base class or interface.
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: If $(D obj) is null, it will return a null reference of type $(D T).
+Otherwise, returns a reference to a newly constructed $(D T) at $(D obj)'s location.
+ */
+T emplace(T, Args...)(T obj, auto ref Args args) @trusted
+    if (is(T == class))
+{
+    if (obj is null)
+        return null;
+    if (typeid(T) !is typeid(obj))
+            assert(0,"attempting to emplace a base class or interface");
+
+    enum classSize = __traits(classInstanceSize, T);
+    void[] buf = (cast(void*) obj)[0..classSize];
+    return emplace!T(buf, args);
+}
+
+///
+pure unittest
+{
+    class C
+    {
+        int a;
+        this(int x)
+        {
+            a = x;
+        }
+    }
+    auto c = new C(0);
+    assert(c.a == 0);
+    c = emplace(c, 5);
+    assert(c.a == 5);
+}
+
 @nogc pure nothrow unittest
 {
     int var = 6;
@@ -5031,6 +5073,12 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
     auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
     assert(k.i == 5);
     assert(var == 7);
+    auto c = emplace(k, 5);
+    assert(c !is null);
+    assert(k is c);
+    c = null;
+    c = emplace(c, 5);
+    assert(c is null);
 }
 
 /**
