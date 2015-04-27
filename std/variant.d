@@ -68,8 +68,6 @@ module std.variant;
 import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
     std.typetuple;
 
-@trusted:
-
 /++
     Gives the $(D sizeof) the largest type given.
   +/
@@ -2599,3 +2597,12 @@ unittest
     assertThrown!VariantException(v.length);
 }
 
+unittest
+{
+    // Bugzilla 13534
+    static assert(!__traits(compiles, () @safe {
+        auto foo() @system { return 3; }
+        auto v = Variant(&foo);
+        v(); // foo is called in safe code!?
+    }));
+}
