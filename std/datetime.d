@@ -26966,8 +26966,16 @@ public:
         {
             scope(exit) clearTZEnvVar();
 
-            setTZEnvVar("America/Los_Angeles");
-            assert(LocalTime().dstName == "PDT");
+            version(FreeBSD)
+            {
+                // A bug on FreeBSD 9+ makes it so that this test fails.
+                // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=168862
+            }
+            else
+            {
+                setTZEnvVar("America/Los_Angeles");
+                assert(LocalTime().dstName == "PDT");
+            }
 
             setTZEnvVar("America/New_York");
             assert(LocalTime().dstName == "EDT");
