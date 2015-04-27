@@ -261,12 +261,28 @@ unittest {
     static assert(is(Filter!(IsPointer) == TypeTuple!()));
 }
 
+/**
+ * Folds (reduces) the $(D TypeList) $(D_PARAM List) using the function $(D_PARAM F), 
+ * and the initial value $(D_PARAM Init).
+ */
 template FoldRight(alias F, alias Init, alias List)
 {
     static if (List.isEmpty)
         alias FoldRight = Init;
     else
         alias FoldRight = F!(List.head, FoldRight!(F, Init, List.tail));
+}
+
+///
+unittest
+{
+    alias list = TypeList!(byte, ubyte, short, ushort);
+    template ListSize(T, int i)
+    {
+        enum ListSize = i + T.sizeof; 
+    }
+    // gets the sum of the type size in a type list.
+    static assert (FoldRight!(ListSize, 1, list) == 7);
 }
 
 version(unittest) {
