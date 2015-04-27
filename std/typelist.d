@@ -74,12 +74,12 @@ version(unittest) {
 
 template TypeList(T...)
 {
-    alias T toTuple;
+    alias toTuple = T;
 
     static if(T.length != 0)
     {
-        alias T[0] head;
-        alias TypeList!(T[1..$]) tail;
+        alias head = T[0];
+        alias tail = TypeList!(T[1..$]);
         enum length = T.length;
         enum isEmpty = false;
     }
@@ -109,9 +109,9 @@ unittest {
 template AppendTypes(alias List, T...)
 {
     static if (List.isEmpty)
-        alias TypeList!(T) AppendTypes;
+        alias AppendTypes = TypeList!(T);
     else
-        alias TypeList!(List.toTuple, T) AppendTypes;
+        alias AppendTypes = TypeList!(List.toTuple, T);
 }
 
 unittest {
@@ -127,7 +127,7 @@ unittest {
 */
 template Append(alias Left, alias Right)
 {
-    alias AppendTypes!(Left, Right.toTuple) Append;
+    alias Append = AppendTypes!(Left, Right.toTuple);
 }
 
 unittest {
@@ -144,9 +144,9 @@ unittest {
 template Cons(T, alias List)
 {
     static if (List.isEmpty)
-        alias TypeList!(T) Cons;
+        alias Cons = TypeList!(T);
     else
-        alias TypeList!(T, List.toTuple) Cons;
+        alias Cons = TypeList!(T, List.toTuple);
 }
 
 unittest {
@@ -207,7 +207,7 @@ unittest {
 */
 template Map(alias F, T...)
 {
-    alias Map!(F, TypeList!(T)).toTuple Map;
+    alias Map = Map!(F, TypeList!(T)).toTuple;
 }
 
 /**
@@ -216,15 +216,15 @@ template Map(alias F, T...)
 private template Map(alias F, alias List)
 {
     static if (List.isEmpty)
-        alias TypeList!() Map;
+        alias Map = TypeList!();
     else
-        alias Cons!(F!(List.head), Map!(F, List.tail)) Map;
+        alias Map = Cons!(F!(List.head), Map!(F, List.tail));
 }
 
 version(unittest) {
     template MakePtr(T)
     {
-        alias T* MakePtr;
+        alias MakePtr = T*;
     }
 }
 
@@ -239,7 +239,7 @@ unittest {
 */
 template Filter(alias Pred, T...)
 {
-    alias Filter!(Pred, TypeList!(T)).toTuple Filter;
+    alias Filter = Filter!(Pred, TypeList!(T)).toTuple;
 }
 
 /**
@@ -249,11 +249,11 @@ template Filter(alias Pred, T...)
 template Filter(alias Pred, alias List)
 {
     static if (List.isEmpty)
-        alias TypeList!() Filter;
+        alias Filter = TypeList!();
     else static if (Pred!(List.head))
-        alias Cons!(List.head, Filter!(Pred, List.tail)) Filter;
+        alias Filter = Cons!(List.head, Filter!(Pred, List.tail));
     else
-        alias Filter!(Pred, List.tail) Filter;
+        alias Filter = Filter!(Pred, List.tail);
 }
 
 unittest {
@@ -261,26 +261,34 @@ unittest {
     static assert(is(Filter!(IsPointer) == TypeTuple!()));
 }
 
+/**
+ * Folds (reduces) the $(D TypeList) $(D_PARAM List) using the function $(D_PARAM F), 
+ * and the initial value $(D_PARAM Init).
+ */
 template FoldRight(alias F, alias Init, alias List)
 {
     static if (List.isEmpty)
-        alias Init FoldRight;
+        alias FoldRight = Init;
     else
-        alias F!(List.head, FoldRight!(F, Init, List.tail)) FoldRight;
+        alias FoldRight = F!(List.head, FoldRight!(F, Init, List.tail));
 }
 
-template FoldRight(alias F, int Init, alias List)
+///
+unittest
 {
-    static if (List.isEmpty)
-        alias Init FoldRight;
-    else
-        alias F!(List.head, FoldRight!(F, Init, List.tail)) FoldRight;
+    alias list = TypeList!(byte, ubyte, short, ushort);
+    template ListSize(T, int i)
+    {
+        enum ListSize = i + T.sizeof; 
+    }
+    // gets the sum of the type size in a type list.
+    static assert (FoldRight!(ListSize, 1, list) == 7);
 }
 
 version(unittest) {
     template snoC(T, alias List)
     {
-        alias TypeList!(List.toTuple, T) snoC;
+        alias snoC = TypeList!(List.toTuple, T);
     }
 
     template Inc(T, int i)
@@ -322,18 +330,20 @@ template TypeFunList()
     enum isEmpty = true;
 }
 
+/// ditto
 template TypeFunList(alias F)
 {
-    alias F head;
-    alias TypeFunList!() tail;
+    alias head = F;
+    alias tail = TypeFunList!();
     enum length = 1;
     enum isEmpty = false;
 }
 
+/// ditto
 template TypeFunList(alias F, alias Tail)
 {
-    alias F head;
-    alias Tail tail;
+    alias head = F;
+    alias tail = Tail;
     enum length = 1 + Tail.length;
     enum isEmpty = false;
 }
@@ -361,7 +371,7 @@ template Not(alias F)
     {
         enum lambda = !F!(X);
     }
-    alias lambda apply;
+    alias apply = lambda;
 }
 
 unittest {
@@ -382,7 +392,7 @@ template Or(alias F1, alias F2)
     {
         enum lambda = F1!(X) || F2!(X);
     }
-    alias lambda apply;
+    alias apply = lambda;
 }
 
 unittest {
@@ -402,7 +412,7 @@ template Or(alias FList)
         else
             enum lambda = FList.head!(X) || Or!(FList.tail).apply!(X);
     }
-    alias lambda apply;
+    alias apply = lambda;
 }
 
 unittest {
@@ -426,7 +436,7 @@ template And(alias F1, alias F2)
     {
         enum lambda = F1!(X) && F2!(X);
     }
-    alias lambda apply;
+    alias apply = lambda;
 }
 
 unittest {
@@ -446,7 +456,7 @@ template And(alias FList)
         else
             enum lambda = FList.head!(X) && And!(FList.tail).apply!(X);
     }
-    alias lambda apply;
+    alias apply = lambda;
 }
 
 unittest {
