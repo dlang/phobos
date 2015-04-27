@@ -21,6 +21,8 @@ $(T2 isSorted,
         $(D isSorted([1, 1, 2, 3])) returns $(D true).)
 $(T2 makeIndex,
         Creates a separate index for a range.)
+$(T2 multiSort,
+        Sorts by multiple keys.)
 $(T2 nextEvenPermutation,
         Computes the next lexicographically greater even permutation of a range
         in-place.)
