@@ -269,14 +269,6 @@ template FoldRight(alias F, alias Init, alias List)
         alias FoldRight = F!(List.head, FoldRight!(F, Init, List.tail));
 }
 
-template FoldRight(alias F, int Init, alias List)
-{
-    static if (List.isEmpty)
-        alias FoldRight = Init;
-    else
-        alias FoldRight = F!(List.head, FoldRight!(F, Init, List.tail));
-}
-
 version(unittest) {
     template snoC(T, alias List)
     {
