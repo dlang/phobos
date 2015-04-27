@@ -314,6 +314,7 @@ template TypeFunList()
     enum isEmpty = true;
 }
 
+/// ditto
 template TypeFunList(alias F)
 {
     alias head = F;
@@ -322,6 +323,7 @@ template TypeFunList(alias F)
     enum isEmpty = false;
 }
 
+/// ditto
 template TypeFunList(alias F, alias Tail)
 {
     alias head = F;
