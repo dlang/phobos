@@ -1110,7 +1110,7 @@ template PackedPtr(T)
 pure nothrow:
     static assert(isPowerOf2(bits));
 
-    this(inout(size_t)* ptr)inout
+    this(inout(size_t)* ptr)inout @safe @nogc
     {
         origin = ptr;
     }
