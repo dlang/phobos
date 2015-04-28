@@ -5330,11 +5330,10 @@ unittest
     struct S;
     interface I;
 
-    static assert(isBuiltinType!void);
-    static assert(isBuiltinType!string);
-    static assert(isBuiltinType!(int[]));
-    static assert(isBuiltinType!(C[string]));
-
+    static assert( isBuiltinType!void);
+    static assert( isBuiltinType!string);
+    static assert( isBuiltinType!(int[]));
+    static assert( isBuiltinType!(C[string]));
     static assert(!isBuiltinType!C);
     static assert(!isBuiltinType!U);
     static assert(!isBuiltinType!S);
@@ -5415,11 +5414,10 @@ unittest
     struct S;
     interface I;
 
-    static assert(isAggregateType!C);
-    static assert(isAggregateType!U);
-    static assert(isAggregateType!S);
-    static assert(isAggregateType!I);
-
+    static assert( isAggregateType!C);
+    static assert( isAggregateType!U);
+    static assert( isAggregateType!S);
+    static assert( isAggregateType!I);
     static assert(!isAggregateType!void);
     static assert(!isAggregateType!string);
     static assert(!isAggregateType!(int[]));
