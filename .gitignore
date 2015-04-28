@@ -8,3 +8,7 @@ GNUmakefile
 .DS_Store
 .*.sw*
 Makefile
+*.dproj
+bin/
+obj/
+*.html
