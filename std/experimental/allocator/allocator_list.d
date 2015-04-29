@@ -34,7 +34,7 @@ struct AllocatorList(alias make)
     void[] allocate(size_t s)
     {
         auto result = allocateNoGrow(s);
-        if (result) return result;
+        if (result.ptr) return result;
         // Must create a new allocator object
         if (!_root)
         {
@@ -81,7 +81,7 @@ struct AllocatorList(alias make)
         for (auto n = _root; ; n = n.next)
         {
             result = n.a.allocate(bytes);
-            if (result) break;
+            if (result.ptr) break;
             if (!n.nextIsInitialized) break;
         }
         return result;
@@ -91,7 +91,7 @@ struct AllocatorList(alias make)
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
     {
-        if (!_root || !b) return false;
+        if (!_root || !b.ptr) return false;
         for (auto n = _root; ; n = n.next)
         {
             if (n.a.owns(b)) return true;
@@ -117,7 +117,7 @@ struct AllocatorList(alias make)
     static if (hasMember!(Allocator, "expand"))
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b) return delta == 0 || (b = allocate(delta)) !is null;
+        if (!b.ptr) return delta == 0 || (b = allocate(delta)) !is null;
         if (!_root) return false;
         for (auto n = _root; ; n = n.next)
         {
@@ -130,7 +130,7 @@ struct AllocatorList(alias make)
     /// Allows moving data from one $(D Allocator) to another.
     bool reallocate(ref void[] b, size_t s)
     {
-        if (!b) return (b = allocate(s)) !is null;
+        if (!b.ptr) return (b = allocate(s)) !is null;
         // First attempt to reallocate within the existing node
         if (!_root) return false;
         for (auto n = _root; ; n = n.next)
@@ -140,7 +140,7 @@ struct AllocatorList(alias make)
         }
         // Failed, but we may find new memory in a new node.
         auto newB = allocate(s);
-        if (!newB) return false;
+        if (!newB.ptr) return false;
         newB[] = b[];
         static if (hasMember!(Allocator, "deallocate"))
             deallocate(b);
@@ -152,7 +152,7 @@ struct AllocatorList(alias make)
     static if (hasMember!(Allocator, "deallocate"))
     void deallocate(void[] b)
     {
-        if (!b || !_root)
+        if (!b.ptr || !_root)
         {
             return;
         }

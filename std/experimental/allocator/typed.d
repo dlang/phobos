@@ -9,7 +9,7 @@ auto make(T, Allok, A...)(auto ref Allok allok, auto ref A args)
 if (!isDynamicArray!T)
 {
     auto m = allok.allocate(max(stateSize!T, 1));
-    if (!m) return null;
+    if (!m.ptr) return null;
     static if (is(T == class)) return emplace!T(m, args);
     else return emplace(cast(T*) m.ptr, args);
 }
@@ -32,7 +32,7 @@ unittest
     assert(b.x == 42);
     assert(b.y is null);
     import std.math;
-    assert(b.z.isnan);
+    assert(b.z.isNaN);
 
     b = Al.it.make!A(43, "44", 45);
     assert(b.x == 43);
@@ -56,7 +56,7 @@ unittest
     assert(c.x == 42);
     assert(c.y is null);
     import std.math;
-    assert(c.z.isnan);
+    assert(c.z.isNaN);
 
     c = Al.it.make!B(43, "44", 45);
     assert(c.x == 43);
@@ -76,7 +76,7 @@ auto makeArray(T, Allok, A...)(auto ref Allok allok, auto ref A args)
         else len += e.save.walkLength;
     }
     auto m = allok.allocate(T.sizeof * len);
-    if (!m) return null;
+    if (!m.ptr) return null;
     auto result = cast(T[]) m;
     size_t i = 0;
     scope (failure)
@@ -134,7 +134,7 @@ struct TypedAllocator
 
     private void scanIndirect(T)(void* p, void[] block) if (is(T == struct))
     {
-        if (!block) return;
+        if (!block.ptr) return;
         assert(p);
         //assert(block.ptr <= p && p < block.ptr + block.length);
 
@@ -214,7 +214,7 @@ struct TypedAllocator
     auto make(T, A...)(auto ref A args) if (is(T == struct))
     {
         auto m = heap.allocate(T.sizeof);
-        if (!m) return null;
+        if (!m.ptr) return null;
         auto p = &heap.prefix(m);
 
         static void scanImpl(TypedAllocator* allok, void* p, void[] obj)
@@ -232,7 +232,7 @@ struct TypedAllocator
     {
         if (!word) return;
         auto hunk = heap.resolveInternalPointer(cast(void*) word);
-        if (!hunk) return;
+        if (!hunk.ptr) return;
         auto p = &heap.prefix(hunk);
         p.scan(&this, p, hunk);
     }

@@ -225,7 +225,7 @@ struct FreeList(ParentAllocator,
         }
 
         auto data = parent.allocate(nodesAtATime * bytes);
-        if (!data) return null;
+        if (!data.ptr) return null;
         auto result = data[0 .. bytes];
         auto n = data[bytes .. $];
         _root = cast(Node*) n.ptr;
@@ -581,7 +581,7 @@ struct SharedFreeList(ParentAllocator,
         }
 
         auto data = parent.allocate(nodesAtATime * bytes);
-        if (!data) return null;
+        if (!data.ptr) return null;
         auto result = data[0 .. bytes];
         auto n = data[bytes .. $];
         auto newRoot = cast(shared Node*) n.ptr;

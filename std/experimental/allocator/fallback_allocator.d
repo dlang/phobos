@@ -55,7 +55,7 @@ struct FallbackAllocator(Primary, Fallback)
     void[] allocate(size_t s)
     {
         auto result = primary.allocate(s);
-        return result ? result : fallback.allocate(s);
+        return result.ptr ? result : fallback.allocate(s);
     }
 
     /**
@@ -68,11 +68,13 @@ struct FallbackAllocator(Primary, Fallback)
     {
         static if (hasMember!(Primary, "alignedAllocate"))
         {
-            if (auto result = primary.alignedAllocate(s, a)) return result;
+            auto result = primary.alignedAllocate(s, a);
+            if (result.ptr) return result;
         }
         static if (hasMember!(Fallback, "alignedAllocate"))
         {
-            if (auto result = fallback.alignedAllocate(s, a)) return result;
+            auto result = fallback.alignedAllocate(s, a);
+            if (result.ptr) return result;
         }
         return null;
     }
@@ -91,7 +93,7 @@ struct FallbackAllocator(Primary, Fallback)
     bool expand(ref void[] b, size_t delta)
     {
         if (!delta) return true;
-        if (!b)
+        if (!b.ptr)
         {
             b = allocate(delta);
             return b !is null;
@@ -137,7 +139,7 @@ struct FallbackAllocator(Primary, Fallback)
         bool crossAllocatorMove(From, To)(ref From from, ref To to)
         {
             auto b1 = to.allocate(newSize);
-            if (!b1) return false;
+            if (!b1.ptr) return false;
             if (b.length < newSize) b1[0 .. b.length] = b[];
             else b1[] = b[0 .. newSize];
             static if (hasMember!(From, "deallocate"))

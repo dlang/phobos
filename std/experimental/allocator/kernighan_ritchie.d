@@ -134,7 +134,7 @@ struct KRBlock
 
     private void assertValid(string s)
     {
-        if (!payload)
+        if (!payload.ptr)
         {
             assert(!root.next, s);
             return;
@@ -211,7 +211,7 @@ struct KRBlock
             b.ptr, b.length);
         // Insert back in the freelist, keeping it sorted by address. Do not
         // coalesce at this time. Instead, do it lazily during allocation.
-        if (!b) return;
+        if (!b.ptr) return;
         assert(owns(b));
         assert(b.ptr !is &root, format("This is weird @%s[%s]", b.ptr, b.length));
         auto n = cast(Node*) b.ptr;
@@ -407,7 +407,8 @@ struct KRAllocator(ParentAllocator)
     {
         foreach (ref alloc; blocks)
         {
-            if (auto result = alloc.allocate(n))
+            auto result = alloc.allocate(n);
+            if (result.ptr)
             {
                 return result;
             }
@@ -447,7 +448,7 @@ struct KRAllocator(ParentAllocator)
 
     void deallocate(void[] b)
     {
-        if (!b) return;
+        if (!b.ptr) return;
         if (auto block = blockFor(b))
         {
             assert(block.owns(b));
@@ -472,7 +473,7 @@ unittest
     foreach (i; 1 .. 4)
     {
         array ~= alloc.allocate(i);
-        assert(array[$ - 1]);
+        assert(array[$ - 1].ptr);
         assert(array.length == 1 || array[$ - 2].ptr != array[$ - 1].ptr);
         assert(array[$ - 1].length == i);
         assert(alloc.owns(array.back));

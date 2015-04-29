@@ -652,7 +652,7 @@ struct InternalPointersTree(Allocator)
     void[] allocate(size_t bytes)
     {
         auto r = parent.allocate(bytes);
-        if (!r) return r;
+        if (!r.ptr) return r;
         Tree.Node* n = &parent.prefix(r);
         n.payload = bytes;
         blockMap.insert(n) || assert(0);
@@ -662,7 +662,7 @@ struct InternalPointersTree(Allocator)
     /// Ditto
     void deallocate(void[] b)
     {
-        if (!b) return;
+        if (!b.ptr) return;
         Tree.Node* n = &parent.prefix(b);
         blockMap.remove(n) || assert(false);
         parent.deallocate(b);

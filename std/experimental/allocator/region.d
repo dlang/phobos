@@ -80,7 +80,8 @@ private struct BasicRegion(uint minAlign = platformAlignment)
         auto save = _current;
         _current = cast(void*) roundUpToMultipleOf(
             cast(ulong) _current, a);
-        if (auto b = allocate(bytes)) return b;
+        auto b = allocate(bytes);
+        if (b.ptr) return b;
         // Failed, rollback
         _current = save;
         return null;
@@ -283,7 +284,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
         auto save = _crt;
         _crt = cast(void*) roundUpToMultipleOf(
             cast(ulong) _crt, a);
-        if (auto b = allocate(bytes)) return b;
+        auto b = allocate(bytes);
+        if (b.ptr) return b;
         // Failed, rollback
         _crt = save;
         return null;

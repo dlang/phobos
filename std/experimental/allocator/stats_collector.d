@@ -361,7 +361,7 @@ public:
         auto result = parent.allocate(bytes);
         add!"bytesAllocated"(result.length);
         add!"bytesSlack"(this.goodAllocSize(result.length) - result.length);
-        add!"numAllocateOK"(result || !bytes); // allocating 0 bytes is OK
+        add!"numAllocateOK"(result.ptr || !bytes); // allocating 0 bytes is OK
         static if (flags & Options.bytesHighTide)
         {
             const bytesNow = bytesAllocated - bytesDeallocated;
@@ -420,7 +420,7 @@ public:
         static if (flags & Options.bytesMoved)
             const oldLength = b.length;
         static if (hasPerAllocationState)
-            const reallocatingRoot = b && _root is &parent.prefix(b);
+            const reallocatingRoot = b.ptr && _root is &parent.prefix(b);
         if (!parent.reallocate(b, s)) return false;
         up!"numReallocateOK";
         add!"bytesSlack"(this.goodAllocSize(b.length) - b.length

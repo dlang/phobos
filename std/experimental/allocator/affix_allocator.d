@@ -191,7 +191,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             //
             bool markAsUsed(void[] b)
             {
-                assert(b);
+                assert(b.ptr);
                 return parent.markAsUsed(actualAllocation(b));
             }
             //

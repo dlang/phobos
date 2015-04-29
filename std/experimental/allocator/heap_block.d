@@ -533,7 +533,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
             result = hugeAlloc(blocks);
             break;
         }
-        return result ? result.ptr[0 .. s] : null;
+        return result.ptr ? result.ptr[0 .. s] : null;
     }
 
     /// Ditto
@@ -1039,7 +1039,7 @@ struct HeapBlockWithInternalPointers(
     void[] allocate(size_t bytes)
     {
         auto r = _heap.allocate(bytes);
-        if (!r) return r;
+        if (!r.ptr) return r;
         immutable block = (r.ptr - _heap._payload.ptr) / _heap.blockSize;
         immutable blocks =
             (r.length + _heap.blockSize - 1) / _heap.blockSize;
@@ -1064,7 +1064,7 @@ struct HeapBlockWithInternalPointers(
     void[] allocateAll()
     {
         auto r = _heap.allocateAll();
-        if (!r) return r;
+        if (!r.ptr) return r;
         // Carve space at the end for _allocStart
         auto p = alignDownTo(r.ptr + r.length - 8, ulong.alignof);
         r = r[0 .. p - r.ptr];

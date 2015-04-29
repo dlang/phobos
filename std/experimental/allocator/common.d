@@ -399,16 +399,16 @@ package void testAllocator(alias make)()
     static if (hasMember!(A, "allocateAll"))
     {{
         auto aa = make();
-        if (aa.allocateAll())
+        if (aa.allocateAll().ptr)
         {
             // Can't get any more memory
-            assert(!aa.allocate(1));
+            assert(!aa.allocate(1).ptr);
         }
         auto ab = make();
         auto b4 = ab.allocateAll();
         assert(b4.length);
         // Can't get any more memory
-        assert(!ab.allocate(1));
+        assert(!ab.allocate(1).ptr);
     }}
 
     static if (hasMember!(A, "expand"))
