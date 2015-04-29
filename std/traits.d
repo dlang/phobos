@@ -20,21 +20,21 @@
  *           $(LREF FunctionTypeOf)
  *           $(LREF isSafe)
  *           $(LREF isUnsafe)
- *           $(LREF ParameterDefaultValueTuple)
- *           $(LREF ParameterIdentifierTuple)
- *           $(LREF ParameterStorageClassTuple)
- *           $(LREF ParameterTypeTuple)
+ *           $(LREF ParameterDefaultValues)
+ *           $(LREF ParameterIdentifiers)
+ *           $(LREF ParameterStorageClasses)
+ *           $(LREF ParameterTypes)
  *           $(LREF ReturnType)
  *           $(LREF SetFunctionAttributes)
  *           $(LREF variadicFunctionStyle)
  * ))
  * $(TR $(TD Aggregate Type _traits) $(TD
- *           $(LREF BaseClassesTuple)
- *           $(LREF BaseTypeTuple)
+ *           $(LREF BaseClasses)
+ *           $(LREF BaseTypes)
  *           $(LREF classInstanceAlignment)
  *           $(LREF EnumMembers)
- *           $(LREF FieldNameTuple)
- *           $(LREF FieldTypeTuple)
+ *           $(LREF FieldNames)
+ *           $(LREF FieldTypes)
  *           $(LREF hasAliasing)
  *           $(LREF hasElaborateAssign)
  *           $(LREF hasElaborateCopyConstructor)
@@ -43,13 +43,13 @@
  *           $(LREF hasMember)
  *           $(LREF hasNested)
  *           $(LREF hasUnsharedAliasing)
- *           $(LREF InterfacesTuple)
+ *           $(LREF Interfaces)
  *           $(LREF isNested)
- *           $(LREF MemberFunctionsTuple)
- *           $(LREF RepresentationTypeTuple)
+ *           $(LREF MemberFunctions)
+ *           $(LREF RepresentationTypes)
  *           $(LREF TemplateArgsOf)
  *           $(LREF TemplateOf)
- *           $(LREF TransitiveBaseTypeTuple)
+ *           $(LREF TransitiveBaseTypes)
  * ))
  * $(TR $(TD Type Conversion) $(TD
  *           $(LREF CommonType)
@@ -98,7 +98,7 @@
  *           $(LREF isAbstractFunction)
  *           $(LREF isCallable)
  *           $(LREF isDelegate)
- *           $(LREF isExpressionTuple)
+ *           $(LREF isExpressionList)
  *           $(LREF isFinalClass)
  *           $(LREF isFinalFunction)
  *           $(LREF isFunctionPointer)
@@ -106,7 +106,7 @@
  *           $(LREF isIterable)
  *           $(LREF isMutable)
  *           $(LREF isSomeFunction)
- *           $(LREF isTypeTuple)
+ *           $(LREF isTypeList)
  * ))
  * $(TR $(TD General Types) $(TD
  *           $(LREF ForeachType)
@@ -134,7 +134,7 @@
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright),
- *            Tomasz Stachowiak ($(D isExpressionTuple)),
+ *            Tomasz Stachowiak ($(D isExpressionList)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
  *            Shin Fujishiro,
  *            $(WEB octarineparrot.com, Robert Clipsham),
@@ -593,8 +593,8 @@ private template fqnType(T,
 
     string parametersTypeString(T)() @property
     {
-        alias parameters   = ParameterTypeTuple!(T);
-        alias parameterStC = ParameterStorageClassTuple!(T);
+        alias parameters   = ParameterTypes!(T);
+        alias parameterStC = ParameterStorageClasses!(T);
 
         enum variadic = variadicFunctionStyle!T;
         static if (variadic == Variadic.no)
@@ -896,47 +896,50 @@ unittest
 }
 
 /***
-Get, as a tuple, the types of the parameters to a function, a pointer
+Get, as a $(D MetaList), the types of the parameters to a function, a pointer
 to function, a delegate, a struct with an $(D opCall), a pointer to a
 struct with an $(D opCall), or a class with an $(D opCall).
 */
-template ParameterTypeTuple(func...)
+template ParameterTypes(func...)
     if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!func P == function))
-        alias ParameterTypeTuple = P;
+        alias ParameterTypes = P;
     else
         static assert(0, "argument has no parameters");
 }
+
+// backwards compatibility alias
+alias ParameterTypeTuple = ParameterTypes;
 
 ///
 unittest
 {
     int foo(int, long);
-    void bar(ParameterTypeTuple!foo);      // declares void bar(int, long);
-    void abc(ParameterTypeTuple!foo[1]);   // declares void abc(long);
+    void bar(ParameterTypes!foo);      // declares void bar(int, long);
+    void abc(ParameterTypes!foo[1]);   // declares void abc(long);
 }
 
 unittest
 {
     int foo(int i, bool b) { return 0; }
-    static assert(is(ParameterTypeTuple!foo == MetaList!(int, bool)));
-    static assert(is(ParameterTypeTuple!(typeof(&foo)) == MetaList!(int, bool)));
+    static assert(is(ParameterTypes!foo == MetaList!(int, bool)));
+    static assert(is(ParameterTypes!(typeof(&foo)) == MetaList!(int, bool)));
 
     struct S { real opCall(real r, int i) { return 0.0; } }
     S s;
-    static assert(is(ParameterTypeTuple!S == MetaList!(real, int)));
-    static assert(is(ParameterTypeTuple!(S*) == MetaList!(real, int)));
-    static assert(is(ParameterTypeTuple!s == MetaList!(real, int)));
+    static assert(is(ParameterTypes!S == MetaList!(real, int)));
+    static assert(is(ParameterTypes!(S*) == MetaList!(real, int)));
+    static assert(is(ParameterTypes!s == MetaList!(real, int)));
 
     class Test
     {
         int prop() @property { return 0; }
     }
-    alias P_Test_prop = ParameterTypeTuple!(Test.prop);
+    alias P_Test_prop = ParameterTypes!(Test.prop);
     static assert(P_Test_prop.length == 0);
 
-    alias P_dglit = ParameterTypeTuple!((int a){});
+    alias P_dglit = ParameterTypes!((int a){});
     static assert(P_dglit.length == 1);
     static assert(is(P_dglit[0] == int));
 }
@@ -948,7 +951,7 @@ arity is undefined for variadic functions.
 template arity(alias func)
     if ( isCallable!func && variadicFunctionStyle!func == Variadic.no )
 {
-    enum size_t arity = ParameterTypeTuple!func.length;
+    enum size_t arity = ParameterTypes!func.length;
 }
 
 ///
@@ -980,7 +983,7 @@ enum ParameterStorageClass : uint
 }
 
 /// ditto
-template ParameterStorageClassTuple(func...)
+template ParameterStorageClasses(func...)
     if (func.length == 1 && isCallable!func)
 {
     alias Func = Unqual!(FunctionTypeOf!func);
@@ -989,7 +992,7 @@ template ParameterStorageClassTuple(func...)
      * TypeFuncion:
      *     CallConvention FuncAttrs Arguments ArgClose Type
      */
-    alias Params = ParameterTypeTuple!Func;
+    alias Params = ParameterTypes!Func;
 
     // chop off CallConvention and FuncAttrs
     enum margs = demangleFunctionAttributes(mangledName!Func[1 .. $]).rest;
@@ -1015,8 +1018,11 @@ template ParameterStorageClassTuple(func...)
         }
     }
 
-    alias ParameterStorageClassTuple = demangleNextParameter!margs;
+    alias ParameterStorageClasses = demangleNextParameter!margs;
 }
+
+// backwards compatibility alias
+alias ParameterStorageClassTuple = ParameterStorageClasses;
 
 ///
 unittest
@@ -1026,7 +1032,7 @@ unittest
     void func(ref int ctx, out real result, real param)
     {
     }
-    alias pstc = ParameterStorageClassTuple!func;
+    alias pstc = ParameterStorageClasses!func;
     static assert(pstc.length == 3); // three parameters
     static assert(pstc[0] == STC.ref_);
     static assert(pstc[1] == STC.out_);
@@ -1038,10 +1044,10 @@ unittest
     alias STC = ParameterStorageClass;
 
     void noparam() {}
-    static assert(ParameterStorageClassTuple!noparam.length == 0);
+    static assert(ParameterStorageClasses!noparam.length == 0);
 
     void test(scope int, ref int, out int, lazy int, int, return ref int) { }
-    alias test_pstc = ParameterStorageClassTuple!test;
+    alias test_pstc = ParameterStorageClasses!test;
     static assert(test_pstc.length == 6);
     static assert(test_pstc[0] == STC.scope_);
     static assert(test_pstc[1] == STC.ref_);
@@ -1057,21 +1063,21 @@ unittest
     }
     Test testi;
 
-    alias test_const_pstc = ParameterStorageClassTuple!(Test.test_const);
+    alias test_const_pstc = ParameterStorageClasses!(Test.test_const);
     static assert(test_const_pstc.length == 1);
     static assert(test_const_pstc[0] == STC.none);
 
-    alias test_sharedconst_pstc = ParameterStorageClassTuple!(testi.test_sharedconst);
+    alias test_sharedconst_pstc = ParameterStorageClasses!(testi.test_sharedconst);
     static assert(test_sharedconst_pstc.length == 1);
     static assert(test_sharedconst_pstc[0] == STC.none);
 
-    alias dglit_pstc = ParameterStorageClassTuple!((ref int a) {});
+    alias dglit_pstc = ParameterStorageClasses!((ref int a) {});
     static assert(dglit_pstc.length == 1);
     static assert(dglit_pstc[0] == STC.ref_);
 
     // Bugzilla 9317
     static inout(int) func(inout int param) { return param; }
-    static assert(ParameterStorageClassTuple!(typeof(func))[0] == STC.none);
+    static assert(ParameterStorageClasses!(typeof(func))[0] == STC.none);
 }
 
 unittest
@@ -1081,14 +1087,14 @@ unittest
         ref Foo opAssign(ref Foo rhs) return { return this; }
     }
 
-    alias tup = ParameterStorageClassTuple!(__traits(getOverloads, Foo, "opAssign")[0]);
+    alias tup = ParameterStorageClasses!(__traits(getOverloads, Foo, "opAssign")[0]);
 }
 
 
 /**
 Get, as a tuple, the identifiers of the parameters to a function symbol.
  */
-template ParameterIdentifierTuple(func...)
+template ParameterIdentifiers(func...)
     if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!func PT == __parameters))
@@ -1124,19 +1130,22 @@ template ParameterIdentifierTuple(func...)
             alias Impl = MetaList!(Get!i, Impl!(i+1));
     }
 
-    alias ParameterIdentifierTuple = Impl!();
+    alias ParameterIdentifiers = Impl!();
 }
+
+// backwards compatibility alias
+alias ParameterIdentifierTuple = ParameterIdentifiers;
 
 ///
 unittest
 {
     int foo(int num, string name, int);
-    static assert([ParameterIdentifierTuple!foo] == ["num", "name", ""]);
+    static assert([ParameterIdentifiers!foo] == ["num", "name", ""]);
 }
 
 unittest
 {
-    alias PIT = ParameterIdentifierTuple;
+    alias PIT = ParameterIdentifiers;
 
     void bar(int num, string name, int[] array){}
     static assert([PIT!bar] == ["num", "name", "array"]);
@@ -1165,7 +1174,7 @@ unittest
     static assert([PIT!baw] == ["_param_0", "_param_1", "_param_2"]);
 
     // depends on internal
-    void baz(TypeTuple!(int, string, int[]) args){}
+    void baz(MetaList!(int, string, int[]) args){}
     static assert([PIT!baz] == ["_param_0", "_param_1", "_param_2"]);
 +/
 }
@@ -1175,14 +1184,14 @@ unittest
 Get, as a tuple, the default value of the parameters to a function symbol.
 If a parameter doesn't have the default value, $(D void) is returned instead.
  */
-template ParameterDefaultValueTuple(func...)
+template ParameterDefaultValues(func...)
     if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!(func[0]) PT == __parameters))
     {
         template Get(size_t i)
         {
-            enum ParamName = ParameterIdentifierTuple!(func[0])[i];
+            enum ParamName = ParameterIdentifiers!(func[0])[i];
             static if (ParamName.length)
                 enum get = (PT[i..i+1]) => mixin(ParamName);
             else // Unnamed parameter
@@ -1218,21 +1227,24 @@ template ParameterDefaultValueTuple(func...)
             alias Impl = MetaList!(Get!i, Impl!(i+1));
     }
 
-    alias ParameterDefaultValueTuple = Impl!();
+    alias ParameterDefaultValues = Impl!();
 }
+
+// backwards compatibility alias
+alias ParameterDefaultValueTuple = ParameterDefaultValues;
 
 ///
 unittest
 {
     int foo(int num, string name = "hello", int[] = [1,2,3]);
-    static assert(is(ParameterDefaultValueTuple!foo[0] == void));
-    static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
-    static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
+    static assert(is(ParameterDefaultValues!foo[0] == void));
+    static assert(   ParameterDefaultValues!foo[1] == "hello");
+    static assert(   ParameterDefaultValues!foo[2] == [1,2,3]);
 }
 
 unittest
 {
-    alias PDVT = ParameterDefaultValueTuple;
+    alias PDVT = ParameterDefaultValues;
 
     void bar(int n = 1, string s = "hello"){}
     static assert(PDVT!bar.length == 2);
@@ -1931,8 +1943,8 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
 
         result ~= "(";
 
-        static if (ParameterTypeTuple!T.length > 0)
-            result ~= "ParameterTypeTuple!T";
+        static if (ParameterTypes!T.length > 0)
+            result ~= "ParameterTypes!T";
 
         enum varStyle = variadicFunctionStyle!T;
         static if (varStyle == Variadic.c)
@@ -2088,7 +2100,7 @@ template hasNested(T)
         enum hasNested = hasNested!(typeof(T.init[0]));
     else static if(is(T == class) || is(T == struct) || is(T == union))
         enum hasNested = isNested!T ||
-            std.meta.algorithm.any!(.hasNested, FieldTypeTuple!T);
+            std.meta.algorithm.any!(.hasNested, FieldTypes!T);
     else
         enum hasNested = false;
 }
@@ -2165,47 +2177,50 @@ unittest
  * If $(D T) isn't a struct, class, or union returns typetuple
  * with one element $(D T).
  */
-template FieldTypeTuple(T)
+template FieldTypes(T)
 {
     static if (is(T == struct) || is(T == union))
-        alias FieldTypeTuple = typeof(T.tupleof[0 .. $ - isNested!T]);
+        alias FieldTypes = typeof(T.tupleof[0 .. $ - isNested!T]);
     else static if (is(T == class))
-        alias FieldTypeTuple = typeof(T.tupleof);
+        alias FieldTypes = typeof(T.tupleof);
     else
-        alias FieldTypeTuple = MetaList!T;
+        alias FieldTypes = MetaList!T;
 }
+
+// backwards compatibility alias
+alias FieldTypeTuple = FieldTypes;
 
 ///
 unittest
 {
     struct S { int x; float y; }
-    static assert(is(FieldTypeTuple!S == MetaList!(int, float)));
+    static assert(is(FieldTypes!S == MetaList!(int, float)));
 }
 
 unittest
 {
-    static assert(is(FieldTypeTuple!int == MetaList!int));
+    static assert(is(FieldTypes!int == MetaList!int));
 
     static struct StaticStruct1 { }
-    static assert(is(FieldTypeTuple!StaticStruct1 == MetaList!()));
+    static assert(is(FieldTypes!StaticStruct1 == MetaList!()));
 
     static struct StaticStruct2 { int a, b; }
-    static assert(is(FieldTypeTuple!StaticStruct2 == MetaList!(int, int)));
+    static assert(is(FieldTypes!StaticStruct2 == MetaList!(int, int)));
 
     int i;
 
     struct NestedStruct1 { void f() { ++i; } }
-    static assert(is(FieldTypeTuple!NestedStruct1 == MetaList!()));
+    static assert(is(FieldTypes!NestedStruct1 == MetaList!()));
 
     struct NestedStruct2 { int a; void f() { ++i; } }
-    static assert(is(FieldTypeTuple!NestedStruct2 == MetaList!int));
+    static assert(is(FieldTypes!NestedStruct2 == MetaList!int));
 
     class NestedClass { int a; void f() { ++i; } }
-    static assert(is(FieldTypeTuple!NestedClass == MetaList!int));
+    static assert(is(FieldTypes!NestedClass == MetaList!int));
 }
 
 
-//Required for FieldNameTuple
+//Required for FieldNames
 private enum NameOf(alias T) = T.stringof;
 
 /**
@@ -2215,44 +2230,47 @@ private enum NameOf(alias T) = T.stringof;
  * for nested types. If $(D T) isn't a struct, class, or union returns an
  * expression tuple with an empty string.
  */
-template FieldNameTuple(T)
+template FieldNames(T)
 {
     static if (is(T == struct) || is(T == union))
-        alias FieldNameTuple = Map!(NameOf, T.tupleof[0 .. $ - isNested!T]);
+        alias FieldNames = Map!(NameOf, T.tupleof[0 .. $ - isNested!T]);
     else static if (is(T == class))
-        alias FieldNameTuple = Map!(NameOf, T.tupleof);
+        alias FieldNames = Map!(NameOf, T.tupleof);
     else
-        alias FieldNameTuple = MetaList!"";
+        alias FieldNames = MetaList!"";
 }
+
+// backwards compatibility alias
+alias FieldNameTuple = FieldNames;
 
 ///
 unittest
 {
     struct S { int x; float y; }
-    static assert(FieldNameTuple!S == MetaList!("x", "y"));
-    static assert(FieldNameTuple!int == MetaList!"");
+    static assert(FieldNames!S == MetaList!("x", "y"));
+    static assert(FieldNames!int == MetaList!"");
 }
 
 unittest
 {
-    static assert(FieldNameTuple!int == MetaList!"");
+    static assert(FieldNames!int == MetaList!"");
 
     static struct StaticStruct1 { }
-    static assert(is(FieldNameTuple!StaticStruct1 == MetaList!()));
+    static assert(is(FieldNames!StaticStruct1 == MetaList!()));
 
     static struct StaticStruct2 { int a, b; }
-    static assert(FieldNameTuple!StaticStruct2 == MetaList!("a", "b"));
+    static assert(FieldNames!StaticStruct2 == MetaList!("a", "b"));
 
     int i;
 
     struct NestedStruct1 { void f() { ++i; } }
-    static assert(is(FieldNameTuple!NestedStruct1 == MetaList!()));
+    static assert(is(FieldNames!NestedStruct1 == MetaList!()));
 
     struct NestedStruct2 { int a; void f() { ++i; } }
-    static assert(FieldNameTuple!NestedStruct2 == MetaList!"a");
+    static assert(FieldNames!NestedStruct2 == MetaList!"a");
 
     class NestedClass { int a; void f() { ++i; } }
-    static assert(FieldNameTuple!NestedClass == MetaList!"a");
+    static assert(FieldNames!NestedClass == MetaList!"a");
 }
 
 
@@ -2260,7 +2278,7 @@ unittest
 Get the primitive types of the fields of a struct or class, in
 topological order.
 */
-template RepresentationTypeTuple(T)
+template RepresentationTypes(T)
 {
     template Impl(T...)
     {
@@ -2281,7 +2299,7 @@ template RepresentationTypeTuple(T)
                 // @@@BUG@@@ this should work
                 //alias .RepresentationTypes!(T[0].tupleof)
                 //    RepresentationTypes;
-                alias Impl = Impl!(FieldTypeTuple!(T[0]), T[1 .. $]);
+                alias Impl = Impl!(FieldTypes!(T[0]), T[1 .. $]);
             }
             else
             {
@@ -2292,20 +2310,23 @@ template RepresentationTypeTuple(T)
 
     static if (is(T == struct) || is(T == union) || is(T == class))
     {
-        alias RepresentationTypeTuple = Impl!(FieldTypeTuple!T);
+        alias RepresentationTypes = Impl!(FieldTypes!T);
     }
     else
     {
-        alias RepresentationTypeTuple = Impl!T;
+        alias RepresentationTypes = Impl!T;
     }
 }
+
+// backwards compatibility alias
+alias RepresentationTypeTuple = RepresentationTypes;
 
 ///
 unittest
 {
     struct S1 { int a; float b; }
     struct S2 { char[] a; union { S1 b; S1 * c; } }
-    alias R = RepresentationTypeTuple!S2;
+    alias R = RepresentationTypes!S2;
     assert(R.length == 4
         && is(R[0] == char[]) && is(R[1] == int)
         && is(R[2] == float) && is(R[3] == S1*));
@@ -2313,32 +2334,32 @@ unittest
 
 unittest
 {
-    alias S1 = RepresentationTypeTuple!int;
+    alias S1 = RepresentationTypes!int;
     static assert(is(S1 == MetaList!int));
 
     struct S2 { int a; }
     struct S3 { int a; char b; }
     struct S4 { S1 a; int b; S3 c; }
-    static assert(is(RepresentationTypeTuple!S2 == MetaList!int));
-    static assert(is(RepresentationTypeTuple!S3 == MetaList!(int, char)));
-    static assert(is(RepresentationTypeTuple!S4 == MetaList!(int, int, int, char)));
+    static assert(is(RepresentationTypes!S2 == MetaList!int));
+    static assert(is(RepresentationTypes!S3 == MetaList!(int, char)));
+    static assert(is(RepresentationTypes!S4 == MetaList!(int, int, int, char)));
 
     struct S11 { int a; float b; }
     struct S21 { char[] a; union { S11 b; S11 * c; } }
-    alias R = RepresentationTypeTuple!S21;
+    alias R = RepresentationTypes!S21;
     assert(R.length == 4
            && is(R[0] == char[]) && is(R[1] == int)
            && is(R[2] == float) && is(R[3] == S11*));
 
     class C { int a; float b; }
-    alias R1 = RepresentationTypeTuple!C;
+    alias R1 = RepresentationTypes!C;
     static assert(R1.length == 2 && is(R1[0] == int) && is(R1[1] == float));
 
     /* Issue 6642 */
     import std.typecons : Rebindable;
 
     struct S5 { int a; Rebindable!(immutable Object) b; }
-    alias R2 = RepresentationTypeTuple!S5;
+    alias R2 = RepresentationTypes!S5;
     static assert(R2.length == 2 && is(R2[0] == int) && is(R2[1] == immutable(Object)));
 }
 
@@ -2371,7 +2392,7 @@ private template hasRawAliasing(T...)
         }
     }
 
-    enum hasRawAliasing = Impl!(RepresentationTypeTuple!T);
+    enum hasRawAliasing = Impl!(RepresentationTypes!T);
 }
 
 ///
@@ -2467,7 +2488,7 @@ private template hasRawUnsharedAliasing(T...)
         }
     }
 
-    enum hasRawUnsharedAliasing = Impl!(RepresentationTypeTuple!T);
+    enum hasRawUnsharedAliasing = Impl!(RepresentationTypes!T);
 }
 
 ///
@@ -2634,7 +2655,7 @@ private template hasObjects(T...)
     else static if (is(T[0] == struct))
     {
         enum hasObjects = hasObjects!(
-            RepresentationTypeTuple!(T[0]), T[1 .. $]);
+            RepresentationTypes!(T[0]), T[1 .. $]);
     }
     else
     {
@@ -2657,7 +2678,7 @@ private template hasUnsharedObjects(T...)
     else static if (is(T[0] == struct))
     {
         enum hasUnsharedObjects = hasUnsharedObjects!(
-            RepresentationTypeTuple!(T[0]), T[1 .. $]);
+            RepresentationTypes!(T[0]), T[1 .. $]);
     }
     else
     {
@@ -2692,7 +2713,7 @@ template hasAliasing(T...)
                                   && !is(FunctionTypeOf!T == immutable);
         }
         enum hasAliasing = hasRawAliasing!T || hasObjects!T ||
-            std.meta.algorithm.any!(isAliasingDelegate, T, RepresentationTypeTuple!T);
+            std.meta.algorithm.any!(isAliasingDelegate, T, RepresentationTypes!T);
     }
 }
 
@@ -2781,7 +2802,7 @@ $(LI an associative array.) $(LI a delegate.))
 template hasIndirections(T)
 {
     static if (is(T == struct) || is(T == union))
-        enum hasIndirections = std.meta.algorithm.any!(.hasIndirections, FieldTypeTuple!T);
+        enum hasIndirections = std.meta.algorithm.any!(.hasIndirections, FieldTypes!T);
     else static if (isStaticArray!T && is(T : E[N], E, size_t N))
         enum hasIndirections = is(E == void) ? true : hasIndirections!E;
     else static if (isFunctionPointer!T)
@@ -2914,7 +2935,7 @@ template hasUnsharedAliasing(T...)
 
         enum hasUnsharedAliasing =
             hasRawUnsharedAliasing!(T[0]) ||
-            std.meta.algorithm.any!(unsharedDelegate, RepresentationTypeTuple!(T[0])) ||
+            std.meta.algorithm.any!(unsharedDelegate, RepresentationTypes!(T[0])) ||
             hasUnsharedObjects!(T[0]) ||
             hasUnsharedAliasing!(T[1..$]);
     }
@@ -3072,7 +3093,7 @@ template hasElaborateCopyConstructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
-            || std.meta.algorithm.any!(.hasElaborateCopyConstructor, FieldTypeTuple!S);
+            || std.meta.algorithm.any!(.hasElaborateCopyConstructor, FieldTypes!S);
     }
     else
     {
@@ -3129,7 +3150,7 @@ template hasElaborateAssign(S)
     {
         enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
                                   is(typeof(S.init.opAssign(lvalueOf!S))) ||
-            std.meta.algorithm.any!(.hasElaborateAssign, FieldTypeTuple!S);
+            std.meta.algorithm.any!(.hasElaborateAssign, FieldTypes!S);
     }
     else
     {
@@ -3214,7 +3235,7 @@ template hasElaborateDestructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateDestructor = hasMember!(S, "__dtor")
-            || std.meta.algorithm.any!(.hasElaborateDestructor, FieldTypeTuple!S);
+            || std.meta.algorithm.any!(.hasElaborateDestructor, FieldTypes!S);
     }
     else
     {
@@ -3466,16 +3487,19 @@ unittest
 
 /***
  * Get a $(D_PARAM MetaList) of the base class and base interfaces of
- * this class or interface. $(D_PARAM BaseTypeTuple!Object) returns
+ * this class or interface. $(D_PARAM BaseTypes!Object) returns
  * the empty type tuple.
  */
-template BaseTypeTuple(A)
+template BaseTypes(A)
 {
     static if (is(A P == super))
-        alias BaseTypeTuple = P;
+        alias BaseTypes = P;
     else
         static assert(0, "argument is not a class or interface");
 }
+
+// backwards compatibility alias
+alias BaseTypeTuple = BaseTypes;
 
 ///
 unittest
@@ -3483,11 +3507,11 @@ unittest
     interface I1 { }
     interface I2 { }
     interface I12 : I1, I2 { }
-    static assert(is(BaseTypeTuple!I12 == MetaList!(I1, I2)));
+    static assert(is(BaseTypes!I12 == MetaList!(I1, I2)));
 
     interface I3 : I1 { }
     interface I123 : I1, I2, I3 { }
-    static assert(is(BaseTypeTuple!I123 == MetaList!(I1, I2, I3)));
+    static assert(is(BaseTypes!I123 == MetaList!(I1, I2, I3)));
 }
 
 unittest
@@ -3497,38 +3521,41 @@ unittest
     class A { }
     class C : A, I1, I2 { }
 
-    alias TL = BaseTypeTuple!C;
+    alias TL = BaseTypes!C;
     assert(TL.length == 3);
     assert(is (TL[0] == A));
     assert(is (TL[1] == I1));
     assert(is (TL[2] == I2));
 
-    assert(BaseTypeTuple!Object.length == 0);
+    assert(BaseTypes!Object.length == 0);
 }
 
 /**
  * Get a $(D_PARAM MetaList) of $(I all) base classes of this class,
  * in decreasing order. Interfaces are not included. $(D_PARAM
- * BaseClassesTuple!Object) yields the empty type tuple.
+ * BaseClasses!Object) yields the empty type tuple.
  */
-template BaseClassesTuple(T)
+template BaseClasses(T)
     if (is(T == class))
 {
     static if (is(T == Object))
     {
-        alias BaseClassesTuple = MetaList!();
+        alias BaseClasses= MetaList!();
     }
-    else static if (is(BaseTypeTuple!T[0] == Object))
+    else static if (is(BaseTypes!T[0] == Object))
     {
-        alias BaseClassesTuple = MetaList!Object;
+        alias BaseClasses = MetaList!Object;
     }
     else
     {
-        alias BaseClassesTuple =
-            MetaList!(BaseTypeTuple!T[0],
-                       BaseClassesTuple!(BaseTypeTuple!T[0]));
+        alias BaseClasses =
+            MetaList!(BaseTypes!T[0],
+                       BaseClasses!(BaseTypes!T[0]));
     }
 }
+
+// backwards compatibility alias
+alias BaseClassesTuple = BaseClasses;
 
 ///
 unittest
@@ -3536,31 +3563,31 @@ unittest
     class C1 { }
     class C2 : C1 { }
     class C3 : C2 { }
-    static assert(!BaseClassesTuple!Object.length);
-    static assert(is(BaseClassesTuple!C1 == MetaList!(Object)));
-    static assert(is(BaseClassesTuple!C2 == MetaList!(C1, Object)));
-    static assert(is(BaseClassesTuple!C3 == MetaList!(C2, C1, Object)));
-    static assert(!BaseClassesTuple!Object.length);
+    static assert(!BaseClasses!Object.length);
+    static assert(is(BaseClasses!C1 == MetaList!(Object)));
+    static assert(is(BaseClasses!C2 == MetaList!(C1, Object)));
+    static assert(is(BaseClasses!C3 == MetaList!(C2, C1, Object)));
+    static assert(!BaseClasses!Object.length);
 }
 
 unittest
 {
     struct S { }
-    static assert(!__traits(compiles, BaseClassesTuple!S));
+    static assert(!__traits(compiles, BaseClasses!S));
     interface I { }
-    static assert(!__traits(compiles, BaseClassesTuple!I));
+    static assert(!__traits(compiles, BaseClasses!I));
     class C4 : I { }
     class C5 : C4, I { }
-    static assert(is(BaseClassesTuple!C5 == MetaList!(C4, Object)));
+    static assert(is(BaseClasses!C5 == MetaList!(C4, Object)));
 }
 
 /**
  * Get a $(D_PARAM MetaList) of $(I all) interfaces directly or
  * indirectly inherited by this class or interface. Interfaces do not
- * repeat if multiply implemented. $(D_PARAM InterfacesTuple!Object)
+ * repeat if multiply implemented. $(D_PARAM Interfaces!Object)
  * yields the empty type tuple.
  */
-template InterfacesTuple(T)
+template Interfaces(T)
 {
     template Flatten(H, T...)
     {
@@ -3571,17 +3598,20 @@ template InterfacesTuple(T)
         else
         {
             static if (is(H == interface))
-                alias Flatten = MetaList!(H, InterfacesTuple!H);
+                alias Flatten = MetaList!(H, Interfaces!H);
             else
-                alias Flatten = InterfacesTuple!H;
+                alias Flatten = Interfaces!H;
         }
     }
 
     static if (is(T S == super) && S.length)
-        alias InterfacesTuple = NoDuplicates!(Flatten!S);
+        alias Interfaces = NoDuplicates!(Flatten!S);
     else
-        alias InterfacesTuple = MetaList!();
+        alias Interfaces = MetaList!();
 }
+
+// backwards compatibility alias
+alias InterfacesTuple = Interfaces;
 
 unittest
 {
@@ -3591,7 +3621,7 @@ unittest
     class A : I1, I2 { }
     class B : A, I1 { }
     class C : B { }
-    alias TL = InterfacesTuple!C;
+    alias TL = Interfaces!C;
     static assert(is(TL[0] == I1) && is(TL[1] == I2));
 }
 
@@ -3607,9 +3637,9 @@ unittest
     interface J {}
     class B2 : J {}
     class C2 : B2, Ia, Ib {}
-    static assert(is(InterfacesTuple!I ==
+    static assert(is(Interfaces!I ==
                     MetaList!(Ia, Iaa, Iab, Ib, Iba, Ibb)));
-    static assert(is(InterfacesTuple!C2 ==
+    static assert(is(Interfaces!C2 ==
                     MetaList!(J, Ia, Iaa, Iab, Ib, Iba, Ibb)));
 
 }
@@ -3617,17 +3647,20 @@ unittest
 /**
  * Get a $(D_PARAM MetaList) of $(I all) base classes of $(D_PARAM
  * T), in decreasing order, followed by $(D_PARAM T)'s
- * interfaces. $(D_PARAM TransitiveBaseTypeTuple!Object) yields the
+ * interfaces. $(D_PARAM TransitiveBaseTypes!Object) yields the
  * empty type tuple.
  */
-template TransitiveBaseTypeTuple(T)
+template TransitiveBaseTypes(T)
 {
     static if (is(T == Object))
-        alias TransitiveBaseTypeTuple = MetaList!();
+        alias TransitiveBaseTypes = MetaList!();
     else
-        alias TransitiveBaseTypeTuple =
-            MetaList!(BaseClassesTuple!T, InterfacesTuple!T);
+        alias TransitiveBaseTypes =
+            MetaList!(BaseClasses!T, Interfaces!T);
 }
+
+// backwards compatibility alias
+alias TransitiveBaseTypeTuple = TransitiveBaseTypes;
 
 ///
 unittest
@@ -3637,7 +3670,7 @@ unittest
     class B1 {}
     class B2 : B1, J1, J2 {}
     class B3 : B2, J1 {}
-    alias TL = TransitiveBaseTypeTuple!B3;
+    alias TL = TransitiveBaseTypes!B3;
     assert(TL.length == 5);
     assert(is (TL[0] == B2));
     assert(is (TL[1] == B1));
@@ -3645,7 +3678,7 @@ unittest
     assert(is (TL[3] == J1));
     assert(is (TL[4] == J2));
 
-    assert(TransitiveBaseTypeTuple!Object.length == 0);
+    assert(TransitiveBaseTypes!Object.length == 0);
 }
 
 
@@ -3654,7 +3687,7 @@ Returns a tuple of non-static functions with the name $(D name) declared in the
 class or interface $(D C).  Covariant duplicates are shrunk into the most
 derived one.
  */
-template MemberFunctionsTuple(C, string name)
+template MemberFunctions(C, string name)
     if (is(C == class) || is(C == interface))
 {
     static if (__traits(hasMember, C, name))
@@ -3738,11 +3771,14 @@ template MemberFunctionsTuple(C, string name)
         }
 
         // done.
-        alias shrink!overloads MemberFunctionsTuple;
+        alias shrink!overloads MemberFunctions;
     }
     else
-        alias MetaList!() MemberFunctionsTuple;
+        alias MetaList!() MemberFunctions;
 }
+
+// backwards compatibility alias
+alias MemberFunctionsTuple = MemberFunctions;
 
 ///
 unittest
@@ -3756,7 +3792,7 @@ unittest
     {
         override C foo() { return this; } // covariant overriding of I.foo()
     }
-    alias MemberFunctionsTuple!(C, "foo") foos;
+    alias MemberFunctions!(C, "foo") foos;
     static assert(foos.length == 2);
     static assert(__traits(isSame, foos[0], C.foo));
     static assert(__traits(isSame, foos[1], B.foo));
@@ -3777,15 +3813,15 @@ unittest
     {
         override C test() { return this; }
     }
-    alias test =MemberFunctionsTuple!(C, "test");
+    alias test =MemberFunctions!(C, "test");
     static assert(test.length == 2);
     static assert(is(FunctionTypeOf!(test[0]) == FunctionTypeOf!(C.test)));
     static assert(is(FunctionTypeOf!(test[1]) == FunctionTypeOf!(K.test)));
-    alias noexist = MemberFunctionsTuple!(C, "noexist");
+    alias noexist = MemberFunctions!(C, "noexist");
     static assert(noexist.length == 0);
 
     interface L { int prop() @property; }
-    alias prop = MemberFunctionsTuple!(L, "prop");
+    alias prop = MemberFunctions!(L, "prop");
     static assert(prop.length == 1);
 
     interface Test_I
@@ -3795,7 +3831,7 @@ unittest
         void foo(int, int);
     }
     interface Test : Test_I {}
-    alias Test_foo = MemberFunctionsTuple!(Test, "foo");
+    alias Test_foo = MemberFunctions!(Test, "foo");
     static assert(Test_foo.length == 3);
     static assert(is(typeof(&Test_foo[0]) == void function()));
     static assert(is(typeof(&Test_foo[2]) == void function(int)));
@@ -3894,7 +3930,7 @@ unittest
 }
 
 
-private template maxAlignment(U...) if (isTypeTuple!U)
+private template maxAlignment(U...) if (isTypeList!U)
 {
     static if (U.length == 0)
         static assert(0);
@@ -4043,7 +4079,7 @@ template ImplicitConversionTargets(T)
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = MetaList!(typeof(null));
     else static if(is(T : Object))
-        alias ImplicitConversionTargets = TransitiveBaseTypeTuple!(T);
+        alias ImplicitConversionTargets = TransitiveBaseTypes!(T);
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
         alias ImplicitConversionTargets =
             MetaList!(const(Unqual!(typeof(T.init[0])))[]);
@@ -4182,7 +4218,7 @@ package template isBlitAssignable(T)
         {
             size_t offset = 0;
             bool assignable = true;
-            foreach (i, F; FieldTypeTuple!T)
+            foreach (i, F; FieldTypes!T)
             {
                 static if (i == 0)
                 {
@@ -4380,10 +4416,10 @@ template isCovariantWith(F, G)
         template checkParameters()
         {
             alias STC = ParameterStorageClass;
-            alias UprParams = ParameterTypeTuple!Upr;
-            alias LwrParams = ParameterTypeTuple!Lwr;
-            alias UprPSTCs  = ParameterStorageClassTuple!Upr;
-            alias LwrPSTCs  = ParameterStorageClassTuple!Lwr;
+            alias UprParams = ParameterTypes!Upr;
+            alias LwrParams = ParameterTypes!Lwr;
+            alias UprPSTCs  = ParameterStorageClasses!Upr;
+            alias LwrPSTCs  = ParameterStorageClasses!Lwr;
             //
             template checkNext(size_t i)
             {
@@ -5505,30 +5541,34 @@ unittest
 }
 
 /**
- * Check whether the tuple T is an expression tuple.
- * An expression tuple only contains expressions.
+ * Check whether $(D T) is an expression list.
+ * An expression list is kind of compile-time list (also $(D MetaList))
+ * that only contains expressions.
  *
- * See_Also: $(LREF isTypeTuple).
+ * See_Also: $(LREF isTypeList).
  */
-template isExpressionTuple(T ...)
+template isExpressionList(T ...)
 {
     static if (T.length >= 2)
-        enum bool isExpressionTuple =
-            isExpressionTuple!(T[0 .. $/2]) &&
-            isExpressionTuple!(T[$/2 .. $]);
+        enum bool isExpressionList =
+            isExpressionList!(T[0 .. $/2]) &&
+            isExpressionList!(T[$/2 .. $]);
     else static if (T.length == 1)
-        enum bool isExpressionTuple =
+        enum bool isExpressionList =
             !is(T[0]) && __traits(compiles, { auto ex = T[0]; });
     else
-        enum bool isExpressionTuple = true; // default
+        enum bool isExpressionList = true; // default
 }
+
+// backwards compatibility alias
+alias isExpressionTuple = isExpressionList;
 
 ///
 unittest
 {
-    static assert(isExpressionTuple!(1, 2.0, "a"));
-    static assert(!isExpressionTuple!(int, double, string));
-    static assert(!isExpressionTuple!(int, 2.0, "a"));
+    static assert(isExpressionList!(1, 2.0, "a"));
+    static assert(!isExpressionList!(int, double, string));
+    static assert(!isExpressionList!(int, 2.0, "a"));
 }
 
 unittest
@@ -5538,41 +5578,45 @@ unittest
     enum aa = [ 1: -1 ];
     alias myint = int;
 
-    static assert( isExpressionTuple!(42));
-    static assert( isExpressionTuple!aa);
-    static assert( isExpressionTuple!("cattywampus", 2.7, aa));
-    static assert( isExpressionTuple!(bar()));
+    static assert( isExpressionList!(42));
+    static assert( isExpressionList!aa);
+    static assert( isExpressionList!("cattywampus", 2.7, aa));
+    static assert( isExpressionList!(bar()));
 
-    static assert(!isExpressionTuple!isExpressionTuple);
-    static assert(!isExpressionTuple!foo);
-    static assert(!isExpressionTuple!( (a) { } ));
-    static assert(!isExpressionTuple!int);
-    static assert(!isExpressionTuple!myint);
+    static assert(!isExpressionList!isExpressionList);
+    static assert(!isExpressionList!foo);
+    static assert(!isExpressionList!( (a) { } ));
+    static assert(!isExpressionList!int);
+    static assert(!isExpressionList!myint);
 }
 
 
 /**
- * Check whether the tuple $(D T) is a type tuple.
- * A type tuple only contains types.
+ * Check whether $(D T) is a type list.
+ * A type list is kind of compile-time list (also $(D MetaList))
+ * that only contains types.
  *
- * See_Also: $(LREF isExpressionTuple).
+ * See_Also: $(LREF isExpressionList).
  */
-template isTypeTuple(T...)
+template isTypeList(T...)
 {
     static if (T.length >= 2)
-        enum bool isTypeTuple = isTypeTuple!(T[0 .. $/2]) && isTypeTuple!(T[$/2 .. $]);
+        enum bool isTypeList = isTypeList!(T[0 .. $/2]) && isTypeList!(T[$/2 .. $]);
     else static if (T.length == 1)
-        enum bool isTypeTuple = is(T[0]);
+        enum bool isTypeList = is(T[0]);
     else
-        enum bool isTypeTuple = true; // default
+        enum bool isTypeList = true; // default
 }
+
+// backwards compatibility alias
+alias isTypeTuple = isTypeList;
 
 ///
 unittest
 {
-    static assert(isTypeTuple!(int, float, string));
-    static assert(!isTypeTuple!(1, 2.0, "a"));
-    static assert(!isTypeTuple!(1, double, string));
+    static assert(isTypeList!(int, float, string));
+    static assert(!isTypeList!(1, 2.0, "a"));
+    static assert(!isTypeList!(1, double, string));
 }
 
 unittest
@@ -5582,15 +5626,15 @@ unittest
     auto c = new C;
     enum CONST = 42;
 
-    static assert( isTypeTuple!int);
-    static assert( isTypeTuple!string);
-    static assert( isTypeTuple!C);
-    static assert( isTypeTuple!(typeof(func)));
-    static assert( isTypeTuple!(int, char, double));
+    static assert( isTypeList!int);
+    static assert( isTypeList!string);
+    static assert( isTypeList!C);
+    static assert( isTypeList!(typeof(func)));
+    static assert( isTypeList!(int, char, double));
 
-    static assert(!isTypeTuple!c);
-    static assert(!isTypeTuple!isTypeTuple);
-    static assert(!isTypeTuple!CONST);
+    static assert(!isTypeList!c);
+    static assert(!isTypeList!isTypeList);
+    static assert(!isTypeList!CONST);
 }
 
 
