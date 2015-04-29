@@ -254,7 +254,7 @@ private template isSafeTask(F)
         (functionAttributes!F & (FunctionAttribute.safe | FunctionAttribute.trusted)) != 0 &&
         (functionAttributes!F & FunctionAttribute.ref_) == 0 &&
         (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
-        std.meta.algorithm.all!(noUnsharedAliasing, ParameterTypeTuple!F);
+        std.meta.algorithm.all!(noUnsharedAliasing, ParameterTypes!F);
 }
 
 unittest
@@ -2342,9 +2342,9 @@ public:
     */
     auto asyncBuf(C1, C2)(C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
     if(is(typeof(C2.init()) : bool) &&
-        ParameterTypeTuple!C1.length == 1 &&
-        ParameterTypeTuple!C2.length == 0 &&
-        isArray!(ParameterTypeTuple!C1[0])
+        ParameterTypes!C1.length == 1 &&
+        ParameterTypes!C2.length == 0 &&
+        isArray!(ParameterTypes!C1[0])
     ) {
         auto roundRobin = RoundRobinBuffer!(C1, C2)(next, empty, initialBufSize, nBuffers);
         return asyncBuf(roundRobin, nBuffers / 2);
@@ -3492,7 +3492,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
         {
             foreach(ref ElementType!R elem; range)
             {
-                static if(ParameterTypeTuple!dg.length == 2)
+                static if(ParameterTypes!dg.length == 2)
                 {
                     res = dg(index, elem);
                 }
@@ -3508,7 +3508,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
         {
             foreach(ElementType!R elem; range)
             {
-                static if(ParameterTypeTuple!dg.length == 2)
+                static if(ParameterTypes!dg.length == 2)
                 {
                     res = dg(index, elem);
                 }
@@ -3532,7 +3532,7 @@ private enum string parallelApplyMixinRandomAccess = q{
     }
 
     // Whether iteration is with or without an index variable.
-    enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
+    enum withIndex = ParameterTypes!(typeof(dg)).length == 2;
 
     shared size_t workUnitIndex = size_t.max;  // Effectively -1:  chunkIndex + 1 == 0
     immutable len = range.length;
@@ -3587,7 +3587,7 @@ enum string parallelApplyMixinInputRange = q{
     }
 
     // Whether iteration is with or without an index variable.
-    enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
+    enum withIndex = ParameterTypes!(typeof(dg)).length == 2;
 
     // This protects the range while copying it.
     auto rangeMutex = new Mutex();
@@ -3844,7 +3844,7 @@ private struct RoundRobinBuffer(C1, C2)
 {
     // No need for constraints because they're already checked for in asyncBuf.
 
-    alias Array = ParameterTypeTuple!(C1.init)[0];
+    alias Array = ParameterTypes!(C1.init)[0];
     alias T = typeof(Array.init[0]);
 
     T[][] bufs;

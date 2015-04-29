@@ -2067,8 +2067,8 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
                               Tuple!(wchar, ushort),
                               Tuple!(dchar, uint  )))
     {
-        alias Char = FieldTypeTuple!Type[0];
-        alias Int  = FieldTypeTuple!Type[1];
+        alias Char = FieldTypes!Type[0];
+        alias Int  = FieldTypes!Type[1];
         enum immutable(Char)[] hello = "hello";
 
         test!(   immutable Char,    immutable Int)(hello);

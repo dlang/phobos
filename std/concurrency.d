@@ -150,7 +150,7 @@ private
 
         auto map(Op)( Op op )
         {
-            alias Args = ParameterTypeTuple!(Op);
+            alias Args = ParameterTypes!(Op);
 
             static if( Args.length == 1 )
             {
@@ -171,7 +171,7 @@ private
         foreach( i, t1; T )
         {
             static assert( isFunctionPointer!t1 || isDelegate!t1 );
-            alias a1 = ParameterTypeTuple!(t1);
+            alias a1 = ParameterTypes!(t1);
             alias r1 = ReturnType!(t1);
 
             static if( i < T.length - 1 && is( r1 == void ) )
@@ -183,7 +183,7 @@ private
                 foreach( t2; T[i+1 .. $] )
                 {
                     static assert( isFunctionPointer!t2 || isDelegate!t2 );
-                    alias a2 = ParameterTypeTuple!(t2);
+                    alias a2 = ParameterTypes!(t2);
 
                     static assert( !is( a1 == a2 ),
                                    "function with arguments " ~ a1.stringof ~
@@ -397,8 +397,8 @@ private template isSpawnable(F, T...)
 {
     template isParamsImplicitlyConvertible(F1, F2, int i=0)
     {
-        alias param1 = ParameterTypeTuple!F1;
-        alias param2 = ParameterTypeTuple!F2;
+        alias param1 = ParameterTypes!F1;
+        alias param2 = ParameterTypes!F2;
         static if (param1.length != param2.length)
             enum isParamsImplicitlyConvertible = false;
         else static if (param1.length == i)
@@ -1920,7 +1920,7 @@ private
             {
                 foreach( i, t; Ops )
                 {
-                    alias Args = ParameterTypeTuple!(t);
+                    alias Args = ParameterTypes!(t);
                     auto  op   = ops[i];
 
                     if( msg.convertsTo!(Args) )

@@ -410,7 +410,7 @@ for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
 motivated by the ability to use value `Tuple`s with various compile-time
-loop constructs (e.g. $(XREF typetuple, MetaList) iteration), all of which use
+loop constructs (e.g. $(XREF meta.list, MetaList) iteration), all of which use
 zero-based indexing.
 
 Params:
@@ -1909,13 +1909,13 @@ Returns:
     {
         return _isNull;
     }
-    
+
 ///
 unittest
 {
     Nullable!int ni;
     assert(ni.isNull);
-    
+
     ni = 0;
     assert(!ni.isNull);
 }
@@ -1928,13 +1928,13 @@ Forces $(D this) to the null state.
         .destroy(_value);
         _isNull = true;
     }
-    
+
 ///
 unittest
 {
     Nullable!int ni = 0;
     assert(!ni.isNull);
-    
+
     ni.nullify();
     assert(ni.isNull);
 }
@@ -1956,7 +1956,7 @@ Params:
     If this `Nullable` wraps a type that already has a null value
     (such as a pointer), then assigning the null value to this
     `Nullable` is no different than assigning any other value of
-    type `T`, and the resulting code will look very strange. It 
+    type `T`, and the resulting code will look very strange. It
     is strongly recommended that this be avoided by instead using
     the version of `Nullable` that takes an additional `nullValue`
     template argument.
@@ -1966,7 +1966,7 @@ unittest
     //Passes
     Nullable!(int*) npi;
     assert(npi.isNull);
-    
+
     //Passes?!
     npi = null;
     assert(!npi.isNull);
@@ -1985,17 +1985,17 @@ Returns:
         assert(!isNull, message);
         return _value;
     }
-    
+
 ///
 unittest
 {
     import std.exception: assertThrown, assertNotThrown;
-    
+
     Nullable!int ni;
-    //`get` is implicitly called. Will throw 
+    //`get` is implicitly called. Will throw
     //an AssertError in non-release mode
     assertThrown!Throwable(ni == 0);
-    
+
     ni = 0;
     assertNotThrown!Throwable(ni == 0);
 }
@@ -2016,21 +2016,21 @@ unittest
         string address;
         int customerNum;
     }
-    
+
     Nullable!CustomerRecord getByName(string name)
     {
         //A bunch of hairy stuff
-        
+
         return Nullable!CustomerRecord.init;
     }
-    
+
     auto queryResult = getByName("Doe, John");
     if (!queryResult.isNull)
     {
         //Process Mr. Doe's customer record
         auto address = queryResult.address;
         auto customerNum = queryResult.customerNum;
-        
+
         //Do some things with this customer's info
     }
     else
@@ -2320,7 +2320,7 @@ Nullable!T) because it does not need to store an extra $(D bool).
 
 Params:
     T = The wrapped type for which Nullable provides a null value.
-    
+
     nullValue = The null value which denotes the null state of this
                 `Nullable`. Must be of type `T`.
  */
@@ -2375,14 +2375,14 @@ Returns:
             return _value == nullValue;
         }
     }
-    
+
 ///
 unittest
 {
     Nullable!(int, -1) ni;
     //Initialized to "null" state
     assert(ni.isNull);
-    
+
     ni = 0;
     assert(!ni.isNull);
 }
@@ -2394,20 +2394,20 @@ Forces $(D this) to the null state.
     {
         _value = nullValue;
     }
-    
+
 ///
 unittest
 {
     Nullable!(int, -1) ni = 0;
     assert(!ni.isNull);
-    
+
     ni = -1;
     assert(ni.isNull);
 }
 
 /**
 Assigns $(D value) to the internally-held state. If the assignment
-succeeds, $(D this) becomes non-null. No null checks are made. Note 
+succeeds, $(D this) becomes non-null. No null checks are made. Note
 that the assignment may leave $(D this) in the null state.
 
 Params:
@@ -2419,13 +2419,13 @@ Params:
     {
         _value = value;
     }
-    
+
 /**
     If this `Nullable` wraps a type that already has a null value
     (such as a pointer), and that null value is not given for
-    `nullValue`, then assigning the null value to this `Nullable` 
-    is no different than assigning any other value of type `T`, 
-    and the resulting code will look very strange. It is strongly 
+    `nullValue`, then assigning the null value to this `Nullable`
+    is no different than assigning any other value of type `T`,
+    and the resulting code will look very strange. It is strongly
     recommended that this be avoided by using `T`'s "built in"
     null value for `nullValue`.
  */
@@ -2435,7 +2435,7 @@ unittest
     enum nullVal = cast(int*)0xCAFEBABE;
     Nullable!(int*, nullVal) npi;
     assert(npi.isNull);
-    
+
     //Passes?!
     npi = null;
     assert(!npi.isNull);
@@ -2456,17 +2456,17 @@ Returns:
         assert(!isNull, message);
         return _value;
     }
-    
+
 ///
 unittest
 {
     import std.exception: assertThrown, assertNotThrown;
-    
+
     Nullable!(int, -1) ni;
-    //`get` is implicitly called. Will throw 
+    //`get` is implicitly called. Will throw
     //an error in non-release mode
     assertThrown!Throwable(ni == 0);
-    
+
     ni = 0;
     assertNotThrown!Throwable(ni == 0);
 }
@@ -2484,14 +2484,14 @@ unittest
     Nullable!(size_t, size_t.max) indexOf(string[] haystack, string needle)
     {
         //Find the needle, returning -1 if not found
-        
+
         return Nullable!(size_t, size_t.max).init;
     }
-    
+
     void sendLunchInvite(string name)
     {
     }
-    
+
     //It's safer than C...
     auto coworkers = ["Jane", "Jim", "Marry", "Fred"];
     auto pos = indexOf(coworkers, "Bob");
@@ -2504,7 +2504,7 @@ unittest
     {
         //Bob not found; report the error
     }
-    
+
     //And there's no overhead
     static assert(Nullable!(size_t, size_t.max).sizeof == size_t.sizeof);
 }
@@ -2683,13 +2683,13 @@ Params:
     {
         _value = value;
     }
-    
+
     ///
     unittest
     {
         NullableRef!int nr = new int(42);
         assert(nr == 42);
-        
+
         int* n = new int(1);
         nr.bind(n);
         assert(nr == 1);
@@ -2705,13 +2705,13 @@ Returns:
     {
         return _value is null;
     }
-    
+
     ///
     unittest
     {
         NullableRef!int nr;
         assert(nr.isNull);
-        
+
         int* n = new int(42);
         nr.bind(n);
         assert(!nr.isNull && nr == 42);
@@ -2724,13 +2724,13 @@ Forces $(D this) to the null state.
     {
         _value = null;
     }
-    
+
     ///
     unittest
     {
         NullableRef!int nr = new int(42);
         assert(!nr.isNull);
-        
+
         nr.nullify();
         assert(nr.isNull);
     }
@@ -2751,16 +2751,16 @@ Params:
         assert(!isNull, message);
         *_value = value;
     }
-    
+
     ///
     unittest
     {
         import std.exception: assertThrown, assertNotThrown;
-        
+
         NullableRef!int nr;
         assert(nr.isNull);
         assertThrown!Throwable(nr = 42);
-        
+
         nr.bind(new int(0));
         assert(!nr.isNull);
         assertNotThrown!Throwable(nr = 42);
@@ -2777,17 +2777,17 @@ This function is also called for the implicit conversion to $(D T).
         assert(!isNull, message);
         return *_value;
     }
-    
+
     ///
     unittest
     {
         import std.exception: assertThrown, assertNotThrown;
-        
+
         NullableRef!int nr;
-        //`get` is implicitly called. Will throw 
+        //`get` is implicitly called. Will throw
         //an error in non-release mode
         assertThrown!Throwable(nr == 0);
-        
+
         nr.bind(new int(0));
         assertNotThrown!Throwable(nr == 0);
     }
@@ -3021,8 +3021,8 @@ unittest
 
 /**
 $(D WhiteHole!Base) is a subclass of $(D Base) which automatically implements
-all abstract member functions as functions that always fail. These functions 
-simply throw an $(D Error) and never return. `Whitehole` is useful for 
+all abstract member functions as functions that always fail. These functions
+simply throw an $(D Error) and never return. `Whitehole` is useful for
 trapping the use of class member functions that haven't been implemented.
 
 The name came from
@@ -3203,7 +3203,7 @@ private static:
             import std.meta : Filter;
             static if (names.length > 0)
             {
-                alias methods = Filter!(pred, MemberFunctionsTuple!(C, names[0]));
+                alias methods = Filter!(pred, MemberFunctions!(C, names[0]));
                 alias next = Impl!(names[1 .. $]);
 
                 static if (methods.length > 0)
@@ -3498,13 +3498,13 @@ Used by MemberFunctionGenerator.
  */
 package template FuncInfo(alias func, /+[BUG 4217 ?]+/ T = typeof(&func))
 {
-    alias RT =         ReturnType!T;
-    alias PT = ParameterTypeTuple!T;
+    alias RT =     ReturnType!T;
+    alias PT = ParameterTypes!T;
 }
 package template FuncInfo(Func)
 {
-    alias RT =         ReturnType!Func;
-    alias PT = ParameterTypeTuple!Func;
+    alias RT =     ReturnType!Func;
+    alias PT = ParameterTypes!Func;
 }
 
 /*
@@ -3700,7 +3700,7 @@ private static:
         /*** Function Body ***/
         code ~= "{\n";
         {
-            enum nparams = ParameterTypeTuple!(func).length;
+            enum nparams = ParameterTypes!(func).length;
 
             /* Declare keywords: args, self and parent. */
             string preamble;
@@ -3737,7 +3737,7 @@ private static:
     private GenParams generateParameters(string myFuncInfo, func...)()
     {
         alias STC = ParameterStorageClass;
-        alias stcs = ParameterStorageClassTuple!(func);
+        alias stcs = ParameterStorageClasses!(func);
         enum nparams = stcs.length;
 
         string imports = ""; // any imports required
@@ -4032,7 +4032,7 @@ if (Targets.length >= 1 && std.meta.algorithm.all!(isMutable, Targets))
                 enum n = to!string(i);
                 static if (fa & FunctionAttribute.property)
                 {
-                    static if (ParameterTypeTuple!(TargetMembers[i].type).length == 0)
+                    static if (ParameterTypes!(TargetMembers[i].type).length == 0)
                         enum fbody = "_wrap_source."~name;
                     else
                         enum fbody = "_wrap_source."~name~" = forward!args";
@@ -4043,7 +4043,7 @@ if (Targets.length >= 1 && std.meta.algorithm.all!(isMutable, Targets))
                 }
                 enum generateFun =
                     "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
-                    ~ name~"(ParameterTypeTuple!(TargetMembers["~n~"].type) args) "~mod~
+                    ~ name~"(ParameterTypes!(TargetMembers["~n~"].type) args) "~mod~
                     "{ return "~fbody~"; }";
             }
 
@@ -4340,7 +4340,7 @@ private template findCovariantFunction(alias finfo, Source, Fs...)
     enum x = check!();
     static if (x == -1 && is(typeof(Source.opDispatch)))
     {
-        alias Params = ParameterTypeTuple!(finfo.type);
+        alias Params = ParameterTypes!(finfo.type);
         enum ptrdiff_t findCovariantFunction =
             is(typeof((             Source).init.opDispatch!(finfo.name)(Params.init))) ||
             is(typeof((       const Source).init.opDispatch!(finfo.name)(Params.init))) ||
@@ -4452,8 +4452,8 @@ private template DerivedFunctionType(T...)
     {
         alias FA = FunctionAttribute;
 
-        alias F0 = T[0], R0 = ReturnType!F0, PSTC0 = ParameterStorageClassTuple!F0;
-        alias F1 = T[1], R1 = ReturnType!F1, PSTC1 = ParameterStorageClassTuple!F1;
+        alias F0 = T[0], R0 = ReturnType!F0, PSTC0 = ParameterStorageClasses!F0;
+        alias F1 = T[1], R1 = ReturnType!F1, PSTC1 = ParameterStorageClasses!F1;
         enum FA0 = functionAttributes!F0;
         enum FA1 = functionAttributes!F1;
 

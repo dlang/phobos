@@ -90,7 +90,7 @@ uint among(alias pred = (a, b) => a == b, Value, Values...)
 
 /// Ditto
 template among(values...)
-    if (isExpressionTuple!values)
+    if (isExpressionList!values)
 {
     uint among(Value)(Value value)
         if (!is(CommonType!(Value, values) == void))
@@ -169,8 +169,8 @@ efficient search, but one that only supports matching on equality:
 // in a tuple.
 private template indexOfFirstOvershadowingChoiceOnLast(choices...)
 {
-    alias firstParameterTypes = ParameterTypeTuple!(choices[0]);
-    alias lastParameterTypes = ParameterTypeTuple!(choices[$ - 1]);
+    alias firstParameterTypes = ParameterTypes!(choices[0]);
+    alias lastParameterTypes = ParameterTypes!(choices[$ - 1]);
 
     static if (lastParameterTypes.length == 0)
     {
@@ -254,7 +254,7 @@ auto castSwitch(choices...)(Object switchObject)
             static assert(isCallable!choice,
                     "A choice handler must be callable");
 
-            alias choiceParameterTypes = ParameterTypeTuple!choice;
+            alias choiceParameterTypes = ParameterTypes!choice;
             static assert(choiceParameterTypes.length <= 1,
                     "A choice handler can not have more than one argument.");
 
@@ -270,7 +270,7 @@ auto castSwitch(choices...)(Object switchObject)
                 static assert(indexOfOvershadowingChoice == index,
                         "choice number %d(type %s) is overshadowed by choice number %d(type %s)".format(
                             index + 1, CastClass.stringof, indexOfOvershadowingChoice + 1,
-                            ParameterTypeTuple!(choices[indexOfOvershadowingChoice])[0].stringof));
+                            ParameterTypes!(choices[indexOfOvershadowingChoice])[0].stringof));
 
                 if (classInfo == typeid(CastClass))
                 {
@@ -297,7 +297,7 @@ auto castSwitch(choices...)(Object switchObject)
         // Checking for derived matches:
         foreach (choice; choices)
         {
-            alias choiceParameterTypes = ParameterTypeTuple!choice;
+            alias choiceParameterTypes = ParameterTypes!choice;
             static if (choiceParameterTypes.length == 1)
             {
                 if (auto castedObject = cast(choiceParameterTypes[0]) switchObject)
@@ -327,7 +327,7 @@ auto castSwitch(choices...)(Object switchObject)
         // Checking for null matches:
         foreach (index, choice; choices)
         {
-            static if (ParameterTypeTuple!(choice).length == 0)
+            static if (ParameterTypes!(choice).length == 0)
             {
                 immutable indexOfOvershadowingChoice =
                     indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);

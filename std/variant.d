@@ -517,7 +517,7 @@ private:
             }
             else
             {
-                alias ParamTypes = ParameterTypeTuple!A;
+                alias ParamTypes = ParameterTypes!A;
                 auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
                 // To assign the tuple we need to use the unqualified version,
@@ -1197,7 +1197,7 @@ public:
      */
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
     {
-        alias A = ParameterTypeTuple!(Delegate)[0];
+        alias A = ParameterTypes!(Delegate)[0];
         if (type == typeid(A[]))
         {
             auto arr = get!(A[]);
@@ -2207,7 +2207,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                 // Handle normal function objects
                 static if (isSomeFunction!dg)
                 {
-                    alias Params = ParameterTypeTuple!dg;
+                    alias Params = ParameterTypes!dg;
                     static if (Params.length == 0)
                     {
                         // Just check exception functions in the first

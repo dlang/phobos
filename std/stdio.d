@@ -2595,12 +2595,12 @@ $(D Range) that locks the file and allows fast writing to it.
         /// ditto
         void put(C)(C c) @safe if (is(C : const(dchar)))
         {
-            import std.traits : ParameterTypeTuple;
+            import std.traits : ParameterTypes;
             static auto trustedFPUTC(int ch, _iobuf* h) @trusted
             {
                 return FPUTC(ch, h);
             }
-            static auto trustedFPUTWC(ParameterTypeTuple!FPUTWC[0] ch, _iobuf* h) @trusted
+            static auto trustedFPUTWC(ParameterTypes!FPUTWC[0] ch, _iobuf* h) @trusted
             {
                 return FPUTWC(ch, h);
             }
@@ -3656,8 +3656,8 @@ struct lines
 //             if (fileName.length && fclose(f))
 //                 StdioException("Could not close file `"~fileName~"'");
 //         }
-        import std.traits : ParameterTypeTuple;
-        alias Parms = ParameterTypeTuple!(dg);
+        import std.traits : ParameterTypes;
+        alias Parms = ParameterTypes!(dg);
         static if (isSomeString!(Parms[$ - 1]))
         {
             enum bool duplicate = is(Parms[$ - 1] == string)
@@ -3702,9 +3702,9 @@ struct lines
     {
         import std.exception : assumeUnique;
         import std.conv : to;
-        import std.traits : ParameterTypeTuple;
+        import std.traits : ParameterTypes;
 
-        alias Parms = ParameterTypeTuple!(dg);
+        alias Parms = ParameterTypes!(dg);
         enum duplicate = is(Parms[$ - 1] : immutable(ubyte)[]);
         int result = 1;
         int c = void;

@@ -896,9 +896,10 @@ unittest
 }
 
 /***
-Get, as a $(D MetaList), the types of the parameters to a function, a pointer
-to function, a delegate, a struct with an $(D opCall), a pointer to a
-struct with an $(D opCall), or a class with an $(D opCall).
+Get, as a $(XREF meta.list, MetaList), the types of the parameters to a
+function, a pointer to function, a delegate, a struct with
+an $(D opCall), a pointer to a struct with an $(D opCall), or a class
+with an $(D opCall).
 */
 template ParameterTypes(func...)
     if (func.length == 1 && isCallable!func)
@@ -965,8 +966,8 @@ unittest {
 }
 
 /**
-Returns a tuple consisting of the storage classes of the parameters of a
-function $(D func).
+Returns a $(XREF meta.list, MetaList) consisting of the storage classes
+off the parameters of a function $(D func).
  */
 enum ParameterStorageClass : uint
 {
@@ -997,7 +998,7 @@ template ParameterStorageClasses(func...)
     // chop off CallConvention and FuncAttrs
     enum margs = demangleFunctionAttributes(mangledName!Func[1 .. $]).rest;
 
-    // demangle Arguments and store parameter storage classes in a tuple
+    // demangle Arguments and store parameter storage classes in a list
     template demangleNextParameter(string margs, size_t i = 0)
     {
         static if (i < Params.length)
@@ -1092,7 +1093,8 @@ unittest
 
 
 /**
-Get, as a tuple, the identifiers of the parameters to a function symbol.
+Get, as a $(XREF meta.list, MetaList), the identifiers of the parameters
+to a function symbol.
  */
 template ParameterIdentifiers(func...)
     if (func.length == 1 && isCallable!func)
@@ -1181,7 +1183,8 @@ unittest
 
 
 /**
-Get, as a tuple, the default value of the parameters to a function symbol.
+Get, as a $(XREF meta.list, MetaList), the default value of the parameters
+to a function symbol.
 If a parameter doesn't have the default value, $(D void) is returned instead.
  */
 template ParameterDefaultValues(func...)
@@ -2170,11 +2173,13 @@ unittest
 
 
 /***
- * Get as a typetuple the types of the fields of a struct, class, or union.
+ * Get as a $(XREF meta.list, MetaList) the types of the fields of a struct,
+ * class, or union.
+ *
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
  * table pointer or a context pointer for nested types.
- * If $(D T) isn't a struct, class, or union returns typetuple
+ * If $(D T) isn't a struct, class, or union returns type list
  * with one element $(D T).
  */
 template FieldTypes(T)
@@ -2224,11 +2229,11 @@ unittest
 private enum NameOf(alias T) = T.stringof;
 
 /**
- * Get as an expression tuple the names of the fields of a struct, class, or
+ * Get as an expression list the names of the fields of a struct, class, or
  * union. This consists of the fields that take up memory space, excluding the
  * hidden fields like the virtual function table pointer or a context pointer
  * for nested types. If $(D T) isn't a struct, class, or union returns an
- * expression tuple with an empty string.
+ * expression list with an empty string.
  */
 template FieldNames(T)
 {
@@ -3340,13 +3345,13 @@ Params:
  E = An enumerated type. $(D E) may have duplicated values.
 
 Returns:
- Static tuple composed of the members of the enumerated type $(D E).
+ Expression list composed of the members of the enumerated type $(D E).
  The members are arranged in the same order as declared in $(D E).
 
 Note:
  An enum can have multiple members which have the same value. If you want
  to use EnumMembers to e.g. generate switch cases at compile-time,
- you should use the $(XREF typetuple, NoDuplicates) template to avoid
+ you should use the $(XREF meta.list, NoDuplicates) template to avoid
  generating duplicate switch cases.
 
 Note:
@@ -3488,7 +3493,7 @@ unittest
 /***
  * Get a $(D_PARAM MetaList) of the base class and base interfaces of
  * this class or interface. $(D_PARAM BaseTypes!Object) returns
- * the empty type tuple.
+ * the empty type list.
  */
 template BaseTypes(A)
 {
@@ -3533,7 +3538,7 @@ unittest
 /**
  * Get a $(D_PARAM MetaList) of $(I all) base classes of this class,
  * in decreasing order. Interfaces are not included. $(D_PARAM
- * BaseClasses!Object) yields the empty type tuple.
+ * BaseClasses!Object) yields the empty type list.
  */
 template BaseClasses(T)
     if (is(T == class))
@@ -3585,7 +3590,7 @@ unittest
  * Get a $(D_PARAM MetaList) of $(I all) interfaces directly or
  * indirectly inherited by this class or interface. Interfaces do not
  * repeat if multiply implemented. $(D_PARAM Interfaces!Object)
- * yields the empty type tuple.
+ * yields the empty type list.
  */
 template Interfaces(T)
 {
@@ -3648,7 +3653,7 @@ unittest
  * Get a $(D_PARAM MetaList) of $(I all) base classes of $(D_PARAM
  * T), in decreasing order, followed by $(D_PARAM T)'s
  * interfaces. $(D_PARAM TransitiveBaseTypes!Object) yields the
- * empty type tuple.
+ * empty type list.
  */
 template TransitiveBaseTypes(T)
 {
@@ -3683,8 +3688,10 @@ unittest
 
 
 /**
-Returns a tuple of non-static functions with the name $(D name) declared in the
-class or interface $(D C).  Covariant duplicates are shrunk into the most
+Returns a symbol list of non-static functions with the name $(D name)
+declared in the class or interface $(D C).
+
+Covariant duplicates are shrunk into the most
 derived one.
  */
 template MemberFunctions(C, string name)
@@ -3724,7 +3731,7 @@ template MemberFunctions(C, string name)
                 alias MetaList!() CollectOverloads; // no overloads in this hierarchy
         }
 
-        // duplicates in this tuple will be removed by shrink()
+        // duplicates in this list will be removed by shrink()
         alias CollectOverloads!C overloads;
 
         // shrinkOne!args[0]    = the most derived one in the covariant siblings of target
@@ -3884,7 +3891,8 @@ unittest
 
 
 /**
-Returns a $(D MetaList) of the template arguments used to instantiate $(D T).
+Returns a $(XREF meta.list, MetaList) of the template arguments used
+to instantiate $(D T).
  */
 template TemplateArgsOf(alias T : Base!Args, alias Base, Args...)
 {
@@ -4017,7 +4025,7 @@ unittest
 
 
 /**
- * Returns a tuple with all possible target types of an implicit
+ * Returns a type list with all possible target types of an implicit
  * conversion of a value of type $(D_PARAM T).
  *
  * Important note:
@@ -5542,7 +5550,7 @@ unittest
 
 /**
  * Check whether $(D T) is an expression list.
- * An expression list is kind of compile-time list (also $(D MetaList))
+ * An expression list is kind of compile-time list (see $(XREF meta.list, MetaList))
  * that only contains expressions.
  *
  * See_Also: $(LREF isTypeList).
@@ -5593,7 +5601,7 @@ unittest
 
 /**
  * Check whether $(D T) is a type list.
- * A type list is kind of compile-time list (also $(D MetaList))
+ * A type list is kind of compile-time list (see $(XREF meta.list, MetaList))
  * that only contains types.
  *
  * See_Also: $(LREF isExpressionList).

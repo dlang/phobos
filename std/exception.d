@@ -1214,7 +1214,7 @@ unittest
     //To check the class payload itself, iterate on its members:
     ()
     {
-        foreach (index, _; FieldTypeTuple!C)
+        foreach (index, _; FieldTypes!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;
         assert(0);
