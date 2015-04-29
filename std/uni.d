@@ -8311,7 +8311,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str
  *      $(LREF toUpper), $(LREF toLower)
  */
 
-auto toLowerCase(Range)(Range str)
+auto lowerCaser(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
@@ -8328,7 +8328,7 @@ auto toLowerCase(Range)(Range str)
 }
 
 /// ditto
-auto toUpperCase(Range)(Range str)
+auto upperCaser(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
@@ -8349,14 +8349,14 @@ auto toUpperCase(Range)(Range str)
 {
     import std.algorithm: equal;
 
-    assert("hEllo".toUpperCase.equal("HELLO"));
+    assert("hEllo".upperCaser.equal("HELLO"));
 }
 
 unittest
 {
     import std.array;
 
-    auto a = "HELLo".toLowerCase;
+    auto a = "HELLo".lowerCaser;
     auto savea = a.save;
     auto s = a.array;
     assert(s == "hello");
@@ -8370,26 +8370,26 @@ unittest
     {
         import std.utf : byChar;
 
-        auto sx = slwr.toUpperCase.byChar.array;
+        auto sx = slwr.upperCaser.byChar.array;
         assert(sx == toUpper(slwr));
-        auto sy = upper[i].toLowerCase.byChar.array;
+        auto sy = upper[i].lowerCaser.byChar.array;
         assert(sy == toLower(upper[i]));
     }
 
     // Not necessary to call r.front
-    for (auto r = lower[3].toUpperCase; !r.empty; r.popFront())
+    for (auto r = lower[3].upperCaser; !r.empty; r.popFront())
     {
     }
 
     import std.algorithm : equal;
 
-    "HELLo"w.toLowerCase.equal("hello"d);
-    "HELLo"w.toUpperCase.equal("HELLO"d);
-    "HELLo"d.toLowerCase.equal("hello"d);
-    "HELLo"d.toUpperCase.equal("HELLO"d);
+    "HELLo"w.lowerCaser.equal("hello"d);
+    "HELLo"w.upperCaser.equal("HELLO"d);
+    "HELLo"d.lowerCaser.equal("hello"d);
+    "HELLo"d.upperCaser.equal("HELLO"d);
 
     import std.utf : byChar;
-    assert(toLower("\u1Fe2") == toLowerCase("\u1Fe2").byChar.array);
+    assert(toLower("\u1Fe2") == lowerCaser("\u1Fe2").byChar.array);
 }
 
 import std.stdio;
@@ -8456,7 +8456,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
                 if (!nLeft)
                 {
                     r.popFront();
-                    lwr = r.toLowerCase();
+                    lwr = r.lowerCaser();
                     lower = true;
                 }
             }
@@ -8475,7 +8475,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
 
       private:
         Range r;
-        typeof(r.toLowerCase) lwr; // range representing the lower case rest of string
+        typeof(r.lowerCaser) lwr; // range representing the lower case rest of string
         bool lower = false;     // false for first character, true for rest of string
         dchar[3] buf = void;
         uint nLeft = 0;
@@ -8500,10 +8500,10 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
  *
  * See_Also:
  *      $(LREF toUpper), $(LREF toLower)
- *      $(LREF toUpperCase), $(LREF toLowerCase)
+ *      $(LREF upperCaser), $(LREF lowerCaser)
  */
 
-auto toCapitalized(Range)(Range str)
+auto capitalizer(Range)(Range str)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
@@ -8524,12 +8524,12 @@ auto toCapitalized(Range)(Range str)
 {
     import std.algorithm: equal;
 
-    assert("hEllo".toCapitalized.equal("Hello"));
+    assert("hEllo".capitalizer.equal("Hello"));
 }
 
 @safe pure nothrow @nogc unittest
 {
-    auto r = "hEllo".toCapitalized();
+    auto r = "hEllo".capitalizer();
     assert(r.front == 'H');
 }
 
@@ -8537,7 +8537,7 @@ unittest
 {
     import std.array;
 
-    auto a = "hELLo".toCapitalized;
+    auto a = "hELLo".capitalizer;
     auto savea = a.save;
     auto s = a.array;
     assert(s == "Hello");
@@ -8560,25 +8560,25 @@ unittest
     {
         import std.utf : byChar;
 
-        auto r = cases[i][0].toCapitalized.byChar.array;
+        auto r = cases[i][0].capitalizer.byChar.array;
         auto result = cases[i][1];
         assert(r == result);
     }
 
     // Don't call r.front
-    for (auto r = "\u1Fe2".toCapitalized; !r.empty; r.popFront())
+    for (auto r = "\u1Fe2".capitalizer; !r.empty; r.popFront())
     {
     }
 
     import std.algorithm : equal;
 
-    "HELLo"w.toCapitalized.equal("Hello"d);
-    "hElLO"w.toCapitalized.equal("Hello"d);
-    "hello"d.toCapitalized.equal("Hello"d);
-    "HELLO"d.toCapitalized.equal("Hello"d);
+    "HELLo"w.capitalizer.equal("Hello"d);
+    "hElLO"w.capitalizer.equal("Hello"d);
+    "hello"d.capitalizer.equal("Hello"d);
+    "HELLO"d.capitalizer.equal("Hello"d);
 
     import std.utf : byChar;
-    assert(toCapitalized("\u0130").byChar.array == toUpperCase("\u0130").byChar.array);
+    assert(capitalizer("\u0130").byChar.array == upperCaser("\u0130").byChar.array);
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
