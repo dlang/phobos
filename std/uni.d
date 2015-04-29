@@ -844,7 +844,7 @@ struct MultiArray(Types...)
 
     template length(size_t n)
     {
-        @property size_t length()const{ return sz[n]; }
+        @property size_t length()const @safe pure nothrow @nogc{ return sz[n]; }
 
         @property void length(size_t new_size)
         {
