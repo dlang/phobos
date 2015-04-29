@@ -499,8 +499,7 @@ struct Option {
     string optShort; /// The short symbol for this option
     string optLong; /// The long symbol for this option
     string help; /// The description of this option
-    bool required; /// If a option is required, not passing it will result in
-                   /// an error.
+    bool required; /// If a option is required, not passing it will result in an error
 }
 
 private pure Option splitAndGet(string opt) @trusted nothrow
