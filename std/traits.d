@@ -5322,6 +5322,25 @@ unittest
  */
 enum bool isBuiltinType(T) = is(BuiltinTypeOf!T) && !isAggregateType!T;
 
+///
+unittest
+{
+    class C;
+    union U;
+    struct S;
+    interface I;
+
+    static assert( isBuiltinType!void);
+    static assert( isBuiltinType!string);
+    static assert( isBuiltinType!(int[]));
+    static assert( isBuiltinType!(C[string]));
+    static assert(!isBuiltinType!C);
+    static assert(!isBuiltinType!U);
+    static assert(!isBuiltinType!S);
+    static assert(!isBuiltinType!I);
+    static assert(!isBuiltinType!(void delegate(int)));
+}
+
 /**
  * Detect whether type $(D T) is a SIMD vector type.
  */
@@ -5386,6 +5405,25 @@ unittest
  */
 enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
                                is(T == class) || is(T == interface);
+
+///
+unittest
+{
+    class C;
+    union U;
+    struct S;
+    interface I;
+
+    static assert( isAggregateType!C);
+    static assert( isAggregateType!U);
+    static assert( isAggregateType!S);
+    static assert( isAggregateType!I);
+    static assert(!isAggregateType!void);
+    static assert(!isAggregateType!string);
+    static assert(!isAggregateType!(int[]));
+    static assert(!isAggregateType!(C[string]));
+    static assert(!isAggregateType!(void delegate(int)));
+}
 
 /**
  * Returns $(D true) if T can be iterated over using a $(D foreach) loop with
