@@ -716,16 +716,12 @@ public:
             throw new FormatException("Format specifier not understood: %" ~ f.spec);
 
         char[] buff =
-            hex ? data.toHexString(0, '_', 0, f.flZero ? '0' : ' ')
-                : data.toDecimalString(0);
+            f.spec == 'X' ?
+                data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.upper) :
+            f.spec == 'x' ?
+                data.toHexString(0, '_', 0, f.flZero ? '0' : ' ', LetterCase.lower) :
+                data.toDecimalString(0);
         assert(buff.length > 0);
-
-        if (f.spec == 'x')
-        {
-            import std.uni : toLowerInPlace;
-
-            toLowerInPlace(buff);
-        }
 
         char signChar = isNegative() ? '-' : 0;
         auto minw = buff.length + (signChar ? 1 : 0);
