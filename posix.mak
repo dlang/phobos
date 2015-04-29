@@ -380,9 +380,15 @@ moduleName=$(subst /,.,$(1))
 unittest/%.run : $(ROOT)/unittest/test_runner
 	$(QUIET)$(RUN) $< $(call moduleName,$*)
 
-# target for quickly running a single unittest (using static phobos library)
+# Target for quickly running a single unittest (using static phobos library).
+# For example: "make std/algorithm/mutation.test"
 %.test : %.d $(LIB)
-	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -run $<
+	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -cov -run $<
+
+# Target for quickly unittesting all modules and packages within a package,
+# transitively. For example: "make std/algorithm.test"
+%.test : $(LIB)
+	$(MAKE) $(addsuffix .test,$(patsubst %.d,%,$(wildcard $*/*)))
 
 ################################################################################
 # More stuff
