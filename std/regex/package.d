@@ -237,7 +237,7 @@
     API and utility constructs are modeled after the original $(D std.regex)
   by Walter Bright and Andrei Alexandrescu.
 
-  Source: $(PHOBOSSRC std/_regex.d)
+  Source: $(PHOBOSSRC std/regex/_package.d)
 
 Macros:
     REG_ROW = $(TR $(TD $(I $1 )) $(TD $+) )

@@ -99,7 +99,7 @@ $(BOOKTABLE ,
     ))
 )
 
-Source: $(PHOBOSSRC std/range/_constraints.d)
+Source: $(PHOBOSSRC std/range/_primitives.d)
 
 Macros:
 
