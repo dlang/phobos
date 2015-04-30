@@ -2509,19 +2509,15 @@ version( unittest )
 // initOnce
 //////////////////////////////////////////////////////////////////////////////
 
-private template initOnceLock()
+private @property Mutex initOnceLock()
 {
     __gshared Mutex lock;
-
-    shared static this()
-    {
-        lock = new Mutex;
-    }
-
-    @property Mutex initOnceLock()
-    {
-        return lock;
-    }
+    if (auto mtx = atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
+        return mtx;
+    auto mtx = new Mutex;
+    if (cas(cast(shared)&lock, cast(shared)null, cast(shared)mtx))
+        return mtx;
+    return atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
 }
 
 /**
