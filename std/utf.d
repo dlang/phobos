@@ -2147,10 +2147,8 @@ string toUTF8(in char[] s) @safe
 }
 
 /// ditto
-string toUTF8(in wchar[] s) @trusted
+string toUTF8(in wchar[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     char[] r;
     size_t i;
     size_t slen = s.length;
@@ -2171,14 +2169,12 @@ string toUTF8(in wchar[] s) @trusted
         }
     }
 
-    return r.assumeUnique();
+    return r;
 }
 
 /// ditto
-string toUTF8(in dchar[] s) @trusted
+string toUTF8(in dchar[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     char[] r;
     size_t i;
     size_t slen = s.length;
@@ -2201,7 +2197,7 @@ string toUTF8(in dchar[] s) @trusted
         }
     }
 
-    return r.assumeUnique();
+    return r;
 }
 
 
@@ -2230,10 +2226,8 @@ body
 /****************
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
-wstring toUTF16(in char[] s) @trusted
+wstring toUTF16(in char[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     wchar[] r;
     size_t slen = s.length;
 
@@ -2254,7 +2248,7 @@ wstring toUTF16(in char[] s) @trusted
         }
     }
 
-    return r.assumeUnique();  // ok because r is unique
+    return r;
 }
 
 /// ditto
@@ -2265,10 +2259,8 @@ wstring toUTF16(in wchar[] s) @safe
 }
 
 /// ditto
-pure wstring toUTF16(in dchar[] s) @trusted
+wstring toUTF16(in dchar[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     wchar[] r;
     size_t slen = s.length;
 
@@ -2279,7 +2271,7 @@ pure wstring toUTF16(in dchar[] s) @trusted
         encode(r, s[i]);
     }
 
-    return r.assumeUnique();  // ok because r is unique
+    return r;
 }
 
 
@@ -2288,10 +2280,8 @@ pure wstring toUTF16(in dchar[] s) @trusted
 /*****
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-dstring toUTF32(in char[] s) @trusted
+dstring toUTF32(in char[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     dchar[] r;
     size_t slen = s.length;
     size_t j = 0;
@@ -2307,14 +2297,12 @@ dstring toUTF32(in char[] s) @trusted
         r[j++] = c;
     }
 
-    return r[0 .. j].assumeUnique(); // legit because it's unique
+    return r[0 .. j];
 }
 
 /// ditto
-dstring toUTF32(in wchar[] s) @trusted
+dstring toUTF32(in wchar[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     dchar[] r;
     size_t slen = s.length;
     size_t j = 0;
@@ -2330,7 +2318,7 @@ dstring toUTF32(in wchar[] s) @trusted
         r[j++] = c;
     }
 
-    return r[0 .. j].assumeUnique();  // legit because it's unique
+    return r[0 .. j];
 }
 
 /// ditto
