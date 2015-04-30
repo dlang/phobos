@@ -6460,7 +6460,7 @@ size_t graphemeStride(C)(in C[] input, size_t index)
 }
 
 // for now tested separately see test_grapheme.d
-unittest
+@safe unittest
 {
     assert(graphemeStride("  ", 1) == 1);
     // A + combing ring above
