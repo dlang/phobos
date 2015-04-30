@@ -1628,7 +1628,7 @@ unittest
 /**
 $(RED Deprecated. It's badly named and provides redundant functionality. It was
 also badly broken prior to 2.060 (bug# 8362), so any code which uses it
-probably needs to be changed anyway. Please use $(D std.meta.algorithm.all(isSafe, ...))
+probably needs to be changed anyway. Please use $(D all(isSafe, ...))
 instead. This will be removed in June 2015.)
 
 $(D true) all functions are $(D isSafe).
@@ -1644,7 +1644,7 @@ static assert( areAllSafe!(add, sub));
 static assert(!areAllSafe!(sub, mul));
 -------------
 */
-deprecated("Please use std.meta.algorithm.all(isSafe, ...) instead.")
+deprecated("Please use all(isSafe, ...) instead.")
 template areAllSafe(funcs...)
     if (funcs.length > 0)
 {
@@ -2103,7 +2103,7 @@ template hasNested(T)
         enum hasNested = hasNested!(typeof(T.init[0]));
     else static if(is(T == class) || is(T == struct) || is(T == union))
         enum hasNested = isNested!T ||
-            std.meta.algorithm.any!(.hasNested, FieldTypes!T);
+            any!(.hasNested, FieldTypes!T);
     else
         enum hasNested = false;
 }
@@ -2718,7 +2718,7 @@ template hasAliasing(T...)
                                   && !is(FunctionTypeOf!T == immutable);
         }
         enum hasAliasing = hasRawAliasing!T || hasObjects!T ||
-            std.meta.algorithm.any!(isAliasingDelegate, T, RepresentationTypes!T);
+            any!(isAliasingDelegate, T, RepresentationTypes!T);
     }
 }
 
@@ -2807,7 +2807,7 @@ $(LI an associative array.) $(LI a delegate.))
 template hasIndirections(T)
 {
     static if (is(T == struct) || is(T == union))
-        enum hasIndirections = std.meta.algorithm.any!(.hasIndirections, FieldTypes!T);
+        enum hasIndirections = any!(.hasIndirections, FieldTypes!T);
     else static if (isStaticArray!T && is(T : E[N], E, size_t N))
         enum hasIndirections = is(E == void) ? true : hasIndirections!E;
     else static if (isFunctionPointer!T)
@@ -2940,7 +2940,7 @@ template hasUnsharedAliasing(T...)
 
         enum hasUnsharedAliasing =
             hasRawUnsharedAliasing!(T[0]) ||
-            std.meta.algorithm.any!(unsharedDelegate, RepresentationTypes!(T[0])) ||
+            any!(unsharedDelegate, RepresentationTypes!(T[0])) ||
             hasUnsharedObjects!(T[0]) ||
             hasUnsharedAliasing!(T[1..$]);
     }
@@ -3098,7 +3098,7 @@ template hasElaborateCopyConstructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
-            || std.meta.algorithm.any!(.hasElaborateCopyConstructor, FieldTypes!S);
+            || any!(.hasElaborateCopyConstructor, FieldTypes!S);
     }
     else
     {
@@ -3155,7 +3155,7 @@ template hasElaborateAssign(S)
     {
         enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
                                   is(typeof(S.init.opAssign(lvalueOf!S))) ||
-            std.meta.algorithm.any!(.hasElaborateAssign, FieldTypes!S);
+            any!(.hasElaborateAssign, FieldTypes!S);
     }
     else
     {
@@ -3240,7 +3240,7 @@ template hasElaborateDestructor(S)
     else static if(is(S == struct))
     {
         enum hasElaborateDestructor = hasMember!(S, "__dtor")
-            || std.meta.algorithm.any!(.hasElaborateDestructor, FieldTypes!S);
+            || any!(.hasElaborateDestructor, FieldTypes!S);
     }
     else
     {

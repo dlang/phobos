@@ -581,12 +581,12 @@ public:
 
     /// Allows assignment from a subset algebraic type
     this(T : VariantN!(tsize, Types), size_t tsize, Types...)(T value)
-        if (!is(T : VariantN) && Types.length > 0 && std.meta.algorithm.all!(allowed, Types))
+        if (!is(T : VariantN) && Types.length > 0 && all!(allowed, Types))
     {
         opAssign(value);
     }
 
-    static if (!AllowedTypes.length || std.meta.algorithm.any!(hasElaborateCopyConstructor, AllowedTypes))
+    static if (!AllowedTypes.length || any!(hasElaborateCopyConstructor, AllowedTypes))
     {
         this(this)
         {
@@ -594,7 +594,7 @@ public:
         }
     }
 
-    static if (!AllowedTypes.length || std.meta.algorithm.any!(hasElaborateDestructor, AllowedTypes))
+    static if (!AllowedTypes.length || any!(hasElaborateDestructor, AllowedTypes))
     {
         ~this()
         {
@@ -624,7 +624,7 @@ public:
         }
         else
         {
-            static if (!AllowedTypes.length || std.meta.algorithm.any!(hasElaborateDestructor, AllowedTypes))
+            static if (!AllowedTypes.length || any!(hasElaborateDestructor, AllowedTypes))
             {
                 // Assignment should destruct previous value
                 fptr(OpID.destruct, &store, null);
@@ -667,7 +667,7 @@ public:
 
     // Allow assignment from another variant which is a subset of this one
     VariantN opAssign(T : VariantN!(tsize, Types), size_t tsize, Types...)(T rhs)
-        if (!is(T : VariantN) && Types.length > 0 && std.meta.algorithm.all!(allowed, Types))
+        if (!is(T : VariantN) && Types.length > 0 && all!(allowed, Types))
     {
         // discover which type rhs is actually storing
         foreach (V; T.AllowedTypes)

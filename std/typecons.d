@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import std.traits;
 // FIXME
-import std.meta; // : MetaList, std.meta.algorithm.all;
+import std.meta; // : MetaList, all;
 
 debug(Unique) import std.stdio;
 
@@ -645,7 +645,7 @@ template Tuple(Specs...)
          *              Array slices are not supported.
          */
         this(U, size_t n)(U[n] values)
-        if (n == Types.length && std.meta.algorithm.all!(isBuildableFrom!U, Types))
+        if (n == Types.length && all!(isBuildableFrom!U, Types))
         {
             foreach (i, _; Types)
             {
@@ -3882,7 +3882,7 @@ unittest
  * wrap $(D src) object, then return it.
  */
 template wrap(Targets...)
-if (Targets.length >= 1 && std.meta.algorithm.all!(isMutable, Targets))
+if (Targets.length >= 1 && all!(isMutable, Targets))
 {
     import std.meta : Map;
 
@@ -3895,7 +3895,7 @@ if (Targets.length >= 1 && std.meta.algorithm.all!(isMutable, Targets))
     }
     // structural upcast
     template wrap(Source)
-    if (!std.meta.algorithm.all!(Bind!(isImplicitlyConvertible, Source), Targets))
+    if (!all!(Bind!(isImplicitlyConvertible, Source), Targets))
     {
         auto wrap(inout Source src)
         {
@@ -4055,7 +4055,7 @@ if (Targets.length >= 1 && std.meta.algorithm.all!(isMutable, Targets))
 }
 /// ditto
 template wrap(Targets...)
-if (Targets.length >= 1 && !std.meta.algorithm.all!(isMutable, Targets))
+if (Targets.length >= 1 && !all!(isMutable, Targets))
 {
     import std.meta : Map;
 
@@ -6511,7 +6511,7 @@ public:
     }
 
     this(T...)(T flags)
-        if (std.meta.algorithm.all!(isBaseEnumType, T))
+        if (all!(isBaseEnumType, T))
     {
         this = flags;
     }
@@ -6534,7 +6534,7 @@ public:
     }
 
     auto ref opAssign(T...)(T flags)
-        if (std.meta.algorithm.all!(isBaseEnumType, T))
+        if (all!(isBaseEnumType, T))
     {
         mValue = 0;
         foreach (E flag; flags)

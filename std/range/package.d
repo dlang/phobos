@@ -795,7 +795,7 @@ range's type.
  */
 auto chain(Ranges...)(Ranges rs)
 if (Ranges.length > 0 &&
-    std.meta.algorithm.all!(isInputRange, Map!(Unqual, Ranges)) &&
+    all!(isInputRange, Map!(Unqual, Ranges)) &&
     !is(CommonType!(Map!(ElementType, Map!(Unqual, Ranges))) == void))
 {
     static if (Ranges.length == 1)
@@ -814,7 +814,7 @@ if (Ranges.length > 0 &&
                 enum sameET = is(.ElementType!A == RvalueElementType);
             }
 
-            enum bool allSameType = std.meta.algorithm.all!(sameET, R);
+            enum bool allSameType = all!(sameET, R);
 
 // This doesn't work yet
             static if (allSameType)
@@ -825,7 +825,7 @@ if (Ranges.length > 0 &&
             {
                 alias ElementType = RvalueElementType;
             }
-            static if (allSameType && std.meta.algorithm.all!(hasLvalueElements, R))
+            static if (allSameType && all!(hasLvalueElements, R))
             {
                 static ref RvalueElementType fixRef(ref RvalueElementType val)
                 {
@@ -1237,7 +1237,7 @@ stops after it has consumed all ranges (skipping over the ones that
 finish early).
  */
 auto roundRobin(Rs...)(Rs rs)
-if (Rs.length > 1 && std.meta.algorithm.all!(isInputRange, Map!(Unqual, Rs)))
+if (Rs.length > 1 && all!(isInputRange, Map!(Unqual, Rs)))
 {
     struct Result
     {
@@ -1302,7 +1302,7 @@ if (Rs.length > 1 && std.meta.algorithm.all!(isInputRange, Map!(Unqual, Rs)))
             }
         }
 
-        static if (std.meta.algorithm.all!(isForwardRange, Map!(Unqual, Rs)))
+        static if (all!(isForwardRange, Map!(Unqual, Rs)))
             @property auto save()
             {
                 Result result = this;
@@ -1313,7 +1313,7 @@ if (Rs.length > 1 && std.meta.algorithm.all!(isInputRange, Map!(Unqual, Rs)))
                 return result;
             }
 
-        static if (std.meta.algorithm.all!(hasLength, Rs))
+        static if (all!(hasLength, Rs))
         {
             @property size_t length()
             {
@@ -3049,7 +3049,7 @@ private alias lengthType(R) = typeof(R.init.length.init);
    in parallel:
 */
 struct Zip(Ranges...)
-    if (Ranges.length && std.meta.algorithm.all!(isInputRange, Ranges))
+    if (Ranges.length && all!(isInputRange, Ranges))
 {
     import std.format : format; //for generic mixins
     import std.typecons : Tuple;
@@ -3073,7 +3073,7 @@ struct Zip(Ranges...)
    Returns $(D true) if the range is at end. The test depends on the
    stopping policy.
 */
-    static if (std.meta.algorithm.all!(isInfinite, R))
+    static if (all!(isInfinite, R))
     {
         // BUG:  Doesn't propagate infiniteness if only some ranges are infinite
         //       and s == StoppingPolicy.longest.  This isn't fixable in the
@@ -3113,7 +3113,7 @@ struct Zip(Ranges...)
         }
     }
 
-    static if (std.meta.algorithm.all!(isForwardRange, R))
+    static if (all!(isForwardRange, R))
     {
         @property Zip save()
         {
@@ -3144,7 +3144,7 @@ struct Zip(Ranges...)
 /**
    Sets the front of all iterated ranges.
 */
-    static if (std.meta.algorithm.all!(hasAssignableElements, R))
+    static if (all!(hasAssignableElements, R))
     {
         @property void front(ElementType v)
         {
@@ -3161,7 +3161,7 @@ struct Zip(Ranges...)
 /**
    Moves out the front.
 */
-    static if (std.meta.algorithm.all!(hasMobileElements, R))
+    static if (all!(hasMobileElements, R))
     {
         ElementType moveFront()
         {
@@ -3174,7 +3174,7 @@ struct Zip(Ranges...)
 /**
    Returns the rightmost element.
 */
-    static if (std.meta.algorithm.all!(isBidirectionalRange, R))
+    static if (all!(isBidirectionalRange, R))
     {
         @property ElementType back()
         {
@@ -3188,7 +3188,7 @@ struct Zip(Ranges...)
 /**
    Moves out the back.
 */
-        static if (std.meta.algorithm.all!(hasMobileElements, R))
+        static if (all!(hasMobileElements, R))
         {
             ElementType moveBack()
             {
@@ -3203,7 +3203,7 @@ struct Zip(Ranges...)
 /**
    Returns the current iterated element.
 */
-        static if (std.meta.algorithm.all!(hasAssignableElements, R))
+        static if (all!(hasAssignableElements, R))
         {
             @property void back(ElementType v)
             {
@@ -3256,7 +3256,7 @@ struct Zip(Ranges...)
 /**
    Calls $(D popBack) for all controlled ranges.
 */
-    static if (std.meta.algorithm.all!(isBidirectionalRange, R))
+    static if (all!(isBidirectionalRange, R))
     {
         void popBack()
         {
@@ -3293,7 +3293,7 @@ struct Zip(Ranges...)
    Returns the length of this range. Defined only if all ranges define
    $(D length).
 */
-    static if (std.meta.algorithm.all!(hasLength, R))
+    static if (all!(hasLength, R))
     {
         @property auto length()
         {
@@ -3320,7 +3320,7 @@ struct Zip(Ranges...)
    Returns a slice of the range. Defined only if all range define
    slicing.
 */
-    static if (std.meta.algorithm.all!(hasSlicing, R))
+    static if (all!(hasSlicing, R))
     {
         auto opSlice(size_t from, size_t to)
         {
@@ -3337,7 +3337,7 @@ struct Zip(Ranges...)
    Returns the $(D n)th element in the composite range. Defined if all
    ranges offer random access.
 */
-    static if (std.meta.algorithm.all!(isRandomAccessRange, R))
+    static if (all!(isRandomAccessRange, R))
     {
         ElementType opIndex(size_t n)
         {
@@ -3352,7 +3352,7 @@ struct Zip(Ranges...)
    Assigns to the $(D n)th element in the composite range. Defined if
    all ranges offer random access.
 */
-        static if (std.meta.algorithm.all!(hasAssignableElements, R))
+        static if (all!(hasAssignableElements, R))
         {
             void opIndexAssign(ElementType v, size_t n)
             {
@@ -3368,7 +3368,7 @@ struct Zip(Ranges...)
    Destructively reads the $(D n)th element in the composite
    range. Defined if all ranges offer random access.
 */
-        static if (std.meta.algorithm.all!(hasMobileElements, R))
+        static if (all!(hasMobileElements, R))
         {
             ElementType moveAt(size_t n)
             {
@@ -3384,7 +3384,7 @@ struct Zip(Ranges...)
 
 /// Ditto
 auto zip(Ranges...)(Ranges ranges)
-    if (Ranges.length && std.meta.algorithm.all!(isInputRange, Ranges))
+    if (Ranges.length && all!(isInputRange, Ranges))
 {
     return Zip!Ranges(ranges);
 }
@@ -3417,7 +3417,7 @@ unittest
 
 /// Ditto
 auto zip(Ranges...)(StoppingPolicy sp, Ranges ranges)
-    if (Ranges.length && std.meta.algorithm.all!(isInputRange, Ranges))
+    if (Ranges.length && all!(isInputRange, Ranges))
 {
     return Zip!Ranges(ranges, sp);
 }
@@ -3689,7 +3689,7 @@ private string lockstepMixin(Ranges...)(bool withIndex)
    -------
 */
 struct Lockstep(Ranges...)
-    if (Ranges.length > 1 && std.meta.algorithm.all!(isInputRange, Ranges))
+    if (Ranges.length > 1 && all!(isInputRange, Ranges))
 {
     this(R ranges, StoppingPolicy sp = StoppingPolicy.shortest)
     {
@@ -3719,13 +3719,13 @@ template Lockstep(Range)
 
 /// Ditto
 Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges)
-    if (std.meta.algorithm.all!(isInputRange, Ranges))
+    if (all!(isInputRange, Ranges))
 {
     return Lockstep!(Ranges)(ranges);
 }
 /// Ditto
 Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
-    if (std.meta.algorithm.all!(isInputRange, Ranges))
+    if (all!(isInputRange, Ranges))
 {
     static if (Ranges.length > 1)
         return Lockstep!Ranges(ranges, s);

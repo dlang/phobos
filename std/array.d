@@ -493,12 +493,12 @@ uninitializedArray is nothrow and weakly pure.
 uninitializedArray is @system if the uninitialized element type has pointers.
 +/
 auto uninitializedArray(T, I...)(I sizes) nothrow @system
-if (isDynamicArray!T && std.meta.algorithm.all!(isIntegral, I) && hasIndirections!(ElementEncodingType!T))
+if (isDynamicArray!T && all!(isIntegral, I) && hasIndirections!(ElementEncodingType!T))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(std.meta.algorithm.all!(isSize_t, I),
+    static assert(all!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
 
@@ -510,12 +510,12 @@ if (isDynamicArray!T && std.meta.algorithm.all!(isIntegral, I) && hasIndirection
 
 ///
 auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
-if (isDynamicArray!T && std.meta.algorithm.all!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
+if (isDynamicArray!T && all!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(std.meta.algorithm.all!(isSize_t, I),
+    static assert(all!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
 
@@ -548,12 +548,12 @@ necessarily the element type's $(D .init).
 minimallyInitializedArray is nothrow and weakly pure.
 +/
 auto minimallyInitializedArray(T, I...)(I sizes) nothrow @trusted
-if (isDynamicArray!T && std.meta.algorithm.all!(isIntegral, I))
+if (isDynamicArray!T && all!(isIntegral, I))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(std.meta.algorithm.all!(isSize_t, I),
+    static assert(all!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
     //Eagerlly transform non-size_t into size_t to avoid template bloat
@@ -924,9 +924,9 @@ private void copyBackwards(T)(T[] src, T[] dest)
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     if(!isSomeString!(T[])
-        && std.meta.algorithm.all!(isInputRangeOrConvertible!T, U) && U.length > 0)
+        && all!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
-    static if(std.meta.algorithm.all!(isInputRangeWithLengthOrConvertible!T, U))
+    static if(all!(isInputRangeWithLengthOrConvertible!T, U))
     {
         import std.conv : emplaceRef;
 
@@ -982,10 +982,10 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 
 /// Ditto
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(isSomeString!(T[]) && std.meta.algorithm.all!(isCharOrStringOrDcharRange, U))
+    if(isSomeString!(T[]) && all!(isCharOrStringOrDcharRange, U))
 {
     static if(is(Unqual!T == T)
-        && std.meta.algorithm.all!(isInputRangeWithLengthOrConvertible!dchar, U))
+        && all!(isInputRangeWithLengthOrConvertible!dchar, U))
     {
         import std.utf : codeLength;
         // mutable, can do in place

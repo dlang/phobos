@@ -89,7 +89,8 @@ import std.math;
 import std.range;
 import std.traits;
 import std.typecons;
-import std.meta;
+import std.meta.algorithm;
+import std.meta.list;
 
 version(OSX)
 {
@@ -250,11 +251,13 @@ private template noUnsharedAliasing(T)
 // requirement for executing it via a TaskPool.  (See isSafeReturn).
 private template isSafeTask(F)
 {
+    alias all = std.meta.algorithm.all;
+
     enum bool isSafeTask =
         (functionAttributes!F & (FunctionAttribute.safe | FunctionAttribute.trusted)) != 0 &&
         (functionAttributes!F & FunctionAttribute.ref_) == 0 &&
         (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
-        std.meta.algorithm.all!(noUnsharedAliasing, ParameterTypes!F);
+        all!(noUnsharedAliasing, ParameterTypes!F);
 }
 
 unittest

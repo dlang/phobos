@@ -1334,7 +1334,7 @@ assert(equal(rbt[], [5]));
 --------------------
       +/
     size_t removeKey(U...)(U elems)
-        if(std.meta.algorithm.all!(isImplicitlyConvertibleToElem, U))
+        if(all!(isImplicitlyConvertibleToElem, U))
     {
         Elem[U.length] toRemove;
 

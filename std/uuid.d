@@ -288,7 +288,7 @@ public struct UUID
          * You need to pass exactly 16 ubytes.
          */
         @safe pure this(T...)(T uuidData)
-            if(uuidData.length == 16 && std.meta.algorithm.all!(isIntegral, T))
+            if(uuidData.length == 16 && all!(isIntegral, T))
         {
             import std.conv : to;
 

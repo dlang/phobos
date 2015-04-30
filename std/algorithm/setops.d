@@ -47,7 +47,7 @@ import std.range.primitives;
 import std.functional; // : unaryFun, binaryFun;
 import std.traits;
 // FIXME
-import std.meta; // : MetaList, Map, std.meta.algorithm.all, std.meta.algorithm.any;
+import std.meta; // : MetaList, Map, all, any;
 
 // cartesianProduct
 /**
@@ -68,8 +68,8 @@ When there are more than two ranges, the above conditions apply to each
 adjacent pair of ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
-    if (!std.meta.algorithm.all!(isForwardRange, R1, R2) ||
-        std.meta.algorithm.any!(isInfinite, R1, R2))
+    if (!all!(isForwardRange, R1, R2) ||
+        any!(isInfinite, R1, R2))
 {
     import std.algorithm.iteration : map, joiner;
 
@@ -339,8 +339,8 @@ pure nothrow @safe @nogc unittest
 /// ditto
 auto cartesianProduct(RR...)(RR ranges)
     if (ranges.length >= 2 &&
-        std.meta.algorithm.all!(isForwardRange, RR) &&
-        !std.meta.algorithm.any!(isInfinite, RR))
+        all!(isForwardRange, RR) &&
+        !any!(isInfinite, RR))
 {
     // This overload uses a much less template-heavy implementation when
     // all ranges are finite forward ranges, which is the most common use
@@ -435,8 +435,8 @@ auto cartesianProduct(RR...)(RR ranges)
 
 /// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
-    if (!std.meta.algorithm.all!(isForwardRange, R1, R2, RR) ||
-        std.meta.algorithm.any!(isInfinite, R1, R2, RR))
+    if (!all!(isForwardRange, R1, R2, RR) ||
+        any!(isInfinite, R1, R2, RR))
 {
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
@@ -923,7 +923,7 @@ ranges). The ranges are assumed to be sorted by $(D less). The element
 types of the ranges must have a common type.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
-    if (Rs.length >= 2 && std.meta.algorithm.all!(isInputRange, Rs) &&
+    if (Rs.length >= 2 && all!(isInputRange, Rs) &&
         !is(CommonType!(Map!(ElementType, Rs)) == void))
 {
 private:
@@ -995,7 +995,7 @@ public:
         return _input[0].front;
     }
 
-    static if (std.meta.algorithm.all!(isForwardRange, Rs))
+    static if (all!(isForwardRange, Rs))
     {
         @property SetIntersection save()
         {
@@ -1011,7 +1011,7 @@ public:
 
 /// Ditto
 SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs ranges)
-    if (Rs.length >= 2 && std.meta.algorithm.all!(isInputRange, Rs) &&
+    if (Rs.length >= 2 && all!(isInputRange, Rs) &&
         !is(CommonType!(Map!(ElementType, Rs)) == void))
 {
     return typeof(return)(ranges);
@@ -1189,7 +1189,7 @@ unique; the length of the output is the sum of the lengths of the
 inputs. (The $(D length) member is offered if all ranges also have
 length.) The element types of all ranges must have a common type.
  */
-struct SetUnion(alias less = "a < b", Rs...) if (std.meta.algorithm.all!(isInputRange, Rs))
+struct SetUnion(alias less = "a < b", Rs...) if (all!(isInputRange, Rs))
 {
 private:
     Rs _r;
@@ -1270,7 +1270,7 @@ public:
         assert(false);
     }
 
-    static if (std.meta.algorithm.all!(isForwardRange, Rs))
+    static if (all!(isForwardRange, Rs))
     {
         @property auto save()
         {
@@ -1283,7 +1283,7 @@ public:
         }
     }
 
-    static if (std.meta.algorithm.all!(hasLength, Rs))
+    static if (all!(hasLength, Rs))
     {
         @property size_t length()
         {

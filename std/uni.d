@@ -4136,7 +4136,7 @@ template callableWith(T)
 */
 template isValidPrefixForTrie(Key, Prefix...)
 {
-    enum isValidPrefixForTrie = std.meta.algorithm.all!(callableWith!Key, Prefix); // TODO: tighten the screws
+    enum isValidPrefixForTrie = all!(callableWith!Key, Prefix); // TODO: tighten the screws
 }
 
 /*
@@ -4854,7 +4854,7 @@ template Utf8Matcher()
 
     struct Impl(Sizes...)
     {
-        static assert(std.meta.algorithm.all!(validSize, Sizes),
+        static assert(all!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         //pick tables for chosen sizes
@@ -4930,7 +4930,7 @@ template Utf8Matcher()
 
     struct CherryPick(I, Sizes...)
     {
-        static assert(std.meta.algorithm.all!(validSize, Sizes),
+        static assert(all!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         I* m;
@@ -5082,7 +5082,7 @@ template Utf16Matcher()
         if(Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
-        static assert(std.meta.algorithm.all!(validSize, Sizes),
+        static assert(all!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
         static if(Sizes.length > 1)
             enum sizeFlags = Sizes[0] | Sizes[1];
@@ -5183,7 +5183,7 @@ template Utf16Matcher()
             return m.lookupUni!mode(inp);
         }
         mixin DefMatcher;
-        static assert(std.meta.algorithm.all!(validSize, Sizes),
+        static assert(all!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
     }
 }
