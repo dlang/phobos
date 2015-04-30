@@ -1355,7 +1355,7 @@ ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
             r[i .. i + len] = s[];
         }
     }
-    return cast(RetType) r;
+    return r;
 }
 
 /// ditto
