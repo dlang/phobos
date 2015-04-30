@@ -5291,15 +5291,18 @@ unittest
     Params:
         From  = The type to cast from. The programmer must ensure it is legal
                 to make this cast.
-        To    = The type to cast to
-        value = The value to cast. It must be of type $(D From),
-                otherwise a compile-time error is emitted.
-
-    Returns:
-        the value after the cast, returned by reference if possible
  */
 template castFrom(From)
 {
+    /**
+        Params:
+            To    = The type _to cast _to.
+            value = The value _to cast. It must be of type $(D From),
+                    otherwise a compile-time error is emitted.
+
+        Returns:
+            the value after the cast, returned by reference if possible.
+     */
     auto ref to(To, T)(auto ref T value) @system
     {
         static assert (
@@ -5315,38 +5318,38 @@ template castFrom(From)
 
         return cast(To) value;
     }
-}
 
-///
-unittest
-{
-    // Regular cast, which has been verified to be legal by the programmer:
+    ///
+    unittest
     {
-        long x;
-        auto y = cast(int) x;
-    }
+        // Regular cast, which has been verified to be legal by the programmer:
+        {
+            long x;
+            auto y = cast(int) x;
+        }
 
-    // However this will still compile if 'x' is changed to be a pointer:
-    {
-        long* x;
-        auto y = cast(int) x;
-    }
+        // However this will still compile if 'x' is changed to be a pointer:
+        {
+            long* x;
+            auto y = cast(int) x;
+        }
 
-    // castFrom provides a more reliable alternative to casting:
-    {
-        long x;
-        auto y = castFrom!long.to!int(x);
-    }
+        // castFrom provides a more reliable alternative to casting:
+        {
+            long x;
+            auto y = castFrom!long.to!int(x);
+        }
 
-    // Changing the type of 'x' will now issue a compiler error,
-    // allowing bad casts to be caught before it's too late:
-    {
-        long* x;
-        static assert (
-            !__traits(compiles, castFrom!long.to!int(x))
-        );
+        // Changing the type of 'x' will now issue a compiler error,
+        // allowing bad casts to be caught before it's too late:
+        {
+            long* x;
+            static assert (
+                !__traits(compiles, castFrom!long.to!int(x))
+            );
 
-        // if cast is still needed, must be changed to:
-        auto y = castFrom!(long*).to!int(x);
+            // if cast is still needed, must be changed to:
+            auto y = castFrom!(long*).to!int(x);
+        }
     }
 }
