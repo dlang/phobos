@@ -6422,7 +6422,6 @@ template genericDecodeGrapheme(bool getValue)
 
 }
 
-@trusted:
 public: // Public API continues
 
 /++
@@ -6450,7 +6449,7 @@ public: // Public API continues
     assert(city[first..$] == "rhus");
     ---
 +/
-size_t graphemeStride(C)(in C[] input, size_t index)
+size_t graphemeStride(C)(in C[] input, size_t index) @safe
     if(is(C : dchar))
 {
     auto src = input[index..$];
@@ -6460,7 +6459,7 @@ size_t graphemeStride(C)(in C[] input, size_t index)
 }
 
 // for now tested separately see test_grapheme.d
-unittest
+@safe unittest
 {
     assert(graphemeStride("  ", 1) == 1);
     // A + combing ring above
@@ -6471,6 +6470,7 @@ unittest
     assert(city[first..$] == "rhus");
 }
 
+@trusted:
 /++
     Reads one full grapheme cluster from an input range of dchar $(D inp).
 
