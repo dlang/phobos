@@ -1537,7 +1537,7 @@ string genUnrolledSwitchSearch(size_t size)
     return code;
 }
 
-bool isPowerOf2(size_t sz) @safe pure nothrow
+bool isPowerOf2(size_t sz) @safe pure nothrow @nogc
 {
     return (sz & (sz-1)) == 0;
 }
