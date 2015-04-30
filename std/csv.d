@@ -34,11 +34,22 @@
  * {
  *     auto text = "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n";
  *
- *     foreach(record; csvReader!(Tuple!(string,string,int))(text))
+ *     foreach(record; csvReader!(Tuple!(string, string, int))(text))
  *     {
  *         writefln("%s works as a %s and earns $%d per year",
  *                  record[0], record[1], record[2]);
  *     }
+ *
+ *     // To read the same string from the file "filename.csv":
+ *
+ *     auto file = File("filename.csv", "r");
+ *     foreach(record;
+ *         file.byLine.joiner("\n").csvReader!(Tuple!(string, string, int)))
+ *     {
+ *         writefln("%s works as a %s and earns $%d per year",
+ *                  record[0], record[1], record[2]);
+ *     }
+ }
  * }
  * -------
  *
@@ -749,7 +760,7 @@ unittest
 
     foreach(record; csvReader(ir, cast(string[])null))
         foreach(cell; record) {}
-    foreach(record; csvReader!(Tuple!(string,string,int))
+    foreach(record; csvReader!(Tuple!(string, string, int))
             (ir,cast(string[])null)) {}
     foreach(record; csvReader!(string[string])
             (ir,cast(string[])null)) {}
