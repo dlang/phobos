@@ -5183,6 +5183,12 @@ unittest
     }
 }
 
+/**
+ * Detect whether type $(D T) is a narrow string.
+ *
+ * All arrays that use char, wchar, and their qualified versions are narrow
+ * strings. (Those include string and wstring).
+ */
 enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T && !isStaticArray!T;
 
 unittest
