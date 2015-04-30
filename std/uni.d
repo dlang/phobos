@@ -6486,7 +6486,7 @@ Grapheme decodeGrapheme(Input)(ref Input inp)
     return genericDecodeGrapheme!true(inp);
 }
 
-unittest
+@system unittest
 {
     Grapheme gr;
     string s = " \u0020\u0308 ";
