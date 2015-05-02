@@ -561,7 +561,9 @@ assignment and initialization. As a result, the contained value is guaranteed
 to always be bounded by $(D lower) and $(D upper).
  */
 struct Clamped(TValue, TLower = TValue, TUpper = TValue)
-    if (!is (TValue == class) && !is (TValue == interface))
+    if (!is (TValue == class) && !is (TValue == interface)
+     && !is (TLower == class) && !is (TLower == interface)
+     && !is (TUpper == class) && !is (TUpper == interface))
 {
     private:
         TValue _value;
