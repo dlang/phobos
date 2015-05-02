@@ -619,6 +619,7 @@ Constructor that initializes the stored value to the passed, clamped, value.
         }
 }
 
+///
 @safe unittest
 {
     Clamped!int x = Clamped!int(5, 10);
