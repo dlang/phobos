@@ -556,33 +556,33 @@ body
 }
 
 /**
-Defines an object that wraps a value type $(D T) which remains clamped across
+Defines an object that wraps a value type $(D TValue) which remains clamped across
 assignment and initialization. As a result, the contained value is guaranteed
 to always be bounded by $(D lower) and $(D upper).
  */
-struct Clamped(T)
-    if (!is (T == class) && !is (T == interface))
+struct Clamped(TValue, TLower = TValue, TUpper = TValue)
+    if (!is (TValue == class) && !is (TValue == interface))
 {
     private:
-        T _value;
-        immutable T _lower;
-        immutable T _upper;
+        TValue _value;
+        const TLower _lower;
+        const TUpper _upper;
     public:
 /**
 Constructor that initializes the stored value to its clamped $(D init) value.
  */
-        this(T lower, T upper) {
+        this(TLower lower, TLower upper) {
             assert(upper.greaterThan(lower));
 
             _lower = lower;
             _upper = upper;
-            _value = T.init.clamp(lower, upper);
+            _value = TValue.init.clamp(lower, upper);
         }
 
 /**
 Constructor that initializes the stored value to the passed, clamped, value.
  */
-        this(T value, T lower, T upper) {
+        this(TValue value, TLower lower, TUpper upper) {
             assert(upper.greaterThan(lower));
 
             _lower = lower;
@@ -594,21 +594,21 @@ Constructor that initializes the stored value to the passed, clamped, value.
         alias _value this;
 
 /// Ditto
-        @property T value() {
+        @property TValue value() {
             return _value;
         }
 
 /// Returns the lower bound.
-        @property const T lower() {
+        @property const TLower lower() {
             return _lower;
         }
 
 /// Returns the upper bound.
-        @property const T upper() {
+        @property const TUpper upper() {
             return _upper;
         }
 
-        T opAssign(T t) {
+        TValue opAssign(TValue t) {
             return _value = clamp(t, _lower, _upper);
         }
 
@@ -622,7 +622,7 @@ Constructor that initializes the stored value to the passed, clamped, value.
 ///
 @safe unittest
 {
-    Clamped!int x = Clamped!int(5, 10);
+    auto x = Clamped!int(0, 5, 10);
     assert(x == 5);
 
     x = 4;
@@ -637,7 +637,7 @@ Constructor that initializes the stored value to the passed, clamped, value.
 
 @safe unittest
 {
-    Clamped!int t1 = Clamped!int(-4, 10);
+    auto t1 = Clamped!int(0, -4, 10);
     assert(t1.lower == -4);
     assert(t1.upper == 10);
 
@@ -655,14 +655,14 @@ Constructor that initializes the stored value to the passed, clamped, value.
     assert(t1 == 10);
 
     // .init clamping
-    Clamped!int t2 = Clamped!int(5, 6);
+    auto t2 = Clamped!int(5, 6);
     assert(t2.lower == 5);
     assert(t2.upper == 6);
     assert(t2 == 5);
 
     // user type
     import std.datetime : Date;
-    Clamped!Date t3 = Clamped!Date(Date(1012, 12, 21), Date(2012, 12, 21));
+    auto t3 = Clamped!Date(Date(1012, 12, 21), Date(2012, 12, 21));
     assert(t3.lower == Date(1012, 12, 21));
     assert(t3.upper == Date(2012, 12, 21));
 
