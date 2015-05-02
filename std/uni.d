@@ -6422,7 +6422,6 @@ template genericDecodeGrapheme(bool getValue)
 
 }
 
-@trusted:
 public: // Public API continues
 
 /++
@@ -6470,6 +6469,8 @@ size_t graphemeStride(C)(in C[] input, size_t index)
     assert(city[0..first] == "A\u030A");
     assert(city[first..$] == "rhus");
 }
+
+@trusted:
 
 /++
     Reads one full grapheme cluster from an input range of dchar $(D inp).
