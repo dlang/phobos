@@ -519,7 +519,7 @@ template MostDerived(T, TList...)
 }
 
 ///
-unittest
+deprecated unittest
 {
     class A { }
     class B : A { }
@@ -550,7 +550,7 @@ template DerivedToFront(TList...)
 }
 
 ///
-unittest
+deprecated unittest
 {
     class A { }
     class B : A { }
