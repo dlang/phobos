@@ -14,6 +14,7 @@ Suffixes are slower to get at because of alignment rounding, so prefixes should
 be preferred. However, small prefixes blunt the alignment so if a large
 alignment with a small affix is needed, suffixes should be chosen.
 
+The following methods are defined if $(D Allocator) defines them, and forward to it: $(D deallocateAll), $(D empty), $(D owns).
  */
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
@@ -155,17 +156,11 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             parent.deallocate(p[0 .. actualAllocationSize(b.length)]);
         }
 
-        static if (hasMember!(Allocator, "deallocateAll"))
-        void deallocateAll()
-        {
-            parent.deallocateAll();
-        }
-
-        static if (hasMember!(Allocator, "empty"))
-        bool empty()
-        {
-            return parent.empty;
-        }
+        /* The following methods are defined if $(D ParentAllocator) defines
+        them, and forward to it: $(D deallocateAll), $(D empty), $(D
+        owns).*/
+        mixin(forwardToMember("parent",
+            "deallocateAll", "empty", "owns"));
 
         static if (hasMember!(Allocator, "zeroesAllocations"))
         alias zeroesAllocations = Allocator.zeroesAllocations;

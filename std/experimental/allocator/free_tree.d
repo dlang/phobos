@@ -44,6 +44,7 @@ which on 64-bit system is one cache line size. If very small objects need to
 be efficiently allocated, the $(D FreeTree) should be fronted with an
 appropriate small object allocator.
 
+The following methods are defined if $(D ParentAllocator) defines them, and forward to it: $(D allocateAll), $(D expand), $(D owns), $(D reallocate).
 */
 struct FreeTree(ParentAllocator)
 {
@@ -300,27 +301,9 @@ struct FreeTree(ParentAllocator)
         }
     }
 
-    /** Defined if $(D ParentAllocator.owns) exists, and forwards to it. */
-    static if (hasMember!(ParentAllocator, "owns"))
-    bool owns(void[] b)
-    {
-        return parent.owns(b);
-    }
-
-    /** Defined if $(D ParentAllocator.expand) exists, and forwards to it. */
-    static if (hasMember!(ParentAllocator, "expand"))
-    bool expand(ref void[] b, size_t delta)
-    {
-        return parent.expand(b, delta);
-    }
-
-    /** Defined if $(D ParentAllocator.reallocate) exists, and forwards to it.
-    */
-    static if (hasMember!(ParentAllocator, "reallocate"))
-    bool reallocate(ref void[] b, size_t n)
-    {
-        return parent.reallocate(b, n);
-    }
+    // Forwarding methods
+    mixin(forwardToMember("parent",
+        "allocateAll", "expand", "owns", "reallocate"));
 
     /** Places $(D b) into the free tree. */
     void deallocate(void[] b)
@@ -406,7 +389,7 @@ struct FreeTree(ParentAllocator)
         {
             // This is easy, just nuke the root and deallocate all from the
             // parent
-            root.left = null;
+            root = null;
             parent.deallocateAll;
         }
         else // hasMember!(ParentAllocator, "deallocate")
@@ -414,14 +397,6 @@ struct FreeTree(ParentAllocator)
             // Must deallocate everything by hand
             clear;
         }
-    }
-
-    /** Defined if $(D ParentAllocator.allocateAll) exists, and forwards to
-    it. */
-    static if (hasMember!(ParentAllocator, "allocateAll"))
-    void[] allocateAll()
-    {
-        return parent.allocateAll;
     }
 }
 

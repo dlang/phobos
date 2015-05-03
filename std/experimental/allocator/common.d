@@ -352,6 +352,24 @@ bool alignedReallocate(Allocator)(ref Allocator alloc,
     return true;
 }
 
+/*
+Forwards each of the methods in "funs" (if defined) to "member".
+*/
+package string forwardToMember(string member, string[] funs...)
+{
+    string result = "    import std.traits : hasMember, ParameterTypeTuple;\n";
+    foreach (fun; funs)
+    {
+        result ~= "
+    static if (hasMember!(typeof("~member~"), `"~fun~"`))
+    auto ref "~fun~"(ParameterTypeTuple!(typeof("~member~"."~fun~")) args)
+    {
+        return "~member~"."~fun~"(args);
+    }\n";
+    }
+    return result;
+}
+
 package void testAllocator(alias make)()
 {
     import std.conv : text;

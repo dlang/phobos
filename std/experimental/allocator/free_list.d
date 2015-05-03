@@ -31,6 +31,8 @@ be incorrect for a freestanding allocator but is both correct and fast when an
 owning allocator on top of the free list allocator (such as $(D Segregator)) is
 already in charge of handling size checking.
 
+The following methods are defined if $(D ParentAllocator) defines them, and forward to it: $(D expand), $(D owns), $(D reallocate).
+
 */
 struct FreeList(ParentAllocator,
     size_t minSize, size_t maxSize = minSize,
@@ -243,30 +245,9 @@ struct FreeList(ParentAllocator,
         return result;
     }
 
-    /**
-    Forwards to $(parent.owns) if implemented.
-    */
-    static if (hasMember!(ParentAllocator, "owns"))
-    bool owns(void[] b)
-    {
-        return parent.owns(b);
-    }
-
-    /**
-    Forwards to $(D parent).
-    */
-    static if (hasMember!(ParentAllocator, "expand"))
-    bool expand(void[] b, size_t s)
-    {
-        return parent.expand(b, s);
-    }
-
-    /// Ditto
-    static if (hasMember!(ParentAllocator, "reallocate"))
-    bool reallocate(void[] b, size_t s)
-    {
-        return parent.reallocate(b, s);
-    }
+    // Forwarding methods
+    mixin(forwardToMember("parent",
+        "expand", "owns", "reallocate"));
 
     /**
     Intercepts deallocations and caches those of the appropriate size in the
@@ -352,6 +333,8 @@ unittest
 /**
 FreeList shared across threads. Allocation and deallocation are lock-free. The
 parameters have the same semantics as for $(D FreeList).
+
+$(D expand) is defined to forward to $(ParentAllocator.expand) (it must be also $(D shared)).
 */
 struct SharedFreeList(ParentAllocator,
     size_t minSize, size_t maxSize = minSize,
@@ -497,6 +480,8 @@ struct SharedFreeList(ParentAllocator,
     static if (stateSize!ParentAllocator) shared ParentAllocator parent;
     else alias parent = ParentAllocator.it;
 
+    mixin(forwardToMember("parent", "expand"));
+
     private struct Node { Node* next; }
     static assert(ParentAllocator.alignment >= Node.alignof);
     private Node* _root;
@@ -520,15 +505,6 @@ struct SharedFreeList(ParentAllocator,
             return parent.owns(b);
         else
             return false;
-    }
-
-    /**
-    Forwards to $(D parent), which must also support $(D shared) primitives.
-    */
-    static if (hasMember!(ParentAllocator, "expand"))
-    bool expand(void[] b, size_t s)
-    {
-        return parent.expand(b, s);
     }
 
     /// Ditto
