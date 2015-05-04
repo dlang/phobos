@@ -1867,7 +1867,8 @@ Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
 struct Nullable(T)
 {
-    private T _value;
+    // Explicitly initialize in case T has a @disable this();
+    private T _value = T.init;
     private bool _isNull = true;
 
 /**
@@ -1999,6 +2000,7 @@ unittest
     ni = 0;
     assertNotThrown!Throwable(ni == 0);
 }
+
 
 /**
 Implicitly converts to $(D T).
@@ -2309,6 +2311,45 @@ unittest
     }
     Nullable!TestToString ntts = new TestToString(2.5);
     assert(ntts.to!string() == "2.5");
+}
+
+unittest
+{
+    // Bugzilla 14477 (@disabled this)
+    struct Foo {
+        int x;
+        @disable this();
+        this(int n){ x = n; }
+    }
+    Nullable!Foo foo;
+    foo.nullify();
+    foo = Foo(1);
+    assert(foo.get == Foo(1));
+    foo.nullify();
+
+    // what if it has indirections?
+    struct Bar {
+        Object x;
+        @disable this();
+        this(Object o){ x = o; }
+    }
+    Nullable!Bar bar;
+    bar.nullify();
+    auto obj = new Object;
+    bar = Bar(obj);
+    assert(bar.get == Bar(obj));
+    bar.nullify();
+}
+
+@safe unittest
+{
+    // ensure that Nullable usable in safe code
+    struct Foo { Object o; }
+    Nullable!Foo foo;
+    assert(foo.isNull);
+    foo = Foo(new Object);
+    auto o = foo.get.o;
+    assert(!foo.isNull);
 }
 
 /**
