@@ -2744,7 +2744,7 @@ unittest
         $(LI If $(D path) starts with $(D `\\?\`) (long UNC path), the
             only requirement for the rest of the string is that it does
             not contain the null character.)
-        $(LI If $(D path) starts with $(D `\\.\`) (Windows device namespace)
+        $(LI If $(D path) starts with $(D `\\.\`) (Win32 device namespace)
             this function returns $(D false); such paths are beyond the scope
             of this module.)
     )
