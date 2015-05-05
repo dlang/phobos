@@ -35,10 +35,14 @@ module std.getopt;
 import std.traits;
 
 /**
- * Thrown on one of the following conditions:
- * - An unrecognized command-line argument is passed
- *   and $(D std.getopt.config.passThrough) was not present.
- */
+Thrown on one of the following conditions:
+$(UL
+  $(LI An unrecognized command-line argument is passed, and
+       $(D std.getopt.config.passThrough) was not present.)
+  $(LI A command-line option was not found, and
+       $(D std.getopt.config.required) was present.)
+)
+*/
 class GetOptException : Exception
 {
     @safe pure nothrow
