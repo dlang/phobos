@@ -193,7 +193,8 @@ version(unittest)
 
     enum testUrl1 = "http://"~testService~"/testUrl1";
     enum testUrl2 = "http://"~testService~"/testUrl2";
-    enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
+    // No anonymous DigitalMars FTP access as of 2015
+    //enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
     enum testUrl4 = testService~"/testUrl1";
     enum testUrl5 = "http://"~testService~"/testUrl3";
 }
@@ -281,7 +282,6 @@ private template isCurlConn(Conn)
  * Example:
  * ----
  * import std.net.curl;
- * download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file");
  * download("d-lang.appspot.com/testUrl2", "/tmp/downloaded-http-file");
  * ----
  */
@@ -308,7 +308,8 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
+    // No anonymous DigitalMars FTP access as of 2015
+    //download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
     download("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
 }
 
@@ -427,9 +428,10 @@ unittest
     res = get(testUrl4);
     assert(res == "Hello world\n",
            "get!HTTP() returns unexpected content: " ~ res);
-    res = get(testUrl3);
-    assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-           "get!FTP() returns unexpected content");
+    // No anonymous DigitalMars FTP access as of 2015
+    //res = get(testUrl3);
+    //assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
+    //       "get!FTP() returns unexpected content");
 }
 
 
