@@ -2425,10 +2425,11 @@ unittest
     }
     -----
  */
-bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
-    (const(C)[] path, const(C)[] pattern)
+bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
+    (Range path, const(C)[] pattern)
     @safe pure nothrow
-    if (isSomeChar!C)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
 in
 {
     // Verify that pattern[] is valid
@@ -2438,111 +2439,139 @@ in
 }
 body
 {
-    size_t ni; // current character in path
+    alias RC = Unqual!(ElementEncodingType!Range);
 
-    foreach (ref pi; 0 .. pattern.length)
+    static if (RC.sizeof == 1 && isSomeString!Range)
     {
-        C pc = pattern[pi];
-        switch (pc)
-        {
-            case '*':
-                if (pi + 1 == pattern.length)
-                    return true;
-                foreach (j; ni .. path.length)
-                {
-                    if (globMatch!(cs, C)(path[j .. path.length],
-                                    pattern[pi + 1 .. pattern.length]))
-                        return true;
-                }
-                return false;
-
-            case '?':
-                if (ni == path.length)
-                    return false;
-                ni++;
-                break;
-
-            case '[':
-                if (ni == path.length)
-                    return false;
-                auto nc = path[ni];
-                ni++;
-                auto not = false;
-                pi++;
-                if (pattern[pi] == '!')
-                {
-                    not = true;
-                    pi++;
-                }
-                auto anymatch = false;
-                while (1)
-                {
-                    pc = pattern[pi];
-                    if (pc == ']')
-                        break;
-                    if (!anymatch && (filenameCharCmp!cs(nc, pc) == 0))
-                        anymatch = true;
-                    pi++;
-                }
-                if (anymatch == not)
-                    return false;
-                break;
-
-            case '{':
-                // find end of {} section
-                auto piRemain = pi;
-                for (; piRemain < pattern.length
-                         && pattern[piRemain] != '}'; piRemain++)
-                {}
-
-                if (piRemain < pattern.length) piRemain++;
-                pi++;
-
-                while (pi < pattern.length)
-                {
-                    auto pi0 = pi;
-                    pc = pattern[pi];
-                    // find end of current alternative
-                    for (; pi<pattern.length && pc!='}' && pc!=','; pi++)
-                    {
-                        pc = pattern[pi];
-                    }
-
-                    if (pi0 == pi)
-                    {
-                        if (globMatch!(cs, C)(path[ni..$], pattern[piRemain..$]))
-                        {
-                            return true;
-                        }
-                        pi++;
-                    }
-                    else
-                    {
-                        if (globMatch!(cs, C)(path[ni..$],
-                                        pattern[pi0..pi-1]
-                                        ~ pattern[piRemain..$]))
-                        {
-                            return true;
-                        }
-                    }
-                    if (pc == '}')
-                    {
-                        break;
-                    }
-                }
-                return false;
-
-            default:
-                if (ni == path.length)
-                    return false;
-                if (filenameCharCmp!cs(pc, path[ni]) != 0)
-                    return false;
-                ni++;
-                break;
-        }
+        import std.utf : byChar;
+        return globMatch!cs(path.byChar, pattern);
     }
-    assert(ni <= path.length);
-    return ni == path.length;
+    else static if (RC.sizeof == 2 && isSomeString!Range)
+    {
+        import std.utf : byWchar;
+        return globMatch!cs(path.byWchar, pattern);
+    }
+    else
+    {
+        C[] pattmp;
+        foreach (ref pi; 0 .. pattern.length)
+        {
+            const pc = pattern[pi];
+            switch (pc)
+            {
+                case '*':
+                    if (pi + 1 == pattern.length)
+                        return true;
+                    for (; !path.empty; path.popFront())
+                    {
+                        auto p = path.save;
+                        if (globMatch!(cs, C)(p,
+                                        pattern[pi + 1 .. pattern.length]))
+                            return true;
+                    }
+                    return false;
+
+                case '?':
+                    if (path.empty)
+                        return false;
+                    path.popFront();
+                    break;
+
+                case '[':
+                    if (path.empty)
+                        return false;
+                    auto nc = path.front;
+                    path.popFront();
+                    auto not = false;
+                    ++pi;
+                    if (pattern[pi] == '!')
+                    {
+                        not = true;
+                        ++pi;
+                    }
+                    auto anymatch = false;
+                    while (1)
+                    {
+                        const pc2 = pattern[pi];
+                        if (pc2 == ']')
+                            break;
+                        if (!anymatch && (filenameCharCmp!cs(nc, pc2) == 0))
+                            anymatch = true;
+                        ++pi;
+                    }
+                    if (anymatch == not)
+                        return false;
+                    break;
+
+                case '{':
+                    // find end of {} section
+                    auto piRemain = pi;
+                    for (; piRemain < pattern.length
+                             && pattern[piRemain] != '}'; ++piRemain)
+                    {   }
+
+                    if (piRemain < pattern.length)
+                        ++piRemain;
+                    ++pi;
+
+                    while (pi < pattern.length)
+                    {
+                        const pi0 = pi;
+                        C pc3 = pattern[pi];
+                        // find end of current alternative
+                        for (; pi < pattern.length && pc3 != '}' && pc3 != ','; ++pi)
+                        {
+                            pc3 = pattern[pi];
+                        }
+
+                        auto p = path.save;
+                        if (pi0 == pi)
+                        {
+                            if (globMatch!(cs, C)(p, pattern[piRemain..$]))
+                            {
+                                return true;
+                            }
+                            ++pi;
+                        }
+                        else
+                        {
+                            /* Match for:
+                             *   pattern[pi0..pi-1] ~ pattern[piRemain..$]
+                             */
+                            if (pattmp.ptr == null)
+                                // Allocate this only once per function invocation.
+                                // Should do it with malloc/free, but that would make it impure.
+                                pattmp = new C[pattern.length];
+
+                            const len1 = pi - 1 - pi0;
+                            pattmp[0 .. len1] = pattern[pi0 .. pi - 1];
+
+                            const len2 = pattern.length - piRemain;
+                            pattmp[len1 .. len1 + len2] = pattern[piRemain .. $];
+
+                            if (globMatch!(cs, C)(p, pattmp[0 .. len1 + len2]))
+                            {
+                                return true;
+                            }
+                        }
+                        if (pc3 == '}')
+                        {
+                            break;
+                        }
+                    }
+                    return false;
+
+                default:
+                    if (path.empty)
+                        return false;
+                    if (filenameCharCmp!cs(pc, path.front) != 0)
+                        return false;
+                    path.popFront();
+                    break;
+            }
+        }
+        return path.empty;
+    }
 }
 
 unittest
@@ -2586,6 +2615,12 @@ unittest
     assert(globMatch("bar.foo"w, "bar.{ar,,fo}o"w));
     assert(globMatch("bar.foo"d, "bar.{,ar,fo}o"d));
     assert(globMatch("bar.o", "bar.{,ar,fo}o"));
+
+    assert(!globMatch("foo", "foo?"));
+    assert(!globMatch("foo", "foo[]"));
+    assert(!globMatch("foo", "foob"));
+    assert(!globMatch("foo", "foo{b}"));
+
 
     static assert(globMatch("foo.bar", "[!gh]*bar"));
 }
