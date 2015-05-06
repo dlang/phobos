@@ -2937,12 +2937,12 @@ unittest
     }
     -----
 */
-string expandTilde(string inputPath)
+string expandTilde(string inputPath) nothrow
 {
     version(Posix)
     {
         import core.stdc.string : strlen;
-        import core.stdc.stdlib : getenv, malloc, free;
+        import core.stdc.stdlib : getenv, malloc, free, realloc;
         import core.exception : onOutOfMemoryError;
         import core.sys.posix.pwd : passwd, getpwnam_r;
         import core.stdc.errno : errno, ERANGE;
@@ -2953,7 +2953,7 @@ string expandTilde(string inputPath)
             is joined to path[char_pos .. length] if char_pos is smaller
             than length, otherwise path is not appended to c_path.
         */
-        static string combineCPathWithDPath(char* c_path, string path, size_t char_pos)
+        static string combineCPathWithDPath(char* c_path, string path, size_t char_pos) nothrow
         {
             assert(c_path != null);
             assert(path.length > 0);
@@ -2966,18 +2966,20 @@ string expandTilde(string inputPath)
             if (end && isDirSeparator(c_path[end - 1]))
                 end--;
 
-            // Create our own copy, as lifetime of c_path is undocumented
-            string cp = c_path[0 .. end].idup;
-
-            // Do we append something from path?
+            // (this is the only GC allocation done in expandTilde())
+            string cp;
             if (char_pos < path.length)
-                cp ~= path[char_pos .. $];
+                // Append something from path
+                cp = cast(string)(c_path[0 .. end] ~ path[char_pos .. $]);
+            else
+                // Create our own copy, as lifetime of c_path is undocumented
+                cp = c_path[0 .. end].idup;
 
             return cp;
         }
 
         // Replaces the tilde from path with the environment variable HOME.
-        static string expandFromEnvironment(string path)
+        static string expandFromEnvironment(string path) nothrow
         {
             assert(path.length >= 1);
             assert(path[0] == '~');
@@ -2991,7 +2993,7 @@ string expandTilde(string inputPath)
         }
 
         // Replaces the tilde from path with the path from the user database.
-        static string expandFromDatabase(string path)
+        static string expandFromDatabase(string path) nothrow
         {
             // Android doesn't really support this, as getpwnam_r
             // isn't provided and getpwnam is basically just a stub
@@ -3007,64 +3009,59 @@ string expandTilde(string inputPath)
                 assert(path[0] == '~');
 
                 // Extract username, searching for path separator.
-                string username;
                 auto last_char = indexOf(path, dirSeparator[0]);
+
+                size_t username_len = (last_char == -1) ? path.length : last_char;
+                char* username = cast(char*)core.stdc.stdlib.malloc(username_len * char.sizeof);
+                if (!username)
+                    onOutOfMemoryError();
+                scope(exit) core.stdc.stdlib.free(username);
 
                 if (last_char == -1)
                 {
-                    username = path[1 .. $] ~ '\0';
-                    last_char = username.length + 1;
+                    username[0 .. username_len - 1] = path[1 .. $];
+                    last_char = path.length + 1;
                 }
                 else
                 {
-                    username = path[1 .. last_char] ~ '\0';
+                    username[0 .. username_len - 1] = path[1 .. last_char];
                 }
+                username[username_len - 1] = 0;
+
                 assert(last_char > 1);
 
                 // Reserve C memory for the getpwnam_r() function.
-                passwd result;
                 int extra_memory_size = 5 * 1024;
-                void* extra_memory;
+                char* extra_memory;
+                scope(exit) core.stdc.stdlib.free(extra_memory);
 
+                passwd result;
                 while (1)
                 {
-                    extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
+                    extra_memory = cast(char*)core.stdc.stdlib.realloc(extra_memory, extra_memory_size * char.sizeof);
                     if (extra_memory == null)
-                        goto Lerror;
+                        onOutOfMemoryError();
 
                     // Obtain info from database.
                     passwd *verify;
                     errno = 0;
-                    if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
+                    if (getpwnam_r(username, &result, extra_memory, extra_memory_size,
                             &verify) == 0)
                     {
-                        // Failure if verify doesn't point at result.
-                        if (verify != &result)
-                            // username is not found, so return path[]
-                            goto Lnotfound;
+                        // Succeeded if verify points at result
+                        if (verify == &result)
+                            // username is found
+                            path = combineCPathWithDPath(result.pw_dir, path, last_char);
                         break;
                     }
 
                     if (errno != ERANGE)
-                        goto Lerror;
+                        onOutOfMemoryError();
 
                     // extra_memory isn't large enough
-                    core.stdc.stdlib.free(extra_memory);
                     extra_memory_size *= 2;
                 }
-
-                path = combineCPathWithDPath(result.pw_dir, path, last_char);
-
-            Lnotfound:
-                core.stdc.stdlib.free(extra_memory);
                 return path;
-
-            Lerror:
-                // Errors are going to be caused by running out of memory
-                if (extra_memory)
-                    core.stdc.stdlib.free(extra_memory);
-                onOutOfMemoryError();
-                return null;
             }
         }
 
