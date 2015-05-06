@@ -294,15 +294,15 @@ private struct _Cache(R, bool bidir)
     private
     {
         import std.algorithm.internal : algoFormat;
-        import std.meta : MetaList;
+        import std.typetuple : TypeTuple;
 
         alias E  = ElementType!R;
         alias UE = Unqual!E;
 
         R source;
 
-        static if (bidir) alias CacheTypes = MetaList!(UE, UE);
-        else              alias CacheTypes = MetaList!UE;
+        static if (bidir) alias CacheTypes = TypeTuple!(UE, UE);
+        else              alias CacheTypes = TypeTuple!UE;
         CacheTypes caches;
 
         static assert(isAssignable!(UE, E) && is(UE : E),
@@ -430,20 +430,20 @@ template map(fun...) if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
-        import std.meta : Map;
+        import std.typetuple : staticMap;
 
         alias AppliedReturnType(alias f) = typeof(f(r.front));
 
         static if (fun.length > 1)
         {
             import std.functional : adjoin;
-            import std.meta : indexOf;
+            import std.typetuple : staticIndexOf;
 
-            alias _funs = Map!(unaryFun, fun);
+            alias _funs = staticMap!(unaryFun, fun);
             alias _fun = adjoin!_funs;
 
-            alias ReturnTypes = Map!(AppliedReturnType, _funs);
-            static assert(indexOf!(void, ReturnTypes) == -1,
+            alias ReturnTypes = staticMap!(AppliedReturnType, _funs);
+            static assert(staticIndexOf!(void, ReturnTypes) == -1,
                           "All mapping functions must not return void.");
         }
         else
@@ -817,8 +817,8 @@ See_Also: $(XREF range,tee)
  */
 template each(alias pred = "a")
 {
-    import std.meta : MetaList;
-    alias BinaryArgs = MetaList!(pred, "i", "a");
+    import std.typetuple : TypeTuple;
+    alias BinaryArgs = TypeTuple!(pred, "i", "a");
 
     enum isRangeUnaryIterable(R) =
         is(typeof(unaryFun!pred(R.init.front)));
@@ -2445,9 +2445,9 @@ See_Also:
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
-    import std.meta : Map;
+    import std.typetuple : staticMap;
 
-    alias binfuns = Map!(binaryFun, fun);
+    alias binfuns = staticMap!(binaryFun, fun);
     static if (fun.length > 1)
         import std.typecons : tuple, isTuple;
 
@@ -2469,7 +2469,7 @@ template reduce(fun...) if (fun.length >= 1)
     {
         import std.exception : enforce;
         alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
-        alias Args = Map!(ReduceSeedType!E, binfuns);
+        alias Args = staticMap!(ReduceSeedType!E, binfuns);
 
         static if (isInputRange!R)
         {
@@ -2509,7 +2509,7 @@ template reduce(fun...) if (fun.length >= 1)
 
     private auto reducePreImpl(R, Args...)(R r, ref Args args)
     {
-        alias Result = Map!(Unqual, Args);
+        alias Result = staticMap!(Unqual, Args);
         static if (is(Result == Args))
             alias result = args;
         else
@@ -3756,8 +3756,8 @@ if (isSomeChar!C)
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
-    import std.meta : MetaList;
-    foreach(S; MetaList!(string, wstring, dstring))
+    import std.typetuple : TypeTuple;
+    foreach(S; TypeTuple!(string, wstring, dstring))
     {
         import std.conv : to;
         S a = " a     bcd   ef gh ";

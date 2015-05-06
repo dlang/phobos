@@ -66,8 +66,8 @@ import std.traits;
 
 version(unittest)
 {
-    import std.meta;
-    package alias PseudoRngTypes = MetaList!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
+    static import std.typetuple;
+    package alias PseudoRngTypes = std.typetuple.TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
                                               Xorshift96, Xorshift128, Xorshift160, Xorshift192);
 }
 
@@ -515,7 +515,7 @@ unittest
     assert(rnd.front == 399268537);
 
     // Check .save works
-    foreach (Type; MetaList!(MinstdRand0, MinstdRand))
+    foreach (Type; std.typetuple.TypeTuple!(MinstdRand0, MinstdRand))
     {
         auto rnd1 = Type(unpredictableSeed);
         auto rnd2 = rnd1.save;
@@ -788,7 +788,7 @@ unittest
 {
     import std.range;
     // Check .save works
-    foreach(Type; MetaList!(Mt19937))
+    foreach(Type; std.typetuple.TypeTuple!(Mt19937))
     {
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
@@ -806,7 +806,7 @@ unittest
                                                         0x9d2c5680, 15,
                                                         0xefc60000, 18);
 
-    foreach (R; MetaList!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+    foreach (R; std.typetuple.TypeTuple!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
         auto a = R();
 }
 
@@ -1061,7 +1061,7 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    alias XorshiftTypes = MetaList!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+    alias XorshiftTypes = std.typetuple.TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192);
 
     foreach (I, Type; XorshiftTypes)
     {
@@ -1436,7 +1436,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach (T; MetaList!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach (T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong, float, double, real))
     {
         T lo = 0, hi = 100;
@@ -1490,7 +1490,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 
     auto reproRng = Xorshift(239842);
 
-    foreach (T; MetaList!(char, wchar, dchar, byte, ubyte, short,
+    foreach (T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short,
                           ushort, int, uint, long, ulong))
     {
         T lo = T.min + 10, hi = T.max - 10;
@@ -1609,7 +1609,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 
 @safe unittest
 {
-    foreach(T; MetaList!(char, wchar, dchar, byte, ubyte, short, ushort,
+    foreach(T; std.typetuple.TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
                           int, uint, long, ulong))
     {
         T init = uniform!T();
@@ -1756,11 +1756,11 @@ body
 
 @safe unittest
 {
-    import std.meta;
+    import std.typetuple;
     foreach (UniformRNG; PseudoRngTypes)
     {
 
-        foreach (T; MetaList!(float, double, real))
+        foreach (T; std.typetuple.TypeTuple!(float, double, real))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             UniformRNG rng = UniformRNG(unpredictableSeed);
 
@@ -2199,7 +2199,7 @@ unittest
     import std.algorithm;
     import std.conv;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
-    foreach (UniformRNG; MetaList!(void, PseudoRngTypes))
+    foreach (UniformRNG; std.typetuple.TypeTuple!(void, PseudoRngTypes))
     {
         static if (is(UniformRNG == void))
         {

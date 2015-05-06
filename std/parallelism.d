@@ -89,8 +89,7 @@ import std.math;
 import std.range;
 import std.traits;
 import std.typecons;
-import std.meta.algorithm;
-import std.meta.list;
+import std.typetuple;
 
 version(OSX)
 {
@@ -233,7 +232,7 @@ private template MapType(R, functions...)
 
     ElementType!R e = void;
     alias MapType =
-        typeof(adjoin!(Map!(unaryFun, functions))(e));
+        typeof(adjoin!(staticMap!(unaryFun, functions))(e));
 }
 
 private template ReduceType(alias fun, R, E)
@@ -251,13 +250,11 @@ private template noUnsharedAliasing(T)
 // requirement for executing it via a TaskPool.  (See isSafeReturn).
 private template isSafeTask(F)
 {
-    alias all = std.meta.algorithm.all;
-
     enum bool isSafeTask =
         (functionAttributes!F & (FunctionAttribute.safe | FunctionAttribute.trusted)) != 0 &&
         (functionAttributes!F & FunctionAttribute.ref_) == 0 &&
         (isFunctionPointer!F || !hasUnsharedAliasing!F) &&
-        all!(noUnsharedAliasing, ParameterTypes!F);
+        allSatisfy!(noUnsharedAliasing, ParameterTypeTuple!F);
 }
 
 unittest
@@ -335,7 +332,7 @@ template reduceAdjoin(functions...)
     {
         T reduceAdjoin(T, U)(T lhs, U rhs)
         {
-            alias funs = Map!(binaryFun, functions);
+            alias funs = staticMap!(binaryFun, functions);
 
             foreach(i, Unused; typeof(lhs.expand))
             {
@@ -357,7 +354,7 @@ private template reduceFinish(functions...)
     {
         T reduceFinish(T)(T lhs, T rhs)
         {
-            alias funs = Map!(binaryFun, functions);
+            alias funs = staticMap!(binaryFun, functions);
 
             foreach(i, Unused; typeof(lhs.expand))
             {
@@ -565,7 +562,7 @@ struct Task(alias fun, Args...)
     }
 
     // Work around DMD bug 6588, allow immutable elements.
-    static if(std.meta.algorithm.all!(isAssignable, Args))
+    static if(allSatisfy!(isAssignable, Args))
     {
         typeof(this) opAssign(typeof(this) rhs)
         {
@@ -1655,7 +1652,7 @@ public:
         auto amap(Args...)(Args args)
         if(isRandomAccessRange!(Args[0]))
         {
-            alias fun = adjoin!(Map!(unaryFun, functions));
+            alias fun = adjoin!(staticMap!(unaryFun, functions));
 
             alias range = args[0];
             immutable len = range.length;
@@ -1841,7 +1838,7 @@ public:
         {
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                     "Work unit size must be smaller than buffer size.");
-            alias fun = adjoin!(Map!(unaryFun, functions));
+            alias fun = adjoin!(staticMap!(unaryFun, functions));
 
             static final class Map
             {
@@ -2345,9 +2342,9 @@ public:
     */
     auto asyncBuf(C1, C2)(C1 next, C2 empty, size_t initialBufSize = 0, size_t nBuffers = 100)
     if(is(typeof(C2.init()) : bool) &&
-        ParameterTypes!C1.length == 1 &&
-        ParameterTypes!C2.length == 0 &&
-        isArray!(ParameterTypes!C1[0])
+        ParameterTypeTuple!C1.length == 1 &&
+        ParameterTypeTuple!C2.length == 0 &&
+        isArray!(ParameterTypeTuple!C1[0])
     ) {
         auto roundRobin = RoundRobinBuffer!(C1, C2)(next, empty, initialBufSize, nBuffers);
         return asyncBuf(roundRobin, nBuffers / 2);
@@ -2463,7 +2460,7 @@ public:
                 }
                 else
                 {
-                    typeof(adjoin!(Map!(binaryFun, functions))(e, e)) seed = void;
+                    typeof(adjoin!(staticMap!(binaryFun, functions))(e, e)) seed = void;
                     foreach (i, T; seed.Types)
                     {
                         emplaceRef(seed.expand[i], e);
@@ -2513,7 +2510,7 @@ public:
                 // since we're assuming functions are associative anyhow.
 
                 // This is so that loops can be unrolled automatically.
-                enum ilpTuple = MetaList!(0, 1, 2, 3, 4, 5);
+                enum ilpTuple = TypeTuple!(0, 1, 2, 3, 4, 5);
                 enum nILP = ilpTuple.length;
                 immutable subSize = (upperBound - lowerBound) / nILP;
 
@@ -3495,7 +3492,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
         {
             foreach(ref ElementType!R elem; range)
             {
-                static if(ParameterTypes!dg.length == 2)
+                static if(ParameterTypeTuple!dg.length == 2)
                 {
                     res = dg(index, elem);
                 }
@@ -3511,7 +3508,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
         {
             foreach(ElementType!R elem; range)
             {
-                static if(ParameterTypes!dg.length == 2)
+                static if(ParameterTypeTuple!dg.length == 2)
                 {
                     res = dg(index, elem);
                 }
@@ -3535,7 +3532,7 @@ private enum string parallelApplyMixinRandomAccess = q{
     }
 
     // Whether iteration is with or without an index variable.
-    enum withIndex = ParameterTypes!(typeof(dg)).length == 2;
+    enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
 
     shared size_t workUnitIndex = size_t.max;  // Effectively -1:  chunkIndex + 1 == 0
     immutable len = range.length;
@@ -3590,7 +3587,7 @@ enum string parallelApplyMixinInputRange = q{
     }
 
     // Whether iteration is with or without an index variable.
-    enum withIndex = ParameterTypes!(typeof(dg)).length == 2;
+    enum withIndex = ParameterTypeTuple!(typeof(dg)).length == 2;
 
     // This protects the range while copying it.
     auto rangeMutex = new Mutex();
@@ -3847,7 +3844,7 @@ private struct RoundRobinBuffer(C1, C2)
 {
     // No need for constraints because they're already checked for in asyncBuf.
 
-    alias Array = ParameterTypes!(C1.init)[0];
+    alias Array = ParameterTypeTuple!(C1.init)[0];
     alias T = typeof(Array.init[0]);
 
     T[][] bufs;

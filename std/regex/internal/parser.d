@@ -5,7 +5,7 @@
 module std.regex.internal.parser;
 
 import std.regex.internal.ir;
-import std.algorithm, std.range, std.uni, std.meta,
+import std.algorithm, std.range, std.uni, std.typetuple,
     std.traits, std.typecons, std.exception;
 
 // package relevant info from parser into a regex object
@@ -155,7 +155,7 @@ unittest
 }
 
 
-alias Escapables = MetaList!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
+alias Escapables = TypeTuple!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
     ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
 
 //test if a given string starts with hex number of maxDigit that's a valid codepoint

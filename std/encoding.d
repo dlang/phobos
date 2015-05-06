@@ -2043,13 +2043,13 @@ unittest
 unittest
 {
     import std.range;
-    import std.meta;
+    import std.typetuple;
     {
         import std.conv : to;
 
         string asciiCharString = to!string(iota(0, 128, 1));
 
-        alias Types = MetaList!(string, Latin1String, AsciiString, Windows1252String, dstring, wstring);
+        alias Types = TypeTuple!(string, Latin1String, AsciiString, Windows1252String, dstring, wstring);
         foreach(S; Types)
             foreach(D; Types)
             {
@@ -2064,7 +2064,7 @@ unittest
     }
     {
         string czechChars = "Příliš žluťoučký kůň úpěl ďábelské ódy.";
-        alias Types = MetaList!(string, dstring, wstring);
+        alias Types = TypeTuple!(string, dstring, wstring);
         foreach(S; Types)
             foreach(D; Types)
             {

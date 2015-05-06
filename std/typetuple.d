@@ -1,9 +1,6 @@
 // Written in the D programming language.
 
 /**
- * $(RED Will be deprecated in next release (2.069).
- * Please use $(LINK2 std_meta_list.html, std.meta.list) instead.)
- *
  * Templates with which to manipulate type tuples (also known as type lists).
  *
  * Some operations on type tuples are built in to the language,
@@ -38,8 +35,6 @@
 module std.typetuple;
 
 /**
- * $(RED Use `std.meta.list.MetaList` instead.)
- *
  * Creates a typetuple out of a sequence of zero or more types.
  */
 template TypeTuple(TList...)
@@ -69,8 +64,6 @@ unittest
 }
 
 /**
- * $(RED Use `std.meta.list.indexOf` instead.)
- *
  * Returns the index of the first occurrence of type T in the
  * sequence of zero or more types TList.
  * If not found, -1 is returned.
@@ -154,8 +147,6 @@ unittest
 alias IndexOf = staticIndexOf;
 
 /**
- * $(RED Use `std.meta.list.Erase` instead.)
- *
  * Returns a typetuple created from TList with the first occurrence,
  * if any, of T removed.
  */
@@ -214,8 +205,6 @@ unittest
 
 
 /**
- * $(RED Use `std.meta.list.EraseAll` instead.)
- *
  * Returns a typetuple created from TList with the all occurrences,
  * if any, of T removed.
  */
@@ -276,8 +265,6 @@ unittest
 
 
 /**
- * $(RED Use `std.meta.list.NoDuplicates` instead.)
- *
  * Returns a typetuple created from TList with the all duplicate
  * types removed.
  */
@@ -309,8 +296,6 @@ unittest
 
 
 /**
- * $(RED Use `Renamed to std.meta.list.Replace` instead)
- *
  * Returns a typetuple created from TList with the first occurrence
  * of type T, if found, replaced with type U.
  */
@@ -391,8 +376,6 @@ unittest
 }
 
 /**
- * $(RED Use `std.meta.list.ReplaceAll` instead)
- *
  * Returns a typetuple created from TList with all occurrences
  * of type T, if found, replaced with type U.
  */
@@ -473,8 +456,6 @@ unittest
 }
 
 /**
- * $(RED Use `std.meta.list.Reverse` instead.)
- *
  * Returns a typetuple created from TList with the order reversed.
  */
 template Reverse(TList...)
@@ -502,12 +483,9 @@ unittest
 }
 
 /**
- * $(RED Use `std.traits.MostDerived` instead.)
- *
  * Returns the type from TList that is the most derived from type T.
  * If none are found, T is returned.
  */
-deprecated("Use std.traits.MostDerived instead")
 template MostDerived(T, TList...)
 {
     static if (TList.length == 0)
@@ -519,7 +497,7 @@ template MostDerived(T, TList...)
 }
 
 ///
-deprecated unittest
+unittest
 {
     class A { }
     class B : A { }
@@ -531,12 +509,9 @@ deprecated unittest
 }
 
 /**
- * $(RED Use `std.traits.DerivedToFront` instead.)
- *
  * Returns the typetuple TList with the types sorted so that the most
  * derived types come first.
  */
-deprecated("Use std.traits.DerivedToFront instead")
 template DerivedToFront(TList...)
 {
     static if (TList.length == 0)
@@ -550,7 +525,7 @@ template DerivedToFront(TList...)
 }
 
 ///
-deprecated unittest
+unittest
 {
     class A { }
     class B : A { }
@@ -562,9 +537,7 @@ deprecated unittest
 }
 
 /**
- * $(RED Use `std.meta.algorithm.Map` instead.)
- *
- * Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, T...)
 {
@@ -610,8 +583,6 @@ unittest
 }
 
 /**
-$(RED Use `std.meta.algorithm.all` instead.)
-
 Tests whether all given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
 
@@ -646,8 +617,6 @@ unittest
 }
 
 /**
-$(RED Use `std.meta.algorithm.any` instead.)
-
 Tests whether any given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
@@ -683,8 +652,6 @@ unittest
 
 
 /**
- * $(RED Use `std.meta.algorithm.Filter` instead.)
- *
  * Filters a $(D TypeTuple) using a template predicate. Returns a
  * $(D TypeTuple) of the elements which satisfy the predicate.
  */
@@ -754,8 +721,6 @@ private version (unittest)
 
 
 /**
- * Use `std.meta.predicates.Not`
- *
  * Negates the passed template predicate.
  */
 template templateNot(alias pred)
@@ -784,8 +749,6 @@ unittest
 
 
 /**
- * $(RED Use `std.meta.predicates.And` instead.)
- *
  * Combines several template predicates using logical AND, i.e. constructs a new
  * predicate which evaluates to true for a given input T if and only if all of
  * the passed predicates are true for T.
@@ -844,8 +807,6 @@ unittest
 
 
 /**
- * $(RED Use `std.meta.predicates.Or` instead.)
- *
  * Combines several template predicates using logical OR, i.e. constructs a new
  * predicate which evaluates to true for a given input T if and only at least
  * one of the passed predicates is true for T.

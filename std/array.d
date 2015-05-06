@@ -68,7 +68,7 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import std.traits;
-import std.meta;
+import std.typetuple;
 import std.functional;
 static import std.algorithm; // FIXME, remove with alias of splitter
 
@@ -275,7 +275,7 @@ unittest
         int i;
     }
 
-    foreach(T; MetaList!(S, const S, immutable S))
+    foreach(T; TypeTuple!(S, const S, immutable S))
     {
         auto arr = [T(1), T(2), T(3), T(4)];
         assert(array(arr) == arr);
@@ -493,34 +493,34 @@ uninitializedArray is nothrow and weakly pure.
 uninitializedArray is @system if the uninitialized element type has pointers.
 +/
 auto uninitializedArray(T, I...)(I sizes) nothrow @system
-if (isDynamicArray!T && all!(isIntegral, I) && hasIndirections!(ElementEncodingType!T))
+if (isDynamicArray!T && allSatisfy!(isIntegral, I) && hasIndirections!(ElementEncodingType!T))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(all!(isSize_t, I),
+    static assert(allSatisfy!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
 
     //Eagerlly transform non-size_t into size_t to avoid template bloat
-    alias ST = Map!(toSize_t, I);
+    alias ST = staticMap!(toSize_t, I);
 
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
 
 ///
 auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
-if (isDynamicArray!T && all!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
+if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(all!(isSize_t, I),
+    static assert(allSatisfy!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
 
     //Eagerlly transform non-size_t into size_t to avoid template bloat
-    alias ST = Map!(toSize_t, I);
+    alias ST = staticMap!(toSize_t, I);
 
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
@@ -548,16 +548,16 @@ necessarily the element type's $(D .init).
 minimallyInitializedArray is nothrow and weakly pure.
 +/
 auto minimallyInitializedArray(T, I...)(I sizes) nothrow @trusted
-if (isDynamicArray!T && all!(isIntegral, I))
+if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(all!(isSize_t, I),
+    static assert(allSatisfy!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
     //Eagerlly transform non-size_t into size_t to avoid template bloat
-    alias ST = Map!(toSize_t, I);
+    alias ST = staticMap!(toSize_t, I);
 
     return arrayAllocImpl!(true, T, ST)(sizes);
 }
@@ -924,9 +924,9 @@ private void copyBackwards(T)(T[] src, T[] dest)
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     if(!isSomeString!(T[])
-        && all!(isInputRangeOrConvertible!T, U) && U.length > 0)
+        && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
-    static if(all!(isInputRangeWithLengthOrConvertible!T, U))
+    static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
         import std.conv : emplaceRef;
 
@@ -982,10 +982,10 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 
 /// Ditto
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if(isSomeString!(T[]) && all!(isCharOrStringOrDcharRange, U))
+    if(isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 {
     static if(is(Unqual!T == T)
-        && all!(isInputRangeWithLengthOrConvertible!dchar, U))
+        && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
     {
         import std.utf : codeLength;
         // mutable, can do in place
@@ -1163,10 +1163,10 @@ unittest
                 new AssertError("testStr failure 3", file, line));
     }
 
-    foreach (T; MetaList!(char, wchar, dchar,
+    foreach (T; TypeTuple!(char, wchar, dchar,
         immutable(char), immutable(wchar), immutable(dchar)))
     {
-        foreach (U; MetaList!(char, wchar, dchar,
+        foreach (U; TypeTuple!(char, wchar, dchar,
             immutable(char), immutable(wchar), immutable(dchar)))
         {
             testStr!(T[], U[])();
@@ -1304,7 +1304,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 
 @safe pure nothrow unittest
 {
-    foreach(T; MetaList!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
     {
         T a = [1, 2, 3, 4, 5];
         T b = a;
@@ -1372,7 +1372,7 @@ unittest
 
     debug(std_array) printf("array.replicate.unittest\n");
 
-    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s;
         immutable S t = "abc";
@@ -1440,7 +1440,7 @@ unittest
     static auto makeEntry(S)(string l, string[] r)
     {return tuple(l.to!S(), r.to!(S[])());}
 
-    foreach (S; MetaList!(string, wstring, dstring,))
+    foreach (S; TypeTuple!(string, wstring, dstring,))
     {
         auto entries =
         [
@@ -1532,7 +1532,7 @@ unittest
     import std.algorithm : cmp;
 
     debug(std_array) printf("array.split\n");
-    foreach (S; MetaList!(string, wstring, dstring,
+    foreach (S; TypeTuple!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
                     const(char)[], const(wchar)[], const(dchar)[],
@@ -1806,18 +1806,18 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 {
     import std.conv : to;
 
-    foreach (T; MetaList!(string,wstring,dstring))
+    foreach (T; TypeTuple!(string,wstring,dstring))
     {
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        foreach (S; MetaList!(char,wchar,dchar))
+        foreach (S; TypeTuple!(char,wchar,dchar))
         {
             auto jarr = arr.join(to!S(' '));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
         }
-        foreach (S; MetaList!(string,wstring,dstring))
+        foreach (S; TypeTuple!(string,wstring,dstring))
         {
             auto jarr = arr.join(to!S(" "));
             static assert(is(typeof(jarr) == T));
@@ -1825,11 +1825,11 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
         }
     }
 
-    foreach (T; MetaList!(string,wstring,dstring))
+    foreach (T; TypeTuple!(string,wstring,dstring))
     {
         auto arr2 = "Здравствуй\u047CМир\u047CUnicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
-        foreach (S; MetaList!(wchar,dchar))
+        foreach (S; TypeTuple!(wchar,dchar))
         {
             auto jarr = arr.join(to!S('\u047C'));
             static assert(is(typeof(jarr) == T));
@@ -1849,7 +1849,7 @@ unittest
 
     debug(std_array) printf("array.join.unittest\n");
 
-    foreach(R; MetaList!(string, wstring, dstring))
+    foreach(R; TypeTuple!(string, wstring, dstring))
     {
         R word1 = "日本語";
         R word2 = "paul";
@@ -1866,7 +1866,7 @@ unittest
         auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
-        foreach(S; MetaList!(string, wstring, dstring))
+        foreach(S; TypeTuple!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
@@ -2044,9 +2044,9 @@ unittest
 
     debug(std_array) printf("array.replace.unittest\n");
 
-    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        foreach (T; MetaList!(string, wstring, dstring, char[], wchar[], dchar[]))
+        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
             auto from = to!T("foo");
@@ -2081,7 +2081,7 @@ unittest
         this(C[] arr){ desired = arr; }
         void put(C[] part){ assert(skipOver(desired, part)); }
     }
-    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         alias Char = ElementEncodingType!S;
         S s = to!S("yet another dummy text, yet another ...");
@@ -2410,10 +2410,10 @@ unittest
 
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
-    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[],
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; MetaList!(string, wstring, dstring, char[], wchar[], dchar[],
+        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
@@ -2518,10 +2518,10 @@ unittest
 
     debug(std_array) printf("array.replaceLast.unittest\n");
 
-    foreach (S; MetaList!(string, wstring, dstring, char[], wchar[], dchar[],
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; MetaList!(string, wstring, dstring, char[], wchar[], dchar[],
+        foreach (T; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
@@ -3137,7 +3137,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     catch (Exception) assert(0);
 
     // Issue 5663 & 9725 tests
-    foreach (S; MetaList!(char[], const(char)[], string))
+    foreach (S; TypeTuple!(char[], const(char)[], string))
     {
         {
             Appender!S app5663i;

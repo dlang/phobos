@@ -66,7 +66,7 @@
 module std.variant;
 
 import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
-    std.meta;
+    std.typetuple;
 
 /++
     Gives the $(D sizeof) the largest type given.
@@ -103,28 +103,28 @@ template AssociativeArray(T : V[K], K, V)
 template This2Variant(V, T...)
 {
     static if (T.length == 0)
-        alias This2Variant = MetaList!();
+        alias This2Variant = TypeTuple!();
     else static if (is(AssociativeArray!(T[0]).Key == This))
     {
         static if (is(AssociativeArray!(T[0]).Value == This))
             alias This2Variant =
-                MetaList!(V[V],
+                TypeTuple!(V[V],
                            This2Variant!(V, T[1 .. $]));
         else
             alias This2Variant =
-                MetaList!(AssociativeArray!(T[0]).Value[V],
+                TypeTuple!(AssociativeArray!(T[0]).Value[V],
                            This2Variant!(V, T[1 .. $]));
     }
     else static if (is(AssociativeArray!(T[0]).Value == This))
         alias This2Variant =
-            MetaList!(V[AssociativeArray!(T[0]).Key],
+            TypeTuple!(V[AssociativeArray!(T[0]).Key],
                        This2Variant!(V, T[1 .. $]));
     else static if (is(T[0] == This[]))
-        alias This2Variant = MetaList!(V[], This2Variant!(V, T[1 .. $]));
+        alias This2Variant = TypeTuple!(V[], This2Variant!(V, T[1 .. $]));
     else static if (is(T[0] == This*))
-        alias This2Variant = MetaList!(V*, This2Variant!(V, T[1 .. $]));
+        alias This2Variant = TypeTuple!(V*, This2Variant!(V, T[1 .. $]));
     else
-        alias This2Variant = MetaList!(T[0], This2Variant!(V, T[1 .. $]));
+        alias This2Variant = TypeTuple!(T[0], This2Variant!(V, T[1 .. $]));
 }
 
 /**
@@ -140,7 +140,7 @@ template This2Variant(V, T...)
  * are larger than the largest built-in type, they will automatically
  * be boxed. This means that even large types will only be the size
  * of a pointer within the $(D_PARAM Variant), but this also implies some
- * overhead. $(D_PARAM Variant) can accommodate all primitive types and
+ * overhead. $(D_PARAM Variant) can accommodate all primitive types and 
  * all user-defined types.))
  *
  * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
@@ -179,7 +179,7 @@ private:
             = is(T == VariantN)
             ||
             //T.sizeof <= size &&
-            (AllowedTypes.length == 0 || indexOf!(T, AllowedTypes) >= 0);
+            (AllowedTypes.length == 0 || staticIndexOf!(T, AllowedTypes) >= 0);
     }
 
     // Each internal operation is encoded with an identifier. See
@@ -294,27 +294,27 @@ private:
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
             alias UA = Unqual!A;
-            alias MutaTypes = MetaList!(UA, ImplicitConversionTargets!UA);
-            alias ConstTypes = Map!(ConstOf, MutaTypes);
-            alias SharedTypes = Map!(SharedOf, MutaTypes);
-            alias SharedConstTypes = Map!(SharedConstOf, MutaTypes);
-            alias ImmuTypes  = Map!(ImmutableOf, MutaTypes);
+            alias MutaTypes = TypeTuple!(UA, ImplicitConversionTargets!UA);
+            alias ConstTypes = staticMap!(ConstOf, MutaTypes);
+            alias SharedTypes = staticMap!(SharedOf, MutaTypes);
+            alias SharedConstTypes = staticMap!(SharedConstOf, MutaTypes);
+            alias ImmuTypes  = staticMap!(ImmutableOf, MutaTypes);
 
             static if (is(A == immutable))
-                alias AllTypes = MetaList!(ImmuTypes, ConstTypes, SharedConstTypes);
+                alias AllTypes = TypeTuple!(ImmuTypes, ConstTypes, SharedConstTypes);
             else static if (is(A == shared))
             {
                 static if (is(A == const))
                     alias AllTypes = SharedConstTypes;
                 else
-                    alias AllTypes = MetaList!(SharedTypes, SharedConstTypes);
+                    alias AllTypes = TypeTuple!(SharedTypes, SharedConstTypes);
             }
             else
             {
                 static if (is(A == const))
                     alias AllTypes = ConstTypes;
                 else
-                    alias AllTypes = MetaList!(MutaTypes, ConstTypes);
+                    alias AllTypes = TypeTuple!(MutaTypes, ConstTypes);
             }
 
             foreach (T ; AllTypes)
@@ -517,14 +517,14 @@ private:
             }
             else
             {
-                alias ParamTypes = ParameterTypes!A;
+                alias ParamTypes = ParameterTypeTuple!A;
                 auto p = cast(Variant*) parm;
                 auto argCount = p.get!size_t;
                 // To assign the tuple we need to use the unqualified version,
                 // otherwise we run into issues such as with const values.
                 // We still get the actual type from the Variant though
                 // to ensure that we retain const correctness.
-                Tuple!(Map!(Unqual, ParamTypes)) t;
+                Tuple!(staticMap!(Unqual, ParamTypes)) t;
                 enforce(t.length == argCount,
                         text("Argument count mismatch: ",
                              A.stringof, " expects ", t.length,
@@ -581,12 +581,12 @@ public:
 
     /// Allows assignment from a subset algebraic type
     this(T : VariantN!(tsize, Types), size_t tsize, Types...)(T value)
-        if (!is(T : VariantN) && Types.length > 0 && all!(allowed, Types))
+        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
     {
         opAssign(value);
     }
 
-    static if (!AllowedTypes.length || any!(hasElaborateCopyConstructor, AllowedTypes))
+    static if (!AllowedTypes.length || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes))
     {
         this(this)
         {
@@ -594,7 +594,7 @@ public:
         }
     }
 
-    static if (!AllowedTypes.length || any!(hasElaborateDestructor, AllowedTypes))
+    static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
     {
         ~this()
         {
@@ -624,7 +624,7 @@ public:
         }
         else
         {
-            static if (!AllowedTypes.length || any!(hasElaborateDestructor, AllowedTypes))
+            static if (!AllowedTypes.length || anySatisfy!(hasElaborateDestructor, AllowedTypes))
             {
                 // Assignment should destruct previous value
                 fptr(OpID.destruct, &store, null);
@@ -667,7 +667,7 @@ public:
 
     // Allow assignment from another variant which is a subset of this one
     VariantN opAssign(T : VariantN!(tsize, Types), size_t tsize, Types...)(T rhs)
-        if (!is(T : VariantN) && Types.length > 0 && all!(allowed, Types))
+        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
     {
         // discover which type rhs is actually storing
         foreach (V; T.AllowedTypes)
@@ -1197,7 +1197,7 @@ public:
      */
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
     {
-        alias A = ParameterTypes!(Delegate)[0];
+        alias A = ParameterTypeTuple!(Delegate)[0];
         if (type == typeid(A[]))
         {
             auto arr = get!(A[]);
@@ -1266,7 +1266,7 @@ unittest
     }
 
     static assert(S.sizeof >= Variant.sizeof);
-    alias Types = MetaList!(string, int, S);
+    alias Types = TypeTuple!(string, int, S);
     alias MyVariant = VariantN!(maxSize!Types, Types);
 
     auto v = MyVariant(S.init);
@@ -1485,7 +1485,7 @@ static class VariantException : Exception
 unittest
 {
     alias W1 = This2Variant!(char, int, This[int]);
-    alias W2 = MetaList!(int, char[int]);
+    alias W2 = TypeTuple!(int, char[int]);
     static assert(is(W1 == W2));
 
     alias var_t = Algebraic!(void, string);
@@ -2207,7 +2207,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                 // Handle normal function objects
                 static if (isSomeFunction!dg)
                 {
-                    alias Params = ParameterTypes!dg;
+                    alias Params = ParameterTypeTuple!dg;
                     static if (Params.length == 0)
                     {
                         // Just check exception functions in the first
@@ -2315,24 +2315,24 @@ unittest
 
     int i = 10;
     v = i;
-    foreach (qual; MetaList!(MutableOf, ConstOf))
+    foreach (qual; TypeTuple!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!int) == 10);
         assert(v.get!(qual!float) == 10.0f);
     }
-    foreach (qual; MetaList!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
     }
 
     const(int) ci = 20;
     v = ci;
-    foreach (qual; MetaList!(ConstOf))
+    foreach (qual; TypeTuple!(ConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; MetaList!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2340,12 +2340,12 @@ unittest
 
     immutable(int) ii = ci;
     v = ii;
-    foreach (qual; MetaList!(ImmutableOf, ConstOf, SharedConstOf))
+    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!int) == 20);
         assert(v.get!(qual!float) == 20.0f);
     }
-    foreach (qual; MetaList!(MutableOf, SharedOf))
+    foreach (qual; TypeTuple!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!int));
         assertThrown!VariantException(v.get!(qual!float));
@@ -2353,12 +2353,12 @@ unittest
 
     int[] ai = [1,2,3];
     v = ai;
-    foreach (qual; MetaList!(MutableOf, ConstOf))
+    foreach (qual; TypeTuple!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!(int[])) == [1,2,3]);
         assert(v.get!(qual!(int)[]) == [1,2,3]);
     }
-    foreach (qual; MetaList!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2366,12 +2366,12 @@ unittest
 
     const(int[]) cai = [4,5,6];
     v = cai;
-    foreach (qual; MetaList!(ConstOf))
+    foreach (qual; TypeTuple!(ConstOf))
     {
         assert(v.get!(qual!(int[])) == [4,5,6]);
         assert(v.get!(qual!(int)[]) == [4,5,6]);
     }
-    foreach (qual; MetaList!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2385,7 +2385,7 @@ unittest
     assert(v.get!(const(int)[]) == [7,8,9]);
     //assert(v.get!(shared(const(int[]))) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
     //assert(v.get!(shared(const(int))[]) == cast(shared const)[7,8,9]);    // Bug ??? runtime error
-    foreach (qual; MetaList!(MutableOf))
+    foreach (qual; TypeTuple!(MutableOf))
     {
         assertThrown!VariantException(v.get!(qual!(int[])));
         assertThrown!VariantException(v.get!(qual!(int)[]));
@@ -2395,13 +2395,13 @@ unittest
     class B : A {}
     B b = new B();
     v = b;
-    foreach (qual; MetaList!(MutableOf, ConstOf))
+    foreach (qual; TypeTuple!(MutableOf, ConstOf))
     {
         assert(v.get!(qual!B) is b);
         assert(v.get!(qual!A) is b);
         assert(v.get!(qual!Object) is b);
     }
-    foreach (qual; MetaList!(ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; TypeTuple!(ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2410,13 +2410,13 @@ unittest
 
     const(B) cb = new B();
     v = cb;
-    foreach (qual; MetaList!(ConstOf))
+    foreach (qual; TypeTuple!(ConstOf))
     {
         assert(v.get!(qual!B) is cb);
         assert(v.get!(qual!A) is cb);
         assert(v.get!(qual!Object) is cb);
     }
-    foreach (qual; MetaList!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, SharedOf, SharedConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2425,13 +2425,13 @@ unittest
 
     immutable(B) ib = new immutable(B)();
     v = ib;
-    foreach (qual; MetaList!(ImmutableOf, ConstOf, SharedConstOf))
+    foreach (qual; TypeTuple!(ImmutableOf, ConstOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is ib);
         assert(v.get!(qual!A) is ib);
         assert(v.get!(qual!Object) is ib);
     }
-    foreach (qual; MetaList!(MutableOf, SharedOf))
+    foreach (qual; TypeTuple!(MutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2440,13 +2440,13 @@ unittest
 
     shared(B) sb = new shared B();
     v = sb;
-    foreach (qual; MetaList!(SharedOf, SharedConstOf))
+    foreach (qual; TypeTuple!(SharedOf, SharedConstOf))
     {
         assert(v.get!(qual!B) is sb);
         assert(v.get!(qual!A) is sb);
         assert(v.get!(qual!Object) is sb);
     }
-    foreach (qual; MetaList!(MutableOf, ImmutableOf, ConstOf))
+    foreach (qual; TypeTuple!(MutableOf, ImmutableOf, ConstOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));
@@ -2455,13 +2455,13 @@ unittest
 
     shared(const(B)) scb = new shared const B();
     v = scb;
-    foreach (qual; MetaList!(SharedConstOf))
+    foreach (qual; TypeTuple!(SharedConstOf))
     {
         assert(v.get!(qual!B) is scb);
         assert(v.get!(qual!A) is scb);
         assert(v.get!(qual!Object) is scb);
     }
-    foreach (qual; MetaList!(MutableOf, ConstOf, ImmutableOf, SharedOf))
+    foreach (qual; TypeTuple!(MutableOf, ConstOf, ImmutableOf, SharedOf))
     {
         assertThrown!VariantException(v.get!(qual!B));
         assertThrown!VariantException(v.get!(qual!A));

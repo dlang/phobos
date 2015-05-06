@@ -1066,7 +1066,7 @@ public:
                     scope(exit) colIndex++;
                     if (indices.length > 0)
                     {
-                        foreach(ti, ToType; FieldTypes!(Contents))
+                        foreach(ti, ToType; FieldTypeTuple!(Contents))
                         {
                             if (indices[ti] == colIndex)
                             {
@@ -1077,7 +1077,7 @@ public:
                     }
                     else
                     {
-                        foreach(ti, ToType; FieldTypes!(Contents))
+                        foreach(ti, ToType; FieldTypeTuple!(Contents))
                         {
                             if (ti == colIndex)
                             {
