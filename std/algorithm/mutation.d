@@ -736,7 +736,7 @@ unittest
 {
     import std.algorithm.iteration : filter;
     import std.traits : hasElaborateAssign;
-    import std.typetuple : TypeTuple;
+    import std.meta : MetaList;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -787,7 +787,7 @@ unittest
     assert (!typeid(S3).init().ptr);
     assert ( typeid(S4).init().ptr);
 
-    foreach(S; TypeTuple!(S1, S2, S3, S4))
+    foreach(S; MetaList!(S1, S2, S3, S4))
     {
         //initializeAll
         {

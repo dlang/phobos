@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import std.traits;
 // FIXME
-import std.typetuple; // : TypeTuple, allSatisfy;
+import std.meta; // : MetaList, all;
 
 debug(Unique) import std.stdio;
 
@@ -410,7 +410,7 @@ for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
 motivated by the ability to use value `Tuple`s with various compile-time
-loop constructs (e.g. $(XREF typetuple, TypeTuple) iteration), all of which use
+loop constructs (e.g. $(XREF meta.list, MetaList) iteration), all of which use
 zero-based indexing.
 
 Params:
@@ -418,7 +418,7 @@ Params:
 */
 template Tuple(Specs...)
 {
-    import std.typetuple : staticMap;
+    import std.meta : Map;
 
     // Parse (type,name) pairs (FieldSpecs) out of the specified
     // arguments. Some fields would have name, others not.
@@ -426,20 +426,20 @@ template Tuple(Specs...)
     {
         static if (Specs.length == 0)
         {
-            alias parseSpecs = TypeTuple!();
+            alias parseSpecs = MetaList!();
         }
         else static if (is(Specs[0]))
         {
             static if (is(typeof(Specs[1]) : string))
             {
                 alias parseSpecs =
-                    TypeTuple!(FieldSpec!(Specs[0 .. 2]),
+                    MetaList!(FieldSpec!(Specs[0 .. 2]),
                                parseSpecs!(Specs[2 .. $]));
             }
             else
             {
                 alias parseSpecs =
-                    TypeTuple!(FieldSpec!(Specs[0]),
+                    MetaList!(FieldSpec!(Specs[0]),
                                parseSpecs!(Specs[1 .. $]));
             }
         }
@@ -458,7 +458,7 @@ template Tuple(Specs...)
 
     alias fieldSpecs = parseSpecs!Specs;
 
-    // Used with staticMap.
+    // Used with Map.
     alias extractType(alias spec) = spec.Type;
     alias extractName(alias spec) = spec.name;
 
@@ -471,7 +471,7 @@ template Tuple(Specs...)
     string injectNamedFields()
     {
         string decl = "";
-        foreach (i, name; staticMap!(extractName, fieldSpecs))
+        foreach (i, name; Map!(extractName, fieldSpecs))
         {
             import std.format : format;
 
@@ -487,17 +487,17 @@ template Tuple(Specs...)
     // Returns Specs for a subtuple this[from .. to] preserving field
     // names if any.
     alias sliceSpecs(size_t from, size_t to) =
-        staticMap!(expandSpec, fieldSpecs[from .. to]);
+        Map!(expandSpec, fieldSpecs[from .. to]);
 
     template expandSpec(alias spec)
     {
         static if (spec.name.length == 0)
         {
-            alias expandSpec = TypeTuple!(spec.Type);
+            alias expandSpec = MetaList!(spec.Type);
         }
         else
         {
-            alias expandSpec = TypeTuple!(spec.Type, spec.name);
+            alias expandSpec = MetaList!(spec.Type, spec.name);
         }
     }
 
@@ -541,25 +541,25 @@ template Tuple(Specs...)
         /**
          * The types of the `Tuple`'s components.
          */
-        alias Types = staticMap!(extractType, fieldSpecs);
-        
+        alias Types = Map!(extractType, fieldSpecs);
+
         ///
         unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
-            static assert(is(Fields.Types == TypeTuple!(int, string, float)));
+            static assert(is(Fields.Types == MetaList!(int, string, float)));
         }
 
         /**
          * The names of the `Tuple`'s components. Unnamed fields have empty names.
          */
-        alias fieldNames = staticMap!(extractName, fieldSpecs);
-        
+        alias fieldNames = Map!(extractName, fieldSpecs);
+
         ///
         unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
-            static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+            static assert(Fields.fieldNames == MetaList!("id", "", ""));
         }
 
         /**
@@ -570,18 +570,18 @@ template Tuple(Specs...)
          */
         Types expand;
         mixin(injectNamedFields());
-        
+
         ///
         unittest
         {
             auto t1 = tuple(1, " hello ", 2.3);
             assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
-            
-            void takeSeveralTypes(int n, string s, bool b) 
+
+            void takeSeveralTypes(int n, string s, bool b)
             {
                 assert(n == 4 && s == "test" && b == false);
             }
-            
+
             auto t2 = tuple(4, "test", false);
             //t.expand acting as a list of values
             takeSeveralTypes(t2.expand);
@@ -617,8 +617,8 @@ template Tuple(Specs...)
          * Params:
          *     values = A list of values that are either the same
          *              types as those given by the `Types` field
-         *              of this `Tuple`, or can implicitly convert 
-         *              to those types. They must be in the same 
+         *              of this `Tuple`, or can implicitly convert
+         *              to those types. They must be in the same
          *              order as they appear in `Types`.
          */
         static if (Types.length > 0)
@@ -628,7 +628,7 @@ template Tuple(Specs...)
                 field[] = values[];
             }
         }
-        
+
         ///
         unittest
         {
@@ -645,14 +645,14 @@ template Tuple(Specs...)
          *              Array slices are not supported.
          */
         this(U, size_t n)(U[n] values)
-        if (n == Types.length && allSatisfy!(isBuildableFrom!U, Types))
+        if (n == Types.length && all!(isBuildableFrom!U, Types))
         {
             foreach (i, _; Types)
             {
                 field[i] = values[i];
             }
         }
-        
+
         ///
         unittest
         {
@@ -675,15 +675,15 @@ template Tuple(Specs...)
         {
             field[] = another.field[];
         }
-        
+
         ///
         unittest
         {
             alias IntVec = Tuple!(int, int, int);
             alias DubVec = Tuple!(double, double, double);
-            
+
             IntVec iv = tuple(1, 1, 1);
-            
+
             //Ok, int can implicitly convert to double
             DubVec dv = iv;
             //Error: double cannot implicitly convert to int
@@ -694,13 +694,13 @@ template Tuple(Specs...)
          * Comparison for equality. Two `Tuple`s are considered equal
          * $(B iff) they fulfill the following criteria:
          *
-         * $(UL 
+         * $(UL
          *   $(LI Each `Tuple` is the same length.)
-         *   $(LI For each type `T` on the left-hand side and each type 
-         *        `U` on the right-hand side, values of type `T` can be 
+         *   $(LI For each type `T` on the left-hand side and each type
+         *        `U` on the right-hand side, values of type `T` can be
          *        compared with values of type `U`.)
-         *   $(LI For each value `v1` on the left-hand side and each value 
-         *        `v2` on the right-hand side, the expression `v1 == v2` is 
+         *   $(LI For each value `v1` on the left-hand side and each value
+         *        `v2` on the right-hand side, the expression `v1 == v2` is
          *        true.))
          *
          * Params:
@@ -715,14 +715,14 @@ template Tuple(Specs...)
         {
             return field[] == rhs.field[];
         }
-        
+
         /// ditto
         bool opEquals(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
             return field[] == rhs.field[];
         }
-        
+
         ///
         unittest
         {
@@ -761,7 +761,7 @@ template Tuple(Specs...)
             }
             return 0;
         }
-        
+
         /// ditto
         int opCmp(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "<"))
@@ -775,8 +775,8 @@ template Tuple(Specs...)
             }
             return 0;
         }
-        
-        /**  
+
+        /**
             The first `v1` for which `v1 > v2` is true determines
             the result. This could lead to unexpected behaviour.
          */
@@ -785,7 +785,7 @@ template Tuple(Specs...)
             auto tup1 = tuple(1, 1, 1);
             auto tup2 = tuple(1, 100, 100);
             assert(tup1 < tup2);
-            
+
             //Only the first result matters for comparison
             tup1[0] = 2;
             assert(tup1 > tup2);
@@ -795,7 +795,7 @@ template Tuple(Specs...)
          * Assignment from another `Tuple`.
          *
          * Params:
-         *     rhs = The source `Tuple` to assign from. Each element of the 
+         *     rhs = The source `Tuple` to assign from. Each element of the
          *           source `Tuple` must be implicitly assignable to each
          *           respective element of the target `Tuple`.
          */
@@ -832,8 +832,8 @@ template Tuple(Specs...)
          *     to = A `size_t` designating the ending position (exclusive) of the slice.
          *
          * Returns:
-         *     A new `Tuple` that is a slice from `[from, to$(RPAREN)` of the original. 
-         *     It has the same types and values as the range `[from, to$(RPAREN)` in 
+         *     A new `Tuple` that is a slice from `[from, to$(RPAREN)` of the original.
+         *     It has the same types and values as the range `[from, to$(RPAREN)` in
          *     the original.
          */
         @property
@@ -842,7 +842,7 @@ template Tuple(Specs...)
         {
             return *cast(typeof(return)*) &(field[from]);
         }
-        
+
         ///
         unittest
         {
@@ -856,7 +856,7 @@ template Tuple(Specs...)
 
         /**
             Creates a hash of this `Tuple`.
-            
+
             Returns:
                 A `size_t` representing the hash of this `Tuple`.
          */
@@ -867,7 +867,7 @@ template Tuple(Specs...)
                 h += typeid(T).getHash(cast(const void*)&field[i]);
             return h;
         }
-        
+
         void toString(DG)(scope DG sink)
         {
             enum header = typeof(this).stringof ~ "(",
@@ -921,7 +921,7 @@ unittest
     auto y = point[1];
 }
 
-/** 
+/**
     `Tuple` members can be named. It is legal to mix named and unnamed
     members. The method above is still applicable to all fields.
  */
@@ -950,17 +950,17 @@ unittest
 
 /**
     Create a copy of a `Tuple` with its fields in reverse order.
-    
+
     Params:
         t = The `Tuple` to copy.
-    
+
     Returns:
         A copy of `t` with its fields in reverse order.
  */
 ReverseTupleType!T reverse(T)(T t)
     if (isTuple!T)
 {
-    import std.typetuple : Reverse;
+    import std.meta : Reverse;
     // @@@BUG@@@ Cannot be an internal function due to forward reference issues.
 
     // @@@BUG@@@ 9929 Need 'this' when calling template with expanded tuple
@@ -994,11 +994,11 @@ private template ReverseTupleSpecs(T...)
     {
         static if (is(typeof(T[$-1]) : string))
         {
-            alias ReverseTupleSpecs = TypeTuple!(T[$-2], T[$-1], ReverseTupleSpecs!(T[0 .. $-2]));
+            alias ReverseTupleSpecs = MetaList!(T[$-2], T[$-1], ReverseTupleSpecs!(T[0 .. $-2]));
         }
         else
         {
-            alias ReverseTupleSpecs = TypeTuple!(T[$-1], ReverseTupleSpecs!(T[0 .. $-1]));
+            alias ReverseTupleSpecs = MetaList!(T[$-1], ReverseTupleSpecs!(T[0 .. $-1]));
         }
     }
     else
@@ -1334,7 +1334,7 @@ unittest
     static assert(T.fieldNames[1] == "foo");
 
     alias Fields = Tuple!(int, "id", string, float);
-    static assert(Fields.fieldNames == TypeTuple!("id", "", ""));
+    static assert(Fields.fieldNames == MetaList!("id", "", ""));
 }
 
 // Bugzilla 13837
@@ -1389,17 +1389,17 @@ unittest
 /**
     Constructs a $(D Tuple) object instantiated and initialized according to
     the given arguments.
-    
+
     Params:
         Names = A list of strings naming each successive field of the `Tuple`.
                 Each name matches up with the corresponding field given by `Args`.
                 A name does not have to be provided for every field, but as
                 the names must proceed in order, it is not possible to skip
                 one field and name the next after it.
-                
+
         args = Values to initialize the `Tuple` with. The `Tuple`'s type will
                be inferred from the types of the values given.
-    
+
     Returns:
         A new `Tuple` with its type inferred from the arguments given.
 */
@@ -1430,12 +1430,12 @@ template tuple(Names...)
             {
                 template and(B...) if (B.length == 1)
                 {
-                    alias TypeTuple!(A[0], B[0]) and;
+                    alias MetaList!(A[0], B[0]) and;
                 }
 
                 template and(B...) if (B.length != 1)
                 {
-                    alias TypeTuple!(A[0], B[0],
+                    alias MetaList!(A[0], B[0],
                         Interleave!(A[1..$]).and!(B[1..$])) and;
                 }
             }
@@ -1460,10 +1460,10 @@ unittest
 
 /**
     Returns $(D true) if and only if $(D T) is an instance of $(D std.typecons.Tuple).
-    
+
     Params:
         T = The type to check.
-        
+
     Returns:
         true if `T` is a `Tuple` type, false otherwise.
  */
@@ -1599,7 +1599,7 @@ unittest
 }
 
 /**
-    However, $(D Rebindable!(Widget)) does allow reassignment, 
+    However, $(D Rebindable!(Widget)) does allow reassignment,
     while otherwise behaving exactly like a $(D const Widget).
  */
 unittest
@@ -1621,7 +1621,7 @@ inference.
 Params:
     obj = A reference to an object or interface, or an array slice
           to initialize the `Rebindable` with.
-          
+
 Returns:
     A newly constructed `Rebindable` initialized with the given reference.
 */
@@ -1720,7 +1720,7 @@ unittest
     immutable(char[]) s7654;
     Rebindable!(typeof(s7654)) r7654 = s7654;
 
-    foreach (T; TypeTuple!(char, wchar, char, int))
+    foreach (T; MetaList!(char, wchar, char, int))
     {
         static assert(is(Rebindable!(immutable(T[])) == immutable(T)[]));
         static assert(is(Rebindable!(const(T[])) == const(T)[]));
@@ -1736,7 +1736,7 @@ unittest
     Similar to $(D Rebindable!(T)) but strips all qualifiers from the reference as
     opposed to just constness / immutability. Primary intended use case is with
     shared (having thread-local reference to shared class data)
-    
+
     Params:
         T = A class or interface type.
  */
@@ -1794,13 +1794,13 @@ unittest
   Order the provided members to minimize size while preserving alignment.
   Alignment is not always optimal for 80-bit reals, nor for structs declared
   as align(1).
-  
+
   Params:
-      E = A list of the types to be aligned, representing fields 
+      E = A list of the types to be aligned, representing fields
           of an aggregate such as a `struct` or `class`.
-      
+
       names = The names of the fields that are to be aligned.
-      
+
   Returns:
       A string to be mixed in to an aggregate, such as a `struct` or `class`.
 */
@@ -1909,13 +1909,13 @@ Returns:
     {
         return _isNull;
     }
-    
+
 ///
 unittest
 {
     Nullable!int ni;
     assert(ni.isNull);
-    
+
     ni = 0;
     assert(!ni.isNull);
 }
@@ -1928,13 +1928,13 @@ Forces $(D this) to the null state.
         .destroy(_value);
         _isNull = true;
     }
-    
+
 ///
 unittest
 {
     Nullable!int ni = 0;
     assert(!ni.isNull);
-    
+
     ni.nullify();
     assert(ni.isNull);
 }
@@ -1956,7 +1956,7 @@ Params:
     If this `Nullable` wraps a type that already has a null value
     (such as a pointer), then assigning the null value to this
     `Nullable` is no different than assigning any other value of
-    type `T`, and the resulting code will look very strange. It 
+    type `T`, and the resulting code will look very strange. It
     is strongly recommended that this be avoided by instead using
     the version of `Nullable` that takes an additional `nullValue`
     template argument.
@@ -1966,7 +1966,7 @@ unittest
     //Passes
     Nullable!(int*) npi;
     assert(npi.isNull);
-    
+
     //Passes?!
     npi = null;
     assert(!npi.isNull);
@@ -1985,17 +1985,17 @@ Returns:
         assert(!isNull, message);
         return _value;
     }
-    
+
 ///
 unittest
 {
     import std.exception: assertThrown, assertNotThrown;
-    
+
     Nullable!int ni;
-    //`get` is implicitly called. Will throw 
+    //`get` is implicitly called. Will throw
     //an AssertError in non-release mode
     assertThrown!Throwable(ni == 0);
-    
+
     ni = 0;
     assertNotThrown!Throwable(ni == 0);
 }
@@ -2016,21 +2016,21 @@ unittest
         string address;
         int customerNum;
     }
-    
+
     Nullable!CustomerRecord getByName(string name)
     {
         //A bunch of hairy stuff
-        
+
         return Nullable!CustomerRecord.init;
     }
-    
+
     auto queryResult = getByName("Doe, John");
     if (!queryResult.isNull)
     {
         //Process Mr. Doe's customer record
         auto address = queryResult.address;
         auto customerNum = queryResult.customerNum;
-        
+
         //Do some things with this customer's info
     }
     else
@@ -2218,7 +2218,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; MetaList!(S1, S2))
     {
         S a;
         S b = a;
@@ -2320,7 +2320,7 @@ Nullable!T) because it does not need to store an extra $(D bool).
 
 Params:
     T = The wrapped type for which Nullable provides a null value.
-    
+
     nullValue = The null value which denotes the null state of this
                 `Nullable`. Must be of type `T`.
  */
@@ -2375,14 +2375,14 @@ Returns:
             return _value == nullValue;
         }
     }
-    
+
 ///
 unittest
 {
     Nullable!(int, -1) ni;
     //Initialized to "null" state
     assert(ni.isNull);
-    
+
     ni = 0;
     assert(!ni.isNull);
 }
@@ -2394,20 +2394,20 @@ Forces $(D this) to the null state.
     {
         _value = nullValue;
     }
-    
+
 ///
 unittest
 {
     Nullable!(int, -1) ni = 0;
     assert(!ni.isNull);
-    
+
     ni = -1;
     assert(ni.isNull);
 }
 
 /**
 Assigns $(D value) to the internally-held state. If the assignment
-succeeds, $(D this) becomes non-null. No null checks are made. Note 
+succeeds, $(D this) becomes non-null. No null checks are made. Note
 that the assignment may leave $(D this) in the null state.
 
 Params:
@@ -2419,13 +2419,13 @@ Params:
     {
         _value = value;
     }
-    
+
 /**
     If this `Nullable` wraps a type that already has a null value
     (such as a pointer), and that null value is not given for
-    `nullValue`, then assigning the null value to this `Nullable` 
-    is no different than assigning any other value of type `T`, 
-    and the resulting code will look very strange. It is strongly 
+    `nullValue`, then assigning the null value to this `Nullable`
+    is no different than assigning any other value of type `T`,
+    and the resulting code will look very strange. It is strongly
     recommended that this be avoided by using `T`'s "built in"
     null value for `nullValue`.
  */
@@ -2435,7 +2435,7 @@ unittest
     enum nullVal = cast(int*)0xCAFEBABE;
     Nullable!(int*, nullVal) npi;
     assert(npi.isNull);
-    
+
     //Passes?!
     npi = null;
     assert(!npi.isNull);
@@ -2456,17 +2456,17 @@ Returns:
         assert(!isNull, message);
         return _value;
     }
-    
+
 ///
 unittest
 {
     import std.exception: assertThrown, assertNotThrown;
-    
+
     Nullable!(int, -1) ni;
-    //`get` is implicitly called. Will throw 
+    //`get` is implicitly called. Will throw
     //an error in non-release mode
     assertThrown!Throwable(ni == 0);
-    
+
     ni = 0;
     assertNotThrown!Throwable(ni == 0);
 }
@@ -2484,14 +2484,14 @@ unittest
     Nullable!(size_t, size_t.max) indexOf(string[] haystack, string needle)
     {
         //Find the needle, returning -1 if not found
-        
+
         return Nullable!(size_t, size_t.max).init;
     }
-    
+
     void sendLunchInvite(string name)
     {
     }
-    
+
     //It's safer than C...
     auto coworkers = ["Jane", "Jim", "Marry", "Fred"];
     auto pos = indexOf(coworkers, "Bob");
@@ -2504,7 +2504,7 @@ unittest
     {
         //Bob not found; report the error
     }
-    
+
     //And there's no overhead
     static assert(Nullable!(size_t, size_t.max).sizeof == size_t.sizeof);
 }
@@ -2589,7 +2589,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; MetaList!(S1, S2))
     {
         S a;
         S b = a;
@@ -2683,13 +2683,13 @@ Params:
     {
         _value = value;
     }
-    
+
     ///
     unittest
     {
         NullableRef!int nr = new int(42);
         assert(nr == 42);
-        
+
         int* n = new int(1);
         nr.bind(n);
         assert(nr == 1);
@@ -2705,13 +2705,13 @@ Returns:
     {
         return _value is null;
     }
-    
+
     ///
     unittest
     {
         NullableRef!int nr;
         assert(nr.isNull);
-        
+
         int* n = new int(42);
         nr.bind(n);
         assert(!nr.isNull && nr == 42);
@@ -2724,13 +2724,13 @@ Forces $(D this) to the null state.
     {
         _value = null;
     }
-    
+
     ///
     unittest
     {
         NullableRef!int nr = new int(42);
         assert(!nr.isNull);
-        
+
         nr.nullify();
         assert(nr.isNull);
     }
@@ -2751,16 +2751,16 @@ Params:
         assert(!isNull, message);
         *_value = value;
     }
-    
+
     ///
     unittest
     {
         import std.exception: assertThrown, assertNotThrown;
-        
+
         NullableRef!int nr;
         assert(nr.isNull);
         assertThrown!Throwable(nr = 42);
-        
+
         nr.bind(new int(0));
         assert(!nr.isNull);
         assertNotThrown!Throwable(nr = 42);
@@ -2777,17 +2777,17 @@ This function is also called for the implicit conversion to $(D T).
         assert(!isNull, message);
         return *_value;
     }
-    
+
     ///
     unittest
     {
         import std.exception: assertThrown, assertNotThrown;
-        
+
         NullableRef!int nr;
-        //`get` is implicitly called. Will throw 
+        //`get` is implicitly called. Will throw
         //an error in non-release mode
         assertThrown!Throwable(nr == 0);
-        
+
         nr.bind(new int(0));
         assertNotThrown!Throwable(nr == 0);
     }
@@ -2891,7 +2891,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; MetaList!(S1, S2))
     {
         S a;
         S b = a;
@@ -3021,8 +3021,8 @@ unittest
 
 /**
 $(D WhiteHole!Base) is a subclass of $(D Base) which automatically implements
-all abstract member functions as functions that always fail. These functions 
-simply throw an $(D Error) and never return. `Whitehole` is useful for 
+all abstract member functions as functions that always fail. These functions
+simply throw an $(D Error) and never return. `Whitehole` is useful for
 trapping the use of class member functions that haven't been implemented.
 
 The name came from
@@ -3200,19 +3200,19 @@ private static:
     {
         template Impl(names...)
         {
-            import std.typetuple : Filter;
+            import std.meta : Filter;
             static if (names.length > 0)
             {
-                alias methods = Filter!(pred, MemberFunctionsTuple!(C, names[0]));
+                alias methods = Filter!(pred, MemberFunctions!(C, names[0]));
                 alias next = Impl!(names[1 .. $]);
 
                 static if (methods.length > 0)
-                    alias Impl = TypeTuple!(OverloadSet!(names[0], methods), next);
+                    alias Impl = MetaList!(OverloadSet!(names[0], methods), next);
                 else
                     alias Impl = next;
             }
             else
-                alias Impl = TypeTuple!();
+                alias Impl = MetaList!();
         }
 
         alias enumerateOverloads = Impl!(__traits(allMembers, C));
@@ -3498,13 +3498,13 @@ Used by MemberFunctionGenerator.
  */
 package template FuncInfo(alias func, /+[BUG 4217 ?]+/ T = typeof(&func))
 {
-    alias RT =         ReturnType!T;
-    alias PT = ParameterTypeTuple!T;
+    alias RT =     ReturnType!T;
+    alias PT = ParameterTypes!T;
 }
 package template FuncInfo(Func)
 {
-    alias RT =         ReturnType!Func;
-    alias PT = ParameterTypeTuple!Func;
+    alias RT =     ReturnType!Func;
+    alias PT = ParameterTypes!Func;
 }
 
 /*
@@ -3564,9 +3564,9 @@ private static:
     template CountUp(size_t n)
     {
         static if (n > 0)
-            alias CountUp = TypeTuple!(CountUp!(n - 1), n - 1);
+            alias CountUp = MetaList!(CountUp!(n - 1), n - 1);
         else
-            alias CountUp = TypeTuple!();
+            alias CountUp = MetaList!();
     }
 
 
@@ -3700,12 +3700,12 @@ private static:
         /*** Function Body ***/
         code ~= "{\n";
         {
-            enum nparams = ParameterTypeTuple!(func).length;
+            enum nparams = ParameterTypes!(func).length;
 
             /* Declare keywords: args, self and parent. */
             string preamble;
 
-            preamble ~= "alias args = TypeTuple!(" ~ enumerateParameters!(nparams) ~ ");\n";
+            preamble ~= "alias args = MetaList!(" ~ enumerateParameters!(nparams) ~ ");\n";
             if (!isCtor)
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
@@ -3737,7 +3737,7 @@ private static:
     private GenParams generateParameters(string myFuncInfo, func...)()
     {
         alias STC = ParameterStorageClass;
-        alias stcs = ParameterStorageClassTuple!(func);
+        alias stcs = ParameterStorageClasses!(func);
         enum nparams = stcs.length;
 
         string imports = ""; // any imports required
@@ -3882,9 +3882,9 @@ unittest
  * wrap $(D src) object, then return it.
  */
 template wrap(Targets...)
-if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
+if (Targets.length >= 1 && all!(isMutable, Targets))
 {
-    import std.typetuple : staticMap;
+    import std.meta : Map;
 
     // strict upcast
     auto wrap(Source)(inout Source src) @trusted pure nothrow
@@ -3895,7 +3895,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
     }
     // structural upcast
     template wrap(Source)
-    if (!allSatisfy!(Bind!(isImplicitlyConvertible, Source), Targets))
+    if (!all!(Bind!(isImplicitlyConvertible, Source), Targets))
     {
         auto wrap(inout Source src)
         {
@@ -3918,17 +3918,17 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
         template Concat(size_t i = 0)
         {
             static if (i >= Targets.length)
-                alias Concat = TypeTuple!();
+                alias Concat = MetaList!();
             else
             {
-                alias Concat = TypeTuple!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
+                alias Concat = MetaList!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
             }
         }
         // Remove duplicated functions based on the identifier name and function type covariance
         template Uniq(members...)
         {
             static if (members.length == 0)
-                alias Uniq = TypeTuple!();
+                alias Uniq = MetaList!();
             else
             {
                 alias func = members[0];
@@ -3956,14 +3956,14 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                                !is(DerivedFunctionType!(typex, remain[0].type) == void))
                     {
                         alias F = DerivedFunctionType!(typex, remain[0].type);
-                        alias Uniq = TypeTuple!(FuncInfo!(name, F), remain[1 .. $]);
+                        alias Uniq = MetaList!(FuncInfo!(name, F), remain[1 .. $]);
                     }
                     else
-                        alias Uniq = TypeTuple!(FuncInfo!(name, typex), remain);
+                        alias Uniq = MetaList!(FuncInfo!(name, typex), remain);
                 }
                 else
                 {
-                    alias Uniq = TypeTuple!(FuncInfo!(name, type), Uniq!(members[1 .. $]));
+                    alias Uniq = MetaList!(FuncInfo!(name, type), Uniq!(members[1 .. $]));
                 }
             }
         }
@@ -4017,7 +4017,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 }
                 static @property mod()
                 {
-                    alias type = TypeTuple!(TargetMembers[i].type)[0];
+                    alias type = MetaList!(TargetMembers[i].type)[0];
                     string r;
                     static if (is(type == immutable))       r ~= " immutable";
                     else
@@ -4032,7 +4032,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 enum n = to!string(i);
                 static if (fa & FunctionAttribute.property)
                 {
-                    static if (ParameterTypeTuple!(TargetMembers[i].type).length == 0)
+                    static if (ParameterTypes!(TargetMembers[i].type).length == 0)
                         enum fbody = "_wrap_source."~name;
                     else
                         enum fbody = "_wrap_source."~name~" = forward!args";
@@ -4043,23 +4043,23 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 }
                 enum generateFun =
                     "override "~stc~"ReturnType!(TargetMembers["~n~"].type) "
-                    ~ name~"(ParameterTypeTuple!(TargetMembers["~n~"].type) args) "~mod~
+                    ~ name~"(ParameterTypes!(TargetMembers["~n~"].type) args) "~mod~
                     "{ return "~fbody~"; }";
             }
 
         public:
             mixin mixinAll!(
-                staticMap!(generateFun, staticIota!(0, TargetMembers.length)));
+                Map!(generateFun, staticIota!(0, TargetMembers.length)));
         }
     }
 }
 /// ditto
 template wrap(Targets...)
-if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
+if (Targets.length >= 1 && !all!(isMutable, Targets))
 {
-    import std.typetuple : staticMap;
+    import std.meta : Map;
 
-    alias wrap = .wrap!(staticMap!(Unqual, Targets));
+    alias wrap = .wrap!(Map!(Unqual, Targets));
 }
 
 // Internal class to support dynamic cross-casting
@@ -4291,14 +4291,14 @@ unittest
 // Make a tuple of non-static function symbols
 private template GetOverloadedMethods(T)
 {
-    import std.typetuple : Filter;
+    import std.meta : Filter;
 
-    alias allMembers = TypeTuple!(__traits(allMembers, T));
+    alias allMembers = MetaList!(__traits(allMembers, T));
     template follows(size_t i = 0)
     {
         static if (i >= allMembers.length)
         {
-            alias follows = TypeTuple!();
+            alias follows = MetaList!();
         }
         else static if (!__traits(compiles, mixin("T."~allMembers[i])))
         {
@@ -4315,8 +4315,8 @@ private template GetOverloadedMethods(T)
                 else
                     enum isMethod = false;
             }
-            alias follows = TypeTuple!(
-                std.typetuple.Filter!(isMethod, __traits(getOverloads, T, name)),
+            alias follows = MetaList!(
+                Filter!(isMethod, __traits(getOverloads, T, name)),
                 follows!(i + 1));
         }
     }
@@ -4340,7 +4340,7 @@ private template findCovariantFunction(alias finfo, Source, Fs...)
     enum x = check!();
     static if (x == -1 && is(typeof(Source.opDispatch)))
     {
-        alias Params = ParameterTypeTuple!(finfo.type);
+        alias Params = ParameterTypes!(finfo.type);
         enum ptrdiff_t findCovariantFunction =
             is(typeof((             Source).init.opDispatch!(finfo.name)(Params.init))) ||
             is(typeof((       const Source).init.opDispatch!(finfo.name)(Params.init))) ||
@@ -4452,8 +4452,8 @@ private template DerivedFunctionType(T...)
     {
         alias FA = FunctionAttribute;
 
-        alias F0 = T[0], R0 = ReturnType!F0, PSTC0 = ParameterStorageClassTuple!F0;
-        alias F1 = T[1], R1 = ReturnType!F1, PSTC1 = ParameterStorageClassTuple!F1;
+        alias F0 = T[0], R0 = ReturnType!F0, PSTC0 = ParameterStorageClasses!F0;
+        alias F1 = T[1], R1 = ReturnType!F1, PSTC1 = ParameterStorageClasses!F1;
         enum FA0 = functionAttributes!F0;
         enum FA1 = functionAttributes!F1;
 
@@ -4542,17 +4542,17 @@ package template staticIota(int beg, int end)
     {
         static if (beg >= end)
         {
-            alias staticIota = TypeTuple!();
+            alias staticIota = MetaList!();
         }
         else
         {
-            alias staticIota = TypeTuple!(+beg);
+            alias staticIota = MetaList!(+beg);
         }
     }
     else
     {
         enum mid = beg + (end - beg) / 2;
-        alias staticIota = TypeTuple!(staticIota!(beg, mid), staticIota!(mid, end));
+        alias staticIota = MetaList!(staticIota!(beg, mid), staticIota!(mid, end));
     }
 }
 
@@ -5001,15 +5001,15 @@ unittest
 
 /**
     Creates a proxy for the value `a` that will forward all operations
-    while disabling implicit conversions. The aliased item `a` must be 
-    an $(B lvalue). This is useful for creating a new type from the 
-    "base" type (though this is $(B not) a subtype-supertype 
-    relationship; the new type is not related to the old type in any way, 
+    while disabling implicit conversions. The aliased item `a` must be
+    an $(B lvalue). This is useful for creating a new type from the
+    "base" type (though this is $(B not) a subtype-supertype
+    relationship; the new type is not related to the old type in any way,
     by design).
-    
+
     The new type supports all operations that the underlying type does,
     including all operators such as `+`, `--`, `<`, `[]`, etc.
-    
+
     Params:
         a = The value to act as a proxy for all operations. It must
             be an lvalue.
@@ -5248,29 +5248,29 @@ unittest
     {
         //Won't work; the literal '1' is
         //is an rvalue, not an lvalue
-        //mixin Proxy!1; 
-        
+        //mixin Proxy!1;
+
         //Okay, n is an lvalue
         int n;
         mixin Proxy!n;
-        
+
         this(int n) { this.n = n; }
     }
-    
+
     NewIntType nit = 0;
     nit++;
     assert(nit == 1);
-    
-    
+
+
     struct NewObjectType
     {
         Object obj;
         //Ok, obj is an lvalue
         mixin Proxy!obj;
-        
+
         this (Object o) { obj = o; }
     }
-    
+
     NewObjectType not = new Object();
     assert(__traits(compiles, not.toHash()));
 }
@@ -5278,24 +5278,24 @@ unittest
 /**
     There is one exception to the fact that the new type is not related to the
     old type. $(LINK2 http://dlang.org/function.html#pseudo-member, Pseudo-member)
-    functions are usable with the new type; they will be forwarded on to the 
+    functions are usable with the new type; they will be forwarded on to the
     proxied value.
  */
 unittest
 {
     import std.math;
-    
+
     float f = 1.0;
     assert(!f.isInfinity);
-    
+
     struct NewFloat
     {
         float _;
         mixin Proxy!_;
-        
+
         this(float f) { _ = f; }
     }
- 
+
     NewFloat nf = 1.0f;
     assert(!nf.isInfinity);
 }
@@ -5312,7 +5312,7 @@ unittest
         static immutable arr = [1,2,3];
     }
 
-    foreach (T; TypeTuple!(MyInt, const MyInt, immutable MyInt))
+    foreach (T; MetaList!(MyInt, const MyInt, immutable MyInt))
     {
         T m = 10;
         static assert(!__traits(compiles, { int x = m; }));
@@ -5357,7 +5357,7 @@ unittest
         this(immutable int[] arr) immutable { value = arr; }
     }
 
-    foreach (T; TypeTuple!(MyArray, const MyArray, immutable MyArray))
+    foreach (T; MetaList!(MyArray, const MyArray, immutable MyArray))
     {
       static if (is(T == immutable) && !is(typeof({ T a = [1,2,3,4]; })))
         T a = [1,2,3,4].idup;   // workaround until qualified ctor is properly supported
@@ -6089,7 +6089,7 @@ unittest // Issue 6580 testcase
             byte[size] arr;
             alignmentTest();
         }
-        foreach(i; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        foreach(i; MetaList!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
             test!i();
     }
 }
@@ -6511,7 +6511,7 @@ public:
     }
 
     this(T...)(T flags)
-        if (allSatisfy!(isBaseEnumType, T))
+        if (all!(isBaseEnumType, T))
     {
         this = flags;
     }
@@ -6534,7 +6534,7 @@ public:
     }
 
     auto ref opAssign(T...)(T flags)
-        if (allSatisfy!(isBaseEnumType, T))
+        if (all!(isBaseEnumType, T))
     {
         mValue = 0;
         foreach (E flag; flags)

@@ -426,13 +426,13 @@ unittest
 // purity and safety inference test
 unittest
 {
-    import std.typetuple;
+    import std.meta;
 
-    foreach (EncloseSafe; TypeTuple!(false, true))
-    foreach (EnclosePure; TypeTuple!(false, true))
+    foreach (EncloseSafe; MetaList!(false, true))
+    foreach (EnclosePure; MetaList!(false, true))
     {
-        foreach (BodySafe; TypeTuple!(false, true))
-        foreach (BodyPure; TypeTuple!(false, true))
+        foreach (BodySafe; MetaList!(false, true))
+        foreach (BodyPure; MetaList!(false, true))
         {
             enum code =
                 "delegate void() " ~
@@ -1214,7 +1214,7 @@ unittest
     //To check the class payload itself, iterate on its members:
     ()
     {
-        foreach (index, _; FieldTypeTuple!C)
+        foreach (index, _; FieldTypes!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;
         assert(0);

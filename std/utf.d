@@ -22,7 +22,7 @@ module std.utf;
 
 import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
-import std.typetuple;  // TypeTuple
+import std.meta;  // MetaList
 
 //debug=utf;           // uncomment to turn on debugging printf's
 
@@ -248,7 +248,7 @@ unittest
     test("hello\U00010143\u0100\U00010143", '\u0100', 9);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 11);
 
-    foreach (S; TypeTuple!(char[], const char[], string))
+    foreach (S; MetaList!(char[], const char[], string))
     {
         enum str = to!S("hello world");
         static assert(isSafe!({ stride(str, 0); }));
@@ -309,7 +309,7 @@ uint strideBack(S)(auto ref S str, size_t index)
 
     if (index >= 4) //single verification for most common case
     {
-        foreach (i; TypeTuple!(2, 3, 4))
+        foreach (i; MetaList!(2, 3, 4))
         {
             if ((str[index-i] & 0b1100_0000) != 0b1000_0000)
                 return i;
@@ -317,7 +317,7 @@ uint strideBack(S)(auto ref S str, size_t index)
     }
     else
     {
-        foreach (i; TypeTuple!(2, 3))
+        foreach (i; MetaList!(2, 3))
         {
             if (index >= i && (str[index-i] & 0b1100_0000) != 0b1000_0000)
                 return i;
@@ -339,7 +339,7 @@ uint strideBack(S)(auto ref S str)
 {
     assert(!str.empty, "Past the end of the UTF-8 sequence");
     auto temp = str.save;
-    foreach (i; TypeTuple!(1, 2, 3, 4))
+    foreach (i; MetaList!(1, 2, 3, 4))
     {
         if ((temp.back & 0b1100_0000) != 0b1000_0000)
             return i;
@@ -406,7 +406,7 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 6);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 4);
 
-    foreach (S; TypeTuple!(char[], const char[], string))
+    foreach (S; MetaList!(char[], const char[], string))
     {
         enum str = to!S("hello world");
         static assert(isSafe!({ strideBack(str, 0); }));
@@ -522,7 +522,7 @@ uint stride(S)(auto ref S str)
     test("hello\U00010143\u0100\U00010143", '\u0100', 7);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 8);
 
-    foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
+    foreach (S; MetaList!(wchar[], const wchar[], wstring))
     {
         enum str = to!S("hello world");
         static assert(isSafe!(() => stride(str, 0)));
@@ -642,7 +642,7 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 3);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 2);
 
-    foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
+    foreach (S; MetaList!(wchar[], const wchar[], wstring))
     {
         enum str = to!S("hello world");
         static assert(isSafe!(() => strideBack(str, 0)));
@@ -733,7 +733,7 @@ unittest
     test("hello\U00010143\u0100\U00010143", '\u0100', 6);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 7);
 
-    foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
+    foreach (S; MetaList!(dchar[], const dchar[], dstring))
     {
         enum str = to!S("hello world");
         static assert(isSafe!(() => stride(str, 0)));
@@ -834,7 +834,7 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 2);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 1);
 
-    foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
+    foreach (S; MetaList!(dchar[], const dchar[], dstring))
     {
         enum str = to!S("hello world");
         static assert(isSafe!(() => strideBack(str, 0)));
@@ -1107,7 +1107,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
     /* Dchar bitmask for different numbers of UTF-8 code units.
      */
-    alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
+    alias bitMask = MetaList!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
     static if (is(S : const char[]))
         auto pstr = str.ptr + index;
@@ -1176,7 +1176,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     dchar d = fst; // upper control bits are masked out later
     fst <<= 1;
 
-    foreach (i; TypeTuple!(1, 2, 3))
+    foreach (i; MetaList!(1, 2, 3))
     {
 
         static if (canIndex)
@@ -1425,7 +1425,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(to!string, InputCU!char, RandomCU!char,
+    foreach (S; MetaList!(to!string, InputCU!char, RandomCU!char,
                            (string s) => new RefBidirCU!char(s),
                            (string s) => new RefRandomCU!char(s)))
     {
@@ -1487,7 +1487,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(to!wstring, InputCU!wchar, RandomCU!wchar,
+    foreach (S; MetaList!(to!wstring, InputCU!wchar, RandomCU!wchar,
                            (wstring s) => new RefBidirCU!wchar(s),
                            (wstring s) => new RefRandomCU!wchar(s)))
     {
@@ -1511,7 +1511,7 @@ unittest
         }
     }
 
-    foreach (S; TypeTuple!(to!wstring, RandomCU!wchar, (wstring s) => new RefRandomCU!wchar(s)))
+    foreach (S; MetaList!(to!wstring, RandomCU!wchar, (wstring s) => new RefRandomCU!wchar(s)))
     {
         auto str = S([cast(wchar)0xD800, cast(wchar)0xDC00,
                       cast(wchar)0x1400,
@@ -1529,7 +1529,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(to!dstring, RandomCU!dchar, InputCU!dchar,
+    foreach (S; MetaList!(to!dstring, RandomCU!dchar, InputCU!dchar,
                            (dstring s) => new RefBidirCU!dchar(s),
                            (dstring s) => new RefRandomCU!dchar(s)))
     {
@@ -1554,7 +1554,7 @@ unittest
         }
     }
 
-    foreach (S; TypeTuple!(to!dstring, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
+    foreach (S; MetaList!(to!dstring, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
     {
         auto str = S([cast(dchar)0x10000, cast(dchar)0x1400, cast(dchar)0xB9DDE]);
         testDecode(str, 0, 0x10000, 1);
@@ -1569,7 +1569,7 @@ unittest
     import std.exception;
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[],  string,
+    foreach (S; MetaList!( char[], const( char)[],  string,
                            wchar[], const(wchar)[], wstring,
                            dchar[], const(dchar)[], dstring))
     {
@@ -2009,11 +2009,11 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const  char[],  string,
+    foreach (S; MetaList!( char[], const  char[],  string,
                            wchar[], const wchar[], wstring,
                            dchar[], const dchar[], dstring))
     {
-        foreach (C; TypeTuple!(char, wchar, dchar))
+        foreach (C; MetaList!(char, wchar, dchar))
         {
             assert(codeLength!C(to!S("Walter Bright")) == to!(C[])("Walter Bright").length);
             assert(codeLength!C(to!S(`言語`)) == to!(C[])(`言語`).length);
@@ -2498,7 +2498,7 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; MetaList!(string, wstring, dstring))
     {
         alias C = Unqual!(ElementEncodingType!S);
 
@@ -2518,7 +2518,7 @@ private P toUTFzImpl(P, S)(S str) @safe pure
             assert(p[s.length] == '\0');
         }
 
-        foreach (P; TypeTuple!(C*, const(C)*, immutable(C)*))
+        foreach (P; MetaList!(C*, const(C)*, immutable(C)*))
         {
             trustedCStringAssert!P(s1);
             trustedCStringAssert!P(s2);
@@ -2544,28 +2544,28 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 
     assertCTFEable!(
     {
-    foreach (P; TypeTuple!(wchar*, const(wchar)*, immutable(wchar)*,
+    foreach (P; MetaList!(wchar*, const(wchar)*, immutable(wchar)*,
                            dchar*, const(dchar)*, immutable(dchar)*))
     {
         test!P("hello\U00010143\u0100\U00010143");
     }
-    foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
+    foreach (P; MetaList!( char*, const( char)*, immutable( char)*,
                            dchar*, const(dchar)*, immutable(dchar)*))
     {
         test!P("hello\U00010143\u0100\U00010143"w);
     }
-    foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
+    foreach (P; MetaList!( char*, const( char)*, immutable( char)*,
                            wchar*, const(wchar)*, immutable(wchar)*))
     {
         test!P("hello\U00010143\u0100\U00010143"d);
     }
-    foreach (S; TypeTuple!( char[], const( char)[],
+    foreach (S; MetaList!( char[], const( char)[],
                            wchar[], const(wchar)[],
                            dchar[], const(dchar)[]))
     {
         auto s = to!S("hello\U00010143\u0100\U00010143");
 
-        foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
+        foreach (P; MetaList!( char*, const( char)*, immutable( char)*,
                                wchar*, const(wchar)*, immutable(wchar)*,
                                dchar*, const(dchar)*, immutable(dchar)*))
         {
@@ -2594,7 +2594,7 @@ const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
     import std.conv : to;
     //toUTFz is already thoroughly tested, so this will just verify that
     //toUTF16z compiles properly for the various string types.
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; MetaList!(string, wstring, dstring))
         static assert(__traits(compiles, toUTF16z(to!S("hello world"))));
 }
 
@@ -3297,9 +3297,9 @@ auto ref byDchar(R)(R r)
 
                     /* Dchar bitmask for different numbers of UTF-8 code units.
                      */
-                    alias bitMask = TypeTuple!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
+                    alias bitMask = MetaList!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
-                    foreach (i; TypeTuple!(1, 2, 3))
+                    foreach (i; MetaList!(1, 2, 3))
                     {
 
                         r.popFront();
@@ -3629,7 +3629,7 @@ int impureVariable;
         }
     }
 
-    foreach (Char; TypeTuple!(char, wchar, dchar))
+    foreach (Char; MetaList!(char, wchar, dchar))
     {
         ImpureThrowingSystemRange!Char range;
         foreach (c; range.byChar())  { }

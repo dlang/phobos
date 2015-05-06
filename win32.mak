@@ -181,6 +181,10 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\stdiobase.d std\parallelism.d \
 	std\exception.d std\ascii.d
 
+SRC_STD_META = \
+	std\meta\algorithm.d std\meta\internal.d std\meta\list.d std\meta\package.d \
+	std\meta\predicates.d
+
 SRC_STD_REGEX= std\regex\internal\ir.d std\regex\package.d std\regex\internal\parser.d \
 	std\regex\internal\tests.d std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d std\regex\internal\kickstart.d \
@@ -227,6 +231,7 @@ SRC_ETC=
 SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
 
 SRC_TO_COMPILE_NOT_STD= \
+	$(SRC_STD_META) \
 	$(SRC_STD_REGEX) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_C) \

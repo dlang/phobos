@@ -171,7 +171,7 @@ import std.stream;
 import std.string;
 import std.traits;
 import std.typecons;
-import std.typetuple;
+import std.meta;
 
 import std.internal.cstring;
 
@@ -3635,7 +3635,7 @@ struct Curl
         copy.stopped = false;
 
         with (CurlOption) {
-            auto tt = TypeTuple!(file, writefunction, writeheader,
+            auto tt = MetaList!(file, writefunction, writeheader,
                                  headerfunction, infile,
                                  readfunction, ioctldata, ioctlfunction,
                                  seekdata, seekfunction, sockoptdata,
