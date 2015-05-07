@@ -5390,10 +5390,10 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
         {
             if (typeid(valti).name.length == 18 &&
                     typeid(valti).name[9..18] == "Invariant")
-                valti = (cast(TypeInfo_Invariant)valti).next;
+                valti = (cast(TypeInfo_Invariant)valti).base;
             else if (typeid(valti).name.length == 14 &&
                     typeid(valti).name[9..14] == "Const")
-                valti = (cast(TypeInfo_Const)valti).next;
+                valti = (cast(TypeInfo_Const)valti).base;
             else
                 break;
         }
