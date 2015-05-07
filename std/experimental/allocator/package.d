@@ -852,7 +852,7 @@ unittest
 unittest
 {
     /// Define an allocator bound to the built-in GC.
-    shared ISharedAllocator alloc = allocatorObject(GCAllocator.it);
+    IAllocator alloc = allocatorObject(GCAllocator.it);
     auto b = alloc.allocate(42);
     assert(b.length == 42);
     assert(alloc.deallocate(b) == Ternary.yes);
