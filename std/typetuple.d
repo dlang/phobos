@@ -20,33 +20,29 @@
  * Macros:
  *  WIKI = Phobos/StdTypeTuple
  *
- * Copyright: Copyright Digital Mars 2005 - 2009.
+ * Copyright: Copyright Digital Mars 2005 - 2015.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
  * Source:    $(PHOBOSSRC std/_typetuple.d)
  */
-/*          Copyright Digital Mars 2005 - 2009.
- * Distributed under the Boost Software License, Version 1.0.
- *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
- */
+
 module std.typetuple;
 
 /**
- * Creates a typetuple out of a sequence of zero or more types.
+ * Creates a tuple out of a sequence of zero or more template arguments.
  */
-template TypeTuple(TList...)
+template Arguments(TList...)
 {
-    alias TypeTuple = TList;
+    alias Arguments = TList;
 }
 
 ///
 unittest
 {
     import std.typetuple;
-    alias TL = TypeTuple!(int, double);
+    alias TL = Arguments!(int, double);
 
     int foo(TL td)  // same as int foo(int, double);
     {
@@ -57,11 +53,16 @@ unittest
 ///
 unittest
 {
-    alias TL = TypeTuple!(int, double);
+    alias TL = Arguments!(int, double);
 
-    alias Types = TypeTuple!(TL, char);
-    static assert(is(Types == TypeTuple!(int, double, char)));
+    alias Types = Arguments!(TL, char);
+    static assert(is(Types == Arguments!(int, double, char)));
 }
+
+/**
+ * Alternate name for $(LREF Arguments) for legacy compatibility.
+ */
+alias TypeTuple = Arguments;
 
 /**
  * Returns the index of the first occurrence of type T in the

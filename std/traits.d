@@ -20,10 +20,10 @@
  *           $(LREF FunctionTypeOf)
  *           $(LREF isSafe)
  *           $(LREF isUnsafe)
- *           $(LREF ParameterDefaultValueTuple)
+ *           $(LREF ParameterDefaults)
  *           $(LREF ParameterIdentifierTuple)
  *           $(LREF ParameterStorageClassTuple)
- *           $(LREF ParameterTypeTuple)
+ *           $(LREF Parameters)
  *           $(LREF ReturnType)
  *           $(LREF SetFunctionAttributes)
  *           $(LREF variadicFunctionStyle)
@@ -34,7 +34,7 @@
  *           $(LREF classInstanceAlignment)
  *           $(LREF EnumMembers)
  *           $(LREF FieldNameTuple)
- *           $(LREF FieldTypeTuple)
+ *           $(LREF Fields)
  *           $(LREF hasAliasing)
  *           $(LREF hasElaborateAssign)
  *           $(LREF hasElaborateCopyConstructor)
@@ -98,7 +98,7 @@
  *           $(LREF isAbstractFunction)
  *           $(LREF isCallable)
  *           $(LREF isDelegate)
- *           $(LREF isExpressionTuple)
+ *           $(LREF isExpressions)
  *           $(LREF isFinalClass)
  *           $(LREF isFinalFunction)
  *           $(LREF isFunctionPointer)
@@ -134,7 +134,7 @@
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright),
- *            Tomasz Stachowiak ($(D isExpressionTuple)),
+ *            Tomasz Stachowiak ($(D isExpressions)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
  *            Shin Fujishiro,
  *            $(WEB octarineparrot.com, Robert Clipsham),
@@ -593,7 +593,7 @@ private template fqnType(T,
 
     string parametersTypeString(T)() @property
     {
-        alias parameters   = ParameterTypeTuple!(T);
+        alias parameters   = Parameters!(T);
         alias parameterStC = ParameterStorageClassTuple!(T);
 
         enum variadic = variadicFunctionStyle!T;
@@ -900,11 +900,11 @@ Get, as a tuple, the types of the parameters to a function, a pointer
 to function, a delegate, a struct with an $(D opCall), a pointer to a
 struct with an $(D opCall), or a class with an $(D opCall).
 */
-template ParameterTypeTuple(func...)
+template Parameters(func...)
     if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!func P == function))
-        alias ParameterTypeTuple = P;
+        alias Parameters = P;
     else
         static assert(0, "argument has no parameters");
 }
@@ -913,9 +913,14 @@ template ParameterTypeTuple(func...)
 unittest
 {
     int foo(int, long);
-    void bar(ParameterTypeTuple!foo);      // declares void bar(int, long);
-    void abc(ParameterTypeTuple!foo[1]);   // declares void abc(long);
+    void bar(Parameters!foo);      // declares void bar(int, long);
+    void abc(Parameters!foo[1]);   // declares void abc(long);
 }
+
+/**
+ * Alternate name for $(LREF Parameters), kept for legacy compatibility.
+ */
+alias ParameterTypeTuple = Parameters;
 
 unittest
 {
@@ -948,7 +953,7 @@ arity is undefined for variadic functions.
 template arity(alias func)
     if ( isCallable!func && variadicFunctionStyle!func == Variadic.no )
 {
-    enum size_t arity = ParameterTypeTuple!func.length;
+    enum size_t arity = Parameters!func.length;
 }
 
 ///
@@ -989,7 +994,7 @@ template ParameterStorageClassTuple(func...)
      * TypeFuncion:
      *     CallConvention FuncAttrs Arguments ArgClose Type
      */
-    alias Params = ParameterTypeTuple!Func;
+    alias Params = Parameters!Func;
 
     // chop off CallConvention and FuncAttrs
     enum margs = demangleFunctionAttributes(mangledName!Func[1 .. $]).rest;
@@ -1175,7 +1180,7 @@ unittest
 Get, as a tuple, the default value of the parameters to a function symbol.
 If a parameter doesn't have the default value, $(D void) is returned instead.
  */
-template ParameterDefaultValueTuple(func...)
+template ParameterDefaults(func...)
     if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!(func[0]) PT == __parameters))
@@ -1218,17 +1223,22 @@ template ParameterDefaultValueTuple(func...)
             alias Impl = TypeTuple!(Get!i, Impl!(i+1));
     }
 
-    alias ParameterDefaultValueTuple = Impl!();
+    alias ParameterDefaults = Impl!();
 }
 
 ///
 unittest
 {
     int foo(int num, string name = "hello", int[] = [1,2,3]);
-    static assert(is(ParameterDefaultValueTuple!foo[0] == void));
-    static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
-    static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
+    static assert(is(ParameterDefaults!foo[0] == void));
+    static assert(   ParameterDefaults!foo[1] == "hello");
+    static assert(   ParameterDefaults!foo[2] == [1,2,3]);
 }
+
+/**
+ * Alternate name for $(LREF ParameterDefaults), kept for legacy compatibility.
+ */
+alias ParameterDefaultValueTuple = ParameterDefaults;
 
 unittest
 {
@@ -1931,8 +1941,8 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
 
         result ~= "(";
 
-        static if (ParameterTypeTuple!T.length > 0)
-            result ~= "ParameterTypeTuple!T";
+        static if (Parameters!T.length > 0)
+            result ~= "Parameters!T";
 
         enum varStyle = variadicFunctionStyle!T;
         static if (varStyle == Variadic.c)
@@ -2088,7 +2098,7 @@ template hasNested(T)
         enum hasNested = hasNested!(typeof(T.init[0]));
     else static if(is(T == class) || is(T == struct) || is(T == union))
         enum hasNested = isNested!T ||
-            anySatisfy!(.hasNested, FieldTypeTuple!T);
+            anySatisfy!(.hasNested, Fields!T);
     else
         enum hasNested = false;
 }
@@ -2158,29 +2168,34 @@ unittest
 
 
 /***
- * Get as a typetuple the types of the fields of a struct, class, or union.
+ * Get as a tuple the types of the fields of a struct, class, or union.
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
  * table pointer or a context pointer for nested types.
- * If $(D T) isn't a struct, class, or union returns typetuple
+ * If $(D T) isn't a struct, class, or union returns a tuple
  * with one element $(D T).
  */
-template FieldTypeTuple(T)
+template Fields(T)
 {
     static if (is(T == struct) || is(T == union))
-        alias FieldTypeTuple = typeof(T.tupleof[0 .. $ - isNested!T]);
+        alias Fields = typeof(T.tupleof[0 .. $ - isNested!T]);
     else static if (is(T == class))
-        alias FieldTypeTuple = typeof(T.tupleof);
+        alias Fields = typeof(T.tupleof);
     else
-        alias FieldTypeTuple = TypeTuple!T;
+        alias Fields = TypeTuple!T;
 }
 
 ///
 unittest
 {
     struct S { int x; float y; }
-    static assert(is(FieldTypeTuple!S == TypeTuple!(int, float)));
+    static assert(is(Fields!S == TypeTuple!(int, float)));
 }
+
+/**
+ * Alternate name for $(LREF FieldTypeTuple), kept for legacy compatibility.
+ */
+alias FieldTypeTuple = Fields;
 
 unittest
 {
@@ -4380,8 +4395,8 @@ template isCovariantWith(F, G)
         template checkParameters()
         {
             alias STC = ParameterStorageClass;
-            alias UprParams = ParameterTypeTuple!Upr;
-            alias LwrParams = ParameterTypeTuple!Lwr;
+            alias UprParams = Parameters!Upr;
+            alias LwrParams = Parameters!Lwr;
             alias UprPSTCs  = ParameterStorageClassTuple!Upr;
             alias LwrPSTCs  = ParameterStorageClassTuple!Lwr;
             //
@@ -5510,26 +5525,32 @@ unittest
  *
  * See_Also: $(LREF isTypeTuple).
  */
-template isExpressionTuple(T ...)
+template isExpressions(T ...)
 {
     static if (T.length >= 2)
-        enum bool isExpressionTuple =
-            isExpressionTuple!(T[0 .. $/2]) &&
-            isExpressionTuple!(T[$/2 .. $]);
+        enum bool isExpressions =
+            isExpressions!(T[0 .. $/2]) &&
+            isExpressions!(T[$/2 .. $]);
     else static if (T.length == 1)
-        enum bool isExpressionTuple =
+        enum bool isExpressions =
             !is(T[0]) && __traits(compiles, { auto ex = T[0]; });
     else
-        enum bool isExpressionTuple = true; // default
+        enum bool isExpressions = true; // default
 }
 
 ///
 unittest
 {
-    static assert(isExpressionTuple!(1, 2.0, "a"));
-    static assert(!isExpressionTuple!(int, double, string));
-    static assert(!isExpressionTuple!(int, 2.0, "a"));
+    static assert(isExpressions!(1, 2.0, "a"));
+    static assert(!isExpressions!(int, double, string));
+    static assert(!isExpressions!(int, 2.0, "a"));
 }
+
+/**
+ * Alternate name for $(LREF isExpressions), kept for legacy compatibility.
+ */
+
+alias isExpressionTuple = isExpressions;
 
 unittest
 {
@@ -5555,7 +5576,7 @@ unittest
  * Check whether the tuple $(D T) is a type tuple.
  * A type tuple only contains types.
  *
- * See_Also: $(LREF isExpressionTuple).
+ * See_Also: $(LREF isExpressions).
  */
 template isTypeTuple(T...)
 {
