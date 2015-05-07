@@ -251,6 +251,7 @@ struct FreeTree(ParentAllocator)
     The destructor of $(D FreeTree) releases all memory back to the parent
     allocator.
     */
+    static if (hasMember!(ParentAllocator, "deallocate"))
     ~this()
     {
         clear;
@@ -385,18 +386,10 @@ struct FreeTree(ParentAllocator)
     static if (hasMember!(ParentAllocator, "deallocateAll"))
     void deallocateAll()
     {
-        static if (hasMember!(ParentAllocator, "deallocateAll"))
-        {
-            // This is easy, just nuke the root and deallocate all from the
-            // parent
-            root = null;
-            parent.deallocateAll;
-        }
-        else // hasMember!(ParentAllocator, "deallocate")
-        {
-            // Must deallocate everything by hand
-            clear;
-        }
+        // This is easy, just nuke the root and deallocate all from the
+        // parent
+        root = null;
+        parent.deallocateAll;
     }
 }
 

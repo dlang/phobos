@@ -9,13 +9,13 @@ and also array primitives related to allocation.
 int* p = theAllocator.make!int(42);
 assert(*p == 42);
 // Destroy and deallocate it
-theAllocator.kill(p);
+theAllocator.dispose(p);
 
 // Allocate using the global process allocator
 p = processAllocator.make!int(100);
 assert(*p == 100);
 // Destroy and deallocate
-processAllocator.kill(p);
+processAllocator.dispose(p);
 
 // Create an array of 50 doubles initialized to -1.0
 double[] arr = theAllocator.makeArray!double(50, -1.0);
@@ -24,7 +24,7 @@ theAllocator.growArray(arr, 2, 0.0);
 // On second thought, take that back
 theAllocator.shrinkArray(arr, 2);
 // Destroy and deallocate
-theAllocator.kill(arr);
+theAllocator.dispose(arr);
 ---
 
 */
@@ -38,13 +38,13 @@ unittest
     int* p = theAllocator.make!int(42);
     assert(*p == 42);
     // Destroy and deallocate it
-    theAllocator.kill(p);
+    theAllocator.dispose(p);
 
     // Allocate using the global process allocator
     p = processAllocator.make!int(100);
     assert(*p == 100);
     // Destroy and deallocate
-    processAllocator.kill(p);
+    processAllocator.dispose(p);
 
     // Create an array of 50 doubles initialized to -1.0
     double[] arr = theAllocator.makeArray!double(50, -1.0);
@@ -53,7 +53,7 @@ unittest
     // On second thought, take that back
     theAllocator.shrinkArray(arr, 2);
     // Destroy and deallocate
-    theAllocator.kill(arr);
+    theAllocator.dispose(arr);
 }
 
 import std.experimental.allocator.common;
@@ -943,7 +943,7 @@ reference, or an entire array. It is assumed the respective entities had been
 allocated with the same allocator.
 
 */
-void kill(A, T)(auto ref A alloc, T* p)
+void dispose(A, T)(auto ref A alloc, T* p)
 {
     static if (hasElaborateDestructor!T)
     {
@@ -953,7 +953,7 @@ void kill(A, T)(auto ref A alloc, T* p)
 }
 
 /// Ditto
-void kill(A, T)(auto ref A alloc, T p)
+void dispose(A, T)(auto ref A alloc, T p)
 if (is(T == class) || is(T == interface))
 {
     if (!p) return;
@@ -963,7 +963,7 @@ if (is(T == class) || is(T == interface))
 }
 
 /// Ditto
-void kill(A, T)(auto ref A alloc, T[] array)
+void dispose(A, T)(auto ref A alloc, T[] array)
 {
     static if (hasElaborateDestructor!(typeof(array[0])))
     {
@@ -994,23 +994,23 @@ unittest
     auto a = theAllocator.make!A;
     a.method();
     assert(x == 21);
-    theAllocator.kill(a);
+    theAllocator.dispose(a);
     assert(x == 42);
 
     B b = theAllocator.make!B;
     b.method();
     assert(x == 21);
-    theAllocator.kill(b);
+    theAllocator.dispose(b);
     assert(x == 42);
 
     I i = theAllocator.make!B;
     i.method();
     assert(x == 21);
-    theAllocator.kill(i);
+    theAllocator.dispose(i);
     assert(x == 42);
 
     int[] arr = theAllocator.makeArray!int(43);
-    theAllocator.kill(arr);
+    theAllocator.dispose(arr);
 }
 
 /**
