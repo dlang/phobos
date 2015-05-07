@@ -70,7 +70,7 @@ module std.range.interfaces;
 
 import std.range.primitives;
 import std.traits;
-import std.meta;
+import std.typetuple;
 
 /**These interfaces are intended to provide virtual function-based wrappers
  * around input ranges with element type E.  This is useful where a well-defined
@@ -263,7 +263,7 @@ private string putMethods(E...)()
 /**Implements the $(D OutputRange) interface for all types E and wraps the
  * $(D put) method for each type $(D E) in a virtual function.
  */
-class OutputRangeObject(R, E...) : Map!(OutputRange, E) {
+class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
     // @BUG 4689:  There should be constraints on this template class, but
     // DMD won't let me put them in.
     private R _range;

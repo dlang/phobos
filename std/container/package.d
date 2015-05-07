@@ -424,7 +424,7 @@ public import std.container.dlist;
 public import std.container.rbtree;
 public import std.container.slist;
 
-import std.meta;
+import std.typetuple;
 
 
 /* The following documentation and type $(D TotalContainer) are
@@ -469,7 +469,7 @@ the type of the $(D k)th key of the container.
 A container may define both $(D KeyType) and $(D KeyTypes), e.g. in
 the case it has the notion of primary/preferred key.
  */
-    alias KeyTypes = MetaList!T;
+    alias KeyTypes = TypeTuple!T;
 
 /**
 If the container has a notion of key-value mapping, $(D ValueType)

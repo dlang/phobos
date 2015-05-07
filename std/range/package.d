@@ -175,7 +175,7 @@ public import std.array;
 public import std.typecons : Flag, Yes, No;
 
 import std.traits;
-import std.meta;
+import std.typetuple;
 
 
 /**
@@ -795,8 +795,8 @@ range's type.
  */
 auto chain(Ranges...)(Ranges rs)
 if (Ranges.length > 0 &&
-    all!(isInputRange, Map!(Unqual, Ranges)) &&
-    !is(CommonType!(Map!(ElementType, Map!(Unqual, Ranges))) == void))
+    allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)) &&
+    !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Ranges))) == void))
 {
     static if (Ranges.length == 1)
     {
@@ -807,14 +807,14 @@ if (Ranges.length > 0 &&
         static struct Result
         {
         private:
-            alias R = Map!(Unqual, Ranges);
-            alias RvalueElementType = CommonType!(Map!(.ElementType, R));
+            alias R = staticMap!(Unqual, Ranges);
+            alias RvalueElementType = CommonType!(staticMap!(.ElementType, R));
             private template sameET(A)
             {
                 enum sameET = is(.ElementType!A == RvalueElementType);
             }
 
-            enum bool allSameType = all!(sameET, R);
+            enum bool allSameType = allSatisfy!(sameET, R);
 
 // This doesn't work yet
             static if (allSameType)
@@ -825,7 +825,7 @@ if (Ranges.length > 0 &&
             {
                 alias ElementType = RvalueElementType;
             }
-            static if (allSameType && all!(hasLvalueElements, R))
+            static if (allSameType && allSatisfy!(hasLvalueElements, R))
             {
                 static ref RvalueElementType fixRef(ref RvalueElementType val)
                 {
@@ -853,9 +853,9 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            import std.meta : any, all;
+            import std.typetuple : anySatisfy;
 
-            static if (any!(isInfinite, R))
+            static if (anySatisfy!(isInfinite, R))
             {
 // Propagate infiniteness.
                 enum bool empty = false;
@@ -872,7 +872,7 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            static if (all!(isForwardRange, R))
+            static if (allSatisfy!(isForwardRange, R))
                 @property auto save()
                 {
                     typeof(this) result = this;
@@ -903,7 +903,7 @@ if (Ranges.length > 0 &&
                 assert(false);
             }
 
-            static if (allSameType && all!(hasAssignableElements, R))
+            static if (allSameType && allSatisfy!(hasAssignableElements, R))
             {
                 // @@@BUG@@@
                 //@property void front(T)(T v) if (is(T : RvalueElementType))
@@ -921,7 +921,7 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            static if (all!(hasMobileElements, R))
+            static if (allSatisfy!(hasMobileElements, R))
             {
                 RvalueElementType moveFront()
                 {
@@ -934,7 +934,7 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            static if (all!(isBidirectionalRange, R))
+            static if (allSatisfy!(isBidirectionalRange, R))
             {
                 @property auto ref back()
                 {
@@ -956,7 +956,7 @@ if (Ranges.length > 0 &&
                     }
                 }
 
-                static if (all!(hasMobileElements, R))
+                static if (allSatisfy!(hasMobileElements, R))
                 {
                     RvalueElementType moveBack()
                     {
@@ -969,7 +969,7 @@ if (Ranges.length > 0 &&
                     }
                 }
 
-                static if (allSameType && all!(hasAssignableElements, R))
+                static if (allSameType && allSatisfy!(hasAssignableElements, R))
                 {
                     // Return type must be auto due to extremely strange bug in DMD's
                     // function overloading.
@@ -986,7 +986,7 @@ if (Ranges.length > 0 &&
                 }
             }
 
-            static if (all!(hasLength, R))
+            static if (allSatisfy!(hasLength, R))
             {
                 @property size_t length()
                 {
@@ -1001,7 +1001,7 @@ if (Ranges.length > 0 &&
                 alias opDollar = length;
             }
 
-            static if (all!(isRandomAccessRange, R))
+            static if (allSatisfy!(isRandomAccessRange, R))
             {
                 auto ref opIndex(size_t index)
                 {
@@ -1021,7 +1021,7 @@ if (Ranges.length > 0 &&
                     assert(false);
                 }
 
-                static if (all!(hasMobileElements, R))
+                static if (allSatisfy!(hasMobileElements, R))
                 {
                     RvalueElementType moveAt(size_t index)
                     {
@@ -1042,7 +1042,7 @@ if (Ranges.length > 0 &&
                     }
                 }
 
-                static if (allSameType && all!(hasAssignableElements, R))
+                static if (allSameType && allSatisfy!(hasAssignableElements, R))
                     void opIndexAssign(ElementType v, size_t index)
                     {
                         foreach (i, Range; R)
@@ -1066,7 +1066,7 @@ if (Ranges.length > 0 &&
                     }
             }
 
-            static if (all!(hasLength, R) && all!(hasSlicing, R))
+            static if (allSatisfy!(hasLength, R) && allSatisfy!(hasSlicing, R))
                 auto opSlice(size_t begin, size_t end)
                 {
                     auto result = this;
@@ -1237,7 +1237,7 @@ stops after it has consumed all ranges (skipping over the ones that
 finish early).
  */
 auto roundRobin(Rs...)(Rs rs)
-if (Rs.length > 1 && all!(isInputRange, Map!(Unqual, Rs)))
+if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 {
     struct Result
     {
@@ -1302,7 +1302,7 @@ if (Rs.length > 1 && all!(isInputRange, Map!(Unqual, Rs)))
             }
         }
 
-        static if (all!(isForwardRange, Map!(Unqual, Rs)))
+        static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
             @property auto save()
             {
                 Result result = this;
@@ -1313,7 +1313,7 @@ if (Rs.length > 1 && all!(isInputRange, Map!(Unqual, Rs)))
                 return result;
             }
 
-        static if (all!(hasLength, Rs))
+        static if (allSatisfy!(hasLength, Rs))
         {
             @property size_t length()
             {
@@ -2166,7 +2166,7 @@ auto takeNone(R)(R range)
 
     import std.format : format;
 
-    foreach(range; MetaList!([1, 2, 3, 4, 5],
+    foreach(range; TypeTuple!([1, 2, 3, 4, 5],
                               "hello world",
                               "hello world"w,
                               "hello world"d,
@@ -2180,7 +2180,7 @@ auto takeNone(R)(R range)
         static assert(is(typeof(range) == typeof(takeNone(range))), typeof(range).stringof);
     }
 
-    foreach(range; MetaList!(NormalStruct([1, 2, 3]),
+    foreach(range; TypeTuple!(NormalStruct([1, 2, 3]),
                               InitStruct([1, 2, 3])))
     {
         static assert(takeNone(range).empty, typeof(range).stringof);
@@ -3049,14 +3049,14 @@ private alias lengthType(R) = typeof(R.init.length.init);
    in parallel:
 */
 struct Zip(Ranges...)
-    if (Ranges.length && all!(isInputRange, Ranges))
+    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     import std.format : format; //for generic mixins
     import std.typecons : Tuple;
 
     alias R = Ranges;
     R ranges;
-    alias ElementType = Tuple!(Map!(.ElementType, R));
+    alias ElementType = Tuple!(staticMap!(.ElementType, R));
     StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
 
 /**
@@ -3073,7 +3073,7 @@ struct Zip(Ranges...)
    Returns $(D true) if the range is at end. The test depends on the
    stopping policy.
 */
-    static if (all!(isInfinite, R))
+    static if (allSatisfy!(isInfinite, R))
     {
         // BUG:  Doesn't propagate infiniteness if only some ranges are infinite
         //       and s == StoppingPolicy.longest.  This isn't fixable in the
@@ -3113,7 +3113,7 @@ struct Zip(Ranges...)
         }
     }
 
-    static if (all!(isForwardRange, R))
+    static if (allSatisfy!(isForwardRange, R))
     {
         @property Zip save()
         {
@@ -3144,7 +3144,7 @@ struct Zip(Ranges...)
 /**
    Sets the front of all iterated ranges.
 */
-    static if (all!(hasAssignableElements, R))
+    static if (allSatisfy!(hasAssignableElements, R))
     {
         @property void front(ElementType v)
         {
@@ -3161,7 +3161,7 @@ struct Zip(Ranges...)
 /**
    Moves out the front.
 */
-    static if (all!(hasMobileElements, R))
+    static if (allSatisfy!(hasMobileElements, R))
     {
         ElementType moveFront()
         {
@@ -3174,7 +3174,7 @@ struct Zip(Ranges...)
 /**
    Returns the rightmost element.
 */
-    static if (all!(isBidirectionalRange, R))
+    static if (allSatisfy!(isBidirectionalRange, R))
     {
         @property ElementType back()
         {
@@ -3188,7 +3188,7 @@ struct Zip(Ranges...)
 /**
    Moves out the back.
 */
-        static if (all!(hasMobileElements, R))
+        static if (allSatisfy!(hasMobileElements, R))
         {
             ElementType moveBack()
             {
@@ -3203,7 +3203,7 @@ struct Zip(Ranges...)
 /**
    Returns the current iterated element.
 */
-        static if (all!(hasAssignableElements, R))
+        static if (allSatisfy!(hasAssignableElements, R))
         {
             @property void back(ElementType v)
             {
@@ -3256,7 +3256,7 @@ struct Zip(Ranges...)
 /**
    Calls $(D popBack) for all controlled ranges.
 */
-    static if (all!(isBidirectionalRange, R))
+    static if (allSatisfy!(isBidirectionalRange, R))
     {
         void popBack()
         {
@@ -3293,7 +3293,7 @@ struct Zip(Ranges...)
    Returns the length of this range. Defined only if all ranges define
    $(D length).
 */
-    static if (all!(hasLength, R))
+    static if (allSatisfy!(hasLength, R))
     {
         @property auto length()
         {
@@ -3320,13 +3320,13 @@ struct Zip(Ranges...)
    Returns a slice of the range. Defined only if all range define
    slicing.
 */
-    static if (all!(hasSlicing, R))
+    static if (allSatisfy!(hasSlicing, R))
     {
         auto opSlice(size_t from, size_t to)
         {
             //Slicing an infinite range yields the type Take!R
             //For finite ranges, the type Take!R aliases to R
-            alias ZipResult = Zip!(Map!(Take, R));
+            alias ZipResult = Zip!(staticMap!(Take, R));
 
             //ZipResult(ranges[0][from .. to], ranges[1][from .. to], ..., stoppingPolicy)
             return mixin (q{ZipResult(%(ranges[%s][from .. to]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
@@ -3337,7 +3337,7 @@ struct Zip(Ranges...)
    Returns the $(D n)th element in the composite range. Defined if all
    ranges offer random access.
 */
-    static if (all!(isRandomAccessRange, R))
+    static if (allSatisfy!(isRandomAccessRange, R))
     {
         ElementType opIndex(size_t n)
         {
@@ -3352,7 +3352,7 @@ struct Zip(Ranges...)
    Assigns to the $(D n)th element in the composite range. Defined if
    all ranges offer random access.
 */
-        static if (all!(hasAssignableElements, R))
+        static if (allSatisfy!(hasAssignableElements, R))
         {
             void opIndexAssign(ElementType v, size_t n)
             {
@@ -3368,7 +3368,7 @@ struct Zip(Ranges...)
    Destructively reads the $(D n)th element in the composite
    range. Defined if all ranges offer random access.
 */
-        static if (all!(hasMobileElements, R))
+        static if (allSatisfy!(hasMobileElements, R))
         {
             ElementType moveAt(size_t n)
             {
@@ -3384,7 +3384,7 @@ struct Zip(Ranges...)
 
 /// Ditto
 auto zip(Ranges...)(Ranges ranges)
-    if (Ranges.length && all!(isInputRange, Ranges))
+    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     return Zip!Ranges(ranges);
 }
@@ -3417,7 +3417,7 @@ unittest
 
 /// Ditto
 auto zip(Ranges...)(StoppingPolicy sp, Ranges ranges)
-    if (Ranges.length && all!(isInputRange, Ranges))
+    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     return Zip!Ranges(ranges, sp);
 }
@@ -3689,7 +3689,7 @@ private string lockstepMixin(Ranges...)(bool withIndex)
    -------
 */
 struct Lockstep(Ranges...)
-    if (Ranges.length > 1 && all!(isInputRange, Ranges))
+    if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 {
     this(R ranges, StoppingPolicy sp = StoppingPolicy.shortest)
     {
@@ -3719,13 +3719,13 @@ template Lockstep(Range)
 
 /// Ditto
 Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges)
-    if (all!(isInputRange, Ranges))
+    if (allSatisfy!(isInputRange, Ranges))
 {
     return Lockstep!(Ranges)(ranges);
 }
 /// Ditto
 Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
-    if (all!(isInputRange, Ranges))
+    if (allSatisfy!(isInputRange, Ranges))
 {
     static if (Ranges.length > 1)
         return Lockstep!Ranges(ranges, s);
@@ -4589,7 +4589,7 @@ unittest
     assert(iota(uint.max, 0u, -1).length == uint.max);
 
     // Issue 8920
-    foreach (Type; MetaList!(byte, ubyte, short, ushort,
+    foreach (Type; TypeTuple!(byte, ubyte, short, ushort,
         int, uint, long, ulong))
     {
         Type val;
@@ -4607,7 +4607,7 @@ unittest
 
 @safe unittest
 {
-    foreach(range; MetaList!(iota(2, 27, 4),
+    foreach(range; TypeTuple!(iota(2, 27, 4),
                               iota(3, 9),
                               iota(2.7, 12.3, .1),
                               iota(3.2, 9.7)))
@@ -6369,12 +6369,12 @@ unittest
     assert(saved[0 .. 0].empty);
     assert(saved[3 .. 3].empty);
 
-    alias data = MetaList!("one", "two", "three", "four");
+    alias data = TypeTuple!("one", "two", "three", "four");
     static joined =
         ["one two", "one two three", "one two three four"];
     string[] joinedRange = joined;
 
-    foreach(argCount; MetaList!(2, 3, 4))
+    foreach(argCount; TypeTuple!(2, 3, 4))
     {
         auto values = only(data[0 .. argCount]);
         alias Values = typeof(values);
@@ -6628,7 +6628,7 @@ pure @safe nothrow unittest
         }
     }
 
-    foreach (DummyType; MetaList!(AllDummyRanges, HasSlicing))
+    foreach (DummyType; TypeTuple!(AllDummyRanges, HasSlicing))
     {
         alias R = typeof(enumerate(DummyType.init));
         static assert(isInputRange!R);
@@ -6694,7 +6694,7 @@ pure @safe nothrow unittest
         assert(shifted.empty);
     }
 
-    foreach(T; MetaList!(ubyte, byte, uint, int))
+    foreach(T; TypeTuple!(ubyte, byte, uint, int))
     {
         auto inf = 42.repeat().enumerate(T.max);
         alias Inf = typeof(inf);
@@ -6721,7 +6721,7 @@ pure @safe unittest
 {
     import std.algorithm : equal;
     static immutable int[] values = [0, 1, 2, 3, 4];
-    foreach(T; MetaList!(ubyte, ushort, uint, ulong))
+    foreach(T; TypeTuple!(ubyte, ushort, uint, ulong))
     {
         auto enumerated = values.enumerate!T();
         static assert(is(typeof(enumerated.front.index) == T));
@@ -6762,7 +6762,7 @@ version(none) // @@@BUG@@@ 10939
         }
 
         SignedLengthRange svalues;
-        foreach(Enumerator; MetaList!(ubyte, byte, ushort, short, uint, int, ulong, long))
+        foreach(Enumerator; TypeTuple!(ubyte, byte, ushort, short, uint, int, ulong, long))
         {
             assertThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max));
             assertNotThrown!RangeError(values[].enumerate!Enumerator(Enumerator.max - values.length));
@@ -6773,7 +6773,7 @@ version(none) // @@@BUG@@@ 10939
             assertThrown!RangeError(svalues.enumerate!Enumerator(Enumerator.max - values.length + 1));
         }
 
-        foreach(Enumerator; MetaList!(byte, short, int))
+        foreach(Enumerator; TypeTuple!(byte, short, int))
         {
             assertThrown!RangeError(repeat(0, uint.max).enumerate!Enumerator());
         }
@@ -8597,14 +8597,14 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     auto result3 = txt.tee(asink3).array;
     assert(equal(txt, result3) && equal(result3, asink3));
 
-    foreach (CharType; MetaList!(char, wchar, dchar))
+    foreach (CharType; TypeTuple!(char, wchar, dchar))
     {
         auto appSink = appender!(CharType[])();
         auto appResult = txt.tee(appSink).array;
         assert(equal(txt, appResult) && equal(appResult, appSink.data));
     }
 
-    foreach (StringType; MetaList!(string, wstring, dstring))
+    foreach (StringType; TypeTuple!(string, wstring, dstring))
     {
         auto appSink = appender!StringType();
         auto appResult = txt.tee(appSink).array;

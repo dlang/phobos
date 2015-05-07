@@ -65,7 +65,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.traits, std.meta.list;
+import std.traits, std.typetuple;
 
 
 private template needOpCallAlias(alias fun)
@@ -87,10 +87,10 @@ private template needOpCallAlias(alias fun)
      */
     static if (is(typeof(fun.opCall) == function))
     {
-        import std.traits : ParameterTypes;
+        import std.traits : ParameterTypeTuple;
 
         enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, () {
-            return fun(ParameterTypes!fun.init);
+            return fun(ParameterTypeTuple!fun.init);
         });
     }
     else
@@ -110,7 +110,7 @@ template unaryFun(alias fun, string parmName = "a")
     {
         static if (!fun._ctfeMatchUnary(parmName))
         {
-            import std.traits, std.typecons, std.meta.list;
+            import std.traits, std.typecons, std.typetuple;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
         auto unaryFun(ElementType)(auto ref ElementType __a)
@@ -202,7 +202,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     {
         static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
         {
-            import std.traits, std.typecons, std.meta.list;
+            import std.traits, std.typecons, std.typetuple;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
         }
         auto binaryFun(ElementType1, ElementType2)
@@ -542,8 +542,6 @@ unittest
 */
 template reverseArgs(alias pred)
 {
-    import std.meta.list : Reverse;
-
     auto reverseArgs(Args...)(auto ref Args args)
         if (is(typeof(pred(Reverse!args))))
     {
@@ -659,7 +657,7 @@ template partial(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
-        ReturnType!fun partial(ParameterTypes!fun[1..$] args2)
+        ReturnType!fun partial(ParameterTypeTuple!fun[1..$] args2)
         {
             return fun(arg, args2);
         }
@@ -864,9 +862,9 @@ unittest
 
 unittest
 {
-    import std.meta : Map;
+    import std.typetuple : staticMap;
     import std.typecons : Tuple, tuple;
-    alias funs = Map!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
+    alias funs = staticMap!(unaryFun, "a", "a * 2", "a * 3", "a * a", "-a");
     alias afun = adjoin!funs;
     assert(afun(5) == tuple(5, 10, 15, 25, -5));
 
@@ -1024,11 +1022,11 @@ is useful to memoize an impure function, too.
 */
 template memoize(alias fun)
 {
-    // alias Args = ParameterTypes!fun; // Bugzilla 13580
+    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
 
-    ReturnType!fun memoize(ParameterTypes!fun args)
+    ReturnType!fun memoize(ParameterTypeTuple!fun args)
     {
-        alias Args = ParameterTypes!fun;
+        alias Args = ParameterTypeTuple!fun;
         import std.typecons : Tuple;
 
         static ReturnType!fun[Tuple!Args] memo;
@@ -1042,11 +1040,11 @@ template memoize(alias fun)
 /// ditto
 template memoize(alias fun, uint maxSize)
 {
-    // alias Args = ParameterTypes!fun; // Bugzilla 13580
-    ReturnType!fun memoize(ParameterTypes!fun args)
+    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
+    ReturnType!fun memoize(ParameterTypeTuple!fun args)
     {
         import std.typecons : tuple;
-        static struct Value { ParameterTypes!fun args; ReturnType!fun res; }
+        static struct Value { ParameterTypeTuple!fun args; ReturnType!fun res; }
         static Value[] memo;
         static size_t[] initialized;
 
@@ -1209,7 +1207,7 @@ private struct DelegateFaker(F)
      *--------------------
      * struct DelegateFaker(F) {
      *     extern(linkage)
-     *     [ref] ReturnType!F doIt(ParameterTypes!F args) [@attributes]
+     *     [ref] ReturnType!F doIt(ParameterTypeTuple!F args) [@attributes]
      *     {
      *         auto fp = cast(F) &this;
      *         return fp(args);
@@ -1229,7 +1227,7 @@ private struct DelegateFaker(F)
         template generateFunctionBody(unused...)
         {
             enum generateFunctionBody =
-            // [ref] ReturnType doIt(ParameterTypes args) @attributes
+            // [ref] ReturnType doIt(ParameterTypeTuple args) @attributes
             q{
                 // When this function gets called, the this pointer isn't
                 // really a this pointer (no instance even really exists), but
@@ -1412,7 +1410,7 @@ Forwards function arguments with saving ref-ness.
 */
 template forward(args...)
 {
-    import std.meta;
+    import std.typetuple;
 
     static if (args.length)
     {
@@ -1423,10 +1421,10 @@ template forward(args...)
             alias fwd = arg;
         else
             @property fwd()(){ return move(arg); }
-        alias forward = MetaList!(fwd, forward!(args[1..$]));
+        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
     }
     else
-        alias forward = MetaList!();
+        alias forward = TypeTuple!();
 }
 
 ///

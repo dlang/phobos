@@ -649,7 +649,7 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 module std.uni;
 
 import core.stdc.stdlib;
-import std.traits, std.meta;
+import std.traits, std.typetuple;
 import std.range.primitives;
 
 
@@ -796,7 +796,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
     import std.range : iota;
     size_t m = 0b111;
     size_t m2 = 0b01;
-    foreach(i; MetaList!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+    foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
     {
         assert(replicateBits!(i, 3)(m)+1 == (1<<(3*i)));
         assert(replicateBits!(i, 2)(m2) == iota(0, i).map!"2^^(2*a)"().sum());
@@ -924,7 +924,7 @@ private:
     enum dim = Types.length;
     size_t[dim] offsets;// offset for level x
     size_t[dim] sz;// size of level x
-    alias bitWidth = Map!(bitSizeOf, Types);
+    alias bitWidth = staticMap!(bitSizeOf, Types);
     size_t[] storage;
 }
 
@@ -3369,7 +3369,7 @@ private:
         assert(u24 != u24_2);
     }
 
-    foreach(Policy; MetaList!(GcPolicy, ReallocPolicy))
+    foreach(Policy; TypeTuple!(GcPolicy, ReallocPolicy))
     {
         alias Range = typeof(CowArray!Policy.init[]);
         alias U24A = CowArray!Policy;
@@ -3407,7 +3407,7 @@ private:
 
 version(unittest)
 {
-    private alias AllSets = MetaList!(InversionList!GcPolicy, InversionList!ReallocPolicy);
+    private alias AllSets = TypeTuple!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
 
 @safe unittest// core set primitives test
@@ -3646,7 +3646,7 @@ version(unittest)
 {
     import std.conv;
     import std.typecons;
-    foreach(CodeList; MetaList!(InversionList!(ReallocPolicy)))
+    foreach(CodeList; TypeTuple!(InversionList!(ReallocPolicy)))
     {
         auto arr = "ABCDEFGHIJKLMabcdefghijklm"d;
         auto a = CodeList('A','N','a', 'n');
@@ -4108,10 +4108,10 @@ template GetBitSlicing(size_t top, sizes...)
 {
     static if(sizes.length > 0)
         alias GetBitSlicing =
-            MetaList!(sliceBits!(top - sizes[0], top),
+            TypeTuple!(sliceBits!(top - sizes[0], top),
                        GetBitSlicing!(top - sizes[0], sizes[1..$]));
     else
-        alias GetBitSlicing = MetaList!();
+        alias GetBitSlicing = TypeTuple!();
 }
 
 template callableWith(T)
@@ -4136,7 +4136,7 @@ template callableWith(T)
 */
 template isValidPrefixForTrie(Key, Prefix...)
 {
-    enum isValidPrefixForTrie = all!(callableWith!Key, Prefix); // TODO: tighten the screws
+    enum isValidPrefixForTrie = allSatisfy!(callableWith!Key, Prefix); // TODO: tighten the screws
 }
 
 /*
@@ -4397,9 +4397,9 @@ public template buildTrie(Value, Key, Args...)
     {
         static if(n > 0)
             alias GetComparators =
-                MetaList!(GetComparators!(n-1), cmpK0!(Prefix[n-1]));
+                TypeTuple!(GetComparators!(n-1), cmpK0!(Prefix[n-1]));
         else
-            alias GetComparators = MetaList!();
+            alias GetComparators = TypeTuple!();
     }
 
     /*
@@ -4674,22 +4674,22 @@ template Utf8Matcher()
     }
 
     //for 1-stage ASCII
-    alias AsciiSpec = MetaList!(bool, char, clamp!7);
+    alias AsciiSpec = TypeTuple!(bool, char, clamp!7);
     //for 2-stage lookup of 2 byte UTF-8 sequences
-    alias Utf8Spec2 = MetaList!(bool, char[2],
+    alias Utf8Spec2 = TypeTuple!(bool, char[2],
         clampIdx!(0, 5), clampIdx!(1, 6));
     //ditto for 3 byte
-    alias Utf8Spec3 = MetaList!(bool, char[3],
+    alias Utf8Spec3 = TypeTuple!(bool, char[3],
         clampIdx!(0, 4),
         clampIdx!(1, 6),
         clampIdx!(2, 6)
     );
     //ditto for 4 byte
-    alias Utf8Spec4 = MetaList!(bool, char[4],
+    alias Utf8Spec4 = TypeTuple!(bool, char[4],
         clampIdx!(0, 3), clampIdx!(1, 6),
         clampIdx!(2, 6), clampIdx!(3, 6)
     );
-    alias Tables = MetaList!(
+    alias Tables = TypeTuple!(
         typeof(TrieBuilder!(AsciiSpec)(false).build()),
         typeof(TrieBuilder!(Utf8Spec2)(false).build()),
         typeof(TrieBuilder!(Utf8Spec3)(false).build()),
@@ -4748,7 +4748,7 @@ template Utf8Matcher()
     mixin template DefMatcher()
     {
         import std.format : format;
-        enum hasASCII = indexOf!(1, Sizes) >= 0;
+        enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
         alias UniSizes = Erase!(1, Sizes);
 
         //generate dispatch code sequence for unicode parts
@@ -4854,11 +4854,11 @@ template Utf8Matcher()
 
     struct Impl(Sizes...)
     {
-        static assert(all!(validSize, Sizes),
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         //pick tables for chosen sizes
-        alias OurTabs = Map!(Table, Sizes);
+        alias OurTabs = staticMap!(Table, Sizes);
         OurTabs tables;
         mixin DefMatcher;
         //static disptach helper UTF size ==> table
@@ -4930,7 +4930,7 @@ template Utf8Matcher()
 
     struct CherryPick(I, Sizes...)
     {
-        static assert(all!(validSize, Sizes),
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1, 2, 3 and 4 code unit are possible for UTF-8");
     private:
         I* m;
@@ -4953,7 +4953,7 @@ template Utf16Matcher()
         throw new UTFException("Invalid UTF-16 sequence");
     }
 
-    alias Seq = MetaList;
+    alias Seq = TypeTuple;
     // 1-stage ASCII
     alias AsciiSpec = Seq!(bool, wchar, clamp!7);
     //2-stage BMP
@@ -5082,7 +5082,7 @@ template Utf16Matcher()
         if(Sizes.length >= 1 && Sizes.length <= 2)
     {
     private:
-        static assert(all!(validSize, Sizes),
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
         static if(Sizes.length > 1)
             enum sizeFlags = Sizes[0] | Sizes[1];
@@ -5183,7 +5183,7 @@ template Utf16Matcher()
             return m.lookupUni!mode(inp);
         }
         mixin DefMatcher;
-        static assert(all!(validSize, Sizes),
+        static assert(allSatisfy!(validSize, Sizes),
             "Only lengths of 1 and 2 code units are possible in UTF-16");
     }
 }
@@ -5388,7 +5388,7 @@ unittest
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
     //decode failure cases UTF-8
-    alias fails8 = MetaList!("\xC1", "\x80\x00","\xC0\x00", "\xCF\x79",
+    alias fails8 = TypeTuple!("\xC1", "\x80\x00","\xC0\x00", "\xCF\x79",
         "\xFF\x00\0x00\0x00\x00", "\xC0\0x80\0x80\x80", "\x80\0x00\0x00\x00",
         "\xCF\x00\0x00\0x00\x00");
     foreach(msg; fails8){
@@ -5401,7 +5401,7 @@ unittest
         }()), format("%( %2x %)", cast(ubyte[])msg));
     }
     //decode failure cases UTF-16
-    alias fails16 = MetaList!([0xD811], [0xDC02]);
+    alias fails16 = TypeTuple!([0xD811], [0xDC02]);
     foreach(msg; fails16){
         assert(collectException((){
             auto s = msg.map!(x => cast(wchar)x);
@@ -5583,9 +5583,9 @@ static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
 template Sequence(size_t start, size_t end)
 {
     static if(start < end)
-        alias Sequence = MetaList!(start, Sequence!(start+1, end));
+        alias Sequence = TypeTuple!(start, Sequence!(start+1, end));
     else
-        alias Sequence = MetaList!();
+        alias Sequence = TypeTuple!();
 }
 
 //---- TRIE TESTS ----
@@ -5715,7 +5715,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 {
     static if(Prefix.length == 1)
     {// the last level is value level, so no index once reduced to 1-level
-        alias idxTypes = MetaList!();
+        alias idxTypes = TypeTuple!();
     }
     else
     {
@@ -5725,7 +5725,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
         // thus it's size in pages is full_bit_width - size_of_last_prefix
         // Recourse on this notion
         alias idxTypes =
-            MetaList!(
+            TypeTuple!(
                 idxTypes!(Key, fullBits - bitSizeOf!(Prefix[$-1]), Prefix[0..$-1]),
                 BitPacked!(typeof(Prefix[$-2](Key.init)), fullBits - bitSizeOf!(Prefix[$-1]))
             );
@@ -6590,7 +6590,7 @@ unittest
     auto gReverse = reverse.byGrapheme;
     assert(gReverse.walkLength == 4);
 
-    foreach(text; MetaList!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
+    foreach(text; TypeTuple!("noe\u0308l"c, "noe\u0308l"w, "noe\u0308l"d))
     {
         assert(text.walkLength == 5);
         static assert(isForwardRange!(typeof(text)));
@@ -7237,10 +7237,10 @@ unittest
     import std.algorithm;
     assertCTFEable!(
     {
-    foreach(cfunc; MetaList!(icmp, sicmp))
+    foreach(cfunc; TypeTuple!(icmp, sicmp))
     {
-        foreach(S1; MetaList!(string, wstring, dstring))
-        foreach(S2; MetaList!(string, wstring, dstring))
+        foreach(S1; TypeTuple!(string, wstring, dstring))
+        foreach(S2; TypeTuple!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(cfunc("".to!S1(), "".to!S2()) == 0);
             assert(cfunc("A".to!S1(), "".to!S2()) > 0);
@@ -8167,8 +8167,8 @@ private dchar toTitlecase(dchar c)
     return c;
 }
 
-private alias UpperTriple = MetaList!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
-private alias LowerTriple = MetaList!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+private alias UpperTriple = TypeTuple!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
+private alias LowerTriple = TypeTuple!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
 
 // generic toUpper/toLower on whole string, creates new or returns as is
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pure
@@ -9100,7 +9100,7 @@ unittest
         assert(upInp == trueUp,
             format(diff, cast(ubyte[])s, cast(ubyte[])upInp, cast(ubyte[])trueUp));
     }
-    foreach(S; MetaList!(dstring, wstring, string))
+    foreach(S; TypeTuple!(dstring, wstring, string))
     {
 
         S easy = "123";
@@ -9111,7 +9111,7 @@ unittest
         S[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
         S[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
 
-        foreach(val; MetaList!(easy, good))
+        foreach(val; TypeTuple!(easy, good))
         {
             auto e = val.dup;
             auto g = e;

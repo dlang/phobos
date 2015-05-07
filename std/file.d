@@ -27,7 +27,7 @@ import std.path;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
-import std.meta;
+import std.typetuple;
 import std.internal.cstring;
 
 version (Windows)
@@ -271,7 +271,7 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
     }
 
     alias defaults =
-        MetaList!(GENERIC_READ,
+        TypeTuple!(GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
             HANDLE.init);
@@ -375,7 +375,7 @@ void write(in char[] name, const void[] buffer) @trusted
     version(Windows)
     {
         alias defaults =
-            MetaList!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+            TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
         auto h = CreateFileW(name.tempCStringW(), defaults);
@@ -414,7 +414,7 @@ void append(in char[] name, in void[] buffer) @trusted
     version(Windows)
     {
         alias defaults =
-            MetaList!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
+            TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init);
 
         auto h = CreateFileW(name.tempCStringW(), defaults);
@@ -790,7 +790,7 @@ void setTimes(in char[] name,
         const ta = SysTimeToFILETIME(accessTime);
         const tm = SysTimeToFILETIME(modificationTime);
         alias defaults =
-            MetaList!(GENERIC_WRITE,
+            TypeTuple!(GENERIC_WRITE,
                          0,
                          null,
                          OPEN_EXISTING,

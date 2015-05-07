@@ -2160,8 +2160,8 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 
 unittest
 {
-    import std.meta;
-    foreach(T; MetaList!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+    import std.typetuple;
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
         T val;
@@ -2276,8 +2276,8 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 
 unittest
 {
-    import std.meta;
-    foreach(T; MetaList!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+    import std.typetuple;
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
          * using a bit compare. There are two kinds of nans, quiet and signaling.
@@ -2450,8 +2450,8 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 
 unittest
 {
-    import std.meta;
-    foreach(T; MetaList!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+    import std.typetuple;
+    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar/*,
                           float, double*/))
     {
@@ -2580,8 +2580,8 @@ private template isFloatOrDouble(T)
 
 unittest
 {
-    import std.meta;
-    foreach(T; MetaList!(float, double))
+    import std.typetuple;
+    foreach(T; TypeTuple!(float, double))
     {
         static assert(isFloatOrDouble!(T));
         static assert(isFloatOrDouble!(const T));
@@ -2609,8 +2609,8 @@ private template canSwapEndianness(T)
 
 unittest
 {
-    import std.meta;
-    foreach(T; MetaList!(bool, ubyte, byte, ushort, short, uint, int, ulong,
+    import std.typetuple;
+    foreach(T; TypeTuple!(bool, ubyte, byte, ushort, short, uint, int, ulong,
                           long, char, wchar, dchar, float, double))
     {
         static assert(canSwapEndianness!(T));
@@ -2622,7 +2622,7 @@ unittest
     }
 
     //!
-    foreach(T; MetaList!(real, string, wstring, dstring))
+    foreach(T; TypeTuple!(real, string, wstring, dstring))
     {
         static assert(!canSwapEndianness!(T));
         static assert(!canSwapEndianness!(const T));
@@ -3700,11 +3700,11 @@ unittest
 {
     import std.format : format;
     import std.array;
-    import std.meta;
-    foreach(endianness; MetaList!(Endian.bigEndian, Endian.littleEndian))
+    import std.typetuple;
+    foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
     {
         auto toWrite = appender!(ubyte[])();
-        alias Types = MetaList!(uint, int, long, ulong, short, ubyte, ushort, byte, uint);
+        alias Types = TypeTuple!(uint, int, long, ulong, short, ubyte, ushort, byte, uint);
         ulong[] values = [42, -11, long.max, 1098911981329L, 16, 255, 19012, 2, 17];
         assert(Types.length == values.length);
 
@@ -3775,8 +3775,8 @@ unittest
 
 unittest
 {
-    import std.meta;
-    foreach (T; MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    import std.typetuple;
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countTrailingZeros(cast(T)0) == 8 * T.sizeof);
         assert(countTrailingZeros(cast(T)1) == 0);
@@ -3856,8 +3856,8 @@ unittest
 
 unittest
 {
-    import std.meta;
-    foreach (T; MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    import std.typetuple;
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(countBitsSet(cast(T)0) == 0);
         assert(countBitsSet(cast(T)1) == 1);
@@ -3957,8 +3957,8 @@ unittest
     import std.algorithm : equal;
     import std.range: iota;
 
-    import std.meta;
-    foreach (T; MetaList!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    import std.typetuple;
+    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assert(bitsSet(cast(T)0).empty);
         assert(bitsSet(cast(T)1).equal([0]));

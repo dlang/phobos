@@ -481,7 +481,7 @@ if (isNarrowString!R1 && isNarrowString!R2)
     import std.exception : assertThrown;
     import std.utf : UTFException;
     import std.range;
-    import std.meta : MetaList;
+    import std.typetuple : TypeTuple;
 
     assert(commonPrefix([1, 2, 3], [1, 2, 3, 4, 5]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4, 5], [1, 2, 3]) == [1, 2, 3]);
@@ -492,11 +492,11 @@ if (isNarrowString!R1 && isNarrowString!R2)
     assert(commonPrefix(cast(int[])null, [1, 2, 3]).empty);
     assert(commonPrefix(cast(int[])null, cast(int[])null).empty);
 
-    foreach (S; MetaList!(char[], const(char)[], string,
+    foreach (S; TypeTuple!(char[], const(char)[], string,
                            wchar[], const(wchar)[], wstring,
                            dchar[], const(dchar)[], dstring))
     {
-        foreach(T; MetaList!(string, wstring, dstring))
+        foreach(T; TypeTuple!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
@@ -1065,13 +1065,13 @@ if (isBidirectionalRange!R &&
 @safe unittest
 {
     import std.algorithm.iteration : filterBidirectional;
-    import std.meta : MetaList;
+    import std.typetuple : TypeTuple;
     import std.conv : to;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    foreach (S; MetaList!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
@@ -1079,7 +1079,7 @@ if (isBidirectionalRange!R &&
         assert(endsWith(to!S("abc"), 'x', 'n', 'c') == 3);
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; MetaList!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             //Lots of strings
             assert(endsWith(to!S("abc"), to!T("")));
@@ -1113,7 +1113,7 @@ if (isBidirectionalRange!R &&
         }();
     }
 
-    foreach (T; MetaList!(int, short))
+    foreach (T; TypeTuple!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -1367,10 +1367,10 @@ if (isInputRange!InputRange &&
 
 @safe pure unittest
 {
-    import std.meta : MetaList;
-    foreach(R; MetaList!(string, wstring, dstring))
+    import std.typetuple : TypeTuple;
+    foreach(R; TypeTuple!(string, wstring, dstring))
     {
-        foreach(E; MetaList!(char, wchar, dchar))
+        foreach(E; TypeTuple!(char, wchar, dchar))
         {
             R r1 = "hello world";
             E e1 = 'w';
@@ -1411,15 +1411,15 @@ if (isInputRange!InputRange &&
 @safe unittest
 {
     import std.exception : assertCTFEable;
-    import std.meta : MetaList;
+    import std.typetuple : TypeTuple;
 
     void dg() @safe pure nothrow
     {
         byte[]  sarr = [1, 2, 3, 4];
         ubyte[] uarr = [1, 2, 3, 4];
-        foreach(arr; MetaList!(sarr, uarr))
+        foreach(arr; TypeTuple!(sarr, uarr))
         {
-            foreach(T; MetaList!(byte, ubyte, int, uint))
+            foreach(T; TypeTuple!(byte, ubyte, int, uint))
             {
                 assert(find(arr, cast(T) 3) == arr[2 .. $]);
                 assert(find(arr, cast(T) 9) == arr[$ .. $]);
@@ -1959,7 +1959,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
-    import std.meta : MetaList;
+    import std.typetuple : TypeTuple;
     import std.uni : toUpper;
 
     debug(std_algorithm) scope(success)
@@ -1969,7 +1969,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find(a, 5).empty);
     assert(find(a, 2) == [2, 3]);
 
-    foreach (T; MetaList!(int, double))
+    foreach (T; TypeTuple!(int, double))
     {
         auto b = rndstuff!(T)();
         if (!b.length) continue;
@@ -1992,7 +1992,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     import std.algorithm.internal : rndstuff;
     import std.algorithm.comparison : equal;
     import std.range : retro;
-    import std.meta : MetaList;
+    import std.typetuple : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2001,7 +2001,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     assert(find(retro(a), 5).empty);
     assert(equal(find(retro(a), 2), [ 2, 3, 2, 1 ][]));
 
-    foreach (T; MetaList!(int, double))
+    foreach (T; TypeTuple!(int, double))
     {
         auto b = rndstuff!(T)();
         if (!b.length) continue;
@@ -2090,7 +2090,7 @@ $(LREF among) for checking a value against multiple possibilities.
  +/
 template canFind(alias pred="a == b")
 {
-    import std.meta : all;
+    import std.typetuple : allSatisfy;
 
     /++
     Returns $(D true) if and only if any value $(D v) found in the
@@ -2125,7 +2125,8 @@ template canFind(alias pred="a == b")
     same operation.
      +/
     size_t canFind(Range, Ranges...)(Range haystack, Ranges needles)
-    if (Ranges.length > 1 && all!(isForwardRange, Ranges) &&
+    if (Ranges.length > 1 &&
+        allSatisfy!(isForwardRange, Ranges) &&
         is(typeof(find!pred(haystack, needles))))
     {
         return find!pred(haystack, needles)[1];
@@ -2687,7 +2688,7 @@ unittest
 unittest
 {
     import std.conv : text;
-    import std.meta : MetaList;
+    import std.typetuple : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -2737,7 +2738,7 @@ unittest
     }
     static assert(!isAssignable!S3);
 
-    foreach (Type; MetaList!(S1, IS1, S2, IS2, S3))
+    foreach (Type; TypeTuple!(S1, IS1, S2, IS2, S3))
     {
         static if (is(Type == immutable)) alias V = immutable int;
         else                              alias V = int;
@@ -3170,12 +3171,12 @@ if (isInputRange!R &&
     import std.algorithm.iteration : filter;
     import std.conv : to;
     import std.range;
-    import std.meta : MetaList;
+    import std.typetuple : TypeTuple;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    foreach (S; MetaList!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
@@ -3183,7 +3184,7 @@ if (isInputRange!R &&
         assert(startsWith(to!S("abc"), 'x', 'n', 'a') == 3);
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; MetaList!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             //Lots of strings
             assert(startsWith(to!S("abc"), to!T("")));
@@ -3225,7 +3226,7 @@ if (isInputRange!R &&
     assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(3)));
     assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(1)));
 
-    foreach (T; MetaList!(int, short))
+    foreach (T; TypeTuple!(int, short))
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 

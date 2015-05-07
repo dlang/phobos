@@ -190,7 +190,7 @@ MAIN = $(ROOT)/emptymain.d
 # Packages in std. Just mention the package name here and the actual files in
 # the package in STD_MODULES.
 STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
-	meta range regex)
+	range regex)
 
 # Modules in std (including those in packages), in alphabetical order.
 STD_MODULES = $(addprefix std/, \
@@ -206,7 +206,6 @@ STD_MODULES = $(addprefix std/, \
   $(addprefix range/, primitives interfaces) \
   $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
   	kickstart tests thompson)) \
-  $(addprefix meta/, algorithm internal list predicates) \
   signals socket socketstream stdint stdio stdiobase stream \
   string syserror system traits typecons typetuple uni uri utf uuid variant \
   xml zip zlib $(addprefix algorithm/,comparison iteration \

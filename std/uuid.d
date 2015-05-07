@@ -126,7 +126,7 @@ import std.traits;
  */
 public struct UUID
 {
-    import std.meta : all;
+    import std.typetuple : allSatisfy;
     import std.traits : isIntegral;
 
     private:
@@ -288,7 +288,7 @@ public struct UUID
          * You need to pass exactly 16 ubytes.
          */
         @safe pure this(T...)(T uuidData)
-            if(uuidData.length == 16 && all!(isIntegral, T))
+            if(uuidData.length == 16 && allSatisfy!(isIntegral, T))
         {
             import std.conv : to;
 
@@ -418,10 +418,10 @@ public struct UUID
         @safe pure unittest
         {
             import std.exception;
-            import std.meta;
+            import std.typetuple;
             import std.conv : to;
 
-            foreach(S; MetaList!(char[], const(char)[], immutable(char)[],
+            foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
                                   dchar[], const(dchar)[], immutable(dchar)[],
                                   immutable(char[]), immutable(wchar[]), immutable(dchar[])))
@@ -1355,7 +1355,7 @@ unittest
 @safe pure unittest
 {
     import std.exception;
-    import std.meta;
+    import std.typetuple;
     import std.conv : to;
 
     struct TestRange(bool forward)
@@ -1406,7 +1406,7 @@ unittest
             return parseUUID(to!T(input));
     }
 
-    foreach(S; MetaList!(char[], const(char)[], immutable(char)[],
+    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
                           wchar[], const(wchar)[], immutable(wchar)[],
                           dchar[], const(dchar)[], immutable(dchar)[],
                           immutable(char[]), immutable(wchar[]), immutable(dchar[]),
