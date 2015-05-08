@@ -179,28 +179,80 @@ version (Windows)
     from a path.
 */
 private auto ltrimDirSeparators(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    if (isInputRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
-    int i = 0;
-    while (i < path.length && isDirSeparator(path[i])) ++i;
-    return path[i .. path.length];
+    static if (isRandomAccessRange!R && hasSlicing!R || isNarrowString!R)
+    {
+        int i = 0;
+        while (i < path.length && isDirSeparator(path[i]))
+            ++i;
+        return path[i .. path.length];
+    }
+    else
+    {
+        while (!path.empty && isDirSeparator(path.front))
+            path.popFront();
+        return path;
+    }
+}
+
+unittest
+{
+    import std.array;
+    import std.utf : byDchar;
+
+    assert(ltrimDirSeparators("//abc//").array == "abc//");
+    assert(ltrimDirSeparators("//abc//"d).array == "abc//"d);
+    assert(ltrimDirSeparators("//abc//".byDchar).array == "abc//"d);
 }
 
 private auto rtrimDirSeparators(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
-    auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && isDirSeparator(path[i])) --i;
-    return path[0 .. i+1];
+    static if (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R)
+    {
+        auto i = (cast(ptrdiff_t) path.length) - 1;
+        while (i >= 0 && isDirSeparator(path[i]))
+            --i;
+        return path[0 .. i+1];
+    }
+    else
+    {
+        while (!path.empty && isDirSeparator(path.back))
+            path.popBack();
+        return path;
+    }
+}
+
+unittest
+{
+    import std.array;
+    import std.utf : byDchar;
+
+    assert(rtrimDirSeparators("//abc//").array == "//abc");
+    assert(rtrimDirSeparators("//abc//"d).array == "//abc"d);
+
+    assert(rtrimDirSeparators(MockBiRange!char("//abc//")).array == "//abc");
 }
 
 private auto trimDirSeparators(R)(R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
+}
+
+unittest
+{
+    import std.array;
+    import std.utf : byDchar;
+
+    assert(trimDirSeparators("//abc//").array == "abc");
+    assert(trimDirSeparators("//abc//"d).array == "abc"d);
+
+    assert(trimDirSeparators(MockBiRange!char("//abc//")).array == "abc");
 }
 
 
@@ -3162,6 +3214,31 @@ version (unittest)
     static assert( isRandomAccessRange!(MockRange!(const(char))) );
 }
 
+version (unittest)
+{
+    /* Define a mock BidirectionalRange to use for unittesting.
+     */
+
+    struct MockBiRange(C)
+    {
+        this(const(C)[] array) { this.array = array; }
+        const
+        {
+            @property bool empty() { return array.length == 0; }
+            @property C front() { return array[0]; }
+            @property C back()  { return array[$ - 1]; }
+            @property size_t opDollar() { return array.length; }
+        }
+        void popFront() { array = array[1 .. $]; }
+        void popBack()  { array = array[0 .. $-1]; }
+        @property MockBiRange save() { return this; }
+      private:
+        const(C)[] array;
+    }
+
+    static assert( isBidirectionalRange!(MockBiRange!(const(char))) );
+}
+
 private template BaseOf(R)
 {
     static if (isRandomAccessRange!R && isSomeChar!(ElementType!R))
@@ -3169,3 +3246,4 @@ private template BaseOf(R)
     else
         alias BaseOf = StringTypeOf!R;
 }
+
