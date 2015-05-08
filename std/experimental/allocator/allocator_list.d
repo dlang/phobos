@@ -17,7 +17,8 @@ struct AllocatorList(alias make)
     import std.algorithm : move;
     /// Alias for $(D typeof(make)).
     alias typeof(make()) Allocator;
-    static struct Node
+
+    private static struct Node
     {
         Allocator a;
         Node* next;
@@ -26,7 +27,7 @@ struct AllocatorList(alias make)
     private Node* _root;
 
     /**
-    Standard primitives.
+    The alignment offered.
     */
     enum uint alignment = Allocator.alignment;
 

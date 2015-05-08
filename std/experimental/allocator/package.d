@@ -270,6 +270,9 @@ run time.))
 $(TR $(TDC2 SharedFreeList) $(TD Same features as $(D FreeList), but packaged as
 a $(D shared) structure that is accessible to several threads.))
 
+$(TR $(TDC2 FreeTree) $(TD Allocator similar to $(D FreeList) that uses a
+binary search tree to adaptively store not one, but many free lists.))
+
 $(TR $(TDC2 SimpleBlocklist) $(TD A simple structure on top of a contiguous
 block of storage, organizing it as a singly-linked list of blocks. Each block
 has a word-sized header consisting of its length massaged with a bit indicating
@@ -295,6 +298,9 @@ $(TR $(TDC2 MmapAllocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
 
 $(TR $(TDC2 StatsCollector) $(TD Collect statistics about any other
 allocator.))
+
+$(TR $(TDC2 Quantizer) $(TD Allocates in coarse-grained quantas, thus
+improving performance of reallocations by often reallocating in place. The drawback is higher memory consumption because of allocated and unused memory.))
 
 $(TR $(TDC2 AllocatorList) $(TD Given an allocator factory, lazily creates as
 many allocators as needed to satisfy allocation requests. The allocators are
