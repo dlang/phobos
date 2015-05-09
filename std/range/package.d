@@ -38,6 +38,9 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF chain)))
         $(TD Concatenates several ranges into a single _range.
     ))
+    $(TR $(TD $(D $(LREF choose)))
+        $(TD Choose one of several ranges.
+    ))
     $(TR $(TD $(D $(LREF chunks)))
         $(TD Creates a _range that returns fixed-size chunks of the original
         _range.
@@ -1227,6 +1230,390 @@ unittest
     immutable(Foo)[] b;
     auto c = chain(a, b);
 }
+
+
+/**
+    Choose one of multiple ranges at runtime.
+
+    The ranges may be different, but they must have the same element type. The
+    result is a range that offers the $(D front), $(D popFront), and $(D
+    empty) primitives. If all input ranges offer random access and $(D
+    length), $(D choose) offers them as well.
+
+    Params:
+        index = which range to choose, must be less than the number of ranges
+        rs = 1 or more ranges
+
+    Returns:
+        The indexed range. If rs consists of only one range,
+        the return type is an alias of that range's type.
+ */
+auto choose(Ranges...)(size_t index, Ranges rs)
+if (Ranges.length > 0 &&
+    allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)) &&
+    !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Ranges))) == void))
+{
+    static if (Ranges.length == 1)
+    {
+        assert(index == 0);
+        return rs[0];
+    }
+    else
+    {
+        static struct Result
+        {
+        private:
+            alias R = staticMap!(Unqual, Ranges);
+            alias RvalueElementType = CommonType!(staticMap!(.ElementType, R));
+            private template sameET(A)
+            {
+                enum sameET = is(.ElementType!A == RvalueElementType);
+            }
+
+            enum bool allSameType = allSatisfy!(sameET, R);
+
+            static if (allSameType)
+            {
+                alias ref RvalueElementType ElementType;
+            }
+            else
+            {
+                alias ElementType = RvalueElementType;
+            }
+            static if (allSameType && allSatisfy!(hasLvalueElements, R))
+            {
+                static ref RvalueElementType fixRef(ref RvalueElementType val)
+                {
+                    return val;
+                }
+            }
+            else
+            {
+                static RvalueElementType fixRef(RvalueElementType val)
+                {
+                    return val;
+                }
+            }
+
+            // Create a tagged union for the Ranges
+            size_t index;               // the tag
+            union U { R fields; }
+            U source;
+
+        public:
+            this(size_t index, R input)
+            {
+                this.index = index;
+                foreach (i, v; input)
+                {
+                    if (i == index)
+                    {
+                        source.fields[i] = v;
+                        return;
+                    }
+                }
+                assert(0);
+            }
+
+            import std.typetuple : anySatisfy;
+
+            static if (allSatisfy!(isInfinite, R))
+            {
+                // Propagate infiniteness.
+                enum bool empty = false;
+            }
+            else
+            {
+                @property bool empty()
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (index == i)
+                            return source.fields[i].empty;
+                    }
+                    assert(0);
+                }
+            }
+
+            static if (allSatisfy!(isForwardRange, R))
+                @property auto save()
+                {
+                    typeof(this) result = this;
+                    foreach (i, Unused; R)
+                    {
+                        if (i == index)
+                        {
+                            result.source.fields[i] = result.source.fields[i].save;
+                            break;
+                        }
+                    }
+                    return result;
+                }
+
+            void popFront()
+            {
+                foreach (i, Unused; R)
+                {
+                    if (i == index)
+                    {
+                        source.fields[i].popFront();
+                        break;
+                    }
+                }
+            }
+
+            @property auto ref front()
+            {
+                foreach (i, Unused; R)
+                {
+                    if (i == index)
+                        return fixRef(source.fields[i].front);
+                }
+                assert(0);
+            }
+
+            static if (allSameType && allSatisfy!(hasAssignableElements, R))
+            {
+                @property void front(RvalueElementType v)
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (i == index)
+                        {
+                            source.fields[i].front = v;
+                            return;
+                        }
+                    }
+                    assert(0);
+                }
+            }
+
+            static if (allSatisfy!(hasMobileElements, R))
+            {
+                RvalueElementType moveFront()
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (i == index)
+                            return .moveFront(source.fields[i]);
+                    }
+                    assert(0);
+                }
+            }
+
+            static if (allSatisfy!(isBidirectionalRange, R))
+            {
+                @property auto ref back()
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (i == index)
+                            return fixRef(source.fields[i].back);
+                    }
+                    assert(0);
+                }
+
+                void popBack()
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (i == index)
+                        {
+                            source.fields[i].popBack();
+                            return;
+                        }
+                    }
+                    assert(0);
+                }
+
+                static if (allSatisfy!(hasMobileElements, R))
+                {
+                    RvalueElementType moveBack()
+                    {
+                        foreach (i, Unused; R)
+                        {
+                            if (i == index)
+                                return .moveBack(source.fields[i]);
+                        }
+                        assert(0);
+                    }
+                }
+
+                static if (allSameType && allSatisfy!(hasAssignableElements, R))
+                {
+                    @property void back(RvalueElementType v)
+                    {
+                        foreach (i, Unused; R)
+                        {
+                            if (i == index)
+                            {
+                                source.fields[i].back = v;
+                                return;
+                            }
+                        }
+                        assert(0);
+                    }
+                }
+            }
+
+            static if (allSatisfy!(hasLength, R))
+            {
+                @property size_t length()
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (i == index)
+                            return source.fields[i].length;
+                    }
+                    assert(0);
+                }
+
+                alias opDollar = length;
+            }
+
+            static if (allSatisfy!(isRandomAccessRange, R))
+            {
+                auto ref opIndex(size_t index)
+                {
+                    foreach (i, Range; R)
+                    {
+                        if (i == this.index)
+                        {
+                            static if (isInfinite!(Range))
+                            {
+                                return source.fields[i][index];
+                            }
+                            else
+                            {
+                                return fixRef(source.fields[i][index]);
+                            }
+                        }
+                    }
+                    assert(0);
+                }
+
+                static if (allSatisfy!(hasMobileElements, R))
+                {
+                    RvalueElementType moveAt(size_t index)
+                    {
+                        foreach (i, Range; R)
+                        {
+                            if (i == this.index)
+                            {
+                                return .moveAt(source.fields[i], index);
+                            }
+                        }
+                        assert(0);
+                    }
+                }
+
+                static if (allSameType && allSatisfy!(hasAssignableElements, R))
+                    void opIndexAssign(ElementType v, size_t index)
+                    {
+                        foreach (i, Range; R)
+                        {
+                            if (i == this.index)
+                            {
+                                source.fields[i][index] = v;
+                                return;
+                            }
+                        }
+                        assert(0);
+                    }
+            }
+
+            static if (allSatisfy!(hasLength, R) && allSatisfy!(hasSlicing, R) && allSameType)
+                auto opSlice(size_t begin, size_t end)
+                {
+                    foreach (i, Unused; R)
+                    {
+                        if (i == index)
+                        {
+                            return source.fields[i][begin .. end];
+                        }
+                    }
+                    assert(0);
+                }
+        }
+        return Result(index, rs);
+    }
+}
+
+///
+unittest
+{
+    import std.algorithm : equal;
+
+    int[] arr1 = [ 1, 2, 3, 4 ];
+    int[] arr2 = [ 5, 6 ];
+    int[] arr3 = [ 7 ];
+
+    {
+        auto s = choose(0, arr1, arr2, arr3);
+        auto t = s.save;
+        assert(s.length == 4);
+        assert(s[2] == 3);
+        s.popFront();
+        assert(equal(t, [1, 2, 3, 4][]));
+    }
+    {
+        auto s = choose(0, arr2);
+        assert(equal(s, [5, 6][]));
+    }
+    {
+        auto s = choose(1, arr1, arr2, arr3);
+        assert(s.length == 2);
+        s.front = 8;
+        assert(equal(s, [8, 6][]));
+    }
+    {
+        auto s = choose(1, arr1, arr2, arr3);
+        assert(s.length == 2);
+        s[1] = 9;
+        assert(equal(s, [8, 9][]));
+    }
+    {
+        auto s = choose(1, arr2, arr1, arr3)[1..3];
+        assert(s.length == 2);
+        assert(equal(s, [2, 3][]));
+    }
+    {
+        auto s = choose(0, arr1, arr2, arr3);
+        assert(s.length == 4);
+        assert(s.back == 4);
+        s.popBack();
+        s.back = 5;
+        assert(equal(s, [1, 2, 5][]));
+        s.back = 3;
+        assert(equal(s, [1, 2, 3][]));
+    }
+    {
+        uint[] foo = [1,2,3,4,5];
+        uint[] bar = [6,7,8,9,10];
+        auto c = choose(1,foo, bar);
+        assert(c[3] == 9);
+        c[3] = 42;
+        assert(c[3] == 42);
+        assert(c.moveFront() == 6);
+        assert(c.moveBack() == 10);
+        assert(c.moveAt(4) == 10);
+    }
+    {
+        import std.range : cycle;
+        auto s = choose(1, cycle(arr2), cycle(arr3));
+        assert(isInfinite!(typeof(s)));
+        assert(!s.empty);
+        assert(s[100] == 7);
+    }
+}
+
+unittest
+{
+    int[] a;
+    long[] b;
+    auto c = choose(0, a, b);
+}
+
 
 /**
 $(D roundRobin(r1, r2, r3)) yields $(D r1.front), then $(D r2.front),
@@ -2840,7 +3227,7 @@ Cycle!R cycle(R)(R input)
 
     // Here we create an infinitive cyclic sequence from [1, 2]
     // (i.e. get here [1, 2, 1, 2, 1, 2 and so on]) then
-    // take 5 elements of this sequence (so we have [1, 2, 1, 2, 1]) 
+    // take 5 elements of this sequence (so we have [1, 2, 1, 2, 1])
     // and compare them with the expected values for equality.
     assert(cycle([1, 2]).take(5).equal([ 1, 2, 1, 2, 1 ]));
 }
