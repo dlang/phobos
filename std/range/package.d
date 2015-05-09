@@ -8361,7 +8361,7 @@ struct NullSink
   that evaluate ranges, such as $(XREF array,array) or
   $(XREF algorithm,reduce).
 
-  See_Also: $(XREF argorithm,each)
+  See_Also: $(XREF algorithm,each)
 +/
 
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
