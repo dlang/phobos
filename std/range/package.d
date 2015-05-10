@@ -816,7 +816,7 @@ if (Ranges.length > 0 &&
 
             enum bool allSameType = allSatisfy!(sameET, R);
 
-// This doesn't work yet
+            // This doesn't work yet
             static if (allSameType)
             {
                 alias ref RvalueElementType ElementType;
@@ -840,9 +840,9 @@ if (Ranges.length > 0 &&
                 }
             }
 
-// This is the entire state
+            // This is the entire state
             R source;
-// TODO: use a vtable (or more) instead of linear iteration
+            // TODO: use a vtable (or more) instead of linear iteration
 
         public:
             this(R input)
@@ -857,7 +857,7 @@ if (Ranges.length > 0 &&
 
             static if (anySatisfy!(isInfinite, R))
             {
-// Propagate infiniteness.
+                // Propagate infiniteness.
                 enum bool empty = false;
             }
             else
@@ -908,8 +908,7 @@ if (Ranges.length > 0 &&
                 // @@@BUG@@@
                 //@property void front(T)(T v) if (is(T : RvalueElementType))
 
-                // Return type must be auto due to Bug 4706.
-                @property auto front(RvalueElementType v)
+                @property void front(RvalueElementType v)
                 {
                     foreach (i, Unused; R)
                     {
@@ -971,9 +970,7 @@ if (Ranges.length > 0 &&
 
                 static if (allSameType && allSatisfy!(hasAssignableElements, R))
                 {
-                    // Return type must be auto due to extremely strange bug in DMD's
-                    // function overloading.
-                    @property auto back(RvalueElementType v)
+                    @property void back(RvalueElementType v)
                     {
                         foreach_reverse (i, Unused; R)
                         {
@@ -2840,7 +2837,7 @@ Cycle!R cycle(R)(R input)
 
     // Here we create an infinitive cyclic sequence from [1, 2]
     // (i.e. get here [1, 2, 1, 2, 1, 2 and so on]) then
-    // take 5 elements of this sequence (so we have [1, 2, 1, 2, 1]) 
+    // take 5 elements of this sequence (so we have [1, 2, 1, 2, 1])
     // and compare them with the expected values for equality.
     assert(cycle([1, 2]).take(5).equal([ 1, 2, 1, 2, 1 ]));
 }
@@ -8361,7 +8358,7 @@ struct NullSink
   that evaluate ranges, such as $(XREF array,array) or
   $(XREF algorithm,reduce).
 
-  See_Also: $(XREF algorithm,each)
+  See_Also: $(XREF algorithm, each)
 +/
 
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
