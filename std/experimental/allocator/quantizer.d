@@ -45,9 +45,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Returns $(D roundingFunction(n)). It is required that
-    $(D roundingFunction(n) >= n). For efficiency reasons, this is only
-    $(D assert)ed (checked in debug mode).
+    Returns $(D roundingFunction(n)). It is required that $(D
+    roundingFunction) is pure (always returns the same value for the same $(D
+    n) and that $(D roundingFunction(n) >= n). For efficiency reasons, this is
+    only $(D assert)ed on and otherwise assumed to be correct.
     */
     size_t goodAllocSize(size_t n)
     {
