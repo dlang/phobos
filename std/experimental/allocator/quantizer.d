@@ -23,8 +23,15 @@ free lists/trees at the cost of slack memory (internal fragmentation).)
 The following methods are forwarded to the parent allocator if present:
 $(D allocateAll), $(D owns), $(D deallocateAll), $(D empty).
 
-Preconditions: $(D roundingFunction(n) >= n) for all $(D n) of type
-$(D size_t).
+Preconditions: $(D roundingFunction) must satisfy three constraints. These are
+not enforced (save for the use of $(D assert)) for the sake of efficiency.
+$(OL
+$(LI $(D roundingFunction(n) >= n) for all $(D n) of type $(D size_t);)
+$(LI $(D roundingFunction) must be monotonically increasing, i.e. $(D
+roundingFunction(n1) <= roundingFunction(n2)) for all $(D n1 < n2);)
+$(LI $(D roundingFunction) must be $(D pure), i.e. always return the same
+value for a given $(D n).)
+)
 */
 struct Quantizer(ParentAllocator, alias roundingFunction)
 {
@@ -45,10 +52,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Returns $(D roundingFunction(n)). It is required that $(D
-    roundingFunction) is pure (always returns the same value for the same $(D
-    n) and that $(D roundingFunction(n) >= n). For efficiency reasons, this is
-    only $(D assert)ed on and otherwise assumed to be correct.
+    Returns $(D roundingFunction(n)).
     */
     size_t goodAllocSize(size_t n)
     {
@@ -93,9 +97,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        auto max = goodAllocSize(b.length);
-        auto needed = b.length + delta;
-        if (max >= needed)
+        immutable allocated = goodAllocSize(b.length),
+            needed = b.length + delta;
+        // Second test needed because expand must work for null pointers, too.
+        if (allocated >= needed && b.ptr)
         {
             // Nice!
             b = b.ptr[0 .. needed];
@@ -104,10 +109,13 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         // Hail Mary
         static if (hasMember!(ParentAllocator, "expand"))
         {
-            if (!parent.expand(b, goodAllocSize(needed) - b.length))
+            // Expand to the appropriate quantum
+            auto original = b.ptr[0 .. allocated];
+            assert(goodAllocSize(needed) >= allocated);
+            if (!parent.expand(original, goodAllocSize(needed) - allocated))
                 return false;
             // Dial back the size
-            b = b.ptr[0 .. needed];
+            b = original.ptr[0 .. needed];
             return true;
         }
         else
@@ -117,69 +125,65 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    In case of shrinkage, shrinks in place if $(D goodAllocSize(s) ==
-    goodAllocSize(b.length)), i.e. the existing and requested size fall within the same quantum. In case of expansion, attempts in-place expansion. If
-    neither approach succeeds, defers to $(D parent.reallocate(b,
-    goodAllocSize(s)).)
+    Expands or shrinks allocated block to an allocated size of $(D
+    goodAllocSize(s)). Expansion occurs in place under the conditions required
+    by $(D expand). Shrinking occurs in place if $(D goodAllocSize(b.length)
+    == goodAllocSize(s)).
     */
     bool reallocate(ref void[] b, size_t s)
     {
-        immutable gs = goodAllocSize(s);
-        if (s < b.length)
+        if (s >= b.length && expand(b, s - b.length)) return true;
+        immutable toAllocate = goodAllocSize(s),
+            allocated = goodAllocSize(b.length);
+        // Are the lengths within the same quantum?
+        if (allocated == toAllocate)
         {
-            // Are the lengths within the same quantum?
-            if (gs == goodAllocSize(b.length))
-            {
-                // Reallocation will be done in place
-                b = b.ptr[0 .. s];
-                return true;
-            }
-        }
-        else if (expand(b, s - b.length))
-        {
+            assert(b.ptr); // expand() must have caught this
+            // Reallocation (whether up or down) will be done in place
+            b = b.ptr[0 .. s];
             return true;
         }
         // Defer to parent (or global) with quantized size
-        return parent.reallocate(b, gs);
+        auto original = b.ptr[0 .. allocated];
+        if (!parent.reallocate(original, toAllocate)) return false;
+        b = original.ptr[0 .. s];
+        return true;
     }
 
     /**
-    Defined only if $(D ParentAllocator.alignedAllocate) exists. In case of
-    shrinkage, shrinks in place if $(D goodAllocSize(s) ==
-    goodAllocSize(b.length)), i.e. the existing and requested size fall within
-    the same quantum. In case of expansion, attempts in-place expansion. If
-    neither approach succeeds, defers to
-    $(D parent.alignedReallocate(b, goodAllocSize(s), a)).
+    Defined only if $(D ParentAllocator.alignedAllocate) exists. Expansion
+    occurs in place under the conditions required by $(D expand). Shrinking
+    occurs in place if $(D goodAllocSize(b.length) == goodAllocSize(s)).
     */
-    static if (hasMember!(ParentAllocator, "alignedReallocate"))
+    static if (hasMember!(ParentAllocator, "alignedAllocate"))
     bool alignedReallocate(ref void[] b, size_t s, uint a)
     {
-        immutable gs = goodAllocSize(s);
-        if (s < b.length)
+        if (s >= b.length && expand(b, s - length)) return true;
+        immutable toAllocate = goodAllocSize(s),
+            allocated = goodAllocSize(b.length);
+        // Are the lengths within the same quantum?
+        if (allocated == toAllocate)
         {
-            // Are the lengths within the same quantum?
-            if (gs == goodAllocSize(b.length))
-            {
-                // Reallocation will be done in place
-                b = b.ptr[0 .. s];
-                return true;
-            }
-        }
-        else if (expand(b, s - b.length))
-        {
+            assert(b.ptr); // expand() must have caught this
+            // Reallocation (whether up or down) will be done in place
+            b = b.ptr[0 .. s];
             return true;
         }
         // Defer to parent (or global) with quantized size
-        return parent.alignedReallocate(b, gs, a);
+        auto original = b.ptr[0 .. allocated];
+        if (!parent.alignedReallocate(original, toAllocate, a)) return false;
+        b = original.ptr[0 .. s];
+        return true;
     }
 
     /**
-    Defined if $(D ParentAllocator.deallocate) exists and passes the
-    rounded-up buffer to it.
+    Defined if $(D ParentAllocator.deallocate) exists and forwards to
+    $(D parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)])).
     */
     static if (hasMember!(ParentAllocator, "deallocate"))
     void deallocate(void[] b)
     {
+        if (!b.ptr) return;
         parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)]);
     }
 
