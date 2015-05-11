@@ -361,18 +361,6 @@ private:
 public:
     enum uint alignment = Allocator.alignment;
 
-    /// Constructor taking a parent allocator
-    this(Allocator parent)
-    {
-        this.parent = parent;
-    }
-
-    /// Ditto
-    this(ref Allocator parent)
-    {
-        this.parent = parent;
-    }
-
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
     {
@@ -467,14 +455,14 @@ public:
     bool expand(ref void[] b, size_t s)
     {
         up!"numExpand";
-        static if (flags & Options.bytesSlack)
-            const bytesSlackB4 = goodAllocSize(b.length) - b.length;
+        immutable bytesSlackB4 = this.goodAllocSize(b.length) - b.length;
         auto result = parent.expand(b, s);
         if (result)
         {
             up!"numExpandOK";
             add!"bytesExpanded"(s);
-            add!"bytesSlack"(goodAllocSize(b.length) - b.length - bytesSlackB4);
+            add!"bytesSlack"(this.goodAllocSize(b.length) - b.length
+                - bytesSlackB4);
         }
         return result;
     }
