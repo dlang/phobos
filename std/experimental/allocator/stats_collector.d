@@ -38,8 +38,8 @@ enum Options : uint
     */
     numReallocate = 1u << 5,
     /**
-    Counts the number of calls to $(D reallocate) that succeeded. (Reallocations
-    to zero bytes count as successful.)
+    Counts the number of calls to $(D reallocate) that succeeded.
+    (Reallocations to zero bytes count as successful.)
     */
     numReallocateOK = 1u << 6,
     /**
@@ -64,19 +64,18 @@ enum Options : uint
     */
     numAll = (1u << 10) - 1,
     /**
+    Tracks bytes currently allocated by this allocator. This number goes up
+    and down as memory is allocated and deallocated, and is zero if the
+    allocator currently has no active allocation.
+    */
+    bytesUsed = 1u << 10,
+    /**
     Tracks total cumulative bytes allocated by means of $(D allocate),
     $(D expand), and $(D reallocate) (when resulting in an expansion). This
     number always grows and indicates allocation traffic. To compute bytes
-    currently allocated, subtract $(D bytesDeallocated) (below) from
-    $(D bytesAllocated).
+    deallocated cumulatively, subtract $(D bytesUsed) from $(D bytesAllocated).
     */
-    bytesAllocated = 1u << 10,
-    /**
-    Tracks total cumulative bytes deallocated by means of $(D deallocate) and
-    $(D reallocate) (when resulting in a contraction). This number always grows
-    and indicates deallocation traffic.
-    */
-    bytesDeallocated = 1u << 11,
+    bytesAllocated = 1u << 11,
     /**
     Tracks the sum of all $(D delta) values in calls of the form
     $(D expand(b, delta)) that succeed (return $(D true)).
@@ -95,58 +94,67 @@ enum Options : uint
     */
     bytesMoved = 1u << 14,
     /**
+    Tracks the sum of all bytes NOT moved as result of calls to $(D realloc)
+    that managed to reallocate in place. A large number (relative to $(D
+    bytesAllocated)) indicates that the application is expansion-intensive and
+    is saving a good amount of moves. However, if this number is relatively
+    small and $(D bytesSlack) is high, it means the application is
+    overallocating for little benefit.
+    */
+    bytesNotMoved = 1u << 15,
+    /**
     Measures the sum of extra bytes allocated beyond the bytes requested, i.e.
     the $(WEB goo.gl/YoKffF, internal fragmentation). This is the current
     effective number of slack bytes, and it goes up and down with time.
     */
-    bytesSlack = 1u << 15,
+    bytesSlack = 1u << 16,
     /**
     Measures the maximum bytes allocated over the time. This is useful for
     dimensioning allocators.
     */
-    bytesHighTide = 1u << 16,
+    bytesHighTide = 1u << 17,
     /**
     Chooses all $(D byteXxx) flags.
     */
-    bytesAll = ((1u << 17) - 1) & ~numAll,
+    bytesAll = ((1u << 18) - 1) & ~numAll,
     /**
     Instructs $(D StatsCollector) to store the size asked by the caller for
     each allocation. All per-allocation data is stored just before the actually
     allocation (see $(D AffixAllocator)).
     */
-    callerSize = 1u << 17,
+    callerSize = 1u << 18,
     /**
     Instructs $(D StatsCollector) to store the caller module for each
     allocation.
     */
-    callerModule = 1u << 18,
+    callerModule = 1u << 19,
     /**
     Instructs $(D StatsCollector) to store the caller's file for each
     allocation.
     */
-    callerFile = 1u << 19,
+    callerFile = 1u << 20,
     /**
     Instructs $(D StatsCollector) to store the caller $(D __FUNCTION__) for
     each allocation.
     */
-    callerFunction = 1u << 20,
+    callerFunction = 1u << 21,
     /**
     Instructs $(D StatsCollector) to store the caller's line for each
     allocation.
     */
-    callerLine = 1u << 21,
+    callerLine = 1u << 22,
     /**
     Instructs $(D StatsCollector) to store the time of each allocation.
     */
-    callerTime = 1u << 22,
+    callerTime = 1u << 23,
     /**
     Chooses all $(D callerXxx) flags.
     */
-    callerAll = ((1u << 23) - 1) & ~numAll & ~bytesAll,
+    callerAll = ((1u << 24) - 1) & ~numAll & ~bytesAll,
     /**
     Combines all flags above.
     */
-    all = (1u << 23) - 1
+    all = (1u << 25) - 1
 }
 
 /**
@@ -168,27 +176,6 @@ struct StatsCollector(Allocator, uint flags = Options.all)
 {
 private:
     import std.traits;
-
-    // Per-allocator state
-    mixin(define("ulong",
-        "numOwns",
-        "numAllocate",
-        "numAllocateOK",
-        "numExpand",
-        "numExpandOK",
-        "numReallocate",
-        "numReallocateOK",
-        "numReallocateInPlace",
-        "numDeallocate",
-        "numDeallocateAll",
-        "bytesAllocated",
-        "bytesDeallocated",
-        "bytesExpanded",
-        "bytesContracted",
-        "bytesMoved",
-        "bytesSlack",
-        "bytesHighTide",
-    ));
 
     static string define(string type, string[] names...)
     {
@@ -219,12 +206,15 @@ private:
         Example:
         ----
         StatsCollector!(Mallocator,
-            Options.bytesAllocated | Options.bytesDeallocated) a;
+            Options.bytesUsed | Options.bytesAllocated) a;
         auto d1 = a.allocate(10);
         auto d2 = a.allocate(11);
         a.deallocate(d1);
         assert(a.bytesAllocated == 21);
-        assert(a.bytesDeallocated == 10);
+        assert(a.bytesUsed == 11);
+        a.deallocate(d2);
+        assert(a.bytesAllocated == 21);
+        assert(a.bytesUsed == 0);
         ----
         */
         @property ulong numOwns() const;
@@ -247,15 +237,17 @@ private:
         /// Ditto
         @property ulong numDeallocateAll() const;
         /// Ditto
-        @property ulong bytesAllocated() const;
+        @property ulong bytesUsed() const;
         /// Ditto
-        @property ulong bytesDeallocated() const;
+        @property ulong bytesAllocated() const;
         /// Ditto
         @property ulong bytesExpanded() const;
         /// Ditto
         @property ulong bytesContracted() const;
         /// Ditto
         @property ulong bytesMoved() const;
+        /// Ditto
+        @property ulong bytesNotMoved() const;
         /// Ditto
         @property ulong bytesSlack() const;
         /// Ditto
@@ -343,7 +335,43 @@ public:
     static if (stateSize!MyAllocator) MyAllocator parent;
     else alias parent = MyAllocator.it;
 
+private:
+    // Per-allocator state
+    mixin(define("ulong",
+        "numOwns",
+        "numAllocate",
+        "numAllocateOK",
+        "numExpand",
+        "numExpandOK",
+        "numReallocate",
+        "numReallocateOK",
+        "numReallocateInPlace",
+        "numDeallocate",
+        "numDeallocateAll",
+        "bytesUsed",
+        "bytesAllocated",
+        "bytesExpanded",
+        "bytesContracted",
+        "bytesMoved",
+        "bytesNotMoved",
+        "bytesSlack",
+        "bytesHighTide",
+    ));
+
+public:
     enum uint alignment = Allocator.alignment;
+
+    /// Constructor taking a parent allocator
+    this(Allocator parent)
+    {
+        this.parent = parent;
+    }
+
+    /// Ditto
+    this(ref Allocator parent)
+    {
+        this.parent = parent;
+    }
 
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
@@ -352,20 +380,61 @@ public:
         return parent.owns(b);
     }
 
-    void[] allocate
-        (string m = __MODULE__, string f = __FILE__, ulong n = __LINE__,
-            string fun = __FUNCTION__)
+    static if (flags & Options.callerLine)
+    {
+        void[] allocate
+            (string m = __MODULE__, string f = __FILE__,
+                string fun = __FUNCTION__, ulong n = __LINE__)
+            (size_t bytes)
+        {
+            return allocateImpl!(m, f, fun, n)(bytes);
+        }
+    }
+    else static if (flags & Options.callerFunction)
+    {
+        void[] allocate
+            (string m = __MODULE__, string f = __FILE__,
+                string fun = __FUNCTION__)
+            (size_t bytes)
+        {
+            return allocateImpl!(m, f, fun, 0)(bytes);
+        }
+    }
+    else static if (flags & Options.callerFile)
+    {
+        void[] allocate(string m = __MODULE__, string f = __FILE__)
+            (size_t bytes)
+        {
+            return allocateImpl!(m, f, null, 0)(bytes);
+        }
+    }
+    else static if (flags & Options.callerModule)
+    {
+        void[] allocate(string m = __MODULE__)(size_t bytes)
+        {
+            return allocateImpl!(m, null, null, 0)(bytes);
+        }
+    }
+    else
+    {
+        void[] allocate(size_t bytes)
+        {
+            return allocateImpl!(null, null, null, 0)(bytes);
+        }
+    }
+
+    private void[] allocateImpl(string m, string f, string fun, ulong n)
         (size_t bytes)
     {
         up!"numAllocate";
         auto result = parent.allocate(bytes);
+        add!"bytesUsed"(result.length);
         add!"bytesAllocated"(result.length);
         add!"bytesSlack"(this.goodAllocSize(result.length) - result.length);
         add!"numAllocateOK"(result.ptr || !bytes); // allocating 0 bytes is OK
         static if (flags & Options.bytesHighTide)
         {
-            const bytesNow = bytesAllocated - bytesDeallocated;
-            if (_bytesHighTide < bytesNow) _bytesHighTide = bytesNow;
+            if (_bytesHighTide < _bytesUsed) _bytesHighTide = _bytesUsed;
         }
         static if (hasPerAllocationState)
         {
@@ -413,11 +482,11 @@ public:
     bool reallocate(ref void[] b, size_t s)
     {
         up!"numReallocate";
-        static if (flags & Options.bytesSlack)
-            const bytesSlackB4 = this.goodAllocSize(b.length) - b.length;
-        static if (flags & Options.numReallocateInPlace)
-            const oldB = b.ptr;
-        static if (flags & Options.bytesMoved)
+        const bytesSlackB4 = this.goodAllocSize(b.length) - b.length;
+        const oldB = b.ptr;
+        static if ((flags & Options.bytesMoved)
+                || (flags & Options.bytesNotMoved)
+                || (flags & Options.bytesUsed))
             const oldLength = b.length;
         static if (hasPerAllocationState)
             const reallocatingRoot = b.ptr && _root is &parent.prefix(b);
@@ -425,10 +494,12 @@ public:
         up!"numReallocateOK";
         add!"bytesSlack"(this.goodAllocSize(b.length) - b.length
             - bytesSlackB4);
+        add!"bytesUsed"(Signed!size_t(b.length - oldLength));
         if (oldB == b.ptr)
         {
             // This was an in-place reallocation, yay
             up!"numReallocateInPlace";
+            add!"bytesNotMoved"(oldLength);
             const Signed!size_t delta = b.length - oldLength;
             if (delta >= 0)
             {
@@ -439,7 +510,6 @@ public:
             else
             {
                 // Contraction
-                add!"bytesDeallocated"(-delta);
                 add!"bytesContracted"(-delta);
             }
         }
@@ -448,7 +518,6 @@ public:
             // This was a allocate-move-deallocate cycle
             add!"bytesAllocated"(b.length);
             add!"bytesMoved"(oldLength);
-            add!"bytesDeallocated"(oldLength);
             static if (hasPerAllocationState)
             {
                 // Stitch the pointers again, ho-hum
@@ -464,7 +533,7 @@ public:
     void deallocate(void[] b)
     {
         up!"numDeallocate";
-        add!"bytesDeallocated"(b.length);
+        add!"bytesUsed"(-Signed!size_t(b.length));
         add!"bytesSlack"(-(this.goodAllocSize(b.length) - b.length));
         // Remove the node from the list
         static if (hasPerAllocationState)
@@ -474,17 +543,16 @@ public:
             if (p._prev) p._prev._next = p._next;
             if (_root is p) _root = p._next;
         }
-        parent.deallocate(b);
+        static if (hasMember!(Allocator, "deallocate"))
+            parent.deallocate(b);
     }
 
     static if (hasMember!(Allocator, "deallocateAll"))
     void deallocateAll()
     {
         up!"numDeallocateAll";
-        // Must force bytesDeallocated to match bytesAllocated
-        static if ((flags & Options.bytesDeallocated)
-                && (flags & Options.bytesDeallocated))
-            _bytesDeallocated = _bytesAllocated;
+        static if ((flags & Options.bytesUsed))
+            _bytesUsed = 0;
         parent.deallocateAll();
         static if (hasPerAllocationState) _root = null;
     }
@@ -502,6 +570,7 @@ unittest
         auto b2 = a.allocate(101);
         assert(a.numAllocate == 2);
         assert(a.bytesAllocated == 201);
+        assert(a.bytesUsed == 201);
         auto b3 = a.allocate(202);
         assert(a.numAllocate == 3);
         assert(a.bytesAllocated == 403);
@@ -520,7 +589,7 @@ unittest
         a.deallocate(b3);
         assert(a.numDeallocate == 3);
         assert(a.numAllocate == a.numDeallocate);
-        assert(a.bytesDeallocated == 403);
+        assert(a.bytesUsed == 0);
     }
 
     import std.experimental.allocator.mallocator;

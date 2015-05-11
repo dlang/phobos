@@ -1,6 +1,7 @@
 module std.experimental.allocator.allocator_list;
 
 import std.experimental.allocator.common;
+version(unittest) import std.stdio;
 
 /**
 Given $(D make) as a function that returns fresh allocators, $(D
@@ -14,17 +15,64 @@ struct AllocatorList(alias make)
 {
     import std.traits : hasMember;
     import std.conv : emplace;
-    import std.algorithm : move;
+    import std.algorithm : min, move;
+    import std.experimental.allocator.stats_collector;
+
     /// Alias for $(D typeof(make)).
-    alias typeof(make()) Allocator;
+    alias Allocator = typeof(make());
+    // Allocator used internally
+    private alias SAllocator = StatsCollector!(Allocator, Options.bytesUsed);
 
     private static struct Node
     {
-        Allocator a;
-        Node* next;
-        bool nextIsInitialized;
+        // Allocator in this node
+        SAllocator a;
+        uint nextIdx = uint.max; // not a pointer - we want this relocatable
+
+        // Is this node unused?
+        void setUnused() { nextIdx = nextIdx.max - 1; }
+        bool unused() const { return nextIdx == nextIdx.max - 1; }
+
+        // Just forward everything to the allocator
+        alias a this;
     }
-    private Node* _root;
+
+    // State is stored in an array, but it has a list threaded through it by
+    // means of "next".
+    private Node[] allocators;
+    private uint rootIndex = uint.max;
+
+    private auto byLRU()
+    {
+        static struct Result
+        {
+            Node* first;
+            Node* current;
+            bool empty() { return current is null; }
+            ref Node front()
+            {
+                assert(!empty);
+                assert(!current.unused);
+                return *current;
+            }
+            void popFront()
+            {
+                assert(first && current && !current.unused);
+                assert(first + current.nextIdx != current);
+                if (current.nextIdx == current.nextIdx.max) current = null;
+                else current = first + current.nextIdx;
+            }
+            Result save() { return this; }
+        }
+        if (!allocators.length) return Result();
+        assert(rootIndex < allocators.length);
+        return Result(allocators.ptr, allocators.ptr + rootIndex);
+    }
+
+    ~this()
+    {
+        deallocateAll;
+    }
 
     /**
     The alignment offered.
@@ -36,94 +84,142 @@ struct AllocatorList(alias make)
     {
         auto result = allocateNoGrow(s);
         if (result.ptr) return result;
-        // Must create a new allocator object
-        if (!_root)
-        {
-            // I mean _brand_ new allocator object
-            auto newNodeStack = Node(make());
-            // Weird: store the new node inside its own allocated storage!
-            _root = cast(Node*) newNodeStack.a.allocate(Node.sizeof).ptr;
-            if (!_root)
-            {
-                // Are you serious? Not even the first allocation?
-                return null;
-            }
-            newNodeStack.move(*_root);
-            // Make sure we reserve room for the next next node
-            _root.next = cast(Node*) _root.a.allocate(Node.sizeof).ptr;
-            assert(_root.next);
-            // root is set up, serve from it
-            return allocateNoGrow(s);
-        }
-        // No room left, must append a new allocator
-        auto n = _root;
-        while (n.nextIsInitialized) n = n.next;
-        if (!n.next)
-        {
-            // Resources truly exhausted, not much to do
-            return null;
-        }
-        static assert(is(typeof(Node(make(), null, false)) == Node));
-        emplace(n.next, make(), cast(Node*) null, false);
-        n.nextIsInitialized = true;
-        // Reserve room for the next next allocator
-        n.next.next = cast(Node*) allocateNoGrow(Node.sizeof).ptr;
-        // Rare failure cases leave nextIsInitialized to false
-        if (!n.next.next) n.nextIsInitialized = false;
-        // TODO: would be nice to bring the new allocator to the front.
-        // All done!
-        return allocateNoGrow(s);
+        if (auto newAlloc = addAllocator) result = newAlloc.allocate(s);
+        return result;
     }
 
+    // Allocate from the existing pool of allocators
     private void[] allocateNoGrow(size_t bytes)
     {
-        void[] result;
-        if (!_root) return result;
-        for (auto n = _root; ; n = n.next)
+        // Try one of the existing allocators
+        foreach (ref n; byLRU)
         {
-            result = n.a.allocate(bytes);
-            if (result.ptr) break;
-            if (!n.nextIsInitialized) break;
+            auto result = n.allocate(bytes);
+            if (!result.ptr) continue;
+            // Bring to front the lastly used allocator
+            auto index = cast(uint) (&n - allocators.ptr);
+            if (index != rootIndex)
+            {
+                assert(index < allocators.length);
+                n.nextIdx = rootIndex;
+                rootIndex = index;
+            }
+            return result;
         }
-        return result;
+        return null;
+    }
+
+    // Reallocate from the existing pool of allocators.
+    bool reallocateNoGrow(ref void[] b, size_t s)
+    {
+        if (!b.ptr)
+        {
+            b = allocateNoGrow(s);
+            return b.ptr !is null || s == 0;
+        }
+        // First attempt to reallocate within the existing node
+        import std.algorithm : find;
+        auto owner = byLRU.find!((ref n) => n.owns(b));
+        assert(!owner.empty);
+        if (owner.front.reallocate(b, s)) return true;
+        // Failed, but we may find new memory in a new node.
+        auto newB = allocateNoGrow(s);
+        if (!newB.ptr) return false;
+        auto copy = min(b.length, s);
+        newB[0 .. copy] = b[0 .. copy];
+        static if (hasMember!(Allocator, "deallocate"))
+        {
+            // We still know n owns b from above
+            owner.front.deallocate(b);
+        }
+        b = newB;
+        return true;
+    }
+
+    // Find an empty (unused) slot for a Node, return its index. Does not create
+    // a new allocator object.
+    private uint findEmptySlot()
+    {
+        // Try past unused slots
+        foreach (uint i, ref n; allocators)
+        {
+            if (n.unused) return i;
+        }
+        // Try to expand in place
+        void[] t = allocators;
+        if (this.reallocateNoGrow(t, t.length + Node.sizeof))
+        {
+            allocators = cast(Node[]) t;
+            assert(0 < allocators.length && allocators.length < uint.max);
+            return cast(uint) allocators.length - 1;
+        }
+        // No can do
+        return uint.max;
+    }
+
+    private Node* addAllocator()
+    {
+        auto i = findEmptySlot;
+        if (i < i.max)
+        {
+            // Found, set up the new one as root
+            Node* n = &allocators[i];
+            emplace(&n.a, make());
+            assert(n.bytesUsed == 0);
+            n.nextIdx = rootIndex;
+            rootIndex = i;
+            return n;
+        }
+        // Must create a new allocator object on the stack and move it
+        auto newNode = Node(SAllocator(make()), rootIndex);
+        // Weird: store the new node inside its own allocated storage!
+        auto buf = newNode.allocate((allocators.length + 1) * Node.sizeof);
+        if (!buf.ptr)
+        {
+            // Terrible, too many allocators
+            return null;
+        }
+        // Move over existing allocators
+        buf[0 .. $ - Node.sizeof] = allocators[];
+        static if (hasMember!(Allocator, "deallocate"))
+            this.deallocate(allocators);
+        allocators = cast(Node[]) buf;
+        assert(allocators.length > 0);
+        // Move node to the last position and set in the root position
+        auto newNodeFinal = &allocators[$ - 1];
+        newNode.move(*newNodeFinal);
+        assert(newNodeFinal.nextIdx == rootIndex);
+        rootIndex = cast(uint) allocators.length - 1;
+        return newNodeFinal;
     }
 
     /// Defined only if $(D Allocator.owns) is defined.
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
     {
-        if (!_root || !b.ptr) return false;
-        for (auto n = _root; ; n = n.next)
-        {
-            if (n.a.owns(b)) return true;
-            if (!n.nextIsInitialized) break;
-        }
-        return false;
+        import std.algorithm : canFind;
+        return byLRU.canFind!((ref n) => n.owns(b));
     }
 
     /// Defined only if $(D Allocator.resolveInternalPointer) is defined.
     static if (hasMember!(Allocator, "resolveInternalPointer"))
     void[] resolveInternalPointer(void* p)
     {
-        if (!_root) return null;
-        for (auto n = _root; ; n = n.next)
+        foreach (ref n; byLRU)
         {
-            if (auto r = n.a.resolveInternalPointer(p)) return p;
-            if (!n.nextIsInitialized) break;
+            if (auto r = n.resolveInternalPointer(p)) return r;
         }
         return null;
     }
 
     /// Defined only if $(D Allocator.expand) is defined.
-    static if (hasMember!(Allocator, "expand"))
+    static if (hasMember!(Allocator, "expand")
+        && hasMember!(Allocator, "owns"))
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0 || (b = allocate(delta)) !is null;
-        if (!_root) return false;
-        for (auto n = _root; ; n = n.next)
+        foreach (ref n; byLRU)
         {
-            if (n.a.owns(b)) return n.a.expand(b, delta);
-            if (!n.nextIsInitialized) break;
+            if (n.owns(b)) return n.expand(b, delta);
         }
         return false;
     }
@@ -131,112 +227,77 @@ struct AllocatorList(alias make)
     /// Allows moving data from one $(D Allocator) to another.
     bool reallocate(ref void[] b, size_t s)
     {
-        if (!b.ptr) return (b = allocate(s)) !is null;
         // First attempt to reallocate within the existing node
-        if (!_root) return false;
-        for (auto n = _root; ; n = n.next)
+        foreach (ref n; byLRU)
         {
-            if (n.a.owns(b) && n.a.reallocate(b, s)) return true;
-            if (!n.nextIsInitialized) break;
+            if (!n.owns(b)) continue;
+            if (n.reallocate(b, s)) return true;
+            break;
         }
         // Failed, but we may find new memory in a new node.
         auto newB = allocate(s);
         if (!newB.ptr) return false;
-        newB[] = b[];
+        auto copy = min(b.length, s);
+        newB[0 .. copy] = b[0 .. copy];
         static if (hasMember!(Allocator, "deallocate"))
             deallocate(b);
         b = newB;
         return true;
     }
 
-    /// Defined only if $(D Allocator.deallocate) is defined.
-    static if (hasMember!(Allocator, "deallocate"))
+    /**
+     Defined if $(D Allocator.deallocate) and $(D Allocator.owns) are defined.
+    */
+    static if (hasMember!(Allocator, "deallocate")
+        && hasMember!(Allocator, "owns"))
     void deallocate(void[] b)
     {
-        if (!b.ptr || !_root)
+        foreach (ref n; byLRU)
         {
-            return;
-        }
-        for (auto n = _root; ; n = n.next)
-        {
-            if (n.a.owns(b)) return n.a.deallocate(b);
-            if (!n.nextIsInitialized) break;
+            if (n.owns(b)) return n.deallocate(b);
         }
         assert(false);
     }
 
     /// Defined only if $(D Allocator.deallocateAll) is defined.
-    static if (hasMember!(Allocator, "deallocateAll"))
+    static if (hasMember!(Allocator, "deallocateAll")
+        && hasMember!(Allocator, "owns"))
     void deallocateAll()
     {
-        if (!_root) return;
-        // This is tricky because the list of allocators is threaded through the
-        // allocators themselves. Malloc to the rescue!
-        // First compute the number of allocators
-        uint k = 0;
-        for (auto n = _root; ; n = n.next)
+        if (!allocators.length) return;
+        // This is tricky because the list of allocators is threaded through
+        // the allocators themselves.
+        Node* owner;
+        for (auto n = byLRU; !n.empty; )
         {
-            ++k;
-            if (!n.nextIsInitialized) break;
+            if (n.front.owns(allocators))
+            {
+                // Skip this guy for now
+                owner = &n.front();
+                n.popFront;
+                continue;
+            }
+            n.front.deallocateAll();
+            auto oldN = &n.front();
+            n.popFront;
+            destroy(*oldN);
         }
-        import std.experimental.allocator.mallocator;
-        auto nodes =
-            cast(Node*[]) Mallocator.it.allocate(k * (Allocator*).sizeof);
-        scope(exit) Mallocator.it.deallocate(nodes);
-        foreach (ref n; nodes)
-        {
-            n = _root;
-            _root = _root.next;
-        }
-        _root = null;
-        // Now we can deallocate in peace
-        foreach (n; nodes)
-        {
-            n.a.deallocateAll();
-        }
+        assert(owner);
+        // Move the remaining allocator on stack, then deallocate from it too
+        Allocator temp = void;
+        import core.stdc.string : memcpy;
+        memcpy(&temp, &owner.a, Allocator.sizeof);
+        static __gshared Allocator empty;
+        memcpy(&owner.a, &empty, Allocator.sizeof);
+        temp.deallocateAll;
+        allocators = null;
+        rootIndex = rootIndex.max;
+        // temp's destructor will take care of the rest
     }
 
-    static if (hasMember!(Allocator, "markAllAsUnused"))
+    bool empty() const
     {
-        void markAllAsUnused()
-        {
-            if (!_root) return;
-            for (auto n = _root; ; n = n.next)
-            {
-                n.a.markAllAsUnused();
-                if (!n.nextIsInitialized) break;
-            }
-            // Mark the list's memory as used
-            for (auto n = _root; ; n = n.next)
-            {
-                markAsUsed(n[0 .. 1]);
-                if (!n.nextIsInitialized) break;
-            }
-        }
-        //
-        bool markAsUsed(void[] b)
-        {
-            if (!_root) return;
-            for (auto n = _root; ; n = n.next)
-            {
-                if (n.a.owns(b))
-                {
-                    n.a.markAsUsed(b);
-                    break;
-                }
-                if (!n.nextIsInitialized) break;
-            }
-        }
-        //
-        void doneMarking()
-        {
-            if (!_root) return;
-            for (auto n = _root; ; n = n.next)
-            {
-                n.a.doneMarking();
-                if (!n.nextIsInitialized) break;
-            }
-        }
+        return !allocators.length;
     }
 }
 
@@ -259,112 +320,9 @@ unittest
     AllocatorList!({ return Region!()(new void[1024 * 4096]); }) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 is null);
-    assert(!a._root.nextIsInitialized);
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
     auto b2 = a.allocate(1024 * 4095);
-    assert(a._root.nextIsInitialized);
     a.deallocateAll();
-    assert(!a._root);
-}
-
-version(none) struct ArrayOfAllocators(alias make)
-{
-    alias Allocator = typeof(make());
-    private Allocator[] allox;
-
-    void[] allocate(size_t bytes)
-    {
-        void[] result = allocateNoGrow(bytes);
-        if (result) return result;
-        // Everything's full to the brim, create a new allocator.
-        auto newAlloc = make();
-        assert(&newAlloc !is newAlloc.initial);
-        // Move the array to the new allocator
-        assert(Allocator.alignment % Allocator.alignof == 0);
-        const arrayBytes = (allox.length + 1) * Allocator.sizeof;
-        Allocator[] newArray = void;
-        do
-        {
-            if (arrayBytes < bytes)
-            {
-                // There is a chance we can find room in the existing allocator.
-                newArray = cast(Allocator[]) allocateNoGrow(arrayBytes);
-                if (newArray) break;
-            }
-            newArray = cast(Allocator[]) newAlloc.allocate(arrayBytes);
-            writeln(newArray.length);
-            assert(newAlloc.initial !is &newArray[$ - 1]);
-            if (!newArray) return null;
-        } while (false);
-
-        assert(newAlloc.initial !is &newArray[$ - 1]);
-
-        // Move data over to the new position
-        foreach (i, ref e; allox)
-        {
-            writeln(&e, " ", e.base.store_.ptr, " ", e.initial);
-            e.move(newArray[i]);
-        }
-        auto recoveredBytes = allox.length * Allocator.sizeof;
-        static if (hasMember!(Allocator, "deallocate"))
-            deallocate(allox);
-        allox = newArray;
-        assert(&allox[$ - 1] !is newAlloc.initial);
-        newAlloc.move(allox[$ - 1]);
-        assert(&allox[$ - 1] !is allox[$ - 1].initial);
-        if (recoveredBytes >= bytes)
-        {
-            // The new request may be served from the just-freed memory. Recurse
-            // and be bold.
-            return allocateNoGrow(bytes);
-        }
-        // Otherwise, we can't possibly fetch memory from anywhere else but the
-        // fresh new allocator.
-        return allox.back.allocate(bytes);
-    }
-
-    private void[] allocateNoGrow(size_t bytes)
-    {
-        void[] result;
-        foreach (ref a; allox)
-        {
-            result = a.allocate(bytes);
-            if (result) break;
-        }
-        return result;
-    }
-
-    bool owns(void[] b)
-    {
-        foreach (i, ref a; allox)
-        {
-            if (a.owns(b)) return true;
-        }
-        return false;
-    }
-
-    static if (hasMember!(Allocator, "deallocate"))
-    void deallocate(void[] b)
-    {
-        foreach (i, ref a; allox)
-        {
-            if (!a.owns(b)) continue;
-            a.deallocate(b);
-            break;
-        }
-    }
-}
-
-version(none) unittest
-{
-    ArrayOfAllocators!({ return Region!()(new void[1024 * 4096]); }) a;
-    assert(a.allox.length == 0);
-    auto b1 = a.allocate(1024 * 8192);
-    assert(b1 is null);
-    b1 = a.allocate(1024 * 10);
-    assert(b1.length == 1024 * 10);
-    assert(a.allox.length == 1);
-    auto b2 = a.allocate(1024 * 4095);
-    assert(a.allox.length == 2);
+    assert(a.empty);
 }
