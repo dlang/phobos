@@ -97,10 +97,19 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool expand(ref void[] b, size_t delta)
     {
+        if (!b.ptr)
+        {
+            b = allocate(delta);
+            return b.ptr !is null || delta == 0;
+        }
         immutable allocated = goodAllocSize(b.length),
-            needed = b.length + delta;
+            needed = b.length + delta,
+            neededAllocation = goodAllocSize(needed);
+        assert(b.length <= allocated);
+        assert(needed <= neededAllocation);
+        assert(allocated <= neededAllocation);
         // Second test needed because expand must work for null pointers, too.
-        if (allocated >= needed && b.ptr)
+        if (allocated == neededAllocation)
         {
             // Nice!
             b = b.ptr[0 .. needed];
@@ -112,7 +121,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
             // Expand to the appropriate quantum
             auto original = b.ptr[0 .. allocated];
             assert(goodAllocSize(needed) >= allocated);
-            if (!parent.expand(original, goodAllocSize(needed) - allocated))
+            if (!parent.expand(original, neededAllocation - allocated))
                 return false;
             // Dial back the size
             b = original.ptr[0 .. needed];
