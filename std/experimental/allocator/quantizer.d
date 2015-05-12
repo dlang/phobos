@@ -141,13 +141,17 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool reallocate(ref void[] b, size_t s)
     {
-        if (s >= b.length && expand(b, s - b.length)) return true;
+        if (s >= b.length)
+        {
+            if (expand(b, s - b.length)) return true;
+            if (!b.ptr) return false; // memory exhausted
+        }
+        assert(b.ptr); // code above took care of it
         immutable toAllocate = goodAllocSize(s),
             allocated = goodAllocSize(b.length);
         // Are the lengths within the same quantum?
         if (allocated == toAllocate)
         {
-            assert(b.ptr); // expand() must have caught this
             // Reallocation (whether up or down) will be done in place
             b = b.ptr[0 .. s];
             return true;
