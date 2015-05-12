@@ -35,7 +35,7 @@ private struct BasicRegion(uint minAlign = platformAlignment)
         static if (minAlign > 1)
         {
             auto newStore = cast(void*) roundUpToMultipleOf(
-                cast(ulong) store.ptr,
+                cast(size_t) store.ptr,
                 alignment);
             enforce(newStore <= store.ptr + store.length);
             _current = newStore;
@@ -79,7 +79,7 @@ private struct BasicRegion(uint minAlign = platformAlignment)
         // Just bump the pointer to the next good allocation
         auto save = _current;
         _current = cast(void*) roundUpToMultipleOf(
-            cast(ulong) _current, a);
+            cast(size_t) _current, a);
         auto b = allocate(bytes);
         if (b.ptr) return b;
         // Failed, rollback
@@ -243,7 +243,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     {
         assert(!_crt);
         _crt = cast(void*) roundUpToMultipleOf(
-            cast(ulong) _store.ptr, alignment);
+            cast(size_t) _store.ptr, alignment);
         _end = _store.ptr + _store.length;
     }
 
@@ -283,7 +283,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
         // Just bump the pointer to the next good allocation
         auto save = _crt;
         _crt = cast(void*) roundUpToMultipleOf(
-            cast(ulong) _crt, a);
+            cast(size_t) _crt, a);
         auto b = allocate(bytes);
         if (b.ptr) return b;
         // Failed, rollback
@@ -453,7 +453,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
             _brkCurrent = _brkInitial;
         }
         immutable size_t delta = cast(shared void*) roundUpToMultipleOf(
-            cast(ulong) _brkCurrent, a) - _brkCurrent;
+            cast(size_t) _brkCurrent, a) - _brkCurrent;
         // Still must make sure the total size is aligned to the allocator's
         // alignment.
         immutable rounded = (bytes + delta).roundUpToMultipleOf(alignment);

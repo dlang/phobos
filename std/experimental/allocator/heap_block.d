@@ -135,9 +135,11 @@ private struct BitVector
         assert(x <= y && y <= _rep.length * 64);
         if (x == y) return;
         --y;
-        immutable size_t i1 = x / 64;
+        assert(x / 64 <= size_t.max);
+        immutable i1 = cast(size_t) (x / 64);
         immutable uint b1 = 63 - x % 64;
-        immutable size_t i2 = y / 64;
+        assert(y / 64 <= size_t.max);
+        immutable i2 = cast(size_t) (y / 64);
         immutable uint b2 = 63 - y % 64;
         assert(i1 <= i2 && i2 < _rep.length);
         if (i1 == i2)
@@ -162,12 +164,15 @@ private struct BitVector
     bool opIndex(ulong x)
     {
         assert(x < length);
-        return (_rep[x / 64] & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
+        return (_rep[cast(size_t) (x / 64)]
+            & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
     }
 
     void opIndexAssign(bool b, ulong x)
     {
-        auto i = x / 64, j = 0x8000_0000_0000_0000UL >> (x % 64);
+        assert(x / 64 <= size_t.max);
+        auto i = cast(size_t) (x / 64),
+            j = 0x8000_0000_0000_0000UL >> (x % 64);
         if (b) _rep[i] |= j;
         else _rep[i] &= ~j;
     }
@@ -183,7 +188,8 @@ private struct BitVector
     ulong find1(ulong i)
     {
         assert(i < length);
-        auto w = i / 64;
+        assert(i / 64 <= size_t.max);
+        auto w = cast(size_t) (i / 64);
         auto b = i % 64; // 0 through 63, 0 when i == 0
         auto mask = ulong.max >> b;
         if (auto current = _rep[w] & mask)
@@ -209,7 +215,7 @@ private struct BitVector
     ulong find1Backward(ulong i)
     {
         assert(i < length);
-        auto w = i / 64;
+        auto w = cast(size_t) (i / 64);
         auto b = 63 - (i % 64); // 0 through 63, 63 when i == 0
         auto mask = ~((1UL << b) - 1);
         assert(mask != 0);
@@ -248,7 +254,7 @@ private struct BitVector
     {
         assert(start < length);
         assert(howMany > 64);
-        auto i = start / 64;
+        auto i = cast(size_t) (start / 64);
         while (_rep[i] & 1)
         {
             // No trailing zeros in this word, try the next one
@@ -657,10 +663,11 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
             return null;
         }
         auto i = _control.findZeros(blocks, _startIdx * 64);
-        if (i == ulong.max) return null;
+        if (i == i.max) return null;
         // Allocate those bits
         _control[i .. i + blocks] = 1;
-        return _payload[i * blockSize .. (i + blocks) * blockSize];
+        return _payload[cast(size_t) (i * blockSize)
+            .. cast(size_t) ((i + blocks) * blockSize)];
         //void[] result;
         //auto pos = tuple(_startIdx, 0);
         //for (;;)
@@ -1130,9 +1137,10 @@ struct HeapBlockWithInternalPointers(
         // if (!_heap._control[block]) return null;
         // Within an allocation, must find the 1 just to the left of it
         auto i = _allocStart.find1Backward(block);
-        if (i == ulong.max) return null;
+        if (i == i.max) return null;
         auto j = _allocStart.find1(i + 1);
-        return _heap._payload.ptr[_heap.blockSize * i .. _heap.blockSize * j];
+        return _heap._payload.ptr[cast(size_t) (_heap.blockSize * i)
+            .. cast(size_t) (_heap.blockSize * j)];
     }
 
     /// Ditto
