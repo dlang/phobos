@@ -7660,7 +7660,7 @@ public:
             return (*_range).front;
         }
 
-        static if(is(typeof((*(cast(const R*)_range)).front))) @property ElementType!R front() const
+        static if(is(typeof((*(cast(const R*)_range)).front))) @property auto front() const
         {
             return (*_range).front;
         }
@@ -7782,7 +7782,7 @@ public:
             return (*_range).back;
         }
 
-        static if(is(typeof((*(cast(const R*)_range)).back))) @property ElementType!R back() const
+        static if(is(typeof((*(cast(const R*)_range)).back))) @property auto back() const
         {
             return (*_range).back;
         }
@@ -8264,6 +8264,36 @@ unittest // issue 14373
     R r;
     refRange(&r).popFront();
     assert(r.empty);
+}
+
+unittest // issue 14575
+{
+    struct R
+    {
+        Object front;
+        alias back = front;
+        bool empty = false;
+        void popFront() {empty = true;}
+        alias popBack = popFront;
+        @property R save() {return this;}
+    }
+    static assert(isBidirectionalRange!R);
+    R r;
+    auto rr = refRange(&r);
+
+    struct R2
+    {
+        @property Object front() {return null;}
+        @property const(Object) front() const {return null;}
+        alias back = front;
+        bool empty = false;
+        void popFront() {empty = true;}
+        alias popBack = popFront;
+        @property R2 save() {return this;}
+    }
+    static assert(isBidirectionalRange!R2);
+    R2 r2;
+    auto rr2 = refRange(&r2);
 }
 
 /++
