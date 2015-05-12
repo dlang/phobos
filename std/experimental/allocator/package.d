@@ -351,7 +351,8 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            () => HeapBlock!(4096)(GCAllocator.it.allocate(4072 * 1024))),
+            (n) => HeapBlock!(4096)(GCAllocator.it.allocate(
+                max(n, 4072 * 1024)))),
         GCAllocator
     );
     A tuMalloc;
@@ -822,7 +823,8 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            () => HeapBlock!(4096)(GCAllocator.it.allocate(4072 * 1024))),
+            (size_t n) => HeapBlock!(4096)(GCAllocator.it.allocate(
+                max(n, 4072 * 1024)))),
         GCAllocator
     );
 
@@ -876,7 +878,8 @@ unittest
             2048, Bucketizer!(FList, 1025, 2048, 256),
             3584, Bucketizer!(FList, 2049, 3584, 512),
             4072 * 1024, AllocatorList!(
-                () => HeapBlock!(4096)(GCAllocator.it.allocate(4072 * 1024))),
+                (n) => HeapBlock!(4096)(GCAllocator.it.allocate(
+                    max(n, 4072 * 1024)))),
             GCAllocator
         )
     );

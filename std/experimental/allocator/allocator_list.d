@@ -4,9 +4,10 @@ import std.experimental.allocator.common;
 version(unittest) import std.stdio;
 
 /**
-Given $(D make) as a function that returns fresh allocators, $(D
-AllocatorList) creates an allocator that lazily creates as many allocators
-are needed for satisfying client allocation requests.
+Given $(D make(size_t n)) as a function that returns fresh allocators capable
+of allocating at least $(D n) bytes, $(D AllocatorList) creates an allocator
+that lazily creates as many allocators are needed for satisfying client
+allocation requests.
 
 The management data of the allocators is stored ouroboros-style in memory
 obtained from the allocators themselves, in a private contiguous array. An
@@ -25,6 +26,11 @@ least-recently-used strategy is fast enough for the application; and (b) the
 array of allocators can be stored contiguously within one of the individual
 allocators.
 
+Usually the capacity of allocators created with $(D n) should be much larger
+than $(D n) such that an allocator can be used for many subsequent allocations.
+$(D n) is passed only to ensure the minimum necessary for the next allocation
+(plus possibly for reallocating the management data).
+
 $(D AllocatorList) makes an effort to return allocated memory back when no
 longer used. It does so by destroying empty allocators. However, in order to
 avoid thrashing (excessive creation/destruction of allocators under certain use
@@ -38,7 +44,7 @@ struct AllocatorList(alias make)
     import std.experimental.allocator.stats_collector;
 
     /// Alias for $(D typeof(make)).
-    alias Allocator = typeof(make());
+    alias Allocator = typeof(make(1));
     // Allocator used internally
     private alias SAllocator = StatsCollector!(Allocator, Options.bytesUsed);
 
@@ -87,6 +93,8 @@ struct AllocatorList(alias make)
         return Result(allocators.ptr, allocators.ptr + rootIndex);
     }
 
+    static if (hasMember!(Allocator, "deallocateAll")
+        && hasMember!(Allocator, "owns"))
     ~this()
     {
         deallocateAll;
@@ -102,7 +110,11 @@ struct AllocatorList(alias make)
     {
         auto result = allocateNoGrow(s);
         if (result.ptr) return result;
-        if (auto newAlloc = addAllocator) result = newAlloc.allocate(s);
+        if (auto newAlloc =
+               addAllocator(s + (allocators.length + 1) * Node.sizeof))
+        {
+            result = newAlloc.allocate(s);
+        }
         return result;
     }
 
@@ -175,21 +187,21 @@ struct AllocatorList(alias make)
         return uint.max;
     }
 
-    private Node* addAllocator()
+    private Node* addAllocator(size_t atLeastBytes)
     {
         auto i = findEmptySlot;
         if (i < i.max)
         {
             // Found, set up the new one as root
             Node* n = &allocators[i];
-            emplace(&n.a, make());
+            emplace(&n.a, make(atLeastBytes));
             assert(n.bytesUsed == 0);
             n.nextIdx = rootIndex;
             rootIndex = i;
             return n;
         }
         // Must create a new allocator object on the stack and move it
-        auto newNode = Node(SAllocator(make()), rootIndex);
+        auto newNode = Node(SAllocator(make(atLeastBytes)), rootIndex);
         // Weird: store the new node inside its own allocated storage!
         auto buf = newNode.allocate((allocators.length + 1) * Node.sizeof);
         if (!buf.ptr)
@@ -353,8 +365,9 @@ struct AllocatorList(alias make)
 unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
+    import std.algorithm : max;
     import std.experimental.allocator.region;
-    AllocatorList!({ return Region!()(new void[1024 * 4096]); }) a;
+    AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 is null); // can't allocate more than 4MB at a time
     b1 = a.allocate(1024 * 10);
@@ -364,8 +377,9 @@ unittest
 
 unittest
 {
+    import std.algorithm : max;
     import std.experimental.allocator.region;
-    AllocatorList!({ return Region!()(new void[1024 * 4096]); }) a;
+    AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 is null);
     b1 = a.allocate(1024 * 10);
