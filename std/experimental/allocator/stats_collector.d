@@ -359,8 +359,11 @@ private:
     ));
 
 public:
-    enum uint alignment = Allocator.alignment;
 
+    /// Alignment offered is equal to $(D Allocator.alignment).
+    alias alignment = Allocator.alignment;
+
+    /// Increments $(D numOwns) and forwards to $(D parent.owns(b)).
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
     {
@@ -368,7 +371,17 @@ public:
         return parent.owns(b);
     }
 
-    static if (flags & Options.callerLine)
+    /**
+    Forwards to $(D parent.allocate). Affects appropriately $(D numAllocate),
+    $(D bytesUsed), $(D bytesAllocated), $(D bytesSlack), $(D numAllocateOK),
+    and $(D bytesHighTide). If per-allocation stats are collected, allocates
+    more than $(D n) bytes from $(D parent).
+    */
+    version (StdDdoc)
+    {
+        void[] allocate(size_t n);
+    }
+    else static if (flags & Options.callerLine)
     {
         void[] allocate
             (string m = __MODULE__, string f = __FILE__,
@@ -451,22 +464,35 @@ public:
         return result;
     }
 
-    static if (hasMember!(Allocator, "expand"))
+    /**
+    Defined whether or not $(D Allocator.expand) is defined. Affects appropriately $(D numExpand), $(D numExpandOK), $(D bytesExpanded),
+    $(D bytesSlack).
+    */
     bool expand(ref void[] b, size_t s)
     {
         up!"numExpand";
-        immutable bytesSlackB4 = this.goodAllocSize(b.length) - b.length;
-        auto result = parent.expand(b, s);
-        if (result)
+        static if (!hasMember!(Allocator, "expand"))
         {
+            return false;
+        }
+        else
+        {
+            immutable bytesSlackB4 = this.goodAllocSize(b.length) - b.length;
+            if (!parent.expand(b, s)) return false;
             up!"numExpandOK";
             add!"bytesExpanded"(s);
             add!"bytesSlack"(this.goodAllocSize(b.length) - b.length
                 - bytesSlackB4);
+            return true;
         }
-        return result;
     }
 
+    /**
+    Defined whether or not $(D Allocator.reallocate) is defined. Affects
+    appropriately $(D numReallocate), $(D numReallocateOK), $(D
+    numReallocateInPlace), $(D bytesNotMoved), $(D bytesAllocated), $(D
+    bytesExpanded), and $(D bytesContracted).
+    */
     bool reallocate(ref void[] b, size_t s)
     {
         up!"numReallocate";
@@ -518,6 +544,10 @@ public:
         return true;
     }
 
+    /**
+    Defined whether or not $(D Allocator.deallocate) is defined. Affects
+    appropriately $(D numDeallocate), $(D bytesUsed), and $(D byteSlack).
+    */
     void deallocate(void[] b)
     {
         up!"numDeallocate";
@@ -535,6 +565,10 @@ public:
             parent.deallocate(b);
     }
 
+    /**
+    Defined only if $(D Allocator.deallocateAll) is defined. Affects
+    appropriately $(D numDeallocateAll).
+    */
     static if (hasMember!(Allocator, "deallocateAll"))
     void deallocateAll()
     {
@@ -543,6 +577,16 @@ public:
             _bytesUsed = 0;
         parent.deallocateAll();
         static if (hasPerAllocationState) _root = null;
+    }
+
+    /**
+    Defined only if $(D Options.bytesUsed) is defined. Returns $(D bytesUsed ==
+    0).
+    */
+    static if (flags & Options.bytesUsed)
+    bool empty()
+    {
+        return _bytesUsed == 0;
     }
 }
 

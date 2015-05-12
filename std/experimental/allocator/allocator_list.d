@@ -8,8 +8,27 @@ Given $(D make) as a function that returns fresh allocators, $(D
 AllocatorList) creates an allocator that lazily creates as many allocators
 are needed for satisfying client allocation requests.
 
-The management data of the allocators is stored in memory obtained from the
-allocators themselves, in a private linked list.
+The management data of the allocators is stored ouroboros-style in memory
+obtained from the allocators themselves, in a private contiguous array. An
+embedded list builds a least-recently-used strategy on top of the array: the
+most recent allocators used for an allocation or deallocation will be attempted
+in order of their most recent use. Thus, although core operations take in
+theory $(BIGOH k) time for $(D k) allocators in current use, in many workloads
+the factor is negligible.
+
+$(D AllocatorList) is intended for coarse-grained handling of allocators, i.e.
+the number of allocators in the list is expected to be relatively small
+compared to the number of allocations handled by each allocator. However, the
+per-allocator overhead is small (around two words) so using $(D AllocatorList)
+with a large number of allocators should be satisfactory as long as (a) the
+least-recently-used strategy is fast enough for the application; and (b) the
+array of allocators can be stored contiguously within one of the individual
+allocators.
+
+$(D AllocatorList) makes an effort to return allocated memory back when no
+longer used. It does so by destroying empty allocators. However, in order to
+avoid thrashing (excessive creation/destruction of allocators under certain use
+patterns), it only destroys one unused allocator when there are two of them.
 */
 struct AllocatorList(alias make)
 {
@@ -46,8 +65,7 @@ struct AllocatorList(alias make)
     {
         static struct Result
         {
-            Node* first;
-            Node* current;
+            Node* first, current;
             bool empty() { return current is null; }
             ref Node front()
             {
@@ -217,6 +235,11 @@ struct AllocatorList(alias make)
         && hasMember!(Allocator, "owns"))
     bool expand(ref void[] b, size_t delta)
     {
+        if (!b.ptr)
+        {
+            b = allocate(delta);
+            return b.ptr || delta == 0;
+        }
         foreach (ref n; byLRU)
         {
             if (n.owns(b)) return n.expand(b, delta);
@@ -230,7 +253,7 @@ struct AllocatorList(alias make)
         // First attempt to reallocate within the existing node
         foreach (ref n; byLRU)
         {
-            if (!n.owns(b)) continue;
+            if (b.ptr && !n.owns(b)) continue;
             if (n.reallocate(b, s)) return true;
             break;
         }
@@ -252,14 +275,38 @@ struct AllocatorList(alias make)
         && hasMember!(Allocator, "owns"))
     void deallocate(void[] b)
     {
-        foreach (ref n; byLRU)
+        if (!b.ptr) return;
+
+        void recurse(ref uint index)
         {
-            if (n.owns(b)) return n.deallocate(b);
+            if (index == index.max) return;
+            assert(allocators.length < index);
+            auto n = &allocators.ptr[index];
+            if (!n.owns(b)) return recurse(n.nextIdx);
+            // Found!
+            n.deallocate(b);
+            if (!n.empty) return;
+            // Hmmm... should we return this allocator back to the wild? Let's
+            // decide if there are TWO empty allocators we can release ONE. This
+            // it to avoid thrashing.
+            foreach (i, ref another; allocators)
+            {
+                if (i == index || another.unused || !another.empty) continue;
+                // Yowzers, found another empty one, let's remove this guy
+                n.a.destroy;
+                index = n.nextIdx;
+                n.setUnused;
+                return;
+            }
         }
-        assert(false);
+
+        recurse(rootIndex);
     }
 
-    /// Defined only if $(D Allocator.deallocateAll) is defined.
+    /**
+    Defined only if $(D Allocator.owns) and $(D Allocator.deallocateAll) are
+    defined.
+    */
     static if (hasMember!(Allocator, "deallocateAll")
         && hasMember!(Allocator, "owns"))
     void deallocateAll()
@@ -295,6 +342,7 @@ struct AllocatorList(alias make)
         // temp's destructor will take care of the rest
     }
 
+    /// Returns $(D true) iff no allocators are currently active.
     bool empty() const
     {
         return !allocators.length;
