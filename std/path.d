@@ -2127,15 +2127,12 @@ unittest
 */
 string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     (string path, lazy string base = getcwd())
-    //TODO: @safe  (object.reserve(T[]) should be @trusted)
 {
     if (!isAbsolute(path)) return path;
     immutable baseVar = base;
     if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
 
     // Find common root with current working directory
-    string result;
-    if (!__ctfe) result.reserve(baseVar.length + path.length);
 
     auto basePS = pathSplitter(baseVar);
     auto pathPS = pathSplitter(path);
@@ -2144,34 +2141,34 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     basePS.popFront();
     pathPS.popFront();
 
-    while (!basePS.empty && !pathPS.empty
-        && filenameCmp!cs(basePS.front, pathPS.front) == 0)
-    {
-        basePS.popFront();
-        pathPS.popFront();
-    }
+    import std.range.primitives : walkLength;
+    import std.range : repeat, chain;
+    import std.algorithm : mismatch, joiner;
+    import std.array;
+    import std.utf : byChar;
+
+    // Remove matching prefix from basePS and pathPS
+    auto tup = mismatch!((a, b) => filenameCmp!cs(a, b) == 0)(basePS, pathPS);
+    basePS = tup[0];
+    pathPS = tup[1];
+
+    // if base == path
+    if (basePS.empty && pathPS.empty)
+        return ".";
 
     // Append as many "../" as necessary to reach common base from path
-    while (!basePS.empty)
-    {
-        result ~= "..";
-        result ~= dirSeparator;
-        basePS.popFront();
-    }
+    auto r1 = ".."
+        .byChar
+        .repeat(basePS.walkLength())
+        .joiner(dirSeparator.byChar);
 
-    // Append the remainder of path
-    while (!pathPS.empty)
-    {
-        result ~= pathPS.front;
-        result ~= dirSeparator;
-        pathPS.popFront();
-    }
+    auto r2 = pathPS
+        .joiner(dirSeparator)
+        .byChar;
 
-    // base == path
-    if (result.empty) return ".";
-
-    // Strip off last path separator
-    return result[0 .. $-1];
+    // Return (r1 ~ dirSeparator ~ r2)
+    auto result = chain(r1, dirSeparator[0 .. $ * !(r1.empty || r2.empty)].byChar, r2).array;
+    return ((r) @trusted => cast(string)r)(result);
 }
 
 unittest
