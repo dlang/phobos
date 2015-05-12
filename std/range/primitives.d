@@ -905,10 +905,10 @@ template isRandomAccessRange(R)
 
         static if(is(typeof(r[$])))
         {
-            static assert(is(typeof(r.front) == typeof(r[$])));
+            static assert(is(typeof(f) == typeof(r[$])));
 
             static if(!isInfinite!R)
-                static assert(is(typeof(r.front) == typeof(r[$ - 1])));
+                static assert(is(typeof(f) == typeof(r[$ - 1])));
         }
     }));
 }
@@ -932,12 +932,12 @@ unittest
     // $ must work as it does with arrays if opIndex works with $
     static if(is(typeof(r[$])))
     {
-        static assert(is(typeof(r.front) == typeof(r[$])));
+        static assert(is(typeof(f) == typeof(r[$])));
 
         // $ - 1 doesn't make sense with infinite ranges but needs to work
         // with finite ones.
         static if(!isInfinite!R)
-            static assert(is(typeof(r.front) == typeof(r[$ - 1])));
+            static assert(is(typeof(f) == typeof(r[$ - 1])));
     }
 }
 
