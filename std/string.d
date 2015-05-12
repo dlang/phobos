@@ -2837,7 +2837,7 @@ Range chomp(Range)(Range str)
 
 /// Ditto
 Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
-    if ((isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+    if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
          isSomeString!Range) &&
         isSomeChar!C2)
 {
@@ -2846,7 +2846,7 @@ Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
 
     alias C1 = ElementEncodingType!Range;
 
-    static if (is(Unqual!C1 == Unqual!C2))
+    static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
         import std.algorithm : endsWith;
         if (str.endsWith(delimiter))
@@ -2855,7 +2855,7 @@ Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
     }
     else
     {
-        auto orig = str;
+        auto orig = str.save;
 
         static if (isSomeString!Range)
             alias C = dchar;    // because strings auto-decode
@@ -2875,7 +2875,8 @@ Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
 }
 
 ///
-@safe pure unittest
+@safe pure
+unittest
 {
     import std.utf : decode;
     import std.uni : lineSep, paraSep, nelSep;
@@ -2953,18 +2954,33 @@ unittest
     assert(chomp("hello world\r\n"d.byDchar).array == "hello world"d);
 
     assert(chomp("hello world"d.byDchar, "ld").array == "hello wor"d);
+
+    assert(chomp("hello\u2020" .byChar , "\u2020").array == "hello");
+    assert(chomp("hello\u2020"d.byDchar, "\u2020"d).array == "hello"d);
 }
 
 
 /++
     If $(D str) starts with $(D delimiter), then the part of $(D str) following
-    $(D delimiter) is returned. If it $(D str) does $(I not) start with
+    $(D delimiter) is returned. If $(D str) does $(I not) start with
+
     $(D delimiter), then it is returned unchanged.
+
+    Params:
+        str = string or forward range of characters
+        delimiter = string of characters to be sliced off front of str[]
+
+    Returns:
+        slice of str
  +/
-C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
-    if (isSomeChar!C1 && isSomeChar!C2)
+Range chompPrefix(Range, C2)(Range str, const(C2)[] delimiter)
+    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+         isSomeString!Range) &&
+        isSomeChar!C2)
 {
-    static if (is(Unqual!C1 == Unqual!C2))
+    alias C1 = ElementEncodingType!Range;
+
+    static if (is(Unqual!C1 == Unqual!C2) && (isSomeString!Range || (hasSlicing!Range && C2.sizeof == 4)))
     {
         import std.algorithm : startsWith;
         if (str.startsWith(delimiter))
@@ -2973,18 +2989,22 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
     }
     else
     {
-        import std.utf : decode;
+        auto orig = str.save;
 
-        auto orig = str;
-        size_t index = 0;
+        static if (isSomeString!Range)
+            alias C = dchar;    // because strings auto-decode
+        else
+            alias C = C1;       // and ranges do not
 
-        foreach (dchar c; delimiter)
+        foreach (C c; delimiter)
         {
-            if (index >= str.length || decode(str, index) != c)
+            if (str.empty || str.front != c)
                 return orig;
+
+            str.popFront();
         }
 
-        return str[index .. $];
+        return str;
     }
 }
 
@@ -2997,7 +3017,8 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
     assert(chompPrefix("", "hello") == "");
 }
 
-/* @safe */ pure unittest
+@safe pure
+unittest
 {
     import std.conv : to;
     import std.algorithm : equal;
@@ -3016,6 +3037,20 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
         }();
     }
     });
+
+    // Ranges
+    import std.utf : byChar, byWchar, byDchar;
+    import std.array;
+    assert(chompPrefix("hello world" .byChar , "hello"d).array == " world");
+    assert(chompPrefix("hello world"w.byWchar, "hello" ).array == " world"w);
+    assert(chompPrefix("hello world"d.byDchar, "hello"w).array == " world"d);
+    assert(chompPrefix("hello world"c.byDchar, "hello"w).array == " world"d);
+
+    assert(chompPrefix("hello world"d.byDchar, "lx").array == "hello world"d);
+    assert(chompPrefix("hello world"d.byDchar, "hello world xx").array == "hello world"d);
+
+    assert(chompPrefix("\u2020world" .byChar , "\u2020").array == "world");
+    assert(chompPrefix("\u2020world"d.byDchar, "\u2020"d).array == "world"d);
 }
 
 
