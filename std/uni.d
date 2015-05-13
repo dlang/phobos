@@ -7080,7 +7080,7 @@ unittest
 
     See_Also:
         $(LREF icmp)
-        $(XREF algorithm, cmp)
+        $(XREF_PACK algorithm,comparison,cmp)
 +/
 int sicmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
@@ -8981,9 +8981,11 @@ unittest
     Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
 
-    toUpper can be used as an argument to $(XREF algorithm, map) to produce an algorithm that can
-    convert a range of characters to upper case without allocating memory.
-    A string can then be produced by using $(XREF algorithm, copy) to send it to an $(XREF array, appender).
+    toUpper can be used as an argument to $(XREF_PACK algorithm,iteration,map)
+    to produce an algorithm that can convert a range of characters to upper case
+    without allocating memory.
+    A string can then be produced by using $(XREF_PACK algorithm,mutation,copy)
+    to send it to an $(XREF array, appender).
 +/
 @safe pure nothrow @nogc
 dchar toUpper(dchar c)

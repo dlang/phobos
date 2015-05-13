@@ -2269,8 +2269,8 @@ void main()
 }
 ---
 
-$(XREF algorithm, joiner) can be used to join chunks together into a single
-range lazily.
+$(XREF_PACK algorithm,iteration,joiner) can be used to join chunks together into
+a single range lazily.
 Example:
 ---
 import std.algorithm, std.stdio;

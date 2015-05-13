@@ -1,6 +1,7 @@
 /**
- * This module describes the digest APIs used in Phobos. All digests follow these APIs.
- * Additionally, this module contains useful helper methods which can be used with every _digest type.
+ * This module describes the _digest APIs used in Phobos. All digests follow
+ * these APIs. Additionally, this module contains useful helper methods which
+ * can be used with every _digest type.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -202,9 +203,10 @@ version(ExampleDigest)
         public:
             /**
              * Use this to feed the digest with data.
-             * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-             * $(D const(ubyte)[]).
-             * The following usages of $(D put) must work for any type which passes $(LREF isDigest):
+             * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+             * interface for $(D ubyte) and $(D const(ubyte)[]).
+             * The following usages of $(D put) must work for any type which
+             * passes $(LREF isDigest):
              * Examples:
              * ----
              * ExampleDigest dig;
@@ -540,8 +542,8 @@ interface Digest
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Examples:
          * ----
@@ -837,8 +839,8 @@ class WrapperDigest(T) if(isDigest!T) : Digest
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)
         {
