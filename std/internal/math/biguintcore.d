@@ -1355,7 +1355,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             // in the existing chunks.
             // Make all the chunks a tiny bit bigger
             // (We're padding y with zeros)
-            chunksize += extra / cast(double)numchunks;
+            chunksize += extra / numchunks;
             extra = x.length - chunksize*numchunks;
             // there will probably be a few left over.
             // Every chunk will either have size chunksize, or chunksize+1.
