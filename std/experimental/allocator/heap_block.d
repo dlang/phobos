@@ -234,6 +234,15 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     }
 
     /**
+    Returns the actual bytes allocated when $(D n) bytes are requested, i.e.
+    $(D n.roundUpToMultipleOf(blockSize)).
+    */
+    size_t goodAllocSize(size_t n)
+    {
+        return n.roundUpToMultipleOf(blockSize);
+    }
+
+    /**
     Allocates $(D s) bytes of memory and returns it, or $(D null) if memory
     could not be allocated.
 
@@ -856,7 +865,8 @@ is the size of the object within which the internal pointer is looked up.
 
 */
 struct HeapBlockWithInternalPointers(
-    size_t theBlockSize, uint theAlignment = platformAlignment)
+    size_t theBlockSize, uint theAlignment = platformAlignment,
+    ParentAllocator = NullAllocator)
 {
     import std.conv : text;
     unittest
@@ -865,10 +875,29 @@ struct HeapBlockWithInternalPointers(
         auto m = AlignedMallocator.it.alignedAllocate(1024 * 64, theAlignment);
         testAllocator!(() => HeapBlockWithInternalPointers(m));
     }
+
+    // state {
     private HeapBlock!(theBlockSize, theAlignment, NullAllocator) _heap;
     private BitVector _allocStart;
+    // }
 
-    this(void[] b) { _heap = HeapBlock!(theBlockSize, theAlignment, NullAllocator)(b); }
+    /**
+    Constructors accepting desired capacity or a preallocated buffer, similar
+    in semantics to those of $(D HeapBlock).
+    */
+    this(void[] data)
+    {
+        _heap = HeapBlock!(theBlockSize, theAlignment, ParentAllocator)(data);
+    }
+
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator))
+    this(size_t capacity)
+    {
+        // Add room for the _allocStart vector
+        _heap = HeapBlock!(theBlockSize, theAlignment, ParentAllocator)
+            (capacity + capacity.divideRoundUp(64));
+    }
 
     // Makes sure there's enough room for _allocStart
     private bool ensureRoomForAllocStart(size_t len)
@@ -890,6 +919,12 @@ struct HeapBlockWithInternalPointers(
     Allocator primitives.
     */
     alias alignment = theAlignment;
+
+    /// Ditto
+    size_t goodAllocSize(size_t n)
+    {
+        return n.roundUpToMultipleOf(_heap.blockSize);
+    }
 
     /// Ditto
     void[] allocate(size_t bytes)
