@@ -40,8 +40,6 @@ blockSize) parameter as in $(D HeapBlock!(Allocator, 4096)). To choose a block
 size parameter, use $(D HeapBlock!(Allocator, chooseAtRuntime)) and pass the
 block size to the constructor.
 
-TODO: implement $(D alignedAllocate) and $(D alignedReallocate).
-
 */
 struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     ParentAllocator = NullAllocator)
@@ -66,9 +64,11 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
 
     /**
     If $(D blockSize == chooseAtRuntime), $(D HeapBlock) offers a read/write
-    property $(D blockSize). It must be set to a power of two before any use
-    of the allocator. Otherwise, $(D blockSize) is an alias for $(D
-    theBlockSize).
+    property $(D blockSize). It must be set before any use of the allocator.
+    Otherwise (i.e. $(D theBlockSize) is a legit constant), $(D blockSize) is
+    an alias for $(D theBlockSize). Whether constant or variable, must also be
+    a multiple of $(D alignment). This constraint is $(D assert)ed statically
+    and dynamically.
     */
     static if (theBlockSize != chooseAtRuntime)
     {
@@ -96,14 +96,14 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     }
 
     /**
-    The alignment offered is user-configurable statically through parameter
+    The _alignment offered is user-configurable statically through parameter
     $(D theAlignment), defaulted to $(D platformAlignment).
     */
     alias alignment = theAlignment;
 
     // state {
     /**
-    The parent allocator. Depending on whether $(D ParentAllocator) holds state
+    The _parent allocator. Depending on whether $(D ParentAllocator) holds state
     or not, this is a member variable or an alias for $(D ParentAllocator.it).
     */
     static if (stateSize!ParentAllocator)
@@ -135,20 +135,20 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     }
 
     /**
-    Constructs a block allocator given desired capacity in bytes.
-    */
-    static if (!is(ParentAllocator == NullAllocator))
-    this(size_t capacity)
-    {
-        size_t toAllocate = totalAllocation(capacity);
-        auto data = parent.allocate(toAllocate);
-        this(data);
-        assert(_blocks * blockSize >= capacity);
-    }
+    Constructs a block allocator given a hunk of memory, or a desired capacity
+    in bytes.
 
-    /**
-    Constructs a block allocator given a hunk of memory. The layout puts the
-    bitmap at the front followed immediately by the payload.
+    $(UL
+    $(LI If $(D ParentAllocator) is $(D NullAllocator), only the constructor
+    taking $(D data) is defined and the user is responsible for freeing $(D
+    data) if desired.)
+    $(LI Otherwise, both constructors are defined. The $(D data)-based
+    constructor assumes memory has been allocated with the parent allocator.
+    The $(D capacity)-based constructor uses $(D ParentAllocator) to allocate
+    an appropriate contiguous hunk of memory. Regardless of the constructor
+    used, the destructor releases the memory by using $(D
+    ParentAllocator.deallocate).)
+    )
     */
     this(void[] data)
     {
@@ -179,6 +179,16 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
             _payload = payload;
             break;
         }
+    }
+
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator))
+    this(size_t capacity)
+    {
+        size_t toAllocate = totalAllocation(capacity);
+        auto data = parent.allocate(toAllocate);
+        this(data);
+        assert(_blocks * blockSize >= capacity);
     }
 
     /**
@@ -224,12 +234,16 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     }
 
     /**
-    Standard allocator methods per the semantics defined above. The $(D
-    deallocate) and $(D reallocate) methods are $(D @system) because they may
-    move memory around, leaving dangling pointers in user code.
+    Allocates $(D s) bytes of memory and returns it, or $(D null) if memory
+    could not be allocated.
 
-    BUGS: Neither $(D deallocateAll) nor the destructor free the original memory
-    block. Either user code or the parent allocator should carry that.
+    The following information might be of help with choosing the appropriate
+    block size. Actual allocation occurs in sizes multiple of the block size.
+    Allocating one block is the fastest because only one 0 bit needs to be
+    found in the metadata. Allocating 2 through 64 blocks is the next cheapest
+    because it affects a maximum of two $(D ulong)s in the metadata.
+    Allocations greater than 64 blocks require a multiword search through the
+    metadata.
     */
     @trusted void[] allocate(const size_t s)
     {
@@ -261,7 +275,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
             goto case 0; // fall through
         case 0:
             return null;
-        case 2: .. case 63:
+        case 2: .. case 64:
             result = smallAlloc(cast(uint) blocks);
             break;
         default:
@@ -271,7 +285,47 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
         return result.ptr ? result.ptr[0 .. s] : null;
     }
 
-    /// Ditto
+    /**
+    Allocates a block with specified alignment $(D a). The alignment must be a
+    power of 2. If $(D a <= alignment), function forwards to $(D allocate).
+    Otherwise, it attempts to overallocate and then adjust the result for
+    proper alignment. In the worst case the slack memory is around two blocks.
+    */
+    void[] alignedAllocate(size_t n, uint a)
+    {
+        assert(a.isPowerOf2);
+        if (a <= alignment) return allocate(n);
+
+        // Overallocate to make sure we can get an aligned block
+        auto b = allocate((n + a - alignment).roundUpToMultipleOf(blockSize));
+        if (!b.ptr) return null;
+        auto result = b.roundStartToMultipleOf(a);
+        assert(result.length >= n);
+        result = result.ptr[0 .. n]; // final result
+
+        // Free any blocks that might be slack at the beginning
+        auto slackHeadingBlocks = (result.ptr - b.ptr) / blockSize;
+        if (slackHeadingBlocks)
+        {
+            deallocate(b[0 .. slackHeadingBlocks * blockSize]);
+        }
+
+        // Free any blocks that might be slack at the end
+        auto slackTrailingBlocks = ((b.ptr + b.length)
+            - (result.ptr + result.length)) / blockSize;
+        if (slackTrailingBlocks)
+        {
+            deallocate(b[$ - slackTrailingBlocks * blockSize .. $]);
+        }
+
+        return result;
+    }
+
+    /**
+    If the $(D HeapBlock) object is empty (has no active allocation), allocates
+    all memory within and returns a slice to it. Otherwise, returns $(D null)
+    (i.e. no attempt is made to allocate the largest available block).
+    */
     void[] allocateAll()
     {
         if (!empty) return null;
@@ -279,7 +333,10 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
         return _payload;
     }
 
-    /// Ditto
+    /**
+    Returns $(D true) if $(D b) belongs to the $(D HeapBlock) object. This
+    method is somewhat tolerant in that accepts an interior slice.
+    */
     bool owns(void[] b) const
     {
         assert(b.ptr !is null || b.length == 0, "Corrupt block.");
@@ -433,15 +490,22 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
         return true;
     }
 
-    /// Ditto
+    /**
+    Expands an allocated block in place.
+    */
     @trusted bool expand(ref void[] b, immutable size_t delta)
     {
+        // Dispose with trivial corner cases
         if (delta == 0) return true;
         if (b is null)
         {
             b = allocate(delta);
             return b !is null;
         }
+
+        /* To simplify matters, refuse to expand buffers that don't start at a block start (this may be the case for blocks allocated with alignedAllocate).
+        */
+        if ((b.ptr - _payload.ptr) % blockSize) return false;
 
         const blocksOld = bytes2blocks(b.length);
         const blocksNew = bytes2blocks(b.length + delta);
@@ -475,7 +539,9 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
         return true;
     }
 
-    /// Ditto
+    /**
+    Reallocates a previously-allocated block. Contractions occur in place.
+    */
     @system bool reallocate(ref void[] b, size_t newSize)
     {
         if (newSize == 0)
@@ -492,23 +558,46 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
             b = b[0 .. newSize];
             return true;
         }
-        // Attempt an in-place expansion first
-        const delta = newSize - b.length;
-        if (expand(b, delta)) return true;
         // Go the slow route
         return .reallocate(this, b, newSize);
     }
 
-    /// Ditto
+    /**
+    Reallocates a block previously allocated with $(D alignedAllocate). Contractions do not occur in place.
+    */
+    @system bool alignedReallocate(ref void[] b, size_t newSize, uint a)
+    {
+        if (newSize == 0)
+        {
+            deallocate(b);
+            b = null;
+            return true;
+        }
+        // Go the slow route
+        return .alignedReallocate(this, b, newSize, a);
+    }
+
+    /**
+    Deallocates a block previously allocated with this allocator.
+    */
     void deallocate(void[] b)
     {
         if (b is null) return;
-        // Round up size to multiple of block size
-        auto blocks = b.length.divideRoundUp(blockSize);
+        // Adjust pointer, might be inside a block after alignedAllocate
+        //auto p = (b.ptr - _payload.ptr) / blockSize
+
         // Locate position
         auto pos = b.ptr - _payload.ptr;
-        assert(pos % blockSize == 0);
         auto blockIdx = pos / blockSize;
+
+        // Adjust pointer, might be inside a block due to alignedAllocate
+        auto begin = _payload.ptr + blockIdx * blockSize,
+            end = b.ptr + b.length;
+        b = begin[0 .. end - begin];
+        // Round up size to multiple of block size
+        auto blocks = b.length.divideRoundUp(blockSize);
+
+        // Get into details
         auto wordIdx = blockIdx / 64, msbIdx = cast(uint) (blockIdx % 64);
         if (_startIdx > wordIdx) _startIdx = wordIdx;
 
@@ -545,14 +634,20 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
         }
     }
 
-    /// Ditto
+    /**
+    Forcibly deallocates all memory allocated by this allocator, making it
+    available for further allocations. Does not return memory to $(D
+    ParentAllocator).
+    */
     void deallocateAll()
     {
         _control[] = 0;
         _startIdx = 0;
     }
 
-    /// Ditto
+    /**
+    Returns $(D true) iff no memory is currently allocated with this allocator.
+    */
     bool empty()
     {
         return _control.allAre0();
