@@ -1,87 +1,149 @@
 module std.experimental.allocator.region;
 
 import std.experimental.allocator.common;
+import std.experimental.allocator.null_allocator;
+import std.typecons : Flag, Yes, No;
 
-/*
-(This type is not public.)
+/**
+A $(D Region) allocator allocates memory straight from one contiguous chunk.
+There is no deallocation, and once the region is full, allocation requests
+return $(D null). Therefore, $(D Region)s are often used (a) in conjunction with
+more sophisticated allocators; or (b) for batch-style very fast allocations
+that deallocate everything at once.
 
-A $(D BasicRegion) allocator allocates memory straight from an externally-
-provided storage as backend. There is no deallocation, and once the region is
-full, allocation requests return $(D null). Therefore, $(D Region)s are often
-used in conjunction with freelists and a fallback general-purpose allocator.
+The region only stores three pointers, corresponding to the current position in
+the store and the limits. One allocation entails rounding up the allocation
+size for alignment purposes, bumping the current pointer, and comparing it
+against the limit.
 
-The region only stores two words, corresponding to the current position in the
-store and the available length. One allocation entails rounding up the
-allocation size for alignment purposes, bumping the current pointer, and
-comparing it against the limit.
+If $(D ParentAllocator) is different from $(D NullAllocator), $(D Region)
+deallocates the chunk of memory during destruction.
 
 The $(D minAlign) parameter establishes alignment. If $(D minAlign > 1), the
 sizes of all allocation requests are rounded up to a multiple of $(D minAlign).
 Applications aiming at maximum speed may want to choose $(D minAlign = 1) and
 control alignment externally.
 */
-private struct BasicRegion(uint minAlign = platformAlignment)
+struct Region(ParentAllocator = NullAllocator,
+    uint minAlign = platformAlignment,
+    Flag!"defineDeallocate" defineDeallocate = No.defineDeallocate)
 {
-    import std.exception : enforce;
+    //import std.exception : enforce;
 
     static assert(minAlign.isGoodStaticAlignment);
-    private void* _current, _end;
+    static assert(ParentAllocator.alignment >= minAlign);
+
+    // state {
+    /**
+    The _parent allocator. Depending on whether $(D ParentAllocator) holds state
+    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    */
+    static if (stateSize!ParentAllocator)
+    {
+        ParentAllocator parent;
+    }
+    else
+    {
+        alias parent = ParentAllocator.it;
+    }
+    private void* _current, _end, _begin;
+    // }
 
     /**
-    Constructs a region backed by a user-provided store.
+    Constructs a region backed by a user-provided store. Assumes $(D store) is
+    aligned at $(D minAlign). Also assumes the memory was allocated with $(D
+    ParentAllocator) (if different from $(D NullAllocator)).
+
+    Params:
+    store = User-provided store backing up the region. $(D store) must be
+    aligned at $(D minAlign) (enforced with $(D assert)). If $(D
+    ParentAllocator) is different from $(D NullAllocator), memory is assumed to
+    have been allocated with $(D ParentAllocator).
+    n = Bytes to allocate using $(D ParentAllocator). This constructor is only
+    defined If $(D ParentAllocator) is different from $(D NullAllocator). If
+    $(D parent.allocate(n)) returns $(D null), the region will be initialized
+    as empty (correctly initialized but unable to allocate).
     */
     this(void[] store)
     {
-        static if (minAlign > 1)
-        {
-            auto newStore = cast(void*) roundUpToMultipleOf(
-                cast(size_t) store.ptr,
-                alignment);
-            enforce(newStore <= store.ptr + store.length);
-            _current = newStore;
-        }
-        else
-        {
-            _current = store;
-        }
-        _end = store.ptr + store.length;
+        assert(store.ptr.alignedAt(minAlign));
+        _current = store.ptr;
+        _end = _current + store.length;
+        _begin = _current;
     }
 
-    /**
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator))
+    this(size_t n)
+    {
+        this(parent.allocate(n));
+    }
+
+    /*
     The postblit of $(D BasicRegion) is disabled because such objects should not
     be copied around naively.
     */
     //@disable this(this);
 
     /**
-    Standard allocator primitives.
+    Alignment offered.
     */
-    enum uint alignment = minAlign;
+    alias alignment = minAlign;
 
-    /// Ditto
-    void[] allocate(size_t bytes)
+    /**
+    Allocates $(D n) bytes of memory. The shortest path involves an alignment adjustment (if $(D alignment > 1)), an increment, and a comparison.
+
+    Params:
+    n = number of bytes to allocate
+
+    Returns:
+    A properly-aligned buffer of size $(D n) or $(D null) if request could not
+    be satisfied.
+    */
+    void[] allocate(size_t n)
     {
+        auto result = _current[0 .. n];
         static if (minAlign > 1)
-            const rounded = bytes.roundUpToMultipleOf(alignment);
+        {
+            immutable uint slack = cast(uint) n & (alignment - 1);
+            const rounded = slack
+                ? n + alignment - slack
+                : n;
+            assert(rounded >= n);
+        }
         else
-            alias rounded = bytes;
-        auto newCurrent = _current + rounded;
-        if (newCurrent > _end) return null;
-        auto result = _current[0 .. bytes];
-        _current = newCurrent;
-        assert(cast(ulong) result.ptr % alignment == 0);
-        return result;
+        {
+            alias rounded = n;
+        }
+        _current += rounded;
+        if (_current <= _end) return result;
+        // Slow path, backtrack
+        _current -= rounded;
+        return null;
     }
 
-    /// Ditto
-    void[] alignedAllocate(size_t bytes, uint a)
+    /**
+    Allocates $(D n) bytes of memory aligned at alignment $(D a).
+
+    Params:
+    n = number of bytes to allocate
+    a = alignment for the allocated block
+
+    Returns:
+    Either a suitable block of $(D n) bytes aligned at $(D a), or $(D null).
+    */
+    void[] alignedAllocate(size_t n, uint a)
     {
+        assert(a.isPowerOf2);
         // Just bump the pointer to the next good allocation
         auto save = _current;
-        _current = cast(void*) roundUpToMultipleOf(
-            cast(size_t) _current, a);
-        auto b = allocate(bytes);
-        if (b.ptr) return b;
+        _current = _current.alignUpTo(a);
+        auto result = allocate(n);
+        if (result.ptr)
+        {
+            assert(result.length == n);
+            return result;
+        }
         // Failed, rollback
         _current = save;
         return null;
@@ -94,6 +156,88 @@ private struct BasicRegion(uint minAlign = platformAlignment)
         _current = _end;
         return result;
     }
+
+    /**
+    Expands an allocated block in place. Expansion will succeed only if the
+    block is the last allocated.
+    */
+    bool expand(ref void[] b, size_t delta)
+    {
+        assert(owns(b) || b.ptr is null);
+        assert(b.ptr + b.length <= _current || b.ptr is null);
+        if (!b.ptr)
+        {
+            b = allocate(delta);
+            return b.length == delta;
+        }
+        auto newLength = b.length + delta;
+        if (_current < b.ptr + b.length + alignment)
+        {
+            // This was the last allocation! Allocate some more and we're done.
+            if (this.goodAllocSize(b.length) == this.goodAllocSize(newLength)
+                || allocate(delta).length == delta)
+            {
+                b = b.ptr[0 .. newLength];
+                assert(_current < b.ptr + b.length + alignment);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+    Deallocates $(D b). This works only if $(D b) was obtained as the last call
+    to $(D allocate); otherwise (i.e. another allocation has occurred since) it
+    does nothing. This semantics is tricky and therefore $(D deallocate) is
+    defined only if $(D Region) is instantiated with $(D Yes.defineDeallocate)
+    as the third template argument.
+
+    Params:
+    b = Block previously obtained by a call to $(D allocate) against this
+    allocator ($(D null) is allowed).
+    */
+    static if (defineDeallocate == Yes.defineDeallocate)
+    void deallocate(void[] b)
+    {
+        assert(owns(b) || b.ptr is null);
+        assert(b.ptr + b.length <= _current || b.ptr is null);
+        if (_current < b.ptr + b.length + alignment)
+        {
+            assert(b.ptr !is null);
+            _current = b.ptr;
+        }
+    }
+
+    /**
+    Deallocates all memory allocated by this region, which can be subsequently
+    reused for new allocations.
+    */
+    void deallocateAll()
+    {
+        _current = _begin;
+    }
+
+    /**
+    Queries whether $(D b) has been allocated with this region.
+
+    Params:
+    b = Arbitrary block of memory ($(D null) is allowed; $(D owns(null)) returns $(D false)).
+
+    Returns:
+    $(D true) if $(D b) has been allocated with this region, $(D false)
+    otherwise.
+    */
+    bool owns(void[] b) const
+    {
+        return b.ptr >= _begin && b.ptr + b.length <= _end;
+    }
+
+    /// Returns $(D true) if no memory has been allocated in this region.
+    bool empty() const
+    {
+        return _current == _begin;
+    }
+
     /// Nonstandard property that returns bytes available for allocation.
     size_t available() const
     {
@@ -101,100 +245,15 @@ private struct BasicRegion(uint minAlign = platformAlignment)
     }
 }
 
-/*
-For implementers' eyes: Region adds more capabilities on top of $(BasicRegion)
-at the cost of one extra word of storage. $(D Region) "remembers" the beginning
-of the region and therefore is able to provide implementations of $(D owns) and
-$(D deallocateAll). For most applications the performance distinction between
-$(D BasicRegion) and $(D Region) is unimportant, so the latter should be the
-default choice.
-*/
-
-/**
-A $(D Region) allocator manages one block of memory provided at construction.
-There is no deallocation, and once the region is full, allocation requests
-return $(D null). Therefore, $(D Region)s are often used in conjunction
-with freelists, a fallback general-purpose allocator, or both.
-
-The region stores three words corresponding to the start of the store, the
-current position in the store, and the end of the store. One allocation entails
-rounding up the allocation size for alignment purposes, bumping the current
-pointer, and comparing it against the limit.
-
-The $(D minAlign) parameter establishes alignment. If $(D minAlign > 1), the
-sizes of all allocation requests are rounded up to a multiple of $(D minAlign).
-Applications aiming at maximum speed may want to choose $(D minAlign = 1) and
-control alignment externally.
-*/
-struct Region(uint minAlign = platformAlignment)
-{
-    static assert(minAlign.isGoodStaticAlignment);
-
-    private BasicRegion!(minAlign) base;
-    private void* _begin;
-
-    /**
-    Constructs a $(D Region) object backed by $(D buffer), which must be aligned
-    to $(D minAlign).
-    */
-    this(void[] buffer)
-    {
-        base = BasicRegion!minAlign(buffer);
-        assert(buffer.ptr !is &this);
-        _begin = base._current;
-    }
-
-    /**
-    Standard primitives.
-    */
-    enum uint alignment = minAlign;
-
-    /// Ditto
-    void[] allocate(size_t bytes)
-    {
-        return base.allocate(bytes);
-    }
-
-    /// Ditto
-    void[] alignedAllocate(size_t bytes, uint a)
-    {
-        return base.alignedAllocate(bytes, a);
-    }
-
-    /// Ditto
-    bool owns(void[] b) const
-    {
-        return b.ptr >= _begin && b.ptr + b.length <= base._end
-            || b is null;
-    }
-
-    /// Ditto
-    void deallocateAll()
-    {
-        base._current = _begin;
-    }
-
-    /**
-    Nonstandard function that gives away the initial buffer used by the range,
-    and makes the range unavailable for further allocations. This is useful for
-    deallocating the memory assigned to the region.
-    */
-    void[] relinquish()
-    {
-        auto result = _begin[0 .. base._end - _begin];
-        base._current = base._end;
-        return result;
-    }
-}
-
 ///
 unittest
 {
     import std.experimental.allocator.mallocator;
-    auto reg = Region!()(Mallocator.it.allocate(1024 * 64));
-    scope(exit) Mallocator.it.deallocate(reg.relinquish);
+    // Create a 64 KB region allocated with malloc
+    auto reg = Region!(Mallocator)(1024 * 64);
     auto b = reg.allocate(101);
     assert(b.length == 101);
+    // Destructor will free the memory
 }
 
 /**
@@ -209,21 +268,25 @@ make sure that at least $(D n) bytes are available in the region, use
 $(D InSituRegion!(n + a - 1, a)).
 
 */
-struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
+struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
+        Flag!"defineDeallocate" defineDeallocate = No.defineDeallocate)
 {
+    import std.algorithm : max;
+    import std.conv : to;
+
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size >= minAlign);
 
     @disable this(this);
 
-    // The store will be aligned to double.alignof, regardless of the requested
-    // alignment.
+    // state {
+    Region!(NullAllocator, minAlign, defineDeallocate) _impl;
     union
     {
         private ubyte[size] _store = void;
-        private double _forAlignmentOnly = void;
+        private double _forAlignmentOnly1 = void;
     }
-    private void* _crt, _end;
+    // }
 
     /**
     An alias for $(D minAlign), which must be a valid alignment (nonzero power
@@ -237,14 +300,18 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     assert(a2.alignment == 64);
     ----
     */
-    enum uint alignment = minAlign;
+    alias alignment = minAlign;
 
     private void lazyInit()
     {
-        assert(!_crt);
-        _crt = cast(void*) roundUpToMultipleOf(
-            cast(size_t) _store.ptr, alignment);
-        _end = _store.ptr + _store.length;
+        assert(!_impl._current);
+        static if (alignment > double.alignof)
+            _impl._current = _store.ptr.alignUpTo(alignment);
+        else
+            _impl._current = _store.ptr;
+        _impl._end = _store.ptr + _store.length;
+        _impl._begin = _impl._current;
+        assert(_impl._current.alignedAt(alignment));
     }
 
     /**
@@ -252,43 +319,51 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     accommodate the request. For efficiency reasons, if $(D bytes == 0) the
     function returns an empty non-null slice.
     */
-    void[] allocate(size_t bytes)
+    void[] allocate(size_t n)
     {
-        // Oddity: we don't return null for null allocation. Instead, we return
-        // an empty slice with a non-null ptr.
-        const rounded = bytes.roundUpToMultipleOf(alignment);
-        auto newCrt = _crt + rounded;
-        assert(newCrt >= _crt); // big overflow
-    again:
-        if (newCrt <= _end)
-        {
-            assert(_crt); // this relies on null + size > null
-            auto result = _crt[0 .. bytes];
-            _crt = newCrt;
-            return result;
-        }
-        // slow path
-        if (_crt) return null;
-        // Lazy initialize _crt
-        lazyInit();
-        newCrt = _crt + rounded;
-        goto again;
+        // Fast path
+    entry:
+        auto result = _impl.allocate(n);
+        if (result.length == n) return result;
+        // Slow path
+        if (_impl._current) return null; // no more room
+        lazyInit;
+        assert(_impl._current);
+        goto entry;
     }
 
     /**
     As above, but the memory allocated is aligned at $(D a) bytes.
     */
-    void[] alignedAllocate(size_t bytes, uint a)
+    void[] alignedAllocate(size_t n, uint a)
     {
-        // Just bump the pointer to the next good allocation
-        auto save = _crt;
-        _crt = cast(void*) roundUpToMultipleOf(
-            cast(size_t) _crt, a);
-        auto b = allocate(bytes);
-        if (b.ptr) return b;
-        // Failed, rollback
-        _crt = save;
-        return null;
+        // Fast path
+    entry:
+        auto result = _impl.alignedAllocate(n, a);
+        if (result.length == n) return result;
+        // Slow path
+        if (_impl._current) return null; // no more room
+        lazyInit;
+        assert(_impl._current);
+        goto entry;
+    }
+
+    /**
+    Deallocates $(D b). This works only if $(D b) was obtained as the last call
+    to $(D allocate); otherwise (i.e. another allocation has occurred since) it
+    does nothing. This semantics is tricky and therefore $(D deallocate) is
+    defined only if $(D Region) is instantiated with $(D Yes.defineDeallocate)
+    as the third template argument.
+
+    Params:
+    b = Block previously obtained by a call to $(D allocate) against this
+    allocator ($(D null) is allowed).
+    */
+    static if (defineDeallocate == Yes.defineDeallocate)
+    void deallocate(void[] b)
+    {
+        if (!_impl._current) lazyInit;
+        return _impl.deallocate(b);
     }
 
     /**
@@ -296,11 +371,20 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     allocation. For efficiency reasons, if $(D b is null) the function returns
     $(D false).
     */
-    bool owns(void[] b) const
+    bool owns(void[] b)
     {
-        // No nullptr
-        return b.ptr >= _store.ptr
-            && b.ptr + b.length <= _store.ptr + _store.length;
+        if (!_impl._current) lazyInit;
+        return _impl.owns(b);
+    }
+
+    /**
+    Expands an allocated block in place. Expansion will succeed only if the
+    block is the last allocated.
+    */
+    bool expand(ref void[] b, size_t delta)
+    {
+        if (!_impl._current) lazyInit;
+        return _impl.expand(b, delta);
     }
 
     /**
@@ -308,7 +392,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     */
     void deallocateAll()
     {
-        _crt = _store.ptr;
+        // We don't care to lazily init the region
+        _impl.deallocateAll;
     }
 
     /**
@@ -316,10 +401,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     */
     void[] allocateAll()
     {
-        auto s = available;
-        auto result = _crt[0 .. s];
-        _crt = _end;
-        return result;
+        if (!_impl._current) lazyInit;
+        return _impl.allocateAll;
     }
 
     /**
@@ -327,8 +410,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     */
     size_t available()
     {
-        if (!_crt) lazyInit();
-        return _end - _crt;
+        if (!_impl._current) lazyInit;
+        return _impl.available;
     }
 }
 
@@ -336,7 +419,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 unittest
 {
     // 128KB region, allocated to x86's cache line
-    InSituRegion!(128 * 1024, 64) r1;
+    InSituRegion!(128 * 1024, 16) r1;
     auto a1 = r1.allocate(101);
     assert(a1.length == 101);
 
@@ -366,11 +449,11 @@ unittest
 
 unittest
 {
-    InSituRegion!(4096) r1;
+    InSituRegion!(4096, 1) r1;
     auto a = r1.allocate(2001);
     assert(a.length == 2001);
     import std.conv : text;
-    assert(r1.available == 2080, text(r1.available));
+    assert(r1.available == 2095, text(r1.available));
 
     InSituRegion!(65536, 1024*4) r2;
     assert(r2.available <= 65536);
