@@ -1,358 +1,7 @@
 module std.experimental.allocator.heap_block;
 
 import std.experimental.allocator.common;
-import std.conv : text;
-
-/**
-Returns the number of most significant ones before a zero can be found in $(D x). If $(D x) contains no zeros (i.e. is equal to $(D ulong.max)), returns 64.
-*/
-private uint leadingOnes(ulong x)
-{
-    uint result = 0;
-    while (cast(long) x < 0)
-    {
-        ++result;
-        x <<= 1;
-    }
-    return result;
-}
-
-unittest
-{
-    assert(leadingOnes(0) == 0);
-    assert(leadingOnes(~0UL) == 64);
-    assert(leadingOnes(0xF000_0000_0000_0000) == 4);
-    assert(leadingOnes(0xE400_0000_0000_0000) == 3);
-    assert(leadingOnes(0xC700_0200_0000_0000) == 2);
-    assert(leadingOnes(0x8000_0030_0000_0000) == 1);
-    assert(leadingOnes(0x2000_0000_0000_0000) == 0);
-}
-
-/**
-Finds a run of contiguous ones in $(D x) of length at least $(D n).
-*/
-private uint findContigOnes(ulong x, uint n)
-{
-    while (n > 1)
-    {
-        immutable s = n >> 1;
-        x &= x << s;
-        n -= s;
-    }
-    return leadingOnes(~x);
-}
-
-unittest
-{
-    assert(findContigOnes(0x0000_0000_0000_0300, 2) == 54);
-
-    assert(findContigOnes(~0UL, 1) == 0);
-    assert(findContigOnes(~0UL, 2) == 0);
-    assert(findContigOnes(~0UL, 32) == 0);
-    assert(findContigOnes(~0UL, 64) == 0);
-    assert(findContigOnes(0UL, 1) == 64);
-
-    assert(findContigOnes(0x4000_0000_0000_0000, 1) == 1);
-    assert(findContigOnes(0x0000_0F00_0000_0000, 4) == 20);
-}
-
-/**
-Returns the number of trailing zeros of $(D x).
-*/
-private uint trailingZeros(ulong x)
-{
-    uint result;
-    while (result < 64 && !(x & (1UL << result)))
-    {
-        ++result;
-    }
-    return result;
-}
-
-unittest
-{
-    assert(trailingZeros(0) == 64);
-    assert(trailingZeros(1) == 0);
-    assert(trailingZeros(2) == 1);
-    assert(trailingZeros(3) == 0);
-    assert(trailingZeros(4) == 2);
-}
-
-/*
-Unconditionally sets the bits from lsb through msb in w to zero.
-*/
-private void setBits(ref ulong w, uint lsb, uint msb)
-{
-    assert(lsb <= msb && msb < 64);
-    const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
-    w |= mask;
-}
-
-unittest
-{
-    ulong w;
-    w = 0; setBits(w, 0, 63); assert(w == ulong.max);
-    w = 0; setBits(w, 1, 63); assert(w == ulong.max - 1);
-    w = 6; setBits(w, 0, 1); assert(w == 7);
-    w = 6; setBits(w, 3, 3); assert(w == 14);
-}
-
-/* Are bits from lsb through msb in w zero? If so, make then 1
-and return the resulting w. Otherwise, just return 0.
-*/
-private bool setBitsIfZero(ref ulong w, uint lsb, uint msb)
-{
-    assert(lsb <= msb && msb < 64);
-    const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
-    if (w & mask) return false;
-    w |= mask;
-    return true;
-}
-
-// Assigns bits in w from lsb through msb to zero.
-private void resetBits(ref ulong w, uint lsb, uint msb)
-{
-    assert(lsb <= msb && msb < 64);
-    const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
-    w &= ~mask;
-}
-
-/*
-Bit disposition is MSB=0 (leftmost, big endian).
-*/
-private struct BitVector
-{
-    ulong[] _rep;
-
-    auto rep() { return _rep; }
-
-    this(ulong[] data) { _rep = data; }
-
-    void opSliceAssign(bool b) { _rep[] = b ? ulong.max : 0; }
-
-    void opSliceAssign(bool b, ulong x, ulong y)
-    {
-        assert(x <= y && y <= _rep.length * 64);
-        if (x == y) return;
-        --y;
-        assert(x / 64 <= size_t.max);
-        immutable i1 = cast(size_t) (x / 64);
-        immutable uint b1 = 63 - x % 64;
-        assert(y / 64 <= size_t.max);
-        immutable i2 = cast(size_t) (y / 64);
-        immutable uint b2 = 63 - y % 64;
-        assert(i1 <= i2 && i2 < _rep.length);
-        if (i1 == i2)
-        {
-            // Inside the same word
-            assert(b1 >= b2);
-            if (b) setBits(_rep[i1], b2, b1);
-            else resetBits(_rep[i1], b2, b1);
-        }
-        else
-        {
-            // Spans multiple words
-            assert(i1 < i2);
-            if (b) setBits(_rep[i1], 0, b1);
-            else resetBits(_rep[i1], 0, b1);
-            _rep[i1 + 1 .. i2] = b;
-            if (b) setBits(_rep[i2], b2, 63);
-            else resetBits(_rep[i2], b2, 63);
-        }
-    }
-
-    bool opIndex(ulong x)
-    {
-        assert(x < length);
-        return (_rep[cast(size_t) (x / 64)]
-            & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
-    }
-
-    void opIndexAssign(bool b, ulong x)
-    {
-        assert(x / 64 <= size_t.max);
-        auto i = cast(size_t) (x / 64),
-            j = 0x8000_0000_0000_0000UL >> (x % 64);
-        if (b) _rep[i] |= j;
-        else _rep[i] &= ~j;
-    }
-
-    ulong length() const
-    {
-        return _rep.length * 64;
-    }
-
-    /* Returns the index of the first 1 to the right of i (including i itself),
-    or length if not found.
-    */
-    ulong find1(ulong i)
-    {
-        assert(i < length);
-        assert(i / 64 <= size_t.max);
-        auto w = cast(size_t) (i / 64);
-        auto b = i % 64; // 0 through 63, 0 when i == 0
-        auto mask = ulong.max >> b;
-        if (auto current = _rep[w] & mask)
-        {
-            // Great, found
-            return w * 64 + leadingOnes(~current);
-        }
-        // The current word doesn't have the solution, find the leftmost 1
-        // going to the right.
-        for (++w; w < _rep.length; ++w)
-        {
-            if (auto current = _rep[w])
-            {
-                return w * 64 + leadingOnes(~current);
-            }
-        }
-        return length;
-    }
-
-    /* Returns the index of the first 1 to the left of i (including i itself),
-    or ulong.max if not found.
-    */
-    ulong find1Backward(ulong i)
-    {
-        assert(i < length);
-        auto w = cast(size_t) (i / 64);
-        auto b = 63 - (i % 64); // 0 through 63, 63 when i == 0
-        auto mask = ~((1UL << b) - 1);
-        assert(mask != 0);
-        // First, let's see if the current word has a bit larger than ours.
-        if (auto currentWord = _rep[w] & mask)
-        {
-            // Great, this word contains the result.
-            return w * 64 + 63 - currentWord.trailingZeros;
-        }
-        // The current word doesn't have the solution, find the rightmost 1
-        // going to the left.
-        while (w >= 1)
-        {
-            --w;
-            if (auto currentWord = _rep[w])
-                return w * 64 + (63 - currentWord.trailingZeros);
-        }
-        return ulong.max;
-    }
-
-    /// Are all bits zero?
-    bool allAre0() const
-    {
-        foreach (w; _rep) if (w) return false;
-        return true;
-    }
-
-    /// Are all bits one?
-    bool allAre1() const
-    {
-        foreach (w; _rep) if (w != ulong.max) return false;
-        return true;
-    }
-
-    ulong findZeros(immutable size_t howMany, ulong start)
-    {
-        assert(start < length);
-        assert(howMany > 64);
-        auto i = cast(size_t) (start / 64);
-        while (_rep[i] & 1)
-        {
-            // No trailing zeros in this word, try the next one
-            if (++i == _rep.length) return ulong.max;
-            start = i * 64;
-        }
-        // Adjust start to have only trailing zeros after it
-        auto prefixLength = 64;
-        while (_rep[i] & (ulong.max >> (64 - prefixLength)))
-        {
-            assert(prefixLength > 0);
-            --prefixLength;
-            ++start;
-        }
-
-        assert(howMany > prefixLength);
-        auto needed = howMany - prefixLength;
-        for (++i; needed >= 64; needed -= 64, ++i)
-        {
-            if (i >= _rep.length) return ulong.max;
-            if (_rep[i] != 0) return findZeros(howMany, i * 64);
-        }
-        // Leftover < 64 bits
-        assert(needed < 64);
-        if (!needed) return start;
-        if (i >= _rep.length) return ulong.max;
-        if (leadingOnes(~_rep[i]) >= needed) return start;
-        return findZeros(howMany, i * 64);
-    }
-}
-
-unittest
-{
-    auto v = BitVector(new ulong[10]);
-    assert(v.length == 640);
-
-    v[] = 0;
-    v[53] = 1;
-    assert(v[52] == 0);
-    assert(v[53] == 1);
-    assert(v[54] == 0);
-
-    v[] = 0;
-    v[53 .. 55] = 1;
-    assert(v[52] == 0);
-    assert(v[53] == 1);
-    assert(v[54] == 1);
-    assert(v[55] == 0);
-
-    v[] = 0;
-    v[2 .. 65] = 1;
-    assert(v.rep[0] == 0x3FFF_FFFF_FFFF_FFFF);
-    assert(v.rep[1] == 0x8000_0000_0000_0000);
-    assert(v.rep[2] == 0);
-
-    v[] = 0;
-    assert(v.find1Backward(0) == ulong.max);
-    assert(v.find1Backward(43) == ulong.max);
-    assert(v.find1Backward(83) == ulong.max);
-
-    v[0] = 1;
-    assert(v.find1Backward(0) == 0);
-    assert(v.find1Backward(43) == 0);
-    assert(v.find1Backward(83) == 0, text(v.find1Backward(83)));
-
-    v[0] = 0;
-    v[101] = 1;
-    assert(v.find1Backward(0) == ulong.max);
-    assert(v.find1Backward(43) == ulong.max);
-    assert(v.find1Backward(83) == ulong.max);
-    assert(v.find1Backward(100) == ulong.max);
-    assert(v.find1Backward(101) == 101);
-    assert(v.find1Backward(553) == 101);
-
-    v[0 .. v.length] = 0;
-    v[v.length .. v.length] = 0;
-    v[0 .. 0] = 0;
-
-    v[] = 0;
-    assert(v.find1(0) == v.length);
-    v[139] = 1;
-    assert(v.find1(0) == 139);
-    assert(v.find1(100) == 139);
-    assert(v.find1(138) == 139);
-    assert(v.find1(139) == 139);
-    assert(v.find1(140) == v.length);
-
-    v[] = 0;
-    assert(v.findZeros(100, 0) == 0);
-    foreach (i; 0 .. 500)
-        assert(v.findZeros(100, i) == i, text(v.findZeros(100, i), " != ", i));
-    assert(v.findZeros(540, 99) == 99);
-    assert(v.findZeros(99, 540) == 540);
-    assert(v.findZeros(540, 100) == 100);
-    assert(v.findZeros(640, 0) == 0);
-    assert(v.findZeros(641, 1) == ulong.max);
-    assert(v.findZeros(641, 100) == ulong.max);
-}
+import std.experimental.allocator.null_allocator;
 
 /**
 
@@ -361,20 +10,28 @@ of memory organized in blocks, each of size $(D theBlockSize). A block is a unit
 of allocation. A bitmap serves as bookkeeping data, more precisely one bit per
 block indicating whether that block is currently allocated or not.
 
+Passing $(D NullAllocator) as $(D ParentAllocator) (the default) means user code
+manages allocation of the memory block from the outside; in that case
+$(D HeapBlock) must be constructed with a $(D void[]) preallocated block and
+has no responsibility regarding the lifetime of its support underlying storage.
+If another allocator type is passed, $(D HeapBlock) defines a destructor that
+uses the parent allocator to release the memory block. That makes the combination of $(D AllocatorList), $(D HeapBlock), and a back-end allocator such as $(D MmapAllocator) a simple and scalable solution for memory allocation.
+
 There are advantages to storing bookkeeping data separated from the payload
-(as opposed to e.g. $(D AffixAllocator)). The layout is more compact, searching
-for a free block during allocation enjoys better cache locality, and
+(as opposed to e.g. using $(D AffixAllocator) to store metadata together with
+each allocation). The layout is more compact (overhead is one bit per block),
+searching for a free block during allocation enjoys better cache locality, and
 deallocation does not touch memory around the payload being deallocated (which
 is often cold).
 
 Allocation requests are handled on a first-fit basis. Although linear in
 complexity, allocation is in practice fast because of the compact bookkeeping
-representation, use of simple and fast bitwise routines, and memoization of the
+representation, use of simple and fast bitwise routines, and caching of the
 first available block position. A known issue with this general approach is
 fragmentation, partially mitigated by coalescing. Since $(D HeapBlock) does
-not maintain the allocated size, freeing memory implicitly coalesces free blocks
-together. Also, tuning $(D blockSize) has a considerable impact on both internal
-and external fragmentation.
+not need to maintain the allocated size, freeing memory implicitly coalesces
+free blocks together. Also, tuning $(D blockSize) has a considerable impact on
+both internal and external fragmentation.
 
 The size of each block can be selected either during compilation or at run
 time. Statically-known block sizes are frequent in practice and yield slightly
@@ -386,16 +43,26 @@ block size to the constructor.
 TODO: implement $(D alignedAllocate) and $(D alignedReallocate).
 
 */
-struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
+struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
+    ParentAllocator = NullAllocator)
 {
     import std.typecons;
+    import std.traits : hasMember;
+    version(unittest) import std.stdio;
+    import std.conv : text;
+
     unittest
     {
         import std.experimental.allocator.mallocator;
-        auto m = AlignedMallocator.it.alignedAllocate(1024 * 64, theAlignment);
+        import std.algorithm : max;
+        auto m = AlignedMallocator.it.alignedAllocate(1024 * 64,
+            max(theAlignment, cast(uint) size_t.sizeof));
         testAllocator!(() => HeapBlock(m));
     }
     static assert(theBlockSize > 0 && theAlignment.isGoodStaticAlignment);
+    static assert(theBlockSize == chooseAtRuntime
+        || theBlockSize % theAlignment == 0,
+        "Block size must be a multiple of the alignment");
 
     /**
     If $(D blockSize == chooseAtRuntime), $(D HeapBlock) offers a read/write
@@ -418,16 +85,66 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
         private uint _blockSize;
     }
 
+    static if (is(ParentAllocator == NullAllocator))
+    {
+        private enum parentAlignment = platformAlignment;
+    }
+    else
+    {
+        private alias parentAlignment = ParentAllocator.alignment;
+        static assert(parentAlignment >= ulong.alignof);
+    }
+
     /**
     The alignment offered is user-configurable statically through parameter
     $(D theAlignment), defaulted to $(D platformAlignment).
     */
     alias alignment = theAlignment;
 
+    // state {
+    /**
+    The parent allocator. Depending on whether $(D ParentAllocator) holds state
+    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    */
+    static if (stateSize!ParentAllocator)
+    {
+        ParentAllocator parent;
+    }
+    else
+    {
+        alias parent = ParentAllocator.it;
+    }
     private uint _blocks;
     private BitVector _control;
     private void[] _payload;
     private size_t _startIdx;
+    // }
+
+    private size_t totalAllocation(size_t capacity)
+    {
+        auto blocks = capacity.divideRoundUp(blockSize);
+        auto leadingUlongs = blocks.divideRoundUp(64);
+        import std.algorithm : min;
+        auto initialAlignment = min(parentAlignment,
+            1U << trailingZeros(leadingUlongs * 8));
+        auto maxSlack = alignment <= initialAlignment
+            ? 0
+            : alignment - initialAlignment;
+        //writeln(maxSlack);
+        return leadingUlongs * 8 + maxSlack + blockSize * blocks;
+    }
+
+    /**
+    Constructs a block allocator given desired capacity in bytes.
+    */
+    static if (!is(ParentAllocator == NullAllocator))
+    this(size_t capacity)
+    {
+        size_t toAllocate = totalAllocation(capacity);
+        auto data = parent.allocate(toAllocate);
+        this(data);
+        assert(_blocks * blockSize >= capacity);
+    }
 
     /**
     Constructs a block allocator given a hunk of memory. The layout puts the
@@ -435,7 +152,9 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
     */
     this(void[] data)
     {
-        assert(data.ptr.alignedAt(alignment), "Data must be aligned properly");
+        immutable a = data.ptr.effectiveAlignment;
+        assert(a >= ulong.alignof || !data.ptr,
+            "Data must be aligned properly");
 
         immutable ulong totalBits = data.length * 8;
         immutable ulong bitsPerBlock = blockSize * 8 + 1;
@@ -447,21 +166,31 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment)
         // blocks found.
         for (; _blocks; --_blocks)
         {
-            immutable size_t controlWords = (_blocks + 63) / 64;
-            immutable controlBytesRounded =
-                roundUpToMultipleOf(controlWords * 8, alignment);
-            immutable payloadBytes = _blocks * blockSize;
-            if (data.length >= controlBytesRounded + payloadBytes)
+            immutable controlWords = _blocks.divideRoundUp(64);
+            auto payload = data[controlWords * 8 .. $].roundStartToMultipleOf(
+                alignment);
+            if (payload.length < _blocks * blockSize)
             {
-                // Enough room, yay. Initialize everything.
-                _control = BitVector((cast(ulong*)data.ptr)[0 .. controlWords]);
-                _control[] = 0;
-                _payload = data[controlBytesRounded .. $];
-                assert(payloadBytes <= _payload.length);
-                _payload = _payload[0 .. payloadBytes];
-                break;
+                // Overestimated
+                continue;
             }
+            _control = BitVector((cast(ulong*)data.ptr)[0 .. controlWords]);
+            _control[] = 0;
+            _payload = payload;
+            break;
         }
+    }
+
+    /**
+    If $(D ParentAllocator) is not $(D NullAllocator) and defines $(D
+    deallocate), the destructor is defined to deallocate the block held.
+    */
+    static if (!is(ParentAllocator == NullAllocator)
+        && hasMember!(ParentAllocator, "deallocate"))
+    ~this()
+    {
+        auto start = _control.rep.ptr, end = _payload.ptr + _payload.length;
+        parent.deallocate(start[0 .. end - start]);
     }
 
     /*
@@ -878,18 +607,21 @@ version(none) unittest
 
 unittest
 {
-    testAllocator!(() => HeapBlock!(64)(new void[1024 * 64]));
+    import std.experimental.allocator.gc_allocator;
+    testAllocator!(() => HeapBlock!(64, 8, GCAllocator)(1024 * 64));
 }
 
 unittest
 {
     static void testAllocateAll(size_t bs)(uint blocks, uint blocksAtATime)
     {
+        import std.algorithm : min;
         assert(bs);
         import std.experimental.allocator.gc_allocator;
-        auto a = HeapBlock!(bs)(
+        auto a = HeapBlock!(bs, min(bs, platformAlignment))(
             GCAllocator.it.allocate((blocks * bs * 8 + blocks) / 8)
         );
+        import std.conv : text;
         assert(blocks >= a._blocks, text(blocks, " < ", a._blocks));
         blocks = a._blocks;
 
@@ -987,12 +719,33 @@ unittest
 
     testAllocateAll!(1)(0, 3);
     testAllocateAll!(1)(24, 3);
-    testAllocateAll!(3000)(100, 1);
-    testAllocateAll!(3000)(100, 3);
+    testAllocateAll!(3008)(100, 1);
+    testAllocateAll!(3008)(100, 3);
 
     testAllocateAll!(1)(0, 128);
     testAllocateAll!(1)(128 * 1, 128);
     testAllocateAll!(128 * 20)(13 * 128, 128);
+}
+
+// Test totakAllocation
+unittest
+{
+    HeapBlock!(8, 8, NullAllocator) h1;
+    assert(h1.totalAllocation(1) == 16);
+    assert(h1.totalAllocation(64) == 8 + 8 * 8);
+    //writeln(h1.totalAllocation(8 * 64));
+    assert(h1.totalAllocation(8 * 64) == 8 + 8 * 64);
+    assert(h1.totalAllocation(8 * 63) == 8 + 8 * 63);
+    assert(h1.totalAllocation(8 * 64 + 1) == 16 + 8 * 65);
+
+    HeapBlock!(64, 8, NullAllocator) h2;
+    assert(h2.totalAllocation(1) == 8 + 64);
+    assert(h2.totalAllocation(64 * 64) == 8 + 64 * 64);
+
+    HeapBlock!(4096, 4096, NullAllocator) h3;
+    assert(h3.totalAllocation(1) == 2 * 4096);
+    assert(h3.totalAllocation(64 * 4096) == 65 * 4096);
+    assert(h3.totalAllocation(64 * 4096 + 1) == 66 * 4096);
 }
 
 // HeapBlockWithInternalPointers
@@ -1010,16 +763,17 @@ is the size of the object within which the internal pointer is looked up.
 struct HeapBlockWithInternalPointers(
     size_t theBlockSize, uint theAlignment = platformAlignment)
 {
+    import std.conv : text;
     unittest
     {
         import std.experimental.allocator.mallocator;
         auto m = AlignedMallocator.it.alignedAllocate(1024 * 64, theAlignment);
         testAllocator!(() => HeapBlockWithInternalPointers(m));
     }
-    private HeapBlock!(theBlockSize, theAlignment) _heap;
+    private HeapBlock!(theBlockSize, theAlignment, NullAllocator) _heap;
     private BitVector _allocStart;
 
-    this(void[] b) { _heap = HeapBlock!(theBlockSize, theAlignment)(b); }
+    this(void[] b) { _heap = HeapBlock!(theBlockSize, theAlignment, NullAllocator)(b); }
 
     // Makes sure there's enough room for _allocStart
     private bool ensureRoomForAllocStart(size_t len)
@@ -1202,4 +956,335 @@ unittest
     assert(h.expand(b, 1));
     assert(b.length == 4097);
     assert(h.resolveInternalPointer(b.ptr + 4096).ptr is b.ptr);
+}
+
+/**
+Returns the number of most significant ones before a zero can be found in $(D
+x). If $(D x) contains no zeros (i.e. is equal to $(D ulong.max)), returns 64.
+*/
+private uint leadingOnes(ulong x)
+{
+    uint result = 0;
+    while (cast(long) x < 0)
+    {
+        ++result;
+        x <<= 1;
+    }
+    return result;
+}
+
+unittest
+{
+    assert(leadingOnes(0) == 0);
+    assert(leadingOnes(~0UL) == 64);
+    assert(leadingOnes(0xF000_0000_0000_0000) == 4);
+    assert(leadingOnes(0xE400_0000_0000_0000) == 3);
+    assert(leadingOnes(0xC700_0200_0000_0000) == 2);
+    assert(leadingOnes(0x8000_0030_0000_0000) == 1);
+    assert(leadingOnes(0x2000_0000_0000_0000) == 0);
+}
+
+/**
+Finds a run of contiguous ones in $(D x) of length at least $(D n).
+*/
+private uint findContigOnes(ulong x, uint n)
+{
+    while (n > 1)
+    {
+        immutable s = n >> 1;
+        x &= x << s;
+        n -= s;
+    }
+    return leadingOnes(~x);
+}
+
+unittest
+{
+    assert(findContigOnes(0x0000_0000_0000_0300, 2) == 54);
+
+    assert(findContigOnes(~0UL, 1) == 0);
+    assert(findContigOnes(~0UL, 2) == 0);
+    assert(findContigOnes(~0UL, 32) == 0);
+    assert(findContigOnes(~0UL, 64) == 0);
+    assert(findContigOnes(0UL, 1) == 64);
+
+    assert(findContigOnes(0x4000_0000_0000_0000, 1) == 1);
+    assert(findContigOnes(0x0000_0F00_0000_0000, 4) == 20);
+}
+
+/*
+Unconditionally sets the bits from lsb through msb in w to zero.
+*/
+private void setBits(ref ulong w, uint lsb, uint msb)
+{
+    assert(lsb <= msb && msb < 64);
+    const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
+    w |= mask;
+}
+
+unittest
+{
+    ulong w;
+    w = 0; setBits(w, 0, 63); assert(w == ulong.max);
+    w = 0; setBits(w, 1, 63); assert(w == ulong.max - 1);
+    w = 6; setBits(w, 0, 1); assert(w == 7);
+    w = 6; setBits(w, 3, 3); assert(w == 14);
+}
+
+/* Are bits from lsb through msb in w zero? If so, make then 1
+and return the resulting w. Otherwise, just return 0.
+*/
+private bool setBitsIfZero(ref ulong w, uint lsb, uint msb)
+{
+    assert(lsb <= msb && msb < 64);
+    const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
+    if (w & mask) return false;
+    w |= mask;
+    return true;
+}
+
+// Assigns bits in w from lsb through msb to zero.
+private void resetBits(ref ulong w, uint lsb, uint msb)
+{
+    assert(lsb <= msb && msb < 64);
+    const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
+    w &= ~mask;
+}
+
+/*
+Bit disposition is MSB=0 (leftmost, big endian).
+*/
+private struct BitVector
+{
+    ulong[] _rep;
+
+    auto rep() { return _rep; }
+
+    this(ulong[] data) { _rep = data; }
+
+    void opSliceAssign(bool b) { _rep[] = b ? ulong.max : 0; }
+
+    void opSliceAssign(bool b, ulong x, ulong y)
+    {
+        assert(x <= y && y <= _rep.length * 64);
+        if (x == y) return;
+        --y;
+        assert(x / 64 <= size_t.max);
+        immutable i1 = cast(size_t) (x / 64);
+        immutable uint b1 = 63 - x % 64;
+        assert(y / 64 <= size_t.max);
+        immutable i2 = cast(size_t) (y / 64);
+        immutable uint b2 = 63 - y % 64;
+        assert(i1 <= i2 && i2 < _rep.length);
+        if (i1 == i2)
+        {
+            // Inside the same word
+            assert(b1 >= b2);
+            if (b) setBits(_rep[i1], b2, b1);
+            else resetBits(_rep[i1], b2, b1);
+        }
+        else
+        {
+            // Spans multiple words
+            assert(i1 < i2);
+            if (b) setBits(_rep[i1], 0, b1);
+            else resetBits(_rep[i1], 0, b1);
+            _rep[i1 + 1 .. i2] = b;
+            if (b) setBits(_rep[i2], b2, 63);
+            else resetBits(_rep[i2], b2, 63);
+        }
+    }
+
+    bool opIndex(ulong x)
+    {
+        assert(x < length);
+        return (_rep[cast(size_t) (x / 64)]
+            & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
+    }
+
+    void opIndexAssign(bool b, ulong x)
+    {
+        assert(x / 64 <= size_t.max);
+        auto i = cast(size_t) (x / 64),
+            j = 0x8000_0000_0000_0000UL >> (x % 64);
+        if (b) _rep[i] |= j;
+        else _rep[i] &= ~j;
+    }
+
+    ulong length() const
+    {
+        return _rep.length * 64;
+    }
+
+    /* Returns the index of the first 1 to the right of i (including i itself),
+    or length if not found.
+    */
+    ulong find1(ulong i)
+    {
+        assert(i < length);
+        assert(i / 64 <= size_t.max);
+        auto w = cast(size_t) (i / 64);
+        auto b = i % 64; // 0 through 63, 0 when i == 0
+        auto mask = ulong.max >> b;
+        if (auto current = _rep[w] & mask)
+        {
+            // Great, found
+            return w * 64 + leadingOnes(~current);
+        }
+        // The current word doesn't have the solution, find the leftmost 1
+        // going to the right.
+        for (++w; w < _rep.length; ++w)
+        {
+            if (auto current = _rep[w])
+            {
+                return w * 64 + leadingOnes(~current);
+            }
+        }
+        return length;
+    }
+
+    /* Returns the index of the first 1 to the left of i (including i itself),
+    or ulong.max if not found.
+    */
+    ulong find1Backward(ulong i)
+    {
+        assert(i < length);
+        auto w = cast(size_t) (i / 64);
+        auto b = 63 - (i % 64); // 0 through 63, 63 when i == 0
+        auto mask = ~((1UL << b) - 1);
+        assert(mask != 0);
+        // First, let's see if the current word has a bit larger than ours.
+        if (auto currentWord = _rep[w] & mask)
+        {
+            // Great, this word contains the result.
+            return w * 64 + 63 - currentWord.trailingZeros;
+        }
+        // The current word doesn't have the solution, find the rightmost 1
+        // going to the left.
+        while (w >= 1)
+        {
+            --w;
+            if (auto currentWord = _rep[w])
+                return w * 64 + (63 - currentWord.trailingZeros);
+        }
+        return ulong.max;
+    }
+
+    /// Are all bits zero?
+    bool allAre0() const
+    {
+        foreach (w; _rep) if (w) return false;
+        return true;
+    }
+
+    /// Are all bits one?
+    bool allAre1() const
+    {
+        foreach (w; _rep) if (w != ulong.max) return false;
+        return true;
+    }
+
+    ulong findZeros(immutable size_t howMany, ulong start)
+    {
+        assert(start < length);
+        assert(howMany > 64);
+        auto i = cast(size_t) (start / 64);
+        while (_rep[i] & 1)
+        {
+            // No trailing zeros in this word, try the next one
+            if (++i == _rep.length) return ulong.max;
+            start = i * 64;
+        }
+        // Adjust start to have only trailing zeros after it
+        auto prefixLength = 64;
+        while (_rep[i] & (ulong.max >> (64 - prefixLength)))
+        {
+            assert(prefixLength > 0);
+            --prefixLength;
+            ++start;
+        }
+
+        assert(howMany > prefixLength);
+        auto needed = howMany - prefixLength;
+        for (++i; needed >= 64; needed -= 64, ++i)
+        {
+            if (i >= _rep.length) return ulong.max;
+            if (_rep[i] != 0) return findZeros(howMany, i * 64);
+        }
+        // Leftover < 64 bits
+        assert(needed < 64);
+        if (!needed) return start;
+        if (i >= _rep.length) return ulong.max;
+        if (leadingOnes(~_rep[i]) >= needed) return start;
+        return findZeros(howMany, i * 64);
+    }
+}
+
+unittest
+{
+    auto v = BitVector(new ulong[10]);
+    assert(v.length == 640);
+
+    v[] = 0;
+    v[53] = 1;
+    assert(v[52] == 0);
+    assert(v[53] == 1);
+    assert(v[54] == 0);
+
+    v[] = 0;
+    v[53 .. 55] = 1;
+    assert(v[52] == 0);
+    assert(v[53] == 1);
+    assert(v[54] == 1);
+    assert(v[55] == 0);
+
+    v[] = 0;
+    v[2 .. 65] = 1;
+    assert(v.rep[0] == 0x3FFF_FFFF_FFFF_FFFF);
+    assert(v.rep[1] == 0x8000_0000_0000_0000);
+    assert(v.rep[2] == 0);
+
+    v[] = 0;
+    assert(v.find1Backward(0) == ulong.max);
+    assert(v.find1Backward(43) == ulong.max);
+    assert(v.find1Backward(83) == ulong.max);
+
+    v[0] = 1;
+    assert(v.find1Backward(0) == 0);
+    assert(v.find1Backward(43) == 0);
+    import std.conv : text;
+    assert(v.find1Backward(83) == 0, text(v.find1Backward(83)));
+
+    v[0] = 0;
+    v[101] = 1;
+    assert(v.find1Backward(0) == ulong.max);
+    assert(v.find1Backward(43) == ulong.max);
+    assert(v.find1Backward(83) == ulong.max);
+    assert(v.find1Backward(100) == ulong.max);
+    assert(v.find1Backward(101) == 101);
+    assert(v.find1Backward(553) == 101);
+
+    v[0 .. v.length] = 0;
+    v[v.length .. v.length] = 0;
+    v[0 .. 0] = 0;
+
+    v[] = 0;
+    assert(v.find1(0) == v.length);
+    v[139] = 1;
+    assert(v.find1(0) == 139);
+    assert(v.find1(100) == 139);
+    assert(v.find1(138) == 139);
+    assert(v.find1(139) == 139);
+    assert(v.find1(140) == v.length);
+
+    v[] = 0;
+    assert(v.findZeros(100, 0) == 0);
+    foreach (i; 0 .. 500)
+        assert(v.findZeros(100, i) == i, text(v.findZeros(100, i), " != ", i));
+    assert(v.findZeros(540, 99) == 99);
+    assert(v.findZeros(99, 540) == 540);
+    assert(v.findZeros(540, 100) == 100);
+    assert(v.findZeros(640, 0) == 0);
+    assert(v.findZeros(641, 1) == ulong.max);
+    assert(v.findZeros(641, 100) == ulong.max);
 }

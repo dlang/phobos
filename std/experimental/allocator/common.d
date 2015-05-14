@@ -259,6 +259,28 @@ unittest
     assert(((size_t.max >> 1) + 1).roundUpToPowerOf2 == (size_t.max >> 1) + 1);
 }
 
+/**
+Returns the number of trailing zeros of $(D x).
+*/
+package uint trailingZeros(ulong x)
+{
+    uint result;
+    while (result < 64 && !(x & (1UL << result)))
+    {
+        ++result;
+    }
+    return result;
+}
+
+unittest
+{
+    assert(trailingZeros(0) == 64);
+    assert(trailingZeros(1) == 0);
+    assert(trailingZeros(2) == 1);
+    assert(trailingZeros(3) == 0);
+    assert(trailingZeros(4) == 2);
+}
+
 /*
 */
 bool alignedAt(void* ptr, uint alignment)
@@ -268,11 +290,36 @@ bool alignedAt(void* ptr, uint alignment)
 
 /*
 */
+package uint effectiveAlignment(void* ptr)
+{
+    return 1U << trailingZeros(cast(size_t) ptr);
+}
+
+unittest
+{
+    int x;
+    assert(effectiveAlignment(&x) >= int.alignof);
+}
+
+/*
+Aligns a pointer down to a specified alignment. The resulting pointer is less
+than or equal to the given pointer.
+*/
 void* alignDownTo(void* ptr, uint alignment)
 {
     assert(alignment.isPowerOf2);
     return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
 }
+
+/*
+Aligns a pointer up to a specified alignment. The resulting pointer is less
+than or equal to the given pointer.
+*/
+//void* alignUpTo(void* ptr, uint alignment)
+//{
+//    assert(alignment.isPowerOf2);
+//    return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
+//}
 
 package bool isPowerOf2(uint x)
 {
