@@ -4865,10 +4865,157 @@ unittest
     assert(rc1 == 5);
     // No more allocation, add just one extra reference count
     auto rc2 = rc1;
+    assert(rc1.refCountedStore.refCount == 2);
     // Reference semantics
     rc2 = 42;
     assert(rc1 == 42);
     // the pair will be freed when rc1 and rc2 go out of scope
+}
+
+// recursively destroy a class instance
+private void _destroy(T)(T obj) if (is(T == class))
+{
+     foreach (C; TypeTuple!(T, BaseClassesTuple!T))
+     {
+         static if (__traits(hasMember, C, "__dtor"))
+             (cast(C)obj).__dtor();
+     }
+     // leak monitor b/c destruction would be impure, will be collected by the GC
+}
+
+/// RefCounted implementation for classes.
+struct RefCounted(T)
+    if (is(T == class))
+{
+    /// $(D RefCounted) storage implementation.
+    struct RefCountedStore
+    {
+        struct Impl
+        {
+            size_t _count;
+            typeof(&._destroy!T) _destroy; // polymorph destructor
+            ubyte[__traits(classInstanceSize, T)] _payload;
+        }
+        Impl* _store;
+
+        /// Returns `true` if the underlying store has been allocated and initialized.
+        @property nothrow @safe
+        bool isInitialized() const
+        {
+            return _store !is null;
+        }
+
+        /// Get the underlying reference count.
+        @property nothrow @safe
+        size_t refCount() const
+        {
+            return _store._count;
+        }
+
+    private:
+
+        void destroy()
+        {
+            import core.memory : GC;
+            import core.stdc.stdlib : free;
+
+            _store._destroy(cast(T)_store._payload.ptr);
+            static if (hasIndirections!T)
+                GC.removeRange(_store._payload.ptr);
+            free(_store);
+            _store = null;
+        }
+    }
+    private RefCountedStore _refCounted;
+
+    /// Returns storage implementation struct.
+    @property nothrow @safe
+    ref inout(RefCountedStore) refCountedStore() inout
+    {
+        return _refCounted;
+    }
+
+    /// Boolean conversion for RefCounted, true when initialized.
+    bool opCast(T:bool)() const @safe
+    {
+        return _refCounted.isInitialized;
+    }
+
+    /// explicit constructor for null initialized RefCounted
+    this(typeof(null))
+    {
+    }
+
+    /// copy constructor for other RefCounted class
+    this(U)(RefCounted!U u)
+        if (is(U == class) && is(U : T))
+    {
+        // possibly polymorph conversion
+        _refCounted._store = cast(RefCountedStore.Impl*)u._refCounted._store;
+        // incref
+        if (_refCounted._store !is null)
+            ++_refCounted._store._count;
+    }
+
+    /// Postblit constructor to track reference count.
+    this(this)
+    {
+        ++_refCounted._store._count;
+    }
+
+    /**
+       Destructor that destroys and frees the payload when the ref count goes to zero.
+
+       Note: This doesn't destroy a possibly attached monitor and won't call dispose events.
+    */
+    ~this()
+    {
+        if (_refCounted._store is null || --_refCounted._store._count)
+            return;
+        _refCounted.destroy();
+    }
+
+    /// assign another ref counted class (can be a derived class)
+    void opAssign(U)(RefCounted!U u)
+        if (is(U == class) && is(U : T))
+    {
+        if (_refCounted._store !is null)
+        {
+            if (--_refCounted._store._count == 0)
+                _refCounted.destroy();
+        }
+        // possibly polymorph conversion
+        _refCounted._store = cast(RefCountedStore.Impl*)u._refCounted._store;
+        // incref
+        if (_refCounted._store !is null)
+            ++_refCounted._store._count;
+    }
+
+    /// nullify this RefCounted
+    void opAssign(typeof(null))
+    {
+        if (_refCounted._store !is null)
+        {
+            if (--_refCounted._store._count == 0)
+                _refCounted.destroy();
+        }
+        _refCounted._store = null;
+    }
+
+    /**
+       Get the underlying payload.
+
+       Note that getting a class reference is currently unsafe
+       as there is currently no way to stop it from escaping. (see DIP69)
+     */
+    @property @system
+    inout(T) refCountedPayload() inout
+    {
+        return cast(inout T) _refCounted._store._payload.ptr;
+    }
+
+    /// Forward to payload
+    alias refCountedPayload this;
 }
 
 unittest
@@ -4916,6 +5063,13 @@ unittest
 
     RefCounted!int p1, p2;
     swap(p1, p2);
+}
+
+unittest
+{
+    static class Foo {}
+    RefCounted!Foo rc = null;
+    auto rc2 = RefCounted!Foo(null);
 }
 
 // 6606
@@ -4997,6 +5151,160 @@ unittest
     auto rcFile2 = rcFile;
     assert(rcFile.refCountedStore.refCount == 2);
     // file gets properly closed when last reference is dropped
+}
+
+/**
+ * Constructs a `RefCounted` instance of type `T` and initializes it with `args`.
+ *
+ * Note: Nested classes and structs cannot be constructed at present time,
+ *    as there is no way to transfer the closure's frame pointer into this function.
+ *
+ * Params:
+ *   args = The constructor arguments; can be empty
+ * Returns:
+ *   An initialized `RefCounted` of type `T`.
+ * See_Also:
+ *   $(WEB http://en.cppreference.com/w/cpp/memory/shared_ptr/make_shared, C++'s make_shared)
+ */
+RefCounted!T refCounted(T, A...)(auto ref A args)
+    if (__traits(compiles, new T(args)))
+{
+    import core.memory : GC;
+    import core.stdc.stdlib : malloc;
+    import std.conv : emplace;
+    import core.exception : onOutOfMemoryError;
+
+    RefCounted!T.RefCountedStore rc = void;
+    rc._store = cast(rc.Impl*)malloc(rc.Impl.sizeof);
+    if (rc._store is null)
+        onOutOfMemoryError();
+
+    static if (hasIndirections!T)
+        GC.addRange(rc._store._payload.ptr, T.sizeof);
+
+    static if (is(T == class))
+    {
+        emplace!T(rc._store._payload[], args);
+        rc._store._destroy = &_destroy!T;
+    }
+    else
+    {
+        emplace!T(&rc._store._payload, args);
+    }
+
+    rc._store._count = 1;
+    RefCounted!T res = void;
+    res._refCounted = rc;
+    return res;
+}
+
+///
+@nogc unittest
+{
+    static struct Foo
+    {
+        int val;
+    }
+
+    // A struct instance will be constructed on the heap using malloc/free.
+    auto rc1 = refCounted!Foo(5);
+    assert(rc1.val == 5);
+    // No more allocation, add just one extra reference count
+    auto rc2 = rc1;
+    assert(rc1.refCountedStore.refCount == 2);
+    // Reference semantics
+    rc2.val = 42;
+    assert(rc1.val == 42);
+    // It's not possible to replace the instance
+    static assert(!__traits(compiles, rc1 = new Foo(12)));
+    // the instance will be freed when rc1 and rc2 go out of scope
+}
+
+/// RefCounted also works with classes.
+@nogc unittest
+{
+    static class Foo
+    {
+        this(int val) @nogc { this.val = val; }
+        int val;
+    }
+
+    // A class instance will be constructed on the heap using malloc/free.
+    auto rc = refCounted!Foo(5);
+    assert(rc.val == 5);
+}
+
+/// RefCounted classes are polymorph just like their GC allocated cousins.
+@nogc nothrow unittest
+{
+    static class Base
+    {
+        ~this() @nogc nothrow {}
+        string name() @nogc nothrow { return "base"; }
+    }
+
+    static class Derived : Base
+    {
+        override string name() @nogc { return "derived"; }
+    }
+
+    auto base = refCounted!Base();
+    RefCounted!Base derived = refCounted!Derived();
+
+    assert(base.name == "base");
+    assert(derived.name == "derived");
+
+    base = derived; // assign derived to base class
+    assert(base.name == "derived");
+    assert(base.refCountedStore.refCount == 2);
+
+    // nullify RefCounted
+    base = null;
+    assert(!base); // boolean test
+    assert(derived);
+    assert(derived.refCountedStore.refCount == 1);
+}
+
+@nogc unittest
+{
+    static class Foo
+    {
+        static size_t ctor, dtor;
+    @nogc:
+        this() { ++ctor; }
+        ~this() { ++dtor; }
+    }
+
+    assert(Foo.ctor == 0 && Foo.dtor == 0);
+    {
+        auto rc = refCounted!Foo();
+        assert(Foo.ctor == 1 && Foo.dtor == 0);
+        auto rc2 = rc;
+        assert(Foo.ctor == 1 && Foo.dtor == 0);
+    }
+    assert(Foo.ctor == 1 && Foo.dtor == 1);
+
+    static class Bar : Foo
+    {
+        static size_t ctor, dtor;
+    @nogc:
+        this() { ++ctor; }
+        ~this() { ++dtor; }
+    }
+
+    Foo.ctor = Foo.dtor = 0;
+    {
+        auto rc = refCounted!Bar();
+        assert(Foo.ctor == 1 && Foo.dtor == 0);
+        assert(Bar.ctor == 1 && Bar.dtor == 0);
+        RefCounted!Foo rc2;
+        rc2 = rc;
+        rc = RefCounted!Bar();
+        assert(Foo.ctor == 1 && Foo.dtor == 0);
+        assert(Bar.ctor == 1 && Bar.dtor == 0);
+    }
+    assert(Foo.ctor == 1 && Foo.dtor == 1);
+    assert(Bar.ctor == 1 && Bar.dtor == 1);
 }
 
 /**
