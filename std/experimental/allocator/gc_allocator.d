@@ -22,6 +22,7 @@ struct GCAllocator
     */
     @trusted void[] allocate(size_t bytes) shared
     {
+        if (!bytes) return null;
         auto p = GC.malloc(bytes);
         return p ? p[0 .. bytes] : null;
     }
@@ -33,7 +34,7 @@ struct GCAllocator
         if (b is null)
         {
             b = allocate(delta);
-            return b !is null;
+            return b.length == delta;
         }
         auto newSize = GC.extend(b.ptr, b.length + delta,
             b.length + delta);

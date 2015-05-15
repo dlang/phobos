@@ -24,6 +24,7 @@ struct Mallocator
     */
     @trusted void[] allocate(size_t bytes) shared
     {
+        if (!bytes) return null;
         auto p = malloc(bytes);
         return p ? p[0 .. bytes] : null;
     }
@@ -119,6 +120,7 @@ struct AlignedMallocator
     */
     @trusted void[] allocate(size_t bytes) shared
     {
+        if (!bytes) return null;
         return alignedAllocate(bytes, alignment);
     }
 

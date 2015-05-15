@@ -433,6 +433,8 @@ package void testAllocator(alias make)()
     assert(a.goodAllocSize(111) >= 111.roundUpToMultipleOf(A.alignment));
 
     // Test allocate
+    assert(a.allocate(0) is null);
+
     auto b1 = a.allocate(1);
     assert(b1.length == 1);
     static if (hasMember!(A, "zeroesAllocations"))

@@ -183,6 +183,7 @@ struct KRBlock
     /// Allocator primitives.
     void[] allocate(size_t bytes)
     {
+        if (!bytes) return null;
         auto actualBytes = goodAllocSize(bytes);
         // First fit
         for (auto i = &root, j = root.next; j; i = j, j = j.next)

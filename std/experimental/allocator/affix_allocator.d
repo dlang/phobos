@@ -72,6 +72,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 
         void[] allocate(size_t bytes)
         {
+            if (!bytes) return null;
             auto result = parent.allocate(actualAllocationSize(bytes));
             if (result is null) return null;
             static if (stateSize!Prefix)
