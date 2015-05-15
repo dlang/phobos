@@ -776,19 +776,7 @@ public:
      * VariantException).
      */
 
-    @property T get(T)() if (!is(T == const) && !is(T == immutable))
-    {
-        T result;
-        auto buf = tuple(typeid(T), &result);
-
-        if (fptr(OpID.get, &store, &buf))
-        {
-            throw new VariantException(type, typeid(T));
-        }
-        return result;
-    }
-
-    @property T get(T)() const if (is(T == const) || is(T == immutable))
+    @property inout(T) get(T)() inout
     {
         static if (is(T == shared))
             shared Unqual!T result;
@@ -800,7 +788,7 @@ public:
         {
             throw new VariantException(type, typeid(T));
         }
-        return cast(T) result;
+        return cast(inout T) result;
     }
 
     /**
