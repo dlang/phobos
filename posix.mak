@@ -142,6 +142,7 @@ endif
 ################################################################################
 MAIN = $(ROOT)/emptymain.d
 
+<<<<<<< HEAD
 # Given one or more packages, returns their respective libraries
 P2LIB=$(addprefix $(ROOT)/libphobos2_,$(addsuffix $(DOTLIB),$(subst /,_,$1)))
 # Given one or more packages, returns the modules they contain
@@ -167,11 +168,11 @@ PACKAGE_std_container = array binaryheap dlist package rbtree slist util
 PACKAGE_std_digest = crc digest hmac md ripemd sha
 PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
   nulllogger multilogger package) $(addprefix allocator/,\
-  affix_allocator allocator_list auto_deallocator bucketizer common fallback_allocator \
+  affix_allocator allocator_list bucketizer common fallback_allocator \
   free_list free_tree \
   gc_allocator heap_block kernighan_ritchie mallocator mmap_allocator \
   null_allocator porcelain quantizer region \
-  segregator stats_collector)
+  scoped_allocator segregator stats_collector)
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \

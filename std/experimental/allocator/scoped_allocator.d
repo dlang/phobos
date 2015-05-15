@@ -1,23 +1,22 @@
-module std.experimental.allocator.auto_deallocator;
+module std.experimental.allocator.scoped_allocator;
 
 import std.experimental.allocator.common;
-import std.experimental.allocator.null_allocator;
 
 /**
 
-$(D AutoDeallocator) delegates all allocation requests to $(D ParentAllocator).
-When destroyed, the $(D AutoDeallocator) object automatically calls $(D
+$(D ScopedAllocator) delegates all allocation requests to $(D ParentAllocator).
+When destroyed, the $(D ScopedAllocator) object automatically calls $(D
 deallocate) for all memory allocated through its lifetime. (The $(D
 deallocateAll) function is also implemented with the same semantics.)
 
 $(D deallocate) is also supported, which is where most implementation effort
-and overhead of $(D AutoDeallocator) go. If $(D deallocate) is not needed, a
+and overhead of $(D ScopedAllocator) go. If $(D deallocate) is not needed, a
 simpler design combining $(D AllocatorList) with $(D Region) is recommended.
 
 Example:
 ---
 import std.experimental.allocator.mallocator;
-AutoDeallocator!Mallocator alloc;
+ScopedAllocator!Mallocator alloc;
 assert(alloc.empty);
 auto b = alloc.allocate(10);
 assert(b.length == 10);
@@ -25,11 +24,11 @@ assert(!alloc.empty);
 // The destructor of alloc will free all memory
 ---
 */
-struct AutoDeallocator(ParentAllocator)
+struct ScopedAllocator(ParentAllocator)
 {
     unittest
     {
-        testAllocator!(() => AutoDeallocator());
+        testAllocator!(() => ScopedAllocator());
     }
 
     import std.experimental.allocator.affix_allocator;
@@ -61,12 +60,12 @@ struct AutoDeallocator(ParentAllocator)
     // }
 
     /**
-    $(D AutoDeallocator) is not copyable.
+    $(D ScopedAllocator) is not copyable.
     */
     @disable this(this);
 
     /**
-    $(D AutoDeallocator)'s destructor releases all memory allocated during its
+    $(D ScopedAllocator)'s destructor releases all memory allocated during its
     lifetime.
     */
     ~this()
@@ -196,7 +195,7 @@ struct AutoDeallocator(ParentAllocator)
 unittest
 {
     import std.experimental.allocator.mallocator;
-    AutoDeallocator!Mallocator alloc;
+    ScopedAllocator!Mallocator alloc;
     assert(alloc.empty);
     auto b = alloc.allocate(10);
     assert(b.length == 10);
@@ -206,5 +205,5 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    testAllocator!(() => AutoDeallocator!GCAllocator());
+    testAllocator!(() => ScopedAllocator!GCAllocator());
 }
