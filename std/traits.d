@@ -1704,23 +1704,21 @@ template functionLinkage(func...)
 ///
 unittest
 {
-    import std.stdio : writeln, printf;
-
-    string a = functionLinkage!(writeln!(string, int));
-    assert(a == "D"); // extern(D)
-
-    auto fp = &printf;
-    string b = functionLinkage!fp;
-    assert(b == "C"); // extern(C)
-}
-
-unittest
-{
     extern(D) void Dfunc() {}
     extern(C) void Cfunc() {}
     static assert(functionLinkage!Dfunc == "D");
     static assert(functionLinkage!Cfunc == "C");
 
+    string a = functionLinkage!Dfunc;
+    assert(a == "D");
+
+    auto fp = &Cfunc;
+    string b = functionLinkage!fp;
+    assert(b == "C");
+}
+
+unittest
+{
     interface Test
     {
         void const_func() const;
