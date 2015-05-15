@@ -6,10 +6,6 @@ of the book "The C Programming Language" Second Edition, Prentice Hall, 1988.
 */
 module std.experimental.allocator.kernighan_ritchie;
 
-import std.algorithm, std.array, std.format, std.range, std.typecons,
-    std.experimental.allocator;
-/*version(unittest)*/ import std.stdio;
-
 //debug = KRBlock;
 debug(KRBlock) import std.stdio;
 
@@ -64,6 +60,8 @@ the free list will evolve accordingly whilst staying sorted at all times.
 */
 struct KRBlock
 {
+    import std.format : format;
+
     private static struct Node
     {
         import std.typecons;
@@ -303,6 +301,7 @@ unittest
     auto store = alloc.allocate(KRBlock.sizeof);
     assert(alloc.root.next !is &alloc.root);
     auto p = cast(KRBlock* ) store.ptr;
+    import std.algorithm : move;
     alloc.move(*p);
     assert(p.root.next !is &p.root);
     //writeln(*p);
@@ -373,6 +372,9 @@ client code.)
 */
 struct KRAllocator(ParentAllocator)
 {
+    import std.experimental.allocator.common : stateSize;
+    import std.algorithm : isSorted, map;
+
     // state {
     static if (stateSize!ParentAllocator) ParentAllocator parent;
     else alias parent = ParentAllocator.it;
@@ -383,7 +385,9 @@ struct KRAllocator(ParentAllocator)
 
     private KRBlock* blockFor(void[] b)
     {
+        import std.range : isInputRange;
         static assert(isInputRange!(KRBlock[]));
+        import std.range : assumeSorted;
         auto ub = blocks.map!((ref a) => a.payload.ptr)
             .assumeSorted
             .upperBound(b.ptr);
@@ -416,7 +420,7 @@ struct KRAllocator(ParentAllocator)
         // Couldn't allocate using the current battery of allocators, get a
         // new one
         import std.conv : emplace;
-        import std.algorithm : move;
+        import std.algorithm : max, move, swap;
         void[] untypedBlocks = blocks;
 
         auto n00b = KRBlock(parent.allocate(
