@@ -241,6 +241,7 @@ enum RealFormat
 template floatTraits(T)
 {
     // EXPMASK is a ushort mask to select the exponent portion (without sign)
+    // EXPSHIFT is the number of bits the exponent is left-shifted by in its ushort
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
     // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
@@ -249,6 +250,7 @@ template floatTraits(T)
     {
         // Single precision float
         enum ushort EXPMASK = 0x7F80;
+        enum ushort EXPSHIFT = 7;
         enum ushort EXPBIAS = 0x3F00;
         enum uint EXPMASK_INT = 0x7F80_0000;
         enum uint MANTISSAMASK_INT = 0x007F_FFFF;
@@ -270,6 +272,7 @@ template floatTraits(T)
         {
             // Double precision float, or real == double
             enum ushort EXPMASK = 0x7FF0;
+            enum ushort EXPSHIFT = 4;
             enum ushort EXPBIAS = 0x3FE0;
             enum uint EXPMASK_INT = 0x7FF0_0000;
             enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
@@ -289,6 +292,7 @@ template floatTraits(T)
         {
             // Intel extended real80 rounded to double
             enum ushort EXPMASK = 0x7FFF;
+            enum ushort EXPSHIFT = 0;
             enum ushort EXPBIAS = 0x3FFE;
             enum realFormat = RealFormat.ieeeExtended53;
             version(LittleEndian)
@@ -309,6 +313,7 @@ template floatTraits(T)
     {
         // Intel extended real80
         enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPSHIFT = 0;
         enum ushort EXPBIAS = 0x3FFE;
         enum realFormat = RealFormat.ieeeExtended;
         version(LittleEndian)
@@ -326,6 +331,7 @@ template floatTraits(T)
     {
         // Quadruple precision float
         enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPSHIFT = 0;
         enum ushort EXPBIAS = 0x3FFF;
         enum realFormat = RealFormat.ieeeQuadruple;
         version(LittleEndian)
@@ -343,6 +349,7 @@ template floatTraits(T)
     {
         // IBM Extended doubledouble
         enum ushort EXPMASK = 0x7FF0;
+        enum ushort EXPSHIFT = 4;
         enum realFormat = RealFormat.ibmExtended;
         // the exponent byte is not unique
         version(LittleEndian)
@@ -6134,52 +6141,28 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
         // always 1 lower than we want, except that if bitsdiff==0,
         // they could have 0 or 1 bits in common.
 
-        static if (F.realFormat == RealFormat.ieeeExtended
-                || F.realFormat == RealFormat.ieeeQuadruple)
-        {
-            int bitsdiff = ( ((pa[F.EXPPOS_SHORT] & F.EXPMASK)
-                              + (pb[F.EXPPOS_SHORT] & F.EXPMASK) - 1) >> 1)
-                              - pd[F.EXPPOS_SHORT];
-        }
-        else static if (F.realFormat == RealFormat.ieeeDouble)
-        {
-            int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7FF0)
-                               + (pb[F.EXPPOS_SHORT]&0x7FF0)-0x10)>>1)
-                               - (pd[F.EXPPOS_SHORT]&0x7FF0))>>4;
-        }
-        else static if (F.realFormat == RealFormat.ieeeSingle)
-        {
-            int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7F80)
-                               + (pb[F.EXPPOS_SHORT]&0x7F80)-0x80)>>1)
-                               - (pd[F.EXPPOS_SHORT]&0x7F80))>>7;
-        }
+        int bitsdiff = (((  (pa[F.EXPPOS_SHORT] & F.EXPMASK)
+                          + (pb[F.EXPPOS_SHORT] & F.EXPMASK)
+                          - (1 << F.EXPSHIFT)) >> 1)
+                        - (pd[F.EXPPOS_SHORT] & F.EXPMASK)) >> F.EXPSHIFT;
         if ( (pd[F.EXPPOS_SHORT] & F.EXPMASK) == 0)
         {   // Difference is subnormal
             // For subnormals, we need to add the number of zeros that
             // lie at the start of diff's significand.
             // We do this by multiplying by 2^^real.mant_dig
             diff *= F.RECIP_EPSILON;
-            return bitsdiff + X.mant_dig - pd[F.EXPPOS_SHORT];
+            return bitsdiff + X.mant_dig - ((pd[F.EXPPOS_SHORT] & F.EXPMASK) >> F.EXPSHIFT);
         }
 
         if (bitsdiff > 0)
             return bitsdiff + 1; // add the 1 we subtracted before
 
         // Avoid out-by-1 errors when factor is almost 2.
-        static if (F.realFormat == RealFormat.ieeeExtended
-                || F.realFormat == RealFormat.ieeeQuadruple)
+        if (bitsdiff == 0
+            && ((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT]) & F.EXPMASK) == 0)
         {
-            return (bitsdiff == 0) ? (pa[F.EXPPOS_SHORT] == pb[F.EXPPOS_SHORT]) : 0;
-        }
-        else static if (F.realFormat == RealFormat.ieeeDouble
-                     || F.realFormat == RealFormat.ieeeSingle)
-        {
-            if (bitsdiff == 0
-                && !((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT]) & F.EXPMASK))
-            {
-                return 1;
-            } else return 0;
-        }
+            return 1;
+        } else return 0;
     }
 }
 
@@ -6227,6 +6210,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
        assert(feqrel(F.infinity, -F.infinity) == 0);
        assert(feqrel(F.max, -F.max) == 0);
 
+       assert(feqrel(F.min_normal / 8, F.min_normal / 17) == 3);
 
        const F Const = 2;
        immutable F Immutable = 2;
@@ -6234,10 +6218,6 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
     }
 
     assert(feqrel(7.1824L, 7.1824L) == real.mant_dig);
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
-    {
-        assert(feqrel(real.min_normal / 8, real.min_normal / 17) == 3);
-    }
 
     testFeqrel!(real)();
     testFeqrel!(double)();
