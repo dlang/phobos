@@ -7,7 +7,7 @@ of the book "The C Programming Language" Second Edition, Prentice Hall, 1988.
 module std.experimental.allocator.kernighan_ritchie;
 import std.experimental.allocator.null_allocator;
 
-//debug = KRBlock;
+// debug = KRBlock;
 debug(KRBlock) import std.stdio;
 
 // KRBlock
@@ -66,7 +66,7 @@ struct KRBlock(ParentAllocator = NullAllocator)
 
     private static struct Node
     {
-        import std.typecons;
+        import std.typecons : tuple, Tuple;
 
         Node* next;
         size_t size;
@@ -76,6 +76,13 @@ struct KRBlock(ParentAllocator = NullAllocator)
         void[] payload()
         {
             return (cast(ubyte*) &this)[0 .. size];
+        }
+
+        bool adjacent(in Node* right) const
+        {
+            assert(&this < right);
+            return cast(ubyte*) &this + size + Node.sizeof >=
+                cast(ubyte*) right;
         }
 
         Tuple!(void[], Node*) allocateHere(size_t bytes)
@@ -106,13 +113,6 @@ struct KRBlock(ParentAllocator = NullAllocator)
             // No slack space, just return next node
             return tuple(payload, next);
         }
-
-        bool adjacent(in Node* right) const
-        {
-            assert(&this < right);
-            return cast(ubyte*) &this + size + Node.sizeof >=
-                cast(ubyte*) right;
-        }
     }
 
     // state {
@@ -125,7 +125,8 @@ struct KRBlock(ParentAllocator = NullAllocator)
         alias parent = ParentAllocator.it;
     }
     private void[] payload;
-    Node root; // size for the root contains total bytes allocated
+    Node* root;
+    size_t totalAllocated;
     // }
 
     string toString()
@@ -133,12 +134,11 @@ struct KRBlock(ParentAllocator = NullAllocator)
         string s = "KRBlock@";
         s ~= format("%s-%s(0x%s[%s]", &this, &this + 1,
             payload.ptr, payload.length);
-        for (auto j = root.next; j; j = j.next)
+        for (auto j = root; j; j = j.next)
         {
             s ~= format(", free(0x%s[%s])", cast(void*) j, j.size);
         }
         s ~= ')';
-        assert(root.next != &root);
         return s;
     }
 
@@ -146,19 +146,19 @@ struct KRBlock(ParentAllocator = NullAllocator)
     {
         if (!payload.ptr)
         {
-            assert(!root.next, s);
+            assert(!root, s);
             return;
         }
-        if (!root.next)
+        if (!root)
         {
             return;
         }
-        assert(root.next >= payload.ptr, s);
-        assert(root.next < payload.ptr + payload.length, s);
+        assert(root >= payload.ptr, s);
+        assert(root < payload.ptr + payload.length, s);
 
         // Check that the list terminates
         size_t n;
-        for (auto i = &root, j = root.next; j; i = j, j = j.next)
+        for (auto i = root; i; i = i.next)
         {
             assert(n++ < payload.length / Node.sizeof, s);
         }
@@ -175,10 +175,10 @@ struct KRBlock(ParentAllocator = NullAllocator)
         assert(b.length % alignment == 0);
         assert(b.length >= 2 * Node.sizeof);
         payload = b;
-        root.next = cast(Node*) b.ptr;
-        root.size = 0;
+        root = cast(Node*) b.ptr;
+        totalAllocated = 0;
         // Initialize the free list with all list
-        with (root.next)
+        with (*root)
         {
             next = null;
             size = b.length;
@@ -198,17 +198,16 @@ struct KRBlock(ParentAllocator = NullAllocator)
         if (!bytes) return null;
         auto actualBytes = goodAllocSize(bytes);
         // First fit
-        for (auto i = &root, j = root.next; j; i = j, j = j.next)
+        for (auto i = &root; *i; i = &(*i).next)
         {
-            assert(j != &root);
-            auto k = j.allocateHere(actualBytes);
+            auto k = (*i).allocateHere(actualBytes);
             if (k[0] is null) continue;
             // Allocated, update freelist
-            i.next = k[1];
+            *i = k[1];
             debug(KRBlock) writefln("KRBlock@%s: allocate returning %s[%s]",
                 &this,
                 k[0].ptr, bytes);
-            root.size += actualBytes;
+            totalAllocated += actualBytes;
             return k[0][0 .. bytes];
         }
         debug(KRBlock) writefln("KRBlock@%s: allocate returning null", &this);
@@ -224,28 +223,19 @@ struct KRBlock(ParentAllocator = NullAllocator)
         // coalesce at this time. Instead, do it lazily during allocation.
         if (!b.ptr) return;
         assert(owns(b));
-        assert(b.ptr !is &root, format("This is weird @%s[%s]", b.ptr, b.length));
         auto n = cast(Node*) b.ptr;
         n.size = goodAllocSize(b.length);
-        root.size -= n.size;
+        totalAllocated -= n.size;
         // Linear search
-        for (auto i = &root, j = root.next; ; i = j, j = j.next)
+        for (auto i = &root; ; i = &(*i).next)
         {
-            if (!j)
+            if (!*i || *i >= n)
             {
-                // Insert at end
-                i.next = n;
-                n.next = null;
+                // Insert ahead of *i
+                n.next = *i;
+                *i = n;
                 return;
             }
-            if (j < n) continue;
-            // node is in between i and j
-            assert(i != n && j != n,
-                format("Double deallocation of block %s (%s bytes)",
-                    b.ptr, b.length));
-            n.next = j;
-            i.next = n;
-            return;
         }
     }
 
@@ -258,10 +248,10 @@ struct KRBlock(ParentAllocator = NullAllocator)
     /// Ditto
     void deallocateAll()
     {
-        root.next = cast(Node*) payload.ptr;
-        root.size = 0;
+        root = cast(Node*) payload.ptr;
+        totalAllocated = 0;
         // Initialize the free list with all list
-        with (root.next)
+        with (*root)
         {
             next = null;
             size = payload.length;
@@ -283,7 +273,10 @@ struct KRBlock(ParentAllocator = NullAllocator)
     }
 
     /// Ditto
-    bool empty() const { return root.size == 0; }
+    bool empty() const
+    {
+        return totalAllocated == 0;
+    }
 }
 
 ///
@@ -312,11 +305,9 @@ unittest
     import std.experimental.allocator.gc_allocator;
     auto alloc = KRBlock!()(GCAllocator.it.allocate(1024 * 1024));
     auto store = alloc.allocate(KRBlock!().sizeof);
-    assert(alloc.root.next !is &alloc.root);
     auto p = cast(KRBlock!()* ) store.ptr;
     import std.algorithm : move;
     alloc.move(*p);
-    assert(p.root.next !is &p.root);
     //writeln(*p);
 
     void[][] array;
