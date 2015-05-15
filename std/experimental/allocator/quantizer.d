@@ -100,7 +100,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         if (!b.ptr)
         {
             b = allocate(delta);
-            return b.ptr !is null || delta == 0;
+            return b.length == delta;
         }
         immutable allocated = goodAllocSize(b.length),
             needed = b.length + delta,
@@ -141,12 +141,12 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool reallocate(ref void[] b, size_t s)
     {
-        if (s >= b.length)
+        if (!b.ptr)
         {
-            if (expand(b, s - b.length)) return true;
-            if (!b.ptr) return false; // memory exhausted
+            b = allocate(s);
+            return b.length == s;
         }
-        assert(b.ptr); // code above took care of it
+        if (s >= b.length && expand(b, s - b.length)) return true;
         immutable toAllocate = goodAllocSize(s),
             allocated = goodAllocSize(b.length);
         // Are the lengths within the same quantum?
@@ -171,13 +171,18 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
     bool alignedReallocate(ref void[] b, size_t s, uint a)
     {
-        if (s >= b.length && expand(b, s - length)) return true;
+        if (!b.ptr)
+        {
+            b = alignedAllocate(s);
+            return b.length == s;
+        }
+        if (s >= b.length && expand(b, s - b.length)) return true;
         immutable toAllocate = goodAllocSize(s),
             allocated = goodAllocSize(b.length);
         // Are the lengths within the same quantum?
         if (allocated == toAllocate)
         {
-            assert(b.ptr); // expand() must have caught this
+            assert(b.ptr); // code above must have caught this
             // Reallocation (whether up or down) will be done in place
             b = b.ptr[0 .. s];
             return true;
@@ -196,8 +201,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     static if (hasMember!(ParentAllocator, "deallocate"))
     void deallocate(void[] b)
     {
-        if (!b.ptr) return;
-        parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)]);
+        if (b.ptr) parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)]);
     }
 
     /**
