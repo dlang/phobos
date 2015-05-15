@@ -776,22 +776,19 @@ public:
      * VariantException).
      */
 
-    @property T get(T)() if (!is(T == const))
+    @property T get(T)() if (!is(T == const) && !is(T == immutable))
     {
-        static if (is(T == shared))
-            shared Unqual!T result;
-        else
-            Unqual!T result;
+        T result;
         auto buf = tuple(typeid(T), &result);
 
         if (fptr(OpID.get, &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
-        return cast(T) result;
+        return result;
     }
 
-    @property T get(T)() const if (is(T == const))
+    @property T get(T)() const if (is(T == const) || is(T == immutable))
     {
         static if (is(T == shared))
             shared Unqual!T result;
@@ -803,7 +800,7 @@ public:
         {
             throw new VariantException(type, typeid(T));
         }
-        return result;
+        return cast(T) result;
     }
 
     /**
@@ -1340,6 +1337,13 @@ unittest
         ~this() {assert(x == 42);}
     }
     Variant(S()).get!S;
+}
+
+// Issue 14586
+unittest
+{
+    const Variant v = new immutable Object;
+    v.get!(immutable Object);
 }
 
 
