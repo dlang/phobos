@@ -5,6 +5,7 @@ famed allocator) described by Brian Kernighan and Dennis Ritchie in section 8.7
 of the book "The C Programming Language" Second Edition, Prentice Hall, 1988.
 */
 module std.experimental.allocator.kernighan_ritchie;
+import std.experimental.allocator.null_allocator;
 
 //debug = KRBlock;
 debug(KRBlock) import std.stdio;
@@ -58,9 +59,10 @@ size overhead for allocated blocks). As memory gets allocated and deallocated,
 the free list will evolve accordingly whilst staying sorted at all times.
 
 */
-struct KRBlock
+struct KRBlock(ParentAllocator = NullAllocator)
 {
     import std.format : format;
+    import std.experimental.allocator.common : stateSize;
 
     private static struct Node
     {
@@ -113,8 +115,18 @@ struct KRBlock
         }
     }
 
+    // state {
+    static if (stateSize!ParentAllocator)
+    {
+        ParentAllocator parent;
+    }
+    else
+    {
+        alias parent = ParentAllocator.it;
+    }
     private void[] payload;
     Node root; // size for the root contains total bytes allocated
+    // }
 
     string toString()
     {
@@ -278,7 +290,7 @@ struct KRBlock
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    auto alloc = KRBlock(GCAllocator.it.allocate(1024 * 1024));
+    auto alloc = KRBlock!()(GCAllocator.it.allocate(1024 * 1024));
     assert(alloc.empty);
     void[][] array;
     foreach (i; 1 .. 4)
@@ -298,10 +310,10 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    auto alloc = KRBlock(GCAllocator.it.allocate(1024 * 1024));
-    auto store = alloc.allocate(KRBlock.sizeof);
+    auto alloc = KRBlock!()(GCAllocator.it.allocate(1024 * 1024));
+    auto store = alloc.allocate(KRBlock!().sizeof);
     assert(alloc.root.next !is &alloc.root);
-    auto p = cast(KRBlock* ) store.ptr;
+    auto p = cast(KRBlock!()* ) store.ptr;
     import std.algorithm : move;
     alloc.move(*p);
     assert(p.root.next !is &p.root);
@@ -322,7 +334,7 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    auto alloc = KRBlock(GCAllocator.it.allocate(1024 * 1024));
+    auto alloc = KRBlock!()(GCAllocator.it.allocate(1024 * 1024));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
     alloc.deallocateAll();
@@ -335,7 +347,7 @@ unittest
     import std.experimental.allocator.mallocator;
     import std.experimental.allocator.common;
     auto m = Mallocator.it.allocate(1024 * 64);
-    testAllocator!(() => KRBlock(m));
+    testAllocator!(() => KRBlock!()(m));
 }
 
 // KRAllocator
@@ -379,15 +391,15 @@ struct KRAllocator(ParentAllocator)
     // state {
     static if (stateSize!ParentAllocator) ParentAllocator parent;
     else alias parent = ParentAllocator.it;
-    private KRBlock[] blocks;
+    private KRBlock!()[] blocks;
     // } state
 
     //@disable this(this);
 
-    private KRBlock* blockFor(void[] b)
+    private KRBlock!()* blockFor(void[] b)
     {
         import std.range : isInputRange;
-        static assert(isInputRange!(KRBlock[]));
+        static assert(isInputRange!(KRBlock!()[]));
         import std.range : assumeSorted;
         auto ub = blocks.map!((ref a) => a.payload.ptr)
             .assumeSorted
@@ -400,12 +412,12 @@ struct KRAllocator(ParentAllocator)
     }
 
     /// Allocator primitives
-    enum alignment = KRBlock.alignment;
+    enum alignment = KRBlock!().alignment;
 
     /// ditto
     static size_t goodAllocSize(size_t n)
     {
-        return KRBlock.goodAllocSize(n);
+        return KRBlock!().goodAllocSize(n);
     }
 
     void[] allocate(size_t n)
@@ -424,13 +436,13 @@ struct KRAllocator(ParentAllocator)
         import std.algorithm : max, move, swap;
         void[] untypedBlocks = blocks;
 
-        auto n00b = KRBlock(parent.allocate(
-            max(1024 * 64, untypedBlocks.length + KRBlock.sizeof + n)));
+        auto n00b = KRBlock!()(parent.allocate(
+            max(1024 * 64, untypedBlocks.length + KRBlock!().sizeof + n)));
         untypedBlocks =
-            n00b.allocate(untypedBlocks.length + KRBlock.sizeof);
-        untypedBlocks[0 .. $ - KRBlock.sizeof] = cast(void[]) blocks[];
+            n00b.allocate(untypedBlocks.length + KRBlock!().sizeof);
+        untypedBlocks[0 .. $ - KRBlock!().sizeof] = cast(void[]) blocks[];
         deallocate(blocks);
-        blocks = cast(KRBlock[]) untypedBlocks;
+        blocks = cast(KRBlock!()[]) untypedBlocks;
         n00b.move(blocks[$ - 1]);
 
         // Bubble the new element into the sorted array
