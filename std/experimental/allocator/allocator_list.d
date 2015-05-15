@@ -280,6 +280,19 @@ struct AllocatorList(alias make)
         return true;
     }
 
+    // Returns a pointer to the index referring to the owner of b
+    private uint* findOwnerIndex(void[] b)
+    {
+        for (uint* p = &rootIndex; *p != (*p).max; )
+        {
+            assert(allocators.length < *p);
+            auto n = &allocators.ptr[*p];
+            if (n.owns(b)) return p;
+            p = &n.nextIdx;
+        }
+        return null;
+    }
+
     /**
      Defined if $(D Allocator.deallocate) and $(D Allocator.owns) are defined.
     */
@@ -288,31 +301,23 @@ struct AllocatorList(alias make)
     void deallocate(void[] b)
     {
         if (!b.ptr) return;
-
-        void recurse(ref uint index)
+        auto p = findOwnerIndex(b);
+        assert(p);
+        auto n = &allocators.ptr[*p];
+        n.deallocate(b);
+        if (!n.empty) return;
+        // Hmmm... should we return this allocator back to the wild? Let's
+        // decide if there are TWO empty allocators we can release ONE. This
+        // is to avoid thrashing.
+        foreach (i, ref another; allocators)
         {
-            if (index == index.max) return;
-            assert(allocators.length < index);
-            auto n = &allocators.ptr[index];
-            if (!n.owns(b)) return recurse(n.nextIdx);
-            // Found!
-            n.deallocate(b);
-            if (!n.empty) return;
-            // Hmmm... should we return this allocator back to the wild? Let's
-            // decide if there are TWO empty allocators we can release ONE. This
-            // it to avoid thrashing.
-            foreach (i, ref another; allocators)
-            {
-                if (i == index || another.unused || !another.empty) continue;
-                // Yowzers, found another empty one, let's remove this guy
-                n.a.destroy;
-                index = n.nextIdx;
-                n.setUnused;
-                return;
-            }
+            if (i == *p || another.unused || !another.empty) continue;
+            // Yowzers, found another empty one, let's remove this guy
+            n.a.destroy;
+            *p = n.nextIdx;
+            n.setUnused;
+            return;
         }
-
-        recurse(rootIndex);
     }
 
     /**
