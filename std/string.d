@@ -3242,39 +3242,170 @@ unittest
     Right justify $(D s) in a field $(D width) characters wide. $(D fillChar)
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
+
+    Params:
+        s = string
+        width = minimum field width
+        fillChar = used to pad end up to $(D width) characters
+
+    Returns:
+        GC allocated string
+
+    See_Also:
+        $(LREF rightJustifier), which does not allocate
   +/
-S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
+S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
     if (isSomeString!S)
 {
-    import std.utf : canSearchInCodeUnits;
-    import std.conv : to;
-
-    alias C = ElementEncodingType!S;
-
-    if (canSearchInCodeUnits!C(fillChar))
-    {
-        immutable len = s.walkLength();
-        if (len >= width)
-            return s;
-
-        auto retval = new Unqual!C[width - len + s.length];
-        retval[0 .. $ - s.length] = cast(C)fillChar;
-        retval[$ - s.length .. $] = s[];
-        return cast(S)retval;
-    }
-    else
-    {
-        auto dstr = to!dstring(s);
-        if (dstr.length >= width)
-            return s;
-
-        auto retval = new dchar[](width);
-        retval[0 .. $ - dstr.length] = fillChar;
-        retval[$ - dstr.length .. $] = dstr[];
-        return to!S(retval);
-    }
+    import std.array;
+    return rightJustifier(s, width, fillChar).array;
 }
 
+/++
+    Right justify $(D s) in a field $(D width) characters wide. $(D fillChar)
+    is the character that will be used to fill up the space in the field that
+    $(D s) doesn't fill.
+
+    Params:
+        s = string or forward range of characters
+        width = minimum field width
+        fillChar = used to pad end up to $(D width) characters
+
+    Returns:
+        a lazy range of the right justified result
+
+    See_Also:
+        $(LREF leftJustifier)
+  +/
+
+auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    alias C = Unqual!(ElementEncodingType!Range);
+
+    static if (C.sizeof == 1)
+    {
+        import std.utf : byDchar, byChar;
+        return rightJustifier(r.byDchar, width, fillChar).byChar;
+    }
+    else static if (C.sizeof == 2)
+    {
+        import std.utf : byDchar, byWchar;
+        return rightJustifier(r.byDchar, width, fillChar).byWchar;
+    }
+    else static if (C.sizeof == 4)
+    {
+        static struct Result
+        {
+          private:
+            Range _input;
+            size_t _width;
+            alias _width nfill;       // number of fill characters to prepend
+            dchar _fillChar;
+            bool inited;
+
+            // Lazy initialization so constructor is trivial and cannot fail
+            void initialize()
+            {
+                // Replace _width with nfill
+                // (use alias instead of union because CTFE cannot deal with unions)
+                assert(_width);
+                static if (hasLength!Range)
+                {
+                    auto len = _input.length;
+                    nfill = (_width > len) ? _width - len : 0;
+                }
+                else
+                {
+                    // Lookahead to see now many fill characters are needed
+                    import std.range : walkLength, take;
+                    nfill = _width - walkLength(_input.save.take(_width), _width);
+                }
+                inited = true;
+            }
+
+          public:
+            this(Range input, size_t width, dchar fillChar) pure nothrow
+            {
+                _input = input;
+                _fillChar = fillChar;
+                _width = width;
+            }
+
+            @property bool empty()
+            {
+                return !nfill && _input.empty;
+            }
+
+            @property C front()
+            {
+                if (!nfill)
+                    return _input.front;   // fast path
+                if (!inited)
+                    initialize();
+                return nfill ? _fillChar : _input.front;
+            }
+
+            void popFront()
+            {
+                if (!nfill)
+                    _input.popFront();  // fast path
+                else
+                {
+                    if (!inited)
+                        initialize();
+                    if (nfill)
+                        --nfill;
+                    else
+                        _input.popFront();
+                }
+            }
+
+            @property typeof(this) save()
+            {
+                auto ret = this;
+                ret._input = _input.save;
+                return ret;
+            }
+        }
+
+        return Result(r, width, fillChar);
+    }
+    else
+        static assert(0);
+}
+
+///
+@safe pure @nogc nothrow
+unittest
+{
+    import std.algorithm : equal;
+    import std.utf : byChar;
+    assert(rightJustifier("hello", 2).equal("hello".byChar));
+    assert(rightJustifier("hello", 7).equal("  hello".byChar));
+    assert(rightJustifier("hello", 7, 'x').equal("xxhello".byChar));
+}
+
+unittest
+{
+    auto r = "hello"d.rightJustifier(6);
+    r.popFront();
+    auto save = r.save;
+    r.popFront();
+    assert(r.front == 'e');
+    assert(save.front == 'h');
+
+    auto t = "hello".rightJustifier(7);
+    t.popFront();
+    assert(t.front == ' ');
+    t.popFront();
+    assert(t.front == 'h');
+
+    auto u = "hello"d.rightJustifier(5);
+    u.popFront();
+    u.popFront();
+    u.popFront();
+}
 
 /++
     Center $(D s) in a field $(D width) characters wide. $(D fillChar)
@@ -3317,7 +3448,8 @@ S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     }
 }
 
-@trusted pure unittest
+@trusted pure
+unittest
 {
     import std.conv : to;
 
@@ -3352,7 +3484,6 @@ S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     }
     });
 }
-
 
 /++
     Replace each tab character in $(D s) with the number of spaces necessary
