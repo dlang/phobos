@@ -23,6 +23,20 @@ The $(D minAlign) parameter establishes alignment. If $(D minAlign > 1), the
 sizes of all allocation requests are rounded up to a multiple of $(D minAlign).
 Applications aiming at maximum speed may want to choose $(D minAlign = 1) and
 control alignment externally.
+
+----
+import std.experimental.allocator.mallocator;
+import std.experimental.allocator.allocator_list;
+import std.algorithm : max;
+// Create a scalable list of regions. Each gets at least 1MB at a time by
+// using malloc.
+auto batchAllocator = AllocatorList!(
+    (size_t n) => Region!Mallocator(max(n, 1024 * 1024))
+)();
+auto b = batchAllocator.allocate(101);
+assert(b.length == 101);
+// Destructor will free the memory
+----
 */
 struct Region(ParentAllocator = NullAllocator,
     uint minAlign = platformAlignment,
@@ -221,7 +235,8 @@ struct Region(ParentAllocator = NullAllocator,
     Queries whether $(D b) has been allocated with this region.
 
     Params:
-    b = Arbitrary block of memory ($(D null) is allowed; $(D owns(null)) returns $(D false)).
+    b = Arbitrary block of memory ($(D null) is allowed; $(D owns(null))
+    returns $(D false)).
 
     Returns:
     $(D true) if $(D b) has been allocated with this region, $(D false)
@@ -245,7 +260,25 @@ struct Region(ParentAllocator = NullAllocator,
     }
 }
 
-///
+// Example above
+unittest
+{
+    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.allocator_list;
+    import std.algorithm : max;
+    // Create a scalable list of regions. Each gets at least 1MB at a time by
+    // using malloc.
+    auto batchAllocator = AllocatorList!(
+        (size_t n) => Region!Mallocator(max(n, 1024 * 1024))
+    )();
+    auto b = batchAllocator.allocate(101);
+    assert(b.length == 101);
+    // This will cause a second allocation
+    b = batchAllocator.allocate(2 * 1024 * 1024);
+    assert(b.length == 2 * 1024 * 1024);
+    // Destructor will free the memory
+}
+
 unittest
 {
     import std.experimental.allocator.mallocator;
