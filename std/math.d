@@ -4589,7 +4589,7 @@ unittest
 
 
 /*********************************
- * Returns !=0 if e is a NaN.
+ * Returns $(D_KEYWORD true) if x is a NaN, and $(D_KEYWORD false) otherwise.
  */
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
@@ -4679,9 +4679,10 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 }
 
 /*********************************
- * Returns !=0 if e is finite (not infinite or $(NAN)).
+ * Returns $(D_KEYWORD true) if e is finite (not infinite or $(NAN)), 
+ * and $(D_KEYWORD false) otherwise.
  */
-int isFinite(X)(X e) @trusted pure nothrow @nogc
+bool isFinite(X)(X e) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
     ushort* pe = cast(ushort *)&e;
@@ -4721,13 +4722,14 @@ int isFinite(X)(X x) @trusted pure nothrow @nogc
 }
 
 /*********************************
- * Returns !=0 if x is normalized (not zero, subnormal, infinite, or $(NAN)).
+ * Returns $(D_KEYWORD true) if x is normalized (not zero, subnormal, infinite, or $(NAN)),
+ * and $(D_KEYWORD false) otherwise.
  */
 
 /* Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
-int isNormal(X)(X x) @trusted pure nothrow @nogc
+bool isNormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ibmExtended)
@@ -4769,7 +4771,7 @@ int isNormal(X)(X x) @trusted pure nothrow @nogc
  * Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
-int isSubnormal(X)(X x) @trusted pure nothrow @nogc
+bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
@@ -4828,7 +4830,7 @@ int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 }
 
 /*********************************
- * Return !=0 if e is $(PLUSMN)$(INFIN).
+ * Returns $(D_KEYWORD true) if x is $(PLUSMN)$(INFIN), and $(D_KEYWORD false) otherwise.
  */
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
