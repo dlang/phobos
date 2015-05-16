@@ -4722,13 +4722,14 @@ int isFinite(X)(X x) @trusted pure nothrow @nogc
 }
 
 /*********************************
- * Returns !=0 if x is normalized (not zero, subnormal, infinite, or $(NAN)).
+ * Returns $(D_KEYWORD true) if x is normalized (not zero, subnormal, infinite, or $(NAN)),
+ * and $(D_KEYWORD false) otherwise.
  */
 
 /* Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
-int isNormal(X)(X x) @trusted pure nothrow @nogc
+bool isNormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ibmExtended)
