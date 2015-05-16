@@ -416,7 +416,7 @@ private struct AbstractTask
     }
 }
 
-/// Used for $(D Task.finish)
+/// Flag to specify whether or not $(D Task.finish) should block
 alias Blocking = Flag!"blocking";
 
 

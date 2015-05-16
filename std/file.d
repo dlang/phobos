@@ -2914,7 +2914,8 @@ public:
 
 }
 
-alias FollowSymlink = Flag!"FollowSymlink";
+/// Flag to specify whether or not $(D dirEntries) should follow symbolic links
+alias FollowSymlink = Flag!"followSymlink";
 
 /++
     Returns an input range of DirEntry that lazily iterates a given directory,

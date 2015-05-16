@@ -906,6 +906,7 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
     }
 }
 
+/// Flag to specify whether or not $(D byLine) should provide line terminators
 alias KeepTerminator = Flag!"keepTerminator";
 
 /+
@@ -3721,8 +3722,13 @@ struct Curl
         this.handle = null;
     }
 
-    alias PauseSending = Flag!"PauseSending";
-    alias PauseReceiving = Flag!"PauseReceiving";
+    /// Flag to specify whether or not $(D pause) should pause or continue
+    /// sending during a transfer
+    alias PauseSending = Flag!"pauseSending";
+
+    /// Flag to specify whether or not $(D pause) should pause or continue
+    /// receiving during a transfer
+    alias PauseReceiving = Flag!"pauseReceiving";
 
     /// Pause and continue transfers.
     void pause(PauseSending pauseSending, PauseReceiving pauseReceiving)
