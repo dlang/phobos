@@ -4830,7 +4830,7 @@ int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 }
 
 /*********************************
- * Return !=0 if e is $(PLUSMN)$(INFIN).
+ * Returns $(D_KEYWORD true) if x is $(PLUSMN)$(INFIN), and $(D_KEYWORD false) otherwise.
  */
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
