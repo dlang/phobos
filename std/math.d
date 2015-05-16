@@ -4589,7 +4589,7 @@ unittest
 
 
 /*********************************
- * Returns !=0 if e is a NaN.
+ * Returns $(D_KEYWORD true) if e is a NaN, and $(D_KEYWORD false) otherwise.
  */
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
