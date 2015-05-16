@@ -4820,11 +4820,11 @@ Assignment operators
         (but will still assert if not initialized).
          */
         @property
-        ref T refCountedPayload();
+        ref T refCountedPayload() return;
 
         /// ditto
         @property nothrow @safe
-        ref inout(T) refCountedPayload() inout;
+        ref inout(T) refCountedPayload() inout return;
     }
     else
     {
@@ -4832,7 +4832,7 @@ Assignment operators
         {
             //Can't use inout here because of potential mutation
             @property
-            ref T refCountedPayload()
+            ref T refCountedPayload() return
             {
                 _refCounted.ensureInitialized();
                 return _refCounted._store._payload;
@@ -4840,7 +4840,7 @@ Assignment operators
         }
 
         @property nothrow @safe
-        ref inout(T) refCountedPayload() inout
+        ref inout(T) refCountedPayload() inout return
         {
             assert(_refCounted.isInitialized, "Attempted to access an uninitialized payload.");
             return _refCounted._store._payload;
