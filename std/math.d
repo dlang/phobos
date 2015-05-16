@@ -4679,9 +4679,10 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 }
 
 /*********************************
- * Returns !=0 if e is finite (not infinite or $(NAN)).
+ * Returns $(D_KEYWORD true) if e is finite (not infinite or $(NAN)), 
+ * and $(D_KEYWORD false) otherwise.
  */
-int isFinite(X)(X e) @trusted pure nothrow @nogc
+bool isFinite(X)(X e) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
     ushort* pe = cast(ushort *)&e;
