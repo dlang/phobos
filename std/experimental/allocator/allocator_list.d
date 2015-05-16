@@ -41,7 +41,7 @@ struct AllocatorList(alias make)
     import std.traits : hasMember;
     import std.conv : emplace;
     import std.algorithm : min, move;
-    import std.experimental.allocator.stats_collector;
+    import std.experimental.allocator.stats_collector : StatsCollector, Options;
 
     /// Alias for $(D typeof(make)).
     alias Allocator = typeof(make(1));
@@ -63,9 +63,11 @@ struct AllocatorList(alias make)
     }
 
     // State is stored in an array, but it has a list threaded through it by
-    // means of "next".
+    // means of "nextIdx".
+    // state {
     private Node[] allocators;
     private uint rootIndex = uint.max;
+    // }
 
     private auto byLRU()
     {
@@ -83,8 +85,15 @@ struct AllocatorList(alias make)
             {
                 assert(first && current && !current.unused);
                 assert(first + current.nextIdx != current);
-                if (current.nextIdx == current.nextIdx.max) current = null;
-                else current = first + current.nextIdx;
+                if (current.nextIdx == current.nextIdx.max)
+                {
+                    current = null;
+                }
+                else
+                {
+                    assert(current != first + current.nextIdx);
+                    current = first + current.nextIdx;
+                }
             }
             Result save() { return this; }
         }
@@ -109,11 +118,17 @@ struct AllocatorList(alias make)
     void[] allocate(size_t s)
     {
         auto result = allocateNoGrow(s);
-        if (result.ptr) return result;
+        if (result.length == s) return result;
+        // We multiply the size by a constant in order to be able to use the new
+        // allocator for about that many allocations. We consider a load of 16
+        // allocations per allocator reasonable. TODO: improve estimate.
+        enum averageLoadPerAllocator = 16;
         if (auto newAlloc =
-               addAllocator(s + (allocators.length + 1) * Node.sizeof))
+            addAllocator(s * averageLoadPerAllocator
+                + (allocators.length + 1) * Node.sizeof))
         {
             result = newAlloc.allocate(s);
+            //assert(result.length == s);
         }
         return result;
     }
@@ -122,18 +137,23 @@ struct AllocatorList(alias make)
     private void[] allocateNoGrow(size_t bytes)
     {
         // Try one of the existing allocators
-        foreach (ref n; byLRU)
+        for (auto p = &rootIndex; ; )
         {
+            immutable index = *p;
+            if (index == index.max) break;
+            assert(index < allocators.length);
+            Node* n = &allocators[index];
+            assert(!n.unused);
             auto result = n.allocate(bytes);
-            if (!result.ptr) continue;
-            // Bring to front the lastly used allocator
-            auto index = cast(uint) (&n - allocators.ptr);
-            if (index != rootIndex)
+            if (result.length != bytes)
             {
-                assert(index < allocators.length);
-                n.nextIdx = rootIndex;
-                rootIndex = index;
+                p = &n.nextIdx;
+                continue;
             }
+            // Bring to front the lastly used allocator
+            *p = n.nextIdx;
+            n.nextIdx = rootIndex;
+            rootIndex = index;
             return result;
         }
         return null;
@@ -145,13 +165,20 @@ struct AllocatorList(alias make)
         if (!b.ptr)
         {
             b = allocateNoGrow(s);
-            return b.ptr !is null || s == 0;
+            return b.length == s;
         }
         // First attempt to reallocate within the existing node
-        import std.algorithm : find;
-        auto owner = byLRU.find!((ref n) => n.owns(b));
+        auto owner = byLRU;
+        for (; !owner.empty; owner.popFront)
+        {
+            if (owner.front.owns(b)) break;
+        }
         assert(!owner.empty);
-        if (owner.front.reallocate(b, s)) return true;
+        if (owner.front.reallocate(b, s))
+        {
+            assert(b.length == s);
+            return true;
+        }
         // Failed, but we may find new memory in a new node.
         auto newB = allocateNoGrow(s);
         if (!newB.ptr) return false;
@@ -177,10 +204,12 @@ struct AllocatorList(alias make)
         }
         // Try to expand in place
         void[] t = allocators;
-        if (this.reallocateNoGrow(t, t.length + Node.sizeof))
+        if (reallocateNoGrow(t, t.length + Node.sizeof))
         {
+            assert(t.length >= Node.sizeof);
             allocators = cast(Node[]) t;
-            assert(0 < allocators.length && allocators.length < uint.max);
+            assert(0 < allocators.length);
+            assert(allocators.length < uint.max);
             return cast(uint) allocators.length - 1;
         }
         // No can do
@@ -189,46 +218,51 @@ struct AllocatorList(alias make)
 
     private Node* addAllocator(size_t atLeastBytes)
     {
-        auto i = findEmptySlot;
-        if (i < i.max)
-        {
-            // Found, set up the new one as root
-            Node* n = &allocators[i];
-            emplace(&n.a, make(atLeastBytes));
-            assert(n.bytesUsed == 0);
-            n.nextIdx = rootIndex;
-            rootIndex = i;
-            return n;
-        }
+        import core.stdc.string : memcpy;
         // Must create a new allocator object on the stack and move it
-        auto newNode = Node(SAllocator(make(atLeastBytes)), rootIndex);
-        // Weird: store the new node inside its own allocated storage!
-        auto buf = newNode.allocate((allocators.length + 1) * Node.sizeof);
-        if (!buf.ptr)
+        auto newAlloc = SAllocator(make(atLeastBytes));
+        assert(newAlloc.bytesUsed == 0);
+        // Let's see where
+        auto i = findEmptySlot;
+        if (i == i.max)
         {
-            // Terrible, too many allocators
-            return null;
+            // Must reallocate the allocators array
+            // Weird: store the new node inside its own allocated storage!
+            auto buf = newAlloc.allocate((allocators.length + 1) * Node.sizeof);
+            if (!buf.ptr)
+            {
+                // Terrible, too many allocators
+                return null;
+            }
+            // Move over existing allocators
+            buf[0 .. $ - Node.sizeof] = allocators[];
+            auto oldAllocators = allocators;
+            allocators = cast(Node[]) buf;
+            allocators[$ - 1].setUnused;
+            static if (hasMember!(Allocator, "deallocate"))
+                deallocate(oldAllocators);
+            assert(allocators.length > 0);
+            i = cast(uint) allocators.length - 1;
         }
-        // Move over existing allocators
-        buf[0 .. $ - Node.sizeof] = allocators[];
-        static if (hasMember!(Allocator, "deallocate"))
-            this.deallocate(allocators);
-        allocators = cast(Node[]) buf;
-        assert(allocators.length > 0);
-        // Move node to the last position and set in the root position
-        auto newNodeFinal = &allocators[$ - 1];
-        newNode.move(*newNodeFinal);
-        assert(newNodeFinal.nextIdx == rootIndex);
-        rootIndex = cast(uint) allocators.length - 1;
-        return newNodeFinal;
+        // From now on i is the seat of the new allocator
+        // Set up the new one as root
+        Node* n = &allocators[i];
+        memcpy(&n.a, &newAlloc, newAlloc.sizeof);
+        n.nextIdx = rootIndex;
+        emplace(&newAlloc);
+        rootIndex = i;
+        return n;
     }
 
     /// Defined only if $(D Allocator.owns) is defined.
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
     {
-        import std.algorithm : canFind;
-        return byLRU.canFind!((ref n) => n.owns(b));
+        foreach (ref n; byLRU)
+        {
+            if (n.owns(b)) return true;
+        }
+        return false;
     }
 
     /// Defined only if $(D Allocator.resolveInternalPointer) is defined.
@@ -250,7 +284,7 @@ struct AllocatorList(alias make)
         if (!b.ptr)
         {
             b = allocate(delta);
-            return b.ptr || delta == 0;
+            return b.length == delta;
         }
         foreach (ref n; byLRU)
         {
@@ -260,32 +294,29 @@ struct AllocatorList(alias make)
     }
 
     /// Allows moving data from one $(D Allocator) to another.
+    static if (hasMember!(Allocator, "reallocate"))
     bool reallocate(ref void[] b, size_t s)
     {
         // First attempt to reallocate within the existing node
         foreach (ref n; byLRU)
         {
             if (b.ptr && !n.owns(b)) continue;
+            // TODO: bring to front on success?
             if (n.reallocate(b, s)) return true;
             break;
         }
         // Failed, but we may find new memory in a new node.
-        auto newB = allocate(s);
-        if (!newB.ptr) return false;
-        auto copy = min(b.length, s);
-        newB[0 .. copy] = b[0 .. copy];
-        static if (hasMember!(Allocator, "deallocate"))
-            deallocate(b);
-        b = newB;
-        return true;
+        return .reallocate(this, b, s);
     }
 
     // Returns a pointer to the index referring to the owner of b
+    static if (hasMember!(Allocator, "owns"))
     private uint* findOwnerIndex(void[] b)
     {
+        assert(b.ptr);
         for (uint* p = &rootIndex; *p != (*p).max; )
         {
-            assert(allocators.length < *p);
+            assert(*p < allocators.length);
             auto n = &allocators.ptr[*p];
             if (n.owns(b)) return p;
             p = &n.nextIdx;
@@ -301,6 +332,7 @@ struct AllocatorList(alias make)
     void deallocate(void[] b)
     {
         if (!b.ptr) return;
+        assert(allocators.length);
         auto p = findOwnerIndex(b);
         assert(p);
         auto n = &allocators.ptr[*p];
@@ -350,9 +382,8 @@ struct AllocatorList(alias make)
         // Move the remaining allocator on stack, then deallocate from it too
         Allocator temp = void;
         import core.stdc.string : memcpy;
-        memcpy(&temp, &owner.a, Allocator.sizeof);
-        static __gshared Allocator empty;
-        memcpy(&owner.a, &empty, Allocator.sizeof);
+        memcpy(&temp, &owner.a, temp.sizeof);
+        // emplace(&owner.a); not needed
         temp.deallocateAll;
         allocators = null;
         rootIndex = rootIndex.max;
@@ -374,7 +405,7 @@ unittest
     import std.experimental.allocator.region;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
-    assert(b1 is null); // can't allocate more than 4MB at a time
+    assert(b1 !is null); // still works due to overdimensioning
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
     a.deallocateAll();
@@ -386,7 +417,7 @@ unittest
     import std.experimental.allocator.region;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
-    assert(b1 is null);
+    assert(b1 !is null);
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
     auto b2 = a.allocate(1024 * 4095);

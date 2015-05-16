@@ -357,6 +357,7 @@ bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
         if (b.length <= s && a.expand(b, s - b.length)) return true;
     }
     auto newB = a.allocate(s);
+    if (newB.length != s) return false;
     if (newB.length <= b.length) newB[] = b[0 .. newB.length];
     else newB[0 .. b.length] = b[];
     static if (hasMember!(Allocator, "deallocate"))

@@ -7,8 +7,9 @@ of the book "The C Programming Language" Second Edition, Prentice Hall, 1988.
 module std.experimental.allocator.kernighan_ritchie;
 import std.experimental.allocator.null_allocator;
 
-// debug = KRBlock;
+//debug = KRBlock;
 debug(KRBlock) import std.stdio;
+version(unittest) import std.conv : text;
 
 // KRBlock
 /**
@@ -62,7 +63,7 @@ the free list will evolve accordingly whilst staying sorted at all times.
 struct KRBlock(ParentAllocator = NullAllocator)
 {
     import std.format : format;
-    import std.experimental.allocator.common : stateSize;
+    import std.experimental.allocator.common : stateSize, alignedAt;
 
     private static struct Node
     {
@@ -71,22 +72,26 @@ struct KRBlock(ParentAllocator = NullAllocator)
         Node* next;
         size_t size;
 
-        //this(this) @disable;
+        this(this) @disable;
 
-        void[] payload()
+        void[] payload() inout
         {
+            assert(!next || &this < next);
             return (cast(ubyte*) &this)[0 .. size];
         }
 
         bool adjacent(in Node* right) const
         {
-            assert(&this < right);
-            return cast(ubyte*) &this + size + Node.sizeof >=
-                cast(ubyte*) right;
+            assert(&this < right, text(&this, " vs ", right));
+            auto p = payload;
+            return p.ptr + p.length == right;
         }
 
         Tuple!(void[], Node*) allocateHere(size_t bytes)
         {
+            assert(bytes >= Node.sizeof);
+            assert(bytes % Node.alignof == 0);
+            assert(&this < next || !next, text(&this, " vs ", next));
             while (size < bytes)
             {
                 // Try to coalesce
@@ -95,19 +100,20 @@ struct KRBlock(ParentAllocator = NullAllocator)
                     // no honey
                     return typeof(return)();
                 }
-                size = cast(ubyte*) next + next.size - cast(ubyte*) &this;
+                // Coalesce these two nodes
+                size += next.size;
+                assert(next < next.next || !next.next);
                 next = next.next;
-                if (size >= bytes) break;
             }
             assert(size >= bytes);
             auto leftover = size - bytes;
-            if (leftover > Node.sizeof)
+            if (leftover >= Node.sizeof)
             {
                 // There's room for another node
                 auto newNode = cast(Node*) ((cast(ubyte*) &this) + bytes);
                 newNode.size = leftover;
                 newNode.next = next;
-                next = newNode;
+                assert(newNode < newNode.next || !next);
                 return tuple(payload, newNode);
             }
             // No slack space, just return next node
@@ -160,6 +166,7 @@ struct KRBlock(ParentAllocator = NullAllocator)
         size_t n;
         for (auto i = root; i; i = i.next)
         {
+            assert(i < i.next || !i.next);
             assert(n++ < payload.length / Node.sizeof, s);
         }
     }
@@ -172,13 +179,13 @@ struct KRBlock(ParentAllocator = NullAllocator)
     this(void[] b)
     {
         assert(b.length > Node.sizeof);
-        assert(b.length % alignment == 0);
+        assert(b.ptr.alignedAt(Node.alignof));
         assert(b.length >= 2 * Node.sizeof);
         payload = b;
         root = cast(Node*) b.ptr;
-        totalAllocated = 0;
+        assert(totalAllocated == 0);
         // Initialize the free list with all list
-        with (*root)
+        with (root)
         {
             next = null;
             size = b.length;
@@ -187,7 +194,30 @@ struct KRBlock(ParentAllocator = NullAllocator)
             b.ptr, b.length);
     }
 
-    /** Alignment is the same as for a $(D struct) consisting of two words (a
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator))
+    this(size_t n)
+    {
+        this(parent.allocate(n));
+    }
+
+    /**
+    Destructor releases parent's memory if $(D ParentAllocator) is not $(D
+    NullAllocator).
+    */
+    static if (!is(ParentAllocator == NullAllocator))
+    ~this()
+    {
+        parent.deallocate(payload);
+    }
+
+    /**
+    Noncopyable
+    */
+    @disable this(this);
+
+    /**
+    Alignment is the same as for a $(D struct) consisting of two words (a
     pointer followed by a $(D size_t).)
     */
     enum alignment = Node.alignof;
@@ -200,17 +230,24 @@ struct KRBlock(ParentAllocator = NullAllocator)
         // First fit
         for (auto i = &root; *i; i = &(*i).next)
         {
+            assert(i);
+            assert(*i);
+            assert(*i < (*i).next || !(*i).next,
+                text(*i, " >= ", (*i).next));
             auto k = (*i).allocateHere(actualBytes);
             if (k[0] is null) continue;
+            assert(k[0].length >= bytes);
             // Allocated, update freelist
+            assert(*i != k[1]);
             *i = k[1];
-            debug(KRBlock) writefln("KRBlock@%s: allocate returning %s[%s]",
-                &this,
-                k[0].ptr, bytes);
+            assert(!*i || !(*i).next || *i < (*i).next);
+            //debug(KRBlock) writefln("KRBlock@%s: allocate returning %s[%s]",
+            //    &this,
+            //    k[0].ptr, bytes);
             totalAllocated += actualBytes;
             return k[0][0 .. bytes];
         }
-        debug(KRBlock) writefln("KRBlock@%s: allocate returning null", &this);
+        //debug(KRBlock) writefln("KRBlock@%s: allocate returning null", &this);
         return null;
     }
 
@@ -223,17 +260,24 @@ struct KRBlock(ParentAllocator = NullAllocator)
         // coalesce at this time. Instead, do it lazily during allocation.
         if (!b.ptr) return;
         assert(owns(b));
+        assert(b.ptr.alignedAt(Node.alignof));
         auto n = cast(Node*) b.ptr;
         n.size = goodAllocSize(b.length);
         totalAllocated -= n.size;
         // Linear search
         for (auto i = &root; ; i = &(*i).next)
         {
-            if (!*i || *i >= n)
+            assert(i);
+            assert(b.ptr != *i);
+            assert(!(*i) || !(*i).next || *i < (*i).next);
+            if (!*i || n < *i)
             {
                 // Insert ahead of *i
                 n.next = *i;
+                assert(n < n.next || !n.next, text(n, " >= ", n.next));
                 *i = n;
+                assert(!(*i).next || *i < (*i).next,
+                    text(*i, " >= ", (*i).next));
                 return;
             }
         }
@@ -242,25 +286,35 @@ struct KRBlock(ParentAllocator = NullAllocator)
     /// Ditto
     void[] allocateAll()
     {
-        return allocate(payload.length);
+        //debug(KRBlock) assertValid("allocateAll");
+        //debug(KRBlock) scope(exit) assertValid("allocateAll");
+        auto result = allocate(payload.length);
+        // The attempt above has coalesced all possible blocks
+        if (!result.ptr && root && !root.next) result = allocate(root.size);
+        return result;
     }
 
     /// Ditto
     void deallocateAll()
     {
+        debug(KRBlock) assertValid("deallocateAll");
+        debug(KRBlock) scope(exit) assertValid("deallocateAll");
         root = cast(Node*) payload.ptr;
         totalAllocated = 0;
         // Initialize the free list with all list
-        with (*root)
+        with (root)
         {
             next = null;
             size = payload.length;
         }
+        assert(empty);
     }
 
     /// Ditto
     bool owns(void[] b)
     {
+        debug(KRBlock) assertValid("owns");
+        debug(KRBlock) scope(exit) assertValid("owns");
         return b.ptr >= payload.ptr && b.ptr < payload.ptr + payload.length;
     }
 
@@ -282,8 +336,81 @@ struct KRBlock(ParentAllocator = NullAllocator)
 ///
 unittest
 {
+    import std.algorithm : max;
+    import std.experimental.allocator.gc_allocator,
+        std.experimental.allocator.mallocator,
+        std.experimental.allocator.allocator_list;
+    /*
+    Create a scalable allocator consisting of 1 MB (or larger) blocks fetched
+    from the garbage-collected heap. Each block is organized as a KR-style
+    heap. More blocks are allocated and freed on a need basis.
+    */
+    AllocatorList!(n => KRBlock!Mallocator(max(n, 1024 * 1024))) alloc;
+    void[][49] array;
+    foreach (i; 0 .. array.length)
+    {
+        auto length = i * 100000 + 1;
+        array[i] = alloc.allocate(length);
+        assert(array[i].ptr);
+        assert(array[i].length == length);
+    }
+    import std.random;
+    randomShuffle(array[]);
+    foreach (i; 0 .. array.length)
+    {
+        assert(alloc.owns(array[i]));
+        alloc.deallocate(array[i]);
+    }
+}
+
+unittest
+{
+    import std.algorithm : max;
+    import std.experimental.allocator.gc_allocator,
+        std.experimental.allocator.mallocator,
+        std.experimental.allocator.allocator_list;
+    /*
+    Create a scalable allocator consisting of 1 MB (or larger) blocks fetched
+    from the garbage-collected heap. Each block is organized as a KR-style
+    heap. More blocks are allocated and freed on a need basis.
+    */
+    AllocatorList!((n) {
+        auto result = KRBlock!Mallocator(max(n, 1024 * 1024));
+        return result;
+    }) alloc;
+    void[][490] array;
+    foreach (i; 0 .. array.length)
+    {
+        auto length = i * 100000 + 1;
+        array[i] = alloc.allocate(length);
+        assert(array[i].ptr);
+        foreach (j; 0 .. i)
+        {
+            assert(array[i].ptr != array[j].ptr);
+        }
+        assert(array[i].length == length);
+    }
+    import std.random;
+    randomShuffle(array[]);
+    foreach (i; 0 .. array.length)
+    {
+        assert(alloc.owns(array[i]));
+        alloc.deallocate(array[i]);
+    }
+}
+
+unittest
+{
+    import std.experimental.allocator.gc_allocator,
+        std.experimental.allocator.allocator_list, std.algorithm;
+    import std.experimental.allocator.common;
+    testAllocator!(() => AllocatorList!(n => KRBlock!GCAllocator(max(n, 1024 * 1024)))());
+}
+
+unittest
+{
     import std.experimental.allocator.gc_allocator;
-    auto alloc = KRBlock!()(GCAllocator.it.allocate(1024 * 1024));
+    auto alloc = KRBlock!GCAllocator(1024 * 1024);
     assert(alloc.empty);
     void[][] array;
     foreach (i; 1 .. 4)
@@ -306,20 +433,31 @@ unittest
     auto alloc = KRBlock!()(GCAllocator.it.allocate(1024 * 1024));
     auto store = alloc.allocate(KRBlock!().sizeof);
     auto p = cast(KRBlock!()* ) store.ptr;
+    import std.conv : emplace;
     import std.algorithm : move;
-    alloc.move(*p);
-    //writeln(*p);
+    import core.stdc.string : memcpy;
 
-    void[][] array;
-    foreach (i; 1 .. 4)
+    memcpy(p, &alloc, alloc.sizeof);
+    emplace(&alloc);
+    //emplace(p, alloc.move);
+
+    void[][100] array;
+    foreach (i; 0 .. array.length)
     {
-        array ~= p.allocate(i);
-        assert(array[$ - 1].length == i);
+        auto length = 100 * i + 1;
+        array[i] = p.allocate(length);
+        assert(array[i].length == length, text(array[i].length));
+        assert(p.owns(array[i]));
     }
-    p.deallocate(array[1]);
-    p.deallocate(array[0]);
-    p.deallocate(array[2]);
-    assert(p.allocateAll() is null);
+    import std.random;
+    randomShuffle(array[]);
+    foreach (i; 0 .. array.length)
+    {
+        assert(p.owns(array[i]));
+        p.deallocate(array[i]);
+    }
+    auto b = p.allocateAll();
+    assert(b.length == 1024 * 1024 - KRBlock!().sizeof, text(b.length));
 }
 
 unittest
@@ -341,156 +479,3 @@ unittest
     testAllocator!(() => KRBlock!()(m));
 }
 
-// KRAllocator
-/**
-$(D KRAllocator) implements a full-fledged KR-style allocator based upon
-
-Similarities with the Kernighan-Ritchie allocator:
-
-$(UL
-$(LI Free blocks have variable size and are linked in a singly-linked list.)
-$(LI The freelist is maintained in increasing address order.)
-$(LI The strategy for finding the next available block is first fit.)
-)
-
-Differences from the Kernighan-Ritchie allocator:
-
-$(UL
-$(LI Once the chunk is exhausted, the Kernighan-Ritchie allocator allocates
-another chunk. The $(D KRBlock) just gets full (returns $(D null) on
-new allocation requests). The decision to allocate more blocks is left to a
-higher-level entity.)
-$(LI The freelist in the Kernighan-Ritchie allocator is circular, with the last
-node pointing back to the first; in $(D KRBlock), the last pointer is
-$(D null).)
-$(LI Allocated blocks do not have a size prefix. This is because in D the size
-information is available in client code at deallocation time.)
-$(LI The Kernighan-Ritchie allocator performs eager coalescing. $(D KRBlock)
-coalesces lazily, i.e. only attempts it for allocation requests larger than
-the memory available. This saves work if most allocations are of similar size
-becase there's no repeated churn for coalescing followed by splitting. Also,
-the coalescing work is proportional with allocation size, which is advantageous
-because large allocations are likely to undergo relatively intensive work in
-client code.)
-)
-*/
-struct KRAllocator(ParentAllocator)
-{
-    import std.experimental.allocator.common : stateSize;
-    import std.algorithm : isSorted, map;
-
-    // state {
-    static if (stateSize!ParentAllocator) ParentAllocator parent;
-    else alias parent = ParentAllocator.it;
-    private KRBlock!()[] blocks;
-    // } state
-
-    //@disable this(this);
-
-    private KRBlock!()* blockFor(void[] b)
-    {
-        import std.range : isInputRange;
-        static assert(isInputRange!(KRBlock!()[]));
-        import std.range : assumeSorted;
-        auto ub = blocks.map!((ref a) => a.payload.ptr)
-            .assumeSorted
-            .upperBound(b.ptr);
-        if (ub.length == blocks.length) return null;
-        auto result = &(blocks[$ - ub.length - 1]);
-        assert(result.payload.ptr <= b.ptr);
-        return result.payload.ptr + result.payload.length > b.ptr
-            ? result : null;
-    }
-
-    /// Allocator primitives
-    enum alignment = KRBlock!().alignment;
-
-    /// ditto
-    static size_t goodAllocSize(size_t n)
-    {
-        return KRBlock!().goodAllocSize(n);
-    }
-
-    void[] allocate(size_t n)
-    {
-        foreach (ref alloc; blocks)
-        {
-            auto result = alloc.allocate(n);
-            if (result.ptr)
-            {
-                return result;
-            }
-        }
-        // Couldn't allocate using the current battery of allocators, get a
-        // new one
-        import std.conv : emplace;
-        import std.algorithm : max, move, swap;
-        void[] untypedBlocks = blocks;
-
-        auto n00b = KRBlock!()(parent.allocate(
-            max(1024 * 64, untypedBlocks.length + KRBlock!().sizeof + n)));
-        untypedBlocks =
-            n00b.allocate(untypedBlocks.length + KRBlock!().sizeof);
-        untypedBlocks[0 .. $ - KRBlock!().sizeof] = cast(void[]) blocks[];
-        deallocate(blocks);
-        blocks = cast(KRBlock!()[]) untypedBlocks;
-        n00b.move(blocks[$ - 1]);
-
-        // Bubble the new element into the sorted array
-        for (auto i = blocks.length - 1; i > 0; --i)
-        {
-            if (blocks[i - 1].payload.ptr < blocks[i].payload.ptr)
-            {
-                return blocks[i].allocate(n);
-            }
-            swap(blocks[i], blocks[i - 1]);
-        }
-        assert(blocks.map!((ref a) => a.payload.ptr).isSorted);
-        return blocks[0].allocate(n);
-    }
-
-    bool owns(void[] b)
-    {
-        return blockFor(b) !is null;
-    }
-
-    void deallocate(void[] b)
-    {
-        if (!b.ptr) return;
-        if (auto block = blockFor(b))
-        {
-            assert(block.owns(b));
-            return block.deallocate(b);
-        }
-        assert(false, "KRAllocator.deallocate: invalid argument.");
-    }
-
-    void deallocateAll()
-    {
-        blocks = null;
-    }
-}
-
-///
-unittest
-{
-    import std.experimental.allocator.gc_allocator, std.algorithm, std.array,
-        std.stdio;
-    KRAllocator!GCAllocator alloc;
-    void[][] array;
-    foreach (i; 1 .. 4)
-    {
-        array ~= alloc.allocate(i);
-        assert(array[$ - 1].ptr);
-        assert(array.length == 1 || array[$ - 2].ptr != array[$ - 1].ptr);
-        assert(array[$ - 1].length == i);
-        assert(alloc.owns(array.back));
-        assert(alloc.blockFor(array.front) !is null);
-        assert(alloc.blockFor(array.back) !is null);
-    }
-    alloc.deallocate(array[1]);
-    alloc.deallocate(array[0]);
-    alloc.deallocate(array[2]);
-    import std.experimental.allocator.common;
-    testAllocator!(() => KRAllocator!GCAllocator());
-}
