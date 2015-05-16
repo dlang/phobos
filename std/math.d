@@ -4771,7 +4771,7 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  * Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
-int isSubnormal(X)(X x) @trusted pure nothrow @nogc
+bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
