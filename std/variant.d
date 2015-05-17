@@ -374,7 +374,8 @@ private:
             target.fptr = &handler!(A);
             break;
         case OpID.get:
-            return !tryPutting(zis, *cast(TypeInfo*) parm, parm);
+            auto t = * cast(Tuple!(TypeInfo, void*)*) parm;
+            return !tryPutting(zis, t[0], t[1]);
         case OpID.testConversion:
             return !tryPutting(null, *cast(TypeInfo*) parm, null);
         case OpID.compare:
@@ -407,8 +408,8 @@ private:
                     return temp.opEquals(*rhsP) ? 0 : 1;
             }
             // Does rhs convert to zis?
-            *cast(TypeInfo*) &temp.store = typeid(A);
-            if (rhsP.fptr(OpID.get, &rhsP.store, &temp.store) == 0)
+            auto t = tuple(typeid(A), &temp.store);
+            if (rhsP.fptr(OpID.get, &rhsP.store, &t) == 0)
             {
                 // cool! Now temp has rhs in my type!
                 auto rhsPA = getPtr(&temp.store);
@@ -775,58 +776,19 @@ public:
      * VariantException).
      */
 
-    @property T get(T)() if (!is(T == const))
+    @property inout(T) get(T)() inout
     {
-        auto p = *cast(T**) &store;
-
-        /* handler(OpID.get, ) expects the TypeInfo for T in the same buffer it
-         * writes the result to afterwards. Because T might have a non-trivial
-         * destructor, postblit or invariant, we cannot use a union.
-         */
-        struct Buf
-        {
-            T result;
-            // Make sure Buf.sizeof is big enough to store a TypeInfo in
-            void[T.sizeof < TypeInfo.sizeof ? TypeInfo.sizeof - T.sizeof : 0] init = void;
-        }
-        TypeInfo info = typeid(T);
-        Buf buf;
-        memcpy(&buf, &info, info.sizeof);
-
-        if (fptr(OpID.get, &store, &buf))
-        {
-            throw new VariantException(type, typeid(T));
-        }
-        return buf.result;
-    }
-
-    @property T get(T)() const if (is(T == const))
-    {
-        auto p = *cast(T**) &store;
-
-        /* handler(OpID.get, ) expects the TypeInfo for T in the same buffer it
-         * writes the result to afterwards. Because T might have a non-trivial
-         * destructor, postblit or invariant, we cannot use a union.
-         */
-        struct Buf
-        {
-            static if (is(T == shared))
-                shared(Unqual!T) result;
-            else
-                Unqual!T result;
-
-            // Make sure Buf.sizeof is big enough to store a TypeInfo in
-            void[T.sizeof < TypeInfo.sizeof ? TypeInfo.sizeof - T.sizeof : 0] init = void;
-        }
-        TypeInfo info = typeid(T);
-        Buf buf;
-        memcpy(&buf, &info, info.sizeof);
+        static if (is(T == shared))
+            shared Unqual!T result;
+        else
+            Unqual!T result;
+        auto buf = tuple(typeid(T), &result);
 
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
-        return buf.result;
+        return cast(inout T) result;
     }
 
     /**
@@ -1352,6 +1314,24 @@ unittest
 
     assert(a.type == typeid(float));
     assert(a.get!float == 6f);
+}
+
+// Issue 14585
+unittest
+{
+    static struct S
+    {
+        int x = 42;
+        ~this() {assert(x == 42);}
+    }
+    Variant(S()).get!S;
+}
+
+// Issue 14586
+unittest
+{
+    const Variant v = new immutable Object;
+    v.get!(immutable Object);
 }
 
 
