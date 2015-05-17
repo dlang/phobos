@@ -288,10 +288,11 @@ struct FallbackAllocator(Primary, Fallback)
     }
 }
 
-///
-version(none) unittest
+unittest
 {
-    import std.experimental.allocator.region;
+    import std.experimental.allocator.region : InSituRegion;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.conv : text;
     FallbackAllocator!(InSituRegion!16384, GCAllocator) a;
     // This allocation uses the stack
     auto b1 = a.allocate(1024);
@@ -302,4 +303,38 @@ version(none) unittest
     assert(!a.primary.owns(b2));
     a.deallocate(b1);
     a.deallocate(b2);
+}
+
+/**
+Convenience function that uses type deduction to return the appropriate
+$(D FallbackAllocator) instance. To initialize with allocators that don't have
+state, use their $(D it) static member.
+*/
+FallbackAllocator!(Primary, Fallback)
+fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
+{
+    static if (stateSize!Primary)
+        static if (stateSize!Fallback)
+            return typeof(return)(p, f);
+        else
+            return typeof(return)(p);
+    else
+        static if (stateSize!Fallback)
+            return typeof(return)(f);
+        else
+            return typeof(return)();
+}
+
+///
+unittest
+{
+    import std.experimental.allocator.region;
+    import std.experimental.allocator.gc_allocator;
+    auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.it);
+    auto b1 = a.allocate(1020);
+    assert(b1.length == 1020);
+    assert(a.primary.owns(b1));
+    auto b2 = a.allocate(10);
+    assert(b2.length == 10);
+    assert(!a.primary.owns(b2));
 }

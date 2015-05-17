@@ -3,6 +3,9 @@ module std.experimental.allocator.allocator_list;
 import std.experimental.allocator.common;
 version(unittest) import std.stdio;
 
+// Turn this on for debugging
+// debug = allocator_list;
+
 /**
 Given $(D make(size_t n)) as a function that returns fresh allocators capable
 of allocating at least $(D n) bytes, $(D AllocatorList) creates an allocator
@@ -119,16 +122,16 @@ struct AllocatorList(alias make)
     {
         auto result = allocateNoGrow(s);
         if (result.length == s) return result;
-        // We multiply the size by a constant in order to be able to use the new
-        // allocator for about that many allocations. We consider a load of 16
-        // allocations per allocator reasonable. TODO: improve estimate.
-        enum averageLoadPerAllocator = 16;
+        // We add an estimated overhead. This is because the
+        // available bytes are needed for two, not one, allocations.
+        enum overhead = 128;
         if (auto newAlloc =
-            addAllocator(s * averageLoadPerAllocator
+            addAllocator(s + overhead
                 + (allocators.length + 1) * Node.sizeof))
         {
+            debug(allocator_list)
+                assert(result.length == s, "That's awfully odd");
             result = newAlloc.allocate(s);
-            //assert(result.length == s);
         }
         return result;
     }
