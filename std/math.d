@@ -1491,6 +1491,10 @@ real sqrt(real x) @nogc @safe pure nothrow;      /* intrinsic */
     enum ZX80 = sqrt(7.0f);
     enum ZX81 = sqrt(7.0);
     enum ZX82 = sqrt(7.0L);
+
+    assert(isNaN(sqrt(-1.0f)));
+    assert(isNaN(sqrt(-1.0)));
+    assert(isNaN(sqrt(-1.0L)));
 }
 
 creal sqrt(creal z) @nogc @safe pure nothrow
