@@ -189,11 +189,19 @@ struct KRBlock(ParentAllocator = NullAllocator)
     Params:
     b = Block of memory to serve as support for the allocator. Memory must be
     larger than two words and word-aligned.
-    n = Capacity desired. This constructor is defined only if $(D ParentAllocator) is not $(D NullAllocator).
+    n = Capacity desired. This constructor is defined only if $(D
+    ParentAllocator) is not $(D NullAllocator).
     */
     this(void[] b)
     {
-        assert(b.length > Node.sizeof);
+        if (b.length < Node.sizeof)
+        {
+            // Init as empty
+            assert(root is null);
+            assert(payload is null);
+            return;
+        }
+        assert(b.length >= Node.sizeof);
         assert(b.ptr.alignedAt(Node.alignof));
         assert(b.length >= 2 * Node.sizeof);
         payload = b;
@@ -212,6 +220,7 @@ struct KRBlock(ParentAllocator = NullAllocator)
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
+        assert(n > Node.sizeof);
         this(parent.allocate(n));
     }
 
@@ -234,7 +243,8 @@ struct KRBlock(ParentAllocator = NullAllocator)
     enum alignment = Node.alignof;
 
     /**
-    Allocates $(D n) bytes. Allocation searches the list of available blocks until a free block with $(D n) or more bytes is found (first fit strategy).
+    Allocates $(D n) bytes. Allocation searches the list of available blocks
+    until a free block with $(D n) or more bytes is found (first fit strategy).
     The block is split (if larger) and returned.
 
     Params: n = number of bytes to _allocate
@@ -348,7 +358,7 @@ struct KRBlock(ParentAllocator = NullAllocator)
         debug(KRBlock) scope(exit) assertValid("deallocateAll");
         root = cast(Node*) payload.ptr;
         // Initialize the free list with all list
-        with (root)
+        if (root) with (root)
         {
             next = null;
             size = payload.length;
@@ -357,7 +367,8 @@ struct KRBlock(ParentAllocator = NullAllocator)
 
     /**
     Checks whether the allocator is responsible for the allocation of $(D b).
-    It does a simple $(BIGOH 1) range check. $(D b) should be a buffer either allocated with $(D this) or obtained through other means.
+    It does a simple $(BIGOH 1) range check. $(D b) should be a buffer either
+    allocated with $(D this) or obtained through other means.
     */
     bool owns(void[] b)
     {
@@ -448,7 +459,7 @@ unittest
 {
     import std.algorithm : max;
     import std.experimental.allocator.gc_allocator,
-        std.experimental.allocator.mallocator,
+        std.experimental.allocator.mmap_allocator,
         std.experimental.allocator.allocator_list;
     /*
     Create a scalable allocator consisting of 1 MB (or larger) blocks fetched
@@ -456,13 +467,13 @@ unittest
     heap. More blocks are allocated and freed on a need basis.
     */
     AllocatorList!((n) {
-        auto result = KRBlock!Mallocator(max(n, 1024 * 1024));
+        auto result = KRBlock!MmapAllocator(max(n * 2, 1024 * 1024));
         return result;
     }) alloc;
     void[][490] array;
     foreach (i; 0 .. array.length)
     {
-        auto length = i * 100000 + 1;
+        auto length = i * 10000 + 1;
         array[i] = alloc.allocate(length);
         assert(array[i].ptr);
         foreach (j; 0 .. i)
@@ -485,7 +496,8 @@ unittest
     import std.experimental.allocator.gc_allocator,
         std.experimental.allocator.allocator_list, std.algorithm;
     import std.experimental.allocator.common;
-    testAllocator!(() => AllocatorList!(n => KRBlock!GCAllocator(max(n, 1024 * 1024)))());
+    testAllocator!(() => AllocatorList!(
+        n => KRBlock!GCAllocator(max(n * 16, 1024 * 1024)))());
 }
 
 unittest
