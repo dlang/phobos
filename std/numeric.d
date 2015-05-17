@@ -783,7 +783,7 @@ public:
 /**  Find a real root of a real function f(x) via bracketing.
  *
  * Given a function $(D f) and a range $(D [a..b]) such that $(D f(a))
- * and $(D f(b)) have opposite signs or at least one of them equals ±0, 
+ * and $(D f(b)) have opposite signs or at least one of them equals ±0,
  * returns the value of $(D x) in
  * the range which is closest to a root of $(D f(x)).  If $(D f(x))
  * has more than one root in the range, one will be chosen
@@ -845,7 +845,7 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  *
  * fax = Value of $(D f(ax)).
  *
- * fbx = Value of $(D f(bx)). $(D fax) and $(D fbx) should have opposite signs. 
+ * fbx = Value of $(D f(bx)). $(D fax) and $(D fbx) should have opposite signs.
  * ($(D f(ax)) and $(D f(bx)) are commonly known in advance.)
  *
  *
