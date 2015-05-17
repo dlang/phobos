@@ -2973,8 +2973,7 @@ auto dirEntries(string path, SpanMode mode,
     return DirIterator(path, mode, followSymlink);
 }
 
-deprecated("Please use dirEntries(string, SpanMode, FollowSymlink) "
-           "with FollowSymlink.yes or FollowSymlink.no instead.")
+/// ditto
 auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
     return dirEntries(path, mode, cast(FollowSymlink)followSymlink);
