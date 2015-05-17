@@ -915,7 +915,9 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
     }
 }
 
+/// Flag to specify whether or not $(D byLine) should provide line terminators
 alias KeepTerminator = Flag!"keepTerminator";
+
 /+
 struct ByLineBuffer(Char)
 {
@@ -3729,15 +3731,28 @@ struct Curl
         this.handle = null;
     }
 
-    /**
-       Pausing and continuing transfers.
-    */
-    void pause(bool sendingPaused, bool receivingPaused)
+    /// Flag to specify whether or not $(D pause) should pause or continue
+    /// sending during a transfer
+    alias PauseSending = Flag!"pauseSending";
+
+    /// Flag to specify whether or not $(D pause) should pause or continue
+    /// receiving during a transfer
+    alias PauseReceiving = Flag!"pauseReceiving";
+
+    /// Pause and continue transfers.
+    void pause(PauseSending pauseSending, PauseReceiving pauseReceiving)
     {
         throwOnStopped();
         _check(curl_easy_pause(this.handle,
-                               (sendingPaused ? CurlPause.send_cont : CurlPause.send) |
-                               (receivingPaused ? CurlPause.recv_cont : CurlPause.recv)));
+                               (pauseSending ? CurlPause.send_cont : CurlPause.send) |
+                               (pauseReceiving ? CurlPause.recv_cont : CurlPause.recv)));
+    }
+
+    deprecated("Use pause(PauseSending, PauseReceiving) with flags instead of booleans.")
+    void pause(bool pauseSending, bool pauseReceiving)
+    {
+        pause(cast(PauseSending)pauseSending,
+              cast(PauseReceiving)pauseReceiving);
     }
 
     /**
