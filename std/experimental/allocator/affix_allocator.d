@@ -146,7 +146,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (b is null)
             {
                 b = allocate(s);
-                return b !is null || s == 0;
+                return b.length == s;
             }
             auto t = actualAllocation(b);
             auto result = parent.reallocate(t, actualAllocationSize(s));
@@ -163,10 +163,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         }
 
         /* The following methods are defined if $(D ParentAllocator) defines
-        them, and forward to it: $(D deallocateAll), $(D empty), $(D
-        owns).*/
+        them, and forward to it: $(D deallocateAll), $(D empty).*/
         mixin(forwardToMember("parent",
-            "deallocateAll", "empty", "owns"));
+            "deallocateAll", "empty"));
 
         static if (hasMember!(Allocator, "zeroesAllocations"))
         alias zeroesAllocations = Allocator.zeroesAllocations;
@@ -271,11 +270,12 @@ unittest
     assert(A.it.prefix(b) == 0xCAFE_BABE && A.it.suffix(b) == 0xDEAD_BEEF);
 }
 
-version(none) unittest
+unittest
 {
     import std.experimental.allocator.mallocator;
     import std.experimental.allocator.heap_block;
-    testAllocator!(() => AffixAllocator!(Mallocator, size_t, size_t).it);
+    import std.experimental.allocator.common;
+    //testAllocator!(() => AffixAllocator!(Mallocator, size_t, size_t).it);
     testAllocator!({
         auto hb = HeapBlock!128(new void[128 * 4096]);
         AffixAllocator!(HeapBlock!128, size_t, size_t) a;

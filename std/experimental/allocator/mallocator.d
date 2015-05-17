@@ -135,8 +135,8 @@ struct AlignedMallocator
     version(Posix) @trusted
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
-        version(assert) import std.conv;
-        assert(a.isGoodDynamicAlignment, a.to!string);
+        import std.conv : to;
+        assert(a.isGoodDynamicAlignment, to!string(a));
         void* result;
         auto code = posix_memalign(&result, a, bytes);
         if (code == ENOMEM) return null;
