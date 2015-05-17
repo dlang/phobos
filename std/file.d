@@ -2601,7 +2601,7 @@ void rmdirRecurse(ref DirEntry de)
     else
     {
         // all children, recursively depth-first
-        foreach(DirEntry e; dirEntries(de.name, SpanMode.depth, FollowSymlink.no))
+        foreach(DirEntry e; dirEntries(de.name, SpanMode.depth, false))
         {
             attrIsDir(e.linkAttributes) ? rmdir(e.name) : remove(e.name);
         }
@@ -2913,10 +2913,6 @@ public:
     void popFront(){ impl.popFront(); }
 
 }
-
-/// Flag to specify whether or not $(D dirEntries) should follow symbolic links
-alias FollowSymlink = Flag!"followSymlink";
-
 /++
     Returns an input range of DirEntry that lazily iterates a given directory,
     also provides two ways of foreach iteration. The iteration variable can be of
@@ -2967,17 +2963,9 @@ foreach(d; parallel(dFiles, 1)) //passes by 1 file to each thread
 }
 --------------------
  +/
-auto dirEntries(string path, SpanMode mode,
-                FollowSymlink followSymlink = FollowSymlink.yes)
-{
-    return DirIterator(path, mode, followSymlink);
-}
-
-deprecated("Please use dirEntries(string, SpanMode, FollowSymlink) "
-           "with FollowSymlink.yes or FollowSymlink.no instead.")
 auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
-    return dirEntries(path, mode, cast(FollowSymlink)followSymlink);
+    return DirIterator(path, mode, followSymlink);
 }
 
 /// Duplicate functionality of D1's $(D std.file.listdir()):
