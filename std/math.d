@@ -326,6 +326,7 @@ template floatTraits(T)
     {
         // Quadruple precision float
         enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPBIAS = 0x3FFF;
         enum realFormat = RealFormat.ieeeQuadruple;
         version(LittleEndian)
         {
