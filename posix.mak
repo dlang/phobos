@@ -201,7 +201,7 @@ STD_MODULES = $(addprefix std/, \
   encoding exception \
   $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
   file format functional getopt json math mathspecial \
-  metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
+  meta metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
   process random \
   $(addprefix range/, primitives interfaces) \
   $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
