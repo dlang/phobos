@@ -4589,7 +4589,11 @@ unittest
 
 
 /*********************************
- * Returns $(D_KEYWORD true) if x is a NaN, and $(D_KEYWORD false) otherwise. 
+ * Determines if $(D_PARAM x) is NaN.
+ * params:
+ *  x = a floating point number. 
+ * returns:
+ *  $(D true) if $(D_PARAM x) is Nan.
  */
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
@@ -4679,7 +4683,11 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 }
 
 /*********************************
- * Returns $(D_KEYWORD true) if e is finite, and $(D_KEYWORD false) otherwise.
+ * Determines if $(D_PARAM x) is finite.
+ * params:
+ *  x = a floating point number. 
+ * returns:
+ *  $(D true) if $(D_PARAM x) is finite.
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
 {
@@ -4720,10 +4728,17 @@ int isFinite(X)(X x) @trusted pure nothrow @nogc
     return isFinite(cast(float)x);
 }
 
+
 /*********************************
- * Returns $(D_KEYWORD true) if x is normalized (not zero, subnormal, infinite, or $(NAN)),
- * and $(D_KEYWORD false) otherwise.
- */
+ * Determines if $(D_PARAM x) is normalized.
+ *
+ * A normalized number must not be zero, subnormal, infinite nor $(NAN).
+ *
+ * params:
+ *  x = a floating point number. 
+ * returns:
+ *  $(D true) if $(D_PARAM x) is normalized.
+ */ 
 
 /* Need one for each format because subnormal floats might
  * be converted to normal reals.
@@ -4764,16 +4779,22 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
 }
 
 /*********************************
- * Returns $(D_KEYWORD true) if x is subnormal (also known as "denormal number"),
- * and $(D_KEYWORD false) otherwise.
+ * Determines if $(D_PARAM x) is subnormal.
  * 
- * Subnormals have a 0 exponent and a 0 most significant mantissa bit.
+ * Subnormals (also known as "denormal number"), have a 0 exponent 
+ * and a 0 most significant mantissa bit.
  *
- * Need one for each format because subnormal floats might
- * be converted to normal reals.
+ * params:
+ *  x = a floating point number. 
+ * returns:
+ *  $(D true) if $(D_PARAM x) is a denormal number.
  */
 bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
+    /*
+        Need one for each format because subnormal floats might
+        be converted to normal reals.
+    */
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -4831,7 +4852,11 @@ int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 }
 
 /*********************************
- * Returns $(D_KEYWORD true) if x is $(PLUSMN)$(INFIN), and $(D_KEYWORD false) otherwise.
+ * Determines if $(D_PARAM x) is $(PLUSMN)$(INFIN).
+ * params:
+ *  x = a floating point number. 
+ * returns:
+ *  $(D true) if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
