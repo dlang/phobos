@@ -6,7 +6,7 @@ import std.experimental.allocator.common;
 _Options for $(D StatsCollector) defined below. Each enables during
 compilation one specific counter, statistic, or other piece of information.
 */
-enum Options : uint
+enum Options : ulong
 {
     /**
     Counts the number of calls to $(D owns).
@@ -141,8 +141,8 @@ callerLine), and $(D callerTime) is associated with each specific allocation.
 This data prefixes each allocation.
 
 */
-struct StatsCollector(Allocator, uint flags = Options.all,
-    uint perCallFlags = 0)
+struct StatsCollector(Allocator, ulong flags = Options.all,
+    ulong perCallFlags = 0)
 {
 private:
     import std.traits : hasMember, Signed;
@@ -613,7 +613,7 @@ public:
             return &s;
         }
 
-        private void addPerCall(string f, uint n, names...)(uint[] values...)
+        private void addPerCall(string f, uint n, names...)(ulong[] values...)
         {
             import std.array : join;
             enum uint mask = mixin("Options."~[names].join("|Options."));
@@ -632,7 +632,7 @@ public:
     }
     else
     {
-        private void addPerCall(string f, uint n, names...)(uint[]...)
+        private void addPerCall(string f, uint n, names...)(ulong[]...)
         {
         }
     }
