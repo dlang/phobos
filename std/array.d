@@ -3008,11 +3008,17 @@ if (isDynamicArray!A)
         this.arr = arr;
     }
 
-    auto opDispatch(string fn, Args...)(Args args) if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
+    template opDispatch(string fn)
     {
-        // we do it this way because we can't cache a void return
-        scope(exit) *this.arr = impl.data;
-        mixin("return impl." ~ fn ~ "(args);");
+        // This is a different name plus an alias to work around issue 14604.
+        auto opDispatchImpl(Args...)(Args args)
+            if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
+        {
+            // we do it this way because we can't cache a void return
+            scope(exit) *this.arr = impl.data;
+            mixin("return impl." ~ fn ~ "(args);");
+        }
+        alias opDispatch = opDispatchImpl;
     }
 
     private alias AppenderType = Appender!A;
@@ -3499,6 +3505,12 @@ unittest
     const app3 = app2;
     assert(app3.capacity >= 3);
     assert(app3.data == [1, 2, 3]);
+}
+
+unittest // issue 14605
+{
+    static assert(isOutputRange!(Appender!(int[]), int));
+    static assert(isOutputRange!(RefAppender!(int[]), int));
 }
 
 unittest
