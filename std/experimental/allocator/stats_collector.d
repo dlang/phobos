@@ -118,43 +118,9 @@ enum Options : uint
     */
     bytesAll = ((1u << 18) - 1) & ~numAll,
     /**
-    Instructs $(D StatsCollector) to store the size asked by the caller for
-    each allocation. All per-allocation data is stored just before the actually
-    allocation (see $(D AffixAllocator)).
-    */
-    callerSize = 1u << 18,
-    /**
-    Instructs $(D StatsCollector) to store the caller module for each
-    allocation.
-    */
-    callerModule = 1u << 19,
-    /**
-    Instructs $(D StatsCollector) to store the caller's file for each
-    allocation.
-    */
-    callerFile = 1u << 20,
-    /**
-    Instructs $(D StatsCollector) to store the caller $(D __FUNCTION__) for
-    each allocation.
-    */
-    callerFunction = 1u << 21,
-    /**
-    Instructs $(D StatsCollector) to store the caller's line for each
-    allocation.
-    */
-    callerLine = 1u << 22,
-    /**
-    Instructs $(D StatsCollector) to store the time of each allocation.
-    */
-    callerTime = 1u << 23,
-    /**
-    Chooses all $(D callerXxx) flags.
-    */
-    callerAll = ((1u << 24) - 1) & ~numAll & ~bytesAll,
-    /**
     Combines all flags above.
     */
-    all = (1u << 25) - 1
+    all = (1u << 18) - 1
 }
 
 /**
@@ -172,10 +138,11 @@ callerLine), and $(D callerTime) is associated with each specific allocation.
 This data prefixes each allocation.
 
 */
-struct StatsCollector(Allocator, uint flags = Options.all)
+struct StatsCollector(Allocator, uint flags = Options.all,
+    uint perCallFlags = 0)
 {
 private:
-    import std.traits;
+    import std.traits : hasMember, Signed;
 
     static string define(string type, string[] names...)
     {
@@ -254,86 +221,14 @@ private:
         @property ulong bytesHighTide() const;
     }
 
-    // Do flags require any per allocation state?
-    enum hasPerAllocationState = flags & (Options.callerTime
-        | Options.callerModule | Options.callerFile | Options.callerLine);
-
-    version (StdDdoc)
-    {
-        /**
-        Per-allocation information that can be iterated upon by using
-        $(D byAllocation). This only tracks live allocations and is useful for
-        e.g. tracking memory leaks.
-
-        Example:
-        ----
-        StatsCollector!(Mallocator, Options.all) a;
-        auto d1 = a.allocate(10);
-        auto d2 = a.allocate(11);
-        a.deallocate(d1);
-        foreach (ref e; a.byAllocation)
-        {
-            writeln("Allocation module: ", e.callerModule);
-        }
-        ----
-        */
-        public struct AllocationInfo
-        {
-            /**
-            Read-only property defined by the corresponding flag chosen in
-            $(D options).
-            */
-            @property size_t callerSize() const;
-            /// Ditto
-            @property string callerModule() const;
-            /// Ditto
-            @property string callerFile() const;
-            /// Ditto
-            @property uint callerLine() const;
-            /// Ditto
-            @property uint callerFunction() const;
-            /// Ditto
-            @property const(SysTime) callerTime() const;
-        }
-    }
-    else static if (hasPerAllocationState)
-    {
-        public struct AllocationInfo
-        {
-            import std.datetime;
-            mixin(define("string", "callerModule", "callerFile",
-                "callerFunction"));
-            mixin(define("uint", "callerLine"));
-            mixin(define("size_t", "callerSize"));
-            mixin(define("SysTime", "callerTime"));
-            private AllocationInfo* _prev, _next;
-        }
-        AllocationInfo* _root;
-        import std.experimental.allocator.affix_allocator;
-        alias MyAllocator = AffixAllocator!(Allocator, AllocationInfo);
-
-        public auto byAllocation()
-        {
-            struct Voldemort
-            {
-                private AllocationInfo* _root;
-                bool empty() { return _root is null; }
-                ref AllocationInfo front() { return *_root; }
-                void popFront() { _root = _root._next; }
-                Voldemort save() { return this; }
-            }
-            return Voldemort(_root);
-        }
-    }
-    else
-    {
-        alias MyAllocator = Allocator;
-    }
-
 public:
-    // Parent allocator (publicly accessible)
-    static if (stateSize!MyAllocator) MyAllocator parent;
-    else alias parent = MyAllocator.it;
+    /**
+    The parent allocator is publicly accessible either as a direct member if it
+    holds state, or as an alias to $(D Allocator.it) otherwise. One may use it
+    for making calls that won't count toward statistics collection.
+    */
+    static if (stateSize!Allocator) Allocator parent;
+    else alias parent = Allocator.it;
 
 private:
     // Per-allocator state
@@ -363,220 +258,239 @@ public:
     /// Alignment offered is equal to $(D Allocator.alignment).
     alias alignment = Allocator.alignment;
 
-    /// Increments $(D numOwns) and forwards to $(D parent.owns(b)).
+    /**
+    Increments $(D numOwns) (per instance and and per call) and forwards to $(D
+    parent.owns(b)).
+    */
     static if (hasMember!(Allocator, "owns"))
-    bool owns(void[] b)
+    {
+        static if ((perCallFlags & Options.numOwns) == 0)
+        bool owns(void[] b)
+        { return ownsImpl(b); }
+        else
+        bool owns(string f = __FILE, uint n = line)(void[] b)
+        { return ownsImpl!(f, n)(b); }
+    }
+
+    private bool ownsImpl(string f = null, uint n = 0)(void[] b)
     {
         up!"numOwns";
+        addPerCall!(f, n, "numOwns")(1);
         return parent.owns(b);
     }
 
     /**
-    Forwards to $(D parent.allocate). Affects appropriately $(D numAllocate),
+    Forwards to $(D parent.allocate). Affects per instance: $(D numAllocate),
     $(D bytesUsed), $(D bytesAllocated), $(D bytesSlack), $(D numAllocateOK),
-    and $(D bytesHighTide). If per-allocation stats are collected, allocates
-    more than $(D n) bytes from $(D parent).
+    and $(D bytesHighTide). Affects per call: $(D numAllocate), $(D
+    numAllocateOK), and $(D bytesAllocated).
     */
-    version (StdDdoc)
+    static if (!(perCallFlags
+        & (Options.numAllocate | Options.numAllocateOK
+            | Options.bytesAllocated)))
     {
-        void[] allocate(size_t n);
-    }
-    else static if (flags & Options.callerLine)
-    {
-        void[] allocate
-            (string m = __MODULE__, string f = __FILE__,
-                string fun = __FUNCTION__, ulong n = __LINE__)
-            (size_t bytes)
-        {
-            return allocateImpl!(m, f, fun, n)(bytes);
-        }
-    }
-    else static if (flags & Options.callerFunction)
-    {
-        void[] allocate
-            (string m = __MODULE__, string f = __FILE__,
-                string fun = __FUNCTION__)
-            (size_t bytes)
-        {
-            return allocateImpl!(m, f, fun, 0)(bytes);
-        }
-    }
-    else static if (flags & Options.callerFile)
-    {
-        void[] allocate(string m = __MODULE__, string f = __FILE__)
-            (size_t bytes)
-        {
-            return allocateImpl!(m, f, null, 0)(bytes);
-        }
-    }
-    else static if (flags & Options.callerModule)
-    {
-        void[] allocate(string m = __MODULE__)(size_t bytes)
-        {
-            return allocateImpl!(m, null, null, 0)(bytes);
-        }
+        void[] allocate(size_t n)
+        { return allocateImpl(n); }
     }
     else
     {
-        void[] allocate(size_t bytes)
-        {
-            return allocateImpl!(null, null, null, 0)(bytes);
-        }
+        void[] allocate(string f = __FILE__, ulong n = __LINE__)
+            (size_t bytes)
+        { return allocateImpl!(f, n)(bytes); }
     }
 
-    private void[] allocateImpl(string m, string f, string fun, ulong n)
-        (size_t bytes)
+    private void[] allocateImpl(string f = null, ulong n = 0)(size_t bytes)
     {
-        up!"numAllocate";
         auto result = parent.allocate(bytes);
         add!"bytesUsed"(result.length);
         add!"bytesAllocated"(result.length);
-        add!"bytesSlack"(this.goodAllocSize(result.length) - result.length);
-        add!"numAllocateOK"(result.ptr || !bytes); // allocating 0 bytes is OK
+        immutable slack = this.goodAllocSize(result.length) - result.length;
+        add!"bytesSlack"(slack);
+        up!"numAllocate";
+        add!"numAllocateOK"(result.length == bytes); // allocating 0 bytes is OK
         static if (flags & Options.bytesHighTide)
         {
             if (_bytesHighTide < _bytesUsed) _bytesHighTide = _bytesUsed;
         }
-        static if (hasPerAllocationState)
-        {
-            auto p = &parent.prefix(result);
-            static if (flags & Options.callerSize)
-                p._callerSize = bytes;
-            static if (flags & Options.callerModule)
-                p._callerModule = m;
-            static if (flags & Options.callerFile)
-                p._callerFile = f;
-            static if (flags & Options.callerFunction)
-                p._callerFunction = fun;
-            static if (flags & Options.callerLine)
-                p._callerLine = n;
-            static if (flags & Options.callerTime)
-            {
-                import std.datetime;
-                p._callerTime =  Clock.currTime;
-            }
-            // Wire the new info into the list
-            assert(p._prev is null);
-            p._next = _root;
-            if (_root) _root._prev = p;
-            _root = p;
-        }
+        addPerCall!(f, n, "numAllocate", "numAllocateOK", "bytesAllocated")
+            (1, result.length == bytes, result.length);
         return result;
     }
 
     /**
-    Defined whether or not $(D Allocator.expand) is defined. Affects appropriately $(D numExpand), $(D numExpandOK), $(D bytesExpanded),
-    $(D bytesSlack).
+    Defined whether or not $(D Allocator.expand) is defined. Affects
+    per instance: $(D numExpand), $(D numExpandOK), $(D bytesExpanded),
+    $(D bytesSlack), $(D bytesAllocated), and $(D bytesUsed). Affects per call:
+    $(D numExpand), $(D numExpandOK), $(D bytesExpanded), and
+    $(D bytesAllocated).
     */
-    bool expand(ref void[] b, size_t s)
+    static if (!(perCallFlags
+        & (Options.numExpand | Options.numExpandOK | Options.bytesExpanded)))
+    {
+        bool expand(ref void[] b, size_t delta)
+        { return expandImpl(b, delta); }
+    }
+    else
+    {
+        bool expand(string f = __FILE__, uint n = __LINE__)
+            (ref void[] b, size_t delta)
+        { return expandImpl!(f, n)(b, delta); }
+    }
+
+    private bool expandImpl(string f = null, uint n = 0)(ref void[] b, size_t s)
     {
         up!"numExpand";
+        Signed!size_t slack = 0;
         static if (!hasMember!(Allocator, "expand"))
         {
-            return false;
+            auto result = s == 0;
         }
         else
         {
             immutable bytesSlackB4 = this.goodAllocSize(b.length) - b.length;
-            if (!parent.expand(b, s)) return false;
-            up!"numExpandOK";
-            add!"bytesExpanded"(s);
-            add!"bytesSlack"(this.goodAllocSize(b.length) - b.length
-                - bytesSlackB4);
-            return true;
+            auto result = parent.expand(b, s);
+            if (result)
+            {
+                up!"numExpandOK";
+                add!"bytesUsed"(s);
+                add!"bytesAllocated"(s);
+                add!"bytesExpanded"(s);
+                slack = Signed!size_t(this.goodAllocSize(b.length) - b.length
+                    - bytesSlackB4);
+                add!"bytesSlack"(slack);
+            }
         }
+        immutable xtra = result ? s : 0;
+        addPerCall!(f, n, "numExpand", "numExpandOK", "bytesExpanded",
+            "bytesAllocated")
+            (1, result, xtra, xtra);
+        return result;
     }
 
     /**
     Defined whether or not $(D Allocator.reallocate) is defined. Affects
-    appropriately $(D numReallocate), $(D numReallocateOK), $(D
+    per instance: $(D numReallocate), $(D numReallocateOK), $(D
     numReallocateInPlace), $(D bytesNotMoved), $(D bytesAllocated), $(D
-    bytesExpanded), and $(D bytesContracted).
+    bytesSlack), $(D bytesExpanded), and $(D bytesContracted). Affects per call:
+    $(D numReallocate), $(D numReallocateOK), $(D numReallocateInPlace),
+    $(D bytesNotMoved), $(D bytesExpanded), $(D bytesContracted), and
+    $(D bytesMoved).
     */
-    bool reallocate(ref void[] b, size_t s)
+    static if (!(perCallFlags
+        & (Options.numReallocate | Options.numReallocateOK
+            | Options.numReallocateInPlace | Options.bytesNotMoved
+            | Options.bytesExpanded | Options.bytesContracted
+            | Options.bytesMoved)))
+    {
+        bool reallocate(ref void[] b, size_t s)
+        { return reallocateImpl(b, s); }
+    }
+    else
+    {
+        bool reallocate(string f = __FILE__, ulong n = __LINE__)
+            (ref void[] b, size_t s)
+        { return reallocateImpl!(f, n)(b, s); }
+    }
+
+    private bool reallocateImpl(string f = null, uint n = 0)
+        (ref void[] b, size_t s)
     {
         up!"numReallocate";
         const bytesSlackB4 = this.goodAllocSize(b.length) - b.length;
         const oldB = b.ptr;
-        static if ((flags & Options.bytesMoved)
-                || (flags & Options.bytesNotMoved)
-                || (flags & Options.bytesUsed))
-            const oldLength = b.length;
-        static if (hasPerAllocationState)
-            const reallocatingRoot = b.ptr && _root is &parent.prefix(b);
-        if (!parent.reallocate(b, s)) return false;
-        up!"numReallocateOK";
-        add!"bytesSlack"(this.goodAllocSize(b.length) - b.length
-            - bytesSlackB4);
-        add!"bytesUsed"(Signed!size_t(b.length - oldLength));
-        if (oldB == b.ptr)
+        const oldLength = b.length;
+
+        const result = parent.reallocate(b, s);
+
+        Signed!size_t slack = 0;
+        bool wasInPlace = false;
+        Signed!size_t delta = 0;
+
+        if (result)
         {
-            // This was an in-place reallocation, yay
-            up!"numReallocateInPlace";
-            add!"bytesNotMoved"(oldLength);
-            const Signed!size_t delta = b.length - oldLength;
-            if (delta >= 0)
+            up!"numReallocateOK";
+            slack = (this.goodAllocSize(b.length) - b.length) - bytesSlackB4;
+            add!"bytesSlack"(slack);
+            add!"bytesUsed"(Signed!size_t(b.length - oldLength));
+            if (oldB == b.ptr)
             {
-                // Expansion
-                add!"bytesAllocated"(delta);
-                add!"bytesExpanded"(delta);
+                // This was an in-place reallocation, yay
+                wasInPlace = true;
+                up!"numReallocateInPlace";
+                add!"bytesNotMoved"(oldLength);
+                delta = b.length - oldLength;
+                if (delta >= 0)
+                {
+                    // Expansion
+                    add!"bytesAllocated"(delta);
+                    add!"bytesExpanded"(delta);
+                }
+                else
+                {
+                    // Contraction
+                    add!"bytesContracted"(-delta);
+                }
             }
             else
             {
-                // Contraction
-                add!"bytesContracted"(-delta);
+                // This was a allocate-move-deallocate cycle
+                add!"bytesAllocated"(b.length);
+                add!"bytesMoved"(oldLength);
             }
         }
-        else
-        {
-            // This was a allocate-move-deallocate cycle
-            add!"bytesAllocated"(b.length);
-            add!"bytesMoved"(oldLength);
-            static if (hasPerAllocationState)
-            {
-                // Stitch the pointers again, ho-hum
-                auto p = &parent.prefix(b);
-                if (p._next) p._next._prev = p;
-                if (p._prev) p._prev._next = p;
-                if (reallocatingRoot) _root = p;
-            }
-        }
-        return true;
+        addPerCall!(f, n, "numReallocate", "numReallocateOK",
+            "numReallocateInPlace", "bytesNotMoved",
+            "bytesExpanded", "bytesContracted", "bytesMoved")
+            (1, result, wasInPlace, wasInPlace ? oldLength : 0,
+                delta >= 0 ? delta : 0, delta < 0 ? -delta : 0,
+                wasInPlace ? 0 : oldLength);
+        return result;
     }
 
     /**
     Defined whether or not $(D Allocator.deallocate) is defined. Affects
-    appropriately $(D numDeallocate), $(D bytesUsed), and $(D byteSlack).
+    per instance: $(D numDeallocate), $(D bytesUsed), and $(D bytesSlack).
+    Affects per call: $(D numDeallocate) and $(D bytesContracted).
     */
-    void deallocate(void[] b)
+    static if (!(perCallFlags &
+            (Options.numDeallocate | Options.bytesContracted)))
+        void deallocate(void[] b)
+        { deallocateImpl(b); }
+    else
+        void deallocate(string f = __FILE__, uint n = __LINE__)(void[] b)
+        { deallocateImpl!(f, n)(b); }
+
+    private void deallocateImpl(string f = null, uint n = 0)(void[] b)
     {
         up!"numDeallocate";
         add!"bytesUsed"(-Signed!size_t(b.length));
         add!"bytesSlack"(-(this.goodAllocSize(b.length) - b.length));
-        // Remove the node from the list
-        static if (hasPerAllocationState)
-        {
-            auto p = &parent.prefix(b);
-            if (p._next) p._next._prev = p._prev;
-            if (p._prev) p._prev._next = p._next;
-            if (_root is p) _root = p._next;
-        }
+        addPerCall!(f, n, "numDeallocate", "bytesContracted")(1, b.length);
         static if (hasMember!(Allocator, "deallocate"))
             parent.deallocate(b);
     }
 
-    /**
-    Defined only if $(D Allocator.deallocateAll) is defined. Affects
-    appropriately $(D numDeallocateAll).
-    */
     static if (hasMember!(Allocator, "deallocateAll"))
-    void deallocateAll()
     {
-        up!"numDeallocateAll";
-        static if ((flags & Options.bytesUsed))
-            _bytesUsed = 0;
-        parent.deallocateAll();
-        static if (hasPerAllocationState) _root = null;
+        /**
+        Defined only if $(D Allocator.deallocateAll) is defined. Affects
+        per instance and per call $(D numDeallocateAll).
+        */
+        static if (!(perCallFlags & Options.numDeallocateAll))
+            void deallocateAll()
+            { deallocateAllImpl(); }
+        else
+            void deallocateAll(string f = __FILE__, uint n = __LINE__)()
+            { deallocateAllImpl!(f, n)(); }
+
+        private void deallocateAllImpl(string f = null, uint n = 0)()
+        {
+            up!"numDeallocateAll";
+            addPerCall!(f, n, "numDeallocateAll")(1);
+            static if ((flags & Options.bytesUsed))
+                _bytesUsed = 0;
+            parent.deallocateAll();
+        }
     }
 
     /**
@@ -588,6 +502,155 @@ public:
     {
         return _bytesUsed == 0;
     }
+
+    /**
+    Reports per instance statistics to $(D output) (e.g. $(D stdout)). The
+    format is simple: one kind and value per line, separated by a colon, e.g.
+    $(D bytesAllocated:7395404)
+    */
+    void reportStatistics(R)(auto ref R output)
+    {
+        import std.traits : EnumMembers;
+        import std.conv : to;
+        foreach (e; EnumMembers!Options)
+        {
+            static if ((flags & e) && e != Options.numAll
+                    && e != Options.bytesAll && e != Options.all)
+                output.write(e.to!string, ":", mixin(e.to!string), '\n');
+        }
+    }
+
+    static if (perCallFlags)
+    {
+        /**
+        Defined if $(D perCallFlags) is nonzero.
+        */
+        struct PerCallStatistics
+        {
+            /// The file and line of the call.
+            string file;
+            /// Ditto
+            uint line;
+            /// The options corresponding to the statistics collected.
+            Options[] opts;
+            /// The values of the statistics. Has the same length as $(D opts).
+            ulong[] values;
+            // Next in the chain.
+            private PerCallStatistics* next;
+
+            /**
+            Format to a string such as:
+            $(D mymodule.d(655): [numAllocate:21, numAllocateOK:21, bytesAllocated:324202]).
+            */
+            string toString()
+            {
+                import std.conv : text, to;
+                auto result = text(file, "(", line, "): [");
+                foreach (i, opt; opts)
+                {
+                    if (i) result ~= ", ";
+                    result ~= opt.to!string;
+                    result ~= ':';
+                    result ~= values[i].to!string;
+                }
+                return result ~= "]";
+            }
+        }
+        private static PerCallStatistics* root;
+
+        /**
+        Defined if $(D perCallFlags) is nonzero. Iterates all monitored
+        file/line instances. The order of iteration is not meaningful (items
+        are inserted at the front of a list upon the first call), so
+        preprocessing the statistics after collection might be appropriate.
+        */
+        static auto byFileLine()
+        {
+            static struct Voldermort
+            {
+                PerCallStatistics* current;
+                bool empty() { return !current; }
+                ref PerCallStatistics front() { return *current; }
+                void popFront() { current = current.next; }
+                Voldermort save() { return this; }
+            }
+            return Voldermort(root);
+        }
+
+        /**
+        Defined if $(D perCallFlags) is nonzero. Outputs (e.g. to a $(D File))
+        a simple report of the collected per-call statistics.
+        */
+        static void reportPerCallStatistics(R)(auto ref R output)
+        {
+            import std.stdio;
+            output.write("Stats for: ", StatsCollector.stringof, '\n');
+            foreach (ref stat; byFileLine)
+            {
+                output.write(stat, '\n');
+            }
+        }
+
+        private PerCallStatistics* statsAt(string f, uint n, opts...)()
+        {
+            import std.range : repeat;
+            import std.array : array;
+
+            static PerCallStatistics s = { f, n, [ opts ],
+                repeat(0UL, opts.length).array };
+
+            if (!s.next && root != &s)
+            {
+                // Insert as root
+                s.next = root;
+                root = &s;
+            }
+            return &s;
+        }
+
+        private void addPerCall(string f, uint n, names...)(uint[] values...)
+        {
+            import std.array : join;
+            enum uint mask = mixin("Options."~[names].join("|Options."));
+            static if (perCallFlags & mask)
+            {
+                // Per allocation info
+                auto ps = mixin("statsAt!(f, n,"
+                    "Options."~[names].join(", Options.")
+                ~")");
+                foreach (i; 0 .. names.length)
+                {
+                    ps.values[i] += values[i];
+                }
+            }
+        }
+    }
+    else
+    {
+        private void addPerCall(string f, uint n, names...)(uint[]...)
+        {
+        }
+    }
+}
+
+///
+unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.free_list;
+    alias Allocator = StatsCollector!(GCAllocator, Options.all, Options.all);
+
+    Allocator alloc;
+    auto b = alloc.allocate(10);
+    alloc.reallocate(b, 20);
+    alloc.deallocate(b);
+
+    import std.stdio : File;
+    import std.range : walkLength;
+    auto f = "/tmp/dlang.std.experimental.allocator.stats_collector.txt";
+    Allocator.reportPerCallStatistics(File(f, "w"));
+    alloc.reportStatistics(File(f, "a"));
+    assert(File(f).byLine.walkLength == 22);
 }
 
 unittest
@@ -599,20 +662,15 @@ unittest
         Allocator a;
         auto b1 = a.allocate(100);
         assert(a.numAllocate == 1);
+        assert(a.expand(b1, 0));
+        assert(a.reallocate(b1, b1.length + 1));
         auto b2 = a.allocate(101);
         assert(a.numAllocate == 2);
-        assert(a.bytesAllocated == 201);
-        assert(a.bytesUsed == 201);
+        assert(a.bytesAllocated == 202);
+        assert(a.bytesUsed == 202);
         auto b3 = a.allocate(202);
         assert(a.numAllocate == 3);
-        assert(a.bytesAllocated == 403);
-
-        assert(walkLength(a.byAllocation) == 3);
-
-        foreach (ref e; a.byAllocation)
-        {
-            if (false) writeln(e);
-        }
+        assert(a.bytesAllocated == 404);
 
         a.deallocate(b2);
         assert(a.numDeallocate == 1);
@@ -622,10 +680,37 @@ unittest
         assert(a.numDeallocate == 3);
         assert(a.numAllocate == a.numDeallocate);
         assert(a.bytesUsed == 0);
-    }
 
-    import std.experimental.allocator.mallocator;
+        //import std.stdio;
+        //Allocator.reportPerCallStatistics(stdout);
+        //a.reportStatistics(stdout);
+     }
+
+    import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator.free_list;
-    test!(StatsCollector!Mallocator)();
-    test!(StatsCollector!(FreeList!(Mallocator, 128)))();
+    test!(StatsCollector!(GCAllocator, Options.all, Options.all));
+    test!(StatsCollector!(FreeList!(GCAllocator, 128), Options.all,
+        Options.all));
+}
+
+unittest
+{
+    void test(Allocator)()
+    {
+        import std.range : walkLength;
+        import std.stdio : writeln;
+        Allocator a;
+        auto b1 = a.allocate(100);
+        assert(a.expand(b1, 0));
+        assert(a.reallocate(b1, b1.length + 1));
+        auto b2 = a.allocate(101);
+        auto b3 = a.allocate(202);
+
+        a.deallocate(b2);
+        a.deallocate(b1);
+        a.deallocate(b3);
+    }
+    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.free_list;
+    test!(StatsCollector!(GCAllocator, 0, 0));
 }
