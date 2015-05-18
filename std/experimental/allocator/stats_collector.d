@@ -18,8 +18,9 @@ enum Options : uint
     */
     numAllocate = 1u << 1,
     /**
-    Counts the number of calls to $(D allocate) that succeeded, i.e. they were
-    for more than zero bytes and returned a non-null block.
+    Counts the number of calls to $(D allocate) that succeeded, i.e. they
+    returned a block as large as requested. (N.B. requests for zero bytes count
+    as successful.)
     */
     numAllocateOK = 1u << 2,
     /**
@@ -83,7 +84,9 @@ enum Options : uint
     bytesExpanded = 1u << 12,
     /**
     Tracks the sum of all $(D b.length - s) with $(D b.length > s) in calls of
-    the form $(D realloc(b, s)) that succeed (return $(D true)).
+    the form $(D realloc(b, s)) that succeed (return $(D true)). In per-call
+    statistics, also unambiguously counts the bytes deallocated with
+    $(D deallocate).
     */
     bytesContracted = 1u << 13,
     /**
@@ -159,6 +162,10 @@ private:
     {
         mixin("static if (flags & Options." ~ counter
             ~ ") _" ~ counter ~ " += n;");
+        static if (counter == "bytesUsed" && (flags & Options.bytesHighTide))
+        {
+            if (bytesHighTide < bytesUsed ) _bytesHighTide = bytesUsed;
+        }
     }
 
     void up(string counter)() { add!counter(1); }
@@ -308,10 +315,6 @@ public:
         add!"bytesSlack"(slack);
         up!"numAllocate";
         add!"numAllocateOK"(result.length == bytes); // allocating 0 bytes is OK
-        static if (flags & Options.bytesHighTide)
-        {
-            if (_bytesHighTide < _bytesUsed) _bytesHighTide = _bytesUsed;
-        }
         addPerCall!(f, n, "numAllocate", "numAllocateOK", "bytesAllocated")
             (1, result.length == bytes, result.length);
         return result;
@@ -566,15 +569,15 @@ public:
         */
         static auto byFileLine()
         {
-            static struct Voldermort
+            static struct Voldemort
             {
                 PerCallStatistics* current;
                 bool empty() { return !current; }
                 ref PerCallStatistics front() { return *current; }
                 void popFront() { current = current.next; }
-                Voldermort save() { return this; }
+                auto save() { return this; }
             }
-            return Voldermort(root);
+            return Voldemort(root);
         }
 
         /**
@@ -598,12 +601,14 @@ public:
 
             static PerCallStatistics s = { f, n, [ opts ],
                 repeat(0UL, opts.length).array };
+            static bool inserted;
 
-            if (!s.next && root != &s)
+            if (!inserted)
             {
                 // Insert as root
                 s.next = root;
                 root = &s;
+                inserted = true;
             }
             return &s;
         }
