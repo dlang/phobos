@@ -19,6 +19,7 @@ The following methods are defined if $(D Allocator) defines them, and forward to
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
     import std.conv, std.experimental.allocator.common, std.traits;
+    import std.algorithm : min;
 
     static assert(
         !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
@@ -30,8 +31,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     /**
     If $(D Prefix) is $(D void), the alignment is that of the parent. Otherwise, the alignment is the same as the $(D Prefix)'s alignment.
     */
-    enum uint alignment =
-        stateSize!Prefix ? Prefix.alignof : Allocator.alignment;
+    enum uint alignment = isPowerOf2(stateSize!Prefix)
+        ? min(stateSize!Prefix, Allocator.alignment)
+        : (stateSize!Prefix ? Prefix.alignof : Allocator.alignment);
 
     /**
     If the parent allocator $(D Allocator) is stateful, an instance of it is
@@ -46,11 +48,15 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     {
         size_t goodAllocSize(size_t s)
         {
-            return parent.goodAllocSize(actualAllocationSize(s));
+            auto a = actualAllocationSize(s);
+            return roundUpToMultipleOf(parent.goodAllocSize(a)
+                    - stateSize!Prefix - stateSize!Suffix,
+                this.alignment);
         }
 
         private size_t actualAllocationSize(size_t s) const
         {
+            assert(s > 0);
             static if (!stateSize!Suffix)
             {
                 return s + stateSize!Prefix;
@@ -76,10 +82,16 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             auto result = parent.allocate(actualAllocationSize(bytes));
             if (result is null) return null;
             static if (stateSize!Prefix)
+            {
+                assert(result.ptr.alignedAt(Prefix.alignof));
                 emplace!Prefix(cast(Prefix*)result.ptr);
+            }
             static if (stateSize!Suffix)
-                emplace!Suffix(
-                    cast(Suffix*)(result.ptr + result.length - Suffix.sizeof));
+            {
+                auto suffixP = result.ptr + result.length - Suffix.sizeof;
+                assert(suffixP.alignedAt(Suffix.alignof));
+                emplace!Suffix(cast(Suffix*)(suffixP));
+            }
             return result[stateSize!Prefix .. stateSize!Prefix + bytes];
         }
 
@@ -88,20 +100,24 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         {
             auto result = parent.allocateAll();
             if (result is null) return null;
+            if (result.length < actualAllocationSize(1))
+            {
+                deallocate(result);
+                return null;
+            }
             static if (stateSize!Prefix)
             {
                 assert(result.length > stateSize!Prefix);
-                if (result.length <= stateSize!Prefix) return null;
                 emplace!Prefix(cast(Prefix*)result.ptr);
                 result = result[stateSize!Prefix .. $];
             }
             static if (stateSize!Suffix)
             {
+                assert(result.length > stateSize!Suffix);
                 // Ehm, find a properly aligned place for the suffix
                 auto p = (result.ptr + result.length - stateSize!Suffix)
                     .alignDownTo(Suffix.alignof);
                 assert(p > result.ptr);
-                if (p <= result.ptr) return null;
                 emplace!Suffix(cast(Suffix*) p);
                 result = result[0 .. p - result.ptr];
             }
@@ -130,7 +146,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         {
             if (!b.ptr)
             {
-                if (delta) b = allocate(delta);
+                b = allocate(delta);
                 return b.length == delta;
             }
             auto t = actualAllocation(b);
@@ -158,8 +174,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         static if (hasMember!(Allocator, "deallocate"))
         void deallocate(void[] b)
         {
-            auto p = b.ptr - stateSize!Prefix;
-            parent.deallocate(p[0 .. actualAllocationSize(b.length)]);
+            if (b.ptr) parent.deallocate(actualAllocation(b));
         }
 
         /* The following methods are defined if $(D ParentAllocator) defines
@@ -174,13 +189,16 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         static if (stateSize!Prefix)
             static ref Prefix prefix(void[] b)
             {
+                assert(b.ptr && b.ptr.alignedAt(Prefix.alignof));
                 return (cast(Prefix*)b.ptr)[-1];
             }
         static if (stateSize!Suffix)
             ref Suffix suffix(void[] b)
             {
+                assert(b.ptr);
                 auto p = b.ptr - stateSize!Prefix
                     + actualAllocationSize(b.length);
+                assert(p && p.alignedAt(Suffix.alignof));
                 return (cast(Suffix*) p)[-1];
             }
 
@@ -272,14 +290,11 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.mallocator;
     import std.experimental.allocator.heap_block;
     import std.experimental.allocator.common;
-    //testAllocator!(() => AffixAllocator!(Mallocator, size_t, size_t).it);
     testAllocator!({
-        auto hb = HeapBlock!128(new void[128 * 4096]);
-        AffixAllocator!(HeapBlock!128, size_t, size_t) a;
-        a.parent = hb;
+        auto a = AffixAllocator!(HeapBlock!128, ulong, ulong)
+            (HeapBlock!128(new void[128 * 4096]));
         return a;
     });
 }

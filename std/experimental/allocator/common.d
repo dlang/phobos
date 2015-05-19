@@ -324,7 +324,12 @@ void* alignUpTo(void* ptr, uint alignment)
 
 package bool isPowerOf2(uint x)
 {
-    return (x & (x - 1)) == 0;
+    return (x & (x - 1)) == 0 && x;
+}
+
+unittest
+{
+    assert(!isPowerOf2(0));
 }
 
 package bool isGoodStaticAlignment(uint x)
@@ -422,14 +427,18 @@ package string forwardToMember(string member, string[] funs...)
 package void testAllocator(alias make)()
 {
     import std.conv : text;
+    import std.stdio : writeln, stderr;
     alias A = typeof(make());
+    scope(failure) stderr.writeln("testAllocator failed for ", A.stringof);
+
     auto a = make();
 
     // Test alignment
     static assert(A.alignment.isPowerOf2);
 
     // Test goodAllocSize
-    assert(a.goodAllocSize(1) >= A.alignment);
+    assert(a.goodAllocSize(1) >= A.alignment,
+        text(a.goodAllocSize(1), " < ", A.alignment));
     assert(a.goodAllocSize(11) >= 11.roundUpToMultipleOf(A.alignment));
     assert(a.goodAllocSize(111) >= 111.roundUpToMultipleOf(A.alignment));
 

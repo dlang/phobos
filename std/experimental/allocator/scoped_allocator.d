@@ -64,7 +64,7 @@ struct ScopedAllocator(ParentAllocator)
     }
 
     /// Alignment offered
-    enum alignment = ParentAllocator.alignment;
+    enum alignment = Allocator.alignment;
 
     /**
     Forwards to $(D parent.goodAllocSize) (which accounts for the management
