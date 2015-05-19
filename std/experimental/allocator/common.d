@@ -324,12 +324,22 @@ void* alignUpTo(void* ptr, uint alignment)
 
 package bool isPowerOf2(uint x)
 {
-    return (x & (x - 1)) == 0 && x;
+    return (x & (x - 1) | !x) == 0;
 }
 
 unittest
 {
     assert(!isPowerOf2(0));
+    assert(isPowerOf2(1));
+    assert(isPowerOf2(2));
+    assert(!isPowerOf2(3));
+    assert(isPowerOf2(4));
+    assert(!isPowerOf2(5));
+    assert(!isPowerOf2(6));
+    assert(!isPowerOf2(7));
+    assert(isPowerOf2(8));
+    assert(!isPowerOf2(9));
+    assert(!isPowerOf2(10));
 }
 
 package bool isGoodStaticAlignment(uint x)
