@@ -13,16 +13,6 @@ $(D deallocate) is also supported, which is where most implementation effort
 and overhead of $(D ScopedAllocator) go. If $(D deallocate) is not needed, a
 simpler design combining $(D AllocatorList) with $(D Region) is recommended.
 
-Example:
----
-import std.experimental.allocator.mallocator;
-ScopedAllocator!Mallocator alloc;
-assert(alloc.empty);
-auto b = alloc.allocate(10);
-assert(b.length == 10);
-assert(!alloc.empty);
-// The destructor of alloc will free all memory
----
 */
 struct ScopedAllocator(ParentAllocator)
 {
