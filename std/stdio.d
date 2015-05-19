@@ -38,6 +38,7 @@ else version (CRuntime_DigitalMars)
 {
     // Specific to the way Digital Mars C does stdio
     version = DIGITAL_MARS_STDIO;
+    version(Windows) version = DIGITAL_MARS_STDIO_ON_WINDOWS;
 }
 
 version (linux)
@@ -299,14 +300,6 @@ manner, such that as soon as the last $(D File) variable bound to a
 given $(D FILE*) goes out of scope, the underlying $(D FILE*) is
 automatically closed.
 
-Bugs:
-$(D File) expects file names to be encoded in $(B CP_ACP) on $(I Windows)
-instead of UTF-8 ($(BUGZILLA 7648)) thus must not be used in $(I Windows)
-or cross-platform applications other than with an immediate ASCII string as
-a file name to prevent accidental changes to result in incorrect behavior.
-One can use $(XREF file, read)/$(XREF file, write)/$(XREF stream, _File)
-instead.
-
 Example:
 ----
 // test.d
@@ -376,29 +369,105 @@ The destructor automatically closes the file as soon as no $(D File)
 object refers to it anymore.
 
 Throws: $(D ErrnoException) if the file could not be opened.
+        $(D WindowsException) on Windows, if the CreateFileW return INVALID_HANDLE_VALUE.
  */
     this(string name, in char[] stdioOpenmode = "rb") @safe
     {
         import std.conv : text;
         import std.exception : errnoEnforce;
 
-        this(errnoEnforce(.fopen(name, stdioOpenmode),
-                        text("Cannot open file `", name, "' in mode `",
-                                stdioOpenmode, "'")),
+        version(DIGITAL_MARS_STDIO_ON_WINDOWS)
+        {
+            // Workaround for Issue 7648
+            
+            static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess,
+                DWORD dwShareMode, SECURITY_ATTRIBUTES *lpSecurityAttributes,
+                DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes,
+                HANDLE hTemplateFile) @trusted
+            {
+                import std.internal.cstring : tempCStringW;
+                return CreateFileW(fileName.tempCStringW(), dwDesiredAccess,
+                    dwShareMode, lpSecurityAttributes, dwCreationDisposition,
+                    dwFlagsAndAttributes, hTemplateFile);
+            }
+
+            static trustedHandleToFD(HANDLE h, int flags) @trusted
+            {
+                return _handleToFD(h, flags);
+            }
+
+            DWORD access, creation;
+            int flags = FHND_DEVICE | FHND_TEXT;
+
+            modeLoop:
+            foreach (c; stdioOpenmode)
+                switch (c)
+                {
+                    case 'r':
+                        access = GENERIC_READ;
+                        creation = OPEN_EXISTING;
+                        break;
+                    case 'w':
+                        access = GENERIC_WRITE;
+                        creation = CREATE_ALWAYS;
+                        break;
+                    case 'a':
+                        access = FILE_APPEND_DATA;
+                        creation = OPEN_ALWAYS;
+                        break;
+                    case '+':
+                        if (access & FILE_APPEND_DATA)
+                            access |= GENERIC_READ;
+                        else
+                            access = GENERIC_READ | GENERIC_WRITE;
+                        break;
+                    case 'b':
+                        flags &= ~FHND_TEXT;
+                        break;
+                    case 't':
+                        flags |= FHND_TEXT;
+                        break;
+                    case ',': break modeLoop;
+                    default: break;
+                }
+
+            auto h = trustedCreateFileW(name, access,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, 
+                null,
+                creation,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                cast(HANDLE) null);
+
+            wenforce(h != INVALID_HANDLE_VALUE,
+                text("Cannot open file `", name, "' in mode '",
+                    stdioOpenmode, "'"));
+
+            auto fd = trustedHandleToFD(h, flags);
+            errnoEnforce(fd >= 0,
+                text("Cannot open file `", name, "' in mode '",
+                    stdioOpenmode, "'"));
+            fdopen(fd, stdioOpenmode, name);
+        }
+        else
+        {
+            this(errnoEnforce(.fopen(name, stdioOpenmode),
+                text("Cannot open file `", name, "' in mode '",
+                    stdioOpenmode, "'")),
                 name);
 
-        // MSVCRT workaround (issue 14422)
-        version (MICROSOFT_STDIO)
-        {
-            bool append, update;
-            foreach (c; stdioOpenmode)
-                if (c == 'a')
-                    append = true;
-                else
-                if (c == '+')
-                    update = true;
-            if (append && !update)
-                seek(size);
+            // MSVCRT workaround (issue 14422)
+            version (MICROSOFT_STDIO)
+            {
+                bool append, update;
+                foreach (c; stdioOpenmode)
+                    if (c == 'a')
+                        append = true;
+                    else
+                    if (c == '+')
+                        update = true;
+                if (append && !update)
+                    seek(size);
+            }
         }
     }
 
@@ -4365,11 +4434,6 @@ version(unittest) string testFilename(string file = __FILE__, size_t line = __LI
     import std.conv : text;
     import std.path : baseName;
 
-    // Non-ASCII characters can't be used because of snn.lib @@@BUG8643@@@
-    version(DIGITAL_MARS_STDIO)
-        return text("deleteme-.", baseName(file), ".", line);
-    else
-
-        // filename intentionally contains non-ASCII (Russian) characters
-        return text("deleteme-детка.", baseName(file), ".", line);
+    // filename intentionally contains non-ASCII (Russian) characters for test Issue 7648
+    return text("deleteme-детка.", baseName(file), ".", line);
 }
