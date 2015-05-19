@@ -11,12 +11,6 @@ deallocated in the past. All other allocations are directed to $(D
 ParentAllocator). Due to the simplicity of free list management, allocations
 from the free list are fast.
 
-If a program makes many allocations in the interval $(D [minSize, maxSize]) and
-then frees most of them, the freelist may grow large, thus making memory
-inaccessible to requests of other sizes. To prevent that, the $(D maxNodes)
-parameter allows limiting the size of the free list. Alternatively, $(D
-deallocateAll) cleans the free list.
-
 $(D FreeList) attempts to reduce internal fragmentation and improve cache
 locality by allocating multiple nodes at once, under the control of the $(D
 batchCount) parameter. This makes $(D FreeList) an efficient front for small
@@ -24,7 +18,7 @@ object allocation on top of a large-block allocator. The default value of $(D
 batchCount) is 8, which should amortize freelist management costs to negligible
 in most cases.
 
-One instantiation is of particular interest: $(D FreeList!(0,unbounded)) puts
+One instantiation is of particular interest: $(D FreeList!(0, unbounded)) puts
 every deallocation in the freelist, and subsequently serves any allocation from
 the freelist (if not empty). There is no checking of size matching, which would
 be incorrect for a freestanding allocator but is both correct and fast when an
@@ -36,7 +30,7 @@ The following methods are defined if $(D ParentAllocator) defines them, and forw
 */
 struct FreeList(ParentAllocator,
     size_t minSize, size_t maxSize = minSize,
-    uint batchCount = 8, size_t maxNodes = unbounded)
+    uint batchCount = 8)
 {
     import std.conv : text;
     import std.exception : enforce;
@@ -45,6 +39,9 @@ struct FreeList(ParentAllocator,
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
     static assert(maxSize >= (void*).sizeof,
         "Maximum size must accommodate a pointer.");
+
+    private enum hasTolerance = minSize != maxSize
+        || maxSize == chooseAtRuntime;
 
     static if (minSize != chooseAtRuntime)
     {
@@ -152,19 +149,9 @@ struct FreeList(ParentAllocator,
     private Node* _root;
     private uint nodesAtATime = batchCount;
 
-    static if (maxNodes != unbounded)
-    {
-        private size_t nodes;
-        private void incNodes() { ++nodes; }
-        private void decNodes() { assert(nodes); --nodes; }
-        private bool nodesFull() { return nodes >= maxNodes; }
-    }
-    else
-    {
-        private static void incNodes() { }
-        private static void decNodes() { }
-        private enum bool nodesFull = false;
-    }
+    private static void incNodes() { }
+    private static void decNodes() { }
+    private enum bool nodesFull = false;
 
     /**
     Alignment is defined as $(D parent.alignment). However, if $(D
@@ -182,7 +169,16 @@ struct FreeList(ParentAllocator,
     */
     size_t goodAllocSize(size_t bytes)
     {
-        if (inRange(bytes)) return maxSize == unbounded ? bytes : max;
+        static if (maxSize != unbounded)
+        {
+            if (inRange(bytes))
+            {
+                assert(parent.goodAllocSize(max) == max,
+                    text("Wrongly configured freelist: maximum should be ",
+                        parent.goodAllocSize(max), " instead of ", max));
+                return max;
+            }
+        }
         return parent.goodAllocSize(bytes);
     }
 
@@ -192,26 +188,46 @@ struct FreeList(ParentAllocator,
     void[] allocate(size_t bytes)
     {
         assert(bytes < size_t.max / 2);
-        if (!inRange(bytes)) return parent.allocate(bytes);
-        // Round up allocation to max
-        if (maxSize != unbounded) bytes = max;
-        if (!_root) return allocateFresh(bytes);
-        // Pop off the freelist
-        auto result = (cast(ubyte*) _root)[0 .. bytes];
-        _root = _root.next;
-        decNodes();
-        return result;
+        // fast path
+        if (inRange(bytes))
+        {
+            if (_root)
+            {
+                auto result = (cast(ubyte*) _root)[0 .. bytes];
+                _root = _root.next;
+                decNodes();
+                return result;
+            }
+            // slower
+            return allocateFresh(bytes);
+        }
+        // slower
+        return parent.allocate(bytes);
     }
 
     private void[] allocateFresh(const size_t bytes)
     {
         assert(!_root);
-        assert(bytes == max || max == unbounded);
         assert(max > 0);
+        assert(inRange(bytes));
+        static if (hasTolerance)
+        {
+            auto toAllocate = max;
+        }
+        else
+        {
+            alias toAllocate = bytes;
+        }
+        assert(toAllocate == max || max == unbounded);
         if (nodesAtATime == 1)
         {
             // Easy case, just get it over with
-            return parent.allocate(bytes);
+            auto result = parent.allocate(bytes);
+            static if (hasTolerance)
+            {
+                if (result) result = result.ptr[0 .. bytes];
+            }
+            return result;
         }
         static if (maxSize != unbounded && maxSize != chooseAtRuntime)
         {
@@ -226,22 +242,23 @@ struct FreeList(ParentAllocator,
                  Node.alignof));
         }
 
-        auto data = parent.allocate(nodesAtATime * bytes);
+        auto data = parent.allocate(nodesAtATime * toAllocate);
         if (!data.ptr) return null;
+        assert(data.length >= bytes);
         auto result = data[0 .. bytes];
-        auto n = data[bytes .. $];
-        _root = cast(Node*) n.ptr;
-        for (;;)
+        data = data[toAllocate .. $];
+        _root = cast(Node*) data.ptr;
+
+        // Thread the "next" pointers through the data
+        auto last = data.ptr + data.length - toAllocate;
+        for (auto p = data.ptr; p != last; )
         {
-            if (n.length < bytes)
-            {
-                (cast(Node*) data.ptr).next = null;
-                break;
-            }
-            (cast(Node*) data.ptr).next = cast(Node*) n.ptr;
-            data = n;
-            n = data[bytes .. $];
+            auto forward = p + toAllocate;
+            (cast(Node*) p).next = cast(Node*) forward;
+            p = forward;
         }
+        // Last node
+        (cast(Node*) last).next = null;
         return result;
     }
 
@@ -258,7 +275,7 @@ struct FreeList(ParentAllocator,
     {
         if (!nodesFull && inRange(block.length))
         {
-            static if (minSize == 0)
+            if (min == 0)
             {
                 // In this case a null pointer might have made it this far.
                 if (block is null) return;
@@ -276,23 +293,28 @@ struct FreeList(ParentAllocator,
     }
 
     /**
-    If $(D ParentAllocator) defines $(D deallocateAll), just forwards to it and
-    reset the freelist. Otherwise, walks the list and frees each object in turn.
+    Defined only if $(D ParentAllocator) defines $(D deallocateAll). If so,
+    forwards to it and resets the freelist.
     */
+    static if (hasMember!(ParentAllocator, "deallocateAll"))
     void deallocateAll()
     {
-        static if (hasMember!(ParentAllocator, "deallocateAll"))
-        {
-            parent.deallocateAll();
-        }
-        else static if (hasMember!(ParentAllocator, "deallocate"))
-        {
-            for (auto n = _root; n; n = n.next)
-            {
-                parent.deallocate((cast(ubyte*)n)[0 .. max]);
-            }
-        }
+        parent.deallocateAll();
         _root = null;
+    }
+
+    /**
+    Nonstandard function that minimizes the memory usage of the freelist by
+    freeing each element in turn. Defined only if $(D ParentAllocator) defines
+    $(D deallocate).
+    */
+    static if (hasMember!(ParentAllocator, "deallocate"))
+    void minimize()
+    {
+        for (; _root; _root = _root.next)
+        {
+            parent.deallocate((cast(void*) _root)[0 .. max]);
+        }
     }
 
     /// GC helper primitives.
@@ -338,7 +360,7 @@ $(D expand) is defined to forward to $(ParentAllocator.expand) (it must be also 
 */
 struct SharedFreeList(ParentAllocator,
     size_t minSize, size_t maxSize = minSize,
-    uint batchCount = 8, size_t maxNodes = unbounded)
+    uint batchCount = 8)
 {
     import std.conv : text;
     import std.exception : enforce;
@@ -420,29 +442,29 @@ struct SharedFreeList(ParentAllocator,
         else return !tooSmall(n) && !tooLarge(n);
     }
 
-    static if (maxNodes != unbounded)
-    {
-        private shared size_t nodes;
-        private void incNodes() shared
-        {
-            atomicOp!("+=")(nodes, 1);
-        }
-        private void decNodes() shared
-        {
-            assert(nodes);
-            atomicOp!("-=")(nodes, 1);
-        }
-        private bool nodesFull() shared
-        {
-            return nodes >= maxNodes;
-        }
-    }
-    else
-    {
+    //static if (maxNodes != unbounded)
+    //{
+    //    private shared size_t nodes;
+    //    private void incNodes() shared
+    //    {
+    //        atomicOp!("+=")(nodes, 1);
+    //    }
+    //    private void decNodes() shared
+    //    {
+    //        assert(nodes);
+    //        atomicOp!("-=")(nodes, 1);
+    //    }
+    //    private bool nodesFull() shared
+    //    {
+    //        return nodes >= maxNodes;
+    //    }
+    //}
+    //else
+    //{
         private static void incNodes() { }
         private static void decNodes() { }
         private enum bool nodesFull = false;
-    }
+    //}
 
     version (StdDdoc)
     {
@@ -628,7 +650,7 @@ unittest
     import core.thread, std.algorithm, std.concurrency, std.range,
         std.experimental.allocator.mallocator;
 
-    static shared SharedFreeList!(Mallocator, 64, 128, 8, 100) a;
+    static shared SharedFreeList!(Mallocator, 64, 128, 8) a;
 
     assert(a.goodAllocSize(1) == platformAlignment);
 
@@ -661,6 +683,6 @@ unittest
 {
     import std.experimental.allocator.mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime,
-        8, 100) a;
+        8) a;
     auto b = a.allocate(64);
 }

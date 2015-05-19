@@ -26,6 +26,7 @@ version(Posix) struct MmapAllocator
     /// Allocator API.
     void[] allocate(size_t bytes) shared
     {
+        if (!bytes) return null;
         version(OSX) import core.sys.osx.sys.mman : MAP_ANON;
         else static assert(false, "Add import for MAP_ANON here.");
         auto p = mmap(null, bytes, PROT_READ | PROT_WRITE,
