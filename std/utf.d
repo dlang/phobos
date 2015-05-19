@@ -84,7 +84,7 @@ class UTFException : Exception
     }
 }
 
-/**
+/*
    Provide array of invalidly encoded UTF strings. Useful for testing.
 
    Params:
