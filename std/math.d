@@ -241,6 +241,7 @@ enum RealFormat
 template floatTraits(T)
 {
     // EXPMASK is a ushort mask to select the exponent portion (without sign)
+    // EXPSHIFT is the number of bits the exponent is left-shifted by in its ushort
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
     // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
@@ -249,6 +250,7 @@ template floatTraits(T)
     {
         // Single precision float
         enum ushort EXPMASK = 0x7F80;
+        enum ushort EXPSHIFT = 7;
         enum ushort EXPBIAS = 0x3F00;
         enum uint EXPMASK_INT = 0x7F80_0000;
         enum uint MANTISSAMASK_INT = 0x007F_FFFF;
@@ -270,6 +272,7 @@ template floatTraits(T)
         {
             // Double precision float, or real == double
             enum ushort EXPMASK = 0x7FF0;
+            enum ushort EXPSHIFT = 4;
             enum ushort EXPBIAS = 0x3FE0;
             enum uint EXPMASK_INT = 0x7FF0_0000;
             enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
@@ -289,6 +292,7 @@ template floatTraits(T)
         {
             // Intel extended real80 rounded to double
             enum ushort EXPMASK = 0x7FFF;
+            enum ushort EXPSHIFT = 0;
             enum ushort EXPBIAS = 0x3FFE;
             enum realFormat = RealFormat.ieeeExtended53;
             version(LittleEndian)
@@ -309,6 +313,7 @@ template floatTraits(T)
     {
         // Intel extended real80
         enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPSHIFT = 0;
         enum ushort EXPBIAS = 0x3FFE;
         enum realFormat = RealFormat.ieeeExtended;
         version(LittleEndian)
@@ -326,6 +331,7 @@ template floatTraits(T)
     {
         // Quadruple precision float
         enum ushort EXPMASK = 0x7FFF;
+        enum ushort EXPSHIFT = 0;
         enum ushort EXPBIAS = 0x3FFF;
         enum realFormat = RealFormat.ieeeQuadruple;
         version(LittleEndian)
@@ -343,6 +349,7 @@ template floatTraits(T)
     {
         // IBM Extended doubledouble
         enum ushort EXPMASK = 0x7FF0;
+        enum ushort EXPSHIFT = 4;
         enum realFormat = RealFormat.ibmExtended;
         // the exponent byte is not unique
         version(LittleEndian)
@@ -1585,10 +1592,21 @@ real exp(real x) @trusted pure nothrow @nogc
         enum real C2 = 1.428606820309417232121458176568075500134E-6L;
 
         // Overflow and Underflow limits.
-        enum real OF =  1.1356523406294143949492E4L;
-        enum real UF = -1.1432769596155737933527E4L;
+        static if (real.mant_dig == 64) // 80-bit reals
+        {
+            enum real OF =  1.1356523406294143949492E4L; // ln((1-2^-64) * 2^16384) ≈ 0x1.62e42fefa39efp+13
+            enum real UF = -1.1398805384308300613366E4L; // ln(2^-16445) ≈ -0x1.6436716d5406ep+13
+        }
+        else static if (real.mant_dig == 53) // 64-bit reals
+        {
+            enum real OF =  0x1.62e42fefa39efp+9L; // ln((1-2^-53) * 2^1024) = 709.78271...
+            enum real UF = -0x1.74385446d71c3p+9L; // ln(2^-1074) = -744.44007...
+        }
+        else
+            static assert(0, "No over-/underflow limits for real type!");
 
         // Special cases.
+        // FIXME: set IEEE flags accordingly
         if (isNaN(x))
             return x;
         if (x > OF)
@@ -2133,39 +2151,73 @@ unittest
         ctrl.disableExceptions(FloatingPointControl.allExceptions);
     ctrl.rounding = FloatingPointControl.roundToNearest;
 
-    // @@BUG@@: Non-immutable array literals are ridiculous.
-    // Note that these are only valid for 80-bit reals: overflow will be different for 64-bit reals.
-    static const real [2][] exptestpoints =
-    [ // x,            exp(x)
-        [1.0L,           E                           ],
-        [0.5L,           0x1.A612_98E1_E069_BC97p+0L ],
-        [3.0L,           E*E*E                       ],
-        [0x1.1p13L,      0x1.29aeffefc8ec645p+12557L ], // near overflow
-        [-0x1.18p13L,    0x1.5e4bf54b4806db9p-12927L ], // near underflow
-        [-0x1.625p13L,   0x1.a6bd68a39d11f35cp-16358L],
-        [-0x1p30L,       0                           ], // underflow - subnormal
-        [-0x1.62DAFp13L, 0x1.96c53d30277021dp-16383L ],
-        [-0x1.643p13L,   0x1p-16444L                 ],
-        [-0x1.645p13L,   0                           ], // underflow to zero
-        [0x1p80L,        real.infinity               ], // far overflow
-        [real.infinity,  real.infinity               ],
-        [0x1.7p13L,      real.infinity               ]  // close overflow
-    ];
+    static if (real.mant_dig == 64) // 80-bit reals
+    {
+        static immutable real[2][] exptestpoints =
+        [ //  x               exp(x)
+            [ 1.0L,           E                            ],
+            [ 0.5L,           0x1.a61298e1e069bc97p+0L     ],
+            [ 3.0L,           E*E*E                        ],
+            [ 0x1.1p+13L,     0x1.29aeffefc8ec645p+12557L  ], // near overflow
+            [ 0x1.7p+13L,     real.infinity                ], // close overflow
+            [ 0x1p+80L,       real.infinity                ], // far overflow
+            [ real.infinity,  real.infinity                ],
+            [-0x1.18p+13L,    0x1.5e4bf54b4806db9p-12927L  ], // near underflow
+            [-0x1.625p+13L,   0x1.a6bd68a39d11f35cp-16358L ], // ditto
+            [-0x1.62dafp+13L, 0x1.96c53d30277021dp-16383L  ], // near underflow - subnormal
+            [-0x1.643p+13L,   0x1p-16444L                  ], // ditto
+            [-0x1.645p+13L,   0                            ], // close underflow
+            [-0x1p+30L,       0                            ], // far underflow
+        ];
+    }
+    else static if (real.mant_dig == 53) // 64-bit reals
+    {
+        static immutable real[2][] exptestpoints =
+        [ //  x,             exp(x)
+            [ 1.0L,          E                        ],
+            [ 0.5L,          0x1.a61298e1e069cp+0L    ],
+            [ 3.0L,          E*E*E                    ],
+            [ 0x1.6p+9L,     0x1.93bf4ec282efbp+1015L ], // near overflow
+            [ 0x1.7p+9L,     real.infinity            ], // close overflow
+            [ 0x1p+80L,      real.infinity            ], // far overflow
+            [ real.infinity, real.infinity            ],
+            [-0x1.6p+9L,     0x1.44a3824e5285fp-1016L ], // near underflow
+            [-0x1.64p+9L,    0x0.06f84920bb2d3p-1022L ], // near underflow - subnormal
+            [-0x1.743p+9L,   0x0.0000000000001p-1022L ], // ditto
+            [-0x1.8p+9L,     0                        ], // close underflow
+            [-0x1p30L,       0                        ], // far underflow
+        ];
+    }
+    else
+        static assert(0, "No exp() tests for real type!");
+
+    const minEqualMantissaBits = real.mant_dig - 2;
     real x;
     IeeeFlags f;
-    for (int i=0; i<exptestpoints.length;++i)
+    foreach (ref pair; exptestpoints)
     {
         resetIeeeFlags();
-        x = exp(exptestpoints[i][0]);
+        x = exp(pair[0]);
         f = ieeeFlags;
-        assert(x == exptestpoints[i][1]);
-        // Check the overflow bit
-        assert(f.overflow == (fabs(x) == real.infinity));
-        // Check the underflow bit
-        assert(f.underflow == (fabs(x) < real.min_normal));
-        // Invalid and div by zero shouldn't be affected.
-        assert(!f.invalid);
-        assert(!f.divByZero);
+        assert(feqrel(x, pair[1]) >= minEqualMantissaBits);
+
+        version (IeeeFlagsSupport)
+        {
+            // Check the overflow bit
+            if (x == real.infinity)
+            {
+                // don't care about the overflow bit if input was inf
+                // (e.g., the LLVM intrinsic doesn't set it on Linux x86_64)
+                assert(pair[0] == real.infinity || f.overflow);
+            }
+            else
+                assert(!f.overflow);
+            // Check the underflow bit
+            assert(f.underflow == (fabs(x) < real.min_normal));
+            // Invalid and div by zero shouldn't be affected.
+            assert(!f.invalid);
+            assert(!f.divByZero);
+        }
     }
     // Ideally, exp(0) would not set the inexact flag.
     // Unfortunately, fldl2e sets it!
@@ -6134,52 +6186,28 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
         // always 1 lower than we want, except that if bitsdiff==0,
         // they could have 0 or 1 bits in common.
 
-        static if (F.realFormat == RealFormat.ieeeExtended
-                || F.realFormat == RealFormat.ieeeQuadruple)
-        {
-            int bitsdiff = ( ((pa[F.EXPPOS_SHORT] & F.EXPMASK)
-                              + (pb[F.EXPPOS_SHORT] & F.EXPMASK) - 1) >> 1)
-                              - pd[F.EXPPOS_SHORT];
-        }
-        else static if (F.realFormat == RealFormat.ieeeDouble)
-        {
-            int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7FF0)
-                               + (pb[F.EXPPOS_SHORT]&0x7FF0)-0x10)>>1)
-                               - (pd[F.EXPPOS_SHORT]&0x7FF0))>>4;
-        }
-        else static if (F.realFormat == RealFormat.ieeeSingle)
-        {
-            int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7F80)
-                               + (pb[F.EXPPOS_SHORT]&0x7F80)-0x80)>>1)
-                               - (pd[F.EXPPOS_SHORT]&0x7F80))>>7;
-        }
+        int bitsdiff = (((  (pa[F.EXPPOS_SHORT] & F.EXPMASK)
+                          + (pb[F.EXPPOS_SHORT] & F.EXPMASK)
+                          - (1 << F.EXPSHIFT)) >> 1)
+                        - (pd[F.EXPPOS_SHORT] & F.EXPMASK)) >> F.EXPSHIFT;
         if ( (pd[F.EXPPOS_SHORT] & F.EXPMASK) == 0)
         {   // Difference is subnormal
             // For subnormals, we need to add the number of zeros that
             // lie at the start of diff's significand.
             // We do this by multiplying by 2^^real.mant_dig
             diff *= F.RECIP_EPSILON;
-            return bitsdiff + X.mant_dig - pd[F.EXPPOS_SHORT];
+            return bitsdiff + X.mant_dig - ((pd[F.EXPPOS_SHORT] & F.EXPMASK) >> F.EXPSHIFT);
         }
 
         if (bitsdiff > 0)
             return bitsdiff + 1; // add the 1 we subtracted before
 
         // Avoid out-by-1 errors when factor is almost 2.
-        static if (F.realFormat == RealFormat.ieeeExtended
-                || F.realFormat == RealFormat.ieeeQuadruple)
+        if (bitsdiff == 0
+            && ((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT]) & F.EXPMASK) == 0)
         {
-            return (bitsdiff == 0) ? (pa[F.EXPPOS_SHORT] == pb[F.EXPPOS_SHORT]) : 0;
-        }
-        else static if (F.realFormat == RealFormat.ieeeDouble
-                     || F.realFormat == RealFormat.ieeeSingle)
-        {
-            if (bitsdiff == 0
-                && !((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT]) & F.EXPMASK))
-            {
-                return 1;
-            } else return 0;
-        }
+            return 1;
+        } else return 0;
     }
 }
 
@@ -6227,6 +6255,7 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
        assert(feqrel(F.infinity, -F.infinity) == 0);
        assert(feqrel(F.max, -F.max) == 0);
 
+       assert(feqrel(F.min_normal / 8, F.min_normal / 17) == 3);
 
        const F Const = 2;
        immutable F Immutable = 2;
@@ -6234,10 +6263,6 @@ int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
     }
 
     assert(feqrel(7.1824L, 7.1824L) == real.mant_dig);
-    static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
-    {
-        assert(feqrel(real.min_normal / 8, real.min_normal / 17) == 3);
-    }
 
     testFeqrel!(real)();
     testFeqrel!(double)();
