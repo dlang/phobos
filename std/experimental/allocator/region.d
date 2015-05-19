@@ -24,19 +24,6 @@ sizes of all allocation requests are rounded up to a multiple of $(D minAlign).
 Applications aiming at maximum speed may want to choose $(D minAlign = 1) and
 control alignment externally.
 
-----
-import std.experimental.allocator.mallocator;
-import std.experimental.allocator.allocator_list;
-import std.algorithm : max;
-// Create a scalable list of regions. Each gets at least 1MB at a time by
-// using malloc.
-auto batchAllocator = AllocatorList!(
-    (size_t n) => Region!Mallocator(max(n, 1024 * 1024))
-)();
-auto b = batchAllocator.allocate(101);
-assert(b.length == 101);
-// Destructor will free the memory
-----
 */
 struct Region(ParentAllocator = NullAllocator,
     uint minAlign = platformAlignment,
@@ -260,7 +247,7 @@ struct Region(ParentAllocator = NullAllocator,
     }
 }
 
-// Example above
+///
 unittest
 {
     import std.experimental.allocator.mallocator;
