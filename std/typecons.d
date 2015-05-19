@@ -6690,3 +6690,108 @@ public:
     auto value = cast(int)flags_A;
     assert(value == Enum.A);
 }
+/**
+ * Returns a Tuple of the parameters.
+ * It can be used to declare function.
+ */
+template ParameterTuple(alias func)
+{
+    import std.traits : FunctionTypeOf;
+    static if (is(FunctionTypeOf!func Params == __parameters))
+       alias ParameterTuple = Params;
+    else
+       static assert(0, "Argument to ParameterTuple must be a function");
+}
+
+///
+unittest
+{
+    // There is a (probable) compiler bug, affecting variadic functions for
+    // dynamically loaded library. The first function call will have garbage arguments.
+    // @@@BUG@@@ 13769
+    void foo(string val = "Test", int = 10);
+    void bar(ParameterTuple!foo) { assert(val == "Test"); }
+    // Variadic functions require special handling:
+    import core.vararg;
+    void foo2(string val, ...);
+    void bar2(ParameterTuple!foo2/*, ...*/) { assert(val == "42", val); }
+
+    bar();
+    bar2("42");
+
+    // Works with parameter-less functions too.
+    void foo3();
+    void bar3(ParameterTuple!foo3) {}
+    bar3();
+
+    // Note: outside of a parameter list, it's value is the type of the param.
+    import std.traits : ParameterDefaultValueTuple;
+    ParameterTuple!(foo)[0] test = ParameterDefaultValueTuple!(foo)[0];
+    assert(test == "Test");
+}
+
+/**
+    Returns a Tuple containing a 1-element parameter list, with an optional default value.
+    Can be used to concatenate a parameter to a parameter list, or to create one.
+    Params:
+    T = Type of the parameter to declare.
+    identifier = identifier to give to the parameter. This can be an empty string.
+    defVal = Optional default value for the parameter. Passing void means no return value.
+	      This means that std.traits.ParameterDefaultValueTuple can be used directly.
+*/
+template ParameterTuple(T, string identifier, DefVal : void = void)
+{
+    import std.string : format;
+    mixin(q{private void __func(T %s);}.format(identifier));
+    alias ParameterTuple = ParameterTuple!__func;
+}
+
+
+/// Ditto
+template ParameterTuple(T, string identifier, alias defVal)
+{
+    import std.string : format;
+    mixin(q{private void __func(T %s = defVal);}.format(identifier));
+    alias ParameterTuple = ParameterTuple!__func;
+}
+
+///
+unittest
+{
+  void foo(ParameterTuple!(int, "arg2")) { assert(arg2 == 42); }
+  foo(42);
+
+  void bar(string arg);
+  void bar2(ParameterTuple!bar, ParameterTuple!(string, "val")) { assert(val == arg); }
+  bar2("isokay", "isokay");
+
+  // For convenience, you can directly pass the result of std.traits.ParameterDefaultValueTuple without checking for void.
+  import std.traits : PDVT = ParameterDefaultValueTuple;
+  import std.traits : arity;
+  void baz(string test, int = 10);
+
+  static assert(is(PDVT!(baz)[0] == void));
+  // void baz2(string test2, string test);
+  void baz2(ParameterTuple!(string, "test2", PDVT!(baz)[0]), ParameterTuple!(baz)[0..$-1]) { assert(test == test2); }
+  static assert(arity!baz2 == 2);
+  baz2("Try", "Try");
+
+  // void baz3(string test, int = 10, int ident = 10);
+  void baz3(ParameterTuple!baz, ParameterTuple!(int, "ident", PDVT!(baz)[1])) { assert(ident == 10); }
+  baz3("string");
+
+  import std.datetime;
+  void baz4(ParameterTuple!(SysTime, "epoch", Clock.currTime)) { assert((Clock.currTime - epoch) < 30.seconds); }
+  baz4();
+
+  // Convertion are possible for default parameters...
+  alias baz6PT = ParameterTuple!(SysTime, "epoch", uint.min);
+
+  // However this blows up because of @@bug 14369@@
+  // alias baz7PT = ParameterTuple!(SysTime, "epoch", PDVT!(baz4)[0]));
+
+  // Non existing convertion are detected.
+  static assert(!__traits(compiles, { alias baz7PT = ParameterTuple!(SysTime, "epoch", Object.init); }));
+  // And types are refused.
+  static assert(!__traits(compiles, { alias baz7PT = ParameterTuple!(SysTime, "epoch", uint); }));
+}
