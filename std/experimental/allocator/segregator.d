@@ -41,11 +41,10 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         */
         void[] allocate(size_t);
         /**
-        This method is defined only if both allocators define it. The call is
-        forwarded to $(D SmallAllocator) if $(D b.length <= threshold), or $(D
-        LargeAllocator) otherwise.
+        This method is defined if both allocators define it, and forwards to
+        $(D SmallAllocator) or $(D LargeAllocator) appropriately.
         */
-        bool owns(void[] b);
+        void[] alignedAllocate(size_t, uint);
         /**
         This method is defined only if at least one of the allocators defines
         it. If $(D SmallAllocator) defines $(D expand) and $(D b.length +
@@ -65,6 +64,17 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         */
         bool reallocate(ref void[] b, size_t s);
         /**
+        This method is defined only if at least one of the allocators defines
+        it, and work similarly to $(D reallocate).
+        */
+        bool alignedReallocate(ref void[] b, size_t s);
+        /**
+        This method is defined only if both allocators define it. The call is
+        forwarded to $(D SmallAllocator) if $(D b.length <= threshold), or $(D
+        LargeAllocator) otherwise.
+        */
+        bool owns(void[] b);
+        /**
         This function is defined only if both allocators define it, and forwards
         appropriately depending on $(D b.length).
         */
@@ -74,6 +84,11 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         $(D deallocateAll) for them in turn.
         */
         void deallocateAll();
+        /**
+        This function is defined only if both allocators define it, and returns
+        the conjunction of $(D empty) calls for the two.
+        */
+        bool empty();
     }
 
     /**
@@ -110,20 +125,6 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
     template Impl()
     {
-        void[] allocate(size_t s)
-        {
-            return s <= threshold ? _small.allocate(s) : _large.allocate(s);
-        }
-
-        static if (hasMember!(SmallAllocator, "deallocate")
-                && hasMember!(LargeAllocator, "deallocate"))
-        void deallocate(void[] data)
-        {
-            data.length <= threshold
-                ? _small.deallocate(data)
-                : _large.deallocate(data);
-        }
-
         size_t goodAllocSize(size_t s)
         {
             return s <= threshold
@@ -131,11 +132,18 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
                 : _large.goodAllocSize(s);
         }
 
-        static if (hasMember!(SmallAllocator, "owns")
-                && hasMember!(LargeAllocator, "owns"))
-        bool owns(void[] b)
+        void[] allocate(size_t s)
         {
-            return b.length <= threshold ? _small.owns(b) : _large.owns(b);
+            return s <= threshold ? _small.allocate(s) : _large.allocate(s);
+        }
+
+        static if (hasMember!(SmallAllocator, "alignedAllocate")
+                && hasMember!(LargeAllocator, "alignedAllocate"))
+        void[] alignedAllocate(size_t s, uint a)
+        {
+            return s <= threshold
+                ? _small.alignedAllocate(s, a)
+                : _large.alignedAllocate(s, a);
         }
 
         static if (hasMember!(SmallAllocator, "expand")
@@ -182,12 +190,55 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
             return .reallocate(this, b, s);
         }
 
+        static if (hasMember!(SmallAllocator, "alignedReallocate")
+                || hasMember!(LargeAllocator, "alignedReallocate"))
+        bool reallocate(ref void[] b, size_t s)
+        {
+            static if (hasMember!(SmallAllocator, "alignedReallocate"))
+                if (b.length <= threshold && s <= threshold)
+                {
+                    // Old and new allocations handled by _small
+                    return _small.alignedReallocate(b, s);
+                }
+            static if (hasMember!(LargeAllocator, "alignedReallocate"))
+                if (b.length > threshold && s > threshold)
+                {
+                    // Old and new allocations handled by _large
+                    return _large.alignedReallocate(b, s);
+                }
+            // Cross-allocator transgression
+            return .alignedReallocate(this, b, s);
+        }
+
+        static if (hasMember!(SmallAllocator, "owns")
+                && hasMember!(LargeAllocator, "owns"))
+        bool owns(void[] b)
+        {
+            return b.length <= threshold ? _small.owns(b) : _large.owns(b);
+        }
+
+        static if (hasMember!(SmallAllocator, "deallocate")
+                && hasMember!(LargeAllocator, "deallocate"))
+        void deallocate(void[] data)
+        {
+            data.length <= threshold
+                ? _small.deallocate(data)
+                : _large.deallocate(data);
+        }
+
         static if (hasMember!(SmallAllocator, "deallocateAll")
                 && hasMember!(LargeAllocator, "deallocateAll"))
         void deallocateAll()
         {
             _small.deallocateAll();
             _large.deallocateAll();
+        }
+
+        static if (hasMember!(SmallAllocator, "empty")
+                && hasMember!(LargeAllocator, "empty"))
+        bool empty()
+        {
+            return _small.empty && _large.empty;
         }
 
         static if (hasMember!(SmallAllocator, "resolveInternalPointer")
