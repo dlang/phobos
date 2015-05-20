@@ -1063,6 +1063,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      * Insert a single element in the container.  Note that this does not
      * invalidate any ranges currently iterating the container.
      *
+     * Returns: The number of elements inserted.
+     *
      * Complexity: $(BIGOH log(n))
      */
     size_t stableInsert(Stuff)(Stuff stuff) if (isImplicitlyConvertible!(Stuff, Elem))
@@ -1081,6 +1083,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
      * Insert a range of elements in the container.  Note that this does not
      * invalidate any ranges currently iterating the container.
+     *
+     * Returns: The number of elements inserted.
      *
      * Complexity: $(BIGOH m * log(n))
      */
