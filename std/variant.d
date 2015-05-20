@@ -788,7 +788,7 @@ public:
         {
             throw new VariantException(type, typeid(T));
         }
-        return cast(inout T) result;
+        return * cast(inout T*) &result;
     }
 
     /**
@@ -1332,6 +1332,16 @@ unittest
 {
     const Variant v = new immutable Object;
     v.get!(immutable Object);
+}
+
+unittest
+{
+    static struct S
+    {
+        T opCast(T)() {assert(false);}
+    }
+    Variant v = S();
+    v.get!S;
 }
 
 
