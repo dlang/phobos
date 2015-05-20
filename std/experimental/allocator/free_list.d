@@ -1,6 +1,7 @@
 module std.experimental.allocator.free_list;
 
 import std.experimental.allocator.common;
+import std.typecons : Flag, Yes, No;
 
 /**
 
@@ -18,11 +19,13 @@ be incorrect for a freestanding allocator but is both correct and fast when an
 owning allocator on top of the free list allocator (such as $(D Segregator)) is
 already in charge of handling size checking.
 
-The following methods are defined if $(D ParentAllocator) defines them, and forward to it: $(D expand), $(D owns), $(D reallocate).
+The following methods are defined if $(D ParentAllocator) defines them, and
+forward to it: $(D expand), $(D owns), $(D reallocate).
 
 */
 struct FreeList(ParentAllocator,
-    size_t minSize, size_t maxSize = minSize)
+    size_t minSize, size_t maxSize = minSize,
+    Flag!"adaptive" adaptive = No.adaptive)
 {
     import std.conv : text;
     import std.exception : enforce;
@@ -98,6 +101,48 @@ struct FreeList(ParentAllocator,
             return n == maxSize;
         else return !tooSmall(n) && !tooLarge(n);
     }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // statistics {
+
+    static if (adaptive == Yes.adaptive)
+    {
+        enum double windowLength = 1000.0;
+        enum double tooFewMisses = 0.01;
+        double probMiss = 1.0; // start with a high miss probability
+        uint accumSamples, accumMisses;
+
+        void updateStats()
+        {
+            assert(accumSamples >= accumMisses);
+            /*
+            Given that for the past windowLength samples we saw misses with
+            estimated probability probMiss, and assuming the new sample wasMiss or
+            not, what's the new estimated probMiss?
+            */
+            probMiss = (probMiss * windowLength + accumMisses)
+                / (windowLength + accumSamples);
+            assert(probMiss <= 1.0);
+            accumSamples = 0;
+            accumMisses = 0;
+            // If probability to miss is under x%, yank one off the freelist
+            if (probMiss < tooFewMisses && _root)
+            {
+                auto b = blockFor(_root);
+                _root = _root.next;
+                parent.deallocate(b);
+            }
+        }
+    }
+
+    void[] blockFor(Node* p)
+    {
+        assert(p);
+        return (cast(void*) p)[0 .. max];
+    }
+
+    // } statistics
+    ////////////////////////////////////////////////////////////////////////////
 
     version (StdDdoc)
     {
@@ -178,6 +223,7 @@ struct FreeList(ParentAllocator,
     */
     void[] allocate(size_t bytes)
     {
+        static if (adaptive == Yes.adaptive) ++accumSamples;
         assert(bytes < size_t.max / 2);
         // fast path
         if (inRange(bytes))
@@ -190,9 +236,18 @@ struct FreeList(ParentAllocator,
                 return result;
             }
             // slower
-            return allocateFresh(bytes);
+            auto result = allocateFresh(bytes);
+            static if (adaptive == Yes.adaptive)
+            {
+                ++accumMisses;
+                updateStats;
+            }
         }
         // slower
+        static if (adaptive == Yes.adaptive)
+        {
+            updateStats;
+        }
         return parent.allocate(bytes);
     }
 
@@ -267,9 +322,11 @@ struct FreeList(ParentAllocator,
     static if (hasMember!(ParentAllocator, "deallocate"))
     void minimize()
     {
-        for (; _root; _root = _root.next)
+        while (_root)
         {
-            parent.deallocate((cast(void*) _root)[0 .. max]);
+            auto nuke = blockFor(_root);
+            _root = _root.next;
+            parent.deallocate(nuke);
         }
     }
 
@@ -282,7 +339,7 @@ struct FreeList(ParentAllocator,
             static if (hasMember!(ParentAllocator, "deallocate"))
             for (auto n = _root; n; n = n.next)
             {
-                parent.deallocate((cast(ubyte*)n)[0 .. max]);
+                parent.deallocate(blockFor(n));
             }
             _root = null;
         }
