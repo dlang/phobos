@@ -412,7 +412,7 @@ unittest
 {
     static assert(!is(ThreadLocal!Mallocator));
     static assert(!is(ThreadLocal!GCAllocator));
-    alias ThreadLocal!(FreeList!(GCAllocator, 0, 8, 1)) Allocator;
+    alias ThreadLocal!(FreeList!(GCAllocator, 0, 8)) Allocator;
     auto b = Allocator.it.allocate(5);
     static assert(hasMember!(Allocator, "allocate"));
 }
@@ -844,7 +844,7 @@ unittest
     auto b = a.allocate(100);
     assert(b.length == 100);
 
-    FreeList!(GCAllocator, 0, 8, 1) fl;
+    FreeList!(GCAllocator, 0, 8) fl;
     auto sa = allocatorObject(fl);
     b = a.allocate(101);
     assert(b.length == 101);

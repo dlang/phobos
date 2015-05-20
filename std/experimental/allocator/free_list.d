@@ -11,13 +11,6 @@ deallocated in the past. All other allocations are directed to $(D
 ParentAllocator). Due to the simplicity of free list management, allocations
 from the free list are fast.
 
-$(D FreeList) attempts to reduce internal fragmentation and improve cache
-locality by allocating multiple nodes at once, under the control of the $(D
-batchCount) parameter. This makes $(D FreeList) an efficient front for small
-object allocation on top of a large-block allocator. The default value of $(D
-batchCount) is 8, which should amortize freelist management costs to negligible
-in most cases.
-
 One instantiation is of particular interest: $(D FreeList!(0, unbounded)) puts
 every deallocation in the freelist, and subsequently serves any allocation from
 the freelist (if not empty). There is no checking of size matching, which would
@@ -29,8 +22,7 @@ The following methods are defined if $(D ParentAllocator) defines them, and forw
 
 */
 struct FreeList(ParentAllocator,
-    size_t minSize, size_t maxSize = minSize,
-    uint batchCount = 8)
+    size_t minSize, size_t maxSize = minSize)
 {
     import std.conv : text;
     import std.exception : enforce;
@@ -147,7 +139,6 @@ struct FreeList(ParentAllocator,
     private struct Node { Node* next; }
     static assert(ParentAllocator.alignment >= Node.alignof);
     private Node* _root;
-    private uint nodesAtATime = batchCount;
 
     private static void incNodes() { }
     private static void decNodes() { }
@@ -219,46 +210,11 @@ struct FreeList(ParentAllocator,
             alias toAllocate = bytes;
         }
         assert(toAllocate == max || max == unbounded);
-        if (nodesAtATime == 1)
+        auto result = parent.allocate(bytes);
+        static if (hasTolerance)
         {
-            // Easy case, just get it over with
-            auto result = parent.allocate(bytes);
-            static if (hasTolerance)
-            {
-                if (result) result = result.ptr[0 .. bytes];
-            }
-            return result;
+            if (result) result = result.ptr[0 .. bytes];
         }
-        static if (maxSize != unbounded && maxSize != chooseAtRuntime)
-        {
-            static assert((parent.alignment + max) % Node.alignof == 0,
-                text("(", parent.alignment, " + ", max, ") % ",
-                 Node.alignof));
-        }
-        else
-        {
-            assert((parent.alignment + bytes) % Node.alignof == 0,
-                text("(", parent.alignment, " + ", bytes, ") % ",
-                 Node.alignof));
-        }
-
-        auto data = parent.allocate(nodesAtATime * toAllocate);
-        if (!data.ptr) return null;
-        assert(data.length >= bytes);
-        auto result = data[0 .. bytes];
-        data = data[toAllocate .. $];
-        _root = cast(Node*) data.ptr;
-
-        // Thread the "next" pointers through the data
-        auto last = data.ptr + data.length - toAllocate;
-        for (auto p = data.ptr; p != last; )
-        {
-            auto forward = p + toAllocate;
-            (cast(Node*) p).next = cast(Node*) forward;
-            p = forward;
-        }
-        // Last node
-        (cast(Node*) last).next = null;
         return result;
     }
 
@@ -340,7 +296,7 @@ struct FreeList(ParentAllocator,
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    FreeList!(GCAllocator, 0, 8, 1) fl;
+    FreeList!(GCAllocator, 0, 8) fl;
     assert(fl._root is null);
     auto b1 = fl.allocate(7);
     //assert(fl._root !is null);
@@ -359,8 +315,7 @@ parameters have the same semantics as for $(D FreeList).
 $(D expand) is defined to forward to $(ParentAllocator.expand) (it must be also $(D shared)).
 */
 struct SharedFreeList(ParentAllocator,
-    size_t minSize, size_t maxSize = minSize,
-    uint batchCount = 8)
+    size_t minSize, size_t maxSize = minSize)
 {
     import std.conv : text;
     import std.exception : enforce;
@@ -507,7 +462,6 @@ struct SharedFreeList(ParentAllocator,
     private struct Node { Node* next; }
     static assert(ParentAllocator.alignment >= Node.alignof);
     private Node* _root;
-    private uint nodesAtATime = batchCount;
 
     /// Standard primitives.
     enum uint alignment = ParentAllocator.alignment;
@@ -559,50 +513,7 @@ struct SharedFreeList(ParentAllocator,
     private void[] allocateFresh(const size_t bytes) shared
     {
         assert(bytes == max || max == unbounded);
-        if (nodesAtATime == 1)
-        {
-            // Easy case, just get it over with
-            return parent.allocate(bytes);
-        }
-        static if (maxSize != unbounded && maxSize != chooseAtRuntime)
-        {
-            static assert(
-                (parent.alignment + max) % Node.alignof == 0,
-                text("(", parent.alignment, " + ", max, ") % ",
-                 Node.alignof));
-        }
-        else
-        {
-            assert((parent.alignment + bytes) % Node.alignof == 0,
-                text("(", parent.alignment, " + ", bytes, ") % ",
-                 Node.alignof));
-        }
-
-        auto data = parent.allocate(nodesAtATime * bytes);
-        if (!data.ptr) return null;
-        auto result = data[0 .. bytes];
-        auto n = data[bytes .. $];
-        auto newRoot = cast(shared Node*) n.ptr;
-        shared Node* lastNode;
-        for (;;)
-        {
-            if (n.length < bytes)
-            {
-                lastNode = cast(shared Node*) data.ptr;
-                break;
-            }
-            (cast(Node*) data.ptr).next = cast(Node*) n.ptr;
-            data = n;
-            n = data[bytes .. $];
-        }
-        // Created the list, now wire the new nodes in considering another
-        // thread might have also created some nodes.
-        do
-        {
-            lastNode.next = _root;
-        }
-        while (!cas(&_root, lastNode.next, newRoot));
-        return result;
+        return parent.allocate(bytes);
     }
 
     /// Ditto
@@ -650,7 +561,7 @@ unittest
     import core.thread, std.algorithm, std.concurrency, std.range,
         std.experimental.allocator.mallocator;
 
-    static shared SharedFreeList!(Mallocator, 64, 128, 8) a;
+    static shared SharedFreeList!(Mallocator, 64, 128) a;
 
     assert(a.goodAllocSize(1) == platformAlignment);
 
@@ -682,7 +593,6 @@ unittest
 unittest
 {
     import std.experimental.allocator.mallocator;
-    shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime,
-        8) a;
+    shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
     auto b = a.allocate(64);
 }
