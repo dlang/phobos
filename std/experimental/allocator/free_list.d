@@ -102,6 +102,12 @@ struct FreeList(ParentAllocator,
         else return !tooSmall(n) && !tooLarge(n);
     }
 
+    private void[] blockFor(Node* p)
+    {
+        assert(p);
+        return (cast(void*) p)[0 .. max];
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // statistics {
 
@@ -133,12 +139,6 @@ struct FreeList(ParentAllocator,
                 parent.deallocate(b);
             }
         }
-    }
-
-    void[] blockFor(Node* p)
-    {
-        assert(p);
-        return (cast(void*) p)[0 .. max];
     }
 
     // } statistics
