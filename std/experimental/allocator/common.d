@@ -283,7 +283,7 @@ unittest
 
 /*
 */
-bool alignedAt(void* ptr, uint alignment)
+package bool alignedAt(void* ptr, uint alignment)
 {
     return cast(size_t) ptr % alignment == 0;
 }
@@ -305,7 +305,7 @@ unittest
 Aligns a pointer down to a specified alignment. The resulting pointer is less
 than or equal to the given pointer.
 */
-void* alignDownTo(void* ptr, uint alignment)
+package void* alignDownTo(void* ptr, uint alignment)
 {
     assert(alignment.isPowerOf2);
     return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
@@ -315,16 +315,17 @@ void* alignDownTo(void* ptr, uint alignment)
 Aligns a pointer up to a specified alignment. The resulting pointer is greater
 than or equal to the given pointer.
 */
-void* alignUpTo(void* ptr, uint alignment)
+package void* alignUpTo(void* ptr, uint alignment)
 {
     assert(alignment.isPowerOf2);
     immutable uint slack = cast(size_t) ptr & (alignment - 1U);
     return slack ? ptr + alignment - slack : ptr;
 }
 
+// Credit: Matthias Bentrup
 package bool isPowerOf2(uint x)
 {
-    return (x & (x - 1) | !x) == 0;
+    return (x & -x) > (x - 1);
 }
 
 unittest
@@ -340,11 +341,12 @@ unittest
     assert(isPowerOf2(8));
     assert(!isPowerOf2(9));
     assert(!isPowerOf2(10));
+    assert(isPowerOf2(1UL << 31));
 }
 
 package bool isGoodStaticAlignment(uint x)
 {
-    return x.isPowerOf2 && x > 0;
+    return x.isPowerOf2;
 }
 
 package bool isGoodDynamicAlignment(uint x)
