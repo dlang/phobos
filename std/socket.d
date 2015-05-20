@@ -50,7 +50,7 @@ import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.con
 
 import core.stdc.config;
 import core.time : dur, Duration;
-import std.algorithm : max;
+import std.algorithm : max, uninitializedFill;
 import std.exception : assumeUnique, enforce, collectException;
 
 import std.internal.cstring;
@@ -1921,45 +1921,46 @@ static if (is(sockaddr_un))
     class UnixAddress: Address
     {
     protected:
-        sockaddr_un* sun;
-        socklen_t len;
-
+        union
+        {
+            sockaddr_un sun;
+            void[sockaddr_un.sizeof + 1] buf;
+        }
 
         this() pure nothrow @nogc
         {
+            sun.sun_family = AF_UNIX;
+            sun.sun_path[].uninitializedFill('?');
         }
-
 
     public:
         override @property sockaddr* name()
         {
-            return cast(sockaddr*)sun;
+            return cast(sockaddr*)&sun;
         }
 
         override @property const(sockaddr)* name() const
         {
-            return cast(const(sockaddr)*)sun;
+            return cast(const(sockaddr)*)&sun;
         }
 
-
-        override @property socklen_t nameLen() const
+        override @property socklen_t nameLen() @trusted const
         {
-            return len;
+            return cast(socklen_t) (sockaddr_un.init.sun_path.offsetof +
+                strlen(cast(const(char*)) sun.sun_path.ptr) + 1);
         }
 
-
-        this(in char[] path) @trusted pure nothrow
+        this(in char[] path) @trusted pure
         {
-            len = cast(socklen_t)(sockaddr_un.init.sun_path.offsetof + path.length + 1);
-            sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
+            enforce(path.length <= sun.sun_path.sizeof, new SocketParameterException("Path too long"));
             sun.sun_family = AF_UNIX;
             sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
         }
 
-        @property string path() const pure
+        @property string path() @trusted const pure
         {
-            return to!string(sun.sun_path.ptr);
+            return to!string(cast(const(char)*)sun.sun_path.ptr);
         }
 
         override string toString() const pure
@@ -1984,6 +1985,7 @@ static if (is(sockaddr_un))
 
         listener.bind(address);
         scope(exit) () @trusted { remove(name.tempCString()); } ();
+        assert(listener.localAddress.toString == name);
 
         listener.listen(1);
 
@@ -3405,6 +3407,10 @@ public:
         Address result;
         switch(_family)
         {
+        case AddressFamily.UNIX:
+            result = new UnixAddress;
+            break;
+
         case AddressFamily.INET:
             result = new InternetAddress;
             break;
