@@ -1906,7 +1906,10 @@ unittest
     {
         auto a = [0, 1, 1, 2, 3];
         auto b = a.dup;
-        auto gen = RandomGen(unpredictableSeed);
+
+        // Pick a fixed seed so that the outcome of the statistical
+        // test below is deterministic.
+        auto gen = RandomGen(12345);
 
         // NUM times, pick LEN elements from the array at random.
         immutable int LEN = 2;
