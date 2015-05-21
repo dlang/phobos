@@ -496,7 +496,7 @@ SbrkRegion) adversely.
 version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 {
     import core.sys.posix.pthread;
-    static shared pthread_mutex_t sbrkMutex;
+    static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
 
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size_t.sizeof == (void*).sizeof);
