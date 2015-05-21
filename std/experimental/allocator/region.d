@@ -519,8 +519,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
             const rounded = bytes.roundUpToMultipleOf(alignment);
         else
             alias rounded = bytes;
-        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
-        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
         // Assume sbrk returns the old break. Most online documentation confirms
         // that, except for http://www.inf.udec.cl/~leo/Malloc_tutorial.pdf,
@@ -543,8 +543,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     /// Ditto
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
-        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
-        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
         if (!_brkInitial)
         {
@@ -581,8 +581,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     {
         if (b is null) return (b = allocate(delta)) !is null;
         assert(_brkInitial && _brkCurrent); // otherwise where did b come from?
-        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
-        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
         if (_brkCurrent != b.ptr + b.length) return false;
         // Great, can expand the last block
@@ -622,10 +622,10 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
             const rounded = b.length.roundUpToMultipleOf(alignment);
         else
             const rounded = b.length;
-        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
-        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
-        if (_brkCurrent != b.ptr + b.length) return false;
+        if (_brkCurrent != b.ptr + rounded) return false;
         assert(b.ptr >= _brkInitial);
         if (sbrk(-rounded) == cast(void*) -1)
             return false;
@@ -640,8 +640,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     */
     bool deallocateAll() shared
     {
-        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) || assert(0);
-        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex)
+        pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
+        scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
         return !_brkInitial || brk(_brkInitial) == 0;
     }
