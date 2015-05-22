@@ -1270,6 +1270,14 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
             return *cast(R2*) buffer.ptr;
         }
 
+        this(bool condition, R1 r1, R2 r2)
+        {
+            this.condition = condition;
+            import std.conv : emplace;
+            if (condition) emplace(&this.r1(), r1);
+            else emplace(&this.r2(), r2);
+        }
+
         // Carefully defined postblit to postblit the appropriate range
         static if (hasElaborateCopyConstructor!R1
             || hasElaborateCopyConstructor!R2)
@@ -1397,12 +1405,7 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
                 return result;
             }
     }
-    Result result;
-    result.condition = condition;
-    import std.conv : emplace;
-    if (condition) emplace(&result.r1(), r1);
-    else emplace(&result.r2(), r2);
-    return result;
+    return Result(condition, r1, r2);
 }
 
 /**
