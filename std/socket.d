@@ -1921,10 +1921,11 @@ static if (is(sockaddr_un))
     class UnixAddress: Address
     {
     protected:
-        union
+        struct
         {
+        align (1):
             sockaddr_un sun;
-            void[sockaddr_un.sizeof + 1] buf;
+            char unused; // placeholder for a terminating '\0'
         }
 
         this() pure nothrow @nogc
