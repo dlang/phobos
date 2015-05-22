@@ -498,6 +498,21 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     import core.sys.posix.pthread;
     static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
 
+    // workaround for https://issues.dlang.org/show_bug.cgi?id=14617
+    version(OSX)
+    {
+        shared static this()
+        {
+            pthread_mutex_init(cast(pthread_mutex_t*) &sbrkMutex, null) == 0
+                || assert(0);
+        }
+        shared static ~this()
+        {
+            pthread_mutex_destroy(cast(pthread_mutex_t*) &sbrkMutex) == 0
+                || assert(0);
+        }
+    }
+
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size_t.sizeof == (void*).sizeof);
     private shared void* _brkInitial, _brkCurrent;
