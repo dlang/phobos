@@ -50,7 +50,7 @@ import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.con
 
 import core.stdc.config;
 import core.time : dur, Duration;
-import std.algorithm : max, uninitializedFill;
+import std.algorithm : max;
 import std.exception : assumeUnique, enforce, collectException;
 
 import std.internal.cstring;
@@ -1925,13 +1925,13 @@ static if (is(sockaddr_un))
         {
         align (1):
             sockaddr_un sun;
-            char unused; // placeholder for a terminating '\0'
+            char unused = '\0'; // placeholder for a terminating '\0'
         }
 
         this() pure nothrow @nogc
         {
             sun.sun_family = AF_UNIX;
-            sun.sun_path[].uninitializedFill('?');
+            sun.sun_path = '?';
         }
 
     public:
