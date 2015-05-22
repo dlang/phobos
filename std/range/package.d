@@ -1271,16 +1271,17 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
         }
 
         // Carefully defined postblit to postblit the appropriate range
-        static if (hasElaborateAssign!R1 || hasElaborateAssign!R2)
+        static if (hasElaborateCopyConstructor!R1
+            || hasElaborateCopyConstructor!R2)
         this(this)
         {
             if (condition)
             {
-                static if (hasElaborateAssign!R1) r1.__postblit();
+                static if (hasElaborateCopyConstructor!R1) r1.__postblit();
             }
             else
             {
-                static if (hasElaborateAssign!R2) r2.__postblit();
+                static if (hasElaborateCopyConstructor!R2) r2.__postblit();
             }
         }
 
@@ -1313,7 +1314,10 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
         static if (isForwardRange!R1 && isForwardRange!R2)
             @property auto save()
             {
-                return this;
+                auto result = this;
+                if (condition) r1 = r1.save;
+                else r2 = r2.save;
+                return result;
             }
 
         @property void front(T)(T v)
