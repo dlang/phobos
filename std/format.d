@@ -3728,7 +3728,8 @@ unittest
     }
     else version (CRuntime_Microsoft)
     {
-        assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
+        assert(stream.data == "1.67 -0X1.47AE14P+0 nan"
+            || stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", // MSVCRT 14+ (VS 2015)
                 stream.data);
     }
     else version (Android)
@@ -3764,7 +3765,8 @@ unittest
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
     version (CRuntime_Microsoft)
-        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
+        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2"
+            || stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB860000000P+2"); // MSVCRT 14+ (VS 2015)
     else version (Android)
     {
         // bionic doesn't support hex formatting of floating point numbers,
@@ -6246,7 +6248,8 @@ unittest
     version (MinGW)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     else version (CRuntime_Microsoft)
-        assert(s == "1.67 -0X1.47AE14P+0 nan", s);
+        assert(s == "1.67 -0X1.47AE14P+0 nan"
+            || s == "1.67 -0X1.47AE147AE147BP+0 nan", s); // MSVCRT 14+ (VS 2015)
     else version (Android)
     {
         // bionic doesn't support hex formatting of floating point numbers
