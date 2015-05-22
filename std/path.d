@@ -304,7 +304,7 @@ inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
 {
     auto p = baseName(path);
     if (p.length > suffix.length
-        && filenameCmp!cs(p[$-suffix.length .. $], suffix) == 0)
+        && filenameCmp!cs(cast(const(C)[])p[$-suffix.length .. $], suffix) == 0)
     {
         return p[0 .. $-suffix.length];
     }
@@ -2284,14 +2284,25 @@ unittest
 
 
 /** Compares file names and returns
-    $(D < 0) if $(D filename1 < filename2),
-    $(D 0) if $(D filename1 == filename2) and
-    $(D > 0) if $(D filename1 > filename2).
 
     Individual characters are compared using $(D filenameCharCmp!cs),
     where $(D cs) is an optional template parameter determining whether
-    the comparison is case sensitive or not.  See the
-    $(LREF filenameCharCmp) documentation for details.
+    the comparison is case sensitive or not.
+
+    Treatment of invalid UTF encodings is implementation defined.
+
+    Params:
+        cs = case sensitivity
+        filename1 = range for first file name
+        filename2 = range for second file name
+
+    Returns:
+        $(D < 0) if $(D filename1 < filename2),
+        $(D 0) if $(D filename1 == filename2) and
+        $(D > 0) if $(D filename1 > filename2).
+
+    See_Also:
+        $(LREF filenameCharCmp)
 
     Examples:
     ---
@@ -2317,21 +2328,41 @@ unittest
     }
     ---
 */
-int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, C1, C2)
-    (const(C1)[] filename1, const(C2)[] filename2)
-    @safe pure //TODO: nothrow (because of std.array.front())
-    if (isSomeChar!C1 && isSomeChar!C2)
+int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
+    (Range1 filename1, Range2 filename2)
+    if (isInputRange!Range1 && isSomeChar!(ElementEncodingType!Range1) &&
+        isInputRange!Range2 && isSomeChar!(ElementEncodingType!Range2))
 {
-    for (;;)
+    alias C1 = Unqual!(ElementEncodingType!Range1);
+    alias C2 = Unqual!(ElementEncodingType!Range2);
+
+    static if (!cs && (C1.sizeof < 4 || C2.sizeof < 4) ||
+               C1.sizeof != C2.sizeof)
     {
-        if (filename1.empty) return -(cast(int) !filename2.empty);
-        if (filename2.empty) return  (cast(int) !filename1.empty);
-        auto c = filenameCharCmp!cs(filename1.front, filename2.front);
-        if (c != 0) return c;
-        filename1.popFront();
-        filename2.popFront();
+        // Case insensitive - decode so case is checkable
+        // Different char sizes - decode to bring to common type
+        import std.utf : byDchar;
+        return filenameCmp!cs(filename1.byDchar, filename2.byDchar);
     }
-    assert (0);
+    else static if (isSomeString!Range1 && C1.sizeof < 4 ||
+                    isSomeString!Range2 && C2.sizeof < 4)
+    {
+        // Avoid autodecoding
+        import std.utf : byCodeUnit;
+        return filenameCmp!cs(filename1.byCodeUnit, filename2.byCodeUnit);
+    }
+    else
+    {
+        for (;;)
+        {
+            if (filename1.empty) return -(cast(int) !filename2.empty);
+            if (filename2.empty) return  1;
+            const c = filenameCharCmp!cs(filename1.front, filename2.front);
+            if (c != 0) return c;
+            filename1.popFront();
+            filename2.popFront();
+        }
+    }
 }
 
 
