@@ -3407,9 +3407,12 @@ public:
         Address result;
         switch(_family)
         {
-        case AddressFamily.UNIX:
-            result = new UnixAddress;
-            break;
+        static if (is(sockaddr_un))
+        {
+            case AddressFamily.UNIX:
+                result = new UnixAddress;
+                break;
+        }
 
         case AddressFamily.INET:
             result = new InternetAddress;
