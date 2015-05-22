@@ -4658,29 +4658,30 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        uint* p = cast(uint *)&x;
-        return ((*p & 0x7F80_0000) == 0x7F80_0000)
-            && *p & 0x007F_FFFF; // not infinity
+        const uint p = *cast(uint *)&x;
+        return ((p & 0x7F80_0000) == 0x7F80_0000)
+            && p & 0x007F_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        ulong*  p = cast(ulong *)&x;
-        return ((*p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-            && *p & 0x000F_FFFF_FFFF_FFFF; // not infinity
+        const ulong  p = *cast(ulong *)&x;
+        return ((p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
+            && p & 0x000F_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        ulong*  ps = cast(ulong *)&x;
+        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        const ulong ps = *cast(ulong *)&x;
         return e == F.EXPMASK &&
-            *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+            ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        ulong*  ps = cast(ulong *)&x;
+        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        const ulong psLsb = (cast(ulong *)&x)[MANTISSA_LSB];
+        const ulong psMsb = (cast(ulong *)&x)[MANTISSA_MSB];
         return e == F.EXPMASK &&
-            (ps[MANTISSA_LSB] | (ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF)) != 0;
+            (psLsb | (psMsb& 0x0000_FFFF_FFFF_FFFF)) != 0;
     }
     else
     {
@@ -4930,11 +4931,11 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
-        ulong*  ps = cast(ulong *)&x;
+        const ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
+        const ulong ps = *cast(ulong *)&x;
 
         // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
-        return e == F.EXPMASK && (*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
+        return e == F.EXPMASK && (ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
@@ -4943,9 +4944,10 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        long*   ps = cast(long *)&x;
-        return (ps[MANTISSA_LSB] == 0)
-            && (ps[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
+        const long psLsb = (cast(long *)&x)[MANTISSA_LSB];
+        const long psMsb = (cast(long *)&x)[MANTISSA_MSB];
+        return (psLsb == 0)
+            && (psMsb & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
     }
     else
     {
