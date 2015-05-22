@@ -2091,6 +2091,9 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  *
  * Returns:
  *     The capitalized string.
+ *
+ * See_Also:
+ *      $(XREF uni, toCapitalized) for a lazy range version that doesn't allocate memory
  */
 S capitalize(S)(S s) @trusted pure
     if (isSomeString!S)
@@ -3059,19 +3062,67 @@ unittest
     Returns $(D str) without its last character, if there is one. If $(D str)
     ends with $(D "\r\n"), then both are removed. If $(D str) is empty, then
     then it is returned unchanged.
+
+    Params:
+        str = string (must be valid UTF)
+    Returns:
+        slice of str
  +/
-S chop(S)(S str) @safe pure
-    if (isSomeString!S)
+
+Range chop(Range)(Range str)
+    if (isSomeString!Range ||
+        isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     if (str.empty)
         return str;
 
-    if (str.length >= 2 && str[$ - 1] == '\n' && str[$ - 2] == '\r')
-        return str[0 .. $ - 2];
-
-    str.popBack();
-
-    return str;
+    static if (isSomeString!Range)
+    {
+        if (str.length >= 2 && str[$ - 1] == '\n' && str[$ - 2] == '\r')
+            return str[0 .. $ - 2];
+        str.popBack();
+        return str;
+    }
+    else
+    {
+        alias C = Unqual!(ElementEncodingType!Range);
+        C c = str.back;
+        str.popBack();
+        if (c == '\n')
+        {
+            if (!str.empty && str.back == '\r')
+                str.popBack();
+            return str;
+        }
+        // Pop back a dchar, not just a code unit
+        static if (C.sizeof == 1)
+        {
+            int cnt = 1;
+            while ((c & 0xC0) == 0x80)
+            {
+                if (str.empty)
+                    break;
+                c = str.back;
+                str.popBack();
+                if (++cnt > 4)
+                    break;
+            }
+        }
+        else static if (C.sizeof == 2)
+        {
+            if (c >= 0xD800 && c <= 0xDBFF)
+            {
+                if (!str.empty)
+                    str.popBack();
+            }
+        }
+        else static if (C.sizeof == 4)
+        {
+        }
+        else
+            static assert(0);
+        return str;
+    }
 }
 
 ///
@@ -3084,6 +3135,40 @@ S chop(S)(S str) @safe pure
     assert(chop("hello world\r\n") == "hello world");
     assert(chop("Walter Bright") == "Walter Brigh");
     assert(chop("") == "");
+}
+
+@safe pure unittest
+{
+    import std.utf : byChar, byWchar, byDchar, byCodeUnit, invalidUTFstrings;
+    import std.array;
+
+    assert(chop("hello world".byChar).array == "hello worl");
+    assert(chop("hello world\n"w.byWchar).array == "hello world"w);
+    assert(chop("hello world\r"d.byDchar).array == "hello world"d);
+    assert(chop("hello world\n\r".byChar).array == "hello world\n");
+    assert(chop("hello world\r\n"w.byWchar).array == "hello world"w);
+    assert(chop("Walter Bright"d.byDchar).array == "Walter Brigh"d);
+    assert(chop("".byChar).array == "");
+
+    assert(chop(`ミツバチと科学者` .byCodeUnit).array == "ミツバチと科学");
+    assert(chop(`ミツバチと科学者`w.byCodeUnit).array == "ミツバチと科学"w);
+    assert(chop(`ミツバチと科学者`d.byCodeUnit).array == "ミツバチと科学"d);
+
+    auto ca = invalidUTFstrings!char();
+    foreach (s; ca)
+    {
+        foreach (c; chop(s.byCodeUnit))
+        {
+        }
+    }
+
+    auto wa = invalidUTFstrings!wchar();
+    foreach (s; wa)
+    {
+        foreach (c; chop(s.byCodeUnit))
+        {
+        }
+    }
 }
 
 unittest
