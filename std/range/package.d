@@ -39,7 +39,7 @@ $(BOOKTABLE ,
         $(TD Concatenates several ranges into a single _range.
     ))
     $(TR $(TD $(D $(LREF choose)))
-        $(TD Choose one of several ranges.
+        $(TD choose one of several ranges.
     ))
     $(TR $(TD $(D $(LREF chunks)))
         $(TD Creates a _range that returns fixed-size chunks of the original
@@ -1228,312 +1228,212 @@ unittest
     auto c = chain(a, b);
 }
 
+/**
+Choose one of two ranges at runtime depending on a Boolean condition.
+
+The ranges may be different, but they must have compatible element types (i.e.
+$(D CommonType) must exist for the two element types). The result is a range
+that offers the weakest capabilities of the two (e.g. $(D ForwardRange) if $(D
+R1) is a random-access range and $(D R2) is a forward range).
+
+Params:
+    condition = which range to choose: $(D r1) if $(D true), $(D r2) otherwise
+    r1 = the "true" range
+    r2 = the "false" range
+
+Returns:
+    A range type dependent on $(D R1) and $(D R2).
+ */
+auto choose(R1, R2)(bool condition, R1 r1, R2 r2)
+if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
+    !is(CommonType!(ElementType!(Unqual!R1), ElementType!(Unqual!R2)) == void))
+{
+    static struct Result
+    {
+        import std.algorithm : max;
+        // state {}
+        private union
+        {
+            void[max(R1.sizeof, R2.sizeof)] buffer = void;
+            void* forAlignmentOnly = void;
+        }
+        private bool condition;
+        // }
+        private @property ref R1 r1()
+        {
+            assert(condition);
+            return *cast(R1*) buffer.ptr;
+        }
+        private @property ref R2 r2()
+        {
+            assert(!condition);
+            return *cast(R2*) buffer.ptr;
+        }
+
+        this(bool condition, R1 r1, R2 r2)
+        {
+            this.condition = condition;
+            import std.conv : emplace;
+            if (condition) emplace(&this.r1(), r1);
+            else emplace(&this.r2(), r2);
+        }
+
+        // Carefully defined postblit to postblit the appropriate range
+        static if (hasElaborateCopyConstructor!R1
+            || hasElaborateCopyConstructor!R2)
+        this(this)
+        {
+            if (condition)
+            {
+                static if (hasElaborateCopyConstructor!R1) r1.__postblit();
+            }
+            else
+            {
+                static if (hasElaborateCopyConstructor!R2) r2.__postblit();
+            }
+        }
+
+        static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
+        ~this()
+        {
+            if (condition) destroy(r1);
+            else destroy(r2);
+        }
+
+        static if (isInfinite!R1 && isInfinite!R2)
+            // Propagate infiniteness.
+            enum bool empty = false;
+        else
+            @property bool empty()
+            {
+                return condition ? r1.empty : r2.empty;
+            }
+
+        @property auto ref front()
+        {
+            return condition ? r1.front : r2.front;
+        }
+
+        void popFront()
+        {
+            return condition ? r1.popFront : r2.popFront;
+        }
+
+        static if (isForwardRange!R1 && isForwardRange!R2)
+            @property auto save()
+            {
+                auto result = this;
+                if (condition) r1 = r1.save;
+                else r2 = r2.save;
+                return result;
+            }
+
+        @property void front(T)(T v)
+        if (is(typeof({ r1.front = v; r2.front = v; })))
+        {
+            if (condition) r1.front = v; else r2.front = v;
+        }
+
+        static if (hasMobileElements!R1 && hasMobileElements!R2)
+            auto moveFront()
+            {
+                return condition ? r1.moveFront : r2.moveFront;
+            }
+
+        static if (isBidirectionalRange!R1 && isBidirectionalRange!R2)
+        {
+            @property auto ref back()
+            {
+                return condition ? r1.back : r2.back;
+            }
+
+            void popBack()
+            {
+                return condition ? r1.popBack : r2.popBack;
+            }
+
+            static if (hasMobileElements!R1 && hasMobileElements!R2)
+                auto moveBack()
+                {
+                    return condition ? r1.moveBack : r2.moveBack;
+                }
+
+            @property void back(T)(T v)
+            if (is(typeof({ r1.back = v; r2.back = v; })))
+            {
+                if (condition) r1.back = v; else r2.back = v;
+            }
+        }
+
+        static if (hasLength!R1 && hasLength!R2)
+        {
+            @property size_t length()
+            {
+                return condition ? r1.length : r2.length;
+            }
+            alias opDollar = length;
+        }
+
+        static if (isRandomAccessRange!R1 && isRandomAccessRange!R2)
+        {
+            auto ref opIndex(size_t index)
+            {
+                return condition ? r1[index] : r2[index];
+            }
+
+            static if (hasMobileElements!R1 && hasMobileElements!R2)
+                auto moveAt(size_t index)
+                {
+                    return condition ? r1.moveAt(index) : r2.moveAt(index);
+                }
+
+            void opIndexAssign(T)(T v, size_t index)
+            if (is(typeof({ r1[1] = v; r2[1] = v; })))
+            {
+                if (condition) r1[index] = v; else r2[index] = v;
+            }
+        }
+
+        // BUG: this should work for infinite ranges, too
+        static if (hasSlicing!R1 && hasSlicing!R2 &&
+                !isInfinite!R2 && !isInfinite!R2)
+            auto opSlice(size_t begin, size_t end)
+            {
+                auto result = this;
+                if (condition) result.r1 = result.r1[begin .. end];
+                else result.r2 = result.r2[begin .. end];
+                return result;
+            }
+    }
+    return Result(condition, r1, r2);
+}
 
 /**
-    Choose one of multiple ranges at runtime.
+Choose one of multiple ranges at runtime.
 
-    The ranges may be different, but they must have the same element type. The
-    result is a range that offers the $(D front), $(D popFront), and $(D
-    empty) primitives. If all input ranges offer random access and $(D
-    length), $(D choose) offers them as well.
+The ranges may be different, but they must have compatible element types. The
+result is a range that offers the weakest capabilities of all $(D Ranges).
 
-    Params:
-        index = which range to choose, must be less than the number of ranges
-        rs = 1 or more ranges
+Params:
+    index = which range to choose, must be less than the number of ranges
+    rs = two or more ranges
 
-    Returns:
-        The indexed range. If rs consists of only one range,
-        the return type is an alias of that range's type.
+Returns:
+    The indexed range. If rs consists of only one range, the return type is an
+    alias of that range's type.
  */
-auto choose(Ranges...)(size_t index, Ranges rs)
-if (Ranges.length > 0 &&
-    allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)) &&
-    !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Ranges))) == void))
+auto chooseAmong(Ranges...)(size_t index, Ranges rs)
+if (Ranges.length > 2
+        && is(typeof(choose(true, rs[0], rs[1])))
+        && is(typeof(chooseAmong(0, rs[1 .. $]))))
 {
-    static if (Ranges.length == 1)
-    {
-        assert(index == 0);
-        return rs[0];
-    }
-    else
-    {
-        static struct Result
-        {
-        private:
-            alias R = staticMap!(Unqual, Ranges);
-            alias RvalueElementType = CommonType!(staticMap!(.ElementType, R));
-            private template sameET(A)
-            {
-                enum sameET = is(.ElementType!A == RvalueElementType);
-            }
+    return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
+}
 
-            enum bool allSameType = allSatisfy!(sameET, R);
-
-            static if (allSameType)
-            {
-                alias ref RvalueElementType ElementType;
-            }
-            else
-            {
-                alias ElementType = RvalueElementType;
-            }
-            static if (allSameType && allSatisfy!(hasLvalueElements, R))
-            {
-                static ref RvalueElementType fixRef(ref RvalueElementType val)
-                {
-                    return val;
-                }
-            }
-            else
-            {
-                static RvalueElementType fixRef(RvalueElementType val)
-                {
-                    return val;
-                }
-            }
-
-            // Create a tagged union for the Ranges
-            size_t index;               // the tag
-            union U { R fields; }
-            U source;
-
-        public:
-            this(size_t index, R input)
-            {
-                this.index = index;
-                foreach (i, v; input)
-                {
-                    if (i == index)
-                    {
-                        source.fields[i] = v;
-                        return;
-                    }
-                }
-                assert(0);
-            }
-
-            import std.typetuple : anySatisfy;
-
-            static if (allSatisfy!(isInfinite, R))
-            {
-                // Propagate infiniteness.
-                enum bool empty = false;
-            }
-            else
-            {
-                @property bool empty()
-                {
-                    foreach (i, Unused; R)
-                    {
-                        if (index == i)
-                            return source.fields[i].empty;
-                    }
-                    assert(0);
-                }
-            }
-
-            static if (allSatisfy!(isForwardRange, R))
-                @property auto save()
-                {
-                    typeof(this) result = this;
-                    foreach (i, Unused; R)
-                    {
-                        if (i == index)
-                        {
-                            result.source.fields[i] = result.source.fields[i].save;
-                            break;
-                        }
-                    }
-                    return result;
-                }
-
-            void popFront()
-            {
-                foreach (i, Unused; R)
-                {
-                    if (i == index)
-                    {
-                        source.fields[i].popFront();
-                        break;
-                    }
-                }
-            }
-
-            @property auto ref front()
-            {
-                foreach (i, Unused; R)
-                {
-                    if (i == index)
-                        return fixRef(source.fields[i].front);
-                }
-                assert(0);
-            }
-
-            static if (allSameType && allSatisfy!(hasAssignableElements, R))
-            {
-                @property void front(RvalueElementType v)
-                {
-                    foreach (i, Unused; R)
-                    {
-                        if (i == index)
-                        {
-                            source.fields[i].front = v;
-                            return;
-                        }
-                    }
-                    assert(0);
-                }
-            }
-
-            static if (allSatisfy!(hasMobileElements, R))
-            {
-                RvalueElementType moveFront()
-                {
-                    foreach (i, Unused; R)
-                    {
-                        if (i == index)
-                            return .moveFront(source.fields[i]);
-                    }
-                    assert(0);
-                }
-            }
-
-            static if (allSatisfy!(isBidirectionalRange, R))
-            {
-                @property auto ref back()
-                {
-                    foreach (i, Unused; R)
-                    {
-                        if (i == index)
-                            return fixRef(source.fields[i].back);
-                    }
-                    assert(0);
-                }
-
-                void popBack()
-                {
-                    foreach (i, Unused; R)
-                    {
-                        if (i == index)
-                        {
-                            source.fields[i].popBack();
-                            return;
-                        }
-                    }
-                    assert(0);
-                }
-
-                static if (allSatisfy!(hasMobileElements, R))
-                {
-                    RvalueElementType moveBack()
-                    {
-                        foreach (i, Unused; R)
-                        {
-                            if (i == index)
-                                return .moveBack(source.fields[i]);
-                        }
-                        assert(0);
-                    }
-                }
-
-                static if (allSameType && allSatisfy!(hasAssignableElements, R))
-                {
-                    @property void back(RvalueElementType v)
-                    {
-                        foreach (i, Unused; R)
-                        {
-                            if (i == index)
-                            {
-                                source.fields[i].back = v;
-                                return;
-                            }
-                        }
-                        assert(0);
-                    }
-                }
-            }
-
-            static if (allSatisfy!(hasLength, R))
-            {
-                @property size_t length()
-                {
-                    foreach (i, Unused; R)
-                    {
-                        if (i == index)
-                            return source.fields[i].length;
-                    }
-                    assert(0);
-                }
-
-                alias opDollar = length;
-            }
-
-            static if (allSatisfy!(isRandomAccessRange, R))
-            {
-                auto ref opIndex(size_t index)
-                {
-                    foreach (i, Range; R)
-                    {
-                        if (i == this.index)
-                        {
-                            static if (isInfinite!(Range))
-                            {
-                                return source.fields[i][index];
-                            }
-                            else
-                            {
-                                return fixRef(source.fields[i][index]);
-                            }
-                        }
-                    }
-                    assert(0);
-                }
-
-                static if (allSatisfy!(hasMobileElements, R))
-                {
-                    RvalueElementType moveAt(size_t index)
-                    {
-                        foreach (i, Range; R)
-                        {
-                            if (i == this.index)
-                            {
-                                return .moveAt(source.fields[i], index);
-                            }
-                        }
-                        assert(0);
-                    }
-                }
-
-                static if (allSameType && allSatisfy!(hasAssignableElements, R))
-                    void opIndexAssign(ElementType v, size_t index)
-                    {
-                        foreach (i, Range; R)
-                        {
-                            if (i == this.index)
-                            {
-                                source.fields[i][index] = v;
-                                return;
-                            }
-                        }
-                        assert(0);
-                    }
-            }
-
-            static if (allSatisfy!(hasLength, R) && allSatisfy!(hasSlicing, R) && allSameType)
-                auto opSlice(size_t begin, size_t end)
-                {
-                    foreach (i, Unused; R)
-                    {
-                        if (i == index)
-                        {
-                            return source.fields[i][begin .. end];
-                        }
-                    }
-                    assert(0);
-                }
-        }
-        return Result(index, rs);
-    }
+auto chooseAmong(Ranges...)(size_t index, Ranges rs)
+if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
+{
+    return choose(index == 0, rs[0], rs[1]);
 }
 
 ///
@@ -1546,7 +1446,7 @@ unittest
     int[] arr3 = [ 7 ];
 
     {
-        auto s = choose(0, arr1, arr2, arr3);
+        auto s = chooseAmong(0, arr1, arr2, arr3);
         auto t = s.save;
         assert(s.length == 4);
         assert(s[2] == 3);
@@ -1554,28 +1454,24 @@ unittest
         assert(equal(t, [1, 2, 3, 4][]));
     }
     {
-        auto s = choose(0, arr2);
-        assert(equal(s, [5, 6][]));
-    }
-    {
-        auto s = choose(1, arr1, arr2, arr3);
+        auto s = chooseAmong(1, arr1, arr2, arr3);
         assert(s.length == 2);
         s.front = 8;
         assert(equal(s, [8, 6][]));
     }
     {
-        auto s = choose(1, arr1, arr2, arr3);
+        auto s = chooseAmong(1, arr1, arr2, arr3);
         assert(s.length == 2);
         s[1] = 9;
         assert(equal(s, [8, 9][]));
     }
     {
-        auto s = choose(1, arr2, arr1, arr3)[1..3];
+        auto s = chooseAmong(1, arr2, arr1, arr3)[1..3];
         assert(s.length == 2);
         assert(equal(s, [2, 3][]));
     }
     {
-        auto s = choose(0, arr1, arr2, arr3);
+        auto s = chooseAmong(0, arr1, arr2, arr3);
         assert(s.length == 4);
         assert(s.back == 4);
         s.popBack();
@@ -1587,7 +1483,7 @@ unittest
     {
         uint[] foo = [1,2,3,4,5];
         uint[] bar = [6,7,8,9,10];
-        auto c = choose(1,foo, bar);
+        auto c = chooseAmong(1,foo, bar);
         assert(c[3] == 9);
         c[3] = 42;
         assert(c[3] == 42);
@@ -1597,7 +1493,7 @@ unittest
     }
     {
         import std.range : cycle;
-        auto s = choose(1, cycle(arr2), cycle(arr3));
+        auto s = chooseAmong(1, cycle(arr2), cycle(arr3));
         assert(isInfinite!(typeof(s)));
         assert(!s.empty);
         assert(s[100] == 7);
@@ -1606,9 +1502,11 @@ unittest
 
 unittest
 {
-    int[] a;
-    long[] b;
-    auto c = choose(0, a, b);
+    int[] a = [1, 2, 3];
+    long[] b = [4, 5, 6];
+    auto c = chooseAmong(0, a, b);
+    c[0] = 42;
+    assert(c[0] == 42);
 }
 
 
