@@ -2814,113 +2814,108 @@ unittest
  */
 real log(real x) @safe pure nothrow @nogc
 {
-    version (INLINE_YL2X)
-        return yl2x(x, LN2);
-    else
+    // Coefficients for log(1 + x)
+    static immutable real[7] P = [
+        2.0039553499201281259648E1L,
+        5.7112963590585538103336E1L,
+        6.0949667980987787057556E1L,
+        2.9911919328553073277375E1L,
+        6.5787325942061044846969E0L,
+        4.9854102823193375972212E-1L,
+        4.5270000862445199635215E-5L,
+    ];
+    static immutable real[7] Q = [
+        6.0118660497603843919306E1L,
+        2.1642788614495947685003E2L,
+        3.0909872225312059774938E2L,
+        2.2176239823732856465394E2L,
+        8.3047565967967209469434E1L,
+        1.5062909083469192043167E1L,
+        1.0000000000000000000000E0L,
+    ];
+
+    // Coefficients for log(x)
+    static immutable real[4] R = [
+        -3.5717684488096787370998E1L,
+        1.0777257190312272158094E1L,
+        -7.1990767473014147232598E-1L,
+        1.9757429581415468984296E-3L,
+    ];
+    static immutable real[4] S = [
+        -4.2861221385716144629696E2L,
+        1.9361891836232102174846E2L,
+        -2.6201045551331104417768E1L,
+        1.0000000000000000000000E0L,
+    ];
+
+    // C1 + C2 = LN2.
+    enum real C1 = 6.9314575195312500000000E-1L;
+    enum real C2 = 1.4286068203094172321215E-6L;
+
+    // Special cases.
+    if (isNaN(x))
+        return x;
+    if (isInfinity(x) && !signbit(x))
+        return x;
+    if (x == 0.0)
+        return -real.infinity;
+    if (x < 0.0)
+        return real.nan;
+
+    // Separate mantissa from exponent.
+    // Note, frexp is used so that denormal numbers will be handled properly.
+    real y, z;
+    int exp;
+
+    x = frexp(x, exp);
+
+    // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
+    // where z = 2(x - 1)/(x + 1)
+    if((exp > 2) || (exp < -2))
     {
-        // Coefficients for log(1 + x)
-        static immutable real[7] P = [
-            2.0039553499201281259648E1L,
-            5.7112963590585538103336E1L,
-            6.0949667980987787057556E1L,
-            2.9911919328553073277375E1L,
-            6.5787325942061044846969E0L,
-            4.9854102823193375972212E-1L,
-            4.5270000862445199635215E-5L,
-        ];
-        static immutable real[7] Q = [
-            6.0118660497603843919306E1L,
-            2.1642788614495947685003E2L,
-            3.0909872225312059774938E2L,
-            2.2176239823732856465394E2L,
-            8.3047565967967209469434E1L,
-            1.5062909083469192043167E1L,
-            1.0000000000000000000000E0L,
-        ];
-
-        // Coefficients for log(x)
-        static immutable real[4] R = [
-           -3.5717684488096787370998E1L,
-            1.0777257190312272158094E1L,
-           -7.1990767473014147232598E-1L,
-            1.9757429581415468984296E-3L,
-        ];
-        static immutable real[4] S = [
-           -4.2861221385716144629696E2L,
-            1.9361891836232102174846E2L,
-           -2.6201045551331104417768E1L,
-            1.0000000000000000000000E0L,
-        ];
-
-        // C1 + C2 = LN2.
-        enum real C1 = 6.9314575195312500000000E-1L;
-        enum real C2 = 1.4286068203094172321215E-6L;
-
-        // Special cases.
-        if (isNaN(x))
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == 0.0)
-            return -real.infinity;
-        if (x < 0.0)
-            return real.nan;
-
-        // Separate mantissa from exponent.
-        // Note, frexp is used so that denormal numbers will be handled properly.
-        real y, z;
-        int exp;
-
-        x = frexp(x, exp);
-
-        // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
-        // where z = 2(x - 1)/(x + 1)
-        if((exp > 2) || (exp < -2))
-        {
-            if(x < SQRT1_2)
-            {   // 2(2x - 1)/(2x + 1)
-                exp -= 1;
-                z = x - 0.5;
-                y = 0.5 * z + 0.5;
-            }
-            else
-            {   // 2(x - 1)/(x + 1)
-                z = x - 0.5;
-                z -= 0.5;
-                y = 0.5 * x  + 0.5;
-            }
-            x = z / y;
-            z = x * x;
-            z = x * (z * poly(z, R) / poly(z, S));
-            z += exp * C2;
-            z += x;
-            z += exp * C1;
-
-            return z;
-        }
-
-        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
-        if (x < SQRT1_2)
-        {   // 2x - 1
+        if(x < SQRT1_2)
+        {   // 2(2x - 1)/(2x + 1)
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            z = x - 0.5;
+            y = 0.5 * z + 0.5;
         }
         else
-        {
-            x = x - 1.0;
+        {   // 2(x - 1)/(x + 1)
+            z = x - 0.5;
+            z -= 0.5;
+            y = 0.5 * x  + 0.5;
         }
+        x = z / y;
         z = x * x;
-        y = x * (z * poly(x, P) / poly(x, Q));
-        y += exp * C2;
-        z = y - ldexp(z, -1);
-
-        // Note, the sum of above terms does not exceed x/4,
-        // so it contributes at most about 1/4 lsb to the error.
+        z = x * (z * poly(z, R) / poly(z, S));
+        z += exp * C2;
         z += x;
         z += exp * C1;
 
         return z;
     }
+
+    // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+    if (x < SQRT1_2)
+    {   // 2x - 1
+        exp -= 1;
+        x = ldexp(x, 1) - 1.0;
+    }
+    else
+    {
+        x = x - 1.0;
+    }
+    z = x * x;
+    y = x * (z * poly(x, P) / poly(x, Q));
+    y += exp * C2;
+    z = y - ldexp(z, -1);
+
+    // Note, the sum of above terms does not exceed x/4,
+    // so it contributes at most about 1/4 lsb to the error.
+    z += x;
+    z += exp * C1;
+
+    return z;
 }
 
 ///
@@ -2941,117 +2936,112 @@ real log(real x) @safe pure nothrow @nogc
  */
 real log10(real x) @safe pure nothrow @nogc
 {
-    version (INLINE_YL2X)
-        return yl2x(x, LOG2);
-    else
+    // Coefficients for log(1 + x)
+    static immutable real[7] P = [
+        2.0039553499201281259648E1L,
+        5.7112963590585538103336E1L,
+        6.0949667980987787057556E1L,
+        2.9911919328553073277375E1L,
+        6.5787325942061044846969E0L,
+        4.9854102823193375972212E-1L,
+        4.5270000862445199635215E-5L,
+    ];
+    static immutable real[7] Q = [
+        6.0118660497603843919306E1L,
+        2.1642788614495947685003E2L,
+        3.0909872225312059774938E2L,
+        2.2176239823732856465394E2L,
+        8.3047565967967209469434E1L,
+        1.5062909083469192043167E1L,
+        1.0000000000000000000000E0L,
+    ];
+
+    // Coefficients for log(x)
+    static immutable real[4] R = [
+        -3.5717684488096787370998E1L,
+        1.0777257190312272158094E1L,
+        -7.1990767473014147232598E-1L,
+        1.9757429581415468984296E-3L,
+    ];
+    static immutable real[4] S = [
+        -4.2861221385716144629696E2L,
+        1.9361891836232102174846E2L,
+        -2.6201045551331104417768E1L,
+        1.0000000000000000000000E0L,
+    ];
+
+    // log10(2) split into two parts.
+    enum real L102A =  0.3125L;
+    enum real L102B = -1.14700043360188047862611052755069732318101185E-2L;
+
+    // log10(e) split into two parts.
+    enum real L10EA =  0.5L;
+    enum real L10EB = -6.570551809674817234887108108339491770560299E-2L;
+
+    // Special cases are the same as for log.
+    if (isNaN(x))
+        return x;
+    if (isInfinity(x) && !signbit(x))
+        return x;
+    if (x == 0.0)
+        return -real.infinity;
+    if (x < 0.0)
+        return real.nan;
+
+    // Separate mantissa from exponent.
+    // Note, frexp is used so that denormal numbers will be handled properly.
+    real y, z;
+    int exp;
+
+    x = frexp(x, exp);
+
+    // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
+    // where z = 2(x - 1)/(x + 1)
+    if((exp > 2) || (exp < -2))
     {
-        // Coefficients for log(1 + x)
-        static immutable real[7] P = [
-            2.0039553499201281259648E1L,
-            5.7112963590585538103336E1L,
-            6.0949667980987787057556E1L,
-            2.9911919328553073277375E1L,
-            6.5787325942061044846969E0L,
-            4.9854102823193375972212E-1L,
-            4.5270000862445199635215E-5L,
-        ];
-        static immutable real[7] Q = [
-            6.0118660497603843919306E1L,
-            2.1642788614495947685003E2L,
-            3.0909872225312059774938E2L,
-            2.2176239823732856465394E2L,
-            8.3047565967967209469434E1L,
-            1.5062909083469192043167E1L,
-            1.0000000000000000000000E0L,
-        ];
-
-        // Coefficients for log(x)
-        static immutable real[4] R = [
-           -3.5717684488096787370998E1L,
-            1.0777257190312272158094E1L,
-           -7.1990767473014147232598E-1L,
-            1.9757429581415468984296E-3L,
-        ];
-        static immutable real[4] S = [
-           -4.2861221385716144629696E2L,
-            1.9361891836232102174846E2L,
-           -2.6201045551331104417768E1L,
-            1.0000000000000000000000E0L,
-        ];
-
-        // log10(2) split into two parts.
-        enum real L102A =  0.3125L;
-        enum real L102B = -1.14700043360188047862611052755069732318101185E-2L;
-
-        // log10(e) split into two parts.
-        enum real L10EA =  0.5L;
-        enum real L10EB = -6.570551809674817234887108108339491770560299E-2L;
-
-        // Special cases are the same as for log.
-        if (isNaN(x))
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == 0.0)
-            return -real.infinity;
-        if (x < 0.0)
-            return real.nan;
-
-        // Separate mantissa from exponent.
-        // Note, frexp is used so that denormal numbers will be handled properly.
-        real y, z;
-        int exp;
-
-        x = frexp(x, exp);
-
-        // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
-        // where z = 2(x - 1)/(x + 1)
-        if((exp > 2) || (exp < -2))
-        {
-            if(x < SQRT1_2)
-            {   // 2(2x - 1)/(2x + 1)
-                exp -= 1;
-                z = x - 0.5;
-                y = 0.5 * z + 0.5;
-            }
-            else
-            {   // 2(x - 1)/(x + 1)
-                z = x - 0.5;
-                z -= 0.5;
-                y = 0.5 * x  + 0.5;
-            }
-            x = z / y;
-            z = x * x;
-            y = x * (z * poly(z, R) / poly(z, S));
-            goto Ldone;
-        }
-
-        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
-        if (x < SQRT1_2)
-        {   // 2x - 1
+        if(x < SQRT1_2)
+        {   // 2(2x - 1)/(2x + 1)
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            z = x - 0.5;
+            y = 0.5 * z + 0.5;
         }
         else
-            x = x - 1.0;
-
+        {   // 2(x - 1)/(x + 1)
+            z = x - 0.5;
+            z -= 0.5;
+            y = 0.5 * x  + 0.5;
+        }
+        x = z / y;
         z = x * x;
-        y = x * (z * poly(x, P) / poly(x, Q));
-        y = y - ldexp(z, -1);
-
-        // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
-        // This sequence of operations is critical and it may be horribly
-        // defeated by some compiler optimizers.
-    Ldone:
-        z = y * L10EB;
-        z += x * L10EB;
-        z += exp * L102B;
-        z += y * L10EA;
-        z += x * L10EA;
-        z += exp * L102A;
-
-        return z;
+        y = x * (z * poly(z, R) / poly(z, S));
+        goto Ldone;
     }
+
+    // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+    if (x < SQRT1_2)
+    {   // 2x - 1
+        exp -= 1;
+        x = ldexp(x, 1) - 1.0;
+    }
+    else
+        x = x - 1.0;
+
+    z = x * x;
+    y = x * (z * poly(x, P) / poly(x, Q));
+    y = y - ldexp(z, -1);
+
+    // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
+    // This sequence of operations is critical and it may be horribly
+    // defeated by some compiler optimizers.
+  Ldone:
+    z = y * L10EB;
+    z += x * L10EB;
+    z += exp * L102B;
+    z += y * L10EA;
+    z += x * L10EA;
+    z += exp * L102A;
+
+    return z;
 }
 
 ///
@@ -3076,26 +3066,17 @@ real log10(real x) @safe pure nothrow @nogc
  */
 real log1p(real x) @safe pure nothrow @nogc
 {
-    version(INLINE_YL2X)
-    {
-        // On x87, yl2xp1 is valid if and only if -0.5 <= lg(x) <= 0.5,
-        //    ie if -0.29<=x<=0.414
-        return (fabs(x) <= 0.25)  ? yl2xp1(x, LN2) : yl2x(x+1, LN2);
-    }
-    else
-    {
-        // Special cases.
-        if (isNaN(x) || x == 0.0)
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == -1.0)
-            return -real.infinity;
-        if (x < -1.0)
-            return real.nan;
+    // Special cases.
+    if (isNaN(x) || x == 0.0)
+        return x;
+    if (isInfinity(x) && !signbit(x))
+        return x;
+    if (x == -1.0)
+        return -real.infinity;
+    if (x < -1.0)
+        return real.nan;
 
-        return log(x + 1.0);
-    }
+    return log(x + 1.0);
 }
 
 /***************************************
@@ -3111,108 +3092,103 @@ real log1p(real x) @safe pure nothrow @nogc
  */
 real log2(real x) @safe pure nothrow @nogc
 {
-    version (INLINE_YL2X)
-        return yl2x(x, 1);
-    else
+    // Coefficients for log(1 + x)
+    static immutable real[7] P = [
+        2.0039553499201281259648E1L,
+        5.7112963590585538103336E1L,
+        6.0949667980987787057556E1L,
+        2.9911919328553073277375E1L,
+        6.5787325942061044846969E0L,
+        4.9854102823193375972212E-1L,
+        4.5270000862445199635215E-5L,
+    ];
+    static immutable real[7] Q = [
+        6.0118660497603843919306E1L,
+        2.1642788614495947685003E2L,
+        3.0909872225312059774938E2L,
+        2.2176239823732856465394E2L,
+        8.3047565967967209469434E1L,
+        1.5062909083469192043167E1L,
+        1.0000000000000000000000E0L,
+    ];
+
+    // Coefficients for log(x)
+    static immutable real[4] R = [
+        -3.5717684488096787370998E1L,
+        1.0777257190312272158094E1L,
+        -7.1990767473014147232598E-1L,
+        1.9757429581415468984296E-3L,
+    ];
+    static immutable real[4] S = [
+        -4.2861221385716144629696E2L,
+        1.9361891836232102174846E2L,
+        -2.6201045551331104417768E1L,
+        1.0000000000000000000000E0L,
+    ];
+
+    // Special cases are the same as for log.
+    if (isNaN(x))
+        return x;
+    if (isInfinity(x) && !signbit(x))
+        return x;
+    if (x == 0.0)
+        return -real.infinity;
+    if (x < 0.0)
+        return real.nan;
+
+    // Separate mantissa from exponent.
+    // Note, frexp is used so that denormal numbers will be handled properly.
+    real y, z;
+    int exp;
+
+    x = frexp(x, exp);
+
+    // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
+    // where z = 2(x - 1)/(x + 1)
+    if((exp > 2) || (exp < -2))
     {
-        // Coefficients for log(1 + x)
-        static immutable real[7] P = [
-            2.0039553499201281259648E1L,
-            5.7112963590585538103336E1L,
-            6.0949667980987787057556E1L,
-            2.9911919328553073277375E1L,
-            6.5787325942061044846969E0L,
-            4.9854102823193375972212E-1L,
-            4.5270000862445199635215E-5L,
-        ];
-        static immutable real[7] Q = [
-            6.0118660497603843919306E1L,
-            2.1642788614495947685003E2L,
-            3.0909872225312059774938E2L,
-            2.2176239823732856465394E2L,
-            8.3047565967967209469434E1L,
-            1.5062909083469192043167E1L,
-            1.0000000000000000000000E0L,
-        ];
-
-        // Coefficients for log(x)
-        static immutable real[4] R = [
-           -3.5717684488096787370998E1L,
-            1.0777257190312272158094E1L,
-           -7.1990767473014147232598E-1L,
-            1.9757429581415468984296E-3L,
-        ];
-        static immutable real[4] S = [
-           -4.2861221385716144629696E2L,
-            1.9361891836232102174846E2L,
-           -2.6201045551331104417768E1L,
-            1.0000000000000000000000E0L,
-        ];
-
-        // Special cases are the same as for log.
-        if (isNaN(x))
-            return x;
-        if (isInfinity(x) && !signbit(x))
-            return x;
-        if (x == 0.0)
-            return -real.infinity;
-        if (x < 0.0)
-            return real.nan;
-
-        // Separate mantissa from exponent.
-        // Note, frexp is used so that denormal numbers will be handled properly.
-        real y, z;
-        int exp;
-
-        x = frexp(x, exp);
-
-        // Logarithm using log(x) = z + z^^3 P(z) / Q(z),
-        // where z = 2(x - 1)/(x + 1)
-        if((exp > 2) || (exp < -2))
-        {
-            if(x < SQRT1_2)
-            {   // 2(2x - 1)/(2x + 1)
-                exp -= 1;
-                z = x - 0.5;
-                y = 0.5 * z + 0.5;
-            }
-            else
-            {   // 2(x - 1)/(x + 1)
-                z = x - 0.5;
-                z -= 0.5;
-                y = 0.5 * x  + 0.5;
-            }
-            x = z / y;
-            z = x * x;
-            y = x * (z * poly(z, R) / poly(z, S));
-            goto Ldone;
-        }
-
-        // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
-        if (x < SQRT1_2)
-        {   // 2x - 1
+        if(x < SQRT1_2)
+        {   // 2(2x - 1)/(2x + 1)
             exp -= 1;
-            x = ldexp(x, 1) - 1.0;
+            z = x - 0.5;
+            y = 0.5 * z + 0.5;
         }
         else
-            x = x - 1.0;
-
+        {   // 2(x - 1)/(x + 1)
+            z = x - 0.5;
+            z -= 0.5;
+            y = 0.5 * x  + 0.5;
+        }
+        x = z / y;
         z = x * x;
-        y = x * (z * poly(x, P) / poly(x, Q));
-        y = y - ldexp(z, -1);
-
-        // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
-        // This sequence of operations is critical and it may be horribly
-        // defeated by some compiler optimizers.
-    Ldone:
-        z = y * (LOG2E - 1.0);
-        z += x * (LOG2E - 1.0);
-        z += y;
-        z += x;
-        z += exp;
-
-        return z;
+        y = x * (z * poly(z, R) / poly(z, S));
+        goto Ldone;
     }
+
+    // Logarithm using log(1 + x) = x - .5x^^2 + x^^3 P(x) / Q(x)
+    if (x < SQRT1_2)
+    {   // 2x - 1
+        exp -= 1;
+        x = ldexp(x, 1) - 1.0;
+    }
+    else
+        x = x - 1.0;
+
+    z = x * x;
+    y = x * (z * poly(x, P) / poly(x, Q));
+    y = y - ldexp(z, -1);
+
+    // Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
+    // This sequence of operations is critical and it may be horribly
+    // defeated by some compiler optimizers.
+  Ldone:
+    z = y * (LOG2E - 1.0);
+    z += x * (LOG2E - 1.0);
+    z += y;
+    z += x;
+    z += exp;
+
+    return z;
 }
 
 ///
@@ -6073,25 +6049,13 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
             }
             x = -x;
         }
-        version(INLINE_YL2X)
-        {
-            // If x > 0, x ^^ y == 2 ^^ ( y * log2(x) )
-            // TODO: This is not accurate in practice. A fast and accurate
-            // (though complicated) method is described in:
-            // "An efficient rounding boundary test for pow(x, y)
-            // in double precision", C.Q. Lauter and V. Lefèvre, INRIA (2007).
-            return sign * exp2( yl2x(x, y) );
-        }
-        else
-        {
-            // If x > 0, x ^^ y == 2 ^^ ( y * log2(x) )
-            // TODO: This is not accurate in practice. A fast and accurate
-            // (though complicated) method is described in:
-            // "An efficient rounding boundary test for pow(x, y)
-            // in double precision", C.Q. Lauter and V. Lefèvre, INRIA (2007).
-            Float w = exp2(y * log2(x));
-            return sign * w;
-        }
+        // If x > 0, x ^^ y == 2 ^^ ( y * log2(x) )
+        // TODO: This is not accurate in practice. A fast and accurate
+        // (though complicated) method is described in:
+        // "An efficient rounding boundary test for pow(x, y)
+        // in double precision", C.Q. Lauter and V. Lefèvre, INRIA (2007).
+        Float w = exp2(y * log2(x));
+        return sign * w;
     }
     return impl(x, y);
 }
