@@ -1906,13 +1906,17 @@ version(StdDdoc)
     class UnixAddress: Address
     {
         /// Construct a new $(D UnixAddress) from the specified path.
-        this(in char[] path);
+        this(in char[] path) { }
 
         /// Get the underlying _path.
-        @property string path() const;
+        @property string path() const { return null; }
 
         /// ditto
-        override string toString() const;
+        override string toString() const { return null; }
+
+        override @property sockaddr* name() { return null; }
+        override @property const(sockaddr)* name() const { return 0; }
+        override @property socklen_t nameLen() const { return 0; }
     }
 }
 else
