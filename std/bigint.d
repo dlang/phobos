@@ -673,14 +673,14 @@ public:
     }
 
     /// Number of significant uints which are used in storing this number.
-    /// The absolute value of this BigInt is always < 2^^(32*uintLength)
+    /// The absolute value of this BigInt is always &lt; 2$(SUPERSCRIPT 32*uintLength)
     @property size_t uintLength() @safe pure nothrow @nogc const
     {
         return data.uintLength;
     }
 
     /// Number of significant ulongs which are used in storing this number.
-    /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
+    /// The absolute value of this BigInt is always &lt; 2$(SUPERSCRIPT 64*ulongLength)
     @property size_t ulongLength() @safe pure nothrow @nogc const
     {
         return data.ulongLength;

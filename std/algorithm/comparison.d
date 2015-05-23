@@ -221,6 +221,7 @@ Params:
         handlers that accept one argument. There can also be a choice that
         accepts zero arguments. That choice will be invoked if the $(D
         switchObject) is null.
+    switchObject = the object against which the tests are being made.
 
 Returns:
     The value of the selected choice.
@@ -500,7 +501,7 @@ Params:
 
 Returns:
     Returns $(D val), if it is between $(D lower) and $(D upper).
-    Otherwise returns the nearest of the two. 
+    Otherwise returns the nearest of the two.
 
 */
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
@@ -708,14 +709,14 @@ template equal(alias pred = "a == b")
     /++
     This function compares to ranges for equality. The ranges may have
     different element types, as long as $(D pred(a, b)) evaluates to $(D bool)
-    for $(D a) in $(D r1) and $(D b) in $(D r2). 
+    for $(D a) in $(D r1) and $(D b) in $(D r2).
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
 
     Params:
-        r1 = The first range to be compared. 
+        r1 = The first range to be compared.
         r2 = The second range to be compared.
 
-    Returns: 
+    Returns:
         $(D true) if and only if the two ranges compare equal element
         for element, according to binary predicate $(D pred).
 
@@ -799,7 +800,7 @@ range of range (of range...) comparisons.
 {
     import std.algorithm.iteration : map;
     import std.math : approxEqual;
-    import std.internal.test.dummyrange : ReferenceForwardRange, 
+    import std.internal.test.dummyrange : ReferenceForwardRange,
         ReferenceInputRange, ReferenceInfiniteForwardRange;
 
     debug(std_algorithm) scope(success)
@@ -911,57 +912,6 @@ enum EditOp : char
 
 private struct Levenshtein(Range, alias equals, CostType = size_t)
 {
-    void deletionIncrement(CostType n)
-    {
-        _deletionIncrement = n;
-        InitMatrix();
-    }
-
-    void insertionIncrement(CostType n)
-    {
-        _insertionIncrement = n;
-        InitMatrix();
-    }
-
-    CostType distance(Range s, Range t)
-    {
-        auto slen = walkLength(s.save), tlen = walkLength(t.save);
-        AllocMatrix(slen + 1, tlen + 1);
-        foreach (i; 1 .. rows)
-        {
-            auto sfront = s.front;
-            s.popFront();
-            auto tt = t;
-            foreach (j; 1 .. cols)
-            {
-                auto cSub = matrix(i - 1,j - 1)
-                    + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
-                tt.popFront();
-                auto cIns = matrix(i,j - 1) + _insertionIncrement;
-                auto cDel = matrix(i - 1,j) + _deletionIncrement;
-                switch (min_index(cSub, cIns, cDel))
-                {
-                    case 0:
-                        matrix(i,j) = cSub;
-                        break;
-                    case 1:
-                        matrix(i,j) = cIns;
-                        break;
-                    default:
-                        matrix(i,j) = cDel;
-                        break;
-                }
-            }
-        }
-        return matrix(slen,tlen);
-    }
-
-    EditOp[] path(Range s, Range t)
-    {
-        distanceWithPath(s, t);
-        return path();
-    }
-
     EditOp[] path()
     {
         import std.algorithm.mutation : reverse;
@@ -997,6 +947,10 @@ private struct Levenshtein(Range, alias equals, CostType = size_t)
         return result;
     }
 
+    ~this() {
+        FreeMatrix();
+    }
+
 private:
     CostType _deletionIncrement = 1,
         _insertionIncrement = 1,
@@ -1007,14 +961,25 @@ private:
     // Treat _matrix as a rectangular array
     ref CostType matrix(size_t row, size_t col) { return _matrix[row * cols + col]; }
 
-    void AllocMatrix(size_t r, size_t c) {
+    void AllocMatrix(size_t r, size_t c) @trusted {
         rows = r;
         cols = c;
         if (_matrix.length < r * c) {
-            delete _matrix;
-            _matrix = new CostType[r * c];
+            import core.stdc.stdlib : realloc;
+            import core.exception : onOutOfMemoryError;
+            auto m = cast(CostType *)realloc(_matrix.ptr, r * c * _matrix[0].sizeof);
+            if (!m)
+                onOutOfMemoryError();
+            _matrix = m[0 .. r * c];
             InitMatrix();
         }
+    }
+
+    void FreeMatrix() @trusted {
+        import core.stdc.stdlib : free;
+
+        free(_matrix.ptr);
+        _matrix = null;
     }
 
     void InitMatrix() {
@@ -1125,9 +1090,9 @@ Params:
 Returns:
     The minimal number of edits to transform s into t.
 
-Allocates GC memory.
+Does not allocate GC memory.
 */
-size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
+size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
@@ -1192,6 +1157,11 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     assert(levenshteinDistance("ID", "I♥D") == 1);
 }
 
+@safe @nogc nothrow unittest
+{
+    assert(levenshteinDistance("cat"d, "rat"d) == 1);
+}
+
 /**
 Returns the Levenshtein distance and the edit path between $(D s) and
 $(D t).
@@ -1202,10 +1172,10 @@ Params:
     t = The transformation target
 
 Returns:
-    The minimal amount of edits to transform s into t and the sequence of
-    edits to effect this transformation.
+    Tuple with the first element being the minimal amount of edits to transform s into t and
+    the second element being the sequence of edits to effect this transformation.
 
-Allocates GC memory.
+Allocates GC memory for the returned EditOp[] array.
 */
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
@@ -1220,10 +1190,10 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 ///
 @safe unittest
 {
-    string a = "Saturday", b = "Sunday";
+    string a = "Saturday", b = "Sundays";
     auto p = levenshteinDistanceAndPath(a, b);
-    assert(p[0] == 3);
-    assert(equal(p[1], "nrrnsnnn"));
+    assert(p[0] == 4);
+    assert(equal(p[1], "nrrnsnnni"));
 }
 
 @safe unittest

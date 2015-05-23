@@ -33,7 +33,7 @@ import std.algorithm;
  * A Stream wrapper for a C file of type FILE*.
  */
 class CFile : Stream {
-  FILE* cfile;
+  protected FILE* cfile;
 
   /**
    * Create the stream wrapper for the given C file.

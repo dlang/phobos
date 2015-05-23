@@ -50,11 +50,16 @@ import std.typetuple; // : TypeTuple, allSatisfy;
 debug(Unique) import std.stdio;
 
 /**
-Encapsulates unique ownership of a resource.  Resource of type $(D T) is
-deleted at the end of the scope, unless it is transferred.  The
-transfer can be explicit, by calling $(D release), or implicit, when
-returning Unique from a function. The resource can be a polymorphic
-class object, in which case Unique behaves polymorphically too.
+Encapsulates unique ownership of a resource.
+
+Like C++'s $(LINK2 http://en.cppreference.com/w/cpp/memory/unique_ptr, std::unique_ptr),
+a $(D Unique) maintains sole ownership of a given resource of type $(D T) until
+ownership is transferred or the $(D Unique) falls out of scope.
+Such a transfer can be explicit, using
+$(LINK2 http://dlang.org/phobos/std_algorithm_mutation.html#.move, $(D std.algorithm.move)),
+or implicit, when returning Unique from a function that created it.
+The resource can be a polymorphic class object,
+in which case Unique behaves polymorphically too.
 */
 struct Unique(T)
 {
@@ -64,67 +69,18 @@ static if (is(T:Object))
 else
     alias RefT = T*;
 
-public:
-    // Deferred in case we get some language support for checking uniqueness.
-    version(None)
-    /**
-    Allows safe construction of $(D Unique). It creates the resource and
-    guarantees unique ownership of it (unless $(D T) publishes aliases of
-    $(D this)).
-    Note: Nested structs/classes cannot be created.
-    Params:
-    args = Arguments to pass to $(D T)'s constructor.
-    ---
-    static class C {}
-    auto u = Unique!(C).create();
-    ---
-    */
-    static Unique!T create(A...)(auto ref A args)
-    if (__traits(compiles, new T(args)))
-    {
-        debug(Unique) writeln("Unique.create for ", T.stringof);
-        Unique!T u;
-        u._p = new T(args);
-        return u;
-    }
-
-    /**
-    Constructor that takes an rvalue.
-    It will ensure uniqueness, as long as the rvalue
-    isn't just a view on an lvalue (e.g., a cast).
-    Typical usage:
-    ----
-    Unique!Foo f = new Foo;
-    ----
-    */
-    this(RefT p)
-    {
-        debug(Unique) writeln("Unique constructor with rvalue");
-        _p = p;
-    }
-    /**
-    Constructor that takes an lvalue. It nulls its source.
-    The nulling will ensure uniqueness as long as there
-    are no previous aliases to the source.
-    */
-    this(ref RefT p)
-    {
-        _p = p;
-        debug(Unique) writeln("Unique constructor nulling source");
-        p = null;
-        assert(p is null);
-    }
     /**
     Constructor that takes a $(D Unique) of a type that is convertible to our type.
 
     Typically used to transfer a $(D Unique) rvalue of derived type to
     a $(D Unique) of base type.
+
     Example:
     ---
-    class C : Object {}
+    class C : Object { }
 
-    Unique!C uc = new C;
-    Unique!Object uo = uc.release;
+    Unique!C uc = unique!C();
+    Unique!Object uo = move(uc);
     ---
     */
     this(U)(Unique!U u)
@@ -146,39 +102,185 @@ public:
         u._p = null;
     }
 
+    /// Destroying a $(D Unique) frees the underlying resource.
     ~this()
     {
+        import core.stdc.stdlib : free;
+
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        if (_p !is null) delete _p;
-        _p = null;
+        if (_p !is null)
+        {
+            destroy(_p);
+
+            static if (hasIndirections!T)
+            {
+                import core.memory : GC;
+                GC.removeRange(cast(void*)_p);
+            }
+
+            free(cast(void*)_p);
+            _p = null;
+        }
     }
-    /** Returns whether the resource exists. */
-    @property bool isEmpty() const
-    {
-        return _p is null;
-    }
-    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
+
+    /// Transfer ownership to a $(D Unique) rvalue.
+    deprecated("Please use std.algorithm.move to transfer ownership.")
     Unique release()
     {
+        import std.algorithm : move;
+
         debug(Unique) writeln("Release");
-        auto u = Unique(_p);
+        Unique u = move(this);
         assert(_p is null);
         debug(Unique) writeln("return from Release");
         return u;
     }
-    /** Forwards member access to contents. */
-    RefT opDot() { return _p; }
 
     /**
-    Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
+    Returns a reference to the underlying $(D RefT) for use by non-owning code.
+
+    The holder of a $(D Unique!T) is the $(I owner) of that $(D T).
+    For code that does not own the resource (and therefore does not affect
+    its life cycle), pass a plain old reference.
     */
+    ref T get()() return @safe
+        if (!is(T == class))
+    {
+        import std.exception : enforce;
+        enforce(!empty, "You cannot get a struct reference from an empty Unique");
+        return *_p;
+    }
+
+    /**
+    Returns a the underlying $(D T) for use by non-owning code.
+
+    Note that getting a class reference is currently unsafe
+    as there is currently no way to stop it from escaping. (see DIP69)
+    */
+    T get()() @system
+        if (is(T == class))
+    {
+        return _p;
+    }
+
+    /// Returns true if the $(D Unique) currently owns an underlying $(D T)
+    @property bool empty() const
+    {
+        return _p is null;
+    }
+
+    /// Allows the $(D Unique) to cast to a boolean value matching
+    /// that of $(D Unique.empty)
+    bool opCast(T : bool)() const { return !empty; }
+
+    /// Forwards the underlying $(D RefT)
+    alias get this;
+
+    /// Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
     @disable this(this);
 
 private:
     RefT _p;
 }
 
+unittest
+{
+    // Ditto...
+    import std.algorithm;
+
+    static class C : Object { }
+
+    Unique!C uc = unique!C();
+    Unique!Object uo = move(uc);
+}
+
+
+/**
+Allows safe construction of $(D Unique). It creates the resource and
+guarantees unique ownership of it (unless $(D T) publishes aliases of
+$(D this)).
+
+Note: Nested classes and structs cannot be created at present time,
+      as there is no way to transfer the closure's frame pointer
+      into this function.
+
+Params:
+    args = Arguments to pass to $(D T)'s constructor.
+
+*/
+Unique!T unique(T, A...)(auto ref A args)
+    if (__traits(compiles, new T(args)))
+{
+    debug(Unique) writeln("Unique.create for ", T.stringof);
+
+    import core.memory : GC;
+    import core.stdc.stdlib : malloc;
+    import std.conv : emplace;
+    import core.exception : onOutOfMemoryError;
+
+    debug(Unique) writeln("Unique.create for ", T.stringof);
+    Unique!T u;
+
+    // TODO: May need to fix alignment?
+    // Does emplace still need to mess with alignment if
+    // the memory is coming from malloc, or does malloc handle that?
+
+    static if (is(T == class))
+        immutable size_t allocSize = __traits(classInstanceSize, T);
+    else
+        immutable size_t allocSize = T.sizeof;
+
+    void* rawMemory = malloc(allocSize);
+    if (!rawMemory)
+        onOutOfMemoryError();
+
+    static if (is(T == class)) {
+        u._p = emplace!T(rawMemory[0 .. allocSize], args);
+    }
+    else {
+        u._p = cast(T*)rawMemory;
+        emplace!T(u._p, args);
+    }
+
+    static if (hasIndirections!T)
+        GC.addRange(rawMemory, allocSize);
+
+    return u;
+}
+
 ///
+unittest
+{
+    struct S { }
+    auto u = unique!S();
+    assert(!u.empty());
+}
+
+unittest
+{
+    // Some real simple stuff
+    static struct S
+    {
+        int i;
+        this(int i) { this.i = i; }
+    }
+
+    // Some quick tests around alias this
+    auto u = unique!S(42);
+    assert(u.i == 42);
+    assert(!u.empty);
+    u.destroy();
+    assert(u.empty);
+    assert(!u); // Since null pointers coerce to false
+
+    auto i = unique!int(25);
+    assert(i.get() == 25);
+    assert(i == 25);
+
+    // opAssign still kicks in, preventing this from compiling:
+    // i = null;
+}
+
 unittest
 {
     static struct S
@@ -186,88 +288,95 @@ unittest
         int i;
         this(int i){this.i = i;}
     }
+
+    // Test implicit return from a function
     Unique!S produce()
     {
         // Construct a unique instance of S on the heap
-        Unique!S ut = new S(5);
+        Unique!S ut = unique!S(5);
         // Implicit transfer of ownership
         return ut;
     }
+
     // Borrow a unique resource by ref
+    // Note that references to Unique should not be passed around to
+    // code that does not play a role in the Unique's life cycle.
+    // (This is what .get() is for)
     void increment(ref Unique!S ur)
     {
         ur.i++;
     }
+
+    // See above
+    void correctIncrement(ref S r)
+    {
+        r.i++;
+    }
+
     void consume(Unique!S u2)
     {
-        assert(u2.i == 6);
+        assert(u2.i == 8);
         // Resource automatically deleted here
     }
+
     Unique!S u1;
-    assert(u1.isEmpty);
+    assert(!u1);
     u1 = produce();
     increment(u1);
     assert(u1.i == 6);
-    //consume(u1); // Error: u1 is not copyable
+    correctIncrement(u1.get());
+    // yay alias this
+    correctIncrement(u1);
+    assert(u1.i == 8);
+
+    // consume(u1); // Error: u1 is not copyable
+
     // Transfer ownership of the resource
-    consume(u1.release);
-    assert(u1.isEmpty);
+    import std.algorithm : move;
+    consume(move(u1));
+    assert(!u1);
 }
 
 unittest
 {
-    // test conversion to base ref
-    int deleted = 0;
-    class C
-    {
-        ~this(){deleted++;}
-    }
-    // constructor conversion
-    Unique!Object u = Unique!C(new C);
-    static assert(!__traits(compiles, {u = new C;}));
-    assert(!u.isEmpty);
-    destroy(u);
-    assert(deleted == 1);
+    // FIXME: Isn't this a bit redundant?
+    // I believe all of these bases are covered in the tests above.
 
-    Unique!C uc = new C;
-    static assert(!__traits(compiles, {Unique!Object uo = uc;}));
-    Unique!Object uo = new C;
-    // opAssign conversion, deleting uo resource first
-    uo = uc.release;
-    assert(uc.isEmpty);
-    assert(!uo.isEmpty);
-    assert(deleted == 2);
-}
-
-unittest
-{
     debug(Unique) writeln("Unique class");
-    class Bar
+    static class Bar
     {
         ~this() { debug(Unique) writeln("    Bar destructor"); }
         int val() const { return 4; }
     }
+
     alias UBar = Unique!(Bar);
+
     UBar g(UBar u)
     {
+        import std.algorithm : move;
         debug(Unique) writeln("inside g");
-        return u.release;
+        return move(u);
     }
-    auto ub = UBar(new Bar);
-    assert(!ub.isEmpty);
+
+    auto ub = unique!Bar();
+    assert(ub);
     assert(ub.val == 4);
-    static assert(!__traits(compiles, {auto ub3 = g(ub);}));
+
+    import std.algorithm : move;
     debug(Unique) writeln("Calling g");
-    auto ub2 = g(ub.release);
+    auto ub2 = g(move(ub));
     debug(Unique) writeln("Returned from g");
-    assert(ub.isEmpty);
-    assert(!ub2.isEmpty);
+    assert(!ub);
+    assert(ub2);
 }
 
 unittest
 {
+    // Same as above, but for a struct
+    import std.algorithm : move;
+
     debug(Unique) writeln("Unique struct");
-    struct Foo
+    static struct Foo
     {
         ~this() { debug(Unique) writeln("    Foo destructor"); }
         int val() const { return 3; }
@@ -277,18 +386,17 @@ unittest
     UFoo f(UFoo u)
     {
         debug(Unique) writeln("inside f");
-        return u.release;
+        return move(u);
     }
 
-    auto uf = UFoo(new Foo);
-    assert(!uf.isEmpty);
+    auto uf = unique!Foo();
+    assert(uf);
     assert(uf.val == 3);
-    static assert(!__traits(compiles, {auto uf3 = f(uf);}));
     debug(Unique) writeln("Unique struct: calling f");
-    auto uf2 = f(uf.release);
+    auto uf2 = f(move(uf));
     debug(Unique) writeln("Unique struct: returned from f");
-    assert(uf.isEmpty);
-    assert(!uf2.isEmpty);
+    assert(!uf);
+    assert(uf2);
 }
 
 
@@ -1764,6 +1872,9 @@ struct Nullable(T)
 
 /**
 Constructor initializing $(D this) with $(D value).
+
+Params:
+    value = The value to initialize this `Nullable` with.
  */
     this(inout T value) inout
     {
@@ -1789,12 +1900,25 @@ Constructor initializing $(D this) with $(D value).
     }
 
 /**
-Returns $(D true) if and only if $(D this) is in the null state.
+Check if `this` is in the null state.
+
+Returns:
+    true $(B iff) `this` is in the null state, otherwise false.
  */
     @property bool isNull() const @safe pure nothrow
     {
         return _isNull;
     }
+    
+///
+unittest
+{
+    Nullable!int ni;
+    assert(ni.isNull);
+    
+    ni = 0;
+    assert(!ni.isNull);
+}
 
 /**
 Forces $(D this) to the null state.
@@ -1804,10 +1928,23 @@ Forces $(D this) to the null state.
         .destroy(_value);
         _isNull = true;
     }
+    
+///
+unittest
+{
+    Nullable!int ni = 0;
+    assert(!ni.isNull);
+    
+    ni.nullify();
+    assert(ni.isNull);
+}
 
 /**
 Assigns $(D value) to the internally-held state. If the assignment
 succeeds, $(D this) becomes non-null.
+
+Params:
+    value = A value of type `T` to assign to this `Nullable`.
  */
     void opAssign()(T value)
     {
@@ -1816,8 +1953,31 @@ succeeds, $(D this) becomes non-null.
     }
 
 /**
+    If this `Nullable` wraps a type that already has a null value
+    (such as a pointer), then assigning the null value to this
+    `Nullable` is no different than assigning any other value of
+    type `T`, and the resulting code will look very strange. It 
+    is strongly recommended that this be avoided by instead using
+    the version of `Nullable` that takes an additional `nullValue`
+    template argument.
+ */
+unittest
+{
+    //Passes
+    Nullable!(int*) npi;
+    assert(npi.isNull);
+    
+    //Passes?!
+    npi = null;
+    assert(!npi.isNull);
+}
+
+/**
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
+
+Returns:
+    The value held internally by this `Nullable`.
  */
     @property ref inout(T) get() inout @safe pure nothrow
     {
@@ -1825,6 +1985,20 @@ This function is also called for the implicit conversion to $(D T).
         assert(!isNull, message);
         return _value;
     }
+    
+///
+unittest
+{
+    import std.exception: assertThrown, assertNotThrown;
+    
+    Nullable!int ni;
+    //`get` is implicitly called. Will throw 
+    //an AssertError in non-release mode
+    assertThrown!Throwable(ni == 0);
+    
+    ni = 0;
+    assertNotThrown!Throwable(ni == 0);
+}
 
 /**
 Implicitly converts to $(D T).
@@ -1836,11 +2010,33 @@ $(D this) must not be in the null state.
 ///
 unittest
 {
-    Nullable!int a;
-    assert(a.isNull);
-    a = 5;
-    assert(!a.isNull);
-    assert(a == 5);
+    struct CustomerRecord
+    {
+        string name;
+        string address;
+        int customerNum;
+    }
+    
+    Nullable!CustomerRecord getByName(string name)
+    {
+        //A bunch of hairy stuff
+        
+        return Nullable!CustomerRecord.init;
+    }
+    
+    auto queryResult = getByName("Doe, John");
+    if (!queryResult.isNull)
+    {
+        //Process Mr. Doe's customer record
+        auto address = queryResult.address;
+        auto customerNum = queryResult.customerNum;
+        
+        //Do some things with this customer's info
+    }
+    else
+    {
+        //Add the customer to the database
+    }
 }
 
 unittest
@@ -2121,6 +2317,12 @@ particular value. For example, $(D Nullable!(uint, uint.max)) is an
 $(D uint) that sets aside the value $(D uint.max) to denote a null
 state. $(D Nullable!(T, nullValue)) is more storage-efficient than $(D
 Nullable!T) because it does not need to store an extra $(D bool).
+
+Params:
+    T = The wrapped type for which Nullable provides a null value.
+    
+    nullValue = The null value which denotes the null state of this
+                `Nullable`. Must be of type `T`.
  */
 struct Nullable(T, T nullValue)
 {
@@ -2128,6 +2330,9 @@ struct Nullable(T, T nullValue)
 
 /**
 Constructor initializing $(D this) with $(D value).
+
+Params:
+    value = The value to initialize this `Nullable` with.
  */
     this(T value)
     {
@@ -2152,7 +2357,10 @@ Constructor initializing $(D this) with $(D value).
     }
 
 /**
-Returns $(D true) if and only if $(D this) is in the null state.
+Check if `this` is in the null state.
+
+Returns:
+    true $(B iff) `this` is in the null state, otherwise false.
  */
     @property bool isNull() const
     {
@@ -2167,6 +2375,17 @@ Returns $(D true) if and only if $(D this) is in the null state.
             return _value == nullValue;
         }
     }
+    
+///
+unittest
+{
+    Nullable!(int, -1) ni;
+    //Initialized to "null" state
+    assert(ni.isNull);
+    
+    ni = 0;
+    assert(!ni.isNull);
+}
 
 /**
 Forces $(D this) to the null state.
@@ -2175,19 +2394,59 @@ Forces $(D this) to the null state.
     {
         _value = nullValue;
     }
+    
+///
+unittest
+{
+    Nullable!(int, -1) ni = 0;
+    assert(!ni.isNull);
+    
+    ni = -1;
+    assert(ni.isNull);
+}
 
 /**
-Assigns $(D value) to the internally-held state. No null checks are
-made. Note that the assignment may leave $(D this) in the null state.
+Assigns $(D value) to the internally-held state. If the assignment
+succeeds, $(D this) becomes non-null. No null checks are made. Note 
+that the assignment may leave $(D this) in the null state.
+
+Params:
+    value = A value of type `T` to assign to this `Nullable`.
+            If it is `nullvalue`, then the internal state of
+            this `Nullable` will be set to null.
  */
     void opAssign()(T value)
     {
         _value = value;
     }
+    
+/**
+    If this `Nullable` wraps a type that already has a null value
+    (such as a pointer), and that null value is not given for
+    `nullValue`, then assigning the null value to this `Nullable` 
+    is no different than assigning any other value of type `T`, 
+    and the resulting code will look very strange. It is strongly 
+    recommended that this be avoided by using `T`'s "built in"
+    null value for `nullValue`.
+ */
+unittest
+{
+    //Passes
+    enum nullVal = cast(int*)0xCAFEBABE;
+    Nullable!(int*, nullVal) npi;
+    assert(npi.isNull);
+    
+    //Passes?!
+    npi = null;
+    assert(!npi.isNull);
+}
 
 /**
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
+
+Returns:
+    The value held internally by this `Nullable`.
  */
     @property ref inout(T) get() inout
     {
@@ -2197,14 +2456,58 @@ This function is also called for the implicit conversion to $(D T).
         assert(!isNull, message);
         return _value;
     }
+    
+///
+unittest
+{
+    import std.exception: assertThrown, assertNotThrown;
+    
+    Nullable!(int, -1) ni;
+    //`get` is implicitly called. Will throw 
+    //an error in non-release mode
+    assertThrown!Throwable(ni == 0);
+    
+    ni = 0;
+    assertNotThrown!Throwable(ni == 0);
+}
 
 /**
 Implicitly converts to $(D T).
-Gets the value. $(D this) must not be in the null state.
+$(D this) must not be in the null state.
  */
     alias get this;
 }
 
+///
+unittest
+{
+    Nullable!(size_t, size_t.max) indexOf(string[] haystack, string needle)
+    {
+        //Find the needle, returning -1 if not found
+        
+        return Nullable!(size_t, size_t.max).init;
+    }
+    
+    void sendLunchInvite(string name)
+    {
+    }
+    
+    //It's safer than C...
+    auto coworkers = ["Jane", "Jim", "Marry", "Fred"];
+    auto pos = indexOf(coworkers, "Bob");
+    if (!pos.isNull)
+    {
+        //Send Bob an invitation to lunch
+        sendLunchInvite(coworkers[pos]);
+    }
+    else
+    {
+        //Bob not found; report the error
+    }
+    
+    //And there's no overhead
+    static assert(Nullable!(size_t, size_t.max).sizeof == size_t.sizeof);
+}
 unittest
 {
     import std.exception : assertThrown;
@@ -2343,7 +2646,10 @@ struct NullableRef(T)
     private T* _value;
 
 /**
-Constructor binding $(D this) with $(D value).
+Constructor binding $(D this) to $(D value).
+
+Params:
+    value = The value to bind to.
  */
     this(T* value) @safe pure nothrow
     {
@@ -2369,18 +2675,46 @@ Constructor binding $(D this) with $(D value).
 
 /**
 Binds the internal state to $(D value).
+
+Params:
+    value = A pointer to a value of type `T` to bind this `NullableRef` to.
  */
     void bind(T* value) @safe pure nothrow
     {
         _value = value;
     }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr = new int(42);
+        assert(nr == 42);
+        
+        int* n = new int(1);
+        nr.bind(n);
+        assert(nr == 1);
+    }
 
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
+
+Returns:
+    true if `this` is in the null state, otherwise false.
  */
     @property bool isNull() const @safe pure nothrow
     {
         return _value is null;
+    }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr;
+        assert(nr.isNull);
+        
+        int* n = new int(42);
+        nr.bind(n);
+        assert(!nr.isNull && nr == 42);
     }
 
 /**
@@ -2390,9 +2724,25 @@ Forces $(D this) to the null state.
     {
         _value = null;
     }
+    
+    ///
+    unittest
+    {
+        NullableRef!int nr = new int(42);
+        assert(!nr.isNull);
+        
+        nr.nullify();
+        assert(nr.isNull);
+    }
 
 /**
 Assigns $(D value) to the internally-held state.
+
+Params:
+    value = A value of type `T` to assign to this `NullableRef`.
+            If the internal state of this `NullableRef` has not
+            been initialized, an error will be thrown in
+            non-release mode.
  */
     void opAssign()(T value)
         if (isAssignable!T) //@@@9416@@@
@@ -2400,6 +2750,21 @@ Assigns $(D value) to the internally-held state.
         enum message = "Called `opAssign' on null NullableRef!" ~ T.stringof ~ ".";
         assert(!isNull, message);
         *_value = value;
+    }
+    
+    ///
+    unittest
+    {
+        import std.exception: assertThrown, assertNotThrown;
+        
+        NullableRef!int nr;
+        assert(nr.isNull);
+        assertThrown!Throwable(nr = 42);
+        
+        nr.bind(new int(0));
+        assert(!nr.isNull);
+        assertNotThrown!Throwable(nr = 42);
+        assert(nr == 42);
     }
 
 /**
@@ -2411,6 +2776,20 @@ This function is also called for the implicit conversion to $(D T).
         enum message = "Called `get' on null NullableRef!" ~ T.stringof ~ ".";
         assert(!isNull, message);
         return *_value;
+    }
+    
+    ///
+    unittest
+    {
+        import std.exception: assertThrown, assertNotThrown;
+        
+        NullableRef!int nr;
+        //`get` is implicitly called. Will throw 
+        //an error in non-release mode
+        assertThrown!Throwable(nr == 0);
+        
+        nr.bind(new int(0));
+        assertNotThrown!Throwable(nr == 0);
     }
 
 /**
@@ -2565,33 +2944,37 @@ The name came from
 $(WEB search.cpan.org/~sburke/Class-_BlackHole-0.04/lib/Class/_BlackHole.pm, Class::_BlackHole)
 Perl module by Sean M. Burke.
 
-Example:
---------------------
-abstract class C
-{
-    int m_value;
-    this(int v) { m_value = v; }
-    int value() @property { return m_value; }
-
-    abstract real realValue() @property;
-    abstract void doSomething();
-}
-
-void main()
-{
-    auto c = new BlackHole!C(42);
-    writeln(c.value);     // prints "42"
-
-    // Abstract functions are implemented as do-nothing:
-    writeln(c.realValue); // prints "NaN"
-    c.doSomething();      // does nothing
-}
---------------------
+Params:
+    Base = A non-final class for `BlackHole` to inherit from.
 
 See_Also:
-  AutoImplement, generateEmptyFunction
+  $(LREF AutoImplement), $(LREF generateEmptyFunction)
  */
 alias BlackHole(Base) = AutoImplement!(Base, generateEmptyFunction, isAbstractFunction);
+
+///
+unittest
+{
+    import std.math: isNaN;
+
+    static abstract class C
+    {
+        int m_value;
+        this(int v) { m_value = v; }
+        int value() @property { return m_value; }
+
+        abstract real realValue() @property;
+        abstract void doSomething();
+    }
+
+    auto c = new BlackHole!C(42);
+    assert(c.value == 42);
+
+    // Returns real.init which is NaN
+    assert(c.realValue.isNaN);
+    // Abstract functions are implemented as do-nothing
+    c.doSomething();
+}
 
 unittest
 {
@@ -2638,32 +3021,35 @@ unittest
 
 /**
 $(D WhiteHole!Base) is a subclass of $(D Base) which automatically implements
-all abstract member functions as throw-always functions.  Each auto-implemented
-function fails with throwing an $(D Error) and does never return.  Useful for
-trapping use of not-yet-implemented functions.
+all abstract member functions as functions that always fail. These functions 
+simply throw an $(D Error) and never return. `Whitehole` is useful for 
+trapping the use of class member functions that haven't been implemented.
 
 The name came from
 $(WEB search.cpan.org/~mschwern/Class-_WhiteHole-0.04/lib/Class/_WhiteHole.pm, Class::_WhiteHole)
 Perl module by Michael G Schwern.
 
-Example:
---------------------
-class C
-{
-    abstract void notYetImplemented();
-}
-
-void main()
-{
-    auto c = new WhiteHole!C;
-    c.notYetImplemented(); // throws an Error
-}
---------------------
+Params:
+    Base = A non-final class for `WhiteHole` to inherit from.
 
 See_Also:
-  AutoImplement, generateAssertTrap
+  $(LREF AutoImplement), $(LREF generateAssertTrap)
  */
 alias WhiteHole(Base) = AutoImplement!(Base, generateAssertTrap, isAbstractFunction);
+
+///
+unittest
+{
+    import std.exception: assertThrown;
+
+    static class C
+    {
+        abstract void notYetImplemented();
+    }
+
+    auto c = new WhiteHole!C;
+    assertThrown!NotImplementedError(c.notYetImplemented()); // throws an Error
+}
 
 // / ditto
 class NotImplementedError : Error
@@ -3413,7 +3799,7 @@ private static:
 
 
 /**
-Predefined how-policies for $(D AutoImplement).  These templates are used by
+Predefined how-policies for $(D AutoImplement).  These templates are also used by
 $(D BlackHole) and $(D WhiteHole), respectively.
  */
 template generateEmptyFunction(C, func.../+[BUG 4217]+/)
@@ -4244,15 +4630,60 @@ if (!is(T == class) && !(is(T == interface)))
 
         private void initialize(A...)(auto ref A args)
         {
+            import core.exception : onOutOfMemoryError;
             import core.memory : GC;
             import core.stdc.stdlib : malloc;
             import std.conv : emplace;
-            import std.exception : enforce;
 
-            _store = cast(Impl*) enforce(malloc(Impl.sizeof));
+            _store = cast(Impl*)malloc(Impl.sizeof);
+            if (_store is null)
+                onOutOfMemoryError();
             static if (hasIndirections!T)
                 GC.addRange(&_store._payload, T.sizeof);
             emplace(&_store._payload, args);
+            _store._count = 1;
+        }
+
+        private void move(ref T source)
+        {
+            import core.exception : onOutOfMemoryError;
+            import core.memory : GC;
+            import core.stdc.stdlib : malloc;
+            import core.stdc.string : memcpy, memset;
+
+            _store = cast(Impl*)malloc(Impl.sizeof);
+            if (_store is null)
+                onOutOfMemoryError();
+            static if (hasIndirections!T)
+                GC.addRange(&_store._payload, T.sizeof);
+
+            // Can't use std.algorithm.move(source, _store._payload)
+            // here because it requires the target to be initialized.
+            // Might be worth to add this as `moveEmplace`
+
+            // Can avoid destructing result.
+            static if (hasElaborateAssign!T || !isAssignable!T)
+                memcpy(&_store._payload, &source, T.sizeof);
+            else
+                _store._payload = source;
+
+            // If the source defines a destructor or a postblit hook, we must obliterate the
+            // object in order to avoid double freeing and undue aliasing
+            static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
+            {
+                // If T is nested struct, keep original context pointer
+                static if (__traits(isNested, T))
+                    enum sz = T.sizeof - (void*).sizeof;
+                else
+                    enum sz = T.sizeof;
+
+                auto init = typeid(T).init();
+                if (init.ptr is null) // null ptr means initialize to 0s
+                    memset(&source, 0, sz);
+                else
+                    memcpy(&source, init.ptr, sz);
+            }
+
             _store._count = 1;
         }
 
@@ -4303,6 +4734,12 @@ Postcondition: $(D refCountedStore.isInitialized)
     this(A...)(auto ref A args) if (A.length > 0)
     {
         _refCounted.initialize(args);
+    }
+
+    /// Ditto
+    this(T val)
+    {
+        _refCounted.move(val);
     }
 
 /**
@@ -4383,11 +4820,11 @@ Assignment operators
         (but will still assert if not initialized).
          */
         @property
-        ref T refCountedPayload();
+        ref T refCountedPayload() return;
 
         /// ditto
         @property nothrow @safe
-        ref inout(T) refCountedPayload() inout;
+        ref inout(T) refCountedPayload() inout return;
     }
     else
     {
@@ -4395,7 +4832,7 @@ Assignment operators
         {
             //Can't use inout here because of potential mutation
             @property
-            ref T refCountedPayload()
+            ref T refCountedPayload() return
             {
                 _refCounted.ensureInitialized();
                 return _refCounted._store._payload;
@@ -4403,7 +4840,7 @@ Assignment operators
         }
 
         @property nothrow @safe
-        ref inout(T) refCountedPayload() inout
+        ref inout(T) refCountedPayload() inout return
         {
             assert(_refCounted.isInitialized, "Attempted to access an uninitialized payload.");
             return _refCounted._store._payload;
@@ -4515,6 +4952,51 @@ unittest
     RefCounted!int b;
     b = a; //This should not assert either
     assert(b == 5);
+}
+
+/**
+ * Initializes a `RefCounted` with `val`. The template parameter
+ * `T` of `RefCounted` is inferred from `val`.
+ * This function can be used to move non-copyable values to the heap.
+ * It also disables the `autoInit` option of `RefCounted`.
+ *
+ * Params:
+ *   val = The value to be reference counted
+ * Returns:
+ *   An initialized $(D RefCounted) containing $(D val).
+ * See_Also:
+ *   $(WEB http://en.cppreference.com/w/cpp/memory/shared_ptr/make_shared, C++'s make_shared)
+ */
+RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
+{
+    typeof(return) res;
+    res._refCounted.move(val);
+    return res;
+}
+
+///
+unittest
+{
+    static struct File
+    {
+        string name;
+        @disable this(this); // not copyable
+        ~this() { name = null; }
+    }
+
+    auto file = File("name");
+    assert(file.name == "name");
+    // file cannot be copied and has unique ownership
+    static assert(!__traits(compiles, {auto file2 = file;}));
+
+    // make the file refcounted to share ownership
+    import std.algorithm.mutation : move;
+    auto rcFile = refCounted(move(file));
+    assert(rcFile.name == "name");
+    assert(file.name == null);
+    auto rcFile2 = rcFile;
+    assert(rcFile.refCountedStore.refCount == 2);
+    // file gets properly closed when last reference is dropped
 }
 
 /**

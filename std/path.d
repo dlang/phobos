@@ -178,29 +178,81 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private auto ltrimDirSeparators(R)(inout R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+private auto ltrimDirSeparators(R)(R path)
+    if (isInputRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
-    int i = 0;
-    while (i < path.length && isDirSeparator(path[i])) ++i;
-    return path[i .. path.length];
+    static if (isRandomAccessRange!R && hasSlicing!R || isNarrowString!R)
+    {
+        int i = 0;
+        while (i < path.length && isDirSeparator(path[i]))
+            ++i;
+        return path[i .. path.length];
+    }
+    else
+    {
+        while (!path.empty && isDirSeparator(path.front))
+            path.popFront();
+        return path;
+    }
 }
 
-private auto rtrimDirSeparators(R)(inout R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+unittest
+{
+    import std.array;
+    import std.utf : byDchar;
+
+    assert(ltrimDirSeparators("//abc//").array == "abc//");
+    assert(ltrimDirSeparators("//abc//"d).array == "abc//"d);
+    assert(ltrimDirSeparators("//abc//".byDchar).array == "abc//"d);
+}
+
+private auto rtrimDirSeparators(R)(R path)
+    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
-    auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && isDirSeparator(path[i])) --i;
-    return path[0 .. i+1];
+    static if (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R)
+    {
+        auto i = (cast(ptrdiff_t) path.length) - 1;
+        while (i >= 0 && isDirSeparator(path[i]))
+            --i;
+        return path[0 .. i+1];
+    }
+    else
+    {
+        while (!path.empty && isDirSeparator(path.back))
+            path.popBack();
+        return path;
+    }
 }
 
-private auto trimDirSeparators(R)(inout R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+unittest
+{
+    import std.array;
+    import std.utf : byDchar;
+
+    assert(rtrimDirSeparators("//abc//").array == "//abc");
+    assert(rtrimDirSeparators("//abc//"d).array == "//abc"d);
+
+    assert(rtrimDirSeparators(MockBiRange!char("//abc//")).array == "//abc");
+}
+
+private auto trimDirSeparators(R)(R path)
+    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
+}
+
+unittest
+{
+    import std.array;
+    import std.utf : byDchar;
+
+    assert(trimDirSeparators("//abc//").array == "abc");
+    assert(trimDirSeparators("//abc//"d).array == "abc"d);
+
+    assert(trimDirSeparators(MockBiRange!char("//abc//")).array == "abc");
 }
 
 
@@ -304,7 +356,7 @@ inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
 {
     auto p = baseName(path);
     if (p.length > suffix.length
-        && filenameCmp!cs(p[$-suffix.length .. $], suffix) == 0)
+        && filenameCmp!cs(cast(const(C)[])p[$-suffix.length .. $], suffix) == 0)
     {
         return p[0 .. $-suffix.length];
     }
@@ -2127,15 +2179,12 @@ unittest
 */
 string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     (string path, lazy string base = getcwd())
-    //TODO: @safe  (object.reserve(T[]) should be @trusted)
 {
     if (!isAbsolute(path)) return path;
     immutable baseVar = base;
     if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
 
     // Find common root with current working directory
-    string result;
-    if (!__ctfe) result.reserve(baseVar.length + path.length);
 
     auto basePS = pathSplitter(baseVar);
     auto pathPS = pathSplitter(path);
@@ -2144,34 +2193,34 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     basePS.popFront();
     pathPS.popFront();
 
-    while (!basePS.empty && !pathPS.empty
-        && filenameCmp!cs(basePS.front, pathPS.front) == 0)
-    {
-        basePS.popFront();
-        pathPS.popFront();
-    }
+    import std.range.primitives : walkLength;
+    import std.range : repeat, chain;
+    import std.algorithm : mismatch, joiner;
+    import std.array;
+    import std.utf : byChar;
+
+    // Remove matching prefix from basePS and pathPS
+    auto tup = mismatch!((a, b) => filenameCmp!cs(a, b) == 0)(basePS, pathPS);
+    basePS = tup[0];
+    pathPS = tup[1];
+
+    // if base == path
+    if (basePS.empty && pathPS.empty)
+        return ".";
 
     // Append as many "../" as necessary to reach common base from path
-    while (!basePS.empty)
-    {
-        result ~= "..";
-        result ~= dirSeparator;
-        basePS.popFront();
-    }
+    auto r1 = ".."
+        .byChar
+        .repeat(basePS.walkLength())
+        .joiner(dirSeparator.byChar);
 
-    // Append the remainder of path
-    while (!pathPS.empty)
-    {
-        result ~= pathPS.front;
-        result ~= dirSeparator;
-        pathPS.popFront();
-    }
+    auto r2 = pathPS
+        .joiner(dirSeparator)
+        .byChar;
 
-    // base == path
-    if (result.empty) return ".";
-
-    // Strip off last path separator
-    return result[0 .. $-1];
+    // Return (r1 ~ dirSeparator ~ r2)
+    auto result = chain(r1, dirSeparator[0 .. $ * !(r1.empty || r2.empty)].byChar, r2).array;
+    return ((r) @trusted => cast(string)r)(result);
 }
 
 unittest
@@ -2287,14 +2336,25 @@ unittest
 
 
 /** Compares file names and returns
-    $(D < 0) if $(D filename1 < filename2),
-    $(D 0) if $(D filename1 == filename2) and
-    $(D > 0) if $(D filename1 > filename2).
 
     Individual characters are compared using $(D filenameCharCmp!cs),
     where $(D cs) is an optional template parameter determining whether
-    the comparison is case sensitive or not.  See the
-    $(LREF filenameCharCmp) documentation for details.
+    the comparison is case sensitive or not.
+
+    Treatment of invalid UTF encodings is implementation defined.
+
+    Params:
+        cs = case sensitivity
+        filename1 = range for first file name
+        filename2 = range for second file name
+
+    Returns:
+        $(D < 0) if $(D filename1 < filename2),
+        $(D 0) if $(D filename1 == filename2) and
+        $(D > 0) if $(D filename1 > filename2).
+
+    See_Also:
+        $(LREF filenameCharCmp)
 
     Examples:
     ---
@@ -2320,21 +2380,41 @@ unittest
     }
     ---
 */
-int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, C1, C2)
-    (const(C1)[] filename1, const(C2)[] filename2)
-    @safe pure //TODO: nothrow (because of std.array.front())
-    if (isSomeChar!C1 && isSomeChar!C2)
+int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
+    (Range1 filename1, Range2 filename2)
+    if (isInputRange!Range1 && isSomeChar!(ElementEncodingType!Range1) &&
+        isInputRange!Range2 && isSomeChar!(ElementEncodingType!Range2))
 {
-    for (;;)
+    alias C1 = Unqual!(ElementEncodingType!Range1);
+    alias C2 = Unqual!(ElementEncodingType!Range2);
+
+    static if (!cs && (C1.sizeof < 4 || C2.sizeof < 4) ||
+               C1.sizeof != C2.sizeof)
     {
-        if (filename1.empty) return -(cast(int) !filename2.empty);
-        if (filename2.empty) return  (cast(int) !filename1.empty);
-        auto c = filenameCharCmp!cs(filename1.front, filename2.front);
-        if (c != 0) return c;
-        filename1.popFront();
-        filename2.popFront();
+        // Case insensitive - decode so case is checkable
+        // Different char sizes - decode to bring to common type
+        import std.utf : byDchar;
+        return filenameCmp!cs(filename1.byDchar, filename2.byDchar);
     }
-    assert (0);
+    else static if (isSomeString!Range1 && C1.sizeof < 4 ||
+                    isSomeString!Range2 && C2.sizeof < 4)
+    {
+        // Avoid autodecoding
+        import std.utf : byCodeUnit;
+        return filenameCmp!cs(filename1.byCodeUnit, filename2.byCodeUnit);
+    }
+    else
+    {
+        for (;;)
+        {
+            if (filename1.empty) return -(cast(int) !filename2.empty);
+            if (filename2.empty) return  1;
+            const c = filenameCharCmp!cs(filename1.front, filename2.front);
+            if (c != 0) return c;
+            filename1.popFront();
+            filename2.popFront();
+        }
+    }
 }
 
 
@@ -2425,10 +2505,11 @@ unittest
     }
     -----
  */
-bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C)
-    (const(C)[] path, const(C)[] pattern)
+bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
+    (Range path, const(C)[] pattern)
     @safe pure nothrow
-    if (isSomeChar!C)
+    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+        isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
 in
 {
     // Verify that pattern[] is valid
@@ -2438,111 +2519,139 @@ in
 }
 body
 {
-    size_t ni; // current character in path
+    alias RC = Unqual!(ElementEncodingType!Range);
 
-    foreach (ref pi; 0 .. pattern.length)
+    static if (RC.sizeof == 1 && isSomeString!Range)
     {
-        C pc = pattern[pi];
-        switch (pc)
-        {
-            case '*':
-                if (pi + 1 == pattern.length)
-                    return true;
-                foreach (j; ni .. path.length)
-                {
-                    if (globMatch!(cs, C)(path[j .. path.length],
-                                    pattern[pi + 1 .. pattern.length]))
-                        return true;
-                }
-                return false;
-
-            case '?':
-                if (ni == path.length)
-                    return false;
-                ni++;
-                break;
-
-            case '[':
-                if (ni == path.length)
-                    return false;
-                auto nc = path[ni];
-                ni++;
-                auto not = false;
-                pi++;
-                if (pattern[pi] == '!')
-                {
-                    not = true;
-                    pi++;
-                }
-                auto anymatch = false;
-                while (1)
-                {
-                    pc = pattern[pi];
-                    if (pc == ']')
-                        break;
-                    if (!anymatch && (filenameCharCmp!cs(nc, pc) == 0))
-                        anymatch = true;
-                    pi++;
-                }
-                if (anymatch == not)
-                    return false;
-                break;
-
-            case '{':
-                // find end of {} section
-                auto piRemain = pi;
-                for (; piRemain < pattern.length
-                         && pattern[piRemain] != '}'; piRemain++)
-                {}
-
-                if (piRemain < pattern.length) piRemain++;
-                pi++;
-
-                while (pi < pattern.length)
-                {
-                    auto pi0 = pi;
-                    pc = pattern[pi];
-                    // find end of current alternative
-                    for (; pi<pattern.length && pc!='}' && pc!=','; pi++)
-                    {
-                        pc = pattern[pi];
-                    }
-
-                    if (pi0 == pi)
-                    {
-                        if (globMatch!(cs, C)(path[ni..$], pattern[piRemain..$]))
-                        {
-                            return true;
-                        }
-                        pi++;
-                    }
-                    else
-                    {
-                        if (globMatch!(cs, C)(path[ni..$],
-                                        pattern[pi0..pi-1]
-                                        ~ pattern[piRemain..$]))
-                        {
-                            return true;
-                        }
-                    }
-                    if (pc == '}')
-                    {
-                        break;
-                    }
-                }
-                return false;
-
-            default:
-                if (ni == path.length)
-                    return false;
-                if (filenameCharCmp!cs(pc, path[ni]) != 0)
-                    return false;
-                ni++;
-                break;
-        }
+        import std.utf : byChar;
+        return globMatch!cs(path.byChar, pattern);
     }
-    assert(ni <= path.length);
-    return ni == path.length;
+    else static if (RC.sizeof == 2 && isSomeString!Range)
+    {
+        import std.utf : byWchar;
+        return globMatch!cs(path.byWchar, pattern);
+    }
+    else
+    {
+        C[] pattmp;
+        foreach (ref pi; 0 .. pattern.length)
+        {
+            const pc = pattern[pi];
+            switch (pc)
+            {
+                case '*':
+                    if (pi + 1 == pattern.length)
+                        return true;
+                    for (; !path.empty; path.popFront())
+                    {
+                        auto p = path.save;
+                        if (globMatch!(cs, C)(p,
+                                        pattern[pi + 1 .. pattern.length]))
+                            return true;
+                    }
+                    return false;
+
+                case '?':
+                    if (path.empty)
+                        return false;
+                    path.popFront();
+                    break;
+
+                case '[':
+                    if (path.empty)
+                        return false;
+                    auto nc = path.front;
+                    path.popFront();
+                    auto not = false;
+                    ++pi;
+                    if (pattern[pi] == '!')
+                    {
+                        not = true;
+                        ++pi;
+                    }
+                    auto anymatch = false;
+                    while (1)
+                    {
+                        const pc2 = pattern[pi];
+                        if (pc2 == ']')
+                            break;
+                        if (!anymatch && (filenameCharCmp!cs(nc, pc2) == 0))
+                            anymatch = true;
+                        ++pi;
+                    }
+                    if (anymatch == not)
+                        return false;
+                    break;
+
+                case '{':
+                    // find end of {} section
+                    auto piRemain = pi;
+                    for (; piRemain < pattern.length
+                             && pattern[piRemain] != '}'; ++piRemain)
+                    {   }
+
+                    if (piRemain < pattern.length)
+                        ++piRemain;
+                    ++pi;
+
+                    while (pi < pattern.length)
+                    {
+                        const pi0 = pi;
+                        C pc3 = pattern[pi];
+                        // find end of current alternative
+                        for (; pi < pattern.length && pc3 != '}' && pc3 != ','; ++pi)
+                        {
+                            pc3 = pattern[pi];
+                        }
+
+                        auto p = path.save;
+                        if (pi0 == pi)
+                        {
+                            if (globMatch!(cs, C)(p, pattern[piRemain..$]))
+                            {
+                                return true;
+                            }
+                            ++pi;
+                        }
+                        else
+                        {
+                            /* Match for:
+                             *   pattern[pi0..pi-1] ~ pattern[piRemain..$]
+                             */
+                            if (pattmp.ptr == null)
+                                // Allocate this only once per function invocation.
+                                // Should do it with malloc/free, but that would make it impure.
+                                pattmp = new C[pattern.length];
+
+                            const len1 = pi - 1 - pi0;
+                            pattmp[0 .. len1] = pattern[pi0 .. pi - 1];
+
+                            const len2 = pattern.length - piRemain;
+                            pattmp[len1 .. len1 + len2] = pattern[piRemain .. $];
+
+                            if (globMatch!(cs, C)(p, pattmp[0 .. len1 + len2]))
+                            {
+                                return true;
+                            }
+                        }
+                        if (pc3 == '}')
+                        {
+                            break;
+                        }
+                    }
+                    return false;
+
+                default:
+                    if (path.empty)
+                        return false;
+                    if (filenameCharCmp!cs(pc, path.front) != 0)
+                        return false;
+                    path.popFront();
+                    break;
+            }
+        }
+        return path.empty;
+    }
 }
 
 unittest
@@ -2587,6 +2696,12 @@ unittest
     assert(globMatch("bar.foo"d, "bar.{,ar,fo}o"d));
     assert(globMatch("bar.o", "bar.{,ar,fo}o"));
 
+    assert(!globMatch("foo", "foo?"));
+    assert(!globMatch("foo", "foo[]"));
+    assert(!globMatch("foo", "foob"));
+    assert(!globMatch("foo", "foo{b}"));
+
+
     static assert(globMatch("foo.bar", "[!gh]*bar"));
 }
 
@@ -2594,9 +2709,6 @@ unittest
 
 
 /** Checks that the given file or directory name is valid.
-
-    This function returns $(D true) if and only if $(D filename) is not
-    empty, not too long, and does not contain invalid characters.
 
     The maximum length of $(D filename) is given by the constant
     $(D core.stdc.stdio.FILENAME_MAX).  (On Windows, this number is
@@ -2617,10 +2729,20 @@ unittest
 
     On POSIX, $(D filename) may not contain a forward slash ($(D '/')) or
     the null character ($(D '\0')).
+
+    Params:
+        filename = string to check
+
+    Returns:
+        $(D true) if and only if $(D filename) is not
+        empty, not too long, and does not contain invalid characters.
+
 */
-bool isValidFilename(R)(R filename)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+bool isValidFilename(Range)(Range filename)
+    if (is(StringTypeOf!Range) ||
+        isRandomAccessRange!Range &&
+        hasLength!Range && hasSlicing!Range &&
+        isSomeChar!(ElementEncodingType!Range))
 {
     import core.stdc.stdio : FILENAME_MAX;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
@@ -2664,7 +2786,16 @@ bool isValidFilename(R)(R filename)
     return true;
 }
 
+///
+@safe pure @nogc nothrow
+unittest
+{
+    import std.utf : byCodeUnit;
 
+    assert(isValidFilename("hello.exe".byCodeUnit));
+}
+
+@safe pure
 unittest
 {
     import std.conv;
@@ -2692,8 +2823,20 @@ unittest
 
     static struct DirEntry { string s; alias s this; }
     assert(isValidFilename(DirEntry("file.ext")));
-}
 
+    version (Windows)
+    {
+        immutable string cases = "<>:\"/\\|?*";
+        foreach (i; 0 .. 31 + cases.length)
+        {
+            char[3] buf;
+            buf[0] = 'a';
+            buf[1] = i <= 31 ? cast(char)i : cases[i - 32];
+            buf[2] = 'b';
+            assert(!isValidFilename(buf[]));
+        }
+    }
+}
 
 
 
@@ -2720,14 +2863,26 @@ unittest
             this function returns $(D false); such paths are beyond the scope
             of this module.)
     )
+
+    Params:
+        path = string or Range of characters to check
+
+    Returns:
+        true if $(D path) is a valid _path.
 */
-bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
+bool isValidPath(Range)(Range path)
+    if (is(StringTypeOf!Range) ||
+        isRandomAccessRange!Range &&
+        hasLength!Range && hasSlicing!Range &&
+        isSomeChar!(ElementEncodingType!Range))
 {
+    alias C = Unqual!(ElementEncodingType!Range);
+
     if (path.empty) return false;
 
     // Check whether component is "." or "..", or whether it satisfies
     // isValidFilename.
-    bool isValidComponent(in C[] component)  @safe pure nothrow
+    bool isValidComponent(Range component)
     {
         assert (component.length > 0);
         if (component[0] == '.')
@@ -2741,7 +2896,7 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
     if (path.length == 1)
         return isDirSeparator(path[0]) || isValidComponent(path);
 
-    const(C)[] remainder;
+    Range remainder;
     version (Windows)
     {
         if (isDirSeparator(path[0]) && isDirSeparator(path[1]))
@@ -2797,7 +2952,6 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
         remainder = path;
     }
     else static assert (0);
-    assert (remainder !is null);
     remainder = ltrimDirSeparators(remainder);
 
     // Check that each component satisfies isValidComponent.
@@ -2815,10 +2969,14 @@ bool isValidPath(C)(in C[] path)  @safe pure nothrow  if (isSomeChar!C)
 }
 
 
+///
+@safe pure @nogc nothrow
 unittest
 {
     assert (isValidPath("/foo/bar"));
     assert (!isValidPath("/foo\0/bar"));
+    assert (isValidPath("/"));
+    assert (isValidPath("a"));
 
     version (Windows)
     {
@@ -2843,7 +3001,11 @@ unittest
         assert (!isValidPath("\\\\?\\foo\0bar"));
 
         assert (!isValidPath(`\\.\PhysicalDisk1`));
+        assert (!isValidPath(`\\`));
     }
+
+    import std.utf : byCodeUnit;
+    assert (isValidPath("/foo/bar".byCodeUnit));
 }
 
 
@@ -2890,12 +3052,12 @@ unittest
     }
     -----
 */
-string expandTilde(string inputPath)
+string expandTilde(string inputPath) nothrow
 {
     version(Posix)
     {
         import core.stdc.string : strlen;
-        import core.stdc.stdlib : getenv, malloc, free;
+        import core.stdc.stdlib : getenv, malloc, free, realloc;
         import core.exception : onOutOfMemoryError;
         import core.sys.posix.pwd : passwd, getpwnam_r;
         import core.stdc.errno : errno, ERANGE;
@@ -2906,7 +3068,7 @@ string expandTilde(string inputPath)
             is joined to path[char_pos .. length] if char_pos is smaller
             than length, otherwise path is not appended to c_path.
         */
-        static string combineCPathWithDPath(char* c_path, string path, size_t char_pos)
+        static string combineCPathWithDPath(char* c_path, string path, size_t char_pos) nothrow
         {
             assert(c_path != null);
             assert(path.length > 0);
@@ -2919,18 +3081,20 @@ string expandTilde(string inputPath)
             if (end && isDirSeparator(c_path[end - 1]))
                 end--;
 
-            // Create our own copy, as lifetime of c_path is undocumented
-            string cp = c_path[0 .. end].idup;
-
-            // Do we append something from path?
+            // (this is the only GC allocation done in expandTilde())
+            string cp;
             if (char_pos < path.length)
-                cp ~= path[char_pos .. $];
+                // Append something from path
+                cp = cast(string)(c_path[0 .. end] ~ path[char_pos .. $]);
+            else
+                // Create our own copy, as lifetime of c_path is undocumented
+                cp = c_path[0 .. end].idup;
 
             return cp;
         }
 
         // Replaces the tilde from path with the environment variable HOME.
-        static string expandFromEnvironment(string path)
+        static string expandFromEnvironment(string path) nothrow
         {
             assert(path.length >= 1);
             assert(path[0] == '~');
@@ -2944,7 +3108,7 @@ string expandTilde(string inputPath)
         }
 
         // Replaces the tilde from path with the path from the user database.
-        static string expandFromDatabase(string path)
+        static string expandFromDatabase(string path) nothrow
         {
             // Android doesn't really support this, as getpwnam_r
             // isn't provided and getpwnam is basically just a stub
@@ -2960,64 +3124,59 @@ string expandTilde(string inputPath)
                 assert(path[0] == '~');
 
                 // Extract username, searching for path separator.
-                string username;
                 auto last_char = indexOf(path, dirSeparator[0]);
+
+                size_t username_len = (last_char == -1) ? path.length : last_char;
+                char* username = cast(char*)core.stdc.stdlib.malloc(username_len * char.sizeof);
+                if (!username)
+                    onOutOfMemoryError();
+                scope(exit) core.stdc.stdlib.free(username);
 
                 if (last_char == -1)
                 {
-                    username = path[1 .. $] ~ '\0';
-                    last_char = username.length + 1;
+                    username[0 .. username_len - 1] = path[1 .. $];
+                    last_char = path.length + 1;
                 }
                 else
                 {
-                    username = path[1 .. last_char] ~ '\0';
+                    username[0 .. username_len - 1] = path[1 .. last_char];
                 }
+                username[username_len - 1] = 0;
+
                 assert(last_char > 1);
 
                 // Reserve C memory for the getpwnam_r() function.
-                passwd result;
                 int extra_memory_size = 5 * 1024;
-                void* extra_memory;
+                char* extra_memory;
+                scope(exit) core.stdc.stdlib.free(extra_memory);
 
+                passwd result;
                 while (1)
                 {
-                    extra_memory = core.stdc.stdlib.malloc(extra_memory_size);
+                    extra_memory = cast(char*)core.stdc.stdlib.realloc(extra_memory, extra_memory_size * char.sizeof);
                     if (extra_memory == null)
-                        goto Lerror;
+                        onOutOfMemoryError();
 
                     // Obtain info from database.
                     passwd *verify;
                     errno = 0;
-                    if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
+                    if (getpwnam_r(username, &result, extra_memory, extra_memory_size,
                             &verify) == 0)
                     {
-                        // Failure if verify doesn't point at result.
-                        if (verify != &result)
-                            // username is not found, so return path[]
-                            goto Lnotfound;
+                        // Succeeded if verify points at result
+                        if (verify == &result)
+                            // username is found
+                            path = combineCPathWithDPath(result.pw_dir, path, last_char);
                         break;
                     }
 
                     if (errno != ERANGE)
-                        goto Lerror;
+                        onOutOfMemoryError();
 
                     // extra_memory isn't large enough
-                    core.stdc.stdlib.free(extra_memory);
                     extra_memory_size *= 2;
                 }
-
-                path = combineCPathWithDPath(result.pw_dir, path, last_char);
-
-            Lnotfound:
-                core.stdc.stdlib.free(extra_memory);
                 return path;
-
-            Lerror:
-                // Errors are going to be caused by running out of memory
-                if (extra_memory)
-                    core.stdc.stdlib.free(extra_memory);
-                onOutOfMemoryError();
-                return null;
             }
         }
 
@@ -3118,6 +3277,31 @@ version (unittest)
     static assert( isRandomAccessRange!(MockRange!(const(char))) );
 }
 
+version (unittest)
+{
+    /* Define a mock BidirectionalRange to use for unittesting.
+     */
+
+    struct MockBiRange(C)
+    {
+        this(const(C)[] array) { this.array = array; }
+        const
+        {
+            @property bool empty() { return array.length == 0; }
+            @property C front() { return array[0]; }
+            @property C back()  { return array[$ - 1]; }
+            @property size_t opDollar() { return array.length; }
+        }
+        void popFront() { array = array[1 .. $]; }
+        void popBack()  { array = array[0 .. $-1]; }
+        @property MockBiRange save() { return this; }
+      private:
+        const(C)[] array;
+    }
+
+    static assert( isBidirectionalRange!(MockBiRange!(const(char))) );
+}
+
 private template BaseOf(R)
 {
     static if (isRandomAccessRange!R && isSomeChar!(ElementType!R))
@@ -3125,3 +3309,4 @@ private template BaseOf(R)
     else
         alias BaseOf = StringTypeOf!R;
 }
+

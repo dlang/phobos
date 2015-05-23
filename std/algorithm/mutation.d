@@ -833,7 +833,7 @@ Params:
 */
 void move(T)(ref T source, ref T target)
 {
-    import core.stdc.string : memcpy;
+    import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
                         isAssignable;
@@ -860,19 +860,17 @@ void move(T)(ref T source, ref T target)
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            import std.algorithm.searching : endsWith;
-
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
+            // If T is nested struct, keep original context pointer
+            static if (__traits(isNested, T))
+                enum sz = T.sizeof - (void*).sizeof;
             else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
+                enum sz = T.sizeof;
+
+            auto init = typeid(T).init();
+            if (init.ptr is null) // null ptr means initialize to 0s
+                memset(&source, 0, sz);
+            else
+                memcpy(&source, init.ptr, sz);
         }
     }
     else
@@ -992,7 +990,7 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
-    import core.stdc.string : memcpy;
+    import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
                         isAssignable;
@@ -1016,19 +1014,17 @@ T move(T)(ref T source)
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            import std.algorithm.searching : endsWith;
-
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
+            // If T is nested struct, keep original context pointer
+            static if (__traits(isNested, T))
+                enum sz = T.sizeof - (void*).sizeof;
             else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
+                enum sz = T.sizeof;
+
+            auto init = typeid(T).init();
+            if (init.ptr is null) // null ptr means initialize to 0s
+                memset(&source, 0, sz);
+            else
+                memcpy(&source, init.ptr, sz);
         }
     }
     else
@@ -2255,4 +2251,3 @@ void uninitializedFill(Range, Value)(Range range, Value value)
         // Doesn't matter whether fill is initialized or not
         return fill(range, value);
 }
-

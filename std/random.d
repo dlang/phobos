@@ -20,7 +20,7 @@ Example:
 ----
 // Generate a uniformly-distributed integer in the range [0, 14]
 auto i = uniform(0, 15);
-// Generate a uniformly-distributed real in the range [0, 100)
+// Generate a uniformly-distributed real in the range [0, 100$(RPAREN)
 // using a specific random generator
 Random gen;
 auto r = uniform(0.0L, 100.0L, gen);
@@ -1221,7 +1221,7 @@ Example:
 auto gen = Random(unpredictableSeed);
 // Generate an integer in [0, 1023]
 auto a = uniform(0, 1024, gen);
-// Generate a float in [0, 1)
+// Generate a float in [0, 1$(RPAREN)
 auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
@@ -1888,7 +1888,7 @@ void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
-        swapAt(r, i, uniform(i, n, gen));
+        swapAt(r, i, uniform(i, r.length, gen));
     }
 }
 
@@ -1904,17 +1904,38 @@ unittest
     import std.algorithm;
     foreach(RandomGen; PseudoRngTypes)
     {
-        auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        auto a = [0, 1, 1, 2, 3];
         auto b = a.dup;
-        auto gen = RandomGen(unpredictableSeed);
-        partialShuffle(a, 5, gen);
-        assert(a[5 .. $] == b[5 .. $]);
-        sort(a[0 .. 5]);
-        assert(a[0 .. 5] == b[0 .. 5]);
-        partialShuffle(a, 6);
-        assert(a[6 .. $] == b[6 .. $]);
-        sort(a[0 .. 6]);
-        assert(a[0 .. 6] == b[0 .. 6]);
+
+        // Pick a fixed seed so that the outcome of the statistical
+        // test below is deterministic.
+        auto gen = RandomGen(12345);
+
+        // NUM times, pick LEN elements from the array at random.
+        immutable int LEN = 2;
+        immutable int NUM = 750;
+        int[][] chk;
+        foreach(step; 0..NUM)
+        {
+            partialShuffle(a, LEN, gen);
+            chk ~= a[0..LEN].dup;
+        }
+
+        // Check that each possible a[0..LEN] was produced at least once.
+        // For a perfectly random RandomGen, the probability that each
+        // particular combination failed to appear would be at most
+        // 0.95 ^^ NUM which is approximately 1,962e-17.
+        // As long as hardware failure (e.g. bit flip) probability
+        // is higher, we are fine with this unittest.
+        sort(chk);
+        assert(equal(uniq(chk), [       [0,1], [0,2], [0,3],
+                                 [1,0], [1,1], [1,2], [1,3],
+                                 [2,0], [2,1],        [2,3],
+                                 [3,0], [3,1], [3,2],      ]));
+
+        // Check that all the elements are still there.
+        sort(a);
+        assert(equal(a, b));
     }
 }
 

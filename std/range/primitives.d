@@ -99,7 +99,7 @@ $(BOOKTABLE ,
     ))
 )
 
-Source: $(PHOBOSSRC std/range/_constraints.d)
+Source: $(PHOBOSSRC std/range/_primitives.d)
 
 Macros:
 
@@ -1954,7 +1954,7 @@ the first argument using the dot notation, $(D array.empty) is
 equivalent to $(D empty(array)).
  */
 
-@property bool empty(T)(in T[] a) @safe pure nothrow
+@property bool empty(T)(in T[] a) @safe pure nothrow @nogc
 {
     return !a.length;
 }
@@ -1975,7 +1975,7 @@ equivalent to $(D save(array)). The function does not duplicate the
 content of the array, it simply returns its argument.
  */
 
-@property T[] save(T)(T[] a) @safe pure nothrow
+@property T[] save(T)(T[] a) @safe pure nothrow @nogc
 {
     return a;
 }
@@ -1987,6 +1987,7 @@ content of the array, it simply returns its argument.
     auto b = a.save;
     assert(b is a);
 }
+
 /**
 Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
@@ -1996,7 +1997,7 @@ $(D popFront) automatically advances to the next $(GLOSSARY code
 point).
 */
 
-void popFront(T)(ref T[] a) @safe pure nothrow
+void popFront(T)(ref T[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of " ~ T.stringof);
@@ -2095,7 +2096,7 @@ equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
 popFront) automatically eliminates the last $(GLOSSARY code point).
 */
 
-void popBack(T)(ref T[] a) @safe pure nothrow
+void popBack(T)(ref T[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length);
@@ -2161,7 +2162,7 @@ equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
 front) automatically returns the first $(GLOSSARY code point) as a $(D
 dchar).
 */
-@property ref T front(T)(T[] a) @safe pure nothrow
+@property ref T front(T)(T[] a) @safe pure nothrow @nogc
 if (!isNarrowString!(T[]) && !is(T[] == void[]))
 {
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
@@ -2205,7 +2206,8 @@ equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
 back) automatically returns the last $(GLOSSARY code point) as a $(D
 dchar).
 */
-@property ref T back(T)(T[] a) @safe pure nothrow if (!isNarrowString!(T[]))
+@property ref T back(T)(T[] a) @safe pure nothrow @nogc
+if (!isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
     return a[$ - 1];

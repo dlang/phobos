@@ -68,8 +68,6 @@ module std.variant;
 import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
     std.typetuple;
 
-@trusted:
-
 /++
     Gives the $(D sizeof) the largest type given.
   +/
@@ -138,10 +136,12 @@ template This2Variant(V, T...)
  * limited type universe (e.g., $(D_PARAM Algebraic!(int, double,
  * string)) only accepts these three types and rejects anything
  * else).) $(LI $(B Variant): An open discriminated union allowing an
- * unbounded set of types. The restriction is that the size of the
- * stored type cannot be larger than the largest built-in type. This
- * means that $(D_PARAM Variant) can accommodate all primitive types
- * and all user-defined types except for large $(D_PARAM struct)s.) )
+ * unbounded set of types. If any of the types in the $(D_PARAM Variant)
+ * are larger than the largest built-in type, they will automatically
+ * be boxed. This means that even large types will only be the size
+ * of a pointer within the $(D_PARAM Variant), but this also implies some
+ * overhead. $(D_PARAM Variant) can accommodate all primitive types and 
+ * all user-defined types.))
  *
  * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
  * VariantN)'s interface. (See their respective documentations below.)
@@ -151,7 +151,8 @@ template This2Variant(V, T...)
  * and with the list of allowed types ($(D_PARAM AllowedTypes)). If
  * the list is empty, then any type up of size up to $(D_PARAM
  * maxDataSize) (rounded up for alignment) can be stored in a
- * $(D_PARAM VariantN) object.
+ * $(D_PARAM VariantN) object without being boxed (types larger
+ * than this will be boxed).
  *
  */
 
@@ -170,9 +171,7 @@ private:
 
     /** Tells whether a type $(D_PARAM T) is statically allowed for
      * storage inside a $(D_PARAM VariantN) object by looking
-     * $(D_PARAM T) up in $(D_PARAM AllowedTypes). If $(D_PARAM
-     * AllowedTypes) is empty, all types of size up to $(D_PARAM
-     * maxSize) are allowed.
+     * $(D_PARAM T) up in $(D_PARAM AllowedTypes).
      */
     public template allowed(T)
     {
@@ -375,7 +374,8 @@ private:
             target.fptr = &handler!(A);
             break;
         case OpID.get:
-            return !tryPutting(zis, *cast(TypeInfo*) parm, parm);
+            auto t = * cast(Tuple!(TypeInfo, void*)*) parm;
+            return !tryPutting(zis, t[0], t[1]);
         case OpID.testConversion:
             return !tryPutting(null, *cast(TypeInfo*) parm, null);
         case OpID.compare:
@@ -408,8 +408,8 @@ private:
                     return temp.opEquals(*rhsP) ? 0 : 1;
             }
             // Does rhs convert to zis?
-            *cast(TypeInfo*) &temp.store = typeid(A);
-            if (rhsP.fptr(OpID.get, &rhsP.store, &temp.store) == 0)
+            auto t = tuple(typeid(A), &temp.store);
+            if (rhsP.fptr(OpID.get, &rhsP.store, &t) == 0)
             {
                 // cool! Now temp has rhs in my type!
                 auto rhsPA = getPtr(&temp.store);
@@ -580,6 +580,13 @@ public:
         opAssign(value);
     }
 
+    /// Allows assignment from a subset algebraic type
+    this(T : VariantN!(tsize, Types), size_t tsize, Types...)(T value)
+        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
+    {
+        opAssign(value);
+    }
+
     static if (!AllowedTypes.length || anySatisfy!(hasElaborateCopyConstructor, AllowedTypes))
     {
         this(this)
@@ -658,6 +665,18 @@ public:
         }
         return this;
     }
+
+    // Allow assignment from another variant which is a subset of this one
+    VariantN opAssign(T : VariantN!(tsize, Types), size_t tsize, Types...)(T rhs)
+        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
+    {
+        // discover which type rhs is actually storing
+        foreach (V; T.AllowedTypes)
+            if (rhs.type == typeid(V))
+                return this = rhs.get!V;
+        assert(0, T.AllowedTypes.stringof);
+    }
+
 
     Variant opCall(P...)(auto ref P params)
     {
@@ -757,58 +776,19 @@ public:
      * VariantException).
      */
 
-    @property T get(T)() if (!is(T == const))
+    @property inout(T) get(T)() inout
     {
-        auto p = *cast(T**) &store;
-
-        /* handler(OpID.get, ) expects the TypeInfo for T in the same buffer it
-         * writes the result to afterwards. Because T might have a non-trivial
-         * destructor, postblit or invariant, we cannot use a union.
-         */
-        struct Buf
-        {
-            T result;
-            // Make sure Buf.sizeof is big enough to store a TypeInfo in
-            void[T.sizeof < TypeInfo.sizeof ? TypeInfo.sizeof - T.sizeof : 0] init = void;
-        }
-        TypeInfo info = typeid(T);
-        Buf buf;
-        memcpy(&buf, &info, info.sizeof);
-
-        if (fptr(OpID.get, &store, &buf))
-        {
-            throw new VariantException(type, typeid(T));
-        }
-        return buf.result;
-    }
-
-    @property T get(T)() const if (is(T == const))
-    {
-        auto p = *cast(T**) &store;
-
-        /* handler(OpID.get, ) expects the TypeInfo for T in the same buffer it
-         * writes the result to afterwards. Because T might have a non-trivial
-         * destructor, postblit or invariant, we cannot use a union.
-         */
-        struct Buf
-        {
-            static if (is(T == shared))
-                shared(Unqual!T) result;
-            else
-                Unqual!T result;
-
-            // Make sure Buf.sizeof is big enough to store a TypeInfo in
-            void[T.sizeof < TypeInfo.sizeof ? TypeInfo.sizeof - T.sizeof : 0] init = void;
-        }
-        TypeInfo info = typeid(T);
-        Buf buf;
-        memcpy(&buf, &info, info.sizeof);
+        static if (is(T == shared))
+            shared Unqual!T result;
+        else
+            Unqual!T result;
+        auto buf = tuple(typeid(T), &result);
 
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
-        return buf.result;
+        return cast(inout T) result;
     }
 
     /**
@@ -1322,6 +1302,38 @@ unittest
     a = 1.0;
 }
 
+// Issue 14457
+unittest
+{
+    alias A = Algebraic!(int, float, double);
+    alias B = Algebraic!(int, float);
+
+    A a = 1;
+    B b = 6f;
+    a = b;
+
+    assert(a.type == typeid(float));
+    assert(a.get!float == 6f);
+}
+
+// Issue 14585
+unittest
+{
+    static struct S
+    {
+        int x = 42;
+        ~this() {assert(x == 42);}
+    }
+    Variant(S()).get!S;
+}
+
+// Issue 14586
+unittest
+{
+    const Variant v = new immutable Object;
+    v.get!(immutable Object);
+}
+
 
 /**
  * Algebraic data type restricted to a closed set of possible
@@ -1362,10 +1374,10 @@ unittest
 $(D_PARAM Variant) is an alias for $(D_PARAM VariantN) instantiated
 with the largest of $(D_PARAM creal), $(D_PARAM char[]), and $(D_PARAM
 void delegate()). This ensures that $(D_PARAM Variant) is large enough
-to hold all of D's predefined types, including all numeric types,
+to hold all of D's predefined types unboxed, including all numeric types,
 pointers, delegates, and class references.  You may want to use
 $(D_PARAM VariantN) directly with a different maximum size either for
-storing larger types, or for saving memory.
+storing larger types unboxed, or for saving memory.
  */
 
 alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
@@ -2565,3 +2577,12 @@ unittest
     assertThrown!VariantException(v.length);
 }
 
+unittest
+{
+    // Bugzilla 13534
+    static assert(!__traits(compiles, () @safe {
+        auto foo() @system { return 3; }
+        auto v = Variant(&foo);
+        v(); // foo is called in safe code!?
+    }));
+}

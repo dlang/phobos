@@ -201,7 +201,7 @@ STD_MODULES = $(addprefix std/, \
   encoding exception \
   $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
   file format functional getopt json math mathspecial \
-  metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
+  meta metastrings mmfile net/isemail net/curl numeric outbuffer parallelism path \
   process random \
   $(addprefix range/, primitives interfaces) \
   $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
@@ -380,9 +380,15 @@ moduleName=$(subst /,.,$(1))
 unittest/%.run : $(ROOT)/unittest/test_runner
 	$(QUIET)$(RUN) $< $(call moduleName,$*)
 
-# target for quickly running a single unittest (using static phobos library)
+# Target for quickly running a single unittest (using static phobos library).
+# For example: "make std/algorithm/mutation.test"
 %.test : %.d $(LIB)
-	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -run $<
+	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= -L-lcurl -cov -run $<
+
+# Target for quickly unittesting all modules and packages within a package,
+# transitively. For example: "make std/algorithm.test"
+%.test : $(LIB)
+	$(MAKE) -f $(MAKEFILE) $(addsuffix .test,$(patsubst %.d,%,$(wildcard $*/*)))
 
 ################################################################################
 # More stuff
@@ -473,7 +479,7 @@ rsync-prerelease : html
 html_consolidated :
 	$(DDOC) -Df$(DOCSRC)/std_consolidated_header.html $(DOCSRC)/std_consolidated_header.dd
 	$(DDOC) -Df$(DOCSRC)/std_consolidated_footer.html $(DOCSRC)/std_consolidated_footer.dd
-	$(MAKE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
+	$(MAKE) -f $(MAKEFILE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
 

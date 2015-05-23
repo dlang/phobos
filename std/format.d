@@ -1469,10 +1469,13 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     // Forward on to formatIntegral to handle both U and const(U)
     // Saves duplication of code for both versions.
-    static if (isSigned!U)
-        formatIntegral(w, cast( long) val, f, base, Unsigned!U.max);
+    static if (is(ucent) && (is(U == cent) || is(U == ucent)))
+        alias C = U;
+    else static if (isSigned!U)
+        alias C = long;
     else
-        formatIntegral(w, cast(ulong) val, f, base, U.max);
+        alias C = ulong;
+    formatIntegral(w, cast(C) val, f, base, Unsigned!U.max);
 }
 
 ///
@@ -1498,10 +1501,13 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
     }
 
     // All unsigned integral types should fit in ulong.
-    formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
+    static if (is(ucent) && is(typeof(arg) == ucent))
+        formatUnsigned(w, (cast(ucent) arg) & mask, fs, base, negative);
+    else
+        formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
 }
 
-private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Char fs, uint base, bool negative)
+private void formatUnsigned(Writer, T, Char)(Writer w, T arg, ref FormatSpec!Char fs, uint base, bool negative)
 {
     if (fs.precision == fs.UNSPECIFIED)
     {
@@ -3722,7 +3728,8 @@ unittest
     }
     else version (CRuntime_Microsoft)
     {
-        assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
+        assert(stream.data == "1.67 -0X1.47AE14P+0 nan"
+            || stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", // MSVCRT 14+ (VS 2015)
                 stream.data);
     }
     else version (Android)
@@ -3758,7 +3765,8 @@ unittest
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
     version (CRuntime_Microsoft)
-        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
+        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2"
+            || stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB860000000P+2"); // MSVCRT 14+ (VS 2015)
     else version (Android)
     {
         // bionic doesn't support hex formatting of floating point numbers,
@@ -5384,10 +5392,10 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
         {
             if (typeid(valti).name.length == 18 &&
                     typeid(valti).name[9..18] == "Invariant")
-                valti = (cast(TypeInfo_Invariant)valti).next;
+                valti = (cast(TypeInfo_Invariant)valti).base;
             else if (typeid(valti).name.length == 14 &&
                     typeid(valti).name[9..14] == "Const")
-                valti = (cast(TypeInfo_Const)valti).next;
+                valti = (cast(TypeInfo_Const)valti).base;
             else
                 break;
         }
@@ -6240,7 +6248,8 @@ unittest
     version (MinGW)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     else version (CRuntime_Microsoft)
-        assert(s == "1.67 -0X1.47AE14P+0 nan", s);
+        assert(s == "1.67 -0X1.47AE14P+0 nan"
+            || s == "1.67 -0X1.47AE147AE147BP+0 nan", s); // MSVCRT 14+ (VS 2015)
     else version (Android)
     {
         // bionic doesn't support hex formatting of floating point numbers

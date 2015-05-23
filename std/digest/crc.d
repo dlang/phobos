@@ -310,7 +310,7 @@ unittest
  * CRC32 implementation.
  *
  * Params:
- *      data = $(D InputRange) of $(D ElementType) implicitly convertible to $(D ubyte), $(D ubyte[]) or $(D ubyte[num]
+ *      data = $(D InputRange) of $(D ElementType) implicitly convertible to $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  *             or one or more arrays of any type.
  *
  * Returns:

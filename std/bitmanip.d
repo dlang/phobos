@@ -3189,8 +3189,9 @@ unittest
 
     Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
-        endianness = The endianness to write the bytes in.
-        range = The range to write to.
+        endianness = The endianness to _write the bytes in.
+        range = The range to _write to.
+        value = The value to _write.
         index = The index to start writing to. If index is a pointer, then it
                 is updated to the index after the bytes read.
   +/
@@ -3535,7 +3536,8 @@ unittest
     Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness to write the bytes in.
-        range = The range to append to.
+        range = The range to _append to.
+        value = The value to _append.
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
     if(canSwapEndianness!T && isOutputRange!(R, ubyte))

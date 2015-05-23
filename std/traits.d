@@ -20,10 +20,10 @@
  *           $(LREF FunctionTypeOf)
  *           $(LREF isSafe)
  *           $(LREF isUnsafe)
- *           $(LREF ParameterDefaultValueTuple)
+ *           $(LREF ParameterDefaults)
  *           $(LREF ParameterIdentifierTuple)
  *           $(LREF ParameterStorageClassTuple)
- *           $(LREF ParameterTypeTuple)
+ *           $(LREF Parameters)
  *           $(LREF ReturnType)
  *           $(LREF SetFunctionAttributes)
  *           $(LREF variadicFunctionStyle)
@@ -34,7 +34,7 @@
  *           $(LREF classInstanceAlignment)
  *           $(LREF EnumMembers)
  *           $(LREF FieldNameTuple)
- *           $(LREF FieldTypeTuple)
+ *           $(LREF Fields)
  *           $(LREF hasAliasing)
  *           $(LREF hasElaborateAssign)
  *           $(LREF hasElaborateCopyConstructor)
@@ -98,7 +98,7 @@
  *           $(LREF isAbstractFunction)
  *           $(LREF isCallable)
  *           $(LREF isDelegate)
- *           $(LREF isExpressionTuple)
+ *           $(LREF isExpressions)
  *           $(LREF isFinalClass)
  *           $(LREF isFinalFunction)
  *           $(LREF isFunctionPointer)
@@ -134,7 +134,7 @@
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright),
- *            Tomasz Stachowiak ($(D isExpressionTuple)),
+ *            Tomasz Stachowiak ($(D isExpressions)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
  *            Shin Fujishiro,
  *            $(WEB octarineparrot.com, Robert Clipsham),
@@ -234,9 +234,22 @@ private
         return Demangle!uint(atts, mstr);
     }
 
-    alias IntegralTypeList      = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
-    alias SignedIntTypeList     = TypeTuple!(byte, short, int, long);
-    alias UnsignedIntTypeList   = TypeTuple!(ubyte, ushort, uint, ulong);
+    static if (is(ucent))
+    {
+        alias CentTypeList         = TypeTuple!(cent, ucent);
+        alias SignedCentTypeList   = TypeTuple!(cent);
+        alias UnsignedCentTypeList = TypeTuple!(ucent);
+    }
+    else
+    {
+        alias CentTypeList         = TypeTuple!();
+        alias SignedCentTypeList   = TypeTuple!();
+        alias UnsignedCentTypeList = TypeTuple!();
+    }
+
+    alias IntegralTypeList      = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList);
+    alias SignedIntTypeList     = TypeTuple!(byte, short, int, long, SignedCentTypeList);
+    alias UnsignedIntTypeList   = TypeTuple!(ubyte, ushort, uint, ulong, UnsignedCentTypeList);
     alias FloatingPointTypeList = TypeTuple!(float, double, real);
     alias ImaginaryTypeList     = TypeTuple!(ifloat, idouble, ireal);
     alias ComplexTypeList       = TypeTuple!(cfloat, cdouble, creal);
@@ -580,7 +593,7 @@ private template fqnType(T,
 
     string parametersTypeString(T)() @property
     {
-        alias parameters   = ParameterTypeTuple!(T);
+        alias parameters   = Parameters!(T);
         alias parameterStC = ParameterStorageClassTuple!(T);
 
         enum variadic = variadicFunctionStyle!T;
@@ -887,11 +900,11 @@ Get, as a tuple, the types of the parameters to a function, a pointer
 to function, a delegate, a struct with an $(D opCall), a pointer to a
 struct with an $(D opCall), or a class with an $(D opCall).
 */
-template ParameterTypeTuple(func...)
+template Parameters(func...)
     if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!func P == function))
-        alias ParameterTypeTuple = P;
+        alias Parameters = P;
     else
         static assert(0, "argument has no parameters");
 }
@@ -900,9 +913,14 @@ template ParameterTypeTuple(func...)
 unittest
 {
     int foo(int, long);
-    void bar(ParameterTypeTuple!foo);      // declares void bar(int, long);
-    void abc(ParameterTypeTuple!foo[1]);   // declares void abc(long);
+    void bar(Parameters!foo);      // declares void bar(int, long);
+    void abc(Parameters!foo[1]);   // declares void abc(long);
 }
+
+/**
+ * Alternate name for $(LREF Parameters), kept for legacy compatibility.
+ */
+alias ParameterTypeTuple = Parameters;
 
 unittest
 {
@@ -935,7 +953,7 @@ arity is undefined for variadic functions.
 template arity(alias func)
     if ( isCallable!func && variadicFunctionStyle!func == Variadic.no )
 {
-    enum size_t arity = ParameterTypeTuple!func.length;
+    enum size_t arity = Parameters!func.length;
 }
 
 ///
@@ -976,7 +994,7 @@ template ParameterStorageClassTuple(func...)
      * TypeFuncion:
      *     CallConvention FuncAttrs Arguments ArgClose Type
      */
-    alias Params = ParameterTypeTuple!Func;
+    alias Params = Parameters!Func;
 
     // chop off CallConvention and FuncAttrs
     enum margs = demangleFunctionAttributes(mangledName!Func[1 .. $]).rest;
@@ -1162,7 +1180,7 @@ unittest
 Get, as a tuple, the default value of the parameters to a function symbol.
 If a parameter doesn't have the default value, $(D void) is returned instead.
  */
-template ParameterDefaultValueTuple(func...)
+template ParameterDefaults(func...)
     if (func.length == 1 && isCallable!func)
 {
     static if (is(FunctionTypeOf!(func[0]) PT == __parameters))
@@ -1205,17 +1223,22 @@ template ParameterDefaultValueTuple(func...)
             alias Impl = TypeTuple!(Get!i, Impl!(i+1));
     }
 
-    alias ParameterDefaultValueTuple = Impl!();
+    alias ParameterDefaults = Impl!();
 }
 
 ///
 unittest
 {
     int foo(int num, string name = "hello", int[] = [1,2,3]);
-    static assert(is(ParameterDefaultValueTuple!foo[0] == void));
-    static assert(   ParameterDefaultValueTuple!foo[1] == "hello");
-    static assert(   ParameterDefaultValueTuple!foo[2] == [1,2,3]);
+    static assert(is(ParameterDefaults!foo[0] == void));
+    static assert(   ParameterDefaults!foo[1] == "hello");
+    static assert(   ParameterDefaults!foo[2] == [1,2,3]);
 }
+
+/**
+ * Alternate name for $(LREF ParameterDefaults), kept for legacy compatibility.
+ */
+alias ParameterDefaultValueTuple = ParameterDefaults;
 
 unittest
 {
@@ -1681,23 +1704,21 @@ template functionLinkage(func...)
 ///
 unittest
 {
-    import std.stdio : writeln, printf;
-
-    string a = functionLinkage!(writeln!(string, int));
-    assert(a == "D"); // extern(D)
-
-    auto fp = &printf;
-    string b = functionLinkage!fp;
-    assert(b == "C"); // extern(C)
-}
-
-unittest
-{
     extern(D) void Dfunc() {}
     extern(C) void Cfunc() {}
     static assert(functionLinkage!Dfunc == "D");
     static assert(functionLinkage!Cfunc == "C");
 
+    string a = functionLinkage!Dfunc;
+    assert(a == "D");
+
+    auto fp = &Cfunc;
+    string b = functionLinkage!fp;
+    assert(b == "C");
+}
+
+unittest
+{
     interface Test
     {
         void const_func() const;
@@ -1918,8 +1939,8 @@ template SetFunctionAttributes(T, string linkage, uint attrs)
 
         result ~= "(";
 
-        static if (ParameterTypeTuple!T.length > 0)
-            result ~= "ParameterTypeTuple!T";
+        static if (Parameters!T.length > 0)
+            result ~= "Parameters!T";
 
         enum varStyle = variadicFunctionStyle!T;
         static if (varStyle == Variadic.c)
@@ -2075,7 +2096,7 @@ template hasNested(T)
         enum hasNested = hasNested!(typeof(T.init[0]));
     else static if(is(T == class) || is(T == struct) || is(T == union))
         enum hasNested = isNested!T ||
-            anySatisfy!(.hasNested, FieldTypeTuple!T);
+            anySatisfy!(.hasNested, Fields!T);
     else
         enum hasNested = false;
 }
@@ -2145,29 +2166,34 @@ unittest
 
 
 /***
- * Get as a typetuple the types of the fields of a struct, class, or union.
+ * Get as a tuple the types of the fields of a struct, class, or union.
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
  * table pointer or a context pointer for nested types.
- * If $(D T) isn't a struct, class, or union returns typetuple
+ * If $(D T) isn't a struct, class, or union returns a tuple
  * with one element $(D T).
  */
-template FieldTypeTuple(T)
+template Fields(T)
 {
     static if (is(T == struct) || is(T == union))
-        alias FieldTypeTuple = typeof(T.tupleof[0 .. $ - isNested!T]);
+        alias Fields = typeof(T.tupleof[0 .. $ - isNested!T]);
     else static if (is(T == class))
-        alias FieldTypeTuple = typeof(T.tupleof);
+        alias Fields = typeof(T.tupleof);
     else
-        alias FieldTypeTuple = TypeTuple!T;
+        alias Fields = TypeTuple!T;
 }
 
 ///
 unittest
 {
     struct S { int x; float y; }
-    static assert(is(FieldTypeTuple!S == TypeTuple!(int, float)));
+    static assert(is(Fields!S == TypeTuple!(int, float)));
 }
+
+/**
+ * Alternate name for $(LREF FieldTypeTuple), kept for legacy compatibility.
+ */
+alias FieldTypeTuple = Fields;
 
 unittest
 {
@@ -3982,31 +4008,35 @@ template ImplicitConversionTargets(T)
 {
     static if (is(T == bool))
         alias ImplicitConversionTargets =
-            TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
+            TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong, CentTypeList,
                        float, double, real, char, wchar, dchar);
     else static if (is(T == byte))
         alias ImplicitConversionTargets =
-            TypeTuple!(short, ushort, int, uint, long, ulong,
+            TypeTuple!(short, ushort, int, uint, long, ulong, CentTypeList,
                        float, double, real, char, wchar, dchar);
     else static if (is(T == ubyte))
         alias ImplicitConversionTargets =
-            TypeTuple!(short, ushort, int, uint, long, ulong,
+            TypeTuple!(short, ushort, int, uint, long, ulong, CentTypeList,
                        float, double, real, char, wchar, dchar);
     else static if (is(T == short))
         alias ImplicitConversionTargets =
-            TypeTuple!(int, uint, long, ulong, float, double, real);
+            TypeTuple!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T == ushort))
         alias ImplicitConversionTargets =
-            TypeTuple!(int, uint, long, ulong, float, double, real);
+            TypeTuple!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T == int))
         alias ImplicitConversionTargets =
-            TypeTuple!(long, ulong, float, double, real);
+            TypeTuple!(long, ulong, CentTypeList, float, double, real);
     else static if (is(T == uint))
         alias ImplicitConversionTargets =
-            TypeTuple!(long, ulong, float, double, real);
+            TypeTuple!(long, ulong, CentTypeList, float, double, real);
     else static if (is(T == long))
         alias ImplicitConversionTargets = TypeTuple!(float, double, real);
     else static if (is(T == ulong))
+        alias ImplicitConversionTargets = TypeTuple!(float, double, real);
+    else static if (is(cent) && is(T == cent))
+        alias ImplicitConversionTargets = TypeTuple!(float, double, real);
+    else static if (is(ucent) && is(T == ucent))
         alias ImplicitConversionTargets = TypeTuple!(float, double, real);
     else static if (is(T == float))
         alias ImplicitConversionTargets = TypeTuple!(double, real);
@@ -4015,14 +4045,14 @@ template ImplicitConversionTargets(T)
     else static if (is(T == char))
         alias ImplicitConversionTargets =
             TypeTuple!(wchar, dchar, byte, ubyte, short, ushort,
-                       int, uint, long, ulong, float, double, real);
+                       int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T == wchar))
         alias ImplicitConversionTargets =
-            TypeTuple!(dchar, short, ushort, int, uint, long, ulong,
+            TypeTuple!(dchar, short, ushort, int, uint, long, ulong, CentTypeList,
                        float, double, real);
     else static if (is(T == dchar))
         alias ImplicitConversionTargets =
-            TypeTuple!(int, uint, long, ulong, float, double, real);
+            TypeTuple!(int, uint, long, ulong, CentTypeList, float, double, real);
     else static if (is(T : typeof(null)))
         alias ImplicitConversionTargets = TypeTuple!(typeof(null));
     else static if(is(T : Object))
@@ -4363,8 +4393,8 @@ template isCovariantWith(F, G)
         template checkParameters()
         {
             alias STC = ParameterStorageClass;
-            alias UprParams = ParameterTypeTuple!Upr;
-            alias LwrParams = ParameterTypeTuple!Lwr;
+            alias UprParams = Parameters!Upr;
+            alias LwrParams = Parameters!Lwr;
             alias UprPSTCs  = ParameterStorageClassTuple!Upr;
             alias LwrPSTCs  = ParameterStorageClassTuple!Lwr;
             //
@@ -5166,6 +5196,12 @@ unittest
     }
 }
 
+/**
+ * Detect whether type $(D T) is a narrow string.
+ *
+ * All arrays that use char, wchar, and their qualified versions are narrow
+ * strings. (Those include string and wstring).
+ */
 enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T && !isStaticArray!T;
 
 unittest
@@ -5305,6 +5341,25 @@ unittest
  */
 enum bool isBuiltinType(T) = is(BuiltinTypeOf!T) && !isAggregateType!T;
 
+///
+unittest
+{
+    class C;
+    union U;
+    struct S;
+    interface I;
+
+    static assert( isBuiltinType!void);
+    static assert( isBuiltinType!string);
+    static assert( isBuiltinType!(int[]));
+    static assert( isBuiltinType!(C[string]));
+    static assert(!isBuiltinType!C);
+    static assert(!isBuiltinType!U);
+    static assert(!isBuiltinType!S);
+    static assert(!isBuiltinType!I);
+    static assert(!isBuiltinType!(void delegate(int)));
+}
+
 /**
  * Detect whether type $(D T) is a SIMD vector type.
  */
@@ -5369,6 +5424,25 @@ unittest
  */
 enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
                                is(T == class) || is(T == interface);
+
+///
+unittest
+{
+    class C;
+    union U;
+    struct S;
+    interface I;
+
+    static assert( isAggregateType!C);
+    static assert( isAggregateType!U);
+    static assert( isAggregateType!S);
+    static assert( isAggregateType!I);
+    static assert(!isAggregateType!void);
+    static assert(!isAggregateType!string);
+    static assert(!isAggregateType!(int[]));
+    static assert(!isAggregateType!(C[string]));
+    static assert(!isAggregateType!(void delegate(int)));
+}
 
 /**
  * Returns $(D true) if T can be iterated over using a $(D foreach) loop with
@@ -5449,26 +5523,32 @@ unittest
  *
  * See_Also: $(LREF isTypeTuple).
  */
-template isExpressionTuple(T ...)
+template isExpressions(T ...)
 {
     static if (T.length >= 2)
-        enum bool isExpressionTuple =
-            isExpressionTuple!(T[0 .. $/2]) &&
-            isExpressionTuple!(T[$/2 .. $]);
+        enum bool isExpressions =
+            isExpressions!(T[0 .. $/2]) &&
+            isExpressions!(T[$/2 .. $]);
     else static if (T.length == 1)
-        enum bool isExpressionTuple =
+        enum bool isExpressions =
             !is(T[0]) && __traits(compiles, { auto ex = T[0]; });
     else
-        enum bool isExpressionTuple = true; // default
+        enum bool isExpressions = true; // default
 }
 
 ///
 unittest
 {
-    static assert(isExpressionTuple!(1, 2.0, "a"));
-    static assert(!isExpressionTuple!(int, double, string));
-    static assert(!isExpressionTuple!(int, 2.0, "a"));
+    static assert(isExpressions!(1, 2.0, "a"));
+    static assert(!isExpressions!(int, double, string));
+    static assert(!isExpressions!(int, 2.0, "a"));
 }
+
+/**
+ * Alternate name for $(LREF isExpressions), kept for legacy compatibility.
+ */
+
+alias isExpressionTuple = isExpressions;
 
 unittest
 {
@@ -5494,7 +5574,7 @@ unittest
  * Check whether the tuple $(D T) is a type tuple.
  * A type tuple only contains types.
  *
- * See_Also: $(LREF isExpressionTuple).
+ * See_Also: $(LREF isExpressions).
  */
 template isTypeTuple(T...)
 {
@@ -5994,6 +6074,7 @@ template Unsigned(T)
             static if (is(T == short)) alias Impl = ushort;
             static if (is(T == int  )) alias Impl = uint;
             static if (is(T == long )) alias Impl = ulong;
+            static if (is(ucent) && is(T == cent )) alias Impl = ucent;
         }
         else
             static assert(false, "Type " ~ T.stringof ~
@@ -6021,6 +6102,15 @@ unittest
     //struct S {}
     //alias U2 = Unsigned!S;
     //alias U3 = Unsigned!double;
+    static if (is(ucent))
+    {
+        alias U4 = Unsigned!cent;
+        alias U5 = Unsigned!(const(cent));
+        alias U6 = Unsigned!(immutable(cent));
+        static assert(is(U4 == ucent));
+        static assert(is(U5 == const(ucent)));
+        static assert(is(U6 == immutable(ucent)));
+    }
 }
 
 /**
@@ -6058,6 +6148,8 @@ unittest
     static assert(is(Largest!(ulong, double) == ulong));
     static assert(is(Largest!(double, ulong) == double));
     static assert(is(Largest!(uint, byte, double, short) == double));
+    static if (is(ucent))
+        static assert(is(Largest!(uint, ubyte, ucent, ushort) == ucent));
 }
 
 /**
@@ -6078,6 +6170,7 @@ template Signed(T)
             static if (is(T == ushort)) alias Impl = short;
             static if (is(T == uint  )) alias Impl = int;
             static if (is(T == ulong )) alias Impl = long;
+            static if (is(ucent) && is(T == ucent )) alias Impl = cent;
         }
         else
             static assert(false, "Type " ~ T.stringof ~
@@ -6096,6 +6189,11 @@ unittest
     static assert(is(S2 == const(int)));
     alias S3 = Signed!(immutable(uint));
     static assert(is(S3 == immutable(int)));
+    static if (is(ucent))
+    {
+        alias S4 = Signed!ucent;
+        static assert(is(S4 == cent));
+    }
 }
 
 unittest

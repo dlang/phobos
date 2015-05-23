@@ -35,10 +35,14 @@ module std.getopt;
 import std.traits;
 
 /**
- * Thrown on one of the following conditions:
- * - An unrecognized command-line argument is passed
- *   and $(D std.getopt.config.passThrough) was not present.
- */
+Thrown on one of the following conditions:
+$(UL
+  $(LI An unrecognized command-line argument is passed, and
+       $(D std.getopt.config.passThrough) was not present.)
+  $(LI A command-line option was not found, and
+       $(D std.getopt.config.required) was present.)
+)
+*/
 class GetOptException : Exception
 {
     @safe pure nothrow
@@ -499,8 +503,7 @@ struct Option {
     string optShort; /// The short symbol for this option
     string optLong; /// The long symbol for this option
     string help; /// The description of this option
-    bool required; /// If a option is required, not passing it will result in
-                   /// an error.
+    bool required; /// If a option is required, not passing it will result in an error
 }
 
 private pure Option splitAndGet(string opt) @trusted nothrow
@@ -570,7 +573,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             if (cfg.required && !optWasHandled)
             {
                 throw new GetOptException("Required option " ~ option ~
-                    "was not supplied");
+                    " was not supplied");
             }
             cfg.required = false;
 
