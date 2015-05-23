@@ -1290,6 +1290,15 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
     return lhs.ptr == rhs.ptr;
 }
 
+///
+@safe pure nothrow unittest
+{
+    auto a = [1, 2, 3, 4, 5];
+    auto b = a[0..2];
+
+    assert(a.sameHead(b));
+}
+
 
 /++
     Returns whether the $(D back)s of $(D lhs) and $(D rhs) both refer to the
@@ -1300,6 +1309,15 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
 pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 {
     return lhs.ptr + lhs.length == rhs.ptr + rhs.length;
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto a = [1, 2, 3, 4, 5];
+    auto b = a[3..$];
+
+    assert(a.sameTail(b));
 }
 
 @safe pure nothrow unittest
@@ -1364,6 +1382,25 @@ if (isInputRange!S && !isDynamicArray!S)
 {
     import std.range : repeat;
     return join(std.range.repeat(s, n));
+}
+
+
+///
+unittest
+{
+    auto a = "abc";
+    auto s = replicate(a, 3);
+
+    assert(s == "abcabcabc");
+
+    auto b = [1, 2, 3];
+    auto c = replicate(b, 3);
+
+    assert(c == [1, 2, 3, 1, 2, 3, 1, 2, 3]);
+
+    auto d = replicate(b, 0);
+
+    assert(d == []);
 }
 
 unittest
@@ -1473,6 +1510,16 @@ unittest //safety, purity, ctfe ...
     }
     dg();
     assertCTFEable!dg;
+}
+
+///
+unittest
+{
+    assert(split("hello world") == ["hello","world"]);
+    assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
+
+    auto a = split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]);
+    assert(a == [[1], [4, 5, 1], [4, 5]]);
 }
 
 /++
@@ -2037,6 +2084,19 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     }
 }
 
+///
+unittest
+{
+    auto arr = [1, 2, 3, 4, 5];
+    auto from = [2, 3];
+    auto into = [4, 6];
+    auto sink = appender!(int[])();
+
+    replaceInto(sink, arr, from, into);
+
+    assert(sink.data == [1, 4, 6, 4, 5]);
+}
+
 unittest
 {
     import std.conv : to;
@@ -2569,6 +2629,15 @@ body
         s[so + slice.length .. s.length];
 
     return cast(inout(T)[]) result;
+}
+
+///
+unittest
+{
+    auto a = [1, 2, 3, 4, 5];
+    auto b = replaceSlice(a, a[1..4], [0, 0, 0]);
+
+    assert(b == [1, 0, 0, 0, 5]);
 }
 
 unittest
