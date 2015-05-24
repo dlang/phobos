@@ -35,37 +35,96 @@ struct FreeList(ParentAllocator,
     static assert(maxSize >= (void*).sizeof,
         "Maximum size must accommodate a pointer.");
 
-    private enum hasTolerance = minSize != maxSize
-        || maxSize == chooseAtRuntime;
+    private enum unchecked = minSize == 0 && maxSize == unbounded;
 
-    static if (minSize != chooseAtRuntime)
+    private enum hasTolerance = !unchecked && (minSize != maxSize
+        || maxSize == chooseAtRuntime);
+
+    static if (minSize == chooseAtRuntime)
     {
-        alias min = minSize;
-    }
-    else
-    {
-        size_t _min = chooseAtRuntime;
+        /**
+        Returns the smallest allocation size eligible for allocation from the
+        freelist. (If $(D minSize != chooseAtRuntime), this is simply an alias
+        for $(D minSize).)
+        */
         @property size_t min() const
         {
             assert(_min != chooseAtRuntime);
             return _min;
         }
-        @property void min(size_t x)
+        /**
+        If $(D FreeList) has been instantiated with $(D minSize ==
+        chooseAtRuntime), then the $(D min) property is writable. Setting it
+        must precede any allocation.
+
+        Params:
+        low = new value for $(D min)
+
+        Precondition: $(D low <= max), or $(D maxSize == chooseAtRuntime) and
+        $(D max) has not yet been initialized. Also, no allocation has been
+        yet done with this allocator.
+
+        Postcondition: $(D min == low)
+        */
+        @property void min(size_t low)
         {
-            enforce(x <= _max);
+            assert(x <= max || max == chooseAtRuntime);
+            minimize;
             _min = x;
         }
-        static if (maxSize == chooseAtRuntime)
+    }
+    else
+    {
+        alias min = minSize;
+    }
+
+    static if (maxSize == chooseAtRuntime)
+    {
+        /**
+        Returns the largest allocation size eligible for allocation from the
+        freelist. (If $(D maxSize != chooseAtRuntime), this is simply an alias
+        for $(D maxSize).) All allocation requests for sizes greater than or
+        equal to $(D min) and less than or equal to $(D max) are rounded to $(D
+        max) and forwarded to the parent allocator. When the block fitting the
+        same constraint gets deallocated, it is put in the freelist with the
+        allocated size assumed to be $(D max).
+        */
+        @property size_t max() const { return _max; }
+
+        /**
+        If $(D FreeList) has been instantiated with $(D maxSize ==
+        chooseAtRuntime), then the $(D max) property is writable. Setting it
+        must precede any allocation.
+
+        Params:
+        high = new value for $(D max)
+
+        Precondition: $(D high >= min), or $(D minSize == chooseAtRuntime) and
+        $(D min) has not yet been initialized. Also $(D high >= (void*).sizeof). Also, no allocation has been yet done with this allocator.
+
+        Postcondition: $(D max == high)
+        */
+        @property void max(size_t high)
         {
-            // Both bounds can be set, provide one function for setting both in
-            // one shot.
-            void setBounds(size_t low, size_t high)
-            {
-                enforce(low <= high && high >= (void*).sizeof);
-                _min = low;
-                _max = high;
-            }
+            assert((high >= min || min == chooseAtRuntime)
+                && high >= (void*).sizeof);
+            minimize;
+            _max = high;
         }
+
+        ///
+        unittest
+        {
+            FreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+            a.min = 64;
+            a.max = 128;
+            assert(a.min == 64);
+            assert(a.max == 128);
+        }
+    }
+    else
+    {
+        alias max = maxSize;
     }
 
     private bool tooSmall(size_t n) const
@@ -74,41 +133,38 @@ struct FreeList(ParentAllocator,
         else return n < min;
     }
 
-    static if (maxSize != chooseAtRuntime)
-    {
-        alias max = maxSize;
-    }
-    else
-    {
-        size_t _max;
-        @property size_t max() const { return _max; }
-        @property void max(size_t x)
-        {
-            enforce(x >= _min && x >= (void*).sizeof);
-            _max = x;
-        }
-    }
-
     private bool tooLarge(size_t n) const
     {
         static if (maxSize == unbounded) return false;
         else return n > max;
     }
 
-    private bool inRange(size_t n) const
+    private bool freeListEligible(size_t n) const
     {
-        static if (minSize == maxSize && minSize != chooseAtRuntime)
-            return n == maxSize;
-        else return !tooSmall(n) && !tooLarge(n);
+        static if (unchecked)
+        {
+            return true;
+        }
+        else
+        {
+            static if (minSize == 0)
+            {
+                if (!n) return false;
+            }
+            static if (minSize == maxSize && minSize != chooseAtRuntime)
+                return n == maxSize;
+            else
+                return !tooSmall(n) && !tooLarge(n);
+        }
     }
 
+    static if (!unchecked)
     private void[] blockFor(Node* p)
     {
         assert(p);
         return (cast(void*) p)[0 .. max];
     }
 
-    ////////////////////////////////////////////////////////////////////////////
     // statistics {
 
     static if (adaptive == Yes.adaptive)
@@ -142,72 +198,45 @@ struct FreeList(ParentAllocator,
     }
 
     // } statistics
-    ////////////////////////////////////////////////////////////////////////////
 
-    version (StdDdoc)
-    {
-        /**
-        Properties for getting and setting bounds. Setting a bound is only
-        possible if the respective compile-time parameter has been set to $(D
-        chooseAtRuntime). $(D setBounds) is defined only if both $(D minSize)
-        and $(D maxSize) are set to $(D chooseAtRuntime).
-        */
-        @property size_t min();
-        /// Ditto
-        @property void min(size_t newMinSize);
-        /// Ditto
-        @property size_t max();
-        /// Ditto
-        @property void max(size_t newMaxSize);
-        /// Ditto
-        void setBounds(size_t newMin, size_t newMax);
-        ///
-        unittest
-        {
-            FreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
-            // Set the maxSize first so setting the minSize doesn't throw
-            a.max = 128;
-            a.min = 64;
-            a.setBounds(64, 128); // equivalent
-            assert(a.max == 128);
-            assert(a.min == 64);
-        }
-    }
+    private struct Node { Node* next; }
+    static assert(ParentAllocator.alignment >= Node.alignof);
 
+    // state {
     /**
     The parent allocator. Depending on whether $(D ParentAllocator) holds state
     or not, this is a member variable or an alias for $(D ParentAllocator.it).
     */
     static if (stateSize!ParentAllocator) ParentAllocator parent;
     else alias parent = ParentAllocator.it;
-
-    private struct Node { Node* next; }
-    static assert(ParentAllocator.alignment >= Node.alignof);
-    private Node* _root;
-
-    private static void incNodes() { }
-    private static void decNodes() { }
-    private enum bool nodesFull = false;
+    private Node* root;
+    static if (minSize == chooseAtRuntime) size_t _min = chooseAtRuntime;
+    static if (maxSize == chooseAtRuntime) size_t _max = chooseAtRuntime;
+    // }
 
     /**
-    Alignment is defined as $(D parent.alignment). However, if $(D
-    parent.alignment > maxSize), objects returned from the freelist will have a
-    smaller _alignment, namely $(D maxSize) rounded up to the nearest multiple
-    of 2. This allows $(D FreeList) to minimize internal fragmentation by
-    allocating several small objects within an allocated block. Also, there is
-    no disruption because no object has smaller size than its _alignment.
+    Alignment offered.
     */
-    enum uint alignment = ParentAllocator.alignment;
+    alias alignment = ParentAllocator.alignment;
 
     /**
-    Returns $(D max) for sizes in the interval $(D [min, max]), and $(D
-    parent.goodAllocSize(bytes)) otherwise.
+    If $(D maxSize == unbounded), returns  $(D parent.goodAllocSize(bytes)).
+    Otherwise, returns $(D max) for sizes in the interval $(D [min, max]), and
+    $(D parent.goodAllocSize(bytes)) otherwise.
+
+    Precondition:
+    If set at runtime, $(D min) and/or $(D max) must be initialized
+    appropriately.
+
+    Postcondition:
+    $(D result >= bytes)
     */
     size_t goodAllocSize(size_t bytes)
     {
+        assert(minSize != chooseAtRuntime && maxSize != chooseAtRuntime);
         static if (maxSize != unbounded)
         {
-            if (inRange(bytes))
+            if (freeListEligible(bytes))
             {
                 assert(parent.goodAllocSize(max) == max,
                     text("Wrongly configured freelist: maximum should be ",
@@ -218,47 +247,20 @@ struct FreeList(ParentAllocator,
         return parent.goodAllocSize(bytes);
     }
 
-    /**
-    Allocates memory either off of the free list or from the parent allocator.
-    */
-    void[] allocate(size_t bytes)
+    private void[] allocateEligible(size_t bytes)
     {
-        static if (adaptive == Yes.adaptive) ++accumSamples;
-        assert(bytes < size_t.max / 2);
-        // fast path
-        if (inRange(bytes))
+        assert(bytes);
+        if (root)
         {
-            if (_root)
-            {
-                auto result = (cast(ubyte*) _root)[0 .. bytes];
-                _root = _root.next;
-                decNodes();
-                return result;
-            }
-            // slower
-            auto result = allocateFresh(bytes);
-            static if (adaptive == Yes.adaptive)
-            {
-                ++accumMisses;
-                updateStats;
-            }
+            // faster
+            auto result = (cast(ubyte*) root)[0 .. bytes];
+            root = root.next;
+            return result;
         }
         // slower
-        static if (adaptive == Yes.adaptive)
-        {
-            updateStats;
-        }
-        return parent.allocate(bytes);
-    }
-
-    private void[] allocateFresh(const size_t bytes)
-    {
-        assert(!_root);
-        assert(max > 0);
-        assert(inRange(bytes));
         static if (hasTolerance)
         {
-            auto toAllocate = max;
+            immutable toAllocate = max;
         }
         else
         {
@@ -270,7 +272,49 @@ struct FreeList(ParentAllocator,
         {
             if (result) result = result.ptr[0 .. bytes];
         }
+        static if (adaptive == Yes.adaptive)
+        {
+            ++accumMisses;
+            updateStats;
+        }
         return result;
+    }
+
+    /**
+    Allocates memory either off of the free list or from the parent allocator.
+    If $(D n) is within $(D [min, max]) or if the free list is unchecked
+    ($(D minSize == 0 && maxSize == size_t.max)), then the free list is
+    consulted first. If not empty (hit), the block at the front of the free
+    list is removed from the list and returned. Otherwise (miss), a new block
+    of $(D max) bytes is allocated, truncated to $(D n) bytes, and returned.
+
+    Params:
+    n = number of bytes to allocate
+
+    Returns:
+    The allocated block, or $(D null).
+
+    Precondition:
+    If set at runtime, $(D min) and/or $(D max) must be initialized
+    appropriately.
+
+    Postcondition: $(D result.length == bytes || result is null)
+    */
+    void[] allocate(size_t n)
+    {
+        static if (adaptive == Yes.adaptive) ++accumSamples;
+        assert(n < size_t.max / 2);
+        // fast path
+        if (freeListEligible(n))
+        {
+            return allocateEligible(n);
+        }
+        // slower
+        static if (adaptive == Yes.adaptive)
+        {
+            updateStats;
+        }
+        return parent.allocate(n);
     }
 
     // Forwarding methods
@@ -278,27 +322,36 @@ struct FreeList(ParentAllocator,
         "expand", "owns", "reallocate"));
 
     /**
-    Intercepts deallocations and caches those of the appropriate size in the
-    freelist. For all others, forwards to $(D parent.deallocate) or does nothing
-    if $(D Parent) does not define $(D deallocate).
+    If $(D block.length) is within $(D [min, max]) or if the free list is
+    unchecked ($(D minSize == 0 && maxSize == size_t.max)), then inserts the
+    block at the front of the free list. For all others, forwards to $(D
+    parent.deallocate) if $(D Parent.deallocate) is defined.
+
+    Params:
+    block = Block to deallocate.
+
+    Precondition:
+    If set at runtime, $(D min) and/or $(D max) must be initialized
+    appropriately. The block must have been allocated with this
+    freelist, and no dynamic changing of $(D min) or $(D max) is allowed to
+    occur between allocation and deallocation.
     */
     void deallocate(void[] block)
     {
-        if (!nodesFull && inRange(block.length))
+        if (freeListEligible(block.length))
         {
             if (min == 0)
             {
                 // In this case a null pointer might have made it this far.
                 if (block is null) return;
             }
-            auto t = _root;
-            _root = cast(Node*) block.ptr;
-            _root.next = t;
-            incNodes();
+            auto t = root;
+            root = cast(Node*) block.ptr;
+            root.next = t;
         }
         else
         {
-            static if (is(typeof(parent.deallocate(block))))
+            static if (hasMember!(ParentAllocator, "deallocate"))
                 parent.deallocate(block);
         }
     }
@@ -311,7 +364,7 @@ struct FreeList(ParentAllocator,
     void deallocateAll()
     {
         parent.deallocateAll();
-        _root = null;
+        root = null;
     }
 
     /**
@@ -319,13 +372,13 @@ struct FreeList(ParentAllocator,
     freeing each element in turn. Defined only if $(D ParentAllocator) defines
     $(D deallocate).
     */
-    static if (hasMember!(ParentAllocator, "deallocate"))
+    static if (hasMember!(ParentAllocator, "deallocate") && !unchecked)
     void minimize()
     {
-        while (_root)
+        while (root)
         {
-            auto nuke = blockFor(_root);
-            _root = _root.next;
+            auto nuke = blockFor(root);
+            root = root.next;
             parent.deallocate(nuke);
         }
     }
@@ -337,11 +390,11 @@ struct FreeList(ParentAllocator,
         {
             // Time to come clean about the stashed data.
             static if (hasMember!(ParentAllocator, "deallocate"))
-            for (auto n = _root; n; n = n.next)
+            for (auto n = root; n; n = n.next)
             {
                 parent.deallocate(blockFor(n));
             }
-            _root = null;
+            root = null;
         }
         //
         bool markAsUsed(void[] b) { return parent.markAsUsed(b); }
@@ -354,22 +407,342 @@ unittest
 {
     import std.experimental.allocator.gc_allocator;
     FreeList!(GCAllocator, 0, 8) fl;
-    assert(fl._root is null);
+    assert(fl.root is null);
     auto b1 = fl.allocate(7);
     //assert(fl._root !is null);
     auto b2 = fl.allocate(8);
-    assert(fl._root is null);
+    assert(fl.root is null);
     fl.deallocate(b1);
-    assert(fl._root !is null);
+    assert(fl.root !is null);
     auto b3 = fl.allocate(8);
-    assert(fl._root is null);
+    assert(fl.root is null);
+}
+
+/**
+Free list built on top of exactly one contiguous block of memory. The block is
+assumed to have been allocated with $(D ParentAllocator), and is released in
+$(D ContiguousFreeList)'s destructor (unless $(D ParentAllocator) is $(D
+NullAllocator)).
+
+$(D ContiguousFreeList) has most advantages of $(D FreeList) but fewer
+disadvantages. It has better cache locality because items are closer to one
+another. It imposes less fragmentation on its parent allocator.
+
+The disadvantages of $(D ContiguousFreeList) over $(D FreeList) are its pay
+upfront model (as opposed to $(D FreeList)'s pay-as-you-go approach), and a
+hard limit on the number of nodes in the list. Thus, a large number of long-
+lived objects may occupy the entire block, making it unavailable for serving
+allocations from the free list. However, an absolute cap on the free list size
+may be beneficial.
+
+The options $(D minSize == unbounded) and $(D maxSize == unbounded) are not
+available for $(D ContiguousFreeList).
+*/
+struct ContiguousFreeList(ParentAllocator,
+     size_t minSize, size_t maxSize = minSize)
+{
+    import std.experimental.allocator.null_allocator : NullAllocator;
+    import std.experimental.allocator.stats_collector;
+    import std.traits : hasMember;
+
+    alias Impl = FreeList!(NullAllocator, minSize, maxSize);
+    alias Node = Impl.Node;
+
+    alias SParent = StatsCollector!(ParentAllocator, Options.bytesUsed);
+
+    // state {
+    /**
+    The parent allocator. Depending on whether $(D ParentAllocator) holds state
+    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    */
+    SParent parent;
+    FreeList!(NullAllocator, minSize, maxSize) fl;
+    void[] support;
+    size_t allocated;
+    // }
+
+    /// Alignment offered.
+    enum uint alignment = (void*).alignof;
+
+    private void initialize(void[] buffer, size_t itemSize = fl.max)
+    {
+        assert(itemSize != unbounded && itemSize != chooseAtRuntime);
+        assert(buffer.ptr.alignedAt(alignment));
+        immutable available = buffer.length / itemSize;
+        if (available == 0) return;
+        support = buffer;
+        fl.root = cast(Node*) buffer.ptr;
+        auto past = cast(Node*) (buffer.ptr + available * itemSize);
+        for (auto n = fl.root; ; )
+        {
+            auto next = cast(Node*) (cast(ubyte*) n + itemSize);
+            if (next == past)
+            {
+                n.next = null;
+                break;
+            }
+            assert(next < past);
+            assert(n < next);
+            n.next = next;
+            n = next;
+        }
+    }
+
+    /**
+    Constructors setting up the memory structured as a free list.
+
+    Params:
+    buffer = Buffer to structure as a free list. If $(D ParentAllocator) is not
+    $(D NullAllocator), the buffer is assumed to be allocated by $(D parent)
+    and will be freed in the destructor.
+    parent = Parent allocator. For construction from stateless allocators, use
+    their $(D it) static member.
+    bytes = Bytes (not items) to be allocated for the free list. Memory will be
+    allocated during construction and deallocated in the destructor.
+    max = Maximum size eligible for freelisting. Construction with this
+    parameter is defined only if $(D maxSize == chooseAtRuntime) or $(D maxSize
+    == unbounded).
+    min = Minimum size eligible for freelisting. Construction with this
+    parameter is defined only if $(D minSize == chooseAtRuntime). If this
+    condition is met and no $(D min) parameter is present, $(D min) is
+    initialized with $(D max).
+    */
+    static if (!stateSize!ParentAllocator)
+    this(void[] buffer)
+    {
+        initialize(buffer);
+    }
+
+    /// ditto
+    static if (stateSize!ParentAllocator)
+    this(ParentAllocator parent, void[] buffer)
+    {
+        initialize(buffer);
+        this.parent = SParent(parent);
+    }
+
+    /// ditto
+    static if (!stateSize!ParentAllocator)
+    this(size_t bytes)
+    {
+        initialize(ParentAllocator.it.allocate(bytes));
+    }
+
+    /// ditto
+    static if (stateSize!ParentAllocator)
+    this(ParentAllocator parent, size_t bytes)
+    {
+        initialize(parent.allocate(bytes));
+        this.parent = SParent(parent);
+    }
+
+    /// ditto
+    static if (!stateSize!ParentAllocator
+        && maxSize == chooseAtRuntime || maxSize == unbounded)
+    this(size_t bytes, size_t max)
+    {
+        static if (maxSize == chooseAtRuntime) fl.max = max;
+        static if (minSize == chooseAtRuntime) fl.min = max;
+        initialize(parent.allocate(bytes), max);
+        this.parent = SParent(parent);
+    }
+
+    /// ditto
+    static if (stateSize!ParentAllocator
+        && maxSize == chooseAtRuntime || maxSize == unbounded)
+    this(ParentAllocator parent, size_t bytes, size_t max)
+    {
+        static if (maxSize == chooseAtRuntime) fl.max = max;
+        static if (minSize == chooseAtRuntime) fl.min = max;
+        initialize(parent.allocate(bytes), max);
+        this.parent = SParent(parent);
+    }
+
+    /// ditto
+    static if (!stateSize!ParentAllocator
+        && maxSize == chooseAtRuntime || maxSize == unbounded
+        && minSize == chooseAtRuntime)
+    this(size_t bytes, size_t min, size_t max)
+    {
+        static if (maxSize == chooseAtRuntime) fl.max = max;
+        fl.min = min;
+        initialize(parent.allocate(bytes), max);
+        static if (stateSize!ParentAllocator)
+            this.parent = SParent(parent);
+    }
+
+    /// ditto
+    static if (stateSize!ParentAllocator
+        && maxSize == chooseAtRuntime || maxSize == unbounded
+        && minSize == chooseAtRuntime)
+    this(ParentAllocator parent, size_t bytes, size_t min, size_t max)
+    {
+        static if (maxSize == chooseAtRuntime) fl.max = max;
+        fl.min = min;
+        initialize(parent.allocate(bytes), max);
+        static if (stateSize!ParentAllocator)
+            this.parent = SParent(parent);
+    }
+
+    /**
+    If $(D n) is eligible for freelisting, returns $(D max). Otherwise, returns
+    $(D parent.goodAllocSize(n)).
+
+    Precondition:
+    If set at runtime, $(D min) and/or $(D max) must be initialized
+    appropriately.
+
+    Postcondition:
+    $(D result >= bytes)
+    */
+    size_t goodAllocSize(size_t n)
+    {
+        if (fl.freeListEligible(n)) return fl.max;
+        return parent.goodAllocSize(n);
+    }
+
+    /**
+    Allocate $(D n) bytes of memory. If $(D n) is eligible for freelist and the
+    freelist is not empty, pops the memory off the free list. In all other
+    cases, uses the parent allocator.
+    */
+    void[] allocate(size_t n)
+    {
+        auto result = fl.allocate(n);
+        if (result)
+        {
+            // Only case we care about: eligible sizes allocated from us
+            ++allocated;
+            return result;
+        }
+        // All others, allocate from parent
+        return parent.allocate(n);
+    }
+
+    /**
+    Defined if $(D ParentAllocator) defines it. Checks whether the block
+    belongs to this allocator.
+    */
+    static if (hasMember!(SParent, "owns"))
+    bool owns(void[] b)
+    {
+        return support.ptr <= b.ptr && b.ptr < support.ptr + support.length
+            || parent.owns(b);
+    }
+
+    /**
+    Deallocates $(D b). If it's of eligible size, it's put on the free list.
+    Otherwise, it's returned to $(D parent).
+
+    Precondition: $(D b) has been allocated with this allocator, or is $(D
+    null).
+    */
+    void deallocate(void[] b)
+    {
+        if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
+        {
+            // we own this guy
+            import std.conv : text;
+            assert(fl.freeListEligible(b.length), text(b.length));
+            assert(allocated);
+            --allocated;
+            // Put manually in the freelist
+            auto t = fl.root;
+            fl.root = cast(Node*) b.ptr;
+            fl.root.next = t;
+        }
+        else
+        {
+            parent.deallocate(b);
+        }
+    }
+
+    /**
+    Deallocates everything from the parent.
+    */
+    static if (hasMember!(ParentAllocator, "deallocateAll")
+        && stateSize!ParentAllocator)
+    void deallocateAll()
+    {
+        fl.deallocateAll;
+        parent.deallocateAll;
+        allocated = 0;
+    }
+
+    /**
+    Returns $(D true) if no memory is currently allocated with this allocator.
+    */
+    bool empty()
+    {
+        return allocated == 0 && parent.bytesUsed == 0;
+    }
+}
+
+///
+unittest
+{
+    import std.experimental.allocator.null_allocator;
+    alias A = ContiguousFreeList!(NullAllocator, 0, 64);
+    auto a = A(new void[1024]);
+
+    assert(a.empty);
+
+    assert(a.goodAllocSize(15) == 64);
+    assert(a.goodAllocSize(65) == NullAllocator.it.goodAllocSize(65));
+
+    auto b = a.allocate(100);
+    assert(a.empty);
+    assert(b.length == 0);
+    a.deallocate(b);
+    b = a.allocate(64);
+    assert(!a.empty);
+    assert(b.length == 64);
+    assert(a.owns(b));
+    assert(!a.owns(null));
+    a.deallocate(b);
+}
+
+unittest
+{
+    import std.experimental.allocator.region;
+    import std.experimental.allocator.gc_allocator;
+    alias A = ContiguousFreeList!(Region!GCAllocator, 0, 64);
+    auto a = A(Region!GCAllocator(1024 * 4), 1024);
+
+    assert(a.empty);
+
+    assert(a.goodAllocSize(15) == 64);
+    assert(a.goodAllocSize(65) == a.parent.goodAllocSize(65));
+
+    auto b = a.allocate(100);
+    assert(!a.empty);
+    assert(a.allocated == 0);
+    assert(b.length == 100);
+    a.deallocate(b);
+    assert(a.empty);
+    b = a.allocate(64);
+    assert(!a.empty);
+    assert(b.length == 64);
+    assert(a.owns(b));
+    assert(!a.owns(null));
+    a.deallocate(b);
+}
+
+unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    alias A = ContiguousFreeList!(GCAllocator, 64, 64);
+    auto a = A(1024);
+    auto b = a.allocate(100);
+    assert(b.length == 100);
 }
 
 /**
 FreeList shared across threads. Allocation and deallocation are lock-free. The
 parameters have the same semantics as for $(D FreeList).
 
-$(D expand) is defined to forward to $(ParentAllocator.expand) (it must be also $(D shared)).
+$(D expand) is defined to forward to $(ParentAllocator.expand) (it must be also
+$(D shared)).
 */
 struct SharedFreeList(ParentAllocator,
     size_t minSize, size_t maxSize = minSize)
@@ -447,7 +820,7 @@ struct SharedFreeList(ParentAllocator,
         else return n > maxSize;
     }
 
-    private bool inRange(size_t n) const shared
+    private bool freeListEligible(size_t n) const shared
     {
         static if (minSize == maxSize && minSize != chooseAtRuntime)
             return n == maxSize;
@@ -526,14 +899,14 @@ struct SharedFreeList(ParentAllocator,
     /// Ditto
     size_t goodAllocSize(size_t bytes) shared
     {
-        if (inRange(bytes)) return maxSize == unbounded ? bytes : max;
+        if (freeListEligible(bytes)) return maxSize == unbounded ? bytes : max;
         return parent.goodAllocSize(bytes);
     }
 
     /// Ditto
     bool owns(void[] b) shared const
     {
-        if (inRange(b.length)) return true;
+        if (freeListEligible(b.length)) return true;
         static if (hasMember!(ParentAllocator, "owns"))
             return parent.owns(b);
         else
@@ -551,7 +924,7 @@ struct SharedFreeList(ParentAllocator,
     void[] allocate(size_t bytes) shared
     {
         assert(bytes < size_t.max / 2);
-        if (!inRange(bytes)) return parent.allocate(bytes);
+        if (!freeListEligible(bytes)) return parent.allocate(bytes);
         if (maxSize != unbounded) bytes = max;
         if (!_root) return allocateFresh(bytes);
         // Pop off the freelist
@@ -576,7 +949,7 @@ struct SharedFreeList(ParentAllocator,
     /// Ditto
     void deallocate(void[] b) shared
     {
-        if (!nodesFull && inRange(b.length))
+        if (!nodesFull && freeListEligible(b.length))
         {
             auto newRoot = cast(shared Node*) b.ptr;
             shared Node* oldRoot;
