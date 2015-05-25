@@ -265,11 +265,11 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
     }
     static trustedReadFile(HANDLE hFile, void *lpBuffer, ulong nNumberOfBytesToRead) @trusted
     {
-        // Read by chunks of size <= 4GB (Windows API limit)
+        // Read by chunks of size < 4GB (Windows API limit)
         ulong totalNumRead = 0;
         while (totalNumRead != nNumberOfBytesToRead)
         {
-            uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_ffff);
+            uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
             auto result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
             if (result == 0 || numRead != chunkSize)
