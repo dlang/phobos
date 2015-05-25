@@ -241,11 +241,6 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
-    static trustedRef(T)(ref T buf) @trusted
-    {
-        return &buf;
-    }
-
     static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
@@ -259,15 +254,29 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
     {
         return CloseHandle(hObject);
     }
-    static trustedGetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh) @trusted
+    static trustedGetFileSize(HANDLE hFile, out ulong fileSize) @trusted
     {
-        return GetFileSize(hFile, lpFileSizeHigh);
+        DWORD sizeHigh;
+        DWORD sizeLow = GetFileSize(hFile, &sizeHigh);
+        bool result = sizeLow != INVALID_FILE_SIZE;
+        if (result)
+            fileSize = makeUlong(sizeLow, sizeHigh);
+        return result;
     }
-    static trustedReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
-                           DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped) @trusted
+    static trustedReadFile(HANDLE hFile, void *lpBuffer, ulong nNumberOfBytesToRead) @trusted
     {
-        return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead,
-                        lpNumberOfBytesRead, lpOverlapped);
+        // Read by chunks of size < 4GB (Windows API limit)
+        ulong totalNumRead = 0;
+        while (totalNumRead != nNumberOfBytesToRead)
+        {
+            uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
+            DWORD numRead = void;
+            auto result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
+            if (result == 0 || numRead != chunkSize)
+                return false;
+            totalNumRead += chunkSize;
+        }
+        return true;
     }
 
     alias defaults =
@@ -279,15 +288,13 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
 
     cenforce(h != INVALID_HANDLE_VALUE, name);
     scope(exit) cenforce(trustedCloseHandle(h), name);
-    auto size = trustedGetFileSize(h, null);
-    cenforce(size != INVALID_FILE_SIZE, name);
-    size = min(upTo, size);
+    ulong fileSize = void;
+    cenforce(trustedGetFileSize(h, fileSize), name);
+    size_t size = min(upTo, fileSize);
     auto buf = uninitializedArray!(ubyte[])(size);
     scope(failure) delete buf;
 
-    DWORD numread = void;
-    cenforce(trustedReadFile(h,buf.ptr, size, trustedRef(numread), null) != 0
-            && numread == size, name);
+    cenforce(trustedReadFile(h, buf.ptr, size), name);
     return buf[0 .. size];
 }
 
