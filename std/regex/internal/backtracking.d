@@ -272,18 +272,18 @@ template BacktrackingMatcher(bool CTregex)
                         //at start & end of input
                         if(atStart)
                         {
-                            if(!atEnd && !wordTrie[s.peek])
+                            if(!atEnd && !s.testWordClass())
                                 goto L_backtrack;
                         }
                         else if(atEnd)
                         {
-                            if(!wordTrie[s.loopBack(s._index).peek])
+                            if(!s.loopBack(s._index).testWordClass())
                                 goto L_backtrack;
                         }
                         else
                         {
-                            bool af = wordTrie[s.peek];
-                            bool ab = wordTrie[s.loopBack(s._index).peek];
+                            bool af = s.testWordClass();
+                            bool ab = s.loopBack(s._index).testWordClass();
                             if((af ^ ab) == false)
                                 goto L_backtrack;
                         }
@@ -293,18 +293,18 @@ template BacktrackingMatcher(bool CTregex)
                         //at start & end of input
                         if(atStart)
                         {
-                            if(atEnd || wordTrie[s.peek])
+                            if(atEnd || s.testWordClass())
                                 goto L_backtrack;
                         }
                         else if(atEnd)
                         {
-                            if(wordTrie[s.loopBack(s._index).peek])
+                            if(s.loopBack(s._index).testWordClass())
                                 goto L_backtrack;
                         }
                         else
                         {
-                            bool af = wordTrie[s.peek];
-                            bool ab = wordTrie[s.loopBack(s._index).peek];
+                            bool af = s.testWordClass();
+                            bool ab = s.loopBack(s._index).testWordClass();
                             if((af ^ ab) == true)
                                 goto L_backtrack;
                         }
@@ -318,7 +318,7 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         else if(re.flags & RegexOption.multiline)
                         {
-                            bool seenNl = !atEnd && s.peek == '\n';
+                            bool seenNl = !atEnd && s.front == '\n';
                             if(startOfLine(s.loopBack(s._index), seenNl))
                             {
                                 pc += IRL!(IR.Eol);
@@ -335,7 +335,7 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         else if(re.flags & RegexOption.multiline)
                         {
-                            bool seenCr = !atStart && s.loopBack(s._index).peek == '\r';
+                            bool seenCr = !atStart && s.loopBack(s._index).front == '\r';
                             if(endOfLine(s, seenCr))
                             {
                                 pc += IRL!(IR.Eol);
@@ -1203,18 +1203,18 @@ struct CtContext
             code ~= ctSub( `
                     if(atStart)
                     {
-                        if(!atEnd && !wordTrie[s.peek])
+                        if(!atEnd && !s.testWordClass())
                             $$
                     }
                     else if(atEnd)
                     {
-                        if(!wordTrie[s.loopBack(s._index).peek])
+                        if(!s.loopBack(s._index).testWordClass())
                             $$
                     }
                     else
                     {
-                        bool af = wordTrie[s.peek];
-                        bool ab = wordTrie[s.loopBack(s._index).peek];
+                        bool af = s.testWordClass();
+                        bool ab = s.loopBack(s._index).testWordClass();
                         if((af ^ ab) == false)
                             $$
                     }
@@ -1225,18 +1225,18 @@ struct CtContext
             code ~= ctSub( `
                     if(atStart)
                     {
-                        if(atEnd || wordTrie[s.peek])
+                        if(atEnd || s.testWordClass())
                             $$
                     }
                     else if(atEnd)
                     {
-                        if(wordTrie[s.loopBack(s._index).peek])
+                        if(s.loopBack(s._index).testWordClass())
                             $$
                     }
                     else
                     {
-                        bool af = wordTrie[s.peek];
-                        bool ab = wordTrie[s.loopBack(s._index).peek];
+                        bool af = s.testWordClass();
+                        bool ab = s.loopBack(s._index).testWordClass();
                         if((af ^ ab) == true)
                             $$
                     }
@@ -1252,7 +1252,7 @@ struct CtContext
                     }
                     else if(re.flags & RegexOption.multiline)
                     {
-                        bool seenNl = !atEnd && s.peek == '\n';
+                        bool seenNl = !atEnd && s.front == '\n';
                         if(startOfLine(s.loopBack(s._index), seenNl))
                         {
                             $$
@@ -1269,7 +1269,7 @@ struct CtContext
                     }
                     else if(re.flags & RegexOption.multiline)
                     {
-                        bool seenCr = !atStart && s.loopBack(s._index).peek == '\r';
+                        bool seenCr = !atStart && s.loopBack(s._index).front == '\r';
                         if(endOfLine(s, seenCr))
                         {
                             $$

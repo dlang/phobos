@@ -419,18 +419,18 @@ int quickTestKnown(InputKind kind, RegEx, Stream)(uint pc, ref Stream s, ref Reg
                 //at start & end of input
                 if(atStart)
                 {
-                    if(!atEnd && !wordTrie[s.peek])
+                    if(!atEnd && !s.testWordClass())
                         goto L_kill_thread;
                 }
                 else if(atEnd)
                 {
-                    if(!wordTrie[s.loopBack(s._index).peek])
+                    if(!s.loopBack(s._index).testWordClass())
                         goto L_kill_thread;
                 }
                 else
                 {
-                    bool af = wordTrie[s.peek];
-                    bool ab = wordTrie[s.loopBack(s._index).peek];
+                    bool af = s.testWordClass();
+                    bool ab = s.loopBack(s._index).testWordClass();
                     if((af ^ ab) == false)
                         goto L_kill_thread;
                 }
@@ -440,18 +440,18 @@ int quickTestKnown(InputKind kind, RegEx, Stream)(uint pc, ref Stream s, ref Reg
                 //at start & end of input
                 if(atStart)
                 {
-                    if(atEnd || wordTrie[s.peek])
+                    if(atEnd || s.testWordClass())
                         goto L_kill_thread;
                 }
                 else if(atEnd)
                 {
-                    if(wordTrie[s.loopBack(s._index).peek])
+                    if(s.loopBack(s._index).testWordClass())
                         goto L_kill_thread;
                 }
                 else
                 {
-                    bool af = wordTrie[s.peek];
-                    bool ab = wordTrie[s.loopBack(s._index).peek];
+                    bool af = s.testWordClass();
+                    bool ab = s.loopBack(s._index).testWordClass();
                     if((af ^ ab) == true)
                         goto L_kill_thread;
                 }

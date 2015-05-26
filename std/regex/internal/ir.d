@@ -17,14 +17,24 @@ alias BasicElementOf(Range) = Unqual!(ElementEncodingType!Range);
 // heuristic value determines maximum CodepointSet length suitable for linear search
 enum maxCharsetUsed = 6;
 
-alias Trie = CodepointSetTrie!(13, 8);
-alias makeTrie = codepointSetTrie!(13, 8);
-
-
-@trusted auto memoizeExpr(string expr)()
+@property @trusted auto memoizeExpr(string expr)()
 {
     if(__ctfe)
         return mixin(expr);
+    alias T = typeof(mixin(expr));
+    static T slot;
+    static bool initialized;
+    if(!initialized)
+    {
+        slot =  mixin(expr);
+        initialized = true;
+    }
+    return slot;
+}
+
+// cannot return ref /non-ref based on __ctfe variable (sadly)
+@property @trusted ref memoizeExprRef(string expr)()
+{
     alias T = typeof(mixin(expr));
     static T slot;
     static bool initialized;
@@ -41,11 +51,6 @@ alias makeTrie = codepointSetTrie!(13, 8);
 {
     return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
         | unicode.Me | unicode.Nd | unicode.Pc")();
-}
-
-@property Trie wordTrie()
-{
-    return memoizeExpr!("makeTrie(wordCharacter)")();
 }
 
 // some special Unicode white space characters
@@ -808,6 +813,13 @@ bool testClass(Stream, Matcher)(ref Stream s, ref Matcher m)
         C[] r = buf[0..step];
         return m.test(r);
     }
+}
+
+bool testWordClass(Stream)(auto ref Stream s)
+{
+    alias Char = BasicElementOf!Stream;
+    alias matcher = memoizeExprRef!("utfMatcher!"~Char.stringof~"(wordCharacter)");
+    return s.testClass(matcher);
 }
 
 //both helpers below are internal, on its own are quite "explosive"
