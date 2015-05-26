@@ -437,8 +437,9 @@ unittest
     from the garbage-collected heap. Each block is organized as a KR-style
     heap. More blocks are allocated and freed on a need basis.
     */
-    AllocatorList!(n => KRBlock!Mallocator(max(n * 16, 1024 * 1024))) alloc;
-    void[][49] array;
+    AllocatorList!(n => KRBlock!Mallocator(max(n * 16, 1024 * 1024)),
+        NullAllocator) alloc;
+    void[][50] array;
     foreach (i; 0 .. array.length)
     {
         auto length = i * 100000 + 1;
@@ -450,6 +451,7 @@ unittest
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
+        assert(array[i].ptr);
         assert(alloc.owns(array[i]));
         alloc.deallocate(array[i]);
     }

@@ -36,15 +36,15 @@ struct GCAllocator
             b = allocate(delta);
             return b.length == delta;
         }
-        auto newSize = GC.extend(b.ptr, b.length + delta,
-            b.length + delta);
+        immutable desired = b.length + delta;
+        auto newSize = GC.extend(b.ptr, desired, desired);
         if (newSize == 0)
         {
             // expansion unsuccessful
             return false;
         }
-        assert(newSize >= b.length + delta);
-        b = b.ptr[0 .. newSize];
+        assert(newSize >= desired);
+        b = b.ptr[0 .. desired];
         return true;
     }
 

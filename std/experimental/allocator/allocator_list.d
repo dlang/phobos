@@ -1,50 +1,63 @@
 module std.experimental.allocator.allocator_list;
 
 import std.experimental.allocator.common;
+import std.experimental.allocator.null_allocator;
+import std.experimental.allocator.gc_allocator;
 version(unittest) import std.stdio;
 
 // Turn this on for debugging
 // debug = allocator_list;
 
 /**
-Given $(D make(size_t n)) as a function that returns fresh allocators capable
-of allocating at least $(D n) bytes, $(D AllocatorList) creates an allocator
+
+Given $(D make(size_t n)) as a function that returns fresh allocators capable of
+allocating at least $(D n) bytes, and $(D BookkeepingAllocator) as a
+supplemental allocator for bookkeeping, $(D AllocatorList) creates an allocator
 that lazily creates as many allocators are needed for satisfying client
 allocation requests.
 
-The management data of the allocators is stored ouroboros-style in memory
-obtained from the allocators themselves, in a private contiguous array. An
-embedded list builds a least-recently-used strategy on top of the array: the
-most recent allocators used for an allocation or deallocation will be attempted
-in order of their most recent use. Thus, although core operations take in
-theory $(BIGOH k) time for $(D k) allocators in current use, in many workloads
-the factor is negligible.
+An embedded list builds a most-recently-used strategy: the most recent
+allocators used in calls to either $(D allocate), $(D owns) (successful calls
+only), or $(D deallocate) are tried for new allocations in order of their most
+recent use. Thus, although core operations take in theory $(BIGOH k) time for
+$(D k) allocators in current use, in many workloads the factor is sublinear.
+Details of the actual strategy may change in future releases.
 
-$(D AllocatorList) is intended for coarse-grained handling of allocators, i.e.
-the number of allocators in the list is expected to be relatively small
-compared to the number of allocations handled by each allocator. However, the
-per-allocator overhead is small (around two words) so using $(D AllocatorList)
-with a large number of allocators should be satisfactory as long as (a) the
-least-recently-used strategy is fast enough for the application; and (b) the
-array of allocators can be stored contiguously within one of the individual
-allocators.
-
-Usually the capacity of allocators created with $(D n) should be much larger
-than $(D n) such that an allocator can be used for many subsequent allocations.
-$(D n) is passed only to ensure the minimum necessary for the next allocation
-(plus possibly for reallocating the management data).
+$(D AllocatorList) is primarily intended for coarse-grained handling of
+allocators, i.e. the number of allocators in the list is expected to be
+relatively small compared to the number of allocations handled by each
+allocator. However, the per-allocator overhead is small so using $(D
+AllocatorList) with a large number of allocators should be satisfactory as long
+as the most-recently-used strategy is fast enough for the application.
 
 $(D AllocatorList) makes an effort to return allocated memory back when no
 longer used. It does so by destroying empty allocators. However, in order to
 avoid thrashing (excessive creation/destruction of allocators under certain use
-patterns), it only destroys one unused allocator when there are two of them.
+patterns), it keeps unused allocators for a while.
+
+Params:
+make = alias for a function that returns new allocators on a need basis. $(D
+make(n)) should return an allocator able to allocate at least $(D n) bytes.
+Usually the capacity of allocators should be much larger than $(D n) such that
+an allocator can be used for many subsequent allocations. $(D n) is passed only
+to ensure the minimum necessary for the next allocation.
+
+BookkeepingAllocator = Allocator used for storing bookkeeping data. The size of
+bookkeeping data is proportional to the number of allocators. If $(D
+BookkeepingAllocator) is $(D NullAllocator), then $(D AllocatorList) is
+"ouroboros-style", i.e. it keeps the bookkeeping data in memory obtained from
+the allocators themselves. Note that for ouroboros-style management, the size
+$(D n) passed to $(D make) will be occasionally different from the size
+requested by client code.
 */
-struct AllocatorList(alias make)
+struct AllocatorList(alias make, BookkeepingAllocator = GCAllocator)
 {
     import std.traits : hasMember;
     import std.conv : emplace;
     import std.algorithm : min, move;
     import std.experimental.allocator.stats_collector : StatsCollector, Options;
+
+    private enum ouroboros = is(BookkeepingAllocator == NullAllocator);
 
     /// Alias for $(D typeof(make)).
     alias Allocator = typeof(make(1));
@@ -55,55 +68,33 @@ struct AllocatorList(alias make)
     {
         // Allocator in this node
         SAllocator a;
-        uint nextIdx = uint.max; // not a pointer - we want this relocatable
+        Node* next;
+
+        @disable this(this);
 
         // Is this node unused?
-        void setUnused() { nextIdx = nextIdx.max - 1; }
-        bool unused() const { return nextIdx == nextIdx.max - 1; }
+        void setUnused() { next = &this; }
+        bool unused() const { return next == &this; }
 
         // Just forward everything to the allocator
         alias a this;
     }
 
+    /**
+    If $(D BookkeepingAllocator) is not $(D NullAllocator), $(D bkalloc) is
+    defined and accessible.
+    */
     // State is stored in an array, but it has a list threaded through it by
     // means of "nextIdx".
     // state {
-    private Node[] allocators;
-    private uint rootIndex = uint.max;
-    // }
-
-    private auto byLRU()
+    static if (!ouroboros)
     {
-        static struct Result
-        {
-            Node* first, current;
-            bool empty() { return current is null; }
-            ref Node front()
-            {
-                assert(!empty);
-                assert(!current.unused);
-                return *current;
-            }
-            void popFront()
-            {
-                assert(first && current && !current.unused);
-                assert(first + current.nextIdx != current);
-                if (current.nextIdx == current.nextIdx.max)
-                {
-                    current = null;
-                }
-                else
-                {
-                    assert(current != first + current.nextIdx);
-                    current = first + current.nextIdx;
-                }
-            }
-            Result save() { return this; }
-        }
-        if (!allocators.length) return Result();
-        assert(rootIndex < allocators.length);
-        return Result(allocators.ptr, allocators.ptr + rootIndex);
+        static if (stateSize!BookkeepingAllocator) BookkeepingAllocator bkalloc;
+        else alias bkalloc = BookkeepingAllocator.it;
     }
+    private Node[] allocators;
+    private Node* root;
+    // }
 
     static if (hasMember!(Allocator, "deallocateAll")
         && hasMember!(Allocator, "owns"))
@@ -117,169 +108,211 @@ struct AllocatorList(alias make)
     */
     enum uint alignment = Allocator.alignment;
 
-    /// Ditto
+    /**
+    Allocate a block of size $(D s). First tries to allocate from the existing
+    list of already-created allocators. If neither can satisfy the request,
+    creates a new allocator by calling $(D make(s)) and delegates the request
+    to it. However, if the allocation fresh off a newly created allocator
+    fails, subsequent calls to $(D allocate) will not cause more calls to $(D
+    make).
+    */
     void[] allocate(size_t s)
     {
-        auto result = allocateNoGrow(s);
-        if (result.length == s) return result;
-        // We add an estimated overhead. This is because the
-        // available bytes are needed for two, not one, allocations.
-        enum overhead = 128;
-        if (auto newAlloc =
-            addAllocator(s + overhead
-                + (allocators.length + 1) * Node.sizeof))
+        for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
-            debug(allocator_list)
-                assert(result.length == s, "That's awfully odd");
-            result = newAlloc.allocate(s);
-        }
-        return result;
-    }
-
-    // Allocate from the existing pool of allocators
-    private void[] allocateNoGrow(size_t bytes)
-    {
-        // Try one of the existing allocators
-        for (auto p = &rootIndex; ; )
-        {
-            immutable index = *p;
-            if (index == index.max) break;
-            assert(index < allocators.length);
-            Node* n = &allocators[index];
-            assert(!n.unused);
-            auto result = n.allocate(bytes);
-            if (result.length != bytes)
+            auto result = n.allocate(s);
+            if (result.length != s) continue;
+            assert(owns(result));
+            // Bring to front if not already
+            if (root != n)
             {
-                p = &n.nextIdx;
-                continue;
+                *p = n.next;
+                n.next = root;
+                root = n;
+                return result;
             }
-            // Bring to front the lastly used allocator
-            *p = n.nextIdx;
-            n.nextIdx = rootIndex;
-            rootIndex = index;
+        }
+        // Can't allocate from the current pool. Check if we just added a new
+        // allocator, in that case it won't do any good to add yet another.
+        if (root && root.empty)
+        {
+            // no can do
+            return null;
+        }
+        // Add a new allocator
+        if (auto a = addAllocator(s))
+        {
+            auto result = a.allocate(s);
+            assert(owns(result) || !result.ptr);
             return result;
         }
         return null;
     }
 
-    // Reallocate from the existing pool of allocators.
-    bool reallocateNoGrow(ref void[] b, size_t s)
+    private void moveAllocators(void[] newPlace)
     {
-        if (!b.ptr)
+        assert(newPlace.ptr.alignedAt(Node.alignof));
+        assert(newPlace.length % Node.sizeof == 0);
+        auto newAllocators = cast(Node[]) newPlace;
+        assert(allocators.length <= newAllocators.length);
+
+        // Move allocators
+        foreach (i, ref e; allocators)
         {
-            b = allocateNoGrow(s);
-            return b.length == s;
+            if (e.unused)
+            {
+                newAllocators[i].setUnused;
+                continue;
+            }
+            import core.stdc.string : memcpy;
+            memcpy(&newAllocators[i].a, &e.a, e.a.sizeof);
+            if (e.next)
+            {
+                newAllocators[i].next = newAllocators.ptr
+                    + (e.next - allocators.ptr);
+            }
+            else
+            {
+                newAllocators[i].next = null;
+            }
         }
-        // First attempt to reallocate within the existing node
-        auto owner = byLRU;
-        for (; !owner.empty; owner.popFront)
+
+        // Mark the unused portion as unused
+        foreach (i; allocators.length .. newAllocators.length)
         {
-            if (owner.front.owns(b)) break;
+            newAllocators[i].setUnused;
         }
-        assert(!owner.empty);
-        if (owner.front.reallocate(b, s))
+        auto toFree = allocators;
+
+        // Change state {
+        root = newAllocators.ptr + (root - allocators.ptr);
+        allocators = newAllocators;
+        // }
+
+        // Free the olden buffer
+        static if (ouroboros)
         {
-            assert(b.length == s);
-            return true;
+            static if (hasMember!(Allocator, "deallocate")
+                    && hasMember!(Allocator, "owns"))
+                deallocate(toFree);
         }
-        // Failed, but we may find new memory in a new node.
-        auto newB = allocateNoGrow(s);
-        if (!newB.ptr) return false;
-        auto copy = min(b.length, s);
-        newB[0 .. copy] = b[0 .. copy];
-        static if (hasMember!(Allocator, "deallocate"))
+        else
         {
-            // We still know n owns b from above
-            owner.front.deallocate(b);
+            bkalloc.deallocate(toFree);
         }
-        b = newB;
-        return true;
     }
 
-    // Find an empty (unused) slot for a Node, return its index. Does not create
-    // a new allocator object.
-    private uint findEmptySlot()
-    {
-        // Try past unused slots
-        foreach (uint i, ref n; allocators)
-        {
-            if (n.unused) return i;
-        }
-        // Try to expand in place
-        void[] t = allocators;
-        if (reallocateNoGrow(t, t.length + Node.sizeof))
-        {
-            assert(t.length >= Node.sizeof);
-            allocators = cast(Node[]) t;
-            assert(0 < allocators.length);
-            assert(allocators.length < uint.max);
-            return cast(uint) allocators.length - 1;
-        }
-        // No can do
-        return uint.max;
-    }
-
+    static if (ouroboros)
     private Node* addAllocator(size_t atLeastBytes)
     {
-        import core.stdc.string : memcpy;
-        // Must create a new allocator object on the stack and move it
-        auto newAlloc = SAllocator(make(atLeastBytes));
-        assert(newAlloc.bytesUsed == 0);
-        // Let's see where
-        auto i = findEmptySlot;
-        if (i == i.max)
+        void[] t = allocators;
+        static if (hasMember!(Allocator, "expand")
+            && hasMember!(Allocator, "owns"))
         {
-            // Must reallocate the allocators array
-            // Weird: store the new node inside its own allocated storage!
-            auto buf = newAlloc.allocate((allocators.length + 1) * Node.sizeof);
-            if (!buf.ptr)
-            {
-                // Terrible, too many allocators
-                return null;
-            }
-            // Move over existing allocators
-            buf[0 .. $ - Node.sizeof] = allocators[];
-            auto oldAllocators = allocators;
-            allocators = cast(Node[]) buf;
-            allocators[$ - 1].setUnused;
-            static if (hasMember!(Allocator, "deallocate"))
-                deallocate(oldAllocators);
-            assert(allocators.length > 0);
-            i = cast(uint) allocators.length - 1;
+            bool expanded = t && this.expand(t, Node.sizeof);
         }
-        // From now on i is the seat of the new allocator
-        // Set up the new one as root
-        Node* n = &allocators[i];
-        memcpy(&n.a, &newAlloc, newAlloc.sizeof);
-        n.nextIdx = rootIndex;
-        emplace(&newAlloc);
-        rootIndex = i;
-        return n;
+        else
+        {
+            enum expanded = false;
+        }
+        if (expanded)
+        {
+            assert(t.length % Node.sizeof == 0);
+            assert(t.ptr.alignedAt(Node.alignof));
+            allocators = cast(Node[]) t;
+            allocators[$ - 1].setUnused;
+            auto newAlloc = SAllocator(make(atLeastBytes));
+            import core.stdc.string;
+            memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
+            emplace(&newAlloc);
+        }
+        else
+        {
+            immutable toAlloc = (allocators.length + 1) * Node.sizeof
+                + atLeastBytes + 128;
+            auto newAlloc = SAllocator(make(toAlloc));
+            auto newPlace = newAlloc.allocate(
+                (allocators.length + 1) * Node.sizeof);
+            if (!newPlace) return null;
+            moveAllocators(newPlace);
+            import core.stdc.string : memcpy;
+            memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
+            emplace(&newAlloc);
+            assert(allocators[$ - 1].owns(allocators));
+        }
+        // Insert as new root
+        if (root != &allocators[$ - 1])
+        {
+            allocators[$ - 1].next = root;
+            root = &allocators[$ - 1];
+        }
+        else
+        {
+            // This is the first one
+            root.next = null;
+        }
+        assert(!root.unused);
+        return root;
     }
 
-    /// Defined only if $(D Allocator.owns) is defined.
+    static if (!ouroboros)
+    private Node* addAllocator(size_t atLeastBytes)
+    {
+        void[] t = allocators;
+        if (bkalloc.expand(t, Node.sizeof))
+        {
+            assert(t.length % Node.sizeof == 0);
+            assert(t.ptr.alignedAt(Node.alignof));
+            allocators = cast(Node[]) t;
+            allocators[$ - 1].setUnused;
+        }
+        else
+        {
+            // Could not expand, create a new block
+            t = bkalloc.allocate((allocators.length + 1) * Node.sizeof);
+            assert(t.length % Node.sizeof == 0);
+            if (!t.ptr) return null;
+            moveAllocators(t);
+        }
+        assert(allocators[$ - 1].unused);
+        auto newAlloc = SAllocator(make(atLeastBytes));
+        import core.stdc.string : memcpy;
+        memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
+        emplace(&newAlloc);
+        // Creation succeeded, insert as root
+        allocators[$ - 1].next = root;
+        root = &allocators[$ - 1];
+        return root;
+    }
+
+    /**
+    Defined only if $(D Allocator) defines $(D owns). Tries each allocator in
+    turn, in most-recently-used order. If the owner is found, it is moved to
+    the front of the list.
+    */
     static if (hasMember!(Allocator, "owns"))
     bool owns(void[] b)
     {
-        foreach (ref n; byLRU)
+        for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
-            if (n.owns(b)) return true;
+            if (!n.owns(b)) continue;
+            // Move the owner to front, speculating it'll be used
+            if (n != root)
+            {
+                *p = n.next;
+                n.next = root;
+                root = n;
+            }
+            return true;
         }
         return false;
     }
 
-    /// Defined only if $(D Allocator.resolveInternalPointer) is defined.
-    static if (hasMember!(Allocator, "resolveInternalPointer"))
-    void[] resolveInternalPointer(void* p)
-    {
-        foreach (ref n; byLRU)
-        {
-            if (auto r = n.resolveInternalPointer(p)) return r;
-        }
-        return null;
-    }
-
-    /// Defined only if $(D Allocator.expand) is defined.
+    /**
+    Defined only if $(D Allocator.expand) is defined. Finds the owner of $(D b)
+    and calls $(D expand) for it. The owner is not brought to the head of the
+    list.
+    */
     static if (hasMember!(Allocator, "expand")
         && hasMember!(Allocator, "owns"))
     bool expand(ref void[] b, size_t delta)
@@ -289,42 +322,33 @@ struct AllocatorList(alias make)
             b = allocate(delta);
             return b.length == delta;
         }
-        foreach (ref n; byLRU)
+        for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
             if (n.owns(b)) return n.expand(b, delta);
         }
         return false;
     }
 
-    /// Allows moving data from one $(D Allocator) to another.
+    /**
+    Defined only if $(D Allocator.reallocate) is defined. Finds the owner of
+    $(D b) and calls $(D reallocate) for it. If that fails, calls the global
+    $(D reallocate), which allocates a new block and moves memory.
+    */
     static if (hasMember!(Allocator, "reallocate"))
     bool reallocate(ref void[] b, size_t s)
     {
         // First attempt to reallocate within the existing node
-        foreach (ref n; byLRU)
+        if (!b.ptr)
         {
-            if (b.ptr && !n.owns(b)) continue;
-            // TODO: bring to front on success?
-            if (n.reallocate(b, s)) return true;
-            break;
+            b = allocate(s);
+            return b.length == s;
+        }
+        for (auto p = &root, n = *p; n; p = &n.next, n = *p)
+        {
+            if (n.owns(b)) return n.reallocate(b, s);
         }
         // Failed, but we may find new memory in a new node.
         return .reallocate(this, b, s);
-    }
-
-    // Returns a pointer to the index referring to the owner of b
-    static if (hasMember!(Allocator, "owns"))
-    private uint* findOwnerIndex(void[] b)
-    {
-        assert(b.ptr);
-        for (uint* p = &rootIndex; *p != (*p).max; )
-        {
-            assert(*p < allocators.length);
-            auto n = &allocators.ptr[*p];
-            if (n.owns(b)) return p;
-            p = &n.nextIdx;
-        }
-        return null;
     }
 
     /**
@@ -336,22 +360,34 @@ struct AllocatorList(alias make)
     {
         if (!b.ptr) return;
         assert(allocators.length);
-        auto p = findOwnerIndex(b);
-        assert(p);
-        auto n = &allocators.ptr[*p];
-        n.deallocate(b);
-        if (!n.empty) return;
+        assert(owns(b));
+        for (auto p = &root, n = *p; ; p = &n.next, n = *p)
+        {
+            assert(n);
+            if (!n.owns(b)) continue;
+            n.deallocate(b);
+            // Bring to front
+            if (n != root)
+            {
+                *p = n.next;
+                n.next = root;
+                root = n;
+            }
+            if (!n.empty) return;
+            break;
+        }
         // Hmmm... should we return this allocator back to the wild? Let's
         // decide if there are TWO empty allocators we can release ONE. This
         // is to avoid thrashing.
-        foreach (i, ref another; allocators)
+        // Note that loop starts from the second element.
+        for (auto p = &root.next, n = *p; n; p = &n.next, n = *p)
         {
-            if (i == *p || another.unused || !another.empty) continue;
-            // Yowzers, found another empty one, let's remove this guy
+            if (n.unused || !n.empty) continue;
+            // Used and empty baby, nuke it!
             n.a.destroy;
-            *p = n.nextIdx;
+            *p = n.next;
             n.setUnused;
-            return;
+            break;
         }
     }
 
@@ -359,38 +395,44 @@ struct AllocatorList(alias make)
     Defined only if $(D Allocator.owns) and $(D Allocator.deallocateAll) are
     defined.
     */
-    static if (hasMember!(Allocator, "deallocateAll")
+    static if (ouroboros && hasMember!(Allocator, "deallocateAll")
         && hasMember!(Allocator, "owns"))
     void deallocateAll()
     {
-        if (!allocators.length) return;
-        // This is tricky because the list of allocators is threaded through
-        // the allocators themselves.
-        Node* owner;
-        for (auto n = byLRU; !n.empty; )
+        Node* special;
+        foreach (ref n; allocators)
         {
-            if (n.front.owns(allocators))
+            if (n.unused) continue;
+            if (n.owns(allocators))
             {
-                // Skip this guy for now
-                owner = &n.front();
-                n.popFront;
+                special = &n;
                 continue;
             }
-            n.front.deallocateAll();
-            auto oldN = &n.front();
-            n.popFront;
-            destroy(*oldN);
+            n.a.deallocateAll;
+            n.a.destroy;
         }
-        assert(owner);
-        // Move the remaining allocator on stack, then deallocate from it too
-        Allocator temp = void;
-        import core.stdc.string : memcpy;
-        memcpy(&temp, &owner.a, temp.sizeof);
-        // emplace(&owner.a); not needed
-        temp.deallocateAll;
+        assert(special || !allocators.ptr);
+        if (special)
+        {
+            special.deallocate(allocators);
+        }
         allocators = null;
-        rootIndex = rootIndex.max;
-        // temp's destructor will take care of the rest
+        root = null;
+    }
+
+    static if (!ouroboros && hasMember!(Allocator, "deallocateAll")
+        && hasMember!(Allocator, "owns"))
+    void deallocateAll()
+    {
+        foreach (ref n; allocators)
+        {
+            if (n.unused) continue;
+            n.a.deallocateAll;
+            n.a.destroy;
+        }
+        bkalloc.deallocate(allocators);
+        allocators = null;
+        root = null;
     }
 
     /// Returns $(D true) iff no allocators are currently active.
@@ -401,6 +443,61 @@ struct AllocatorList(alias make)
 }
 
 ///
+version(Posix) unittest
+{
+    import std.algorithm : max;
+    import std.experimental.allocator.region;
+    import std.experimental.allocator.mmap_allocator;
+    import std.experimental.allocator.segregator;
+    import std.experimental.allocator.free_list;
+
+    // Ouroboros allocator list based upon 4MB regions, fetched directly from
+    // mmap. All memory is released upon destruction.
+    alias A1 = AllocatorList!((n) => Region!MmapAllocator(max(n, 1024 * 4096)),
+        NullAllocator);
+
+    // Allocator list based upon 4MB regions, fetched from the garbage
+    // collector. All memory is released upon destruction.
+    alias A2 = AllocatorList!((n) => Region!GCAllocator(max(n, 1024 * 4096)));
+
+    // Ouroboros allocator list based upon 4MB regions, fetched from the garbage
+    // collector. Memory is left to the collector.
+    alias A3 = AllocatorList!(
+        (n) => Region!NullAllocator(new void[max(n, 1024 * 4096)]),
+        NullAllocator);
+
+    // Allocator list that creates one freelist for all objects
+    alias A4 =
+        Segregator!(
+            64, AllocatorList!(
+                (n) => ContiguousFreeList!(NullAllocator, 0, 64)(
+                    GCAllocator.it.allocate(4096))),
+            GCAllocator);
+
+    A4 a;
+    auto small = a.allocate(64);
+    assert(small);
+    //a.deallocate(small);
+    //auto b1 = a.allocate(1024 * 8192);
+    //assert(b1 !is null); // still works due to overdimensioning
+    //b1 = a.allocate(1024 * 10);
+    //assert(b1.length == 1024 * 10);
+}
+
+unittest
+{
+    // Create an allocator based upon 4MB regions, fetched from the GC heap.
+    import std.algorithm : max;
+    import std.experimental.allocator.region;
+    AllocatorList!((n) => Region!GCAllocator(new void[max(n, 1024 * 4096)]),
+        NullAllocator) a;
+    auto b1 = a.allocate(1024 * 8192);
+    assert(b1 !is null); // still works due to overdimensioning
+    auto b2 = a.allocate(1024 * 10);
+    assert(b2.length == 1024 * 10);
+    a.deallocateAll();
+}
+
 unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.

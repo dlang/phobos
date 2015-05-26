@@ -553,6 +553,11 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     */
     @system bool reallocate(ref void[] b, size_t newSize)
     {
+        if (!b.ptr)
+        {
+            b = allocate(newSize);
+            return b.length == newSize;
+        }
         if (newSize == 0)
         {
             deallocate(b);

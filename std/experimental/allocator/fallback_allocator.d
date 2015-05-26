@@ -55,7 +55,7 @@ struct FallbackAllocator(Primary, Fallback)
     void[] allocate(size_t s)
     {
         auto result = primary.allocate(s);
-        return result.ptr ? result : fallback.allocate(s);
+        return result.length == s ? result : fallback.allocate(s);
     }
 
     /**

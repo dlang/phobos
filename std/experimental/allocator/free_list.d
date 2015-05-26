@@ -166,7 +166,6 @@ struct FreeList(ParentAllocator,
     }
 
     // statistics {
-
     static if (adaptive == Yes.adaptive)
     {
         enum double windowLength = 1000.0;
@@ -188,15 +187,17 @@ struct FreeList(ParentAllocator,
             accumSamples = 0;
             accumMisses = 0;
             // If probability to miss is under x%, yank one off the freelist
-            if (probMiss < tooFewMisses && _root)
+            static if (!unchecked)
             {
-                auto b = blockFor(_root);
-                _root = _root.next;
-                parent.deallocate(b);
+                if (probMiss < tooFewMisses && _root)
+                {
+                    auto b = blockFor(_root);
+                    _root = _root.next;
+                    parent.deallocate(b);
+                }
             }
         }
     }
-
     // } statistics
 
     private struct Node { Node* next; }
@@ -382,25 +383,6 @@ struct FreeList(ParentAllocator,
             parent.deallocate(nuke);
         }
     }
-
-    /// GC helper primitives.
-    static if (hasMember!(ParentAllocator, "markAllAsUnused"))
-    {
-        void markAllAsUnused()
-        {
-            // Time to come clean about the stashed data.
-            static if (hasMember!(ParentAllocator, "deallocate"))
-            for (auto n = root; n; n = n.next)
-            {
-                parent.deallocate(blockFor(n));
-            }
-            root = null;
-        }
-        //
-        bool markAsUsed(void[] b) { return parent.markAsUsed(b); }
-        //
-        void doneMarking() { parent.doneMarking(); }
-    }
 }
 
 unittest
@@ -446,6 +428,7 @@ struct ContiguousFreeList(ParentAllocator,
     import std.traits : hasMember;
 
     alias Impl = FreeList!(NullAllocator, minSize, maxSize);
+    enum unchecked = minSize == 0 && maxSize == unbounded;
     alias Node = Impl.Node;
 
     alias SParent = StatsCollector!(ParentAllocator, Options.bytesUsed);
@@ -544,12 +527,11 @@ struct ContiguousFreeList(ParentAllocator,
         static if (maxSize == chooseAtRuntime) fl.max = max;
         static if (minSize == chooseAtRuntime) fl.min = max;
         initialize(parent.allocate(bytes), max);
-        this.parent = SParent(parent);
     }
 
     /// ditto
     static if (stateSize!ParentAllocator
-        && maxSize == chooseAtRuntime || maxSize == unbounded)
+        && (maxSize == chooseAtRuntime || maxSize == unbounded))
     this(ParentAllocator parent, size_t bytes, size_t max)
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
@@ -623,11 +605,15 @@ struct ContiguousFreeList(ParentAllocator,
     Defined if $(D ParentAllocator) defines it. Checks whether the block
     belongs to this allocator.
     */
-    static if (hasMember!(SParent, "owns"))
+    static if (hasMember!(SParent, "owns") || unchecked)
     bool owns(void[] b)
     {
-        return support.ptr <= b.ptr && b.ptr < support.ptr + support.length
-            || parent.owns(b);
+        if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
+            return true;
+        static if (unchecked)
+            return false;
+        else
+            return parent.owns(b);
     }
 
     /**
@@ -679,6 +665,17 @@ struct ContiguousFreeList(ParentAllocator,
 }
 
 ///
+unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.allocator_list;
+    import std.experimental.allocator.null_allocator;
+
+    alias ScalableFreeList = AllocatorList!((n) =>
+        ContiguousFreeList!(GCAllocator, 0, unbounded)(4096)
+    );
+}
+
 unittest
 {
     import std.experimental.allocator.null_allocator;

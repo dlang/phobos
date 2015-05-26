@@ -354,6 +354,32 @@ package bool isGoodDynamicAlignment(uint x)
     return x.isPowerOf2 && x >= (void*).sizeof;
 }
 
+/*
+If $(D b.length + delta <= a.goodAllocSize(b.length)), $(D expand) just adjusts
+$(D b) and returns $(D true). Otherwise, returns $(D false).
+
+$(D expand) does not attempt to use $(D Allocator.reallocate) even if
+defined. This is deliberate so allocators may use it internally within their own
+implementation of $(D expand).
+
+*/
+//bool expand(Allocator)(ref Allocator a, ref void[] b, size_t delta)
+//{
+//    if (!b.ptr)
+//    {
+//        b = a.allocate(delta);
+//        return b.length == delta;
+//    }
+//    if (delta == 0) return true;
+//    immutable length = b.length + delta;
+//    if (length <= a.goodAllocSize(b.length))
+//    {
+//        b = b.ptr[0 .. length];
+//        return true;
+//    }
+//    return false;
+//}
+
 /**
 The default $(D reallocate) function first attempts to use $(D expand). If $(D
 Allocator.expand) is not defined or returns $(D false), $(D reallocate)
