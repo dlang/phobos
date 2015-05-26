@@ -3824,6 +3824,7 @@ template TemplateOf(alias T : Base!Args, alias Base, Args...)
     alias TemplateOf = Base;
 }
 
+/// ditto
 template TemplateOf(T : Base!Args, alias Base, Args...)
 {
     alias TemplateOf = Base;
