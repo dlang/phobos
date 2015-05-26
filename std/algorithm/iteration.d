@@ -1884,10 +1884,6 @@ unittest
     [""].map!((s) => s).chunkBy!((x, y) => true);
 }
 
-// to be removed in 2.068.0
-deprecated("use chunkBy instead")
-alias groupBy = chunkBy;
-
 // joiner
 /**
 Lazily joins a range of ranges with a separator. The separator itself
