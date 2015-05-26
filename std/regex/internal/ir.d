@@ -589,16 +589,6 @@ struct Input(Char)
         _index += std.utf.stride(_origin, _index);
     }
 
-    //codepoint at current stream position
-    bool nextChar(ref dchar res, ref size_t pos)
-    {
-        pos = _index;
-        if(_index == _origin.length)
-            return false;
-        res = std.utf.decode(_origin, _index);
-        return true;
-    }
-
     @property bool atEnd()
     {
         return _index == _origin.length;
@@ -656,18 +646,6 @@ struct Input(Char)
             _index -= std.utf.strideBack(_origin, _index);
         }
 
-        @trusted bool nextChar(ref dchar res,ref size_t pos)
-        {
-            pos = _index;
-            if(_index == 0)
-                return false;
-
-            res = _origin[0.._index].back;
-            _index -= std.utf.strideBack(_origin, _index);
-
-            return true;
-        }
-
         @property atEnd(){ return _index == 0; }
         auto loopBack(size_t index){   return Input(_origin, index); }
 
@@ -683,16 +661,6 @@ struct Input(Char)
     auto loopBack(size_t index){   return BackLooper(this, index); }
 }
 
-//transitional helper
-dchar peek(Stream)(auto ref Stream s)
-{
-    dchar ch;
-    size_t dummy;
-    auto i = s._index;
-    s.nextChar(ch, dummy);
-    s._index = i;
-    return ch;
-}
 
 unittest
 {
