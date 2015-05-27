@@ -8846,13 +8846,18 @@ auto merge(alias pred = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
     I[] b = [50, 60];
     D[] c = [10, 20, 30, 40];
 
-    static assert(!__traits(compiles, { auto c = merge(a.assumeSorted); }));
+    auto d = ["a", "b", "c"];
+
+    static assert(!__traits(compiles, { auto m = merge(a.assumeSorted); }));
+    static assert(!__traits(compiles, { auto m = merge(a.assumeSorted,
+                                                       d.assumeSorted); }));
 
     auto m = merge(a.assumeSorted,
                    b.assumeSorted,
                    c.assumeSorted);
 
     static assert(is(typeof(m.front) == CommonType!(S, I, D)));
+
     assert(equal(m, [1, 2, 3, 10, 20, 30, 40, 50, 60]));
     assert(equal(m.retro, [60, 50, 40, 30, 20, 10, 3, 2, 1]));
 
