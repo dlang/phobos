@@ -8647,3 +8647,218 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
     auto r = [1, 2, 3, 4].tee!func1.tee!func2;
 }
+
+template CommonElementType(Rs...)
+{
+    alias CommonElementType = CommonType!(staticMap!(ElementType, Rs));
+}
+
+alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits(isSame, TemplateOf!R, SortedRange)
+
+/**
+   Merge several sorted ranges with less-than function $(D less).
+*/
+auto merge(alias less = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
+                                                   allSatisfy!(isSortedRange,
+                                                               staticMap!(Unqual, Rs)) &&
+                                                   is(CommonElementType!(Rs)))
+{
+    alias E = CommonElementType!Rs;
+    enum isBidirectional = allSatisfy!(isBidirectionalRange, staticMap!(Unqual, Rs));
+
+    struct Result
+    {
+        import std.conv : to;
+
+        this(Rs source)
+        {
+            this.source = source;
+            this._lastFrontIndex = frontIndex;
+            static if (isBidirectional)
+                this._lastBackIndex = backIndex;
+        }
+
+        @property bool empty()
+        {
+            if (_lastFrontIndex == size_t.max)
+                return true;
+            static if (isBidirectional)
+                return _lastBackIndex == size_t.max;
+            else
+                return false;
+        }
+
+        @property auto ref front()
+        {
+            final switch (_lastFrontIndex)
+            {
+                foreach (i, _; Rs)
+                {
+                    case i:
+                        assert(!source[i].empty);
+                        return source[i].front;
+                }
+            }
+            assert(0);
+        }
+
+        private size_t frontIndex()
+        {
+            size_t bestIndex = size_t.max; // indicate undefined
+            E bestElement;
+            foreach (i, _; Rs)
+            {
+                import std.functional: binaryFun;
+                if (!source[i].empty)
+                {
+                    if (bestIndex == size_t.max || // either this is the first or
+                        binaryFun!less(source[i].front, bestElement))
+                    {
+                        bestIndex = i;
+                        bestElement = source[i].front;
+                    }
+                }
+            }
+            return bestIndex;
+        }
+
+        void popFront()
+        {
+            final switch (_lastFrontIndex)
+            {
+                foreach (i, _; Rs)
+                {
+                    case i:
+                        source[i].popFront();
+                        break;
+                }
+            }
+            _lastFrontIndex = frontIndex;
+        }
+
+        static if (isBidirectional)
+        {
+            @property auto ref back()
+            {
+                final switch (_lastBackIndex)
+                {
+                    foreach (i, _; Rs)
+                    {
+                        case i:
+                            assert(!source[i].empty);
+                            return source[i].back;
+                    }
+                }
+                assert(0);
+            }
+
+            private size_t backIndex()
+            {
+                import std.functional: binaryFun;
+                size_t bestIndex = size_t.max; // indicate undefined
+                E bestElement;
+                foreach (i, _; Rs)
+                {
+                    if (!source[i].empty)
+                    {
+                        if (bestIndex == size_t.max || // either this is the first or
+                            binaryFun!less(bestElement, source[i].back))
+                        {
+                            bestIndex = i;
+                            bestElement = source[i].back;
+                        }
+                    }
+                }
+                return bestIndex;
+            }
+
+            void popBack()
+            {
+                final switch (_lastBackIndex)
+                {
+                    foreach (i, _; Rs)
+                    {
+                        case i:
+                            source[i].popBack();
+                            break;
+                    }
+                }
+                _lastBackIndex = backIndex;
+            }
+        }
+
+        static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
+        {
+            @property auto save()
+            {
+                Result result = this;
+                foreach (i, _; Rs)
+                {
+                    result.source[i] = result.source[i].save;
+                }
+                return result;
+            }
+        }
+
+        static if (allSatisfy!(hasLength, Rs))
+        {
+            @property size_t length()
+            {
+                size_t result;
+                foreach (i, _; Rs)
+                {
+                    result += source[i].length;
+                }
+                return result;
+            }
+
+            alias opDollar = length;
+        }
+
+        public Rs source;
+        private size_t _lastFrontIndex = size_t.max;
+        static if (isBidirectional)
+        {
+            private size_t _lastBackIndex = size_t.max;
+        }
+    }
+
+    return Result(rs);
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm: equal;
+
+    alias I = int;
+    alias D = double;
+
+    I[] a = [ 1, 2, 3, 50, 60];
+    D[] b = [ 10, 20, 30, 40 ];
+
+    auto r = merge(a.assumeSorted,
+                   b.assumeSorted);
+
+    static assert(is(typeof(r.front) == CommonType!(I, D)));
+    assert(equal(r, [1, 2, 3, 10, 20, 30, 40, 50, 60]));
+    assert(equal(r.retro, [60, 50, 40, 30, 20, 10, 3, 2, 1]));
+
+    r.popFront;
+    assert(equal(r, [2, 3, 10, 20, 30, 40, 50, 60]));
+    r.popBack;
+    assert(equal(r, [2, 3, 10, 20, 30, 40, 50]));
+    r.popFront;
+    assert(equal(r, [3, 10, 20, 30, 40, 50]));
+    r.popBack;
+    assert(equal(r, [3, 10, 20, 30, 40]));
+    r.popFront;
+    assert(equal(r, [10, 20, 30, 40]));
+    r.popBack;
+    assert(equal(r, [10, 20, 30]));
+    r.popFront;
+    assert(equal(r, [20, 30]));
+    r.popBack;
+    assert(equal(r, [20]));
+    r.popFront;
+    assert(r.empty);
+}
