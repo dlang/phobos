@@ -28,46 +28,7 @@
 
 QUIET:=@
 
-OS:=
-uname_S:=$(shell uname -s)
-ifeq (Darwin,$(uname_S))
-    OS:=osx
-endif
-ifeq (Linux,$(uname_S))
-    OS:=linux
-endif
-ifeq (FreeBSD,$(uname_S))
-    OS:=freebsd
-endif
-ifeq (OpenBSD,$(uname_S))
-    OS:=openbsd
-endif
-ifeq (Solaris,$(uname_S))
-    OS:=solaris
-endif
-ifeq (SunOS,$(uname_S))
-    OS:=solaris
-endif
-ifeq (,$(OS))
-    $(error Unrecognized or unsupported OS for uname: $(uname_S))
-endif
-
-ifeq (,$(MODEL))
-    ifeq ($(OS),solaris)
-        uname_M:=$(shell isainfo -n)
-    else
-        uname_M:=$(shell uname -m)
-    endif
-    ifneq (,$(findstring $(uname_M),x86_64 amd64))
-        MODEL:=64
-    endif
-    ifneq (,$(findstring $(uname_M),i386 i586 i686))
-        MODEL:=32
-    endif
-    ifeq (,$(MODEL))
-        $(error Cannot figure 32/64 model from uname -m: $(uname_M))
-    endif
-endif
+include osmodel.mak
 
 # Default to a release built, override with BUILD=debug
 ifeq (,$(BUILD))
@@ -101,7 +62,7 @@ SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) \
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/.generated/modlist-prerelease.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 # Set DDOC, the documentation generator
-DDOC=$(DMD) -conf= -m$(MODEL) -w -c -o- -version=StdDdoc \
+DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Set DRUNTIME name and full path
@@ -133,7 +94,7 @@ endif
 # Set CFLAGS
 CFLAGS=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += -m$(MODEL) -fPIC
+	CFLAGS += $(MODEL_FLAG) -fPIC
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -142,7 +103,7 @@ ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -dip25 -m$(MODEL) $(PIC)
+DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -dip25 $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
