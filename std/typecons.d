@@ -3011,11 +3011,6 @@ unittest
         inout(Object) foo() inout;
     }
     BlackHole!Foo o;
-
-    // Bugzilla 12464
-    import std.stream;
-    import std.typecons;
-    BlackHole!OutputStream dout;
 }
 
 

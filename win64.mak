@@ -148,12 +148,9 @@ SRC_STD_5_HEAVY= $(SRC_STD_ALGO)
 SRC_STD_6a=std\variant.d
 SRC_STD_6b=std\syserror.d
 SRC_STD_6c=std\zlib.d
-SRC_STD_6d=std\stream.d
 SRC_STD_6e=std\socket.d
-SRC_STD_6f=std\socketstream.d
 SRC_STD_6h=std\conv.d
 SRC_STD_6i=std\zip.d
-SRC_STD_6j=std\cstream.d
 
 SRC_STD_7= \
 	std\stdint.d \
@@ -168,13 +165,10 @@ SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_6a) \
 	$(SRC_STD_6b) \
 	$(SRC_STD_6c) \
-	$(SRC_STD_6d) \
 	$(SRC_STD_6e) \
-	$(SRC_STD_6f) \
 	$(SRC_STD_CONTAINER) \
 	$(SRC_STD_6h) \
 	$(SRC_STD_6i) \
-	$(SRC_STD_6j) \
 	$(SRC_STD_7) \
 	$(SRC_STD_LOGGER)
 
@@ -186,10 +180,10 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\outbuffer.d std\base64.d \
 	std\meta.d std\metastrings.d std\mmfile.d \
 	std\syserror.d \
-	std\random.d std\stream.d std\process.d \
-	std\socket.d std\socketstream.d std\format.d \
+	std\random.d std\process.d \
+	std\socket.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
-	std\cstream.d std\demangle.d \
+	std\demangle.d \
 	std\signals.d std\typetuple.d std\traits.d \
 	std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
@@ -345,7 +339,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_digest_md.html \
 	$(DOC)\std_digest_ripemd.html \
 	$(DOC)\std_digest_digest.html \
-	$(DOC)\std_cstream.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
@@ -372,10 +365,8 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
-	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
-	$(DOC)\std_stream.html \
 	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_traits.html \
@@ -435,7 +426,6 @@ UNITTEST_OBJS= \
 		unittest6c.obj \
 		unittest6d.obj \
 		unittest6e.obj \
-		unittest6f.obj \
 		unittest6g.obj \
 		unittest6h.obj \
 		unittest6i.obj \
@@ -457,13 +447,10 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6b.obj $(SRC_STD_6b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6d.obj $(SRC_STD_6d)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6f.obj $(SRC_STD_6f)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_CONTAINER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6h.obj $(SRC_STD_6h)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_LOGGER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
@@ -626,9 +613,6 @@ $(DOC)\std_range_primitives.html : $(STDDOC) std\range\primitives.d
 $(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_interfaces.html $(STDDOC) std\range\interfaces.d
 
-$(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
-
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
@@ -698,17 +682,11 @@ $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 $(DOC)\std_socket.html : $(STDDOC) std\socket.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socket.html $(STDDOC) std\socket.d
 
-$(DOC)\std_socketstream.html : $(STDDOC) std\socketstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socketstream.html $(STDDOC) std\socketstream.d
-
 $(DOC)\std_stdint.html : $(STDDOC) std\stdint.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdint.html $(STDDOC) std\stdint.d
 
 $(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
-
-$(DOC)\std_stream.html : $(STDDOC) std\stream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html $(STDDOC) std\stream.d
 
 $(DOC)\std_string.html : $(STDDOC) std\string.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_string.html $(STDDOC) std\string.d
