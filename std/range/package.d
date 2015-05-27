@@ -8656,7 +8656,17 @@ template CommonElementType(Rs...)
 alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits(isSame, TemplateOf!R, SortedRange)
 
 /**
-   Merge several sorted ranges with less-than function $(D less).
+   Merge several sorted ranges with less-than function $(D less) into one single
+   sorted range containing the sorted union of the elements of inputs assuming.
+
+   Example:
+   -------
+   auto a = [0, 2, 4];
+   auto b = [1, 3, 5];
+   auto c = merge(a.assumeSorted, b.assumeSorted)
+   assert(equal(c, [0, 1, 2, 3, 4, 5]));
+   assert(equal(c.retro, [5, 4, 3, 2, 1, 0]));
+   -------
 */
 auto merge(alias less = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
                                                    allSatisfy!(isSortedRange,
