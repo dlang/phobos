@@ -8656,7 +8656,7 @@ template CommonElementType(Rs...)
 alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits(isSame, TemplateOf!R, SortedRange)
 
 /**
-   Merge several sorted ranges with less-than function $(D less) into one single
+   Merge several sorted ranges with less-than function $(D pred) into one single
    sorted range containing the sorted union of the elements of inputs assuming.
 
    Example:
@@ -8668,7 +8668,7 @@ alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits
    assert(equal(c.retro, [5, 4, 3, 2, 1, 0]));
    -------
 */
-auto merge(alias less = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
+auto merge(alias pred = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
                                                    allSatisfy!(isSortedRange,
                                                                staticMap!(Unqual, Rs)) &&
                                                    is(CommonElementType!(Rs)))
@@ -8720,7 +8720,7 @@ auto merge(alias less = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
                 if (!source[i].empty)
                 {
                     if (bestIndex == size_t.max || // either this is the first or
-                        binaryFun!less(source[i].front, bestElement))
+                        binaryFun!pred(source[i].front, bestElement))
                     {
                         bestIndex = i;
                         bestElement = source[i].front;
@@ -8770,7 +8770,7 @@ auto merge(alias less = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
                     if (!source[i].empty)
                     {
                         if (bestIndex == size_t.max || // either this is the first or
-                            binaryFun!less(bestElement, source[i].back))
+                            binaryFun!pred(bestElement, source[i].back))
                         {
                             bestIndex = i;
                             bestElement = source[i].back;
