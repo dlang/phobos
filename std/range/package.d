@@ -8842,7 +8842,7 @@ auto merge(alias pred = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
     alias I = int;
     alias D = double;
 
-    S[] a = [1, 2, 3 ];
+    S[] a = [1, 2, 3];
     I[] b = [50, 60];
     D[] c = [10, 20, 30, 40];
 
