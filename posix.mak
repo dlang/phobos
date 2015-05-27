@@ -100,6 +100,7 @@ SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) \
 	$(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/html.ddoc $(DOCSRC)/dlang.org.ddoc $(DOCSRC)/std_navbar-prerelease.ddoc $(DOCSRC)/std.ddoc $(DOCSRC)/macros.ddoc $(DOCSRC)/.generated/modlist-prerelease.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
+
 # Set DDOC, the documentation generator
 DDOC=$(DMD) -conf= -m$(MODEL) -w -c -o- -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
@@ -121,7 +122,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = ../dmd/src/dmd
+	DMD ?= ../dmd/src/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else
