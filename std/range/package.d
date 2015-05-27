@@ -8668,8 +8668,6 @@ auto merge(alias less = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
 
     struct Result
     {
-        import std.conv : to;
-
         this(Rs source)
         {
             this.source = source;
