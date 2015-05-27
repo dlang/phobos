@@ -8838,35 +8838,40 @@ auto merge(alias pred = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
 {
     import std.algorithm: equal;
 
+    alias S = short;
     alias I = int;
     alias D = double;
 
-    I[] a = [ 1, 2, 3, 50, 60];
-    D[] b = [ 10, 20, 30, 40 ];
+    S[] a = [1, 2, 3 ];
+    I[] b = [50, 60];
+    D[] c = [10, 20, 30, 40];
 
-    auto r = merge(a.assumeSorted,
-                   b.assumeSorted);
+    static assert(!__traits(compiles, { auto c = merge(a.assumeSorted); }));
 
-    static assert(is(typeof(r.front) == CommonType!(I, D)));
-    assert(equal(r, [1, 2, 3, 10, 20, 30, 40, 50, 60]));
-    assert(equal(r.retro, [60, 50, 40, 30, 20, 10, 3, 2, 1]));
+    auto m = merge(a.assumeSorted,
+                   b.assumeSorted,
+                   c.assumeSorted);
 
-    r.popFront;
-    assert(equal(r, [2, 3, 10, 20, 30, 40, 50, 60]));
-    r.popBack;
-    assert(equal(r, [2, 3, 10, 20, 30, 40, 50]));
-    r.popFront;
-    assert(equal(r, [3, 10, 20, 30, 40, 50]));
-    r.popBack;
-    assert(equal(r, [3, 10, 20, 30, 40]));
-    r.popFront;
-    assert(equal(r, [10, 20, 30, 40]));
-    r.popBack;
-    assert(equal(r, [10, 20, 30]));
-    r.popFront;
-    assert(equal(r, [20, 30]));
-    r.popBack;
-    assert(equal(r, [20]));
-    r.popFront;
-    assert(r.empty);
+    static assert(is(typeof(m.front) == CommonType!(I, D)));
+    assert(equal(m, [1, 2, 3, 10, 20, 30, 40, 50, 60]));
+    assert(equal(m.retro, [60, 50, 40, 30, 20, 10, 3, 2, 1]));
+
+    m.popFront;
+    assert(equal(m, [2, 3, 10, 20, 30, 40, 50, 60]));
+    m.popBack;
+    assert(equal(m, [2, 3, 10, 20, 30, 40, 50]));
+    m.popFront;
+    assert(equal(m, [3, 10, 20, 30, 40, 50]));
+    m.popBack;
+    assert(equal(m, [3, 10, 20, 30, 40]));
+    m.popFront;
+    assert(equal(m, [10, 20, 30, 40]));
+    m.popBack;
+    assert(equal(m, [10, 20, 30]));
+    m.popFront;
+    assert(equal(m, [20, 30]));
+    m.popBack;
+    assert(equal(m, [20]));
+    m.popFront;
+    assert(m.empty);
 }
