@@ -8852,7 +8852,7 @@ auto merge(alias pred = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
                    b.assumeSorted,
                    c.assumeSorted);
 
-    static assert(is(typeof(m.front) == CommonType!(I, D)));
+    static assert(is(typeof(m.front) == CommonType!(S, I, D)));
     assert(equal(m, [1, 2, 3, 10, 20, 30, 40, 50, 60]));
     assert(equal(m.retro, [60, 50, 40, 30, 20, 10, 3, 2, 1]));
 
