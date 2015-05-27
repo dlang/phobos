@@ -8657,7 +8657,7 @@ alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits
 
 /**
    Merge several sorted ranges with less-than function $(D pred) into one single
-   sorted range containing the sorted union of the elements of inputs assuming.
+   sorted range containing the sorted union of the elements of inputs.
 
    Example:
    -------
