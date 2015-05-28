@@ -1635,7 +1635,7 @@ unittest
 
    For now, we only assume arrays are cheap to iterate.
  +/
-private enum bool hasCheapIteration(R) = isArray!R;
+private enum bool hasCheapIteration = isArray!R;
 
 /++
    Concatenates all of the ranges in $(D ror) together into one array using
