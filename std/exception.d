@@ -1114,13 +1114,13 @@ unittest
         union A4
         {
             int b0; //Not aliased
-        };
+        }
         A4 a4;
         union A5
         {
             int b0; //Aliased
             int b1; //Aliased
-        };
+        }
         A5 a5;
     }
 
