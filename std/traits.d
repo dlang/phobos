@@ -3680,60 +3680,60 @@ template MemberFunctionsTuple(C, string name)
             static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
             {
                 // Get all overloads in sight (not hidden).
-                alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
+                alias inSight = TypeTuple!(__traits(getVirtualFunctions, Node, name));
 
                 // And collect all overloads in ancestor classes to reveal hidden
                 // methods.  The result may contain duplicates.
                 template walkThru(Parents...)
                 {
                     static if (Parents.length > 0)
-                        alias TypeTuple!(
+                        alias walkThru = TypeTuple!(
                                     CollectOverloads!(Parents[0]),
                                     walkThru!(Parents[1 .. $])
-                                ) walkThru;
+                                );
                     else
-                        alias TypeTuple!() walkThru;
+                        alias walkThru = TypeTuple!();
                 }
 
                 static if (is(Node Parents == super))
-                    alias TypeTuple!(inSight, walkThru!Parents) CollectOverloads;
+                    alias CollectOverloads = TypeTuple!(inSight, walkThru!Parents);
                 else
-                    alias TypeTuple!inSight CollectOverloads;
+                    alias CollectOverloads = TypeTuple!inSight;
             }
             else
-                alias TypeTuple!() CollectOverloads; // no overloads in this hierarchy
+                alias CollectOverloads = TypeTuple!(); // no overloads in this hierarchy
         }
 
         // duplicates in this tuple will be removed by shrink()
-        alias CollectOverloads!C overloads;
+        alias overloads = CollectOverloads!C;
 
         // shrinkOne!args[0]    = the most derived one in the covariant siblings of target
         // shrinkOne!args[1..$] = non-covariant others
         template shrinkOne(/+ alias target, rest... +/ args...)
         {
-            alias args[0 .. 1] target; // prevent property functions from being evaluated
-            alias args[1 .. $] rest;
+            alias target = args[0 .. 1]; // prevent property functions from being evaluated
+            alias rest = args[1 .. $];
 
             static if (rest.length > 0)
             {
-                alias FunctionTypeOf!target Target;
-                alias FunctionTypeOf!(rest[0]) Rest0;
+                alias Target = FunctionTypeOf!target;
+                alias Rest0 = FunctionTypeOf!(rest[0]);
 
                 static if (isCovariantWith!(Target, Rest0))
                     // target overrides rest[0] -- erase rest[0].
-                    alias shrinkOne!(target, rest[1 .. $]) shrinkOne;
+                    alias shrinkOne = shrinkOne!(target, rest[1 .. $]);
                 else static if (isCovariantWith!(Rest0, Target))
                     // rest[0] overrides target -- erase target.
-                    alias shrinkOne!(rest[0], rest[1 .. $]) shrinkOne;
+                    alias shrinkOne = shrinkOne!(rest[0], rest[1 .. $]);
                 else
                     // target and rest[0] are distinct.
-                    alias TypeTuple!(
+                    alias shrinkOne = TypeTuple!(
                                 shrinkOne!(target, rest[1 .. $]),
                                 rest[0] // keep
-                            ) shrinkOne;
+                            );
             }
             else
-                alias TypeTuple!target shrinkOne; // done
+                alias shrinkOne = TypeTuple!target; // done
         }
 
         /*
@@ -3743,18 +3743,18 @@ template MemberFunctionsTuple(C, string name)
         {
             static if (overloads.length > 0)
             {
-                alias shrinkOne!overloads temp;
-                alias TypeTuple!(temp[0], shrink!(temp[1 .. $])) shrink;
+                alias temp = shrinkOne!overloads;
+                alias shrink = TypeTuple!(temp[0], shrink!(temp[1 .. $]));
             }
             else
-                alias TypeTuple!() shrink; // done
+                alias shrink = TypeTuple!(); // done
         }
 
         // done.
-        alias shrink!overloads MemberFunctionsTuple;
+        alias MemberFunctionsTuple = shrink!overloads;
     }
     else
-        alias TypeTuple!() MemberFunctionsTuple;
+        alias MemberFunctionsTuple = TypeTuple!();
 }
 
 ///
@@ -3769,7 +3769,7 @@ unittest
     {
         override C foo() { return this; } // covariant overriding of I.foo()
     }
-    alias MemberFunctionsTuple!(C, "foo") foos;
+    alias foos = MemberFunctionsTuple!(C, "foo");
     static assert(foos.length == 2);
     static assert(__traits(isSame, foos[0], C.foo));
     static assert(__traits(isSame, foos[1], B.foo));
@@ -5370,7 +5370,7 @@ unittest
 {
     static if (is(__vector(float[4])))
     {
-        alias __vector(float[4]) SimdVec;
+        alias SimdVec = __vector(float[4]);
         static assert(isSIMDVector!(__vector(float[4])));
         static assert(isSIMDVector!SimdVec);
     }
@@ -6095,8 +6095,8 @@ unittest
     static assert(is(U3 == immutable(uint)));
     static if (is(__vector(int[4])) && is(__vector(uint[4])))
     {
-        alias Unsigned!(__vector(int[4])) UV1;
-        alias Unsigned!(const(__vector(int[4]))) UV2;
+        alias UV1 = Unsigned!(__vector(int[4]));
+        alias UV2 = Unsigned!(const(__vector(int[4])));
         static assert(is(UV1 == __vector(uint[4])));
         static assert(is(UV2 == const(__vector(uint[4]))));
     }
@@ -6202,8 +6202,8 @@ unittest
     static assert(is(Signed!float == float));
     static if (is(__vector(int[4])) && is(__vector(uint[4])))
     {
-        alias Signed!(__vector(uint[4])) SV1;
-        alias Signed!(const(__vector(uint[4]))) SV2;
+        alias SV1 = Signed!(__vector(uint[4]));
+        alias SV2 = Signed!(const(__vector(uint[4])));
         static assert(is(SV1 == __vector(int[4])));
         static assert(is(SV2 == const(__vector(int[4]))));
     }
