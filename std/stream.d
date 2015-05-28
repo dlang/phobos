@@ -27,7 +27,7 @@
  * "as is" without express or implied warranty.
  */
 
-module std.stream;
+deprecated module std.stream;
 
 
 import std.internal.cstring;
