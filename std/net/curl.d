@@ -167,7 +167,6 @@ import std.encoding;
 import std.exception;
 import std.regex;
 import std.socket : InternetAddress;
-import std.stream;
 import std.string;
 import std.traits;
 import std.typecons;
@@ -291,9 +290,8 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
         conn.url = url;
-        auto f = new std.stream.BufferedFile(saveToPath, FileMode.OutNew);
-        scope (exit) f.close();
-        conn.onReceive = (ubyte[] data) { return f.write(data); };
+        auto f = File(saveToPath, "w");
+        conn.onReceive = (ubyte[] data) { f.write(data); return data.length; };
         conn.perform();
     }
     else
@@ -351,13 +349,15 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
-        auto f = new std.stream.BufferedFile(loadFromPath, FileMode.In);
-        scope (exit) f.close();
+        static import std.file;
+        void[] f;
+
         conn.onSend = (void[] data)
         {
-            return f.read(cast(ubyte[])data);
+            f = std.file.read(loadFromPath);
+            return f.length;
         };
-        conn.contentLength = cast(size_t)f.size;
+        conn.contentLength = f.length;
         conn.perform();
     }
 }

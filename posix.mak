@@ -196,7 +196,7 @@ STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
 STD_MODULES = $(addprefix std/, \
   array ascii base64 bigint bitmanip compiler complex concurrency \
   $(addprefix container/, array binaryheap dlist rbtree slist util) \
-  conv cstream csv datetime demangle \
+  conv csv datetime demangle \
   $(addprefix digest/, digest crc md ripemd sha) \
   encoding exception \
   $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \
@@ -206,7 +206,7 @@ STD_MODULES = $(addprefix std/, \
   $(addprefix range/, primitives interfaces) \
   $(addprefix regex/, $(addprefix internal/,generator ir parser backtracking \
   	kickstart tests thompson)) \
-  signals socket socketstream stdint stdio stdiobase stream \
+  signals socket stdint stdio stdiobase \
   string syserror system traits typecons typetuple uni uri utf uuid variant \
   xml zip zlib $(addprefix algorithm/,comparison iteration \
     mutation searching setops sorting))

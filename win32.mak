@@ -147,8 +147,8 @@ SRC_STD_LOGGER= std\experimental\logger\core.d std\experimental\logger\filelogge
 
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
-	std\stream.d std\socket.d std\socketstream.d \
-	std\conv.d std\zip.d std\cstream.d \
+	std\socket.d \
+	std\conv.d std\zip.d \
 	$(SRC_STD_CONTAINER) $(SRC_STD_LOGGER)
 
 SRC_STD_REST= std\stdint.d \
@@ -169,10 +169,10 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\outbuffer.d std\base64.d \
 	std\meta.d std\metastrings.d std\mmfile.d \
 	std\syserror.d \
-	std\random.d std\stream.d std\process.d \
-	std\socket.d std\socketstream.d std\format.d \
+	std\random.d std\process.d \
+	std\socket.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
-	std\cstream.d std\demangle.d \
+	std\demangle.d \
 	std\signals.d std\typetuple.d std\traits.d \
 	std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
@@ -328,7 +328,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_digest_md.html \
 	$(DOC)\std_digest_ripemd.html \
 	$(DOC)\std_digest_digest.html \
-	$(DOC)\std_cstream.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
@@ -355,10 +354,8 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
-	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
-	$(DOC)\std_stream.html \
 	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_traits.html \
@@ -493,9 +490,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=83 -unittest -main -run std\variant.d
 	$(DMD) -conf= -cov=0  -unittest -main -run std\syserror.d
 	$(DMD) -conf= -cov=58 -unittest -main -run std\zlib.d
-	$(DMD) -conf= -cov=54 -unittest -main -run std\stream.d
 	$(DMD) -conf= -cov=53 -unittest -main -run std\socket.d
-	$(DMD) -conf= -cov=0  -unittest -main -run std\socketstream.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\container\array.d
 	$(DMD) -conf= -cov=68 -unittest -main -run std\container\binaryheap.d
 	$(DMD) -conf= -cov=91 -unittest -main -run std\container\dlist.d
@@ -505,7 +500,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=100 -unittest -main -run std\container\package.d
 	$(DMD) -conf= -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -conf= -cov=0  -unittest -main -run std\zip.d
-	$(DMD) -conf= -cov=92 -unittest -main -run std\cstream.d
 	$(DMD) -conf= -cov=77 -unittest -main -run std\regex\tests.d
 	$(DMD) -conf= -cov=92 -unittest -main -run std\json.d
 	$(DMD) -conf= -cov=87 -unittest -main -run std\parallelism.d
@@ -668,9 +662,6 @@ $(DOC)\std_range_primitives.html : $(STDDOC) std\range\primitives.d
 $(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_interfaces.html $(STDDOC) std\range\interfaces.d
 
-$(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
-
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
@@ -740,17 +731,11 @@ $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 $(DOC)\std_socket.html : $(STDDOC) std\socket.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socket.html $(STDDOC) std\socket.d
 
-$(DOC)\std_socketstream.html : $(STDDOC) std\socketstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socketstream.html $(STDDOC) std\socketstream.d
-
 $(DOC)\std_stdint.html : $(STDDOC) std\stdint.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdint.html $(STDDOC) std\stdint.d
 
 $(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
-
-$(DOC)\std_stream.html : $(STDDOC) std\stream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html $(STDDOC) std\stream.d
 
 $(DOC)\std_string.html : $(STDDOC) std\string.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_string.html $(STDDOC) std\string.d
