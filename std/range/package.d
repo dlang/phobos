@@ -8656,8 +8656,9 @@ template CommonElementType(Rs...)
 alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits(isSame, TemplateOf!R, SortedRange)
 
 /**
-   Merge several sorted ranges with less-than function $(D pred) into one single
-   sorted range containing the sorted union of the elements of inputs.
+   Merge several sorted ranges $(D rs) with less-than predicate function $(D
+   pred) into one single sorted range containing the sorted union of the
+   elements of inputs.
 
    Example:
    -------
