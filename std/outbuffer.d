@@ -88,7 +88,7 @@ class OutBuffer
     /**********************************
      * put enables OutBuffer to be used as an OutputRange.
      */
-    alias write put;
+    alias put = write;
 
     /*************************************
      * Append data to the internal buffer.
