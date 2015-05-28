@@ -5557,7 +5557,7 @@ unittest
 private auto hexStrImpl(String)(String hexData)
 {
     import std.ascii;
-    alias Unqual!(ElementEncodingType!String) C;
+    alias C = Unqual!(ElementEncodingType!String);
     C[] result;
     result.length = hexData.length / 2;
     size_t cnt;
