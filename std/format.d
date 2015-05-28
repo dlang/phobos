@@ -1751,7 +1751,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
     }
     else
-        alias val tval;
+        alias tval = val;
     if (fs.spec == 's') fs.spec = 'g';
     char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] sprintfSpec = void;
