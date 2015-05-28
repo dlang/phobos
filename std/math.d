@@ -193,9 +193,9 @@ version(unittest)
         int ix;
         int iy;
         version(CRuntime_Microsoft)
-            alias double real_t;
+            alias real_t = double;
         else
-            alias real real_t;
+            alias real_t = real;
         ix = sprintf(bufx.ptr, "%.*Lg", ndigits, cast(real_t) x);
         iy = sprintf(bufy.ptr, "%.*Lg", ndigits, cast(real_t) y);
         assert(ix < bufx.length && ix > 0);
