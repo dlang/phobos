@@ -670,7 +670,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
@@ -754,7 +754,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
@@ -825,7 +825,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
