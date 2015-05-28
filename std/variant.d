@@ -2539,7 +2539,7 @@ unittest
     static assert( hasElaborateDestructor!(Algebraic!(bool, S)));
 
     import std.array;
-    alias Algebraic!bool Value;
+    alias Value = Algebraic!bool;
 
     static struct T
     {
