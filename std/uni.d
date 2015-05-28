@@ -2982,7 +2982,7 @@ private:
     }
 
     CowArray!SP data;
-};
+}
 
 @system unittest
 {
@@ -5618,7 +5618,7 @@ unittest
     //@@@BUG link failure, lambdas not found by linker somehow (in case of trie2)
     // alias lo8   = assumeSize!(8, function (uint x) { return x&0xFF; });
     // alias next8 = assumeSize!(7, function (uint x) { return (x&0x7F00)>>8; });
-    alias CodepointSet Set;
+    alias Set = CodepointSet;
     auto set = Set('A','Z','a','z');
     auto trie = buildTrie!(bool, uint, 256, lo8)(set.byInterval);// simple bool array
     for(int a='a'; a<'z';a++)
@@ -7409,7 +7409,7 @@ enum UnicodeDecomposition {
          typically suitable only for fuzzy matching and internal processing.
     */
     Compatibility
-};
+}
 
 /**
     Shorthand aliases for character decomposition type, passed as a
