@@ -21,7 +21,7 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module std.cstream;
+deprecated module std.cstream;
 
 public import core.stdc.stdio;
 public import std.stream;
