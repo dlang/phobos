@@ -808,7 +808,7 @@ unittest
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "-n" "foo,bar,baz"];
+    args = ["program.name", "-n", "foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
@@ -1278,7 +1278,7 @@ unittest
     bool foo;
     bool bar;
     auto args = ["prog", "--foo", "-b"];
-    getopt(args, config.caseInsensitive,"foo|f" "Some foo", &foo,
+    getopt(args, config.caseInsensitive,"foo|f", "Some foo", &foo,
         config.caseSensitive, "bar|b", "Some bar", &bar);
     assert(foo);
     assert(bar);
@@ -1289,7 +1289,7 @@ unittest
     bool foo;
     bool bar;
     auto args = ["prog", "-b", "--foo", "-z"];
-    getopt(args, config.caseInsensitive, config.required, "foo|f" "Some foo",
+    getopt(args, config.caseInsensitive, config.required, "foo|f", "Some foo",
         &foo, config.caseSensitive, "bar|b", "Some bar", &bar,
         config.passThrough);
     assert(foo);
@@ -1486,6 +1486,6 @@ unittest
     assert(helpMsg.indexOf("Help") != -1);
 
     string wanted = "Some Text\n-f  --foo Required: Help\n-h --help "
-        "          This help information.\n";
+        ~ "          This help information.\n";
     assert(wanted == helpMsg, helpMsg ~ wanted);
 }
