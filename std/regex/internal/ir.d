@@ -20,8 +20,8 @@ enum maxCharsetUsed = 6;
 // another variable to tweak behavior of caching generated Tries for character classes
 enum maxCachedTries = 8;
 
-alias CodepointSetTrie!(13, 8) Trie;
-alias codepointSetTrie!(13, 8) makeTrie;
+alias Trie = CodepointSetTrie!(13, 8);
+alias makeTrie = codepointSetTrie!(13, 8);
 
 Trie[CodepointSet] trieCache;
 
