@@ -1503,7 +1503,7 @@ unittest
 
 // used by both Rebindable and UnqualRef
 private mixin template RebindableCommon(T, U, alias This)
-    if (is(T == class) || is(T == interface))
+    if (is(T == class) || is(T == interface) || isAssociativeArray!T)
 {
     private union
     {
@@ -1562,7 +1562,7 @@ risks usually associated with $(D cast).
 Params:
     T = An object, interface, or array slice type.
  */
-template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T)
+template Rebindable(T) if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
 {
     static if (is(T == const U, U) || is(T == immutable U, U))
     {
@@ -1626,7 +1626,7 @@ Returns:
     A newly constructed `Rebindable` initialized with the given reference.
 */
 Rebindable!T rebindable(T)(T obj)
-if (is(T == class) || is(T == interface) || isDynamicArray!T)
+if (is(T == class) || is(T == interface) || isDynamicArray!T || isAssociativeArray!T)
 {
     typeof(return) ret;
     ret = obj;
@@ -1730,6 +1730,14 @@ unittest
     // Issue 12046
     static assert(!__traits(compiles, Rebindable!(int[1])));
     static assert(!__traits(compiles, Rebindable!(const int[1])));
+    
+	// Pull request 3341
+    Rebindable!(immutable int[int]) pr3341 = [123:345];
+    assert(pr3341[123] == 345);
+	immutable int[int] pr3341_aa = [321:543];
+    pr3341 = pr3341_aa;
+    assert(pr3341[321] == 543);
+    assert(rebindable(pr3341_aa)[321] == 543);
 }
 
 /**
