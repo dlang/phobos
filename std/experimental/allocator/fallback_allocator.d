@@ -206,9 +206,9 @@ struct FallbackAllocator(Primary, Fallback)
     Returns $(D primary.owns(b) || fallback.owns(b)).
     */
     static if (hasMember!(Primary, "owns") && hasMember!(Fallback, "owns"))
-    bool owns(void[] p)
+    bool owns(void[] b)
     {
-        return primary.owns(b) || fallback.owns(p);
+        return primary.owns(b) || fallback.owns(b);
     }
 
     /**

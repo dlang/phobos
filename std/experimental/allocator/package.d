@@ -3,10 +3,11 @@
 /**
 Macros:
 WIKI = Phobos/StdAllocator
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco,
-"DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
+MYREF = <a href="std_experimental_allocator_$2.html">$1</a>&nbsp;
+MYREF2 = <a href="std_experimental_allocator_$2.html#$1">$1</a>&nbsp;
 TDC = <td nowrap>$(D $1)$+</td>
-TDC2 = <td nowrap>$(D $(LREF $0))</td>
+TDC2 = <td nowrap>$(D $(MYREF $1,$+))</td>
+TDC3 = <td nowrap>$(D $(MYREF2 $1,$+))</td>
 RES = $(I result)
 POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))
 
@@ -233,88 +234,76 @@ or with the same allocator object after casting it to $(D shared)) is illegal.
 $(BOOKTABLE $(BIG Synopsis of predefined _allocator building blocks),
 $(TR $(TH Allocator) $(TH Description))
 
-$(TR $(TDC2 NullAllocator) $(TD Very good at doing absolutely nothing. A good
+$(TR $(TDC2 NullAllocator, null_allocator) $(TD Very good at doing absolutely nothing. A good
 starting point for defining other allocators or for studying the API.))
 
-$(TR $(TDC2 GCAllocator) $(TD The system-provided garbage-collector allocator.
+$(TR $(TDC2 GCAllocator, gc_allocator) $(TD The system-provided garbage-collector allocator.
 This should be the default fallback allocator tapping into system memory. It
 offers manual $(D free) and dutifully collects litter.))
 
-$(TR $(TDC2 Mallocator) $(TD The C heap _allocator, a.k.a. $(D
+$(TR $(TDC2 Mallocator, mallocator) $(TD The C heap _allocator, a.k.a. $(D
 malloc)/$(D realloc)/$(D free). Use sparingly and only for code that is unlikely
 to leak.))
 
-$(TR $(TDC2 AlignedMallocator) $(TD Interface to OS-specific _allocators that
+$(TR $(TDC3 AlignedMallocator, mallocator) $(TD Interface to OS-specific _allocators that
 support specifying alignment:
 $(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html, $(D posix_memalign))
 on Posix and $(WEB msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
 $(D __aligned_xxx)) on Windows.))
 
-$(TR $(TDC2 AffixAllocator) $(TD Allocator that allows and manages allocating
+$(TR $(TDC2 AffixAllocator, affix_allocator) $(TD Allocator that allows and manages allocating
 extra prefix and/or a suffix bytes for each block allocated.))
 
-$(TR $(TDC2 HeapBlock) $(TD Organizes one contiguous chunk of memory in
+$(TR $(TDC2 HeapBlock, heap_block) $(TD Organizes one contiguous chunk of memory in
 equal-size blocks and tracks allocation status at the cost of one bit per
 block.))
 
-$(TR $(TDC2 FallbackAllocator) $(TD Allocator that combines two other allocators
+$(TR $(TDC2 FallbackAllocator, fallback_allocator) $(TD Allocator that combines two other allocators
  - primary and fallback. Allocation requests are first tried with primary, and
  upon failure are passed to the fallback. Useful for small and fast allocators
  fronting general-purpose ones.))
 
-$(TR $(TDC2 FreeList) $(TD Allocator that implements a $(WEB
+$(TR $(TDC2 FreeList, free_list) $(TD Allocator that implements a $(WEB
 wikipedia.org/wiki/Free_list, free list) on top of any other allocator. The
 preferred size, tolerance, and maximum elements are configurable at compile- and
 run time.))
 
-$(TR $(TDC2 SharedFreeList) $(TD Same features as $(D FreeList), but packaged as
+$(TR $(TDC3 SharedFreeList, free_list) $(TD Same features as $(D FreeList), but packaged as
 a $(D shared) structure that is accessible to several threads.))
 
-$(TR $(TDC2 FreeTree) $(TD Allocator similar to $(D FreeList) that uses a
+$(TR $(TDC2 FreeTree, free_tree) $(TD Allocator similar to $(D FreeList) that uses a
 binary search tree to adaptively store not one, but many free lists.))
 
-$(TR $(TDC2 SimpleBlocklist) $(TD A simple structure on top of a contiguous
-block of storage, organizing it as a singly-linked list of blocks. Each block
-has a word-sized header consisting of its length massaged with a bit indicating
-whether the block is occupied.))
-
-$(TR $(TDC2 Blocklist) $(TD An enhanced block-list style of allocator building
-on top of $(D SimpleBlocklist). Each block in the list stores the block size at
-the end of the block as well (similarly to the way
-$(WEB http://g.oswego.edu/dl/html/malloc.html, dlmalloc) does), which makes it
-possible to iterate the block list backward as well as forward. This makes for
-better coalescing properties.))
-
-$(TR $(TDC2 Region) $(TD Region allocator organizes a chunk of memory as a
+$(TR $(TDC2 Region, region) $(TD Region allocator organizes a chunk of memory as a
 simple bump-the-pointer allocator.))
 
-$(TR $(TDC2 InSituRegion) $(TD Region holding its own allocation, most often on
+$(TR $(TDC3 InSituRegion, region) $(TD Region holding its own allocation, most often on
 the stack. Has statically-determined size.))
 
-$(TR $(TDC2 SbrkRegion) $(TD Region using $(D $(LUCKY sbrk)) for allocating
+$(TR $(TDC3 SbrkRegion, region) $(TD Region using $(D $(LUCKY sbrk)) for allocating
 memory.))
 
-$(TR $(TDC2 MmapAllocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
+$(TR $(TDC2 MmapAllocator, mmap_allocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
 
-$(TR $(TDC2 StatsCollector) $(TD Collect statistics about any other
+$(TR $(TDC2 StatsCollector, stats_collector) $(TD Collect statistics about any other
 allocator.))
 
-$(TR $(TDC2 Quantizer) $(TD Allocates in coarse-grained quantas, thus
+$(TR $(TDC2 Quantizer, quantizer) $(TD Allocates in coarse-grained quantas, thus
 improving performance of reallocations by often reallocating in place. The drawback is higher memory consumption because of allocated and unused memory.))
 
-$(TR $(TDC2 AllocatorList) $(TD Given an allocator factory, lazily creates as
+$(TR $(TDC2 AllocatorList, allocator_list) $(TD Given an allocator factory, lazily creates as
 many allocators as needed to satisfy allocation requests. The allocators are
 stored in a linked list. Requests for allocation are satisfied by searching the
 list in a linear manner.))
 
-$(TR $(TDC2 Segregator) $(TD Segregates allocation requests by size and
+$(TR $(TDC2 Segregator, segregator) $(TD Segregates allocation requests by size and
 dispatches them to distinct allocators.))
 
-$(TR $(TDC2 Bucketizer) $(TD Divides allocation sizes in discrete buckets and
+$(TR $(TDC2 Bucketizer, bucketizer) $(TD Divides allocation sizes in discrete buckets and
 uses an array of allocators, one per bucket, to satisfy requests.))
 
-$(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving internal
-pointers on top of another allocator.))
+$(COMMENT $(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving internal
+pointers on top of another allocator.)))
 
 )
  */
