@@ -1,12 +1,13 @@
 // Written in the D programming language.
 
 /**
- * Templates to manipulate template argument lists (also known as type lists).
+ * Templates to manipulate $(LINK2 ../template.html#TemplateArgumentList, template argument lists)).
+ * Those are also commonly called "type lists" if only contain type arguments. In some contexts
+ * terms "expression tuple" and "type tuple" may be used but those are discouraged to avoid
+ * any confusion with $(LINK2 std_typecons.html#tuple, std.typecons.tuple).
  *
- * Some operations on type tuples are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th type from the
- * type tuple. TL[$(I lwr) .. $(I upr)] returns a new type
- * list that is a slice of the old one.
+ * Some operations on such argument lists are built into the language. This
+ * is explained in more details in the $(LINK2 ../ctarguments.html, website).
  *
  * Several templates in this module use or operate on eponymous templates that
  * take a single argument and evaluate to a boolean constant. Such templates
@@ -25,13 +26,17 @@
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_typetuple.d)
+ * Source:    $(PHOBOSSRC std/_meta.d)
  */
 
 module std.meta;
 
 /**
- * Creates a tuple out of a sequence of zero or more template arguments.
+ * Captures provided template argument list as a single symbol
+ *
+ * Params:
+ *    TList = any symbol, type or expression that is legal as
+ *        template variadic argument
  */
 template Arguments(TList...)
 {
@@ -41,7 +46,7 @@ template Arguments(TList...)
 ///
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     alias TL = Arguments!(int, double);
 
     int foo(TL td)  // same as int foo(int, double);
@@ -147,7 +152,7 @@ unittest
 alias IndexOf = staticIndexOf;
 
 /**
- * Returns a typetuple created from TList with the first occurrence,
+ * Returns an argument list created from TList with the first occurrence,
  * if any, of T removed.
  */
 template Erase(T, TList...)
@@ -265,8 +270,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all duplicate
- * types removed.
+ * Returns an argument list created from TList with the all duplicate
+ * entities removed.
  */
 template NoDuplicates(TList...)
 {
@@ -296,8 +301,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the first occurrence
- * of type T, if found, replaced with type U.
+ * Returns an argument list created from TList with the first occurrence
+ * of entity T, if found, replaced with entity U.
  */
 template Replace(T, U, TList...)
 {
@@ -376,8 +381,8 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
- * of type T, if found, replaced with type U.
+ * Returns an argument list created from TList with all occurrences
+ * of entity T, if found, replaced with entity U.
  */
 template ReplaceAll(T, U, TList...)
 {
@@ -456,7 +461,7 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns an argument list created from TList with the order reversed.
  */
 template Reverse(TList...)
 {
@@ -509,7 +514,7 @@ unittest
 }
 
 /**
- * Returns the typetuple TList with the types sorted so that the most
+ * Returns the type list TList with the types sorted so that the most
  * derived types come first.
  */
 template DerivedToFront(TList...)
@@ -537,7 +542,7 @@ unittest
 }
 
 /**
-Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D Arguments!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, T...)
 {
