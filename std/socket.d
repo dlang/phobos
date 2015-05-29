@@ -1999,7 +1999,7 @@ static if (is(sockaddr_un))
 
         this() pure nothrow @nogc
         {
-            sun.sun_family = AF_UNIX;
+            sun.sun_family = AddressFamily.UNIX;
             sun.sun_path = '?';
         }
 
@@ -2023,14 +2023,14 @@ static if (is(sockaddr_un))
         this(in char[] path) @trusted pure
         {
             enforce(path.length <= sun.sun_path.sizeof, new SocketParameterException("Path too long"));
-            sun.sun_family = AF_UNIX;
+            sun.sun_family = AddressFamily.UNIX;
             sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
         }
 
         this(sockaddr_un addr) pure nothrow @nogc
         {
-            assert(addr.sun_family == AF_UNIX);
+            assert(addr.sun_family == AddressFamily.UNIX);
             sun = addr;
         }
 
