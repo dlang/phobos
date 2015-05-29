@@ -3385,7 +3385,7 @@ auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
           private:
             Range _input;
             size_t _width;
-            alias _width nfill;       // number of fill characters to prepend
+            alias nfill = _width;       // number of fill characters to prepend
             dchar _fillChar;
             bool inited;
 
