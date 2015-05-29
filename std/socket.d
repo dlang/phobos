@@ -1622,6 +1622,16 @@ public:
         sin.sin_port = htons(port);
     }
 
+    /**
+     * Construct a new $(D InternetAddress).
+     * Params:
+     *   addr = A sockaddr_in as obtained from lower-level API calls such as getifaddrs.
+     */
+    this(sockaddr_in addr) pure nothrow @nogc
+    {
+        sin = addr;
+    }
+
     /// Human readable string representing the IPv4 address in dotted-decimal form.
     override string toAddrString() @trusted const
     {
@@ -1709,6 +1719,18 @@ unittest
     softUnittest({
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
+    });
+
+    softUnittest({
+        // test construction from a sockaddr_in
+        sockaddr_in sin;
+
+        sin.sin_addr.s_addr = htonl(0x7F000001);  // 127.0.0.1
+        sin.sin_family = AddressFamily.INET;
+        sin.sin_port = htons(80);
+
+        const InternetAddress ia = new InternetAddress(sin);
+        assert(ia.toString() == "127.0.0.1:80");
     });
 
     softUnittest({
@@ -1870,7 +1892,17 @@ public:
         sin6.sin6_port = htons(port);
     }
 
-    /**
+     /**
+     * Construct a new $(D Internet6Address).
+     * Params:
+     *   addr = A sockaddr_in6 as obtained from lower-level API calls such as getifaddrs.
+     */
+    this(sockaddr_in6 addr) pure nothrow @nogc
+    {
+        sin6 = addr;
+    }
+
+   /**
      * Parse an IPv6 host address string as described in RFC 2373, and return the
      * address.
      * Throws: $(D SocketException) on error.
@@ -1892,6 +1924,18 @@ unittest
 {
     softUnittest({
         const Internet6Address ia = new Internet6Address("::1", 80);
+        assert(ia.toString() == "[::1]:80");
+    });
+
+    softUnittest({
+        // test construction from a sockaddr_in6
+        sockaddr_in6 sin;
+
+        sin.sin6_addr.s6_addr = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];  // [::1]
+        sin.sin6_family = AddressFamily.INET6;
+        sin.sin6_port = htons(80);
+
+        const Internet6Address ia = new Internet6Address(sin);
         assert(ia.toString() == "[::1]:80");
     });
 }
