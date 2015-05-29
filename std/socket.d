@@ -1908,6 +1908,8 @@ version(StdDdoc)
         /// Construct a new $(D UnixAddress) from the specified path.
         this(in char[] path) { }
 
+        this() pure nothrow @nogc { }
+
         /// Get the underlying _path.
         @property string path() const { return null; }
 
@@ -1915,7 +1917,7 @@ version(StdDdoc)
         override string toString() const { return null; }
 
         override @property sockaddr* name() { return null; }
-        override @property const(sockaddr)* name() const { return 0; }
+        override @property const(sockaddr)* name() const { return null; }
         override @property socklen_t nameLen() const { return 0; }
     }
 }
