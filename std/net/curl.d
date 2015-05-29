@@ -4148,7 +4148,7 @@ private struct Pool(Data)
     {
         Data data;
         Entry* next;
-    };
+    }
     private Entry*  root;
     private Entry* freeList;
 
@@ -4182,7 +4182,7 @@ private struct Pool(Data)
         root = n;
         return d;
     }
-};
+}
 
 // Shared function for reading incoming chunks of data and
 // sending the to a parent thread
