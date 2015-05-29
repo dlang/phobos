@@ -1725,7 +1725,7 @@ unittest
         // test construction from a sockaddr_in
         sockaddr_in sin;
 
-        sin.sin_addr.s_addr = htonl(0x7F000001);  // 127.0.0.1
+        sin.sin_addr.s_addr = htonl(0x7F_00_00_01);  // 127.0.0.1
         sin.sin_family = AddressFamily.INET;
         sin.sin_port = htons(80);
 
