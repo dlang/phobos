@@ -1629,6 +1629,7 @@ public:
      */
     this(sockaddr_in addr) pure nothrow @nogc
     {
+        assert(addr.sin_family == AddressFamily.INET);
         sin = addr;
     }
 
@@ -1899,6 +1900,7 @@ public:
      */
     this(sockaddr_in6 addr) pure nothrow @nogc
     {
+        assert(addr.sin6_family == AddressFamily.INET6);
         sin6 = addr;
     }
 
@@ -2028,6 +2030,7 @@ static if (is(sockaddr_un))
 
         this(sockaddr_un addr) pure nothrow @nogc
         {
+            assert(addr.sun_family == AF_UNIX);
             sun = addr;
         }
 
