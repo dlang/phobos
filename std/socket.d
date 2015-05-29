@@ -1943,6 +1943,16 @@ unittest
 
 version(StdDdoc)
 {
+    static if (!is(sockaddr_un))
+    {
+        // This exists only to allow the constructor taking
+        // a sockaddr_un to be compilable for documentation
+        // on platforms that don't supply a sockaddr_un.
+        struct sockaddr_in
+        {
+        }
+    }
+
     /**
      * $(D UnixAddress) encapsulates an address for a Unix domain socket
      * ($(D AF_UNIX)). Available only on supported systems.
@@ -1953,6 +1963,13 @@ version(StdDdoc)
         this(in char[] path) { }
 
         this() pure nothrow @nogc { }
+
+        /**
+         * Construct a new $(D UnixAddress).
+         * Params:
+         *   addr = A sockaddr_un as obtained from lower-level API calls.
+         */
+        this(sockaddr_un addr) pure nothrow @nogc { }
 
         /// Get the underlying _path.
         @property string path() const { return null; }
@@ -2007,6 +2024,11 @@ static if (is(sockaddr_un))
             sun.sun_family = AF_UNIX;
             sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
+        }
+
+        this(sockaddr_un addr) pure nothrow @nogc
+        {
+            sun = addr;
         }
 
         @property string path() @trusted const pure
