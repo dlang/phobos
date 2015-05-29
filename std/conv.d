@@ -3737,10 +3737,21 @@ unittest
 @property T octal(T, string num)()
     if (isOctalLiteral!num)
 {
+    return octal!T(num);
+}
+
+/// Ditto
+@property T octal(T)(const(char)[] num) pure nothrow
+    if (isNumeric!T)
+{
+    assert( isOctalLiteralString(num),
+            "The provided string contains non-octal digits."
+            );
+
     ulong pow = 1;
     T value = 0;
 
-    for (int pos = num.length - 1; pos >= 0; pos--)
+    for (ptrdiff_t pos = num.length - 1; pos >= 0; pos--)
     {
         char s = num[pos];
         if (s < '0' || s > '7') // we only care about digits; skip the rest
@@ -3759,8 +3770,10 @@ unittest
 unittest
 {
     int a = octal!(int, "10");
+    int b = octal!int("10");
 
     assert(a == 8);
+    assert(a == b);
 }
 
 /*
@@ -3812,7 +3825,7 @@ Returns if the given string is a correctly formatted octal literal.
 The format is specified in lex.html. The leading zero is allowed, but
 not required.
  */
-bool isOctalLiteralString(string num)
+bool isOctalLiteralString(const(char)[] num) pure nothrow
 {
     if (num.length == 0)
         return false;
