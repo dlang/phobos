@@ -1,9 +1,9 @@
 /**
  * Provides `Arguments` and utilities for its manipulation
  *
- * Module that provides one of core D meta-programming primitives - list
+ * Module that provides one of D's core meta-programming primitives: a list
  * of compile-time entities (also "template argument list").
- * It can contain any type, expression or symbol that is legal template argument.
+ * It can contain any type, expression or symbol that is a legal template argument.
  *
  * It also provides compile-time algorithms that work on such lists.
  *
@@ -20,11 +20,11 @@ module std.meta.arglist;
 import std.meta.internal;
 
 /**
- * Captures provided template argument list as a single symbol
+ * Captures the provided template argument list as a single symbol
  *
  * Params:
  *    TList = any symbol, type or expression that is legal as
- *        template variadic argument
+ *        a template variadic argument
  */
 template Arguments(TList...)
 {
