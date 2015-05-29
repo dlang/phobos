@@ -37,7 +37,7 @@
  * Macros: WIKI=Phobos/StdSocketstream
  */
 
-deprecated module std.socketstream;
+module std.socketstream;
 
 private import std.stream;
 private import std.socket;
