@@ -1950,7 +1950,7 @@ version(StdDdoc)
         // This exists only to allow the constructor taking
         // a sockaddr_un to be compilable for documentation
         // on platforms that don't supply a sockaddr_un.
-        struct sockaddr_in
+        struct sockaddr_un
         {
         }
     }
