@@ -1101,7 +1101,7 @@ body
     Params:
         useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
         str = input string or indexable Range
-        numCodeUnites = set to number of code units processed
+        numCodeUnits = set to number of code units processed
 
     Returns:
         decoded character

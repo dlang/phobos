@@ -1684,8 +1684,8 @@ if (is(E == enum))
  * for some applications.
  *
  * Params:
- *     urng = (optional) random number generator to use;
- *            if not specified, defaults to $(D rndGen)
+ *     rng = (optional) random number generator to use;
+ *           if not specified, defaults to $(D rndGen)
  *
  * Returns:
  *     Floating-point random variate of type $(D T) drawn from the _uniform

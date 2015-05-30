@@ -3224,7 +3224,7 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
     $(D s) doesn't fill.
 
     Params:
-        s = string or range of characters
+        r = string or range of characters
         width = minimum field width
         fillChar = used to pad end up to $(D width) characters
 
@@ -3352,7 +3352,7 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
     $(D s) doesn't fill.
 
     Params:
-        s = string or forward range of characters
+        r = string or forward range of characters
         width = minimum field width
         fillChar = used to pad end up to $(D width) characters
 
