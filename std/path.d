@@ -3059,7 +3059,6 @@ string expandTilde(string inputPath) nothrow
         import core.stdc.string : strlen;
         import core.stdc.stdlib : getenv, malloc, free, realloc;
         import core.exception : onOutOfMemoryError;
-        import core.sys.posix.pwd : passwd, getpwnam_r;
         import core.stdc.errno : errno, ERANGE;
 
         /*  Joins a path from a C string to the remainder of path.
@@ -3110,14 +3109,15 @@ string expandTilde(string inputPath) nothrow
         // Replaces the tilde from path with the path from the user database.
         static string expandFromDatabase(string path) nothrow
         {
-            // Android doesn't really support this, as getpwnam_r
+            // bionic doesn't really support this, as getpwnam_r
             // isn't provided and getpwnam is basically just a stub
-            version(Android)
+            version(CRuntime_Bionic)
             {
                 return path;
             }
             else
             {
+                import core.sys.posix.pwd : passwd, getpwnam_r;
                 import std.string : indexOf;
 
                 assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));

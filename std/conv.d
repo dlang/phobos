@@ -2978,7 +2978,7 @@ unittest
     {
         version (CRuntime_Microsoft)
             ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
-        else version (Android)
+        else version (CRuntime_Bionic)
             ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
         else
             ld1 = strtold(s.ptr, null);
