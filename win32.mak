@@ -115,9 +115,11 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 	std\uni.d std\base64.d std\ascii.d \
 	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
+SRC_STD_RANDOM= std\random\package.d
+
 SRC_STD_3a= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
-	std\random.d \
+	$(SRC_STD_RANDOM) \
 	std\exception.d \
 	std\compiler.d \
 	std\system.d std\concurrency.d
@@ -169,7 +171,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\outbuffer.d std\base64.d \
 	std\meta.d std\metastrings.d std\mmfile.d \
 	std\syserror.d \
-	std\random.d std\stream.d std\process.d \
+	std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
@@ -478,7 +480,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=85 -unittest -main -run std\traits.d
 	$(DMD) -conf= -cov=62 -unittest -main -run std\encoding.d
 	$(DMD) -conf= -cov=61 -unittest -main -run std\xml.d
-	$(DMD) -conf= -cov=79 -unittest -main -run std\random.d
+	$(DMD) -conf= -cov=79 -unittest -main -run std\random\package.d
 	$(DMD) -conf= -cov=92 -unittest -main -run std\exception.d
 	$(DMD) -conf= -cov=73 -unittest -main -run std\concurrency.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime.d
@@ -730,8 +732,8 @@ $(DOC)\std_path.html : $(STDDOC) std\path.d
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d
 
-$(DOC)\std_random.html : $(STDDOC) std\random.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
+$(DOC)\std_random.html : $(STDDOC) std\random\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random\package.d
 
 $(DOC)\std_range.html : $(STDDOC) std\range\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range\package.d

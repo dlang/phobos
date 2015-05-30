@@ -121,9 +121,11 @@ SRC_STD_3c= std\datetime.d std\bitmanip.d std\typecons.d
 SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
 	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
+SRC_STD_RANDOM= std\random\package.d
+
 SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
-	std\random.d \
+	$(SRC_STD_RANDOM) \
 	std\exception.d \
 	std\compiler.d \
 	std\system.d std\concurrency.d
@@ -190,7 +192,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\outbuffer.d std\base64.d \
 	std\meta.d std\metastrings.d std\mmfile.d \
 	std\syserror.d \
-	std\random.d std\stream.d std\process.d \
+	std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
 	std\stdio.d std\uni.d std\uuid.d \
 	std\cstream.d std\demangle.d \
@@ -706,8 +708,8 @@ $(DOC)\std_path.html : $(STDDOC) std\path.d
 $(DOC)\std_process.html : $(STDDOC) std\process.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d
 
-$(DOC)\std_random.html : $(STDDOC) std\random.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
+$(DOC)\std_random.html : $(STDDOC) std\random\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random\package.d
 
 $(DOC)\std_range.html : $(STDDOC) std\range\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range\package.d

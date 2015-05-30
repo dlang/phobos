@@ -159,14 +159,14 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 # xy/zz is in variable PACKAGE_xy_zz. This allows automation in iterating
 # packages and their modules.
 STD_PACKAGES = std $(addprefix std/,\
-  algorithm container digest experimental net range regex)
+  algorithm container digest experimental net random range regex)
 
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv cstream csv datetime demangle encoding exception file format \
   functional getopt json math mathspecial meta metastrings mmfile numeric \
-  outbuffer parallelism path process random signals socket socketstream stdint \
+  outbuffer parallelism path process signals socket socketstream stdint \
   stdio stdiobase stream string syserror system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
@@ -176,6 +176,7 @@ PACKAGE_std_digest = crc digest hmac md ripemd sha
 PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
   nulllogger multilogger package)
 PACKAGE_std_net = curl isemail
+PACKAGE_std_random = package
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking kickstart tests thompson)
