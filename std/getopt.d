@@ -413,13 +413,16 @@ getopt(args,
 An unrecognized option such as "--baz" will be found untouched in
 $(D args) after $(D getopt) returns.
 
-$(D Help Information Generation)
+$(B Help Information Generation)
 
 If an option string is followed by another string, this string serves as an
 description for this option. The function $(D getopt) returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
 as well a bool indicating if information about these options where required by
 the passed arguments.
+
+The function also always adds an option for `--help|-h` to set the flag
+$(D GetoptResult.helpWanted) if seen on the command line.
 
 $(B Options Terminator)
 
@@ -488,9 +491,7 @@ enum config {
 
 /** The result of the $(D getopt) function.
 
-The $(D GetoptResult) contains two members. The first member is a boolean with
-the name $(D helpWanted). The second member is an array of $(D Option). The
-array is accessable by the name $(D options).
+$(D helpWanted) is set if the option `--help` or `-h` was passed to the option parser.
 */
 struct GetoptResult {
     bool helpWanted; /// Flag indicating if help was requested
