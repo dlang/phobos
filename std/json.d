@@ -115,7 +115,7 @@ struct JSONValue
     /**
       Returns the JSON_TYPE of the value stored in this structure.
     */
-    @property JSON_TYPE type() const
+    @property JSON_TYPE type() const pure nothrow @safe @nogc
     {
         return type_tag;
     }
@@ -173,14 +173,14 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.STRING).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.STRING).
-    @property inout(string) str() inout
+    @property inout(string) str() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.STRING,
                                 "JSONValue is not a string");
         return store.str;
     }
     /// ditto
-    @property string str(string v)
+    @property string str(string v) pure nothrow @nogc
     {
         assign(v);
         return store.str;
@@ -200,14 +200,14 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.INTEGER).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.INTEGER).
-    @property inout(long) integer() inout
+    @property inout(long) integer() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.INTEGER,
                                 "JSONValue is not an integer");
         return store.integer;
     }
     /// ditto
-    @property long integer(long v)
+    @property long integer(long v) pure nothrow @safe @nogc
     {
         assign(v);
         return store.integer;
@@ -215,14 +215,14 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.UINTEGER).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.UINTEGER).
-    @property inout(ulong) uinteger() inout
+    @property inout(ulong) uinteger() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.UINTEGER,
                                 "JSONValue is not an unsigned integer");
         return store.uinteger;
     }
     /// ditto
-    @property ulong uinteger(ulong v)
+    @property ulong uinteger(ulong v) pure nothrow @safe @nogc
     {
         assign(v);
         return store.uinteger;
@@ -230,14 +230,14 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.FLOAT).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.FLOAT).
-    @property inout(double) floating() inout
+    @property inout(double) floating() inout pure @safe
     {
         enforce!JSONException(type == JSON_TYPE.FLOAT,
                                 "JSONValue is not a floating type");
         return store.floating;
     }
     /// ditto
-    @property double floating(double v)
+    @property double floating(double v) pure nothrow @safe @nogc
     {
         assign(v);
         return store.floating;
@@ -245,14 +245,14 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.OBJECT).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.OBJECT).
-    @property ref inout(JSONValue[string]) object() inout
+    @property ref inout(JSONValue[string]) object() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
         return store.object;
     }
     /// ditto
-    @property JSONValue[string] object(JSONValue[string] v)
+    @property JSONValue[string] object(JSONValue[string] v) pure nothrow @nogc
     {
         assign(v);
         return store.object;
@@ -260,21 +260,21 @@ struct JSONValue
 
     /// Value getter/setter for $(D JSON_TYPE.ARRAY).
     /// Throws $(D JSONException) for read access if $(D type) is not $(D JSON_TYPE.ARRAY).
-    @property ref inout(JSONValue[]) array() inout
+    @property ref inout(JSONValue[]) array() inout pure
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
         return store.array;
     }
     /// ditto
-    @property JSONValue[] array(JSONValue[] v)
+    @property JSONValue[] array(JSONValue[] v) pure nothrow @nogc
     {
         assign(v);
         return store.array;
     }
 
     /// Test whether the type is $(D JSON_TYPE.NULL)
-    @property bool isNull() const
+    @property bool isNull() const pure nothrow @safe @nogc
     {
         return type == JSON_TYPE.NULL;
     }
@@ -418,7 +418,7 @@ struct JSONValue
 
     /// Array syntax for json arrays.
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.ARRAY).
-    ref inout(JSONValue) opIndex(size_t i) inout
+    ref inout(JSONValue) opIndex(size_t i) inout pure
     {
         enforce!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
@@ -436,7 +436,7 @@ struct JSONValue
 
     /// Hash syntax for json objects.
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT).
-    ref inout(JSONValue) opIndex(string k) inout
+    ref inout(JSONValue) opIndex(string k) inout pure
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
@@ -455,7 +455,7 @@ struct JSONValue
     /// sets $(D value) for it.
     /// Throws $(D JSONException) if $(D type) is not $(D JSON_TYPE.OBJECT)
     /// or $(D JSON_TYPE.NULL).
-    void opIndexAssign(T)(auto ref T value, string key)
+    void opIndexAssign(T)(auto ref T value, string key) pure
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
                                 "JSONValue must be object or null");
@@ -473,7 +473,7 @@ struct JSONValue
             assert( j["language"].str == "Perl" );
     }
 
-    void opIndexAssign(T)(T arg, size_t i)
+    void opIndexAssign(T)(T arg, size_t i) pure
     {
         enforceEx!JSONException(type == JSON_TYPE.ARRAY,
                                 "JSONValue is not an array");
@@ -546,12 +546,12 @@ struct JSONValue
         string a = ("author" in j).str;
     }
 
-    bool opEquals(const JSONValue rhs) const
+    bool opEquals(const JSONValue rhs) const pure nothrow @nogc
     {
         return opEquals(rhs);
     }
 
-    bool opEquals(ref const JSONValue rhs) const
+    bool opEquals(ref const JSONValue rhs) const pure nothrow @nogc
     {
         // Default doesn't work well since store is a union.  Compare only
         // what should be in store.
@@ -849,8 +849,8 @@ if(isInputRange!T)
                 auto str = parseString();
 
                 // if special float parsing is enabled, check if string represents NaN/Inf
-                if ((options & JsonOptions.specialFloatLiterals) && 
-                    tryGetSpecialFloat(str, value.store.floating)) 
+                if ((options & JsonOptions.specialFloatLiterals) &&
+                    tryGetSpecialFloat(str, value.store.floating))
                 {
                     // found a special float, its value was placed in value.store.floating
                     value.type_tag = JSON_TYPE.FLOAT;
@@ -1162,7 +1162,7 @@ Exception thrown on JSON errors
 */
 class JSONException : Exception
 {
-    this(string msg, int line = 0, int pos = 0)
+    this(string msg, int line = 0, int pos = 0) pure nothrow @safe
     {
         if(line)
             super(text(msg, " (Line ", line, ":", pos, ")"));
@@ -1170,7 +1170,7 @@ class JSONException : Exception
             super(msg);
     }
 
-    this(string msg, string file, size_t line)
+    this(string msg, string file, size_t line) pure nothrow @safe
     {
         super(msg, file, line);
     }
@@ -1292,7 +1292,7 @@ unittest
     assert(jv.type == JSON_TYPE.TRUE);
 }
 
-unittest
+pure unittest
 {
     // Adding new json element via array() / object() directly
 
@@ -1307,7 +1307,7 @@ unittest
     assert(jobj.object.length == 10);
 }
 
-unittest
+pure unittest
 {
     // Adding new json element without array() / object() access
 
@@ -1442,7 +1442,7 @@ deprecated unittest
     assert(jv.type == JSON_TYPE.TRUE);
 }
 
-unittest
+pure unittest
 {
     // Bugzilla 12969
 
@@ -1529,4 +1529,17 @@ unittest
     assert(jvNan.str    == JSONFloatLiteral.nan);
     assert(jvInf.str    == JSONFloatLiteral.inf);
     assert(jvNegInf.str == JSONFloatLiteral.negativeInf);
+}
+
+pure nothrow @safe @nogc unittest
+{
+    JSONValue testVal;
+    testVal = "test";
+    testVal = 10;
+    testVal = 10u;
+    testVal = 1.0;
+    testVal = (JSONValue[string]).init;
+    testVal = JSONValue[].init;
+    testVal = null;
+    assert(testVal.isNull);
 }
