@@ -9,24 +9,24 @@
  ----
  class Foo
  {
- enum serializable = true;
- long bar;
- int[] baz;
+     enum serializable = true;
+     long bar;
+     int[] baz;
  }
  Foo foo = new Foo();
  static if (isSerializable!Foo)
  {
- ubyte[] serializedFoo serialize(foo);
- //do something with serializedFoo 
- try
- {
- Foo deserializedFoo = deserialize!foo(serializedFoo);
- //do something with deserializedFoo 
- }
- catch(SerializationException e)
- {
- //figure out what to do if their was an error 
- }
+     ubyte[] serializedFoo serialize(foo);
+     //do something with serializedFoo 
+     try
+     {
+         Foo deserializedFoo = deserialize!foo(serializedFoo);
+         //do something with deserializedFoo 
+     }
+     catch(SerializationException e)
+     {
+         //figure out what to do if their was an error 
+     }
  }
  ----
 
