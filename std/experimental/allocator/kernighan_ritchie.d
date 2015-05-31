@@ -13,6 +13,9 @@ famed allocator) described by Brian Kernighan and Dennis Ritchie in section 8.7
 of the book $(WEB amazon.com/exec/obidos/ASIN/0131103628/classicempire, "The C
 Programming Language"), Second Edition, Prentice Hall, 1988.
 
+The recommended usage for $(D KRBlock) is as a simple means to add
+$(D deallocate) to a region.
+
 A $(D KRBlock) manages a single contiguous chunk of memory by embedding a free
 blocks list onto it. It is a very simple allocator with good memory utilization.
 $(D KRBlock) has a small control structure and no per-allocation overhead. Its
@@ -75,7 +78,6 @@ copyable.
 */
 struct KRBlock(ParentAllocator = NullAllocator)
 {
-    import std.format : format;
     import std.experimental.allocator.common : stateSize, alignedAt;
 
     private static struct Node
@@ -148,6 +150,7 @@ struct KRBlock(ParentAllocator = NullAllocator)
 
     string toString()
     {
+        import std.format : format;
         string s = "KRBlock@";
         s ~= format("%s-%s(0x%s[%s]", &this, &this + 1,
             payload.ptr, payload.length);
@@ -234,7 +237,6 @@ struct KRBlock(ParentAllocator = NullAllocator)
     /*
     Noncopyable
     */
-    static if (!is(ParentAllocator == NullAllocator))
     @disable this(this);
 
     /**
@@ -290,11 +292,11 @@ struct KRBlock(ParentAllocator = NullAllocator)
     {
         debug(KRBlock) writefln("KRBlock@%s: deallocate(%s[%s])", &this,
             b.ptr, b.length);
-        // Insert back in the freelist, keeping it sorted by address. Do not
-        // coalesce at this time. Instead, do it lazily during allocation.
         if (!b.ptr) return;
         assert(owns(b));
         assert(b.ptr.alignedAt(Node.alignof));
+        // Insert back in the freelist, keeping it sorted by address. Do not
+        // coalesce at this time. Instead, do it lazily during allocation.
         auto n = cast(Node*) b.ptr;
         n.size = goodAllocSize(b.length);
         // Linear search
