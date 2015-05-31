@@ -176,7 +176,7 @@ PACKAGE_std_digest = crc digest hmac md ripemd sha
 PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
   nulllogger multilogger package)
 PACKAGE_std_net = curl isemail
-PACKAGE_std_random = package
+PACKAGE_std_random = algorithm device distribution engine package traits
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
   backtracking kickstart tests thompson)
