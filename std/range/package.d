@@ -8648,17 +8648,30 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     auto r = [1, 2, 3, 4].tee!func1.tee!func2;
 }
 
-template CommonElementType(Rs...)
+package template CommonElementType(Rs...)
 {
     alias CommonElementType = CommonType!(staticMap!(ElementType, Rs));
 }
 
-alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits(isSame, TemplateOf!R, SortedRange)
+package alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits(isSame, TemplateOf!R, SortedRange)
 
 /**
    Merge several sorted ranges $(D rs) with less-than predicate function $(D
    pred) into one single sorted range containing the sorted union of the
    elements of inputs.
+
+   All of its inputs must be instantiations of $(XREF range, SortedRange). Use
+   the result of $(XREF algorithm, sort), or $(XREF range, assumeSorted) to
+   merge ranges known to be sorted (show in the example below).
+
+   This algorithm is lazy, doing work progressively as elements are pulled off
+   the result.
+
+   Average complexity is $(BIGOH n * k) for $(D k) ranges of maximum length $(D n).
+
+   If all ranges have the same element type and offer it by $(D ref), merge
+   offers a range with mutable $(D front) (and $(D back) where appropriate) that
+   reflects in the original ranges.
 
    Example:
    -------
