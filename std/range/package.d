@@ -80,7 +80,7 @@ $(BOOKTABLE ,
     ))
     $(TR $(TD $(D $(LREF merge)))
         $(TD Creates a _range that iterates over the merged sorted union of its
-        sorted arguments. Is bidrectional if all it inputs are.
+        sorted arguments. Is bidrectional if all its inputs are.
     ))
     $(TR $(TD $(D $(LREF NullSink)))
         $(TD An output _range that discards the data it receives.
