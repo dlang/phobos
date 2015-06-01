@@ -1886,6 +1886,8 @@ version(StdDdoc)
      */
     class UnixAddress: Address
     {
+        private this() pure nothrow @nogc {}
+
         /// Construct a new $(D UnixAddress) from the specified path.
         this(in char[] path) { }
 

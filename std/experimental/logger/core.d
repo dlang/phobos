@@ -502,15 +502,18 @@ template defaultLogFunction(LogLevel ll)
     }
 }
 
-/** This function logs data to the $(D stdThreadLocalLog).
+/** This function logs data to the $(D stdThreadLocalLog), optionally depending
+on a condition.
 
 In order for the resulting log message to be logged the $(D LogLevel) must
 be greater or equal than the $(D LogLevel) of the $(D stdThreadLocalLog) and
 must be greater or equal than the global $(D LogLevel).
 Additionally the $(D LogLevel) must be greater or equal than the $(D LogLevel)
 of the $(D stdSharedLogger).
+If a condition is given, it must evaluate to $(D true).
 
 Params:
+  condition = The condition must be $(D true) for the data to be logged.
   args = The data that should be logged.
 
 Examples:
@@ -520,24 +523,6 @@ info(1337, "is number");
 error(1337, "is number");
 critical(1337, "is number");
 fatal(1337, "is number");
---------------------
-
-The second version of the function logs data to the $(D stdThreadLocalLog) depending
-on a condition.
-
-In order for the resulting log message to be logged the $(D LogLevel) must
-be greater or equal than the $(D LogLevel) of the $(D stdThreadLocalLog) and
-must be greater or equal than the global $(D LogLevel) additionally the
-condition passed must be $(D true).
-Additionally the $(D LogLevel) must be greater or equal than the $(D LogLevel)
-of the $(D stdSharedLogger).
-
-Params:
-  condition = The condition must be $(D true) for the data to be logged.
-  args = The data that should be logged.
-
-Examples:
---------------------
 trace(true, 1337, "is number");
 info(false, 1337, "is number");
 error(true, 1337, "is number");
