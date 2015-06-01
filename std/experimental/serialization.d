@@ -40,6 +40,8 @@ module std.experimental.serialization;
 import std.traits;
 import std.system;
 import std.exception;
+import std.range : retro;
+import std.array;
 import std.typetuple;
 
 /**
@@ -189,19 +191,7 @@ T fromBytes(T)(in ubyte[] bytes)
     converter.bytes = bytes;
     return converter.value;
 }
-/**
- Creates a reversed copy of an array.
- */
-T[] reverseOf(T)(in T[] source)
-{
-    T[] dest;
-    dest.length = source.length;
-    foreach_reverse(k,v;source)
-    {
-        dest[k] = v;
-    }
-    return dest;
-}
+
 /**
  Exception that is thrown if serializer/deserializer encounters a problem
  */
@@ -446,17 +436,17 @@ T deserialize(T)(in ubyte[] input)
             enforce!SerializationException(pos+uint.sizeof<=input.length,"unexpected end of input");
             output.length=fromBytes!uint(input[pos..pos+uint.sizeof]);
             pos+=uint.sizeof;
-            for(uint i = 0;i<output.length;i++)
-            {
-                static if (isSerializableStructure!(typeof(output[i])))
+                for(uint i = 0;i<output.length;i++)
                 {
-                    deserializeStructure(output[i]);
+                    static if (isSerializableStructure!(typeof(output[i])))
+                    {
+                        deserializeStructure(output[i]);
+                    }
+                    else static if (isSerializableData!(typeof(output[i])))
+                    {
+                        deserializeData(output[i]);
+                    }
                 }
-                else static if (isSerializableData!(typeof(output[i])))
-                {
-                    deserializeData(output[i]);
-                }
-            }
         }
         else static if(isAssociativeArray!U)
         {
@@ -493,7 +483,7 @@ T deserialize(T)(in ubyte[] input)
             enforce!SerializationException(pos+U.sizeof<=input.length,"unexpected end of input");
             if(dataBOM != bom)
             {
-                output = fromBytes!U(input[pos..pos+U.sizeof].reverseOf());
+                output = fromBytes!U(array(input[pos..pos+U.sizeof].retro()));
                 pos+=U.sizeof;
             }
             else
