@@ -8682,10 +8682,11 @@ package alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: 
    assert(equal(c.retro, [5, 4, 3, 2, 1, 0]));
    -------
 */
-auto merge(alias pred = "a < b", Rs...)(Rs rs) if (Rs.length > 1 &&
-                                                   allSatisfy!(isSortedRange,
-                                                               staticMap!(Unqual, Rs)) &&
-                                                   is(CommonElementType!(Rs)))
+auto merge(alias pred = "a < b", Rs...)(Rs rs)
+if (Rs.length > 1 &&
+    allSatisfy!(isSortedRange,
+                staticMap!(Unqual, Rs)) &&
+    is(CommonElementType!(Rs)))
 {
     alias E = CommonElementType!Rs;
     enum isBidirectional = allSatisfy!(isBidirectionalRange, staticMap!(Unqual, Rs));
