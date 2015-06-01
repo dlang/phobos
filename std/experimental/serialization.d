@@ -154,7 +154,7 @@ template Named(T...)
  */
 template hasAttribute(alias Member, alias Attrubute)
 {
-    static if (staticIndexOf!(Attrubute,__traits(getAttributes,Member)))
+    static if (staticIndexOf!(Attrubute,__traits(getAttributes,Member)) != -1)
     {
         enum hasAttribute = true;
     }
@@ -279,6 +279,10 @@ ubyte[] serialize(T)(ref in T source) if (isSerializable!T)
                     && !hasAttribute!(__traits(getMember,input,name),noSerialization))
                 {
                     serializeData(__traits(getMember,input,name));
+                }
+                else static if(!hasAttribute!(__traits(getMember,input,name),noSerialization))
+                {
+                    static assert(0,U.stringof~" has member "~name~" which cannot be serialized\nmark with @noSerialization if intended");
                 }
             }
             if (!is(U == class))
@@ -418,6 +422,10 @@ T deserialize(T)(in ubyte[] input)
                     && !hasAttribute!(__traits(getMember,output,name),noSerialization))
                 {
                     deserializeData(__traits(getMember,output,name));
+                }
+                else static if(!hasAttribute!(__traits(getMember,U,name),noSerialization))
+                {
+                    static assert(0,U.stringof~" has member "~name~" which cannot be serialized\nmark with @noSerialization if intended");
                 }
             }
         }
