@@ -3740,7 +3740,14 @@ unittest
     return octal!T(num);
 }
 
-/// Ditto
+/// Takes an octal literal string and returns its value as the specified type.
+/// 
+/// Params:
+///     num     =   The octal literal string.
+///     
+/// Preconditions:
+///     Asserts that $(D num) is an octal literal string using
+///     $(D isOctalLiteralString).
 @property T octal(T)(const(char)[] num) pure nothrow
     if (isNumeric!T)
 {
