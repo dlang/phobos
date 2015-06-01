@@ -1670,6 +1670,8 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
     assert(equal(radial(a), [ 3, 4, 2, 5, 1 ]));
     a = [ 1, 2, 3, 4 ];
     assert(equal(radial(a), [ 2, 3, 1, 4 ]));
+    assert(equal(radial(a) ~ radial(a), [ 2, 3, 1, 4,
+                                          2, 3, 1, 4 ]));
 }
 
 @safe unittest
