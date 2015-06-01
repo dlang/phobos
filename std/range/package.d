@@ -78,6 +78,10 @@ $(BOOKTABLE ,
         loop. Similar to $(D zip), except that $(D lockstep) is designed
         especially for $(D foreach) loops.
     ))
+    $(TR $(TD $(D $(LREF merge)))
+        $(TD Creates a _range that iterates over the merged sorted union of its
+        sorted arguments. Is bidrectional if all it inputs are.
+    ))
     $(TR $(TD $(D $(LREF NullSink)))
         $(TD An output _range that discards the data it receives.
     ))
