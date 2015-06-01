@@ -3011,6 +3011,30 @@ if (isDynamicArray!A && (isMutable!(ElementEncodingType!A) || !hasPopFront))
     }
 
     /**
+     * Appends items from a delegate.
+     *
+     * The delegate should folow the read/recv rules: it reads up to buf length items
+     * and returns the number of read items or negative value on error.
+     *
+     * Returns: The result of the delegate.
+     */
+    ptrdiff_t putFrom(ptrdiff_t delegate(Unqual!T[] buf) dg, size_t minBufSize = 0) @trusted
+    {
+        if (minBufSize == 0)
+            minBufSize = std.algorithm.max(8, _data ? _data.capacity / 8 : 0);
+
+        ensureAddable(minBufSize);
+
+        ptrdiff_t result = dg(_data.arr.ptr[_data.arr.length .. _data.capacity]);
+        assert(result <= minBufSize, "dg returns more elements as expected");
+
+        if (result > 0)
+            _data.arr = _data.arr.ptr[0 .. _data.arr.length + result];
+
+        return result;
+    }
+
+    /**
      * Appends one item to the managed array.
      */
     void opOpAssign(string op : "~", U)(U item) if (canPutItem!U)
@@ -3126,15 +3150,30 @@ if (isDynamicArray!A && (isMutable!(ElementEncodingType!A) || !hasPopFront))
 ///
 unittest{
     int[] a = [ 1, 2 ];
-    auto buff = linearBuffer(a);
-    buff.put(3);
-    buff.put([ 4, 5, 6 ]);
-    assert(buff.data == [ 1, 2, 3, 4, 5, 6 ]);
-    auto capacity = buff.capacity;
-    assert(buff.popFrontN(4) == 4);
-    assert(buff.data == [ 5, 6 ]);
-    assert(buff.popFrontN(4) == 2);
-    assert(buff.capacity == capacity);
+    auto buf = linearBuffer(a);
+
+    buf.put(3);
+    buf.put([ 4, 5, 6 ]);
+    assert(buf.data == [ 1, 2, 3, 4, 5, 6 ]);
+
+    auto capacity = buf.capacity;
+
+    assert(buf.popFrontN(4) == 4);
+    assert(buf.data == [ 5, 6 ]);
+    assert(buf.popFrontN(4) == 2);
+    assert(buf.capacity == capacity);
+
+    ptrdiff_t readDelegate(int[] buf)
+    {
+        assert(buf.length >= 3);
+        buf[0 .. 3] = [ 10, 11, 12 ];
+        return 3;
+    }
+
+    buf.putFrom(&readDelegate);
+    assert(buf.data == [ 10, 11, 12 ]);
+    buf.putFrom(&readDelegate);
+    assert(buf.data == [ 10, 11, 12, 10, 11, 12 ]);
 }
 
 unittest
