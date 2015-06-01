@@ -2133,6 +2133,8 @@ if (isInputRange!R)
                     return _input.front = v;
                 }
             }
+
+            mixin Chainable;
         }
 
         return Result(range, n);
@@ -2148,6 +2150,8 @@ if (isInputRange!R)
 
     auto b = takeExactly(a, 3);
     assert(equal(b, [1, 2, 3]));
+    assert(equal(b ~ b, [1, 2, 3,
+                         1, 2, 3]));
     static assert(is(typeof(b.length) == size_t));
     assert(b.length == 3);
     assert(b.front == 1);
