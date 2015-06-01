@@ -2294,6 +2294,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
             }
             // Non-standard property
             @property R source() { return _source; }
+            mixin Chainable;
         }
 
         return Result(source, source.empty);
@@ -2303,7 +2304,10 @@ auto takeOne(R)(R source) if (isInputRange!R)
 ///
 @safe unittest
 {
+    import std.algorithm : equal;
+
     auto s = takeOne([42, 43, 44]);
+    assert(equal(s ~ s, [42, 42]));
     static assert(isRandomAccessRange!(typeof(s)));
     assert(s.length == 1);
     assert(!s.empty);
