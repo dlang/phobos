@@ -1947,8 +1947,6 @@ version(StdDdoc)
         /// Construct a new $(D UnixAddress) from the specified path.
         this(in char[] path) { }
 
-        this() pure nothrow @nogc { }
-
         /**
          * Construct a new $(D UnixAddress).
          * Params:
