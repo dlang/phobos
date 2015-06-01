@@ -1603,6 +1603,17 @@ public:
         sin.sin_port = htons(port);
     }
 
+    /**
+     * Construct a new $(D InternetAddress).
+     * Params:
+     *   addr = A sockaddr_in as obtained from lower-level API calls such as getifaddrs.
+     */
+    this(sockaddr_in addr) pure nothrow @nogc
+    {
+        assert(addr.sin_family == AddressFamily.INET);
+        sin = addr;
+    }
+
     /// Human readable string representing the IPv4 address in dotted-decimal form.
     override string toAddrString() @trusted const
     {
@@ -1690,6 +1701,18 @@ unittest
     softUnittest({
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
+    });
+
+    softUnittest({
+        // test construction from a sockaddr_in
+        sockaddr_in sin;
+
+        sin.sin_addr.s_addr = htonl(0x7F_00_00_01);  // 127.0.0.1
+        sin.sin_family = AddressFamily.INET;
+        sin.sin_port = htons(80);
+
+        const InternetAddress ia = new InternetAddress(sin);
+        assert(ia.toString() == "127.0.0.1:80");
     });
 
     softUnittest({
@@ -1851,7 +1874,18 @@ public:
         sin6.sin6_port = htons(port);
     }
 
-    /**
+     /**
+     * Construct a new $(D Internet6Address).
+     * Params:
+     *   addr = A sockaddr_in6 as obtained from lower-level API calls such as getifaddrs.
+     */
+    this(sockaddr_in6 addr) pure nothrow @nogc
+    {
+        assert(addr.sin6_family == AddressFamily.INET6);
+        sin6 = addr;
+    }
+
+   /**
      * Parse an IPv6 host address string as described in RFC 2373, and return the
      * address.
      * Throws: $(D SocketException) on error.
@@ -1875,11 +1909,33 @@ unittest
         const Internet6Address ia = new Internet6Address("::1", 80);
         assert(ia.toString() == "[::1]:80");
     });
+
+    softUnittest({
+        // test construction from a sockaddr_in6
+        sockaddr_in6 sin;
+
+        sin.sin6_addr.s6_addr = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];  // [::1]
+        sin.sin6_family = AddressFamily.INET6;
+        sin.sin6_port = htons(80);
+
+        const Internet6Address ia = new Internet6Address(sin);
+        assert(ia.toString() == "[::1]:80");
+    });
 }
 
 
 version(StdDdoc)
 {
+    static if (!is(sockaddr_un))
+    {
+        // This exists only to allow the constructor taking
+        // a sockaddr_un to be compilable for documentation
+        // on platforms that don't supply a sockaddr_un.
+        struct sockaddr_un
+        {
+        }
+    }
+
     /**
      * $(D UnixAddress) encapsulates an address for a Unix domain socket
      * ($(D AF_UNIX)). Available only on supported systems.
@@ -1892,6 +1948,13 @@ version(StdDdoc)
         this(in char[] path) { }
 
         this() pure nothrow @nogc { }
+
+        /**
+         * Construct a new $(D UnixAddress).
+         * Params:
+         *   addr = A sockaddr_un as obtained from lower-level API calls.
+         */
+        this(sockaddr_un addr) pure nothrow @nogc { }
 
         /// Get the underlying _path.
         @property string path() const { return null; }
@@ -1919,7 +1982,7 @@ static if (is(sockaddr_un))
 
         this() pure nothrow @nogc
         {
-            sun.sun_family = AF_UNIX;
+            sun.sun_family = AddressFamily.UNIX;
             sun.sun_path = '?';
         }
 
@@ -1943,9 +2006,15 @@ static if (is(sockaddr_un))
         this(in char[] path) @trusted pure
         {
             enforce(path.length <= sun.sun_path.sizeof, new SocketParameterException("Path too long"));
-            sun.sun_family = AF_UNIX;
+            sun.sun_family = AddressFamily.UNIX;
             sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
+        }
+
+        this(sockaddr_un addr) pure nothrow @nogc
+        {
+            assert(addr.sun_family == AddressFamily.UNIX);
+            sun = addr;
         }
 
         @property string path() @trusted const pure
