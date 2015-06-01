@@ -140,7 +140,7 @@ template This2Variant(V, T...)
  * are larger than the largest built-in type, they will automatically
  * be boxed. This means that even large types will only be the size
  * of a pointer within the $(D_PARAM Variant), but this also implies some
- * overhead. $(D_PARAM Variant) can accommodate all primitive types and 
+ * overhead. $(D_PARAM Variant) can accommodate all primitive types and
  * all user-defined types.))
  *
  * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
