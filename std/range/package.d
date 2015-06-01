@@ -1414,6 +1414,7 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
                 else result.r2 = result.r2[begin .. end];
                 return result;
             }
+        mixin Chainable;
     }
     return Result(condition, r1, r2);
 }
@@ -1500,6 +1501,8 @@ unittest
         assert(c.moveFront() == 6);
         assert(c.moveBack() == 10);
         assert(c.moveAt(4) == 10);
+        assert(equal(c ~ c, [6,7,8,9,10,
+                             6,7,8,9,10]));
     }
     {
         import std.range : cycle;
