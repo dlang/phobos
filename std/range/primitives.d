@@ -2240,6 +2240,11 @@ if (!isNarrowString!(T[]))
     return decode(a, i);
 }
 
+/**
+   This template shall be mixed in at the top-scope inside of the $(D Result)
+   struct of each $(D InputRange) in order to support lazy chaining via
+   concatenation operation as `x ~ y` instead of via $(D chain(x, y))).
+*/
 template Chainable()
 {
     import std.traits: Unqual, CommonType;
