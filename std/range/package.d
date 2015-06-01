@@ -8701,14 +8701,23 @@ if (Rs.length > 1 &&
                 this._lastBackIndex = backIndex;
         }
 
-        @property bool empty()
+        import std.typetuple : anySatisfy;
+        static if (anySatisfy!(isInfinite, Rs))
         {
-            if (_lastFrontIndex == size_t.max)
-                return true;
-            static if (isBidirectional)
-                return _lastBackIndex == size_t.max;
-            else
-                return false;
+            // Propagate infiniteness.
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty()
+            {
+                if (_lastFrontIndex == size_t.max)
+                    return true;
+                static if (isBidirectional)
+                    return _lastBackIndex == size_t.max;
+                else
+                    return false;
+            }
         }
 
         @property auto ref front()
