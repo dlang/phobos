@@ -3755,6 +3755,8 @@ if (isSomeChar!C)
         {
             return this;
         }
+
+        mixin Chainable;
     }
     return Result(s);
 }
@@ -3765,6 +3767,7 @@ if (isSomeChar!C)
     import std.algorithm.comparison : equal;
     auto a = " a     bcd   ef gh ";
     assert(equal(splitter(a), ["a", "bcd", "ef", "gh"][]));
+    assert(equal(splitter(a) ~ splitter(a), ["a", "bcd", "ef", "gh", "a", "bcd", "ef", "gh"][]));
 }
 
 @safe pure unittest
