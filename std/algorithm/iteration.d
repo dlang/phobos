@@ -181,6 +181,7 @@ if (isBidirectionalRange!Range)
 
     // the values of x that have a negative y are:
     assert(equal(result2, [-3, -2, 2]));
+    assert(equal(result2 ~ result2, [-3, -2, 2, -3, -2, 2]));
 
     // Check how many times fun was evaluated.
     // Only as many times as the number of items in source.
@@ -412,6 +413,8 @@ private struct _Cache(R, bool bidir)
             }
         }
     }
+
+    mixin Chainable;
 }
 
 /**
