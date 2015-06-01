@@ -2244,7 +2244,7 @@ template Chainable()
 {
     import std.traits: Unqual, CommonType;
     import std.range: ElementType;
-    auto opCat(Range)(Range r)
+    auto opBinary(string op : "~", Range)(Range r)
     if (isInputRange!(Unqual!Range) &&
         is(CommonType!(ElementType!(typeof(this)),
                        ElementType!Range)))
