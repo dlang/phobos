@@ -19,7 +19,8 @@ up by the $(D GCAllocator).
 */
 struct FallbackAllocator(Primary, Fallback)
 {
-    import std.algorithm, std.traits;
+    import std.algorithm.comparison : min;
+    import std.traits : hasMember;
 
     unittest
     {
@@ -67,15 +68,15 @@ struct FallbackAllocator(Primary, Fallback)
     void[] alignedAllocate(size_t s, uint a)
     {
         static if (hasMember!(Primary, "alignedAllocate"))
-        {
+        {{
             auto result = primary.alignedAllocate(s, a);
-            if (result.ptr) return result;
-        }
+            if (result.length == s) return result;
+        }}
         static if (hasMember!(Fallback, "alignedAllocate"))
-        {
+        {{
             auto result = fallback.alignedAllocate(s, a);
-            if (result.ptr) return result;
-        }
+            if (result.length == s) return result;
+        }}
         return null;
     }
 
@@ -89,14 +90,15 @@ struct FallbackAllocator(Primary, Fallback)
     (returning $(D false)) otherwise.
 
     */
-    static if (hasMember!(Primary, "expand") || hasMember!(Fallback, "expand"))
+    static if (hasMember!(Primary, "owns")
+        && (hasMember!(Primary, "expand") || hasMember!(Fallback, "expand")))
     bool expand(ref void[] b, size_t delta)
     {
         if (!delta) return true;
         if (!b.ptr)
         {
             b = allocate(delta);
-            return b !is null;
+            return b.length == delta;
         }
         if (primary.owns(b))
         {
@@ -122,24 +124,13 @@ struct FallbackAllocator(Primary, Fallback)
     allocation from $(D fallback) to $(D primary).
 
     */
+    static if (hasMember!(Primary, "owns"))
     bool reallocate(ref void[] b, size_t newSize)
     {
-        if (newSize == 0)
-        {
-            static if (hasMember!(typeof(this), "deallocate"))
-                deallocate(b);
-            return true;
-        }
-        if (b is null)
-        {
-            b = allocate(newSize);
-            return b !is null;
-        }
-
         bool crossAllocatorMove(From, To)(ref From from, ref To to)
         {
             auto b1 = to.allocate(newSize);
-            if (!b1.ptr) return false;
+            if (b1.length != newSize) return false;
             if (b.length < newSize) b1[0 .. b.length] = b[];
             else b1[] = b[0 .. newSize];
             static if (hasMember!(From, "deallocate"))
@@ -150,17 +141,18 @@ struct FallbackAllocator(Primary, Fallback)
 
         if (b is null || primary.owns(b))
         {
-            if (primary.reallocate(b, newSize)) return true;
-            // Move from primary to fallback
-            return crossAllocatorMove(primary, fallback);
+            return primary.reallocate(b, newSize)
+                // Move from primary to fallback
+                || crossAllocatorMove(primary, fallback);
         }
-        if (fallback.reallocate(b, newSize)) return true;
-        // Interesting. Move from fallback to primary.
-        return crossAllocatorMove(fallback, primary);
+        return fallback.reallocate(b, newSize)
+            // Interesting. Move from fallback to primary.
+            || crossAllocatorMove(fallback, primary);
     }
 
-    static if (hasMember!(Primary, "alignedAllocate")
-        || hasMember!(Fallback, "alignedAllocate"))
+    static if (hasMember!(Primary, "owns")
+        && (hasMember!(Primary, "alignedAllocate")
+            || hasMember!(Fallback, "alignedAllocate")))
     bool alignedReallocate(ref void[] b, size_t newSize, uint a)
     {
         bool crossAllocatorMove(From, To)(ref From from, ref To to)
@@ -172,7 +164,7 @@ struct FallbackAllocator(Primary, Fallback)
             else
             {
                 auto b1 = to.alignedAllocate(newSize, a);
-                if (!b1) return false;
+                if (b1.length != newSize) return false;
                 if (b.length < newSize) b1[0 .. b.length] = b[];
                 else b1[] = b[0 .. newSize];
                 static if (hasMember!(From, "deallocate"))
@@ -232,8 +224,9 @@ struct FallbackAllocator(Primary, Fallback)
     request is forwarded to $(D fallback.deallocate) if it is defined, or is a
     no-op otherwise.
     */
-    static if (hasMember!(Primary, "deallocate")
-        || hasMember!(Fallback, "deallocate"))
+    static if (hasMember!(Primary, "owns") &&
+        (hasMember!(Primary, "deallocate")
+            || hasMember!(Fallback, "deallocate")))
     void deallocate(void[] b)
     {
         if (primary.owns(b))
