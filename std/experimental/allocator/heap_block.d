@@ -1038,8 +1038,8 @@ struct HeapBlockWithInternalPointers(
         return _heap.empty;
     }
 
-    /// Ditto
-    void markAllAsUnused()
+    // Currently unused
+    private void markAllAsUnused()
     {
         // Mark all deallocated memory with 1 so we minimize damage created by
         // false pointers. TODO: improve speed.
@@ -1055,8 +1055,9 @@ struct HeapBlockWithInternalPointers(
         // EXCEPT for the _allocStart block itself
         markAsUsed(_allocStart.rep);
     }
-    /// Ditto
-    bool markAsUsed(void[] b)
+
+    // Currently unused
+    private bool markAsUsed(void[] b)
     {
         // Locate position
         auto pos = b.ptr - _heap._payload.ptr;
@@ -1068,8 +1069,9 @@ struct HeapBlockWithInternalPointers(
         _heap._control[blockIdx .. blockIdx + blocks] = 1;
         return true;
     }
-    /// Ditto
-    void doneMarking()
+
+    // Currently unused
+    private void doneMarking()
     {
         // Nothing to do, what's free stays free.
     }

@@ -198,20 +198,6 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 assert(p && p.alignedAt(Suffix.alignof));
                 return (cast(Suffix*) p)[-1];
             }
-
-        //
-        static if (hasMember!(Allocator, "markAllAsUnused"))
-        {
-            void markAllAsUnused() { parent.markAllAsUnused(); }
-            //
-            bool markAsUsed(void[] b)
-            {
-                assert(b.ptr);
-                return parent.markAsUsed(actualAllocation(b));
-            }
-            //
-            void doneMarking() { parent.doneMarking(); }
-        }
     }
 
     version (StdDdoc)
@@ -237,12 +223,6 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         void deallocateAll();
         /// Ditto
         bool empty();
-        /// Ditto
-        void markAllAsUnused();
-        /// Ditto
-        bool markAsUsed(void[] b);
-        /// Ditto
-        void doneMarking();
 
         /**
         The $(D it) singleton is defined if and only if the parent allocator has no state and defines its own $(D it) object.

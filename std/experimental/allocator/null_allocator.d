@@ -65,12 +65,6 @@ struct NullAllocator
     Returns the $(D shared) global instance of the $(D NullAllocator).
     */
     static shared NullAllocator it;
-    /// No-op
-    void markAllAsUnused() shared {}
-    /// Returns $(D false).
-    bool markAsUsed(void[]) shared { return false; }
-    /// No-op
-    void doneMarking() shared {}
 }
 
 unittest

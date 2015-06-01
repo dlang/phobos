@@ -143,30 +143,6 @@ of the allocator. An allocator should not hold state and define $(D it)
 simultaneously. Depending on whether the allocator is thread-safe or not, this
 instance may be $(D shared).))
 
-$(TR $(TDC void markAllAsUnused();, $(POST empty)) $(TD This routine is meant as
-an aid for garbage collectors. It is similar to $(D deallocateAll), with an
-important distinction: if there's no intervening call to $(D allocate), a
-subsequent call $(D markAsUsed(b)) (see below) for any block $(D b) that had
-been allocated prior to calling $(D markAllAsUnused) is guaranteed to restore
-the allocation status of $(D b). $(D markAllAsUnused) must not affect memory
-managed by the allocator at all. This is unlike $(D deallocateAll), which is
-allowed to alter managed memory in any way. The primitive $(D
-resolveInternalPointer) must continue working unaffected following a call to $(D
-markAllAsUnused).))
-
-$(TR $(TDC bool markAsUsed(void[] b);) $(TD This routine is meant as
-an aid for garbage collectors. Following a call to $(D
-markAllAsUnused), calling $(D markAsUsed(b)) restores $(D b)'s status as an
-allocated block. Just like $(D markAllAsUnused), $(D markAsUsed(b)) is not
-supposed to affect $(D b) or any other memory managed by the allocator. The
-function returns $(D false) if the block had already been marked by a previous
-call to $(D markAsUsed), $(D true) otherwise.))
-
-$(TR $(TDC void doneMarking();) $(TD This routine is meant as
-an aid for garbage collectors. This call allows the allocator to clear
-state following a call to $(D markAllAsUnused) and a series of calls to $(D
-markAsUsed).))
-
 )
 
 The example below features an _allocator modeled after $(WEB goo.gl/m7329l,
@@ -722,18 +698,6 @@ struct InternalPointersTree(Allocator)
         auto n = find();
         if (!n) return null;
         return (cast(void*) (n + 1))[0 .. n.payload];
-    }
-
-    static if (hasMember!(Parent, "markAllAsUnused"))
-    {
-        void markAllAsUnused() { parent.markAllAsUnused(); }
-        //
-        bool markAsUsed(void[] b)
-        {
-            return parent.markAsUsed(actualAllocation(b));
-        }
-        //
-        void doneMarking() { parent.doneMarking(); }
     }
 }
 

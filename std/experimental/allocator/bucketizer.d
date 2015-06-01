@@ -123,33 +123,6 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         }
         return null;
     }
-
-    static if (hasMember!(Allocator, "markAllAsUnused"))
-    {
-        void markAllAsUnused()
-        {
-            foreach (ref a; buckets)
-            {
-                a.markAllAsUnused();
-            }
-        }
-        //
-        bool markAsUsed(void[] b)
-        {
-            const i = (b.length - min) / step;
-            assert(i < buckets.length);
-            const actual = goodAllocSize(b.length);
-            return buckets.ptr[i].markAsUsed(b.ptr[0 .. actual]);
-        }
-        //
-        void doneMarking()
-        {
-            foreach (ref a; buckets)
-            {
-                a.doneMarking();
-            }
-        }
-    }
 }
 
 ///

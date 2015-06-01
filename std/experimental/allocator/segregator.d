@@ -248,29 +248,6 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
             if (auto r = _small.resolveInternalPointer(p)) return r;
             return _large.resolveInternalPointer(p);
         }
-
-        static if (hasMember!(SmallAllocator, "markAllAsUnused")
-                && hasMember!(LargeAllocator, "markAllAsUnused"))
-        {
-            void markAllAsUnused()
-            {
-                _small.markAllAsUnused();
-                _large.markAllAsUnused();
-            }
-
-            bool markAsUsed(void[] b)
-            {
-                return b.length <= threshold
-                    ? _small.markAsUsed(b)
-                    : _large.markAsUsed(b);
-            }
-
-            void doneMarking()
-            {
-                _small.doneMarking();
-                _large.doneMarking();
-            }
-        }
     }
 
     enum sharedMethods =
