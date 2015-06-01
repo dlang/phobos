@@ -181,7 +181,6 @@ if (isBidirectionalRange!Range)
 
     // the values of x that have a negative y are:
     assert(equal(result2, [-3, -2, 2]));
-    assert(equal(result2 ~ result2, [-3, -2, 2, -3, -2, 2]));
 
     // Check how many times fun was evaluated.
     // Only as many times as the number of items in source.
@@ -213,6 +212,7 @@ same cost or side effects.
     auto r2 = r.cache().take(3);
 
     assert(equal(r1, [0, 1, 2]));
+    assert(equal(r1 ~ r1, [0, 1, 2, 0, 1, 2]));
     assert(i == 2); //The last "seen" element was 2. The data in cache has been cleared.
 
     assert(equal(r2, [0, 1, 2]));
