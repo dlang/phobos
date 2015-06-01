@@ -8673,6 +8673,9 @@ package alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: 
    offers a range with mutable $(D front) (and $(D back) where appropriate) that
    reflects in the original ranges.
 
+   If any of the inputs $(D rs) is infinite so is the merge result (`empty` is
+   statically always false).
+
    Example:
    -------
    auto a = [0, 2, 4];
