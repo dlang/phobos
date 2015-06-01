@@ -1495,14 +1495,14 @@ unittest
         uint[] foo = [1,2,3,4,5];
         uint[] bar = [6,7,8,9,10];
         auto c = chooseAmong(1,foo, bar);
+        assert(equal(c ~ c, [6,7,8,9,10,
+                             6,7,8,9,10]));
         assert(c[3] == 9);
         c[3] = 42;
         assert(c[3] == 42);
         assert(c.moveFront() == 6);
         assert(c.moveBack() == 10);
         assert(c.moveAt(4) == 10);
-        assert(equal(c ~ c, [6,7,8,9,10,
-                             6,7,8,9,10]));
     }
     {
         import std.range : cycle;
