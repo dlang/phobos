@@ -608,6 +608,8 @@ private struct MapResult(alias fun, Range)
             return typeof(this)(_input.save);
         }
     }
+
+    mixin Chainable;
 }
 
 @safe unittest
@@ -620,7 +622,9 @@ private struct MapResult(alias fun, Range)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     alias stringize = map!(to!string);
-    assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
+    auto s = stringize([ 1, 2, 3, 4 ]);
+    assert(equal(s, [ "1", "2", "3", "4" ]));
+    assert(equal(s ~ s, [ "1", "2", "3", "4", "1", "2", "3", "4" ]));
 
     uint counter;
     alias count = map!((a) { return counter++; });
