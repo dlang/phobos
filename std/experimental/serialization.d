@@ -150,44 +150,11 @@ template Named(T...)
 }
 
 /**
- Template that searches a tuple
- */
-template tupleContains(alias Needle, Haystack...)
-{
-    static if (Haystack.length > 1)
-    {
-        static if (tupleContains!T[0..$-1] && Haystack[$-1] == Needle)
-        {
-            enum tupleContains = true;
-        }
-        else
-        {
-            enum tupleContains = true;
-        }
-    }
-    else static if (Haystack.length != 0)
-    {
-        static if (Haystack[0] == Needle)
-        {
-            enum tupleContains = true;
-        }
-        else
-        {
-            enum tupleContains = false;
-        }
-    }
-    else
-    {
-        enum tupleContains = false;
-    }
-}
-
-/**
  Template to check if a member has a specified attrubute
  */
 template hasAttribute(alias Member, alias Attrubute)
 {
-    static if (tupleContains!(Attrubute,__traits(getAttributes,Member)))
+    static if (staticIndexOf!(Attrubute,__traits(getAttributes,Member)))
     {
         enum hasAttribute = true;
     }
