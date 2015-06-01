@@ -1106,6 +1106,16 @@ if (Ranges.length > 0 &&
                     }
                     return result;
                 }
+
+            auto opCat(Range)(Range r)
+            if (isInputRange!(Unqual!Range)//  &&
+                // is(CommonType!(RvalueElementType,
+                //                ElementType!Range))
+                )
+            {
+                import std.range : chain;
+                return chain(source, r); // flatten tree
+            }
         }
         return Result(rs);
     }

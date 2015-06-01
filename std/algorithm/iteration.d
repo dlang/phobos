@@ -1037,6 +1037,7 @@ private struct FilterResult(alias pred, Range)
     static assert(isForwardRange!(typeof(r)));
     assert(equal(r, [ 4 ][]));
     assert(equal(r ~ r, [ 4, 4][]));
+    assert(equal(r ~ r ~ r, [ 4, 4, 4][]));
 
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);
