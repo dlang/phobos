@@ -1622,6 +1622,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
 
             alias opDollar = length;
         }
+
+        mixin Chainable;
     }
 
     return Result(rs, 0);
@@ -1636,6 +1638,8 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
     int[] b = [ 10, 20, 30, 40 ];
     auto r = roundRobin(a, b);
     assert(equal(r, [ 1, 10, 2, 20, 3, 30, 40 ]));
+    assert(equal(r ~ r, [ 1, 10, 2, 20, 3, 30, 40,
+                          1, 10, 2, 20, 3, 30, 40 ]));
 }
 
 /**
