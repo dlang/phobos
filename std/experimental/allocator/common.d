@@ -485,10 +485,6 @@ package void testAllocator(alias make)()
 
     auto b1 = a.allocate(1);
     assert(b1.length == 1);
-    static if (hasMember!(A, "zeroesAllocations"))
-    {
-        assert((cast(byte*) b1.ptr) == 0);
-    }
     auto b2 = a.allocate(2);
     assert(b2.length == 2);
     assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);

@@ -134,10 +134,6 @@ $(TR $(TDC bool empty();) $(TD Returns $(D true) if and only if the allocator
 holds no memory (i.e. no allocation has occurred, or all allocations have been
 deallocated).))
 
-$(TR $(TDC bool zeroesAllocations;) $(TD Enumerated value indicating whether the
-allocator zeroes newly allocated memory automatically. If not defined, it is
-assumed the allocator does not zero allocated memory.))
-
 $(TR $(TDC static Allocator it;, $(POST it $(I is a valid) Allocator $(I
 object))) $(TD Some allocators are $(I monostate), i.e. have only an instance
 and hold only global state. (Notable examples are C's own $(D malloc)-based

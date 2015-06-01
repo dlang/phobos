@@ -41,9 +41,6 @@ version(Posix) struct MmapAllocator
     {
         if (b.ptr) munmap(b.ptr, b.length) == 0 || assert(0);
     }
-
-    /// Ditto
-    enum zeroesAllocations = true;
 }
 
 version(Posix) unittest

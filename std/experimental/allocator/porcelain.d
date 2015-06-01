@@ -145,12 +145,6 @@ interface IAllocator
     $(D Ternary.unknown) if not supported.
     */
     Ternary empty();
-
-    /**
-    Returns $(D Ternary.yes) if memory is zeroed upon an allocation,
-    $(D Ternary.no) if not, or $(D Ternary.unknown) if primitive not supported.
-    */
-    Ternary zeroesAllocations();
 }
 
 __gshared IAllocator _processAllocator;
@@ -1211,22 +1205,6 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         {
             result = impl.allocateAll();
             return Ternary(result.ptr !is null);
-        }
-        else
-        {
-            return Ternary.unknown;
-        }
-    }
-
-    /**
-    Forwards to $(D impl.zeroesAllocations) if defined, otherwise returns
-    $(D Ternary.unknown).
-    */
-    override Ternary zeroesAllocations()
-    {
-        static if (hasMember!(Allocator, "zeroesAllocations"))
-        {
-            return Ternary(impl.zeroesAllocations);
         }
         else
         {

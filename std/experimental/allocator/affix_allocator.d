@@ -182,9 +182,6 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         mixin(forwardToMember("parent",
             "deallocateAll", "empty"));
 
-        static if (hasMember!(Allocator, "zeroesAllocations"))
-        alias zeroesAllocations = Allocator.zeroesAllocations;
-
         // Extra functions
         static if (stateSize!Prefix)
             static ref Prefix prefix(void[] b)
@@ -240,8 +237,6 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         void deallocateAll();
         /// Ditto
         bool empty();
-        /// Ditto
-        enum bool zeroesAllocations = false;
         /// Ditto
         void markAllAsUnused();
         /// Ditto

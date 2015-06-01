@@ -667,9 +667,6 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         // Also works when they're both null.
         return _brkCurrent == _brkInitial;
     }
-
-    /// Ditto
-    enum bool zeroesAllocations = true;
 }
 
 version(Posix) unittest

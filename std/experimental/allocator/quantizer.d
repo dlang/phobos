@@ -204,12 +204,6 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         if (b.ptr) parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)]);
     }
 
-    /**
-    Defined if $(D ParentAllocator.zeroesAllocations) exists.
-    */
-    static if (hasMember!(ParentAllocator, "zeroesAllocations"))
-        alias zeroesAllocations = ParentAllocator.zeroesAllocations;
-
     // Forwarding methods
     mixin(forwardToMember("parent",
         "allocateAll", "owns", "deallocateAll", "empty"));

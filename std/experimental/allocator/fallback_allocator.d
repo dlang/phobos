@@ -256,36 +256,6 @@ struct FallbackAllocator(Primary, Fallback)
     {
         return primary.empty && fallback.empty;
     }
-
-    /**
-    $(D zeroesAllocations) is defined if both allocators also define it.
-    */
-    static if (hasMember!(Primary, "zeroesAllocations")
-        && hasMember!(Fallback, "zeroesAllocations"))
-    enum bool zeroesAllocations = Primary.zeroesAllocations
-        && Fallback.zeroesAllocations;
-
-    static if (hasMember!(Primary, "markAllAsUnused")
-        && hasMember!(Fallback, "markAllAsUnused"))
-    {
-        void markAllAsUnused()
-        {
-            primary.markAllAsUnused();
-            fallback.markAllAsUnused();
-        }
-        //
-        bool markAsUsed(void[] b)
-        {
-            if (primary.owns(b)) primary.markAsUsed(b);
-            else fallback.markAsUsed(b);
-        }
-        //
-        void doneMarking()
-        {
-            primary.doneMarking();
-            falback.doneMarking();
-        }
-    }
 }
 
 unittest
