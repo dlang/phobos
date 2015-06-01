@@ -2732,6 +2732,7 @@ public:
     private static struct DollarToken {}
     enum opDollar = DollarToken.init;
     auto opSlice(size_t, DollarToken) inout { return this; }
+    mixin Chainable;
 }
 
 /// Ditto
@@ -2742,7 +2743,9 @@ Repeat!T repeat(T)(T value) { return Repeat!T(value); }
 {
     import std.algorithm : equal;
 
-    assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
+    assert(equal(5.repeat.take(4), [ 5, 5, 5, 5 ]));
+    assert(equal((1.repeat.take(2) ~ 5.repeat).take(4), [ 1, 1,
+                                                          5, 5 ]));
 }
 
 @safe unittest
