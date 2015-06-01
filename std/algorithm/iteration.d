@@ -2070,6 +2070,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
                 return copy;
             }
         }
+
+        mixin Chainable;
     }
     return Result(r, sep);
 }
@@ -2093,6 +2095,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
     assert(equal(joiner(["abc", "def"]), "abcdef"));
+    /* TODO This fails, as
+       iteration.d(2098,18): Error: incompatible types for ((joiner(["abc", "def"])) ~ (joiner(["abc", "def"]))): 'Result' and 'Result'
+       why?:
+       assert(equal(joiner(["abc", "def"]) ~ joiner(["abc", "def"]), "abcdefabcdef"));
+    */
 }
 
 unittest
