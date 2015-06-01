@@ -4168,6 +4168,8 @@ private struct UniqResult(alias pred, Range)
             return typeof(this)(_input.save);
         }
     }
+
+    mixin Chainable;
 }
 
 @safe unittest
@@ -4183,6 +4185,7 @@ private struct UniqResult(alias pred, Range)
     static assert(isForwardRange!(typeof(r)));
 
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
+    assert(equal(r ~ r, [ 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
 
     foreach (DummyType; AllDummyRanges) {
