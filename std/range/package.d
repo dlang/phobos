@@ -1894,6 +1894,8 @@ if (isInputRange!(Unqual!Range) &&
     {
         return _maxAvailable;
     }
+
+    mixin Chainable;
 }
 
 // This template simply aliases itself to R and is useful for consistency in
@@ -1927,6 +1929,8 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
     assert(s.length == 5);
     assert(s[4] == 5);
     assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
+    assert(equal(s ~ s, [ 1, 2, 3, 4, 5,
+                          1, 2, 3, 4, 5 ][]));
 }
 
 // take(take(r, n1), n2)
