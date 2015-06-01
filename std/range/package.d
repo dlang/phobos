@@ -8740,7 +8740,7 @@ if (Rs.length > 1 &&
             E bestElement;
             foreach (i, _; Rs)
             {
-                import std.functional: binaryFun;
+                import std.functional : binaryFun;
                 if (!source[i].empty)
                 {
                     if (bestIndex == size_t.max || // either this is the first or
@@ -8786,7 +8786,7 @@ if (Rs.length > 1 &&
 
             private size_t backIndex()
             {
-                import std.functional: binaryFun;
+                import std.functional : binaryFun;
                 size_t bestIndex = size_t.max; // indicate undefined
                 E bestElement;
                 foreach (i, _; Rs)
@@ -8860,7 +8860,7 @@ if (Rs.length > 1 &&
 
 @safe pure nothrow unittest
 {
-    import std.algorithm: equal;
+    import std.algorithm : equal;
 
     alias S = short;
     alias I = int;
