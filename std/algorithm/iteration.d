@@ -1020,6 +1020,8 @@ private struct FilterResult(alias pred, Range)
             return typeof(this)(_input.save);
         }
     }
+
+    mixin Chainable;
 }
 
 @safe unittest
@@ -1034,6 +1036,7 @@ private struct FilterResult(alias pred, Range)
     auto r = filter!("a > 3")(a);
     static assert(isForwardRange!(typeof(r)));
     assert(equal(r, [ 4 ][]));
+    assert(equal(r ~ r, [ 4, 4][]));
 
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);

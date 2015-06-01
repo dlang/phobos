@@ -2239,3 +2239,17 @@ if (!isNarrowString!(T[]))
     size_t i = a.length - std.utf.strideBack(a, a.length);
     return decode(a, i);
 }
+
+template Chainable()
+{
+    import std.traits: Unqual, CommonType;
+    import std.range: ElementType;
+    auto opCat(Range)(Range r)
+    if (isInputRange!(Unqual!Range) &&
+        is(CommonType!(ElementType!(typeof(this)),
+                       ElementType!Range)))
+    {
+        import std.range : chain;
+        return chain(this, r);
+    }
+}
