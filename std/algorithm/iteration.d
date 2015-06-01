@@ -1160,6 +1160,7 @@ template filterBidirectional(alias pred)
     static assert(isBidirectionalRange!(typeof(small)));
     assert(small.back == 2);
     assert(equal(small, [ 1, 2 ]));
+    assert(equal(small ~ small, [ 1, 2, 1, 2]));
     assert(equal(retro(small), [ 2, 1 ]));
     // In combination with chain() to span multiple ranges
     int[] a = [ 3, -2, 400 ];
@@ -1212,6 +1213,8 @@ private struct FilterBidiResult(alias pred, Range)
     {
         return typeof(this)(_input.save);
     }
+
+    mixin Chainable;
 }
 
 // group
