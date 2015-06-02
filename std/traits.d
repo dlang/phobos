@@ -3326,6 +3326,69 @@ unittest
 }
 
 /**
+   Yields $(D true) if and only if $(D T) has a UDA of type $(D attribute).
+   The UDA associated with $(D T) can be of type $(D attribute) or a value of
+   that type.
+ */
+template hasAttribute(alias T, attribute)
+{
+    import std.typetuple: Filter;
+
+    enum isAttribute(alias U) = is(TypeOf!U == attribute);
+    alias attributes = Filter!(isAttribute, __traits(getAttributes, T));
+    enum hasAttribute = attributes.length != 0;
+}
+
+///
+unittest
+{
+    struct TypeStruct{}
+    struct ValueStruct{ string s; }
+    enum Enum;
+
+    void noUdaFunc() {}
+    static assert(!hasAttribute!(noUdaFunc, TypeStruct));
+    static assert(!hasAttribute!(noUdaFunc, ValueStruct));
+    static assert(!hasAttribute!(noUdaFunc, Enum));
+
+    @(5)
+    void intUdaFunc() {}
+    static assert(!hasAttribute!(intUdaFunc, TypeStruct));
+    static assert(!hasAttribute!(intUdaFunc, ValueStruct));
+    static assert(!hasAttribute!(noUdaFunc, Enum));
+
+    static assert(hasAttribute!(intUdaFunc, int));
+
+    @(TypeStruct, ValueStruct("blah"))
+    void structUdaFunc() {}
+    static assert(hasAttribute!(structUdaFunc, ValueStruct));
+    static assert(hasAttribute!(structUdaFunc, TypeStruct));
+
+    static assert(!hasAttribute!(structUdaFunc, Enum));
+    static assert(!hasAttribute!(structUdaFunc, int));
+
+    @Enum
+    void enumUdaFunc() {}
+    static assert(hasAttribute!(enumUdaFunc, Enum));
+}
+
+//Utility to allow checking UDAs regardless of whether the template
+//parameter is or has a type
+private template TypeOf(alias T)
+{
+
+    static if(is(T))
+    {
+        alias TypeOf = T;
+    }
+    else
+    {
+        alias TypeOf = typeof(T);
+    }
+}
+
+
+/**
 Retrieves the members of an enumerated type $(D enum E).
 
 Params:
