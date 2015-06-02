@@ -839,7 +839,7 @@ $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 
 ######################################################
 
-zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
+zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
@@ -847,7 +847,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO) \
 	$(SRC_STD_LOGGER)
 	del phobos.zip
-	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
+	zip32 -u phobos win32.mak win64.mak posix.mak osmodel.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_STD)
 	zip32 -u phobos $(SRC_STD_C)
