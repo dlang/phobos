@@ -3330,13 +3330,13 @@ unittest
    The UDA associated with $(D T) can be of type $(D attribute) or a value of
    that type.
  */
-template hasAttribute(alias T, attribute)
+template hasAttributeOfType(alias T, attribute)
 {
     import std.typetuple: Filter;
 
     enum isAttribute(alias U) = is(TypeOf!U == attribute);
     alias attributes = Filter!(isAttribute, __traits(getAttributes, T));
-    enum hasAttribute = attributes.length != 0;
+    enum hasAttributeOfType = attributes.length != 0;
 }
 
 ///
@@ -3347,29 +3347,29 @@ unittest
     enum Enum;
 
     void noUdaFunc() {}
-    static assert(!hasAttribute!(noUdaFunc, TypeStruct));
-    static assert(!hasAttribute!(noUdaFunc, ValueStruct));
-    static assert(!hasAttribute!(noUdaFunc, Enum));
+    static assert(!hasAttributeOfType!(noUdaFunc, TypeStruct));
+    static assert(!hasAttributeOfType!(noUdaFunc, ValueStruct));
+    static assert(!hasAttributeOfType!(noUdaFunc, Enum));
 
     @(5)
     void intUdaFunc() {}
-    static assert(!hasAttribute!(intUdaFunc, TypeStruct));
-    static assert(!hasAttribute!(intUdaFunc, ValueStruct));
-    static assert(!hasAttribute!(noUdaFunc, Enum));
+    static assert(!hasAttributeOfType!(intUdaFunc, TypeStruct));
+    static assert(!hasAttributeOfType!(intUdaFunc, ValueStruct));
+    static assert(!hasAttributeOfType!(noUdaFunc, Enum));
 
-    static assert(hasAttribute!(intUdaFunc, int));
+    static assert(hasAttributeOfType!(intUdaFunc, int));
 
     @(TypeStruct, ValueStruct("blah"))
     void structUdaFunc() {}
-    static assert(hasAttribute!(structUdaFunc, ValueStruct));
-    static assert(hasAttribute!(structUdaFunc, TypeStruct));
+    static assert(hasAttributeOfType!(structUdaFunc, ValueStruct));
+    static assert(hasAttributeOfType!(structUdaFunc, TypeStruct));
 
-    static assert(!hasAttribute!(structUdaFunc, Enum));
-    static assert(!hasAttribute!(structUdaFunc, int));
+    static assert(!hasAttributeOfType!(structUdaFunc, Enum));
+    static assert(!hasAttributeOfType!(structUdaFunc, int));
 
     @Enum
     void enumUdaFunc() {}
-    static assert(hasAttribute!(enumUdaFunc, Enum));
+    static assert(hasAttributeOfType!(enumUdaFunc, Enum));
 }
 
 //Utility to allow checking UDAs regardless of whether the template
