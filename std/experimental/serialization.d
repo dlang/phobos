@@ -1,15 +1,13 @@
-﻿// Written in the D programming language.
+// Written in the D programming language.
 
 /**
  This module intends to provide fully functional serialization for basic
- types (except pointers) and D structs and classes which define
- themselves as serializable with $(D enum serializable = true;)
-
+ types (except pointers) and D structs and classes.
+ Types can define themselvs as not serialzable with $(D enum serializable = false;)
  Synopsis:
  ----
  class Foo
- {
-     enum serializable = true;
+ { 
      long bar;
      int[] baz;
  }
@@ -29,7 +27,7 @@
      }
  }
  ----
-
+ 
  Copyright: Copyright Sean Campbell 2015.
  License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  Authors:   Sean Campbell
@@ -82,7 +80,8 @@ static this()
  */
 template isSerializableStructure(T)
 {
-    static if (__traits(compiles,T.serializable) && T.serializable && !isPointer!T)
+    static if (((__traits(compiles,T.serializable) && T.serializable) || !__traits(compiles,T.serializable)) 
+        && !isPointer!T && (is(T == class) || is(T == struct) || is(T == union)))
     {
         static if (is(T == class))
         {
@@ -521,6 +520,10 @@ version(unittest)
         SomeClass someClass;
         SomeClass[] someOtherClasses;
     }
+    struct NotSerializableStruct
+    {
+        enum serializable = false;
+    }
 }
 unittest
 {
@@ -539,4 +542,5 @@ unittest
     assert(someOtherStruct.intArray == [1,2,3,5,200]);
     assert(44L in someOtherStruct.longAArray);
     assert(someStruct.someClass.someLong == someOtherStruct.someOtherClasses[0].someLong);
+    assert(!isSerializable!NotSerializableStruct);
 }
