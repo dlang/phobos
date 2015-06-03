@@ -124,9 +124,11 @@
  *           $(LREF mangledName)
  *           $(LREF Select)
  *           $(LREF select)
- *           $(LREF hasUDA)
  * ))
- * )
+ * $(TR $(TD User-Defined Attributes) $(TD
+ *           $(LREF hasUDA)
+ *           $(LREF getUDA)
+ * ))
  * )
  *
  * Macros:
@@ -6471,4 +6473,40 @@ unittest
 
     @Named("abc") int h;
     static assert(hasUDA!(h, Named));
+}
+
+/**
+ * Gets a $(LINK2 ../attribute.html#uda, user-defined attribute) of the given
+ * type from the given symbol. This is useful for UDAs that are structs with fields.
+ */
+template getUDA(alias symbol, alias attribute)
+{
+    import std.typetuple : TypeTuple, staticIndexOf, staticMap;
+
+    alias toType(alias S) = typeof(S);
+    enum int udaIndex = staticIndexOf!(attribute, staticMap!(toType,
+            __traits(getAttributes, symbol)));
+    static if (udaIndex == -1)
+        static assert(false, "'" ~ symbol.stringof ~ "' does not have UDA '"
+                ~ attribute.stringof ~ "'");
+    else
+        enum getUDA = TypeTuple!(__traits(getAttributes, symbol))[udaIndex];
+}
+
+///
+unittest
+{
+    struct Attr
+    {
+        string name;
+        int value;
+    }
+
+    @Attr("Answer", 42) int a;
+    static assert(getUDA!(a, Attr).name == "Answer");
+    static assert(getUDA!(a, Attr).value == 42);
+
+    @(Attr("Answer", 42), "string", 9999) int b;
+    static assert(getUDA!(b, Attr).name == "Answer");
+    static assert(getUDA!(b, Attr).value == 42);
 }
