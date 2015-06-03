@@ -1799,6 +1799,7 @@ unittest
 {
     Logger l = stdThreadLocalLog;
     stdThreadLocalLog = new FileLogger("someFile.log");
+    scope(exit) remove("someFile.log");
 
     stdThreadLocalLog = l;
 }
@@ -2089,7 +2090,7 @@ version (unittest)
 
 unittest // default logger
 {
-    import std.file : remove;
+    import std.file : exists, remove;
     string filename = randomString(32) ~ ".tempLogFile";
     FileLogger l = new FileLogger(filename);
     auto oldunspecificLogger = sharedLog;
@@ -2098,6 +2099,7 @@ unittest // default logger
     scope(exit)
     {
         remove(filename);
+        assert(!exists(filename));
         sharedLog = oldunspecificLogger;
         globalLogLevel = LogLevel.all;
     }
