@@ -127,7 +127,7 @@
  * ))
  * $(TR $(TD User-Defined Attributes) $(TD
  *           $(LREF hasUDA)
- *           $(LREF getUDA)
+ *           $(LREF getUDAs)
  * ))
  * )
  *
@@ -6476,21 +6476,15 @@ unittest
 }
 
 /**
- * Gets a $(LINK2 ../attribute.html#uda, user-defined attribute) of the given
- * type from the given symbol. This is useful for UDAs that are structs with fields.
+ * Gets the $(LINK2 ../attribute.html#uda, user-defined attributes) of the given
+ * type from the given symbol.
  */
-template getUDA(alias symbol, alias attribute)
+template getUDAs(alias symbol, alias attribute)
 {
-    import std.typetuple : TypeTuple, staticIndexOf, staticMap;
+    import std.typetuple : Filter;
 
-    alias toType(alias S) = typeof(S);
-    enum int udaIndex = staticIndexOf!(attribute, staticMap!(toType,
-            __traits(getAttributes, symbol)));
-    static if (udaIndex == -1)
-        static assert(false, "'" ~ symbol.stringof ~ "' does not have UDA '"
-                ~ attribute.stringof ~ "'");
-    else
-        enum getUDA = TypeTuple!(__traits(getAttributes, symbol))[udaIndex];
+    enum isDesiredUDA(alias S) = is(typeof(S) == attribute);
+    alias getUDAs = Filter!(isDesiredUDA, __traits(getAttributes, symbol));
 }
 
 ///
@@ -6503,10 +6497,16 @@ unittest
     }
 
     @Attr("Answer", 42) int a;
-    static assert(getUDA!(a, Attr).name == "Answer");
-    static assert(getUDA!(a, Attr).value == 42);
+    static assert(getUDAs!(a, Attr)[0].name == "Answer");
+    static assert(getUDAs!(a, Attr)[0].value == 42);
 
     @(Attr("Answer", 42), "string", 9999) int b;
-    static assert(getUDA!(b, Attr).name == "Answer");
-    static assert(getUDA!(b, Attr).value == 42);
+    static assert(getUDAs!(b, Attr)[0].name == "Answer");
+    static assert(getUDAs!(b, Attr)[0].value == 42);
+
+    @Attr("Answer", 42) @Attr("Pi", 3) int c;
+    static assert(getUDAs!(c, Attr)[0].name == "Answer");
+    static assert(getUDAs!(c, Attr)[0].value == 42);
+    static assert(getUDAs!(c, Attr)[1].name == "Pi");
+    static assert(getUDAs!(c, Attr)[1].value == 3);
 }
