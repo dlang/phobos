@@ -23,6 +23,9 @@ struct NullAllocator
     shouldn't be unnecessarily constrained.
     */
     enum uint alignment = 64 * 1024;
+    /// Returns $(D n).
+    //size_t goodAllocSize(size_t n) shared const
+    //{ return .goodAllocSize(this, n); }
     /// Always returns $(D null).
     void[] allocate(size_t) shared { return null; }
     /// Always returns $(D null).
@@ -43,11 +46,11 @@ struct NullAllocator
     bool alignedReallocate(ref void[] b, size_t, uint) shared
     { assert(b is null); return false; }
     /// Returns $(D false).
-    bool owns(void[] b) shared { return false; }
+    bool owns(void[] b) shared const { return false; }
     /**
     Returns $(D null).
     */
-    void[] resolveInternalPointer(void*) shared { return null; }
+    void[] resolveInternalPointer(void*) shared const { return null; }
     /**
     No-op.
     Precondition: $(D b is null)
@@ -60,7 +63,7 @@ struct NullAllocator
     /**
     Returns $(D true).
     */
-    bool empty() shared { return true; }
+    bool empty() shared const { return true; }
     /**
     Returns the $(D shared) global instance of the $(D NullAllocator).
     */

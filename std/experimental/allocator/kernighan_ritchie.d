@@ -1,36 +1,73 @@
 module std.experimental.allocator.kernighan_ritchie;
 import std.experimental.allocator.null_allocator;
 
-//debug = KRBlock;
-debug(KRBlock) import std.stdio;
+//debug = KRRegion;
+debug(KRRegion) import std.stdio;
 version(unittest) import std.conv : text;
 
-// KRBlock
+// KRRegion
 /**
-$(D KRBlock) draws inspiration from the
+$(D KRRegion) draws inspiration from the $(LINK2
+std_experimental_allocator_region.html, region allocation strategy) and also the
 $(WEB stackoverflow.com/questions/13159564/explain-this-implementation-of-malloc-from-the-kr-book,
 famed allocator) described by Brian Kernighan and Dennis Ritchie in section 8.7
 of the book $(WEB amazon.com/exec/obidos/ASIN/0131103628/classicempire, "The C
 Programming Language"), Second Edition, Prentice Hall, 1988.
 
-The recommended usage for $(D KRBlock) is as a simple means to add
-$(D deallocate) to a region.
+$(H4 `KRRegion` = `Region` + Kernighan-Ritchie Allocator)
 
-A $(D KRBlock) manages a single contiguous chunk of memory by embedding a free
-blocks list onto it. It is a very simple allocator with good memory utilization.
-$(D KRBlock) has a small control structure and no per-allocation overhead. Its
-disadvantages include proneness to fragmentation, a minimum allocation size of
-two words, and slow allocation and deallocation  times, in the worst case
-proportional to the number of free (previously allocated and then deallocated)
-blocks. So $(D KRBlock) should be used for simple allocation patterns, or
-for coarse-granular allocations in conjunction with faster allocators.
+Initially, `KRRegion` starts in "region" mode: allocations are served from
+the memory chunk in a region fashion. Thus, as long as there is enough memory
+left, $(D KRRegion.allocate) has the performance profile of a region allocator.
+Deallocation inserts (in $(BIGOH 1) time) the deallocated blocks in an
+unstructured freelist, which is not read in region mode.
+
+Once the region cannot serve an $(D allocate) request, $(D KRRegion) switches
+to "free list" mode. It sorts the list of previously deallocated blocks by
+address and serves allocation requests off that free list. The allocation and
+deallocation follow the pattern described by Kernighan and Ritchie.
+
+The recommended use of `KRRegion` is as a $(I region with deallocation). If the
+`KRRegion` is dimensioned appropriately, it could often not enter free list
+mode during its lifetime. Thus it is as fast as a simple region, whilst
+offering deallocation at a small cost. When the region memory is  exhausted,
+the previously deallocated memory is still usable, at a performance  cost. If
+the region is not excessively large and fragmented, the linear  allocation and
+deallocation cost may still be compensated for by the good locality
+characteristics.
+
+If the chunk of memory managed is large, it may be desirable to switch
+management to free list from the beginning. That way, memory may be used in a
+more compact manner than region mode. To force free list mode, call $(D
+switchToFreeList) shortly after construction or when deemed appropriate.
 
 The smallest size that can be allocated is two words (16 bytes on 64-bit
 systems, 8 bytes on 32-bit systems). This is because the free list management
 needs two words (one for the length, the other for the next pointer in the
 singly-linked list).
 
-Similarities with the Kernighan-Ritchie allocator:
+The $(D ParentAllocator) type parameter is the type of the allocator used to
+allocate the memory chunk underlying the $(D KRRegion) object. Choosing the
+default ($(D NullAllocator)) means the user is responsible for passing a buffer
+at construction (and for deallocating it if necessary). Otherwise, $(D KRRegion)
+automatically deallocates the buffer during destruction. For that reason, if
+$(D ParentAllocator) is not $(D NullAllocator), then $(D KRRegion) is not
+copyable.
+
+$(H4 Implementation Details)
+
+In free list mode, $(D KRRegion) embeds a free blocks list onto the chunk of
+memory. The free list is circular, coalesced, and sorted by address at all
+times. Allocations and deallocations take time proportional to the number of
+previously deallocated blocks. (In practice the cost may be lower, e.g. if
+memory is deallocated in reverse order of allocation, all operations take
+constant time.) Memory utilization is good (small control structure and no
+per-allocation overhead). The disadvantages of freelist mode include proneness
+to fragmentation, a minimum allocation size of two words, and linear worst-case
+allocation and deallocation times.
+
+Similarities of `KRRegion` (in free list mode) with the
+Kernighan-Ritchie allocator:
 
 $(UL
 $(LI Free blocks have variable size and are linked in a singly-linked list.)
@@ -46,29 +83,16 @@ Differences from the Kernighan-Ritchie allocator:
 $(UL
 $(LI Once the chunk is exhausted, the Kernighan-Ritchie allocator allocates
 another chunk using operating system primitives. For better composability, $(D
-KRBlock) just gets full (returns $(D null) on new allocation requests). The
+KRRegion) just gets full (returns $(D null) on new allocation requests). The
 decision to allocate more blocks is deferred to a higher-level entity. For an
 example, see the example below using $(D AllocatorList) in conjunction with $(D
-KRBlock).)
+KRRegion).)
 $(LI Allocated blocks do not hold a size prefix. This is because in D the size
 information is available in client code at deallocation time.)
 )
 
-Initially the freelist has only one element, which covers the entire chunk of
-memory. The maximum amount that can be allocated is the full chunk (there is no
-size overhead for allocated blocks). As memory gets allocated and deallocated,
-the free list will evolve accordingly whilst staying sorted at all times.
-
-The $(D ParentAllocator) type parameter is the type of the allocator used to
-allocate the memory chunk underlying the $(D KRBlock) object. Choosing the
-default ($(D NullAllocator)) means the user is responsible for passing a buffer
-at construction (and for deallocating it if necessary). Otherwise, $(D KRBlock)
-automatically deallocates the buffer during destruction. For that reason, if
-$(D ParentAllocator) is not $(D NullAllocator), then $(D KRBlock) is not
-copyable.
-
 */
-struct KRBlock(ParentAllocator = NullAllocator)
+struct KRRegion(ParentAllocator = NullAllocator)
 {
     import std.experimental.allocator.common : stateSize, alignedAt;
     import std.traits : hasMember;
@@ -94,13 +118,12 @@ struct KRBlock(ParentAllocator = NullAllocator)
             return p.ptr + p.length == right;
         }
 
-        void coalesce()
+        bool coalesce()
         {
-            if (adjacent(next))
-            {
-                size += next.size;
-                next = next.next;
-            }
+            if (!adjacent(next)) return false;
+            size += next.size;
+            next = next.next;
+            return true;
         }
 
         Tuple!(void[], Node*) allocateHere(size_t bytes)
@@ -129,13 +152,14 @@ struct KRBlock(ParentAllocator = NullAllocator)
     // state {
     /**
     If $(D ParentAllocator) holds state, $(D parent) is a public member of type
-    $(D KRBlock). Otherwise, $(D parent) is an $(D alias) for
+    $(D KRRegion). Otherwise, $(D parent) is an $(D alias) for
     $(D ParentAllocator.it).
     */
     static if (stateSize!ParentAllocator) ParentAllocator parent;
     else alias parent = ParentAllocator.it;
     private void[] payload;
     Node* root;
+    bool regionMode = true;
     // }
 
     auto byNodePtr()
@@ -147,6 +171,7 @@ struct KRBlock(ParentAllocator = NullAllocator)
             @property Node* front() { return current; }
             void popFront()
             {
+                assert(current && current.next);
                 current = current.next;
                 if (current == start) current = null;
             }
@@ -160,23 +185,40 @@ struct KRBlock(ParentAllocator = NullAllocator)
     string toString()
     {
         import std.format : format;
-        string s = "KRBlock@";
-        s ~= format("%s-%s(0x%s[%s]", &this, &this + 1,
-            payload.ptr, payload.length);
+        string s = "KRRegion@";
+        s ~= format("%s-%s(0x%s[%s] %s", &this, &this + 1,
+            payload.ptr, payload.length,
+            regionMode ? "(region)" : "(freelist)");
+
         Node* lastNode = null;
-        foreach (node; byNodePtr)
+        if (!regionMode)
         {
-            s ~= format(", %sfree(0x%s[%s])",
-                lastNode && lastNode.adjacent(node) ? "+" : "",
-                cast(void*) node, node.size);
-            lastNode = node;
+            foreach (node; byNodePtr)
+            {
+                s ~= format(", %sfree(0x%s[%s])",
+                    lastNode && lastNode.adjacent(node) ? "+" : "",
+                    cast(void*) node, node.size);
+                lastNode = node;
+            }
         }
+        else
+        {
+            for (auto node = root; node; node = node.next)
+            {
+                s ~= format(", %sfree(0x%s[%s])",
+                    lastNode && lastNode.adjacent(node) ? "+" : "",
+                    cast(void*) node, node.size);
+                lastNode = node;
+            }
+        }
+
         s ~= ')';
         return s;
     }
 
     private void assertValid(string s)
     {
+        assert(!regionMode);
         if (!payload.ptr)
         {
             assert(!root, s);
@@ -199,9 +241,58 @@ struct KRBlock(ParentAllocator = NullAllocator)
         }
     }
 
+    private Node* sortFreelist(Node* root)
+    {
+        // Find a monotonic run
+        auto last = root;
+        for (;;)
+        {
+            if (!last.next) return root;
+            if (last > last.next) break;
+            assert(last < last.next);
+            last = last.next;
+        }
+        auto tail = last.next;
+        last.next = null;
+        tail = sortFreelist(tail);
+        return merge(root, tail);
+    }
+
+    private Node* merge(Node* left, Node* right)
+    {
+        assert(left != right);
+        if (!left) return right;
+        if (!right) return left;
+        if (left < right)
+        {
+            auto result = left;
+            result.next = merge(left.next, right);
+            return result;
+        }
+        auto result = right;
+        result.next = merge(left, right.next);
+        return result;
+    }
+
+    private void coalesceAndMakeCircular()
+    {
+        for (auto n = root;;)
+        {
+            assert(!n.next || n < n.next);
+            if (!n.next)
+            {
+                // Convert to circular
+                n.next = root;
+                break;
+            }
+            if (n.coalesce) continue; // possibly another coalesce
+            n = n.next;
+        }
+    }
+
     /**
-    Create a $(D KRBlock). If $(D ParentAllocator) is not $(D NullAllocator),
-    $(D KRBlock)'s destructor will call $(D parent.deallocate).
+    Create a $(D KRRegion). If $(D ParentAllocator) is not $(D NullAllocator),
+    $(D KRRegion)'s destructor will call $(D parent.deallocate).
 
     Params:
     b = Block of memory to serve as support for the allocator. Memory must be
@@ -224,9 +315,10 @@ struct KRBlock(ParentAllocator = NullAllocator)
         payload = b;
         root = cast(Node*) b.ptr;
         // Initialize the free list with all list
-        root.next = root;
+        assert(regionMode);
+        root.next = null;
         root.size = b.length;
-        debug(KRBlock) writefln("KRBlock@%s: init with %s[%s]", &this,
+        debug(KRRegion) writefln("KRRegion@%s: init with %s[%s]", &this,
             b.ptr, b.length);
     }
 
@@ -244,6 +336,20 @@ struct KRBlock(ParentAllocator = NullAllocator)
     ~this()
     {
         parent.deallocate(payload);
+    }
+
+    /**
+    Forces free list mode. If already in free list mode, does nothing.
+    Otherwise, sorts the free list accumulated so far and switches strategy for
+    future allocations to KR style.
+    */
+    void switchToFreeList()
+    {
+        if (!regionMode) return;
+        regionMode = false;
+        if (!root) return;
+        root = sortFreelist(root);
+        coalesceAndMakeCircular;
     }
 
     /*
@@ -268,7 +374,35 @@ struct KRBlock(ParentAllocator = NullAllocator)
     void[] allocate(size_t n)
     {
         if (!n || !root) return null;
-        auto actualBytes = goodAllocSize(n);
+        const actualBytes = goodAllocSize(n);
+
+        // Try the region first
+        if (regionMode)
+        {
+            // Only look at the head of the freelist
+            if (root.size >= actualBytes)
+            {
+                // Enough room for allocation
+                void* result = root;
+                auto balance = root.size - actualBytes;
+                if (balance >= Node.sizeof)
+                {
+                    auto newRoot = cast(Node*) (result + actualBytes);
+                    newRoot.next = root.next;
+                    newRoot.size = balance;
+                    root = newRoot;
+                }
+                else
+                {
+                    root = null;
+                    switchToFreeList;
+                }
+                return result[0 .. n];
+            }
+            // Not enough memory, switch to freelist mode and fall through
+            switchToFreeList;
+        }
+
         // Try to allocate from next after the iterating node
         for (auto pnode = root;;)
         {
@@ -298,15 +432,25 @@ struct KRBlock(ParentAllocator = NullAllocator)
     */
     void deallocate(void[] b)
     {
-        debug(KRBlock) writefln("KRBlock@%s: deallocate(%s[%s])", &this,
+        debug(KRRegion) writefln("KRRegion@%s: deallocate(%s[%s])", &this,
             b.ptr, b.length);
         if (!b.ptr) return;
         assert(owns(b));
         assert(b.ptr.alignedAt(Node.alignof));
+
         // Insert back in the freelist, keeping it sorted by address. Do not
         // coalesce at this time. Instead, do it lazily during allocation.
         auto n = cast(Node*) b.ptr;
         n.size = goodAllocSize(b.length);
+
+        if (regionMode)
+        {
+            assert(root);
+            // Insert right after root
+            n.next = root.next;
+            root.next = n;
+            return;
+        }
 
         if (!root)
         {
@@ -374,20 +518,19 @@ struct KRBlock(ParentAllocator = NullAllocator)
     */
     void[] allocateAll()
     {
-        //debug(KRBlock) assertValid("allocateAll");
-        //debug(KRBlock) scope(exit) assertValid("allocateAll");
-        auto result = allocate(payload.length);
-        // The attempt above has coalesced all possible blocks
-        if (!result.ptr && root && root == root.next)
-            result = allocate(root.size);
-        return result;
+        //debug(KRRegion) assertValid("allocateAll");
+        //debug(KRRegion) scope(exit) assertValid("allocateAll");
+        if (regionMode) switchToFreeList;
+        if (root && root.next == root)
+            return allocate(root.size);
+        return null;
     }
 
     ///
     unittest
     {
         import std.experimental.allocator.gc_allocator;
-        auto alloc = KRBlock!GCAllocator(1024 * 64);
+        auto alloc = KRRegion!GCAllocator(1024 * 64);
         auto b1 = alloc.allocate(2048);
         assert(b1.length == 2048);
         auto b2 = alloc.allocateAll;
@@ -400,8 +543,8 @@ struct KRBlock(ParentAllocator = NullAllocator)
     */
     void deallocateAll()
     {
-        debug(KRBlock) assertValid("deallocateAll");
-        debug(KRBlock) scope(exit) assertValid("deallocateAll");
+        debug(KRRegion) assertValid("deallocateAll");
+        debug(KRRegion) scope(exit) assertValid("deallocateAll");
         root = cast(Node*) payload.ptr;
         // Initialize the free list with all list
         if (root)
@@ -418,8 +561,8 @@ struct KRBlock(ParentAllocator = NullAllocator)
     */
     bool owns(void[] b)
     {
-        debug(KRBlock) assertValid("owns");
-        debug(KRBlock) scope(exit) assertValid("owns");
+        debug(KRRegion) assertValid("owns");
+        debug(KRRegion) scope(exit) assertValid("owns");
         return b.ptr >= payload.ptr && b.ptr < payload.ptr + payload.length;
     }
 
@@ -441,18 +584,18 @@ struct KRBlock(ParentAllocator = NullAllocator)
 }
 
 /**
-$(D KRBlock) is preferable to $(D Region) as a front for a general-purpose
+$(D KRRegion) is preferable to $(D Region) as a front for a general-purpose
 allocator if $(D deallocate) is needed, yet the actual deallocation traffic is
-relatively low. The example below shows a $(D KRBlock) using stack storage
+relatively low. The example below shows a $(D KRRegion) using stack storage
 fronting the GC allocator.
 */
 unittest
 {
     import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator.fallback_allocator;
-    // KRBlock fronting a general-purpose allocator
+    // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
-    auto alloc = fallbackAllocator(KRBlock!()(buf), GCAllocator.it);
+    auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.it);
     auto b = alloc.allocate(100);
     assert(b.length == 100);
     assert(alloc.primary.owns(b));
@@ -474,7 +617,7 @@ unittest
     import std.experimental.allocator.gc_allocator,
         std.experimental.allocator.mmap_allocator,
         std.experimental.allocator.allocator_list;
-    AllocatorList!(n => KRBlock!MmapAllocator(max(n * 16, 1024 * 1024))) alloc;
+    AllocatorList!(n => KRRegion!MmapAllocator(max(n * 16, 1024 * 1024))) alloc;
 }
 
 unittest
@@ -488,7 +631,7 @@ unittest
     from the garbage-collected heap. Each block is organized as a KR-style
     heap. More blocks are allocated and freed on a need basis.
     */
-    AllocatorList!(n => KRBlock!Mallocator(max(n * 16, 1024 * 1024)),
+    AllocatorList!(n => KRRegion!Mallocator(max(n * 16, 1024 * 1024)),
         NullAllocator) alloc;
     void[][50] array;
     foreach (i; 0 .. array.length)
@@ -520,7 +663,7 @@ unittest
     heap. More blocks are allocated and freed on a need basis.
     */
     AllocatorList!((n) {
-        auto result = KRBlock!MmapAllocator(max(n * 2, 1024 * 1024));
+        auto result = KRRegion!MmapAllocator(max(n * 2, 1024 * 1024));
         return result;
     }) alloc;
     void[][490] array;
@@ -550,13 +693,16 @@ unittest
         std.experimental.allocator.allocator_list, std.algorithm;
     import std.experimental.allocator.common;
     testAllocator!(() => AllocatorList!(
-        n => KRBlock!GCAllocator(max(n * 16, 1024 * 1024)))());
+        n => KRRegion!GCAllocator(max(n * 16, 1024 * 1024)))());
 }
 
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    auto alloc = KRBlock!GCAllocator(1024 * 1024);
+    import std.stdio;
+
+    auto alloc = KRRegion!GCAllocator(1024 * 1024);
+
     void[][] array;
     foreach (i; 1 .. 4)
     {
@@ -572,9 +718,9 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    auto alloc = KRBlock!()(GCAllocator.it.allocate(1024 * 1024));
-    auto store = alloc.allocate(KRBlock!().sizeof);
-    auto p = cast(KRBlock!()* ) store.ptr;
+    auto alloc = KRRegion!()(GCAllocator.it.allocate(1024 * 1024));
+    auto store = alloc.allocate(KRRegion!().sizeof);
+    auto p = cast(KRRegion!()* ) store.ptr;
     import std.conv : emplace;
     import std.algorithm : move;
     import core.stdc.string : memcpy;
@@ -598,13 +744,13 @@ unittest
         p.deallocate(array[i]);
     }
     auto b = p.allocateAll();
-    assert(b.length == 1024 * 1024 - KRBlock!().sizeof, text(b.length));
+    assert(b.length == 1024 * 1024 - KRRegion!().sizeof, text(b.length));
 }
 
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    auto alloc = KRBlock!()(GCAllocator.it.allocate(1024 * 1024));
+    auto alloc = KRRegion!()(GCAllocator.it.allocate(1024 * 1024));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
     alloc.deallocateAll();

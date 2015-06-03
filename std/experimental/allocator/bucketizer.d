@@ -17,7 +17,8 @@ for $(D Bucketizer). To handle them separately, $(D Segregator) may be of use.
 struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
     import std.traits : hasMember;
-    import std.experimental.allocator.common : roundUpToMultipleOf;
+    import common = std.experimental.allocator.common : roundUpToMultipleOf,
+        reallocate;
 
     static assert((max - (min - 1)) % step == 0,
         "Invalid limits when instantiating " ~ Bucketizer.stringof);
@@ -29,9 +30,19 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     //static if (step == chooseAtRuntime) size_t _step;
     //else alias _step = step;
 
-    /// The array of allocators is publicly available for e.g. initialization
-    /// and inspection.
-    Allocator[(max - (min - 1)) / step] buckets;
+    // state {
+    /**
+    The array of allocators is publicly available for e.g. initialization and
+    inspection.
+    */
+    Allocator[(max + 1 - min) / step] buckets;
+    // }
+
+    private Allocator* allocatorFor(size_t n)
+    {
+        const i = (n - min) / step;
+        return i < buckets.length ? buckets.ptr + i : null;
+    }
 
     /**
     The alignment offered is the same as $(D Allocator.alignment).
@@ -50,24 +61,35 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
-    Returns $(D b.length >= min && b.length <= max).
-    */
-    bool owns(void[] b) const
-    {
-        return b.length >= min && b.length <= max;
-    }
-
-    /**
     Directs the call to either one of the $(D buckets) allocators.
     */
     void[] allocate(size_t bytes)
     {
-        // Choose the appropriate allocator
-        const i = (bytes - min) / step;
-        assert(i < buckets.length);
-        const actual = goodAllocSize(bytes);
-        auto result = buckets[i].allocate(actual);
-        return result.ptr[0 .. bytes];
+        if (!bytes) return null;
+        if (auto a = allocatorFor(bytes))
+        {
+            const actual = goodAllocSize(bytes);
+            auto result = a.allocate(actual);
+            return result.ptr ? result.ptr[0 .. bytes] : null;
+        }
+        return null;
+    }
+
+    /**
+    Directs the call to either one of the $(D buckets) allocators. Defined only
+    if `Allocator` defines `alignedAllocate`.
+    */
+    static if (hasMember!(Allocator, "alignedAllocate"))
+    void[] alignedAllocate(size_t bytes, uint a)
+    {
+        if (!bytes) return null;
+        if (auto a = allocatorFor(b.length))
+        {
+            const actual = goodAllocSize(bytes);
+            auto result = a.alignedAllocate(actual);
+            return result.ptr ? result.ptr[0 .. bytes] : null;
+        }
+        return null;
     }
 
     /**
@@ -77,6 +99,11 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     bool expand(ref void[] b, size_t delta)
     {
+        if (!b.ptr)
+        {
+            b = allocate(delta);
+            return b.length == delta;
+        }
         assert(b.length >= min && b.length <= max);
         const available = goodAllocSize(b.length);
         const desired = b.length + delta;
@@ -86,15 +113,87 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
+    This method allows reallocation within the respective bucket range. If both
+    $(D b.length) and $(D size) fall in a range of the form $(D [min + k *
+    step, min + (k + 1) * step - 1]), then reallocation is in place. Otherwise,
+    reallocation with moving is attempted.
+    */
+    bool reallocate(ref void[] b, size_t size)
+    {
+        if (size == 0)
+        {
+            deallocate(b);
+            b = null;
+            return true;
+        }
+        if (size >= b.length)
+        {
+            return expand(b, size - b.length);
+        }
+        assert(b.length >= min && b.length <= max);
+        if (goodAllocSize(size) == goodAllocSize(b.length))
+        {
+            b = b.ptr[0 .. size];
+            return true;
+        }
+        // Move cross buckets
+        return common.reallocate(this, b, size);
+    }
+
+    /**
+    Similar to `reallocate`, with alignment. Defined only if `Allocator`
+    defines `alignedReallocate`.
+    */
+    static if (hasMember!(Allocator, "alignedReallocate"))
+    bool alignedReallocate(ref void[] b, size_t size, uint a)
+    {
+        if (size == 0)
+        {
+            deallocate(b);
+            b = null;
+            return true;
+        }
+        if (size >= b.length)
+        {
+            return expand(b, size - b.length);
+        }
+        assert(b.length >= min && b.length <= max);
+        if (goodAllocSize(size) == goodAllocSize(b.length))
+        {
+            b = b.ptr[0 .. size];
+            return true;
+        }
+        // Move cross buckets
+        return .alignedReallocate(this, b, size, a);
+    }
+
+    /**
+    Returns `true` if the bucket to which `b` belongs owns it. Defined only if
+    `Allocator` defines `owns`.
+    */
+    static if (hasMember!(Allocator, "owns"))
+    bool owns(void[] b)
+    {
+        if (!b.ptr) return false;
+        if (auto a = allocatorFor(b.length))
+        {
+            const actual = goodAllocSize(bytes);
+            return a.owns(b.ptr[0 .. actual]);
+        }
+        return false;
+    }
+
+    /**
     This method is only defined if $(D Allocator) defines $(D deallocate).
     */
     static if (hasMember!(Allocator, "deallocate"))
     void deallocate(void[] b)
     {
-        const i = (b.length - min) / step;
-        assert(i < buckets.length);
-        const actual = goodAllocSize(b.length);
-        buckets.ptr[i].deallocate(b.ptr[0 .. actual]);
+        if (!b.ptr) return;
+        if (auto a = allocatorFor(b.length))
+        {
+            a.deallocate(b.ptr[0 .. goodAllocSize(b.length)]);
+        }
     }
 
     /**

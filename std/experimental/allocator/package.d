@@ -3,8 +3,8 @@
 /**
 Macros:
 WIKI = Phobos/StdAllocator
-MYREF = <a href="std_experimental_allocator_$2.html">$1</a>&nbsp;
-MYREF2 = <a href="std_experimental_allocator_$2.html#$1">$1</a>&nbsp;
+MYREF = $(LINK2 std_experimental_allocator_$2.html, $1)&nbsp;
+MYREF2 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
 TDC = <td nowrap>$(D $1)$+</td>
 TDC2 = <td nowrap>$(D $(MYREF $1,$+))</td>
 TDC3 = <td nowrap>$(D $(MYREF2 $1,$+))</td>
