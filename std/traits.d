@@ -54,6 +54,7 @@
  * $(TR $(TD Type Conversion) $(TD
  *           $(LREF CommonType)
  *           $(LREF ImplicitConversionTargets)
+ *           $(LREF CopyTypeQualifiers)
  *           $(LREF isAssignable)
  *           $(LREF isCovariantWith)
  *           $(LREF isImplicitlyConvertible)
@@ -257,50 +258,58 @@ private
     alias NumericTypeList       = TypeTuple!(IntegralTypeList, FloatingPointTypeList);
     alias CharTypeList          = TypeTuple!(char, wchar, dchar);
 }
+
 package
 {
-    // Add specific qualifier to the given type T
+    /// Add specific qualifier to the given type T.
     template MutableOf(T)     { alias MutableOf     =              T  ; }
-    template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
-    template ConstOf(T)       { alias ConstOf       =        const(T) ; }
-    template SharedOf(T)      { alias SharedOf      =       shared(T) ; }
-    template SharedInoutOf(T) { alias SharedInoutOf = shared(inout(T)); }
-    template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
-    template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
+}
 
-    unittest
-    {
-        static assert(is(    MutableOf!int ==              int));
-        static assert(is(      InoutOf!int ==        inout int));
-        static assert(is(      ConstOf!int ==        const int));
-        static assert(is(     SharedOf!int == shared       int));
-        static assert(is(SharedInoutOf!int == shared inout int));
-        static assert(is(SharedConstOf!int == shared const int));
-        static assert(is(  ImmutableOf!int ==    immutable int));
-    }
+/// Add specific qualifier to the given type T.
+template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
+/// ditto.
+template ConstOf(T)       { alias ConstOf       =        const(T) ; }
+/// ditto.
+template SharedOf(T)      { alias SharedOf      =       shared(T) ; }
+/// ditto.
+template SharedInoutOf(T) { alias SharedInoutOf = shared(inout(T)); }
+/// ditto.
+template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
+/// ditto.
+template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
 
-    // Get qualifier template from the given type T
-    template QualifierOf(T)
-    {
-             static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
-        else static if (is(T ==        const U , U)) alias QualifierOf = ConstOf;
-        else static if (is(T == shared(inout U), U)) alias QualifierOf = SharedInoutOf;
-        else static if (is(T ==        inout U , U)) alias QualifierOf = InoutOf;
-        else static if (is(T ==    immutable U , U)) alias QualifierOf = ImmutableOf;
-        else static if (is(T ==       shared U , U)) alias QualifierOf = SharedOf;
-        else                                         alias QualifierOf = MutableOf;
-    }
+unittest
+{
+    static assert(is(    MutableOf!int ==              int));
+    static assert(is(      InoutOf!int ==        inout int));
+    static assert(is(      ConstOf!int ==        const int));
+    static assert(is(     SharedOf!int == shared       int));
+    static assert(is(SharedInoutOf!int == shared inout int));
+    static assert(is(SharedConstOf!int == shared const int));
+    static assert(is(  ImmutableOf!int ==    immutable int));
+}
 
-    unittest
-    {
-        alias Qual1 = QualifierOf!(             int);   static assert(is(Qual1!long ==              long));
-        alias Qual2 = QualifierOf!(       inout int);   static assert(is(Qual2!long ==        inout long));
-        alias Qual3 = QualifierOf!(       const int);   static assert(is(Qual3!long ==        const long));
-        alias Qual4 = QualifierOf!(shared       int);   static assert(is(Qual4!long == shared       long));
-        alias Qual5 = QualifierOf!(shared inout int);   static assert(is(Qual5!long == shared inout long));
-        alias Qual6 = QualifierOf!(shared const int);   static assert(is(Qual6!long == shared const long));
-        alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
-    }
+// Get qualifier template from the given type T
+template QualifierOf(T)
+{
+         static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
+    else static if (is(T ==        const U , U)) alias QualifierOf = ConstOf;
+    else static if (is(T == shared(inout U), U)) alias QualifierOf = SharedInoutOf;
+    else static if (is(T ==        inout U , U)) alias QualifierOf = InoutOf;
+    else static if (is(T ==    immutable U , U)) alias QualifierOf = ImmutableOf;
+    else static if (is(T ==       shared U , U)) alias QualifierOf = SharedOf;
+    else                                         alias QualifierOf = MutableOf;
+}
+
+unittest
+{
+    alias Qual1 = QualifierOf!(             int);   static assert(is(Qual1!long ==              long));
+    alias Qual2 = QualifierOf!(       inout int);   static assert(is(Qual2!long ==        inout long));
+    alias Qual3 = QualifierOf!(       const int);   static assert(is(Qual3!long ==        const long));
+    alias Qual4 = QualifierOf!(shared       int);   static assert(is(Qual4!long == shared       long));
+    alias Qual5 = QualifierOf!(shared inout int);   static assert(is(Qual5!long == shared inout long));
+    alias Qual6 = QualifierOf!(shared const int);   static assert(is(Qual6!long == shared const long));
+    alias Qual7 = QualifierOf!(   immutable int);   static assert(is(Qual7!long ==    immutable long));
 }
 
 version(unittest)
@@ -4305,8 +4314,8 @@ private template isStorageClassImplicitlyConvertible(From, To)
     alias Pointify(T) = void*;
 
     enum isStorageClassImplicitlyConvertible = isImplicitlyConvertible!(
-            ModifyTypePreservingSTC!(Pointify, From),
-            ModifyTypePreservingSTC!(Pointify,   To) );
+            ModifyTypePreservingTQ!(Pointify, From),
+            ModifyTypePreservingTQ!(Pointify,   To) );
 }
 
 unittest
@@ -5944,31 +5953,65 @@ unittest
 }
 
 // [For internal use]
-package template ModifyTypePreservingSTC(alias Modifier, T)
+package template ModifyTypePreservingTQ(alias Modifier, T)
 {
-         static if (is(T U ==          immutable U)) alias ModifyTypePreservingSTC =          immutable Modifier!U;
-    else static if (is(T U == shared inout const U)) alias ModifyTypePreservingSTC = shared inout const Modifier!U;
-    else static if (is(T U == shared inout       U)) alias ModifyTypePreservingSTC = shared inout       Modifier!U;
-    else static if (is(T U == shared       const U)) alias ModifyTypePreservingSTC = shared       const Modifier!U;
-    else static if (is(T U == shared             U)) alias ModifyTypePreservingSTC = shared             Modifier!U;
-    else static if (is(T U ==        inout const U)) alias ModifyTypePreservingSTC =        inout const Modifier!U;
-    else static if (is(T U ==        inout       U)) alias ModifyTypePreservingSTC =              inout Modifier!U;
-    else static if (is(T U ==              const U)) alias ModifyTypePreservingSTC =              const Modifier!U;
-    else                                             alias ModifyTypePreservingSTC =                    Modifier!T;
+         static if (is(T U ==          immutable U)) alias ModifyTypePreservingTQ =          immutable Modifier!U;
+    else static if (is(T U == shared inout const U)) alias ModifyTypePreservingTQ = shared inout const Modifier!U;
+    else static if (is(T U == shared inout       U)) alias ModifyTypePreservingTQ = shared inout       Modifier!U;
+    else static if (is(T U == shared       const U)) alias ModifyTypePreservingTQ = shared       const Modifier!U;
+    else static if (is(T U == shared             U)) alias ModifyTypePreservingTQ = shared             Modifier!U;
+    else static if (is(T U ==        inout const U)) alias ModifyTypePreservingTQ =        inout const Modifier!U;
+    else static if (is(T U ==        inout       U)) alias ModifyTypePreservingTQ =              inout Modifier!U;
+    else static if (is(T U ==              const U)) alias ModifyTypePreservingTQ =              const Modifier!U;
+    else                                             alias ModifyTypePreservingTQ =                    Modifier!T;
 }
 
 unittest
 {
     alias Intify(T) = int;
-    static assert(is(ModifyTypePreservingSTC!(Intify,                    real) ==                    int));
-    static assert(is(ModifyTypePreservingSTC!(Intify,              const real) ==              const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify,        inout       real) ==        inout       int));
-    static assert(is(ModifyTypePreservingSTC!(Intify,        inout const real) ==        inout const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared             real) == shared             int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared       const real) == shared       const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared inout       real) == shared inout       int));
-    static assert(is(ModifyTypePreservingSTC!(Intify, shared inout const real) == shared inout const int));
-    static assert(is(ModifyTypePreservingSTC!(Intify,          immutable real) ==          immutable int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,                    real) ==                    int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,              const real) ==              const int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,        inout       real) ==        inout       int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,        inout const real) ==        inout const int));
+    static assert(is(ModifyTypePreservingTQ!(Intify, shared             real) == shared             int));
+    static assert(is(ModifyTypePreservingTQ!(Intify, shared       const real) == shared       const int));
+    static assert(is(ModifyTypePreservingTQ!(Intify, shared inout       real) == shared inout       int));
+    static assert(is(ModifyTypePreservingTQ!(Intify, shared inout const real) == shared inout const int));
+    static assert(is(ModifyTypePreservingTQ!(Intify,          immutable real) ==          immutable int));
+}
+
+/**
+ * Copies type qualifiers from $(D FromType) to $(D ToType).
+ *
+ * Supported type qualifiers:
+ * $(UL
+ *     $(LI $(D const))
+ *     $(LI $(D inout))
+ *     $(LI $(D immutable))
+ *     $(LI $(D shared))
+ * )
+ * Examples:
+ * ---
+ * static assert(is(CopyTypeQualifiers!(inout const real, int) == inout const int));
+ * ---
+ */
+template CopyTypeQualifiers(FromType, ToType)
+{
+    alias T(U) = ToType;
+    alias CopyTypeQualifiers = ModifyTypePreservingTQ!(T, FromType);
+}
+
+unittest
+{
+    static assert(is(CopyTypeQualifiers!(                   real, int) ==                    int));
+    static assert(is(CopyTypeQualifiers!(             const real, int) ==              const int));
+    static assert(is(CopyTypeQualifiers!(       inout       real, int) ==        inout       int));
+    static assert(is(CopyTypeQualifiers!(       inout const real, int) ==        inout const int));
+    static assert(is(CopyTypeQualifiers!(shared             real, int) == shared             int));
+    static assert(is(CopyTypeQualifiers!(shared       const real, int) == shared       const int));
+    static assert(is(CopyTypeQualifiers!(shared inout       real, int) == shared inout       int));
+    static assert(is(CopyTypeQualifiers!(shared inout const real, int) == shared inout const int));
+    static assert(is(CopyTypeQualifiers!(         immutable real, int) ==          immutable int));
 }
 
 /**
@@ -6012,7 +6055,7 @@ template OriginalType(T)
         else                        alias Impl =              T;
     }
 
-    alias OriginalType = ModifyTypePreservingSTC!(Impl, T);
+    alias OriginalType = ModifyTypePreservingTQ!(Impl, T);
 }
 
 ///
@@ -6083,7 +6126,7 @@ template Unsigned(T)
                                  " does not have an Unsigned counterpart");
     }
 
-    alias Unsigned = ModifyTypePreservingSTC!(Impl, OriginalType!T);
+    alias Unsigned = ModifyTypePreservingTQ!(Impl, OriginalType!T);
 }
 
 unittest
@@ -6179,7 +6222,7 @@ template Signed(T)
                                  " does not have an Signed counterpart");
     }
 
-    alias Signed = ModifyTypePreservingSTC!(Impl, OriginalType!T);
+    alias Signed = ModifyTypePreservingTQ!(Impl, OriginalType!T);
 }
 
 ///
