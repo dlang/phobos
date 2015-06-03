@@ -757,19 +757,56 @@ unittest
 
 
 /*  Helper function that returns the position of the filename/extension
-    separator dot in path.  If not found, returns -1.
+    separator dot in path.
+
+    Params:
+        path = file spec as string or indexable range
+    Returns:
+        index of extension separator (the dot), or -1 if not found
 */
 private ptrdiff_t extSeparatorPos(R)(const R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
-    auto i = (cast(ptrdiff_t) path.length) - 1;
-    while (i >= 0 && !isSeparator(path[i]))
+    for (auto i = path.length; i-- > 0 && !isSeparator(path[i]); )
     {
-        if (path[i] == '.' && i > 0 && !isSeparator(path[i-1])) return i;
-        --i;
+        if (path[i] == '.' && i > 0 && !isSeparator(path[i-1]))
+            return i;
     }
     return -1;
+}
+
+unittest
+{
+    assert (extSeparatorPos("file") == -1);
+    assert (extSeparatorPos("file.ext"w) == 4);
+    assert (extSeparatorPos("file.ext1.ext2"d) == 9);
+    assert (extSeparatorPos(".foo".dup) == -1);
+    assert (extSeparatorPos(".foo.ext"w.dup) == 4);
+
+    assert (extSeparatorPos("dir/file"d.dup) == -1);
+    assert (extSeparatorPos("dir/file.ext") == 8);
+    assert (extSeparatorPos("dir/file.ext1.ext2"w) == 13);
+    assert (extSeparatorPos("dir/.foo"d) == -1);
+    assert (extSeparatorPos("dir/.foo.ext".dup) == 8);
+
+    version(Windows)
+    {
+        assert (extSeparatorPos("dir\\file") == -1);
+        assert (extSeparatorPos("dir\\file.ext") == 8);
+        assert (extSeparatorPos("dir\\file.ext1.ext2") == 13);
+        assert (extSeparatorPos("dir\\.foo") == -1);
+        assert (extSeparatorPos("dir\\.foo.ext") == 8);
+
+        assert (extSeparatorPos("d:file") == -1);
+        assert (extSeparatorPos("d:file.ext") == 6);
+        assert (extSeparatorPos("d:file.ext1.ext2") == 11);
+        assert (extSeparatorPos("d:.foo") == -1);
+        assert (extSeparatorPos("d:.foo.ext") == 6);
+    }
+
+    static assert (extSeparatorPos("file") == -1);
+    static assert (extSeparatorPos("file.ext"w) == 4);
 }
 
 
@@ -812,30 +849,6 @@ unittest
     assert (extension(".foo".dup).empty);
     assert (extension(".foo.ext"w.dup) == ".ext");
 
-    assert (extension("dir/file"d.dup).empty);
-    assert (extension("dir/file.") == ".");
-    assert (extension("dir/file.ext") == ".ext");
-    assert (extension("dir/file.ext1.ext2"w) == ".ext2");
-    assert (extension("dir/.foo"d).empty);
-    assert (extension("dir/.foo.ext".dup) == ".ext");
-
-    version(Windows)
-    {
-        assert (extension(`dir\file`).empty);
-        assert (extension(`dir\file.`) == ".");
-        assert (extension(`dir\file.ext`) == `.ext`);
-        assert (extension(`dir\file.ext1.ext2`) == `.ext2`);
-        assert (extension(`dir\.foo`).empty);
-        assert (extension(`dir\.foo.ext`) == `.ext`);
-
-        assert (extension(`d:file`).empty);
-        assert (extension(`d:file.`) == ".");
-        assert (extension(`d:file.ext`) == `.ext`);
-        assert (extension(`d:file.ext1.ext2`) == `.ext2`);
-        assert (extension(`d:.foo`).empty);
-        assert (extension(`d:.foo.ext`) == `.ext`);
-    }
-
     static assert (extension("file").empty);
     static assert (extension("file.ext") == ".ext");
 
@@ -853,7 +866,13 @@ unittest
 
 
 
-/** Returns slice of path[] with the extension stripped off.
+/** Remove extension from path.
+
+    Params:
+        path = string or range to be sliced
+
+    Returns:
+        slice of path with the extension (if any) stripped off
 
     Examples:
     ---
@@ -866,12 +885,12 @@ unittest
     assert (stripExtension("dir/file.ext")   == "dir/file");
     ---
 */
-inout(C)[] stripExtension(C)(inout(C)[] path)  @safe pure nothrow @nogc
-    if (isSomeChar!C)
+auto stripExtension(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
     auto i = extSeparatorPos(path);
-    if (i == -1) return path;
-    else return path[0 .. i];
+    return (i == -1) ? path : path[0 .. i];
 }
 
 
@@ -880,32 +899,13 @@ unittest
     assert (stripExtension("file") == "file");
     assert (stripExtension("file.ext"w) == "file");
     assert (stripExtension("file.ext1.ext2"d) == "file.ext1");
-    assert (stripExtension(".foo".dup) == ".foo");
-    assert (stripExtension(".foo.ext"w.dup) == ".foo");
 
-    assert (stripExtension("dir/file"d.dup) == "dir/file");
-    assert (stripExtension("dir/file.ext") == "dir/file");
-    assert (stripExtension("dir/file.ext1.ext2"w) == "dir/file.ext1");
-    assert (stripExtension("dir/.foo"d) == "dir/.foo");
-    assert (stripExtension("dir/.foo.ext".dup) == "dir/.foo");
+    import std.array;
+    import std.utf : byChar, byWchar, byDchar;
 
-    version(Windows)
-    {
-    assert (stripExtension("dir\\file") == "dir\\file");
-    assert (stripExtension("dir\\file.ext") == "dir\\file");
-    assert (stripExtension("dir\\file.ext1.ext2") == "dir\\file.ext1");
-    assert (stripExtension("dir\\.foo") == "dir\\.foo");
-    assert (stripExtension("dir\\.foo.ext") == "dir\\.foo");
-
-    assert (stripExtension("d:file") == "d:file");
-    assert (stripExtension("d:file.ext") == "d:file");
-    assert (stripExtension("d:file.ext1.ext2") == "d:file.ext1");
-    assert (stripExtension("d:.foo") == "d:.foo");
-    assert (stripExtension("d:.foo.ext") == "d:.foo");
-    }
-
-    static assert (stripExtension("file") == "file");
-    static assert (stripExtension("file.ext"w) == "file");
+    assert (stripExtension("file".byChar).array == "file");
+    assert (stripExtension("file.ext"w.byWchar).array == "file");
+    assert (stripExtension("file.ext1.ext2"d.byDchar).array == "file.ext1");
 }
 
 
