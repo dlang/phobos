@@ -179,7 +179,7 @@ real digamma(real x)
 /** Log Minus Digamma function
  *
  *  logmdigamma(x) = log(x) - digamma(x)
- * 
+ *
  *  See_Also: $(LREF digamma), $(LREF logmdigammaInverse).
  */
 real logmdigamma(real x)
@@ -188,9 +188,9 @@ real logmdigamma(real x)
 }
 
 /** Inverse of the Log Minus Digamma function
- * 
+ *
  *  Given y, the function finds x such log(x) - digamma(x) = y.
- * 
+ *
  *  See_Also: $(LREF logmdigamma), $(LREF digamma).
  */
 real logmdigammaInverse(real x)

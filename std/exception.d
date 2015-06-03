@@ -1114,13 +1114,13 @@ unittest
         union A4
         {
             int b0; //Not aliased
-        };
+        }
         A4 a4;
         union A5
         {
             int b0; //Aliased
             int b1; //Aliased
-        };
+        }
         A5 a5;
     }
 
@@ -1418,7 +1418,7 @@ class ErrnoException : Exception
     this(string msg, string file = null, size_t line = 0) @trusted
     {
         _errno = .errno;
-        version (linux)
+        version (CRuntime_Glibc)
         {
             char[1024] buf = void;
             auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);

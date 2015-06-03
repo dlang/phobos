@@ -140,7 +140,7 @@ template This2Variant(V, T...)
  * are larger than the largest built-in type, they will automatically
  * be boxed. This means that even large types will only be the size
  * of a pointer within the $(D_PARAM Variant), but this also implies some
- * overhead. $(D_PARAM Variant) can accommodate all primitive types and 
+ * overhead. $(D_PARAM Variant) can accommodate all primitive types and
  * all user-defined types.))
  *
  * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
@@ -788,7 +788,7 @@ public:
         {
             throw new VariantException(type, typeid(T));
         }
-        return cast(inout T) result;
+        return * cast(inout T*) &result;
     }
 
     /**
@@ -1332,6 +1332,16 @@ unittest
 {
     const Variant v = new immutable Object;
     v.get!(immutable Object);
+}
+
+unittest
+{
+    static struct S
+    {
+        T opCast(T)() {assert(false);}
+    }
+    Variant v = S();
+    v.get!S;
 }
 
 
@@ -2529,7 +2539,7 @@ unittest
     static assert( hasElaborateDestructor!(Algebraic!(bool, S)));
 
     import std.array;
-    alias Algebraic!bool Value;
+    alias Value = Algebraic!bool;
 
     static struct T
     {

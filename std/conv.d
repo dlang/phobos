@@ -2978,7 +2978,7 @@ unittest
     {
         version (CRuntime_Microsoft)
             ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
-        else version (Android)
+        else version (CRuntime_Bionic)
             ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
         else
             ld1 = strtold(s.ptr, null);
@@ -5557,7 +5557,7 @@ unittest
 private auto hexStrImpl(String)(String hexData)
 {
     import std.ascii;
-    alias Unqual!(ElementEncodingType!String) C;
+    alias C = Unqual!(ElementEncodingType!String);
     C[] result;
     result.length = hexData.length / 2;
     size_t cnt;

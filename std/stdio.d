@@ -40,7 +40,7 @@ else version (CRuntime_DigitalMars)
     version = DIGITAL_MARS_STDIO;
 }
 
-version (linux)
+version (CRuntime_Glibc)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
@@ -65,7 +65,7 @@ version (Solaris)
     version = NO_GETDELIM;
 }
 
-version (Android)
+version (CRuntime_Bionic)
 {
     version = GENERIC_IO;
     version = NO_GETDELIM;
@@ -882,7 +882,7 @@ Throws: $(D Exception) if the file is not opened.
         {
             import std.conv : text;
 
-            version (Android)
+            version (CRuntime_Bionic)
                 auto bigOffset = int.max - 100;
             else
                 auto bigOffset = cast(ulong) int.max + 100;
@@ -2042,7 +2042,7 @@ $(XREF file,readText)
             auto file = File(deleteme, "w+");
             scope(success) std.file.remove(deleteme);
         }
-        else version(Android)
+        else version(CRuntime_Bionic)
         {
             static import std.file;
 
@@ -3816,7 +3816,7 @@ Initialize with a message and an error code.
             import core.stdc.string : strerror_r;
 
             char[256] buf = void;
-            version (linux)
+            version (CRuntime_Glibc)
             {
                 auto s = core.stdc.string.strerror_r(errno, buf.ptr, buf.length);
             }

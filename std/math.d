@@ -193,9 +193,9 @@ version(unittest)
         int ix;
         int iy;
         version(CRuntime_Microsoft)
-            alias double real_t;
+            alias real_t = double;
         else
-            alias real real_t;
+            alias real_t = real;
         ix = sprintf(bufx.ptr, "%.*Lg", ndigits, cast(real_t) x);
         iy = sprintf(bufy.ptr, "%.*Lg", ndigits, cast(real_t) y);
         assert(ix < bufx.length && ix > 0);
@@ -2725,7 +2725,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
         T n = 3.0;
         int exp = 3;
         r = ldexp(n, exp);
-        assert(r == 24);        
+        assert(r == 24);
     }
 }
 
@@ -4648,7 +4648,7 @@ unittest
 /*********************************
  * Determines if $(D_PARAM x) is NaN.
  * params:
- *  x = a floating point number. 
+ *  x = a floating point number.
  * returns:
  *  $(D true) if $(D_PARAM x) is Nan.
  */
@@ -4743,7 +4743,7 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 /*********************************
  * Determines if $(D_PARAM x) is finite.
  * params:
- *  x = a floating point number. 
+ *  x = a floating point number.
  * returns:
  *  $(D true) if $(D_PARAM x) is finite.
  */
@@ -4793,10 +4793,10 @@ int isFinite(X)(X x) @trusted pure nothrow @nogc
  * A normalized number must not be zero, subnormal, infinite nor $(NAN).
  *
  * params:
- *  x = a floating point number. 
+ *  x = a floating point number.
  * returns:
  *  $(D true) if $(D_PARAM x) is normalized.
- */ 
+ */
 
 /* Need one for each format because subnormal floats might
  * be converted to normal reals.
@@ -4838,12 +4838,12 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
 
 /*********************************
  * Determines if $(D_PARAM x) is subnormal.
- * 
- * Subnormals (also known as "denormal number"), have a 0 exponent 
+ *
+ * Subnormals (also known as "denormal number"), have a 0 exponent
  * and a 0 most significant mantissa bit.
  *
  * params:
- *  x = a floating point number. 
+ *  x = a floating point number.
  * returns:
  *  $(D true) if $(D_PARAM x) is a denormal number.
  */
@@ -4912,7 +4912,7 @@ int isSubnormal(X)(X x) @trusted pure nothrow @nogc
 /*********************************
  * Determines if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  * params:
- *  x = a floating point number. 
+ *  x = a floating point number.
  * returns:
  *  $(D true) if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
@@ -6606,34 +6606,6 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
             }
         }
         else version (FreeBSD)
-        {
-            asm pure nothrow @nogc // assembler by W. Bright
-            {
-                // EDX = (A.length - 1) * real.sizeof
-                mov     ECX,A[EBP]              ; // ECX = A.length
-                dec     ECX                     ;
-                lea     EDX,[ECX*8]             ;
-                lea     EDX,[EDX][ECX*4]        ;
-                add     EDX,A+4[EBP]            ;
-                fld     real ptr [EDX]          ; // ST0 = coeff[ECX]
-                jecxz   return_ST               ;
-                fld     x[EBP]                  ; // ST0 = x
-                fxch    ST(1)                   ; // ST1 = x, ST0 = r
-                align   4                       ;
-        L2:     fmul    ST,ST(1)                ; // r *= x
-                fld     real ptr -12[EDX]       ;
-                sub     EDX,12                  ; // deg--
-                faddp   ST(1),ST                ;
-                dec     ECX                     ;
-                jne     L2                      ;
-                fxch    ST(1)                   ; // ST1 = r, ST0 = x
-                fstp    ST(0)                   ; // dump x
-                align   4                       ;
-        return_ST:                              ;
-                ;
-            }
-        }
-        else version (Android)
         {
             asm pure nothrow @nogc // assembler by W. Bright
             {

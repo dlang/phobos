@@ -1225,17 +1225,17 @@ MaxType!T max(T...)(T args)
 {
     //Get "a"
     static if (T.length <= 2)
-        alias args[0] a;
+        alias a = args[0];
     else
         auto a = max(args[0 .. ($+1)/2]);
-    alias typeof(a) T0;
+    alias T0 = typeof(a);
 
     //Get "b"
     static if (T.length <= 3)
-        alias args[$-1] b;
+        alias b = args[$-1];
     else
         auto b = max(args[($+1)/2 .. $]);
-    alias typeof(b) T1;
+    alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
     static assert (is(typeof(a < b)),
@@ -1333,17 +1333,17 @@ MinType!T min(T...)(T args)
 {
     //Get "a"
     static if (T.length <= 2)
-        alias args[0] a;
+        alias a = args[0];
     else
         auto a = min(args[0 .. ($+1)/2]);
-    alias typeof(a) T0;
+    alias T0 = typeof(a);
 
     //Get "b"
     static if (T.length <= 3)
-        alias args[$-1] b;
+        alias b = args[$-1];
     else
         auto b = min(args[($+1)/2 .. $]);
-    alias typeof(b) T1;
+    alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
     static assert (is(typeof(a < b)),

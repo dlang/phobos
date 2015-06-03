@@ -1101,7 +1101,7 @@ body
     Params:
         useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
         str = input string or indexable Range
-        numCodeUnites = set to number of code units processed
+        numCodeUnits = set to number of code units processed
 
     Returns:
         decoded character
@@ -3891,11 +3891,11 @@ int impureVariable;
 template byUTF(C) if (isSomeChar!C)
 {
     static if (is(C : const(char)))
-        alias byChar byUTF;
+        alias byUTF = byChar;
     else static if (is(C : const(wchar)))
-        alias byWchar byUTF;
+        alias byUTF = byWchar;
     else static if (is(C : const(dchar)))
-        alias byDchar byUTF;
+        alias byUTF = byDchar;
     else
         static assert(0);
 }

@@ -1584,14 +1584,14 @@ unittest {
 }
 
 /** Inverse of the Log Minus Digamma function
- * 
+ *
  *   Returns x such $(D log(x) - digamma(x) == y).
  *
  * References:
  *   1. Abramowitz, M., and Stegun, I. A. (1970).
  *      Handbook of mathematical functions. Dover, New York,
  *      pages 258-259, equation 6.3.18.
- * 
+ *
  * Authors: Ilya Yaroshenko
  */
 real logmdigammaInverse(real y)
