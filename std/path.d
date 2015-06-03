@@ -431,9 +431,11 @@ unittest
 /** Returns the directory part of a path.  On Windows, this
     includes the drive letter if present.
 
-    This function performs a memory allocation if and only if $(D path)
-    does not have a directory (in which case a new string is needed to
-    hold the returned current-directory symbol, $(D ".")).
+    Params:
+        path = filespec
+
+    Returns:
+        slice of $(D path) or "."
 
     Examples:
     ---
@@ -457,38 +459,52 @@ unittest
     the POSIX requirements for the 'dirname' shell utility)
     (with suitable adaptations for Windows paths).
 */
-C[] dirName(C)(C[] path)
-    //TODO: @safe (BUG 6169) pure nothrow (because of to())
-    if (isSomeChar!C)
+auto dirName(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
-    import std.conv : to;
-    if (path.empty) return to!(typeof(return))(".");
+    auto result(bool dot, typeof(path[0..1]) p)
+    {
+        static if (is(StringTypeOf!R))
+            return dot ? "." : p;
+        else
+        {
+            import std.range : choose, only;
+            return choose(dot, only(cast(ElementEncodingType!R)'.'), p);
+        }
+    }
+
+    if (path.empty)
+        return result(true, path[0 .. 0]);
 
     auto p = rtrimDirSeparators(path);
-    if (p.empty) return path[0 .. 1];
+    if (p.empty)
+        return result(false, path[0 .. 1]);
 
     version (Windows)
     {
         if (isUNC(p) && uncRootLength(p) == p.length)
-            return p;
+            return result(false, p);
+
         if (p.length == 2 && isDriveSeparator(p[1]) && path.length > 2)
-            return path[0 .. 3];
+            return result(false, path[0 .. 3]);
     }
 
     auto i = lastSeparator(p);
-    if (i == -1) return to!(typeof(return))(".");
-    if (i == 0) return p[0 .. 1];
+    if (i == -1)
+        return result(true, p);
+    if (i == 0)
+        return result(false, p[0 .. 1]);
 
     version (Windows)
     {
-        // If the directory part is either d: or d:\, don't
-        // chop off the last symbol.
+        // If the directory part is either d: or d:\
+        // do not chop off the last symbol.
         if (isDriveSeparator(p[i]) || isDriveSeparator(p[i-1]))
-            return p[0 .. i+1];
+            return result(false, p[0 .. i+1]);
     }
-
     // Remove any remaining trailing (back)slashes.
-    return rtrimDirSeparators(p[0 .. i]);
+    return result(false, rtrimDirSeparators(p[0 .. i]));
 }
 
 
@@ -529,6 +545,43 @@ unittest
     }
 
     static assert (dirName("dir/file") == "dir");
+
+    import std.array;
+    import std.utf : byChar, byWchar, byDchar;
+
+    assert (dirName("".byChar).array == ".");
+    assert (dirName("file"w.byWchar).array == "."w);
+    assert (dirName("dir/"d.byDchar).array == "."d);
+    assert (dirName("dir///".byChar).array == ".");
+    assert (dirName("dir/subdir/".byChar).array == "dir");
+    assert (dirName("/dir/file"w.byWchar).array == "/dir"w);
+    assert (dirName("/file"d.byDchar).array == "/"d);
+    assert (dirName("/".byChar).array == "/");
+    assert (dirName("///".byChar).array == "/");
+
+    version (Windows)
+    {
+        assert (dirName(`dir\`.byChar).array == `.`);
+        assert (dirName(`dir\\\`.byChar).array == `.`);
+        assert (dirName(`dir\file`.byChar).array == `dir`);
+        assert (dirName(`dir\\\file`.byChar).array == `dir`);
+        assert (dirName(`dir\subdir\`.byChar).array == `dir`);
+        assert (dirName(`\dir\file`.byChar).array == `\dir`);
+        assert (dirName(`\file`.byChar).array == `\`);
+        assert (dirName(`\`.byChar).array == `\`);
+        assert (dirName(`\\\`.byChar).array == `\`);
+        assert (dirName(`d:`.byChar).array == `d:`);
+        assert (dirName(`d:file`.byChar).array == `d:`);
+        assert (dirName(`d:\`.byChar).array == `d:\`);
+        assert (dirName(`d:\file`.byChar).array == `d:\`);
+        assert (dirName(`d:\dir\file`.byChar).array == `d:\dir`);
+        assert (dirName(`\\server\share\dir\file`.byChar).array == `\\server\share\dir`);
+        assert (dirName(`\\server\share\file`) == `\\server\share`);
+        assert (dirName(`\\server\share\`.byChar).array == `\\server\share`);
+        assert (dirName(`\\server\share`.byChar).array == `\\server\share`);
+    }
+
+    //static assert (dirName("dir/file".byChar).array == "dir");
 }
 
 
