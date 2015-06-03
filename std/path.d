@@ -537,6 +537,12 @@ unittest
 /** Returns the root directory of the specified path, or $(D null) if the
     path is not rooted.
 
+    Params:
+        path = filespec
+
+    Returns:
+        slice of $(D path)
+
     Examples:
     ---
     assert (rootName("foo") is null);
@@ -550,9 +556,12 @@ unittest
     }
     ---
 */
-inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeChar!C)
+auto rootName(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
-    if (path.empty) return null;
+    if (path.empty)
+        goto Lnull;
 
     version (Posix)
     {
@@ -574,7 +583,11 @@ inout(C)[] rootName(C)(inout(C)[] path)  @safe pure nothrow @nogc  if (isSomeCha
     else static assert (0, "unsupported platform");
 
     assert (!isRooted(path));
-    return null;
+Lnull:
+    static if (is(StringTypeOf!R))
+        return null; // legacy code may rely on null return rather than slice
+    else
+        return path[0..0];
 }
 
 
@@ -591,6 +604,22 @@ unittest
         assert (rootName(`d:\foo`) == `d:\`);
         assert (rootName(`\\server\share\foo`) == `\\server\share`);
         assert (rootName(`\\server\share`) == `\\server\share`);
+    }
+
+    import std.array;
+    import std.utf : byChar;
+
+    assert (rootName("".byChar).array == "");
+    assert (rootName("foo".byChar).array == "");
+    assert (rootName("/".byChar).array == "/");
+    assert (rootName("/foo/bar".byChar).array == "/");
+
+    version (Windows)
+    {
+        assert (rootName("d:foo".byChar).array == "");
+        assert (rootName(`d:\foo`.byChar).array == `d:\`);
+        assert (rootName(`\\server\share\foo`.byChar).array == `\\server\share`);
+        assert (rootName(`\\server\share`.byChar).array == `\\server\share`);
     }
 }
 
