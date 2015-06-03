@@ -626,11 +626,18 @@ unittest
 
 
 
-/** Returns the drive of a path, or $(D null) if the drive
-    is not specified.  In the case of UNC paths, the network share
-    is returned.
+/**
+    Get the drive portion of a path.
 
-    Always returns $(D null) on POSIX.
+    Params:
+        path = string or range of characters
+
+    Returns:
+        A slice of $(D _path) that is the drive, or an empty range if the drive
+        is not specified.  In the case of UNC paths, the network share
+        is returned.
+
+        Always returns an empty range on POSIX.
 
     Examples:
     ---
@@ -642,8 +649,9 @@ unittest
     }
     ---
 */
-inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow @nogc
-    if (isSomeChar!C)
+auto driveName(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
 {
     version (Windows)
     {
@@ -652,7 +660,10 @@ inout(C)[] driveName(C)(inout(C)[] path)  @safe pure nothrow @nogc
         else if (isUNC(path))
             return path[0 .. uncRootLength(path)];
     }
-    return null;
+    static if (is(StringTypeOf!R))
+        return cast(ElementEncodingType!R[])null; // legacy code may rely on null return rather than slice
+    else
+        return path[0..0];
 }
 
 
@@ -670,6 +681,23 @@ unittest
         assert (driveName(`\\server\share`) == `\\server\share`);
 
         static assert (driveName(`d:\file`) == "d:");
+    }
+
+    import std.array;
+    import std.utf : byChar;
+
+    version (Posix)  assert (driveName("c:/foo".byChar).empty);
+    version (Windows)
+    {
+        assert (driveName(`dir\file`.byChar).empty);
+        assert (driveName(`d:file`.byChar).array == "d:");
+        assert (driveName(`d:\file`.byChar).array == "d:");
+        assert (driveName("d:".byChar).array == "d:");
+        assert (driveName(`\\server\share\file`.byChar).array == `\\server\share`);
+        assert (driveName(`\\server\share\`.byChar).array == `\\server\share`);
+        assert (driveName(`\\server\share`.byChar).array == `\\server\share`);
+
+        static assert (driveName(`d:\file`).array == "d:");
     }
 }
 
