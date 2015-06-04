@@ -986,42 +986,39 @@ unittest
     assert (setExtension("file.old", "new")  == "file.new");
     assert (setExtension("file.old", ".new") == "file.new");
     ---
+
+    See_Also:
+        $(LREF setExt) which does not allocate and returns a lazy range.
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
-    @trusted pure nothrow
     if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
-    if (ext.length > 0 && ext[0] != '.')
-        return cast(typeof(return))(stripExtension(path)~'.'~ext);
-    else
-        return cast(typeof(return))(stripExtension(path)~ext);
+    try
+    {
+        import std.conv : to;
+        return setExt(path, ext).to!(typeof(return));
+    }
+    catch (Exception e)
+    {
+        assert(0);
+    }
 }
 
 ///ditto
 immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
-    @trusted pure nothrow
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     if (ext.length == 0)
         return stripExtension(path);
 
-    // Optimised for the case where path is immutable and has no extension
-    if (ext.length > 0 && ext[0] == '.') ext = ext[1 .. $];
-    auto i = extSeparatorPos(path);
-    if (i == -1)
+    try
     {
-        path ~= '.';
-        path ~= ext;
-        return path;
+        import std.conv : to;
+        return setExt(path, ext).to!(typeof(return));
     }
-    else if (i == path.length - 1)
+    catch (Exception e)
     {
-        path ~= ext;
-        return path;
-    }
-    else
-    {
-        return cast(typeof(return))(path[0 .. i+1] ~ ext);
+        assert(0);
     }
 }
 
@@ -1053,6 +1050,45 @@ unittest
     assert (setExtension("file.ext", "") == "file");
 }
 
+/************
+ * Replace existing extension on filespec with new one.
+ *
+ * Params:
+ *      path = string or random access range representing a filespec
+ * Returns:
+ *      Range with $(D path)'s extension (if any) replaced with $(D ext).
+ *      The element encoding type of the returned range will be the same as $(D path)'s.
+ * See_Also:
+ *      $(LREF setExtension)
+ */
+auto setExt(R, C)(R path, C[] ext)
+    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+         is(StringTypeOf!R)) &&
+        isSomeChar!C)
+{
+    import std.range : only, chain;
+    import std.utf : byUTF;
+
+    alias CR = Unqual!(ElementEncodingType!R);
+    auto dot = only(CR('.'));
+    if (ext.length == 0 || ext[0] == '.')
+        dot.popFront();                 // so dot is an empty range, too
+    return chain(stripExtension(path).byUTF!CR, dot, ext.byUTF!CR);
+}
+
+///
+unittest
+{
+    import std.array;
+    assert (setExt("file", "ext").array == "file.ext");
+    assert (setExt("file"w, ".ext"w).array == "file.ext");
+    assert (setExt("file.ext"w, ".").array == "file.");
+
+    import std.utf : byChar, byWchar;
+    assert (setExt("file".byChar, "ext").array == "file.ext");
+    assert (setExt("file"w.byWchar, ".ext"w).array == "file.ext"w);
+    assert (setExt("file.ext"w.byWchar, ".").array == "file."w);
+}
 
 
 /** Returns the _path given by $(D path), with the extension given by
