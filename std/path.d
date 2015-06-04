@@ -1073,19 +1073,10 @@ unittest
     ---
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
-    @trusted pure // TODO: nothrow (because of to())
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     import std.conv : to;
-    auto i = extSeparatorPos(path);
-    if (i == -1)
-    {
-        if (ext.length > 0 && ext[0] == '.')
-            return cast(typeof(return))(path~ext);
-        else
-            return cast(typeof(return))(path~'.'~ext);
-    }
-    else return to!(typeof(return))(path);
+    return defaultExt(path, ext).to!(typeof(return));
 }
 
 
@@ -1107,6 +1098,56 @@ unittest
     static assert (defaultExtension("file.old"d.dup, "new"d) == "file.old");
 }
 
+
+/********************************
+ * Set the extension of $(D path) to $(D ext) if $(D path) doesn't have one.
+ *
+ * Params:
+ *      path = filespec as string or range
+ *      ext = extension, may have leading '.'
+ * Returns:
+ *      range with the result
+ */
+auto defaultExt(R, C)(R path, C[] ext)
+    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+         is(StringTypeOf!R)) &&
+        isSomeChar!C)
+{
+    import std.range : only, chain;
+    import std.utf : byUTF;
+
+    alias CR = Unqual!(ElementEncodingType!R);
+    auto dot = only(CR('.'));
+    auto i = extSeparatorPos(path);
+    if (i == -1)
+    {
+        if (ext.length > 0 && ext[0] == '.')
+            ext = ext[1 .. $];              // remove any leading . from ext[]
+    }
+    else
+    {
+        // path already has an extension, so make these empty
+        ext = ext[0 .. 0];
+        dot.popFront();
+    }
+    return chain(path.byUTF!CR, dot, ext.byUTF!CR);
+}
+
+///
+unittest
+{
+    import std.array;
+    assert (defaultExt("file", "ext").array == "file.ext");
+    assert (defaultExt("file"w, ".ext").array == "file.ext"w);
+    assert (defaultExt("file.", "ext").array == "file.");
+    assert (defaultExt("file", "").array == "file.");
+
+    import std.utf : byChar, byWchar;
+    assert (defaultExt("file".byChar, "ext").array == "file.ext");
+    assert (defaultExt("file"w.byWchar, ".ext").array == "file.ext"w);
+    assert (defaultExt("file.".byChar, "ext"d).array == "file.");
+    assert (defaultExt("file".byChar, "").array == "file.");
+}
 
 /** Combines one or more path segments.
 
