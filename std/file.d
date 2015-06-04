@@ -1539,7 +1539,7 @@ private bool ensureDirExists(in char[] pathname)
     {
         if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
             return true;
-        cenforce(errno == EEXIST, pathname);
+        cenforce(errno == EEXIST || errno == EISDIR, pathname);
     }
     enforce(pathname.isDir, new FileException(pathname.idup));
     return false;
