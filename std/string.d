@@ -2039,7 +2039,7 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     if (isSomeChar!Char)
 {
     alias ToRepType(T) = TypeTuple!(ubyte, ushort, uint)[T.sizeof / 2];
-    return cast(ModifyTypePreservingSTC!(ToRepType, Char)[])s;
+    return cast(ModifyTypePreservingTQ!(ToRepType, Char)[])s;
 }
 
 ///
@@ -6182,7 +6182,7 @@ auto assumeUTF(T)(T[] arr) pure
 {
     import std.utf : validate;
     alias ToUTFType(U) = TypeTuple!(char, wchar, dchar)[U.sizeof / 2];
-    auto asUTF = cast(ModifyTypePreservingSTC!(ToUTFType, T)[])arr;
+    auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[])arr;
     debug validate(asUTF);
     return asUTF;
 }
