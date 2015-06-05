@@ -31,7 +31,7 @@ auto n = rnd.front;
 @property uint unpredictableSeed() @trusted
 {
     import core.thread : Thread, getpid, TickDuration;
-    import std.random: MinstdRand0;
+    import std.random.engine : MinstdRand0;
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded)
