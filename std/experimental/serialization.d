@@ -69,6 +69,10 @@ enum DataStorageMode:ubyte
  Indicates wheather somthing isn't serializable
  */
 enum noSerialization = "noSerialization";
+/**
+ Indicates if a field has a custom serializer
+ */
+enum customSerialization = "customSerialization";
 
 static this()
 {
@@ -134,19 +138,40 @@ template isSerializable(T)
         enum isSerializable = false;
     }
 }
-
 /**
- Template to get all the names of the members in a tuple
+ Checks if a field has a custom serializer
  */
-template Named(T...)
+template hasCustomFieldSerializer(alias T)
 {
-    static if (T.length>1)
+    static if (hasAttribute!(T,customSerialization))
     {
-        alias Named = TypeTuple!(Named!(T[0..$-1]),T[$-1].stringof);
+        static assert(__traits(compiles,mixin("(__traits(parent,T)).serialize" ~ T.stringof))
+            && __traits(compiles,mixin("(__traits(parent,T)).deserialize" ~ T.stringof))
+            && matchesPrototype!(mixin("(__traits(parent,T)).serialize" ~ T.stringof), ubyte[] function(in typeof(T)))
+            && matchesPrototype!(mixin("(__traits(parent,T)).deserialize" ~ T.stringof), typeof(T) function(in ubyte[])) 
+            , T.stringof ~ " is declared as @customSerialization but has non-existant or an invalid serializer or deserializer");
+        enum hasCustomFieldSerializer = true;
     }
     else
     {
-        alias Named = TypeTuple!(T[0].stringof);
+        enum hasCustomFieldSerializer = false;
+    }
+}
+
+/**
+ Checks if a type has a custom serializer
+*/
+template hasCustomTypeSerializer(T)
+{
+    static if (__traits(compiles,T.serializeThis) && __traits(compiles,T.deserializeThis)
+        && matchesPrototype!(T.serializeThis, ubyte[] function(in T)) 
+        && matchesPrototype!(T.deserializeThis, T function(in ubyte[])))
+    {
+        enum hasCustomTypeSerializer = true;
+    }
+    else
+    {
+        enum hasCustomTypeSerializer = false; 
     }
 }
 
@@ -162,6 +187,21 @@ template hasAttribute(alias Member, alias Attrubute)
     else
     {
         enum hasAttribute = false;
+    }
+}
+
+/**
+ Checks if function matches a function prototype
+ */
+template matchesPrototype(alias Function,Prototype)
+{
+    static if (is(ReturnType!Function == ReturnType!Prototype) && is(ParameterTypeTuple!Function == ParameterTypeTuple!Prototype))
+    {
+        enum matchesPrototype = true;
+    }
+    else
+    {
+        enum matchesPrototype = false;
     }
 }
 
@@ -250,6 +290,12 @@ ubyte[] serialize(T)(ref in T source) if (isSerializable!T)
             output ~= DataStorageMode.byReference;
             output ~= toBytes(getreference(input));
         }
+        static if(hasCustomTypeSerializer!(U))
+        {
+            ubyte[] custom = U.serializeThis(input);
+            output~=toBytes!uint(custom.length);
+            output~=custom;
+        }
         else
         {
             if (is(U == class))
@@ -257,9 +303,23 @@ ubyte[] serialize(T)(ref in T source) if (isSerializable!T)
                 addreference(input,output.length);
             }
             output ~= DataStorageMode.byValue;
-            foreach(name;Named!(U.tupleof))
+            foreach(name;FieldNameTuple!U)
             {
-                static if (isSerializableStructure!(typeof(__traits(getMember,input,name))) 
+                static if (hasCustomFieldSerializer!(__traits(getMember,input,name))
+                    && !hasAttribute!(__traits(getMember,input,name),noSerialization))
+                {
+                    ubyte[] custom = mixin("U.serialize"~name)(__traits(getMember,input,name));
+                    output~=toBytes!uint(custom.length);
+                    output~=custom;
+                }
+                else static if(hasCustomTypeSerializer!(typeof(__traits(getMember,input,name)))
+                    && !hasAttribute!(__traits(getMember,input,name),noSerialization))
+                {
+                    ubyte[] custom = typeof(__traits(getMember,input,name)).serializeThis(input);
+                    output~=toBytes!uint(custom.length);
+                    output~=custom;
+                }
+                else static if (isSerializableStructure!(typeof(__traits(getMember,input,name))) 
                     && !hasAttribute!(__traits(getMember,input,name),noSerialization))
                 {
                     serializeStructure(__traits(getMember,input,name));
@@ -395,26 +455,53 @@ T deserialize(T)(in ubyte[] input)
         }
         else
         {
-            static if (is(U == class))
+            static if(hasCustomTypeSerializer!(U))
             {
-                output = new U();
+                output = U.deserializeThis(input);
             }
-            addreference(output,pos-1);
-            foreach(name;Named!(U.tupleof))
+            else
             {
-                static if (isSerializableStructure!(typeof(__traits(getMember,output,name))) 
-                    && !hasAttribute!(__traits(getMember,output,name),noSerialization))
+                static if (is(U == class))
                 {
-                    deserializeStructure(__traits(getMember,output,name));
+                    output = new U();
                 }
-                else static if (isSerializableData!(typeof(__traits(getMember,output,name))) 
-                    && !hasAttribute!(__traits(getMember,output,name),noSerialization))
+                addreference(output,pos-1);
+                foreach(name;FieldNameTuple!U)
                 {
-                    deserializeData(__traits(getMember,output,name));
-                }
-                else static if(!hasAttribute!(__traits(getMember,U,name),noSerialization))
-                {
-                    static assert(0,U.stringof~" has member "~name~" which cannot be serialized\nmark with @noSerialization if intended");
+                    static if (hasCustomFieldSerializer!(__traits(getMember,output,name))
+                        && !hasAttribute!(__traits(getMember,output,name),noSerialization))
+                    {
+                        enforce!SerializationException(pos+uint.sizeof<=input.length,"unexpected end of input");
+                        uint length = fromBytes!uint(input[pos..pos+uint.sizeof]);
+                        pos+=uint.sizeof;
+                        enforce!SerializationException(pos+length<=input.length,"unexpected end of input");
+                        __traits(getMember,output,name) = mixin("U.deserialize"~name)(input[pos..pos+length]);
+                        pos+=length;
+                    }
+                    else static if(hasCustomTypeSerializer!(typeof(__traits(getMember,output,name)))
+                        && !hasAttribute!(__traits(getMember,output,name),noSerialization))
+                    {
+                        enforce!SerializationException(pos+uint.sizeof<=input.length,"unexpected end of input");
+                        uint length = input[pos..pos+uint.sizeof];
+                        pos+=uint.sizeof;
+                        enforce!SerializationException(pos+length<=input.length,"unexpected end of input");
+                        __traits(getMember,output,name) = typeof(__traits(getMember,output,name)).deserializeThis(input[pos..pos+length]);
+                        pos+=length;
+                    }
+                    else static if (isSerializableStructure!(typeof(__traits(getMember,output,name))) 
+                        && !hasAttribute!(__traits(getMember,output,name),noSerialization))
+                    {
+                        deserializeStructure(__traits(getMember,output,name));
+                    }
+                    else static if (isSerializableData!(typeof(__traits(getMember,output,name))) 
+                        && !hasAttribute!(__traits(getMember,output,name),noSerialization))
+                    {
+                        deserializeData(__traits(getMember,output,name));
+                    }
+                    else static if(!hasAttribute!(__traits(getMember,U,name),noSerialization))
+                    {
+                        static assert(0,U.stringof~" has member "~name~" which cannot be serialized\nmark with @noSerialization if intended");
+                    }
                 }
             }
         }
@@ -513,12 +600,20 @@ version(unittest)
     struct SomeStruct
     {
         enum serializable = true;
-        long someLong;
+        @customSerialization long someLong;
         @noSerialization int someInt;
         int[] intArray;
         size_t[long] longAArray;
         SomeClass someClass;
         SomeClass[] someOtherClasses;
+        static ubyte[] serializesomeLong(in long long_)
+        {
+            return toBytes(long_).dup(); //I don't know why this is needed but I think it's dmd bug with static and non-static array
+        }
+        static long deserializesomeLong(in ubyte[] bytes)
+        {
+            return fromBytes!long(bytes);
+        }
     }
     struct NotSerializableStruct
     {
@@ -543,4 +638,5 @@ unittest
     assert(44L in someOtherStruct.longAArray);
     assert(someStruct.someClass.someLong == someOtherStruct.someOtherClasses[0].someLong);
     assert(!isSerializable!NotSerializableStruct);
+    assert(hasCustomFieldSerializer!(SomeStruct.someLong));
 }
