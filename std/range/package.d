@@ -858,6 +858,11 @@ if (Ranges.length > 0 &&
 
             import std.typetuple : anySatisfy;
 
+            static if (anySatisfy!(isInfinite, R[0 .. $ - 1]))
+            {
+                static assert(false, "No sense in appending ranges after an infinite range in a chain.");
+            }
+
             static if (anySatisfy!(isInfinite, R))
             {
                 // Propagate infiniteness.
@@ -1178,12 +1183,15 @@ unittest
     auto c = chain( iota(0, 10), iota(0, 10) );
 
     // Test the case where infinite ranges are present.
-    auto inf = chain([0,1,2][], cycle([4,5,6][]), [7,8,9][]); // infinite range
+    auto inf = chain([0,1,2][], cycle([4,5,6][])); // infinite range
     assert(inf[0] == 0);
     assert(inf[3] == 4);
     assert(inf[6] == 4);
     assert(inf[7] == 5);
     static assert(isInfinite!(typeof(inf)));
+
+    // Infinite ranges may only be placed at the end of a chain
+    static assert(!__traits(compiles, { auto inf = chain([0,1,2][], cycle([4,5,6][]), [7,8,9][]); }));
 
     immutable int[] immi = [ 1, 2, 3 ];
     immutable float[] immf = [ 1, 2, 3 ];
