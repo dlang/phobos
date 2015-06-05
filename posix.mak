@@ -171,7 +171,7 @@ PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
   free_list free_tree \
   gc_allocator heap_block kernighan_ritchie mallocator mmap_allocator \
   null_allocator porcelain quantizer region \
-  scoped_allocator segregator stats_collector)
+  scoped_allocator segregator showcase stats_collector)
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \

@@ -27,10 +27,9 @@ control alignment externally.
 */
 struct Region(ParentAllocator = NullAllocator,
     uint minAlign = platformAlignment,
-    Flag!"defineDeallocate" defineDeallocate = No.defineDeallocate)
+    Flag!"defineDeallocate" defineDeallocate = No.defineDeallocate,
+    Flag!"growDownwards" growDownwards = No.growDownwards)
 {
-    //import std.exception : enforce;
-
     static assert(minAlign.isGoodStaticAlignment);
     static assert(ParentAllocator.alignment >= minAlign);
 
@@ -47,7 +46,7 @@ struct Region(ParentAllocator = NullAllocator,
     {
         alias parent = ParentAllocator.it;
     }
-    private void* _current, _end, _begin;
+    private void* _current, _begin, _end;
     // }
 
     /**
@@ -67,17 +66,23 @@ struct Region(ParentAllocator = NullAllocator,
     */
     this(void[] store)
     {
+        store = store.roundUpToAlignment(alignment);
+        store = store[0 .. $.roundDownToAlignment(alignment)];
         assert(store.ptr.alignedAt(minAlign));
-        _current = store.ptr;
-        _end = _current + store.length;
-        _begin = _current;
+        assert(store.length % minAlign == 0);
+        _begin = store.ptr;
+        _end = store.ptr + store.length;
+        static if (growDownwards)
+            _current = _end;
+        else
+            _current = store.ptr;
     }
 
     /// Ditto
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
-        this(parent.allocate(n));
+        this(parent.allocate(n.roundUpToAlignment(alignment)));
     }
 
     /*
@@ -92,7 +97,8 @@ struct Region(ParentAllocator = NullAllocator,
     alias alignment = minAlign;
 
     /**
-    Allocates $(D n) bytes of memory. The shortest path involves an alignment adjustment (if $(D alignment > 1)), an increment, and a comparison.
+    Allocates $(D n) bytes of memory. The shortest path involves an alignment
+    adjustment (if $(D alignment > 1)), an increment, and a comparison.
 
     Params:
     n = number of bytes to allocate
@@ -103,24 +109,33 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] allocate(size_t n)
     {
-        auto result = _current[0 .. n];
-        static if (minAlign > 1)
+        static if (growDownwards)
         {
-            immutable uint slack = cast(uint) n & (alignment - 1);
-            const rounded = slack
-                ? n + alignment - slack
-                : n;
-            assert(rounded >= n);
+            if (available < n) return null;
+            static if (minAlign > 1)
+                const rounded = n.roundUpToAlignment(alignment);
+            else
+                alias rounded = n;
+            assert(available >= rounded);
+            auto result = (_current - rounded)[0 .. n];
+            assert(result.ptr >= _begin);
+            _current = result.ptr;
+            assert(owns(result));
+            return result;
         }
         else
         {
-            alias rounded = n;
+            auto result = _current[0 .. n];
+            static if (minAlign > 1)
+                const rounded = n.roundUpToAlignment(alignment);
+            else
+                alias rounded = n;
+            _current += rounded;
+            if (_current <= _end) return result;
+            // Slow path, backtrack
+            _current -= rounded;
+            return null;
         }
-        _current += rounded;
-        if (_current <= _end) return result;
-        // Slow path, backtrack
-        _current -= rounded;
-        return null;
     }
 
     /**
@@ -136,32 +151,56 @@ struct Region(ParentAllocator = NullAllocator,
     void[] alignedAllocate(size_t n, uint a)
     {
         assert(a.isPowerOf2);
-        // Just bump the pointer to the next good allocation
-        auto save = _current;
-        _current = _current.alignUpTo(a);
-        auto result = allocate(n);
-        if (result.ptr)
+        static if (growDownwards)
         {
-            assert(result.length == n);
-            return result;
+            const available = _current - _begin;
+            if (available < n) return null;
+            auto result = (_current - n).alignDownTo(a)[0 .. n];
+            if (result.ptr >= _begin)
+            {
+                _current = result.ptr;
+                return result;
+            }
         }
-        // Failed, rollback
-        _current = save;
+        else
+        {
+            // Just bump the pointer to the next good allocation
+            auto save = _current;
+            _current = _current.alignUpTo(a);
+            auto result = allocate(n);
+            if (result.ptr)
+            {
+                assert(result.length == n);
+                return result;
+            }
+            // Failed, rollback
+            _current = save;
+        }
         return null;
     }
 
     /// Allocates and returns all memory available to this region.
     void[] allocateAll()
     {
-        auto result = _current[0 .. available];
-        _current = _end;
+        static if (growDownwards)
+        {
+            auto result = _begin[0 .. available];
+            _current = _begin;
+        }
+        else
+        {
+            auto result = _current[0 .. available];
+            _current = _end;
+        }
         return result;
     }
 
     /**
     Expands an allocated block in place. Expansion will succeed only if the
-    block is the last allocated.
+    block is the last allocated. Defined only if `growDownwards` is
+    `No.growDownwards`.
     */
+    static if (growDownwards == No.growDownwards)
     bool expand(ref void[] b, size_t delta)
     {
         assert(owns(b) || b.ptr is null);
@@ -201,11 +240,20 @@ struct Region(ParentAllocator = NullAllocator,
     void deallocate(void[] b)
     {
         assert(owns(b) || b.ptr is null);
-        assert(b.ptr + b.length <= _current || b.ptr is null);
-        if (_current < b.ptr + b.length + alignment)
+        static if (growDownwards)
         {
-            assert(b.ptr !is null);
-            _current = b.ptr;
+            if (b.ptr == _current)
+            {
+                _current += this.goodAllocSize(b.length);
+            }
+        }
+        else
+        {
+            if (b.ptr + this.goodAllocSize(b.length) == _current)
+            {
+                assert(b.ptr !is null);
+                _current = b.ptr;
+            }
         }
     }
 
@@ -215,7 +263,14 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void deallocateAll()
     {
-        _current = _begin;
+        static if (growDownwards)
+        {
+            _current = _end;
+        }
+        else
+        {
+            _current = _begin;
+        }
     }
 
     /**
@@ -243,7 +298,14 @@ struct Region(ParentAllocator = NullAllocator,
     /// Nonstandard property that returns bytes available for allocation.
     size_t available() const
     {
-        return _end - _current;
+        static if (growDownwards)
+        {
+            return _current - _begin;
+        }
+        else
+        {
+            return _end - _current;
+        }
     }
 }
 
@@ -270,7 +332,8 @@ unittest
 {
     import std.experimental.allocator.mallocator;
     // Create a 64 KB region allocated with malloc
-    auto reg = Region!(Mallocator)(1024 * 64);
+    auto reg = Region!(Mallocator, Mallocator.alignment, Yes.defineDeallocate,
+        Yes.growDownwards)(1024 * 64);
     auto b = reg.allocate(101);
     assert(b.length == 101);
     // Destructor will free the memory
@@ -287,20 +350,29 @@ the actual available storage may be smaller than the compile-time parameter. To
 make sure that at least $(D n) bytes are available in the region, use
 $(D InSituRegion!(n + a - 1, a)).
 
+Given that the most frequent use of `InSituRegion` is as a stack allocator, it
+allocates starting at the end on systems where stack grows downwards, such that
+hot memory is used first.
+
 */
 struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
         Flag!"defineDeallocate" defineDeallocate = No.defineDeallocate)
 {
     import std.algorithm : max;
     import std.conv : to;
+    import std.traits : hasMember;
 
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size >= minAlign);
 
+    version (X86) enum growDownwards = Yes.growDownwards;
+    else version (X86_64) enum growDownwards = Yes.growDownwards;
+    else static assert(0, "Dunno how the stack grows on this architecture.");
+
     @disable this(this);
 
     // state {
-    Region!(NullAllocator, minAlign, defineDeallocate) _impl;
+    Region!(NullAllocator, minAlign, defineDeallocate, growDownwards) _impl;
     union
     {
         private ubyte[size] _store = void;
@@ -325,12 +397,13 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
     private void lazyInit()
     {
         assert(!_impl._current);
-        static if (alignment > double.alignof)
-            _impl._current = _store.ptr.alignUpTo(alignment);
-        else
-            _impl._current = _store.ptr;
-        _impl._end = _store.ptr + _store.length;
-        _impl._begin = _impl._current;
+        //static if (alignment > double.alignof)
+        //{
+        //    auto p = _store.ptr.alignUpTo(alignment);
+        //}
+        //else
+        //    auto p = _store.ptr;
+        _impl = typeof(_impl)(_store);
         assert(_impl._current.alignedAt(alignment));
     }
 
@@ -401,6 +474,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
     Expands an allocated block in place. Expansion will succeed only if the
     block is the last allocated.
     */
+    static if (hasMember!(typeof(_impl), "expand"))
     bool expand(ref void[] b, size_t delta)
     {
         if (!_impl._current) lazyInit;

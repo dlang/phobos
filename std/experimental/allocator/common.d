@@ -198,6 +198,61 @@ unittest
     assert(118.roundUpToMultipleOf(11) == 121);
 }
 
+/**
+Returns s rounded up to a multiple of alignment, which must be a power of 2.
+*/
+package size_t roundUpToAlignment(size_t n, uint alignment)
+{
+    assert(alignment.isPowerOf2);
+    immutable uint slack = cast(uint) n & (alignment - 1);
+    const result = slack
+        ? n + alignment - slack
+        : n;
+    assert(result >= n);
+    return result;
+}
+
+unittest
+{
+    assert(10.roundUpToAlignment(4) == 12);
+    assert(11.roundUpToAlignment(2) == 12);
+    assert(12.roundUpToAlignment(8) == 16);
+    assert(118.roundUpToAlignment(64) == 128);
+}
+
+package void[] roundUpToAlignment(void[] b, uint a)
+{
+    auto e = b.ptr + b.length;
+    auto p = cast(void*) roundUpToAlignment(cast(size_t) b.ptr, a);
+    if (e < p) return null;
+    return p[0 .. e - p];
+}
+
+unittest
+{
+    void[] empty;
+    assert(roundUpToAlignment(empty, 4) == null);
+    char[9] buf;
+    assert(roundUpToAlignment(buf, 128) == null);
+}
+
+/**
+Returns s rounded down to a multiple of alignment, which must be a power of 2.
+*/
+package size_t roundDownToAlignment(size_t n, uint alignment)
+{
+    assert(alignment.isPowerOf2);
+    return n & ~size_t(alignment - 1);
+}
+
+unittest
+{
+    assert(10.roundDownToAlignment(4) == 8);
+    assert(11.roundDownToAlignment(2) == 10);
+    assert(12.roundDownToAlignment(8) == 8);
+    assert(63.roundDownToAlignment(64) == 0);
+}
+
 package size_t divideRoundUp(size_t a, size_t b)
 {
     assert(b);
