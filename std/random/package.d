@@ -60,6 +60,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.random;
 
+public import std.random.device;
 public import std.random.traits;
 
 import std.range.primitives;
@@ -337,6 +338,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48271, 0, 2147483647);
 
 unittest
 {
+    import std.random.device : unpredictableSeed;
     import std.range;
     static assert(isForwardRange!MinstdRand);
     static assert(isUniformRNG!MinstdRand);
@@ -616,6 +618,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
 nothrow unittest
 {
     import std.algorithm;
+    import std.random.device : unpredictableSeed;
     import std.range;
     static assert(isUniformRNG!Mt19937);
     static assert(isUniformRNG!(Mt19937, uint));
@@ -630,6 +633,7 @@ nothrow unittest
 unittest
 {
     import std.exception;
+    import std.random.device : unpredictableSeed;
     import std.range;
     import std.algorithm;
 
@@ -660,6 +664,7 @@ unittest
 
 unittest
 {
+    import std.random.device : unpredictableSeed;
     import std.range;
     // Check .save works
     foreach(Type; std.typetuple.TypeTuple!(Mt19937))
@@ -918,6 +923,7 @@ alias Xorshift    = Xorshift128;                            /// ditto
 
 unittest
 {
+    import std.random.device : unpredictableSeed;
     import std.range;
     static assert(isForwardRange!Xorshift);
     static assert(isUniformRNG!Xorshift);
@@ -988,45 +994,6 @@ unittest
 
 
 /**
-A "good" seed for initializing random number engines. Initializing
-with $(D_PARAM unpredictableSeed) makes engines generate different
-random number sequences every run.
-
-Returns:
-A single unsigned integer seed value, different on each successive call
-
-Example:
-
-----
-auto rnd = Random(unpredictableSeed);
-auto n = rnd.front;
-...
-----
-*/
-
-@property uint unpredictableSeed() @trusted
-{
-    import core.thread : Thread, getpid, TickDuration;
-    static bool seeded;
-    static MinstdRand0 rand;
-    if (!seeded)
-    {
-        uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) TickDuration.currSystemTick.length);
-        seeded = true;
-    }
-    rand.popFront();
-    return cast(uint) (TickDuration.currSystemTick.length ^ rand.front);
-}
-
-@safe unittest
-{
-    // not much to test here
-    auto a = unpredictableSeed;
-    static assert(is(typeof(a) == uint));
-}
-
-/**
 The "default", "favorite", "suggested" random number generator type on
 the current platform. It is an alias for one of the previously-defined
 generators. You may want to use it if (1) you need to generate some
@@ -1055,6 +1022,7 @@ A singleton instance of the default random number generator
 @property ref Random rndGen() @safe
 {
     import std.algorithm : map;
+    import std.random.device : unpredictableSeed;
     import std.range : repeat;
 
     static Random result;
@@ -1300,6 +1268,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 @safe unittest
 {
     import std.conv : to;
+    import std.random.device : unpredictableSeed;
     auto gen = Mt19937(unpredictableSeed);
     static assert(isForwardRange!(typeof(gen)));
 
@@ -1630,6 +1599,7 @@ body
 
 @safe unittest
 {
+    import std.random.device : unpredictableSeed;
     import std.typetuple;
     foreach (UniformRNG; PseudoRngTypes)
     {
@@ -1721,6 +1691,7 @@ void randomShuffle(Range)(Range r)
 unittest
 {
     import std.algorithm;
+    import std.random.device : unpredictableSeed;
     foreach(RandomGen; PseudoRngTypes)
     {
         // Also tests partialShuffle indirectly.
@@ -1897,6 +1868,7 @@ body
 
 unittest
 {
+    import std.random.device : unpredictableSeed;
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
     assert(i == 1);
@@ -2093,6 +2065,7 @@ unittest
 {
     import std.algorithm;
     import std.conv;
+    import std.random.device : unpredictableSeed;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
     foreach (UniformRNG; std.typetuple.TypeTuple!(void, PseudoRngTypes))
     {
@@ -2636,6 +2609,7 @@ unittest
     import std.exception;
     import std.range;
     import std.conv : text;
+    import std.random.device : unpredictableSeed;
     // For test purposes, an infinite input range
     struct TestInputRange
     {
