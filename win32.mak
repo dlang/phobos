@@ -935,3 +935,8 @@ install: phobos.zip
 	$(CP) $(DOC)\index.html $(DIR)\html\d\phobos\index.html
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos
+
+auto-tester-build: targets
+
+auto-tester-test: unittest
+
