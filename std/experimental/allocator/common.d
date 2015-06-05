@@ -233,7 +233,10 @@ unittest
     void[] empty;
     assert(roundUpToAlignment(empty, 4) == null);
     char[9] buf;
-    assert(roundUpToAlignment(buf, 128) == null);
+    auto buf2 = buf[1 .. $];
+    // At least one of buf and buf2 is misaligned
+    assert(roundUpToAlignment(buf, 128) == null
+        || roundUpToAlignment(buf2, 128) == null);
 }
 
 /**
