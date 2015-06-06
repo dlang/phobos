@@ -10,37 +10,36 @@ version(unittest) import std.stdio;
 
 /**
 
-Given $(D make(size_t n)) as a function that returns fresh allocators capable of
-allocating at least $(D n) bytes, and $(D BookkeepingAllocator) as a
-supplemental allocator for bookkeeping, $(D AllocatorList) creates an allocator
-that lazily creates as many allocators are needed for satisfying client
-allocation requests.
+Given an $(LUCKY object factory) of type `Factory` or a factory function
+`factoryFunction`, and optionally also `BookkeepingAllocator` as a supplemental
+allocator for bookkeeping, `AllocatorList` creates an allocator that lazily
+creates as many allocators are needed for satisfying client allocation requests.
 
 An embedded list builds a most-recently-used strategy: the most recent
-allocators used in calls to either $(D allocate), $(D owns) (successful calls
-only), or $(D deallocate) are tried for new allocations in order of their most
+allocators used in calls to either `allocate`, `owns` (successful calls
+only), or `deallocate` are tried for new allocations in order of their most
 recent use. Thus, although core operations take in theory $(BIGOH k) time for
 $(D k) allocators in current use, in many workloads the factor is sublinear.
 Details of the actual strategy may change in future releases.
 
-$(D AllocatorList) is primarily intended for coarse-grained handling of
+`AllocatorList` is primarily intended for coarse-grained handling of
 allocators, i.e. the number of allocators in the list is expected to be
 relatively small compared to the number of allocations handled by each
-allocator. However, the per-allocator overhead is small so using $(D
-AllocatorList) with a large number of allocators should be satisfactory as long
+allocator. However, the per-allocator overhead is small so using
+`AllocatorList` with a large number of allocators should be satisfactory as long
 as the most-recently-used strategy is fast enough for the application.
 
-$(D AllocatorList) makes an effort to return allocated memory back when no
+`AllocatorList` makes an effort to return allocated memory back when no
 longer used. It does so by destroying empty allocators. However, in order to
 avoid thrashing (excessive creation/destruction of allocators under certain use
 patterns), it keeps unused allocators for a while.
 
 Params:
-make = alias for a function that returns new allocators on a need basis. $(D
-make(n)) should return an allocator able to allocate at least $(D n) bytes.
-Usually the capacity of allocators should be much larger than $(D n) such that
-an allocator can be used for many subsequent allocations. $(D n) is passed only
-to ensure the minimum necessary for the next allocation.
+factoryFunction = A function or template function (including function literals).
+New allocators are created by calling `factoryFunction(n)` with strictly
+positive numbers `n`. Delegates that capture their enviroment are not created
+amid concerns regarding garbage creation for the environment. When the factory
+needs state, a `Factory` object should be used.
 
 BookkeepingAllocator = Allocator used for storing bookkeeping data. The size of
 bookkeeping data is proportional to the number of allocators. If $(D
@@ -49,8 +48,19 @@ BookkeepingAllocator) is $(D NullAllocator), then $(D AllocatorList) is
 the allocators themselves. Note that for ouroboros-style management, the size
 $(D n) passed to $(D make) will be occasionally different from the size
 requested by client code.
+
+Factory = Type of a factory object that returns new allocators on a need
+basis. For an object $(D sweatshop) of type $(D Factory), `sweatshop(n)` should
+return an allocator able to allocate at least `n` bytes (i.e. `Factory` must
+define `opCall(size_t)` to return an allocator object). Usually the capacity of
+allocators created should be much larger than $(D n) such that an allocator can
+be used for many subsequent allocations. $(D n) is passed only to ensure the
+minimum necessary for the next allocation. The factory object is allowed to hold
+state, which will be stored inside `AllocatorList` as a direct `public` member
+called `factory`.
+
 */
-struct AllocatorList(alias make, BookkeepingAllocator = GCAllocator)
+struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
 {
     import std.traits : hasMember;
     import std.conv : emplace;
@@ -59,8 +69,11 @@ struct AllocatorList(alias make, BookkeepingAllocator = GCAllocator)
 
     private enum ouroboros = is(BookkeepingAllocator == NullAllocator);
 
-    /// Alias for $(D typeof(make)).
-    alias Allocator = typeof(make(1));
+    /**
+    Alias for `typeof(Factory()(1))`, i.e. the type of the individual
+    allocators.
+    */
+    alias Allocator = typeof(Factory.init(1));
     // Allocator used internally
     private alias SAllocator = StatsCollector!(Allocator, Options.bytesUsed);
 
@@ -84,17 +97,48 @@ struct AllocatorList(alias make, BookkeepingAllocator = GCAllocator)
     If $(D BookkeepingAllocator) is not $(D NullAllocator), $(D bkalloc) is
     defined and accessible.
     */
+
     // State is stored in an array, but it has a list threaded through it by
     // means of "nextIdx".
+
     // state {
     static if (!ouroboros)
     {
         static if (stateSize!BookkeepingAllocator) BookkeepingAllocator bkalloc;
         else alias bkalloc = BookkeepingAllocator.it;
     }
+    static if (stateSize!Factory)
+    {
+        Factory factory;
+    }
     private Node[] allocators;
     private Node* root;
     // }
+
+    static if (stateSize!Factory)
+    {
+        private auto make(size_t n) { return factory(n); }
+    }
+    else
+    {
+        private auto make(size_t n) { Factory f; return f(n); }
+    }
+
+    /**
+    Constructs an `AllocatorList` given a factory object. This constructor is
+    defined only if `Factory` has state.
+    */
+    static if (stateSize!Factory)
+    this(ref Factory plant)
+    {
+        factory = plant;
+    }
+    /// Ditto
+    static if (stateSize!Factory)
+    this(Factory plant)
+    {
+        factory = plant;
+    }
 
     static if (hasMember!(Allocator, "deallocateAll")
         && hasMember!(Allocator, "owns"))
@@ -442,6 +486,29 @@ struct AllocatorList(alias make, BookkeepingAllocator = GCAllocator)
     }
 }
 
+/// Ditto
+template AllocatorList(alias factoryFunction,
+    BookkeepingAllocator = GCAllocator)
+{
+    alias A = typeof(factoryFunction(1));
+    static assert(
+        // is a template function (including literals)
+        is(typeof({A function(size_t) @system x = factoryFunction!size_t;}))
+        ||
+        // or a function (including literals)
+        is(typeof({A function(size_t) @system x = factoryFunction;}))
+        ,
+        "Only function names and function literals that take size_t"
+            ~ " and return an allocator are accepted, not "
+            ~ typeof(factoryFunction).stringof
+    );
+    static struct Factory
+    {
+        A opCall(size_t n) { return factoryFunction(n); }
+    }
+    alias AllocatorList = .AllocatorList!(Factory, BookkeepingAllocator);
+}
+
 ///
 version(Posix) unittest
 {
@@ -477,11 +544,11 @@ version(Posix) unittest
     A4 a;
     auto small = a.allocate(64);
     assert(small);
-    //a.deallocate(small);
-    //auto b1 = a.allocate(1024 * 8192);
-    //assert(b1 !is null); // still works due to overdimensioning
-    //b1 = a.allocate(1024 * 10);
-    //assert(b1.length == 1024 * 10);
+    a.deallocate(small);
+    auto b1 = a.allocate(1024 * 8192);
+    assert(b1 !is null); // still works due to overdimensioning
+    b1 = a.allocate(1024 * 10);
+    assert(b1.length == 1024 * 10);
 }
 
 unittest

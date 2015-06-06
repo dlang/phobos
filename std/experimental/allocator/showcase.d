@@ -55,5 +55,38 @@ unittest
 }
 
 /**
+Creates a scalable `AllocatorList` of `Regions`, each having at least
+`bytesPerRegion` bytes. Allocation is very fast. This allocator does not offer
+`deallocate` but does free all regions in its destructor. It is recommended for
+short-lived batch applications that count on never running out of memory.
 */
-//auto mmapRegionList!(alias factory)
+auto mmapRegionList(size_t bytesPerRegion)
+{
+    static struct Factory
+    {
+        size_t bytesPerRegion;
+        import std.algorithm : max;
+        import std.experimental.allocator.region;
+        import std.experimental.allocator.mmap_allocator;
+        this(size_t n)
+        {
+            bytesPerRegion = n;
+        }
+        auto opCall(size_t n)
+        {
+            return Region!MmapAllocator(max(n, bytesPerRegion));
+        }
+    }
+    import std.experimental.allocator.allocator_list;
+    import std.experimental.allocator.null_allocator;
+    auto shop = Factory(bytesPerRegion);
+    return AllocatorList!(Factory, NullAllocator)(shop);
+}
+
+///
+unittest
+{
+    auto alloc = mmapRegionList(1024 * 1024);
+    auto b = alloc.allocate(100);
+    assert(b.length == 100);
+}
