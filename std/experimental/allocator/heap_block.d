@@ -704,9 +704,11 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
 }
 
 ///
-version(none) unittest
+unittest
 {
     // Create a block allocator on top of a 10KB stack region.
+    import std.experimental.allocator.region;
+    import std.traits;
     InSituRegion!(10240, 64) r;
     auto a = HeapBlock!(64, 64)(r.allocateAll());
     static assert(hasMember!(InSituRegion!(10240, 64), "allocateAll"));
