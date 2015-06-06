@@ -1381,6 +1381,113 @@ unittest
 }
 
 
+/**
+ * Concatenate path segments together to form one path.
+ *
+ * Params:
+ *      r1 = first segment
+ *      r2 = second segment
+ *      ranges = 0 or more segments
+ * Returns:
+ *      Lazy range which is the concatenation of r1, r2 and ranges with path separators.
+ *      The resulting element type is that of r1.
+ * See_Also:
+ *      $(LREF buildPath)
+ */
+auto chainPath(R1, R2, Ranges...)(R1 r1, R2 r2, Ranges ranges)
+    if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(ElementType!R1) ||
+         is(StringTypeOf!R1)) &&
+        (isRandomAccessRange!R2 && hasSlicing!R2 && hasLength!R2 && isSomeChar!(ElementType!R2) ||
+         is(StringTypeOf!R2)) &&
+        (Ranges.length == 0 || is(typeof(chainPath(r2, ranges))))
+       )
+{
+    static if (Ranges.length)
+    {
+        return chainPath(chainPath(r1, r2), ranges);
+    }
+    else
+    {
+        import std.range : only, chain;
+        import std.utf : byUTF;
+
+        alias CR = Unqual!(ElementEncodingType!R1);
+        auto sep = only(CR(dirSeparator[0]));
+        bool usesep = false;
+
+        auto pos = r1.length;
+
+        if (pos)
+        {
+            if (isRooted(r2))
+            {
+                version (Posix)
+                {
+                    pos = 0;
+                }
+                else version (Windows)
+                {
+                    if (isAbsolute(r2))
+                        pos = 0;
+                    else
+                    {
+                        pos = rootName(r1).length;
+                        if (pos > 0 && isDirSeparator(r1[pos - 1]))
+                            --pos;
+                    }
+                }
+                else
+                    static assert(0);
+            }
+            else if (!isDirSeparator(r1[pos - 1]))
+                usesep = true;
+        }
+        if (!usesep)
+            sep.popFront();
+        // Return r1 ~ '/' ~ r2
+        return chain(r1[0 .. pos].byUTF!CR, sep, r2.byUTF!CR);
+    }
+}
+
+///
+unittest
+{
+    import std.array;
+    version (Posix)
+    {
+        //assert (chainPath("foo", "bar", "baz").array == "foo/bar/baz");
+        assert (chainPath("/foo/", "bar/baz").array  == "/foo/bar/baz");
+        assert (chainPath("/foo", "/bar").array      == "/bar");
+    }
+
+    version (Windows)
+    {
+        //assert (chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
+        assert (chainPath(`c:\foo`, `bar\baz`).array == `c:\foo\bar\baz`);
+        assert (chainPath("foo", `d:\bar`).array     == `d:\bar`);
+        assert (chainPath("foo", `\bar`).array       == `\bar`);
+        assert (chainPath(`c:\foo`, `\bar`).array    == `c:\bar`);
+    }
+
+    import std.utf : byChar;
+    version (Posix)
+    {
+        //assert (chainPath("foo", "bar", "baz").array == "foo/bar/baz");
+        assert (chainPath("/foo/".byChar, "bar/baz").array  == "/foo/bar/baz");
+        assert (chainPath("/foo", "/bar".byChar).array      == "/bar");
+    }
+
+    version (Windows)
+    {
+        //assert (chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
+        assert (chainPath(`c:\foo`.byChar, `bar\baz`).array == `c:\foo\bar\baz`);
+        assert (chainPath("foo", `d:\bar`).array     == `d:\bar`);
+        assert (chainPath("foo", `\bar`.byChar).array       == `\bar`);
+        assert (chainPath(`c:\foo`, `\bar`w).array    == `c:\bar`);
+    }
+}
+
+
 /** Performs the same task as $(LREF buildPath),
     while at the same time resolving current/parent directory
     symbols ($(D ".") and $(D "..")) and removing superfluous
