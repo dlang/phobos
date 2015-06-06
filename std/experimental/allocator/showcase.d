@@ -44,7 +44,6 @@ alias StackFront(size_t stackSize, Allocator = GCAllocator) =
 ///
 unittest
 {
-    //auto a = stackFront!4096;
     StackFront!4096 a;
     auto b = a.allocate(4000);
     assert(b.length == 4000);
