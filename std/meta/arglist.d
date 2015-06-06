@@ -1,37 +1,30 @@
-// Written in the D programming language.
-
 /**
- * Templates to manipulate template argument lists (also known as type lists).
+ * Provides `Arguments` and utilities for its manipulation
  *
- * Some operations on type tuples are built in to the language,
- * such as TL[$(I n)] which gets the $(I n)th type from the
- * type tuple. TL[$(I lwr) .. $(I upr)] returns a new type
- * list that is a slice of the old one.
+ * Module that provides one of D's core meta-programming primitives: a list
+ * of compile-time entities (also "template argument list").
+ * It can contain any type, expression or symbol that is a legal template argument.
  *
- * Several templates in this module use or operate on eponymous templates that
- * take a single argument and evaluate to a boolean constant. Such templates
- * are referred to as $(I template predicates).
+ * It also provides compile-time algorithms that work on such lists.
  *
- * References:
- *  Based on ideas in Table 3.1 from
- *  $(LINK2 http://amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
- *      Modern C++ Design),
- *   Andrei Alexandrescu (Addison-Wesley Professional, 2001)
- * Macros:
- *  WIKI = Phobos/StdTypeTuple
- *
- * Copyright: Copyright Digital Mars 2005 - 2015.
+ * Copyright: Copyright Digital Mars 2005 - 2015
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  *     $(WEB digitalmars.com, Walter Bright),
  *     $(WEB klickverbot.at, David Nadlinger)
- * Source:    $(PHOBOSSRC std/_typetuple.d)
+ * Source:    $(PHOBOSSRC std.meta/_list.d)
  */
 
-module std.meta;
+module std.meta.arglist;
+
+import std.meta.internal;
 
 /**
- * Creates a tuple out of a sequence of zero or more template arguments.
+ * Captures the provided template argument list as a single symbol
+ *
+ * Params:
+ *    TList = any symbol, type or expression that is legal as
+ *        a template variadic argument
  */
 template Arguments(TList...)
 {
@@ -41,7 +34,7 @@ template Arguments(TList...)
 ///
 unittest
 {
-    import std.typetuple;
+    import std.meta;
     alias TL = Arguments!(int, double);
 
     int foo(TL td)  // same as int foo(int, double);
@@ -88,7 +81,7 @@ unittest
     void foo()
     {
         writefln("The index of long is %s",
-                 staticIndexOf!(long, TypeTuple!(int, long, double)));
+                 staticIndexOf!(long, Arguments!(int, long, double)));
         // prints: The index of long is 1
     }
 }
@@ -147,7 +140,7 @@ unittest
 alias IndexOf = staticIndexOf;
 
 /**
- * Returns a typetuple created from TList with the first occurrence,
+ * Returns an argument list created from TList with the first occurrence,
  * if any, of T removed.
  */
 template Erase(T, TList...)
@@ -164,9 +157,9 @@ template Erase(alias T, TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, double, char);
+    alias Types = Arguments!(int, long, double, char);
     alias TL = Erase!(long, Types);
-    static assert(is(TL == TypeTuple!(int, double, char)));
+    static assert(is(TL == Arguments!(int, double, char)));
 }
 
 // [internal]
@@ -184,11 +177,11 @@ private template GenericErase(args...)
         static if (isSame!(e, head))
             alias result = tail;
         else
-            alias result = TypeTuple!(head, GenericErase!(e, tail).result);
+            alias result = Arguments!(head, GenericErase!(e, tail).result);
     }
     else
     {
-        alias result = TypeTuple!();
+        alias result = Arguments!();
     }
 }
 
@@ -222,10 +215,10 @@ template EraseAll(alias T, TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int);
+    alias Types = Arguments!(int, long, long, int);
 
     alias TL = EraseAll!(long, Types);
-    static assert(is(TL == TypeTuple!(int, int)));
+    static assert(is(TL == Arguments!(int, int)));
 }
 
 // [internal]
@@ -244,11 +237,11 @@ private template GenericEraseAll(args...)
         static if (isSame!(e, head))
             alias result = next;
         else
-            alias result = TypeTuple!(head, next);
+            alias result = Arguments!(head, next);
     }
     else
     {
-        alias result = TypeTuple!();
+        alias result = Arguments!();
     }
 }
 
@@ -265,8 +258,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the all duplicate
- * types removed.
+ * Returns an argument list created from TList with the all duplicate
+ * entities removed.
  */
 template NoDuplicates(TList...)
 {
@@ -274,16 +267,16 @@ template NoDuplicates(TList...)
         alias NoDuplicates = TList;
     else
         alias NoDuplicates =
-            TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
+            Arguments!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
 }
 
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int, float);
+    alias Types = Arguments!(int, long, long, int, float);
 
     alias TL = NoDuplicates!(Types);
-    static assert(is(TL == TypeTuple!(int, long, float)));
+    static assert(is(TL == Arguments!(int, long, float)));
 }
 
 unittest
@@ -296,8 +289,8 @@ unittest
 
 
 /**
- * Returns a typetuple created from TList with the first occurrence
- * of type T, if found, replaced with type U.
+ * Returns an argument list created from TList with the first occurrence
+ * of entity T, if found, replaced with entity U.
  */
 template Replace(T, U, TList...)
 {
@@ -325,10 +318,10 @@ template Replace(alias T, alias U, TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int, float);
+    alias Types = Arguments!(int, long, long, int, float);
 
     alias TL = Replace!(long, char, Types);
-    static assert(is(TL == TypeTuple!(int, char, long, int, float)));
+    static assert(is(TL == Arguments!(int, char, long, int, float)));
 }
 
 // [internal]
@@ -345,14 +338,14 @@ private template GenericReplace(args...)
         alias tail = tuple[1 .. $];
 
         static if (isSame!(from, head))
-            alias result = TypeTuple!(to, tail);
+            alias result = Arguments!(to, tail);
         else
-            alias result = TypeTuple!(head,
+            alias result = Arguments!(head,
                 GenericReplace!(from, to, tail).result);
     }
     else
     {
-        alias result = TypeTuple!();
+        alias result = Arguments!();
     }
  }
 
@@ -376,8 +369,8 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
- * of type T, if found, replaced with type U.
+ * Returns an argument list created from TList with all occurrences
+ * of entity T, if found, replaced with entity U.
  */
 template ReplaceAll(T, U, TList...)
 {
@@ -405,10 +398,10 @@ template ReplaceAll(alias T, alias U, TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int, float);
+    alias Types = Arguments!(int, long, long, int, float);
 
     alias TL = ReplaceAll!(long, char, Types);
-    static assert(is(TL == TypeTuple!(int, char, char, int, float)));
+    static assert(is(TL == Arguments!(int, char, char, int, float)));
 }
 
 // [internal]
@@ -426,13 +419,13 @@ private template GenericReplaceAll(args...)
         alias next = GenericReplaceAll!(from, to, tail).result;
 
         static if (isSame!(from, head))
-            alias result = TypeTuple!(to, next);
+            alias result = Arguments!(to, next);
         else
-            alias result = TypeTuple!(head, next);
+            alias result = Arguments!(head, next);
     }
     else
     {
-        alias result = TypeTuple!();
+        alias result = Arguments!();
     }
 }
 
@@ -456,7 +449,7 @@ unittest
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns an argument list created from TList with the order reversed.
  */
 template Reverse(TList...)
 {
@@ -467,7 +460,7 @@ template Reverse(TList...)
     else
     {
         alias Reverse =
-            TypeTuple!(
+            Arguments!(
                 Reverse!(TList[$/2 ..  $ ]),
                 Reverse!(TList[ 0  .. $/2]));
     }
@@ -476,10 +469,10 @@ template Reverse(TList...)
 ///
 unittest
 {
-    alias Types = TypeTuple!(int, long, long, int, float);
+    alias Types = Arguments!(int, long, long, int, float);
 
     alias TL = Reverse!(Types);
-    static assert(is(TL == TypeTuple!(float, int, long, long, int)));
+    static assert(is(TL == Arguments!(float, int, long, long, int)));
 }
 
 /**
@@ -502,14 +495,14 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = TypeTuple!(A, C, B);
+    alias Types = Arguments!(A, C, B);
 
     MostDerived!(Object, Types) x;  // x is declared as type C
     static assert(is(typeof(x) == C));
 }
 
 /**
- * Returns the typetuple TList with the types sorted so that the most
+ * Returns the type list TList with the types sorted so that the most
  * derived types come first.
  */
 template DerivedToFront(TList...)
@@ -518,7 +511,7 @@ template DerivedToFront(TList...)
         alias DerivedToFront = TList;
     else
         alias DerivedToFront =
-            TypeTuple!(MostDerived!(TList[0], TList[1 .. $]),
+            Arguments!(MostDerived!(TList[0], TList[1 .. $]),
                        DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
                                 TList[0],
                                 TList[1 .. $])));
@@ -530,29 +523,29 @@ unittest
     class A { }
     class B : A { }
     class C : B { }
-    alias Types = TypeTuple!(A, C, B);
+    alias Types = Arguments!(A, C, B);
 
     alias TL = DerivedToFront!(Types);
-    static assert(is(TL == TypeTuple!(C, B, A)));
+    static assert(is(TL == Arguments!(C, B, A)));
 }
 
 /**
-Evaluates to $(D TypeTuple!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to $(D Arguments!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, T...)
 {
     static if (T.length == 0)
     {
-        alias staticMap = TypeTuple!();
+        alias staticMap = Arguments!();
     }
     else static if (T.length == 1)
     {
-        alias staticMap = TypeTuple!(F!(T[0]));
+        alias staticMap = Arguments!(F!(T[0]));
     }
     else
     {
         alias staticMap =
-            TypeTuple!(
+            Arguments!(
                 staticMap!(F, T[ 0  .. $/2]),
                 staticMap!(F, T[$/2 ..  $ ]));
     }
@@ -563,7 +556,7 @@ unittest
 {
     import std.traits : Unqual;
     alias TL = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(TL == TypeTuple!(int, int, int)));
+    static assert(is(TL == Arguments!(int, int, int)));
 }
 
 unittest
@@ -576,10 +569,10 @@ unittest
 
     // single
     alias Single = staticMap!(Unqual, const int);
-    static assert(is(Single == TypeTuple!int));
+    static assert(is(Single == Arguments!int));
 
     alias T = staticMap!(Unqual, int, const int, immutable int);
-    static assert(is(T == TypeTuple!(int, int, int)));
+    static assert(is(T == Arguments!(int, int, int)));
 }
 
 /**
@@ -652,26 +645,26 @@ unittest
 
 
 /**
- * Filters a $(D TypeTuple) using a template predicate. Returns a
- * $(D TypeTuple) of the elements which satisfy the predicate.
+ * Filters a $(D Arguments) using a template predicate. Returns a
+ * $(D Arguments) of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
 {
     static if (TList.length == 0)
     {
-        alias Filter = TypeTuple!();
+        alias Filter = Arguments!();
     }
     else static if (TList.length == 1)
     {
         static if (pred!(TList[0]))
-            alias Filter = TypeTuple!(TList[0]);
+            alias Filter = Arguments!(TList[0]);
         else
-            alias Filter = TypeTuple!();
+            alias Filter = Arguments!();
     }
     else
     {
         alias Filter =
-            TypeTuple!(
+            Arguments!(
                 Filter!(pred, TList[ 0  .. $/2]),
                 Filter!(pred, TList[$/2 ..  $ ]));
     }
@@ -682,21 +675,21 @@ unittest
 {
     import std.traits : isNarrowString, isUnsigned;
 
-    alias Types1 = TypeTuple!(string, wstring, dchar[], char[], dstring, int);
+    alias Types1 = Arguments!(string, wstring, dchar[], char[], dstring, int);
     alias TL1 = Filter!(isNarrowString, Types1);
-    static assert(is(TL1 == TypeTuple!(string, wstring, char[])));
+    static assert(is(TL1 == Arguments!(string, wstring, char[])));
 
-    alias Types2 = TypeTuple!(int, byte, ubyte, dstring, dchar, uint, ulong);
+    alias Types2 = Arguments!(int, byte, ubyte, dstring, dchar, uint, ulong);
     alias TL2 = Filter!(isUnsigned, Types2);
-    static assert(is(TL2 == TypeTuple!(ubyte, uint, ulong)));
+    static assert(is(TL2 == Arguments!(ubyte, uint, ulong)));
 }
 
 unittest
 {
     import std.traits : isPointer;
 
-    static assert(is(Filter!(isPointer, int, void*, char[], int*) == TypeTuple!(void*, int*)));
-    static assert(is(Filter!isPointer == TypeTuple!()));
+    static assert(is(Filter!(isPointer, int, void*, char[], int*) == Arguments!(void*, int*)));
+    static assert(is(Filter!isPointer == Arguments!()));
 }
 
 
@@ -740,7 +733,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; Arguments!(int, staticMap, 42))
     {
         static assert(!Instantiate!(templateNot!testAlways, T));
         static assert(Instantiate!(templateNot!testNever, T));
@@ -791,7 +784,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; Arguments!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateAnd!(), T));
         static assert( Instantiate!(templateAnd!(testAlways), T));
@@ -849,7 +842,7 @@ unittest
 
 unittest
 {
-    foreach (T; TypeTuple!(int, staticMap, 42))
+    foreach (T; Arguments!(int, staticMap, 42))
     {
         static assert( Instantiate!(templateOr!(testAlways), T));
         static assert( Instantiate!(templateOr!(testAlways, testAlways), T));
@@ -866,165 +859,3 @@ unittest
         // static assert(!is(typeof(Instantiate!(templateOr!(testNever, testError), T))));
     }
 }
-
-
-// : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
-package:
-
-/*
- * With the builtin alias declaration, you cannot declare
- * aliases of, for example, literal values. You can alias anything
- * including literal values via this template.
- */
-// symbols and literal values
-template Alias(alias a)
-{
-    static if (__traits(compiles, { alias x = a; }))
-        alias Alias = a;
-    else static if (__traits(compiles, { enum x = a; }))
-        enum Alias = a;
-    else
-        static assert(0, "Cannot alias " ~ a.stringof);
-}
-// types and tuples
-template Alias(a...)
-{
-    alias Alias = a;
-}
-
-unittest
-{
-    enum abc = 1;
-    static assert(__traits(compiles, { alias a = Alias!(123); }));
-    static assert(__traits(compiles, { alias a = Alias!(abc); }));
-    static assert(__traits(compiles, { alias a = Alias!(int); }));
-    static assert(__traits(compiles, { alias a = Alias!(1,abc,int); }));
-}
-
-
-// : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
-private:
-
-/*
- * [internal] Returns true if a and b are the same thing, or false if
- * not. Both a and b can be types, literals, or symbols.
- *
- * How:                     When:
- *      is(a == b)        - both are types
- *        a == b          - both are literals (true literals, enums)
- * __traits(isSame, a, b) - other cases (variables, functions,
- *                          templates, etc.)
- */
-private template isSame(ab...)
-    if (ab.length == 2)
-{
-    static if (__traits(compiles, expectType!(ab[0]),
-                                  expectType!(ab[1])))
-    {
-        enum isSame = is(ab[0] == ab[1]);
-    }
-    else static if (!__traits(compiles, expectType!(ab[0])) &&
-                    !__traits(compiles, expectType!(ab[1])) &&
-                     __traits(compiles, expectBool!(ab[0] == ab[1])))
-    {
-        static if (!__traits(compiles, &ab[0]) ||
-                   !__traits(compiles, &ab[1]))
-            enum isSame = (ab[0] == ab[1]);
-        else
-            enum isSame = __traits(isSame, ab[0], ab[1]);
-    }
-    else
-    {
-        enum isSame = __traits(isSame, ab[0], ab[1]);
-    }
-}
-private template expectType(T) {}
-private template expectBool(bool b) {}
-
-unittest
-{
-    static assert( isSame!(int, int));
-    static assert(!isSame!(int, short));
-
-    enum a = 1, b = 1, c = 2, s = "a", t = "a";
-    static assert( isSame!(1, 1));
-    static assert( isSame!(a, 1));
-    static assert( isSame!(a, b));
-    static assert(!isSame!(b, c));
-    static assert( isSame!("a", "a"));
-    static assert( isSame!(s, "a"));
-    static assert( isSame!(s, t));
-    static assert(!isSame!(1, "1"));
-    static assert(!isSame!(a, "a"));
-    static assert( isSame!(isSame, isSame));
-    static assert(!isSame!(isSame, a));
-
-    static assert(!isSame!(byte, a));
-    static assert(!isSame!(short, isSame));
-    static assert(!isSame!(a, int));
-    static assert(!isSame!(long, isSame));
-
-    static immutable X = 1, Y = 1, Z = 2;
-    static assert( isSame!(X, X));
-    static assert(!isSame!(X, Y));
-    static assert(!isSame!(Y, Z));
-
-    int  foo();
-    int  bar();
-    real baz(int);
-    static assert( isSame!(foo, foo));
-    static assert(!isSame!(foo, bar));
-    static assert(!isSame!(bar, baz));
-    static assert( isSame!(baz, baz));
-    static assert(!isSame!(foo, 0));
-
-    int  x, y;
-    real z;
-    static assert( isSame!(x, x));
-    static assert(!isSame!(x, y));
-    static assert(!isSame!(y, z));
-    static assert( isSame!(z, z));
-    static assert(!isSame!(x, 0));
-}
-
-/*
- * [internal] Confines a tuple within a template.
- */
-private template Pack(T...)
-{
-    alias tuple = T;
-
-    // For convenience
-    template equals(U...)
-    {
-        static if (T.length == U.length)
-        {
-            static if (T.length == 0)
-                enum equals = true;
-            else
-                enum equals = isSame!(T[0], U[0]) &&
-                    Pack!(T[1 .. $]).equals!(U[1 .. $]);
-        }
-        else
-        {
-            enum equals = false;
-        }
-    }
-}
-
-unittest
-{
-    static assert( Pack!(1, int, "abc").equals!(1, int, "abc"));
-    static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
-}
-
-/*
- * Instantiates the given template with the given list of parameters.
- *
- * Used to work around syntactic limitations of D with regard to instantiating
- * a template from a type tuple (e.g. T[0]!(...) is not valid) or a template
- * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
- */
-// TODO: Consider publicly exposing this, maybe even if only for better
-// understandability of error messages.
-alias Instantiate(alias Template, Params...) = Template!Params;

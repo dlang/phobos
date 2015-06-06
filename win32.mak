@@ -115,7 +115,7 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 	std\uni.d std\base64.d std\ascii.d \
 	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
-SRC_STD_3a= std\signals.d std\meta.d std\typetuple.d std\traits.d \
+SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
 	std\random.d \
 	std\exception.d \
@@ -127,6 +127,8 @@ SRC_STD_3b= std\datetime.d
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
 	std\digest\ripemd.d std\digest\digest.d
+
+SRC_STD_META = std\meta\internal.d std\meta\arglist.d
 
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
     std\container\dlist.d std\container\rbtree.d std\container\slist.d \
@@ -159,7 +161,7 @@ SRC_STD_REST= std\stdint.d \
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2a_HEAVY) \
 	$(SRC_STD_3) $(SRC_STD_3a) $(SRC_STD_3b) $(SRC_STD_4) \
-	$(SRC_STD_6) $(SRC_STD_REST)
+	$(SRC_STD_6) $(SRC_STD_REST) $(SRC_STD_META)
 
 SRC=	unittest.d index.d
 
@@ -167,7 +169,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
-	std\meta.d std\metastrings.d std\mmfile.d \
+	std\metastrings.d std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \

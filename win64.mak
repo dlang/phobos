@@ -117,7 +117,7 @@ SRC_STD_3c= std\datetime.d std\bitmanip.d std\typecons.d
 SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
 	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
-SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
+SRC_STD_3b= std\signals.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
 	std\random.d \
 	std\exception.d \
@@ -128,11 +128,13 @@ SRC_STD_3b= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
 	std\digest\ripemd.d std\digest\digest.d
 
+SRC_STD_META = std\meta\internal.d std\meta\arglist.d
+
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
 	std\container\dlist.d std\container\rbtree.d std\container\slist.d \
 	std\container\util.d std\container\package.d
 
-SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
+SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST) $(SRC_STD_META)
 
 SRC_STD_ALGO= std\algorithm\package.d std\algorithm\comparison.d \
 	std\algorithm\iteration.d std\algorithm\mutation.d \
