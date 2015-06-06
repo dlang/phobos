@@ -276,7 +276,11 @@ $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB): $(OBJS) $(DRUNTIME) $(call P2LIB,$(STD_PACKAGES))
+$(LIB): $(OBJS) $(DRUNTIME) $(call P2LIB,$(STD_PACKAGES))\
+		$(ROOT)/libphobos2_xtra$(DOTLIB)
+	$(DMD) $(DFLAGS) -lib -of$@ $^
+
+$(ROOT)/libphobos2_xtra$(DOTLIB): $(addsuffix .d,$(EXTRA_MODULES))
 	$(DMD) $(DFLAGS) -lib -of$@ $^
 
 # Each package depends on everything. We may improve that in the future.
