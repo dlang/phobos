@@ -445,3 +445,10 @@ html_consolidated :
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
 
 #############################
+
+.PHONY : auto-tester-build
+auto-tester-build: all
+
+.PHONY : auto-tester-test
+auto-tester-test: unittest
+

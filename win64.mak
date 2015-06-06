@@ -889,3 +889,8 @@ install: phobos.zip
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DRUNTIME)\lib\gcstub64.obj $(DIR)\windows\lib
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos
+
+auto-tester-build: targets
+
+auto-tester-test: unittest
+
