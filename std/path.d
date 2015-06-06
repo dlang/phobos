@@ -2346,7 +2346,7 @@ unittest
 
 
 
-/** Translates $(D path) into an absolute _path.
+/** Tranforms $(D path) into an absolute _path.
 
     The following algorithm is used:
     $(OL
@@ -2359,38 +2359,30 @@ unittest
     The function allocates memory if and only if it gets to the third stage
     of this algorithm.
 
-    Examples:
-    ---
-    version (Posix)
-    {
-        assert (absolutePath("some/file", "/foo/bar")  == "/foo/bar/some/file");
-        assert (absolutePath("../file", "/foo/bar")    == "/foo/bar/../file");
-        assert (absolutePath("/some/file", "/foo/bar") == "/some/file");
-    }
+    Params:
+        path = the relative path to transform
 
-    version (Windows)
-    {
-        assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
-        assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
-        assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
-        assert (absolutePath(`\file`, `c:\foo\bar`)        == `c:\file`);
-    }
-    ---
+    Returns:
+        string of transformed path
 
     Throws:
     $(D Exception) if the specified _base directory is not absolute.
+
+    See_Also:
+        $(LREF toAbsolutePath) which does not allocate
 */
 string absolutePath(string path, lazy string base = getcwd())
     @safe pure
 {
     if (path.empty)  return null;
     if (isAbsolute(path))  return path;
-    immutable baseVar = base;
+    auto baseVar = base;
     if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
-    return buildPath(baseVar, path);
+    import std.array;
+    return chainPath(baseVar, path).array;
 }
 
-
+///
 unittest
 {
     version (Posix)
@@ -2398,7 +2390,6 @@ unittest
         assert (absolutePath("some/file", "/foo/bar")  == "/foo/bar/some/file");
         assert (absolutePath("../file", "/foo/bar")    == "/foo/bar/../file");
         assert (absolutePath("/some/file", "/foo/bar") == "/some/file");
-        static assert (absolutePath("some/file", "/foo/bar") == "/foo/bar/some/file");
     }
 
     version (Windows)
@@ -2408,6 +2399,18 @@ unittest
         assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
         assert (absolutePath(`\`, `c:\`)                   == `c:\`);
         assert (absolutePath(`\some\file`, `c:\foo\bar`)   == `c:\some\file`);
+    }
+}
+
+unittest
+{
+    version (Posix)
+    {
+        static assert (absolutePath("some/file", "/foo/bar") == "/foo/bar/some/file");
+    }
+
+    version (Windows)
+    {
         static assert (absolutePath(`some\file`, `c:\foo\bar`) == `c:\foo\bar\some\file`);
     }
 
@@ -2415,8 +2418,51 @@ unittest
     assertThrown(absolutePath("bar", "foo"));
 }
 
+/** Tranforms $(D path) into an absolute _path.
 
+    The following algorithm is used:
+    $(OL
+        $(LI If $(D path) is empty, return $(D null).)
+        $(LI If $(D path) is already absolute, return it.)
+        $(LI Otherwise, append $(D path) to the current working directory,
+        which allocates memory.)
+    )
 
+    Params:
+        path = the relative path to transform
+
+    Returns:
+        the transformed path as a lazy range
+
+    See_Also:
+        $(LREF absolutePath) which returns an allocated string
+*/
+auto toAbsolutePath(R1)(R1 path)
+    if (isRandomAccessRange!R1 && isSomeChar!(ElementType!R1) ||
+        isNarrowString!R1)
+{
+    import std.file : getcwd;
+    string base = null;
+    if (!path.empty && !isAbsolute(path))
+        base = getcwd();
+    return chainPath(base, path);
+}
+
+///
+unittest
+{
+    import std.array;
+    assert(toAbsolutePath(cast(string)null).array == "");
+    version (Posix)
+    {
+        assert(toAbsolutePath("/foo").array == "/foo");
+    }
+    version (Windows)
+    {
+        assert(toAbsolutePath("c:/foo").array == "c:/foo");
+    }
+    toAbsolutePath("foo");
+}
 
 /** Translates $(D path) into a relative _path.
 
