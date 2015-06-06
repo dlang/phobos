@@ -8666,7 +8666,13 @@ package alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: 
 
    All of its inputs must be instantiations of $(XREF range, SortedRange). Use
    the result of $(XREF algorithm, sort), or $(XREF range, assumeSorted) to
-   merge ranges known to be sorted (show in the example below).
+   merge ranges known to be sorted (show in the example below). However, note
+   that there is currently no way of ensuring that two or more instances of
+   $(XREF range, SortedRange) are sorted using a specific comparison function
+   $(D pred). Therefore no checking is done here to assure that the $(D pred)
+   template parmeter matches the $(D pred) template parameter that were given to
+   each instance of $(XREF range, SortedRange) when the $(D rs) were
+   instantiated.
 
    This algorithm is lazy, doing work progressively as elements are pulled off
    the result.
