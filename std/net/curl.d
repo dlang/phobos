@@ -3939,7 +3939,7 @@ struct Curl
     alias InData = ubyte[];
     bool stopped;
 
-    private static auto ref curl() @property { return CurlAPI.instance(); }
+    private static auto ref curl() @property { return CurlAPI.instance; }
 
     // A handle should not be used by two threads simultaneously
     private CURL* handle;
