@@ -117,7 +117,7 @@ version(Posix) private alias isSeparator = isDirSeparator;
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ptrdiff_t lastSeparator(R)(const R path)
+private ptrdiff_t lastSeparator(R)(R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
@@ -129,7 +129,7 @@ private ptrdiff_t lastSeparator(R)(const R path)
 
 version (Windows)
 {
-    private bool isUNC(R)(const R path)
+    private bool isUNC(R)(R path)
         if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
             isNarrowString!R)
     {
@@ -137,7 +137,7 @@ version (Windows)
             && !isDirSeparator(path[2]);
     }
 
-    private ptrdiff_t uncRootLength(R)(const R path)
+    private ptrdiff_t uncRootLength(R)(R path)
         if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
             isNarrowString!R)
         in { assert (isUNC(path)); }
@@ -158,14 +158,14 @@ version (Windows)
         return i;
     }
 
-    private bool hasDrive(R)(const R path)
+    private bool hasDrive(R)(R path)
         if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
             isNarrowString!R)
     {
         return path.length >= 2 && isDriveSeparator(path[1]);
     }
 
-    private bool isDriveRoot(R)(const R path)
+    private bool isDriveRoot(R)(R path)
         if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
             isNarrowString!R)
     {
@@ -769,7 +769,7 @@ unittest
     }
     ---
 */
-auto stripDrive(R)(inout R path)
+auto stripDrive(R)(R path)
     if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
@@ -1230,37 +1230,21 @@ immutable(ElementEncodingType!(ElementType!Range))[]
             if (buf.length < neededLength)
                 buf.length = reserve(buf, neededLength + buf.length/2);
         }
-        if (pos > 0)
+        auto r = chainPath(buf[0 .. pos], segment);
+        size_t i;
+        foreach (c; r)
         {
-            if (isRooted(segment))
-            {
-                version (Posix)
-                {
-                    pos = 0;
-                }
-                else version (Windows)
-                {
-                    if (isAbsolute(segment))
-                        pos = 0;
-                    else
-                    {
-                        pos = rootName(buf[0 .. pos]).length;
-                        if (pos > 0 && isDirSeparator(buf[pos-1])) --pos;
-                    }
-                }
-            }
-            else if (!isDirSeparator(buf[pos-1]))
-                buf[pos++] = dirSeparator[0];
+            buf[i] = c;
+            ++i;
         }
-        buf[pos .. pos + segment.length] = segment[];
-        pos += segment.length;
+        pos = i;
     }
     static U trustedCast(U, V)(V v) @trusted pure nothrow { return cast(U) v; }
     return trustedCast!(typeof(return))(buf[0 .. pos]);
 }
 
 /// ditto
-immutable(C)[] buildPath(C)(const(C[])[] paths...)
+immutable(C)[] buildPath(C)(const(C)[][] paths...)
     @safe pure nothrow
     if (isSomeChar!C)
 {
@@ -1455,14 +1439,14 @@ unittest
     import std.array;
     version (Posix)
     {
-        //assert (chainPath("foo", "bar", "baz").array == "foo/bar/baz");
+        assert (chainPath("foo", "bar", "baz").array == "foo/bar/baz");
         assert (chainPath("/foo/", "bar/baz").array  == "/foo/bar/baz");
         assert (chainPath("/foo", "/bar").array      == "/bar");
     }
 
     version (Windows)
     {
-        //assert (chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
+        assert (chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
         assert (chainPath(`c:\foo`, `bar\baz`).array == `c:\foo\bar\baz`);
         assert (chainPath("foo", `d:\bar`).array     == `d:\bar`);
         assert (chainPath("foo", `\bar`).array       == `\bar`);
@@ -1472,14 +1456,14 @@ unittest
     import std.utf : byChar;
     version (Posix)
     {
-        //assert (chainPath("foo", "bar", "baz").array == "foo/bar/baz");
+        assert (chainPath("foo", "bar", "baz").array == "foo/bar/baz");
         assert (chainPath("/foo/".byChar, "bar/baz").array  == "/foo/bar/baz");
         assert (chainPath("/foo", "/bar".byChar).array      == "/bar");
     }
 
     version (Windows)
     {
-        //assert (chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
+        assert (chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
         assert (chainPath(`c:\foo`.byChar, `bar\baz`).array == `c:\foo\bar\baz`);
         assert (chainPath("foo", `d:\bar`).array     == `d:\bar`);
         assert (chainPath("foo", `\bar`.byChar).array       == `\bar`);
@@ -2220,7 +2204,7 @@ unittest
     }
     ---
 */
-bool isRooted(R)(inout R path)
+bool isRooted(R)(R path)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         is(StringTypeOf!R))
 {
@@ -2290,13 +2274,13 @@ unittest
 */
 version (StdDdoc)
 {
-    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+    bool isAbsolute(R)(R path)
         if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
             is(StringTypeOf!R));
 }
 else version (Windows)
 {
-    bool isAbsolute(R)(const R path) @safe pure nothrow @nogc
+    bool isAbsolute(R)(R path)
         if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
             is(StringTypeOf!R))
     {
