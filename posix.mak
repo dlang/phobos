@@ -462,3 +462,4 @@ auto-tester-build: all
 .PHONY : auto-tester-test
 auto-tester-test: unittest
 
+.DELETE_ON_ERROR: # GNU Make directive (delete output files on error)
