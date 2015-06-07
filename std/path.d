@@ -2472,8 +2472,10 @@ unittest
     the comparison is case sensitive or not.  See the
     $(LREF filenameCmp) documentation for details.
 
-    The function allocates memory if and only if it reaches the third stage
-    of the above algorithm.
+    This function allocates memory.
+
+    See_Also:
+        $(LREF toRelativePath) which does not allocate memory
 
     Examples:
     ---
@@ -2504,33 +2506,103 @@ unittest
 string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
     (string path, lazy string base = getcwd())
 {
-    if (!isAbsolute(path)) return path;
-    immutable baseVar = base;
-    if (!isAbsolute(baseVar)) throw new Exception("Base directory must be absolute");
+    if (!isAbsolute(path))
+        return path;
+    auto baseVar = base;
+    if (!isAbsolute(baseVar))
+        throw new Exception("Base directory must be absolute");
+
+    import std.conv : to;
+    return toRelativePath!cs(path, baseVar).to!string;
+}
+
+unittest
+{
+    import std.exception;
+    assert (relativePath("foo") == "foo");
+    version (Posix)
+    {
+        relativePath("/foo");
+        assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
+        assertThrown(relativePath("/foo", "bar"));
+    }
+    else version (Windows)
+    {
+        relativePath(`\foo`);
+        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\bar`) == "baz");
+        assertThrown(relativePath(`c:\foo`, "bar"));
+    }
+    else static assert (0);
+}
+
+/** Transforms `path` into a _path relative to `base`.
+
+    The returned _path is relative to `base`, which is usually
+    the current working directory.
+    `base` must be an absolute _path, and it is always assumed
+    to refer to a directory.  If `path` and `base` refer to
+    the same directory, the function returns `'.'`.
+
+    The following algorithm is used:
+    $(OL
+        $(LI If `path` is a relative directory, return it unaltered.)
+        $(LI Find a common root between `path` and `base`.
+            If there is no common root, return `path` unaltered.)
+        $(LI Prepare a string with as many `../`) or `..\` as
+            necessary to reach the common root from base path.)
+        $(LI Append the remaining segments of `path` to the string
+            and return.)
+    )
+
+    In the second step, path components are compared using `filenameCmp!cs`,
+    where `cs` is an optional template parameter determining whether
+    the comparison is case sensitive or not.  See the
+    $(LREF filenameCmp) documentation for details.
+
+    Params:
+        path = _path to transform
+        base = absolute path
+        cs = whether filespec comparisons are sensitive or not; defaults to
+         `CaseSensitive.osDefault`
+
+    Returns:
+        a random access range of the transformed _path
+
+    See_Also:
+        $(LREF relativePath)
+*/
+auto toRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R)
+    (R path, string base)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
+{
+    bool choosePath = !isAbsolute(path);
 
     // Find common root with current working directory
 
-    auto basePS = pathSplitter(baseVar);
+    auto basePS = pathSplitter(base);
     auto pathPS = pathSplitter(path);
-    if (filenameCmp!cs(basePS.front, pathPS.front) != 0) return path;
+    choosePath |= filenameCmp!cs(basePS.front, pathPS.front) != 0;
 
     basePS.popFront();
     pathPS.popFront();
 
     import std.range.primitives : walkLength;
-    import std.range : repeat, chain;
+    import std.range : repeat, chain, choose;
     import std.algorithm : mismatch, joiner;
     import std.array;
-    import std.utf : byChar;
+    import std.utf : byCodeUnit, byChar;
 
     // Remove matching prefix from basePS and pathPS
     auto tup = mismatch!((a, b) => filenameCmp!cs(a, b) == 0)(basePS, pathPS);
     basePS = tup[0];
     pathPS = tup[1];
 
-    // if base == path
+    string sep;
     if (basePS.empty && pathPS.empty)
-        return ".";
+        sep = ".";              // if base == path, this is the return
+    else if (!basePS.empty && !pathPS.empty)
+        sep = dirSeparator;
 
     // Append as many "../" as necessary to reach common base from path
     auto r1 = ".."
@@ -2542,50 +2614,36 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
         .joiner(dirSeparator)
         .byChar;
 
-    // Return (r1 ~ dirSeparator ~ r2)
-    auto result = chain(r1, dirSeparator[0 .. $ * !(r1.empty || r2.empty)].byChar, r2).array;
-    return ((r) @trusted => cast(string)r)(result);
+    // Return (r1 ~ sep ~ r2)
+    return choose(choosePath, path.byCodeUnit, chain(r1, sep.byChar, r2));
 }
 
+///
 unittest
 {
-    import std.exception;
-    assert (relativePath("foo") == "foo");
+    import std.array;
     version (Posix)
     {
-        assert (relativePath("foo", "/bar") == "foo");
-        assert (relativePath("/foo/bar", "/foo/bar") == ".");
-        assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
-        assert (relativePath("/foo/bar/baz", "/foo/woo/wee") == "../../bar/baz");
-        assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
-        assertThrown(relativePath("/foo", "bar"));
-
-        assertCTFEable!(
-        {
-            assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
-        });
+        assert (toRelativePath("foo", "/bar").array == "foo");
+        assert (toRelativePath("/foo/bar", "/foo/bar").array == ".");
+        assert (toRelativePath("/foo/bar", "/foo/baz").array == "../bar");
+        assert (toRelativePath("/foo/bar/baz", "/foo/woo/wee").array == "../../bar/baz");
+        assert (toRelativePath("/foo/bar/baz", "/foo/bar").array == "baz");
     }
     else version (Windows)
     {
-        assert (relativePath("foo", `c:\bar`) == "foo");
-        assert (relativePath(`c:\foo\bar`, `c:\foo\bar`) == ".");
-        assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
-        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`) == `..\..\bar\baz`);
-        assert (relativePath(`c:/foo/bar/baz`, `c:\foo\woo\wee`) == `..\..\bar\baz`);
-        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\bar`) == "baz");
-        assert (relativePath(`c:\foo\bar`, `d:\foo`) == `c:\foo\bar`);
-        assert (relativePath(`\\foo\bar`, `c:\foo`) == `\\foo\bar`);
-        assertThrown(relativePath(`c:\foo`, "bar"));
-
-        assertCTFEable!(
-        {
-            assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
-        });
+        assert (toRelativePath("foo", `c:\bar`).array == "foo");
+        assert (toRelativePath(`c:\foo\bar`, `c:\foo\bar`).array == ".");
+        assert (toRelativePath(`c:\foo\bar`, `c:\foo\baz`).array == `..\bar`);
+        assert (toRelativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
+        assert (toRelativePath(`c:/foo/bar/baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
+        assert (toRelativePath(`c:\foo\bar\baz`, `c:\foo\bar`).array == "baz");
+        assert (toRelativePath(`c:\foo\bar`, `d:\foo`).array == `c:\foo\bar`);
+        assert (toRelativePath(`\\foo\bar`, `c:\foo`).array == `\\foo\bar`);
     }
-    else static assert (0);
-}
-
-
+    else
+        static assert(0);
+ }
 
 
 /** Compares filename characters and return $(D < 0) if $(D a < b), $(D 0) if
