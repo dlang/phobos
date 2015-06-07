@@ -694,6 +694,8 @@ _clearerr) for the file handle.
     }
 
 /**
+Flushes the C $(D FILE) buffers.
+
 Calls $(WEB cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush)
 for the file handle.
 
@@ -719,6 +721,33 @@ Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) f
 
         f.close();
         assertThrown(f.flush());
+    }
+
+/**
+Forces any data buffered by the OS to be written to disk.
+Call $(LREF flush) before calling this function to flush the C $(D FILE) buffers first.
+
+This function calls
+$(WEB msdn.microsoft.com/en-us/library/windows/desktop/aa364439%28v=vs.85%29.aspx,
+$(D FlushFileBuffers)) on Windows and
+$(WEB pubs.opengroup.org/onlinepubs/7908799/xsh/fsync.html,
+$(D fsync)) on POSIX for the file handle.
+
+Throws: $(D Exception) if the file is not opened or if the OS call fails.
+ */
+    void sync() @trusted
+    {
+        import std.exception : enforce, errnoEnforce;
+
+        enforce(isOpen, "Attempting to sync() an unopened file");
+
+        version (Windows)
+            wenforce(FlushFileBuffers(windowsHandle), "FlushFileBuffers failed");
+        else
+        {
+            import core.sys.posix.unistd : fsync;
+            errnoEnforce(fsync(fileno) == 0, "fsync failed");
+        }
     }
 
 /**
