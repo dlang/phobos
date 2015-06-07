@@ -8660,12 +8660,13 @@ struct NullSink
 
 
 /++
-  Implements a "tee" style pipe, wrapping an input range so that elements
-  of the range can be passed to a provided function or $(LREF OutputRange)
-  as they are iterated over. This is useful for printing out intermediate
-  values in a long chain of range code, performing some operation with
-  side-effects on each call to $(D front) or $(D popFront), or diverting
-  the elements of a range into an auxiliary $(LREF OutputRange).
+
+  Implements a "tee" style pipe, wrapping an input range so that elements of the
+  range can be passed to a provided function or $(LREF OutputRange) as they are
+  iterated over. This is useful for printing out intermediate values in a long
+  chain of range code, performing some operation with side-effects on each call
+  to $(D front) or $(D popFront), or diverting the elements of a range into an
+  auxiliary $(LREF OutputRange).
 
   It is important to note that as the resultant range is evaluated lazily,
   in the case of the version of $(D tee) that takes a function, the function
@@ -8673,9 +8674,26 @@ struct NullSink
   that evaluate ranges, such as $(XREF array,array) or
   $(XREF algorithm,reduce).
 
+  Params:
+  pipeOnPop = If `Yes.pipeOnPop`, simply iterating the range without ever
+  calling `front` is enough to have `tee` mirror elements to `outputRange` (or,
+  respectively, `fun`). If `No.pipeOnPop`, only elements for which `front` does
+  get called will be also sent to `outputRange`/`fun`.
+  inputRange = The input range beeing passed through.
+  outputRange = This range will receive elements of `inputRange` progressively
+  as iteration proceeds.
+  fun = This function will be called with elements of `inputRange`
+  progressively as iteration proceeds.
+
+  Returns:
+  An input range that offers the elements of `inputRange`. Regardless of
+  whether `inputRange` is a more powerful range (forward, bidirectional etc),
+  the result is always an input range. Reading this causes `inputRange` to be
+  iterated and returns its elements in turn. In addition, the same elements
+  will be passed to `outputRange` or `fun` as well.
+
   See_Also: $(XREF algorithm, each)
 +/
-
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
 if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
 {
@@ -8736,9 +8754,7 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
     return Result(inputRange, outputRange);
 }
 
-/++
-  Overload for taking a function or template lambda as an $(LREF OutputRange)
-+/
+/// Ditto
 auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1)(R1 inputRange)
 if (is(typeof(fun) == void) || isSomeFunction!fun)
 {
@@ -8764,17 +8780,19 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     }
 }
 
-//
+///
 @safe unittest
 {
     import std.algorithm : equal, filter, map;
 
-    // Pass-through
+    // Sum values while copying
     int[] values = [1, 4, 9, 16, 25];
-
-    auto newValues = values.tee!(a => a + 1).array;
+    int sum = 0;
+    auto newValues = values.tee!(a => sum += a).array;
     assert(equal(newValues, values));
+    assert(sum == 1 + 4 + 9 + 16 + 25);
 
+    // Count values that pass the first filter
     int count = 0;
     auto newValues4 = values.filter!(a => a < 10)
                             .tee!(a => count++)
