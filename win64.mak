@@ -494,8 +494,8 @@ $(ZLIB): $(SRC_ZLIB)
 
 DDOCFLAGS=$(DFLAGS) -version=StdDdoc
 
-$(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object_.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
+$(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object.d -I$(DRUNTIME)\src\
 
 $(DOC)\index.html : $(STDDOC) index.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\index.html $(STDDOC) index.d
