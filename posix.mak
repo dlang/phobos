@@ -420,14 +420,12 @@ endif
 ###########################################################
 # html documentation
 
-# Package to html, e.g. std/algorithm -> std_algorithm.html
-P2HTML=$(addsuffix .html,$(subst /,_,$1))
 # D file to html, e.g. std/conv.d -> std_conv.html
-D2HTML=$(subst /,_,$(subst .d,.html,$1))
+# However, std/algorithm/package.d -> std_algorithm.html
+D2HTML=$(subst /,_,$(subst .d,.html,$(subst /package.d,.d,$1)))
 
 HTMLS=$(addprefix $(DOC_OUTPUT_DIR)/, \
-	$(call D2HTML, $(SRC_DOCUMENTABLES)) \
-	$(call P2HTML, $(STD_PACKAGES)))
+	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, \
 	$(call D2HTML, $(SRC_DOCUMENTABLES)))
 
@@ -438,12 +436,6 @@ $(DOC_OUTPUT_DIR)/. :
 # ../web/phobos/std_conv.html : std/conv.d $(STDDOC) ; ...
 $(foreach p,$(SRC_DOCUMENTABLES),$(eval \
 $(DOC_OUTPUT_DIR)/$(call D2HTML,$p) : $p $(STDDOC) ;\
-  $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
-
-# For each package, define a rule e.g.:
-# ../web/phobos/std_algorithm.html : std/algorithm/package.d $(STDDOC) ; ...
-$(foreach p,$(STD_PACKAGES),$(eval \
-$(DOC_OUTPUT_DIR)/$(call P2HTML,$p) : $(STDDOC) ;\
   $(DDOC) project.ddoc $(STDDOC) -Df$$@ $$<))
 
 html : $(DOC_OUTPUT_DIR)/. $(HTMLS) $(STYLECSS_TGT)
