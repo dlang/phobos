@@ -1273,8 +1273,8 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
         {
             this.condition = condition;
             import std.conv : emplace;
-            if (condition) emplace(&this.r1(), r1);
-            else emplace(&this.r2(), r2);
+            if (condition) emplace(addressOf(this.r1), r1);
+            else emplace(addressOf(this.r2), r2);
         }
 
         // Carefully defined postblit to postblit the appropriate range
@@ -8964,3 +8964,5 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
     auto r = [1, 2, 3, 4].tee!func1.tee!func2;
 }
+
+package T* addressOf(T)(ref T val) { return &val; }
