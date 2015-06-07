@@ -1243,6 +1243,9 @@ Params:
 
 Returns:
     A range type dependent on $(D R1) and $(D R2).
+
+Bugs:
+    $(BUGZILLA 14660)
  */
 auto choose(R1, R2)(bool condition, R1 r1, R2 r2)
 if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
