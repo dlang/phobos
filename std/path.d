@@ -2274,7 +2274,7 @@ unittest
 */
 version (StdDdoc)
 {
-    bool isAbsolute(R)(R path)
+    bool isAbsolute(R)(R path) pure nothrow @safe
         if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
             is(StringTypeOf!R));
 }
