@@ -6470,8 +6470,6 @@ size_t graphemeStride(C)(in C[] input, size_t index)
     assert(city[first..$] == "rhus");
 }
 
-@trusted:
-
 /++
     Reads one full grapheme cluster from an input range of dchar $(D inp).
 
@@ -6698,6 +6696,8 @@ unittest
 
     assert(cpText.walkLength == text.walkLength);
 }
+
+@trusted:
 
 /++
     $(P A structure designed to effectively pack $(CHARACTERS)
