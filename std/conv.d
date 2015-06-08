@@ -302,12 +302,6 @@ template to(T)
     {
         return toImpl!T(arg);
     }
-
-    T to(S)(ref S arg, AllowUnderscores uscores)
-        if (isRawStaticArray!S && isIntegral!T)
-    {
-        return toImpl!T(arg, uscores);
-    }
 }
 
 unittest
@@ -1754,7 +1748,10 @@ T toImpl(T, S)(S value)
     return parse!T(value);
 }
 
+/// ditto
 T toImpl(T, S)(S value, AllowUnderscores uscores)
+    if ( isExactSomeString!S && isDynamicArray!S &&
+        !isExactSomeString!T && is(typeof(parse!T(value))))
 {
     scope(success)
     {
@@ -1767,7 +1764,7 @@ T toImpl(T, S)(S value, AllowUnderscores uscores)
 }
 
 /// ditto
-T toImpl(T, S)(S value, uint radix)
+T toImpl(T, S)(S value, uint radix, AllowUnderscores uscores = AllowUnderscores.no)
     if ( isExactSomeString!S && isDynamicArray!S &&
         !isExactSomeString!T && is(typeof(parse!T(value, radix))))
 {
@@ -1778,7 +1775,16 @@ T toImpl(T, S)(S value, uint radix)
             throw convError!(S, T)(value);
         }
     }
-    return parse!T(value, radix);
+    return parse!T(value, radix, uscores);
+}
+
+unittest
+{
+    string included = "FF_FF",
+           excluded = "FFFF";
+
+    assert( to!int(excluded, 16) == 0xFFFF );
+    assert( to!int(included, 16, AllowUnderscores.yes) == 0xFFFF );
 }
 
 @safe pure unittest
