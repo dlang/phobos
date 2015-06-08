@@ -302,6 +302,21 @@ template to(T)
     {
         return toImpl!T(arg);
     }
+
+    T to(S)(ref S arg, AllowUnderscores uscores)
+        if (isRawStaticArray!S && isIntegral!T)
+    {
+        return toImpl!T(arg, uscores);
+    }
+}
+
+unittest
+{
+    string including = "5_000",
+           excluding = "5000";
+
+    assert( excluding.to!int == 5000 );
+    assert( including.to!int(AllowUnderscores.yes) == 5000 );
 }
 
 // Tests for issue 6175
@@ -1737,6 +1752,18 @@ T toImpl(T, S)(S value)
         }
     }
     return parse!T(value);
+}
+
+T toImpl(T, S)(S value, AllowUnderscores uscores)
+{
+    scope(success)
+    {
+        if (value.length)
+        {
+            throw convError!(S, T)(value);
+        }
+    }
+    return parse!T(value, uscores);
 }
 
 /// ditto
