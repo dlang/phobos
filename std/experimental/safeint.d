@@ -14,7 +14,7 @@ import std.typetuple : TypeTuple;
 
 @safe pure:
 
-/** This function compares two integer of arbitrary type for equality.
+/** Compares two integer of arbitrary type for equality.
 
 This function makes sure no implicit value propagation falsifies the result of
 the comparison.
@@ -38,7 +38,7 @@ unittest
     assert(!equal(-1, uint.max));
 }
 
-/** This function compares two integer of arbitrary type for no-equality.
+/** Compares two integer of arbitrary type for no-equality.
 
 This function makes sure no implicit value propagation falsifies the result of
 the comparison.
@@ -62,7 +62,7 @@ unittest
     assert(notEqual(-1, uint.max));
 }
 
-/** This function checks if the value of the first parameter is smaller than 
+/** Checks if the value of the first parameter is smaller than 
 the value of the second parameter.
 
 This function makes sure no implicit value propagation falsifies the result of
@@ -87,7 +87,7 @@ unittest
     assert(less(-1, uint.max));
 }
 
-/** This function checks if the value of the first parameter is less or equal
+/** Checks if the value of the first parameter is less or equal
 to the value of the second parameter.
 
 This function makes sure no implicit value propagation falsifies the result of
@@ -113,7 +113,7 @@ unittest
     assert(lessEqual(-1, ulong.max));
 }
 
-/** This function checks if the value of the first parameter is greater than 
+/** Checks if the value of the first parameter is greater than 
 the value of the second parameter.
 
 This function makes sure no implicit value propagation falsifies the result of
@@ -138,7 +138,7 @@ unittest
     assert(greater(ulong.max, long.min));
 }
 
-/** This function checks if the value of the first parameter is greater or equal
+/** Checks if the value of the first parameter is greater or equal
 to the value of the second parameter.
 
 This function makes sure no implicit value propagation falsifies the result of
@@ -261,7 +261,7 @@ private auto getValue(T)(T t)
         return t.value;
 }
 
-/* This functions checks if the value of $(D s) can be stored by a variable of
+/* Checks if the value of $(D s) can be stored by a variable of
 type $(D T).
 
 Params:
@@ -300,7 +300,7 @@ unittest
     }
 }
 
-/** This template returns the integer type used by a $(D SafeInt) to store the
+/** Returns the integer type used by a $(D SafeInt) to store the
 value.
 
 If an integer type is passed this type will be returned.
@@ -320,7 +320,7 @@ unittest
     static assert(is(SafeIntType!int == int));
 }
 
-/** This template checks if the passed type is a $(D SafeInt).
+/** Checks if the passed type is a $(D SafeInt).
 
 Returns:
     $(D true) if the passed type $(D T) is an $(D SafeInt), false
@@ -421,6 +421,14 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
 
     private void safeAssign(V)(in V v)
     {
+        static if (isSafeInt!V)
+        {
+            if (v.isNaN)
+            {
+                this.value = this.nan;
+                return;
+            }
+        }
         if (greaterEqual(getValue(v), this.min) 
                 && lessEqual(getValue(v), this.max))
         {
@@ -491,9 +499,16 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
 
         bool overflow = false;
 
-        if (this.isNaN())
+        if (this.isNaN)
         {
             return SafeInt!T();
+        }
+        static if (isSafeInt!V)
+        {
+            if(vIn.isNaN)
+            {
+                return SafeInt!T();
+            }
         }
 
         static if (op == "+")
@@ -587,18 +602,6 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
             auto uOp = sOp;
         }
 
-        /*auto executer(A,B,T)(A a, B b, ref bool overflow) {
-            A ret = T.nan;
-            if(canConvertTo!A(v)) {
-                ret = sOp(this.value, cast(A)v, overflow);
-            } else if(canConvertTo!B(a)) {
-                auto tmp = uOp(cast(B)this.value, v, overflow);
-                if(canConvertTo!A(tmp)) {
-                    ret = cast(A)tmp;
-                }
-            }
-        }*/
-
         static if (Signed && isSigned!(typeof(v)))
         {
             auto ret = sOp(this.value, v, overflow);
@@ -664,6 +667,14 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     */
     SafeInt!T opAssign(V)(V vIn) if (isNumeric!T && is(V : SafeInt!S, S))
     {
+        static if (isSafeInt!V) 
+        {
+            if (vIn.isNaN)
+            {
+                this.value = this.nan;
+                return this;
+            }
+        }
         this.safeAssign(getValue(vIn));
         return this;
     }
@@ -761,6 +772,21 @@ unittest
         SafeInt!T s2;
         assert(s2.isNaN);
     }
+}
+
+unittest
+{
+    auto s1 = SafeInt!byte();
+    assert(s1.isNaN);
+
+    SafeInt!int s2 = s1;
+    assert(s2.isNaN);
+
+    auto s3 = SafeInt!int(1) + s1;
+    assert(s3.isNaN);
+
+    auto s4 = SafeInt!int(s1);
+    assert(s4.isNaN);
 }
 
 unittest
