@@ -1,68 +1,71 @@
 // Written in the D programming language.
 
 /**
- * This module implements a
- * $(LINK2 http://erdani.org/publications/cuj-04-2002.html,discriminated union)
- * type (a.k.a.
- * $(LINK2 http://en.wikipedia.org/wiki/Tagged_union,tagged union),
- * $(LINK2 http://en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
- * Such types are useful
- * for type-uniform binary interfaces, interfacing with scripting
- * languages, and comfortable exploratory programming.
- *
- * Macros:
- *  WIKI = Phobos/StdVariant
- *
- * Synopsis:
- *
- * ----
- * Variant a; // Must assign before use, otherwise exception ensues
- * // Initialize with an integer; make the type int
- * Variant b = 42;
- * assert(b.type == typeid(int));
- * // Peek at the value
- * assert(b.peek!(int) !is null && *b.peek!(int) == 42);
- * // Automatically convert per language rules
- * auto x = b.get!(real);
- * // Assign any other type, including other variants
- * a = b;
- * a = 3.14;
- * assert(a.type == typeid(double));
- * // Implicit conversions work just as with built-in types
- * assert(a < b);
- * // Check for convertibility
- * assert(!a.convertsTo!(int)); // double not convertible to int
- * // Strings and all other arrays are supported
- * a = "now I'm a string";
- * assert(a == "now I'm a string");
- * a = new int[42]; // can also assign arrays
- * assert(a.length == 42);
- * a[5] = 7;
- * assert(a[5] == 7);
- * // Can also assign class values
- * class Foo {}
- * auto foo = new Foo;
- * a = foo;
- * assert(*a.peek!(Foo) == foo); // and full type information is preserved
- * ----
- *
- * Credits:
- *
- * Reviewed by Brad Roberts. Daniel Keep provided a detailed code
- * review prompting the following improvements: (1) better support for
- * arrays; (2) support for associative arrays; (3) friendlier behavior
- * towards the garbage collector.
- *
- * Copyright: Copyright Andrei Alexandrescu 2007 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB erdani.org, Andrei Alexandrescu)
- * Source:    $(PHOBOSSRC std/_variant.d)
- */
-/*          Copyright Andrei Alexandrescu 2007 - 2009.
- * Distributed under the Boost Software License, Version 1.0.
- *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
- */
+This module implements a
+$(WEB erdani.org/publications/cuj-04-2002.html,discriminated union)
+type (a.k.a.
+$(WEB en.wikipedia.org/wiki/Tagged_union,tagged union),
+$(WEB en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
+Such types are useful
+for type-uniform binary interfaces, interfacing with scripting
+languages, and comfortable exploratory programming.
+
+Macros:
+ WIKI = Phobos/StdVariant
+
+Synopsis:
+----
+Variant a; // Must assign before use, otherwise exception ensues
+// Initialize with an integer; make the type int
+Variant b = 42;
+assert(b.type == typeid(int));
+// Peek at the value
+assert(b.peek!(int) !is null && *b.peek!(int) == 42);
+// Automatically convert per language rules
+auto x = b.get!(real);
+// Assign any other type, including other variants
+a = b;
+a = 3.14;
+assert(a.type == typeid(double));
+// Implicit conversions work just as with built-in types
+assert(a < b);
+// Check for convertibility
+assert(!a.convertsTo!(int)); // double not convertible to int
+// Strings and all other arrays are supported
+a = "now I'm a string";
+assert(a == "now I'm a string");
+a = new int[42]; // can also assign arrays
+assert(a.length == 42);
+a[5] = 7;
+assert(a[5] == 7);
+// Can also assign class values
+class Foo {}
+auto foo = new Foo;
+a = foo;
+assert(*a.peek!(Foo) == foo); // and full type information is preserved
+----
+
+A $(LREF Variant) object can hold a value of any type, with very few
+restrictions (such as `shared` types and noncopyable types). Setting the value
+is as immediate as assigning to the `Variant` object. To read back the value of
+the appropriate type `T`, use the $(LREF get!T) call. To query whether a
+`Variant` currently holds a value of type `T`, use $(LREF peek!T). To fetch the
+exact type currently held, call $(LREF type), which returns the `TypeInfo` of
+the current value.
+
+In addition to $(LREF Variant), this module also defines the $(LREF Algebraic)
+type constructor. Unlike `Variant`, `Algebraic` only allows a finite set of
+types, which are specified in the instantiation (e.g. $(D_PARAM Algebraic!(int,
+string)) may only hold an `int` or a `string`).
+
+Credits: Reviewed by Brad Roberts. Daniel Keep provided a detailed code review
+prompting the following improvements: (1) better support for arrays; (2) support
+for associative arrays; (3) friendlier behavior towards the garbage collector.
+Copyright: Copyright Andrei Alexandrescu 2007 - 2015.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+Source:    $(PHOBOSSRC std/_variant.d)
+*/
 module std.variant;
 
 import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
@@ -79,52 +82,21 @@ template maxSize(T...)
     }
     else
     {
-        enum size_t maxSize = T[0].sizeof >= maxSize!(T[1 .. $])
-            ? T[0].sizeof : maxSize!(T[1 .. $]);
+        import std.algorithm.comparison : max;
+        enum size_t maxSize = max(T[0].sizeof, maxSize!(T[1 .. $]));
     }
 }
 
 struct This;
 
-template AssociativeArray(T)
+private template This2Variant(V, T...)
 {
-    enum bool valid = false;
-    alias Key = void;
-    alias Value = void;
-}
-
-template AssociativeArray(T : V[K], K, V)
-{
-    enum bool valid = true;
-    alias Key = K;
-    alias Value = V;
-}
-
-template This2Variant(V, T...)
-{
-    static if (T.length == 0)
-        alias This2Variant = TypeTuple!();
-    else static if (is(AssociativeArray!(T[0]).Key == This))
-    {
-        static if (is(AssociativeArray!(T[0]).Value == This))
-            alias This2Variant =
-                TypeTuple!(V[V],
-                           This2Variant!(V, T[1 .. $]));
-        else
-            alias This2Variant =
-                TypeTuple!(AssociativeArray!(T[0]).Value[V],
-                           This2Variant!(V, T[1 .. $]));
-    }
-    else static if (is(AssociativeArray!(T[0]).Value == This))
-        alias This2Variant =
-            TypeTuple!(V[AssociativeArray!(T[0]).Key],
-                       This2Variant!(V, T[1 .. $]));
-    else static if (is(T[0] == This[]))
-        alias This2Variant = TypeTuple!(V[], This2Variant!(V, T[1 .. $]));
-    else static if (is(T[0] == This*))
-        alias This2Variant = TypeTuple!(V*, This2Variant!(V, T[1 .. $]));
+    // Test if it compiles because right now type replacement does not work for
+    // functions involving local types.
+    static if (__traits(compiles, TypeTuple!(ReplaceType!(This, V, T))))
+        alias This2Variant = TypeTuple!(ReplaceType!(This, V, T));
     else
-        alias This2Variant = TypeTuple!(T[0], This2Variant!(V, T[1 .. $]));
+        alias This2Variant = TypeTuple!T;
 }
 
 /**
@@ -155,10 +127,12 @@ template This2Variant(V, T...)
  * than this will be boxed).
  *
  */
-
-struct VariantN(size_t maxDataSize, AllowedTypesX...)
+struct VariantN(size_t maxDataSize, AllowedTypesParam...)
 {
-    alias AllowedTypes = This2Variant!(VariantN, AllowedTypesX);
+    /**
+    The list of allowed types. If empty, any type is allowed.
+    */
+    alias AllowedTypes = This2Variant!(VariantN, AllowedTypesParam);
 
 private:
     // Compute the largest practical size from maxDataSize
@@ -769,13 +743,16 @@ public:
     }
 
     /**
-     * Returns the value stored in the $(D_PARAM VariantN) object,
-     * implicitly converted to the requested type $(D_PARAM T), in
-     * fact $(D_PARAM DecayStaticToDynamicArray!(T)). If an implicit
-     * conversion is not possible, throws a $(D_PARAM
-     * VariantException).
-     */
+    Returns the value stored in the `VariantN` object, either by specifying the
+    needed type or the index in the list of allowed types. The latter overload
+    only applies to bounded variants (e.g. $(LREF Algebraic)).
 
+    Params:
+    T = The requested type. The currently stored value must implicitly convert
+    to the requested type, in fact `DecayStaticToDynamicArray!T`. If an
+    implicit conversion is not possible, throws a `VariantException`.
+    index = The index of the type among `AllowedTypesParam`, zero-based.
+     */
     @property inout(T) get(T)() inout
     {
         static if (is(T == shared))
@@ -789,6 +766,17 @@ public:
             throw new VariantException(type, typeid(T));
         }
         return * cast(inout T*) &result;
+    }
+
+    /// Ditto
+    @property auto get(uint index)() inout
+    if (index < AllowedTypes.length)
+    {
+        foreach (i, T; AllowedTypes)
+        {
+            static if (index == i) return get!T;
+        }
+        assert(0);
     }
 
     /**
@@ -1283,6 +1271,7 @@ unittest
 unittest
 {
     Variant a = true;
+    assert(a.type == typeid(bool));
 }
 
 // Issue #14233
@@ -1346,27 +1335,17 @@ unittest
 
 
 /**
- * Algebraic data type restricted to a closed set of possible
- * types. It's an alias for a $(D_PARAM VariantN) with an
- * appropriately-constructed maximum size. $(D_PARAM Algebraic) is
- * useful when it is desirable to restrict what a discriminated type
- * could hold to the end of defining simpler and more efficient
- * manipulation.
- *
- * Future additions to $(D_PARAM Algebraic) will allow compile-time
- * checking that all possible types are handled by user code,
- * eliminating a large class of errors.
- *
- * Bugs:
- *
- * Currently, $(D_PARAM Algebraic) does not allow recursive data
- * types. They will be allowed in a future iteration of the
- * implementation.
- */
+Algebraic data type restricted to a closed set of possible
+types. It's an alias for a $(LREF VariantN) with an
+appropriately-constructed maximum size. `Algebraic` is
+useful when it is desirable to restrict what a discriminated type
+could hold to the end of defining simpler and more efficient
+manipulation.
 
+*/
 template Algebraic(T...)
 {
-    alias Algebraic = VariantN!(maxSize!(T), T);
+    alias Algebraic = VariantN!(maxSize!T, T);
 }
 
 ///
@@ -1381,15 +1360,44 @@ unittest
 }
 
 /**
-$(D_PARAM Variant) is an alias for $(D_PARAM VariantN) instantiated
-with the largest of $(D_PARAM creal), $(D_PARAM char[]), and $(D_PARAM
-void delegate()). This ensures that $(D_PARAM Variant) is large enough
+$(H4 Self-Referential Types)
+
+A useful and popular use of algebraic data structures is for defining $(LUCKY
+self-referential data structures), i.e. structures that embed references to
+values of their own type within.
+
+This is achieved with `Algebraic` by using `This` as a placeholder whenever a
+reference to the type being defined is needed. The `Algebraic` instantiation
+will perform $(LUCKY alpha renaming) on its constituent types, replacing `This`
+with the self-referenced type. The structure of the type involving `This` may
+be arbitrarily complex.
+*/
+unittest
+{
+    // A tree is either a leaf or a branch of two other trees
+    alias Tree(Leaf) = Algebraic!(Leaf, Tuple!(This*, This*));
+    Tree!int tree = tuple(new Tree!int(42), new Tree!int(43));
+    Tree!int* right = tree.get!1[1];
+    assert(*right == 43);
+
+    // An object is a double, a string, or a hash of objects
+    alias Obj = Algebraic!(double, string, This[string]);
+    Obj obj = "hello";
+    assert(obj.get!1 == "hello");
+    obj = 42.0;
+    assert(obj.get!0 == 42);
+    obj = ["customer": Obj("John"), "paid": Obj(23.95)];
+    assert(obj.get!2["customer"] == "John");
+}
+
+/**
+`Variant` is an alias for `VariantN` instantiated with the largest of `creal`,
+`char[]`, and `void delegate()`. This ensures that `Variant` is large enough
 to hold all of D's predefined types unboxed, including all numeric types,
 pointers, delegates, and class references.  You may want to use
 $(D_PARAM VariantN) directly with a different maximum size either for
 storing larger types unboxed, or for saving memory.
  */
-
 alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
 
 /**
@@ -1484,18 +1492,17 @@ unittest
 
 unittest
 {
-    // @@@BUG@@@
-    // alias A = Algebraic!(real, This[], This[int], This[This]);
-    // A v1, v2, v3;
-    // v2 = 5.0L;
-    // v3 = 42.0L;
-    // //v1 = [ v2 ][];
-    //  auto v = v1.peek!(A[]);
-    // //writeln(v[0]);
-    // v1 = [ 9 : v3 ];
-    // //writeln(v1);
-    // v1 = [ v3 : v3 ];
-    // //writeln(v1);
+     alias A = Algebraic!(real, This[], This[int], This[This]);
+     A v1, v2, v3;
+     v2 = 5.0L;
+     v3 = 42.0L;
+     //v1 = [ v2 ][];
+      auto v = v1.peek!(A[]);
+     //writeln(v[0]);
+     v1 = [ 9 : v3 ];
+     //writeln(v1);
+     v1 = [ v3 : v3 ];
+     //writeln(v1);
 }
 
 unittest
@@ -2154,7 +2161,7 @@ unittest
 private template isAlgebraic(Type)
 {
     static if (is(Type _ == VariantN!T, T...))
-        enum isAlgebraic = T.length >= 2; // T[0] == maxDataSize, T[1..$] == AllowedTypesX
+        enum isAlgebraic = T.length >= 2; // T[0] == maxDataSize, T[1..$] == AllowedTypesParam
     else
         enum isAlgebraic = false;
 }
