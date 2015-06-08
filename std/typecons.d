@@ -6774,10 +6774,7 @@ private string replaceTypeInFunctionType(X, Y, fun)()
 {
     alias storageClasses = ParameterStorageClassTuple!fun;
     string result;
-    static if (functionLinkage!fun == "C")
-    {
-        result ~= "extern(C) ";
-    }
+    result ~= "extern(" ~ functionLinkage!fun ~ ") ";
     static if (functionAttributes!fun & FunctionAttribute.ref_)
     {
         result ~= "ref ";
