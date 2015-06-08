@@ -12,7 +12,7 @@ import std.traits : isFloatingPoint, isIntegral, isUnsigned, isNumeric,
     isSigned, Unqual;
 import std.typetuple : TypeTuple;
 
-@safe pure:
+@safe:
 
 /** Compares two integer of arbitrary type for equality.
 
@@ -26,7 +26,7 @@ Params:
 Returns: $(D true) if the value of $(D t) is equal to the value of $(D s),
     false otherwise.
 */
-bool equal(T, S)(in T t, in S s) @nogc nothrow if (isIntegral!T && isIntegral!S)
+bool equal(T, S)(in T t, in S s) @nogc nothrow pure if (isIntegral!T && isIntegral!S)
 {
     return impl!("a == b", false, false)(t, s);
 }
@@ -50,7 +50,7 @@ Params:
 Returns: $(D true) if the value of $(D t) is not equal to the value of $(D s),
     false otherwise.
 */
-bool notEqual(T, S)(in T t, in S s) @nogc nothrow 
+bool notEqual(T, S)(in T t, in S s) @nogc nothrow pure
         if (isIntegral!T && isIntegral!S)
 {
     return impl!("a != b", true, true)(t, s);
@@ -75,7 +75,7 @@ Params:
 Returns: $(D true) if the value of $(D t) is smaller than the value of $(D s),
     false otherwise.
 */
-bool less(T, S)(in T t, in S s) @nogc nothrow 
+bool less(T, S)(in T t, in S s) @nogc nothrow pure
         if (isIntegral!T && isIntegral!S)
 {
     return impl!("a < b", true, false)(t, s);
@@ -100,7 +100,7 @@ Params:
 Returns: $(D true) if the value of $(D t) is smaller or equal than the value
     of $(D s), false otherwise.
 */
-bool lessEqual(T, S)(in T t, in S s) @nogc nothrow 
+bool lessEqual(T, S)(in T t, in S s) @nogc nothrow pure
         if (isIntegral!T && isIntegral!S)
 {
     return impl!("a <= b", true, false)(t, s);
@@ -126,7 +126,7 @@ Params:
 Returns: $(D true) if the value of $(D t) is greater than the value of $(D s),
     false otherwise.
 */
-bool greater(T, S)(in T t, in S s) @nogc nothrow 
+bool greater(T, S)(in T t, in S s) @nogc nothrow pure
         if (isIntegral!T && isIntegral!S)
 {
     return impl!("a > b", false, true)(t, s);
@@ -151,7 +151,7 @@ Params:
 Returns: $(D true) if the value of $(D t) is greater or equal than the value
     of $(D s), false otherwise.
 */
-bool greaterEqual(T, S)(in T t, in S s) @nogc nothrow 
+bool greaterEqual(T, S)(in T t, in S s) @nogc nothrow pure
         if (isIntegral!T && isIntegral!S)
 {
     return impl!("a >= b", false, true)(t, s);
@@ -164,7 +164,7 @@ unittest
 }
 
 private bool impl(string op, bool A, bool B, T, S)(in T t, in S s) 
-        @nogc nothrow if (isIntegral!T && isIntegral!S)
+        @nogc nothrow pure if (isIntegral!T && isIntegral!S)
 {
     import std.functional : binaryFun;
 
@@ -207,7 +207,7 @@ private bool impl(string op, bool A, bool B, T, S)(in T t, in S s)
 private alias TTest = 
     TypeTuple!(byte, short, int, long, ubyte, ushort, uint, ulong);
 
-unittest
+pure unittest
 {
     import std.conv : to;
 
@@ -253,7 +253,7 @@ unittest
     }
 }
 
-private auto getValue(T)(T t)
+private pure auto getValue(T)(T t)
 {
     static if (isIntegral!T)
         return t;
@@ -270,14 +270,14 @@ Params:
 Returns:
     $(D true) if the value can be stored, false otherwise.
 */
-bool canConvertTo(T, S)(in S s) nothrow @nogc 
+bool canConvertTo(T, S)(in S s) nothrow @nogc pure
         if (isIntegral!(Unqual!T) && isIntegral!(SafeIntType!S))
 {
     return (less(getValue(s), T.min) || greater(getValue(s), T.max)) ? false : true;
 }
 
 ///
-unittest
+pure unittest
 {
     assert(canConvertTo!int(1337));
     assert(canConvertTo!uint(1337));
@@ -289,7 +289,7 @@ unittest
     assert(!canConvertTo!ubyte(-1337));
 }
 
-unittest
+pure unittest
 {
     foreach (T; TTest)
     {
@@ -314,7 +314,7 @@ template SafeIntType(T)
 }
 
 ///
-unittest
+pure unittest
 {
     static assert(is(SafeIntType!(SafeInt!int) == int));
     static assert(is(SafeIntType!int == int));
@@ -335,13 +335,13 @@ template isSafeInt(T)
 }
 
 ///
-unittest
+pure unittest
 {
     static assert(isSafeInt!(SafeInt!int));
     static assert(!isSafeInt!int);
 }
 
-unittest
+pure unittest
 {
     static assert(!isSafeInt!int);
     foreach (T; TTest)
@@ -395,7 +395,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Params:
         v = the value to construct the SafeInt from.
     */
-    this(V)(in V v) if (isNumeric!V || is(V : SafeInt!S, S))
+    this(V)(in V v) pure if (isNumeric!V || is(V : SafeInt!S, S))
     {
         this.safeAssign(v);
     }
@@ -419,7 +419,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         enum nan = T.min;
     }
 
-    private void safeAssign(V)(in V v)
+    private void safeAssign(V)(in V v) pure
     {
         static if (isSafeInt!V)
         {
@@ -445,12 +445,12 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Returns:
         true is value is NaN, false otherwise.
     */
-    @property bool isNaN() const
+    @property bool isNaN() const pure
     {
         return this.value == nan;
     }
 
-    private static auto getValue(V)(V vIn)
+    private static auto getValue(V)(V vIn) pure
     {
         static if (is(V : SafeInt!S, S))
         {
@@ -467,7 +467,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Returns:
         a copy of this SafeInt.    
     */
-    SafeInt!T opOpAssign(string op, V)(V vIn)
+    SafeInt!T opOpAssign(string op, V)(V vIn) pure
     {
         enum call = "this = this " ~ op ~ " vIn;";
         mixin(call);
@@ -482,7 +482,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Returns:
         a new SafeInt!T with the result of the operation.
     */
-    SafeInt!T opBinary(string op, V)(V vIn) const
+    SafeInt!T opBinary(string op, V)(V vIn) const pure
     {
         auto v = getValue(vIn);
 
@@ -665,7 +665,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Returns:
         a copy of this SafeInt.    
     */
-    SafeInt!T opAssign(V)(V vIn) if (isNumeric!T && is(V : SafeInt!S, S))
+    SafeInt!T opAssign(V)(V vIn) pure if (isNumeric!T && is(V : SafeInt!S, S))
     {
         static if (isSafeInt!V) 
         {
@@ -688,7 +688,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         $(D true) if the passed value is equal to the value stored in the
         SafeInt, false otherwise.
     */
-    bool opEquals(V)(auto ref V vIn) const
+    bool opEquals(V)(auto ref V vIn) const pure
     {
         static if (isFloatingPoint!V)
         {
@@ -711,7 +711,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         -1 if the SafeInt is less than $(D vIn), 1 if the SafeInt is greater
         than $(D vIn), 0 otherwise.
     */
-    int opCmp(V)(auto ref V vIn) const
+    int opCmp(V)(auto ref V vIn) const pure
     {
         static if (isFloatingPoint!V)
         {
@@ -724,6 +724,21 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
             return less(this.value, v) ? -1 : equal(this.value, v) ? 0 : 1;
         }
     }
+
+	import std.format : FormatSpec;
+
+	void toString(scope void delegate(const(char)[]) @trusted sink, FormatSpec!char fmt) const {
+		import std.format : formatValue;
+
+		if (this.value == this.nan) 
+		{
+			sink("nan");
+		}
+		else
+		{
+			formatValue(sink, this.value, fmt);
+		}
+	}
 }
 
 ///
@@ -758,9 +773,9 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     assert(SafeInt!int(0) == 0.0);
 }
 
-@nogc @safe pure nothrow:
+@safe:
 
-unittest
+nothrow @nogc pure unittest
 {
     foreach (T; TTest)
     {
@@ -774,7 +789,7 @@ unittest
     }
 }
 
-unittest
+nothrow pure @nogc unittest
 {
     auto s1 = SafeInt!byte();
     assert(s1.isNaN);
@@ -788,6 +803,22 @@ unittest
     auto s4 = SafeInt!int(s1);
     assert(s4.isNaN);
 }
+
+unittest
+{
+	import std.format : format;
+
+	auto f = format("%d", SafeInt!int(1));
+	assert(f == "1");
+
+	f = format("%5d", SafeInt!int(1));
+	assert(f == "    1");
+
+	f = format("%d", SafeInt!int());
+	assert(f == "nan");
+}
+
+nothrow @nogc pure:
 
 unittest
 {
