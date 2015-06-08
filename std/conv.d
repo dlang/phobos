@@ -1751,7 +1751,7 @@ T toImpl(T, S)(S value)
 /// ditto
 T toImpl(T, S)(S value, AllowUnderscores uscores)
     if ( isExactSomeString!S && isDynamicArray!S &&
-        !isExactSomeString!T && is(typeof(parse!T(value))))
+        !isExactSomeString!T && is(typeof(parse!T(value, uscores))))
 {
     scope(success)
     {
@@ -1766,7 +1766,7 @@ T toImpl(T, S)(S value, AllowUnderscores uscores)
 /// ditto
 T toImpl(T, S)(S value, uint radix, AllowUnderscores uscores = AllowUnderscores.no)
     if ( isExactSomeString!S && isDynamicArray!S &&
-        !isExactSomeString!T && is(typeof(parse!T(value, radix))))
+        !isExactSomeString!T && is(typeof(parse!T(value, radix, uscores))))
 {
     scope(success)
     {
