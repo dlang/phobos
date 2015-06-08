@@ -64,257 +64,6 @@ import std.range : isInputRange, isForwardRange, walkLength, save, empty,
     front, popFront;
 
 /**
-Dynamic version of an allocator. This should be used wherever a uniform type is
-required for encapsulating various allocator implementations.
-
-Methods returning $(D Ternary) return $(D Ternary.yes) upon success,
-$(D Ternary.no) upon failure, and $(D Ternary.unknown) if the primitive is not
-implemented by the allocator instance.
-*/
-interface IAllocator
-{
-    /**
-    Returns the alignment offered.
-    */
-    @property uint alignment();
-
-    /**
-    Returns the good allocation size that guarantees zero internal
-    fragmentation.
-    */
-    size_t goodAllocSize(size_t s);
-
-    /**
-    Allocates memory.
-    */
-    void[] allocate(size_t, TypeInfo ti = null);
-
-    /**
-    Allocates memory with specified alignment.
-    */
-    Ternary alignedAllocate(size_t, uint, ref void[], TypeInfo ti = null);
-
-    /**
-    Allocates and returns all memory available to this allocator. $(COMMENT By
-    default returns $(D null).)
-    */
-    Ternary allocateAll(ref void[] result);
-
-    /**
-    Expands a memory block in place. If expansion not supported
-    by the allocator, returns $(D Ternary.unknown). If implemented, returns $(D
-    Ternary.yes) if expansion succeeded, $(D Ternary.no) otherwise.
-    */
-    Ternary expand(ref void[], size_t);
-
-    /// Reallocates a memory block.
-    bool reallocate(ref void[], size_t);
-
-    /// Reallocates a memory block with specified alignment.
-    Ternary alignedReallocate(ref void[] b, size_t size, uint alignment);
-
-    /**
-    Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
-    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership not
-    supported by the allocator. $(COMMENT By default returns $(D
-    Ternary.unknown).)
-    */
-    Ternary owns(void[] b);
-
-    /**
-    Resolves an internal pointer to the full block allocated.
-    */
-    Ternary resolveInternalPointer(void* p, ref void[] result);
-
-    /**
-    Deallocates a memory block. Returns $(D Ternary.unknown) if deallocation is
-    not supported. A simple way to check that an allocator supports
-    deallocation is to call $(D deallocate(null)).
-    */
-    Ternary deallocate(void[] b);
-
-    /**
-    Deallocates all memory. Returns $(D Ternary.unknown) if deallocation is
-    not supported.
-    */
-    Ternary deallocateAll();
-
-    /**
-    Returns $(D Ternary.yes) if no memory is currently allocated from this
-    allocator, $(D Ternary.no) if some allocations are currently active, or
-    $(D Ternary.unknown) if not supported.
-    */
-    Ternary empty();
-}
-
-__gshared IAllocator _processAllocator;
-IAllocator _threadAllocator;
-
-shared static this()
-{
-    assert(!_processAllocator);
-    import std.experimental.allocator.gc_allocator : GCAllocator;
-    _processAllocator = allocatorObject(GCAllocator.it);
-}
-
-static this()
-{
-    assert(!_threadAllocator);
-    _threadAllocator = _processAllocator;
-}
-
-/**
-Gets/sets the allocator for the current thread. This is the default allocator
-that should be used for allocating thread-local memory. For allocating memory
-to be shared across threads, use $(D processAllocator) (below). By default,
-$(D theAllocator) ultimately fetches memory from $(D processAllocator), which
-in turn uses the garbage collected heap.
-*/
-@property IAllocator theAllocator()
-{
-    return _threadAllocator;
-}
-
-/// Ditto
-@property void theAllocator(IAllocator a)
-{
-    assert(a);
-    _threadAllocator = a;
-}
-
-///
-unittest
-{
-    // Install a new allocator that is faster for 128-byte allocations.
-    import std.experimental.allocator.free_list,
-        std.experimental.allocator.gc_allocator;
-    auto oldAllocator = theAllocator;
-    scope(exit) theAllocator = oldAllocator;
-    theAllocator = allocatorObject(FreeList!(GCAllocator, 128)());
-    // Use the now changed allocator to allocate an array
-    ubyte[] arr = theAllocator.makeArray!ubyte(128);
-    assert(arr.ptr);
-    //...
-}
-
-/**
-Gets/sets the allocator for the current process. This allocator must be used
-for allocating memory shared across threads. Objects created using this
-allocator can be cast to $(D shared).
-*/
-@property IAllocator processAllocator()
-{
-    return _processAllocator;
-}
-
-/// Ditto
-@property void processAllocator(IAllocator a)
-{
-    assert(a);
-    _processAllocator = a;
-}
-
-unittest
-{
-    assert(processAllocator);
-    assert(processAllocator is theAllocator);
-}
-
-/**
-
-Returns a dynamically-typed $(D CAllocator) built around a given statically-
-typed allocator $(D a) of type $(D A). Passing a pointer to the allocator
-creates a dynamic allocator around the allocator pointed to by the pointer,
-without attempting to copy or move it. Passing the allocator by value or
-reference behaves as follows.
-
-$(UL
-$(LI If $(D A) has no state, the resulting object is allocated in static
-shared storage.)
-$(LI If $(D A) has state and is copyable, the result will store a copy of it
-within. The result itself is allocated in its own statically-typed allocator.)
-$(LI If $(D A) has state and is not copyable, the result will move the
-passed-in argument into the result. The result itself is allocated in its own
-statically-typed allocator.)
-)
-
-*/
-CAllocatorImpl!A allocatorObject(A)(auto ref A a)
-if (!isPointer!A)
-{
-    import std.conv : emplace;
-    static if (stateSize!A == 0)
-    {
-        enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
-        static __gshared ulong[s] state;
-        static __gshared CAllocatorImpl!A result;
-        if (!result)
-        {
-            // Don't care about a few races
-            result = emplace!(CAllocatorImpl!A)(state[]);
-        }
-        assert(result);
-        return result;
-    }
-    else static if (is(typeof({ A b = a; A c = b; }))) // copyable
-    {
-        auto state = a.allocate(stateSize!(CAllocatorImpl!A));
-        import std.traits : hasMember;
-        static if (hasMember!(A, "deallocate"))
-        {
-            scope(failure) a.deallocate(state);
-        }
-        return cast(CAllocatorImpl!A) emplace!(CAllocatorImpl!A)(state);
-    }
-    else // the allocator object is not copyable
-    {
-        // This is sensitive... create on the stack and then move
-        enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
-        ulong[s] state;
-        import std.algorithm : move;
-        emplace!(CAllocatorImpl!A)(state[], move(a));
-        auto dynState = a.allocate(stateSize!(CAllocatorImpl!A));
-        // Bitblast the object in its final destination
-        dynState[] = state[];
-        return cast(CAllocatorImpl!A) dynState.ptr;
-    }
-}
-
-/// Ditto
-CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
-{
-    assert(pa);
-    import std.conv : emplace;
-    auto state = pa.allocate(stateSize!(CAllocatorImpl!(A, Yes.indirect)));
-    import std.traits : hasMember;
-    static if (hasMember!(A, "deallocate"))
-    {
-        scope(failure) pa.deallocate(state);
-    }
-    return emplace!(CAllocatorImpl!(A, Yes.indirect))
-        (state, pa);
-}
-
-///
-unittest
-{
-    import std.experimental.allocator.mallocator;
-    IAllocator a = allocatorObject(Mallocator.it);
-    auto b = a.allocate(100);
-    assert(b.length == 100);
-    assert(a.deallocate(b) == Ternary.yes);
-
-    // The in-situ region must be used by pointer
-    import std.experimental.allocator.region;
-    auto r = InSituRegion!1024();
-    a = allocatorObject(&r);
-    b = a.allocate(200);
-    assert(b.length == 200);
-    // In-situ regions can't deallocate
-    assert(a.deallocate(b) == Ternary.unknown);
-}
-
-/**
 Dynamically allocates (using $(D alloc)) and then creates in the memory
 allocated an object of type $(D T), using $(D args) (if any) for its
 initialization. Initialization occurs in the memory allocated and is otherwise
@@ -1005,6 +754,257 @@ unittest
 
     int[] arr = theAllocator.makeArray!int(43);
     theAllocator.dispose(arr);
+}
+
+/**
+Dynamic version of an allocator. This should be used wherever a uniform type is
+required for encapsulating various allocator implementations.
+
+Methods returning $(D Ternary) return $(D Ternary.yes) upon success,
+$(D Ternary.no) upon failure, and $(D Ternary.unknown) if the primitive is not
+implemented by the allocator instance.
+*/
+interface IAllocator
+{
+    /**
+    Returns the alignment offered.
+    */
+    @property uint alignment();
+
+    /**
+    Returns the good allocation size that guarantees zero internal
+    fragmentation.
+    */
+    size_t goodAllocSize(size_t s);
+
+    /**
+    Allocates memory.
+    */
+    void[] allocate(size_t, TypeInfo ti = null);
+
+    /**
+    Allocates memory with specified alignment.
+    */
+    Ternary alignedAllocate(size_t, uint, ref void[], TypeInfo ti = null);
+
+    /**
+    Allocates and returns all memory available to this allocator. $(COMMENT By
+    default returns $(D null).)
+    */
+    Ternary allocateAll(ref void[] result);
+
+    /**
+    Expands a memory block in place. If expansion not supported
+    by the allocator, returns $(D Ternary.unknown). If implemented, returns $(D
+    Ternary.yes) if expansion succeeded, $(D Ternary.no) otherwise.
+    */
+    Ternary expand(ref void[], size_t);
+
+    /// Reallocates a memory block.
+    bool reallocate(ref void[], size_t);
+
+    /// Reallocates a memory block with specified alignment.
+    Ternary alignedReallocate(ref void[] b, size_t size, uint alignment);
+
+    /**
+    Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
+    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership not
+    supported by the allocator. $(COMMENT By default returns $(D
+    Ternary.unknown).)
+    */
+    Ternary owns(void[] b);
+
+    /**
+    Resolves an internal pointer to the full block allocated.
+    */
+    Ternary resolveInternalPointer(void* p, ref void[] result);
+
+    /**
+    Deallocates a memory block. Returns $(D Ternary.unknown) if deallocation is
+    not supported. A simple way to check that an allocator supports
+    deallocation is to call $(D deallocate(null)).
+    */
+    Ternary deallocate(void[] b);
+
+    /**
+    Deallocates all memory. Returns $(D Ternary.unknown) if deallocation is
+    not supported.
+    */
+    Ternary deallocateAll();
+
+    /**
+    Returns $(D Ternary.yes) if no memory is currently allocated from this
+    allocator, $(D Ternary.no) if some allocations are currently active, or
+    $(D Ternary.unknown) if not supported.
+    */
+    Ternary empty();
+}
+
+__gshared IAllocator _processAllocator;
+IAllocator _threadAllocator;
+
+shared static this()
+{
+    assert(!_processAllocator);
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    _processAllocator = allocatorObject(GCAllocator.it);
+}
+
+static this()
+{
+    assert(!_threadAllocator);
+    _threadAllocator = _processAllocator;
+}
+
+/**
+Gets/sets the allocator for the current thread. This is the default allocator
+that should be used for allocating thread-local memory. For allocating memory
+to be shared across threads, use $(D processAllocator) (below). By default,
+$(D theAllocator) ultimately fetches memory from $(D processAllocator), which
+in turn uses the garbage collected heap.
+*/
+@property IAllocator theAllocator()
+{
+    return _threadAllocator;
+}
+
+/// Ditto
+@property void theAllocator(IAllocator a)
+{
+    assert(a);
+    _threadAllocator = a;
+}
+
+///
+unittest
+{
+    // Install a new allocator that is faster for 128-byte allocations.
+    import std.experimental.allocator.free_list,
+        std.experimental.allocator.gc_allocator;
+    auto oldAllocator = theAllocator;
+    scope(exit) theAllocator = oldAllocator;
+    theAllocator = allocatorObject(FreeList!(GCAllocator, 128)());
+    // Use the now changed allocator to allocate an array
+    ubyte[] arr = theAllocator.makeArray!ubyte(128);
+    assert(arr.ptr);
+    //...
+}
+
+/**
+Gets/sets the allocator for the current process. This allocator must be used
+for allocating memory shared across threads. Objects created using this
+allocator can be cast to $(D shared).
+*/
+@property IAllocator processAllocator()
+{
+    return _processAllocator;
+}
+
+/// Ditto
+@property void processAllocator(IAllocator a)
+{
+    assert(a);
+    _processAllocator = a;
+}
+
+unittest
+{
+    assert(processAllocator);
+    assert(processAllocator is theAllocator);
+}
+
+/**
+
+Returns a dynamically-typed $(D CAllocator) built around a given statically-
+typed allocator $(D a) of type $(D A). Passing a pointer to the allocator
+creates a dynamic allocator around the allocator pointed to by the pointer,
+without attempting to copy or move it. Passing the allocator by value or
+reference behaves as follows.
+
+$(UL
+$(LI If $(D A) has no state, the resulting object is allocated in static
+shared storage.)
+$(LI If $(D A) has state and is copyable, the result will store a copy of it
+within. The result itself is allocated in its own statically-typed allocator.)
+$(LI If $(D A) has state and is not copyable, the result will move the
+passed-in argument into the result. The result itself is allocated in its own
+statically-typed allocator.)
+)
+
+*/
+CAllocatorImpl!A allocatorObject(A)(auto ref A a)
+if (!isPointer!A)
+{
+    import std.conv : emplace;
+    static if (stateSize!A == 0)
+    {
+        enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
+        static __gshared ulong[s] state;
+        static __gshared CAllocatorImpl!A result;
+        if (!result)
+        {
+            // Don't care about a few races
+            result = emplace!(CAllocatorImpl!A)(state[]);
+        }
+        assert(result);
+        return result;
+    }
+    else static if (is(typeof({ A b = a; A c = b; }))) // copyable
+    {
+        auto state = a.allocate(stateSize!(CAllocatorImpl!A));
+        import std.traits : hasMember;
+        static if (hasMember!(A, "deallocate"))
+        {
+            scope(failure) a.deallocate(state);
+        }
+        return cast(CAllocatorImpl!A) emplace!(CAllocatorImpl!A)(state);
+    }
+    else // the allocator object is not copyable
+    {
+        // This is sensitive... create on the stack and then move
+        enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
+        ulong[s] state;
+        import std.algorithm : move;
+        emplace!(CAllocatorImpl!A)(state[], move(a));
+        auto dynState = a.allocate(stateSize!(CAllocatorImpl!A));
+        // Bitblast the object in its final destination
+        dynState[] = state[];
+        return cast(CAllocatorImpl!A) dynState.ptr;
+    }
+}
+
+/// Ditto
+CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
+{
+    assert(pa);
+    import std.conv : emplace;
+    auto state = pa.allocate(stateSize!(CAllocatorImpl!(A, Yes.indirect)));
+    import std.traits : hasMember;
+    static if (hasMember!(A, "deallocate"))
+    {
+        scope(failure) pa.deallocate(state);
+    }
+    return emplace!(CAllocatorImpl!(A, Yes.indirect))
+        (state, pa);
+}
+
+///
+unittest
+{
+    import std.experimental.allocator.mallocator;
+    IAllocator a = allocatorObject(Mallocator.it);
+    auto b = a.allocate(100);
+    assert(b.length == 100);
+    assert(a.deallocate(b) == Ternary.yes);
+
+    // The in-situ region must be used by pointer
+    import std.experimental.allocator.region;
+    auto r = InSituRegion!1024();
+    a = allocatorObject(&r);
+    b = a.allocate(200);
+    assert(b.length == 200);
+    // In-situ regions can't deallocate
+    assert(a.deallocate(b) == Ternary.unknown);
 }
 
 /**
