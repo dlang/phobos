@@ -1955,7 +1955,13 @@ unittest
 
 
 
-/** Returns a bidirectional range that iterates over the elements of a path.
+/** Slice up a path into its elements.
+
+    Params:
+        path = string or slicable random access range
+
+    Returns:
+        bidirectional range of slices of `path`
 
     Examples:
     ---
@@ -1973,90 +1979,95 @@ unittest
     }
     ---
 */
-auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
-    if (isSomeChar!C)
+auto pathSplitter(R)(R path)
+    if (isRandomAccessRange!R && hasSlicing!R ||
+        isSomeString!R)
 {
     static struct PathSplitter
     {
-    @safe pure nothrow @nogc:
-        @property bool empty() const { return _empty; }
+        @property bool empty() const { return pe == 0; }
 
-        @property const(C)[] front() const
+        @property R front()
         {
-            assert (!empty, "PathSplitter: called front() on empty range");
-            return _front;
+            assert(!empty);
+            return _path[fs .. fe];
         }
 
         void popFront()
         {
-            assert (!empty, "PathSplitter: called popFront() on empty range");
-            if (_path.empty)
+            assert(!empty);
+            if (ps == pe)
             {
-                if (_front is _back)
+                if (fs == bs && fe == be)
                 {
-                    _empty = true;
-                    _front = null;
-                    _back = null;
+                    pe = 0;
                 }
                 else
                 {
-                    _front = _back;
+                    fs = bs;
+                    fe = be;
                 }
             }
             else
             {
-                ptrdiff_t i = 0;
-                while (i < _path.length && !isDirSeparator(_path[i])) ++i;
-                _front = _path[0 .. i];
-                _path = ltrimDirSeparators(_path[i .. $]);
+                fs = ps;
+                fe = fs;
+                while (fe < pe && !isDirSeparator(_path[fe]))
+                    ++fe;
+                ps = ltrim(fe, pe);
             }
         }
 
-        @property const(C)[] back() const
+        @property R back()
         {
-            assert (!empty, "PathSplitter: called back() on empty range");
-            return _back;
+            assert(!empty);
+            return _path[bs .. be];
         }
 
         void popBack()
         {
-            assert (!empty, "PathSplitter: called popBack() on empty range");
-            if (_path.empty)
+            assert(!empty);
+            if (ps == pe)
             {
-                if (_front is _back)
+                if (fs == bs && fe == be)
                 {
-                    _empty = true;
-                    _front = null;
-                    _back = null;
+                    pe = 0;
                 }
                 else
                 {
-                    _back = _front;
+                    bs = fs;
+                    be = fe;
                 }
             }
             else
             {
-                auto i = (cast(ptrdiff_t) _path.length) - 1;
-                while (i >= 0 && !isDirSeparator(_path[i])) --i;
-                _back = _path[i + 1 .. $];
-                _path = rtrimDirSeparators(_path[0 .. i+1]);
+                bs = pe;
+                be = bs;
+                while (bs > ps && !isDirSeparator(_path[bs - 1]))
+                    --bs;
+                pe = rtrim(ps, bs);
             }
         }
         @property auto save() { return this; }
 
 
     private:
-        typeof(path) _path, _front, _back;
-        bool _empty;
+        R _path;
+        size_t ps, pe;
+        size_t fs, fe;
+        size_t bs, be;
 
-        this(typeof(path) p)
+        this(R p)
         {
             if (p.empty)
             {
-                _empty = true;
+                pe = 0;
                 return;
             }
             _path = p;
+
+            ps = 0;
+            pe = _path.length;
 
             // If path is rooted, first element is special
             version (Windows)
@@ -2064,18 +2075,21 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
                 if (isUNC(_path))
                 {
                     auto i = uncRootLength(_path);
-                    _front = _path[0 .. i];
-                    _path = ltrimDirSeparators(_path[i .. $]);
+                    fs = 0;
+                    fe = i;
+                    ps = ltrim(fe, pe);
                 }
                 else if (isDriveRoot(_path))
                 {
-                    _front = _path[0 .. 3];
-                    _path = ltrimDirSeparators(_path[3 .. $]);
+                    fs = 0;
+                    fe = 3;
+                    ps = ltrim(fe, pe);
                 }
                 else if (_path.length >= 1 && isDirSeparator(_path[0]))
                 {
-                    _front = _path[0 .. 1];
-                    _path = ltrimDirSeparators(_path[1 .. $]);
+                    fs = 0;
+                    fe = 1;
+                    ps = ltrim(fe, pe);
                 }
                 else
                 {
@@ -2087,8 +2101,9 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             {
                 if (_path.length >= 1 && isDirSeparator(_path[0]))
                 {
-                    _front = _path[0 .. 1];
-                    _path = ltrimDirSeparators(_path[1 .. $]);
+                    fs = 0;
+                    fe = 1;
+                    ps = ltrim(fe, pe);
                 }
                 else
                 {
@@ -2097,12 +2112,30 @@ auto pathSplitter(C)(const(C)[] path)  @safe pure nothrow
             }
             else static assert (0);
 
-            if (_path.empty) _back = _front;
+            if (ps == pe)
+            {
+                bs = fs;
+                be = fe;
+            }
             else
             {
-                _path = rtrimDirSeparators(_path);
+                pe = rtrim(ps, pe);
                 popBack();
             }
+        }
+
+        size_t ltrim(size_t s, size_t e)
+        {
+            while (s < e && isDirSeparator(_path[s]))
+                ++s;
+            return s;
+        }
+
+        size_t rtrim(size_t s, size_t e)
+        {
+            while (s < e && isDirSeparator(_path[e - 1]))
+                --e;
+            return e;
         }
     }
 
@@ -2167,9 +2200,10 @@ unittest
         assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
     });
 
-    // Bugzilla 11691
-    // front should return a mutable array of const elements
-    static assert(is(typeof(pathSplitter!char(null).front) == const(char)[]));
+    static assert(is(typeof(pathSplitter!(const(char)[])(null).front) == const(char)[]));
+
+    import std.utf : byDchar;
+    assert (equal2(pathSplitter("foo/bar"d.byDchar), ["foo"d, "bar"d]));
 }
 
 
