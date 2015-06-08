@@ -1973,6 +1973,17 @@ unittest
 /// numeric strings.
 alias AllowUnderscores = Flag!"AllowUnderscores";
 
+/// Parses a numeric value from a string.
+/// 
+/// Params:
+///     s       =   The string to parse the value from.
+///     uscores =   Whether underscores should be accepted in numeric strings.
+///                 
+/// Throws:
+///     ConvOverflowException when a conversion from a string to a numeric
+///         value causes an overflow.
+///     ConvException when the first character in the provided string is not
+///         a valid digit for the specified base/radix.
 Target parse(Target, Source)(ref Source s, 
                              AllowUnderscores uscores = AllowUnderscores.no)
     if (isSomeChar!(ElementType!Source) &&
