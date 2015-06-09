@@ -201,7 +201,6 @@ $(BOOKTABLE ,
     $(TR
         $(TD
             $(LINK2 std_socket.html, std.socket)$(BR)
-            $(LINK2 std_socketstream.html, std.socketstream)$(BR)
             $(LINK2 std_net_curl.html, std.net.curl)$(BR)
             $(LINK2 std_net_isemail.html, std.net.isemail)
         )
