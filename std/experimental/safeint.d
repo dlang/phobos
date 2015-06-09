@@ -62,7 +62,7 @@ unittest
     assert(notEqual(-1, uint.max));
 }
 
-/** Checks if the value of the first parameter is smaller than 
+/** Checks if the value of the first parameter is smaller than
 the value of the second parameter.
 
 This function makes sure no implicit value propagation falsifies the result of
@@ -113,7 +113,7 @@ unittest
     assert(lessEqual(-1, ulong.max));
 }
 
-/** Checks if the value of the first parameter is greater than 
+/** Checks if the value of the first parameter is greater than
 the value of the second parameter.
 
 This function makes sure no implicit value propagation falsifies the result of
@@ -163,7 +163,7 @@ unittest
     assert(greaterEqual(ulong.max, long.min));
 }
 
-private bool impl(string op, bool A, bool B, T, S)(in T t, in S s) 
+private bool impl(string op, bool A, bool B, T, S)(in T t, in S s)
         @nogc nothrow pure if (isIntegral!T && isIntegral!S)
 {
     import std.functional : binaryFun;
@@ -204,7 +204,7 @@ private bool impl(string op, bool A, bool B, T, S)(in T t, in S s)
     }
 }
 
-private alias TTest = 
+private alias TTest =
     TypeTuple!(byte, short, int, long, ubyte, ushort, uint, ulong);
 
 pure unittest
@@ -354,10 +354,10 @@ pure unittest
 /** $(B SafeInt) implements a safe integer type.
 
 Safe in the sense that:
-$(UL 
+$(UL
     $(LI over and underflows are not ignored)
     $(LI no unchecked implicit casts are performed)
-    $(LI assigned values are checked if they fit into the value range of the 
+    $(LI assigned values are checked if they fit into the value range of the
         underlaying type)
     $(LI default initialization to NaN)
     $(LI no bitwise operations are implemented.)
@@ -387,7 +387,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     alias value this;
 
     /** The constructor for SafeInt.
-    
+
     The passed value must either be an basic numeric or another SafeInt value.
     The value of the passed parameter must fit into the value range defined by
     the template specialization of the SafeInt.
@@ -429,7 +429,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
                 return;
             }
         }
-        if (greaterEqual(getValue(v), this.min) 
+        if (greaterEqual(getValue(v), this.min)
                 && lessEqual(getValue(v), this.max))
         {
             this.value = cast(T) v;
@@ -465,7 +465,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     /** This implements $(D +=, -=, %=, /=, *=) for this SafeInt.
 
     Returns:
-        a copy of this SafeInt.    
+        a copy of this SafeInt.
     */
     SafeInt!T opOpAssign(string op, V)(V vIn) pure
     {
@@ -515,16 +515,16 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         {
             static if (T.sizeof > 4 || typeof(v).sizeof > 4)
             {
-                long function(long, long, ref bool) 
+                long function(long, long, ref bool)
                     @safe @nogc pure nothrow sOp = &adds;
-                ulong function(ulong, ulong, ref bool) 
+                ulong function(ulong, ulong, ref bool)
                     @safe @nogc pure nothrow uOp = &addu;
             }
             else
             {
-                int function(int, int, ref bool) 
+                int function(int, int, ref bool)
                     @safe @nogc pure nothrow sOp = &adds;
-                uint function(uint, uint, ref bool) 
+                uint function(uint, uint, ref bool)
                     @safe @nogc pure nothrow uOp = &addu;
             }
         }
@@ -537,9 +537,9 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
             }
             else
             {
-                int function(int, int, ref bool) 
+                int function(int, int, ref bool)
                     @safe @nogc pure nothrow sOp = &subs;
-                uint function(uint, uint, ref bool) 
+                uint function(uint, uint, ref bool)
                     @safe @nogc pure nothrow uOp = &subu;
             }
         }
@@ -547,23 +547,23 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         {
             static if (T.sizeof > 4 || typeof(v).sizeof > 4)
             {
-                long function(long, long, ref bool) 
+                long function(long, long, ref bool)
                     @safe @nogc pure nothrow sOp = &muls;
-                ulong function(ulong, ulong, ref bool) 
+                ulong function(ulong, ulong, ref bool)
                     @safe @nogc pure nothrow uOp = &mulu;
             }
             else
             {
-                int function(int, int, ref bool) 
+                int function(int, int, ref bool)
                     @safe @nogc pure nothrow sOp = &muls;
-                uint function(uint, uint, ref bool) 
+                uint function(uint, uint, ref bool)
                     @safe @nogc pure nothrow uOp = &mulu;
             }
         }
         else static if (op == "/")
         {
-            auto sOp = function(long v1, long v2, ref bool overflow) 
-                    @safe pure nothrow @nogc 
+            auto sOp = function(long v1, long v2, ref bool overflow)
+                    @safe pure nothrow @nogc
             {
                 T ret = this.nan;
                 if (notEqual(v2, 0))
@@ -576,7 +576,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
                 }
             };
 
-            auto uOp = function(ulong v1, ulong v2, ref bool overflow) 
+            auto uOp = function(ulong v1, ulong v2, ref bool overflow)
                     @safe pure nothrow @nogc
             {
                 T ret = this.nan;
@@ -592,7 +592,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         }
         else static if (op == "%")
         {
-            auto sOp = function(T v1, T v2, ref bool overflow) 
+            auto sOp = function(T v1, T v2, ref bool overflow)
                     @safe pure nothrow @nogc
             {
                 T ret = this.nan;
@@ -600,6 +600,12 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
             };
 
             auto uOp = sOp;
+        }
+        else
+        {
+            static assert(false, "Only \"+,-,*,/,%\" operations are supported, "
+                ~ "to use bitwise operaton, please convert to an buildin "
+                ~ "integer.");
         }
 
         static if (Signed && isSigned!(typeof(v)))
@@ -663,11 +669,11 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         vIn = the value to assign
 
     Returns:
-        a copy of this SafeInt.    
+        a copy of this SafeInt.
     */
     SafeInt!T opAssign(V)(V vIn) pure if (isNumeric!T && is(V : SafeInt!S, S))
     {
-        static if (isSafeInt!V) 
+        static if (isSafeInt!V)
         {
             if (vIn.isNaN)
             {
@@ -680,10 +686,10 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     }
 
     /** Implements the equality comparison function for the SafeInt type.
-    
+
     Params:
         vIn = the value to compare the SafeInt with
-    
+
     Returns:
         $(D true) if the passed value is equal to the value stored in the
         SafeInt, false otherwise.
@@ -703,10 +709,10 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     }
 
     /** Implements the comparison function for the SafeInt type.
-    
+
     Params:
         vIn = the value to compare the SafeInt with
-    
+
     Returns:
         -1 if the SafeInt is less than $(D vIn), 1 if the SafeInt is greater
         than $(D vIn), 0 otherwise.
@@ -725,20 +731,22 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         }
     }
 
-	import std.format : FormatSpec;
+    import std.format : FormatSpec;
 
-	void toString(scope void delegate(const(char)[]) @trusted sink, FormatSpec!char fmt) const {
-		import std.format : formatValue;
+    void toString(scope void delegate(const(char)[]) @trusted sink,
+            FormatSpec!char fmt) const @safe
+    {
+        import std.format : formatValue;
 
-		if (this.value == this.nan) 
-		{
-			sink("nan");
-		}
-		else
-		{
-			formatValue(sink, this.value, fmt);
-		}
-	}
+        if (this.value == this.nan)
+        {
+            sink("nan");
+        }
+        else
+        {
+            formatValue(sink, this.value, fmt);
+        }
+    }
 }
 
 ///
@@ -806,16 +814,22 @@ nothrow pure @nogc unittest
 
 unittest
 {
-	import std.format : format;
+    SafeInt!int a = 1;
+    static assert(!__traits(compiles, (a | 1)));
+}
 
-	auto f = format("%d", SafeInt!int(1));
-	assert(f == "1");
+unittest
+{
+    import std.format : format;
 
-	f = format("%5d", SafeInt!int(1));
-	assert(f == "    1");
+    auto f = format("%d", SafeInt!int(1));
+    assert(f == "1");
 
-	f = format("%d", SafeInt!int());
-	assert(f == "nan");
+    f = format("%5d", SafeInt!int(1));
+    assert(f == "    1");
+
+    f = format("%d", SafeInt!int());
+    assert(f == "nan");
 }
 
 nothrow @nogc pure:
