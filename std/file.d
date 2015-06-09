@@ -539,16 +539,12 @@ ulong getSize(in char[] name) @safe
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, stat_t* buf) @trusted
+        static auto trustedStat(in char[] path, ref stat_t buf) @trusted
         {
-            return stat(path.tempCString(), buf);
-        }
-        static stat_t* ptrOfLocalVariable(return ref stat_t buf) @trusted
-        {
-            return &buf;
+            return stat(path.tempCString(), &buf);
         }
         stat_t statbuf = void;
-        cenforce(trustedStat(name, ptrOfLocalVariable(statbuf)) == 0, name);
+        cenforce(trustedStat(name, statbuf) == 0, name);
         return statbuf.st_size;
     }
 }
@@ -1909,183 +1905,67 @@ else version (FreeBSD)
     assert(path.isFile);
 }
 
-version(StdDdoc)
+/++
+ + Info on a file, similar to what you'd get from stat on a Posix system.
+ +/
+struct DirEntry
 {
-    /++
-        Info on a file, similar to what you'd get from stat on a Posix system.
-      +/
-    struct DirEntry
+private:
+    /// The file or directory represented by this DirEntry.
+    string _name;
+
+    version (Windows)
     {
-        /++
-            Constructs a DirEntry for the given file (or directory).
+        /// The time when the file was created.
+        SysTime _timeCreated;
+        /// The time when the file was last accessed.
+        SysTime _timeLastAccessed;
+        /// The time when the file was last modified.
+        SysTime _timeLastModified;
 
-            Params:
-                path = The file (or directory) to get a DirEntry for.
+        /// The size of the file in bytes.
+        ulong _size;
+        /// The file attributes from WIN32_FIND_DATAW.
+        uint  _attributes;
+    }
+    else version (Posix)
+    {
+        /// The result of stat().
+        stat_t _statBuf = void;
+        /// The stat mode from lstat().
+        uint  _lstatMode;
+        /// The type of the file.
+        ubyte _dType;
 
-            Throws:
-                $(D FileException) if the file does not exist.
-        +/
-        this(string path);
+        /// Whether lstat() has been called for this DirEntry.
+        bool _didLStat = false;
+        /// Whether stat() has been called for this DirEntry.
+        bool _didStat = false;
+        /// Whether the dType of the file has been set.
+        bool _dTypeSet = false;
+    }
+
+public:
+    alias name this;
+
+    /++
+     + Constructs a DirEntry for the given file (or directory).
+     +
+     + Params:
+     +    path = The file (or directory) to get a DirEntry for.
+     +
+     + Throws:
+     +    $(D FileException) if the file does not exist.
+     +/
+    this(string path)
+    {
+        if(!path.exists)
+            throw new FileException(path, "File does not exist");
+
+        _name = path;
 
         version (Windows)
         {
-            private this(string path, in WIN32_FIND_DATAW *fd);
-        }
-        else version (Posix)
-        {
-            private this(string path, core.sys.posix.dirent.dirent* fd);
-        }
-
-        /++
-            Returns the path to the file represented by this $(D DirEntry).
-
-Examples:
---------------------
-auto de1 = DirEntry("/etc/fonts/fonts.conf");
-assert(de1.name == "/etc/fonts/fonts.conf");
-
-auto de2 = DirEntry("/usr/share/include");
-assert(de2.name == "/usr/share/include");
---------------------
-          +/
-        @property string name() const;
-
-
-        /++
-            Returns whether the file represented by this $(D DirEntry) is a
-            directory.
-
-Examples:
---------------------
-auto de1 = DirEntry("/etc/fonts/fonts.conf");
-assert(!de1.isDir);
-
-auto de2 = DirEntry("/usr/share/include");
-assert(de2.isDir);
---------------------
-          +/
-        @property bool isDir();
-
-
-        /++
-            Returns whether the file represented by this $(D DirEntry) is a file.
-
-            On Windows, if a file is not a directory, then it's a file. So,
-            either $(D isFile) or $(D isDir) will return $(D true).
-
-            On Posix systems, if $(D isFile) is $(D true), that indicates that
-            the file is a regular file (e.g. not a block not device). So, on
-            Posix systems, it's possible for both $(D isFile) and $(D isDir) to
-            be $(D false) for a particular file (in which case, it's a special
-            file). You can use $(D attributes) or $(D statBuf) to get more
-            information about a special file (see the stat man page for more
-            details).
-
-Examples:
---------------------
-auto de1 = DirEntry("/etc/fonts/fonts.conf");
-assert(de1.isFile);
-
-auto de2 = DirEntry("/usr/share/include");
-assert(!de2.isFile);
---------------------
-          +/
-        @property bool isFile();
-
-        /++
-            Returns whether the file represented by this $(D DirEntry) is a
-            symbolic link.
-
-            On Windows, return $(D true) when the file is either a symbolic
-            link or a junction point.
-          +/
-        @property bool isSymlink();
-
-        /++
-            Returns the size of the the file represented by this $(D DirEntry)
-            in bytes.
-          +/
-        @property ulong size();
-
-        /++
-            $(BLUE This function is Windows-Only.)
-
-            Returns the creation time of the file represented by this
-            $(D DirEntry).
-          +/
-        @property SysTime timeCreated() const;
-
-        /++
-            Returns the time that the file represented by this $(D DirEntry) was
-            last accessed.
-
-            Note that many file systems do not update the access time for files
-            (generally for performance reasons), so there's a good chance that
-            $(D timeLastAccessed) will return the same value as
-            $(D timeLastModified).
-          +/
-        @property SysTime timeLastAccessed();
-
-        /++
-            Returns the time that the file represented by this $(D DirEntry) was
-            last modified.
-          +/
-        @property SysTime timeLastModified();
-
-        /++
-            Returns the attributes of the file represented by this $(D DirEntry).
-
-            Note that the file attributes on Windows and Posix systems are
-            completely different. On, Windows, they're what is returned by
-            $(D GetFileAttributes)
-            $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
-            Whereas, an Posix systems, they're the $(D st_mode) value which is
-            part of the $(D stat) struct gotten by calling $(D stat).
-
-            On Posix systems, if the file represented by this $(D DirEntry) is a
-            symbolic link, then attributes are the attributes of the file
-            pointed to by the symbolic link.
-          +/
-        @property uint attributes();
-
-        /++
-            On Posix systems, if the file represented by this $(D DirEntry) is a
-            symbolic link, then $(D linkAttributes) are the attributes of the
-            symbolic link itself. Otherwise, $(D linkAttributes) is identical to
-            $(D attributes).
-
-            On Windows, $(D linkAttributes) is identical to $(D attributes). It
-            exists on Windows so that you don't have to special-case code for
-            Windows when dealing with symbolic links.
-          +/
-        @property uint linkAttributes();
-
-        version(Windows)
-            alias stat_t = void*;
-
-        /++
-            $(BLUE This function is Posix-Only.)
-
-            The $(D stat) struct gotten from calling $(D stat).
-          +/
-        @property stat_t statBuf();
-    }
-}
-else version(Windows)
-{
-    struct DirEntry
-    {
-        import std.utf : toUTF8;
-    public:
-        alias name this;
-
-        this(string path)
-        {
-            if(!path.exists())
-                throw new FileException(path, "File does not exist");
-
-            _name = path;
-
             with (getFileAttributesWin(path))
             {
                 _size = makeUlong(nFileSizeLow, nFileSizeHigh);
@@ -2095,10 +1975,20 @@ else version(Windows)
                 _attributes = dwFileAttributes;
             }
         }
+        else version (Posix)
+        {
+            _didLStat = false;
+            _didStat = false;
+            _dTypeSet = false;
+        }
+    }
 
+    version (Windows)
+    {
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             import core.stdc.wchar_ : wcslen;
+            import std.utf : toUTF8;
 
             size_t clength = wcslen(fd.cFileName.ptr);
             _name = toUTF8(fd.cFileName[0 .. clength]);
@@ -2109,90 +1999,9 @@ else version(Windows)
             _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
             _attributes = fd.dwFileAttributes;
         }
-
-        @property string name() const pure nothrow
-        {
-            return _name;
-        }
-
-        @property bool isDir() const pure nothrow
-        {
-            return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-        }
-
-        @property bool isFile() const pure nothrow
-        {
-            //Are there no options in Windows other than directory and file?
-            //If there are, then this probably isn't the best way to determine
-            //whether this DirEntry is a file or not.
-            return !isDir;
-        }
-
-        @property bool isSymlink() const pure nothrow
-        {
-            return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-        }
-
-        @property ulong size() const pure nothrow
-        {
-            return _size;
-        }
-
-        @property SysTime timeCreated() const pure nothrow
-        {
-            return cast(SysTime)_timeCreated;
-        }
-
-        @property SysTime timeLastAccessed() const pure nothrow
-        {
-            return cast(SysTime)_timeLastAccessed;
-        }
-
-        @property SysTime timeLastModified() const pure nothrow
-        {
-            return cast(SysTime)_timeLastModified;
-        }
-
-        @property uint attributes() const pure nothrow
-        {
-            return _attributes;
-        }
-
-        @property uint linkAttributes() const pure nothrow
-        {
-            return _attributes;
-        }
-
-    private:
-        string _name; /// The file or directory represented by this DirEntry.
-
-        SysTime _timeCreated;      /// The time when the file was created.
-        SysTime _timeLastAccessed; /// The time when the file was last accessed.
-        SysTime _timeLastModified; /// The time when the file was last modified.
-
-        ulong _size;       /// The size of the file in bytes.
-        uint  _attributes; /// The file attributes from WIN32_FIND_DATAW.
     }
-}
-else version(Posix)
-{
-    struct DirEntry
+    else version (Posix)
     {
-    public:
-        alias name this;
-
-        this(string path)
-        {
-            if(!path.exists)
-                throw new FileException(path, "File does not exist");
-
-            _name = path;
-
-            _didLStat = false;
-            _didStat = false;
-            _dTypeSet = false;
-        }
-
         private this(string path, core.sys.posix.dirent.dirent* fd)
         {
             immutable len = core.stdc.string.strlen(fd.d_name.ptr);
@@ -2225,85 +2034,281 @@ else version(Posix)
                 _dTypeSet = false;
             }
         }
+    }
 
-        @property string name() const pure nothrow
+
+    /++
+     + Returns the path to the file represented by this $(D DirEntry).
+     +/
+    @property string name() const @safe pure nothrow @nogc
+    {
+        return _name;
+    }
+
+    ///
+    unittest
+    {
+        version (Posix)
         {
-            return _name;
-        }
+            auto de1 = DirEntry("/etc/fonts/fonts.conf");
+            assert(de1.name == "/etc/fonts/fonts.conf");
 
-        @property bool isDir()
+            auto de2 = DirEntry("/usr/share/include");
+            assert(de2.name == "/usr/share/include");
+        }
+    }
+
+    /++
+     + Returns whether the file represented by this $(D DirEntry) is a
+     + directory.
+     +/
+    @property bool isDir() const pure nothrow
+    {
+        version (Windows)
+        {
+            return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        }
+        else version (Posix)
         {
             _ensureStatOrLStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
+    }
 
-        @property bool isFile()
+    ///
+    unittest
+    {
+        version (Posix)
+        {
+            auto de1 = DirEntry("/etc/fonts/fonts.conf");
+            assert(!de1.isDir);
+
+            auto de2 = DirEntry("/usr/share/include");
+            assert(de2.isDir);
+        }
+    }
+
+    /++
+     + Returns whether the file represented by this $(D DirEntry) is a file.
+     +
+     + On Windows, if a file is not a directory, then it's a file. So,
+     + either $(D isFile) or $(D isDir) will return $(D true).
+     +
+     + On Posix systems, if $(D isFile) is $(D true), that indicates that
+     + the file is a regular file (e.g. not a block not device). So, on
+     + Posix systems, it's possible for both $(D isFile) and $(D isDir) to
+     + be $(D false) for a particular file (in which case, it's a special
+     + file). You can use $(D attributes) or $(D statBuf) to get more
+     + information about a special file (see the stat man page for more
+     + details).
+     +/
+    @property bool isFile() const pure nothrow
+    {
+        version (Windows)
+        {
+            //Are there no options in Windows other than directory and file?
+            //If there are, then this probably isn't the best way to determine
+            //whether this DirEntry is a file or not.
+            return !isDir;
+        }
+        else version (Posix)
         {
             _ensureStatOrLStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
+    }
 
-        @property bool isSymlink()
+    ///
+    unittest
+    {
+        version (Posix)
+        {
+            auto de1 = DirEntry("/etc/fonts/fonts.conf");
+            assert(de1.isFile);
+
+            auto de2 = DirEntry("/usr/share/include");
+            assert(!de2.isFile);
+        }
+    }
+
+
+    /++
+     + Returns whether the file represented by this $(D DirEntry) is a
+     + symbolic link.
+     +
+     + On Windows, return $(D true) when the file is either a symbolic
+     + link or a junction point.
+     +/
+    @property bool isSymlink() const pure nothrow
+    {
+        version (Windows)
+        {
+            return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+        }
+        else version (Posix)
         {
             _ensureLStatDone();
 
             return (_lstatMode & S_IFMT) == S_IFLNK;
         }
+    }
 
-        @property ulong size()
+    /++
+     + Returns the size of the the file represented by this $(D DirEntry)
+     + in bytes.
+     +/
+    @property ulong size() const pure nothrow
+    {
+        version (Windows)
+        {
+            return _size;
+        }
+        else version (Posix)
         {
             _ensureStatDone();
             return _statBuf.st_size;
         }
+    }
 
-        @property SysTime timeStatusChanged()
+    /++
+     + $(BLUE This function is Windows-Only.)
+     +
+     + Returns the creation time of the file represented by this
+     + $(D DirEntry).
+     +/
+    version (StdDdoc) @property SysTime timeCreated() const pure nothrow;
+    else version (Windows) @property SysTime timeCreated() const pure nothrow
+    {
+        return cast(SysTime)_timeCreated;
+    }
+
+
+    version (StdDdoc) @property SysTime timeStatusChanged();
+    else version (Posix) @property SysTime timeStatusChanged()
+    {
+        _ensureStatDone();
+
+        return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
+    }
+
+    /++
+     + Returns the time that the file represented by this $(D DirEntry) was
+     + last accessed.
+     +
+     + Note that many file systems do not update the access time for files
+     + (generally for performance reasons), so there's a good chance that
+     + $(D timeLastAccessed) will return the same value as
+     + $(D timeLastModified).
+     +/
+    @property SysTime timeLastAccessed() const pure nothrow
+    {
+        version (Windows)
+        {
+            return cast(SysTime)_timeLastAccessed;
+        }
+        else version (Posix)
         {
             _ensureStatDone();
 
             return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
         }
+    }
 
-        @property SysTime timeLastAccessed()
+    /++
+     + Returns the time that the file represented by this $(D DirEntry) was
+     + last modified.
+     +/
+    @property SysTime timeLastModified() const pure nothrow
+    {
+        version (Windows)
         {
-            _ensureStatDone();
-
-            return SysTime(unixTimeToStdTime(_statBuf.st_ctime));
+            return cast(SysTime)_timeLastModified;
         }
-
-        @property SysTime timeLastModified()
+        else version (Posix)
         {
             _ensureStatDone();
 
             return SysTime(unixTimeToStdTime(_statBuf.st_mtime));
         }
+    }
 
-        @property uint attributes()
+    /++
+     + Returns the attributes of the file represented by this $(D DirEntry).
+     +
+     + Note that the file attributes on Windows and Posix systems are
+     + completely different. On, Windows, they're what is returned by
+     + $(D GetFileAttributes)
+     + $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
+     + Whereas, an Posix systems, they're the $(D st_mode) value which is
+     + part of the $(D stat) struct gotten by calling $(D stat).
+     +
+     + On Posix systems, if the file represented by this $(D DirEntry) is a
+     + symbolic link, then attributes are the attributes of the file
+     + pointed to by the symbolic link.
+     +/
+    @property uint attributes() const pure nothrow
+    {
+        version (Windows)
+        {
+            return _attributes;
+        }
+        else version (Posix)
         {
             _ensureStatDone();
 
             return _statBuf.st_mode;
         }
+    }
 
-        @property uint linkAttributes()
+    /++
+     + On Posix systems, if the file represented by this $(D DirEntry) is a
+     + symbolic link, then $(D linkAttributes) are the attributes of the
+     + symbolic link itself. Otherwise, $(D linkAttributes) is identical to
+     + $(D attributes).
+     +
+     + On Windows, $(D linkAttributes) is identical to $(D attributes). It
+     + exists on Windows so that you don't have to special-case code for
+     + Windows when dealing with symbolic links.
+     +/
+    @property uint linkAttributes() const pure nothrow
+    {
+        version (Windows)
+        {
+            return _attributes;
+        }
+        else version (Posix)
         {
             _ensureLStatDone();
 
             return _lstatMode;
         }
+    }
 
-        @property stat_t statBuf()
-        {
-            _ensureStatDone();
 
-            return _statBuf;
-        }
+    version(Windows)
+        private alias stat_t = void*;
 
+    /++
+     + $(BLUE This function is Posix-Only.)
+     +
+     + The $(D stat) struct gotten from calling $(D stat).
+     +/
+    version (StdDdoc) @property stat_t statBuf();
+    else version (Posix) @property stat_t statBuf()
+    {
+        _ensureStatDone();
+
+        return _statBuf;
+    }
+
+    version (Posix)
+    {
     private:
         /++
-            This is to support lazy evaluation, because doing stat's is
-            expensive and not always needed.
+         + This is to support lazy evaluation, because doing stat's is
+         + expensive and not always needed.
          +/
         void _ensureStatDone() @safe
         {
@@ -2315,17 +2320,17 @@ else version(Posix)
                 return;
 
             enforce(trustedStat(_name, &_statBuf) == 0,
-                    "Failed to stat file `" ~ _name ~ "'");
+                "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
         }
 
         /++
-            This is to support lazy evaluation, because doing stat's is
-            expensive and not always needed.
-
-            Try both stat and lstat for isFile and isDir
-            to detect broken symlinks.
+         + This is to support lazy evaluation, because doing stat's is
+         + expensive and not always needed.
+         +
+         + Try both stat and lstat for isFile and isDir
+         + to detect broken symlinks.
          +/
         void _ensureStatOrLStatDone()
         {
@@ -2346,8 +2351,8 @@ else version(Posix)
         }
 
         /++
-            This is to support lazy evaluation, because doing stat's is
-            expensive and not always needed.
+         + This is to support lazy evaluation, because doing stat's is
+         + expensive and not always needed.
          +/
         void _ensureLStatDone()
         {
@@ -2364,16 +2369,6 @@ else version(Posix)
             _dTypeSet = true;
             _didLStat = true;
         }
-
-        string _name; /// The file or directory represented by this DirEntry.
-
-        stat_t _statBuf = void;  /// The result of stat().
-        uint  _lstatMode;               /// The stat mode from lstat().
-        ubyte _dType;                   /// The type of the file.
-
-        bool _didLStat = false;   /// Whether lstat() has been called for this DirEntry.
-        bool _didStat = false;    /// Whether stat() has been called for this DirEntry.
-        bool _dTypeSet = false;   /// Whether the dType of the file has been set.
     }
 }
 
