@@ -63,6 +63,113 @@ import std.algorithm : min;
 import std.range : isInputRange, isForwardRange, walkLength, save, empty,
     front, popFront;
 
+// fixedSize vs. variableSize
+// threadLocal vs. forSharing vs. forImmutable
+// hasPointers vs. hasNoPointers
+
+enum SizePolicy : uint
+{
+    variableSize = 0,
+    fixedSize = 1,
+}
+
+enum SharingPolicy : uint
+{
+    threadShared = 0,
+    threadLocal = 4,
+    immutableShared = 8,
+}
+
+enum DepthPolicy
+{
+    hasPointers = 0,
+    hasNoPointers = 16
+}
+
+unittest
+{
+    auto a = SizePolicy.fixedSize | DepthPolicy.hasNoPointers;
+    assert(a & SizePolicy.fixedSize);
+    assert(a & DepthPolicy.hasNoPointers);
+}
+
+/**
+`TypedAllocator` acts like a chassis on which several specialized allocators
+can be assembled. To let the system make a choice about a particular kind of
+allocation, use `Default` for the respective parameters.
+
+Params:
+Fixed = Allocator to use for fixed-size allocations. These are unklikely to
+change size during the data's lifetime, so an allocator with poor resizing
+performance but good fixed-size performance would be indicated.
+
+FixedLeaf = Allocator to use for fixed-size allocations of data that has no
+indirections (for example, `int` or $(D Tuple!(int, float))). This means
+tracing collectors do not need to scan data allocated with this allocator for
+further indirections.
+
+Resizable = Allocator to use for allocating resizable data, such as arrays.
+Following allocation, the data may grow or shrink during its lifetime. A
+quantized allocator that overallocates to offer expansion and contraction
+without moving memory would be a good fit.
+
+ResizableLeaf = Allocator to use for allocating resizable data that contains no
+pointers (for example, `int[]` or $(D Algebraic!(int, double))).
+
+Shared = Allocator to use for memory that may be shared or transferred across
+threads. Data allocated within one thread can be deallocated from a different
+thread. All other allocators may assume they allocate thread-local data.
+
+Immutable = Allocator to use for memory that will become immutable after
+initialization. Immutable data may be shared across threads without
+interlocking, but must always be deallocated in the same thread it was
+allocated in.
+*/
+struct TypedAllocator(PrimaryAllocator, Policies...)
+{
+    import std.typecons : Tuple;
+    import std.meta : Arguments;
+    import std.algorithm.sorting : isSorted;
+
+    static assert(isSorted([Stride2!Policies]));
+
+    PrimaryAllocator primary;
+    template Stride2(T...)
+    {
+        static if (T.length >= 2)
+        {
+            alias Stride2 = Arguments!(T[0], Stride2!(T[2 .. $]));
+        }
+        else
+        {
+            alias Stride2 = Arguments!(T[0 .. $]);
+        }
+    }
+    Tuple!(Stride2!(Policies[1 .. $])) extras;
+    pragma(msg, typeof(extras));
+
+    auto ref allocatorFor(uint flags)
+    {
+        foreach (choice; Stride2!Policies)
+        {
+
+        }
+        return primary;
+    }
+}
+
+unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.mallocator;
+    alias MyAllocator = TypedAllocator!(GCAllocator,
+        SizePolicy.fixedSize | SharingPolicy.threadLocal, Mallocator,
+        SizePolicy.fixedSize | SharingPolicy.threadLocal
+                | DepthPolicy.hasNoPointers,
+            GCAllocator,
+    );
+}
+
 /**
 Dynamically allocates (using $(D alloc)) and then creates in the memory
 allocated an object of type $(D T), using $(D args) (if any) for its

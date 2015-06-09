@@ -171,7 +171,7 @@ PACKAGE_std_experimental_logger = core filelogger \
 PACKAGE_std_experimental_allocator = \
   affix_allocator allocator_list bucketizer common fallback_allocator \
   free_list free_tree gc_allocator heap_block kernighan_ritchie mallocator \
-  mmap_allocator null_allocator porcelain quantizer region scoped_allocator \
+  mmap_allocator null_allocator package porcelain quantizer region scoped_allocator \
   segregator showcase stats_collector
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
