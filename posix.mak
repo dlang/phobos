@@ -94,7 +94,7 @@ endif
 # Set CFLAGS
 CFLAGS=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += $(MODEL_FLAG) -fPIC
+	CFLAGS += $(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
