@@ -6685,3 +6685,219 @@ public:
     auto value = cast(int)flags_A;
     assert(value == Enum.A);
 }
+
+// ReplaceType
+/**
+Replaces all occurrences of `From` into `To`, in one or more types `T`. For
+example, $(D ReplaceType!(int, uint, Tuple!(int, float)[string])) yields
+$(D Tuple!(uint, float)[string]). The types in which replacement is performed
+may be arbitrarily complex, including qualifiers, built-in type constructors
+(pointers, arrays, associative arrays, functions, and delegates), and template
+instantiations; replacement proceeds transitively through the type definition.
+However, member types in `struct`s or `class`es are not replaced because there
+are no ways to express the types resulting after replacement.
+
+This is an advanced type manipulation necessary e.g. for replacing the
+placeholder type `This` in $(XREF variant, Algebraic).
+
+Returns: `ReplaceType` aliases itself to the type(s) that result after
+replacement.
+*/
+template ReplaceType(From, To, T...)
+{
+    static if (T.length == 1)
+    {
+        static if (is(T[0] == From)) alias ReplaceType = To;
+        else static if (is(T[0] == const(U), U))
+            alias ReplaceType = const(ReplaceType!(From, To, U));
+        else static if (is(T[0] == immutable(U), U))
+            alias ReplaceType = immutable(ReplaceType!(From, To, U));
+        else static if (is(T[0] == shared(U), U))
+            alias ReplaceType = shared(ReplaceType!(From, To, U));
+        else static if (is(T[0] == U*, U))
+        {
+            static if (is(U == function) || is(U == delegate))
+            {
+                mixin("alias ReplaceType = "
+                    ~replaceTypeInFunctionType!(From, To, T[0])~";");
+            }
+            else
+            {
+                alias ReplaceType = ReplaceType!(From, To, U)*;
+            }
+        }
+        else static if (is(T[0] == delegate))
+        {
+            mixin("alias ReplaceType = "
+                ~replaceTypeInFunctionType!(From, To, T[0])~";");
+        }
+        else static if (is(T[0] == function))
+        {
+            static assert(0, "Function types not supported,"
+                " use a function pointer type instead of "~T[0].stringof);
+        }
+        else static if (is(T[0] == U[], U))
+            alias ReplaceType = ReplaceType!(From, To, U)[];
+        else static if (is(T[0] == U[n], U, size_t n))
+            alias ReplaceType = ReplaceType!(From, To, U)[n];
+        else static if (is(T[0] == U[V], U, V))
+            alias ReplaceType =
+                ReplaceType!(From, To, U)[ReplaceType!(From, To, V)];
+        else static if (is(T[0] : U!V, alias U, V...))
+            alias ReplaceType = U!(ReplaceType!(From, To, V));
+        else alias ReplaceType = T[0];
+    }
+    else static if (T.length > 1)
+    {
+        alias ReplaceType = TypeTuple!(ReplaceType!(From, To, T[0]),
+            ReplaceType!(From, To, T[1 .. $]));
+    }
+    else
+    {
+        alias ReplaceType = TypeTuple!();
+    }
+}
+
+///
+unittest
+{
+    static assert(
+        is(ReplaceType!(int, string, int[]) == string[]) &&
+        is(ReplaceType!(int, string, int[int]) == string[string]) &&
+        is(ReplaceType!(int, string, const(int)[]) == const(string)[]) &&
+        is(ReplaceType!(int, string, Tuple!(int[], float))
+            == Tuple!(string[], float))
+    );
+}
+
+private string replaceTypeInFunctionType(X, Y, fun)()
+{
+    alias storageClasses = ParameterStorageClassTuple!fun;
+    string result;
+    result ~= "extern(" ~ functionLinkage!fun ~ ") ";
+    static if (functionAttributes!fun & FunctionAttribute.ref_)
+    {
+        result ~= "ref ";
+    }
+    result ~= (ReplaceType!(X, Y, ReturnType!fun)).stringof;
+    static if (is(fun == delegate))
+        result ~= " delegate";
+    else
+        result ~= " function";
+    result ~= "(";
+    foreach (i, T; Parameters!fun)
+    {
+        if (i) result ~= ", ";
+        if (storageClasses[i] & ParameterStorageClass.scope_)
+            result ~= "scope ";
+        if (storageClasses[i] & ParameterStorageClass.out_)
+            result ~= "out ";
+        if (storageClasses[i] & ParameterStorageClass.ref_)
+            result ~= "ref ";
+        if (storageClasses[i] & ParameterStorageClass.lazy_)
+            result ~= "lazy ";
+        if (storageClasses[i] & ParameterStorageClass.return_)
+            result ~= "return ";
+        result ~= ReplaceType!(X, Y, T).stringof;
+    }
+    static if (variadicFunctionStyle!fun != Variadic.no)
+    {
+        result ~= ", ...";
+    }
+    result ~= ")";
+    alias attributes = functionAttributes!fun;
+    static if (attributes & FunctionAttribute.pure_)
+        result ~= " pure";
+    static if (attributes & FunctionAttribute.nothrow_)
+        result ~= " nothrow";
+    static if (attributes & FunctionAttribute.property)
+        result ~= " @property";
+    static if (attributes & FunctionAttribute.trusted)
+        result ~= " @trusted";
+    static if (attributes & FunctionAttribute.safe)
+        result ~= " @safe";
+    static if (attributes & FunctionAttribute.nogc)
+        result ~= " @nogc";
+    static if (attributes & FunctionAttribute.system)
+        result ~= " @system";
+    static if (attributes & FunctionAttribute.const_)
+        result ~= " @const";
+    static if (attributes & FunctionAttribute.immutable_)
+        result ~= " immutable";
+    static if (attributes & FunctionAttribute.inout_)
+        result ~= " inout";
+    static if (attributes & FunctionAttribute.shared_)
+        result ~= " shared";
+    static if (attributes & FunctionAttribute.return_)
+        result ~= " return";
+    return result;
+}
+
+unittest
+{
+    template Test(Ts...)
+    {
+        static if (Ts.length)
+        {
+            //pragma(msg, "Testing: ReplaceType!("~Ts[0].stringof~", "
+            //    ~Ts[1].stringof~", "~Ts[2].stringof~")");
+            static assert(is(ReplaceType!(Ts[0], Ts[1], Ts[2]) == Ts[3]),
+                "ReplaceType!("~Ts[0].stringof~", "~Ts[1].stringof~", "
+                    ~Ts[2].stringof~") == "
+                    ~ReplaceType!(Ts[0], Ts[1], Ts[2]).stringof);
+            alias Test = Test!(Ts[4 .. $]);
+        }
+        else alias Test = void;
+    }
+
+    //import core.stdc.stdio;
+    alias RefFun1 = ref int function(float, long);
+    alias RefFun2 = ref float function(float, long);
+    extern(C) int printf(const char*, ...) nothrow @nogc @system;
+    extern(C) float floatPrintf(const char*, ...) nothrow @nogc @system;
+    int func(float);
+
+    alias Pass = Test!(
+        int, float, typeof(&func), float delegate(float),
+        int, float, typeof(&printf), typeof(&floatPrintf),
+        int, float, int function(out long, ...),
+            float function(out long, ...),
+        int, float, int function(ref float, long),
+            float function(ref float, long),
+        int, float, int function(ref int, long),
+            float function(ref float, long),
+        int, float, int function(out int, long),
+            float function(out float, long),
+        int, float, int function(lazy int, long),
+            float function(lazy float, long),
+        int, float, int function(out long, ref const int),
+            float function(out long, ref const float),
+        int, int, int, int,
+        int, float, int, float,
+        int, float, const int, const float,
+        int, float, immutable int, immutable float,
+        int, float, shared int, shared float,
+        int, float, int*, float*,
+        int, float, const(int)*, const(float)*,
+        int, float, const(int*), const(float*),
+        const(int)*, float, const(int*), const(float),
+        int*, float, const(int)*, const(int)*,
+        int, float, int[], float[],
+        int, float, int[42], float[42],
+        int, float, const(int)[42], const(float)[42],
+        int, float, const(int[42]), const(float[42]),
+        int, float, int[int], float[float],
+        int, float, int[double], float[double],
+        int, float, double[int], double[float],
+        int, float, int function(float, long), float function(float, long),
+        int, float, int function(float), float function(float),
+        int, float, int function(float, int), float function(float, float),
+        int, float, int delegate(float, long), float delegate(float, long),
+        int, float, int delegate(float), float delegate(float),
+        int, float, int delegate(float, int), float delegate(float, float),
+        int, float, Unique!int, Unique!float,
+        int, float, Tuple!(float, int), Tuple!(float, float),
+        int, float, RefFun1, RefFun2,
+    );
+}
+
