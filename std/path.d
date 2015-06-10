@@ -1484,6 +1484,7 @@ unittest
     Note that this function does not resolve symbolic links.
 
     This function always allocates memory to hold the resulting path.
+    Use $(LREF toNormalizedPath) to not allocate memory.
 
     Examples:
     ---
@@ -1513,225 +1514,22 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
     if (isSomeChar!C)
 {
-    import core.stdc.stdlib;
+    import std.array;
 
-    //Remove empty fields
-    bool allEmpty = true;
-    foreach (ref const(C[]) path ; paths)
+    const(C)[] result;
+    foreach (path; paths)
     {
-        if (path !is null)
-        {
-            allEmpty = false;
-            break;
-        }
-    }
-    if (allEmpty) return null;
-
-    auto paths2 = new const(C)[][](paths.length);
-        //(cast(const(C)[]*)alloca((const(C)[]).sizeof * paths.length))[0 .. paths.length];
-
-    // Check whether the resulting path will be absolute or rooted,
-    // calculate its maximum length, and discard segments we won't use.
-    typeof(paths[0][0])[] rootElement;
-    int numPaths = 0;
-    bool seenAbsolute;
-    size_t segmentLengthSum = 0;
-    foreach (i; 0 .. paths.length)
-    {
-        auto p = paths[i];
-        if (p.empty) continue;
-        else if (isRooted(p))
-        {
-            immutable thisIsAbsolute = isAbsolute(p);
-            if (thisIsAbsolute || !seenAbsolute)
-            {
-                if (thisIsAbsolute) seenAbsolute = true;
-                rootElement = rootName(p);
-                paths2[0] = p[rootElement.length .. $];
-                numPaths = 1;
-                segmentLengthSum = paths2[0].length;
-            }
-            else
-            {
-                paths2[0] = p;
-                numPaths = 1;
-                segmentLengthSum = p.length;
-            }
-        }
+        if (result)
+            result = chainPath(result, path).array;
         else
-        {
-            paths2[numPaths++] = p;
-            segmentLengthSum += p.length;
-        }
+            result = path;
     }
-    if (rootElement.length + segmentLengthSum == 0) return null;
-    paths2 = paths2[0 .. numPaths];
-    immutable rooted = !rootElement.empty;
-    assert (rooted || !seenAbsolute); // absolute => rooted
-
-    // Allocate memory for the resulting path, including room for
-    // extra dir separators
-    auto fullPath = new C[rootElement.length + segmentLengthSum + paths2.length];
-
-    // Copy the root element into fullPath, and let relPart be
-    // the remaining slice.
-    typeof(fullPath) relPart;
-    if (rooted)
-    {
-        // For Windows, we also need to perform normalization on
-        // the root element.
-        version (Posix)
-        {
-            fullPath[0 .. rootElement.length] = rootElement[];
-        }
-        else version (Windows)
-        {
-            foreach (i, c; rootElement)
-            {
-                if (isDirSeparator(c))
-                {
-                    static assert (dirSeparator.length == 1);
-                    fullPath[i] = dirSeparator[0];
-                }
-                else fullPath[i] = c;
-            }
-        }
-        else static assert (0);
-
-        // If the root element doesn't end with a dir separator,
-        // we add one.
-        if (!isDirSeparator(rootElement[$-1]))
-        {
-            static assert (dirSeparator.length == 1);
-            fullPath[rootElement.length] = dirSeparator[0];
-            relPart = fullPath[rootElement.length + 1 .. $];
-        }
-        else
-        {
-            relPart = fullPath[rootElement.length .. $];
-        }
-    }
-    else relPart = fullPath;
-
-    // Now, we have ensured that all segments in path are relative to the
-    // root we found earlier.
-    bool hasParents = rooted;
-    ptrdiff_t i;
-    foreach (path; paths2)
-    {
-        path = trimDirSeparators(path);
-
-        enum Prev { nonSpecial, dirSep, dot, doubleDot }
-        Prev prev = Prev.dirSep;
-        foreach (j; 0 .. path.length+1)
-        {
-            // Fake a dir separator between path segments
-            immutable c = (j == path.length ? dirSeparator[0] : path[j]);
-
-            if (isDirSeparator(c))
-            {
-                final switch (prev)
-                {
-                    case Prev.doubleDot:
-                        if (hasParents)
-                        {
-                            while (i > 0 && !isDirSeparator(relPart[i-1])) --i;
-                            if (i > 0) --i; // skip the dir separator
-                            while (i > 0 && !isDirSeparator(relPart[i-1])) --i;
-                            if (i == 0) hasParents = rooted;
-                        }
-                        else
-                        {
-                            relPart[i++] = '.';
-                            relPart[i++] = '.';
-                            static assert (dirSeparator.length == 1);
-                            relPart[i++] = dirSeparator[0];
-                        }
-                        break;
-                    case Prev.dot:
-                        while (i > 0 && !isDirSeparator(relPart[i-1])) --i;
-                        break;
-                    case Prev.nonSpecial:
-                        static assert (dirSeparator.length == 1);
-                        relPart[i++] = dirSeparator[0];
-                        hasParents = true;
-                        break;
-                    case Prev.dirSep:
-                        break;
-                }
-                prev = Prev.dirSep;
-            }
-            else if (c == '.')
-            {
-                final switch (prev)
-                {
-                    case Prev.dirSep:
-                        prev = Prev.dot;
-                        break;
-                    case Prev.dot:
-                        prev = Prev.doubleDot;
-                        break;
-                    case Prev.doubleDot:
-                        prev = Prev.nonSpecial;
-                        relPart[i .. i+3] = "...";
-                        i += 3;
-                        break;
-                    case Prev.nonSpecial:
-                        relPart[i] = '.';
-                        ++i;
-                        break;
-                }
-            }
-            else
-            {
-                final switch (prev)
-                {
-                    case Prev.doubleDot:
-                        relPart[i] = '.';
-                        ++i;
-                        goto case;
-                    case Prev.dot:
-                        relPart[i] = '.';
-                        ++i;
-                        break;
-                    case Prev.dirSep:       break;
-                    case Prev.nonSpecial:   break;
-                }
-                relPart[i] = c;
-                ++i;
-                prev = Prev.nonSpecial;
-            }
-        }
-    }
-
-    // Return path, including root element and excluding the
-    // final dir separator.
-    immutable len = (relPart.ptr - fullPath.ptr) + (i > 0 ? i - 1 : 0);
-    if (len == 0)
-    {
-        fullPath.length = 1;
-        fullPath[0] = '.';
-    }
-    else
-        fullPath = fullPath[0 .. len];
-
-    version (Windows)
-    {
-        // On Windows, if the path is on the form `\\server\share`,
-        // with no further segments, normalization will have turned it
-        // into `\\server\share\`.  If so, we need to remove the final
-        // backslash.
-        if (isUNC(fullPath) && uncRootLength(fullPath) == fullPath.length - 1)
-            fullPath = fullPath[0 .. $-1];
-    }
-    return cast(typeof(return)) fullPath;
+    result = toNormalizedPath(result).array;
+    return cast(typeof(return)) result;
 }
 
 unittest
 {
-    assert (buildNormalizedPath("") is null);
-    assert (buildNormalizedPath("foo") == "foo");
-    assert (buildNormalizedPath(".") == ".");
     assert (buildNormalizedPath(".", ".") == ".");
     assert (buildNormalizedPath("foo", "..") == ".");
     assert (buildNormalizedPath("", "") is null);
@@ -1768,12 +1566,6 @@ unittest
 
         assert (buildNormalizedPath("foo", "", "bar") == "foo/bar");
         assert (buildNormalizedPath("foo", null, "bar") == "foo/bar");
-
-        //Curent dir path
-        assert (buildNormalizedPath("./") == ".");
-        assert (buildNormalizedPath("././") == ".");
-        assert (buildNormalizedPath("./foo/..") == ".");
-        assert (buildNormalizedPath("foo/..") == ".");
     }
     else version (Windows)
     {
@@ -1823,119 +1615,8 @@ unittest
 
         assert (buildNormalizedPath("foo", "", "bar") == `foo\bar`);
         assert (buildNormalizedPath("foo", null, "bar") == `foo\bar`);
-
-        //Curent dir path
-        assert (buildNormalizedPath(`.\`) == ".");
-        assert (buildNormalizedPath(`.\.\`) == ".");
-        assert (buildNormalizedPath(`.\foo\..`) == ".");
-        assert (buildNormalizedPath(`foo\..`) == ".");
     }
     else static assert (0);
-}
-
-unittest
-{
-    version (Posix)
-    {
-        // Trivial
-        assert (buildNormalizedPath("").empty);
-        assert (buildNormalizedPath("foo/bar") == "foo/bar");
-
-        // Correct handling of leading slashes
-        assert (buildNormalizedPath("/") == "/");
-        assert (buildNormalizedPath("///") == "/");
-        assert (buildNormalizedPath("////") == "/");
-        assert (buildNormalizedPath("/foo/bar") == "/foo/bar");
-        assert (buildNormalizedPath("//foo/bar") == "/foo/bar");
-        assert (buildNormalizedPath("///foo/bar") == "/foo/bar");
-        assert (buildNormalizedPath("////foo/bar") == "/foo/bar");
-
-        // Correct handling of single-dot symbol (current directory)
-        assert (buildNormalizedPath("/./foo") == "/foo");
-        assert (buildNormalizedPath("/foo/./bar") == "/foo/bar");
-
-        assert (buildNormalizedPath("./foo") == "foo");
-        assert (buildNormalizedPath("././foo") == "foo");
-        assert (buildNormalizedPath("foo/././bar") == "foo/bar");
-
-        // Correct handling of double-dot symbol (previous directory)
-        assert (buildNormalizedPath("/foo/../bar") == "/bar");
-        assert (buildNormalizedPath("/foo/../../bar") == "/bar");
-        assert (buildNormalizedPath("/../foo") == "/foo");
-        assert (buildNormalizedPath("/../../foo") == "/foo");
-        assert (buildNormalizedPath("/foo/..") == "/");
-        assert (buildNormalizedPath("/foo/../..") == "/");
-
-        assert (buildNormalizedPath("foo/../bar") == "bar");
-        assert (buildNormalizedPath("foo/../../bar") == "../bar");
-        assert (buildNormalizedPath("../foo") == "../foo");
-        assert (buildNormalizedPath("../../foo") == "../../foo");
-        assert (buildNormalizedPath("../foo/../bar") == "../bar");
-        assert (buildNormalizedPath(".././../foo") == "../../foo");
-        assert (buildNormalizedPath("foo/bar/..") == "foo");
-        assert (buildNormalizedPath("/foo/../..") == "/");
-
-        // The ultimate path
-        assert (buildNormalizedPath("/foo/../bar//./../...///baz//") == "/.../baz");
-        static assert (buildNormalizedPath("/foo/../bar//./../...///baz//") == "/.../baz");
-    }
-    else version (Windows)
-    {
-        // Trivial
-        assert (buildNormalizedPath("").empty);
-        assert (buildNormalizedPath(`foo\bar`) == `foo\bar`);
-        assert (buildNormalizedPath("foo/bar") == `foo\bar`);
-
-        // Correct handling of absolute paths
-        assert (buildNormalizedPath("/") == `\`);
-        assert (buildNormalizedPath(`\`) == `\`);
-        assert (buildNormalizedPath(`\\\`) == `\`);
-        assert (buildNormalizedPath(`\\\\`) == `\`);
-        assert (buildNormalizedPath(`\foo\bar`) == `\foo\bar`);
-        assert (buildNormalizedPath(`\\foo`) == `\\foo`);
-        assert (buildNormalizedPath(`\\foo\\`) == `\\foo`);
-        assert (buildNormalizedPath(`\\foo/bar`) == `\\foo\bar`);
-        assert (buildNormalizedPath(`\\\foo\bar`) == `\foo\bar`);
-        assert (buildNormalizedPath(`\\\\foo\bar`) == `\foo\bar`);
-        assert (buildNormalizedPath(`c:\`) == `c:\`);
-        assert (buildNormalizedPath(`c:\foo\bar`) == `c:\foo\bar`);
-        assert (buildNormalizedPath(`c:\\foo\bar`) == `c:\foo\bar`);
-
-        // Correct handling of single-dot symbol (current directory)
-        assert (buildNormalizedPath(`\./foo`) == `\foo`);
-        assert (buildNormalizedPath(`\foo/.\bar`) == `\foo\bar`);
-
-        assert (buildNormalizedPath(`.\foo`) == `foo`);
-        assert (buildNormalizedPath(`./.\foo`) == `foo`);
-        assert (buildNormalizedPath(`foo\.\./bar`) == `foo\bar`);
-
-        // Correct handling of double-dot symbol (previous directory)
-        assert (buildNormalizedPath(`\foo\..\bar`) == `\bar`);
-        assert (buildNormalizedPath(`\foo\../..\bar`) == `\bar`);
-        assert (buildNormalizedPath(`\..\foo`) == `\foo`);
-        assert (buildNormalizedPath(`\..\..\foo`) == `\foo`);
-        assert (buildNormalizedPath(`\foo\..`) == `\`);
-        assert (buildNormalizedPath(`\foo\../..`) == `\`);
-
-        assert (buildNormalizedPath(`foo\..\bar`) == `bar`);
-        assert (buildNormalizedPath(`foo\..\../bar`) == `..\bar`);
-        assert (buildNormalizedPath(`..\foo`) == `..\foo`);
-        assert (buildNormalizedPath(`..\..\foo`) == `..\..\foo`);
-        assert (buildNormalizedPath(`..\foo\..\bar`) == `..\bar`);
-        assert (buildNormalizedPath(`..\.\..\foo`) == `..\..\foo`);
-        assert (buildNormalizedPath(`foo\bar\..`) == `foo`);
-        assert (buildNormalizedPath(`\foo\..\..`) == `\`);
-        assert (buildNormalizedPath(`c:\foo\..\..`) == `c:\`);
-
-        // Correct handling of non-root path with drive specifier
-        assert (buildNormalizedPath(`c:foo`) == `c:foo`);
-        assert (buildNormalizedPath(`c:..\foo\.\..\bar`) == `c:..\bar`);
-
-        // The ultimate path
-        assert (buildNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
-        static assert (buildNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`) == `c:\...\baz`);
-    }
-    else static assert (false);
 }
 
 unittest
@@ -1953,7 +1634,395 @@ unittest
 }
 
 
+/** Normalize a path by resolving current/parent directory
+    symbols ($(D ".") and $(D "..")) and removing superfluous
+    directory separators.
+    It will return "." if the path leads to the starting directory.
+    On Windows, slashes are replaced with backslashes.
 
+    Using toNormalizedPath on empty paths will always return an empty path.
+
+    Does not resolve symbolic links.
+
+    This function always allocates memory to hold the resulting path.
+    Use $(LREF buildNormalizedPath) to allocate memory and return a string.
+
+    Params:
+        path = string or random access range representing the _path to normalize
+
+    Returns:
+        normalized path as a forward range
+
+    Examples:
+    ---
+    import std.array;
+    assert (toNormalizedPath("foo/..").array == ".");
+
+    version (Posix)
+    {
+        assert (toNormalizedPath("/foo/./bar/..//baz/").array == "/foo/baz");
+        assert (toNormalizedPath("../foo/.").array == "../foo");
+        assert (toNormalizedPath("/foo/bar/baz/").array == "/foo/bar/baz");
+        assert (toNormalizedPath("foo/./bar/../../", "../baz").array == "../baz");
+        assert (toNormalizedPath("/foo/./bar/../../baz").array == "/baz");
+    }
+
+    version (Windows)
+    {
+        assert (toNormalizedPath(`c:\foo\.\bar/..\\baz\`).array == `c:\foo\baz`);
+        assert (toNormalizedPath(`..\foo\.`).array == `..\foo`);
+        assert (toNormalizedPath(`c:\foo\bar\baz\`).array == `c:\foo\bar\baz`);
+        assert (toNormalizedPath(`c:\foo\bar/..`).array == `c:\foo`);
+        assert (toNormalizedPath(`\\server\share\foo\..\bar`).array == `\\server\share\bar`);
+    }
+    ---
+*/
+
+auto toNormalizedPath(R)(R path)
+        if (isSomeChar!(ElementEncodingType!R) &&
+            (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R))
+{
+    alias C = Unqual!(ElementEncodingType!R);
+    alias S = typeof(path[0..0]);
+
+    static struct Result
+    {
+        @property bool empty()
+        {
+            return c == c.init;
+        }
+
+        @property C front()
+        {
+            return c;
+        }
+
+        void popFront()
+        {
+            C lastc = c;
+            c = c.init;
+            if (!element.empty)
+            {
+                c = getElement0();
+                return;
+            }
+          L1:
+            while (1)
+            {
+                if (elements.empty)
+                {
+                    element = element[0..0];
+                    return;
+                }
+                element = elements.front;
+                elements.popFront();
+                if (isDot(element) || (rooted && isDotDot(element)))
+                    continue;
+
+                if (rooted || !isDotDot(element))
+                {
+                    int n = 1;
+                    auto elements2 = elements.save;
+                    while (!elements2.empty)
+                    {
+                        auto e = elements2.front;
+                        elements2.popFront();
+                        if (isDot(e))
+                            continue;
+                        if (isDotDot(e))
+                        {
+                            --n;
+                            if (n == 0)
+                            {
+                                elements = elements2;
+                                element = element[0..0];
+                                continue L1;
+                            }
+                        }
+                        else
+                            ++n;
+                    }
+                }
+                break;
+            }
+
+            static assert(dirSeparator.length == 1);
+            if (lastc == dirSeparator[0] || lastc == lastc.init)
+                c = getElement0();
+            else
+                c = dirSeparator[0];
+        }
+
+        static if (isForwardRange!R)
+        {
+            @property auto save()
+            {
+                auto result = this;
+                result.element = element.save;
+                result.elements = elements.save;
+                return result;
+            }
+        }
+
+      private:
+        this(R path)
+        {
+            element = rootName(path);
+            auto i = element.length;
+            while (i < path.length && isDirSeparator(path[i]))
+                ++i;
+            rooted = i > 0;
+            elements = pathSplitter(path[i .. $]);
+            popFront();
+            if (c == c.init && path.length)
+                c = C('.');
+        }
+
+        C getElement0()
+        {
+            static if (isNarrowString!S)  // avoid autodecode
+            {
+                C c = element[0];
+                element = element[1 .. $];
+            }
+            else
+            {
+                C = element.front;
+                element.popFront();
+            }
+            version (Windows)
+            {
+                if (c == '/')   // can appear in root element
+                    c = '\\';   // use native Windows directory separator
+            }
+            return c;
+        }
+
+        // See if elem is "."
+        static bool isDot(S elem)
+        {
+            return elem.length == 1 && elem[0] == '.';
+        }
+
+        // See if elem is ".."
+        static bool isDotDot(S elem)
+        {
+            return elem.length == 2 && elem[0] == '.' && elem[1] == '.';
+        }
+
+        bool rooted;    // the path starts with a root directory
+        C c;
+        S element;
+        typeof(pathSplitter(path[0..0])) elements;
+    }
+
+    return Result(path);
+}
+
+unittest
+{
+    import std.array;
+    import std.utf : byChar;
+
+    assert (toNormalizedPath("").array is null);
+    assert (toNormalizedPath("foo").array == "foo");
+    assert (toNormalizedPath(".").array == ".");
+    assert (toNormalizedPath("./.").array == ".");
+    assert (toNormalizedPath("foo/..").array == ".");
+
+    auto save = toNormalizedPath("fob").save;
+    save.popFront();
+    assert(save.front == 'o');
+
+    version (Posix)
+    {
+        assert (toNormalizedPath("/foo/bar").array == "/foo/bar");
+        assert (toNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
+        assert (toNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
+        assert (toNormalizedPath("foo/bar//baz///").array == "foo/bar/baz");
+        assert (toNormalizedPath("/foo/bar/baz").array == "/foo/bar/baz");
+        assert (toNormalizedPath("/foo/../bar/baz").array == "/bar/baz");
+        assert (toNormalizedPath("/foo/../..//bar/baz").array == "/bar/baz");
+        assert (toNormalizedPath("/foo/bar/../baz").array == "/foo/baz");
+        assert (toNormalizedPath("/foo/bar/../../baz").array == "/baz");
+        assert (toNormalizedPath("/foo/bar/.././/baz/../wee/").array == "/foo/wee");
+        assert (toNormalizedPath("//foo/bar/baz///wee").array == "/foo/bar/baz/wee");
+        // Examples in docs:
+        assert (toNormalizedPath("/foo/bar/baz/").array == "/foo/bar/baz");
+        assert (toNormalizedPath("foo/./bar/../..//../baz").array == "../baz");
+        assert (toNormalizedPath("/foo/./bar/../../baz").array == "/baz");
+
+        assert (toNormalizedPath("foo//bar").array == "foo/bar");
+        assert (toNormalizedPath("foo/bar").array == "foo/bar");
+
+        //Curent dir path
+        assert (toNormalizedPath("./").array == ".");
+        assert (toNormalizedPath("././").array == ".");
+        assert (toNormalizedPath("./foo/..").array == ".");
+        assert (toNormalizedPath("foo/..").array == ".");
+    }
+    else version (Windows)
+    {
+        assert (toNormalizedPath(`\foo\bar`).array == `\foo\bar`);
+        assert (toNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
+        assert (toNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
+        assert (toNormalizedPath(`foo\bar\\baz\\\`).array == `foo\bar\baz`);
+        assert (toNormalizedPath(`\foo\bar\baz`).array == `\foo\bar\baz`);
+        assert (toNormalizedPath(`\foo\..\\bar\.\baz`).array == `\bar\baz`);
+        assert (toNormalizedPath(`\foo\..\bar\baz`).array == `\bar\baz`);
+        assert (toNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
+
+        assert (toNormalizedPath(`\foo\bar\..\baz`).array == `\foo\baz`);
+        assert (toNormalizedPath(`\foo\bar\../../baz`).array == `\baz`);
+        assert (toNormalizedPath(`\foo\bar\..\.\/baz\..\wee\`).array == `\foo\wee`);
+
+        assert (toNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
+        assert (toNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
+        assert (toNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
+        assert (toNormalizedPath(`c:foo\bar\\baz\\\`).array == `c:foo\bar\baz`);
+        assert (toNormalizedPath(`c:\foo\bar\baz`).array == `c:\foo\bar\baz`);
+
+        assert (toNormalizedPath(`c:\foo\..\\bar\.\baz`).array == `c:\bar\baz`);
+        assert (toNormalizedPath(`c:\foo\..\bar\baz`).array == `c:\bar\baz`);
+        assert (toNormalizedPath(`c:\foo\..\..\\bar\baz`).array == `c:\bar\baz`);
+        assert (toNormalizedPath(`c:\foo\bar\..\baz`).array == `c:\foo\baz`);
+        assert (toNormalizedPath(`c:\foo\bar\..\..\baz`).array == `c:\baz`);
+        assert (toNormalizedPath(`c:\foo\bar\..\.\\baz\..\wee\`).array == `c:\foo\wee`);
+        assert (toNormalizedPath(`\\server\share\foo\bar`).array == `\\server\share\foo\bar`);
+        assert (toNormalizedPath(`\\server\share\\foo\bar`).array == `\\server\share\foo\bar`);
+        assert (toNormalizedPath(`\\server\share\foo\bar\baz`).array == `\\server\share\foo\bar\baz`);
+        assert (toNormalizedPath(`\\server\share\foo\..\\bar\.\baz`).array == `\\server\share\bar\baz`);
+        assert (toNormalizedPath(`\\server\share\foo\..\bar\baz`).array == `\\server\share\bar\baz`);
+        assert (toNormalizedPath(`\\server\share\foo\..\..\\bar\baz`).array == `\\server\share\bar\baz`);
+        assert (toNormalizedPath(`\\server\share\foo\bar\..\baz`).array == `\\server\share\foo\baz`);
+        assert (toNormalizedPath(`\\server\share\foo\bar\..\..\baz`).array == `\\server\share\baz`);
+        assert (toNormalizedPath(`\\server\share\foo\bar\..\.\\baz\..\wee\`).array == `\\server\share\foo\wee`);
+
+        static assert (toNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
+
+        // Examples in docs:
+        assert (toNormalizedPath(`c:\foo\bar\baz\`).array == `c:\foo\bar\baz`);
+        assert (toNormalizedPath(`c:\foo\bar/..`).array == `c:\foo`);
+        assert (toNormalizedPath(`\\server\share\foo\..\bar`).array == `\\server\share\bar`);
+
+        assert (toNormalizedPath("foo//bar").array == `foo\bar`);
+
+        //Curent dir path
+        assert (toNormalizedPath(`.\`).array == ".");
+        assert (toNormalizedPath(`.\.\`).array == ".");
+        assert (toNormalizedPath(`.\foo\..`).array == ".");
+        assert (toNormalizedPath(`foo\..`).array == ".");
+    }
+    else static assert (0);
+}
+
+unittest
+{
+    import std.array;
+
+    version (Posix)
+    {
+        // Trivial
+        assert (toNormalizedPath("").empty);
+        assert (toNormalizedPath("foo/bar").array == "foo/bar");
+
+        // Correct handling of leading slashes
+        assert (toNormalizedPath("/").array == "/");
+        assert (toNormalizedPath("///").array == "/");
+        assert (toNormalizedPath("////").array == "/");
+        assert (toNormalizedPath("/foo/bar").array == "/foo/bar");
+        assert (toNormalizedPath("//foo/bar").array == "/foo/bar");
+        assert (toNormalizedPath("///foo/bar").array == "/foo/bar");
+        assert (toNormalizedPath("////foo/bar").array == "/foo/bar");
+
+        // Correct handling of single-dot symbol (current directory)
+        assert (toNormalizedPath("/./foo").array == "/foo");
+        assert (toNormalizedPath("/foo/./bar").array == "/foo/bar");
+
+        assert (toNormalizedPath("./foo").array == "foo");
+        assert (toNormalizedPath("././foo").array == "foo");
+        assert (toNormalizedPath("foo/././bar").array == "foo/bar");
+
+        // Correct handling of double-dot symbol (previous directory)
+        assert (toNormalizedPath("/foo/../bar").array == "/bar");
+        assert (toNormalizedPath("/foo/../../bar").array == "/bar");
+        assert (toNormalizedPath("/../foo").array == "/foo");
+        assert (toNormalizedPath("/../../foo").array == "/foo");
+        assert (toNormalizedPath("/foo/..").array == "/");
+        assert (toNormalizedPath("/foo/../..").array == "/");
+
+        assert (toNormalizedPath("foo/../bar").array == "bar");
+        assert (toNormalizedPath("foo/../../bar").array == "../bar");
+        assert (toNormalizedPath("../foo").array == "../foo");
+        assert (toNormalizedPath("../../foo").array == "../../foo");
+        assert (toNormalizedPath("../foo/../bar").array == "../bar");
+        assert (toNormalizedPath(".././../foo").array == "../../foo");
+        assert (toNormalizedPath("foo/bar/..").array == "foo");
+        assert (toNormalizedPath("/foo/../..").array == "/");
+
+        // The ultimate path
+        assert (toNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
+        static assert (toNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
+    }
+    else version (Windows)
+    {
+        // Trivial
+        assert (toNormalizedPath("").empty);
+        assert (toNormalizedPath(`foo\bar`).array == `foo\bar`);
+        assert (toNormalizedPath("foo/bar").array == `foo\bar`);
+
+        // Correct handling of absolute paths
+        assert (toNormalizedPath("/").array == `\`);
+        assert (toNormalizedPath(`\`).array == `\`);
+        assert (toNormalizedPath(`\\\`).array == `\`);
+        assert (toNormalizedPath(`\\\\`).array == `\`);
+        assert (toNormalizedPath(`\foo\bar`).array == `\foo\bar`);
+        assert (toNormalizedPath(`\\foo`).array == `\\foo`);
+        assert (toNormalizedPath(`\\foo\\`).array == `\\foo`);
+        assert (toNormalizedPath(`\\foo/bar`).array == `\\foo\bar`);
+        assert (toNormalizedPath(`\\\foo\bar`).array == `\foo\bar`);
+        assert (toNormalizedPath(`\\\\foo\bar`).array == `\foo\bar`);
+        assert (toNormalizedPath(`c:\`).array == `c:\`);
+        assert (toNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
+        assert (toNormalizedPath(`c:\\foo\bar`).array == `c:\foo\bar`);
+
+        // Correct handling of single-dot symbol (current directory)
+        assert (toNormalizedPath(`\./foo`).array == `\foo`);
+        assert (toNormalizedPath(`\foo/.\bar`).array == `\foo\bar`);
+
+        assert (toNormalizedPath(`.\foo`).array == `foo`);
+        assert (toNormalizedPath(`./.\foo`).array == `foo`);
+        assert (toNormalizedPath(`foo\.\./bar`).array == `foo\bar`);
+
+        // Correct handling of double-dot symbol (previous directory)
+        assert (toNormalizedPath(`\foo\..\bar`).array == `\bar`);
+        assert (toNormalizedPath(`\foo\../..\bar`).array == `\bar`);
+        assert (toNormalizedPath(`\..\foo`).array == `\foo`);
+        assert (toNormalizedPath(`\..\..\foo`).array == `\foo`);
+        assert (toNormalizedPath(`\foo\..`).array == `\`);
+        assert (toNormalizedPath(`\foo\../..`).array == `\`);
+
+        assert (toNormalizedPath(`foo\..\bar`).array == `bar`);
+        assert (toNormalizedPath(`foo\..\../bar`).array == `..\bar`);
+
+        assert (toNormalizedPath(`..\foo`).array == `..\foo`);
+        assert (toNormalizedPath(`..\..\foo`).array == `..\..\foo`);
+        assert (toNormalizedPath(`..\foo\..\bar`).array == `..\bar`);
+        assert (toNormalizedPath(`..\.\..\foo`).array == `..\..\foo`);
+        assert (toNormalizedPath(`foo\bar\..`).array == `foo`);
+        assert (toNormalizedPath(`\foo\..\..`).array == `\`);
+        assert (toNormalizedPath(`c:\foo\..\..`).array == `c:\`);
+
+        // Correct handling of non-root path with drive specifier
+        assert (toNormalizedPath(`c:foo`).array == `c:foo`);
+        assert (toNormalizedPath(`c:..\foo\.\..\bar`).array == `c:..\bar`);
+
+        // The ultimate path
+        assert (toNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
+        static assert (toNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
+    }
+    else static assert (false);
+}
 
 /** Slice up a path into its elements.
 
