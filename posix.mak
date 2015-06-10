@@ -196,9 +196,9 @@ else
 endif
 
 # Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl sqlite3 zlib) $(addprefix	\
-std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
-time wcharh)
+EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
+  odbc/sqltypes odbc/sqlucode sqlite3 zlib) $(addprefix std/c/,fenv locale \
+  math process stdarg stddef stdio stdlib string time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
