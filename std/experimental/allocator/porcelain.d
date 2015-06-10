@@ -148,13 +148,21 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     Tuple!(Stride2!(Policies[1 .. $])) extras;
     pragma(msg, typeof(extras));
 
-    auto ref allocatorFor(uint flags)
+    auto ref allocatorFor(uint flags)()
     {
-        foreach (choice; Stride2!Policies)
+        import std.algorithm.comparison : among;
+        static if (flags.among(Stride2!Policies))
         {
-
+            foreach (i, choice; Stride2!Policies)
+            {
+                static if (choice == flags) return extras[i];
+            }
+            assert(0);
         }
-        return primary;
+        else
+        {
+            return primary;
+        }
     }
 }
 
@@ -162,12 +170,20 @@ unittest
 {
     import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.mmap_allocator;
     alias MyAllocator = TypedAllocator!(GCAllocator,
         SizePolicy.fixedSize | SharingPolicy.threadLocal, Mallocator,
         SizePolicy.fixedSize | SharingPolicy.threadLocal
                 | DepthPolicy.hasNoPointers,
-            GCAllocator,
+            MmapAllocator,
     );
+    MyAllocator a;
+    static assert(is(typeof(a.allocatorFor!0()) == GCAllocator));
+    enum f1 = SizePolicy.fixedSize | SharingPolicy.threadLocal;
+    static assert(is(typeof(a.allocatorFor!f1()) == Mallocator));
+    enum f2 = SizePolicy.fixedSize | SharingPolicy.threadLocal
+                | DepthPolicy.hasNoPointers;
+    static assert(is(typeof(a.allocatorFor!f1()) == Mallocator));
 }
 
 /**
