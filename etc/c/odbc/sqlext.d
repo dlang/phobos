@@ -1555,70 +1555,63 @@ enum
     SQL_SETPOS_MAX_LOCK_VALUE = SQL_LOCK_UNLOCK
 }
 
-version(unittest)
+//************************
+/+ Macros for SQLSetPos. They're templates so they don't link in. +/
+//************************
+int SQL_POSITION_TO()
+(
+    SQLHSTMT hstmt,
+    ushort      irow
+)
 {
-    // no "macros" because they cause linking errors
+    return SQLSetPos( hstmt, irow, SQL_POSITION, SQL_LOCK_NO_CHANGE );
+};
+
+int SQL_LOCK_RECORD()
+(
+    SQLHSTMT hstmt,
+    ushort      irow,
+    bool     fLock
+)
+{
+    return SQLSetPos( hstmt, irow, SQL_POSITION, fLock );
 }
-else
+
+int SQL_REFRESH_RECORD()
+(
+    SQLHSTMT hstmt,
+    ushort      irow,
+    bool     fLock
+)
 {
-    //************************
-    /+ Macros for SQLSetPos +/
-    //************************
-    int SQL_POSITION_TO
-    (
-        SQLHSTMT hstmt,
-        ushort      irow
-    )
-    {
-        return SQLSetPos( hstmt, irow, SQL_POSITION, SQL_LOCK_NO_CHANGE );
-    };
+    return SQLSetPos( hstmt, irow, SQL_REFRESH, fLock );
+}
 
-    int SQL_LOCK_RECORD
-    (
-        SQLHSTMT hstmt,
-        ushort      irow,
-        bool     fLock
-    )
-    {
-        return SQLSetPos( hstmt, irow, SQL_POSITION, fLock );
-    }
+int SQL_UPDATE_RECORD()
+(
+    SQLHSTMT hstmt,
+    ushort      irow
+)
+{
+    return SQLSetPos( hstmt, irow, SQL_UPDATE, SQL_LOCK_NO_CHANGE );
+}
 
-    int SQL_REFRESH_RECORD
-    (
-        SQLHSTMT hstmt,
-        ushort      irow,
-        bool     fLock
-    )
-    {
-        return SQLSetPos( hstmt, irow, SQL_REFRESH, fLock );
-    }
+int SQL_DELETE_RECORD()
+(
+    SQLHSTMT hstmt,
+    ushort      irow
+)
+{
+    return SQLSetPos( hstmt, irow, SQL_DELETE, SQL_LOCK_NO_CHANGE );
+}
 
-    int SQL_UPDATE_RECORD
-    (
-        SQLHSTMT hstmt,
-        ushort      irow
-    )
-    {
-        return SQLSetPos( hstmt, irow, SQL_UPDATE, SQL_LOCK_NO_CHANGE );
-    }
-
-    int SQL_DELETE_RECORD
-    (
-        SQLHSTMT hstmt,
-        ushort      irow
-    )
-    {
-        return SQLSetPos( hstmt, irow, SQL_DELETE, SQL_LOCK_NO_CHANGE );
-    }
-
-    int SQL_ADD_RECORD
-    (
-        SQLHSTMT hstmt,
-        ushort      irow
-    )
-    {
-        return SQLSetPos( hstmt, irow, SQL_ADD,SQL_LOCK_NO_CHANGE );
-    }
+int SQL_ADD_RECORD()
+(
+    SQLHSTMT hstmt,
+    ushort      irow
+)
+{
+    return SQLSetPos( hstmt, irow, SQL_ADD,SQL_LOCK_NO_CHANGE );
 }
 
 // * Column types and scopes in SQLSpecialColumns. *
