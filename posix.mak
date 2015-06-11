@@ -170,7 +170,7 @@ PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
 PACKAGE_std_experimental_allocator = \
   affix_allocator allocator_list bucketizer building_blocks common \
-  fallback_allocator free_list free_tree gc_allocator heap_block \
+  fallback_allocator free_list free_tree gc_allocator bitmapped_block \
   kernighan_ritchie mallocator mmap_allocator null_allocator package quantizer \
   region scoped_allocator segregator showcase stats_collector typed
 PACKAGE_std_net = curl isemail

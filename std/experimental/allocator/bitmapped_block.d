@@ -1,21 +1,21 @@
-module std.experimental.allocator.heap_block;
+module std.experimental.allocator.bitmapped_block;
 
 import std.experimental.allocator.common;
 import std.experimental.allocator.null_allocator;
 
 /**
 
-$(D HeapBlock) implements a simple heap consisting of one contiguous area
+$(D BitmappedBlock) implements a simple heap consisting of one contiguous area
 of memory organized in blocks, each of size $(D theBlockSize). A block is a unit
 of allocation. A bitmap serves as bookkeeping data, more precisely one bit per
 block indicating whether that block is currently allocated or not.
 
 Passing $(D NullAllocator) as $(D ParentAllocator) (the default) means user code
 manages allocation of the memory block from the outside; in that case
-$(D HeapBlock) must be constructed with a $(D void[]) preallocated block and
+$(D BitmappedBlock) must be constructed with a $(D void[]) preallocated block and
 has no responsibility regarding the lifetime of its support underlying storage.
-If another allocator type is passed, $(D HeapBlock) defines a destructor that
-uses the parent allocator to release the memory block. That makes the combination of $(D AllocatorList), $(D HeapBlock), and a back-end allocator such as $(D MmapAllocator) a simple and scalable solution for memory allocation.
+If another allocator type is passed, $(D BitmappedBlock) defines a destructor that
+uses the parent allocator to release the memory block. That makes the combination of $(D AllocatorList), $(D BitmappedBlock), and a back-end allocator such as $(D MmapAllocator) a simple and scalable solution for memory allocation.
 
 There are advantages to storing bookkeeping data separated from the payload
 (as opposed to e.g. using $(D AffixAllocator) to store metadata together with
@@ -28,7 +28,7 @@ Allocation requests are handled on a first-fit basis. Although linear in
 complexity, allocation is in practice fast because of the compact bookkeeping
 representation, use of simple and fast bitwise routines, and caching of the
 first available block position. A known issue with this general approach is
-fragmentation, partially mitigated by coalescing. Since $(D HeapBlock) does
+fragmentation, partially mitigated by coalescing. Since $(D BitmappedBlock) does
 not need to maintain the allocated size, freeing memory implicitly coalesces
 free blocks together. Also, tuning $(D blockSize) has a considerable impact on
 both internal and external fragmentation.
@@ -36,12 +36,12 @@ both internal and external fragmentation.
 The size of each block can be selected either during compilation or at run
 time. Statically-known block sizes are frequent in practice and yield slightly
 better performance. To choose a block size statically, pass it as the $(D
-blockSize) parameter as in $(D HeapBlock!(Allocator, 4096)). To choose a block
-size parameter, use $(D HeapBlock!(Allocator, chooseAtRuntime)) and pass the
+blockSize) parameter as in $(D BitmappedBlock!(Allocator, 4096)). To choose a block
+size parameter, use $(D BitmappedBlock!(Allocator, chooseAtRuntime)) and pass the
 block size to the constructor.
 
 */
-struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
+struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     ParentAllocator = NullAllocator)
 {
     import std.typecons;
@@ -55,7 +55,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
         import std.algorithm : max;
         auto m = AlignedMallocator.it.alignedAllocate(1024 * 64,
             max(theAlignment, cast(uint) size_t.sizeof));
-        testAllocator!(() => HeapBlock(m));
+        testAllocator!(() => BitmappedBlock(m));
     }
     static assert(theBlockSize > 0 && theAlignment.isGoodStaticAlignment);
     static assert(theBlockSize == chooseAtRuntime
@@ -63,7 +63,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
         "Block size must be a multiple of the alignment");
 
     /**
-    If $(D blockSize == chooseAtRuntime), $(D HeapBlock) offers a read/write
+    If $(D blockSize == chooseAtRuntime), $(D BitmappedBlock) offers a read/write
     property $(D blockSize). It must be set before any use of the allocator.
     Otherwise (i.e. $(D theBlockSize) is a legit constant), $(D blockSize) is
     an alias for $(D theBlockSize). Whether constant or variable, must also be
@@ -331,7 +331,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     }
 
     /**
-    If the $(D HeapBlock) object is empty (has no active allocation), allocates
+    If the $(D BitmappedBlock) object is empty (has no active allocation), allocates
     all memory within and returns a slice to it. Otherwise, returns $(D null)
     (i.e. no attempt is made to allocate the largest available block).
     */
@@ -343,7 +343,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     }
 
     /**
-    Returns $(D true) if $(D b) belongs to the $(D HeapBlock) object. This
+    Returns $(D true) if $(D b) belongs to the $(D BitmappedBlock) object. This
     method is somewhat tolerant in that accepts an interior slice.
     */
     Ternary owns(void[] b) const
@@ -713,7 +713,7 @@ unittest
     import std.experimental.allocator.region;
     import std.traits;
     InSituRegion!(10240, 64) r;
-    auto a = HeapBlock!(64, 64)(r.allocateAll());
+    auto a = BitmappedBlock!(64, 64)(r.allocateAll());
     static assert(hasMember!(InSituRegion!(10240, 64), "allocateAll"));
     auto b = a.allocate(100);
     assert(b.length == 100);
@@ -722,7 +722,7 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator;
-    testAllocator!(() => HeapBlock!(64, 8, GCAllocator)(1024 * 64));
+    testAllocator!(() => BitmappedBlock!(64, 8, GCAllocator)(1024 * 64));
 }
 
 unittest
@@ -732,7 +732,7 @@ unittest
         import std.algorithm : min;
         assert(bs);
         import std.experimental.allocator.gc_allocator;
-        auto a = HeapBlock!(bs, min(bs, platformAlignment))(
+        auto a = BitmappedBlock!(bs, min(bs, platformAlignment))(
             GCAllocator.it.allocate((blocks * bs * 8 + blocks) / 8)
         );
         import std.conv : text;
@@ -844,7 +844,7 @@ unittest
 // Test totakAllocation
 unittest
 {
-    HeapBlock!(8, 8, NullAllocator) h1;
+    BitmappedBlock!(8, 8, NullAllocator) h1;
     assert(h1.totalAllocation(1) == 16);
     assert(h1.totalAllocation(64) == 8 + 8 * 8);
     //writeln(h1.totalAllocation(8 * 64));
@@ -852,21 +852,21 @@ unittest
     assert(h1.totalAllocation(8 * 63) == 8 + 8 * 63);
     assert(h1.totalAllocation(8 * 64 + 1) == 16 + 8 * 65);
 
-    HeapBlock!(64, 8, NullAllocator) h2;
+    BitmappedBlock!(64, 8, NullAllocator) h2;
     assert(h2.totalAllocation(1) == 8 + 64);
     assert(h2.totalAllocation(64 * 64) == 8 + 64 * 64);
 
-    HeapBlock!(4096, 4096, NullAllocator) h3;
+    BitmappedBlock!(4096, 4096, NullAllocator) h3;
     assert(h3.totalAllocation(1) == 2 * 4096);
     assert(h3.totalAllocation(64 * 4096) == 65 * 4096);
     assert(h3.totalAllocation(64 * 4096 + 1) == 66 * 4096);
 }
 
-// HeapBlockWithInternalPointers
+// BitmappedBlockWithInternalPointers
 /**
 
-A $(D HeapBlock) with additional structure for supporting $(D
-resolveInternalPointer). To that end, $(D HeapBlockWithInternalPointers) adds a
+A $(D BitmappedBlock) with additional structure for supporting $(D
+resolveInternalPointer). To that end, $(D BitmappedBlockWithInternalPointers) adds a
 bitmap (one bit per block) that marks object starts. The bitmap itself has
 variable size and is allocated together with regular allocations.
 
@@ -874,7 +874,7 @@ The time complexity of $(D resolveInternalPointer) is $(BIGOH k), where $(D k)
 is the size of the object within which the internal pointer is looked up.
 
 */
-struct HeapBlockWithInternalPointers(
+struct BitmappedBlockWithInternalPointers(
     size_t theBlockSize, uint theAlignment = platformAlignment,
     ParentAllocator = NullAllocator)
 {
@@ -883,21 +883,21 @@ struct HeapBlockWithInternalPointers(
     {
         import std.experimental.allocator.mallocator;
         auto m = AlignedMallocator.it.alignedAllocate(1024 * 64, theAlignment);
-        testAllocator!(() => HeapBlockWithInternalPointers(m));
+        testAllocator!(() => BitmappedBlockWithInternalPointers(m));
     }
 
     // state {
-    private HeapBlock!(theBlockSize, theAlignment, NullAllocator) _heap;
+    private BitmappedBlock!(theBlockSize, theAlignment, NullAllocator) _heap;
     private BitVector _allocStart;
     // }
 
     /**
     Constructors accepting desired capacity or a preallocated buffer, similar
-    in semantics to those of $(D HeapBlock).
+    in semantics to those of $(D BitmappedBlock).
     */
     this(void[] data)
     {
-        _heap = HeapBlock!(theBlockSize, theAlignment, ParentAllocator)(data);
+        _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)(data);
     }
 
     /// Ditto
@@ -905,7 +905,7 @@ struct HeapBlockWithInternalPointers(
     this(size_t capacity)
     {
         // Add room for the _allocStart vector
-        _heap = HeapBlock!(theBlockSize, theAlignment, ParentAllocator)
+        _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)
             (capacity + capacity.divideRoundUp(64));
     }
 
@@ -1084,7 +1084,7 @@ struct HeapBlockWithInternalPointers(
 
 unittest
 {
-    auto h = HeapBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
+    auto h = BitmappedBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
     auto b = h.allocate(123);
     assert(b.length == 123);
     auto p = h.resolveInternalPointer(b.ptr + 17);

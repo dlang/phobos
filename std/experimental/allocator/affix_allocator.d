@@ -267,11 +267,11 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.heap_block;
+    import std.experimental.allocator.bitmapped_block;
     import std.experimental.allocator.common;
     testAllocator!({
-        auto a = AffixAllocator!(HeapBlock!128, ulong, ulong)
-            (HeapBlock!128(new void[128 * 4096]));
+        auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
+            (BitmappedBlock!128(new void[128 * 4096]));
         return a;
     });
 }

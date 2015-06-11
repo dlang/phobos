@@ -521,22 +521,22 @@ unittest
     import std.experimental.allocator.fallback_allocator;
     import std.experimental.allocator.free_list;
     import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.heap_block;
+    import std.experimental.allocator.bitmapped_block;
     FallbackAllocator!(InSituRegion!(128 * 1024), GCAllocator) r2;
     auto a2 = r1.allocate(102);
     assert(a2.length == 102);
 
     // Reap with GC fallback.
     InSituRegion!(128 * 1024, 8) tmp3;
-    FallbackAllocator!(HeapBlock!(64, 8), GCAllocator) r3;
-    r3.primary = HeapBlock!(64, 8)(tmp3.allocateAll());
+    FallbackAllocator!(BitmappedBlock!(64, 8), GCAllocator) r3;
+    r3.primary = BitmappedBlock!(64, 8)(tmp3.allocateAll());
     auto a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
     InSituRegion!(128 * 1024, 64) tmp4;
-    FreeList!(FallbackAllocator!(HeapBlock!(64, 64), GCAllocator), 0, 16) r4;
-    r4.parent.primary = HeapBlock!(64, 64)(tmp4.allocateAll());
+    FreeList!(FallbackAllocator!(BitmappedBlock!(64, 64), GCAllocator), 0, 16) r4;
+    r4.parent.primary = BitmappedBlock!(64, 64)(tmp4.allocateAll());
     auto a4 = r4.allocate(104);
     assert(a4.length == 104);
 }

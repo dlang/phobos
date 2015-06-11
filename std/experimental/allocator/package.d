@@ -57,7 +57,7 @@ public import
     std.experimental.allocator.fallback_allocator,
     std.experimental.allocator.free_list,
     std.experimental.allocator.gc_allocator,
-    std.experimental.allocator.heap_block,
+    std.experimental.allocator.bitmapped_block,
     std.experimental.allocator.mallocator,
     std.experimental.allocator.mmap_allocator,
     std.experimental.allocator.null_allocator,
@@ -79,7 +79,7 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            (n) => HeapBlock!(4096)(GCAllocator.it.allocate(
+            (n) => BitmappedBlock!(4096)(GCAllocator.it.allocate(
                 max(n, 4072 * 1024)))),
         GCAllocator
     );
@@ -1722,7 +1722,7 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            (size_t n) => HeapBlock!(4096)(GCAllocator.it.allocate(
+            (size_t n) => BitmappedBlock!(4096)(GCAllocator.it.allocate(
                 max(n, 4072 * 1024)))),
         GCAllocator
     );
@@ -1777,7 +1777,7 @@ unittest
             2048, Bucketizer!(FList, 1025, 2048, 256),
             3584, Bucketizer!(FList, 2049, 3584, 512),
             4072 * 1024, AllocatorList!(
-                (n) => HeapBlock!(4096)(GCAllocator.it.allocate(
+                (n) => BitmappedBlock!(4096)(GCAllocator.it.allocate(
                     max(n, 4072 * 1024)))),
             GCAllocator
         )

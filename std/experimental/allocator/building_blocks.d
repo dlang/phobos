@@ -142,7 +142,7 @@ bounds for the freelist because the $(D Segregator) does all size selection in
 advance.
 
 Sizes through 3584 bytes are handled via freelists of staggered sizes. Sizes
-from 3585 bytes through 4072 KB are handled by a $(D HeapBlock) with a
+from 3585 bytes through 4072 KB are handled by a $(D BitmappedBlock) with a
 block size of 4 KB. Sizes above that are passed direct to the $(D Mallocator).
 
 ----
@@ -156,7 +156,7 @@ block size of 4 KB. Sizes above that are passed direct to the $(D Mallocator).
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            () => HeapBlock!(GCAllocator, 4096)(4072 * 1024)),
+            () => BitmappedBlock!(GCAllocator, 4096)(4072 * 1024)),
         GCAllocator
     );
     A tuMalloc;
@@ -227,7 +227,7 @@ $(D __aligned_xxx)) on Windows.))
 $(TR $(TDC2 AffixAllocator, affix_allocator) $(TD Allocator that allows and manages allocating
 extra prefix and/or a suffix bytes for each block allocated.))
 
-$(TR $(TDC2 HeapBlock, heap_block) $(TD Organizes one contiguous chunk of memory in
+$(TR $(TDC2 BitmappedBlock, bitmapped_block) $(TD Organizes one contiguous chunk of memory in
 equal-size blocks and tracks allocation status at the cost of one bit per
 block.))
 
@@ -300,7 +300,7 @@ public import
     std.experimental.allocator.free_list,
     std.experimental.allocator.free_tree,
     std.experimental.allocator.gc_allocator,
-    std.experimental.allocator.heap_block,
+    std.experimental.allocator.bitmapped_block,
     std.experimental.allocator.kernighan_ritchie,
     std.experimental.allocator.mallocator,
     std.experimental.allocator.mmap_allocator,
