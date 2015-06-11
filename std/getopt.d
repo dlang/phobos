@@ -298,8 +298,7 @@ void main(string[] args)
     ))
 )
 
-$(B Options with multiple names)
-
+Options_with_multiple_names:
 Sometimes option synonyms are desirable, e.g. "--verbose",
 "--loquacious", and "--garrulous" should have the same effect. Such
 alternate option names can be included in the option specification,
@@ -310,8 +309,7 @@ bool verbose;
 getopt(args, "verbose|loquacious|garrulous", &verbose);
 ---------
 
-$(B Case)
-
+Case:
 By default options are case-insensitive. You can change that behavior
 by passing $(D getopt) the $(D caseSensitive) directive like this:
 
@@ -342,8 +340,7 @@ etc. because the directive $(D
 std.getopt.config.caseInsensitive) turned sensitivity off before
 option "bar" was parsed.
 
-$(B "Short" versus "long" options)
-
+Short_versus_long_options:
 Traditionally, programs accepted single-letter options preceded by
 only one dash (e.g. $(D -t)). $(D getopt) accepts such parameters
 seamlessly. When used with a double-dash (e.g. $(D --t)), a
@@ -363,8 +360,7 @@ and $(D -timeout=5) will be not accepted.
 
 For more details about short options, refer also to the next section.
 
-$(B Bundling)
-
+Bundling:
 Single-letter options can be bundled together, i.e. "-abc" is the same as
 $(D "-a -b -c"). By default, this option is turned off. You can turn it on
 with the $(D std.getopt.config.bundling) directive:
@@ -380,8 +376,7 @@ getopt(args,
 In case you want to only enable bundling for some of the parameters,
 bundling can be turned off with $(D std.getopt.config.noBundling).
 
-$(B Required)
-
+Required:
 An option can be marked as required. If that option is not present in the
 arguments an exceptin will be thrown.
 
@@ -396,8 +391,7 @@ getopt(args,
 Only the option direclty following $(D std.getopt.config.required) is
 required.
 
-$(B Passing unrecognized options through)
-
+Passing_unrecognized_options_through:
 If an application needs to do its own processing of whichever arguments
 $(D getopt) did not understand, it can pass the
 $(D std.getopt.config.passThrough) directive to $(D getopt):
@@ -413,16 +407,17 @@ getopt(args,
 An unrecognized option such as "--baz" will be found untouched in
 $(D args) after $(D getopt) returns.
 
-$(D Help Information Generation)
-
+Help_Information_Generation:
 If an option string is followed by another string, this string serves as an
 description for this option. The function $(D getopt) returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
 as well a bool indicating if information about these options where required by
 the passed arguments.
 
-$(B Options Terminator)
+The function also always adds an option for `--help|-h` to set the flag
+$(D GetoptResult.helpWanted) if seen on the command line.
 
+Options_Terminator:
 A lonesome double-dash terminates $(D getopt) gathering. It is used to
 separate program options from other parameters (e.g. options to be passed
 to another program). Invoking the example above with $(D "--foo -- --bar")
@@ -488,9 +483,7 @@ enum config {
 
 /** The result of the $(D getopt) function.
 
-The $(D GetoptResult) contains two members. The first member is a boolean with
-the name $(D helpWanted). The second member is an array of $(D Option). The
-array is accessable by the name $(D options).
+$(D helpWanted) is set if the option `--help` or `-h` was passed to the option parser.
 */
 struct GetoptResult {
     bool helpWanted; /// Flag indicating if help was requested
