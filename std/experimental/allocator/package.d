@@ -1,8 +1,34 @@
 // Written in the D programming language.
-
 /**
+
+High-level interface for allocators. Implements bundled allocation/creation
+and destruction/deallocation of data including $(D struct)s and $(D class)es,
+and also array primitives related to allocation.
+
+---
+// Allocate an int, initialize it with 42
+int* p = theAllocator.make!int(42);
+assert(*p == 42);
+// Destroy and deallocate it
+theAllocator.dispose(p);
+
+// Allocate using the global process allocator
+p = processAllocator.make!int(100);
+assert(*p == 100);
+// Destroy and deallocate
+processAllocator.dispose(p);
+
+// Create an array of 50 doubles initialized to -1.0
+double[] arr = theAllocator.makeArray!double(50, -1.0);
+// Append two zeros to it
+theAllocator.growArray(arr, 2, 0.0);
+// On second thought, take that back
+theAllocator.shrinkArray(arr, 2);
+// Destroy and deallocate
+theAllocator.dispose(arr);
+---
+
 Macros:
-WIKI = Phobos/StdAllocator
 MYREF = $(LINK2 std_experimental_allocator_$2.html, $1)&nbsp;
 MYREF2 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
 TDC = <td nowrap>$(D $1)$+</td>
@@ -17,268 +43,9 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(WEB erdani.com, Andrei Alexandrescu)
 
-Source: $(PHOBOSSRC std/_allocator.d)
+Source: $(PHOBOSSRC std/experimental/_allocator)
 
-This module implements untyped composable memory allocators. They are $(I
-untyped) because they deal exclusively in $(D void[]) and have no notion of what
-type the memory allocated would be destined for. They are $(I composable)
-because the included allocators are building blocks that can be assembled in
-complex nontrivial allocators.
-
-$(P Unlike the allocators for the C and C++ programming languages, which manage
-the allocated size internally, these allocators require that the client
-maintains (or knows $(I a priori)) the allocation size for each piece of memory
-allocated. Put simply, the client must pass the allocated size upon
-deallocation. Storing the size in the _allocator has significant negative
-performance implications, and is virtually always redundant because client code
-needs knowledge of the allocated size in order to avoid buffer overruns. (See
-more discussion in a $(WEB open-
-std.org/JTC1/SC22/WG21/docs/papers/2013/n3536.html, proposal) for sized
-deallocation in C++.) For this reason, allocators herein traffic in $(D void[])
-as opposed to $(D void*).)
-
-$(P In order to be usable as an _allocator, a type should implement the
-following methods with their respective semantics. Only $(D alignment) and  $(D
-allocate) are required. If any of the other methods is missing, the _allocator
-is assumed to not have that capability (for example some allocators do not offer
-manual deallocation of memory).)
-
-$(BOOKTABLE ,
-$(TR $(TH Method name) $(TH Semantics))
-
-$(TR $(TDC uint alignment;, $(POST $(RES) > 0)) $(TD Returns the minimum
-alignment of all data returned by the allocator. An allocator may implement $(D
-alignment) as a statically-known $(D enum) value only. Applications that need
-dynamically-chosen alignment values should use the $(D alignedAllocate) and $(D
-alignedReallocate) APIs.))
-
-$(TR $(TDC size_t goodAllocSize(size_t n);, $(POST $(RES) >= n)) $(TD Allocators
-customarily allocate memory in discretely-sized chunks. Therefore, a request for
-$(D n) bytes may result in a larger allocation. The extra memory allocated goes
-unused and adds to the so-called $(WEB goo.gl/YoKffF,internal fragmentation).
-The function $(D goodAllocSize(n)) returns the actual number of bytes that would
-be allocated upon a request for $(D n) bytes. This module defines a default
-implementation that returns $(D n) rounded up to a multiple of the allocator's
-alignment.))
-
-$(TR $(TDC void[] allocate(size_t s);, $(POST $(RES) is null || $(RES).length ==
-s)) $(TD If $(D s == 0), the call may return any empty slice (including $(D
-null)). Otherwise, the call allocates $(D s) bytes of memory and returns the
-allocated block, or $(D null) if the request could not be satisfied.))
-
-$(TR $(TDC void[] alignedAllocate(size_t s, uint a);, $(POST $(RES) is null ||
-$(RES).length == s)) $(TD Similar to $(D allocate), with the additional
-guarantee that the memory returned is aligned to at least $(D a) bytes. $(D a)
-must be a power of 2.))
-
-$(TR $(TDC void[] allocateAll();) $(TD Offers all of allocator's memory to the
-caller, so it's usually defined by fixed-size allocators. If the allocator is
-currently NOT managing any memory, then $(D allocateAll()) shall allocate and
-return all memory available to the allocator, and subsequent calls to all
-allocation primitives should not succeed (e..g $(D allocate) shall return $(D
-null) etc). Otherwise, $(D allocateAll) only works on a best-effort basis, and
-the allocator is allowed to return $(D null) even if does have available memory.
-Memory allocated with $(D allocateAll) is not otherwise special (e.g. can be
-reallocated or deallocated with the usual primitives, if defined).))
-
-$(TR $(TDC bool expand(ref void[] b, size_t delta);, $(POST !$(RES) || b.length
-== $(I old)(b).length + delta)) $(TD Expands $(D b) by $(D delta) bytes. If $(D
-delta == 0), succeeds without changing $(D b). If $(D b is null), the call
-evaluates $(D b = allocate(delta)) and returns $(D b !is null). Otherwise, $(D
-b) must be a buffer previously allocated with the same allocator. If expansion
-was successful, $(D expand) changes $(D b)'s length to $(D b.length + delta) and
-returns $(D true). Upon failure, the call effects no change upon the allocator
-object, leaves $(D b) unchanged, and returns $(D false).))
-
-$(TR $(TDC bool reallocate(ref void[] b, size_t s);, $(POST !$(RES) || b.length
-== s)) $(TD Reallocates $(D b) to size $(D s), possibly moving memory around.
-$(D b) must be $(D null) or a buffer allocated with the same allocator. If
-reallocation was successful, $(D reallocate) changes $(D b) appropriately and
-returns $(D true). Upon failure, the call effects no change upon the allocator
-object, leaves $(D b) unchanged, and returns $(D false). An allocator should
-implement $(D reallocate) if it can derive some advantage from doing so;
-otherwise, this module defines a $(D reallocate) free function implemented in
-terms of $(D expand), $(D allocate), and $(D deallocate).))
-
-$(TR $(TDC bool alignedReallocate(ref void[] b,$(BR) size_t s, uint a);, $(POST
-!$(RES) || b.length == s)) $(TD Similar to $(D reallocate), but guarantees the
-reallocated memory is aligned at $(D a) bytes. The buffer must have been
-originated with a call to $(D alignedAllocate). $(D a) must be a power of 2
-greater than $(D (void*).sizeof). An allocator should implement $(D
-alignedReallocate) if it can derive some advantage from doing so; otherwise,
-this module defines a $(D alignedReallocate) free function implemented in terms
-of $(D expand), $(D alignedAllocate), and $(D deallocate).))
-
-$(TR $(TDC bool owns(void[] b);) $(TD Returns $(D true) if $(D b) has been
-allocated with this allocator. An allocator should define this method only if it
-can decide on ownership precisely and fast (in constant time, logarithmic time,
-or linear time with a low multiplication factor). Traditional allocators such as
-the C heap do not define such functionality. If $(D b is null), the allocator
-shall return $(D false), i.e. no allocator owns the $(D null) slice.))
-
-$(TR $(TDC void[] resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
-somewhere inside a block allocated with this allocator, returns a pointer to the
-beginning of the allocated block. Otherwise, returns $(D null). If the pointer
-points immediately after an allocated block, the result is implementation
-defined.))
-
-$(TR $(TDC void deallocate(void[] b);) $(TD If $(D b is null), does
-nothing. Otherwise, deallocates memory previously allocated with this
-allocator.))
-
-$(TR $(TDC void deallocateAll();, $(POST empty)) $(TD Deallocates all memory
-allocated with this allocator. If an allocator implements this method, it must
-specify whether its destructor calls it, too.))
-
-$(TR $(TDC bool empty();) $(TD Returns $(D true) if and only if the allocator
-holds no memory (i.e. no allocation has occurred, or all allocations have been
-deallocated).))
-
-$(TR $(TDC static Allocator it;, $(POST it $(I is a valid) Allocator $(I
-object))) $(TD Some allocators are $(I monostate), i.e. have only an instance
-and hold only global state. (Notable examples are C's own $(D malloc)-based
-allocator and D's garbage-collected heap.) Such allocators must define a static
-$(D it) instance that serves as the symbolic placeholder for the global instance
-of the allocator. An allocator should not hold state and define $(D it)
-simultaneously. Depending on whether the allocator is thread-safe or not, this
-instance may be $(D shared).))
-
-)
-
-The example below features an _allocator modeled after $(WEB goo.gl/m7329l,
-jemalloc), which uses a battery of free-list allocators spaced so as to keep
-internal fragmentation to a minimum. The $(D FList) definitions specify no
-bounds for the freelist because the $(D Segregator) does all size selection in
-advance.
-
-Sizes through 3584 bytes are handled via freelists of staggered sizes. Sizes
-from 3585 bytes through 4072 KB are handled by a $(D HeapBlock) with a
-block size of 4 KB. Sizes above that are passed direct to the $(D Mallocator).
-
-----
-    alias FList = FreeList!(GCAllocator, 0, unbounded);
-    alias A = Segregator!(
-        8, FreeList!(GCAllocator, 0, 8),
-        128, Bucketizer!(FList, 1, 128, 16),
-        256, Bucketizer!(FList, 129, 256, 32),
-        512, Bucketizer!(FList, 257, 512, 64),
-        1024, Bucketizer!(FList, 513, 1024, 128),
-        2048, Bucketizer!(FList, 1025, 2048, 256),
-        3584, Bucketizer!(FList, 2049, 3584, 512),
-        4072 * 1024, AllocatorList!(
-            () => HeapBlock!(GCAllocator, 4096)(4072 * 1024)),
-        GCAllocator
-    );
-    A tuMalloc;
-    auto b = tuMalloc.allocate(500);
-    assert(b.length == 500);
-    auto c = tuMalloc.allocate(113);
-    assert(c.length == 113);
-    assert(tuMalloc.expand(c, 14));
-    tuMalloc.deallocate(b);
-    tuMalloc.deallocate(c);
-----
-
-$(H2 Allocating memory for sharing across threads)
-
-One allocation pattern used in multithreaded applications is to share memory
-across threads, and to deallocate blocks in a different thread than the one that
-allocated it.
-
-All allocators in this module accept and return $(D void[]) (as opposed to
-$(D shared void[])). This is because at the time of allocation, deallocation, or
-reallocation, the memory is effectively not $(D shared) (if it were, it would
-reveal a bug at the application level).
-
-The issue remains of calling $(D a.deallocate(b)) from a different thread than
-the one that allocated $(D b). It follows that both threads must have access to
-the same instance $(D a) of the respective allocator type. By definition of D,
-this is possible only if $(D a) has the $(D shared) qualifier. It follows that
-the allocator type must implement $(D allocate) and $(D deallocate) as $(D
-shared) methods. That way, the allocator commits to allowing usable $(D shared)
-instances.
-
-Conversely, allocating memory with one non-$(D shared) allocator, passing it
-across threads (by casting the obtained buffer to $(D shared)), and later
-deallocating it in a different thread (either with a different allocator object
-or with the same allocator object after casting it to $(D shared)) is illegal.
-
-$(BOOKTABLE $(BIG Synopsis of predefined _allocator building blocks),
-$(TR $(TH Allocator) $(TH Description))
-
-$(TR $(TDC2 NullAllocator, null_allocator) $(TD Very good at doing absolutely nothing. A good
-starting point for defining other allocators or for studying the API.))
-
-$(TR $(TDC2 GCAllocator, gc_allocator) $(TD The system-provided garbage-collector allocator.
-This should be the default fallback allocator tapping into system memory. It
-offers manual $(D free) and dutifully collects litter.))
-
-$(TR $(TDC2 Mallocator, mallocator) $(TD The C heap _allocator, a.k.a. $(D
-malloc)/$(D realloc)/$(D free). Use sparingly and only for code that is unlikely
-to leak.))
-
-$(TR $(TDC3 AlignedMallocator, mallocator) $(TD Interface to OS-specific _allocators that
-support specifying alignment:
-$(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html, $(D posix_memalign))
-on Posix and $(WEB msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
-$(D __aligned_xxx)) on Windows.))
-
-$(TR $(TDC2 AffixAllocator, affix_allocator) $(TD Allocator that allows and manages allocating
-extra prefix and/or a suffix bytes for each block allocated.))
-
-$(TR $(TDC2 HeapBlock, heap_block) $(TD Organizes one contiguous chunk of memory in
-equal-size blocks and tracks allocation status at the cost of one bit per
-block.))
-
-$(TR $(TDC2 FallbackAllocator, fallback_allocator) $(TD Allocator that combines two other allocators
- - primary and fallback. Allocation requests are first tried with primary, and
- upon failure are passed to the fallback. Useful for small and fast allocators
- fronting general-purpose ones.))
-
-$(TR $(TDC2 FreeList, free_list) $(TD Allocator that implements a $(WEB
-wikipedia.org/wiki/Free_list, free list) on top of any other allocator. The
-preferred size, tolerance, and maximum elements are configurable at compile- and
-run time.))
-
-$(TR $(TDC3 SharedFreeList, free_list) $(TD Same features as $(D FreeList), but packaged as
-a $(D shared) structure that is accessible to several threads.))
-
-$(TR $(TDC2 FreeTree, free_tree) $(TD Allocator similar to $(D FreeList) that uses a
-binary search tree to adaptively store not one, but many free lists.))
-
-$(TR $(TDC2 Region, region) $(TD Region allocator organizes a chunk of memory as a
-simple bump-the-pointer allocator.))
-
-$(TR $(TDC3 InSituRegion, region) $(TD Region holding its own allocation, most often on
-the stack. Has statically-determined size.))
-
-$(TR $(TDC3 SbrkRegion, region) $(TD Region using $(D $(LUCKY sbrk)) for allocating
-memory.))
-
-$(TR $(TDC2 MmapAllocator, mmap_allocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
-
-$(TR $(TDC2 StatsCollector, stats_collector) $(TD Collect statistics about any other
-allocator.))
-
-$(TR $(TDC2 Quantizer, quantizer) $(TD Allocates in coarse-grained quantas, thus
-improving performance of reallocations by often reallocating in place. The drawback is higher memory consumption because of allocated and unused memory.))
-
-$(TR $(TDC2 AllocatorList, allocator_list) $(TD Given an allocator factory, lazily creates as
-many allocators as needed to satisfy allocation requests. The allocators are
-stored in a linked list. Requests for allocation are satisfied by searching the
-list in a linear manner.))
-
-$(TR $(TDC2 Segregator, segregator) $(TD Segregates allocation requests by size and
-dispatches them to distinct allocators.))
-
-$(TR $(TDC2 Bucketizer, bucketizer) $(TD Divides allocation sizes in discrete buckets and
-uses an array of allocators, one per bucket, to satisfy requests.))
-
-$(COMMENT $(TR $(TDC2 InternalPointersTree) $(TD Adds support for resolving internal
-pointers on top of another allocator.)))
-
-)
- */
+*/
 
 module std.experimental.allocator;
 
@@ -294,10 +61,10 @@ public import
     std.experimental.allocator.mallocator,
     std.experimental.allocator.mmap_allocator,
     std.experimental.allocator.null_allocator,
-    std.experimental.allocator.porcelain,
     std.experimental.allocator.region,
     std.experimental.allocator.segregator,
-    std.experimental.allocator.stats_collector;
+    std.experimental.allocator.stats_collector,
+    std.experimental.allocator.typed;
 
 // Example in the synopsis above
 unittest
@@ -331,6 +98,1191 @@ import std.algorithm, std.conv, std.exception, std.range, std.traits,
 version(unittest) import std.random, std.stdio;
 
 /**
+Dynamic allocator interface. Code that defines allocators ultimately implements
+this interface. This should be used wherever a uniform type is required for
+encapsulating various allocator implementations.
+
+Composition of allocators is not recommended at this level due to
+inflexibility of dynamic interfaces and inefficiencies caused by cascaded
+multiple calls. Instead, compose allocators using the static interface defined
+in $(A std_experimental_allocator_building_blocks.html,
+`std.experimental.allocator.building_blocks`), then adapt the composed
+allocator to `IAllocator` (possibly by using $(LREF CAllocatorImpl) below).
+
+Methods returning $(D Ternary) return $(D Ternary.yes) upon success,
+$(D Ternary.no) upon failure, and $(D Ternary.unknown) if the primitive is not
+implemented by the allocator instance.
+*/
+interface IAllocator
+{
+    /**
+    Returns the alignment offered.
+    */
+    @property uint alignment();
+
+    /**
+    Returns the good allocation size that guarantees zero internal
+    fragmentation.
+    */
+    size_t goodAllocSize(size_t s);
+
+    /**
+    Allocates memory.
+    */
+    void[] allocate(size_t, TypeInfo ti = null);
+
+    /**
+    Allocates memory with specified alignment.
+    */
+    Ternary alignedAllocate(size_t, uint, ref void[], TypeInfo ti = null);
+
+    /**
+    Allocates and returns all memory available to this allocator. $(COMMENT By
+    default returns $(D null).)
+    */
+    Ternary allocateAll(ref void[] result);
+
+    /**
+    Expands a memory block in place. If expansion not supported
+    by the allocator, returns $(D Ternary.unknown). If implemented, returns $(D
+    Ternary.yes) if expansion succeeded, $(D Ternary.no) otherwise.
+    */
+    Ternary expand(ref void[], size_t);
+
+    /// Reallocates a memory block.
+    bool reallocate(ref void[], size_t);
+
+    /// Reallocates a memory block with specified alignment.
+    Ternary alignedReallocate(ref void[] b, size_t size, uint alignment);
+
+    /**
+    Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
+    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership not
+    supported by the allocator. $(COMMENT By default returns $(D
+    Ternary.unknown).)
+    */
+    Ternary owns(void[] b);
+
+    /**
+    Resolves an internal pointer to the full block allocated.
+    */
+    Ternary resolveInternalPointer(void* p, ref void[] result);
+
+    /**
+    Deallocates a memory block. Returns $(D Ternary.unknown) if deallocation is
+    not supported. A simple way to check that an allocator supports
+    deallocation is to call $(D deallocate(null)).
+    */
+    Ternary deallocate(void[] b);
+
+    /**
+    Deallocates all memory. Returns $(D Ternary.unknown) if deallocation is
+    not supported.
+    */
+    Ternary deallocateAll();
+
+    /**
+    Returns $(D Ternary.yes) if no memory is currently allocated from this
+    allocator, $(D Ternary.no) if some allocations are currently active, or
+    $(D Ternary.unknown) if not supported.
+    */
+    Ternary empty();
+}
+
+__gshared IAllocator _processAllocator;
+IAllocator _threadAllocator;
+
+shared static this()
+{
+    assert(!_processAllocator);
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    _processAllocator = allocatorObject(GCAllocator.it);
+}
+
+static this()
+{
+    assert(!_threadAllocator);
+    _threadAllocator = _processAllocator;
+}
+
+/**
+Gets/sets the allocator for the current thread. This is the default allocator
+that should be used for allocating thread-local memory. For allocating memory
+to be shared across threads, use $(D processAllocator) (below). By default,
+$(D theAllocator) ultimately fetches memory from $(D processAllocator), which
+in turn uses the garbage collected heap.
+*/
+@property IAllocator theAllocator()
+{
+    return _threadAllocator;
+}
+
+/// Ditto
+@property void theAllocator(IAllocator a)
+{
+    assert(a);
+    _threadAllocator = a;
+}
+
+///
+unittest
+{
+    // Install a new allocator that is faster for 128-byte allocations.
+    import std.experimental.allocator.free_list,
+        std.experimental.allocator.gc_allocator;
+    auto oldAllocator = theAllocator;
+    scope(exit) theAllocator = oldAllocator;
+    theAllocator = allocatorObject(FreeList!(GCAllocator, 128)());
+    // Use the now changed allocator to allocate an array
+    ubyte[] arr = theAllocator.makeArray!ubyte(128);
+    assert(arr.ptr);
+    //...
+}
+
+/**
+Gets/sets the allocator for the current process. This allocator must be used
+for allocating memory shared across threads. Objects created using this
+allocator can be cast to $(D shared).
+*/
+@property IAllocator processAllocator()
+{
+    return _processAllocator;
+}
+
+/// Ditto
+@property void processAllocator(IAllocator a)
+{
+    assert(a);
+    _processAllocator = a;
+}
+
+unittest
+{
+    assert(processAllocator);
+    assert(processAllocator is theAllocator);
+}
+
+/**
+Dynamically allocates (using $(D alloc)) and then creates in the memory
+allocated an object of type $(D T), using $(D args) (if any) for its
+initialization. Initialization occurs in the memory allocated and is otherwise
+semantically the same as $(D T(args)).
+(Note that using $(D alloc.make!(T[])) creates a pointer to an (empty) array
+of $(D T)s, not an array. To use an allocator to allocate and initialize an
+array, use $(D alloc.makeArray!T) described below.)
+
+Params:
+T = Type of the object being created.
+alloc = The allocator used for getting the needed memory. It may be an object
+implementing the static interface for allocators, or an $(D IAllocator)
+reference.
+args = Optional arguments used for initializing the created object. If not
+present, the object is default constructed.
+
+Returns: If $(D T) is a class type, returns a reference to the created $(D T)
+object. Otherwise, returns a $(D T*) pointing to the created object. In all
+cases, returns $(D null) if allocation failed.
+
+Throws: If $(D T)'s constructor throws, deallocates the allocated memory and
+propagates the exception.
+*/
+auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
+{
+    import std.algorithm : max;
+    import std.conv : emplace;
+    auto m = alloc.allocate(max(stateSize!T, 1));
+    if (!m.ptr) return null;
+    scope(failure) alloc.deallocate(m);
+    static if (is(T == class)) return emplace!T(m, args);
+    else return emplace(cast(T*) m.ptr, args);
+}
+
+///
+unittest
+{
+    // Dynamically allocate one integer
+    int* p1 = theAllocator.make!int;
+    // It's implicitly initialized with its .init value
+    assert(*p1 == 0);
+    // Dynamically allocate one double, initialize to 42.5
+    double* p2 = theAllocator.make!double(42.5);
+    assert(*p2 == 42.5);
+
+    // Dynamically allocate a struct
+    static struct Point
+    {
+        int x, y, z;
+    }
+    // Use the generated constructor taking field values in order
+    Point* p = theAllocator.make!Point(1, 2);
+    assert(p.x == 1 && p.y == 2 && p.z == 0);
+
+    // Dynamically allocate a class object
+    static class Customer
+    {
+        uint id = uint.max;
+        this() {}
+        this(uint id) { this.id = id; }
+        // ...
+    }
+    Customer cust = theAllocator.make!Customer;
+    assert(cust.id == uint.max); // default initialized
+    cust = theAllocator.make!Customer(42);
+    assert(cust.id == 42);
+}
+
+unittest
+{
+    void test(Allocator)(auto ref Allocator alloc)
+    {
+        int* a = alloc.make!int(10);
+        assert(*a == 10);
+
+        struct A
+        {
+            int x;
+            string y;
+            double z;
+        }
+
+        A* b = alloc.make!A(42);
+        assert(b.x == 42);
+        assert(b.y is null);
+        import std.math;
+        assert(b.z.isNaN);
+
+        b = alloc.make!A(43, "44", 45);
+        assert(b.x == 43);
+        assert(b.y == "44");
+        assert(b.z == 45);
+
+        static class B
+        {
+            int x;
+            string y;
+            double z;
+            this(int _x, string _y = null, double _z = double.init)
+            {
+                x = _x;
+                y = _y;
+                z = _z;
+            }
+        }
+
+        B c = alloc.make!B(42);
+        assert(c.x == 42);
+        assert(c.y is null);
+        import std.math;
+        assert(c.z.isNaN);
+
+        c = alloc.make!B(43, "44", 45);
+        assert(c.x == 43);
+        assert(c.y == "44");
+        assert(c.z == 45);
+
+        auto parray = alloc.make!(int[]);
+        assert((*parray).empty);
+    }
+
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.it);
+    test(theAllocator);
+}
+
+private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
+{
+    import core.stdc.string : memcpy;
+    if (!array.length) return;
+    memcpy(array.ptr, &filler, T.sizeof);
+    // Fill the array from the initialized portion of itself exponentially.
+    for (size_t offset = T.sizeof; offset < array.length; )
+    {
+        size_t extent = min(offset, array.length - offset);
+        memcpy(array.ptr + offset, array.ptr, extent);
+        offset += extent;
+    }
+}
+
+unittest
+{
+    int[] a;
+    fillWithMemcpy(a, 42);
+    assert(a.length == 0);
+    a = [ 1, 2, 3, 4, 5 ];
+    fillWithMemcpy(a, 42);
+    assert(a == [ 42, 42, 42, 42, 42]);
+}
+
+private T[] uninitializedFillDefault(T)(T[] array) nothrow
+{
+    static immutable __gshared T t;
+    fillWithMemcpy(array, t);
+    return array;
+}
+
+unittest
+{
+    int[] a = [1, 2, 4];
+    uninitializedFillDefault(a);
+    assert(a == [0, 0, 0]);
+}
+
+/**
+Create an array of $(D T) with $(D length) elements using $(D alloc). The array is either default-initialized, filled with copies of $(D init), or initialized with values fetched from $(R range).
+
+Params:
+T = element type of the array being created
+alloc = the allocator used for getting memory
+length = length of the newly created array
+init = element used for filling the array
+range = range used for initializing the array elements
+
+Returns:
+The newly-created array, or $(D null) if either $(D length) was $(D 0) or
+allocation failed.
+
+Throws:
+The first two overloads throw only if $(T alloc)'s primitives do. The
+overloads that involve copy initialization deallocate memory and propagate the
+exception if the copy operation throws.
+*/
+T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
+{
+    if (!length) return null;
+    auto m = alloc.allocate(T.sizeof * length);
+    if (!m.ptr) return null;
+    return uninitializedFillDefault(cast(T[]) m);
+}
+
+unittest
+{
+    void test(A)(auto ref A alloc)
+    {
+        int[] a = alloc.makeArray!int(0);
+        assert(a.length == 0 && a.ptr is null);
+        a = alloc.makeArray!int(5);
+        assert(a.length == 5);
+        assert(a == [ 0, 0, 0, 0, 0]);
+    }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.it);
+    test(theAllocator);
+}
+
+/// Ditto
+T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
+    auto ref T init)
+{
+    if (!length) return null;
+    auto m = alloc.allocate(T.sizeof * length);
+    if (!m.ptr) return null;
+    auto result = cast(T[]) m;
+    import std.traits : hasElaborateCopyConstructor;
+    static if (hasElaborateCopyConstructor!T)
+    {
+        scope(failure) alloc.deallocate(m);
+        size_t i = 0;
+        static if (hasElaborateDestructor!T)
+        {
+            scope (failure)
+            {
+                foreach (j; 0 .. i)
+                {
+                    destroy(result[j]);
+                }
+            }
+        }
+        for (; i < length; ++i)
+        {
+            emplace!T(result.ptr + i, init);
+        }
+    }
+    else
+    {
+        fillWithMemcpy(result, init);
+    }
+    return result;
+}
+
+///
+unittest
+{
+    int[] a = theAllocator.makeArray!int(2);
+    assert(a == [0, 0]);
+    a = theAllocator.makeArray!int(3, 42);
+    assert(a == [42, 42, 42]);
+    import std.range : only;
+    a = theAllocator.makeArray!int(only(42, 43, 44));
+    assert(a == [42, 43, 44]);
+}
+
+unittest
+{
+    void test(A)(auto ref A alloc)
+    {
+        long[] a = alloc.makeArray!long(0, 42);
+        assert(a.length == 0 && a.ptr is null);
+        a = alloc.makeArray!long(5, 42);
+        assert(a.length == 5);
+        assert(a == [ 42, 42, 42, 42, 42 ]);
+    }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.it);
+    test(theAllocator);
+}
+
+/// Ditto
+T[] makeArray(T, Allocator, R)(auto ref Allocator alloc, R range)
+if (isInputRange!R)
+{
+    static if (isForwardRange!R)
+    {
+        size_t length = walkLength(range.save);
+        if (!length) return null;
+        auto m = alloc.allocate(T.sizeof * length);
+        if (!m.ptr) return null;
+        auto result = cast(T[]) m;
+
+        size_t i = 0;
+        scope (failure)
+        {
+            foreach (j; 0 .. i)
+            {
+                destroy(result[j]);
+            }
+            alloc.deallocate(m);
+        }
+
+        for (; !range.empty; range.popFront, ++i)
+        {
+            import std.conv : emplace;
+            emplace!T(result.ptr + i, range.front);
+        }
+
+        return result;
+    }
+    else
+    {
+        // Estimated size
+        size_t estimated = 8;
+        auto m = alloc.allocate(T.sizeof * estimated);
+        if (!m.ptr) return null;
+        auto result = cast(T[]) m;
+
+        size_t initialized = 0;
+        void bailout()
+        {
+            foreach (i; 0 .. initialized)
+            {
+                destroy(result[i]);
+            }
+            alloc.deallocate(m);
+        }
+        scope (failure) bailout;
+
+        for (; !range.empty; range.popFront, ++initialized)
+        {
+            if (initialized == estimated)
+            {
+                // Need to reallocate
+                if (!alloc.reallocate(m, T.sizeof * (estimated *= 2)))
+                {
+                    bailout;
+                    return null;
+                }
+                result = cast(T[]) m;
+            }
+            import std.conv : emplace;
+            emplace!T(result.ptr + initialized, range.front);
+        }
+
+        // Try to shrink memory, no harm if not possible
+        if (initialized < estimated
+            && alloc.reallocate(m, T.sizeof * initialized))
+        {
+            result = cast(T[]) m;
+        }
+
+        return result[0 .. initialized];
+    }
+}
+
+unittest
+{
+    void test(A)(auto ref A alloc)
+    {
+        long[] a = alloc.makeArray!long((int[]).init);
+        assert(a.length == 0 && a.ptr is null);
+        a = alloc.makeArray!long([5, 42]);
+        assert(a.length == 2);
+        assert(a == [ 5, 42]);
+    }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.it);
+    test(theAllocator);
+}
+
+version(unittest)
+{
+    private struct ForcedInputRange
+    {
+        int[]* array;
+        bool empty() { return !array || (*array).empty; }
+        ref int front() { return (*array)[0]; }
+        void popFront() { *array = (*array)[1 .. $]; }
+    }
+}
+
+unittest
+{
+    import std.array, std.range;
+    int[] arr = iota(10).array;
+
+    void test(A)(auto ref A alloc)
+    {
+        ForcedInputRange r;
+        long[] a = alloc.makeArray!long(r);
+        assert(a.length == 0 && a.ptr is null);
+        auto arr2 = arr;
+        r.array = &arr2;
+        a = alloc.makeArray!long(r);
+        assert(a.length == 10);
+        assert(a == iota(10).array);
+    }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.it);
+    test(theAllocator);
+}
+
+/**
+Grows $(D array) by appending $(D delta) more elements. The needed memory is
+allocated using $(D alloc). The extra elements added are either default-initialized, filled with copies of $(D init), or initialized with values fetched from $(R range).
+
+Params:
+T = element type of the array being created
+alloc = the allocator used for getting memory
+array = a reference to the array being grown
+delta = number of elements to add (upon success the new length of $(D array) is $(D array.length + delta))
+init = element used for filling the array
+range = range used for initializing the array elements
+
+Returns:
+$(D true) upon success, $(D false) if memory could not be allocated. In the latter case $(D array) is left unaffected.
+
+Throws:
+The first two overloads throw only if $(T alloc)'s primitives do. The
+overloads that involve copy initialization deallocate memory and propagate the
+exception if the copy operation throws.
+*/
+bool growArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
+        size_t delta)
+{
+    if (!delta) return true;
+    immutable oldLength = array.length;
+    void[] buf = array;
+    if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
+    array = cast(T[]) buf;
+    array[oldLength .. $].uninitializedFillDefault;
+    return true;
+}
+
+unittest
+{
+    void test(A)(auto ref A alloc)
+    {
+        auto arr = alloc.makeArray!int([1, 2, 3]);
+        assert(alloc.growArray(arr, 3));
+        assert(arr == [1, 2, 3, 0, 0, 0]);
+    }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.it);
+    test(theAllocator);
+}
+
+/// Ditto
+auto growArray(T, Allocator)(auto ref Allocator alloc, T[] array,
+    size_t delta, auto ref T init)
+{
+    if (!delta) return true;
+    void[] buf = array;
+    if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
+    immutable oldLength = array.length;
+    array = cast(T[]) buf;
+    scope(failure) array[oldLength .. $].uninitializedFillDefault;
+    import std.algorithm : uninitializedFill;
+    array[oldLength .. $].uninitializedFill(init);
+    return true;
+}
+
+/// Ditto
+auto growArray(T, Allocator, R)(auto ref Allocator alloc, ref T[] array,
+        R range)
+if (isInputRange!R)
+{
+    static if (isForwardRange!R)
+    {
+        immutable delta = walkLength(range.save);
+        if (!delta) return true;
+        immutable oldLength = array.length;
+
+        // Reallocate support memory
+        void[] buf = array;
+        if (!alloc.reallocate(buf, buf.length + T.sizeof * delta))
+        {
+            return false;
+        }
+        array = cast(T[]) buf;
+        // At this point we're committed to the new length.
+
+        auto toFill = array[oldLength .. $];
+        scope (failure)
+        {
+            // Fill the remainder with default-constructed data
+            toFill.uninitializedFillDefault;
+        }
+
+        for (; !range.empty; range.popFront, toFill.popFront)
+        {
+            assert(!toFill.empty);
+            import std.conv : emplace;
+            emplace!T(&toFill.front, range.front);
+        }
+        assert(toFill.empty);
+    }
+    else
+    {
+        scope(failure)
+        {
+            // The last element didn't make it, fill with default
+            array[$ - 1 .. $].uninitializedFillDefault;
+        }
+        void[] buf = array;
+        for (; !range.empty; range.popFront)
+        {
+            if (!alloc.reallocate(buf, buf.length + T.sizeof))
+            {
+                array = cast(T[]) buf;
+                return false;
+            }
+            import std.conv : emplace;
+            emplace!T(buf[$ - T.sizeof .. $], range.front);
+        }
+
+        array = cast(T[]) buf;
+    }
+    return true;
+}
+
+///
+unittest
+{
+    auto arr = theAllocator.makeArray!int([1, 2, 3]);
+    assert(theAllocator.growArray(arr, 2));
+    assert(arr == [1, 2, 3, 0, 0]);
+    import std.range : only;
+    assert(theAllocator.growArray(arr, only(4, 5)));
+    assert(arr == [1, 2, 3, 0, 0, 4, 5]);
+
+    ForcedInputRange r;
+    int[] b = [ 1, 2, 3, 4 ];
+    auto temp = b;
+    r.array = &temp;
+    assert(theAllocator.growArray(arr, r));
+    assert(arr == [1, 2, 3, 0, 0, 4, 5, 1, 2, 3, 4]);
+}
+
+/**
+Shrinks an array by $(D delta) elements.
+
+If $(D array.length < delta), does nothing and returns false. Otherwise,
+destroys the last $(D array.length - delta) elements in the array and then
+reallocates the array's buffer. If reallocation fails, fills the array with
+default-initialized data.
+
+Params:
+T = element type of the array being created
+alloc = the allocator used for getting memory
+array = a reference to the array being shrunk
+delta = number of elements to remove (upon success the new length of $(D array) is $(D array.length - delta))
+
+Returns:
+$(D true) upon success, $(D false) if memory could not be reallocated. In the latter case $(D array) is left with all elements default-initialized.
+
+Throws:
+The first two overloads throw only if $(T alloc)'s primitives do. The
+overloads that involve copy initialization deallocate memory and propagate the
+exception if the copy operation throws.
+*/
+bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
+        ref T[] array, size_t delta)
+{
+    if (delta > array.length) return false;
+
+    // Destroy elements. If a destructor throws, fill the already destroyed
+    // stuff with the default initializer.
+    {
+        size_t destroyed;
+        scope(failure)
+        {
+            array[$ - delta .. $][0 .. destroyed].uninitializedFillDefault;
+        }
+        foreach (ref e; array[$ - delta .. $])
+        {
+            e.destroy;
+            ++destroyed;
+        }
+    }
+
+    if (delta == array.length)
+    {
+        alloc.deallocate(array);
+        array = null;
+        return true;
+    }
+
+    void[] buf = array;
+    if (!alloc.reallocate(buf, buf.length - T.sizeof * delta))
+    {
+        // urgh, at least fill back with default
+        array[$ - delta .. $].uninitializedFillDefault;
+        return false;
+    }
+    array = cast(T[]) buf;
+    return true;
+}
+
+///
+unittest
+{
+    int[] a = theAllocator.makeArray!int(100, 42);
+    assert(a.length == 100);
+    assert(theAllocator.shrinkArray(a, 98));
+    assert(a.length == 2);
+    assert(a == [42, 42]);
+}
+
+unittest
+{
+    void test(A)(auto ref A alloc)
+    {
+        long[] a = alloc.makeArray!long((int[]).init);
+        assert(a.length == 0 && a.ptr is null);
+        a = alloc.makeArray!long(100, 42);
+        assert(alloc.shrinkArray(a, 98));
+        assert(a.length == 2);
+        assert(a == [ 42, 42]);
+    }
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    test(GCAllocator.it);
+    test(theAllocator);
+}
+
+/**
+
+Destroys and then deallocates (using $(D alloc)) the object pointed to by a
+pointer, the class object referred to by a $(D class) or $(D interface)
+reference, or an entire array. It is assumed the respective entities had been
+allocated with the same allocator.
+
+*/
+void dispose(A, T)(auto ref A alloc, T* p)
+{
+    static if (hasElaborateDestructor!T)
+    {
+        destroy(*p);
+    }
+    alloc.deallocate(p[0 .. T.sizeof]);
+}
+
+/// Ditto
+void dispose(A, T)(auto ref A alloc, T p)
+if (is(T == class) || is(T == interface))
+{
+    if (!p) return;
+    auto support = (cast(void*) p)[0 .. typeid(p).init.length];
+    destroy(p);
+    alloc.deallocate(support);
+}
+
+/// Ditto
+void dispose(A, T)(auto ref A alloc, T[] array)
+{
+    static if (hasElaborateDestructor!(typeof(array[0])))
+    {
+        foreach (ref e; array)
+        {
+            destroy(e);
+        }
+    }
+    alloc.deallocate(array);
+}
+
+unittest
+{
+    static int x;
+    static interface I
+    {
+        void method();
+    }
+    static class A : I
+    {
+        int y;
+        override void method() { x = 21; }
+        ~this() { x = 42; }
+    }
+    static class B : A
+    {
+    }
+    auto a = theAllocator.make!A;
+    a.method();
+    assert(x == 21);
+    theAllocator.dispose(a);
+    assert(x == 42);
+
+    B b = theAllocator.make!B;
+    b.method();
+    assert(x == 21);
+    theAllocator.dispose(b);
+    assert(x == 42);
+
+    I i = theAllocator.make!B;
+    i.method();
+    assert(x == 21);
+    theAllocator.dispose(i);
+    assert(x == 42);
+
+    int[] arr = theAllocator.makeArray!int(43);
+    theAllocator.dispose(arr);
+}
+
+/**
+
+Returns a dynamically-typed $(D CAllocator) built around a given statically-
+typed allocator $(D a) of type $(D A). Passing a pointer to the allocator
+creates a dynamic allocator around the allocator pointed to by the pointer,
+without attempting to copy or move it. Passing the allocator by value or
+reference behaves as follows.
+
+$(UL
+$(LI If $(D A) has no state, the resulting object is allocated in static
+shared storage.)
+$(LI If $(D A) has state and is copyable, the result will store a copy of it
+within. The result itself is allocated in its own statically-typed allocator.)
+$(LI If $(D A) has state and is not copyable, the result will move the
+passed-in argument into the result. The result itself is allocated in its own
+statically-typed allocator.)
+)
+
+*/
+CAllocatorImpl!A allocatorObject(A)(auto ref A a)
+if (!isPointer!A)
+{
+    import std.conv : emplace;
+    static if (stateSize!A == 0)
+    {
+        enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
+        static __gshared ulong[s] state;
+        static __gshared CAllocatorImpl!A result;
+        if (!result)
+        {
+            // Don't care about a few races
+            result = emplace!(CAllocatorImpl!A)(state[]);
+        }
+        assert(result);
+        return result;
+    }
+    else static if (is(typeof({ A b = a; A c = b; }))) // copyable
+    {
+        auto state = a.allocate(stateSize!(CAllocatorImpl!A));
+        import std.traits : hasMember;
+        static if (hasMember!(A, "deallocate"))
+        {
+            scope(failure) a.deallocate(state);
+        }
+        return cast(CAllocatorImpl!A) emplace!(CAllocatorImpl!A)(state);
+    }
+    else // the allocator object is not copyable
+    {
+        // This is sensitive... create on the stack and then move
+        enum s = stateSize!(CAllocatorImpl!A).divideRoundUp(ulong.sizeof);
+        ulong[s] state;
+        import std.algorithm : move;
+        emplace!(CAllocatorImpl!A)(state[], move(a));
+        auto dynState = a.allocate(stateSize!(CAllocatorImpl!A));
+        // Bitblast the object in its final destination
+        dynState[] = state[];
+        return cast(CAllocatorImpl!A) dynState.ptr;
+    }
+}
+
+/// Ditto
+CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
+{
+    assert(pa);
+    import std.conv : emplace;
+    auto state = pa.allocate(stateSize!(CAllocatorImpl!(A, Yes.indirect)));
+    import std.traits : hasMember;
+    static if (hasMember!(A, "deallocate"))
+    {
+        scope(failure) pa.deallocate(state);
+    }
+    return emplace!(CAllocatorImpl!(A, Yes.indirect))
+        (state, pa);
+}
+
+///
+unittest
+{
+    import std.experimental.allocator.mallocator;
+    IAllocator a = allocatorObject(Mallocator.it);
+    auto b = a.allocate(100);
+    assert(b.length == 100);
+    assert(a.deallocate(b) == Ternary.yes);
+
+    // The in-situ region must be used by pointer
+    import std.experimental.allocator.region;
+    auto r = InSituRegion!1024();
+    a = allocatorObject(&r);
+    b = a.allocate(200);
+    assert(b.length == 200);
+    // In-situ regions can't deallocate
+    assert(a.deallocate(b) == Ternary.unknown);
+}
+
+/**
+
+Implementation of $(D IAllocator) using $(D Allocator). This adapts a
+statically-built allocator type to $(D IAllocator) that is directly usable by
+non-templated code.
+
+Usually $(D CAllocatorImpl) is used indirectly by calling
+$(LREF theAllocator).
+*/
+class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
+    : IAllocator
+{
+    import std.traits : hasMember;
+
+    /**
+    The implementation is available as a public member.
+    */
+    static if (indirect)
+    {
+        private Allocator* pimpl;
+        ref Allocator impl()
+        {
+            return *pimpl;
+        }
+        this(Allocator* pa)
+        {
+            pimpl = pa;
+        }
+    }
+    else
+    {
+        static if (stateSize!Allocator) Allocator impl;
+        else alias impl = Allocator.it;
+    }
+
+    /// Returns $(D impl.alignment).
+    override @property uint alignment()
+    {
+        return impl.alignment;
+    }
+
+    /**
+    Returns $(D impl.goodAllocSize(s)).
+    */
+    override size_t goodAllocSize(size_t s)
+    {
+        return impl.goodAllocSize(s);
+    }
+
+    /**
+    Returns $(D impl.allocate(s)).
+    */
+    override void[] allocate(size_t s, TypeInfo ti = null)
+    {
+        return impl.allocate(s);
+    }
+
+    /**
+    If $(D impl.alignedAllocate) exists, calls it, puts the result in $(D r),
+    and returns $(D Ternary.yes) or $(D Ternary.no) indicating whether
+    allocation succeded.
+
+    If $(D impl.alignedAllocate) is not defined, returns $(D Ternary.unknown).
+    */
+    override Ternary alignedAllocate(size_t s, uint a, ref void[] r,
+        TypeInfo ti = null)
+    {
+        static if (!hasMember!(Allocator, "alignedAllocate"))
+        {
+            return Ternary.unknown;
+        }
+        else
+        {
+            r = impl.alignedAllocate(s, a);
+            return Ternary(r.ptr !is null);
+        }
+    }
+
+    /**
+    Overridden only if $(D Allocator) implements $(D owns). In that case,
+    returns $(D impl.owns(b)).
+    */
+    override Ternary owns(void[] b)
+    {
+        static if (hasMember!(Allocator, "owns")) return Ternary(impl.owns(b));
+        else return Ternary.unknown;
+    }
+
+    /// Returns $(D impl.expand(b, s)) if defined, $(D false) otherwise.
+    override Ternary expand(ref void[] b, size_t s)
+    {
+        static if (hasMember!(Allocator, "expand"))
+            return Ternary(impl.expand(b, s));
+        else
+            return Ternary.unknown;
+    }
+
+    /// Returns $(D impl.reallocate(b, s)).
+    override bool reallocate(ref void[] b, size_t s)
+    {
+        return impl.reallocate(b, s);
+    }
+
+    /// Forwards to $(D impl.alignedReallocate).
+    Ternary alignedReallocate(ref void[] b, size_t s, uint a)
+    {
+        static if (!hasMember!(Allocator, "alignedAllocate"))
+        {
+            return Ternary.unknown;
+        }
+        else
+        {
+            return Ternary(impl.alignedReallocate(b, s, a));
+        }
+    }
+
+    Ternary resolveInternalPointer(void* p, ref void[] result)
+    {
+        static if (hasMember!(Allocator, "resolveInternalPointer"))
+        {
+            result = impl.resolveInternalPointer(p);
+            return Ternary(result.ptr !is null);
+        }
+        else
+        {
+            return Ternary.unknown;
+        }
+    }
+
+    /**
+    If $(D impl.deallocate) is not defined, returns $(D Ternary.unknown). If
+    $(D impl.deallocate) returns $(D void) (the common case), calls it and
+    returns $(D Ternary.yes). If $(D impl.deallocate) returns $(D bool), calls
+    it and returns $(D Ternary.yes) for $(D true), $(D Ternary.no) for $(D
+    false).
+    */
+    override Ternary deallocate(void[] b)
+    {
+        static if (hasMember!(Allocator, "deallocate"))
+        {
+            static if (is(typeof(impl.deallocate(b)) == bool))
+            {
+                return Ternary(impl.deallocate(b));
+            }
+            else
+            {
+                impl.deallocate(b);
+                return Ternary.yes;
+            }
+        }
+        else
+        {
+            return Ternary.unknown;
+        }
+    }
+
+    /**
+    Calls $(D impl.deallocateAll()) and returns $(D Ternary.yes) if defined,
+    otherwise returns $(D Ternary.unknown).
+    */
+    override Ternary deallocateAll()
+    {
+        static if (hasMember!(Allocator, "deallocateAll"))
+        {
+            impl.deallocateAll();
+            return Ternary.yes;
+        }
+        else
+        {
+            return Ternary.unknown;
+        }
+    }
+
+    /**
+    Forwards to $(D impl.empty()) if defined, otherwise returns
+    $(D Ternary.unknown).
+    */
+    override Ternary empty()
+    {
+        static if (hasMember!(Allocator, "empty"))
+        {
+            return Ternary(impl.empty);
+        }
+        else
+        {
+            return Ternary.unknown;
+        }
+    }
+
+    /**
+    Returns $(D impl.allocateAll()) if present, $(D null) otherwise.
+    */
+    override Ternary allocateAll(ref void[] result)
+    {
+        static if (hasMember!(Allocator, "allocateAll"))
+        {
+            result = impl.allocateAll();
+            return Ternary(result.ptr !is null);
+        }
+        else
+        {
+            return Ternary.unknown;
+        }
+    }
+}
+
+// Example in intro above
+unittest
+{
+    // Allocate an int, initialize it with 42
+    int* p = theAllocator.make!int(42);
+    assert(*p == 42);
+    // Destroy and deallocate it
+    theAllocator.dispose(p);
+
+    // Allocate using the global process allocator
+    p = processAllocator.make!int(100);
+    assert(*p == 100);
+    // Destroy and deallocate
+    processAllocator.dispose(p);
+
+    // Create an array of 50 doubles initialized to -1.0
+    double[] arr = theAllocator.makeArray!double(50, -1.0);
+    // Append two zeros to it
+    theAllocator.growArray(arr, 2, 0.0);
+    // On second thought, take that back
+    theAllocator.shrinkArray(arr, 2);
+    // Destroy and deallocate
+    theAllocator.dispose(arr);
+}
+
+__EOF__
+
+/**
 
 Stores an allocator object in thread-local storage (i.e. non-$(D shared) D
 global). $(D ThreadLocal!A) is a subtype of $(D A) so it appears to implement
@@ -354,14 +1306,14 @@ struct ThreadLocal(A)
     static A it;
 
     /**
-    $(D ThreadLocal!A) is a subtype of $(D A) so it appears to implement
-    $(D A)'s allocator primitives.
+    `ThreadLocal!A` is a subtype of `A` so it appears to implement `A`'s
+    allocator primitives.
     */
     alias it this;
 
     /**
-    $(D ThreadLocal) disables all constructors. The intended usage is
-    $(D ThreadLocal!A.it).
+    `ThreadLocal` disables all constructors. The intended usage is
+    `ThreadLocal!A.it`.
     */
     @disable this();
     /// Ditto
@@ -599,7 +1551,7 @@ The implementation stores three additional words with each allocation (one for
 the block size and two for search management).
 
 */
-struct InternalPointersTree(Allocator)
+private struct InternalPointersTree(Allocator)
 {
     alias Tree = EmbeddedTree!(size_t,
         (a, b) => cast(void*) a + a.payload < cast(void*) b);
@@ -838,34 +1790,3 @@ unittest
     assert(alloc.deallocate(b) == Ternary.yes);
 }
 
-__EOF__
-
-version(none) struct TemplateAllocator
-{
-    enum alignment = platformAlignment;
-    static size_t goodAllocSize(size_t s)
-    {
-    }
-    void[] allocate(size_t)
-    {
-    }
-    bool owns(void[])
-    {
-    }
-    bool expand(ref void[] b, size_t)
-    {
-    }
-    bool reallocate(ref void[] b, size_t)
-    {
-    }
-    void deallocate(void[] b)
-    {
-    }
-    void deallocateAll()
-    {
-    }
-    void[] allocateAll()
-    {
-    }
-    static shared TemplateAllocator it;
-}

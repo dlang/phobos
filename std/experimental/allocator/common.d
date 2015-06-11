@@ -1,8 +1,15 @@
+/**
+Utility and ancillary artifacts of `std.experimental.allocator`. This module
+shouldn't be used directly; its functionality will be migrated into more
+appropriate parts of `std`.
+
+Authors: $(WEB erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
+*/
 module std.experimental.allocator.common;
 import std.algorithm, std.traits;
 
-/*
-Ternary by Timon Gehr and Andrei Alexandrescu.
+/**
+Ternary type with three thruth values.
 */
 struct Ternary
 {
@@ -14,27 +21,56 @@ struct Ternary
         return r;
     }
 
-    enum no = make(0), yes = make(2), unknown = make(6);
+    /**
+    In addition to `false` and `true`, `Ternary` offers `unknown`.
+    */
+    enum no = make(0);
+    /// ditto
+    enum yes = make(2);
+    /// ditto
+    enum unknown = make(6);
 
+    /**
+     Construct and assign from a `bool`, receiving `no` for `false` and `yes`
+     for `true`.
+    */
     this(bool b) { value = b << 1; }
 
+    /// ditto
     void opAssign(bool b) { value = b << 1; }
 
+    /**
+    $(TABLE Truth table for logical operations,
+      $(TR $(TH `a`) $(TH `b`) $(TH `$(TILDE)a`) $(TH `a | b`) $(TH `a & b`) $(TH `a ^ b`))
+      $(TR $(TD `no`) $(TD `no`) $(TD `yes`) $(TD `no`) $(TD `no`) $(TD `no`))
+      $(TR $(TD `no`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `no`) $(TD `yes`))
+      $(TR $(TD `no`) $(TD `unknown`) $(TD) $(TD `unknown`) $(TD `no`) $(TD `unknown`))
+      $(TR $(TD `yes`) $(TD `no`) $(TD `no`) $(TD `yes`) $(TD `no`) $(TD `yes`))
+      $(TR $(TD `yes`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `yes`) $(TD `no`))
+      $(TR $(TD `yes`) $(TD `unknown`) $(TD) $(TD `yes`) $(TD `no`) $(TD `unknown`))
+      $(TR $(TD `unknown`) $(TD `no`) $(TD `unknown`) $(TD `unknown`) $(TD `no`) $(TD `unknown`))
+      $(TR $(TD `unknown`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `no`) $(TD `unknown`))
+      $(TR $(TD `unknown`) $(TD `unknown`) $(TD) $(TD `unknown`) $(TD `unknown`) $(TD `unknown`))
+    )
+    */
     Ternary opUnary(string s)() if (s == "~")
     {
         return make(386 >> value & 6);
     }
 
+    /// ditto
     Ternary opBinary(string s)(Ternary rhs) if (s == "|")
     {
         return make(25512 >> value + rhs.value & 6);
     }
 
+    /// ditto
     Ternary opBinary(string s)(Ternary rhs) if (s == "&")
     {
         return make(26144 >> value + rhs.value & 6);
     }
 
+    /// ditto
     Ternary opBinary(string s)(Ternary rhs) if (s == "^")
     {
         return make(26504 >> value + rhs.value & 6);
@@ -199,7 +235,7 @@ unittest
 }
 
 /**
-Returns s rounded up to a multiple of alignment, which must be a power of 2.
+Returns `n` rounded up to a multiple of alignment, which must be a power of 2.
 */
 package size_t roundUpToAlignment(size_t n, uint alignment)
 {
@@ -220,6 +256,27 @@ unittest
     assert(118.roundUpToAlignment(64) == 128);
 }
 
+/**
+Returns `n` rounded down to a multiple of alignment, which must be a power of 2.
+*/
+package size_t roundDownToAlignment(size_t n, uint alignment)
+{
+    assert(alignment.isPowerOf2);
+    return n & ~size_t(alignment - 1);
+}
+
+unittest
+{
+    assert(10.roundDownToAlignment(4) == 8);
+    assert(11.roundDownToAlignment(2) == 10);
+    assert(12.roundDownToAlignment(8) == 8);
+    assert(63.roundDownToAlignment(64) == 0);
+}
+
+/**
+Advances the beginning of `b` to start at alignment `a`. The resulting buffer
+may therefore be shorter.
+*/
 package void[] roundUpToAlignment(void[] b, uint a)
 {
     auto e = b.ptr + b.length;
@@ -240,22 +297,8 @@ unittest
 }
 
 /**
-Returns s rounded down to a multiple of alignment, which must be a power of 2.
+Like `a / b` but rounds the result up, not down.
 */
-package size_t roundDownToAlignment(size_t n, uint alignment)
-{
-    assert(alignment.isPowerOf2);
-    return n & ~size_t(alignment - 1);
-}
-
-unittest
-{
-    assert(10.roundDownToAlignment(4) == 8);
-    assert(11.roundDownToAlignment(2) == 10);
-    assert(12.roundDownToAlignment(8) == 8);
-    assert(63.roundDownToAlignment(64) == 0);
-}
-
 package size_t divideRoundUp(size_t a, size_t b)
 {
     assert(b);
@@ -263,7 +306,7 @@ package size_t divideRoundUp(size_t a, size_t b)
 }
 
 /**
-Returns s rounded up to a multiple of base.
+Returns `s` rounded up to a multiple of `base`.
 */
 package void[] roundStartToMultipleOf(void[] s, uint base)
 {
@@ -339,14 +382,17 @@ unittest
     assert(trailingZeros(4) == 2);
 }
 
-/*
+/**
+Returns `true` if `ptr` is aligned at `alignment`.
 */
 package bool alignedAt(void* ptr, uint alignment)
 {
     return cast(size_t) ptr % alignment == 0;
 }
 
-/*
+/**
+Returns the effective alignment of `ptr`, i.e. the largest power of two that is
+a divisor of `ptr`.
 */
 package uint effectiveAlignment(void* ptr)
 {
@@ -359,7 +405,7 @@ unittest
     assert(effectiveAlignment(&x) >= int.alignof);
 }
 
-/*
+/**
 Aligns a pointer down to a specified alignment. The resulting pointer is less
 than or equal to the given pointer.
 */
@@ -369,7 +415,7 @@ package void* alignDownTo(void* ptr, uint alignment)
     return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
 }
 
-/*
+/**
 Aligns a pointer up to a specified alignment. The resulting pointer is greater
 than or equal to the given pointer.
 */
@@ -381,6 +427,9 @@ package void* alignUpTo(void* ptr, uint alignment)
 }
 
 // Credit: Matthias Bentrup
+/**
+Returns `true` if `x` is a nonzero power of two.
+*/
 package bool isPowerOf2(uint x)
 {
     return (x & -x) > (x - 1);
@@ -502,8 +551,8 @@ bool alignedReallocate(Allocator)(ref Allocator alloc,
     return true;
 }
 
-/*
-Forwards each of the methods in "funs" (if defined) to "member".
+/**
+Forwards each of the methods in `funs` (if defined) to `member`.
 */
 package string forwardToMember(string member, string[] funs...)
 {

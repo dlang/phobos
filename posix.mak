@@ -169,10 +169,10 @@ PACKAGE_std_digest = crc digest hmac md ripemd sha
 PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
 PACKAGE_std_experimental_allocator = \
-  affix_allocator allocator_list bucketizer common fallback_allocator \
-  free_list free_tree gc_allocator heap_block kernighan_ritchie mallocator \
-  mmap_allocator null_allocator package porcelain quantizer region scoped_allocator \
-  segregator showcase stats_collector
+  affix_allocator allocator_list bucketizer building_blocks common \
+  fallback_allocator free_list free_tree gc_allocator heap_block \
+  kernighan_ritchie mallocator mmap_allocator null_allocator package quantizer \
+  region scoped_allocator segregator showcase stats_collector typed
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
