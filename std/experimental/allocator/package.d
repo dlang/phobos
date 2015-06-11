@@ -21,7 +21,7 @@ processAllocator.dispose(p);
 // Create an array of 50 doubles initialized to -1.0
 double[] arr = theAllocator.makeArray!double(50, -1.0);
 // Append two zeros to it
-theAllocator.growArray(arr, 2, 0.0);
+theAllocator.expandArray(arr, 2, 0.0);
 // On second thought, take that back
 theAllocator.shrinkArray(arr, 2);
 // Destroy and deallocate
@@ -428,7 +428,7 @@ unittest
 }
 
 /**
-Create an array of $(D T) with $(D length) elements using $(D alloc). The array is either default-initialized, filled with copies of $(D init), or initialized with values fetched from $(R range).
+Create an array of $(D T) with $(D length) elements using $(D alloc). The array is either default-initialized, filled with copies of $(D init), or initialized with values fetched from `range`.
 
 Params:
 T = element type of the array being created
@@ -442,7 +442,7 @@ The newly-created array, or $(D null) if either $(D length) was $(D 0) or
 allocation failed.
 
 Throws:
-The first two overloads throw only if $(T alloc)'s primitives do. The
+The first two overloads throw only if `alloc`'s primitives do. The
 overloads that involve copy initialization deallocate memory and propagate the
 exception if the copy operation throws.
 */
@@ -656,25 +656,29 @@ unittest
 
 /**
 Grows $(D array) by appending $(D delta) more elements. The needed memory is
-allocated using $(D alloc). The extra elements added are either default-initialized, filled with copies of $(D init), or initialized with values fetched from $(R range).
+allocated using $(D alloc). The extra elements added are either default-
+initialized, filled with copies of $(D init), or initialized with values
+fetched from `range`.
 
 Params:
 T = element type of the array being created
 alloc = the allocator used for getting memory
 array = a reference to the array being grown
-delta = number of elements to add (upon success the new length of $(D array) is $(D array.length + delta))
+delta = number of elements to add (upon success the new length of $(D array) is
+$(D array.length + delta))
 init = element used for filling the array
 range = range used for initializing the array elements
 
 Returns:
-$(D true) upon success, $(D false) if memory could not be allocated. In the latter case $(D array) is left unaffected.
+$(D true) upon success, $(D false) if memory could not be allocated. In the
+latter case $(D array) is left unaffected.
 
 Throws:
-The first two overloads throw only if $(T alloc)'s primitives do. The
+The first two overloads throw only if `alloc`'s primitives do. The
 overloads that involve copy initialization deallocate memory and propagate the
 exception if the copy operation throws.
 */
-bool growArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
+bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
         size_t delta)
 {
     if (!delta) return true;
@@ -691,7 +695,7 @@ unittest
     void test(A)(auto ref A alloc)
     {
         auto arr = alloc.makeArray!int([1, 2, 3]);
-        assert(alloc.growArray(arr, 3));
+        assert(alloc.expandArray(arr, 3));
         assert(arr == [1, 2, 3, 0, 0, 0]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -700,7 +704,7 @@ unittest
 }
 
 /// Ditto
-auto growArray(T, Allocator)(auto ref Allocator alloc, T[] array,
+bool expandArray(T, Allocator)(auto ref Allocator alloc, T[] array,
     size_t delta, auto ref T init)
 {
     if (!delta) return true;
@@ -715,7 +719,7 @@ auto growArray(T, Allocator)(auto ref Allocator alloc, T[] array,
 }
 
 /// Ditto
-auto growArray(T, Allocator, R)(auto ref Allocator alloc, ref T[] array,
+bool expandArray(T, Allocator, R)(auto ref Allocator alloc, ref T[] array,
         R range)
 if (isInputRange!R)
 {
@@ -777,24 +781,24 @@ if (isInputRange!R)
 unittest
 {
     auto arr = theAllocator.makeArray!int([1, 2, 3]);
-    assert(theAllocator.growArray(arr, 2));
+    assert(theAllocator.expandArray(arr, 2));
     assert(arr == [1, 2, 3, 0, 0]);
     import std.range : only;
-    assert(theAllocator.growArray(arr, only(4, 5)));
+    assert(theAllocator.expandArray(arr, only(4, 5)));
     assert(arr == [1, 2, 3, 0, 0, 4, 5]);
 
     ForcedInputRange r;
     int[] b = [ 1, 2, 3, 4 ];
     auto temp = b;
     r.array = &temp;
-    assert(theAllocator.growArray(arr, r));
+    assert(theAllocator.expandArray(arr, r));
     assert(arr == [1, 2, 3, 0, 0, 4, 5, 1, 2, 3, 4]);
 }
 
 /**
 Shrinks an array by $(D delta) elements.
 
-If $(D array.length < delta), does nothing and returns false. Otherwise,
+If $(D array.length < delta), does nothing and returns `false`. Otherwise,
 destroys the last $(D array.length - delta) elements in the array and then
 reallocates the array's buffer. If reallocation fails, fills the array with
 default-initialized data.
@@ -806,10 +810,12 @@ array = a reference to the array being shrunk
 delta = number of elements to remove (upon success the new length of $(D array) is $(D array.length - delta))
 
 Returns:
-$(D true) upon success, $(D false) if memory could not be reallocated. In the latter case $(D array) is left with all elements default-initialized.
+`true` upon success, `false` if memory could not be reallocated. In the latter
+case, the slice $(D array[$ - delta .. $]) is left with default-initialized
+elements.
 
 Throws:
-The first two overloads throw only if $(T alloc)'s primitives do. The
+The first two overloads throw only if `alloc`'s primitives do. The
 overloads that involve copy initialization deallocate memory and propagate the
 exception if the copy operation throws.
 */
@@ -1273,7 +1279,7 @@ unittest
     // Create an array of 50 doubles initialized to -1.0
     double[] arr = theAllocator.makeArray!double(50, -1.0);
     // Append two zeros to it
-    theAllocator.growArray(arr, 2, 0.0);
+    theAllocator.expandArray(arr, 2, 0.0);
     // On second thought, take that back
     theAllocator.shrinkArray(arr, 2);
     // Destroy and deallocate
