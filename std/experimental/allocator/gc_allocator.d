@@ -74,9 +74,10 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system void deallocate(void[] b) shared
+    @system bool deallocate(void[] b) shared
     {
         GC.free(b.ptr);
+        return true;
     }
 
     /**

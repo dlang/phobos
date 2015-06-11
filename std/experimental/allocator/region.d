@@ -27,7 +27,6 @@ control alignment externally.
 */
 struct Region(ParentAllocator = NullAllocator,
     uint minAlign = platformAlignment,
-    Flag!"defineDeallocate" defineDeallocate = No.defineDeallocate,
     Flag!"growDownwards" growDownwards = No.growDownwards)
 {
     static assert(minAlign.isGoodStaticAlignment);
@@ -120,7 +119,7 @@ struct Region(ParentAllocator = NullAllocator,
             auto result = (_current - rounded)[0 .. n];
             assert(result.ptr >= _begin);
             _current = result.ptr;
-            assert(owns(result));
+            assert(owns(result) == Ternary.yes);
             return result;
         }
         else
@@ -203,7 +202,7 @@ struct Region(ParentAllocator = NullAllocator,
     static if (growDownwards == No.growDownwards)
     bool expand(ref void[] b, size_t delta)
     {
-        assert(owns(b) || b.ptr is null);
+        assert(owns(b) == Ternary.yes || b.ptr is null);
         assert(b.ptr + b.length <= _current || b.ptr is null);
         if (!b.ptr)
         {
@@ -236,32 +235,34 @@ struct Region(ParentAllocator = NullAllocator,
     b = Block previously obtained by a call to $(D allocate) against this
     allocator ($(D null) is allowed).
     */
-    static if (defineDeallocate == Yes.defineDeallocate)
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
-        assert(owns(b) || b.ptr is null);
+        assert(owns(b) == Ternary.yes || b.ptr is null);
         static if (growDownwards)
         {
             if (b.ptr == _current)
             {
                 _current += this.goodAllocSize(b.length);
+                return true;
             }
         }
         else
         {
             if (b.ptr + this.goodAllocSize(b.length) == _current)
             {
-                assert(b.ptr !is null);
+                assert(b.ptr !is null || _current is null);
                 _current = b.ptr;
+                return true;
             }
         }
+        return false;
     }
 
     /**
     Deallocates all memory allocated by this region, which can be subsequently
     reused for new allocations.
     */
-    void deallocateAll()
+    bool deallocateAll()
     {
         static if (growDownwards)
         {
@@ -271,6 +272,7 @@ struct Region(ParentAllocator = NullAllocator,
         {
             _current = _begin;
         }
+        return true;
     }
 
     /**
@@ -284,15 +286,15 @@ struct Region(ParentAllocator = NullAllocator,
     $(D true) if $(D b) has been allocated with this region, $(D false)
     otherwise.
     */
-    bool owns(void[] b) const
+    Ternary owns(void[] b) const
     {
-        return b.ptr >= _begin && b.ptr + b.length <= _end;
+        return Ternary(b.ptr >= _begin && b.ptr + b.length <= _end);
     }
 
     /// Returns $(D true) if no memory has been allocated in this region.
-    bool empty() const
+    Ternary empty() const
     {
-        return _current == _begin;
+        return Ternary(_current == _begin);
     }
 
     /// Nonstandard property that returns bytes available for allocation.
@@ -332,7 +334,7 @@ unittest
 {
     import std.experimental.allocator.mallocator;
     // Create a 64 KB region allocated with malloc
-    auto reg = Region!(Mallocator, Mallocator.alignment, Yes.defineDeallocate,
+    auto reg = Region!(Mallocator, Mallocator.alignment,
         Yes.growDownwards)(1024 * 64);
     auto b = reg.allocate(101);
     assert(b.length == 101);
@@ -355,8 +357,7 @@ allocates starting at the end on systems where stack grows downwards, such that
 hot memory is used first.
 
 */
-struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
-        Flag!"defineDeallocate" defineDeallocate = No.defineDeallocate)
+struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 {
     import std.algorithm : max;
     import std.conv : to;
@@ -372,7 +373,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
     @disable this(this);
 
     // state {
-    Region!(NullAllocator, minAlign, defineDeallocate, growDownwards) _impl;
+    Region!(NullAllocator, minAlign, growDownwards) _impl;
     union
     {
         private ubyte[size] _store = void;
@@ -452,8 +453,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
     b = Block previously obtained by a call to $(D allocate) against this
     allocator ($(D null) is allowed).
     */
-    static if (defineDeallocate == Yes.defineDeallocate)
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
         if (!_impl._current) lazyInit;
         return _impl.deallocate(b);
@@ -464,7 +464,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
     allocation. For efficiency reasons, if $(D b is null) the function returns
     $(D false).
     */
-    bool owns(void[] b)
+    Ternary owns(void[] b)
     {
         if (!_impl._current) lazyInit;
         return _impl.owns(b);
@@ -484,10 +484,10 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment,
     /**
     Deallocates all memory allocated with this allocator.
     */
-    void deallocateAll()
+    bool deallocateAll()
     {
         // We don't care to lazily init the region
-        _impl.deallocateAll;
+        return _impl.deallocateAll;
     }
 
     /**
@@ -690,11 +690,11 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 
     /// Ditto
-    bool owns(void[] b) shared
+    Ternary owns(void[] b) shared
     {
         // No need to lock here.
         assert(!_brkCurrent || b.ptr + b.length <= _brkCurrent);
-        return _brkInitial && b.ptr >= _brkInitial;
+        return Ternary(_brkInitial && b.ptr >= _brkInitial);
     }
 
     /**
@@ -736,10 +736,10 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 
     /// Standard allocator API.
-    bool empty()
+    Ternary empty()
     {
         // Also works when they're both null.
-        return _brkCurrent == _brkInitial;
+        return Ternary(_brkCurrent == _brkInitial);
     }
 }
 
@@ -762,8 +762,8 @@ version(Posix) unittest
     assert(a.length == 2001);
     auto b = alloc.allocate(2001);
     assert(b.length == 2001);
-    assert(alloc.owns(a));
-    assert(alloc.owns(b));
+    assert(alloc.owns(a) == Ternary.yes);
+    assert(alloc.owns(b) == Ternary.yes);
     // reducing the brk does not work on OSX
     version(OSX) {} else
     {

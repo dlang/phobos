@@ -127,59 +127,62 @@ interface IAllocator
     size_t goodAllocSize(size_t s);
 
     /**
-    Allocates memory.
+    Allocates `n` bytes of memory.
     */
     void[] allocate(size_t, TypeInfo ti = null);
 
     /**
-    Allocates memory with specified alignment.
+    Allocates `n` bytes of memory with specified alignment `a`. Implementations
+    that do not support this primitive should always return `null`.
     */
-    Ternary alignedAllocate(size_t, uint, ref void[], TypeInfo ti = null);
+    void[] alignedAllocate(size_t n, uint a);
 
     /**
-    Allocates and returns all memory available to this allocator. $(COMMENT By
-    default returns $(D null).)
+    Allocates and returns all memory available to this allocator.
+    Implementations that do not support this primitive should always return
+    `null`.
     */
-    Ternary allocateAll(ref void[] result);
+    void[] allocateAll();
 
     /**
-    Expands a memory block in place. If expansion not supported
-    by the allocator, returns $(D Ternary.unknown). If implemented, returns $(D
-    Ternary.yes) if expansion succeeded, $(D Ternary.no) otherwise.
+    Expands a memory block in place and returns `true` if successful.
+    Implementations that don't support this primitive should always return
+    `false`.
     */
-    Ternary expand(ref void[], size_t);
+    bool expand(ref void[], size_t);
 
     /// Reallocates a memory block.
     bool reallocate(ref void[], size_t);
 
     /// Reallocates a memory block with specified alignment.
-    Ternary alignedReallocate(ref void[] b, size_t size, uint alignment);
+    bool alignedReallocate(ref void[] b, size_t size, uint alignment);
 
     /**
     Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
-    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership not
-    supported by the allocator. $(COMMENT By default returns $(D
-    Ternary.unknown).)
+    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership
+    cannot be determined. Implementations that don't support this primitive
+    should always return `Ternary.unknown`.
     */
     Ternary owns(void[] b);
 
     /**
-    Resolves an internal pointer to the full block allocated.
+    Resolves an internal pointer to the full block allocated. Implementations
+    that don't support this primitive should always return `Ternary.unknown`.
     */
     Ternary resolveInternalPointer(void* p, ref void[] result);
 
     /**
-    Deallocates a memory block. Returns $(D Ternary.unknown) if deallocation is
-    not supported. A simple way to check that an allocator supports
-    deallocation is to call $(D deallocate(null)).
+    Deallocates a memory block. Implementations that don't support this
+    primitive should always return `false`. A simple way to check that an
+    allocator supports deallocation is to call $(D deallocate(null)).
     */
-    Ternary deallocate(void[] b);
+    bool deallocate(void[] b);
 
     /**
-    Deallocates all memory. Returns $(D Ternary.unknown) if deallocation is
-    not supported.
+    Deallocates all memory. Implementations that don't support this primitive
+    should always return `false`.
     */
-    Ternary deallocateAll();
+    bool deallocateAll();
 
     /**
     Returns $(D Ternary.yes) if no memory is currently allocated from this
@@ -1043,7 +1046,7 @@ unittest
     IAllocator a = allocatorObject(Mallocator.it);
     auto b = a.allocate(100);
     assert(b.length == 100);
-    assert(a.deallocate(b) == Ternary.yes);
+    assert(a.deallocate(b));
 
     // The in-situ region must be used by pointer
     import std.experimental.allocator.region;
@@ -1051,8 +1054,8 @@ unittest
     a = allocatorObject(&r);
     b = a.allocate(200);
     assert(b.length == 200);
-    // In-situ regions can't deallocate
-    assert(a.deallocate(b) == Ternary.unknown);
+    // In-situ regions can deallocate the last allocation
+    assert(a.deallocate(b));
 }
 
 /**
@@ -1119,17 +1122,15 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
 
     If $(D impl.alignedAllocate) is not defined, returns $(D Ternary.unknown).
     */
-    override Ternary alignedAllocate(size_t s, uint a, ref void[] r,
-        TypeInfo ti = null)
+    override void[] alignedAllocate(size_t s, uint a)
     {
         static if (!hasMember!(Allocator, "alignedAllocate"))
         {
-            return Ternary.unknown;
+            return null;
         }
         else
         {
-            r = impl.alignedAllocate(s, a);
-            return Ternary(r.ptr !is null);
+            return impl.alignedAllocate(s, a);
         }
     }
 
@@ -1139,17 +1140,17 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     */
     override Ternary owns(void[] b)
     {
-        static if (hasMember!(Allocator, "owns")) return Ternary(impl.owns(b));
+        static if (hasMember!(Allocator, "owns")) return impl.owns(b);
         else return Ternary.unknown;
     }
 
     /// Returns $(D impl.expand(b, s)) if defined, $(D false) otherwise.
-    override Ternary expand(ref void[] b, size_t s)
+    override bool expand(ref void[] b, size_t s)
     {
         static if (hasMember!(Allocator, "expand"))
-            return Ternary(impl.expand(b, s));
+            return impl.expand(b, s);
         else
-            return Ternary.unknown;
+            return false;
     }
 
     /// Returns $(D impl.reallocate(b, s)).
@@ -1159,15 +1160,15 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     /// Forwards to $(D impl.alignedReallocate).
-    Ternary alignedReallocate(ref void[] b, size_t s, uint a)
+    bool alignedReallocate(ref void[] b, size_t s, uint a)
     {
         static if (!hasMember!(Allocator, "alignedAllocate"))
         {
-            return Ternary.unknown;
+            return false;
         }
         else
         {
-            return Ternary(impl.alignedReallocate(b, s, a));
+            return impl.alignedReallocate(b, s, a);
         }
     }
 
@@ -1191,23 +1192,15 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     it and returns $(D Ternary.yes) for $(D true), $(D Ternary.no) for $(D
     false).
     */
-    override Ternary deallocate(void[] b)
+    override bool deallocate(void[] b)
     {
         static if (hasMember!(Allocator, "deallocate"))
         {
-            static if (is(typeof(impl.deallocate(b)) == bool))
-            {
-                return Ternary(impl.deallocate(b));
-            }
-            else
-            {
-                impl.deallocate(b);
-                return Ternary.yes;
-            }
+            return impl.deallocate(b);
         }
         else
         {
-            return Ternary.unknown;
+            return false;
         }
     }
 
@@ -1215,16 +1208,15 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     Calls $(D impl.deallocateAll()) and returns $(D Ternary.yes) if defined,
     otherwise returns $(D Ternary.unknown).
     */
-    override Ternary deallocateAll()
+    override bool deallocateAll()
     {
         static if (hasMember!(Allocator, "deallocateAll"))
         {
-            impl.deallocateAll();
-            return Ternary.yes;
+            return impl.deallocateAll();
         }
         else
         {
-            return Ternary.unknown;
+            return false;
         }
     }
 
@@ -1247,16 +1239,15 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     /**
     Returns $(D impl.allocateAll()) if present, $(D null) otherwise.
     */
-    override Ternary allocateAll(ref void[] result)
+    override void[] allocateAll()
     {
         static if (hasMember!(Allocator, "allocateAll"))
         {
-            result = impl.allocateAll();
-            return Ternary(result.ptr !is null);
+            return impl.allocateAll();
         }
         else
         {
-            return Ternary.unknown;
+            return null;
         }
     }
 }
@@ -1482,9 +1473,9 @@ private struct EmbeddedTree(T, alias less)
         }
     }
 
-    bool empty() const
+    Ternary empty() const
     {
-        return !root;
+        return Ternary(!root);
     }
 
     void dump()
@@ -1586,12 +1577,13 @@ private struct InternalPointersTree(Allocator)
     }
 
     /// Ditto
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
         if (!b.ptr) return;
         Tree.Node* n = &parent.prefix(b);
         blockMap.remove(n) || assert(false);
         parent.deallocate(b);
+        return true;
     }
 
     /// Ditto
@@ -1616,15 +1608,15 @@ private struct InternalPointersTree(Allocator)
     }
 
     /// Ditto
-    bool owns(void[] b)
+    Ternary owns(void[] b)
     {
-        return resolveInternalPointer(b.ptr) !is null;
+        return Ternary(resolveInternalPointer(b.ptr) !is null);
     }
 
     /// Ditto
-    bool empty()
+    Ternary empty()
     {
-        return blockMap.empty;
+        return Ternary(blockMap.empty);
     }
 
     /** Returns the block inside which $(D p) resides, or $(D null) if the

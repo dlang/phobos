@@ -23,7 +23,12 @@ $(P In order to be usable as an _allocator, a type should implement the
 following methods with their respective semantics. Only $(D alignment) and  $(D
 allocate) are required. If any of the other methods is missing, the _allocator
 is assumed to not have that capability (for example some allocators do not offer
-manual deallocation of memory).)
+manual deallocation of memory). Allocators should NOT implement
+unsupported methods to always fail. For example, an allocator that lacks the
+capability to implement `alignedAllocate` should not define it at all (as
+opposed to defining it to always return `null` or throw an exception). The
+missing implementation statically informs other components about the
+allocator's capabilities and allows them to make design decisions accordingly.)
 
 $(BOOKTABLE ,
 $(TR $(TH Method name) $(TH Semantics))
@@ -49,8 +54,8 @@ null)). Otherwise, the call allocates $(D s) bytes of memory and returns the
 allocated block, or $(D null) if the request could not be satisfied.))
 
 $(TR $(TDC void[] alignedAllocate(size_t s, uint a);, $(POST $(RES) is null ||
-$(RES).length == s)) $(TD Similar to $(D allocate), with the additional
-guarantee that the memory returned is aligned to at least $(D a) bytes. $(D a)
+$(RES).length == s)) $(TD Similar to `allocate`, with the additional
+guarantee that the memory returned is aligned to at least `a` bytes. `a`
 must be a power of 2.))
 
 $(TR $(TDC void[] allocateAll();) $(TD Offers all of allocator's memory to the
@@ -91,12 +96,12 @@ alignedReallocate) if it can derive some advantage from doing so; otherwise,
 this module defines a $(D alignedReallocate) free function implemented in terms
 of $(D expand), $(D alignedAllocate), and $(D deallocate).))
 
-$(TR $(TDC bool owns(void[] b);) $(TD Returns $(D true) if $(D b) has been
+$(TR $(TDC Ternary owns(void[] b);) $(TD Returns `Ternary.yes` if `b` has been
 allocated with this allocator. An allocator should define this method only if it
 can decide on ownership precisely and fast (in constant time, logarithmic time,
 or linear time with a low multiplication factor). Traditional allocators such as
 the C heap do not define such functionality. If $(D b is null), the allocator
-shall return $(D false), i.e. no allocator owns the $(D null) slice.))
+shall return `Ternary.no`, i.e. no allocator owns the `null` slice.))
 
 $(TR $(TDC void[] resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
 somewhere inside a block allocated with this allocator, returns a pointer to the
@@ -104,17 +109,19 @@ beginning of the allocated block. Otherwise, returns $(D null). If the pointer
 points immediately after an allocated block, the result is implementation
 defined.))
 
-$(TR $(TDC void deallocate(void[] b);) $(TD If $(D b is null), does
-nothing. Otherwise, deallocates memory previously allocated with this
-allocator.))
+$(TR $(TDC bool deallocate(void[] b);) $(TD If $(D b is null), does
+nothing and returns `true`. Otherwise, deallocates memory previously allocated
+with this allocator and returns `true` if successful, `false` otherwise. An
+implementation that would not support deallocation (i.e. would always return
+`false` should not define this primitive at all.)))
 
-$(TR $(TDC void deallocateAll();, $(POST empty)) $(TD Deallocates all memory
+$(TR $(TDC bool deallocateAll();, $(POST empty)) $(TD Deallocates all memory
 allocated with this allocator. If an allocator implements this method, it must
 specify whether its destructor calls it, too.))
 
-$(TR $(TDC bool empty();) $(TD Returns $(D true) if and only if the allocator
-holds no memory (i.e. no allocation has occurred, or all allocations have been
-deallocated).))
+$(TR $(TDC Ternary empty();) $(TD Returns `Ternary.yes` if and only if the
+allocator holds no memory (i.e. no allocation has occurred, or all allocations
+have been deallocated).))
 
 $(TR $(TDC static Allocator it;, $(POST it $(I is a valid) Allocator $(I
 object))) $(TD Some allocators are $(I monostate), i.e. have only an instance

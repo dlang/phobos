@@ -30,9 +30,10 @@ struct Mallocator
     }
 
     /// Ditto
-    @system void deallocate(void[] b) shared
+    @system bool deallocate(void[] b) shared
     {
         free(b.ptr);
+        return true;
     }
 
     /// Ditto
@@ -159,14 +160,16 @@ struct AlignedMallocator
     $(D __aligned_free(b.ptr))) on Windows.
     */
     version (Posix) @system
-    void deallocate(void[] b) shared
+    bool deallocate(void[] b) shared
     {
         free(b.ptr);
+        return true;
     }
     else version (Windows) @system
-    void deallocate(void[] b) shared
+    bool deallocate(void[] b) shared
     {
         _aligned_free(b.ptr);
+        return true;
     }
     else static assert(0);
 

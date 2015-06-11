@@ -172,41 +172,45 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     `Allocator` defines `owns`.
     */
     static if (hasMember!(Allocator, "owns"))
-    bool owns(void[] b)
+    Ternary owns(void[] b)
     {
-        if (!b.ptr) return false;
+        if (!b.ptr) return Ternary.no;
         if (auto a = allocatorFor(b.length))
         {
             const actual = goodAllocSize(bytes);
             return a.owns(b.ptr[0 .. actual]);
         }
-        return false;
+        return Ternary.no;
     }
 
     /**
     This method is only defined if $(D Allocator) defines $(D deallocate).
     */
     static if (hasMember!(Allocator, "deallocate"))
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
-        if (!b.ptr) return;
+        if (!b.ptr) return true;
         if (auto a = allocatorFor(b.length))
         {
             a.deallocate(b.ptr[0 .. goodAllocSize(b.length)]);
         }
+        return true;
     }
 
     /**
     This method is only defined if all allocators involved define $(D
-    deallocateAll), and calls it for each bucket in turn.
+    deallocateAll), and calls it for each bucket in turn. Returns `true` if all
+    allocators could deallocate all.
     */
     static if (hasMember!(Allocator, "deallocateAll"))
-    void deallocateAll()
+    bool deallocateAll()
     {
+        bool result = true;
         foreach (ref a; buckets)
         {
-            a.deallocateAll();
+            if (!a.deallocateAll()) result = false;
         }
+        return result;
     }
 
     /**

@@ -166,7 +166,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         {
             auto result = n.allocate(s);
             if (result.length != s) continue;
-            assert(owns(result));
+            assert(owns(result) == Ternary.yes);
             // Bring to front if not already
             if (root != n)
             {
@@ -178,7 +178,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         // Can't allocate from the current pool. Check if we just added a new
         // allocator, in that case it won't do any good to add yet another.
-        if (root && root.empty)
+        if (root && root.empty == Ternary.yes)
         {
             // no can do
             return null;
@@ -187,7 +187,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         if (auto a = addAllocator(s))
         {
             auto result = a.allocate(s);
-            assert(owns(result) || !result.ptr);
+            assert(owns(result) == Ternary.yes || !result.ptr);
             return result;
         }
         return null;
@@ -282,7 +282,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
             import core.stdc.string : memcpy;
             memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
             emplace(&newAlloc);
-            assert(allocators[$ - 1].owns(allocators));
+            assert(allocators[$ - 1].owns(allocators) == Ternary.yes);
         }
         // Insert as new root
         if (root != &allocators[$ - 1])
@@ -335,11 +335,17 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     the front of the list.
     */
     static if (hasMember!(Allocator, "owns"))
-    bool owns(void[] b)
+    Ternary owns(void[] b)
     {
+        auto result = Ternary.no;
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
-            if (!n.owns(b)) continue;
+            auto t = n.owns(b);
+            if (t != Ternary.yes)
+            {
+                if (t == Ternary.unknown) result = t;
+                continue;
+            }
             // Move the owner to front, speculating it'll be used
             if (n != root)
             {
@@ -347,9 +353,9 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
                 n.next = root;
                 root = n;
             }
-            return true;
+            return Ternary.yes;
         }
-        return false;
+        return result;
     }
 
     /**
@@ -368,7 +374,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
-            if (n.owns(b)) return n.expand(b, delta);
+            if (n.owns(b) == Ternary.yes) return n.expand(b, delta);
         }
         return false;
     }
@@ -389,7 +395,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
-            if (n.owns(b)) return n.reallocate(b, s);
+            if (n.owns(b) == Ternary.yes) return n.reallocate(b, s);
         }
         // Failed, but we may find new memory in a new node.
         return .reallocate(this, b, s);
@@ -400,16 +406,17 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     */
     static if (hasMember!(Allocator, "deallocate")
         && hasMember!(Allocator, "owns"))
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
-        if (!b.ptr) return;
+        if (!b.ptr) return true;
         assert(allocators.length);
-        assert(owns(b));
+        assert(owns(b) == Ternary.yes);
+        bool result;
         for (auto p = &root, n = *p; ; p = &n.next, n = *p)
         {
             assert(n);
-            if (!n.owns(b)) continue;
-            n.deallocate(b);
+            if (n.owns(b) != Ternary.yes) continue;
+            result = n.deallocate(b);
             // Bring to front
             if (n != root)
             {
@@ -417,7 +424,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
                 n.next = root;
                 root = n;
             }
-            if (!n.empty) return;
+            if (n.empty != Ternary.yes) return result;
             break;
         }
         // Hmmm... should we return this allocator back to the wild? Let's
@@ -426,13 +433,14 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         // Note that loop starts from the second element.
         for (auto p = &root.next, n = *p; n; p = &n.next, n = *p)
         {
-            if (n.unused || !n.empty) continue;
+            if (n.unused || n.empty != Ternary.yes) continue;
             // Used and empty baby, nuke it!
             n.a.destroy;
             *p = n.next;
             n.setUnused;
             break;
         }
+        return result;
     }
 
     /**
@@ -441,13 +449,13 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     */
     static if (ouroboros && hasMember!(Allocator, "deallocateAll")
         && hasMember!(Allocator, "owns"))
-    void deallocateAll()
+    bool deallocateAll()
     {
         Node* special;
         foreach (ref n; allocators)
         {
             if (n.unused) continue;
-            if (n.owns(allocators))
+            if (n.owns(allocators) == Ternary.yes)
             {
                 special = &n;
                 continue;
@@ -462,11 +470,12 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         allocators = null;
         root = null;
+        return true;
     }
 
     static if (!ouroboros && hasMember!(Allocator, "deallocateAll")
         && hasMember!(Allocator, "owns"))
-    void deallocateAll()
+    bool deallocateAll()
     {
         foreach (ref n; allocators)
         {
@@ -477,12 +486,13 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         bkalloc.deallocate(allocators);
         allocators = null;
         root = null;
+        return true;
     }
 
     /// Returns $(D true) iff no allocators are currently active.
-    bool empty() const
+    Ternary empty() const
     {
-        return !allocators.length;
+        return Ternary(!allocators.length);
     }
 }
 
@@ -589,5 +599,5 @@ unittest
     assert(b1.length == 1024 * 10);
     auto b2 = a.allocate(1024 * 4095);
     a.deallocateAll();
-    assert(a.empty);
+    assert(a.empty == Ternary.yes);
 }

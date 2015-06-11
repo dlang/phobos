@@ -307,14 +307,15 @@ struct FreeTree(ParentAllocator)
         "allocateAll", "expand", "owns", "reallocate"));
 
     /** Places $(D b) into the free tree. */
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
-        if (!b.ptr) return;
+        if (!b.ptr) return true;
         auto which = cast(Node*) b.ptr;
         which.size = goodAllocSize(b.length);
         // deliberately don't initialize which.left and which.right
         assert(which.size >= Node.sizeof);
         insertAsRoot(which);
+        return true;
     }
 
     unittest // test a few simple configurations
@@ -384,12 +385,12 @@ struct FreeTree(ParentAllocator)
 
     */
     static if (hasMember!(ParentAllocator, "deallocateAll"))
-    void deallocateAll()
+    bool deallocateAll()
     {
         // This is easy, just nuke the root and deallocate all from the
         // parent
         root = null;
-        parent.deallocateAll;
+        return parent.deallocateAll;
     }
 }
 

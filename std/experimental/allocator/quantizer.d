@@ -199,9 +199,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     $(D parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)])).
     */
     static if (hasMember!(ParentAllocator, "deallocate"))
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
-        if (b.ptr) parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)]);
+        if (!b.ptr) return true;
+        return parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)]);
     }
 
     // Forwarding methods

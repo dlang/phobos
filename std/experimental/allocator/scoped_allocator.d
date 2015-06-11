@@ -135,7 +135,7 @@ struct ScopedAllocator(ParentAllocator)
     Forwards to $(D parent.owns(b)).
     */
     static if (hasMember!(Allocator, "owns"))
-    bool owns(void[] b)
+    Ternary owns(void[] b)
     {
         return parent.owns(b);
     }
@@ -144,7 +144,7 @@ struct ScopedAllocator(ParentAllocator)
     Deallocates $(D b).
     */
     static if (hasMember!(Allocator, "deallocate"))
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
         // Remove from list
         if (b.ptr)
@@ -154,30 +154,33 @@ struct ScopedAllocator(ParentAllocator)
             else root = n.next;
             if (n.next) n.next.prev = n.prev;
         }
-        parent.deallocate(b);
+        return parent.deallocate(b);
     }
 
     /**
     Deallocates all memory allocated.
     */
-    void deallocateAll()
+    bool deallocateAll()
     {
+        bool result = true;
         for (auto n = root; n; )
         {
             void* p = n + 1;
             auto length = n.length;
             n = n.next;
-            parent.deallocate(p[0 .. length]);
+            if (!parent.deallocate(p[0 .. length]))
+                result = false;
         }
         root = null;
+        return result;
     }
 
     /**
     Returns $(D true) if this allocator is not responsible for any memory.
     */
-    bool empty() const
+    Ternary empty() const
     {
-        return root is null;
+        return Ternary(root is null);
     }
 }
 
@@ -186,10 +189,10 @@ unittest
 {
     import std.experimental.allocator.mallocator;
     ScopedAllocator!Mallocator alloc;
-    assert(alloc.empty);
+    assert(alloc.empty == Ternary.yes);
     auto b = alloc.allocate(10);
     assert(b.length == 10);
-    assert(!alloc.empty);
+    assert(alloc.empty == Ternary.no);
 }
 
 unittest

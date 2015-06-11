@@ -37,9 +37,10 @@ version(Posix) struct MmapAllocator
     }
 
     /// Ditto
-    void deallocate(void[] b) shared
+    bool deallocate(void[] b) shared
     {
         if (b.ptr) munmap(b.ptr, b.length) == 0 || assert(0);
+        return true;
     }
 }
 

@@ -100,7 +100,7 @@ struct FallbackAllocator(Primary, Fallback)
             b = allocate(delta);
             return b.length == delta;
         }
-        if (primary.owns(b))
+        if (primary.owns(b) == Ternary.yes)
         {
             static if (hasMember!(Primary, "expand"))
                 return primary.expand(b, delta);
@@ -139,7 +139,7 @@ struct FallbackAllocator(Primary, Fallback)
             return true;
         }
 
-        if (b is null || primary.owns(b))
+        if (b is null || primary.owns(b) == Ternary.yes)
         {
             return primary.reallocate(b, newSize)
                 // Move from primary to fallback
@@ -176,7 +176,7 @@ struct FallbackAllocator(Primary, Fallback)
 
         static if (hasMember!(Primary, "alignedAllocate"))
         {
-            if (b is null || primary.owns(b))
+            if (b is null || primary.owns(b) == Ternary.yes)
             {
                 return primary.alignedReallocate(b, newSize, a)
                     || crossAllocatorMove(primary, fallback);
@@ -198,9 +198,9 @@ struct FallbackAllocator(Primary, Fallback)
     Returns $(D primary.owns(b) || fallback.owns(b)).
     */
     static if (hasMember!(Primary, "owns") && hasMember!(Fallback, "owns"))
-    bool owns(void[] b)
+    Ternary owns(void[] b)
     {
-        return primary.owns(b) || fallback.owns(b);
+        return primary.owns(b) | fallback.owns(b);
     }
 
     /**
@@ -227,17 +227,21 @@ struct FallbackAllocator(Primary, Fallback)
     static if (hasMember!(Primary, "owns") &&
         (hasMember!(Primary, "deallocate")
             || hasMember!(Fallback, "deallocate")))
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
-        if (primary.owns(b))
+        if (primary.owns(b) == Ternary.yes)
         {
             static if (hasMember!(Primary, "deallocate"))
-                primary.deallocate(b);
+                return primary.deallocate(b);
+            else
+                return false;
         }
         else
         {
             static if (hasMember!(Fallback, "deallocate"))
                 return fallback.deallocate(b);
+            else
+                return false;
         }
     }
 
@@ -245,7 +249,7 @@ struct FallbackAllocator(Primary, Fallback)
     $(D empty) is defined if both allocators also define it.
     */
     static if (hasMember!(Primary, "empty") && hasMember!(Fallback, "empty"))
-    bool empty()
+    Ternary empty()
     {
         return primary.empty && fallback.empty;
     }
@@ -260,10 +264,10 @@ unittest
     // This allocation uses the stack
     auto b1 = a.allocate(1024);
     assert(b1.length == 1024, text(b1.length));
-    assert(a.primary.owns(b1));
+    assert(a.primary.owns(b1) == Ternary.yes);
     // This large allocation will go to the Mallocator
     auto b2 = a.allocate(1024 * 1024);
-    assert(!a.primary.owns(b2));
+    assert(a.primary.owns(b2) == Ternary.no);
     a.deallocate(b1);
     a.deallocate(b2);
 }
@@ -344,8 +348,8 @@ unittest
     auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.it);
     auto b1 = a.allocate(1020);
     assert(b1.length == 1020);
-    assert(a.primary.owns(b1));
+    assert(a.primary.owns(b1) == Ternary.yes);
     auto b2 = a.allocate(10);
     assert(b2.length == 10);
-    assert(!a.primary.owns(b2));
+    assert(a.primary.owns(b2) == Ternary.no);
 }

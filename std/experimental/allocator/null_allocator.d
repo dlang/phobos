@@ -16,6 +16,7 @@ composite allocators.
 */
 struct NullAllocator
 {
+    import std.experimental.allocator.common : Ternary;
     /**
     $(D NullAllocator) advertises a relatively large _alignment equal to 64 KB.
     This is because $(D NullAllocator) never actually needs to honor this
@@ -45,8 +46,8 @@ struct NullAllocator
     /// Ditto
     bool alignedReallocate(ref void[] b, size_t, uint) shared
     { assert(b is null); return false; }
-    /// Returns $(D false).
-    bool owns(void[] b) shared const { return false; }
+    /// Returns $(D Ternary.no).
+    Ternary owns(void[]) shared const { return Ternary.no; }
     /**
     Returns $(D null).
     */
@@ -55,15 +56,15 @@ struct NullAllocator
     No-op.
     Precondition: $(D b is null)
     */
-    void deallocate(void[] b) shared { assert(b is null); }
+    bool deallocate(void[] b) shared { assert(b is null); return true; }
     /**
     No-op.
     */
-    void deallocateAll() shared { }
+    bool deallocateAll() shared { return true; }
     /**
-    Returns $(D true).
+    Returns $(D Ternary.yes).
     */
-    bool empty() shared const { return true; }
+    Ternary empty() shared const { return Ternary.yes; }
     /**
     Returns the $(D shared) global instance of the $(D NullAllocator).
     */
@@ -76,5 +77,6 @@ unittest
     assert(b is null);
     NullAllocator.it.deallocate(b);
     NullAllocator.it.deallocateAll();
-    assert(!NullAllocator.it.owns(null));
+    import std.experimental.allocator.common : Ternary;
+    assert(NullAllocator.it.owns(null) == Ternary.no);
 }

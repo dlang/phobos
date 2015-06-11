@@ -272,14 +272,14 @@ public:
     static if (hasMember!(Allocator, "owns"))
     {
         static if ((perCallFlags & Options.numOwns) == 0)
-        bool owns(void[] b)
+        Ternary owns(void[] b)
         { return ownsImpl(b); }
         else
-        bool owns(string f = __FILE, uint n = line)(void[] b)
+        Ternary owns(string f = __FILE, uint n = line)(void[] b)
         { return ownsImpl!(f, n)(b); }
     }
 
-    private bool ownsImpl(string f = null, uint n = 0)(void[] b)
+    private Ternary ownsImpl(string f = null, uint n = 0)(void[] b)
     {
         up!"numOwns";
         addPerCall!(f, n, "numOwns")(1);
@@ -457,20 +457,22 @@ public:
     */
     static if (!(perCallFlags &
             (Options.numDeallocate | Options.bytesContracted)))
-        void deallocate(void[] b)
-        { deallocateImpl(b); }
+        bool deallocate(void[] b)
+        { return deallocateImpl(b); }
     else
-        void deallocate(string f = __FILE__, uint n = __LINE__)(void[] b)
-        { deallocateImpl!(f, n)(b); }
+        bool deallocate(string f = __FILE__, uint n = __LINE__)(void[] b)
+        { return deallocateImpl!(f, n)(b); }
 
-    private void deallocateImpl(string f = null, uint n = 0)(void[] b)
+    private bool deallocateImpl(string f = null, uint n = 0)(void[] b)
     {
         up!"numDeallocate";
         add!"bytesUsed"(-Signed!size_t(b.length));
         add!"bytesSlack"(-(this.goodAllocSize(b.length) - b.length));
         addPerCall!(f, n, "numDeallocate", "bytesContracted")(1, b.length);
         static if (hasMember!(Allocator, "deallocate"))
-            parent.deallocate(b);
+            return parent.deallocate(b);
+        else
+            return false;
     }
 
     static if (hasMember!(Allocator, "deallocateAll"))
@@ -480,19 +482,19 @@ public:
         per instance and per call $(D numDeallocateAll).
         */
         static if (!(perCallFlags & Options.numDeallocateAll))
-            void deallocateAll()
-            { deallocateAllImpl(); }
+            bool deallocateAll()
+            { return deallocateAllImpl(); }
         else
-            void deallocateAll(string f = __FILE__, uint n = __LINE__)()
-            { deallocateAllImpl!(f, n)(); }
+            bool deallocateAll(string f = __FILE__, uint n = __LINE__)()
+            { return deallocateAllImpl!(f, n)(); }
 
-        private void deallocateAllImpl(string f = null, uint n = 0)()
+        private bool deallocateAllImpl(string f = null, uint n = 0)()
         {
             up!"numDeallocateAll";
             addPerCall!(f, n, "numDeallocateAll")(1);
             static if ((flags & Options.bytesUsed))
                 _bytesUsed = 0;
-            parent.deallocateAll();
+            return parent.deallocateAll();
         }
     }
 
@@ -501,9 +503,9 @@ public:
     0).
     */
     static if (flags & Options.bytesUsed)
-    bool empty()
+    Ternary empty()
     {
-        return _bytesUsed == 0;
+        return Ternary(_bytesUsed == 0);
     }
 
     /**

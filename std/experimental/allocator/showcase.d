@@ -35,10 +35,7 @@ and may end up worse off because it explores cold portions of the stack.
 */
 alias StackFront(size_t stackSize, Allocator = GCAllocator) =
     FallbackAllocator!(
-        InSituRegion!(stackSize, Allocator.alignment,
-            hasMember!(Allocator, "deallocate")
-                ? Yes.defineDeallocate
-                : No.defineDeallocate),
+        InSituRegion!(stackSize, Allocator.alignment),
         Allocator);
 
 ///

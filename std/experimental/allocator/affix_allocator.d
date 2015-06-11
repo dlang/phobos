@@ -125,9 +125,10 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         }
 
         static if (hasMember!(Allocator, "owns"))
-        bool owns(void[] b)
+        Ternary owns(void[] b)
         {
-            return b !is null && parent.owns(actualAllocation(b));
+            if (b is null) return Ternary.no;
+            return parent.owns(actualAllocation(b));
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
@@ -172,9 +173,10 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         }
 
         static if (hasMember!(Allocator, "deallocate"))
-        void deallocate(void[] b)
+        bool deallocate(void[] b)
         {
-            if (b.ptr) parent.deallocate(actualAllocation(b));
+            if (!b.ptr) return true;
+            return parent.deallocate(actualAllocation(b));
         }
 
         /* The following methods are defined if $(D ParentAllocator) defines
@@ -212,17 +214,17 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         /// Ditto
         void[] allocate(size_t);
         /// Ditto
-        bool owns(void[]);
+        Ternary owns(void[]);
         /// Ditto
         bool expand(ref void[] b, size_t delta);
         /// Ditto
         bool reallocate(ref void[] b, size_t s);
         /// Ditto
-        void deallocate(void[] b);
+        bool deallocate(void[] b);
         /// Ditto
-        void deallocateAll();
+        bool deallocateAll();
         /// Ditto
-        bool empty();
+        Ternary empty();
 
         /**
         The $(D it) singleton is defined if and only if the parent allocator has no state and defines its own $(D it) object.

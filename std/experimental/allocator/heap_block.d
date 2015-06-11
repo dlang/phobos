@@ -337,7 +337,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     */
     void[] allocateAll()
     {
-        if (!empty) return null;
+        if (empty != Ternary.yes) return null;
         _control[] = 1;
         return _payload;
     }
@@ -346,11 +346,12 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     Returns $(D true) if $(D b) belongs to the $(D HeapBlock) object. This
     method is somewhat tolerant in that accepts an interior slice.
     */
-    bool owns(void[] b) const
+    Ternary owns(void[] b) const
     {
+        //if (!b.ptr) return Ternary.no;
         assert(b.ptr !is null || b.length == 0, "Corrupt block.");
-        return b.ptr >= _payload.ptr
-            && b.ptr + b.length <= _payload.ptr + _payload.length;
+        return Ternary(b.ptr >= _payload.ptr
+            && b.ptr + b.length <= _payload.ptr + _payload.length);
     }
 
     /*
@@ -594,9 +595,9 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     /**
     Deallocates a block previously allocated with this allocator.
     */
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
-        if (b is null) return;
+        if (b is null) return true;
         // Adjust pointer, might be inside a block after alignedAllocate
         //auto p = (b.ptr - _payload.ptr) / blockSize
 
@@ -623,7 +624,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
                 resetBits(_control.rep[wordIdx],
                     cast(uint) (64 - msbIdx - blocks),
                     63 - msbIdx);
-                return;
+                return true;
             }
             else
             {
@@ -646,6 +647,7 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
         {
             _control.rep[wordIdx] &= ulong.max >> blocks;
         }
+        return true;
     }
 
     /**
@@ -653,18 +655,19 @@ struct HeapBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     available for further allocations. Does not return memory to $(D
     ParentAllocator).
     */
-    void deallocateAll()
+    bool deallocateAll()
     {
         _control[] = 0;
         _startIdx = 0;
+        return true;
     }
 
     /**
     Returns $(D true) iff no memory is currently allocated with this allocator.
     */
-    bool empty()
+    Ternary empty()
     {
-        return _control.allAre0();
+        return Ternary(_control.allAre0());
     }
 
     void dump()
@@ -1004,11 +1007,11 @@ struct HeapBlockWithInternalPointers(
     }
 
     /// Ditto
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
         // No need to touch _allocStart here - except for the first bit, it's
         // meaningless in freed memory. The first bit is already 1.
-        _heap.deallocate(b);
+        return _heap.deallocate(b);
         // TODO: one smart thing to do is reduce memory occupied by
         // _allocStart if we're freeing the rightmost block.
     }
@@ -1035,7 +1038,7 @@ struct HeapBlockWithInternalPointers(
     }
 
     /// Ditto
-    bool empty()
+    Ternary empty()
     {
         return _heap.empty;
     }

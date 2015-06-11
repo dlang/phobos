@@ -94,7 +94,7 @@ information is available in client code at deallocation time.)
 */
 struct KRRegion(ParentAllocator = NullAllocator)
 {
-    import std.experimental.allocator.common : stateSize, alignedAt;
+    import std.experimental.allocator.common : stateSize, alignedAt, Ternary;
     import std.traits : hasMember;
 
     private static struct Node
@@ -430,12 +430,12 @@ struct KRRegion(ParentAllocator = NullAllocator)
 
     Params: b = block to be deallocated
     */
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
         debug(KRRegion) writefln("KRRegion@%s: deallocate(%s[%s])", &this,
             b.ptr, b.length);
-        if (!b.ptr) return;
-        assert(owns(b));
+        if (!b.ptr) return true;
+        assert(owns(b) == Ternary.yes);
         assert(b.ptr.alignedAt(Node.alignof));
 
         // Insert back in the freelist, keeping it sorted by address. Do not
@@ -449,7 +449,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             // Insert right after root
             n.next = root.next;
             root.next = n;
-            return;
+            return true;
         }
 
         if (!root)
@@ -457,7 +457,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             // What a sight for sore eyes
             root = n;
             root.next = root;
-            return;
+            return true;
         }
 
         version(assert) foreach (test; byNodePtr)
@@ -480,7 +480,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
                 n.coalesce;
                 pnode.coalesce;
                 root = pnode;
-                return;
+                return true;
             }
             else if (pnode < n)
             {
@@ -489,7 +489,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
                 pnode.next = n;
                 pnode.coalesce;
                 root = pnode;
-                return;
+                return true;
             }
             else if (n < pnode.next)
             {
@@ -498,7 +498,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
                 pnode.next = n;
                 n.coalesce;
                 root = n;
-                return;
+                return true;
             }
         }
         while ((pnode = pnode.next) != root);
@@ -541,7 +541,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     Deallocates all memory currently allocated, making the allocator ready for
     other allocations. This is a $(BIGOH 1) operation.
     */
-    void deallocateAll()
+    bool deallocateAll()
     {
         debug(KRRegion) assertValid("deallocateAll");
         debug(KRRegion) scope(exit) assertValid("deallocateAll");
@@ -552,6 +552,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             root.next = root;
             root.size = payload.length;
         }
+        return true;
     }
 
     /**
@@ -559,11 +560,12 @@ struct KRRegion(ParentAllocator = NullAllocator)
     It does a simple $(BIGOH 1) range check. $(D b) should be a buffer either
     allocated with $(D this) or obtained through other means.
     */
-    bool owns(void[] b)
+    Ternary owns(void[] b)
     {
         debug(KRRegion) assertValid("owns");
         debug(KRRegion) scope(exit) assertValid("owns");
-        return b.ptr >= payload.ptr && b.ptr < payload.ptr + payload.length;
+        return Ternary(b.ptr >= payload.ptr
+            && b.ptr < payload.ptr + payload.length);
     }
 
     /**
@@ -577,9 +579,9 @@ struct KRRegion(ParentAllocator = NullAllocator)
             ? Node.sizeof : n.roundUpToMultipleOf(alignment);
     }
 
-    bool empty()
+    Ternary empty()
     {
-        return root && root.size == payload.length;
+        return Ternary(root && root.size == payload.length);
     }
 }
 
@@ -593,12 +595,13 @@ unittest
 {
     import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator.fallback_allocator;
+    import std.experimental.allocator.common : Ternary;
     // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
     auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.it);
     auto b = alloc.allocate(100);
     assert(b.length == 100);
-    assert(alloc.primary.owns(b));
+    assert(alloc.primary.owns(b) == Ternary.yes);
 }
 
 /**
@@ -624,6 +627,7 @@ unittest
 {
     import std.algorithm : max;
     import std.experimental.allocator.gc_allocator,
+        std.experimental.allocator.common,
         std.experimental.allocator.mallocator,
         std.experimental.allocator.allocator_list;
     /*
@@ -646,7 +650,7 @@ unittest
     foreach (i; 0 .. array.length)
     {
         assert(array[i].ptr);
-        assert(alloc.owns(array[i]));
+        assert(alloc.owns(array[i]) == Ternary.yes);
         alloc.deallocate(array[i]);
     }
 }
@@ -655,6 +659,7 @@ unittest
 {
     import std.algorithm : max;
     import std.experimental.allocator.gc_allocator,
+        std.experimental.allocator.common,
         std.experimental.allocator.mmap_allocator,
         std.experimental.allocator.allocator_list;
     /*
@@ -682,7 +687,7 @@ unittest
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
-        assert(alloc.owns(array[i]));
+        assert(alloc.owns(array[i]) == Ternary.yes);
         alloc.deallocate(array[i]);
     }
 }
@@ -718,6 +723,7 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.common : Ternary;
     auto alloc = KRRegion!()(GCAllocator.it.allocate(1024 * 1024));
     auto store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
@@ -734,13 +740,13 @@ unittest
         auto length = 100 * i + 1;
         array[i] = p.allocate(length);
         assert(array[i].length == length, text(array[i].length));
-        assert(p.owns(array[i]));
+        assert(p.owns(array[i]) == Ternary.yes);
     }
     import std.random;
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
-        assert(p.owns(array[i]));
+        assert(p.owns(array[i]) == Ternary.yes);
         p.deallocate(array[i]);
     }
     auto b = p.allocateAll();

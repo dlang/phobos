@@ -73,22 +73,22 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         forwarded to $(D SmallAllocator) if $(D b.length <= threshold), or $(D
         LargeAllocator) otherwise.
         */
-        bool owns(void[] b);
+        Ternary owns(void[] b);
         /**
         This function is defined only if both allocators define it, and forwards
         appropriately depending on $(D b.length).
         */
-        void deallocate(void[] b);
+        bool deallocate(void[] b);
         /**
         This function is defined only if both allocators define it, and calls
         $(D deallocateAll) for them in turn.
         */
-        void deallocateAll();
+        bool deallocateAll();
         /**
         This function is defined only if both allocators define it, and returns
         the conjunction of $(D empty) calls for the two.
         */
-        bool empty();
+        Ternary empty();
     }
 
     /**
@@ -212,31 +212,32 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "owns")
                 && hasMember!(LargeAllocator, "owns"))
-        bool owns(void[] b)
+        Ternary owns(void[] b)
         {
-            return b.length <= threshold ? _small.owns(b) : _large.owns(b);
+            return Ternary(b.length <= threshold
+                ? _small.owns(b) : _large.owns(b));
         }
 
         static if (hasMember!(SmallAllocator, "deallocate")
                 && hasMember!(LargeAllocator, "deallocate"))
-        void deallocate(void[] data)
+        bool deallocate(void[] data)
         {
-            data.length <= threshold
+            return data.length <= threshold
                 ? _small.deallocate(data)
                 : _large.deallocate(data);
         }
 
         static if (hasMember!(SmallAllocator, "deallocateAll")
                 && hasMember!(LargeAllocator, "deallocateAll"))
-        void deallocateAll()
+        bool deallocateAll()
         {
-            _small.deallocateAll();
-            _large.deallocateAll();
+            // Use & insted of && to evaluate both
+            return _small.deallocateAll() & _large.deallocateAll();
         }
 
         static if (hasMember!(SmallAllocator, "empty")
                 && hasMember!(LargeAllocator, "empty"))
-        bool empty()
+        Ternary empty()
         {
             return _small.empty && _large.empty;
         }

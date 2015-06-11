@@ -656,10 +656,10 @@ package void testAllocator(alias make)()
     // Test owns
     static if (hasMember!(A, "owns"))
     {{
-        assert(!a.owns(null));
-        assert(a.owns(b1));
-        assert(a.owns(b2));
-        assert(a.owns(b6));
+        assert(a.owns(null) == Ternary.no);
+        assert(a.owns(b1) == Ternary.yes);
+        assert(a.owns(b2) == Ternary.yes);
+        assert(a.owns(b6) == Ternary.yes);
     }}
 
     static if (hasMember!(A, "resolveInternalPointer"))

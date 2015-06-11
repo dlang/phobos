@@ -337,24 +337,24 @@ struct FreeList(ParentAllocator,
     freelist, and no dynamic changing of $(D min) or $(D max) is allowed to
     occur between allocation and deallocation.
     */
-    void deallocate(void[] block)
+    bool deallocate(void[] block)
     {
         if (freeListEligible(block.length))
         {
             if (min == 0)
             {
                 // In this case a null pointer might have made it this far.
-                if (block is null) return;
+                if (block is null) return true;
             }
             auto t = root;
             root = cast(Node*) block.ptr;
             root.next = t;
+            return true;
         }
+        static if (hasMember!(ParentAllocator, "deallocate"))
+            return parent.deallocate(block);
         else
-        {
-            static if (hasMember!(ParentAllocator, "deallocate"))
-                parent.deallocate(block);
-        }
+            return false;
     }
 
     /**
@@ -362,10 +362,10 @@ struct FreeList(ParentAllocator,
     forwards to it and resets the freelist.
     */
     static if (hasMember!(ParentAllocator, "deallocateAll"))
-    void deallocateAll()
+    bool deallocateAll()
     {
-        parent.deallocateAll();
         root = null;
+        return parent.deallocateAll();
     }
 
     /**
@@ -606,12 +606,12 @@ struct ContiguousFreeList(ParentAllocator,
     belongs to this allocator.
     */
     static if (hasMember!(SParent, "owns") || unchecked)
-    bool owns(void[] b)
+    Ternary owns(void[] b)
     {
         if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
-            return true;
+            return Ternary.yes;
         static if (unchecked)
-            return false;
+            return Ternary.no;
         else
             return parent.owns(b);
     }
@@ -623,7 +623,7 @@ struct ContiguousFreeList(ParentAllocator,
     Precondition: $(D b) has been allocated with this allocator, or is $(D
     null).
     */
-    void deallocate(void[] b)
+    bool deallocate(void[] b)
     {
         if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
         {
@@ -636,11 +636,9 @@ struct ContiguousFreeList(ParentAllocator,
             auto t = fl.root;
             fl.root = cast(Node*) b.ptr;
             fl.root.next = t;
+            return true;
         }
-        else
-        {
-            parent.deallocate(b);
-        }
+        return parent.deallocate(b);
     }
 
     /**
@@ -648,19 +646,19 @@ struct ContiguousFreeList(ParentAllocator,
     */
     static if (hasMember!(ParentAllocator, "deallocateAll")
         && stateSize!ParentAllocator)
-    void deallocateAll()
+    bool deallocateAll()
     {
-        fl.deallocateAll;
-        parent.deallocateAll;
+        bool result = fl.deallocateAll && parent.deallocateAll;
         allocated = 0;
+        return result;
     }
 
     /**
     Returns $(D true) if no memory is currently allocated with this allocator.
     */
-    bool empty()
+    Ternary empty()
     {
-        return allocated == 0 && parent.bytesUsed == 0;
+        return Ternary(allocated == 0 && parent.bytesUsed == 0);
     }
 }
 
@@ -682,20 +680,20 @@ unittest
     alias A = ContiguousFreeList!(NullAllocator, 0, 64);
     auto a = A(new void[1024]);
 
-    assert(a.empty);
+    assert(a.empty == Ternary.yes);
 
     assert(a.goodAllocSize(15) == 64);
     assert(a.goodAllocSize(65) == NullAllocator.it.goodAllocSize(65));
 
     auto b = a.allocate(100);
-    assert(a.empty);
+    assert(a.empty == Ternary.yes);
     assert(b.length == 0);
     a.deallocate(b);
     b = a.allocate(64);
-    assert(!a.empty);
+    assert(a.empty == Ternary.no);
     assert(b.length == 64);
-    assert(a.owns(b));
-    assert(!a.owns(null));
+    assert(a.owns(b) == Ternary.yes);
+    assert(a.owns(null) == Ternary.no);
     a.deallocate(b);
 }
 
@@ -706,22 +704,22 @@ unittest
     alias A = ContiguousFreeList!(Region!GCAllocator, 0, 64);
     auto a = A(Region!GCAllocator(1024 * 4), 1024);
 
-    assert(a.empty);
+    assert(a.empty == Ternary.yes);
 
     assert(a.goodAllocSize(15) == 64);
     assert(a.goodAllocSize(65) == a.parent.goodAllocSize(65));
 
     auto b = a.allocate(100);
-    assert(!a.empty);
+    assert(a.empty == Ternary.no);
     assert(a.allocated == 0);
     assert(b.length == 100);
     a.deallocate(b);
-    assert(a.empty);
+    assert(a.empty == Ternary.yes);
     b = a.allocate(64);
-    assert(!a.empty);
+    assert(a.empty == Ternary.no);
     assert(b.length == 64);
-    assert(a.owns(b));
-    assert(!a.owns(null));
+    assert(a.owns(b) == Ternary.yes);
+    assert(a.owns(null) == Ternary.no);
     a.deallocate(b);
 }
 
@@ -901,13 +899,10 @@ struct SharedFreeList(ParentAllocator,
     }
 
     /// Ditto
-    bool owns(void[] b) shared const
+    static if (hasMember!(ParentAllocator, "owns"))
+    Ternary owns(void[] b) shared const
     {
-        if (freeListEligible(b.length)) return true;
-        static if (hasMember!(ParentAllocator, "owns"))
-            return parent.owns(b);
-        else
-            return false;
+        return parent.owns(b);
     }
 
     /// Ditto
@@ -944,7 +939,7 @@ struct SharedFreeList(ParentAllocator,
     }
 
     /// Ditto
-    void deallocate(void[] b) shared
+    bool deallocate(void[] b) shared
     {
         if (!nodesFull && freeListEligible(b.length))
         {
@@ -957,29 +952,33 @@ struct SharedFreeList(ParentAllocator,
             }
             while (!cas(&_root, oldRoot, newRoot));
             incNodes();
+            return true;
         }
+        static if (is(typeof(parent.deallocate(block))))
+            return parent.deallocate(block);
         else
-        {
-            static if (is(typeof(parent.deallocate(block))))
-                parent.deallocate(block);
-        }
+            return false;
     }
 
     /// Ditto
-    void deallocateAll() shared
+    bool deallocateAll() shared
     {
+        bool result = false;
         static if (hasMember!(ParentAllocator, "deallocateAll"))
         {
-            parent.deallocateAll();
+            result = parent.deallocateAll();
         }
         else static if (hasMember!(ParentAllocator, "deallocate"))
         {
+            result = true;
             for (auto n = _root; n; n = n.next)
             {
-                parent.deallocate((cast(ubyte*)n)[0 .. max]);
+                if (!parent.deallocate((cast(ubyte*)n)[0 .. max]))
+                    result = false;
             }
         }
         _root = null;
+        return result;
     }
 }
 
