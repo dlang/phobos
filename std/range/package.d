@@ -7160,7 +7160,8 @@ if (isInputRange!Range)
         {
             import core.bitop : bsr;
             import std.conv : text;
-            import std.random : MinstdRand, uniform;
+            import std.random.distribution : uniform;
+            import std.random.engine : MinstdRand;
 
             static if (isRandomAccessRange!Range)
             {

@@ -13,7 +13,8 @@ module std.regex.internal.generator;
 @trusted private struct SampleGenerator(Char)
 {
     import std.regex.internal.ir;
-    import std.array, std.format, std.utf, std.random;
+    import std.array, std.format, std.utf;
+    import std.random.engine : Xorshift;
     Regex!Char re;
     Appender!(char[]) app;
     uint limit, seed;

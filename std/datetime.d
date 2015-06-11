@@ -31081,7 +31081,7 @@ unittest
         @property auto front() { return _mon; }
         void popFront()
         {
-            import std.random;
+            import std.random.engine : rndGen;
             _mon = rndGen.map!(a => letters[a % letters.length])().take(3).array().assumeUnique();
         }
         string _mon;

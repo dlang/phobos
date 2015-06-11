@@ -858,7 +858,8 @@ unittest
     assert(zip3.directory["foo"].compressedSize == am1.compressedSize);
 
     // Test if packing and unpacking produces the original data
-    import std.random : uniform, MinstdRand0;
+    import std.random.distribution : uniform;
+    import std.random.engine : MinstdRand0;
     import std.stdio, std.conv;
     MinstdRand0 gen;
     const uint itemCount = 20, minSize = 10, maxSize = 500;
