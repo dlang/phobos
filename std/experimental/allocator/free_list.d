@@ -983,10 +983,10 @@ struct SharedFreeList(ParentAllocator,
 
 unittest
 {
-	import std.algorithm.comparison : equal;
-	import std.concurrency : receiveOnly, send, spawn, thisTid, Tid;
-	import std.range : repeat;
-	import std.experimental.allocator.mallocator : Mallocator;
+    import std.algorithm.comparison : equal;
+    import std.concurrency : receiveOnly, send, spawn, thisTid, Tid;
+    import std.range : repeat;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     static shared SharedFreeList!(Mallocator, 64, 128) a;
 

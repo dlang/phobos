@@ -23,7 +23,7 @@ struct Mallocator
     */
     @trusted void[] allocate(size_t bytes) shared
     {
-		import core.stdc.stdlib : malloc;
+        import core.stdc.stdlib : malloc;
         if (!bytes) return null;
         auto p = malloc(bytes);
         return p ? p[0 .. bytes] : null;
@@ -32,7 +32,7 @@ struct Mallocator
     /// Ditto
     @system bool deallocate(void[] b) shared
     {
-		import core.stdc.stdlib : free;
+        import core.stdc.stdlib : free;
         free(b.ptr);
         return true;
     }
@@ -40,7 +40,7 @@ struct Mallocator
     /// Ditto
     @system bool reallocate(ref void[] b, size_t s) shared
     {
-		import core.stdc.stdlib : realloc;
+        import core.stdc.stdlib : realloc;
         if (!s)
         {
             // fuzzy area in the C standard, see http://goo.gl/ZpWeSE
@@ -135,7 +135,7 @@ struct AlignedMallocator
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
         import std.conv : to;
-		import core.stdc.errno : ENOMEM;
+        import core.stdc.errno : ENOMEM;
         assert(a.isGoodDynamicAlignment, to!string(a));
         void* result;
         auto code = posix_memalign(&result, a, bytes);
@@ -161,7 +161,7 @@ struct AlignedMallocator
     version (Posix) @system
     bool deallocate(void[] b) shared
     {
-		import core.stdc.stdlib : free;
+        import core.stdc.stdlib : free;
         free(b.ptr);
         return true;
     }

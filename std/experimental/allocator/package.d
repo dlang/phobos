@@ -232,7 +232,7 @@ unittest
 {
     // Install a new allocator that is faster for 128-byte allocations.
     import std.experimental.allocator.free_list : FreeList;
-	import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     auto oldAllocator = theAllocator;
     scope(exit) theAllocator = oldAllocator;
     theAllocator = allocatorObject(FreeList!(GCAllocator, 128)());
@@ -638,7 +638,7 @@ version(unittest)
 unittest
 {
     import std.array : array;
-	import std.range : iota;
+    import std.range : iota;
     int[] arr = iota(10).array;
 
     void test(A)(auto ref A alloc)

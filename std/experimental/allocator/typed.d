@@ -398,8 +398,7 @@ unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
-    import std.experimental.allocator.mmap_allocator : MmapAllocator
-	;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
     alias MyAllocator = TypedAllocator!(GCAllocator,
         AllocFlag.fixedSize | AllocFlag.threadLocal, Mallocator,
         AllocFlag.fixedSize | AllocFlag.threadLocal
