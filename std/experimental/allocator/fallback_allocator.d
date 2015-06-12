@@ -260,7 +260,7 @@ unittest
     import std.experimental.allocator.region : InSituRegion;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.conv : text;
-    FallbackAllocator!(InSituRegion!16384, GCAllocator) a;
+    FallbackAllocator!(InSituRegion!16_384, GCAllocator) a;
     // This allocation uses the stack
     auto b1 = a.allocate(1024);
     assert(b1.length == 1024, text(b1.length));
@@ -290,7 +290,7 @@ private auto ref forward(alias arg)()
 
 unittest
 {
-    void fun(T)(auto ref T a, string b) { /* ... */ }
+    void fun(T)(auto ref T, string) { /* ... */ }
     void gun(T...)(auto ref T args)
     {
         fun(forward!(args[0]), forward!(args[1]));
@@ -343,8 +343,8 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 ///
 unittest
 {
-    import std.experimental.allocator.region;
-    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.region : Region;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.it);
     auto b1 = a.allocate(1020);
     assert(b1.length == 1020);

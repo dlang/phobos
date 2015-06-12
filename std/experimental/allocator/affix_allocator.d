@@ -44,7 +44,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     static if (stateSize!Allocator) Allocator parent;
     else alias parent = Allocator.it;
 
-    template Impl()
+    private template Impl()
     {
         size_t goodAllocSize(size_t s)
         {
@@ -151,7 +151,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 return b.length == delta;
             }
             auto t = actualAllocation(b);
-            auto result = parent.expand(t, delta);
+            const result = parent.expand(t, delta);
             if (!result) return false;
             b = b.ptr[0 .. b.length + delta];
             return true;
@@ -166,7 +166,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 return b.length == s;
             }
             auto t = actualAllocation(b);
-            auto result = parent.reallocate(t, actualAllocationSize(s));
+            const result = parent.reallocate(t, actualAllocationSize(s));
             if (!result) return false; // no harm done
             b = t.ptr[stateSize!Prefix .. stateSize!Prefix + s];
             return true;
@@ -256,7 +256,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 ///
 unittest
 {
-    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.mallocator : Mallocator;
     // One word before and after each allocation.
     alias A = AffixAllocator!(Mallocator, size_t, size_t);
     auto b = A.it.allocate(11);
@@ -267,8 +267,8 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.bitmapped_block;
-    import std.experimental.allocator.common;
+    import std.experimental.allocator.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.common : testAllocator;
     testAllocator!({
         auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
             (BitmappedBlock!128(new void[128 * 4096]));
@@ -278,13 +278,13 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.mallocator : Mallocator;
     alias A = AffixAllocator!(Mallocator, size_t);
     auto b = A.it.allocate(10);
     A.it.prefix(b) = 10;
     assert(A.it.prefix(b) == 10);
 
-    import std.experimental.allocator.null_allocator;
+    import std.experimental.allocator.null_allocator : NullAllocator;
     alias B = AffixAllocator!(NullAllocator, size_t);
     b = B.it.allocate(100);
     assert(b is null);

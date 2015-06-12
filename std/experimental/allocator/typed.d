@@ -129,7 +129,7 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
 
     static assert(isSorted([Stride2!Policies]));
 
-    template Stride2(T...)
+    private template Stride2(T...)
     {
         static if (T.length >= 2)
         {
@@ -142,9 +142,9 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     }
 
     // state {
-    static if (stateSize!PrimaryAllocator) PrimaryAllocator primary;
+    static if (stateSize!PrimaryAllocator) private PrimaryAllocator primary;
     else alias primary = PrimaryAllocator.it;
-    Tuple!(Stride2!(Policies[1 .. $])) extras;
+    private Tuple!(Stride2!(Policies[1 .. $])) extras;
     // }
 
     //pragma(msg, "Allocators available: ", typeof(extras));
@@ -396,9 +396,10 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
 ///
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.mallocator;
-    import std.experimental.allocator.mmap_allocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator
+	;
     alias MyAllocator = TypedAllocator!(GCAllocator,
         AllocFlag.fixedSize | AllocFlag.threadLocal, Mallocator,
         AllocFlag.fixedSize | AllocFlag.threadLocal

@@ -231,13 +231,13 @@ in turn uses the garbage collected heap.
 unittest
 {
     // Install a new allocator that is faster for 128-byte allocations.
-    import std.experimental.allocator.free_list,
-        std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.free_list : FreeList;
+	import std.experimental.allocator.gc_allocator : GCAllocator;
     auto oldAllocator = theAllocator;
     scope(exit) theAllocator = oldAllocator;
     theAllocator = allocatorObject(FreeList!(GCAllocator, 128)());
     // Use the now changed allocator to allocate an array
-    ubyte[] arr = theAllocator.makeArray!ubyte(128);
+    const ubyte[] arr = theAllocator.makeArray!ubyte(128);
     assert(arr.ptr);
     //...
 }
@@ -304,11 +304,11 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 unittest
 {
     // Dynamically allocate one integer
-    int* p1 = theAllocator.make!int;
+    const int* p1 = theAllocator.make!int;
     // It's implicitly initialized with its .init value
     assert(*p1 == 0);
     // Dynamically allocate one double, initialize to 42.5
-    double* p2 = theAllocator.make!double(42.5);
+    const double* p2 = theAllocator.make!double(42.5);
     assert(*p2 == 42.5);
 
     // Dynamically allocate a struct
@@ -317,7 +317,7 @@ unittest
         int x, y, z;
     }
     // Use the generated constructor taking field values in order
-    Point* p = theAllocator.make!Point(1, 2);
+    const Point* p = theAllocator.make!Point(1, 2);
     assert(p.x == 1 && p.y == 2 && p.z == 0);
 
     // Dynamically allocate a class object
@@ -338,7 +338,7 @@ unittest
 {
     void test(Allocator)(auto ref Allocator alloc)
     {
-        int* a = alloc.make!int(10);
+        const int* a = alloc.make!int(10);
         assert(*a == 10);
 
         struct A
@@ -351,7 +351,7 @@ unittest
         A* b = alloc.make!A(42);
         assert(b.x == 42);
         assert(b.y is null);
-        import std.math;
+        import std.math : isNaN;
         assert(b.z.isNaN);
 
         b = alloc.make!A(43, "44", 45);
@@ -375,7 +375,6 @@ unittest
         B c = alloc.make!B(42);
         assert(c.x == 42);
         assert(c.y is null);
-        import std.math;
         assert(c.z.isNaN);
 
         c = alloc.make!B(43, "44", 45);
@@ -383,7 +382,7 @@ unittest
         assert(c.y == "44");
         assert(c.z == 45);
 
-        auto parray = alloc.make!(int[]);
+        const parray = alloc.make!(int[]);
         assert((*parray).empty);
     }
 
@@ -638,7 +637,8 @@ version(unittest)
 
 unittest
 {
-    import std.array, std.range;
+    import std.array : array;
+	import std.range : iota;
     int[] arr = iota(10).array;
 
     void test(A)(auto ref A alloc)
@@ -1042,14 +1042,14 @@ CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
 ///
 unittest
 {
-    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.mallocator : Mallocator;
     IAllocator a = allocatorObject(Mallocator.it);
     auto b = a.allocate(100);
     assert(b.length == 100);
     assert(a.deallocate(b));
 
     // The in-situ region must be used by pointer
-    import std.experimental.allocator.region;
+    import std.experimental.allocator.region : InSituRegion;
     auto r = InSituRegion!1024();
     a = allocatorObject(&r);
     b = a.allocate(200);

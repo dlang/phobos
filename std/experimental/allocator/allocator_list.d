@@ -109,7 +109,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
     static if (stateSize!Factory)
     {
-        Factory factory;
+        private Factory factory;
     }
     private Node[] allocators;
     private Node* root;
@@ -253,7 +253,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         static if (hasMember!(Allocator, "expand")
             && hasMember!(Allocator, "owns"))
         {
-            bool expanded = t && this.expand(t, Node.sizeof);
+            immutable bool expanded = t && this.expand(t, Node.sizeof);
         }
         else
         {
@@ -261,12 +261,12 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         }
         if (expanded)
         {
+			import std.c.string : memcpy;
             assert(t.length % Node.sizeof == 0);
             assert(t.ptr.alignedAt(Node.alignof));
             allocators = cast(Node[]) t;
             allocators[$ - 1].setUnused;
             auto newAlloc = SAllocator(make(atLeastBytes));
-            import core.stdc.string;
             memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
             emplace(&newAlloc);
         }
@@ -340,7 +340,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         auto result = Ternary.no;
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
-            auto t = n.owns(b);
+            immutable t = n.owns(b);
             if (t != Ternary.yes)
             {
                 if (t == Ternary.unknown) result = t;
@@ -523,10 +523,10 @@ template AllocatorList(alias factoryFunction,
 version(Posix) unittest
 {
     import std.algorithm : max;
-    import std.experimental.allocator.region;
-    import std.experimental.allocator.mmap_allocator;
-    import std.experimental.allocator.segregator;
-    import std.experimental.allocator.free_list;
+    import std.experimental.allocator.region : Region;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
+    import std.experimental.allocator.segregator : Segregator;
+    import std.experimental.allocator.free_list : ContiguousFreeList;
 
     // Ouroboros allocator list based upon 4MB regions, fetched directly from
     // mmap. All memory is released upon destruction.
@@ -565,12 +565,12 @@ unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm : max;
-    import std.experimental.allocator.region;
+    import std.experimental.allocator.region : Region;
     AllocatorList!((n) => Region!GCAllocator(new void[max(n, 1024 * 4096)]),
         NullAllocator) a;
-    auto b1 = a.allocate(1024 * 8192);
+    const b1 = a.allocate(1024 * 8192);
     assert(b1 !is null); // still works due to overdimensioning
-    auto b2 = a.allocate(1024 * 10);
+    const b2 = a.allocate(1024 * 10);
     assert(b2.length == 1024 * 10);
     a.deallocateAll();
 }
@@ -579,7 +579,7 @@ unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm : max;
-    import std.experimental.allocator.region;
+    import std.experimental.allocator.region : Region;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null); // still works due to overdimensioning
@@ -591,13 +591,13 @@ unittest
 unittest
 {
     import std.algorithm : max;
-    import std.experimental.allocator.region;
+    import std.experimental.allocator.region : Region;
     AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null);
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
-    auto b2 = a.allocate(1024 * 4095);
+    a.allocate(1024 * 4095);
     a.deallocateAll();
     assert(a.empty == Ternary.yes);
 }

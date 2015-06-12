@@ -16,10 +16,10 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     import std.algorithm : min;
     import std.traits : hasMember;
 
-    static if (stateSize!SmallAllocator) SmallAllocator _small;
-    else static alias SmallAllocator.it _small;
-    static if (stateSize!LargeAllocator) LargeAllocator _large;
-    else alias LargeAllocator.it _large;
+    static if (stateSize!SmallAllocator) private SmallAllocator _small;
+    else private alias _small = SmallAllocator.it ;
+    static if (stateSize!LargeAllocator) private LargeAllocator _large;
+    else private alias _large = LargeAllocator.it;
 
     version (StdDdoc)
     {
@@ -123,7 +123,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     enum uint alignment = min(SmallAllocator.alignment,
         LargeAllocator.alignment);
 
-    template Impl()
+    private template Impl()
     {
         size_t goodAllocSize(size_t s)
         {
@@ -251,7 +251,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         }
     }
 
-    enum sharedMethods =
+    private enum sharedMethods =
         !stateSize!SmallAllocator
         && !stateSize!LargeAllocator
         && is(typeof(SmallAllocator.it) == shared)
@@ -274,9 +274,9 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 ///
 unittest
 {
-    import std.experimental.allocator.free_list;
-    import std.experimental.allocator.mallocator;
-    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     alias A =
         Segregator!(
             1024 * 4,
@@ -347,9 +347,9 @@ template Segregator(Args...) if (Args.length > 3)
 ///
 unittest
 {
-    import std.experimental.allocator.free_list;
-    import std.experimental.allocator.mallocator;
-    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     alias A =
         Segregator!(
             128, FreeList!(Mallocator, 0, 128),

@@ -83,7 +83,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     $(D parent.alignedAllocate(goodAllocSize(n), a)).
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
-    void[] alignedAllocate(size_t n, uint a)
+    void[] alignedAllocate(size_t n, uint)
     {
         auto result = parent.alignedAllocate(goodAllocSize(n));
         return result.ptr ? result.ptr[0 .. n] : null;
@@ -213,21 +213,21 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 ///
 unittest
 {
-    import std.experimental.allocator.free_tree,
-        std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.free_tree : FreeTree;
+	import std.experimental.allocator.gc_allocator : GCAllocator;
     // Quantize small allocations to a multiple of cache line, large ones to a
     // multiple of page size
     alias MyAlloc = Quantizer!(
         FreeTree!GCAllocator,
-        n => n.roundUpToMultipleOf(n <= 16384 ? 64 : 4096));
+        n => n.roundUpToMultipleOf(n <= 16_384 ? 64 : 4096));
     MyAlloc alloc;
-    auto buf = alloc.allocate(256);
+    const buf = alloc.allocate(256);
     assert(buf.ptr);
 }
 
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     alias MyAlloc = Quantizer!(GCAllocator,
         (size_t n) => n.roundUpToMultipleOf(64));
     testAllocator!(() => MyAlloc());

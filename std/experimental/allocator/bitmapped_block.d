@@ -51,7 +51,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
     unittest
     {
-        import std.experimental.allocator.mallocator;
+        import std.experimental.allocator.mallocator : AlignedMallocator;
         import std.algorithm : max;
         auto m = AlignedMallocator.it.alignedAllocate(1024 * 64,
             max(theAlignment, cast(uint) size_t.sizeof));
@@ -125,7 +125,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         auto blocks = capacity.divideRoundUp(blockSize);
         auto leadingUlongs = blocks.divideRoundUp(64);
         import std.algorithm : min;
-        auto initialAlignment = min(parentAlignment,
+        immutable initialAlignment = min(parentAlignment,
             1U << trailingZeros(leadingUlongs * 8));
         auto maxSlack = alignment <= initialAlignment
             ? 0
@@ -382,7 +382,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
                 : tuple(wordIdx, cast(uint) (msbIdx + blocks));
         }
         // Allocation spans two control words or more
-        auto mask = ulong.max >> msbIdx;
+        immutable mask = ulong.max >> msbIdx;
         if (_control.rep[wordIdx] & mask)
         {
             // We can't allocate the rest of this control word,
@@ -602,8 +602,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         //auto p = (b.ptr - _payload.ptr) / blockSize
 
         // Locate position
-        auto pos = b.ptr - _payload.ptr;
-        auto blockIdx = pos / blockSize;
+        immutable pos = b.ptr - _payload.ptr;
+        immutable blockIdx = pos / blockSize;
 
         // Adjust pointer, might be inside a block due to alignedAllocate
         auto begin = _payload.ptr + blockIdx * blockSize,
@@ -710,18 +710,18 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 unittest
 {
     // Create a block allocator on top of a 10KB stack region.
-    import std.experimental.allocator.region;
-    import std.traits;
-    InSituRegion!(10240, 64) r;
+    import std.experimental.allocator.region : InSituRegion;
+    import std.traits : hasMember;
+    InSituRegion!(10_240, 64) r;
     auto a = BitmappedBlock!(64, 64)(r.allocateAll());
-    static assert(hasMember!(InSituRegion!(10240, 64), "allocateAll"));
-    auto b = a.allocate(100);
+    static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
+    const b = a.allocate(100);
     assert(b.length == 100);
 }
 
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => BitmappedBlock!(64, 8, GCAllocator)(1024 * 64));
 }
 
@@ -731,7 +731,7 @@ unittest
     {
         import std.algorithm : min;
         assert(bs);
-        import std.experimental.allocator.gc_allocator;
+        import std.experimental.allocator.gc_allocator : GCAllocator;
         auto a = BitmappedBlock!(bs, min(bs, platformAlignment))(
             GCAllocator.it.allocate((blocks * bs * 8 + blocks) / 8)
         );
@@ -881,7 +881,7 @@ struct BitmappedBlockWithInternalPointers(
     import std.conv : text;
     unittest
     {
-        import std.experimental.allocator.mallocator;
+        import std.experimental.allocator.mallocator : AlignedMallocator;
         auto m = AlignedMallocator.it.alignedAllocate(1024 * 64, theAlignment);
         testAllocator!(() => BitmappedBlockWithInternalPointers(m));
     }
@@ -1065,7 +1065,7 @@ struct BitmappedBlockWithInternalPointers(
     private bool markAsUsed(void[] b)
     {
         // Locate position
-        auto pos = b.ptr - _heap._payload.ptr;
+        immutable pos = b.ptr - _heap._payload.ptr;
         assert(pos % _heap.blockSize == 0);
         auto blockIdx = pos / _heap.blockSize;
         if (_heap._control[blockIdx]) return false;
@@ -1087,13 +1087,13 @@ unittest
     auto h = BitmappedBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
     auto b = h.allocate(123);
     assert(b.length == 123);
-    auto p = h.resolveInternalPointer(b.ptr + 17);
+    const p = h.resolveInternalPointer(b.ptr + 17);
     assert(p.ptr is b.ptr);
     assert(p.length >= b.length);
     b = h.allocate(4096);
     assert(h.resolveInternalPointer(b.ptr) is b);
     assert(h.resolveInternalPointer(b.ptr + 11) is b);
-    assert(h.resolveInternalPointer(b.ptr - 40970) is null);
+    assert(h.resolveInternalPointer(b.ptr - 40_970) is null);
 
     assert(h.expand(b, 1));
     assert(b.length == 4097);
@@ -1247,8 +1247,8 @@ private struct BitVector
     void opIndexAssign(bool b, ulong x)
     {
         assert(x / 64 <= size_t.max);
-        auto i = cast(size_t) (x / 64),
-            j = 0x8000_0000_0000_0000UL >> (x % 64);
+        immutable i = cast(size_t) (x / 64);
+        immutable j = 0x8000_0000_0000_0000UL >> (x % 64);
         if (b) _rep[i] |= j;
         else _rep[i] &= ~j;
     }
@@ -1266,8 +1266,8 @@ private struct BitVector
         assert(i < length);
         assert(i / 64 <= size_t.max);
         auto w = cast(size_t) (i / 64);
-        auto b = i % 64; // 0 through 63, 0 when i == 0
-        auto mask = ulong.max >> b;
+        immutable b = i % 64; // 0 through 63, 0 when i == 0
+        immutable mask = ulong.max >> b;
         if (auto current = _rep[w] & mask)
         {
             // Great, found
@@ -1292,8 +1292,8 @@ private struct BitVector
     {
         assert(i < length);
         auto w = cast(size_t) (i / 64);
-        auto b = 63 - (i % 64); // 0 through 63, 63 when i == 0
-        auto mask = ~((1UL << b) - 1);
+        immutable b = 63 - (i % 64); // 0 through 63, 63 when i == 0
+        immutable mask = ~((1UL << b) - 1);
         assert(mask != 0);
         // First, let's see if the current word has a bit larger than ours.
         if (auto currentWord = _rep[w] & mask)

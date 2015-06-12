@@ -314,8 +314,8 @@ struct Region(ParentAllocator = NullAllocator,
 ///
 unittest
 {
-    import std.experimental.allocator.mallocator;
-    import std.experimental.allocator.allocator_list;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.allocator_list : AllocatorList;
     import std.algorithm : max;
     // Create a scalable list of regions. Each gets at least 1MB at a time by
     // using malloc.
@@ -332,11 +332,11 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.mallocator : Mallocator;
     // Create a 64 KB region allocated with malloc
     auto reg = Region!(Mallocator, Mallocator.alignment,
         Yes.growDownwards)(1024 * 64);
-    auto b = reg.allocate(101);
+    const b = reg.allocate(101);
     assert(b.length == 101);
     // Destructor will free the memory
 }
@@ -373,7 +373,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     @disable this(this);
 
     // state {
-    Region!(NullAllocator, minAlign, growDownwards) _impl;
+    private Region!(NullAllocator, minAlign, growDownwards) _impl;
     union
     {
         private ubyte[size] _store = void;
@@ -518,26 +518,26 @@ unittest
     assert(a1.length == 101);
 
     // 128KB region, with fallback to the garbage collector.
-    import std.experimental.allocator.fallback_allocator;
-    import std.experimental.allocator.free_list;
-    import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.bitmapped_block;
+    import std.experimental.allocator.fallback_allocator : FallbackAllocator;
+    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.bitmapped_block : BitmappedBlock;
     FallbackAllocator!(InSituRegion!(128 * 1024), GCAllocator) r2;
-    auto a2 = r1.allocate(102);
+    const a2 = r2.allocate(102);
     assert(a2.length == 102);
 
     // Reap with GC fallback.
     InSituRegion!(128 * 1024, 8) tmp3;
     FallbackAllocator!(BitmappedBlock!(64, 8), GCAllocator) r3;
     r3.primary = BitmappedBlock!(64, 8)(tmp3.allocateAll());
-    auto a3 = r3.allocate(103);
+    const a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
     InSituRegion!(128 * 1024, 64) tmp4;
     FreeList!(FallbackAllocator!(BitmappedBlock!(64, 64), GCAllocator), 0, 16) r4;
     r4.parent.primary = BitmappedBlock!(64, 64)(tmp4.allocateAll());
-    auto a4 = r4.allocate(104);
+    const a4 = r4.allocate(104);
     assert(a4.length == 104);
 }
 
@@ -549,8 +549,8 @@ unittest
     import std.conv : text;
     assert(r1.available == 2095, text(r1.available));
 
-    InSituRegion!(65536, 1024*4) r2;
-    assert(r2.available <= 65536);
+    InSituRegion!(65_536, 1024*4) r2;
+    assert(r2.available <= 65_536);
     a = r2.allocate(2001);
     assert(a.length == 2001);
 }
@@ -569,8 +569,10 @@ SbrkRegion) adversely.
 */
 version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 {
-    import core.sys.posix.pthread;
-    static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
+    private import core.sys.posix.pthread : pthread_mutex_init, pthread_mutex_destroy,
+        pthread_mutex_t, pthread_mutex_lock, pthread_mutex_unlock,
+        PTHREAD_MUTEX_INITIALIZER;
+    private static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
 
     // workaround for https://issues.dlang.org/show_bug.cgi?id=14617
     version(OSX)
@@ -746,10 +748,10 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 version(Posix) unittest
 {
     // Let's test the assumption that sbrk(n) returns the old address
-    auto p1 = sbrk(0);
-    auto p2 = sbrk(4096);
+    const p1 = sbrk(0);
+    const p2 = sbrk(4096);
     assert(p1 == p2);
-    auto p3 = sbrk(0);
+    const p3 = sbrk(0);
     assert(p3 == p2 + 4096);
     // Try to reset brk, but don't make a fuss if it doesn't work
     sbrk(-4096);

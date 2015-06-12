@@ -47,9 +47,9 @@ struct Ternary
       $(TR $(TD `no`) $(TD `unknown`) $(TD) $(TD `unknown`) $(TD `no`) $(TD `unknown`))
       $(TR $(TD `yes`) $(TD `no`) $(TD `no`) $(TD `yes`) $(TD `no`) $(TD `yes`))
       $(TR $(TD `yes`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `yes`) $(TD `no`))
-      $(TR $(TD `yes`) $(TD `unknown`) $(TD) $(TD `yes`) $(TD `unknown`) $(TD `unknown`))
+      $(TR $(TD `yes`) $(TD `unknown`) $(TD) $(TD `yes`) $(TD `no`) $(TD `unknown`))
       $(TR $(TD `unknown`) $(TD `no`) $(TD `unknown`) $(TD `unknown`) $(TD `no`) $(TD `unknown`))
-      $(TR $(TD `unknown`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `unknown`) $(TD `unknown`))
+      $(TR $(TD `unknown`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `no`) $(TD `unknown`))
       $(TR $(TD `unknown`) $(TD `unknown`) $(TD) $(TD `unknown`) $(TD `unknown`) $(TD `unknown`))
     )
     */
@@ -61,19 +61,19 @@ struct Ternary
     /// ditto
     Ternary opBinary(string s)(Ternary rhs) if (s == "|")
     {
-        return make(25512 >> value + rhs.value & 6);
+        return make(25_512 >> value + rhs.value & 6);
     }
 
     /// ditto
     Ternary opBinary(string s)(Ternary rhs) if (s == "&")
     {
-        return make(26144 >> value + rhs.value & 6);
+        return make(26_144 >> value + rhs.value & 6);
     }
 
     /// ditto
     Ternary opBinary(string s)(Ternary rhs) if (s == "^")
     {
-        return make(26504 >> value + rhs.value & 6);
+        return make(26_504 >> value + rhs.value & 6);
     }
 }
 
@@ -330,13 +330,13 @@ Returns $(D s) rounded up to the nearest power of 2.
 */
 package size_t roundUpToPowerOf2(size_t s)
 {
-    import std.typetuple;
+    import std.meta : Arguments;
     assert(s <= (size_t.max >> 1) + 1);
     --s;
     static if (size_t.sizeof == 4)
-        alias Shifts = TypeTuple!(1, 2, 4, 8, 16);
+        alias Shifts = Arguments!(1, 2, 4, 8, 16);
     else
-        alias Shifts = TypeTuple!(1, 2, 4, 8, 16, 32);
+        alias Shifts = Arguments!(1, 2, 4, 8, 16, 32);
     foreach (i; Shifts)
     {
         s |= s >> i;
@@ -625,7 +625,7 @@ package void testAllocator(alias make)()
             assert(!aa.allocate(1).ptr);
         }
         auto ab = make();
-        auto b4 = ab.allocateAll();
+        const b4 = ab.allocateAll();
         assert(b4.length);
         // Can't get any more memory
         assert(!ab.allocate(1).ptr);

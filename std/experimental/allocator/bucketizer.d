@@ -231,9 +231,9 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 ///
 unittest
 {
-    import std.experimental.allocator.free_list;
-    import std.experimental.allocator.mallocator;
-    import std.experimental.allocator.common;
+    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.common : unbounded;
     Bucketizer!(FreeList!(Mallocator, 0, unbounded),
         65, 512, 64) a;
     auto b = a.allocate(400);

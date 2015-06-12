@@ -152,9 +152,9 @@ private:
         string result;
         foreach (v; names)
             result ~= "static if (flags & Options."~v~") {"
-                "private "~type~" _"~v~";"
-                "public const("~type~") "~v~"() const { return _"~v~"; }"
-                "}";
+                ~ "private "~type~" _"~v~";"
+                ~ "public const("~type~") "~v~"() const { return _"~v~"; }"
+                ~ "}";
         return result;
     }
 
@@ -547,7 +547,7 @@ public:
             Format to a string such as:
             $(D mymodule.d(655): [numAllocate:21, numAllocateOK:21, bytesAllocated:324202]).
             */
-            string toString()
+            string toString() const
             {
                 import std.conv : text, to;
                 auto result = text(file, "(", line, "): [");
@@ -588,7 +588,6 @@ public:
         */
         static void reportPerCallStatistics(R)(auto ref R output)
         {
-            import std.stdio;
             output.write("Stats for: ", StatsCollector.stringof, '\n');
             foreach (ref stat; byFileLine)
             {
@@ -623,7 +622,7 @@ public:
             {
                 // Per allocation info
                 auto ps = mixin("statsAt!(f, n,"
-                    "Options."~[names].join(", Options.")
+                    ~ "Options."~[names].join(", Options.")
                 ~")");
                 foreach (i; 0 .. names.length)
                 {
@@ -643,8 +642,8 @@ public:
 ///
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.free_list;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.free_list : FreeList;
     alias Allocator = StatsCollector!(GCAllocator, Options.all, Options.all);
 
     Allocator alloc;
@@ -693,8 +692,8 @@ unittest
         //a.reportStatistics(stdout);
      }
 
-    import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.free_list;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.free_list : FreeList;
     test!(StatsCollector!(GCAllocator, Options.all, Options.all));
     test!(StatsCollector!(FreeList!(GCAllocator, 128), Options.all,
         Options.all));
@@ -717,7 +716,7 @@ unittest
         a.deallocate(b1);
         a.deallocate(b3);
     }
-    import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.free_list;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.free_list : FreeList;
     test!(StatsCollector!(GCAllocator, 0, 0));
 }

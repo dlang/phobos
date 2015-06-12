@@ -21,8 +21,8 @@ struct ScopedAllocator(ParentAllocator)
         testAllocator!(() => ScopedAllocator());
     }
 
-    import std.experimental.allocator.affix_allocator;
-    import std.traits : hasMember;
+    private import std.experimental.allocator.affix_allocator : AffixAllocator;
+    private import std.traits : hasMember;
 
     private struct Node
     {
@@ -46,7 +46,7 @@ struct ScopedAllocator(ParentAllocator)
     {
         alias parent = Allocator.it;
     }
-    Node* root;
+    private Node* root;
     // }
 
     /**
@@ -187,16 +187,16 @@ struct ScopedAllocator(ParentAllocator)
 ///
 unittest
 {
-    import std.experimental.allocator.mallocator;
+    import std.experimental.allocator.mallocator : Mallocator;
     ScopedAllocator!Mallocator alloc;
     assert(alloc.empty == Ternary.yes);
-    auto b = alloc.allocate(10);
+    const b = alloc.allocate(10);
     assert(b.length == 10);
     assert(alloc.empty == Ternary.no);
 }
 
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => ScopedAllocator!GCAllocator());
 }

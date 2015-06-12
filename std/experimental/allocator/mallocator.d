@@ -6,7 +6,6 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    import core.stdc.stdlib;
     unittest { testAllocator!(() => Mallocator.it); }
 
     /**
@@ -24,6 +23,7 @@ struct Mallocator
     */
     @trusted void[] allocate(size_t bytes) shared
     {
+		import core.stdc.stdlib : malloc;
         if (!bytes) return null;
         auto p = malloc(bytes);
         return p ? p[0 .. bytes] : null;
@@ -32,6 +32,7 @@ struct Mallocator
     /// Ditto
     @system bool deallocate(void[] b) shared
     {
+		import core.stdc.stdlib : free;
         free(b.ptr);
         return true;
     }
@@ -39,6 +40,7 @@ struct Mallocator
     /// Ditto
     @system bool reallocate(ref void[] b, size_t s) shared
     {
+		import core.stdc.stdlib : realloc;
         if (!s)
         {
             // fuzzy area in the C standard, see http://goo.gl/ZpWeSE
@@ -94,12 +96,12 @@ unittest
     test!Mallocator();
 }
 
-version (Posix) extern(C) int posix_memalign(void**, size_t, size_t);
+version (Posix) private extern(C) int posix_memalign(void**, size_t, size_t);
 version (Windows)
 {
-    extern(C) void* _aligned_malloc(size_t, size_t);
-    extern(C) void _aligned_free(void *memblock);
-    extern(C) void* _aligned_realloc(void *, size_t, size_t);
+    private extern(C) void* _aligned_malloc(size_t, size_t);
+    private extern(C) void _aligned_free(void *memblock);
+    private extern(C) void* _aligned_realloc(void *, size_t, size_t);
 }
 
 /**
@@ -108,8 +110,6 @@ version (Windows)
 struct AlignedMallocator
 {
     unittest { testAllocator!(() => typeof(this).it); }
-
-    private import core.stdc.stdlib;
 
     /**
     The default alignment is $(D platformAlignment).
@@ -125,8 +125,6 @@ struct AlignedMallocator
         return alignedAllocate(bytes, alignment);
     }
 
-    version (Posix) import core.stdc.errno, core.sys.posix.stdlib;
-
     /**
     Uses $(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html,
     $(D posix_memalign)) on Posix and
@@ -137,6 +135,7 @@ struct AlignedMallocator
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
         import std.conv : to;
+		import core.stdc.errno : ENOMEM;
         assert(a.isGoodDynamicAlignment, to!string(a));
         void* result;
         auto code = posix_memalign(&result, a, bytes);
@@ -162,6 +161,7 @@ struct AlignedMallocator
     version (Posix) @system
     bool deallocate(void[] b) shared
     {
+		import core.stdc.stdlib : free;
         free(b.ptr);
         return true;
     }

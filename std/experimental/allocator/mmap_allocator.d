@@ -13,7 +13,6 @@ allocating large chunks to be managed by fine-granular allocators.
 */
 version(Posix) struct MmapAllocator
 {
-    import core.sys.posix.sys.mman;
     /// The one shared instance.
     static shared MmapAllocator it;
 
@@ -26,6 +25,7 @@ version(Posix) struct MmapAllocator
     /// Allocator API.
     void[] allocate(size_t bytes) shared
     {
+        import core.sys.posix.sys.mman;
         if (!bytes) return null;
         version(OSX) import core.sys.osx.sys.mman : MAP_ANON;
         else version(linux) import core.sys.linux.sys.mman : MAP_ANON;
@@ -39,6 +39,7 @@ version(Posix) struct MmapAllocator
     /// Ditto
     bool deallocate(void[] b) shared
     {
+        import core.sys.posix.sys.mman : munmap;
         if (b.ptr) munmap(b.ptr, b.length) == 0 || assert(0);
         return true;
     }

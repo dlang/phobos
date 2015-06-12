@@ -6,7 +6,7 @@ D's built-in garbage-collected allocator.
  */
 struct GCAllocator
 {
-    import core.memory;
+    import core.memory : GC;
     unittest { testAllocator!(() => GCAllocator.it); }
 
     /**
@@ -37,7 +37,7 @@ struct GCAllocator
             return b.length == delta;
         }
         immutable desired = b.length + delta;
-        auto newSize = GC.extend(b.ptr, desired, desired);
+        immutable newSize = GC.extend(b.ptr, desired, desired);
         if (newSize == 0)
         {
             // expansion unsuccessful
@@ -105,6 +105,6 @@ unittest
 
 unittest
 {
-    auto b = GCAllocator.it.allocate(10000);
+    auto b = GCAllocator.it.allocate(10_000);
     assert(GCAllocator.it.expand(b, 1));
 }

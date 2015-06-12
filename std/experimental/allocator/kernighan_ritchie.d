@@ -134,7 +134,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             assert(!adjacent(next));
             if (size < bytes) return typeof(return)();
             assert(size >= bytes);
-            auto leftover = size - bytes;
+            immutable leftover = size - bytes;
             if (leftover >= Node.sizeof)
             {
                 // There's room for another node
@@ -158,8 +158,8 @@ struct KRRegion(ParentAllocator = NullAllocator)
     static if (stateSize!ParentAllocator) ParentAllocator parent;
     else alias parent = ParentAllocator.it;
     private void[] payload;
-    Node* root;
-    bool regionMode = true;
+    private Node* root;
+    private bool regionMode = true;
     // }
 
     auto byNodePtr()
@@ -384,7 +384,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             {
                 // Enough room for allocation
                 void* result = root;
-                auto balance = root.size - actualBytes;
+                immutable balance = root.size - actualBytes;
                 if (balance >= Node.sizeof)
                 {
                     auto newRoot = cast(Node*) (result + actualBytes);
@@ -529,11 +529,11 @@ struct KRRegion(ParentAllocator = NullAllocator)
     ///
     unittest
     {
-        import std.experimental.allocator.gc_allocator;
+        import std.experimental.allocator.gc_allocator : GCAllocator;
         auto alloc = KRRegion!GCAllocator(1024 * 64);
-        auto b1 = alloc.allocate(2048);
+        const b1 = alloc.allocate(2048);
         assert(b1.length == 2048);
-        auto b2 = alloc.allocateAll;
+        const b2 = alloc.allocateAll;
         assert(b2.length == 1024 * 62);
     }
 
@@ -579,6 +579,9 @@ struct KRRegion(ParentAllocator = NullAllocator)
             ? Node.sizeof : n.roundUpToMultipleOf(alignment);
     }
 
+    /**
+    Returns: `true` if the allocator is empty.
+    */
     Ternary empty()
     {
         return Ternary(root && root.size == payload.length);
@@ -593,8 +596,8 @@ fronting the GC allocator.
 */
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
-    import std.experimental.allocator.fallback_allocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.fallback_allocator : fallbackAllocator;
     import std.experimental.allocator.common : Ternary;
     // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
@@ -617,19 +620,19 @@ it actually returns memory to the operating system when possible.
 unittest
 {
     import std.algorithm : max;
-    import std.experimental.allocator.gc_allocator,
-        std.experimental.allocator.mmap_allocator,
-        std.experimental.allocator.allocator_list;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
+    import std.experimental.allocator.allocator_list : AllocatorList;
     AllocatorList!(n => KRRegion!MmapAllocator(max(n * 16, 1024 * 1024))) alloc;
 }
 
 unittest
 {
     import std.algorithm : max;
-    import std.experimental.allocator.gc_allocator,
-        std.experimental.allocator.common,
-        std.experimental.allocator.mallocator,
-        std.experimental.allocator.allocator_list;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import   std.experimental.allocator.common : Ternary;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.allocator_list : AllocatorList;
     /*
     Create a scalable allocator consisting of 1 MB (or larger) blocks fetched
     from the garbage-collected heap. Each block is organized as a KR-style
@@ -640,12 +643,12 @@ unittest
     void[][50] array;
     foreach (i; 0 .. array.length)
     {
-        auto length = i * 100000 + 1;
+        auto length = i * 100_000 + 1;
         array[i] = alloc.allocate(length);
         assert(array[i].ptr);
         assert(array[i].length == length);
     }
-    import std.random;
+    import std.random : randomShuffle;
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
@@ -658,10 +661,10 @@ unittest
 unittest
 {
     import std.algorithm : max;
-    import std.experimental.allocator.gc_allocator,
-        std.experimental.allocator.common,
-        std.experimental.allocator.mmap_allocator,
-        std.experimental.allocator.allocator_list;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.common : Ternary;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
+    import std.experimental.allocator.allocator_list : AllocatorList;
     /*
     Create a scalable allocator consisting of 1 MB (or larger) blocks fetched
     from the garbage-collected heap. Each block is organized as a KR-style
@@ -674,7 +677,7 @@ unittest
     void[][490] array;
     foreach (i; 0 .. array.length)
     {
-        auto length = i * 10000 + 1;
+        auto length = i * 10_000 + 1;
         array[i] = alloc.allocate(length);
         assert(array[i].ptr);
         foreach (j; 0 .. i)
@@ -683,7 +686,7 @@ unittest
         }
         assert(array[i].length == length);
     }
-    import std.random;
+    import std.random : randomShuffle;
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
@@ -694,17 +697,17 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.gc_allocator,
-        std.experimental.allocator.allocator_list, std.algorithm;
-    import std.experimental.allocator.common;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.allocator_list : AllocatorList;
+    import std.algorithm : max;
+    import std.experimental.allocator.common : testAllocator;
     testAllocator!(() => AllocatorList!(
         n => KRRegion!GCAllocator(max(n * 16, 1024 * 1024)))());
 }
 
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
-    import std.stdio;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
 
     auto alloc = KRRegion!GCAllocator(1024 * 1024);
 
@@ -722,10 +725,10 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.common : Ternary;
     auto alloc = KRRegion!()(GCAllocator.it.allocate(1024 * 1024));
-    auto store = alloc.allocate(KRRegion!().sizeof);
+    const store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
     import std.conv : emplace;
     import std.algorithm : move;
@@ -742,7 +745,7 @@ unittest
         assert(array[i].length == length, text(array[i].length));
         assert(p.owns(array[i]) == Ternary.yes);
     }
-    import std.random;
+    import std.random : randomShuffle;
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
@@ -755,7 +758,7 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     auto alloc = KRRegion!()(GCAllocator.it.allocate(1024 * 1024));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
@@ -763,4 +766,3 @@ unittest
     p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
 }
-
