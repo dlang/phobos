@@ -547,7 +547,7 @@ enum : uint
     SQL_LEN_DATA_AT_EXEC_OFFSET  = (-100),
 }
 
-uint SQL_LEN_DATA_AT_EXEC
+uint SQL_LEN_DATA_AT_EXEC()
 (
     uint length
 )
