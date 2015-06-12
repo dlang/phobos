@@ -1804,16 +1804,6 @@ unittest
     stdThreadLocalLog = l;
 }
 
-@trusted package string randomString(size_t upto)
-{
-    import std.ascii : letters;
-    import std.random : uniform;
-    auto app = Appender!string();
-    foreach (_ ; 0 .. upto)
-        app.put(letters[uniform(0, letters.length)]);
-    return app.data;
-}
-
 @safe unittest
 {
     LogLevel ll = globalLogLevel;
@@ -2083,7 +2073,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 unittest // default logger
 {
     import std.file : exists, remove;
-    string filename = randomString(32) ~ ".tempLogFile";
+
+    string filename = __FUNCTION__ ~ ".tempLogFile";
     FileLogger l = new FileLogger(filename);
     auto oldunspecificLogger = sharedLog;
     sharedLog = l;
@@ -2121,7 +2112,7 @@ unittest
 {
     import std.file : remove;
     import core.memory : destroy;
-    string filename = randomString(32) ~ ".tempLogFile";
+    string filename = __FUNCTION__ ~ ".tempLogFile";
     auto oldunspecificLogger = sharedLog;
 
     scope(exit)

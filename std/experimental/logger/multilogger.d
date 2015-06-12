@@ -143,7 +143,7 @@ unittest
 {
     import std.stdio : File;
     import std.string : indexOf;
-    auto logName = randomString(32) ~ ".log";
+    string logName = __FUNCTION__ ~ ".log";
     auto logFileOutput = File(logName, "w");
     scope(exit)
     {
