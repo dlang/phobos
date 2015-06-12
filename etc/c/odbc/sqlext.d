@@ -558,7 +558,7 @@ uint SQL_LEN_DATA_AT_EXEC
 // * binary length for driver specific attributes *
 enum uint SQL_LEN_BINARY_ATTR_OFFSET  = (-100);
 
-uint SQL_LEN_BINARY_ATTR
+uint SQL_LEN_BINARY_ATTR()
 (
     uint length
 )
