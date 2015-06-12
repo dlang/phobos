@@ -241,7 +241,8 @@ SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d \
+    etc\c\odbc\sql.d etc\c\odbc\sqlext.d etc\c\odbc\sqltypes.d etc\c\odbc\sqlucode.d
 
 SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_STD_REGEX) \
@@ -412,6 +413,10 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
+	$(DOC)\etc_c_odbc_sql.html \
+	$(DOC)\etc_c_odbc_sqlext.html \
+	$(DOC)\etc_c_odbc_sqltypes.html \
+	$(DOC)\etc_c_odbc_sqlucode.html \
 	$(DOC)\index.html
 
 $(LIB) : $(SRC_TO_COMPILE) \
@@ -836,6 +841,17 @@ $(DOC)\etc_c_sqlite3.html : $(STDDOC) etc\c\sqlite3.d
 $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_zlib.html $(STDDOC) etc\c\zlib.d
 
+$(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sql.html $(STDDOC) etc\c\odbc\sql.d
+
+$(DOC)\etc_c_odbc_sqlext.html : $(STDDOC) etc\c\odbc\sqlext.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sqlext.html $(STDDOC) etc\c\odbc\sqlext.d
+
+$(DOC)\etc_c_odbc_sqltypes.html : $(STDDOC) etc\c\odbc\sqltypes.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sqltypes.html $(STDDOC) etc\c\odbc\sqltypes.d
+
+$(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sql.html $(STDDOC) etc\c\odbc\sql.d
 
 ######################################################
 
