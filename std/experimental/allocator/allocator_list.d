@@ -109,7 +109,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
     static if (stateSize!Factory)
     {
-        private Factory factory;
+        Factory factory;
     }
     private Node[] allocators;
     private Node* root;

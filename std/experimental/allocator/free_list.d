@@ -68,9 +68,9 @@ struct FreeList(ParentAllocator,
         */
         @property void min(size_t low)
         {
-            assert(x <= max || max == chooseAtRuntime);
+            assert(low <= max || max == chooseAtRuntime);
             minimize;
-            _min = x;
+            _min = low;
         }
     }
     else
