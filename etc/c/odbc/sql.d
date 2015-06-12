@@ -10,6 +10,12 @@ original announcement)).
 corresponding to the `sql.h` C header file. It `import`s `public`ly
 `etc.c.odbc.sqltypes` for conformity with the C header.
 
+Note: The ODBC library itself not a part of the `dmd` distribution (and
+typically not a part of the distribution packages of other compilers
+such as `gdc` and `ldc`). To use ODBC, install it per the vendor- and
+platform-specific instructions and then use the appropriate command-line
+flags (e.g. `-L-lodbc` with `dmd` on Posix) to link with the ODBC library.
+
 See_Also: $(LUCKY ODBC API Reference on MSN Online)
 */
 
