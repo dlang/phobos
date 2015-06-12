@@ -65,6 +65,3 @@ public import std.random.device;
 public import std.random.distribution;
 public import std.random.engine;
 public import std.random.traits;
-
-// Segments of the code in this file Copyright (c) 1997 by Rick Booth
-// From "Inner Loops" by Rick Booth, Addison-Wesley
