@@ -1804,19 +1804,14 @@ unittest
     stdThreadLocalLog = l;
 }
 
-version (unittest)
+@trusted package string randomString(size_t upto)
 {
-    import std.array;
-    import std.ascii;
-    import std.random;
-
-    @trusted package string randomString(size_t upto)
-    {
-        auto app = Appender!string();
-        foreach (_ ; 0 .. upto)
-            app.put(letters[uniform(0, letters.length)]);
-        return app.data;
-    }
+    import std.ascii : letters;
+    import std.random : uniform;
+    auto app = Appender!string();
+    foreach (_ ; 0 .. upto)
+        app.put(letters[uniform(0, letters.length)]);
+    return app.data;
 }
 
 @safe unittest
@@ -1827,38 +1822,35 @@ version (unittest)
     globalLogLevel = ll;
 }
 
-version (unittest)
+package class TestLogger : Logger
 {
-    package class TestLogger : Logger
+    int line = -1;
+    string file = null;
+    string func = null;
+    string prettyFunc = null;
+    string msg = null;
+    LogLevel lvl;
+
+    this(const LogLevel lv = LogLevel.all) @safe
     {
-        int line = -1;
-        string file = null;
-        string func = null;
-        string prettyFunc = null;
-        string msg = null;
-        LogLevel lvl;
-
-        this(const LogLevel lv = LogLevel.all) @safe
-        {
-            super(lv);
-        }
-
-        override protected void writeLogMsg(ref LogEntry payload) @safe
-        {
-            this.line = payload.line;
-            this.file = payload.file;
-            this.func = payload.funcName;
-            this.prettyFunc = payload.prettyFuncName;
-            this.lvl = payload.logLevel;
-            this.msg = payload.msg;
-        }
+        super(lv);
     }
 
-    private void testFuncNames(Logger logger) @safe
+    override protected void writeLogMsg(ref LogEntry payload) @safe
     {
-        string s = "I'm here";
-        logger.log(s);
+        this.line = payload.line;
+        this.file = payload.file;
+        this.func = payload.funcName;
+        this.prettyFunc = payload.prettyFuncName;
+        this.lvl = payload.logLevel;
+        this.msg = payload.msg;
     }
+}
+
+version(unittest) private void testFuncNames(Logger logger) @safe
+{
+    string s = "I'm here";
+    logger.log(s);
 }
 
 @safe unittest
