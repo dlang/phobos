@@ -36,7 +36,7 @@ enum
 }
 
 /* test for SQL_SUCCESS or SQL_SUCCESS_WITH_INFO */
-bool SQL_SUCCEEDED(uint rc) { return (rc & ~1U) == 0; }
+bool SQL_SUCCEEDED()(uint rc) { return (rc & ~1U) == 0; }
 
 enum
 {
