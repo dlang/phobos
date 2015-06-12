@@ -3685,17 +3685,18 @@ else version (OSX)
     {
         const(char)*[5] args;
 
+        auto curl = url.tempCString();
         const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
         if (browser)
         {   browser = strdup(browser);
             args[0] = browser;
-            args[1] = url.tempCString();
+            args[1] = curl;
             args[2] = null;
         }
         else
         {
             args[0] = "open".ptr;
-            args[1] = url.tempCString();
+            args[1] = curl;
             args[2] = null;
         }
 
