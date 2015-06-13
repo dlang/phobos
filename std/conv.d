@@ -3671,12 +3671,9 @@ unittest
 
 
 /***************************************************************
-The $(D octal) facility is intended as an experimental facility to
-replace _octal literals starting with $(D '0'), which many find
-confusing. Using $(D octal!177) or $(D octal!"177") instead of $(D
-0177) as an _octal literal makes code clearer and the intent more
-visible. If use of this facility becomes predominant, a future
-version of the language may deem old-style _octal literals deprecated.
+The $(D octal) facility provides a means to declare a number in base 8.
+Using $(D octal!177) or $(D octal!"177") for 127 represented in octal
+(same as 0177 in C).
 
 The rules for strings are the usual for literals: If it can fit in an
 $(D int), it is an $(D int). Otherwise, it is a $(D long). But, if the
@@ -3684,6 +3681,9 @@ user specifically asks for a $(D long) with the $(D L) suffix, always
 give the $(D long). Give an unsigned iff it is asked for with the $(D
 U) or $(D u) suffix. _Octals created from integers preserve the type
 of the passed-in integral.
+
+See_Also:
+    $(LREF parse) for parsing octal strings at runtime.
  */
 @property int octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
