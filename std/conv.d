@@ -3665,7 +3665,8 @@ unittest
 
 /***************************************************************
 The $(D octal) facility provides a means to declare a number in base 8.
-Using $(D octal!177) or $(D octal!"177") for 127 represented in octal.
+Using $(D octal!177) or $(D octal!"177") for 127 represented in octal
+(same as 0177 in C).
 
 The rules for strings are the usual for literals: If it can fit in an
 $(D int), it is an $(D int). Otherwise, it is a $(D long). But, if the
