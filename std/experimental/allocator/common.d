@@ -40,6 +40,11 @@ struct Ternary
     void opAssign(bool b) { value = b << 1; }
 
     /**
+    Construct a ternary value from another ternary value
+    */
+    this(const Ternary b) { value = b.value; }
+
+    /**
     $(TABLE Truth table for logical operations,
       $(TR $(TH `a`) $(TH `b`) $(TH `$(TILDE)a`) $(TH `a | b`) $(TH `a & b`) $(TH `a ^ b`))
       $(TR $(TD `no`) $(TD `no`) $(TD `yes`) $(TD `no`) $(TD `no`) $(TD `no`))
