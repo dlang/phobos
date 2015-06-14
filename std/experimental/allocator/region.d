@@ -32,6 +32,8 @@ struct Region(ParentAllocator = NullAllocator,
     static assert(minAlign.isGoodStaticAlignment);
     static assert(ParentAllocator.alignment >= minAlign);
 
+    import std.traits : hasMember;
+
     // state {
     /**
     The _parent allocator. Depending on whether $(D ParentAllocator) holds state
@@ -85,10 +87,22 @@ struct Region(ParentAllocator = NullAllocator,
     }
 
     /*
-    The postblit of $(D BasicRegion) is disabled because such objects should not
-    be copied around naively.
+    TODO: The postblit of $(D BasicRegion) is disabled because such objects
+    should not be copied around naively.
     */
     //@disable this(this);
+
+    /**
+    If `ParentAllocator` is not `NullAllocator` and defines `deallocate`, the region defines a destructor that uses `ParentAllocator.delete` to free the
+    memory chunk.
+    */
+    static if (!is(ParentAllocator == NullAllocator)
+        && hasMember!(ParentAllocator, "deallocate"))
+    ~this()
+    {
+        parent.deallocate(_begin[0 .. _end - _begin]);
+    }
+
 
     /**
     Alignment offered.
