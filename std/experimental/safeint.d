@@ -671,17 +671,9 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Returns:
         a copy of this SafeInt.
     */
-    SafeInt!T opAssign(V)(V vIn) pure if (isNumeric!T && is(V : SafeInt!S, S))
+    SafeInt!T opAssign(V)(V vIn) pure if (isNumeric!T || is(V : SafeInt!S, S))
     {
-        static if (isSafeInt!V)
-        {
-            if (vIn.isNaN)
-            {
-                this.value = this.nan;
-                return this;
-            }
-        }
-        this.safeAssign(getValue(vIn));
+        this.safeAssign(vIn);
         return this;
     }
 
@@ -955,4 +947,11 @@ unittest
             auto s1 = s0 + cast(S)-1;
         }
     }
+}
+
+unittest
+{
+    SafeInt!int safe;
+    int raw = 0;
+    safe = raw;
 }
