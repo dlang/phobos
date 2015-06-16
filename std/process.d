@@ -562,7 +562,7 @@ private Pid spawnProcessImpl(in char[] commandLine,
     DWORD dwCreationFlags =
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
-    auto pworkDir = workDir.tempCStringW();
+    auto pworkDir = workDir.tempCStringW();     // workaround until Bugzilla 14696 is fixed
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
                         envz, workDir.length ? pworkDir : null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
