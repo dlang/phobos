@@ -143,7 +143,7 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
 
     // state {
     static if (stateSize!PrimaryAllocator) private PrimaryAllocator primary;
-    else alias primary = PrimaryAllocator.it;
+    else alias primary = PrimaryAllocator.instance;
     private Tuple!(Stride2!(Policies[1 .. $])) extras;
     // }
 

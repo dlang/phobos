@@ -153,10 +153,10 @@ struct KRRegion(ParentAllocator = NullAllocator)
     /**
     If $(D ParentAllocator) holds state, $(D parent) is a public member of type
     $(D KRRegion). Otherwise, $(D parent) is an $(D alias) for
-    $(D ParentAllocator.it).
+    `ParentAllocator.instance`.
     */
     static if (stateSize!ParentAllocator) ParentAllocator parent;
-    else alias parent = ParentAllocator.it;
+    else alias parent = ParentAllocator.instance;
     private void[] payload;
     private Node* root;
     private bool regionMode = true;
@@ -601,7 +601,7 @@ unittest
     import std.experimental.allocator.common : Ternary;
     // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
-    auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.it);
+    auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
     auto b = alloc.allocate(100);
     assert(b.length == 100);
     assert(alloc.primary.owns(b) == Ternary.yes);
@@ -727,7 +727,7 @@ unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.common : Ternary;
-    auto alloc = KRRegion!()(GCAllocator.it.allocate(1024 * 1024));
+    auto alloc = KRRegion!()(GCAllocator.instance.allocate(1024 * 1024));
     const store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
     import std.conv : emplace;
@@ -759,7 +759,7 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    auto alloc = KRRegion!()(GCAllocator.it.allocate(1024 * 1024));
+    auto alloc = KRRegion!()(GCAllocator.instance.allocate(1024 * 1024));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
     alloc.deallocateAll();

@@ -7,7 +7,7 @@ D's built-in garbage-collected allocator.
 struct GCAllocator
 {
     import core.memory : GC;
-    unittest { testAllocator!(() => GCAllocator.it); }
+    unittest { testAllocator!(() => GCAllocator.instance); }
 
     /**
     The alignment is a static constant equal to $(D platformAlignment), which
@@ -82,11 +82,11 @@ struct GCAllocator
 
     /**
     Returns the global instance of this allocator type. The garbage collected
-    allocator is thread-safe, therefore all of its methods and $(D it) itself
+    allocator is thread-safe, therefore all of its methods and `instance` itself
     are $(D shared).
     */
 
-    static shared GCAllocator it;
+    static shared GCAllocator instance;
 
     // Leave it undocummented for now.
     @trusted void collect() shared
@@ -98,13 +98,14 @@ struct GCAllocator
 ///
 unittest
 {
-    auto buffer = GCAllocator.it.allocate(1024 * 1024 * 4);
-    scope(exit) GCAllocator.it.deallocate(buffer); // or leave it to collection
+    auto buffer = GCAllocator.instance.allocate(1024 * 1024 * 4);
+    // deallocate upon scope's end (alternatively: leave it to collection)
+    scope(exit) GCAllocator.instance.deallocate(buffer);
     //...
 }
 
 unittest
 {
-    auto b = GCAllocator.it.allocate(10_000);
-    assert(GCAllocator.it.expand(b, 1));
+    auto b = GCAllocator.instance.allocate(10_000);
+    assert(GCAllocator.instance.expand(b, 1));
 }

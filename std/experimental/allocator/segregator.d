@@ -17,9 +17,9 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     import std.traits : hasMember;
 
     static if (stateSize!SmallAllocator) private SmallAllocator _small;
-    else private alias _small = SmallAllocator.it ;
+    else private alias _small = SmallAllocator.instance;
     static if (stateSize!LargeAllocator) private LargeAllocator _large;
-    else private alias _large = LargeAllocator.it;
+    else private alias _large = LargeAllocator.instance;
 
     version (StdDdoc)
     {
@@ -254,19 +254,19 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     private enum sharedMethods =
         !stateSize!SmallAllocator
         && !stateSize!LargeAllocator
-        && is(typeof(SmallAllocator.it) == shared)
-        && is(typeof(LargeAllocator.it) == shared);
+        && is(typeof(SmallAllocator.instance) == shared)
+        && is(typeof(LargeAllocator.instance) == shared);
     //pragma(msg, sharedMethods);
 
     static if (sharedMethods)
     {
-        static shared Segregator it;
+        static shared Segregator instance;
         shared { mixin Impl!(); }
     }
     else
     {
         static if (!stateSize!SmallAllocator && !stateSize!LargeAllocator)
-            static __gshared Segregator it;
+            static __gshared Segregator instance;
         mixin Impl!();
     }
 }

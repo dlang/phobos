@@ -53,7 +53,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
         import std.algorithm : max;
-        auto m = AlignedMallocator.it.alignedAllocate(1024 * 64,
+        auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
             max(theAlignment, cast(uint) size_t.sizeof));
         testAllocator!(() => BitmappedBlock(m));
     }
@@ -104,7 +104,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     // state {
     /**
     The _parent allocator. Depending on whether $(D ParentAllocator) holds state
-    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    or not, this is a member variable or an alias for
+    `ParentAllocator.instance`.
     */
     static if (stateSize!ParentAllocator)
     {
@@ -112,7 +113,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
     else
     {
-        alias parent = ParentAllocator.it;
+        alias parent = ParentAllocator.instance;
     }
     private uint _blocks;
     private BitVector _control;
@@ -733,7 +734,7 @@ unittest
         assert(bs);
         import std.experimental.allocator.gc_allocator : GCAllocator;
         auto a = BitmappedBlock!(bs, min(bs, platformAlignment))(
-            GCAllocator.it.allocate((blocks * bs * 8 + blocks) / 8)
+            GCAllocator.instance.allocate((blocks * bs * 8 + blocks) / 8)
         );
         import std.conv : text;
         assert(blocks >= a._blocks, text(blocks, " < ", a._blocks));
@@ -882,7 +883,8 @@ struct BitmappedBlockWithInternalPointers(
     unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
-        auto m = AlignedMallocator.it.alignedAllocate(1024 * 64, theAlignment);
+        auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
+            theAlignment);
         testAllocator!(() => BitmappedBlockWithInternalPointers(m));
     }
 

@@ -37,12 +37,12 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 
     /**
     If the parent allocator $(D Allocator) is stateful, an instance of it is
-    stored as a member. Otherwise, $(D AffixAllocator) uses $(D Allocator.it).
-    In either case, the name $(D _parent) is uniformly used for accessing the
-    parent allocator.
+    stored as a member. Otherwise, $(D AffixAllocator) uses
+    `Allocator.instance`. In either case, the name $(D _parent) is uniformly
+    used for accessing the parent allocator.
     */
     static if (stateSize!Allocator) Allocator parent;
-    else alias parent = Allocator.it;
+    else alias parent = Allocator.instance;
 
     private template Impl()
     {
@@ -227,9 +227,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         Ternary empty();
 
         /**
-        The $(D it) singleton is defined if and only if the parent allocator has no state and defines its own $(D it) object.
+        The `instance` singleton is defined if and only if the parent allocator has no state and defines its own `it` object.
         */
-        static AffixAllocator it;
+        static AffixAllocator instance;
 
         /**
         Affix access functions offering mutable references to the affixes of a block previously allocated with this allocator. $(D b) may not be null. They are defined if and only if the corresponding affix is not $(D void).
@@ -240,16 +240,16 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         /// Ditto
         static ref Suffix suffix(void[] b);
     }
-    else static if (is(typeof(Allocator.it) == shared))
+    else static if (is(typeof(Allocator.instance) == shared))
     {
-        static shared AffixAllocator it;
+        static shared AffixAllocator instance;
         shared { mixin Impl!(); }
     }
     else
     {
         mixin Impl!();
         static if (stateSize!Allocator == 0)
-            static __gshared AffixAllocator it;
+            static __gshared AffixAllocator instance;
     }
 }
 
@@ -259,10 +259,11 @@ unittest
     import std.experimental.allocator.mallocator : Mallocator;
     // One word before and after each allocation.
     alias A = AffixAllocator!(Mallocator, size_t, size_t);
-    auto b = A.it.allocate(11);
-    A.it.prefix(b) = 0xCAFE_BABE;
-    A.it.suffix(b) = 0xDEAD_BEEF;
-    assert(A.it.prefix(b) == 0xCAFE_BABE && A.it.suffix(b) == 0xDEAD_BEEF);
+    auto b = A.instance.allocate(11);
+    A.instance.prefix(b) = 0xCAFE_BABE;
+    A.instance.suffix(b) = 0xDEAD_BEEF;
+    assert(A.instance.prefix(b) == 0xCAFE_BABE
+        && A.instance.suffix(b) == 0xDEAD_BEEF);
 }
 
 unittest
@@ -280,12 +281,12 @@ unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     alias A = AffixAllocator!(Mallocator, size_t);
-    auto b = A.it.allocate(10);
-    A.it.prefix(b) = 10;
-    assert(A.it.prefix(b) == 10);
+    auto b = A.instance.allocate(10);
+    A.instance.prefix(b) = 10;
+    assert(A.instance.prefix(b) == 10);
 
     import std.experimental.allocator.null_allocator : NullAllocator;
     alias B = AffixAllocator!(NullAllocator, size_t);
-    b = B.it.allocate(100);
+    b = B.instance.allocate(100);
     assert(b is null);
 }

@@ -29,19 +29,19 @@ struct FallbackAllocator(Primary, Fallback)
 
     /// The primary allocator.
     static if (stateSize!Primary) Primary primary;
-    else alias primary = Primary.it;
+    else alias primary = Primary.instance;
 
     /// The fallback allocator.
     static if (stateSize!Fallback) Fallback fallback;
-    else alias fallback = Fallback.it;
+    else alias fallback = Fallback.instance;
 
     /**
     If both $(D Primary) and $(D Fallback) are stateless, $(D FallbackAllocator)
-    defines a static instance $(D it).
+    defines a static instance called `instance`.
     */
     static if (!stateSize!Primary && !stateSize!Fallback)
     {
-        static FallbackAllocator it;
+        static FallbackAllocator instance;
     }
 
     /**
@@ -345,7 +345,7 @@ unittest
 {
     import std.experimental.allocator.region : Region;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.it);
+    auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.instance);
     auto b1 = a.allocate(1020);
     assert(b1.length == 1020);
     assert(a.primary.owns(b1) == Ternary.yes);

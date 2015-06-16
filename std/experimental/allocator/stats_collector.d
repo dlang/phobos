@@ -231,11 +231,11 @@ private:
 public:
     /**
     The parent allocator is publicly accessible either as a direct member if it
-    holds state, or as an alias to $(D Allocator.it) otherwise. One may use it
-    for making calls that won't count toward statistics collection.
+    holds state, or as an alias to `Allocator.instance` otherwise. One may use
+    it for making calls that won't count toward statistics collection.
     */
     static if (stateSize!Allocator) Allocator parent;
-    else alias parent = Allocator.it;
+    else alias parent = Allocator.instance;
 
 private:
     // Per-allocator state

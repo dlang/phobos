@@ -39,7 +39,8 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 
     /**
     The parent allocator. Depending on whether $(D ParentAllocator) holds state
-    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    or not, this is a member variable or an alias for
+    `ParentAllocator.instance`.
     */
     static if (stateSize!ParentAllocator)
     {
@@ -47,8 +48,8 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
     else
     {
-        alias parent = ParentAllocator.it;
-        static __gshared Quantizer it;
+        alias parent = ParentAllocator.instance;
+        static __gshared Quantizer instance;
     }
 
     /**

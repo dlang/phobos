@@ -57,7 +57,7 @@ struct FreeTree(ParentAllocator)
 
     // State {
     static if (stateSize!ParentAllocator) private ParentAllocator parent;
-    else private alias parent = ParentAllocator.it;
+    else private alias parent = ParentAllocator.instance;
     private Node* root; // that's the entire added state
     // }
 

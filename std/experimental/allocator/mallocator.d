@@ -6,7 +6,7 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    unittest { testAllocator!(() => Mallocator.it); }
+    unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
     The alignment is a static constant equal to $(D platformAlignment), which
@@ -57,17 +57,17 @@ struct Mallocator
 
     /**
     Returns the global instance of this allocator type. The C heap allocator is
-    thread-safe, therefore all of its methods and $(D it) itself are
+    thread-safe, therefore all of its methods and `it` itself are
     $(D shared).
     */
-    static shared Mallocator it;
+    static shared Mallocator instance;
 }
 
 ///
 unittest
 {
-    auto buffer = Mallocator.it.allocate(1024 * 1024 * 4);
-    scope(exit) Mallocator.it.deallocate(buffer);
+    auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
+    scope(exit) Mallocator.instance.deallocate(buffer);
     //...
 }
 
@@ -109,7 +109,7 @@ version (Windows)
  */
 struct AlignedMallocator
 {
-    unittest { testAllocator!(() => typeof(this).it); }
+    unittest { testAllocator!(() => typeof(this).instance); }
 
     /**
     The default alignment is $(D platformAlignment).
@@ -179,7 +179,7 @@ struct AlignedMallocator
     */
     version (Posix) @system bool reallocate(ref void[] b, size_t newSize) shared
     {
-        return Mallocator.it.reallocate(b, newSize);
+        return Mallocator.instance.reallocate(b, newSize);
     }
     version (Windows) @system
     bool reallocate(ref void[] b, size_t newSize) shared
@@ -210,16 +210,17 @@ struct AlignedMallocator
 
     /**
     Returns the global instance of this allocator type. The C heap allocator is
-    thread-safe, therefore all of its methods and $(D it) itself are
+    thread-safe, therefore all of its methods and `instance` itself are
     $(D shared).
     */
-    static shared AlignedMallocator it;
+    static shared AlignedMallocator instance;
 }
 
 ///
 unittest
 {
-    auto buffer = AlignedMallocator.it.alignedAllocate(1024 * 1024 * 4, 128);
-    scope(exit) AlignedMallocator.it.deallocate(buffer);
+    auto buffer = AlignedMallocator.instance.alignedAllocate(1024 * 1024 * 4,
+        128);
+    scope(exit) AlignedMallocator.instance.deallocate(buffer);
     //...
 }

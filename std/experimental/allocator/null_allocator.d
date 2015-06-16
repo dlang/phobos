@@ -68,15 +68,15 @@ struct NullAllocator
     /**
     Returns the $(D shared) global instance of the $(D NullAllocator).
     */
-    static shared NullAllocator it;
+    static shared NullAllocator instance;
 }
 
 unittest
 {
-    auto b = NullAllocator.it.allocate(100);
+    auto b = NullAllocator.instance.allocate(100);
     assert(b is null);
-    NullAllocator.it.deallocate(b);
-    NullAllocator.it.deallocateAll();
+    NullAllocator.instance.deallocate(b);
+    NullAllocator.instance.deallocateAll();
     import std.experimental.allocator.common : Ternary;
-    assert(NullAllocator.it.owns(null) == Ternary.no);
+    assert(NullAllocator.instance.owns(null) == Ternary.no);
 }

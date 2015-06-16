@@ -123,14 +123,14 @@ $(TR $(TDC Ternary empty();) $(TD Returns `Ternary.yes` if and only if the
 allocator holds no memory (i.e. no allocation has occurred, or all allocations
 have been deallocated).))
 
-$(TR $(TDC static Allocator it;, $(POST it $(I is a valid) Allocator $(I
-object))) $(TD Some allocators are $(I monostate), i.e. have only an instance
-and hold only global state. (Notable examples are C's own $(D malloc)-based
-allocator and D's garbage-collected heap.) Such allocators must define a static
-$(D it) instance that serves as the symbolic placeholder for the global instance
-of the allocator. An allocator should not hold state and define $(D it)
-simultaneously. Depending on whether the allocator is thread-safe or not, this
-instance may be $(D shared).))
+$(TR $(TDC static Allocator instance;, $(POST instance $(I is a valid)
+Allocator $(I object))) $(TD Some allocators are $(I monostate), i.e. have only
+an instance and hold only global state. (Notable examples are C's own
+`malloc`-based allocator and D's garbage-collected heap.) Such allocators must
+define a static $(D instance) instance that serves as the symbolic placeholder
+for the global instance of the allocator. An allocator should not hold state
+and define `instance` simultaneously. Depending on whether the allocator is
+thread-safe or not, this instance may be $(D shared).))
 )
 
 $(H2 Sample Assembly)

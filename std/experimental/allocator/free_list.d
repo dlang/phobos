@@ -206,10 +206,11 @@ struct FreeList(ParentAllocator,
     // state {
     /**
     The parent allocator. Depending on whether $(D ParentAllocator) holds state
-    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    or not, this is a member variable or an alias for
+    `ParentAllocator.instance`.
     */
     static if (stateSize!ParentAllocator) ParentAllocator parent;
-    else alias parent = ParentAllocator.it;
+    else alias parent = ParentAllocator.instance;
     private Node* root;
     static if (minSize == chooseAtRuntime) private size_t _min = chooseAtRuntime;
     static if (maxSize == chooseAtRuntime) private size_t _max = chooseAtRuntime;
@@ -436,7 +437,8 @@ struct ContiguousFreeList(ParentAllocator,
     // state {
     /**
     The parent allocator. Depending on whether $(D ParentAllocator) holds state
-    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    or not, this is a member variable or an alias for
+    `ParentAllocator.instance`.
     */
     SParent parent;
     FreeList!(NullAllocator, minSize, maxSize) fl;
@@ -479,7 +481,7 @@ struct ContiguousFreeList(ParentAllocator,
     $(D NullAllocator), the buffer is assumed to be allocated by $(D parent)
     and will be freed in the destructor.
     parent = Parent allocator. For construction from stateless allocators, use
-    their $(D it) static member.
+    their `instance` static member.
     bytes = Bytes (not items) to be allocated for the free list. Memory will be
     allocated during construction and deallocated in the destructor.
     max = Maximum size eligible for freelisting. Construction with this
@@ -508,7 +510,7 @@ struct ContiguousFreeList(ParentAllocator,
     static if (!stateSize!ParentAllocator)
     this(size_t bytes)
     {
-        initialize(ParentAllocator.it.allocate(bytes));
+        initialize(ParentAllocator.instance.allocate(bytes));
     }
 
     /// ditto
@@ -682,7 +684,7 @@ unittest
     assert(a.empty == Ternary.yes);
 
     assert(a.goodAllocSize(15) == 64);
-    assert(a.goodAllocSize(65) == NullAllocator.it.goodAllocSize(65));
+    assert(a.goodAllocSize(65) == NullAllocator.instance.goodAllocSize(65));
 
     auto b = a.allocate(100);
     assert(a.empty == Ternary.yes);
@@ -876,10 +878,11 @@ struct SharedFreeList(ParentAllocator,
 
     /**
     The parent allocator. Depending on whether $(D ParentAllocator) holds state
-    or not, this is a member variable or an alias for $(D ParentAllocator.it).
+    or not, this is a member variable or an alias for
+    `ParentAllocator.instance`.
     */
     static if (stateSize!ParentAllocator) shared ParentAllocator parent;
-    else alias parent = ParentAllocator.it;
+    else alias parent = ParentAllocator.instance;
 
     mixin(forwardToMember("parent", "expand"));
 

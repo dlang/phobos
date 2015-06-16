@@ -14,7 +14,7 @@ allocating large chunks to be managed by fine-granular allocators.
 struct MmapAllocator
 {
     /// The one shared instance.
-    static shared MmapAllocator it;
+    static shared MmapAllocator instance;
 
     /**
     Alignment is page-size and hardcoded to 4096 (even though on certain systems
@@ -97,7 +97,7 @@ struct MmapAllocator
 
 unittest
 {
-    alias alloc = MmapAllocator.it;
+    alias alloc = MmapAllocator.instance;
     auto p = alloc.allocate(100);
     assert(p.length == 100);
     alloc.deallocate(p);

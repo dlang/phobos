@@ -79,7 +79,7 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            (n) => BitmappedBlock!(4096)(GCAllocator.it.allocate(
+            (n) => BitmappedBlock!(4096)(GCAllocator.instance.allocate(
                 max(n, 4072 * 1024)))),
         GCAllocator
     );
@@ -199,7 +199,7 @@ shared static this()
 {
     assert(!_processAllocator);
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    _processAllocator = allocatorObject(GCAllocator.it);
+    _processAllocator = allocatorObject(GCAllocator.instance);
 }
 
 static this()
@@ -387,7 +387,7 @@ unittest
     }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.it);
+    test(GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -467,7 +467,7 @@ unittest
         assert(a == [ 0, 0, 0, 0, 0]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.it);
+    test(GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -529,7 +529,7 @@ unittest
         assert(a == [ 42, 42, 42, 42, 42 ]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.it);
+    test(GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -620,7 +620,7 @@ unittest
         assert(a == [ 5, 42]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.it);
+    test(GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -653,7 +653,7 @@ unittest
         assert(a == iota(10).array);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.it);
+    test(GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -702,7 +702,7 @@ unittest
         assert(arr == [1, 2, 3, 0, 0, 0]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.it);
+    test(GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -882,7 +882,7 @@ unittest
         assert(a == [ 42, 42]);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    test(GCAllocator.it);
+    test(GCAllocator.instance);
     test(theAllocator);
 }
 
@@ -1043,7 +1043,7 @@ CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
 unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
-    IAllocator a = allocatorObject(Mallocator.it);
+    IAllocator a = allocatorObject(Mallocator.instance);
     auto b = a.allocate(100);
     assert(b.length == 100);
     assert(a.deallocate(b));
@@ -1090,7 +1090,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     else
     {
         static if (stateSize!Allocator) Allocator impl;
-        else alias impl = Allocator.it;
+        else alias impl = Allocator.instance;
     }
 
     /// Returns $(D impl.alignment).
@@ -1300,17 +1300,17 @@ struct ThreadLocal(A)
     /**
     The allocator instance.
     */
-    static A it;
+    static A instance;
 
     /**
     `ThreadLocal!A` is a subtype of `A` so it appears to implement `A`'s
     allocator primitives.
     */
-    alias it this;
+    alias instance this;
 
     /**
     `ThreadLocal` disables all constructors. The intended usage is
-    `ThreadLocal!A.it`.
+    `ThreadLocal!A.instance`.
     */
     @disable this();
     /// Ditto
@@ -1323,7 +1323,7 @@ unittest
     static assert(!is(ThreadLocal!Mallocator));
     static assert(!is(ThreadLocal!GCAllocator));
     alias ThreadLocal!(FreeList!(GCAllocator, 0, 8)) Allocator;
-    auto b = Allocator.it.allocate(5);
+    auto b = Allocator.instance.allocate(5);
     static assert(hasMember!(Allocator, "allocate"));
 }
 
@@ -1515,7 +1515,7 @@ private struct EmbeddedTree(T, alias less)
 
 unittest
 {
-    alias a = GCAllocator.it;
+    alias a = GCAllocator.instance;
     alias Tree = EmbeddedTree!(int, (a, b) => a.payload < b.payload);
     Tree t;
     assert(t.empty);
@@ -1563,7 +1563,7 @@ private struct InternalPointersTree(Allocator)
     The implementation is available as a public member.
     */
     static if (stateSize!Parent) Parent parent;
-    else alias parent = Parent.it;
+    else alias parent = Parent.instance;
 
     /// Allocator API.
     void[] allocate(size_t bytes)
@@ -1688,7 +1688,7 @@ unittest
     static void testSpeed(A)()
     {
         static if (stateSize!A) A a;
-        else alias a = A.it;
+        else alias a = A.instance;
 
         void[][128] bufs;
 
@@ -1722,7 +1722,7 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            (size_t n) => BitmappedBlock!(4096)(GCAllocator.it.allocate(
+            (size_t n) => BitmappedBlock!(4096)(GCAllocator.instance.allocate(
                 max(n, 4072 * 1024)))),
         GCAllocator
     );
@@ -1739,7 +1739,7 @@ unittest
 
 unittest
 {
-    auto a = allocatorObject(Mallocator.it);
+    auto a = allocatorObject(Mallocator.instance);
     auto b = a.allocate(100);
     assert(b.length == 100);
 
@@ -1759,7 +1759,7 @@ unittest
 unittest
 {
     /// Define an allocator bound to the built-in GC.
-    IAllocator alloc = allocatorObject(GCAllocator.it);
+    IAllocator alloc = allocatorObject(GCAllocator.instance);
     auto b = alloc.allocate(42);
     assert(b.length == 42);
     assert(alloc.deallocate(b) == Ternary.yes);
@@ -1777,13 +1777,13 @@ unittest
             2048, Bucketizer!(FList, 1025, 2048, 256),
             3584, Bucketizer!(FList, 2049, 3584, 512),
             4072 * 1024, AllocatorList!(
-                (n) => BitmappedBlock!(4096)(GCAllocator.it.allocate(
+                (n) => BitmappedBlock!(4096)(GCAllocator.instance.allocate(
                     max(n, 4072 * 1024)))),
             GCAllocator
         )
     );
 
-    auto alloc2 = allocatorObject(A.it);
+    auto alloc2 = allocatorObject(A.instance);
     b = alloc.allocate(101);
     assert(alloc.deallocate(b) == Ternary.yes);
 }

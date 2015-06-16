@@ -105,7 +105,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     static if (!ouroboros)
     {
         static if (stateSize!BookkeepingAllocator) BookkeepingAllocator bkalloc;
-        else alias bkalloc = BookkeepingAllocator.it;
+        else alias bkalloc = BookkeepingAllocator.instance;
     }
     static if (stateSize!Factory)
     {
@@ -548,7 +548,7 @@ version(Posix) unittest
         Segregator!(
             64, AllocatorList!(
                 (n) => ContiguousFreeList!(NullAllocator, 0, 64)(
-                    GCAllocator.it.allocate(4096))),
+                    GCAllocator.instance.allocate(4096))),
             GCAllocator);
 
     A4 a;
