@@ -429,14 +429,23 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
                 return;
             }
         }
-        if (greaterEqual(getValue(v), this.min)
-                && lessEqual(getValue(v), this.max))
+
+        static if (isSigned!(typeof(this.value)) == isSigned!(SafeIntType!V)
+                && this.value.sizeof >= SafeIntType!(V).sizeof)
         {
-            this.value = cast(T) v;
+            this.value = getValue(v);
         }
         else
         {
-            this.value = this.nan;
+            if (greaterEqual(getValue(v), this.min)
+                    && lessEqual(getValue(v), this.max))
+            {
+                this.value = cast(T) v;
+            }
+            else
+            {
+                this.value = this.nan;
+            }
         }
     }
 
