@@ -944,7 +944,7 @@ time complexity.
 See_Also:
     $(XREF range, assumeSorted)$(BR)
     $(XREF range, SortedRange)$(BR)
-    $(XREF algorithm, SwapStrategy)$(BR)
+    $(XREF_PACK algorithm,mutation,SwapStrategy)$(BR)
     $(XREF functional, binaryFun)
 */
 SortedRange!(Range, less)
@@ -2281,10 +2281,12 @@ Params:
     less = A binary predicate that defines the ordering of range elements.
         Defaults to $(D a < b).
     ss = $(RED (Not implemented yet.)) Specify the swapping strategy.
-    r = A $(XREF2 range, isRandomAccessRange, random-access range) of elements
-        to make an index for.
-    index = A $(XREF2 range, isRandomAccessRange, random-access range) with
-        assignable elements to build the index in. The length of this range
+    r = A
+        $(XREF_PACK_NAMED range,primitives,isRandomAccessRange,random-access range)
+        of elements to make an index for.
+    index = A
+        $(XREF_PACK_NAMED range,primitives,isRandomAccessRange,random-access range)
+        with assignable elements to build the index in. The length of this range
         determines how many top elements to index in $(D r).
 
         This index range can either have integral elements, in which case the

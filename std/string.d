@@ -86,10 +86,10 @@ $(TR $(TH Module) $(TH Functions) )
 $(LEADINGROW Publicly imported functions)
     $(TR $(TD std.algorithm)
         $(TD
-         $(SHORTXREF algorithm, cmp)
-         $(SHORTXREF algorithm, count)
-         $(SHORTXREF algorithm, endsWith)
-         $(SHORTXREF algorithm, startsWith)
+         $(SHORTXREF_PACK algorithm,comparison,cmp)
+         $(SHORTXREF_PACK algorithm,searching,count)
+         $(SHORTXREF_PACK algorithm,searching,endsWith)
+         $(SHORTXREF_PACK algorithm,searching,startsWith)
     ))
     $(TR $(TD std.array)
         $(TD
@@ -134,6 +134,7 @@ See_Also:
 
 Macros: WIKI = Phobos/StdString
         SHORTXREF=$(XREF2 $1, $2, $(TT $2))
+        SHORTXREF_PACK=$(XREF_PACK_NAMED  $2, $(TT $3),$1, $3)
 
 Copyright: Copyright Digital Mars 2007-.
 

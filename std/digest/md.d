@@ -286,8 +286,8 @@ struct MD5
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Examples:
          * ----
@@ -490,7 +490,7 @@ unittest
 }
 
 /**
- * This is a convenience alias for $(XREF digest.digest, digest) using the
+ * This is a convenience alias for $(XREF_PACK digest,digest,digest) using the
  * MD5 implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -510,8 +510,8 @@ unittest
  * OOP API MD5 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(XREF digest.digest, WrapperDigest)!MD5, see
- * $(XREF digest.digest, WrapperDigest) for more information.
+ * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!MD5), see
+ * there for more information.
  */
 alias MD5Digest = WrapperDigest!MD5;
 

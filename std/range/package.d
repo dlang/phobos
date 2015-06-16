@@ -2781,12 +2781,14 @@ an entire $(D front)/$(D popFront)/$(D empty) structure.
 $(D fun) maybe be passed either a template alias parameter (existing
 function, delegate, struct type defining static $(D opCall)... ) or
 a run-time value argument (delegate, function object... ).
-The result range models an InputRange ($(XREF range, isInputRange)).
+The result range models an InputRange
+($(XREF_PACK range,primitives,isInputRange)).
 The resulting range will call $(D fun()) on every call to $(D front),
 and only when $(D front) is called, regardless of how the range is
 iterated.
-It is advised to compose generate with either $(XREF algorithm,cache)
-or $(XREF array,array), or to use it in a foreach loop.
+It is advised to compose generate with either
+$(XREF_PACK algorithm,iteration,cache) or $(XREF array,array), or to use it in a
+foreach loop.
 A by-value foreach loop means that the loop value is not $(D ref).
 
 Params:
@@ -7155,10 +7157,10 @@ enum SearchPolicy
 Represents a sorted range. In addition to the regular range
 primitives, supports additional operations that take advantage of the
 ordering, such as merge and binary search. To obtain a $(D
-SortedRange) from an unsorted range $(D r), use $(XREF algorithm,
-sort) which sorts $(D r) in place and returns the corresponding $(D
-SortedRange). To construct a $(D SortedRange) from a range $(D r) that
-is known to be already sorted, use $(LREF assumeSorted) described
+SortedRange) from an unsorted range $(D r), use
+$(XREF_PACK algorithm,sorting,sort) which sorts $(D r) in place and returns the
+corresponding $(D SortedRange). To construct a $(D SortedRange) from a range
+$(D r) that is known to be already sorted, use $(LREF assumeSorted) described
 below.
 */
 struct SortedRange(Range, alias pred = "a < b")
@@ -7787,7 +7789,7 @@ effect on the complexity of subsequent operations specific to sorted
 ranges (such as binary search). The probability of an arbitrary
 unsorted range failing the test is very high (however, an
 almost-sorted range is likely to pass it). To check for sortedness at
-cost $(BIGOH n), use $(XREF algorithm,isSorted).
+cost $(BIGOH n), use $(XREF_PACK algorithm,sorting,isSorted).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
 if (isInputRange!(Unqual!R))
@@ -8679,7 +8681,7 @@ struct NullSink
   in the case of the version of $(D tee) that takes a function, the function
   will not actually be executed until the range is "walked" using functions
   that evaluate ranges, such as $(XREF array,array) or
-  $(XREF algorithm,reduce).
+  $(XREF_PACK algorithm,iteration,reduce).
 
   Params:
   pipeOnPop = If `Yes.pipeOnPop`, simply iterating the range without ever
@@ -8699,7 +8701,7 @@ struct NullSink
   iterated and returns its elements in turn. In addition, the same elements
   will be passed to `outputRange` or `fun` as well.
 
-  See_Also: $(XREF algorithm, each)
+  See_Also: $(XREF_PACK algorithm,iteration,each)
 +/
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
 if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))

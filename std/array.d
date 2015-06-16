@@ -1431,7 +1431,8 @@ delimiter. Runs of whitespace are merged together (no empty words are produced).
 $(D @safe), $(D pure) and $(D CTFE)-able.
 
 See_Also:
-$(XREF algorithm, splitter) for a version that splits using any separator.
+$(XREF_PACK algorithm,iteration,splitter) for a version that splits using any
+separator.
 
 $(XREF regex, splitter) for a version that splits using a regular
 expression defined separator.
@@ -1523,7 +1524,7 @@ unittest
 }
 
 /++
-Alias for $(XREF algorithm, _splitter).
+Alias for $(XREF_PACK algorithm,iteration,_splitter).
  +/
 deprecated("Please use std.algorithm.iteration.splitter instead.")
 alias splitter = std.algorithm.iteration.splitter;
@@ -1531,9 +1532,10 @@ alias splitter = std.algorithm.iteration.splitter;
 /++
     Eagerly splits $(D range) into an array, using $(D sep) as the delimiter.
 
-    The range must be a $(XREF2 range, isForwardRange, forward range).
-    The separator can be a value of the same type as the elements in $(D range) or
-    it can be another forward range.
+    The _range must be a
+    $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range).
+    The separator can be a value of the same type as the elements in $(D range)
+    or it can be another forward _range.
 
     Examples:
         If $(D range) is a $(D string), $(D sep) can be a $(D char) or another
@@ -1542,7 +1544,7 @@ alias splitter = std.algorithm.iteration.splitter;
         The return type will be an array of $(D int) arrays.
 
     Params:
-        range = a forward range.
+        range = a forward _range.
         sep = a value of the same type as the elements of $(D range) or another
         forward range.
 
@@ -1550,7 +1552,8 @@ alias splitter = std.algorithm.iteration.splitter;
         An array containing the divided parts of $(D range).
 
     See_Also:
-        $(XREF algorithm, splitter) for the lazy version of this function.
+        $(XREF_PACK algorithm,iteration,splitter) for the lazy version of this
+        function.
  +/
 auto split(Range, Separator)(Range range, Separator sep)
 if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init)))
@@ -1649,7 +1652,7 @@ private enum bool hasCheapIteration(R) = isArray!R;
         an allocated array of Elements
 
    See_Also:
-        $(XREF algorithm, joiner)
+        $(XREF_PACK algorithm,iteration,joiner)
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if(isInputRange!RoR &&
