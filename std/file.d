@@ -149,18 +149,49 @@ class FileException : Exception
 
 private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
 {
-    if (!condition)
+    if (condition)
+        return condition;
+    version (Windows)
     {
-      version (Windows)
-      {
         throw new FileException(name, .GetLastError(), file, line);
-      }
-      else version (Posix)
-      {
-        throw new FileException(name, .errno, file, line);
-      }
     }
-    return condition;
+    else version (Posix)
+    {
+        throw new FileException(name, .errno, file, line);
+    }
+}
+
+version (Windows)
+@trusted
+private T cenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file = __FILE__, size_t line = __LINE__)
+{
+    if (condition)
+        return condition;
+    if (!name)
+    {
+        import core.stdc.wchar_ : wcslen;
+        import std.conv : to;
+
+        auto len = wcslen(namez);
+        name = to!string(namez[0 .. len]);
+    }
+    throw new FileException(name, .GetLastError(), file, line);
+}
+
+version (Posix)
+@trusted
+private T cenforce(T)(T condition, const(char)[] name, const(char)* namez, string file = __FILE__, size_t line = __LINE__)
+{
+    if (condition)
+        return condition;
+    if (!name)
+    {
+        import core.stdc.string : strlen;
+
+        auto len = strlen(namez);
+        name = namez[0 .. len].idup;
+    }
+    throw new FileException(name, .errno, file, line);
 }
 
 /* **********************************
@@ -188,7 +219,15 @@ Returns: Untyped array of bytes _read.
 
 Throws: $(D FileException) on error.
  */
-version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
+version (Posix) void[] read(R)(R name, size_t upTo = size_t.max)
+{
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        return readImpl(name, name.tempCString(), upTo);
+    else
+        return readImpl(null, name.tempCString(), upTo);
+}
+
+version (Posix) private void[] readImpl(const(char)[] name, const(char)* namez, size_t upTo = size_t.max) @trusted
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
@@ -202,13 +241,13 @@ version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
         maxSlackMemoryAllowed = 1024;
     // }
 
-    immutable fd = core.sys.posix.fcntl.open(name.tempCString,
+    immutable fd = core.sys.posix.fcntl.open(namez,
             core.sys.posix.fcntl.O_RDONLY);
     cenforce(fd != -1, name);
     scope(exit) core.sys.posix.unistd.close(fd);
 
     stat_t statbuf = void;
-    cenforce(fstat(fd, &statbuf) == 0, name);
+    cenforce(fstat(fd, &statbuf) == 0, name, namez);
 
     immutable initialAlloc = to!size_t(statbuf.st_size
         ? min(statbuf.st_size + 1, maxInitialAlloc)
@@ -221,7 +260,7 @@ version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
     {
         immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
                 min(result.length, upTo) - size);
-        cenforce(actual != -1, name);
+        cenforce(actual != -1, name, namez);
         if (actual == 0) break;
         size += actual;
         if (size < result.length) continue;
@@ -234,15 +273,25 @@ version (Posix) void[] read(in char[] name, size_t upTo = size_t.max) @trusted
         : result[0 .. size];
 }
 
-version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
+version (Windows) void[] read(R)(R name, size_t upTo = size_t.max)
+    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R)) || isSomeString!R)
+{
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        return readImpl(name, name.tempCString!wchar(), upTo);
+    else
+        return readImpl(null, name.tempCString!wchar(), upTo);
+}
+
+
+version (Windows) private void[] readImpl(const(char)[] name, const(wchar)* namez, size_t upTo = size_t.max) @safe
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
-    static trustedCreateFileW(in char[] fileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+    static trustedCreateFileW(const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
     {
-        return CreateFileW(fileName.tempCStringW(), dwDesiredAccess, dwShareMode,
+        return CreateFileW(namez, dwDesiredAccess, dwShareMode,
                            lpSecurityAttributes, dwCreationDisposition,
                            dwFlagsAndAttributes, hTemplateFile);
 
@@ -281,17 +330,17 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
             FILE_SHARE_READ | FILE_SHARE_WRITE, (SECURITY_ATTRIBUTES*).init,
             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
             HANDLE.init);
-    auto h = trustedCreateFileW(name, defaults);
+    auto h = trustedCreateFileW(namez, defaults);
 
-    cenforce(h != INVALID_HANDLE_VALUE, name);
-    scope(exit) cenforce(trustedCloseHandle(h), name);
+    cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+    scope(exit) cenforce(trustedCloseHandle(h), name, namez);
     ulong fileSize = void;
-    cenforce(trustedGetFileSize(h, fileSize), name);
+    cenforce(trustedGetFileSize(h, fileSize), name, namez);
     size_t size = min(upTo, fileSize);
     auto buf = uninitializedArray!(ubyte[])(size);
     scope(failure) delete buf;
 
-    cenforce(trustedReadFile(h, buf.ptr, size), name);
+    cenforce(trustedReadFile(h, buf.ptr, size), name, namez);
     return buf[0 .. size];
 }
 
@@ -300,7 +349,8 @@ version (Windows) void[] read(in char[] name, size_t upTo = size_t.max) @safe
     write(deleteme, "1234");
     scope(exit) { assert(exists(deleteme)); remove(deleteme); }
     assert(read(deleteme, 2) == "12");
-    assert(read(deleteme) == "1234");
+    import std.utf : byChar;
+    assert(read(deleteme.byChar) == "1234");
 }
 
 version (linux) @safe unittest
