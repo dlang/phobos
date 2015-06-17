@@ -16,55 +16,38 @@ $(I On Iteration)).
 
 Submodules:
 
-This module has a few submodules:
+This module has two submodules:
 
+$(LIST
+$(DIV ,
 The $(LINK2 std_range_primitives.html, $(D std._range.primitives)) submodule
 provides basic _range functionality. It defines several templates for testing
 whether a given object is a _range, what kind of _range it is, and provides
 some common _range operations.
-
+),
+$(DIV ,
 The $(LINK2 std_range_interfaces.html, $(D std._range.interfaces)) submodule
 provides object-based interfaces for working with ranges via runtime
 polymorphism.
+))
 
 The remainder of this module provides a rich set of _range creation and
 composition templates that let you construct new ranges out of existing ranges:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF retro)))
-        $(TD Iterates a bidirectional _range backwards.
-    ))
-    $(TR $(TD $(D $(LREF stride)))
-        $(TD Iterates a _range with stride $(I n).
-    ))
     $(TR $(TD $(D $(LREF chain)))
         $(TD Concatenates several ranges into a single _range.
     ))
-    $(TR $(TD $(D $(LREF roundRobin)))
-        $(TD Given $(I n) ranges, creates a new _range that return the $(I n)
-        first elements of each _range, in turn, then the second element of each
-        _range, and so on, in a round-robin fashion.
+    $(TR $(TD $(D $(LREF choose)))
+        $(TD choose one of several ranges.
     ))
-    $(TR $(TD $(D $(LREF radial)))
-        $(TD Given a random-access _range and a starting point, creates a
-        _range that alternately returns the next left and next right element to
-        the starting point.
+    $(TR $(TD $(D $(LREF chunks)))
+        $(TD Creates a _range that returns fixed-size chunks of the original
+        _range.
     ))
-    $(TR $(TD $(D $(LREF take)))
-        $(TD Creates a sub-_range consisting of only up to the first $(I n)
-        elements of the given _range.
-    ))
-    $(TR $(TD $(D $(LREF takeExactly)))
-        $(TD Like $(D take), but assumes the given _range actually has $(I n)
-        elements, and therefore also defines the $(D length) property.
-    ))
-    $(TR $(TD $(D $(LREF takeOne)))
-        $(TD Creates a random-access _range consisting of exactly the first
-        element of the given _range.
-    ))
-    $(TR $(TD $(D $(LREF takeNone)))
-        $(TD Creates a random-access _range consisting of zero elements of the
-        given _range.
+    $(TR $(TD $(D $(LREF cycle)))
+        $(TD Creates an infinite _range that repeats the given forward _range
+        indefinitely. Good for implementing circular buffers.
     ))
     $(TR $(TD $(D $(LREF drop)))
         $(TD Creates the _range that results from discarding the first $(I n)
@@ -78,67 +61,95 @@ $(BOOKTABLE ,
         $(TD Creates the _range that results from discarding
         the first elements from the given _range.
     ))
-    $(TR $(TD $(D $(LREF repeat)))
-        $(TD Creates a _range that consists of a single element repeated $(I n)
-        times, or an infinite _range repeating that element indefinitely.
+    $(TR $(TD $(D $(LREF enumerate)))
+        $(TD Iterates a _range with an attached index variable.
     ))
-    $(TR $(TD $(D $(LREF cycle)))
-        $(TD Creates an infinite _range that repeats the given forward _range
-        indefinitely. Good for implementing circular buffers.
+    $(TR $(TD $(D $(LREF frontTransversal)))
+        $(TD Creates a _range that iterates over the first elements of the
+        given ranges.
     ))
-    $(TR $(TD $(D $(LREF zip)))
-        $(TD Given $(I n) _ranges, creates a _range that successively returns a
-        tuple of all the first elements, a tuple of all the second elements,
-        etc.
+    $(TR $(TD $(D $(LREF indexed)))
+        $(TD Creates a _range that offers a view of a given _range as though
+        its elements were reordered according to a given _range of indices.
+    ))
+    $(TR $(TD $(D $(LREF iota)))
+        $(TD Creates a _range consisting of numbers between a starting point
+        and ending point, spaced apart by a given interval.
     ))
     $(TR $(TD $(D $(LREF lockstep)))
         $(TD Iterates $(I n) _ranges in lockstep, for use in a $(D foreach)
         loop. Similar to $(D zip), except that $(D lockstep) is designed
         especially for $(D foreach) loops.
     ))
+    $(TR $(TD $(D $(LREF merge)))
+        $(TD Creates a _range that iterates over the merged sorted union of its
+        sorted arguments. Is bidrectional if all its inputs are.
+    ))
+    $(TR $(TD $(D $(LREF NullSink)))
+        $(TD An output _range that discards the data it receives.
+    ))
+    $(TR $(TD $(D $(LREF only)))
+        $(TD Creates a _range that iterates over the given arguments.
+    ))
+    $(TR $(TD $(D $(LREF radial)))
+        $(TD Given a random-access _range and a starting point, creates a
+        _range that alternately returns the next left and next right element to
+        the starting point.
+    ))
     $(TR $(TD $(D $(LREF recurrence)))
         $(TD Creates a forward _range whose values are defined by a
         mathematical recurrence relation.
+    ))
+    $(TR $(TD $(D $(LREF repeat)))
+        $(TD Creates a _range that consists of a single element repeated $(I n)
+        times, or an infinite _range repeating that element indefinitely.
+    ))
+    $(TR $(TD $(D $(LREF retro)))
+        $(TD Iterates a bidirectional _range backwards.
+    ))
+    $(TR $(TD $(D $(LREF roundRobin)))
+        $(TD Given $(I n) ranges, creates a new _range that return the $(I n)
+        first elements of each _range, in turn, then the second element of each
+        _range, and so on, in a round-robin fashion.
     ))
     $(TR $(TD $(D $(LREF sequence)))
         $(TD Similar to $(D recurrence), except that a random-access _range is
         created.
     ))
-    $(TR $(TD $(D $(LREF iota)))
-        $(TD Creates a _range consisting of numbers between a starting point
-        and ending point, spaced apart by a given interval.
+    $(TR $(TD $(D $(LREF stride)))
+        $(TD Iterates a _range with stride $(I n).
     ))
-    $(TR $(TD $(D $(LREF frontTransversal)))
-        $(TD Creates a _range that iterates over the first elements of the
-        given ranges.
+    $(TR $(TD $(D $(LREF take)))
+        $(TD Creates a sub-_range consisting of only up to the first $(I n)
+        elements of the given _range.
     ))
-    $(TR $(TD $(D $(LREF transversal)))
-        $(TD Creates a _range that iterates over the $(I n)'th elements of the
-        given random-access ranges.
+    $(TR $(TD $(D $(LREF takeExactly)))
+        $(TD Like $(D take), but assumes the given _range actually has $(I n)
+        elements, and therefore also defines the $(D length) property.
     ))
-    $(TR $(TD $(D $(LREF transposed)))
-        $(TD Transposes a _range of ranges.
+    $(TR $(TD $(D $(LREF takeNone)))
+        $(TD Creates a random-access _range consisting of zero elements of the
+        given _range.
     ))
-    $(TR $(TD $(D $(LREF indexed)))
-        $(TD Creates a _range that offers a view of a given _range as though
-        its elements were reordered according to a given _range of indices.
-    ))
-    $(TR $(TD $(D $(LREF chunks)))
-        $(TD Creates a _range that returns fixed-size chunks of the original
-        _range.
-    ))
-    $(TR $(TD $(D $(LREF only)))
-        $(TD Creates a _range that iterates over the given arguments.
+    $(TR $(TD $(D $(LREF takeOne)))
+        $(TD Creates a random-access _range consisting of exactly the first
+        element of the given _range.
     ))
     $(TR $(TD $(D $(LREF tee)))
         $(TD Creates a _range that wraps a given _range, forwarding along
         its elements while also calling a provided function with each element.
     ))
-    $(TR $(TD $(D $(LREF enumerate)))
-        $(TD Iterates a _range with an attached index variable.
+    $(TR $(TD $(D $(LREF transposed)))
+        $(TD Transposes a _range of ranges.
     ))
-    $(TR $(TD $(D $(LREF NullSink)))
-        $(TD An output _range that discards the data it receives.
+    $(TR $(TD $(D $(LREF transversal)))
+        $(TD Creates a _range that iterates over the $(I n)'th elements of the
+        given random-access ranges.
+    ))
+    $(TR $(TD $(D $(LREF zip)))
+        $(TD Given $(I n) _ranges, creates a _range that successively returns a
+        tuple of all the first elements, a tuple of all the second elements,
+        etc.
     ))
 )
 
@@ -404,17 +415,17 @@ Iterates range $(D r) with stride $(D n). If the range is a
 random-access range, moves by indexing into the range; otherwise,
 moves by successive calls to $(D popFront). Applying stride twice to
 the same range results in a stride with a step that is the
-product of the two applications.
-
-Throws: $(D Exception) if $(D n == 0).
+product of the two applications. It is an error for $(D n) to be 0.
  */
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
+in
 {
-    import std.exception : enforce;
+    assert(n != 0, "stride cannot have step zero.");
+}
+body
+{
     import std.algorithm : min;
-
-    enforce(n > 0, "Stride cannot have step zero.");
 
     static if (is(typeof(stride(r.source, n)) == Range))
     {
@@ -626,6 +637,21 @@ unittest
     assert(stride(stride(a, 2), 3) == stride(a, 6));
 }
 
+nothrow @nogc unittest
+{
+    int[4] testArr = [1,2,3,4];
+    //just checking it compiles
+    auto s = testArr[].stride(2);
+}
+
+debug unittest
+{//check the contract
+    int[4] testArr = [1,2,3,4];
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+    assertThrown!AssertError(testArr[].stride(0));
+}
+
 @safe unittest
 {
     import std.internal.test.dummyrange;
@@ -797,7 +823,7 @@ if (Ranges.length > 0 &&
 
             enum bool allSameType = allSatisfy!(sameET, R);
 
-// This doesn't work yet
+            // This doesn't work yet
             static if (allSameType)
             {
                 alias ref RvalueElementType ElementType;
@@ -821,9 +847,9 @@ if (Ranges.length > 0 &&
                 }
             }
 
-// This is the entire state
+            // This is the entire state
             R source;
-// TODO: use a vtable (or more) instead of linear iteration
+            // TODO: use a vtable (or more) instead of linear iteration
 
         public:
             this(R input)
@@ -838,7 +864,7 @@ if (Ranges.length > 0 &&
 
             static if (anySatisfy!(isInfinite, R))
             {
-// Propagate infiniteness.
+                // Propagate infiniteness.
                 enum bool empty = false;
             }
             else
@@ -889,8 +915,7 @@ if (Ranges.length > 0 &&
                 // @@@BUG@@@
                 //@property void front(T)(T v) if (is(T : RvalueElementType))
 
-                // Return type must be auto due to Bug 4706.
-                @property auto front(RvalueElementType v)
+                @property void front(RvalueElementType v)
                 {
                     foreach (i, Unused; R)
                     {
@@ -952,9 +977,7 @@ if (Ranges.length > 0 &&
 
                 static if (allSameType && allSatisfy!(hasAssignableElements, R))
                 {
-                    // Return type must be auto due to extremely strange bug in DMD's
-                    // function overloading.
-                    @property auto back(RvalueElementType v)
+                    @property void back(RvalueElementType v)
                     {
                         foreach_reverse (i, Unused; R)
                         {
@@ -1208,6 +1231,291 @@ unittest
     immutable(Foo)[] b;
     auto c = chain(a, b);
 }
+
+/**
+Choose one of two ranges at runtime depending on a Boolean condition.
+
+The ranges may be different, but they must have compatible element types (i.e.
+$(D CommonType) must exist for the two element types). The result is a range
+that offers the weakest capabilities of the two (e.g. $(D ForwardRange) if $(D
+R1) is a random-access range and $(D R2) is a forward range).
+
+Params:
+    condition = which range to choose: $(D r1) if $(D true), $(D r2) otherwise
+    r1 = the "true" range
+    r2 = the "false" range
+
+Returns:
+    A range type dependent on $(D R1) and $(D R2).
+
+Bugs:
+    $(BUGZILLA 14660)
+ */
+auto choose(R1, R2)(bool condition, R1 r1, R2 r2)
+if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
+    !is(CommonType!(ElementType!(Unqual!R1), ElementType!(Unqual!R2)) == void))
+{
+    static struct Result
+    {
+        import std.algorithm : max;
+        // state {}
+        private union
+        {
+            void[max(R1.sizeof, R2.sizeof)] buffer = void;
+            void* forAlignmentOnly = void;
+        }
+        private bool condition;
+        // }
+        private @property ref R1 r1()
+        {
+            assert(condition);
+            return *cast(R1*) buffer.ptr;
+        }
+        private @property ref R2 r2()
+        {
+            assert(!condition);
+            return *cast(R2*) buffer.ptr;
+        }
+
+        this(bool condition, R1 r1, R2 r2)
+        {
+            this.condition = condition;
+            import std.conv : emplace;
+            if (condition) emplace(&this.r1(), r1);
+            else emplace(&this.r2(), r2);
+        }
+
+        // Carefully defined postblit to postblit the appropriate range
+        static if (hasElaborateCopyConstructor!R1
+            || hasElaborateCopyConstructor!R2)
+        this(this)
+        {
+            if (condition)
+            {
+                static if (hasElaborateCopyConstructor!R1) r1.__postblit();
+            }
+            else
+            {
+                static if (hasElaborateCopyConstructor!R2) r2.__postblit();
+            }
+        }
+
+        static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
+        ~this()
+        {
+            if (condition) destroy(r1);
+            else destroy(r2);
+        }
+
+        static if (isInfinite!R1 && isInfinite!R2)
+            // Propagate infiniteness.
+            enum bool empty = false;
+        else
+            @property bool empty()
+            {
+                return condition ? r1.empty : r2.empty;
+            }
+
+        @property auto ref front()
+        {
+            return condition ? r1.front : r2.front;
+        }
+
+        void popFront()
+        {
+            return condition ? r1.popFront : r2.popFront;
+        }
+
+        static if (isForwardRange!R1 && isForwardRange!R2)
+            @property auto save()
+            {
+                auto result = this;
+                if (condition) r1 = r1.save;
+                else r2 = r2.save;
+                return result;
+            }
+
+        @property void front(T)(T v)
+        if (is(typeof({ r1.front = v; r2.front = v; })))
+        {
+            if (condition) r1.front = v; else r2.front = v;
+        }
+
+        static if (hasMobileElements!R1 && hasMobileElements!R2)
+            auto moveFront()
+            {
+                return condition ? r1.moveFront : r2.moveFront;
+            }
+
+        static if (isBidirectionalRange!R1 && isBidirectionalRange!R2)
+        {
+            @property auto ref back()
+            {
+                return condition ? r1.back : r2.back;
+            }
+
+            void popBack()
+            {
+                return condition ? r1.popBack : r2.popBack;
+            }
+
+            static if (hasMobileElements!R1 && hasMobileElements!R2)
+                auto moveBack()
+                {
+                    return condition ? r1.moveBack : r2.moveBack;
+                }
+
+            @property void back(T)(T v)
+            if (is(typeof({ r1.back = v; r2.back = v; })))
+            {
+                if (condition) r1.back = v; else r2.back = v;
+            }
+        }
+
+        static if (hasLength!R1 && hasLength!R2)
+        {
+            @property size_t length()
+            {
+                return condition ? r1.length : r2.length;
+            }
+            alias opDollar = length;
+        }
+
+        static if (isRandomAccessRange!R1 && isRandomAccessRange!R2)
+        {
+            auto ref opIndex(size_t index)
+            {
+                return condition ? r1[index] : r2[index];
+            }
+
+            static if (hasMobileElements!R1 && hasMobileElements!R2)
+                auto moveAt(size_t index)
+                {
+                    return condition ? r1.moveAt(index) : r2.moveAt(index);
+                }
+
+            void opIndexAssign(T)(T v, size_t index)
+            if (is(typeof({ r1[1] = v; r2[1] = v; })))
+            {
+                if (condition) r1[index] = v; else r2[index] = v;
+            }
+        }
+
+        // BUG: this should work for infinite ranges, too
+        static if (hasSlicing!R1 && hasSlicing!R2 &&
+                !isInfinite!R2 && !isInfinite!R2)
+            auto opSlice(size_t begin, size_t end)
+            {
+                auto result = this;
+                if (condition) result.r1 = result.r1[begin .. end];
+                else result.r2 = result.r2[begin .. end];
+                return result;
+            }
+    }
+    return Result(condition, r1, r2);
+}
+
+/**
+Choose one of multiple ranges at runtime.
+
+The ranges may be different, but they must have compatible element types. The
+result is a range that offers the weakest capabilities of all $(D Ranges).
+
+Params:
+    index = which range to choose, must be less than the number of ranges
+    rs = two or more ranges
+
+Returns:
+    The indexed range. If rs consists of only one range, the return type is an
+    alias of that range's type.
+ */
+auto chooseAmong(Ranges...)(size_t index, Ranges rs)
+if (Ranges.length > 2
+        && is(typeof(choose(true, rs[0], rs[1])))
+        && is(typeof(chooseAmong(0, rs[1 .. $]))))
+{
+    return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
+}
+
+auto chooseAmong(Ranges...)(size_t index, Ranges rs)
+if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
+{
+    return choose(index == 0, rs[0], rs[1]);
+}
+
+///
+unittest
+{
+    import std.algorithm : equal;
+
+    int[] arr1 = [ 1, 2, 3, 4 ];
+    int[] arr2 = [ 5, 6 ];
+    int[] arr3 = [ 7 ];
+
+    {
+        auto s = chooseAmong(0, arr1, arr2, arr3);
+        auto t = s.save;
+        assert(s.length == 4);
+        assert(s[2] == 3);
+        s.popFront();
+        assert(equal(t, [1, 2, 3, 4][]));
+    }
+    {
+        auto s = chooseAmong(1, arr1, arr2, arr3);
+        assert(s.length == 2);
+        s.front = 8;
+        assert(equal(s, [8, 6][]));
+    }
+    {
+        auto s = chooseAmong(1, arr1, arr2, arr3);
+        assert(s.length == 2);
+        s[1] = 9;
+        assert(equal(s, [8, 9][]));
+    }
+    {
+        auto s = chooseAmong(1, arr2, arr1, arr3)[1..3];
+        assert(s.length == 2);
+        assert(equal(s, [2, 3][]));
+    }
+    {
+        auto s = chooseAmong(0, arr1, arr2, arr3);
+        assert(s.length == 4);
+        assert(s.back == 4);
+        s.popBack();
+        s.back = 5;
+        assert(equal(s, [1, 2, 5][]));
+        s.back = 3;
+        assert(equal(s, [1, 2, 3][]));
+    }
+    {
+        uint[] foo = [1,2,3,4,5];
+        uint[] bar = [6,7,8,9,10];
+        auto c = chooseAmong(1,foo, bar);
+        assert(c[3] == 9);
+        c[3] = 42;
+        assert(c[3] == 42);
+        assert(c.moveFront() == 6);
+        assert(c.moveBack() == 10);
+        assert(c.moveAt(4) == 10);
+    }
+    {
+        import std.range : cycle;
+        auto s = chooseAmong(1, cycle(arr2), cycle(arr3));
+        assert(isInfinite!(typeof(s)));
+        assert(!s.empty);
+        assert(s[100] == 7);
+    }
+}
+
+unittest
+{
+    int[] a = [1, 2, 3];
+    long[] b = [4, 5, 6];
+    auto c = chooseAmong(0, a, b);
+    c[0] = 42;
+    assert(c[0] == 42);
+}
+
 
 /**
 $(D roundRobin(r1, r2, r3)) yields $(D r1.front), then $(D r2.front),
@@ -2465,6 +2773,117 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 /**
+Given callable ($(XREF traits, isCallable)) $(D fun), create as a range
+whose front is defined by successive calls to $(D fun()).
+This is especially useful to call function with global side effects (random
+functions), or to create ranges expressed as a single delegate, rather than
+an entire $(D front)/$(D popFront)/$(D empty) structure.
+$(D fun) maybe be passed either a template alias parameter (existing
+function, delegate, struct type defining static $(D opCall)... ) or
+a run-time value argument (delegate, function object... ).
+The result range models an InputRange
+($(XREF_PACK range,primitives,isInputRange)).
+The resulting range will call $(D fun()) on every call to $(D front),
+and only when $(D front) is called, regardless of how the range is
+iterated.
+It is advised to compose generate with either
+$(XREF_PACK algorithm,iteration,cache) or $(XREF array,array), or to use it in a
+foreach loop.
+A by-value foreach loop means that the loop value is not $(D ref).
+
+Params:
+    fun = is the $(D isCallable) that gets called on every call to front.
+
+Returns: an $(D inputRange) that returns a new value generated by $(D Fun) on
+    any call to $(D front).
+*/
+auto generate(Fun)(Fun fun)
+    if (isCallable!fun)
+{
+    return Generator!(Fun)(fun);
+}
+
+///
+auto generate(alias fun)()
+    if (isCallable!fun)
+{
+    return Generator!(fun)();
+}
+
+//private struct Generator(bool onPopFront, bool runtime, Fun...)
+private struct Generator(Fun...)
+{
+    static assert(Fun.length == 1);
+    static assert(isInputRange!Generator);
+
+private:
+    static if (is(Fun[0]))
+        Fun[0] fun;
+    else
+        alias fun = Fun[0];
+
+public:
+    enum empty = false;
+
+    auto ref front() @property
+    {
+        return fun();
+    }
+
+    void popFront() { }
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm : equal, map;
+
+    int i = 1;
+    auto powersOfTwo = generate!(() => i *= 2)().take(10);
+    assert(equal(powersOfTwo, iota(1, 11).map!"2^^a"()));
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm : equal;
+
+    //Returns a run-time delegate
+    auto infiniteIota(T)(T low, T high)
+    {
+        T i = high;
+        return (){if (i == high) i = low; return i++;};
+    }
+    //adapted as a range.
+    assert(equal(generate(infiniteIota(1, 4)).take(10), [1, 2, 3, 1, 2, 3, 1, 2, 3, 1]));
+}
+
+@safe unittest
+{
+    import std.algorithm : equal;
+
+    struct StaticOpCall
+    {
+        static ubyte opCall() { return 5 ; }
+    }
+
+    assert(equal(generate!StaticOpCall().take(10), repeat(5).take(10)));
+}
+
+@safe pure unittest
+{
+    import std.algorithm : equal;
+
+    struct OpCall
+    {
+        ubyte opCall() @safe pure { return 5 ; }
+    }
+
+    OpCall op;
+    assert(equal(generate(op).take(10), repeat(5).take(10)));
+}
+
+/**
 Repeats the given forward range ad infinitum. If the original range is
 infinite (fact that would make $(D Cycle) the identity application),
 $(D Cycle) detects that and aliases itself to the range type
@@ -2708,8 +3127,13 @@ Cycle!R cycle(R)(R input)
 @safe unittest
 {
     import std.algorithm : equal;
+    import std.range : cycle, take;
 
-    assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
+    // Here we create an infinitive cyclic sequence from [1, 2]
+    // (i.e. get here [1, 2, 1, 2, 1, 2 and so on]) then
+    // take 5 elements of this sequence (so we have [1, 2, 1, 2, 1])
+    // and compare them with the expected values for equality.
+    assert(cycle([1, 2]).take(5).equal([ 1, 2, 1, 2, 1 ]));
 }
 
 /// Ditto
@@ -4016,19 +4440,47 @@ unittest
 
    The two-argument overloads have $(D step = 1). If $(D begin < end && step <
    0) or $(D begin > end && step > 0) or $(D begin == end), then an empty range
-   is returned.
+   is returned. If $(D step == 0) then $(D begin == end) is an error.
 
    For built-in types, the range returned is a random access range. For
    user-defined types that support $(D ++), the range is an input
    range.
 
-   Throws:
-   $(D Exception) if $(D begin != end && step == 0), an exception is
-   thrown.
+    Example:
+    ---
+    void main()
+    {
+        import std.stdio;
+
+        // The following groups all produce the same output of:
+        // 0 1 2 3 4
+
+        foreach (i; 0..5)
+            writef("%s ", i);
+        writeln();
+
+        import std.range : iota;
+        foreach (i; iota(0, 5))
+            writef("%s ", i);
+        writeln();
+
+        writefln("%(%s %|%)", iota(0, 5));
+
+        import std.algorithm : map, copy;
+        import std.format;
+        iota(0, 5).map!(i => format("%s ", i)).copy(stdout.lockingTextWriter());
+        writeln();
+    }
+    ---
 */
 auto iota(B, E, S)(B begin, E end, S step)
 if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         && isIntegral!S)
+in
+{
+    assert(!(step == 0 && begin != end));
+}
+body
 {
     import std.conv : unsigned;
 
@@ -4043,12 +4495,9 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
         this(Value current, Value pastLast, StepType step)
         {
-            import std.exception : enforce;
-
             if ((current < pastLast && step >= 0) ||
                     (current > pastLast && step <= 0))
             {
-                enforce(step != 0);
                 this.step = step;
                 this.current = current;
                 if (step > 0)
@@ -4196,6 +4645,12 @@ auto iota(E)(E end)
 // Specialization for floating-point types
 auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
+in
+{
+    assert(step != 0, "iota: step must not be 0");
+    assert((end - begin) / step >= 0, "iota: incorrect startup parameters");
+}
+body
 {
     alias Value = Unqual!(CommonType!(B, E, S));
     static struct Result
@@ -4206,13 +4661,10 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
         this(Value start, Value end, Value step)
         {
             import std.conv : to;
-            import std.exception : enforce;
 
             this.start = start;
             this.step = step;
-            enforce(step != 0);
             immutable fcount = (end - start) / step;
-            enforce(fcount >= 0, "iota: incorrect startup parameters");
             count = to!size_t(fcount);
             auto pastEnd = start + count * step;
             if (step > 0)
@@ -4289,6 +4741,24 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
     assert(r[2] == 6);
     auto rf = iota(0.0, 0.5, 0.1);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
+}
+
+nothrow @nogc unittest
+{
+    auto t0 = iota(0, 10);
+    auto t1 = iota(0, 10, 2);
+    auto t2 = iota(1, 1, 0);
+    //float overloads use std.conv.to so can't be @nogc or nothrow
+}
+
+debug unittest
+{//check the contracts
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+    assertThrown!AssertError(iota(1,2,0));
+    assertThrown!AssertError(iota(0f,1f,0f));
+    assertThrown!AssertError(iota(1f,0f,0.1f));
+    assertThrown!AssertError(iota(0f,1f,-0.1f));
 }
 
 unittest
@@ -6687,10 +7157,10 @@ enum SearchPolicy
 Represents a sorted range. In addition to the regular range
 primitives, supports additional operations that take advantage of the
 ordering, such as merge and binary search. To obtain a $(D
-SortedRange) from an unsorted range $(D r), use $(XREF algorithm,
-sort) which sorts $(D r) in place and returns the corresponding $(D
-SortedRange). To construct a $(D SortedRange) from a range $(D r) that
-is known to be already sorted, use $(LREF assumeSorted) described
+SortedRange) from an unsorted range $(D r), use
+$(XREF_PACK algorithm,sorting,sort) which sorts $(D r) in place and returns the
+corresponding $(D SortedRange). To construct a $(D SortedRange) from a range
+$(D r) that is known to be already sorted, use $(LREF assumeSorted) described
 below.
 */
 struct SortedRange(Range, alias pred = "a < b")
@@ -7319,7 +7789,7 @@ effect on the complexity of subsequent operations specific to sorted
 ranges (such as binary search). The probability of an arbitrary
 unsorted range failing the test is very high (however, an
 almost-sorted range is likely to pass it). To check for sortedness at
-cost $(BIGOH n), use $(XREF algorithm,isSorted).
+cost $(BIGOH n), use $(XREF_PACK algorithm,sorting,isSorted).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
 if (isInputRange!(Unqual!R))
@@ -7422,7 +7892,7 @@ unittest
 
   +/
 struct RefRange(R)
-    if(isForwardRange!R)
+    if(isInputRange!R)
 {
 public:
 
@@ -7484,7 +7954,7 @@ public:
             return (*_range).front;
         }
 
-        static if(is(typeof((*(cast(const R*)_range)).front))) @property ElementType!R front() const
+        static if(is(typeof((*(cast(const R*)_range)).front))) @property auto front() const
         {
             return (*_range).front;
         }
@@ -7526,7 +7996,9 @@ public:
 
     version(StdDdoc)
     {
-        /++ +/
+        /++
+            Only defined if $(D isForwardRange!R) is $(D true).
+          +/
         @property auto save() {assert(0);}
         /++ Ditto +/
         @property auto save() const {assert(0);}
@@ -7535,7 +8007,7 @@ public:
         /++ Ditto +/
         auto opSlice() const {assert(0);}
     }
-    else
+    else static if(isForwardRange!R)
     {
         static if(isSafe!((R* r) => (*r).save))
         {
@@ -7604,7 +8076,7 @@ public:
             return (*_range).back;
         }
 
-        static if(is(typeof((*(cast(const R*)_range)).back))) @property ElementType!R back() const
+        static if(is(typeof((*(cast(const R*)_range)).back))) @property auto back() const
         {
             return (*_range).back;
         }
@@ -8073,40 +8545,66 @@ unittest
     auto cWrapper = refRange(&c);
     static assert(is(typeof(cWrapper) == C));
     assert(cWrapper is c);
+}
 
-    struct S
+unittest // issue 14373
+{
+    static struct R
     {
-        @property int front() @safe const pure nothrow { return 0; }
-        @property bool empty() @safe const pure nothrow { return false; }
-        void popFront() @safe pure nothrow { }
-
-        int i = 27;
+        @property int front() {return 0;}
+        void popFront() {empty = true;}
+        bool empty = false;
     }
-    static assert(isInputRange!S);
-    static assert(!isForwardRange!S);
+    R r;
+    refRange(&r).popFront();
+    assert(r.empty);
+}
 
-    auto s = S(42);
-    auto sWrapper = refRange(&s);
-    static assert(is(typeof(sWrapper) == S));
-    assert(sWrapper == s);
+unittest // issue 14575
+{
+    struct R
+    {
+        Object front;
+        alias back = front;
+        bool empty = false;
+        void popFront() {empty = true;}
+        alias popBack = popFront;
+        @property R save() {return this;}
+    }
+    static assert(isBidirectionalRange!R);
+    R r;
+    auto rr = refRange(&r);
+
+    struct R2
+    {
+        @property Object front() {return null;}
+        @property const(Object) front() const {return null;}
+        alias back = front;
+        bool empty = false;
+        void popFront() {empty = true;}
+        alias popBack = popFront;
+        @property R2 save() {return this;}
+    }
+    static assert(isBidirectionalRange!R2);
+    R2 r2;
+    auto rr2 = refRange(&r2);
 }
 
 /++
     Helper function for constructing a $(LREF RefRange).
 
-    If the given range is not a forward range or it is a class type (and thus is
-    already a reference type), then the original range is returned rather than
-    a $(LREF RefRange).
+    If the given range is a class type (and thus is already a reference type),
+    then the original range is returned rather than a $(LREF RefRange).
   +/
 auto refRange(R)(R* range)
-    if(isForwardRange!R && !is(R == class))
+    if(isInputRange!R && !is(R == class))
 {
     return RefRange!R(range);
 }
 
+/// ditto
 auto refRange(R)(R* range)
-    if((!isForwardRange!R && isInputRange!R) ||
-       is(R == class))
+    if(isInputRange!R && is(R == class))
 {
     return *range;
 }
@@ -8171,22 +8669,40 @@ struct NullSink
 
 
 /++
-  Implements a "tee" style pipe, wrapping an input range so that elements
-  of the range can be passed to a provided function or $(LREF OutputRange)
-  as they are iterated over. This is useful for printing out intermediate
-  values in a long chain of range code, performing some operation with
-  side-effects on each call to $(D front) or $(D popFront), or diverting
-  the elements of a range into an auxiliary $(LREF OutputRange).
+
+  Implements a "tee" style pipe, wrapping an input range so that elements of the
+  range can be passed to a provided function or $(LREF OutputRange) as they are
+  iterated over. This is useful for printing out intermediate values in a long
+  chain of range code, performing some operation with side-effects on each call
+  to $(D front) or $(D popFront), or diverting the elements of a range into an
+  auxiliary $(LREF OutputRange).
 
   It is important to note that as the resultant range is evaluated lazily,
   in the case of the version of $(D tee) that takes a function, the function
   will not actually be executed until the range is "walked" using functions
   that evaluate ranges, such as $(XREF array,array) or
-  $(XREF algorithm,reduce).
+  $(XREF_PACK algorithm,iteration,reduce).
 
-  See_Also: $(XREF argorithm,each)
+  Params:
+  pipeOnPop = If `Yes.pipeOnPop`, simply iterating the range without ever
+  calling `front` is enough to have `tee` mirror elements to `outputRange` (or,
+  respectively, `fun`). If `No.pipeOnPop`, only elements for which `front` does
+  get called will be also sent to `outputRange`/`fun`.
+  inputRange = The input range beeing passed through.
+  outputRange = This range will receive elements of `inputRange` progressively
+  as iteration proceeds.
+  fun = This function will be called with elements of `inputRange`
+  progressively as iteration proceeds.
+
+  Returns:
+  An input range that offers the elements of `inputRange`. Regardless of
+  whether `inputRange` is a more powerful range (forward, bidirectional etc),
+  the result is always an input range. Reading this causes `inputRange` to be
+  iterated and returns its elements in turn. In addition, the same elements
+  will be passed to `outputRange` or `fun` as well.
+
+  See_Also: $(XREF_PACK algorithm,iteration,each)
 +/
-
 auto tee(Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1, R2)(R1 inputRange, R2 outputRange)
 if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
 {
@@ -8247,9 +8763,7 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
     return Result(inputRange, outputRange);
 }
 
-/++
-  Overload for taking a function or template lambda as an $(LREF OutputRange)
-+/
+/// Ditto
 auto tee(alias fun, Flag!"pipeOnPop" pipeOnPop = Yes.pipeOnPop, R1)(R1 inputRange)
 if (is(typeof(fun) == void) || isSomeFunction!fun)
 {
@@ -8275,17 +8789,19 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     }
 }
 
-//
+///
 @safe unittest
 {
     import std.algorithm : equal, filter, map;
 
-    // Pass-through
+    // Sum values while copying
     int[] values = [1, 4, 9, 16, 25];
-
-    auto newValues = values.tee!(a => a + 1).array;
+    int sum = 0;
+    auto newValues = values.tee!(a => sum += a).array;
     assert(equal(newValues, values));
+    assert(sum == 1 + 4 + 9 + 16 + 25);
 
+    // Count values that pass the first filter
     int count = 0;
     auto newValues4 = values.filter!(a => a < 10)
                             .tee!(a => count++)
@@ -8442,4 +8958,270 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     void func2(int x) {}
 
     auto r = [1, 2, 3, 4].tee!func1.tee!func2;
+}
+
+package template CommonElementType(Rs...)
+{
+    alias CommonElementType = CommonType!(staticMap!(ElementType, Rs));
+}
+
+package alias isSortedRange(R) = isInstanceOf!(SortedRange, R); // TODO Or use: __traits(isSame, TemplateOf!R, SortedRange)
+
+/**
+   Merge several sorted ranges $(D rs) with less-than predicate function $(D
+   pred) into one single sorted range containing the sorted union of the
+   elements of inputs.
+
+   All of its inputs must be instantiations of $(XREF range, SortedRange). Use
+   the result of $(XREF algorithm, sort), or $(XREF range, assumeSorted) to
+   merge ranges known to be sorted (show in the example below). However, note
+   that there is currently no way of ensuring that two or more instances of
+   $(XREF range, SortedRange) are sorted using a specific comparison function
+   $(D pred). Therefore no checking is done here to assure that the $(D pred)
+   template parmeter matches the $(D pred) template parameter that were given to
+   each instance of $(XREF range, SortedRange) when the $(D rs) were
+   instantiated.
+
+   This algorithm is lazy, doing work progressively as elements are pulled off
+   the result.
+
+   Average complexity is $(BIGOH n * k) for $(D k) ranges of maximum length $(D n).
+
+   If all ranges have the same element type and offer it by $(D ref), merge
+   offers a range with mutable $(D front) (and $(D back) where appropriate) that
+   reflects in the original ranges.
+
+   If any of the inputs $(D rs) is infinite so is the merge result (`empty` is
+   statically always false).
+
+   Example:
+   -------
+   auto a = [0, 2, 4];
+   auto b = [1, 3, 5];
+   auto c = merge(a.assumeSorted, b.assumeSorted)
+   assert(equal(c, [0, 1, 2, 3, 4, 5]));
+   assert(equal(c.retro, [5, 4, 3, 2, 1, 0]));
+   -------
+*/
+auto merge(alias pred = "a < b", Rs...)(Rs rs)
+if (Rs.length > 1 &&
+    allSatisfy!(isSortedRange,
+                staticMap!(Unqual, Rs)) &&
+    is(CommonElementType!(Rs)))
+{
+    alias E = CommonElementType!Rs;
+    enum isBidirectional = allSatisfy!(isBidirectionalRange, staticMap!(Unqual, Rs));
+
+    struct Result
+    {
+        this(Rs source)
+        {
+            this.source = source;
+            this._lastFrontIndex = frontIndex;
+            static if (isBidirectional)
+                this._lastBackIndex = backIndex;
+        }
+
+        import std.typetuple : anySatisfy;
+        static if (anySatisfy!(isInfinite, Rs))
+        {
+            // Propagate infiniteness.
+            enum bool empty = false;
+        }
+        else
+        {
+            @property bool empty()
+            {
+                if (_lastFrontIndex == size_t.max)
+                    return true;
+                static if (isBidirectional)
+                    return _lastBackIndex == size_t.max;
+                else
+                    return false;
+            }
+        }
+
+        @property auto ref front()
+        {
+            final switch (_lastFrontIndex)
+            {
+                foreach (i, _; Rs)
+                {
+                    case i:
+                        assert(!source[i].empty);
+                        return source[i].front;
+                }
+            }
+            assert(0);
+        }
+
+        private size_t frontIndex()
+        {
+            size_t bestIndex = size_t.max; // indicate undefined
+            E bestElement;
+            foreach (i, _; Rs)
+            {
+                import std.functional : binaryFun;
+                if (!source[i].empty)
+                {
+                    if (bestIndex == size_t.max || // either this is the first or
+                        binaryFun!pred(source[i].front, bestElement))
+                    {
+                        bestIndex = i;
+                        bestElement = source[i].front;
+                    }
+                }
+            }
+            return bestIndex;
+        }
+
+        void popFront()
+        {
+            final switch (_lastFrontIndex)
+            {
+                foreach (i, _; Rs)
+                {
+                    case i:
+                        source[i].popFront();
+                        break;
+                }
+            }
+            _lastFrontIndex = frontIndex;
+        }
+
+        static if (isBidirectional)
+        {
+            @property auto ref back()
+            {
+                final switch (_lastBackIndex)
+                {
+                    foreach (i, _; Rs)
+                    {
+                        case i:
+                            assert(!source[i].empty);
+                            return source[i].back;
+                    }
+                }
+                assert(0);
+            }
+
+            private size_t backIndex()
+            {
+                import std.functional : binaryFun;
+                size_t bestIndex = size_t.max; // indicate undefined
+                E bestElement;
+                foreach (i, _; Rs)
+                {
+                    if (!source[i].empty)
+                    {
+                        if (bestIndex == size_t.max || // either this is the first or
+                            binaryFun!pred(bestElement, source[i].back))
+                        {
+                            bestIndex = i;
+                            bestElement = source[i].back;
+                        }
+                    }
+                }
+                return bestIndex;
+            }
+
+            void popBack()
+            {
+                final switch (_lastBackIndex)
+                {
+                    foreach (i, _; Rs)
+                    {
+                        case i:
+                            source[i].popBack();
+                            break;
+                    }
+                }
+                _lastBackIndex = backIndex;
+            }
+        }
+
+        static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
+        {
+            @property auto save()
+            {
+                Result result = this;
+                foreach (i, _; Rs)
+                {
+                    result.source[i] = result.source[i].save;
+                }
+                return result;
+            }
+        }
+
+        static if (allSatisfy!(hasLength, Rs))
+        {
+            @property size_t length()
+            {
+                size_t result;
+                foreach (i, _; Rs)
+                {
+                    result += source[i].length;
+                }
+                return result;
+            }
+
+            alias opDollar = length;
+        }
+
+        public Rs source;
+        private size_t _lastFrontIndex = size_t.max;
+        static if (isBidirectional)
+        {
+            private size_t _lastBackIndex = size_t.max;
+        }
+    }
+
+    return Result(rs);
+}
+
+@safe pure nothrow unittest
+{
+    import std.algorithm : equal;
+
+    alias S = short;
+    alias I = int;
+    alias D = double;
+
+    S[] a = [1, 2, 3];
+    I[] b = [50, 60];
+    D[] c = [10, 20, 30, 40];
+
+    auto d = ["a", "b", "c"];
+
+    static assert(!__traits(compiles, { auto m = merge(a.assumeSorted); }));
+    static assert(!__traits(compiles, { auto m = merge(a.assumeSorted,
+                                                       d.assumeSorted); }));
+
+    auto m = merge(a.assumeSorted,
+                   b.assumeSorted,
+                   c.assumeSorted);
+
+    static assert(is(typeof(m.front) == CommonType!(S, I, D)));
+
+    assert(equal(m, [1, 2, 3, 10, 20, 30, 40, 50, 60]));
+    assert(equal(m.retro, [60, 50, 40, 30, 20, 10, 3, 2, 1]));
+
+    m.popFront;
+    assert(equal(m, [2, 3, 10, 20, 30, 40, 50, 60]));
+    m.popBack;
+    assert(equal(m, [2, 3, 10, 20, 30, 40, 50]));
+    m.popFront;
+    assert(equal(m, [3, 10, 20, 30, 40, 50]));
+    m.popBack;
+    assert(equal(m, [3, 10, 20, 30, 40]));
+    m.popFront;
+    assert(equal(m, [10, 20, 30, 40]));
+    m.popBack;
+    assert(equal(m, [10, 20, 30]));
+    m.popFront;
+    assert(equal(m, [20, 30]));
+    m.popBack;
+    assert(equal(m, [20]));
+    m.popFront;
+    assert(m.empty);
 }

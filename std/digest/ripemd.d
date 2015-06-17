@@ -442,8 +442,8 @@ struct RIPEMD160
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Examples:
          * ----
@@ -659,7 +659,7 @@ unittest
 }
 
 /**
- * This is a convenience alias for $(XREF digest.digest, digest) using the
+ * This is a convenience alias for $(XREF_PACK digest,digest,digest) using the
  * RIPEMD160 implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -679,8 +679,8 @@ unittest
  * OOP API RIPEMD160 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(XREF digest.digest, WrapperDigest)!RIPEMD160, see
- * $(XREF digest.digest, WrapperDigest) for more information.
+ * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!RIPEMD160),
+ * see there for more information.
  */
 alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
 

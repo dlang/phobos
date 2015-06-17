@@ -670,7 +670,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
@@ -754,7 +754,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
@@ -825,7 +825,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
@@ -1792,10 +1792,8 @@ private
             }
         }
 
-
-        /*
-         *
-         */
+        ///
+        deprecated("isClosed can't be used with a const MessageBox")
         final @property bool isClosed() const
         {
             synchronized( m_lock )
@@ -1804,6 +1802,14 @@ private
             }
         }
 
+        ///
+        final @property bool isClosed()
+        {
+            synchronized( m_lock )
+            {
+                return m_closed;
+            }
+        }
 
         /*
          * Sets a limit on the maximum number of user messages allowed in the
@@ -2503,19 +2509,15 @@ version( unittest )
 // initOnce
 //////////////////////////////////////////////////////////////////////////////
 
-private template initOnceLock()
+private @property Mutex initOnceLock()
 {
     __gshared Mutex lock;
-
-    shared static this()
-    {
-        lock = new Mutex;
-    }
-
-    @property Mutex initOnceLock()
-    {
-        return lock;
-    }
+    if (auto mtx = atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
+        return mtx;
+    auto mtx = new Mutex;
+    if (cas(cast(shared)&lock, cast(shared)null, cast(shared)mtx))
+        return mtx;
+    return atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
 }
 
 /**

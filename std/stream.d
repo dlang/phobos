@@ -1181,7 +1181,7 @@ class Stream : InputStream, OutputStream {
     size_t count;
     while (true) {
       version (Windows) {
-        count = _vsnprintf(p, psize, f, args);
+        count = vsnprintf(p, psize, f, args);
         if (count != -1)
           break;
         psize *= 2;

@@ -63,6 +63,15 @@ of the first matching value in $(D values), or $(D 0) if $(D value)
 is not _among $(D values). The predicate $(D pred) is used to
 compare values, and uses equality by default.
 
+Params:
+    pred = The predicate used to compare the values.
+    value = The value to search for.
+    values = The values to compare the value to.
+
+Returns:
+    0 if value was not found among the values, otherwise the index of the
+    found value plus one is returned.
+
 See_Also:
 $(LREF find) and $(LREF canFind) for finding a value in a
 range.
@@ -196,13 +205,9 @@ private template indexOfFirstOvershadowingChoiceOnLast(choices...)
 Executes and returns one of a collection of handlers based on the type of the
 switch object.
 
-$(D choices) needs to be composed of function or delegate handlers that accept
-one argument. The first choice that $(D switchObject) can be casted to the type
+The first choice that $(D switchObject) can be casted to the type
 of argument it accepts will be called with $(D switchObject) casted to that
 type, and the value it'll return will be returned by $(D castSwitch).
-
-There can also be a choice that accepts zero arguments. That choice will be
-invoked if $(D switchObject) is null.
 
 If a choice's return type is void, the choice must throw an exception, unless
 all the choices are void. In that case, castSwitch itself will return void.
@@ -210,6 +215,16 @@ all the choices are void. In that case, castSwitch itself will return void.
 Throws: If none of the choice matches, a $(D SwitchError) will be thrown.  $(D
 SwitchError) will also be thrown if not all the choices are void and a void
 choice was executed without throwing anything.
+
+Params:
+    choices = The $(D choices) needs to be composed of function or delegate
+        handlers that accept one argument. There can also be a choice that
+        accepts zero arguments. That choice will be invoked if the $(D
+        switchObject) is null.
+    switchObject = the object against which the tests are being made.
+
+Returns:
+    The value of the selected choice.
 
 Note: $(D castSwitch) can only be used with object types.
 */
@@ -475,10 +490,19 @@ unittest
                            )());
 }
 
-/**
-Returns $(D val), if it is between $(D lower) and $(D upper).
-Otherwise returns the nearest of the two. Equivalent to $(D max(lower,
-min(upper,val))).
+/** Clamps a value into the given bounds.
+
+This functions is equivalent to $(D max(lower, min(upper,val))).
+
+Params:
+    val = The value to _clamp.
+    lower = The _lower bound of the _clamp.
+    upper = The _upper bound of the _clamp.
+
+Returns:
+    Returns $(D val), if it is between $(D lower) and $(D upper).
+    Otherwise returns the nearest of the two.
+
 */
 auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 in
@@ -523,7 +547,7 @@ body
     static assert(is(typeof(clamp(-1L, -2L, 2UL)) == long));
 
     // user-defined types
-    import std.datetime;
+    import std.datetime : Date;
     assert(clamp(Date(1982, 1, 4), Date(1012, 12, 21), Date(2012, 12, 21)) == Date(1982, 1, 4));
     assert(clamp(Date(1982, 1, 4), Date.min, Date.max) == Date(1982, 1, 4));
     // UFCS style
@@ -536,9 +560,7 @@ body
 Performs three-way lexicographical comparison on two input ranges
 according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
 lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
-corresponding element $(D e2) in $(D r2). If $(D binaryFun!pred(e1,
-e2)), $(D cmp) returns a negative value. If $(D binaryFun!pred(e2,
-e1)), $(D cmp) returns a positive value. If one of the ranges has been
+corresponding element $(D e2) in $(D r2). If one of the ranges has been
 finished, $(D cmp) returns a negative value if $(D r1) has fewer
 elements than $(D r2), a positive value if $(D r1) has more elements
 than $(D r2), and $(D 0) if the ranges have the same number of
@@ -546,6 +568,18 @@ elements.
 
 If the ranges are strings, $(D cmp) performs UTF decoding
 appropriately and compares the ranges one code point at a time.
+
+Params:
+    pred = The predicate used for comparison.
+    r1 = The first range.
+    r2 = The second range.
+
+Returns:
+    0 if both ranges compare equal. -1 if the first differing element of $(D
+    r1) is less than the corresponding element of $(D r2) according to $(D
+    pred). 1 if the first differing element of $(D r2) is less than the
+    corresponding element of $(D r1) according to $(D pred).
+
 */
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
 if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
@@ -560,7 +594,7 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
     }
 }
 
-// Specialization for strings (for speed purposes)
+/// ditto
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
 {
     import core.stdc.string : memcmp;
@@ -635,11 +669,8 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
 {
     int result;
 
-    debug(string) printf("string.cmp.unittest\n");
     result = cmp("abc", "abc");
     assert(result == 0);
-    //    result = cmp(null, null);
-    //    assert(result == 0);
     result = cmp("", "");
     assert(result == 0);
     result = cmp("abc", "abcd");
@@ -676,11 +707,18 @@ Compares two ranges for equality, as defined by predicate $(D pred)
 template equal(alias pred = "a == b")
 {
     /++
-    Returns $(D true) if and only if the two ranges compare equal element
-    for element, according to binary predicate $(D pred). The ranges may
-    have different element types, as long as $(D pred(a, b)) evaluates to
-    $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
-    $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
+    This function compares to ranges for equality. The ranges may have
+    different element types, as long as $(D pred(a, b)) evaluates to $(D bool)
+    for $(D a) in $(D r1) and $(D b) in $(D r2).
+    Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
+
+    Params:
+        r1 = The first range to be compared.
+        r2 = The second range to be compared.
+
+    Returns:
+        $(D true) if and only if the two ranges compare equal element
+        for element, according to binary predicate $(D pred).
 
     See_Also:
         $(WEB sgi.com/tech/stl/_equal.html, STL's _equal)
@@ -762,7 +800,8 @@ range of range (of range...) comparisons.
 {
     import std.algorithm.iteration : map;
     import std.math : approxEqual;
-    import std.internal.test.dummyrange;
+    import std.internal.test.dummyrange : ReferenceForwardRange,
+        ReferenceInputRange, ReferenceInfiniteForwardRange;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -871,59 +910,8 @@ enum EditOp : char
     remove = 'r'
 }
 
-struct Levenshtein(Range, alias equals, CostType = size_t)
+private struct Levenshtein(Range, alias equals, CostType = size_t)
 {
-    void deletionIncrement(CostType n)
-    {
-        _deletionIncrement = n;
-        InitMatrix();
-    }
-
-    void insertionIncrement(CostType n)
-    {
-        _insertionIncrement = n;
-        InitMatrix();
-    }
-
-    CostType distance(Range s, Range t)
-    {
-        auto slen = walkLength(s.save), tlen = walkLength(t.save);
-        AllocMatrix(slen + 1, tlen + 1);
-        foreach (i; 1 .. rows)
-        {
-            auto sfront = s.front;
-            s.popFront();
-            auto tt = t;
-            foreach (j; 1 .. cols)
-            {
-                auto cSub = matrix(i - 1,j - 1)
-                    + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
-                tt.popFront();
-                auto cIns = matrix(i,j - 1) + _insertionIncrement;
-                auto cDel = matrix(i - 1,j) + _deletionIncrement;
-                switch (min_index(cSub, cIns, cDel))
-                {
-                    case 0:
-                        matrix(i,j) = cSub;
-                        break;
-                    case 1:
-                        matrix(i,j) = cIns;
-                        break;
-                    default:
-                        matrix(i,j) = cDel;
-                        break;
-                }
-            }
-        }
-        return matrix(slen,tlen);
-    }
-
-    EditOp[] path(Range s, Range t)
-    {
-        distanceWithPath(s, t);
-        return path();
-    }
-
     EditOp[] path()
     {
         import std.algorithm.mutation : reverse;
@@ -959,6 +947,10 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         return result;
     }
 
+    ~this() {
+        FreeMatrix();
+    }
+
 private:
     CostType _deletionIncrement = 1,
         _insertionIncrement = 1,
@@ -969,14 +961,25 @@ private:
     // Treat _matrix as a rectangular array
     ref CostType matrix(size_t row, size_t col) { return _matrix[row * cols + col]; }
 
-    void AllocMatrix(size_t r, size_t c) {
+    void AllocMatrix(size_t r, size_t c) @trusted {
         rows = r;
         cols = c;
         if (_matrix.length < r * c) {
-            delete _matrix;
-            _matrix = new CostType[r * c];
+            import core.stdc.stdlib : realloc;
+            import core.exception : onOutOfMemoryError;
+            auto m = cast(CostType *)realloc(_matrix.ptr, r * c * _matrix[0].sizeof);
+            if (!m)
+                onOutOfMemoryError();
+            _matrix = m[0 .. r * c];
             InitMatrix();
         }
+    }
+
+    void FreeMatrix() @trusted {
+        import core.stdc.stdlib : free;
+
+        free(_matrix.ptr);
+        _matrix = null;
     }
 
     void InitMatrix() {
@@ -1079,9 +1082,17 @@ the minimal amount of edit operations necessary to transform $(D s)
 into $(D t).  Performs $(BIGOH s.length * t.length) evaluations of $(D
 equals) and occupies $(BIGOH s.length * t.length) storage.
 
-Allocates GC memory.
+Params:
+    equals = The binary predicate to compare the elements of the two ranges.
+    s = The original range.
+    t = The transformation target
+
+Returns:
+    The minimal number of edits to transform s into t.
+
+Does not allocate GC memory.
 */
-size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
+size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
@@ -1146,11 +1157,25 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     assert(levenshteinDistance("ID", "I♥D") == 1);
 }
 
+@safe @nogc nothrow unittest
+{
+    assert(levenshteinDistance("cat"d, "rat"d) == 1);
+}
+
 /**
 Returns the Levenshtein distance and the edit path between $(D s) and
 $(D t).
 
-Allocates GC memory.
+Params:
+    equals = The binary predicate to compare the elements of the two ranges.
+    s = The original range.
+    t = The transformation target
+
+Returns:
+    Tuple with the first element being the minimal amount of edits to transform s into t and
+    the second element being the sequence of edits to effect this transformation.
+
+Allocates GC memory for the returned EditOp[] array.
 */
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
@@ -1165,10 +1190,10 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 ///
 @safe unittest
 {
-    string a = "Saturday", b = "Sunday";
+    string a = "Saturday", b = "Sundays";
     auto p = levenshteinDistanceAndPath(a, b);
-    assert(p[0] == 3);
-    assert(equal(p[1], "nrrnsnnn"));
+    assert(p[0] == 4);
+    assert(equal(p[1], "nrrnsnnni"));
 }
 
 @safe unittest
@@ -1185,24 +1210,32 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
 
 // max
 /**
-Returns the maximum of the passed-in values.
+Iterates the passed arguments and return the maximum value.
+
+Params:
+    args = The values to select the maximum from. At least two arguments must
+    be passed.
+
+Returns:
+    The maximum of the passed-in args. The type of the returned value is
+    the type among the passed arguments that is able to store the largest value.
 */
 MaxType!T max(T...)(T args)
     if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
-        alias args[0] a;
+        alias a = args[0];
     else
         auto a = max(args[0 .. ($+1)/2]);
-    alias typeof(a) T0;
+    alias T0 = typeof(a);
 
     //Get "b"
     static if (T.length <= 3)
-        alias args[$-1] b;
+        alias b = args[$-1];
     else
         auto b = max(args[($+1)/2 .. $]);
-    alias typeof(b) T1;
+    alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
     static assert (is(typeof(a < b)),
@@ -1248,7 +1281,7 @@ MaxType!T max(T...)(T args)
     assert(max(a, f) == 5);
 
     //Test user-defined types
-    import std.datetime;
+    import std.datetime : Date;
     assert(max(Date(2012, 12, 21), Date(1982, 1, 4)) == Date(2012, 12, 21));
     assert(max(Date(1982, 1, 4), Date(2012, 12, 21)) == Date(2012, 12, 21));
     assert(max(Date(1982, 1, 4), Date.min) == Date(1982, 1, 4));
@@ -1300,17 +1333,17 @@ MinType!T min(T...)(T args)
 {
     //Get "a"
     static if (T.length <= 2)
-        alias args[0] a;
+        alias a = args[0];
     else
         auto a = min(args[0 .. ($+1)/2]);
-    alias typeof(a) T0;
+    alias T0 = typeof(a);
 
     //Get "b"
     static if (T.length <= 3)
-        alias args[$-1] b;
+        alias b = args[$-1];
     else
         auto b = min(args[($+1)/2 .. $]);
-    alias typeof(b) T1;
+    alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
     static assert (is(typeof(a < b)),

@@ -25,10 +25,11 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of))
  * module.
  *
  * Note:
- * CRCs are usually printed with the MSB first. When using $(XREF digest.digest, toHexString) the result
- * will be in an unexpected order. Use $(XREF digest.digest, toHexString)s optional order parameter
- * to specify decreasing order for the correct result. The $(LREF crcHexString) alias can also
- * be used for this purpose.
+ * CRCs are usually printed with the MSB first. When using
+ * $(XREF_PACK digest,digest,toHexString) the result will be in an unexpected
+ * order. Use $(XREF_PACK digest,digest,toHexString)'s optional order parameter
+ * to specify decreasing order for the correct result. The $(LREF crcHexString)
+ * alias can also be used for this purpose.
  *
  * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  *
@@ -156,8 +157,8 @@ struct CRC32
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
         {
@@ -306,36 +307,55 @@ unittest
 }
 
 /**
- * This is a convenience alias for $(XREF digest.digest, digest) using the
+ * This is a convenience alias for $(XREF_PACK digest,digest,digest) using the
  * CRC32 implementation.
+ *
+ * Params:
+ *      data = $(D InputRange) of $(D ElementType) implicitly convertible to
+ *             $(D ubyte), $(D ubyte[]) or $(D ubyte[num]) or one or more arrays
+ *             of any type.
+ *
+ * Returns:
+ *      CRC32 of data
  */
 //simple alias doesn't work here, hope this gets inlined...
-auto crc32Of(T...)(T data)
+ubyte[4] crc32Of(T...)(T data)
 {
     return digest!(CRC32, T)(data);
 }
 
+///
+unittest
+{
+    ubyte[] data = [4,5,7,25];
+    assert(data.crc32Of == [167, 180, 199, 131]);
+
+    import std.utf : byChar;
+    assert("hello"d.byChar.crc32Of == [134, 166, 16, 54]);
+
+    ubyte[4] hash = "abc".crc32Of();
+    assert(hash == digest!CRC32("ab", "c"));
+
+    import std.range : iota;
+    enum ubyte S = 5, F = 66;
+    assert(iota(S, F).crc32Of == [59, 140, 234, 154]);
+}
+
 /**
- * This is a convenience alias for $(XREF digest.digest, toHexString) producing the usual
- * CRC32 string output.
+ * This is a convenience alias for $(XREF_PACK digest,digest,toHexString)
+ * producing the usual CRC32 string output.
  */
 public alias crcHexString = toHexString!(Order.decreasing);
 ///ditto
 public alias crcHexString = toHexString!(Order.decreasing, 16);
 
-///
-unittest
-{
-    ubyte[4] hash = crc32Of("abc");
-    assert(hash == digest!CRC32("abc")); //This is the same as above
-}
 
 /**
  * OOP API CRC32 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(XREF digest.digest, WrapperDigest)!CRC32, see
- * $(XREF digest.digest, WrapperDigest) for more information.
+ * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!CRC32), see
+ * there for more information.
  */
 alias CRC32Digest = WrapperDigest!CRC32;
 

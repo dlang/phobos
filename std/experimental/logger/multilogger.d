@@ -13,10 +13,10 @@ struct MultiLoggerEntry
 }
 
 /** MultiLogger logs to multiple $(D Logger). The $(D Logger)s are stored in an
-$(D Logger[]) in there order of insertion.
+$(D Logger[]) in their order of insertion.
 
 Every data logged to this $(D MultiLogger) will be distributed to all the $(D
-Logger)s inserted into inserted it. This $(D MultiLogger) implementation can
+Logger)s inserted into it. This $(D MultiLogger) implementation can
 hold multiple $(D Logger)s with the same name. If the method $(D removeLogger)
 is used to remove a $(D Logger) only the first occurrence with that name will
 be removed.
@@ -39,7 +39,7 @@ class MultiLogger : Logger
         super(lv);
     }
 
-    /** This member holds all $(D Logger) stored in the $(D MultiLogger).
+    /** This member holds all $(D Logger)s stored in the $(D MultiLogger).
 
     When inheriting from $(D MultiLogger) this member can be used to gain
     access to the stored $(D Logger).
@@ -143,7 +143,7 @@ unittest
 {
     import std.stdio : File;
     import std.string : indexOf;
-    auto logName = randomString(32) ~ ".log";
+    string logName = __FUNCTION__ ~ ".log";
     auto logFileOutput = File(logName, "w");
     scope(exit)
     {

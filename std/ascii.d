@@ -3,10 +3,10 @@
 /++
     Functions which operate on ASCII characters.
 
-    All of the functions in std.ascii accept Unicode characters but effectively
-    ignore them if they're not ASCII. All $(D isX) functions return $(D false)
-    for non-ASCII characters, and all $(D toX) functions do nothing to non-ASCII
-    characters.
+    All of the functions in std._ascii accept Unicode characters but
+    effectively ignore them if they're not ASCII. All $(D isX) functions return
+    $(D false) for non-ASCII characters, and all $(D toX) functions do nothing
+    to non-ASCII characters.
 
     For functions which operate on Unicode characters, see
     $(LINK2 std_uni.html, std.uni).
@@ -42,7 +42,7 @@ immutable octalDigits    = digits[0..8];                 /// 0..7
 immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"; /// A..Za..z
 immutable uppercase      = letters[0..26];               /// A..Z
 immutable lowercase      = letters[26..52];              /// a..z
-immutable whitespace     = " \t\v\r\n\f";                /// ASCII whitespace
+immutable whitespace     = " \t\v\r\n\f";                /// ASCII _whitespace
 
 /++
     Letter case specifier.
@@ -63,11 +63,23 @@ else
 
 
 /++
-    Returns whether $(D c) is a letter or a number (0..9, a..z, A..Z).
+    Params: c = The character to test.
+    Returns: Whether $(D c) is a letter or a number (0..9, a..z, A..Z).
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 {
     return c <= 'z' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'Z'));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isAlphaNum('A'));
+    assert( isAlphaNum('1'));
+    assert(!isAlphaNum('#'));
+
+    // N.B.: does not return true for non-ASCII Unicode alphanumerics:
+    assert(!isAlphaNum('á'));
 }
 
 unittest
@@ -81,12 +93,24 @@ unittest
 
 
 /++
-    Returns whether $(D c) is an ASCII letter (A..Z, a..z).
+    Params: c = The character to test.
+    Returns: Whether $(D c) is an ASCII letter (A..Z, a..z).
   +/
 bool isAlpha(dchar c) @safe pure nothrow @nogc
 {
     // Optimizer can turn this into a bitmask operation on 64 bit code
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isAlpha('A'));
+    assert(!isAlpha('1'));
+    assert(!isAlpha('#'));
+
+    // N.B.: does not return true for non-ASCII Unicode alphabetic characters:
+    assert(!isAlpha('á'));
 }
 
 unittest
@@ -100,11 +124,24 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a lowercase ASCII letter (a..z).
+    Params: c = The character to test.
+    Returns: Whether $(D c) is a lowercase ASCII letter (a..z).
   +/
 bool isLower(dchar c) @safe pure nothrow @nogc
 {
     return c >= 'a' && c <= 'z';
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isLower('a'));
+    assert(!isLower('A'));
+    assert(!isLower('#'));
+
+    // N.B.: does not return true for non-ASCII Unicode lowercase letters
+    assert(!isLower('á'));
+    assert(!isLower('Á'));
 }
 
 unittest
@@ -118,11 +155,24 @@ unittest
 
 
 /++
-    Returns whether $(D c) is an uppercase ASCII letter (A..Z).
+    Params: c = The character to test.
+    Returns: Whether $(D c) is an uppercase ASCII letter (A..Z).
   +/
 bool isUpper(dchar c) @safe pure nothrow @nogc
 {
     return c <= 'Z' && 'A' <= c;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isUpper('A'));
+    assert(!isUpper('a'));
+    assert(!isUpper('#'));
+
+    // N.B.: does not return true for non-ASCII Unicode uppercase letters
+    assert(!isUpper('á'));
+    assert(!isUpper('Á'));
 }
 
 unittest
@@ -136,11 +186,25 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a digit (0..9).
+    Params: c = The character to test.
+    Returns: Whether $(D c) is a digit (0..9).
   +/
 bool isDigit(dchar c) @safe pure nothrow @nogc
 {
     return '0' <= c && c <= '9';
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isDigit('3'));
+    assert( isDigit('8'));
+    assert(!isDigit('B'));
+    assert(!isDigit('#'));
+
+    // N.B.: does not return true for non-ASCII Unicode numbers
+    assert(!isDigit('０')); // full-width digit zero (U+FF10)
+    assert(!isDigit('４')); // full-width digit four (U+FF14)
 }
 
 unittest
@@ -154,11 +218,22 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a digit in base 8 (0..7).
+    Params: c = The character to test.
+    Returns: Whether $(D c) is a digit in base 8 (0..7).
   +/
 bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 {
     return c >= '0' && c <= '7';
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isOctalDigit('0'));
+    assert( isOctalDigit('7'));
+    assert(!isOctalDigit('8'));
+    assert(!isOctalDigit('A'));
+    assert(!isOctalDigit('#'));
 }
 
 unittest
@@ -172,11 +247,23 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a digit in base 16 (0..9, A..F, a..f).
+    Params: c = The character to test.
+    Returns: Whether $(D c) is a digit in base 16 (0..9, A..F, a..f).
   +/
 bool isHexDigit(dchar c) @safe pure nothrow @nogc
 {
     return c <= 'f' && c >= '0' && (c <= '9' || c >= 'a' || (c >= 'A' && c <= 'F'));
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isHexDigit('0'));
+    assert( isHexDigit('A'));
+    assert( isHexDigit('f')); // lowercase hex digits are accepted
+    assert(!isHexDigit('g'));
+    assert(!isHexDigit('G'));
+    assert(!isHexDigit('#'));
 }
 
 unittest
@@ -190,12 +277,30 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a whitespace character. That includes the space,
-    tab, vertical tab, form feed, carriage return, and linefeed characters.
+    Params: c = The character to test.
+    Returns: Whether or not $(D c) is a whitespace character. That includes the
+    space, tab, vertical tab, form feed, carriage return, and linefeed
+    characters.
   +/
 bool isWhite(dchar c) @safe pure nothrow @nogc
 {
     return c == ' ' || (c >= 0x09 && c <= 0x0D);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isWhite(' '));
+    assert( isWhite('\t'));
+    assert( isWhite('\n'));
+    assert(!isWhite('1'));
+    assert(!isWhite('a'));
+    assert(!isWhite('#'));
+
+    // N.B.: Does not return true for non-ASCII Unicode whitespace characters.
+    static import std.uni;
+    assert(std.uni.isWhite('\u00A0'));
+    assert(!isWhite('\u00A0')); // std.ascii.isWhite
 }
 
 unittest
@@ -209,11 +314,29 @@ unittest
 
 
 /++
-    Returns whether $(D c) is a control character.
+    Params: c = The character to test.
+    Returns: Whether $(D c) is a control character.
   +/
 bool isControl(dchar c) @safe pure nothrow @nogc
 {
     return c < 0x20 || c == 0x7F;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isControl('\0'));
+    assert( isControl('\022'));
+    assert( isControl('\n')); // newline is both whitespace and control
+    assert(!isControl(' '));
+    assert(!isControl('1'));
+    assert(!isControl('a'));
+    assert(!isControl('#'));
+
+    // N.B.: non-ASCII Unicode control characters are not recognized:
+    assert(!isControl('\u0080'));
+    assert(!isControl('\u2028'));
+    assert(!isControl('\u2029'));
 }
 
 unittest
@@ -228,12 +351,36 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a punctuation character. That includes all ASCII
-    characters which are not control characters, letters, digits, or whitespace.
+    Params: c = The character to test.
+    Returns: Whether or not $(D c) is a punctuation character. That includes
+    all ASCII characters which are not control characters, letters, digits, or
+    whitespace.
   +/
 bool isPunctuation(dchar c) @safe pure nothrow @nogc
 {
     return c <= '~' && c >= '!' && !isAlphaNum(c);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isPunctuation('.'));
+    assert( isPunctuation(','));
+    assert( isPunctuation(':'));
+    assert( isPunctuation('!'));
+    assert( isPunctuation('#'));
+    assert( isPunctuation('~'));
+    assert( isPunctuation('+'));
+    assert( isPunctuation('_'));
+
+    assert(!isPunctuation('1'));
+    assert(!isPunctuation('a'));
+    assert(!isPunctuation(' '));
+    assert(!isPunctuation('\n'));
+    assert(!isPunctuation('\0'));
+
+    // N.B.: Non-ASCII Unicode punctuation characters are not recognized.
+    assert(!isPunctuation('\u2012')); // (U+2012 = en-dash)
 }
 
 unittest
@@ -249,12 +396,27 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a printable character other than the space
-    character.
+    Params: c = The character to test.
+    Returns: Whether or not $(D c) is a printable character other than the
+    space character.
   +/
 bool isGraphical(dchar c) @safe pure nothrow @nogc
 {
     return '!' <= c && c <= '~';
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isGraphical('1'));
+    assert( isGraphical('a'));
+    assert( isGraphical('#'));
+    assert(!isGraphical(' ')); // whitespace is not graphical
+    assert(!isGraphical('\n'));
+    assert(!isGraphical('\0'));
+
+    // N.B.: Unicode graphical characters are not regarded as such.
+    assert(!isGraphical('á'));
 }
 
 unittest
@@ -270,12 +432,26 @@ unittest
 
 
 /++
-    Whether or not $(D c) is a printable character - including the space
-    character.
+    Params: c = The character to test.
+    Returns: Whether or not $(D c) is a printable character - including the
+    space character.
   +/
 bool isPrintable(dchar c) @safe pure nothrow @nogc
 {
     return c >= ' ' && c <= '~';
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isPrintable(' '));  // whitespace is printable
+    assert( isPrintable('1'));
+    assert( isPrintable('a'));
+    assert( isPrintable('#'));
+    assert(!isPrintable('\0')); // control characters are not printable
+
+    // N.B.: Printable non-ASCII Unicode characters are not recognized.
+    assert(!isPrintable('á'));
 }
 
 unittest
@@ -291,12 +467,20 @@ unittest
 
 
 /++
-    Whether or not $(D c) is in the ASCII character set - i.e. in the range
-    0..0x7F.
+    Params: c = The character to test.
+    Returns: Whether or not $(D c) is in the ASCII character set - i.e. in the
+    range 0..0x7F.
   +/
 bool isASCII(dchar c) @safe pure nothrow @nogc
 {
     return c <= 0x7F;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert( isASCII('a'));
+    assert(!isASCII('á'));
 }
 
 unittest
@@ -309,13 +493,15 @@ unittest
 
 
 /++
-    If $(D c) is an uppercase ASCII character, then its corresponding lowercase
-    letter is returned. Otherwise, $(D c) is returned.
+    Converts an ASCII letter to lowercase.
 
-    $(D C) can be any type which implicitly converts to $(D dchar). In the case
-    where it's a built-in type, or an enum of a built-in type,
+    Params: c = A character of any type that implicitly converts to $(D dchar).
+    In the case where it's a built-in type, or an enum of a built-in type,
     $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
     type, $(D dchar) is returned.
+
+    Returns: The corresponding lowercase letter, if $(D c) is an uppercase
+    ASCII character, otherwise $(D c) itself.
   +/
 auto toLower(C)(C c)
     if(is(C : dchar))
@@ -329,6 +515,17 @@ auto toLower(C)(C c)
         alias R = Unqual!OC;
 
     return isUpper(c) ? cast(R)(cast(R)c + 'a' - 'A') : cast(R)c;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(toLower('a') == 'a');
+    assert(toLower('A') == 'a');
+    assert(toLower('#') == '#');
+
+    // N.B.: Non-ASCII Unicode uppercase letters are not converted.
+    assert(toLower('Á') == 'Á');
 }
 
 @safe pure nothrow unittest
@@ -358,13 +555,15 @@ auto toLower(C)(C c)
 
 
 /++
-    If $(D c) is a lowercase ASCII character, then its corresponding uppercase
-    letter is returned. Otherwise, $(D c) is returned.
+    Converts an ASCII letter to uppercase.
 
-    $(D C) can be any type which implicitly converts to $(D dchar). In the case
+    Params: c = Any type which implicitly converts to $(D dchar). In the case
     where it's a built-in type, or an enum of a built-in type,
     $(D Unqual!(OriginalType!C)) is returned, whereas if it's a user-defined
     type, $(D dchar) is returned.
+
+    Returns: The corresponding uppercase letter, if $(D c) is a lowercase ASCII
+    character, otherwise $(D c) itself.
   +/
 auto toUpper(C)(C c)
     if(is(C : dchar))
@@ -378,6 +577,17 @@ auto toUpper(C)(C c)
         alias R = Unqual!OC;
 
     return isLower(c) ? cast(R)(cast(R)c - ('a' - 'A')) : cast(R)c;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(toUpper('a') == 'A');
+    assert(toUpper('A') == 'A');
+    assert(toUpper('#') == '#');
+
+    // N.B.: Non-ASCII Unicode lowercase letters are not converted.
+    assert(toUpper('á') == 'á');
 }
 
 @safe pure nothrow unittest

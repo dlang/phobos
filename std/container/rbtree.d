@@ -19,8 +19,7 @@ Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
 */
 module std.container.rbtree;
 
-// FIXME
-import std.functional; // : binaryFun;
+import std.functional : binaryFun;
 
 public import std.container.util;
 
@@ -74,7 +73,7 @@ struct RBNode(V)
     /**
      * Get the left child
      */
-    @property Node left()
+    @property inout(RBNode)* left() inout
     {
         return _left;
     }
@@ -82,7 +81,7 @@ struct RBNode(V)
     /**
      * Get the right child
      */
-    @property Node right()
+    @property inout(RBNode)* right() inout
     {
         return _right;
     }
@@ -90,7 +89,7 @@ struct RBNode(V)
     /**
      * Get the parent
      */
-    @property Node parent()
+    @property inout(RBNode)* parent() inout
     {
         return _parent;
     }
@@ -514,9 +513,9 @@ struct RBNode(V)
     /**
      * Return the leftmost descendant of this node.
      */
-    @property Node leftmost()
+    @property inout(RBNode)* leftmost() inout
     {
-        Node result = &this;
+        inout(RBNode)* result = &this;
         while(result._left !is null)
             result = result._left;
         return result;
@@ -525,9 +524,9 @@ struct RBNode(V)
     /**
      * Return the rightmost descendant of this node
      */
-    @property Node rightmost()
+    @property inout(RBNode)* rightmost() inout
     {
-        Node result = &this;
+        inout(RBNode)* result = &this;
         while(result._right !is null)
             result = result._right;
         return result;
@@ -539,9 +538,9 @@ struct RBNode(V)
      * You should never call this on the marker node, as it is assumed that
      * there is a valid next node.
      */
-    @property Node next()
+    @property inout(RBNode)* next() inout
     {
-        Node n = &this;
+        inout(RBNode)* n = &this;
         if(n.right is null)
         {
             while(!n.isLeftNode)
@@ -558,9 +557,9 @@ struct RBNode(V)
      * You should never call this on the leftmost node of the tree as it is
      * assumed that there is a valid previous node.
      */
-    @property Node prev()
+    @property inout(RBNode)* prev() inout
     {
-        Node n = &this;
+        inout(RBNode)* n = &this;
         if(n.left is null)
         {
             while(n.isLeftNode)
@@ -601,6 +600,16 @@ struct RBNode(V)
     }
 }
 
+//constness checks
+unittest
+{
+    const RBNode!int n;
+    static assert(is(typeof(n.leftmost)));
+    static assert(is(typeof(n.rightmost)));
+    static assert(is(typeof(n.next)));
+    static assert(is(typeof(n.prev)));
+}
+
 /**
  * Implementation of a $(LUCKY red-black tree) container.
  *
@@ -630,89 +639,6 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     import std.traits;
 
     alias _less = binaryFun!less;
-
-    // BUG: this must come first in the struct due to issue 2810
-
-    // add an element to the tree, returns the node added, or the existing node
-    // if it has already been added and allowDuplicates is false
-
-    private auto _add(Elem n)
-    {
-        Node result;
-        static if(!allowDuplicates)
-            bool added = true;
-
-        if(!_end.left)
-        {
-            _end.left = _begin = result = allocate(n);
-        }
-        else
-        {
-            Node newParent = _end.left;
-            Node nxt = void;
-            while(true)
-            {
-                if(_less(n, newParent.value))
-                {
-                    nxt = newParent.left;
-                    if(nxt is null)
-                    {
-                        //
-                        // add to right of new parent
-                        //
-                        newParent.left = result = allocate(n);
-                        break;
-                    }
-                }
-                else
-                {
-                    static if(!allowDuplicates)
-                    {
-                        if(!_less(newParent.value, n))
-                        {
-                            result = newParent;
-                            added = false;
-                            break;
-                        }
-                    }
-                    nxt = newParent.right;
-                    if(nxt is null)
-                    {
-                        //
-                        // add to right of new parent
-                        //
-                        newParent.right = result = allocate(n);
-                        break;
-                    }
-                }
-                newParent = nxt;
-            }
-            if(_begin.left)
-                _begin = _begin.left;
-        }
-
-        static if(allowDuplicates)
-        {
-            result.setColor(_end);
-            debug(RBDoChecks)
-                check();
-            ++_length;
-            return result;
-        }
-        else
-        {
-            import std.typecons : Tuple;
-
-            if(added)
-            {
-                ++_length;
-                result.setColor(_end);
-            }
-            debug(RBDoChecks)
-                check();
-            return Tuple!(bool, "added", Node, "n")(added, result);
-        }
-    }
 
     version(unittest)
     {
@@ -749,7 +675,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     alias Elem = T;
 
     // used for convenience
-    private alias Node = RBNode!Elem.Node;
+    private alias RBNode = .RBNode!Elem;
+    private alias Node = RBNode.Node;
 
     private Node   _end;
     private Node   _begin;
@@ -763,7 +690,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static private Node allocate()
     {
-        return new RBNode!Elem;
+        return new RBNode;
     }
 
     static private Node allocate(Elem v)
@@ -867,12 +794,12 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     // find a node based on an element value
-    private Node _find(Elem e)
+    private inout(RBNode)* _find(Elem e) inout
     {
         static if(allowDuplicates)
         {
-            Node cur = _end.left;
-            Node result = null;
+            inout(RBNode)* cur = _end.left;
+            inout(RBNode)* result = null;
             while(cur)
             {
                 if(_less(cur.value, e))
@@ -890,7 +817,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
         else
         {
-            Node cur = _end.left;
+            inout(RBNode)* cur = _end.left;
             while(cur)
             {
                 if(_less(cur.value, e))
@@ -903,6 +830,87 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             return null;
         }
     }
+
+    // add an element to the tree, returns the node added, or the existing node
+    // if it has already been added and allowDuplicates is false
+    private auto _add(Elem n)
+    {
+        Node result;
+        static if(!allowDuplicates)
+            bool added = true;
+
+        if(!_end.left)
+        {
+            _end.left = _begin = result = allocate(n);
+        }
+        else
+        {
+            Node newParent = _end.left;
+            Node nxt = void;
+            while(true)
+            {
+                if(_less(n, newParent.value))
+                {
+                    nxt = newParent.left;
+                    if(nxt is null)
+                    {
+                        //
+                        // add to right of new parent
+                        //
+                        newParent.left = result = allocate(n);
+                        break;
+                    }
+                }
+                else
+                {
+                    static if(!allowDuplicates)
+                    {
+                        if(!_less(newParent.value, n))
+                        {
+                            result = newParent;
+                            added = false;
+                            break;
+                        }
+                    }
+                    nxt = newParent.right;
+                    if(nxt is null)
+                    {
+                        //
+                        // add to right of new parent
+                        //
+                        newParent.right = result = allocate(n);
+                        break;
+                    }
+                }
+                newParent = nxt;
+            }
+            if(_begin.left)
+                _begin = _begin.left;
+        }
+
+        static if(allowDuplicates)
+        {
+            result.setColor(_end);
+            debug(RBDoChecks)
+                check();
+            ++_length;
+            return result;
+        }
+        else
+        {
+            import std.typecons : Tuple;
+
+            if(added)
+            {
+                ++_length;
+                result.setColor(_end);
+            }
+            debug(RBDoChecks)
+                check();
+            return Tuple!(bool, "added", Node, "n")(added, result);
+        }
+    }
+
 
     /**
      * Check if any elements exist in the container.  Returns $(D false) if at least
@@ -918,7 +926,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
         Complexity: $(BIGOH 1).
     +/
-    @property size_t length()
+    @property size_t length() const
     {
         return _length;
     }
@@ -983,7 +991,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
        Complexity: $(BIGOH log(n))
      +/
-    bool opBinaryRight(string op)(Elem e) if (op == "in")
+    bool opBinaryRight(string op)(Elem e) const if (op == "in")
     {
         return _find(e) !is null;
     }
@@ -998,18 +1006,18 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
      * Compares two trees for equality.
      *
-     * Complexity: $(BIGOH n*log(n))
+     * Complexity: $(BIGOH n)
      */
     override bool opEquals(Object rhs)
     {
         import std.algorithm : equal;
+
         RedBlackTree that = cast(RedBlackTree)rhs;
         if (that is null) return false;
 
         // If there aren't the same number of nodes, we can't be equal.
         if (this._length != that._length) return false;
 
-        // FIXME: use a more efficient algo (if one exists?)
         auto thisRange = this[];
         auto thatRange = that[];
         return equal!(function(Elem a, Elem b) => !_less(a,b) && !_less(b,a))
@@ -1024,10 +1032,11 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         auto t4 = new RedBlackTree(1,2,3,4,5);
         auto o = new Object();
 
-        assert(t1==t2);
-        assert(t1!=t3);
-        assert(t1!=t4);
-        assert(t1!=o);  // pathological case, must not crash
+        assert(t1 == t1);
+        assert(t1 == t2);
+        assert(t1 != t3);
+        assert(t1 != t4);
+        assert(t1 != o);  // pathological case, must not crash
     }
 
     /**
@@ -1054,6 +1063,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      * Insert a single element in the container.  Note that this does not
      * invalidate any ranges currently iterating the container.
      *
+     * Returns: The number of elements inserted.
+     *
      * Complexity: $(BIGOH log(n))
      */
     size_t stableInsert(Stuff)(Stuff stuff) if (isImplicitlyConvertible!(Stuff, Elem))
@@ -1072,6 +1083,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
      * Insert a range of elements in the container.  Note that this does not
      * invalidate any ranges currently iterating the container.
+     *
+     * Returns: The number of elements inserted.
      *
      * Complexity: $(BIGOH m * log(n))
      */
@@ -1783,4 +1796,12 @@ pure unittest
     auto rt4 = redBlackTree!string("hello", "hello");
     assert(rt4.length == 1);
     assert(array(rt4[]) == ["hello"]);
+}
+
+//constness checks
+unittest
+{
+    const rt1 = redBlackTree(5,4,3,2,1);
+    static assert(is(typeof(rt1.length)));
+    static assert(is(typeof(5 in rt1)));
 }

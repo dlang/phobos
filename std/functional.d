@@ -3,6 +3,51 @@
 /**
 Functions that manipulate other functions.
 
+This module provides functions for compile time function composition. These
+functions are helpful when constructing predicates for the algorithms in
+$(LINK2 std_algorithm.html, std.algorithm) or $(LINK2 std_range.html,
+std.range).
+
+$(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
+    $(TR $(TD $(D $(LREF adjoin)))
+        $(TD Joins a couple of functions into one that executes the original
+        functions independently and returns a tuple with all the results.
+    ))
+    $(TR $(TD $(D $(LREF compose)), $(D $(LREF pipe)))
+        $(TD Join a couple of functions into one that executes the original
+        functions one after the other, using one function's result for the next
+        function's argument.
+    ))
+    $(TR $(TD $(D $(LREF forward)))
+        $(TD Forwards function arguments while saving ref-ness.
+    ))
+    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+        $(TD Ready-made predicate functions to compare two values.
+    ))
+    $(TR $(TD $(D $(LREF memoize)))
+        $(TD Creates a function that caches its result for fast re-evalation.
+    ))
+    $(TR $(TD $(D $(LREF not)))
+        $(TD Creates a function that negates another.
+    ))
+    $(TR $(TD $(D $(LREF partial)))
+        $(TD Creates a function that binds the first argument of a given function
+        to a given value.
+    ))
+    $(TR $(TD $(D $(LREF reverseArgs)), $(D $(LREF binaryReverseArgs)))
+        $(TD Predicate that reverses the order of its arguments.
+    ))
+    $(TR $(TD $(D $(LREF toDelegate)))
+        $(TD Converts a callable to a delegate.
+    ))
+    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
+        $(TD Create a unary or binary function from a string. Most often
+        used when defining algorithms on ranges.
+    ))
+)
+
 Macros:
 
 WIKI = Phobos/StdFunctional
@@ -747,7 +792,7 @@ $(XREF typecons, Tuple) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
 
-Note: In the special case where where only a single function is provided
+Note: In the special case where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
@@ -1369,7 +1414,7 @@ template forward(args...)
 
     static if (args.length)
     {
-    	import std.algorithm.mutation : move;
+        import std.algorithm.mutation : move;
 
         alias arg = args[0];
         static if (__traits(isRef, arg))

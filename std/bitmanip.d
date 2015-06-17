@@ -28,7 +28,7 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import std.range.primitives;
-import std.system;
+public import std.system : Endian;
 import std.traits;
 
 version(unittest)
@@ -268,7 +268,10 @@ $(D uint*) as specified by the first argument, and is named x, as specified by t
 argument.
 
 Following arguments works the same way as $(D bitfield)'s. The bitfield must fit into the
-bits known to be zero because of the pointer alignement.
+bits known to be zero because of the pointer alignment.
+
+$(RED Warning: Don't use $(D taggedPointer) with pointers to garbage collected objects, as it will result in
+undefined behaviour. See $(LINK http://dlang.org/garbage.html) for details.)
 */
 
 template taggedPointer(T : T*, string name, Ts...) {
@@ -301,6 +304,9 @@ One can store a 2-bit integer there.
 
 The example above creates a tagged reference to an Object in the struct A. This expects the same parameters
 as $(D taggedPointer), except the first argument which must be a class type instead of a pointer type.
+
+$(RED Warning: Don't use $(D taggedClassRef) with references to garbage collected objects, as it will result in
+undefined behaviour. See $(LINK http://dlang.org/garbage.html) for details.)
 */
 
 template taggedClassRef(T, string name, Ts...) if(is(T == class)) {
@@ -3189,8 +3195,9 @@ unittest
 
     Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
-        endianness = The endianness to write the bytes in.
-        range = The range to write to.
+        endianness = The endianness to _write the bytes in.
+        range = The range to _write to.
+        value = The value to _write.
         index = The index to start writing to. If index is a pointer, then it
                 is updated to the index after the bytes read.
   +/
@@ -3535,7 +3542,8 @@ unittest
     Params:
         T     = The integral type to convert the first $(D T.sizeof) bytes to.
         endianness = The endianness to write the bytes in.
-        range = The range to append to.
+        range = The range to _append to.
+        value = The value to _append.
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
     if(canSwapEndianness!T && isOutputRange!(R, ubyte))

@@ -88,7 +88,7 @@ class OutBuffer
     /**********************************
      * put enables OutBuffer to be used as an OutputRange.
      */
-    alias write put;
+    alias put = write;
 
     /*************************************
      * Append data to the internal buffer.
@@ -269,7 +269,7 @@ class OutBuffer
         {
             version(Windows)
             {
-                count = _vsnprintf(p,psize,f,args);
+                count = vsnprintf(p,psize,f,args);
                 if (count != -1)
                     break;
                 psize *= 2;

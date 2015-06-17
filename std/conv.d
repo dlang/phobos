@@ -2973,12 +2973,19 @@ unittest
     ld = parse!real(s2);
     assert(s2.empty);
     x = *cast(longdouble *)&ld;
-    version (CRuntime_Microsoft)
-        ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
-    else version (Android)
-        ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+
+    static if(real.mant_dig == 64)
+    {
+        version (CRuntime_Microsoft)
+            ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+        else version (CRuntime_Bionic)
+            ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+        else
+            ld1 = strtold(s.ptr, null);
+    }
     else
         ld1 = strtold(s.ptr, null);
+
     x1 = *cast(longdouble *)&ld1;
     assert(x1 == x && ld1 == ld);
 
@@ -3664,12 +3671,9 @@ unittest
 
 
 /***************************************************************
-The $(D octal) facility is intended as an experimental facility to
-replace _octal literals starting with $(D '0'), which many find
-confusing. Using $(D octal!177) or $(D octal!"177") instead of $(D
-0177) as an _octal literal makes code clearer and the intent more
-visible. If use of this facility becomes predominant, a future
-version of the language may deem old-style _octal literals deprecated.
+The $(D octal) facility provides a means to declare a number in base 8.
+Using $(D octal!177) or $(D octal!"177") for 127 represented in octal
+(same as 0177 in C).
 
 The rules for strings are the usual for literals: If it can fit in an
 $(D int), it is an $(D int). Otherwise, it is a $(D long). But, if the
@@ -3677,6 +3681,9 @@ user specifically asks for a $(D long) with the $(D L) suffix, always
 give the $(D long). Give an unsigned iff it is asked for with the $(D
 U) or $(D u) suffix. _Octals created from integers preserve the type
 of the passed-in integral.
+
+See_Also:
+    $(LREF parse) for parsing octal strings at runtime.
  */
 @property int octal(string num)()
     if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
@@ -3955,7 +3962,7 @@ private template emplaceImpl(T)
             alias UArg = Unqual!Arg;
             alias E = ElementEncodingType!(typeof(T.init[]));
             alias UE = Unqual!E;
-            enum N = T.length;
+            enum n = T.length;
 
             static if (is(Arg : T))
             {
@@ -3965,9 +3972,11 @@ private template emplaceImpl(T)
                 else static if (is(UArg == UT))
                 {
                     import core.stdc.string : memcpy;
-                    memcpy(&chunk, &arg, T.sizeof);
+                    // This is known to be safe as the two values are the same
+                    // type and the source (arg) should be initialized
+                    () @trusted { memcpy(&chunk, &arg, T.sizeof); }();
                     static if (hasElaborateCopyConstructor!T)
-                        typeid(T).postblit(cast(void*)&chunk);
+                        _postblitRecurse(chunk);
                 }
                 else
                     .emplaceImpl!T(chunk, cast(T)arg);
@@ -3980,10 +3989,14 @@ private template emplaceImpl(T)
                 else static if (is(Unqual!(ElementEncodingType!Arg) == UE))
                 {
                     import core.stdc.string : memcpy;
-                    assert(N == chunk.length, "Array length missmatch in emplace");
-                    memcpy(cast(void*)&chunk, arg.ptr, T.sizeof);
+                    assert(n == chunk.length, "Array length missmatch in emplace");
+
+                    // This is unsafe as long as the length match is a
+                    // precondition and not an unconditional exception
+                    memcpy(&chunk, arg.ptr, T.sizeof);
+
                     static if (hasElaborateCopyConstructor!T)
-                        typeid(T).postblit(cast(void*)&chunk);
+                        _postblitRecurse(chunk);
                 }
                 else
                     .emplaceImpl!T(chunk, cast(E[])arg);
@@ -3996,12 +4009,16 @@ private template emplaceImpl(T)
                 else static if (is(UArg == Unqual!E))
                 {
                     import core.stdc.string : memcpy;
-                    //Note: We copy everything, and then postblit just once.
-                    //This is as exception safe as what druntime can provide us.
-                    foreach(i; 0 .. N)
-                        memcpy(cast(void*)&(chunk[i]), &arg, E.sizeof);
+
+                    foreach(i; 0 .. n)
+                    {
+                        // This is known to be safe as the two values are the same
+                        // type and the source (arg) should be initialized
+                        () @trusted { memcpy(&(chunk[i]), &arg, E.sizeof); }();
+                    }
+
                     static if (hasElaborateCopyConstructor!T)
-                        typeid(T).postblit(cast(void*)&chunk);
+                        _postblitRecurse(chunk);
                 }
                 else
                     //Alias this. Coerce.
@@ -4015,7 +4032,7 @@ private template emplaceImpl(T)
                 static if (!hasElaborateAssign!UT && is(typeof(chunk[] = arg)))
                     chunk[] = arg;
                 else
-                    foreach(i; 0 .. N)
+                    foreach(i; 0 .. n)
                         .emplaceImpl!E(chunk[i], arg);
             }
             else
@@ -4045,9 +4062,11 @@ private template emplaceImpl(T)
                 else
                 {
                     import core.stdc.string : memcpy;
-                    memcpy(&chunk, &args[0], T.sizeof);
+                    // This is known to be safe as the two values are the same
+                    // type and the source (args[0]) should be initialized
+                    () @trusted { memcpy(&chunk, &args[0], T.sizeof); }();
                     static if (hasElaborateCopyConstructor!T)
-                        typeid(T).postblit(&chunk);
+                        _postblitRecurse(chunk);
                 }
             }
             else
@@ -4181,12 +4200,12 @@ version(unittest) private struct __conv_EmplaceTest
 version(unittest) private class __conv_EmplaceTestClass
 {
     int i = 3;
-    this(int i)
+    this(int i) @nogc @safe pure nothrow
     {
         assert(this.i == 3 && i == 5);
         this.i = i;
     }
-    this(int i, ref int j)
+    this(int i, ref int j) @nogc @safe pure nothrow
     {
         assert(i == 5 && j == 6);
         this.i = i;
@@ -4970,7 +4989,7 @@ unittest //Constness
     emplaceRef!(IS[2])(ss, iss[]);
 }
 
-unittest
+pure nothrow @safe @nogc unittest
 {
     int i;
     emplaceRef(i);
@@ -4979,15 +4998,40 @@ unittest
     emplaceRef!int(i, 5);
 }
 
-private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
+// Test attribute propagation for UDTs
+pure nothrow @safe /* @nogc */ unittest
 {
-    import std.exception : enforce;
-    enforce!ConvException(chunk.length >= typeSize,
-        convFormat("emplace: Chunk size too small: %s < %s size = %s",
-        chunk.length, typeName, typeSize));
-    enforce!ConvException((cast(size_t) chunk.ptr) % typeAlignment == 0,
-        convFormat("emplace: Misaligned memory block (0x%X): it must be %s-byte aligned for type %s",
-        chunk.ptr, typeAlignment, typeName));
+    static struct Safe
+    {
+        this(this) pure nothrow @safe @nogc {}
+    }
+
+    Safe safe = void;
+    emplaceRef(safe, Safe());
+
+    Safe[1] safeArr = [Safe()];
+    Safe[1] uninitializedSafeArr = void;
+    emplaceRef(uninitializedSafeArr, safe);
+    emplaceRef(uninitializedSafeArr, safeArr);
+
+    static struct Unsafe
+    {
+        this(this) @system {}
+    }
+
+    Unsafe unsafe = void;
+    static assert(!__traits(compiles, emplaceRef(unsafe, Unsafe())));
+
+    Unsafe[1] unsafeArr = [Unsafe()];
+    Unsafe[1] uninitializedUnsafeArr = void;
+    static assert(!__traits(compiles, emplaceRef(uninitializedUnsafeArr, unsafe)));
+    static assert(!__traits(compiles, emplaceRef(uninitializedUnsafeArr, unsafeArr)));
+}
+
+private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
+{
+    assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
+    assert((cast(size_t)chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
 }
 
 /**
@@ -5011,7 +5055,7 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
     auto result = cast(T) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
-    (cast(byte[]) chunk)[0 .. classSize] = typeid(T).init[];
+    chunk[0 .. classSize] = typeid(T).init[];
 
     // Call the ctor if any
     static if (is(typeof(result.__ctor(args))))
@@ -5029,10 +5073,11 @@ T emplace(T, Args...)(void[] chunk, auto ref Args args)
     return result;
 }
 
-unittest
+@nogc pure nothrow unittest
 {
     int var = 6;
-    auto k = emplace!__conv_EmplaceTestClass(new void[__traits(classInstanceSize, __conv_EmplaceTestClass)], 5, var);
+    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
+    auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
     assert(k.i == 5);
     assert(var == 7);
 }
@@ -5295,15 +5340,18 @@ unittest
     Params:
         From  = The type to cast from. The programmer must ensure it is legal
                 to make this cast.
-        To    = The type to cast to
-        value = The value to cast. It must be of type $(D From),
-                otherwise a compile-time error is emitted.
-
-    Returns:
-        the value after the cast, returned by reference if possible
  */
 template castFrom(From)
 {
+    /**
+        Params:
+            To    = The type _to cast _to.
+            value = The value _to cast. It must be of type $(D From),
+                    otherwise a compile-time error is emitted.
+
+        Returns:
+            the value after the cast, returned by reference if possible.
+     */
     auto ref to(To, T)(auto ref T value) @system
     {
         static assert (
@@ -5319,38 +5367,230 @@ template castFrom(From)
 
         return cast(To) value;
     }
+
+    ///
+    unittest
+    {
+        // Regular cast, which has been verified to be legal by the programmer:
+        {
+            long x;
+            auto y = cast(int) x;
+        }
+
+        // However this will still compile if 'x' is changed to be a pointer:
+        {
+            long* x;
+            auto y = cast(int) x;
+        }
+
+        // castFrom provides a more reliable alternative to casting:
+        {
+            long x;
+            auto y = castFrom!long.to!int(x);
+        }
+
+        // Changing the type of 'x' will now issue a compiler error,
+        // allowing bad casts to be caught before it's too late:
+        {
+            long* x;
+            static assert (
+                !__traits(compiles, castFrom!long.to!int(x))
+            );
+
+            // if cast is still needed, must be changed to:
+            auto y = castFrom!(long*).to!int(x);
+        }
+    }
+}
+
+/**
+Check the correctness of a string for $(D hexString).
+The result is true if and only if the input string is composed of whitespace
+characters (\f\n\r\t\v lineSep paraSep nelSep) and
+an even number of hexadecimal digits (regardless of the case).
+*/
+private bool isHexLiteral(String)(in String hexData)
+{
+    import std.ascii : isHexDigit;
+    import std.uni : lineSep, paraSep, nelSep;
+    size_t i;
+    foreach(const dchar c; hexData)
+    {
+        switch (c)
+        {
+            case ' ':
+            case '\t':
+            case '\v':
+            case '\f':
+            case '\r':
+            case '\n':
+            case lineSep:
+            case paraSep:
+            case nelSep:
+                continue;
+
+            default:
+                break;
+        }
+        if (c.isHexDigit)
+            ++i;
+        else
+            return false;
+    }
+    return !(i & 1);
 }
 
 ///
 unittest
 {
-    // Regular cast, which has been verified to be legal by the programmer:
-    {
-        long x;
-        auto y = cast(int) x;
-    }
+    // test all the hex digits
+    static assert( ("0123456789abcdefABCDEF").isHexLiteral);
+    // empty or white strings are not valid
+    static assert( "\r\n\t".isHexLiteral);
+    // but are accepted if the count of hex digits is even
+    static assert( "A\r\n\tB".isHexLiteral);
+}
 
-    // However this will still compile if 'x' is changed to be a pointer:
-    {
-        long* x;
-        auto y = cast(int) x;
-    }
+unittest
+{
+    import std.ascii;
+    // empty/whites
+    static assert( "".isHexLiteral);
+    static assert( " \r".isHexLiteral);
+    static assert( whitespace.isHexLiteral);
+    static assert( ""w.isHexLiteral);
+    static assert( " \r"w.isHexLiteral);
+    static assert( ""d.isHexLiteral);
+    static assert( " \r"d.isHexLiteral);
+    static assert( "\u2028\u2029\u0085"d.isHexLiteral);
+    // odd x strings
+    static assert( !("5" ~ whitespace).isHexLiteral);
+    static assert( !"123".isHexLiteral);
+    static assert( !"1A3".isHexLiteral);
+    static assert( !"1 23".isHexLiteral);
+    static assert( !"\r\n\tC".isHexLiteral);
+    static assert( !"123"w.isHexLiteral);
+    static assert( !"1A3"w.isHexLiteral);
+    static assert( !"1 23"w.isHexLiteral);
+    static assert( !"\r\n\tC"w.isHexLiteral);
+    static assert( !"123"d.isHexLiteral);
+    static assert( !"1A3"d.isHexLiteral);
+    static assert( !"1 23"d.isHexLiteral);
+    static assert( !"\r\n\tC"d.isHexLiteral);
+    // even x strings with invalid charset
+    static assert( !"12gG".isHexLiteral);
+    static assert( !"2A  3q".isHexLiteral);
+    static assert( !"12gG"w.isHexLiteral);
+    static assert( !"2A  3q"w.isHexLiteral);
+    static assert( !"12gG"d.isHexLiteral);
+    static assert( !"2A  3q"d.isHexLiteral);
+    // valid x strings
+    static assert( ("5A" ~ whitespace).isHexLiteral);
+    static assert( ("5A 01A C FF de 1b").isHexLiteral);
+    static assert( ("0123456789abcdefABCDEF").isHexLiteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF").isHexLiteral);
+    static assert( ("5A 01A C FF de 1b"w).isHexLiteral);
+    static assert( ("0123456789abcdefABCDEF"w).isHexLiteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF"w).isHexLiteral);
+    static assert( ("5A 01A C FF de 1b"d).isHexLiteral);
+    static assert( ("0123456789abcdefABCDEF"d).isHexLiteral);
+    static assert( (" 012 34 5 6789 abcd ef\rAB\nCDEF"d).isHexLiteral);
+    // library version allows what's pointed by issue 10454
+    static assert( ("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF").isHexLiteral);
+}
 
-    // castFrom provides a more reliable alternative to casting:
-    {
-        long x;
-        auto y = castFrom!long.to!int(x);
-    }
+/**
+Converts a hex literal to a string at compile time.
 
-    // Changing the type of 'x' will now issue a compiler error,
-    // allowing bad casts to be caught before it's too late:
-    {
-        long* x;
-        static assert (
-            !__traits(compiles, castFrom!long.to!int(x))
-        );
+Takes a string made of hexadecimal digits and returns
+the matching string by converting each pair of digits to a character.
+The input string can also include white characters, which can be used
+to keep the literal string readable in the source code.
 
-        // if cast is still needed, must be changed to:
-        auto y = castFrom!(long*).to!int(x);
+The function is intended to replace the hexadecimal literal strings
+starting with $(D 'x'), which could be removed to simplify the core language.
+
+Params:
+    hexData = string to be converted.
+
+Returns:
+    a $(D string), a $(D wstring) or a $(D dstring), according to the type of hexData.
+ */
+template hexString(string hexData)
+if (hexData.isHexLiteral)
+{
+    immutable hexString = hexStrImpl(hexData);
+}
+
+/// ditto
+template hexString(wstring hexData)
+if (hexData.isHexLiteral)
+{
+    immutable hexString = hexStrImpl(hexData);
+}
+
+/// ditto
+template hexString(dstring hexData)
+if (hexData.isHexLiteral)
+{
+    immutable hexString = hexStrImpl(hexData);
+}
+
+///
+unittest
+{
+    // conversion at compile time
+    auto string1 = hexString!"304A314B";
+    assert(string1 == "0J1K");
+    auto string2 = hexString!"304A314B"w;
+    assert(string2 == "0J1K"w);
+    auto string3 = hexString!"304A314B"d;
+    assert(string3 == "0J1K"d);
+}
+
+/*
+    Takes a hexadecimal string literal and returns its representation.
+    hexData is granted to be a valid string by the caller.
+    C is granted to be a valid char type by the caller.
+*/
+@safe nothrow pure
+private auto hexStrImpl(String)(String hexData)
+{
+    import std.ascii;
+    alias C = Unqual!(ElementEncodingType!String);
+    C[] result;
+    result.length = hexData.length / 2;
+    size_t cnt;
+    ubyte v;
+    foreach(c; hexData)
+    {
+        if (c.isHexDigit)
+        {
+            ubyte x;
+            if (c >= '0' && c <= '9')
+                x = cast(ubyte)(c - '0');
+            else if (c >= 'a' && c <= 'f')
+                x = cast(ubyte)(c - ('a' - 10));
+            else if (c >= 'A' && c <= 'F')
+                x = cast(ubyte)(c - ('A' - 10));
+            if (cnt & 1)
+            {
+                v = cast(ubyte)((v << 4) | x);
+                result[cnt / 2] = v;
+            }
+            else
+                v = x;
+            ++cnt;
+        }
     }
+    result.length = cnt / 2;
+    return result;
+}
+
+unittest
+{
+    // compile time
+    assert(hexString!"46 47 48 49 4A 4B" == "FGHIJK");
+    assert(hexString!"30\r\n\t\f\v31 32 33 32 31 30" == "0123210");
+    assert(hexString!"ab cd" == hexString!"ABCD");
 }

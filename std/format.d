@@ -3,11 +3,47 @@
 /**
    This module implements the formatting functionality for strings and
    I/O. It's comparable to C99's $(D vsprintf()) and uses a similar
-   format encoding scheme.
+   _format encoding scheme.
 
-   For an introductory look at $(B std.format)'s capabilities and how to use
+   For an introductory look at $(B std._format)'s capabilities and how to use
    this module see the dedicated
    $(LINK2 http://wiki.dlang.org/Defining_custom_print_format_specifiers, DWiki article).
+
+   This module centers around two functions:
+
+$(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
+    $(TR $(TD $(D $(LREF formattedRead)))
+        $(TD Reads values according to the _format string from an InputRange.
+    ))
+    $(TR $(TD $(D $(LREF formattedWrite)))
+        $(TD Formats its arguments according to the _format string and puts them
+        to an OutputRange.
+    ))
+)
+
+   Please see the documentation of function $(D $(LREF formattedWrite)) for a
+   description of the _format string.
+
+   Two functions have been added for convenience:
+
+$(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
+    $(TR $(TD $(D $(LREF _format)))
+        $(TD Returns a GC-allocated string with the formatting result.
+    ))
+    $(TR $(TD $(D $(LREF sformat)))
+        $(TD Puts the formatting result into a preallocated array.
+    ))
+)
+
+   These two functions are publicly imported by $(LINK2 std_string.html,
+   std.string) to be easily available.
+
+   The functions $(D $(LREF formatValue)) and $(D $(LREF unformatValue)) are
+   used for the plumbing.
 
    Macros: WIKI = Phobos/StdFormat
 
@@ -71,7 +107,7 @@ private alias enforceFmt = enforceEx!FormatException;
    Interprets variadic argument list $(D args), formats them according
    to $(D fmt), and sends the resulting characters to $(D w). The
    encoding of the output is the same as $(D Char). The type $(D Writer)
-   must satisfy $(XREF range,isOutputRange!(Writer, Char)).
+   must satisfy $(D $(XREF_PACK range,primitives,isOutputRange)!(Writer, Char)).
 
    The variadic arguments are normally consumed in order. POSIX-style
    $(WEB opengroup.org/onlinepubs/009695399/functions/printf.html,
@@ -309,7 +345,7 @@ $(I FormatChar):
 
     Examples:
     -------------------------
-    import core.stdc.stdio;
+    import std.array;
     import std.format;
 
     void main()
@@ -1433,10 +1469,13 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     // Forward on to formatIntegral to handle both U and const(U)
     // Saves duplication of code for both versions.
-    static if (isSigned!U)
-        formatIntegral(w, cast( long) val, f, base, Unsigned!U.max);
+    static if (is(ucent) && (is(U == cent) || is(U == ucent)))
+        alias C = U;
+    else static if (isSigned!U)
+        alias C = long;
     else
-        formatIntegral(w, cast(ulong) val, f, base, U.max);
+        alias C = ulong;
+    formatIntegral(w, cast(C) val, f, base, Unsigned!U.max);
 }
 
 ///
@@ -1462,10 +1501,13 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
     }
 
     // All unsigned integral types should fit in ulong.
-    formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
+    static if (is(ucent) && is(typeof(arg) == ucent))
+        formatUnsigned(w, (cast(ucent) arg) & mask, fs, base, negative);
+    else
+        formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
 }
 
-private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Char fs, uint base, bool negative)
+private void formatUnsigned(Writer, T, Char)(Writer w, T arg, ref FormatSpec!Char fs, uint base, bool negative)
 {
     if (fs.precision == fs.UNSPECIFIED)
     {
@@ -1709,7 +1751,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
     }
     else
-        alias val tval;
+        alias tval = val;
     if (fs.spec == 's') fs.spec = 'g';
     char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] sprintfSpec = void;
@@ -1763,7 +1805,7 @@ unittest
         formatTest( to!(immutable T)(5.5), "5.5" );
 
         // bionic doesn't support lower-case string formatting of nan yet
-        version(Android) { formatTest( T.nan, "NaN" ); }
+        version(CRuntime_Bionic) { formatTest( T.nan, "NaN" ); }
         else { formatTest( T.nan, "nan" ); }
     }
 }
@@ -3669,7 +3711,7 @@ unittest
     * specify what the hex digit before the decimal point is for
     * %A.  */
 
-    version (linux)
+    version (CRuntime_Glibc)
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
                 stream.data);
@@ -3686,10 +3728,11 @@ unittest
     }
     else version (CRuntime_Microsoft)
     {
-        assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
+        assert(stream.data == "1.67 -0X1.47AE14P+0 nan"
+            || stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", // MSVCRT 14+ (VS 2015)
                 stream.data);
     }
-    else version (Android)
+    else version (CRuntime_Bionic)
     {
         // bionic doesn't support hex formatting of floating point numbers
         // or lower-case string formatting of nan yet, but it was committed
@@ -3722,8 +3765,9 @@ unittest
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
     version (CRuntime_Microsoft)
-        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
-    else version (Android)
+        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2"
+            || stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB860000000P+2"); // MSVCRT 14+ (VS 2015)
+    else version (CRuntime_Bionic)
     {
         // bionic doesn't support hex formatting of floating point numbers,
         // but it was committed recently (April 2014):
@@ -5348,10 +5392,10 @@ void doFormat()(scope void delegate(dchar) putc, TypeInfo[] arguments, va_list a
         {
             if (typeid(valti).name.length == 18 &&
                     typeid(valti).name[9..18] == "Invariant")
-                valti = (cast(TypeInfo_Invariant)valti).next;
+                valti = (cast(TypeInfo_Invariant)valti).base;
             else if (typeid(valti).name.length == 14 &&
                     typeid(valti).name[9..14] == "Const")
-                valti = (cast(TypeInfo_Const)valti).next;
+                valti = (cast(TypeInfo_Const)valti).base;
             else
                 break;
         }
@@ -6204,8 +6248,9 @@ unittest
     version (MinGW)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     else version (CRuntime_Microsoft)
-        assert(s == "1.67 -0X1.47AE14P+0 nan", s);
-    else version (Android)
+        assert(s == "1.67 -0X1.47AE14P+0 nan"
+            || s == "1.67 -0X1.47AE147AE147BP+0 nan", s); // MSVCRT 14+ (VS 2015)
+    else version (CRuntime_Bionic)
     {
         // bionic doesn't support hex formatting of floating point numbers
         // or lower-case string formatting of nan yet, but it was committed
@@ -6506,7 +6551,7 @@ unittest
 /*****************************************************
  * Format arguments into a string.
  *
- * Params: fmt  = Format string. For detailed specification, see $(XREF format,formattedWrite).
+ * Params: fmt  = Format string. For detailed specification, see $(XREF _format,formattedWrite).
  *         args = Variadic list of arguments to format into returned string.
  */
 string format(Char, Args...)(in Char[] fmt, Args args)
@@ -6552,12 +6597,12 @@ unittest
 }
 
 /*****************************************************
- * Format arguments into buffer <i>buf</i> which must be large
+ * Format arguments into buffer $(I buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
  * Returns: The slice of $(D buf) containing the formatted string.
  *
  *  $(RED sformat's current implementation has been replaced with $(LREF xsformat)'s
- *        implementation. in November 2012.
+ *        implementation in November 2012.
  *        This is seamless for most code, but it makes it so that the only
  *        argument that can be a format string is the first one, so any
  *        code which used multiple format strings has broken. Please change
