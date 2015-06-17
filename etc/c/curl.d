@@ -280,7 +280,7 @@ enum CurlFnMAtchFunc {
 
 /** callback type for wildcard downloading pattern matching. If the
    string matches the pattern, return CURL_FNMATCHFUNC_MATCH value, etc. */
-alias int  function(void *ptr, char *pattern, char *string)curl_fnmatch_callback;
+alias int  function(void *ptr, in char *pattern, in char *string)curl_fnmatch_callback;
 
 /// seek whence...
 enum CurlSeekPos {
@@ -377,7 +377,7 @@ alias void  function(void *ptr)curl_free_callback;
 /// ditto
 alias void * function(void *ptr, size_t size)curl_realloc_callback;
 /// ditto
-alias char * function(char *str)curl_strdup_callback;
+alias char * function(in char *str)curl_strdup_callback;
 /// ditto
 alias void * function(size_t nmemb, size_t size)curl_calloc_callback;
 
@@ -583,8 +583,8 @@ enum CurlKHType
 ///
 extern (C) struct curl_khkey
 {
-    char *key; /** points to a zero-terminated string encoded with base64
-                  if len is zero, otherwise to the "raw" data */
+    const(char) *key; /** points to a zero-terminated string encoded with base64
+                         if len is zero, otherwise to the "raw" data */
     size_t len; ///
     CurlKHType keytype; ///
 }
@@ -1360,9 +1360,9 @@ alias int curl_TimeCond;
 /** curl_strequal() and curl_strnequal() are subject for removal in a future
    libcurl, see lib/README.curlx for details */
 extern (C) {
-int  curl_strequal(char *s1, char *s2);
+int  curl_strequal(in char *s1, in char *s2);
 /// ditto
-int  curl_strnequal(char *s1, char *s2, size_t n);
+int  curl_strnequal(in char *s1, in char *s2, size_t n);
 }
 enum CurlForm {
     nothing, /********** the first one is unused ************/
@@ -1394,7 +1394,7 @@ alias int CURLformoption;
 extern (C) struct curl_forms
 {
     CURLformoption option;      ///
-    char *value;        ///
+    const(char) *value;        ///
 }
 
 /** use this for multipart formpost building */
@@ -1448,7 +1448,7 @@ CURLFORMcode  curl_formadd(curl_httppost **httppost, curl_httppost **last_post,.
  * Should return the buffer length passed to it as the argument "len" on
  *   success.
  */
-alias size_t  function(void *arg, char *buf, size_t len)curl_formget_callback;
+alias size_t  function(void *arg, in char *buf, size_t len)curl_formget_callback;
 
 /**
  * Name: curl_formget()
@@ -1498,10 +1498,10 @@ char * curl_version();
  * %XX versions). This function returns a new allocated string or NULL if an
  * error occurred.
  */
-char * curl_easy_escape(CURL *handle, char *string, int length);
+char * curl_easy_escape(CURL *handle, in char *string, int length) @trusted;
 
 /** the previous version: */
-char * curl_escape(char *string, int length);
+char * curl_escape(in char *string, int length) @trusted;
 
 
 /**
@@ -1515,10 +1515,10 @@ char * curl_escape(char *string, int length);
  * Conversion Note: On non-ASCII platforms the ASCII %XX codes are
  * converted into the host encoding.
  */
-char * curl_easy_unescape(CURL *handle, char *string, int length, int *outlength);
+char * curl_easy_unescape(CURL *handle, in char *string, int length, int *outlength) @trusted;
 
 /** the previous version */
-char * curl_unescape(char *string, int length);
+char * curl_unescape(in char *string, int length) @trusted;
 
 /**
  * Name: curl_free()
@@ -1812,24 +1812,24 @@ enum CURLVERSION_NOW = CurlVer.fourth;
 extern (C) struct _N28
 {
   CURLversion age;     /** age of the returned struct */
-  char *version_;      /** LIBCURL_VERSION */
+  const(char) *version_;      /** LIBCURL_VERSION */
   uint version_num;    /** LIBCURL_VERSION_NUM */
-  char *host;          /** OS/host/cpu/machine when configured */
+  const(char) *host;          /** OS/host/cpu/machine when configured */
   int features;        /** bitmask, see defines below */
-  char *ssl_version;   /** human readable string */
+  const(char) *ssl_version;   /** human readable string */
   c_long ssl_version_num; /** not used anymore, always 0 */
-  char *libz_version;     /** human readable string */
+  const(char) *libz_version;     /** human readable string */
   /** protocols is terminated by an entry with a NULL protoname */
-  char **protocols;
+  const(char) **protocols;
   /** The fields below this were added in CURLVERSION_SECOND */
-  char *ares;
+  const(char) *ares;
   int ares_num;
   /** This field was added in CURLVERSION_THIRD */
-  char *libidn;
+  const(char) *libidn;
   /** These field were added in CURLVERSION_FOURTH */
   /** Same as '_libiconv_version' if built with HAVE_ICONV */
   int iconv_ver_num;
-  char *libssh_version;  /** human readable string */
+  const(char) *libssh_version;  /** human readable string */
 }
 ///
 alias _N28 curl_version_info_data;

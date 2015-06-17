@@ -6,7 +6,7 @@ This module defines generic containers.
 Construction:
 
 To implement the different containers both struct and class based
-approaches have been used. $(XREF container_util, make) allows for
+approaches have been used. $(XREF_PACK _container,util,make) allows for
 uniform construction with either approach.
 
 ---
@@ -84,7 +84,8 @@ array1 = array2;
 array1.removeBack();
 assert(array2.empty);
 ---
-It is therefore recommended to always construct containers using $(XREF container_util, make).
+It is therefore recommended to always construct containers using
+$(XREF_PACK _container,util,make).
 
 This is in fact necessary to put containers into another _container.
 For example, to construct an $(D Array) of ten empty $(D Array)s, use

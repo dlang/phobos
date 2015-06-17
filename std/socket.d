@@ -169,7 +169,7 @@ string formatSocketError(int err) @trusted
     {
         char[80] buf;
         const(char)* cs;
-        version (linux)
+        version (CRuntime_Glibc)
         {
             cs = strerror_r(err, buf.ptr, buf.length);
         }
@@ -197,7 +197,7 @@ string formatSocketError(int err) @trusted
             else
                 return "Socket error " ~ to!string(err);
         }
-        else version (Android)
+        else version (CRuntime_Bionic)
         {
             auto errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
@@ -403,37 +403,18 @@ enum SocketType: int
 /**
  * Protocol
  */
-version(Android)
+enum ProtocolType: int
 {
-    // no GGP on Android
-    enum ProtocolType: int
-    {
-        IP =    IPPROTO_IP,         /// Internet Protocol version 4
-        ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
-        IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
-        TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
-        PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
-        UDP =   IPPROTO_UDP,        /// User Datagram Protocol
-        IDP =   IPPROTO_IDP,        /// Xerox NS protocol
-        RAW =   IPPROTO_RAW,        /// Raw IP packets
-        IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
-    }
-}
-else
-{
-    enum ProtocolType: int
-    {
-        IP =    IPPROTO_IP,         /// Internet Protocol version 4
-        ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
-        IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
-        GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
-        TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
-        PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
-        UDP =   IPPROTO_UDP,        /// User Datagram Protocol
-        IDP =   IPPROTO_IDP,        /// Xerox NS protocol
-        RAW =   IPPROTO_RAW,        /// Raw IP packets
-        IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
-    }
+    IP =    IPPROTO_IP,         /// Internet Protocol version 4
+    ICMP =  IPPROTO_ICMP,       /// Internet Control Message Protocol
+    IGMP =  IPPROTO_IGMP,       /// Internet Group Management Protocol
+    GGP =   IPPROTO_GGP,        /// Gateway to Gateway Protocol
+    TCP =   IPPROTO_TCP,        /// Transmission Control Protocol
+    PUP =   IPPROTO_PUP,        /// PARC Universal Packet Protocol
+    UDP =   IPPROTO_UDP,        /// User Datagram Protocol
+    IDP =   IPPROTO_IDP,        /// Xerox NS protocol
+    RAW =   IPPROTO_RAW,        /// Raw IP packets
+    IPV6 =  IPPROTO_IPV6,       /// Internet Protocol version 6
 }
 
 
@@ -517,7 +498,7 @@ class Protocol
 
 unittest
 {
-    // getprotobyname,number are unimplemented on Android
+    // getprotobyname,number are unimplemented in bionic
     softUnittest({
         Protocol proto = new Protocol;
         assert(proto.getProtocolByType(ProtocolType.TCP));
@@ -1622,6 +1603,17 @@ public:
         sin.sin_port = htons(port);
     }
 
+    /**
+     * Construct a new $(D InternetAddress).
+     * Params:
+     *   addr = A sockaddr_in as obtained from lower-level API calls such as getifaddrs.
+     */
+    this(sockaddr_in addr) pure nothrow @nogc
+    {
+        assert(addr.sin_family == AddressFamily.INET);
+        sin = addr;
+    }
+
     /// Human readable string representing the IPv4 address in dotted-decimal form.
     override string toAddrString() @trusted const
     {
@@ -1709,6 +1701,18 @@ unittest
     softUnittest({
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
+    });
+
+    softUnittest({
+        // test construction from a sockaddr_in
+        sockaddr_in sin;
+
+        sin.sin_addr.s_addr = htonl(0x7F_00_00_01);  // 127.0.0.1
+        sin.sin_family = AddressFamily.INET;
+        sin.sin_port = htons(80);
+
+        const InternetAddress ia = new InternetAddress(sin);
+        assert(ia.toString() == "127.0.0.1:80");
     });
 
     softUnittest({
@@ -1870,7 +1874,18 @@ public:
         sin6.sin6_port = htons(port);
     }
 
-    /**
+     /**
+     * Construct a new $(D Internet6Address).
+     * Params:
+     *   addr = A sockaddr_in6 as obtained from lower-level API calls such as getifaddrs.
+     */
+    this(sockaddr_in6 addr) pure nothrow @nogc
+    {
+        assert(addr.sin6_family == AddressFamily.INET6);
+        sin6 = addr;
+    }
+
+   /**
      * Parse an IPv6 host address string as described in RFC 2373, and return the
      * address.
      * Throws: $(D SocketException) on error.
@@ -1894,25 +1909,60 @@ unittest
         const Internet6Address ia = new Internet6Address("::1", 80);
         assert(ia.toString() == "[::1]:80");
     });
+
+    softUnittest({
+        // test construction from a sockaddr_in6
+        sockaddr_in6 sin;
+
+        sin.sin6_addr.s6_addr = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];  // [::1]
+        sin.sin6_family = AddressFamily.INET6;
+        sin.sin6_port = htons(80);
+
+        const Internet6Address ia = new Internet6Address(sin);
+        assert(ia.toString() == "[::1]:80");
+    });
 }
 
 
 version(StdDdoc)
 {
+    static if (!is(sockaddr_un))
+    {
+        // This exists only to allow the constructor taking
+        // a sockaddr_un to be compilable for documentation
+        // on platforms that don't supply a sockaddr_un.
+        struct sockaddr_un
+        {
+        }
+    }
+
     /**
      * $(D UnixAddress) encapsulates an address for a Unix domain socket
      * ($(D AF_UNIX)). Available only on supported systems.
      */
     class UnixAddress: Address
     {
+        private this() pure nothrow @nogc {}
+
         /// Construct a new $(D UnixAddress) from the specified path.
-        this(in char[] path);
+        this(in char[] path) { }
+
+        /**
+         * Construct a new $(D UnixAddress).
+         * Params:
+         *   addr = A sockaddr_un as obtained from lower-level API calls.
+         */
+        this(sockaddr_un addr) pure nothrow @nogc { }
 
         /// Get the underlying _path.
-        @property string path() const;
+        @property string path() const { return null; }
 
         /// ditto
-        override string toString() const;
+        override string toString() const { return null; }
+
+        override @property sockaddr* name() { return null; }
+        override @property const(sockaddr)* name() const { return null; }
+        override @property socklen_t nameLen() const { return 0; }
     }
 }
 else
@@ -1921,45 +1971,53 @@ static if (is(sockaddr_un))
     class UnixAddress: Address
     {
     protected:
-        sockaddr_un* sun;
-        socklen_t len;
-
+        struct
+        {
+        align (1):
+            sockaddr_un sun;
+            char unused = '\0'; // placeholder for a terminating '\0'
+        }
 
         this() pure nothrow @nogc
         {
+            sun.sun_family = AddressFamily.UNIX;
+            sun.sun_path = '?';
         }
-
 
     public:
         override @property sockaddr* name()
         {
-            return cast(sockaddr*)sun;
+            return cast(sockaddr*)&sun;
         }
 
         override @property const(sockaddr)* name() const
         {
-            return cast(const(sockaddr)*)sun;
+            return cast(const(sockaddr)*)&sun;
         }
 
-
-        override @property socklen_t nameLen() const
+        override @property socklen_t nameLen() @trusted const
         {
-            return len;
+            return cast(socklen_t) (sockaddr_un.init.sun_path.offsetof +
+                strlen(cast(const(char*)) sun.sun_path.ptr) + 1);
         }
 
-
-        this(in char[] path) @trusted pure nothrow
+        this(in char[] path) @trusted pure
         {
-            len = cast(socklen_t)(sockaddr_un.init.sun_path.offsetof + path.length + 1);
-            sun = cast(sockaddr_un*) (new ubyte[len]).ptr;
-            sun.sun_family = AF_UNIX;
+            enforce(path.length <= sun.sun_path.sizeof, new SocketParameterException("Path too long"));
+            sun.sun_family = AddressFamily.UNIX;
             sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
         }
 
-        @property string path() const pure
+        this(sockaddr_un addr) pure nothrow @nogc
         {
-            return to!string(sun.sun_path.ptr);
+            assert(addr.sun_family == AddressFamily.UNIX);
+            sun = addr;
+        }
+
+        @property string path() @trusted const pure
+        {
+            return to!string(cast(const(char)*)sun.sun_path.ptr);
         }
 
         override string toString() const pure
@@ -1984,6 +2042,7 @@ static if (is(sockaddr_un))
 
         listener.bind(address);
         scope(exit) () @trusted { remove(name.tempCString()); } ();
+        assert(listener.localAddress.toString == name);
 
         listener.listen(1);
 
@@ -2229,7 +2288,8 @@ public:
                 set.length *= 2;
                 set.length = set.capacity;
             }
-            fds[count++] = s;
+            ++count;
+            fds[$-1] = s;
         }
         else
         {
@@ -2446,39 +2506,19 @@ unittest // Issue 14012, 14013
 }
 
 /// The level at which a socket option is defined:
-version(Android)
+enum SocketOptionLevel: int
 {
-    // no GGP on Android
-    enum SocketOptionLevel: int
-    {
-        SOCKET =  SOL_SOCKET,               /// Socket level
-        IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
-        ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
-        IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
-        TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
-        PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
-        UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
-        IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
-        RAW =     ProtocolType.RAW,         /// Raw IP packet level
-        IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
-    }
-}
-else
-{
-    enum SocketOptionLevel: int
-    {
-        SOCKET =  SOL_SOCKET,               /// Socket level
-        IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
-        ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
-        IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
-        GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
-        TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
-        PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
-        UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
-        IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
-        RAW =     ProtocolType.RAW,         /// Raw IP packet level
-        IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
-    }
+    SOCKET =  SOL_SOCKET,               /// Socket level
+    IP =      ProtocolType.IP,          /// Internet Protocol version 4 level
+    ICMP =    ProtocolType.ICMP,        /// Internet Control Message Protocol level
+    IGMP =    ProtocolType.IGMP,        /// Internet Group Management Protocol level
+    GGP =     ProtocolType.GGP,         /// Gateway to Gateway Protocol level
+    TCP =     ProtocolType.TCP,         /// Transmission Control Protocol level
+    PUP =     ProtocolType.PUP,         /// PARC Universal Packet Protocol level
+    UDP =     ProtocolType.UDP,         /// User Datagram Protocol level
+    IDP =     ProtocolType.IDP,         /// Xerox NS protocol level
+    RAW =     ProtocolType.RAW,         /// Raw IP packet level
+    IPV6 =    ProtocolType.IPV6,        /// Internet Protocol version 6 level
 }
 
 /// _Linger information for use with SocketOption.LINGER.
@@ -3405,6 +3445,13 @@ public:
         Address result;
         switch(_family)
         {
+        static if (is(sockaddr_un))
+        {
+            case AddressFamily.UNIX:
+                result = new UnixAddress;
+                break;
+        }
+
         case AddressFamily.INET:
             result = new InternetAddress;
             break;

@@ -166,6 +166,12 @@ public struct UUID
                 179, 189, 251, 70])._toString() == "8ab3060e-2cba-4f23-b74c-b52db3bdfb46");
         }
 
+        // Reinterpret the UUID as an array of some other primitive.
+        @trusted ref T[16 / T.sizeof] asArrayOf(T)() return
+        if (isIntegral!T)
+        {
+            return *cast(typeof(return)*)&data;
+        }
 
     public:
         /**
@@ -1060,9 +1066,9 @@ unittest
  * This function is not supported at compile time.
  *
  */
-@trusted UUID randomUUID()
+@safe UUID randomUUID()
 {
-    import std.random : rndGen, Mt19937;
+    import std.random : rndGen;
     return randomUUID(rndGen);
 }
 
@@ -1074,18 +1080,22 @@ unittest
  *      randomGen = uniform RNG
  * See_Also: $(XREF random, isUniformRNG)
  */
-@trusted UUID randomUUID(RNG)(ref RNG randomGen) if(isIntegral!(typeof(RNG.front)))
+UUID randomUUID(RNG)(ref RNG randomGen)
+if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
     import std.random : isUniformRNG;
-    static assert(isUniformRNG!RNG, "randomGen must be an uniform RNG");
-    enum size_t elemSize = typeof(RNG.front).sizeof;
-    static assert(elemSize <= 16);
+    static assert (isUniformRNG!RNG, "randomGen must be a uniform RNG");
+
+    alias E = ElementEncodingType!RNG;
+    enum size_t elemSize = E.sizeof;
+    static assert (elemSize <= 16);
+    static assert (16 % elemSize == 0);
+
     UUID u;
-    for(size_t i; i < 16; i += elemSize)
+    foreach (ref E e ; u.asArrayOf!E())
     {
+        e = randomGen.front;
         randomGen.popFront();
-        immutable randomValue = randomGen.front;
-        u.data[i .. i + elemSize] = (*cast(ubyte[elemSize]*)&randomValue)[];
     }
 
     //set variant
@@ -1102,7 +1112,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.random : Xorshift192, unpredictableSeed;
 
@@ -1122,13 +1132,13 @@ unittest
  * to something else, this assert and the randomUUID function
  * have to be updated.
  */
-unittest
+@safe unittest
 {
     import std.random : rndGen, Mt19937;
     static assert(is(typeof(rndGen) == Mt19937));
 }
 
-unittest
+@safe unittest
 {
     import std.random : Xorshift192, unpredictableSeed;
     //simple call

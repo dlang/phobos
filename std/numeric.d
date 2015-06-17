@@ -783,7 +783,8 @@ public:
 /**  Find a real root of a real function f(x) via bracketing.
  *
  * Given a function $(D f) and a range $(D [a..b]) such that $(D f(a))
- * and $(D f(b)) have opposite signs, returns the value of $(D x) in
+ * and $(D f(b)) have opposite signs or at least one of them equals ±0,
+ * returns the value of $(D x) in
  * the range which is closest to a root of $(D f(x)).  If $(D f(x))
  * has more than one root in the range, one will be chosen
  * arbitrarily.  If $(D f(x)) returns NaN, NaN will be returned;
@@ -812,7 +813,13 @@ T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
         is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
-    auto r = findRoot(f, a, b, f(a), f(b), tolerance);
+    immutable fa = f(a);
+    if(fa == 0)
+        return a;
+    immutable fb = f(b);
+    if(fb == 0)
+        return b;
+    immutable r = findRoot(f, a, b, fa, fb, tolerance);
     // Return the first value if it is smaller or NaN
     return !(fabs(r[2]) > fabs(r[3])) ? r[0] : r[1];
 }
@@ -838,8 +845,8 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  *
  * fax = Value of $(D f(ax)).
  *
- * fbx = Value of $(D f(bx)). ($(D f(ax)) and $(D f(bx)) are commonly
- * known in advance.)
+ * fbx = Value of $(D f(bx)). $(D fax) and $(D fbx) should have opposite signs.
+ * ($(D f(ax)) and $(D f(bx)) are commonly known in advance.)
  *
  *
  * tolerance = Defines an early termination condition. Receives the
@@ -1163,7 +1170,7 @@ whileloop:
 }
 
 ///ditto
-Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
+Tuple!(T, T, R, R) findRoot(T, R, DF)(scope DF f, in T ax, in T bx, in R fax, in R fbx)
 {
     return findRoot(f, ax, bx, fax, fbx, (T a, T b) => false);
 }
@@ -1380,6 +1387,9 @@ nothrow unittest
    printf("POWER TOTAL = %d avg = %f ", powercalls,
         (1.0*powercalls)/powerProblems);
 */
+    //Issue 14231
+    auto xp = findRoot((float x) => x, 0f, 1f);
+    auto xn = findRoot((float x) => x, -1f, -0f);
 }
 
 //regression control

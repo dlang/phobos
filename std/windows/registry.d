@@ -64,36 +64,38 @@ private
 
 /* ************* Exceptions *************** */
 
-/**
- */
-class Win32Exception : Exception
+// Do not use. Left for compatibility.
+class Win32Exception : WindowsException
 {
-    int error;
-
-    @safe pure nothrow
+    @safe
     this(string message, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
-        super(message, fn, ln, next);
+        super(0, message, fn, ln);
     }
 
-    @safe pure
+    @safe
     this(string message, int errnum, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
-        super(text(message, " (", errnum, ")"), fn, ln, next);
-        error = errnum;
+        super(errnum, message, fn, ln);
     }
+
+    @property int error() { return super.code; }
 }
 
-unittest {
+version(unittest) import std.string : startsWith, endsWith;
+
+unittest
+{
     // Test that we can throw and catch one by its own type
     string message = "Test W1";
 
     auto e = collectException!Win32Exception(
         enforce(false, new Win32Exception(message)));
-    assert(e.msg == message);
+    assert(e.msg.startsWith(message));
 }
 
-unittest {
+unittest
+{
     // ditto
     string message = "Test W2";
     int    code    = 5;
@@ -101,10 +103,7 @@ unittest {
     auto e = collectException!Win32Exception(
         enforce(false, new Win32Exception(message, code)));
     assert(e.error == code);
-
-    // CAUTION: this test is to be removed in D1
-    //          because e.msg does not contains the (code) section.
-    assert(e.msg == text(message, " (", code, ")"));
+    assert(e.msg.startsWith(message));
 }
 
 /**
@@ -120,7 +119,7 @@ public:
         Params:
             message = The message associated with the exception.
      */
-    @safe pure
+    @safe
     this(string message, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(message, fn, ln, next);
@@ -133,7 +132,7 @@ public:
             message = The message associated with the exception.
             error = The Win32 error number associated with the exception.
      */
-    @safe pure
+    @safe
     this(string message, int error, string fn = __FILE__, size_t ln = __LINE__, Throwable next = null)
     {
         super(message, error, fn, ln, next);
@@ -149,10 +148,7 @@ unittest
     auto e = collectException!RegistryException(
         enforce(false, new RegistryException(message, code)));
     assert(e.error == code);
-
-    // CAUTION: this test is to be removed in D1
-    //          because e.msg does not contains the (code) section.
-    assert(e.msg == text(message, " (", code, ")"));
+    assert(e.msg.startsWith(message));
 }
 
 unittest
@@ -162,7 +158,7 @@ unittest
 
     auto e = collectException!RegistryException(
         enforce(false, new RegistryException(message)));
-    assert(e.msg == message);
+    assert(e.msg.startsWith(message));
 }
 
 /* ************* public enumerations *************** */
@@ -1845,4 +1841,7 @@ unittest
     unittestKey.deleteKey(stateKey.name);
     unittestKey.deleteKey(cityKey.name);
     HKCU.deleteKey(unittestKeyName);
+
+    auto e = collectException!RegistryException(HKCU.getKey("cDhmxsX9K23a8Uf869uB"));
+    assert(e.msg.endsWith(" (error 2)"));
 }

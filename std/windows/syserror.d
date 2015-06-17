@@ -42,7 +42,7 @@ version (StdDdoc)
     {
         private alias DWORD = int;
         final @property DWORD code(); /// $(D GetLastError)'s return value.
-        @disable this(int dummy);
+        this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted;
     }
 
     /++
@@ -130,11 +130,15 @@ class WindowsException : Exception
         if (str != null)
         {
             buf.put(str);
-            buf.put(": ");
+            if (code)
+                buf.put(": ");
         }
 
-        auto success = putSysError(code, buf);
-        formattedWrite(buf, success ? " (error %d)" : "Error %d", code);
+        if (code)
+        {
+            auto success = putSysError(code, buf);
+            formattedWrite(buf, success ? " (error %d)" : "Error %d", code);
+        }
 
         super(buf.data, file, line);
     }
@@ -163,4 +167,11 @@ unittest
     assert(e.msg.startsWith("DeleteFile: "));
     // can't test the entire message, as it depends on Windows locale
     assert(e.msg.endsWith(" (error 2)"));
+
+    // Test code zero
+    e = new WindowsException(0);
+    assert(e.msg == "");
+
+    e = new WindowsException(0, "Test");
+    assert(e.msg == "Test");
 }

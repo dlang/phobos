@@ -115,7 +115,7 @@ SRC_STD_3= std\csv.d std\math.d std\complex.d std\numeric.d std\bigint.d \
 	std\uni.d std\base64.d std\ascii.d \
 	std\demangle.d std\uri.d std\metastrings.d std\mmfile.d std\getopt.d
 
-SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
+SRC_STD_3a= std\signals.d std\meta.d std\typetuple.d std\traits.d \
 	std\encoding.d std\xml.d \
 	std\random.d \
 	std\exception.d \
@@ -167,7 +167,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\datetime.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
-	std\metastrings.d std\mmfile.d \
+	std\meta.d std\metastrings.d std\mmfile.d \
 	std\syserror.d \
 	std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\format.d \
@@ -224,7 +224,8 @@ SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
 SRC_ETC=
 
-SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d
+SRC_ETC_C= etc\c\zlib.d etc\c\curl.d etc\c\sqlite3.d \
+    etc\c\odbc\sql.d etc\c\odbc\sqlext.d etc\c\odbc\sqltypes.d etc\c\odbc\sqlucode.d
 
 SRC_TO_COMPILE_NOT_STD= \
 	$(SRC_STD_REGEX) \
@@ -341,6 +342,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
+	$(DOC)\std_meta.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
 	$(DOC)\std_outbuffer.html \
@@ -394,6 +396,10 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\etc_c_curl.html \
 	$(DOC)\etc_c_sqlite3.html \
 	$(DOC)\etc_c_zlib.html \
+	$(DOC)\etc_c_odbc_sql.html \
+	$(DOC)\etc_c_odbc_sqlext.html \
+	$(DOC)\etc_c_odbc_sqltypes.html \
+	$(DOC)\etc_c_odbc_sqlucode.html \
 	$(DOC)\index.html
 
 $(LIB) : $(SRC_TO_COMPILE) \
@@ -467,6 +473,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=51 -unittest -main -run std\mmfile.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\getopt.d
 	$(DMD) -conf= -cov=92 -unittest -main -run std\signals.d
+	$(DMD) -conf= -cov=100 -unittest -main -run std\meta.d
 	$(DMD) -conf= -cov=100 -unittest -main -run std\typetuple.d
 	$(DMD) -conf= -cov=85 -unittest -main -run std\traits.d
 	$(DMD) -conf= -cov=62 -unittest -main -run std\encoding.d
@@ -534,8 +541,8 @@ $(ZLIB): $(SRC_ZLIB)
 
 DDOCFLAGS=$(DFLAGS) -version=StdDdoc
 
-$(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object_.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
+$(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object.d -I$(DRUNTIME)\src\
 
 $(DOC)\index.html : $(STDDOC) index.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\index.html $(STDDOC) index.d
@@ -698,6 +705,9 @@ $(DOC)\std_json.html : $(STDDOC) std\json.d
 
 $(DOC)\std_math.html : $(STDDOC) std\math.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_math.html $(STDDOC) std\math.d
+
+$(DOC)\std_meta.html : $(STDDOC) std\meta.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_meta.html $(STDDOC) std\meta.d
 
 $(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_mathspecial.html $(STDDOC) std\mathspecial.d
@@ -873,10 +883,21 @@ $(DOC)\etc_c_sqlite3.html : $(STDDOC) etc\c\sqlite3.d
 $(DOC)\etc_c_zlib.html : $(STDDOC) etc\c\zlib.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_zlib.html $(STDDOC) etc\c\zlib.d
 
+$(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sql.html $(STDDOC) etc\c\odbc\sql.d
+
+$(DOC)\etc_c_odbc_sqlext.html : $(STDDOC) etc\c\odbc\sqlext.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sqlext.html $(STDDOC) etc\c\odbc\sqlext.d
+
+$(DOC)\etc_c_odbc_sqltypes.html : $(STDDOC) etc\c\odbc\sqltypes.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sqltypes.html $(STDDOC) etc\c\odbc\sqltypes.d
+
+$(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sql.html $(STDDOC) etc\c\odbc\sql.d
 
 ######################################################
 
-zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
+zip : win32.mak win64.mak posix.mak osmodel.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
 	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_STD_NET) $(SRC_STD_DIGEST) $(SRC_STD_CONTAINER) \
@@ -884,7 +905,7 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD_INTERNAL_WINDOWS) $(SRC_STD_REGEX) $(SRC_STD_RANGE) $(SRC_STD_ALGO) \
 	$(SRC_STD_LOGGER)
 	del phobos.zip
-	zip32 -u phobos win32.mak win64.mak posix.mak $(STDDOC)
+	zip32 -u phobos win32.mak win64.mak posix.mak osmodel.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_STD)
 	zip32 -u phobos $(SRC_STD_C)
@@ -930,3 +951,8 @@ install: phobos.zip
 	$(CP) $(DOC)\index.html $(DIR)\html\d\phobos\index.html
 	+rd/s/q $(DIR)\src\phobos
 	unzip -o phobos.zip -d $(DIR)\src\phobos
+
+auto-tester-build: targets
+
+auto-tester-test: unittest
+

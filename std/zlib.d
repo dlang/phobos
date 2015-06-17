@@ -60,9 +60,20 @@ class ZlibException : Exception
     }
 }
 
-/**************************************************
- * Compute the Adler32 checksum of the data in buf[]. adler is the starting
- * value when computing a cumulative checksum.
+/**
+ * $(P Compute the Adler-32 checksum of a buffer's worth of data.)
+ *
+ * Params:
+ *     adler = the starting checksum for the computation. Use 0
+ *             for a new checksum. Use the output of this function
+ *             for a cumulative checksum.
+ *     buf = buffer containing input data
+ *
+ * Returns:
+ *     A $(D uint) checksum for the provided input data and starting checksum
+ *
+ * See_Also:
+ *     $(LINK http://en.wikipedia.org/wiki/Adler-32)
  */
 
 uint adler32(uint adler, const(void)[] buf)
@@ -87,9 +98,20 @@ unittest
     assert(adler == 0xdc0037);
 }
 
-/*********************************
- * Compute the CRC32 checksum of the data in buf[]. crc is the starting value
- * when computing a cumulative checksum.
+/**
+ * $(P Compute the CRC32 checksum of a buffer's worth of data.)
+ *
+ * Params:
+ *     crc = the starting checksum for the computation. Use 0
+ *             for a new checksum. Use the output of this function
+ *             for a cumulative checksum.
+ *     buf = buffer containing input data
+ *
+ * Returns:
+ *     A $(D uint) checksum for the provided input data and starting checksum
+ *
+ * See_Also:
+ *     $(LINK http://en.wikipedia.org/wiki/Cyclic_redundancy_check)
  */
 
 uint crc32(uint crc, const(void)[] buf)
@@ -114,12 +136,17 @@ unittest
     assert(crc == 0x2520577b);
 }
 
-/*********************************************
- * Compresses the data in srcbuf[] using compression _level level.
- * The default value
- * for level is 6, legal values are 1..9, with 1 being the least compression
- * and 9 being the most.
- * Returns the compressed data.
+/**
+ * $(P Compress data)
+ *
+ * Params:
+ *     srcbuf = buffer containing the data to compress
+ *     level = compression level. Legal values are 1..9, with 1 being the
+ *             least compression and 9 being the most. The default value
+ *             is 6.
+ *
+ * Returns:
+ *     the compressed data
  */
 
 const(void)[] compress(const(void)[] srcbuf, int level)
@@ -145,9 +172,9 @@ body
  * ditto
  */
 
-const(void)[] compress(const(void)[] buf)
+const(void)[] compress(const(void)[] srcbuf)
 {
-    return compress(buf, Z_DEFAULT_COMPRESSION);
+    return compress(srcbuf, Z_DEFAULT_COMPRESSION);
 }
 
 /*********************************************
@@ -288,7 +315,16 @@ class Compress
   public:
 
     /**
-     * Construct. level is the same as for D.zlib.compress(). header can be used to make a gzip compatible stream.
+     * Constructor.
+     *
+     * Params:
+     *    level = compression level. Legal values are 1..9, with 1 being the least
+     *            compression and 9 being the most. The default value is 6.
+     *    header = sets the compression type to one of the options available
+     *             in $(LREF HeaderFormat). Defaults to HeaderFormat.deflate.
+     *
+     * See_Also:
+     *    $(LREF compress), $(LREF HeaderFormat)
      */
     this(int level, HeaderFormat header = HeaderFormat.deflate)
     in
@@ -319,8 +355,12 @@ class Compress
 
     /**
      * Compress the data in buf and return the compressed data.
-     * The buffers
-     * returned from successive calls to this should be concatenated together.
+     * Params:
+     *    buf = data to compress
+     *
+     * Returns:
+     *    the compressed data. The buffers returned from successive calls to this should be concatenated together.
+     *
      */
     const(void)[] compress(const(void)[] buf)
     {   int err;

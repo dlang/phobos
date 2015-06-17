@@ -1,74 +1,75 @@
 // Written in the D programming language.
 
 /**
- * This module implements a
- * $(LINK2 http://erdani.org/publications/cuj-04-2002.html,discriminated union)
- * type (a.k.a.
- * $(LINK2 http://en.wikipedia.org/wiki/Tagged_union,tagged union),
- * $(LINK2 http://en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
- * Such types are useful
- * for type-uniform binary interfaces, interfacing with scripting
- * languages, and comfortable exploratory programming.
- *
- * Macros:
- *  WIKI = Phobos/StdVariant
- *
- * Synopsis:
- *
- * ----
- * Variant a; // Must assign before use, otherwise exception ensues
- * // Initialize with an integer; make the type int
- * Variant b = 42;
- * assert(b.type == typeid(int));
- * // Peek at the value
- * assert(b.peek!(int) !is null && *b.peek!(int) == 42);
- * // Automatically convert per language rules
- * auto x = b.get!(real);
- * // Assign any other type, including other variants
- * a = b;
- * a = 3.14;
- * assert(a.type == typeid(double));
- * // Implicit conversions work just as with built-in types
- * assert(a < b);
- * // Check for convertibility
- * assert(!a.convertsTo!(int)); // double not convertible to int
- * // Strings and all other arrays are supported
- * a = "now I'm a string";
- * assert(a == "now I'm a string");
- * a = new int[42]; // can also assign arrays
- * assert(a.length == 42);
- * a[5] = 7;
- * assert(a[5] == 7);
- * // Can also assign class values
- * class Foo {}
- * auto foo = new Foo;
- * a = foo;
- * assert(*a.peek!(Foo) == foo); // and full type information is preserved
- * ----
- *
- * Credits:
- *
- * Reviewed by Brad Roberts. Daniel Keep provided a detailed code
- * review prompting the following improvements: (1) better support for
- * arrays; (2) support for associative arrays; (3) friendlier behavior
- * towards the garbage collector.
- *
- * Copyright: Copyright Andrei Alexandrescu 2007 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB erdani.org, Andrei Alexandrescu)
- * Source:    $(PHOBOSSRC std/_variant.d)
- */
-/*          Copyright Andrei Alexandrescu 2007 - 2009.
- * Distributed under the Boost Software License, Version 1.0.
- *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
- */
+This module implements a
+$(WEB erdani.org/publications/cuj-04-2002.html,discriminated union)
+type (a.k.a.
+$(WEB en.wikipedia.org/wiki/Tagged_union,tagged union),
+$(WEB en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
+Such types are useful
+for type-uniform binary interfaces, interfacing with scripting
+languages, and comfortable exploratory programming.
+
+Macros:
+ WIKI = Phobos/StdVariant
+
+Synopsis:
+----
+Variant a; // Must assign before use, otherwise exception ensues
+// Initialize with an integer; make the type int
+Variant b = 42;
+assert(b.type == typeid(int));
+// Peek at the value
+assert(b.peek!(int) !is null && *b.peek!(int) == 42);
+// Automatically convert per language rules
+auto x = b.get!(real);
+// Assign any other type, including other variants
+a = b;
+a = 3.14;
+assert(a.type == typeid(double));
+// Implicit conversions work just as with built-in types
+assert(a < b);
+// Check for convertibility
+assert(!a.convertsTo!(int)); // double not convertible to int
+// Strings and all other arrays are supported
+a = "now I'm a string";
+assert(a == "now I'm a string");
+a = new int[42]; // can also assign arrays
+assert(a.length == 42);
+a[5] = 7;
+assert(a[5] == 7);
+// Can also assign class values
+class Foo {}
+auto foo = new Foo;
+a = foo;
+assert(*a.peek!(Foo) == foo); // and full type information is preserved
+----
+
+A $(LREF Variant) object can hold a value of any type, with very few
+restrictions (such as `shared` types and noncopyable types). Setting the value
+is as immediate as assigning to the `Variant` object. To read back the value of
+the appropriate type `T`, use the $(LREF get!T) call. To query whether a
+`Variant` currently holds a value of type `T`, use $(LREF peek!T). To fetch the
+exact type currently held, call $(LREF type), which returns the `TypeInfo` of
+the current value.
+
+In addition to $(LREF Variant), this module also defines the $(LREF Algebraic)
+type constructor. Unlike `Variant`, `Algebraic` only allows a finite set of
+types, which are specified in the instantiation (e.g. $(D Algebraic!(int,
+string)) may only hold an `int` or a `string`).
+
+Credits: Reviewed by Brad Roberts. Daniel Keep provided a detailed code review
+prompting the following improvements: (1) better support for arrays; (2) support
+for associative arrays; (3) friendlier behavior towards the garbage collector.
+Copyright: Copyright Andrei Alexandrescu 2007 - 2015.
+License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+Source:    $(PHOBOSSRC std/_variant.d)
+*/
 module std.variant;
 
 import core.stdc.string, std.conv, std.exception, std.traits, std.typecons,
     std.typetuple;
-
-@trusted:
 
 /++
     Gives the $(D sizeof) the largest type given.
@@ -81,83 +82,57 @@ template maxSize(T...)
     }
     else
     {
-        enum size_t maxSize = T[0].sizeof >= maxSize!(T[1 .. $])
-            ? T[0].sizeof : maxSize!(T[1 .. $]);
+        import std.algorithm.comparison : max;
+        enum size_t maxSize = max(T[0].sizeof, maxSize!(T[1 .. $]));
     }
 }
 
 struct This;
 
-template AssociativeArray(T)
+private template This2Variant(V, T...)
 {
-    enum bool valid = false;
-    alias Key = void;
-    alias Value = void;
-}
-
-template AssociativeArray(T : V[K], K, V)
-{
-    enum bool valid = true;
-    alias Key = K;
-    alias Value = V;
-}
-
-template This2Variant(V, T...)
-{
-    static if (T.length == 0)
-        alias This2Variant = TypeTuple!();
-    else static if (is(AssociativeArray!(T[0]).Key == This))
-    {
-        static if (is(AssociativeArray!(T[0]).Value == This))
-            alias This2Variant =
-                TypeTuple!(V[V],
-                           This2Variant!(V, T[1 .. $]));
-        else
-            alias This2Variant =
-                TypeTuple!(AssociativeArray!(T[0]).Value[V],
-                           This2Variant!(V, T[1 .. $]));
-    }
-    else static if (is(AssociativeArray!(T[0]).Value == This))
-        alias This2Variant =
-            TypeTuple!(V[AssociativeArray!(T[0]).Key],
-                       This2Variant!(V, T[1 .. $]));
-    else static if (is(T[0] == This[]))
-        alias This2Variant = TypeTuple!(V[], This2Variant!(V, T[1 .. $]));
-    else static if (is(T[0] == This*))
-        alias This2Variant = TypeTuple!(V*, This2Variant!(V, T[1 .. $]));
+    // Test if it compiles because right now type replacement does not work for
+    // functions involving local types.
+    static if (__traits(compiles, TypeTuple!(ReplaceType!(This, V, T))))
+        alias This2Variant = TypeTuple!(ReplaceType!(This, V, T));
     else
-        alias This2Variant = TypeTuple!(T[0], This2Variant!(V, T[1 .. $]));
+        alias This2Variant = TypeTuple!T;
 }
 
 /**
- * $(D_PARAM VariantN) is a back-end type seldom used directly by user
- * code. Two commonly-used types using $(D_PARAM VariantN) as
+ * $(D VariantN) is a back-end type seldom used directly by user
+ * code. Two commonly-used types using $(D VariantN) as
  * back-end are:
  *
  * $(OL $(LI $(B Algebraic): A closed discriminated union with a
- * limited type universe (e.g., $(D_PARAM Algebraic!(int, double,
+ * limited type universe (e.g., $(D Algebraic!(int, double,
  * string)) only accepts these three types and rejects anything
  * else).) $(LI $(B Variant): An open discriminated union allowing an
- * unbounded set of types. The restriction is that the size of the
- * stored type cannot be larger than the largest built-in type. This
- * means that $(D_PARAM Variant) can accommodate all primitive types
- * and all user-defined types except for large $(D_PARAM struct)s.) )
+ * unbounded set of types. If any of the types in the $(D Variant)
+ * are larger than the largest built-in type, they will automatically
+ * be boxed. This means that even large types will only be the size
+ * of a pointer within the $(D Variant), but this also implies some
+ * overhead. $(D Variant) can accommodate all primitive types and
+ * all user-defined types.))
  *
- * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
+ * Both $(D Algebraic) and $(D Variant) share $(D
  * VariantN)'s interface. (See their respective documentations below.)
  *
- * $(D_PARAM VariantN) is a discriminated union type parameterized
- * with the largest size of the types stored ($(D_PARAM maxDataSize))
- * and with the list of allowed types ($(D_PARAM AllowedTypes)). If
- * the list is empty, then any type up of size up to $(D_PARAM
+ * $(D VariantN) is a discriminated union type parameterized
+ * with the largest size of the types stored ($(D maxDataSize))
+ * and with the list of allowed types ($(D AllowedTypes)). If
+ * the list is empty, then any type up of size up to $(D
  * maxDataSize) (rounded up for alignment) can be stored in a
- * $(D_PARAM VariantN) object.
+ * $(D VariantN) object without being boxed (types larger
+ * than this will be boxed).
  *
  */
-
-struct VariantN(size_t maxDataSize, AllowedTypesX...)
+struct VariantN(size_t maxDataSize, AllowedTypesParam...)
 {
-    alias AllowedTypes = This2Variant!(VariantN, AllowedTypesX);
+    /**
+    The list of allowed types. If empty, any type is allowed.
+    */
+    alias AllowedTypes = This2Variant!(VariantN, AllowedTypesParam);
 
 private:
     // Compute the largest practical size from maxDataSize
@@ -168,11 +143,9 @@ private:
     }
     enum size = SizeChecker.sizeof - (int function()).sizeof;
 
-    /** Tells whether a type $(D_PARAM T) is statically allowed for
-     * storage inside a $(D_PARAM VariantN) object by looking
-     * $(D_PARAM T) up in $(D_PARAM AllowedTypes). If $(D_PARAM
-     * AllowedTypes) is empty, all types of size up to $(D_PARAM
-     * maxSize) are allowed.
+    /** Tells whether a type $(D T) is statically allowed for
+     * storage inside a $(D VariantN) object by looking
+     * $(D T) up in $(D AllowedTypes).
      */
     public template allowed(T)
     {
@@ -375,7 +348,8 @@ private:
             target.fptr = &handler!(A);
             break;
         case OpID.get:
-            return !tryPutting(zis, *cast(TypeInfo*) parm, parm);
+            auto t = * cast(Tuple!(TypeInfo, void*)*) parm;
+            return !tryPutting(zis, t[0], t[1]);
         case OpID.testConversion:
             return !tryPutting(null, *cast(TypeInfo*) parm, null);
         case OpID.compare:
@@ -408,8 +382,8 @@ private:
                     return temp.opEquals(*rhsP) ? 0 : 1;
             }
             // Does rhs convert to zis?
-            *cast(TypeInfo*) &temp.store = typeid(A);
-            if (rhsP.fptr(OpID.get, &rhsP.store, &temp.store) == 0)
+            auto t = tuple(typeid(A), &temp.store);
+            if (rhsP.fptr(OpID.get, &rhsP.store, &t) == 0)
             {
                 // cool! Now temp has rhs in my type!
                 auto rhsPA = getPtr(&temp.store);
@@ -569,7 +543,7 @@ private:
     }
 
 public:
-    /** Constructs a $(D_PARAM VariantN) value given an argument of a
+    /** Constructs a $(D VariantN) value given an argument of a
      * generic type. Statically rejects disallowed types.
      */
 
@@ -577,6 +551,13 @@ public:
     {
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof);
+        opAssign(value);
+    }
+
+    /// Allows assignment from a subset algebraic type
+    this(T : VariantN!(tsize, Types), size_t tsize, Types...)(T value)
+        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
+    {
         opAssign(value);
     }
 
@@ -596,7 +577,7 @@ public:
         }
     }
 
-    /** Assigns a $(D_PARAM VariantN) from a generic
+    /** Assigns a $(D VariantN) from a generic
      * argument. Statically rejects disallowed types. */
 
     VariantN opAssign(T)(T rhs)
@@ -659,6 +640,18 @@ public:
         return this;
     }
 
+    // Allow assignment from another variant which is a subset of this one
+    VariantN opAssign(T : VariantN!(tsize, Types), size_t tsize, Types...)(T rhs)
+        if (!is(T : VariantN) && Types.length > 0 && allSatisfy!(allowed, Types))
+    {
+        // discover which type rhs is actually storing
+        foreach (V; T.AllowedTypes)
+            if (rhs.type == typeid(V))
+                return this = rhs.get!V;
+        assert(0, T.AllowedTypes.stringof);
+    }
+
+
     Variant opCall(P...)(auto ref P params)
     {
         Variant[P.length + 1] pack;
@@ -671,7 +664,7 @@ public:
         return pack[0];
     }
 
-    /** Returns true if and only if the $(D_PARAM VariantN) object
+    /** Returns true if and only if the $(D VariantN) object
      * holds a valid value (has been initialized with, or assigned
      * from, a valid value).
      */
@@ -694,10 +687,10 @@ public:
     }
 
     /**
-     * If the $(D_PARAM VariantN) object holds a value of the
-     * $(I exact) type $(D_PARAM T), returns a pointer to that
-     * value. Otherwise, returns $(D_PARAM null). In cases
-     * where $(D_PARAM T) is statically disallowed, $(D_PARAM
+     * If the $(D VariantN) object holds a value of the
+     * $(I exact) type $(D T), returns a pointer to that
+     * value. Otherwise, returns $(D null). In cases
+     * where $(D T) is statically disallowed, $(D
      * peek) will not compile.
      */
     @property inout(T)* peek(T)() inout
@@ -724,7 +717,7 @@ public:
     }
 
     /**
-     * Returns the $(D_PARAM typeid) of the currently held value.
+     * Returns the $(D typeid) of the currently held value.
      */
 
     @property TypeInfo type() const nothrow @trusted
@@ -737,8 +730,8 @@ public:
     }
 
     /**
-     * Returns $(D_PARAM true) if and only if the $(D_PARAM VariantN)
-     * object holds an object implicitly convertible to type $(D_PARAM
+     * Returns $(D true) if and only if the $(D VariantN)
+     * object holds an object implicitly convertible to type $(D
      * U). Implicit convertibility is defined as per
      * $(LINK2 std_traits.html#ImplicitConversionTargets,ImplicitConversionTargets).
      */
@@ -750,74 +743,49 @@ public:
     }
 
     /**
-     * Returns the value stored in the $(D_PARAM VariantN) object,
-     * implicitly converted to the requested type $(D_PARAM T), in
-     * fact $(D_PARAM DecayStaticToDynamicArray!(T)). If an implicit
-     * conversion is not possible, throws a $(D_PARAM
-     * VariantException).
+    Returns the value stored in the `VariantN` object, either by specifying the
+    needed type or the index in the list of allowed types. The latter overload
+    only applies to bounded variants (e.g. $(LREF Algebraic)).
+
+    Params:
+    T = The requested type. The currently stored value must implicitly convert
+    to the requested type, in fact `DecayStaticToDynamicArray!T`. If an
+    implicit conversion is not possible, throws a `VariantException`.
+    index = The index of the type among `AllowedTypesParam`, zero-based.
      */
-
-    @property T get(T)() if (!is(T == const))
+    @property inout(T) get(T)() inout
     {
-        auto p = *cast(T**) &store;
-
-        /* handler(OpID.get, ) expects the TypeInfo for T in the same buffer it
-         * writes the result to afterwards. Because T might have a non-trivial
-         * destructor, postblit or invariant, we cannot use a union.
-         */
-        struct Buf
-        {
-            T result;
-            // Make sure Buf.sizeof is big enough to store a TypeInfo in
-            void[T.sizeof < TypeInfo.sizeof ? TypeInfo.sizeof - T.sizeof : 0] init = void;
-        }
-        TypeInfo info = typeid(T);
-        Buf buf;
-        memcpy(&buf, &info, info.sizeof);
-
-        if (fptr(OpID.get, &store, &buf))
-        {
-            throw new VariantException(type, typeid(T));
-        }
-        return buf.result;
-    }
-
-    @property T get(T)() const if (is(T == const))
-    {
-        auto p = *cast(T**) &store;
-
-        /* handler(OpID.get, ) expects the TypeInfo for T in the same buffer it
-         * writes the result to afterwards. Because T might have a non-trivial
-         * destructor, postblit or invariant, we cannot use a union.
-         */
-        struct Buf
-        {
-            static if (is(T == shared))
-                shared(Unqual!T) result;
-            else
-                Unqual!T result;
-
-            // Make sure Buf.sizeof is big enough to store a TypeInfo in
-            void[T.sizeof < TypeInfo.sizeof ? TypeInfo.sizeof - T.sizeof : 0] init = void;
-        }
-        TypeInfo info = typeid(T);
-        Buf buf;
-        memcpy(&buf, &info, info.sizeof);
+        static if (is(T == shared))
+            shared Unqual!T result;
+        else
+            Unqual!T result;
+        auto buf = tuple(typeid(T), &result);
 
         if (fptr(OpID.get, cast(ubyte[size]*) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
-        return buf.result;
+        return * cast(inout T*) &result;
+    }
+
+    /// Ditto
+    @property auto get(uint index)() inout
+    if (index < AllowedTypes.length)
+    {
+        foreach (i, T; AllowedTypes)
+        {
+            static if (index == i) return get!T;
+        }
+        assert(0);
     }
 
     /**
-     * Returns the value stored in the $(D_PARAM VariantN) object,
-     * explicitly converted (coerced) to the requested type $(D_PARAM
-     * T). If $(D_PARAM T) is a string type, the value is formatted as
-     * a string. If the $(D_PARAM VariantN) object is a string, a
-     * parse of the string to type $(D_PARAM T) is attempted. If a
-     * conversion is not possible, throws a $(D_PARAM
+     * Returns the value stored in the $(D VariantN) object,
+     * explicitly converted (coerced) to the requested type $(D
+     * T). If $(D T) is a string type, the value is formatted as
+     * a string. If the $(D VariantN) object is a string, a
+     * parse of the string to type $(D T) is attempted. If a
+     * conversion is not possible, throws a $(D
      * VariantException).
      */
 
@@ -900,7 +868,7 @@ public:
     /**
      * Ordering comparison used by the "<", "<=", ">", and ">="
      * operators. In case comparison is not sensible between the held
-     * value and $(D_PARAM rhs), an exception is thrown.
+     * value and $(D rhs), an exception is thrown.
      */
 
     int opCmp(T)(T rhs)
@@ -930,7 +898,7 @@ public:
 
     private VariantN opArithmetic(T, string op)(T other)
     {
-        static if (isInstanceOf!(VariantN, T))
+        static if (isInstanceOf!(.VariantN, T))
         {
             string tryUseType(string tp)
             {
@@ -1003,8 +971,8 @@ public:
     }
 
     /**
-     * Arithmetic between $(D_PARAM VariantN) objects and numeric
-     * values. All arithmetic operations return a $(D_PARAM VariantN)
+     * Arithmetic between $(D VariantN) objects and numeric
+     * values. All arithmetic operations return a $(D VariantN)
      * object typed depending on the types of both values
      * involved. The conversion rules mimic D's built-in rules for
      * arithmetic conversions.
@@ -1113,7 +1081,7 @@ public:
     }
 
     /**
-     * Array and associative array operations. If a $(D_PARAM
+     * Array and associative array operations. If a $(D
      * VariantN) contains an (associative) array, it can be indexed
      * into. Otherwise, an exception is thrown.
      */
@@ -1137,7 +1105,7 @@ public:
 
     /** Caveat:
     Due to limitations in current language, read-modify-write
-    operations $(D_PARAM op=) will not work properly:
+    operations $(D op=) will not work properly:
     */
     unittest
     {
@@ -1164,7 +1132,7 @@ public:
         return args[0];
     }
 
-    /** If the $(D_PARAM VariantN) contains an (associative) array,
+    /** If the $(D VariantN) contains an (associative) array,
      * returns the length of that array. Otherwise, throws an
      * exception.
      */
@@ -1303,6 +1271,7 @@ unittest
 unittest
 {
     Variant a = true;
+    assert(a.type == typeid(bool));
 }
 
 // Issue #14233
@@ -1322,29 +1291,61 @@ unittest
     a = 1.0;
 }
 
+// Issue 14457
+unittest
+{
+    alias A = Algebraic!(int, float, double);
+    alias B = Algebraic!(int, float);
+
+    A a = 1;
+    B b = 6f;
+    a = b;
+
+    assert(a.type == typeid(float));
+    assert(a.get!float == 6f);
+}
+
+// Issue 14585
+unittest
+{
+    static struct S
+    {
+        int x = 42;
+        ~this() {assert(x == 42);}
+    }
+    Variant(S()).get!S;
+}
+
+// Issue 14586
+unittest
+{
+    const Variant v = new immutable Object;
+    v.get!(immutable Object);
+}
+
+unittest
+{
+    static struct S
+    {
+        T opCast(T)() {assert(false);}
+    }
+    Variant v = S();
+    v.get!S;
+}
+
 
 /**
- * Algebraic data type restricted to a closed set of possible
- * types. It's an alias for a $(D_PARAM VariantN) with an
- * appropriately-constructed maximum size. $(D_PARAM Algebraic) is
- * useful when it is desirable to restrict what a discriminated type
- * could hold to the end of defining simpler and more efficient
- * manipulation.
- *
- * Future additions to $(D_PARAM Algebraic) will allow compile-time
- * checking that all possible types are handled by user code,
- * eliminating a large class of errors.
- *
- * Bugs:
- *
- * Currently, $(D_PARAM Algebraic) does not allow recursive data
- * types. They will be allowed in a future iteration of the
- * implementation.
- */
+Algebraic data type restricted to a closed set of possible
+types. It's an alias for a $(LREF VariantN) with an
+appropriately-constructed maximum size. `Algebraic` is
+useful when it is desirable to restrict what a discriminated type
+could hold to the end of defining simpler and more efficient
+manipulation.
 
+*/
 template Algebraic(T...)
 {
-    alias Algebraic = VariantN!(maxSize!(T), T);
+    alias Algebraic = VariantN!(maxSize!T, T);
 }
 
 ///
@@ -1359,21 +1360,50 @@ unittest
 }
 
 /**
-$(D_PARAM Variant) is an alias for $(D_PARAM VariantN) instantiated
-with the largest of $(D_PARAM creal), $(D_PARAM char[]), and $(D_PARAM
-void delegate()). This ensures that $(D_PARAM Variant) is large enough
-to hold all of D's predefined types, including all numeric types,
-pointers, delegates, and class references.  You may want to use
-$(D_PARAM VariantN) directly with a different maximum size either for
-storing larger types, or for saving memory.
- */
+$(H4 Self-Referential Types)
 
+A useful and popular use of algebraic data structures is for defining $(LUCKY
+self-referential data structures), i.e. structures that embed references to
+values of their own type within.
+
+This is achieved with `Algebraic` by using `This` as a placeholder whenever a
+reference to the type being defined is needed. The `Algebraic` instantiation
+will perform $(LUCKY alpha renaming) on its constituent types, replacing `This`
+with the self-referenced type. The structure of the type involving `This` may
+be arbitrarily complex.
+*/
+unittest
+{
+    // A tree is either a leaf or a branch of two other trees
+    alias Tree(Leaf) = Algebraic!(Leaf, Tuple!(This*, This*));
+    Tree!int tree = tuple(new Tree!int(42), new Tree!int(43));
+    Tree!int* right = tree.get!1[1];
+    assert(*right == 43);
+
+    // An object is a double, a string, or a hash of objects
+    alias Obj = Algebraic!(double, string, This[string]);
+    Obj obj = "hello";
+    assert(obj.get!1 == "hello");
+    obj = 42.0;
+    assert(obj.get!0 == 42);
+    obj = ["customer": Obj("John"), "paid": Obj(23.95)];
+    assert(obj.get!2["customer"] == "John");
+}
+
+/**
+`Variant` is an alias for `VariantN` instantiated with the largest of `creal`,
+`char[]`, and `void delegate()`. This ensures that `Variant` is large enough
+to hold all of D's predefined types unboxed, including all numeric types,
+pointers, delegates, and class references.  You may want to use
+$(D VariantN) directly with a different maximum size either for
+storing larger types unboxed, or for saving memory.
+ */
 alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
 
 /**
- * Returns an array of variants constructed from $(D_PARAM args).
+ * Returns an array of variants constructed from $(D args).
  *
- * This is by design. During construction the $(D_PARAM Variant) needs
+ * This is by design. During construction the $(D Variant) needs
  * static type information about the type being held, so as to store a
  * pointer to function for fast retrieval.
  */
@@ -1396,8 +1426,8 @@ unittest
     assert(b[1] == 3.14);
 }
 
-/** Code that needs functionality similar to the $(D_PARAM boxArray)
-function in the $(D_PARAM std.boxer) module can achieve it like this:
+/** Code that needs functionality similar to the $(D boxArray)
+function in the $(D std.boxer) module can achieve it like this:
 */
 unittest
 {
@@ -1422,9 +1452,9 @@ unittest
  * Thrown in three cases:
  *
  * $(OL $(LI An uninitialized Variant is used in any way except
- * assignment and $(D_PARAM hasValue);) $(LI A $(D_PARAM get) or
- * $(D_PARAM coerce) is attempted with an incompatible target type;)
- * $(LI A comparison between $(D_PARAM Variant) objects of
+ * assignment and $(D hasValue);) $(LI A $(D get) or
+ * $(D coerce) is attempted with an incompatible target type;)
+ * $(LI A comparison between $(D Variant) objects of
  * incompatible types is attempted.))
  *
  */
@@ -1462,18 +1492,17 @@ unittest
 
 unittest
 {
-    // @@@BUG@@@
-    // alias A = Algebraic!(real, This[], This[int], This[This]);
-    // A v1, v2, v3;
-    // v2 = 5.0L;
-    // v3 = 42.0L;
-    // //v1 = [ v2 ][];
-    //  auto v = v1.peek!(A[]);
-    // //writeln(v[0]);
-    // v1 = [ 9 : v3 ];
-    // //writeln(v1);
-    // v1 = [ v3 : v3 ];
-    // //writeln(v1);
+     alias A = Algebraic!(real, This[], This[int], This[This]);
+     A v1, v2, v3;
+     v2 = 5.0L;
+     v3 = 42.0L;
+     //v1 = [ v2 ][];
+      auto v = v1.peek!(A[]);
+     //writeln(v[0]);
+     v1 = [ 9 : v3 ];
+     //writeln(v1);
+     v1 = [ v3 : v3 ];
+     //writeln(v1);
 }
 
 unittest
@@ -1954,11 +1983,11 @@ unittest
  * ensuring that all types are handled by the visiting functions.
  *
  * The delegate or function having the currently held value as parameter is called
- * with $(D_PARAM variant)'s current value. Visiting handlers are passed
+ * with $(D variant)'s current value. Visiting handlers are passed
  * in the template parameter list.
  * It is statically ensured that all types of
- * $(D_PARAM variant) are handled across all handlers.
- * $(D_PARAM visit) allows delegates and static functions to be passed
+ * $(D variant) are handled across all handlers.
+ * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
  * If a function without parameters is specified, this function is called
@@ -1970,7 +1999,7 @@ unittest
  * Returns: The return type of visit is deduced from the visiting functions and must be
  * the same across all overloads.
  * Throws: If no parameter-less, error function is specified:
- * $(D_PARAM VariantException) if $(D_PARAM variant) doesn't hold a value.
+ * $(D VariantException) if $(D variant) doesn't hold a value.
  */
 template visit(Handler ...)
     if (Handler.length > 0)
@@ -2064,18 +2093,18 @@ unittest
 }
 
 /**
- * Behaves as $(D_PARAM visit) but doesn't enforce that all types are handled
+ * Behaves as $(D visit) but doesn't enforce that all types are handled
  * by the visiting functions.
  *
  * If a parameter-less function is specified it is called when
- * either $(D_PARAM variant) doesn't hold a value or holds a type
+ * either $(D variant) doesn't hold a value or holds a type
  * which isn't handled by the visiting functions.
  *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
  * the same across all overloads.
- * Throws: If no parameter-less, error function is specified: $(D_PARAM VariantException) if
- *         $(D_PARAM variant) doesn't hold a value or
- *         if $(D_PARAM variant) holds a value which isn't handled by the visiting
+ * Throws: If no parameter-less, error function is specified: $(D VariantException) if
+ *         $(D variant) doesn't hold a value or
+ *         if $(D variant) holds a value which isn't handled by the visiting
  *         functions.
  */
 template tryVisit(Handler ...)
@@ -2132,7 +2161,7 @@ unittest
 private template isAlgebraic(Type)
 {
     static if (is(Type _ == VariantN!T, T...))
-        enum isAlgebraic = T.length >= 2; // T[0] == maxDataSize, T[1..$] == AllowedTypesX
+        enum isAlgebraic = T.length >= 2; // T[0] == maxDataSize, T[1..$] == AllowedTypesParam
     else
         enum isAlgebraic = false;
 }
@@ -2151,11 +2180,11 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 
 
     /**
-     * Returns: Struct where $(D_PARAM indices)  is an array which
+     * Returns: Struct where $(D indices)  is an array which
      * contains at the n-th position the index in Handler which takes the
      * n-th type of AllowedTypes. If an Handler doesn't match an
      * AllowedType, -1 is set. If a function in the delegates doesn't
-     * have parameters, the field $(D_PARAM exceptionFuncIdx) is set;
+     * have parameters, the field $(D exceptionFuncIdx) is set;
      * otherwise it's -1.
      */
     auto visitGetOverloadMap()
@@ -2517,7 +2546,7 @@ unittest
     static assert( hasElaborateDestructor!(Algebraic!(bool, S)));
 
     import std.array;
-    alias Algebraic!bool Value;
+    alias Value = Algebraic!bool;
 
     static struct T
     {
@@ -2565,3 +2594,12 @@ unittest
     assertThrown!VariantException(v.length);
 }
 
+unittest
+{
+    // Bugzilla 13534
+    static assert(!__traits(compiles, () @safe {
+        auto foo() @system { return 3; }
+        auto v = Variant(&foo);
+        v(); // foo is called in safe code!?
+    }));
+}

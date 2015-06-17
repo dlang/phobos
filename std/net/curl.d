@@ -167,7 +167,6 @@ import std.encoding;
 import std.exception;
 import std.regex;
 import std.socket : InternetAddress;
-import std.stream;
 import std.string;
 import std.traits;
 import std.typecons;
@@ -193,7 +192,8 @@ version(unittest)
 
     enum testUrl1 = "http://"~testService~"/testUrl1";
     enum testUrl2 = "http://"~testService~"/testUrl2";
-    enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
+    // No anonymous DigitalMars FTP access as of 2015
+    //enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
     enum testUrl4 = testService~"/testUrl1";
     enum testUrl5 = "http://"~testService~"/testUrl3";
 }
@@ -281,7 +281,6 @@ private template isCurlConn(Conn)
  * Example:
  * ----
  * import std.net.curl;
- * download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file");
  * download("d-lang.appspot.com/testUrl2", "/tmp/downloaded-http-file");
  * ----
  */
@@ -290,10 +289,10 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 {
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
+        import std.stdio : File;
         conn.url = url;
-        auto f = new std.stream.BufferedFile(saveToPath, FileMode.OutNew);
-        scope (exit) f.close();
-        conn.onReceive = (ubyte[] data) { return f.write(data); };
+        auto f = File(saveToPath, "w");
+        conn.onReceive = (ubyte[] data) { f.write(data); return data.length; };
         conn.perform();
     }
     else
@@ -308,8 +307,10 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
+    // No anonymous DigitalMars FTP access as of 2015
+    //download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
     download("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
+    download!(HTTP)("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -350,13 +351,15 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
-        auto f = new std.stream.BufferedFile(loadFromPath, FileMode.In);
-        scope (exit) f.close();
+        static import std.file;
+        void[] f;
+
         conn.onSend = (void[] data)
         {
-            return f.read(cast(ubyte[])data);
+            f = std.file.read(loadFromPath);
+            return f.length;
         };
-        conn.contentLength = cast(size_t)f.size;
+        conn.contentLength = f.length;
         conn.perform();
     }
 }
@@ -427,9 +430,10 @@ unittest
     res = get(testUrl4);
     assert(res == "Hello world\n",
            "get!HTTP() returns unexpected content: " ~ res);
-    res = get(testUrl3);
-    assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-           "get!FTP() returns unexpected content");
+    // No anonymous DigitalMars FTP access as of 2015
+    //res = get(testUrl3);
+    //assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
+    //       "get!FTP() returns unexpected content");
 }
 
 
@@ -815,8 +819,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
     enforce!CurlException(statusLine.code / 100 == 2,
-                            format("HTTP request returned status code %s",
-                                   statusLine.code));
+                            format("HTTP request returned status code %d (%s)",
+                                   statusLine.code, statusLine.reason));
 
     // Default charset defined in HTTP RFC
     auto charset = "ISO-8859-1";
@@ -830,6 +834,13 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     }
 
     return _decodeContent!T(content, charset);
+}
+
+unittest
+{
+    if (!netAllowed()) return;
+    auto e = collectException!CurlException(get(testUrl1 ~ "nonexisting"));
+    assert(e.msg == "HTTP request returned status code 404 (Not Found)");
 }
 
 /*
@@ -907,7 +918,7 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
 }
 
 alias KeepTerminator = Flag!"keepTerminator";
-/++
+/+
 struct ByLineBuffer(Char)
 {
     bool linePresent;
@@ -1631,7 +1642,7 @@ private mixin template Protocol()
     /**
        The curl handle used by this connection.
     */
-    @property ref Curl handle()
+    @property ref Curl handle() return
     {
         return p.curl;
     }
@@ -4139,7 +4150,7 @@ private struct Pool(Data)
     {
         Data data;
         Entry* next;
-    };
+    }
     private Entry*  root;
     private Entry* freeList;
 
@@ -4173,7 +4184,7 @@ private struct Pool(Data)
         root = n;
         return d;
     }
-};
+}
 
 // Shared function for reading incoming chunks of data and
 // sending the to a parent thread

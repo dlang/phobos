@@ -523,7 +523,10 @@ unittest {
     assert(logGamma(-50.2) == log(fabs(gamma(-50.2))));
     assert(logGamma(-0.008) == log(fabs(gamma(-0.008))));
     assert(feqrel(logGamma(-38.8),log(fabs(gamma(-38.8)))) > real.mant_dig-4);
-    assert(feqrel(logGamma(1500.0L),log(gamma(1500.0L))) > real.mant_dig-2);
+    static if (real.mant_dig >= 64) // incl. 80-bit reals
+        assert(feqrel(logGamma(1500.0L),log(gamma(1500.0L))) > real.mant_dig-2);
+    else static if (real.mant_dig >= 53) // incl. 64-bit reals
+        assert(feqrel(logGamma(150.0L),log(gamma(150.0L))) > real.mant_dig-2);
 }
 
 
@@ -898,12 +901,15 @@ unittest { // also tested by the normal distribution
     // Test against Mathematica   betaRegularized[z,a,b]
     // These arbitrary points are chosen to give good code coverage.
     assert(feqrel(betaIncomplete(8, 10, 0.2), 0.010_934_315_234_099_2L) >=  real.mant_dig - 5);
-    assert(feqrel(betaIncomplete(2, 2.5, 0.9),0.989_722_597_604_452_767_171_003_59L) >= real.mant_dig - 1 );
-    assert(feqrel(betaIncomplete(1000, 800, 0.5), 1.179140859734704555102808541457164E-06L) >= real.mant_dig - 13 );
-    assert(feqrel(betaIncomplete(0.0001, 10000, 0.0001),0.999978059362107134278786L) >= real.mant_dig - 18 );
+    assert(feqrel(betaIncomplete(2, 2.5, 0.9), 0.989_722_597_604_452_767_171_003_59L) >= real.mant_dig - 1);
+    static if (real.mant_dig >= 64) // incl. 80-bit reals
+        assert(feqrel(betaIncomplete(1000, 800, 0.5), 1.179140859734704555102808541457164E-06L) >= real.mant_dig - 13);
+    else
+        assert(feqrel(betaIncomplete(1000, 800, 0.5), 1.179140859734704555102808541457164E-06L) >= real.mant_dig - 14);
+    assert(feqrel(betaIncomplete(0.0001, 10000, 0.0001), 0.999978059362107134278786L) >= real.mant_dig - 18);
     assert(betaIncomplete(0.01, 327726.7, 0.545113) == 1.0);
     assert(feqrel(betaIncompleteInv(8, 10, 0.010_934_315_234_099_2L), 0.2L) >= real.mant_dig - 2);
-    assert(feqrel(betaIncomplete(0.01, 498.437, 0.0121433),0.99999664562033077636065L) >= real.mant_dig - 1);
+    assert(feqrel(betaIncomplete(0.01, 498.437, 0.0121433), 0.99999664562033077636065L) >= real.mant_dig - 1);
     assert(feqrel(betaIncompleteInv(5, 10, 0.2000002972865658842), 0.229121208190918L) >= real.mant_dig - 3);
     assert(feqrel(betaIncompleteInv(4, 7, 0.8000002209179505L), 0.483657360076904L) >= real.mant_dig - 3);
 
@@ -913,30 +919,32 @@ unittest { // also tested by the normal distribution
     // Extensive testing failed to increase the coverage. It seems likely that about
     // half the code in this function is unnecessary; there is potential for
     // significant improvement over the original CEPHES code.
+    static if (real.mant_dig == 64) // 80-bit reals
+    {
+        assert(betaIncompleteInv(0.01, 8e-48, 5.45464e-20) == 1-real.epsilon);
+        assert(betaIncompleteInv(0.01, 8e-48, 9e-26) == 1-real.epsilon);
 
-    assert(betaIncompleteInv(0.01, 8e-48, 5.45464e-20)==1-real.epsilon);
-    assert(betaIncompleteInv(0.01, 8e-48, 9e-26)==1-real.epsilon);
+        // Beware: a one-bit change in pow() changes almost all digits in the result!
+        assert(feqrel(betaIncompleteInv(0x1.b3d151fbba0eb18p+1, 1.2265e-19, 2.44859e-18), 0x1.c0110c8531d0952cp-1L) > 10);
+        // This next case uncovered a one-bit difference in the FYL2X instruction
+        // between Intel and AMD processors. This difference gets magnified by 2^^38.
+        // WolframAlpha crashes attempting to calculate this.
+        assert(feqrel(betaIncompleteInv(0x1.ff1275ae5b939bcap-41, 4.6713e18, 0.0813601),
+            0x1.f97749d90c7adba8p-63L) >= real.mant_dig - 39);
+        real a1 = 3.40483;
+        assert(betaIncompleteInv(a1, 4.0640301659679627772e19L, 0.545113) == 0x1.ba8c08108aaf5d14p-109);
+        real b1 = 2.82847e-25;
+        assert(feqrel(betaIncompleteInv(0.01, b1, 9e-26), 0x1.549696104490aa9p-830L) >= real.mant_dig-10);
 
-    // Beware: a one-bit change in pow() changes almost all digits in the result!
-    assert(feqrel(betaIncompleteInv(0x1.b3d151fbba0eb18p+1, 1.2265e-19, 2.44859e-18),0x1.c0110c8531d0952cp-1L) > 10);
-    // This next case uncovered a one-bit difference in the FYL2X instruction
-    // between Intel and AMD processors. This difference gets magnified by 2^^38.
-    // WolframAlpha crashes attempting to calculate this.
-    assert(feqrel(betaIncompleteInv(0x1.ff1275ae5b939bcap-41, 4.6713e18, 0.0813601),
-        0x1.f97749d90c7adba8p-63L) >= real.mant_dig - 39);
-    real a1 = 3.40483;
-    assert(betaIncompleteInv(a1, 4.0640301659679627772e19L, 0.545113)== 0x1.ba8c08108aaf5d14p-109);
-    real b1 = 2.82847e-25;
-    assert(feqrel(betaIncompleteInv(0.01, b1, 9e-26), 0x1.549696104490aa9p-830L) >= real.mant_dig-10);
-
-    // --- Problematic cases ---
-    // This is a situation where the series expansion fails to converge
-    assert( isNaN(betaIncompleteInv(0.12167, 4.0640301659679627772e19L, 0.0813601)));
-    // This next result is almost certainly erroneous.
-    // Mathematica states: "(cannot be determined by current methods)"
-    assert(betaIncomplete(1.16251e20, 2.18e39, 5.45e-20)==-real.infinity);
-    // WolframAlpha gives no result for this, though indicates that it approximately 1.0 - 1.3e-9
-    assert(1- betaIncomplete(0.01, 328222, 4.0375e-5) == 0x1.5f62926b4p-30);
+        // --- Problematic cases ---
+        // This is a situation where the series expansion fails to converge
+        assert( isNaN(betaIncompleteInv(0.12167, 4.0640301659679627772e19L, 0.0813601)));
+        // This next result is almost certainly erroneous.
+        // Mathematica states: "(cannot be determined by current methods)"
+        assert(betaIncomplete(1.16251e20, 2.18e39, 5.45e-20) == -real.infinity);
+        // WolframAlpha gives no result for this, though indicates that it approximately 1.0 - 1.3e-9
+        assert(1 - betaIncomplete(0.01, 328222, 4.0375e-5) == 0x1.5f62926b4p-30);
+    }
 }
 
 
@@ -1418,7 +1426,10 @@ assert(gammaIncompleteComplInv(3, 0)==real.infinity);
 // Fixed a bug that caused gammaIncompleteCompl to return a wrong value when
 // x was larger than a, but not by much, and both were large:
 // The value is from WolframAlpha (Gamma[100000, 100001, inf] / Gamma[100000])
-assert(fabs(gammaIncompleteCompl(100000, 100001) - 0.49831792109) < 0.000000000005);
+static if (real.mant_dig >= 64) // incl. 80-bit reals
+    assert(fabs(gammaIncompleteCompl(100000, 100001) - 0.49831792109) < 0.000000000005);
+else
+    assert(fabs(gammaIncompleteCompl(100000, 100001) - 0.49831792109) < 0.00000005);
 }
 
 
@@ -1570,4 +1581,65 @@ unittest {
         assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
     for(auto x = 1.0; x < 15.0; x += 1.0)
         assert(approxEqual(digamma(x), log(x) - logmdigamma(x)));
+}
+
+/** Inverse of the Log Minus Digamma function
+ *
+ *   Returns x such $(D log(x) - digamma(x) == y).
+ *
+ * References:
+ *   1. Abramowitz, M., and Stegun, I. A. (1970).
+ *      Handbook of mathematical functions. Dover, New York,
+ *      pages 258-259, equation 6.3.18.
+ *
+ * Authors: Ilya Yaroshenko
+ */
+real logmdigammaInverse(real y)
+{
+    import std.numeric: findRoot;
+    enum maxY = logmdigamma(real.min_normal);
+    static assert(maxY > 0 && maxY <= real.max);
+
+    if (y >= maxY)
+    {
+        //lim x->0 (log(x)-digamma(x))*x == 1
+        return 1 / y;
+    }
+    if (y < 0)
+    {
+        return real.nan;
+    }
+    if (y < real.min_normal)
+    {
+        //6.3.18
+        return 0.5 / y;
+    }
+    if (y > 0)
+    {
+        // x/2 <= logmdigamma(1 / x) <= x, x > 0
+        // calls logmdigamma ~6 times
+        return 1 / findRoot((real x) => logmdigamma(1 / x) - y, y,  2*y);
+    }
+    return y; //NaN
+}
+
+unittest {
+    import std.typecons;
+    //WolframAlpha, 22.02.2015
+    immutable Tuple!(real, real)[5] testData = [
+        tuple(1.0L, 0.615556766479594378978099158335549201923L),
+        tuple(1.0L/8, 4.15937801516894947161054974029150730555L),
+        tuple(1.0L/1024, 512.166612384991507850643277924243523243L),
+        tuple(0.000500083333325000003968249801594877323784632117L, 1000.0L),
+        tuple(1017.644138623741168814449776695062817947092468536L, 1.0L/1024),
+    ];
+    foreach (test; testData)
+        assert(approxEqual(logmdigammaInverse(test[0]), test[1], 1e-15, 0));
+
+    assert(approxEqual(logmdigamma(logmdigammaInverse(1)), 1, 1e-15, 0));
+    assert(approxEqual(logmdigamma(logmdigammaInverse(real.min_normal)), real.min_normal, 1e-15, 0));
+    assert(approxEqual(logmdigamma(logmdigammaInverse(real.max/2)), real.max/2, 1e-15, 0));
+    assert(approxEqual(logmdigammaInverse(logmdigamma(1)), 1, 1e-15, 0));
+    assert(approxEqual(logmdigammaInverse(logmdigamma(real.min_normal)), real.min_normal, 1e-15, 0));
+    assert(approxEqual(logmdigammaInverse(logmdigamma(real.max/2)), real.max/2, 1e-15, 0));
 }

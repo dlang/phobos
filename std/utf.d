@@ -23,6 +23,7 @@ module std.utf;
 import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
 import std.typetuple;  // TypeTuple
+import std.typecons : Flag;
 
 //debug=utf;           // uncomment to turn on debugging printf's
 
@@ -83,6 +84,99 @@ class UTFException : Exception
     }
 }
 
+/*
+   Provide array of invalidly encoded UTF strings. Useful for testing.
+
+   Params:
+        Char = char, wchar, or dchar
+
+   Returns:
+        an array of invalidly encoded UTF strings
+ */
+
+package auto invalidUTFstrings(Char)() @safe pure @nogc nothrow
+    if (isSomeChar!Char)
+{
+    static if (is(Char == char))
+    {
+        enum x = 0xDC00;         // invalid surrogate value
+        enum y = 0x110000;       // out of range
+
+        static immutable string[8] result =
+        [
+            "\x80",             // not a start byte
+            "\xC0",             // truncated
+            "\xC0\xC0",         // invalid continuation
+            "\xF0\x82\x82\xAC", // overlong
+            [
+              0xE0 | (x >> 12),
+              0x80 | ((x >> 6) & 0x3F),
+              0x80 | (x & 0x3F)
+            ],
+            [
+              cast(char)(0xF0 | (y >> 18)),
+              cast(char)(0x80 | ((y >> 12) & 0x3F)),
+              cast(char)(0x80 | ((y >> 6) & 0x3F)),
+              cast(char)(0x80 | (y & 0x3F))
+            ],
+            [
+              cast(char)(0xF8 | 3),     // 5 byte encoding
+              cast(char)(0x80 | 3),
+              cast(char)(0x80 | 3),
+              cast(char)(0x80 | 3),
+              cast(char)(0x80 | 3),
+            ],
+            [
+              cast(char)(0xFC | 3),     // 6 byte encoding
+              cast(char)(0x80 | 3),
+              cast(char)(0x80 | 3),
+              cast(char)(0x80 | 3),
+              cast(char)(0x80 | 3),
+              cast(char)(0x80 | 3),
+            ],
+        ];
+
+        return result[];
+    }
+    else static if (is(Char == wchar))
+    {
+        static immutable wstring[5] result =
+        [
+            [
+              cast(wchar)0xDC00,
+            ],
+            [
+              cast(wchar)0xDFFF,
+            ],
+            [
+              cast(wchar)0xDBFF,
+              cast(wchar)0xDBFF,
+            ],
+            [
+              cast(wchar)0xDBFF,
+              cast(wchar)0xE000,
+            ],
+            [
+              cast(wchar)0xD800,
+            ],
+        ];
+
+        return result[];
+    }
+    else static if (is(Char == dchar))
+    {
+        static immutable dstring[3] result =
+        [
+            [ cast(dchar)0x110000 ],
+            [ cast(dchar)0x00D800 ],
+            [ cast(dchar)0x00DFFF ],
+        ];
+
+        return result;
+    }
+    else
+        static assert(0);
+}
 
 /++
     Returns whether $(D c) is a valid UTF-32 character.
@@ -947,11 +1041,19 @@ unittest
     with length and slicing, whereas $(LREF decodeFront) will work with any
     input range of code units.
 
+    Params:
+        useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
+        str = input string or indexable Range
+        index = starting index into s[]; incremented by number of code units processed
+
+    Returns:
+        decoded character
+
     Throws:
         $(LREF UTFException) if $(D str[index]) is not the start of a valid UTF
-        sequence.
+        sequence and useReplacementDchar is UseReplacementDchar.no
   +/
-dchar decode(S)(auto ref S str, ref size_t index)
+dchar decode(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
     if (!isSomeString!S &&
         isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
@@ -967,10 +1069,10 @@ body
     if (str[index] < codeUnitLimit!S)
         return str[index++];
     else
-        return decodeImpl!true(str, index);
+        return decodeImpl!(true, useReplacementDchar)(str, index);
 }
 
-dchar decode(S)(auto ref S str, ref size_t index) @trusted pure
+dchar decode(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index) @trusted pure
     if (isSomeString!S)
 in
 {
@@ -985,7 +1087,7 @@ body
     if (str[index] < codeUnitLimit!S)
         return str[index++];
     else
-        return decodeImpl!true(str, index);
+        return decodeImpl!(true, useReplacementDchar)(str, index);
 }
 
 /++
@@ -996,6 +1098,14 @@ body
     decodes them. If $(D numCodeUnits) is passed in, it gets set to the number
     of code units which were in the code point which was decoded.
 
+    Params:
+        useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
+        str = input string or indexable Range
+        numCodeUnits = set to number of code units processed
+
+    Returns:
+        decoded character
+
     Throws:
         $(LREF UTFException) if $(D str.front) is not the start of a valid UTF
         sequence. If an exception is thrown, then there is no guarantee as to
@@ -1003,7 +1113,7 @@ body
         type of range being used and how many code units had to be popped off
         before the code point was determined to be invalid.
   +/
-dchar decodeFront(S)(ref S str, out size_t numCodeUnits)
+dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str, out size_t numCodeUnits)
     if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
 in
 {
@@ -1025,11 +1135,11 @@ body
     }
     else
     {
-        //@@@BUG@@@ 8521 forces canIndex to be done outside of decodeImpl, which
+        //@@@BUG@@@ 14447 forces canIndex to be done outside of decodeImpl, which
         //is undesirable, since not all overloads of decodeImpl need it. So, it
         //should be moved back into decodeImpl once bug# 8521 has been fixed.
         enum canIndex = isRandomAccessRange!S && hasSlicing!S && hasLength!S;
-        immutable retval = decodeImpl!canIndex(str, numCodeUnits);
+        immutable retval = decodeImpl!(canIndex, useReplacementDchar)(str, numCodeUnits);
 
         // The other range types were already popped by decodeImpl.
         static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
@@ -1039,7 +1149,7 @@ body
     }
 }
 
-dchar decodeFront(S)(ref S str, out size_t numCodeUnits) @trusted pure
+dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str, out size_t numCodeUnits) @trusted pure
     if (isSomeString!S)
 in
 {
@@ -1060,18 +1170,18 @@ body
     }
     else
     {
-        immutable retval = decodeImpl!true(str, numCodeUnits);
+        immutable retval = decodeImpl!(true, useReplacementDchar)(str, numCodeUnits);
         str = str[numCodeUnits .. $];
         return retval;
     }
 }
 
 /++ Ditto +/
-dchar decodeFront(S)(ref S str)
+dchar decodeFront(Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(ref S str)
     if (isInputRange!S && isSomeChar!(ElementType!S))
 {
     size_t numCodeUnits;
-    return decodeFront(str, numCodeUnits);
+    return decodeFront!useReplacementDchar(str, numCodeUnits);
 }
 
 // Gives the maximum value that a code unit for the given range type can hold.
@@ -1091,8 +1201,19 @@ private template codeUnitLimit(S)
  * more useful error message when attempting to decode past the end of a string.
  * Subsequently it uses a pointer instead of an array to avoid
  * redundant bounds checking.
+ *
+ * The three overloads of this operate on chars, wchars, and dchars.
+ *
+ * Params:
+ *      canIndex = if S is indexable
+ *      useReplacementDchar = if invalid UTF, return replacementDchar rather than throwing
+ *      str = input string or Range
+ *      index = starting index into s[]; incremented by number of code units processed
+ *
+ * Returns:
+ *      decoded character
  */
-private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
+private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
     if (is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
@@ -1116,7 +1237,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     else
         alias pstr = str;
 
-    //@@@BUG@@@ 8521 forces this to be done outside of decodeImpl
+    //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
     //enum canIndex = is(S : const char[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
     static if (canIndex)
@@ -1130,48 +1251,60 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         pstr.popFront();
     }
 
-    static if (canIndex)
+    static if (!useReplacementDchar)
     {
-        static UTFException exception(S)(S str, string msg)
+        static if (canIndex)
         {
-            uint[4] sequence = void;
-            size_t i;
-
-            do
+            static UTFException exception(S)(S str, string msg)
             {
-                sequence[i] = str[i];
-            } while (++i < str.length && i < 4 && (str[i] & 0xC0) == 0x80);
+                uint[4] sequence = void;
+                size_t i;
 
-            return new UTFException(msg, i).setSequence(sequence[0 .. i]);
+                do
+                {
+                    sequence[i] = str[i];
+                } while (++i < str.length && i < 4 && (str[i] & 0xC0) == 0x80);
+
+                return new UTFException(msg, i).setSequence(sequence[0 .. i]);
+            }
         }
-    }
 
-    UTFException invalidUTF()
-    {
-        static if (canIndex)
-           return exception(pstr[0 .. length], "Invalid UTF-8 sequence");
-        else
+        UTFException invalidUTF()
         {
-            //We can't include the invalid sequence with input strings without
-            //saving each of the code units along the way, and we can't do it with
-            //forward ranges without saving the entire range. Both would incur a
-            //cost for the decoding of every character just to provide a better
-            //error message for the (hopefully) rare case when an invalid UTF-8
-            //sequence is encountered, so we don't bother trying to include the
-            //invalid sequence here, unlike with strings and sliceable ranges.
-           return new UTFException("Invalid UTF-8 sequence");
+            static if (canIndex)
+               return exception(pstr[0 .. length], "Invalid UTF-8 sequence");
+            else
+            {
+                //We can't include the invalid sequence with input strings without
+                //saving each of the code units along the way, and we can't do it with
+                //forward ranges without saving the entire range. Both would incur a
+                //cost for the decoding of every character just to provide a better
+                //error message for the (hopefully) rare case when an invalid UTF-8
+                //sequence is encountered, so we don't bother trying to include the
+                //invalid sequence here, unlike with strings and sliceable ranges.
+               return new UTFException("Invalid UTF-8 sequence");
+            }
+        }
+
+        UTFException outOfBounds()
+        {
+            static if (canIndex)
+               return exception(pstr[0 .. length], "Attempted to decode past the end of a string");
+            else
+               return new UTFException("Attempted to decode past the end of a string");
         }
     }
 
-    UTFException outOfBounds()
+    if ((fst & 0b1100_0000) != 0b1100_0000)
     {
-        static if (canIndex)
-           return exception(pstr[0 .. length], "Attempted to decode past the end of a string");
+        static if (useReplacementDchar)
+        {
+            ++index;            // always consume bad input to avoid infinite loops
+            return replacementDchar;
+        }
         else
-           return new UTFException("Attempted to decode past the end of a string");
+            throw invalidUTF(); // starter must have at least 2 first bits set
     }
-    if((fst & 0b1100_0000) != 0b1100_0000)
-        throw invalidUTF(); // starter must have at least 2 first bits set
     ubyte tmp = void;
     dchar d = fst; // upper control bits are masked out later
     fst <<= 1;
@@ -1182,12 +1315,28 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         static if (canIndex)
         {
             if (i == length)
-                throw outOfBounds();
+            {
+                static if (useReplacementDchar)
+                {
+                    index += i;
+                    return replacementDchar;
+                }
+                else
+                    throw outOfBounds();
+            }
         }
         else
         {
             if (pstr.empty)
-                throw outOfBounds();
+            {
+                static if (useReplacementDchar)
+                {
+                    index += i;
+                    return replacementDchar;
+                }
+                else
+                    throw outOfBounds();
+            }
         }
 
         static if (canIndex)
@@ -1199,7 +1348,15 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         }
 
         if ((tmp & 0xC0) != 0x80)
-            throw invalidUTF();
+        {
+            static if (useReplacementDchar)
+            {
+                index += i + 1;
+                return replacementDchar;
+            }
+            else
+                throw invalidUTF();
+        }
 
         d = (d << 6) | (tmp & 0x3F);
         fst <<= 1;
@@ -1210,27 +1367,82 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
 
             // overlong, could have been encoded with i bytes
             if ((d & ~bitMask[i - 1]) == 0)
-                throw invalidUTF();
+            {
+                static if (useReplacementDchar)
+                {
+                    index += i + 1;
+                    return replacementDchar;
+                }
+                else
+                    throw invalidUTF();
+            }
 
             // check for surrogates only needed for 3 bytes
             static if (i == 2)
             {
                 if (!isValidDchar(d))
-                    throw invalidUTF();
+                {
+                    static if (useReplacementDchar)
+                    {
+                        index += i + 1;
+                        return replacementDchar;
+                    }
+                    else
+                        throw invalidUTF();
+                }
             }
 
             index += i + 1;
             static if (i == 3)
+            {
                 if (d > dchar.max)
-                    throw invalidUTF();
+                {
+                    static if (useReplacementDchar)
+                        d = replacementDchar;
+                    else
+                        throw invalidUTF();
+                }
+            }
             return d;
         }
     }
 
-    throw invalidUTF();
+    static if (useReplacementDchar)
+    {
+        index += 4;             // read 4 chars by now
+        return replacementDchar;
+    }
+    else
+        throw invalidUTF();
 }
 
-private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
+@safe pure @nogc nothrow
+unittest
+{
+    // Add tests for useReplacemendDchar==yes path
+
+    static struct R
+    {
+      @safe pure @nogc nothrow:
+        this(string s) { this.s = s; }
+        @property bool empty() { return idx == s.length; }
+        @property char front() { return s[idx]; }
+        void popFront() { ++idx; }
+        size_t idx;
+        string s;
+    }
+
+    foreach (s; invalidUTFstrings!char())
+    {
+        auto r = R(s);
+        size_t index;
+        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        assert(dc == replacementDchar);
+        assert(1 <= index && index <= s.length);
+    }
+}
+
+private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
     if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
     static if (is(S : const wchar[]))
@@ -1240,7 +1452,7 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     else
         alias pstr = str;
 
-    //@@@BUG@@@ 8521 forces this to be done outside of decodeImpl
+    //@@@BUG@@@ 14447 forces this to be done outside of decodeImpl
     //enum canIndex = is(S : const wchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S);
 
     static if (canIndex)
@@ -1254,15 +1466,20 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         pstr.popFront();
     }
 
-    UTFException exception(string msg)
+    static if (!useReplacementDchar)
     {
-        static if (canIndex)
-            return new UTFException(msg).setSequence(pstr[0]);
-        else
-            return new UTFException(msg);
+        UTFException exception(string msg)
+        {
+            static if (canIndex)
+                return new UTFException(msg).setSequence(pstr[0]);
+            else
+                return new UTFException(msg);
+        }
     }
 
     string msg;
+
+    // The < case must be taken care of before decodeImpl is called.
     assert(u >= 0xD800);
 
     if (u <= 0xDBFF)
@@ -1273,7 +1490,15 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
             immutable onlyOneCodeUnit = pstr.empty;
 
         if (onlyOneCodeUnit)
-            throw exception("surrogate UTF-16 high value past end of string");
+        {
+            static if (useReplacementDchar)
+            {
+                ++index;
+                return replacementDchar;
+            }
+            else
+                throw exception("surrogate UTF-16 high value past end of string");
+        }
 
         static if (canIndex)
             immutable uint u2 = pstr[1];
@@ -1284,15 +1509,24 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
         }
 
         if (u2 < 0xDC00 || u2 > 0xDFFF)
-            throw exception("surrogate UTF-16 low value out of range");
-
-        u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
-        index += 2;
+        {
+            static if (useReplacementDchar)
+                u = replacementDchar;
+            else
+                throw exception("surrogate UTF-16 low value out of range");
+        }
+        else
+            u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
+        ++index;
     }
     else if (u >= 0xDC00 && u <= 0xDFFF)
-        throw exception("unpaired surrogate UTF-16 value");
-    else
-        ++index;
+    {
+        static if (useReplacementDchar)
+            u = replacementDchar;
+        else
+            throw exception("unpaired surrogate UTF-16 value");
+    }
+    ++index;
 
     // Note: u+FFFE and u+FFFF are specifically permitted by the
     // Unicode standard for application internal use (see isValidDchar)
@@ -1300,7 +1534,33 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     return cast(dchar)u;
 }
 
-private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
+pure @nogc nothrow
+unittest
+{
+    // Add tests for useReplacemendDchar==true path
+
+    static struct R
+    {
+      @safe pure @nogc nothrow:
+        this(wstring s) { this.s = s; }
+        @property bool empty() { return idx == s.length; }
+        @property wchar front() { return s[idx]; }
+        void popFront() { ++idx; }
+        size_t idx;
+        wstring s;
+    }
+
+    foreach (s; invalidUTFstrings!wchar())
+    {
+        auto r = R(s);
+        size_t index;
+        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        assert(dc == replacementDchar);
+        assert(1 <= index && index <= s.length);
+    }
+}
+
+private dchar decodeImpl(bool canIndex, Flag!"useReplacementDchar" useReplacementDchar = Flag!"useReplacementDchar".no, S)(auto ref S str, ref size_t index)
     if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
     static if (is(S : const dchar[]))
@@ -1308,22 +1568,61 @@ private dchar decodeImpl(bool canIndex, S)(auto ref S str, ref size_t index)
     else
         alias pstr = str;
 
-    static if (is(S : const dchar[]) || (isRandomAccessRange!S && hasSlicing!S && hasLength!S))
+    static if (is(S : const dchar[]) || isRandomAccessRange!S)
     {
-        if (!isValidDchar(pstr[index]))
-            throw new UTFException("Invalid UTF-32 value").setSequence(pstr[index]);
-        return pstr[index++];
+        dchar dc = pstr[index];
+        if (!isValidDchar(dc))
+        {
+            static if (useReplacementDchar)
+                dc = replacementDchar;
+            else
+                throw new UTFException("Invalid UTF-32 value").setSequence(dc);
+        }
+        ++index;
+        return dc;
     }
     else
     {
-        if (!isValidDchar(pstr.front))
-            throw new UTFException("Invalid UTF-32 value").setSequence(pstr.front);
+        dchar dc = pstr.front;
+        if (!isValidDchar(dc))
+        {
+            static if (useReplacementDchar)
+                dc = replacementDchar;
+            else
+                throw new UTFException("Invalid UTF-32 value").setSequence(dc);
+        }
         ++index;
-        immutable retval = pstr.front;
         pstr.popFront();
-        return retval;
+        return dc;
     }
 }
+
+pure @nogc nothrow
+unittest
+{
+    // Add tests for useReplacemendDchar==true path
+
+    static struct R
+    {
+      @safe pure @nogc nothrow:
+        this(dstring s) { this.s = s; }
+        @property bool empty() { return idx == s.length; }
+        @property dchar front() { return s[idx]; }
+        void popFront() { ++idx; }
+        size_t idx;
+        dstring s;
+    }
+
+    foreach (s; invalidUTFstrings!dchar())
+    {
+        auto r = R(s);
+        size_t index;
+        dchar dc = decodeImpl!(false, Flag!"useReplacementDchar".yes)(r, index);
+        assert(dc == replacementDchar);
+        assert(1 <= index && index <= s.length);
+    }
+}
+
 
 version(unittest) private void testDecode(R)(R range,
                                              size_t index,
@@ -2147,10 +2446,8 @@ string toUTF8(in char[] s) @safe
 }
 
 /// ditto
-string toUTF8(in wchar[] s) @trusted
+string toUTF8(in wchar[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     char[] r;
     size_t i;
     size_t slen = s.length;
@@ -2171,14 +2468,12 @@ string toUTF8(in wchar[] s) @trusted
         }
     }
 
-    return r.assumeUnique();
+    return r;
 }
 
 /// ditto
-string toUTF8(in dchar[] s) @trusted
+string toUTF8(in dchar[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     char[] r;
     size_t i;
     size_t slen = s.length;
@@ -2201,7 +2496,7 @@ string toUTF8(in dchar[] s) @trusted
         }
     }
 
-    return r.assumeUnique();
+    return r;
 }
 
 
@@ -2230,10 +2525,8 @@ body
 /****************
  * Encodes string $(D s) into UTF-16 and returns the encoded string.
  */
-wstring toUTF16(in char[] s) @trusted
+wstring toUTF16(in char[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     wchar[] r;
     size_t slen = s.length;
 
@@ -2254,7 +2547,7 @@ wstring toUTF16(in char[] s) @trusted
         }
     }
 
-    return r.assumeUnique();  // ok because r is unique
+    return r;
 }
 
 /// ditto
@@ -2265,10 +2558,8 @@ wstring toUTF16(in wchar[] s) @safe
 }
 
 /// ditto
-pure wstring toUTF16(in dchar[] s) @trusted
+wstring toUTF16(in dchar[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     wchar[] r;
     size_t slen = s.length;
 
@@ -2279,7 +2570,7 @@ pure wstring toUTF16(in dchar[] s) @trusted
         encode(r, s[i]);
     }
 
-    return r.assumeUnique();  // ok because r is unique
+    return r;
 }
 
 
@@ -2288,10 +2579,8 @@ pure wstring toUTF16(in dchar[] s) @trusted
 /*****
  * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-dstring toUTF32(in char[] s) @trusted
+dstring toUTF32(in char[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     dchar[] r;
     size_t slen = s.length;
     size_t j = 0;
@@ -2307,14 +2596,12 @@ dstring toUTF32(in char[] s) @trusted
         r[j++] = c;
     }
 
-    return r[0 .. j].assumeUnique(); // legit because it's unique
+    return r[0 .. j];
 }
 
 /// ditto
-dstring toUTF32(in wchar[] s) @trusted
+dstring toUTF32(in wchar[] s) @safe
 {
-    import std.exception : assumeUnique;
-
     dchar[] r;
     size_t slen = s.length;
     size_t j = 0;
@@ -2330,7 +2617,7 @@ dstring toUTF32(in wchar[] s) @trusted
         r[j++] = c;
     }
 
-    return r[0 .. j].assumeUnique();  // legit because it's unique
+    return r[0 .. j];
 }
 
 /// ditto
@@ -3474,57 +3761,14 @@ pure nothrow @nogc unittest
     assert(s == "hello\u07FF\uD7FF\U00010000\U0010FFFF"d);
   }
   {
-    char[1] cs;
-    cs[0] = 0xC0;                       // truncated
-    auto r = cs[].byDchar();
-    assert(!r.empty);
-    dchar c = r.front;
-    assert(c == replacementDchar);
-  }
-  {
-    char[2] cs;
-    cs[0] = 0xC0;
-    cs[1] = 0xC0;                       // invalid continuation
-    auto r = cs[].byDchar();
-    assert(!r.empty);
-    assert(r.front == r.front);
-    dchar c = r.front;
-    assert(c == replacementDchar);
-  }
-  {
-    char[3] cs;
-    enum x = 0xDC00;                    // invalid surrogate value
-    cs[0] = 0xE0 | (x >> 12);
-    cs[1] = 0x80 | ((x >> 6) & 0x3F);
-    cs[2] = 0x80 | (x & 0x3F);
-    auto r = cs[].byDchar();
-    assert(!r.empty);
-    dchar c = r.front;
-    assert(c == replacementDchar);
-  }
-  {
-    char[4] cs;
-    cs[0] = 0xF0;
-    cs[1] = 0x82;
-    cs[2] = 0x82;
-    cs[3] = 0xAC;               // overlong
-    auto r = cs[].byDchar();
-    assert(!r.empty);
-    assert(r.front == r.front);
-    dchar c = r.front;
-    assert(c == replacementDchar);
-  }
-  {
-    char[4] cs;
-    enum x = 0x110000;                    // out of range
-    cs[0] = cast(char)(0xF0 | (x >> 18));
-    cs[1] = cast(char)(0x80 | ((x >> 12) & 0x3F));
-    cs[2] = cast(char)(0x80 | ((x >> 6) & 0x3F));
-    cs[3] = cast(char)(0x80 | (x & 0x3F));
-    auto r = cs[].byDchar();
-    assert(!r.empty);
-    dchar c = r.front;
-    assert(c == replacementDchar);
+    foreach (s; invalidUTFstrings!char())
+    {
+        auto r = s.byDchar();
+        assert(!r.empty);
+        assert(r.front == r.front);
+        dchar c = r.front;
+        assert(c == replacementDchar);
+    }
   }
   {
     auto r = "hello".byDchar();
@@ -3545,20 +3789,14 @@ pure nothrow @nogc unittest
     assert(s == "hello\u07FF\uD7FF\U0010FFFF"d);
   }
   {
-    wchar[1] ws;
-    ws[0] = 0xD801;             // truncated surrogate pair
-    auto r = ws[].byDchar();
-    assert(!r.empty);
-    dchar c = r.front;
-    assert(c == replacementDchar);
-  }
-  {
-    wchar[1] ws;
-    ws[0] = 0xDC00;             // unpaired 2nd surrogate
-    auto r = ws[].byDchar();
-    assert(!r.empty);
-    dchar c = r.front;
-    assert(c == replacementDchar);
+    foreach (s; invalidUTFstrings!wchar())
+    {
+        auto r = s.byDchar();
+        assert(!r.empty);
+        assert(r.front == r.front);
+        dchar c = r.front;
+        assert(c == replacementDchar);
+    }
   }
   {
     wchar[2] ws;
@@ -3569,16 +3807,6 @@ pure nothrow @nogc unittest
     assert(r.front == r.front);
     dchar c = r.front;
     assert(c == '\U00010100');
-  }
-  {
-    wchar[2] ws;
-    ws[0] = 0xD800;
-    ws[1] = 0xDBFF;             // second surrogate out of range
-    auto r = ws[].byDchar();
-    assert(!r.empty);
-    assert(r.front == r.front);
-    dchar c = r.front;
-    assert(c == replacementDchar);
   }
   {
     auto r = "hello"w.byDchar();
@@ -3648,4 +3876,37 @@ int impureVariable;
         foreach (c; range.byWchar()) { }
         foreach (c; range.byDchar()) { }
     }
+}
+
+/***************************************
+ * Select byChar, byWchar, or byDchar based on the type C.
+ *
+ * Params:
+ *    C = char, wchar, or dchar
+ *
+ * Returns:
+ *    corresponding alias to $(LREF byChar), $(LREF byWchar), or $(LREF byDchar)
+ */
+
+template byUTF(C) if (isSomeChar!C)
+{
+    static if (is(C : const(char)))
+        alias byUTF = byChar;
+    else static if (is(C : const(wchar)))
+        alias byUTF = byWchar;
+    else static if (is(C : const(dchar)))
+        alias byUTF = byDchar;
+    else
+        static assert(0);
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    foreach (c; "h".byUTF!char())
+        assert(c == 'h');
+    foreach (c; "h".byUTF!wchar())
+        assert(c == 'h');
+    foreach (c; "h".byUTF!dchar())
+        assert(c == 'h');
 }

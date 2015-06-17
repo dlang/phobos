@@ -820,7 +820,7 @@ template EncoderInstance(CharType : Windows1252Char)
     immutable wstring charMap =
         "\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"~
         "\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"~
-        "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"~
+        "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2013\u2014"~
         "\u02DC\u2122\u0161\u203A\u0153\uFFFD\u017E\u0178"
     ;
 

@@ -168,6 +168,8 @@ unittest {
  *  The digamma function is the logarithmic derivative of the gamma function.
  *
  *  digamma(x) = d/dx logGamma(x)
+ *
+ *  See_Also: $(LREF logmdigamma), $(LREF logmdigammaInverse).
  */
 real digamma(real x)
 {
@@ -177,10 +179,23 @@ real digamma(real x)
 /** Log Minus Digamma function
  *
  *  logmdigamma(x) = log(x) - digamma(x)
+ *
+ *  See_Also: $(LREF digamma), $(LREF logmdigammaInverse).
  */
 real logmdigamma(real x)
 {
     return std.internal.math.gammafunction.logmdigamma(x);
+}
+
+/** Inverse of the Log Minus Digamma function
+ *
+ *  Given y, the function finds x such log(x) - digamma(x) = y.
+ *
+ *  See_Also: $(LREF logmdigamma), $(LREF digamma).
+ */
+real logmdigammaInverse(real x)
+{
+    return std.internal.math.gammafunction.logmdigammaInverse(x);
 }
 
 /** Incomplete beta integral

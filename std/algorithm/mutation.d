@@ -289,21 +289,21 @@ Copies the content of $(D source) into $(D target) and returns the
 remaining (unfilled) part of $(D target).
 
 Preconditions: $(D target) shall have enough room to accomodate
-$(D source).
+the entirety of $(D source).
 
 See_Also:
     $(WEB sgi.com/tech/stl/_copy.html, STL's _copy)
  */
-Range2 copy(Range1, Range2)(Range1 source, Range2 target)
-if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
+TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
+if (isInputRange!SourceRange && isOutputRange!(TargetRange, ElementType!SourceRange))
 {
-    static Range2 genericImpl(Range1 source, Range2 target)
+    static TargetRange genericImpl(SourceRange source, TargetRange target)
     {
         // Specialize for 2 random access ranges.
         // Typically 2 random access ranges are faster iterated by common
         // index then by x.popFront(), y.popFront() pair
-        static if (isRandomAccessRange!Range1 && hasLength!Range1
-            && hasSlicing!Range2 && isRandomAccessRange!Range2 && hasLength!Range2)
+        static if (isRandomAccessRange!SourceRange && hasLength!SourceRange
+            && hasSlicing!TargetRange && isRandomAccessRange!TargetRange && hasLength!TargetRange)
         {
             assert(target.length >= source.length,
                 "Cannot copy a source range into a smaller target range.");
@@ -321,7 +321,7 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     }
 
     import std.traits : isArray;
-    static if (isArray!Range1 && isArray!Range2 &&
+    static if (isArray!SourceRange && isArray!TargetRange &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
         immutable overlaps = () @trusted {
@@ -339,9 +339,9 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
             // generic implementation.
             assert(target.length >= source.length,
                 "Cannot copy a source array into a smaller target array.");
-            target[0..source.length] = source[];
+            target[0 .. source.length] = source[];
 
-            return target[source.length..$];
+            return target[source.length .. $];
         }
     }
     else
@@ -355,9 +355,9 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
     int[] a = [ 1, 5 ];
     int[] b = [ 9, 8 ];
-    int[] buf = new int[a.length + b.length + 10];
-    auto rem = copy(a, buf);    // copy a into buf
-    rem = copy(b, rem);         // copy b into remainder of buf
+    int[] buf = new int[](a.length + b.length + 10);
+    auto rem = a.copy(buf);    // copy a into buf
+    rem = b.copy(rem);         // copy b into remainder of buf
     assert(buf[0 .. a.length + b.length] == [1, 5, 9, 8]);
     assert(rem.length == 10);   // unused slots in buf
 }
@@ -370,7 +370,7 @@ range elements, different types of ranges are accepted:
 {
     float[] src = [ 1.0f, 5 ];
     double[] dest = new double[src.length];
-    copy(src, dest);
+    src.copy(dest);
 }
 
 /**
@@ -381,21 +381,23 @@ $(XREF range, take):
 {
     import std.range;
     int[] src = [ 1, 5, 8, 9, 10 ];
-    auto dest = new int[3];
-    copy(take(src, dest.length), dest);
-    assert(dest[0 .. $] == [ 1, 5, 8 ]);
+    auto dest = new int[](3);
+    src.take(dest.length).copy(dest);
+    assert(dest == [ 1, 5, 8 ]);
 }
 
 /**
-To _copy just those elements from a range that satisfy a predicate you
-may want to use $(LREF filter):
+To _copy just those elements from a range that satisfy a predicate,
+use $(LREF filter):
 */
 @safe unittest
 {
     import std.algorithm.iteration : filter;
     int[] src = [ 1, 5, 8, 9, 10, 1, 2, 0 ];
     auto dest = new int[src.length];
-    auto rem = copy(src.filter!(a => (a & 1) == 1), dest);
+    auto rem = src
+        .filter!(a => (a & 1) == 1)
+        .copy(dest);
     assert(dest[0 .. $ - rem.length] == [ 1, 5, 9, 1 ]);
 }
 
@@ -408,7 +410,7 @@ $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
     import std.algorithm, std.range;
     int[] src = [1, 2, 4];
     int[] dest = [0, 0, 0, 0, 0];
-    copy(src.retro, dest.retro);
+    src.retro.copy(dest.retro);
     assert(dest == [0, 0, 1, 2, 4]);
 }
 
@@ -444,11 +446,13 @@ $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 }
 
 /**
-Assigns $(D value) to each element of input range $(D range).
+Assigns $(D value) to each element of input _range $(D range).
 
 Params:
-        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
-                and has assignable elements
+        range = An
+                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                that exposes references to its elements and has assignable
+                elements
         value = Assigned to each element of range
 
 See_Also:
@@ -558,10 +562,11 @@ $(D range) does not have to be a multiple of the length of $(D
 filler). If $(D filler) is empty, an exception is thrown.
 
 Params:
-    range = An $(XREF2 range, isInputRange, input range) that exposes
-            references to its elements and has assignable elements.
-    filler = The $(XREF2 range, isForwardRange, forward range) representing the
-             _fill pattern.
+    range = An $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+            that exposes references to its elements and has assignable elements.
+    filler = The
+             $(XREF_PACK_NAMED _range,primitives,isForwardRange,forward _range)
+             representing the _fill pattern.
  */
 void fill(Range1, Range2)(Range1 range, Range2 filler)
     if (isInputRange!Range1
@@ -678,8 +683,10 @@ Initializes all elements of $(D range) with their $(D .init) value.
 Assumes that the elements of the range are uninitialized.
 
 Params:
-        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
-                and has assignable elements
+        range = An
+                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                that exposes references to its elements and has assignable
+                elements
 
 See_Also:
         $(LREF fill)
@@ -831,7 +838,7 @@ Params:
 */
 void move(T)(ref T source, ref T target)
 {
-    import core.stdc.string : memcpy;
+    import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
                         isAssignable;
@@ -858,19 +865,17 @@ void move(T)(ref T source, ref T target)
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            import std.algorithm.searching : endsWith;
-
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
+            // If T is nested struct, keep original context pointer
+            static if (__traits(isNested, T))
+                enum sz = T.sizeof - (void*).sizeof;
             else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
+                enum sz = T.sizeof;
+
+            auto init = typeid(T).init();
+            if (init.ptr is null) // null ptr means initialize to 0s
+                memset(&source, 0, sz);
+            else
+                memcpy(&source, init.ptr, sz);
         }
     }
     else
@@ -879,6 +884,52 @@ void move(T)(ref T source, ref T target)
         // assignment works great
         target = source;
     }
+}
+
+///
+unittest
+{
+    Object obj1 = new Object;
+    Object obj2 = obj1;
+    Object obj3;
+
+    move(obj2, obj3);
+    assert(obj3 is obj1);
+}
+
+///
+unittest
+{
+    // Structs without destructors are simply copied
+    struct S1
+    {
+        int a = 1;
+        int b = 2;
+    }
+    S1 s11 = { 10, 11 };
+    S1 s12;
+
+    move(s11, s12);
+
+    assert(s11.a == 10 && s11.b == 11 &&
+           s12.a == 10 && s12.b == 11);
+
+    // But structs with destructors or postblits are reset to their .init value
+    // after copying to the target.
+    struct S2
+    {
+        int a = 1;
+        int b = 2;
+
+        ~this() { }
+    }
+    S2 s21 = { 3, 4 };
+    S2 s22;
+
+    move(s21, s22);
+
+    assert(s21.a == 1 && s21.b == 2 &&
+           s22.a == 3 && s22.b == 4);
 }
 
 unittest
@@ -944,7 +995,7 @@ unittest
 /// Ditto
 T move(T)(ref T source)
 {
-    import core.stdc.string : memcpy;
+    import core.stdc.string : memcpy, memset;
     import std.traits : hasAliasing, hasElaborateAssign,
                         hasElaborateCopyConstructor, hasElaborateDestructor,
                         isAssignable;
@@ -968,19 +1019,17 @@ T move(T)(ref T source)
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            import std.algorithm.searching : endsWith;
-
-            static T empty;
-            static if (T.tupleof.length > 0 &&
-                       T.tupleof[$-1].stringof.endsWith("this"))
-            {
-                // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
-            }
+            // If T is nested struct, keep original context pointer
+            static if (__traits(isNested, T))
+                enum sz = T.sizeof - (void*).sizeof;
             else
-            {
-                memcpy(&source, &empty, T.sizeof);
-            }
+                enum sz = T.sizeof;
+
+            auto init = typeid(T).init();
+            if (init.ptr is null) // null ptr means initialize to 0s
+                memset(&source, 0, sz);
+            else
+                memcpy(&source, init.ptr, sz);
         }
     }
     else
@@ -1124,9 +1173,10 @@ An exception will be thrown if this condition does not hold, i.e., there is not
 enough room in $(D tgt) to accommodate all of $(D src).
 
 Params:
-    src = An $(XREF2 range, isInputRange, input range) with movable elements.
-    tgt = An $(XREF2 range, isInputRange, input range) with elements that
-        elements from $(D src) can be moved into.
+    src = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+        movable elements.
+    tgt = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+        elements that elements from $(D src) can be moved into.
 
 Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
 been moved.
@@ -1157,10 +1207,9 @@ if (isInputRange!Range1 && isInputRange!Range2
     }
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
     int[] b = new int[5];
     assert(moveAll(a, b) is b[3 .. $]);
@@ -1175,9 +1224,10 @@ tgt) in lockstep in increasing order, calls $(D move(a, b)). Stops
 when either $(D src) or $(D tgt) have been exhausted.
 
 Params:
-    src = An $(XREF2 range, isInputRange, input range) with movable elements.
-    tgt = An $(XREF2 range, isInputRange, input range) with elements that
-        elements from $(D src) can be moved into.
+    src = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+        movable elements.
+    tgt = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) with
+        elements that elements from $(D src) can be moved into.
 
 Returns: The leftover portions of the two ranges after one or the other of the
 ranges have been exhausted.
@@ -1196,11 +1246,10 @@ if (isInputRange!Range1 && isInputRange!Range2
     return tuple(src, tgt);
 }
 
+///
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-   int[] a = [ 1, 2, 3, 4, 5 ];
+    int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = new int[3];
     assert(moveSome(a, b)[0] is a[3 .. $]);
     assert(a[0 .. 3] == b);
@@ -1272,8 +1321,8 @@ In the case above the element at offset $(D 1) is removed and $(D
 remove) returns the range smaller by one element. The original array
 has remained of the same length because all functions in $(D
 std.algorithm) only change $(I content), not $(I topology). The value
-$(D 8) is repeated because $(XREF algorithm, move) was invoked to move
-elements around and on integers $(D move) simply copies the source to
+$(D 8) is repeated because $(LREF move) was invoked to
+move elements around and on integers $(D move) simply copies the source to
 the destination. To replace $(D a) with the effect of the removal,
 simply assign $(D a = remove(a, 1)). The slice will be rebound to the
 shorter array and the operation completes with maximal efficiency.
@@ -1951,24 +2000,18 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     }
 }
 
-// Not yet documented
-void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
-{
-    lhs.proxySwap(rhs);
-}
-
+///
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    // Swapping POD (plain old data) types:
     int a = 42, b = 34;
     swap(a, b);
     assert(a == 34 && b == 42);
 
+    // Swapping structs with indirection:
     static struct S { int x; char c; int[] y; }
     S s1 = { 0, 'z', [ 1, 2 ] };
     S s2 = { 42, 'a', [ 4, 6 ] };
-    //writeln(s2.tupleof.stringof);
     swap(s1, s2);
     assert(s1.x == 42);
     assert(s1.c == 'a');
@@ -1978,12 +2021,15 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     assert(s2.c == 'z');
     assert(s2.y == [ 1, 2 ]);
 
+    // Immutables cannot be swapped:
     immutable int imm1, imm2;
     static assert(!__traits(compiles, swap(imm1, imm2)));
 }
 
+///
 @safe unittest
 {
+    // Non-copyable types can still be swapped.
     static struct NoCopy
     {
         this(this) { assert(0); }
@@ -1993,14 +2039,17 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     NoCopy nc1, nc2;
     nc1.n = 127; nc1.s = "abc";
     nc2.n = 513; nc2.s = "uvwxyz";
+
     swap(nc1, nc2);
     assert(nc1.n == 513 && nc1.s == "uvwxyz");
     assert(nc2.n == 127 && nc2.s == "abc");
+
     swap(nc1, nc1);
     swap(nc2, nc2);
     assert(nc1.n == 513 && nc1.s == "uvwxyz");
     assert(nc2.n == 127 && nc2.s == "abc");
 
+    // Types containing non-copyable fields can also be swapped.
     static struct NoCopyHolder
     {
         NoCopy noCopy;
@@ -2008,14 +2057,17 @@ void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
     NoCopyHolder h1, h2;
     h1.noCopy.n = 31; h1.noCopy.s = "abc";
     h2.noCopy.n = 65; h2.noCopy.s = null;
+
     swap(h1, h2);
     assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
     assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
+
     swap(h1, h1);
     swap(h2, h2);
     assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
     assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
 
+    // Const types cannot be swapped.
     const NoCopy const1, const2;
     static assert(!__traits(compiles, swap(const1, const2)));
 }
@@ -2111,6 +2163,12 @@ unittest
     swap(b1, b2);
 }
 
+// Not yet documented
+void swap(T)(ref T lhs, ref T rhs) if (is(typeof(lhs.proxySwap(rhs))))
+{
+    lhs.proxySwap(rhs);
+}
+
 void swapFront(R1, R2)(R1 r1, R2 r2)
     if (isInputRange!R1 && isInputRange!R2)
 {
@@ -2166,8 +2224,10 @@ define copy constructors (for all other types, $(LREF fill) and
 uninitializedFill are equivalent).
 
 Params:
-        range = An $(XREF2 range, isInputRange, input range) that exposes references to its elements
-                and has assignable elements
+        range = An
+                $(XREF_PACK_NAMED _range,primitives,isInputRange,input _range)
+                that exposes references to its elements and has assignable
+                elements
         value = Assigned to each element of range
 
 See_Also:
@@ -2200,4 +2260,3 @@ void uninitializedFill(Range, Value)(Range range, Value value)
         // Doesn't matter whether fill is initialized or not
         return fill(range, value);
 }
-

@@ -135,7 +135,7 @@ unittest
     import std.array : empty;
     import std.string : indexOf;
 
-    string filename = randomString(32) ~ ".tempLogFile";
+    string filename = __FUNCTION__ ~ ".tempLogFile";
     auto l = new FileLogger(filename);
 
     scope(exit)
@@ -164,7 +164,7 @@ unittest
     import std.array : empty;
     import std.string : indexOf;
 
-    string filename = randomString(32) ~ ".tempLogFile";
+    string filename = __FUNCTION__ ~ ".tempLogFile";
     auto file = File(filename, "w");
     auto l = new FileLogger(file);
 

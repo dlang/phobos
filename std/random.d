@@ -32,7 +32,7 @@ distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
 
 Upgrading:
-        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand) can
+        $(WEB digitalmars.com/d/1.0/phobos/std_random.html#rand Phobos D1 $(D rand())) can
         be replaced with $(D uniform!uint()).
 
 Source:    $(PHOBOSSRC std/_random.d)
@@ -45,12 +45,12 @@ WIKI = Phobos/StdRandom
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009, Joseph Rushton Wakeling 2012.
 License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
-           Masahiro Nakagawa (Xorshift randome generator)
+           Masahiro Nakagawa (Xorshift random generator)
            $(WEB braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
 Credits:   The entire random number library architecture is derived from the
            excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
-           researchers at the Fermi laboratory(excluding Xorshift).
+           researchers at the Fermi laboratory (excluding Xorshift).
 */
 /*
          Copyright Andrei Alexandrescu 2008 - 2009.
@@ -1684,8 +1684,8 @@ if (is(E == enum))
  * for some applications.
  *
  * Params:
- *     urng = (optional) random number generator to use;
- *            if not specified, defaults to $(D rndGen)
+ *     rng = (optional) random number generator to use;
+ *           if not specified, defaults to $(D rndGen)
  *
  * Returns:
  *     Floating-point random variate of type $(D T) drawn from the _uniform
@@ -1726,18 +1726,22 @@ body
     {
         immutable T u = (rng.front - rng.min) * factor;
         rng.popFront();
-        static if (isIntegral!R)
+
+        import core.stdc.limits : CHAR_BIT;  // CHAR_BIT is always 8
+        static if (isIntegral!R && T.mant_dig >= (CHAR_BIT * R.sizeof))
         {
-            /* if RNG variates are integral, we're guaranteed
-             * by the definition of factor that u < 1.
+            /* If RNG variates are integral and T has enough precision to hold
+             * R without loss, we're guaranteed by the definition of factor
+             * that precisely u < 1.
              */
             return u;
         }
         else
         {
-            /* Otherwise we have to check, just in case a
-             * floating-point RNG returns a variate that is
-             * exactly equal to its maximum
+            /* Otherwise we have to check whether u is beyond the assumed range
+             * because of the loss of precision, or for another reason, a
+             * floating-point RNG can return a variate that is exactly equal to
+             * its maximum.
              */
             if (u < 1)
             {
@@ -1884,7 +1888,7 @@ void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
-        swapAt(r, i, uniform(i, n, gen));
+        swapAt(r, i, uniform(i, r.length, gen));
     }
 }
 
@@ -1900,17 +1904,38 @@ unittest
     import std.algorithm;
     foreach(RandomGen; PseudoRngTypes)
     {
-        auto a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        auto a = [0, 1, 1, 2, 3];
         auto b = a.dup;
-        auto gen = RandomGen(unpredictableSeed);
-        partialShuffle(a, 5, gen);
-        assert(a[5 .. $] == b[5 .. $]);
-        sort(a[0 .. 5]);
-        assert(a[0 .. 5] == b[0 .. 5]);
-        partialShuffle(a, 6);
-        assert(a[6 .. $] == b[6 .. $]);
-        sort(a[0 .. 6]);
-        assert(a[0 .. 6] == b[0 .. 6]);
+
+        // Pick a fixed seed so that the outcome of the statistical
+        // test below is deterministic.
+        auto gen = RandomGen(12345);
+
+        // NUM times, pick LEN elements from the array at random.
+        immutable int LEN = 2;
+        immutable int NUM = 750;
+        int[][] chk;
+        foreach(step; 0..NUM)
+        {
+            partialShuffle(a, LEN, gen);
+            chk ~= a[0..LEN].dup;
+        }
+
+        // Check that each possible a[0..LEN] was produced at least once.
+        // For a perfectly random RandomGen, the probability that each
+        // particular combination failed to appear would be at most
+        // 0.95 ^^ NUM which is approximately 1,962e-17.
+        // As long as hardware failure (e.g. bit flip) probability
+        // is higher, we are fine with this unittest.
+        sort(chk);
+        assert(equal(uniq(chk), [       [0,1], [0,2], [0,3],
+                                 [1,0], [1,1], [1,2], [1,3],
+                                 [2,0], [2,1],        [2,3],
+                                 [3,0], [3,1], [3,2],      ]));
+
+        // Check that all the elements are still there.
+        sort(a);
+        assert(equal(a, b));
     }
 }
 
@@ -2326,7 +2351,7 @@ struct RandomSample(Range, UniformRNG = void)
     private double _Vprime;
     private Range _input;
     private size_t _index;
-    private enum Skip { None, A, D };
+    private enum Skip { None, A, D }
     private Skip _skip = Skip.None;
 
     // If we're using the default thread-local random number generator then
