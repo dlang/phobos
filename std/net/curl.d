@@ -289,6 +289,7 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 {
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
+        import std.stdio : File;
         conn.url = url;
         auto f = File(saveToPath, "w");
         conn.onReceive = (ubyte[] data) { f.write(data); return data.length; };
@@ -309,6 +310,7 @@ unittest
     // No anonymous DigitalMars FTP access as of 2015
     //download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
     download("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
+    download!(HTTP)("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
