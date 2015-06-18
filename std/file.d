@@ -42,6 +42,18 @@ else version (Posix)
 else
     static assert(false, "Module " ~ .stringof ~ " not implemented for this OS.");
 
+// Character type used for operating system filesystem APIs
+version (Windows)
+{
+    private alias FSChar = wchar;
+}
+else version (Posix)
+{
+    private alias FSChar = char;
+}
+else
+    static assert(0);
+
 package @property string deleteme() @safe
 {
     import std.process : thisProcessID;
@@ -163,7 +175,7 @@ private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE
 
 version (Windows)
 @trusted
-private T cenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file = __FILE__, size_t line = __LINE__)
+private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
         return condition;
@@ -180,7 +192,7 @@ private T cenforce(T)(T condition, const(char)[] name, const(wchar)* namez, stri
 
 version (Posix)
 @trusted
-private T cenforce(T)(T condition, const(char)[] name, const(char)* namez, string file = __FILE__, size_t line = __LINE__)
+private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
         return condition;
@@ -215,19 +227,25 @@ void main()
 }
 ----
 
+Params:
+    name = string or range of characters representing the file _name
+    upTo = if present, the maximum number of bytes to read
+
 Returns: Untyped array of bytes _read.
 
-Throws: $(D FileException) on error.
+Throws: $(LREF FileException) on error.
  */
-version (Posix) void[] read(R)(R name, size_t upTo = size_t.max)
+
+void[] read(R)(R name, size_t upTo = size_t.max)
+    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R)) || isSomeString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-        return readImpl(name, name.tempCString(), upTo);
+        return readImpl(name, name.tempCString!FSChar(), upTo);
     else
-        return readImpl(null, name.tempCString(), upTo);
+        return readImpl(null, name.tempCString!FSChar(), upTo);
 }
 
-version (Posix) private void[] readImpl(const(char)[] name, const(char)* namez, size_t upTo = size_t.max) @trusted
+version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
@@ -273,17 +291,8 @@ version (Posix) private void[] readImpl(const(char)[] name, const(char)* namez, 
         : result[0 .. size];
 }
 
-version (Windows) void[] read(R)(R name, size_t upTo = size_t.max)
-    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R)) || isSomeString!R)
-{
-    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-        return readImpl(name, name.tempCString!wchar(), upTo);
-    else
-        return readImpl(null, name.tempCString!wchar(), upTo);
-}
 
-
-version (Windows) private void[] readImpl(const(char)[] name, const(wchar)* namez, size_t upTo = size_t.max) @safe
+version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
 {
     import std.algorithm : min;
     import std.array : uninitializedArray;
@@ -377,6 +386,9 @@ width conversion is performed; if the width of the characters in file
 $(D name) is different from the width of elements of $(D S),
 validation will fail.
 
+Params:
+    name = string or range of characters representing the file _name
+
 Returns: Array of characters read.
 
 Throws: $(D FileException) on file error, $(D UTFException) on UTF
@@ -391,7 +403,9 @@ enforce(chomp(readText("deleteme")) == "abc");
 ----
  */
 
-S readText(S = string)(in char[] name) @safe if (isSomeString!S)
+S readText(S = string, R)(R name)
+    if (isSomeString!S &&
+        (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R))
 {
     import std.utf : validate;
     static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
@@ -410,6 +424,11 @@ S readText(S = string)(in char[] name) @safe if (isSomeString!S)
 
 /*********************************************
 Write $(D buffer) to file $(D name).
+
+Params:
+    name = string or range of characters representing the file _name
+    buffer = data to be written to file
+
 Throws: $(D FileException) on error.
 
 Example:
@@ -424,29 +443,22 @@ void main()
 }
 ----
  */
-void write(in char[] name, const void[] buffer) @trusted
+void write(R)(R name, const void[] buffer)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
 {
-    version(Windows)
-    {
-        alias defaults =
-            TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                HANDLE.init);
-        auto h = CreateFileW(name.tempCStringW(), defaults);
-
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
-        DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
-                && buffer.length == numwritten,
-                name);
-    }
-    else version(Posix)
-        return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        writeImpl(name, name.tempCString!FSChar(), buffer, false);
+    else
+        writeImpl(null, name.tempCString!FSChar(), buffer, false);
 }
 
 /*********************************************
 Appends $(D buffer) to file $(D name).
+
+Params:
+    name = string or range of characters representing the file _name
+    buffer = data to be appended to file
+
 Throws: $(D FileException) on error.
 
 Example:
@@ -463,44 +475,74 @@ void main()
 }
 ----
  */
-void append(in char[] name, in void[] buffer) @trusted
+void append(R)(R name, const void[] buffer)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
 {
-    version(Windows)
-    {
-        alias defaults =
-            TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init);
-
-        auto h = CreateFileW(name.tempCStringW(), defaults);
-
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
-        DWORD numwritten;
-        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
-                && buffer.length == numwritten,
-                name);
-    }
-    else version(Posix)
-        return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        writeImpl(name, name.tempCString!FSChar(), buffer, true);
+    else
+        writeImpl(null, name.tempCString!FSChar(), buffer, true);
 }
 
 // Posix implementation helper for write and append
 
-version(Posix) private void writeImpl(in char[] name,
-        in void[] buffer, in uint mode) @trusted
+version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
+        in void[] buffer, bool append) @trusted
 {
-    immutable fd = core.sys.posix.fcntl.open(name.tempCString(),
-            mode, octal!666);
-    cenforce(fd != -1, name);
+    // append or write
+    auto mode = append ? O_CREAT | O_WRONLY | O_APPEND
+                       : O_CREAT | O_WRONLY | O_TRUNC;
+
+    immutable fd = core.sys.posix.fcntl.open(namez, mode, octal!666);
+    cenforce(fd != -1, name, namez);
     {
         scope(failure) core.sys.posix.unistd.close(fd);
         immutable size = buffer.length;
         cenforce(
             core.sys.posix.unistd.write(fd, buffer.ptr, size) == size,
-            name);
+            name, namez);
     }
-    cenforce(core.sys.posix.unistd.close(fd) == 0, name);
+    cenforce(core.sys.posix.unistd.close(fd) == 0, name, namez);
+}
+
+// Windows implementation helper for write and append
+
+version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
+        in void[] buffer, bool append) @trusted
+{
+    if (append)
+    {
+        alias defaults =
+            TypeTuple!(GENERIC_WRITE, 0, null, OPEN_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                HANDLE.init);
+
+        auto h = CreateFileW(namez, defaults);
+
+        cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+        scope(exit) cenforce(CloseHandle(h), name, namez);
+        DWORD numwritten;
+        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
+                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
+                && buffer.length == numwritten,
+                name, namez);
+    }
+    else // write
+    {
+        alias defaults =
+            TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                HANDLE.init);
+
+        auto h = CreateFileW(namez, defaults);
+
+        cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+        scope(exit) cenforce(CloseHandle(h), name, namez);
+        DWORD numwritten;
+        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
+                && buffer.length == numwritten,
+                name, namez);
+    }
 }
 
 /***************************************************
