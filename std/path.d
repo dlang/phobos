@@ -1787,7 +1787,7 @@ auto toNormalizedPath(R)(R path)
             }
             else
             {
-                C = element.front;
+                C c = element.front;
                 element.popFront();
             }
             version (Windows)
