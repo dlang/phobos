@@ -83,7 +83,7 @@ lead to memory corruption.
 See $(RED WARNING) in $(B Examples) section.
 */
 
-auto tempCString(To = char, From)(From str) @nogc
+auto tempCString(To = char, From)(From str)
     if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
         isSomeChar!(ElementEncodingType!From))
 {
