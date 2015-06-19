@@ -6556,6 +6556,8 @@ unittest
 
 /**
  * Gets all symbols within `symbol` that have the given user-defined attribute.
+ * This is not recursive; it will not search for symbols within symbols such as
+ * nested structs or unions.
  */
 template getSymbolsByUDA(alias symbol, alias attribute)
 {
@@ -6579,6 +6581,11 @@ unittest
         int b;
         @Attr void doStuff() {}
         void doOtherStuff() {}
+        static struct Inner
+        {
+            // Not found by getSymbolsByUDA
+            @Attr int c;
+        }
     }
 
     // Finds both variables and functions with the attribute, but
