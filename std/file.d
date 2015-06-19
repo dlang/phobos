@@ -548,34 +548,72 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
 /***************************************************
  * Rename file $(D from) to $(D to).
  * If the target file exists, it is overwritten.
+ * Params:
+ *    from = string or range of characters representing the existing file name
+ *    to = string or range of characters representing the target file name
  * Throws: $(D FileException) on error.
  */
-void rename(in char[] from, in char[] to) @trusted
+void rename(RF, RT)(RF from, RT to)
+    if ((isInputRange!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF) &&
+        (isInputRange!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT))
+{
+    // Place outside of @trusted block
+    auto fromz = from.tempCString!FSChar();
+    auto toz = to.tempCString!FSChar();
+
+    static if (isNarrowString!RF && is(Unqual!(ElementEncodingType!RF) == char))
+        alias f = from;
+    else
+        enum string f = null;
+
+    static if (isNarrowString!RT && is(Unqual!(ElementEncodingType!RT) == char))
+        alias t = to;
+    else
+        enum string t = null;
+
+    renameImpl(f, t, fromz, toz);
+}
+
+private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz) @trusted
 {
     version(Windows)
     {
-        enforce(MoveFileExW(from.tempCStringW(), to.tempCStringW(), MOVEFILE_REPLACE_EXISTING),
+        auto result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
+        if (!result)
+        {
+            import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
+
+            if (!f)
+                f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
+
+            if (!t)
+                t = to!(typeof(t))(toz[0 .. wcslen(toz)]);
+
+            enforce(false,
                 new FileException(
-                    text("Attempting to rename file ", from, " to ",
-                            to)));
+                    text("Attempting to rename file ", f, " to ", t)));
+        }
     }
     else version(Posix)
     {
         import core.stdc.stdio;
 
-        cenforce(core.stdc.stdio.rename(from.tempCString(), to.tempCString()) == 0, to);
+        cenforce(core.stdc.stdio.rename(fromz, toz) == 0, t, toz);
     }
 }
 
 @safe unittest
 {
+    import std.utf : byWchar;
+
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "1");
     rename(t1, t2);
     assert(readText(t2) == "1");
     write(t1, "2");
-    rename(t1, t2);
+    rename(t1, t2.byWchar);
     assert(readText(t2) == "2");
 }
 
@@ -1054,16 +1092,26 @@ unittest
 }
 
 
-/++
-    Returns whether the given file (or directory) exists.
- +/
-bool exists(in char[] name) @trusted nothrow @nogc
+/**
+ * Determine whether the given file (or directory) exists.
+ * Params:
+ *    name = string or range of characters representing the file name
+ * Returns:
+ *    true if it exists
+ */
+bool exists(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+{
+    return existsImpl(name.tempCString!FSChar());
+}
+
+private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 {
     version(Windows)
     {
-// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/
-// fileio/base/getfileattributes.asp
-        return GetFileAttributesW(name.tempCStringW()) != 0xFFFFFFFF;
+        // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/
+        // fileio/base/getfileattributes.asp
+        return GetFileAttributesW(namez) != 0xFFFFFFFF;
     }
     else version(Posix)
     {
@@ -1088,8 +1136,10 @@ bool exists(in char[] name) @trusted nothrow @nogc
         */
 
         stat_t statbuf = void;
-        return lstat(name.tempCString(), &statbuf) == 0;
+        return lstat(namez, &statbuf) == 0;
     }
+    else
+        static assert(0);
 }
 
 @safe unittest
