@@ -6609,7 +6609,7 @@ unittest
 
     // Finds both UDA attributes.
     static assert(getSymbolsByUDA!(B, UDA).length == 2);
-    // Finds one `100` atribute.
+    // Finds one `100` attribute.
     static assert(getSymbolsByUDA!(B, 100).length == 1);
     // Can get the value of the UDA from the return value
     static assert(getUDAs!(getSymbolsByUDA!(B, UDA)[0], UDA)[0].name == "X");
