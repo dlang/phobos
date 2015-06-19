@@ -892,6 +892,9 @@ $(DOC)\etc_c_odbc_sqlext.html : $(STDDOC) etc\c\odbc\sqlext.d
 $(DOC)\etc_c_odbc_sqltypes.html : $(STDDOC) etc\c\odbc\sqltypes.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sqltypes.html $(STDDOC) etc\c\odbc\sqltypes.d
 
+$(DOC)\etc_c_odbc_sqlucode.html : $(STDDOC) etc\c\odbc\sqlucode.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sqlucode.html $(STDDOC) etc\c\odbc\sqlucode.d
+
 $(DOC)\etc_c_odbc_sql.html : $(STDDOC) etc\c\odbc\sql.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\etc_c_odbc_sql.html $(STDDOC) etc\c\odbc\sql.d
 
