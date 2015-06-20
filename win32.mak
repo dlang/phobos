@@ -126,7 +126,7 @@ SRC_STD_3b= std\datetime.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
-	std\digest\ripemd.d std\digest\digest.d
+	std\digest\ripemd.d std\digest\digest.d std\digest\hmac.d
 
 SRC_STD_CONTAINER= std\container\array.d std\container\binaryheap.d \
     std\container\dlist.d std\container\rbtree.d std\container\slist.d \

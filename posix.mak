@@ -172,7 +172,7 @@ PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
-PACKAGE_std_digest = crc digest md ripemd sha
+PACKAGE_std_digest = crc digest hmac md ripemd sha
 PACKAGE_std_experimental = $(addprefix logger/, core filelogger \
   nulllogger multilogger package)
 PACKAGE_std_net = curl isemail
