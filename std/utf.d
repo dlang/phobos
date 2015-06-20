@@ -102,9 +102,10 @@ package auto invalidUTFstrings(Char)() @safe pure @nogc nothrow
         enum x = 0xDC00;         // invalid surrogate value
         enum y = 0x110000;       // out of range
 
-        static immutable string[8] result =
+        static immutable string[9] result =
         [
             "\x80",             // not a start byte
+            "a\x80",            // not a start byte
             "\xC0",             // truncated
             "\xC0\xC0",         // invalid continuation
             "\xF0\x82\x82\xAC", // overlong
@@ -140,9 +141,13 @@ package auto invalidUTFstrings(Char)() @safe pure @nogc nothrow
     }
     else static if (is(Char == wchar))
     {
-        static immutable wstring[5] result =
+        static immutable wstring[6] result =
         [
             [
+              cast(wchar)0xDC00,
+            ],
+            [
+              'a',
               cast(wchar)0xDC00,
             ],
             [
