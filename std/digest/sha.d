@@ -192,6 +192,17 @@ private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
     return (x >> n) | (x << (64-n));
 }
 
+version(USE_SSSE3)
+{
+    // moved to outside template to avoid issues with static ctor cycles (Bug 14157)
+    immutable bool _cachedSSSE3Support;
+
+    shared static this()
+    {
+        _cachedSSSE3Support = hasSSSE3Support;
+    }
+}
+
 /**
  * Template API SHA1/SHA2 implementation. Supports: SHA-1, SHA-224, SHA-256,
  * SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
@@ -214,21 +225,7 @@ struct SHA(int blockSize, int digestSize)
         "Invalid SHA digestSize for a blockSize of 1024. The digestSize must be 224, 256, 384 or 512.");
 
     static if(digestSize==160) /* SHA-1 */
-    {
-        version(USE_SSSE3)
-        {
-            private __gshared immutable pure nothrow @nogc void function(uint[5]* state, const(ubyte[64])* block) transform;
-
-            shared static this()
-            {
-                transform = hasSSSE3Support ? &transformSSSE3 : &transformX86;
-            }
-        }
-        else
-        {
-            alias transform = transformX86;
-        }
-    }
+        alias transform = transformX86;
     else static if(blockSize == 512) /* SHA-224, SHA-256 */
         alias transform = transformSHA2!uint;
     else static if(blockSize == 1024) /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
@@ -426,6 +423,11 @@ struct SHA(int blockSize, int digestSize)
 
         private static void transformX86(uint[5]* state, const(ubyte[64])* block) pure nothrow @nogc
         {
+            version(USE_SSSE3)
+            {
+                if(_cachedSSSE3Support)
+                    return transformSSSE3(state, block);
+            }
             uint A, B, C, D, E, T;
             uint[16] W = void;
 
