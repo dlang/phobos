@@ -620,27 +620,70 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 
 /***************************************************
 Delete file $(D name).
+
+Params:
+    name = string or range of characters representing the file name
+
 Throws: $(D FileException) on error.
  */
-void remove(in char[] name) @trusted
+void remove(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+{
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        removeImpl(name, name.tempCString!FSChar());
+    else
+        removeImpl(null, name.tempCString!FSChar());
+}
+
+private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
 {
     version(Windows)
     {
-        cenforce(DeleteFileW(name.tempCStringW()), name);
+        cenforce(DeleteFileW(namez), name, namez);
     }
     else version(Posix)
     {
         import core.stdc.stdio;
 
-        cenforce(core.stdc.stdio.remove(name.tempCString()) == 0,
+        if (!name)
+        {
+            import core.stdc.string : strlen;
+            auto len = strlen(namez);
+            name = namez[0 .. len];
+        }
+        cenforce(core.stdc.stdio.remove(namez) == 0,
             "Failed to remove file " ~ name);
     }
 }
 
-version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(in char[] name) @trusted
+version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
 {
-    WIN32_FILE_ATTRIBUTE_DATA fad;
-    enforce(GetFileAttributesExW(name.tempCStringW(), GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad), new FileException(name.idup));
+    auto namez = name.tempCString!FSChar();
+
+    WIN32_FILE_ATTRIBUTE_DATA fad = void;
+
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+    {
+        static void getFA(const(char)[] name, const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
+        {
+            enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
+                new FileException(name.idup));
+        }
+        getFA(name, namez, fad);
+    }
+    else
+    {
+        static void getFA(const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
+        {
+            import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
+
+            enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
+                new FileException(namez[0 .. wcslen(namez)].to!string));
+        }
+        getFA(namez, fad);
+    }
     return fad;
 }
 
@@ -655,9 +698,13 @@ version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure n
 /***************************************************
 Get size of file $(D name) in bytes.
 
+Params:
+    name = string or range of characters representing the file name
+
 Throws: $(D FileException) on error (e.g., file not found).
  */
-ulong getSize(in char[] name) @safe
+ulong getSize(R)(R name)
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
 {
     version(Windows)
     {
@@ -666,16 +713,18 @@ ulong getSize(in char[] name) @safe
     }
     else version(Posix)
     {
-        static auto trustedStat(in char[] path, stat_t* buf) @trusted
+        auto namez = name.tempCString();
+
+        static trustedStat(const(FSChar)* namez, out stat_t buf) @trusted
         {
-            return stat(path.tempCString(), buf);
+            return stat(namez, &buf);
         }
-        static stat_t* ptrOfLocalVariable(return ref stat_t buf) @trusted
-        {
-            return &buf;
-        }
+        static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+            alias names = name;
+        else
+            string names = null;
         stat_t statbuf = void;
-        cenforce(trustedStat(name, ptrOfLocalVariable(statbuf)) == 0, name);
+        cenforce(trustedStat(namez, statbuf) == 0, names, namez);
         return statbuf.st_size;
     }
 }
@@ -688,7 +737,8 @@ ulong getSize(in char[] name) @safe
     assert(getSize(deleteme) == 1);
     // create a file of size 3
     write(deleteme, "abc");
-    assert(getSize(deleteme) == 3);
+    import std.utf : byChar;
+    assert(getSize(deleteme.byChar) == 3);
 }
 
 
