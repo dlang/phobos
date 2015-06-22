@@ -1,3 +1,16 @@
+// Written in the D programming language.
+/**
+Allocator that collects useful statistics about allocations, both global and per
+calling point. The statistics collected can be configured statically by choosing
+combinations of `Options` appropriately.
+
+Example:
+----
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.building_blocks.free_list : FreeList;
+alias Allocator = StatsCollector!(GCAllocator, Options.bytesUsed);
+----
+*/
 module std.experimental.allocator.building_blocks.stats_collector;
 
 import std.experimental.allocator.common;

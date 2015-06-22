@@ -210,15 +210,15 @@ $(TR $(TH Allocator$(BR)) $(TH Description))
 $(TR $(TDC2 NullAllocator, null_allocator) $(TD Very good at doing absolutely nothing. A good
 starting point for defining other allocators or for studying the API.))
 
-$(TR $(TDC2 GCAllocator, gc_allocator) $(TD The system-provided garbage-collector allocator.
+$(TR $(TDC3 GCAllocator, gc_allocator) $(TD The system-provided garbage-collector allocator.
 This should be the default fallback allocator tapping into system memory. It
 offers manual $(D free) and dutifully collects litter.))
 
-$(TR $(TDC2 Mallocator, mallocator) $(TD The C heap _allocator, a.k.a. $(D
+$(TR $(TDC3 Mallocator, mallocator) $(TD The C heap _allocator, a.k.a. $(D
 malloc)/$(D realloc)/$(D free). Use sparingly and only for code that is unlikely
 to leak.))
 
-$(TR $(TDC2 AlignedMallocator, mallocator) $(TD Interface to OS-specific _allocators that
+$(TR $(TDC3 AlignedMallocator, mallocator) $(TD Interface to OS-specific _allocators that
 support specifying alignment:
 $(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html, $(D posix_memalign))
 on Posix and $(WEB msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
@@ -256,7 +256,7 @@ the stack. Has statically-determined size.))
 $(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LUCKY sbrk)) for allocating
 memory.))
 
-$(TR $(TDC2 MmapAllocator, mmap_allocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
+$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
 
 $(TR $(TDC2 StatsCollector, stats_collector) $(TD Collect statistics about any other
 allocator.))
@@ -280,12 +280,14 @@ pointers on top of another allocator.)))
 )
 
 Macros:
-MYREF = $(LINK2 std_experimental_allocator_$2.html, $1)&nbsp;
-MYREF2 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
+MYREF = $(LINK2 std_experimental_allocator_building_blocks_$2.html, $1)&nbsp;
+MYREF2 = $(LINK2 std_experimental_allocator_building_blocks_$2.html#$1, $1)&nbsp;
+MYREF3 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
 TDC = $(T td nowrap, $(D $1)$+)
 TDC2 = $(T td nowrap, $(D $(MYREF2 $1,$+))$(BR)$(SMALL
 $(D std.experimental.allocator.building_blocks.$2)))
-TDC3 = $(T td nowrap, $(D $(MYREF2 $1,$+)))
+TDC3 = $(T td nowrap, $(D $(MYREF3 $1,$+))$(BR)$(SMALL
+$(D std.experimental.allocator.$2)))
 RES = $(I result)
 POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))
 */
