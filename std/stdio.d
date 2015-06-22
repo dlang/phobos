@@ -71,6 +71,18 @@ version (CRuntime_Bionic)
     version = NO_GETDELIM;
 }
 
+// Character type used for operating system filesystem APIs
+version (Windows)
+{
+    private alias FSChar = wchar;
+}
+else version (Posix)
+{
+    private alias FSChar = char;
+}
+else
+    static assert(0);
+
 version(Windows)
 {
     // core.stdc.stdio.fopen expects file names to be
@@ -364,16 +376,20 @@ struct File
     }
 
 /**
-Constructor taking the name of the file to open and the open mode
-(with the same semantics as in the C standard library $(WEB
-cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
-function).
+Constructor taking the name of the file to open and the open mode.
 
 Copying one $(D File) object to another results in the two $(D File)
 objects referring to the same underlying file.
 
 The destructor automatically closes the file as soon as no $(D File)
 object refers to it anymore.
+
+Params:
+    name = range or string representing the file _name
+    stdioOpenMode = range or string represting the open mode
+        (with the same semantics as in the C standard library $(WEB
+        cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
+        function)
 
 Throws: $(D ErrnoException) if the file could not be opened.
  */
@@ -400,6 +416,33 @@ Throws: $(D ErrnoException) if the file could not be opened.
             if (append && !update)
                 seek(size);
         }
+    }
+
+    /// ditto
+    this(R1, R2)(R1 name)
+        if (isInputRange!R1 && isSomeChar!(ElementEncodingType!R1))
+    {
+        import std.conv : to;
+        this(name.to!string, "rb");
+    }
+
+    /// ditto
+    this(R1, R2)(R1 name, R2 mode)
+        if (isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) &&
+            isInputRange!R2 && isSomeChar!(ElementEncodingType!R2))
+    {
+        import std.conv : to;
+        this(name.to!string, mode.to!string);
+    }
+
+    @safe unittest
+    {
+        static import std.file;
+        import std.utf : byChar;
+        auto deleteme = testFilename();
+        auto f = File(deleteme.byChar, "w".byChar);
+        f.close();
+        std.file.remove(deleteme);
     }
 
     ~this() @safe
@@ -474,6 +517,7 @@ Throws: $(D ErrnoException) in case of error.
         import std.internal.cstring : tempCString;
         import std.exception : errnoEnforce;
 
+        auto modez = stdioOpenmode.tempCString();
         detach();
 
         version (DIGITAL_MARS_STDIO)
@@ -483,7 +527,7 @@ Throws: $(D ErrnoException) in case of error.
             // new fdopen'd file to retain the given file descriptor's
             // position.
             import core.stdc.stdio : fopen;
-            auto fp = fopen("NUL", stdioOpenmode.tempCString());
+            auto fp = fopen("NUL", modez);
             errnoEnforce(fp, "Cannot open placeholder NUL stream");
             FLOCK(fp);
             auto iob = cast(_iobuf*)fp;
@@ -495,11 +539,11 @@ Throws: $(D ErrnoException) in case of error.
         else
         {
             version (Windows) // MSVCRT
-                auto fp = _fdopen(fd, stdioOpenmode.tempCString());
+                auto fp = _fdopen(fd, modez);
             else version (Posix)
             {
                 import core.sys.posix.stdio : fdopen;
-                auto fp = fdopen(fd, stdioOpenmode.tempCString());
+                auto fp = fdopen(fd, modez);
             }
             errnoEnforce(fp);
         }
@@ -3362,32 +3406,40 @@ unittest
  * (to $(D _wfopen) on Windows)
  * with appropriately-constructed C-style strings.
  */
-private FILE* fopen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
+private FILE* fopen(R1, R2)(R1 name, R2 mode = "r")
+    if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
+        (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
 {
     import std.internal.cstring : tempCString;
 
-    version(Windows)
+    auto namez = name.tempCString!FSChar();
+    auto modez = mode.tempCString!FSChar();
+
+    static fopenImpl(const(FSChar)* namez, const(FSChar)* modez) @trusted nothrow @nogc
     {
-        import std.internal.cstring : tempCStringW;
-        return _wfopen(name.tempCStringW(), mode.tempCStringW());
+        version(Windows)
+        {
+            return _wfopen(namez, modez);
+        }
+        else version(Posix)
+        {
+            /*
+             * The new opengroup large file support API is transparently
+             * included in the normal C bindings. http://opengroup.org/platform/lfs.html#1.0
+             * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and
+             * the normal functions work fine. If not, then large file support
+             * probably isn't available. Do not use the old transitional API
+             * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
+             */
+            import core.sys.posix.stdio : fopen;
+            return fopen(namez, modez);
+        }
+        else
+        {
+            return .fopen(namez, modez);
+        }
     }
-    else version(Posix)
-    {
-        /*
-         * The new opengroup large file support API is transparently
-         * included in the normal C bindings. http://opengroup.org/platform/lfs.html#1.0
-         * if _FILE_OFFSET_BITS in druntime is 64, off_t is 64 bit and
-         * the normal functions work fine. If not, then large file support
-         * probably isn't available. Do not use the old transitional API
-         * (the native extern(C) fopen64, http://www.unix.org/version2/whatsnew/lfs20mar.html#3.0)
-         */
-        import core.sys.posix.stdio : fopen;
-        return fopen(name.tempCString(), mode.tempCString());
-    }
-    else
-    {
-        return .fopen(name.tempCString(), mode.tempCString());
-    }
+    return fopenImpl(namez, modez);
 }
 
 version (Posix)
@@ -3396,12 +3448,21 @@ version (Posix)
      * Convenience function that forwards to $(D core.sys.posix.stdio.popen)
      * with appropriately-constructed C-style strings.
      */
-    FILE* popen(in char[] name, in char[] mode = "r") @trusted nothrow @nogc
+    FILE* popen(R1, R2)(R1 name, R2 mode = "r") @trusted nothrow @nogc
+        if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
+            (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
     {
-        import core.sys.posix.stdio : popen;
         import std.internal.cstring : tempCString;
 
-        return popen(name.tempCString(), mode.tempCString());
+        auto namez = name.tempCString!FSChar();
+        auto modez = mode.tempCString!FSChar();
+
+        static popenImpl(const(FSChar)* namez, const(FSChar)* modez) @trusted nothrow @nogc
+        {
+            import core.sys.posix.stdio : popen;
+            return popen(namez, modez);
+        }
+        return popenImpl(namez, modez);
     }
 }
 
