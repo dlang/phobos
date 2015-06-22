@@ -295,7 +295,9 @@ pure unittest
     {
         foreach (S; TTest)
         {
-            assert(canConvertTo!T(SafeInt!S(0)));
+            auto s = SafeInt!S(0);
+            assert(!s.isNaN);
+            assert(canConvertTo!T(s));
         }
     }
 }
@@ -421,30 +423,76 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
 
     private void safeAssign(V)(in V v) pure
     {
-        static if (isSafeInt!V)
+        static if (isFloatingPoint!V)
         {
-            if (v.isNaN)
-            {
-                this.value = this.nan;
-                return;
-            }
-        }
-
-        static if (isSigned!(typeof(this.value)) == isSigned!(SafeIntType!V)
-                && this.value.sizeof >= SafeIntType!(V).sizeof)
-        {
-            this.value = getValue(v);
-        }
-        else
-        {
-            if (greaterEqual(getValue(v), this.min)
-                    && lessEqual(getValue(v), this.max))
+            if (v >= this.min && v <= this.max)
             {
                 this.value = cast(T) v;
             }
             else
             {
                 this.value = this.nan;
+            }
+        }
+        else
+        {
+            alias VT = SafeIntType!V;
+
+            static if (is(T == VT))
+            {
+                // If this and v have the exact same value type, no runtime
+                // checks are required at all.
+                this.value = getValue(v);
+            }
+            else
+            {
+                   static if (isSafeInt!V)
+                {
+                    if (v.isNaN)
+                    {
+                        this.value = this.nan;
+                        return;
+                    }
+                }
+
+                auto vVal = getValue(v);
+                static if (Signed && isSigned!(typeof(vVal)) &&
+                        typeof(vVal).sizeof > T.sizeof)
+                {
+                    if (less(vVal, this.min) || greater(vVal, this.max))
+                    {
+                        this.value = this.nan;
+                        return;
+                    }
+                }
+                else static if (Signed && !isSigned!(typeof(vVal)) &&
+                        typeof(vVal).sizeof >= T.sizeof)
+                {
+                    if(greater(vVal, this.max))
+                    {
+                        this.value = this.nan;
+                        return;
+                    }
+                }
+                else static if (!Signed && !isSigned!(typeof(vVal)) &&
+                        typeof(vVal).sizeof > T.sizeof)
+                {
+                    if(greater(vVal, this.max))
+                    {
+                        this.value = this.nan;
+                        return;
+                    }
+                }
+                else static if (!Signed && isSigned!(typeof(vVal)))
+                {
+                    if (less(vVal, this.min) || greater(vVal, this.max))
+                    {
+                        this.value = this.nan;
+                        return;
+                    }
+                }
+
+                this.value = cast(T)vVal;
             }
         }
     }
@@ -796,6 +844,15 @@ nothrow @nogc pure unittest
         SafeInt!T s2;
         assert(s2.isNaN);
     }
+}
+
+nothrow @nogc pure unittest
+{
+    auto s = SafeInt!byte(1337u);
+    assert(s.isNaN);
+
+    auto u = SafeInt!ubyte(1337u);
+    assert(u.isNaN);
 }
 
 nothrow pure @nogc unittest
