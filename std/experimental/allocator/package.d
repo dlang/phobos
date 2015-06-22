@@ -2,9 +2,11 @@
 /**
 
 High-level interface for allocators. Implements bundled allocation/creation
-and destruction/deallocation of data including $(D struct)s and $(D class)es,
-and also array primitives related to allocation.
+and destruction/deallocation of data including `struct`s and `class`es,
+and also array primitives related to allocation. This module is the entry point
+for both making use of allocators and for their documentation.
 
+Synopsis:
 ---
 // Allocate an int, initialize it with 42
 int* p = theAllocator.make!int(42);
@@ -28,6 +30,22 @@ theAllocator.shrinkArray(arr, 2);
 theAllocator.dispose(arr);
 ---
 
+$(H2 Layered Structure)
+
+D's allocators have a layered structure in both implementation and documentation:
+
+$(OL
+
+$(LI A high-level, dynamically-typed layer (described further down in this module). It consists of an interface called $(LREF IAllocator), which concrete allocators need to implement. The interface primitives themselves are oblivious to the type of the objects being allocated; they only deal in `void[]`, by necessity of the interface being dynamic (as opposed to type-parameterized). Each thread has a current allocator it uses by default, which is a thread-local variable $(LREF theAllocator) of type $(LREF IAllocator). The process has a global _allocator called $(LREF processAllocator), also of type $(LREF IAllocator). When a new thread is created, $(LREF processAllocator) is copied into $(LREF theAllocator). An application can change the objects to which these references point. By default, at application startup, $(LREF processAllocator) refers to an object that uses D's garbage collected heap. This layer also include high-level functions such as $(LREF make) and $(LREF dispose) that comfortably allocate/create and respectively destroy/deallocate objects. This layer is all needed for most casual uses of allocation primitives.)
+
+$(LI A mid-level, statically-typed layer for assembling several allocators into one. It uses properties of the type of the objects being created to route allocation requests to possibly specialized allocators. This layer is relatively thin and implemented and documented in the $(XREF2 std,experimental,_allocator,typed) module. It allows an interested user to e.g. use different allocators for arrays versus fixed-sized objects, to the end of better overall performance.)
+
+$(LI A low-level collection of highly generic $(I heap building blocks)$(MDASH)Lego-like pieces that can be used to assemble application-specific allocators. The real allocation smarts are occurring at this level. This layer is of interest to advanced applications that want to configure their own allocators. A good illustration of typical uses of these building blocks is module $(XREF2 std,experimental,_allocator,showcase) which defines a collection of frequently-used preassembled allocator objects. The implementation and documentation entry point is $(XREF2 std,experimental,_allocator,building_blocks). By design, the primitives of the static interface have the same signatures as the $(LREF IAllocator) primitives but are for the most part optional and driven by static introspection. The parameterized class $(LREF CAllocatorImpl) offers an immediate and useful means to package a static low-level _allocator into an implementation of $(LREF IAllocator).)
+
+$(LI Core _allocator objects that interface with D's garbage collected heap ($(XREF2 std,experimental,_allocator,gc_allocator)), the C `malloc` family ($(XREF2 std,experimental,_allocator,mallocator)), and the OS ($(XREF2 std,experimental,_allocator,mmap_allocator)). Most custom allocators would ultimately obtain memory from one of these core allocators.)
+
+)
+
 Macros:
 MYREF = $(LINK2 std_experimental_allocator_$2.html, $1)&nbsp;
 MYREF2 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
@@ -36,6 +54,11 @@ TDC2 = <td nowrap>$(D $(MYREF $1,$+))</td>
 TDC3 = <td nowrap>$(D $(MYREF2 $1,$+))</td>
 RES = $(I result)
 POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))
+JOIN_LINE = $1$(JOIN_LINE_TAIL $+)
+JOIN_LINE_TAIL = _$1$(JOIN_LINE_TAIL $+)
+JOIN_DOT = $1$(JOIN_DOT_TAIL $+)
+JOIN_DOT_TAIL = .$1$(JOIN_DOT_TAIL $+)
+XREF2 = $(A $(JOIN_LINE $1,$+).html,$(D $(JOIN_DOT $1,$+)))
 
 Copyright: Andrei Alexandrescu 2013-.
 
@@ -49,9 +72,7 @@ Source: $(PHOBOSSRC std/experimental/_allocator)
 
 module std.experimental.allocator;
 
-public import
-    //std.experimental.allocator.building_blocks,
-    std.experimental.allocator.common,
+public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
 
 // Example in the synopsis above
