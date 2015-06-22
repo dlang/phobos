@@ -129,6 +129,7 @@
  * $(TR $(TD User-Defined Attributes) $(TD
  *           $(LREF hasUDA)
  *           $(LREF getUDAs)
+ *           $(LREF getSymbolsByUDA)
  * ))
  * )
  *
@@ -6456,7 +6457,6 @@ unittest
 template hasUDA(alias symbol, alias attribute)
 {
     import std.typetuple : staticIndexOf;
-    import std.traits : staticMap;
 
     static if (is(attribute == struct) || is(attribute == class))
     {
@@ -6552,4 +6552,76 @@ unittest
     static assert(getUDAs!(c, Attr)[0].value == 42);
     static assert(getUDAs!(c, Attr)[1].name == "Pi");
     static assert(getUDAs!(c, Attr)[1].value == 3);
+}
+
+/**
+ * Gets all symbols within `symbol` that have the given user-defined attribute.
+ * This is not recursive; it will not search for symbols within symbols such as
+ * nested structs or unions.
+ */
+template getSymbolsByUDA(alias symbol, alias attribute)
+{
+    import std.typetuple : Filter, staticMap, TypeTuple;
+
+    static enum hasSpecificUDA(alias S) = hasUDA!(S, attribute);
+    alias StringToSymbol(alias Name) = Identity!(__traits(getMember, symbol, Name));
+    alias getSymbolsByUDA = Filter!(hasSpecificUDA, TypeTuple!(symbol,
+        staticMap!(StringToSymbol, __traits(allMembers, symbol))));
+}
+
+///
+unittest
+{
+    enum Attr;
+
+    static struct A
+    {
+        @Attr int a;
+        int b;
+        @Attr void doStuff() {}
+        void doOtherStuff() {}
+        static struct Inner
+        {
+            // Not found by getSymbolsByUDA
+            @Attr int c;
+        }
+    }
+
+    // Finds both variables and functions with the attribute, but
+    // doesn't include the variables and functions without it.
+    static assert(getSymbolsByUDA!(A, Attr).length == 2);
+    // Can access attributes on the symbols returned by getSymbolsByUDA.
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
+
+    static struct UDA { string name; }
+
+    static struct B
+    {
+        @UDA("X")
+        int x;
+        @UDA("Y")
+        int y;
+        @(100)
+        int z;
+    }
+
+    // Finds both UDA attributes.
+    static assert(getSymbolsByUDA!(B, UDA).length == 2);
+    // Finds one `100` attribute.
+    static assert(getSymbolsByUDA!(B, 100).length == 1);
+    // Can get the value of the UDA from the return value
+    static assert(getUDAs!(getSymbolsByUDA!(B, UDA)[0], UDA)[0].name == "X");
+
+    @UDA("A")
+    static struct C
+    {
+        @UDA("B")
+        int d;
+    }
+
+    // Also checks the symbol itself
+    static assert(getSymbolsByUDA!(C, UDA).length == 2);
+    static assert(getSymbolsByUDA!(C, UDA)[0].stringof == "C");
+    static assert(getSymbolsByUDA!(C, UDA)[1].stringof == "d");
 }
