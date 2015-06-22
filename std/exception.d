@@ -394,7 +394,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     }
     else
     {
-        static assert("Expected this(string, string, size_t) or this(string, size_t)" ~
+        static assert(0, "Expected this(string, string, size_t) or this(string, size_t)" ~
             " constructor for " ~ __traits(identifier, E));
     }
 }
@@ -507,6 +507,17 @@ deprecated unittest
     S s;
 
     enforce!(S, __FILE__, __LINE__)(s, "");
+}
+
+unittest
+{
+    // Issue 14685
+
+    class E : Exception
+    {
+        this() { super("Not found"); }
+    }
+    static assert(!__traits(compiles, { enforce!E(false); }));
 }
 
 /++
