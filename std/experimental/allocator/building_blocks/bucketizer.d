@@ -1,4 +1,4 @@
-module std.experimental.allocator.bucketizer;
+module std.experimental.allocator.building_blocks.bucketizer;
 
 /**
 
@@ -231,7 +231,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 ///
 unittest
 {
-    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.common : unbounded;
     Bucketizer!(FreeList!(Mallocator, 0, unbounded),

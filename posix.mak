@@ -151,7 +151,8 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 # xy/zz is in variable PACKAGE_xy_zz. This allows automation in iterating
 # packages and their modules.
 STD_PACKAGES = std $(addprefix std/,\
-  algorithm container digest experimental/allocator experimental/logger net \
+  algorithm container digest experimental/allocator \
+  experimental/allocator/building_blocks experimental/logger net \
   range regex)
 
 # Modules broken down per package
@@ -169,10 +170,12 @@ PACKAGE_std_digest = crc digest hmac md ripemd sha
 PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
 PACKAGE_std_experimental_allocator = \
-  affix_allocator allocator_list bucketizer building_blocks common \
-  fallback_allocator free_list free_tree gc_allocator bitmapped_block \
-  kernighan_ritchie mallocator mmap_allocator null_allocator package quantizer \
-  region scoped_allocator segregator showcase stats_collector typed
+  common gc_allocator mallocator mmap_allocator package showcase typed
+PACKAGE_std_experimental_allocator_building_blocks = \
+  affix_allocator allocator_list bucketizer \
+  fallback_allocator free_list free_tree bitmapped_block \
+  kernighan_ritchie null_allocator package quantizer \
+  region scoped_allocator segregator stats_collector
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \

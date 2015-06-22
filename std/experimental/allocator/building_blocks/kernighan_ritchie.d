@@ -1,5 +1,5 @@
-module std.experimental.allocator.kernighan_ritchie;
-import std.experimental.allocator.null_allocator;
+module std.experimental.allocator.building_blocks.kernighan_ritchie;
+import std.experimental.allocator.building_blocks.null_allocator;
 
 //debug = KRRegion;
 debug(KRRegion) import std.stdio;
@@ -597,7 +597,8 @@ fronting the GC allocator.
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.fallback_allocator : fallbackAllocator;
+    import std.experimental.allocator.building_blocks.fallback_allocator
+        : fallbackAllocator;
     import std.experimental.allocator.common : Ternary;
     // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
@@ -622,7 +623,8 @@ unittest
     import std.algorithm : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
-    import std.experimental.allocator.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.allocator_list
+        : AllocatorList;
     AllocatorList!(n => KRRegion!MmapAllocator(max(n * 16, 1024 * 1024))) alloc;
 }
 
@@ -632,7 +634,8 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import   std.experimental.allocator.common : Ternary;
     import std.experimental.allocator.mallocator : Mallocator;
-    import std.experimental.allocator.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.allocator_list
+        : AllocatorList;
     /*
     Create a scalable allocator consisting of 1 MB (or larger) blocks fetched
     from the garbage-collected heap. Each block is organized as a KR-style
@@ -664,7 +667,8 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.common : Ternary;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
-    import std.experimental.allocator.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.allocator_list
+        : AllocatorList;
     /*
     Create a scalable allocator consisting of 1 MB (or larger) blocks fetched
     from the garbage-collected heap. Each block is organized as a KR-style
@@ -698,7 +702,8 @@ unittest
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.allocator_list
+        : AllocatorList;
     import std.algorithm : max;
     import std.experimental.allocator.common : testAllocator;
     testAllocator!(() => AllocatorList!(

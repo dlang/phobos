@@ -1,7 +1,7 @@
-module std.experimental.allocator.bitmapped_block;
+module std.experimental.allocator.building_blocks.bitmapped_block;
 
 import std.experimental.allocator.common;
-import std.experimental.allocator.null_allocator;
+import std.experimental.allocator.building_blocks.null_allocator;
 
 /**
 
@@ -711,7 +711,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 unittest
 {
     // Create a block allocator on top of a 10KB stack region.
-    import std.experimental.allocator.region : InSituRegion;
+    import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.traits : hasMember;
     InSituRegion!(10_240, 64) r;
     auto a = BitmappedBlock!(64, 64)(r.allocateAll());

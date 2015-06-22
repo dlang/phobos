@@ -1,4 +1,4 @@
-module std.experimental.allocator.free_list;
+module std.experimental.allocator.building_blocks.free_list;
 
 import std.experimental.allocator.common;
 import std.typecons : Flag, Yes, No;
@@ -424,8 +424,10 @@ available for $(D ContiguousFreeList).
 struct ContiguousFreeList(ParentAllocator,
      size_t minSize, size_t maxSize = minSize)
 {
-    import std.experimental.allocator.null_allocator : NullAllocator;
-    import std.experimental.allocator.stats_collector : StatsCollector, Options;
+    import std.experimental.allocator.building_blocks.null_allocator
+        : NullAllocator;
+    import std.experimental.allocator.building_blocks.stats_collector
+        : StatsCollector, Options;
     import std.traits : hasMember;
 
     alias Impl = FreeList!(NullAllocator, minSize, maxSize);
@@ -668,7 +670,8 @@ struct ContiguousFreeList(ParentAllocator,
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.allocator_list
+        : AllocatorList;
 
     alias ScalableFreeList = AllocatorList!((n) =>
         ContiguousFreeList!(GCAllocator, 0, unbounded)(4096)
@@ -677,7 +680,8 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.null_allocator : NullAllocator;
+    import std.experimental.allocator.building_blocks.null_allocator
+        : NullAllocator;
     alias A = ContiguousFreeList!(NullAllocator, 0, 64);
     auto a = A(new void[1024]);
 
@@ -700,7 +704,7 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.region : Region;
+    import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias A = ContiguousFreeList!(Region!GCAllocator, 0, 64);
     auto a = A(Region!GCAllocator(1024 * 4), 1024);

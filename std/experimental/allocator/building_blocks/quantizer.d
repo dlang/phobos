@@ -1,4 +1,4 @@
-module std.experimental.allocator.quantizer;
+module std.experimental.allocator.building_blocks.quantizer;
 
 import std.experimental.allocator.common;
 
@@ -214,7 +214,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 ///
 unittest
 {
-    import std.experimental.allocator.free_tree : FreeTree;
+    import std.experimental.allocator.building_blocks.free_tree : FreeTree;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     // Quantize small allocations to a multiple of cache line, large ones to a
     // multiple of page size

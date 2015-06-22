@@ -1,4 +1,4 @@
-module std.experimental.allocator.segregator;
+module std.experimental.allocator.building_blocks.segregator;
 
 import std.experimental.allocator.common;
 
@@ -274,7 +274,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 ///
 unittest
 {
-    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias A =
@@ -347,7 +347,7 @@ template Segregator(Args...) if (Args.length > 3)
 ///
 unittest
 {
-    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias A =

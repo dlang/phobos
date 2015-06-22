@@ -1,4 +1,4 @@
-module std.experimental.allocator.stats_collector;
+module std.experimental.allocator.building_blocks.stats_collector;
 
 import std.experimental.allocator.common;
 
@@ -643,7 +643,7 @@ public:
 unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
     alias Allocator = StatsCollector!(GCAllocator, Options.all, Options.all);
 
     Allocator alloc;
@@ -693,7 +693,7 @@ unittest
      }
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
     test!(StatsCollector!(GCAllocator, Options.all, Options.all));
     test!(StatsCollector!(FreeList!(GCAllocator, 128), Options.all,
         Options.all));
@@ -717,6 +717,6 @@ unittest
         a.deallocate(b3);
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
     test!(StatsCollector!(GCAllocator, 0, 0));
 }

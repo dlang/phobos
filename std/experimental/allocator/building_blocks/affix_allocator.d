@@ -1,4 +1,4 @@
-module std.experimental.allocator.affix_allocator;
+module std.experimental.allocator.building_blocks.affix_allocator;
 
 /**
 
@@ -268,7 +268,8 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.building_blocks.bitmapped_block
+        : BitmappedBlock;
     import std.experimental.allocator.common : testAllocator;
     testAllocator!({
         auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
@@ -285,7 +286,8 @@ unittest
     A.instance.prefix(b) = 10;
     assert(A.instance.prefix(b) == 10);
 
-    import std.experimental.allocator.null_allocator : NullAllocator;
+    import std.experimental.allocator.building_blocks.null_allocator
+        : NullAllocator;
     alias B = AffixAllocator!(NullAllocator, size_t);
     b = B.instance.allocate(100);
     assert(b is null);

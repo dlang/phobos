@@ -202,7 +202,7 @@ or `import` `std.experimental.building_blocks`, which imports them all
 combined with your own. For a collection of typical and useful preassembled
 allocators and for inspiration in defining more such assemblies, refer to
 $(LINK2 std_experimental_allocator_showcase.html,
-`std.experimental.allocator.showcase`).)
+`std.experimental.allocator.building_blocks.showcase`).)
 
 $(BOOKTABLE,
 $(TR $(TH Allocator$(BR)) $(TH Description))
@@ -284,7 +284,7 @@ MYREF = $(LINK2 std_experimental_allocator_$2.html, $1)&nbsp;
 MYREF2 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
 TDC = $(T td nowrap, $(D $1)$+)
 TDC2 = $(T td nowrap, $(D $(MYREF2 $1,$+))$(BR)$(SMALL
-$(D std.experimental.allocator.$2)))
+$(D std.experimental.allocator.building_blocks.$2)))
 TDC3 = $(T td nowrap, $(D $(MYREF2 $1,$+)))
 RES = $(I result)
 POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))
@@ -293,19 +293,19 @@ POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))
 module std.experimental.allocator.building_blocks;
 
 public import
-    std.experimental.allocator.affix_allocator,
-    std.experimental.allocator.allocator_list,
-    std.experimental.allocator.bucketizer,
-    std.experimental.allocator.fallback_allocator,
-    std.experimental.allocator.free_list,
-    std.experimental.allocator.free_tree,
+    std.experimental.allocator.building_blocks.affix_allocator,
+    std.experimental.allocator.building_blocks.allocator_list,
+    std.experimental.allocator.building_blocks.bucketizer,
+    std.experimental.allocator.building_blocks.fallback_allocator,
+    std.experimental.allocator.building_blocks.free_list,
+    std.experimental.allocator.building_blocks.free_tree,
     std.experimental.allocator.gc_allocator,
-    std.experimental.allocator.bitmapped_block,
-    std.experimental.allocator.kernighan_ritchie,
+    std.experimental.allocator.building_blocks.bitmapped_block,
+    std.experimental.allocator.building_blocks.kernighan_ritchie,
     std.experimental.allocator.mallocator,
     std.experimental.allocator.mmap_allocator,
-    std.experimental.allocator.null_allocator,
-    std.experimental.allocator.quantizer,
-    std.experimental.allocator.region,
-    std.experimental.allocator.segregator,
-    std.experimental.allocator.stats_collector;
+    std.experimental.allocator.building_blocks.null_allocator,
+    std.experimental.allocator.building_blocks.quantizer,
+    std.experimental.allocator.building_blocks.region,
+    std.experimental.allocator.building_blocks.segregator,
+    std.experimental.allocator.building_blocks.stats_collector;

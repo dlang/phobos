@@ -1,7 +1,7 @@
-module std.experimental.allocator.region;
+module std.experimental.allocator.building_blocks.region;
 
 import std.experimental.allocator.common;
-import std.experimental.allocator.null_allocator;
+import std.experimental.allocator.building_blocks.null_allocator;
 import std.typecons : Flag, Yes, No;
 
 /**
@@ -330,7 +330,8 @@ struct Region(ParentAllocator = NullAllocator,
 unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
-    import std.experimental.allocator.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.allocator_list
+        : AllocatorList;
     import std.algorithm : max;
     // Create a scalable list of regions. Each gets at least 1MB at a time by
     // using malloc.
@@ -533,10 +534,13 @@ unittest
     assert(a1.length == 101);
 
     // 128KB region, with fallback to the garbage collector.
-    import std.experimental.allocator.fallback_allocator : FallbackAllocator;
-    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.fallback_allocator
+        : FallbackAllocator;
+    import std.experimental.allocator.building_blocks.free_list
+        : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.building_blocks.bitmapped_block
+        : BitmappedBlock;
     FallbackAllocator!(InSituRegion!(128 * 1024), GCAllocator) r2;
     const a2 = r2.allocate(102);
     assert(a2.length == 102);

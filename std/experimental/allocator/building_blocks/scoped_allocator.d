@@ -1,4 +1,4 @@
-module std.experimental.allocator.scoped_allocator;
+module std.experimental.allocator.building_blocks.scoped_allocator;
 
 import std.experimental.allocator.common;
 
@@ -21,7 +21,8 @@ struct ScopedAllocator(ParentAllocator)
         testAllocator!(() => ScopedAllocator());
     }
 
-    private import std.experimental.allocator.affix_allocator : AffixAllocator;
+    private import std.experimental.allocator.building_blocks.affix_allocator
+        : AffixAllocator;
     private import std.traits : hasMember;
 
     private struct Node

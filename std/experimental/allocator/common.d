@@ -559,7 +559,7 @@ bool alignedReallocate(Allocator)(ref Allocator alloc,
 /**
 Forwards each of the methods in `funs` (if defined) to `member`.
 */
-package string forwardToMember(string member, string[] funs...)
+/*package*/ string forwardToMember(string member, string[] funs...)
 {
     string result = "    import std.traits : hasMember, ParameterTypeTuple;\n";
     foreach (fun; funs)

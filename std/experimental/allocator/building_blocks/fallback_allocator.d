@@ -1,4 +1,4 @@
-module std.experimental.allocator.fallback_allocator;
+module std.experimental.allocator.building_blocks.fallback_allocator;
 
 import std.experimental.allocator.common;
 
@@ -257,7 +257,7 @@ struct FallbackAllocator(Primary, Fallback)
 
 unittest
 {
-    import std.experimental.allocator.region : InSituRegion;
+    import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.conv : text;
     FallbackAllocator!(InSituRegion!16_384, GCAllocator) a;
@@ -343,7 +343,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 ///
 unittest
 {
-    import std.experimental.allocator.region : Region;
+    import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.instance);
     auto b1 = a.allocate(1020);

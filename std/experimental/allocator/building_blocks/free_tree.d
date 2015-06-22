@@ -1,4 +1,4 @@
-module std.experimental.allocator.free_tree;
+module std.experimental.allocator.building_blocks.free_tree;
 
 import std.experimental.allocator.common;
 

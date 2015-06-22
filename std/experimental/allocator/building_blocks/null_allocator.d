@@ -1,4 +1,4 @@
-module std.experimental.allocator.null_allocator;
+module std.experimental.allocator.building_blocks.null_allocator;
 
 /*
   _   _       _ _          _ _                 _

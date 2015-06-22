@@ -7,9 +7,9 @@ facilities, or import individual heap building blocks and assemble them.
 */
 module std.experimental.allocator.showcase;
 
-import std.experimental.allocator.fallback_allocator,
+import std.experimental.allocator.building_blocks.fallback_allocator,
     std.experimental.allocator.gc_allocator,
-    std.experimental.allocator.region;
+    std.experimental.allocator.building_blocks.region;
 import std.traits : hasMember;
 
 /**
@@ -62,8 +62,10 @@ auto mmapRegionList(size_t bytesPerRegion)
     {
         size_t bytesPerRegion;
         private import std.algorithm : max;
-        private import std.experimental.allocator.region : Region;
-        private import std.experimental.allocator.mmap_allocator : MmapAllocator;
+        private import std.experimental.allocator.building_blocks.region
+            : Region;
+        private import std.experimental.allocator.mmap_allocator
+            : MmapAllocator;
         this(size_t n)
         {
             bytesPerRegion = n;
@@ -73,8 +75,10 @@ auto mmapRegionList(size_t bytesPerRegion)
             return Region!MmapAllocator(max(n, bytesPerRegion));
         }
     }
-    import std.experimental.allocator.allocator_list : AllocatorList;
-    import std.experimental.allocator.null_allocator : NullAllocator;
+    import std.experimental.allocator.building_blocks.allocator_list
+        : AllocatorList;
+    import std.experimental.allocator.building_blocks.null_allocator
+        : NullAllocator;
     auto shop = Factory(bytesPerRegion);
     return AllocatorList!(Factory, NullAllocator)(shop);
 }

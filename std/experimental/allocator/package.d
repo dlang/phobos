@@ -50,25 +50,22 @@ Source: $(PHOBOSSRC std/experimental/_allocator)
 module std.experimental.allocator;
 
 public import
-    std.experimental.allocator.affix_allocator,
-    std.experimental.allocator.allocator_list,
-    std.experimental.allocator.bucketizer,
+    //std.experimental.allocator.building_blocks,
     std.experimental.allocator.common,
-    std.experimental.allocator.fallback_allocator,
-    std.experimental.allocator.free_list,
-    std.experimental.allocator.gc_allocator,
-    std.experimental.allocator.bitmapped_block,
-    std.experimental.allocator.mallocator,
-    std.experimental.allocator.mmap_allocator,
-    std.experimental.allocator.null_allocator,
-    std.experimental.allocator.region,
-    std.experimental.allocator.segregator,
-    std.experimental.allocator.stats_collector,
     std.experimental.allocator.typed;
 
 // Example in the synopsis above
 unittest
 {
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.building_blocks.segregator : Segregator;
+    import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
+    import std.experimental.allocator.building_blocks.allocator_list
+        : AllocatorList;
+    import std.experimental.allocator.building_blocks.bitmapped_block
+        : BitmappedBlock;
+
     alias FList = FreeList!(GCAllocator, 0, unbounded);
     alias A = Segregator!(
         8, FreeList!(GCAllocator, 0, 8),
@@ -231,7 +228,7 @@ in turn uses the garbage collected heap.
 unittest
 {
     // Install a new allocator that is faster for 128-byte allocations.
-    import std.experimental.allocator.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     auto oldAllocator = theAllocator;
     scope(exit) theAllocator = oldAllocator;
@@ -1049,7 +1046,7 @@ unittest
     assert(a.deallocate(b));
 
     // The in-situ region must be used by pointer
-    import std.experimental.allocator.region : InSituRegion;
+    import std.experimental.allocator.building_blocks.region : InSituRegion;
     auto r = InSituRegion!1024();
     a = allocatorObject(&r);
     b = a.allocate(200);
