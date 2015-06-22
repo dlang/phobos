@@ -6564,8 +6564,7 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     import std.typetuple : Filter, staticMap, TypeTuple;
 
     static enum hasSpecificUDA(alias S) = hasUDA!(S, attribute);
-    static alias I(alias T) = T;
-    alias StringToSymbol(alias Name) = I!(__traits(getMember, symbol, Name));
+    alias StringToSymbol(alias Name) = Identity!(__traits(getMember, symbol, Name));
     alias getSymbolsByUDA = Filter!(hasSpecificUDA, TypeTuple!(symbol,
         staticMap!(StringToSymbol, __traits(allMembers, symbol))));
 }
