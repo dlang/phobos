@@ -26413,7 +26413,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     //reads a time zone file.
     unittest
     {
-        import std.path : buildPath;
+        import std.path : chainPath;
         import std.file : exists, isFile;
         import std.conv : to;
         import std.format : format;
@@ -26492,7 +26492,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                 //be there, but since PosixTimeZone _does_ use leap seconds if
                 //the time zone file does, we'll test that functionality if the
                 //appropriate files exist.
-                if(buildPath(PosixTimeZone.defaultTZDatabaseDir, "right", tzName).exists)
+                if (chainPath(PosixTimeZone.defaultTZDatabaseDir, "right", tzName).exists)
                 {
                     auto leapTZ = PosixTimeZone.getTimeZone("right/" ~ tzName);
 
@@ -27905,7 +27905,7 @@ private:
 final class PosixTimeZone : TimeZone
 {
     import std.stdio : File;
-    import std.path : buildNormalizedPath, extension;
+    import std.path : extension;
     import std.file : isDir, isFile, exists, dirEntries, SpanMode, DirEntry;
     import std.string : strip, representation;
     import std.algorithm : countUntil, canFind, startsWith;
@@ -28075,13 +28075,15 @@ assert(tz.dstName == "PDT");
         import std.algorithm : sort;
         import std.range : retro;
         import std.format : format;
+        import std.path : toNormalizedPath, chainPath;
+        import std.conv : to;
 
         name = strip(name);
 
         enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
-        immutable file = buildNormalizedPath(tzDatabaseDir, name);
+        const file = toNormalizedPath(chainPath(tzDatabaseDir, name)).to!string;
 
         enforce(file.exists(), new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
@@ -29170,28 +29172,23 @@ else version(Posix)
     void setTZEnvVar(string tzDatabaseName) @trusted nothrow
     {
         import std.internal.cstring : tempCString;
-        import std.path : buildNormalizedPath;
+        import std.path : toNormalizedPath, chainPath;
+        import core.sys.posix.stdlib : setenv;
+        import core.sys.posix.time : tzset;
 
-        try
-        {
-            immutable value = buildNormalizedPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName);
-            setenv("TZ", value.tempCString(), 1);
-            tzset();
-        }
-        catch(Exception e)
-            assert(0, "The impossible happened. setenv or tzset threw.");
+        auto value = toNormalizedPath(chainPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName));
+        setenv("TZ", value.tempCString(), 1);
+        tzset();
     }
 
 
     void clearTZEnvVar() @trusted nothrow
     {
-        try
-        {
-            unsetenv("TZ");
-            tzset();
-        }
-        catch(Exception e)
-            assert(0, "The impossible happened. unsetenv or tzset threw.");
+        import core.sys.posix.stdlib : unsetenv;
+        import core.sys.posix.time : tzset;
+
+        unsetenv("TZ");
+        tzset();
     }
 }
 
