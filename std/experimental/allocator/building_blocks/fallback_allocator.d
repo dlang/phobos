@@ -195,7 +195,7 @@ struct FallbackAllocator(Primary, Fallback)
 
     /**
     $(D owns) is defined if and only if both allocators define $(D owns).
-    Returns $(D primary.owns(b) || fallback.owns(b)).
+    Returns $(D primary.owns(b) | fallback.owns(b)).
     */
     static if (hasMember!(Primary, "owns") && hasMember!(Fallback, "owns"))
     Ternary owns(void[] b)
@@ -247,11 +247,13 @@ struct FallbackAllocator(Primary, Fallback)
 
     /**
     $(D empty) is defined if both allocators also define it.
+
+    Returns: $(D primary.empty & fallback.empty)
     */
     static if (hasMember!(Primary, "empty") && hasMember!(Fallback, "empty"))
     Ternary empty()
     {
-        return primary.empty && fallback.empty;
+        return primary.empty & fallback.empty;
     }
 }
 

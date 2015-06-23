@@ -606,7 +606,7 @@ struct ContiguousFreeList(ParentAllocator,
     }
 
     /**
-    Defined if $(D ParentAllocator) defines it. Checks whether the block
+    Defined if `ParentAllocator` defines it. Checks whether the block
     belongs to this allocator.
     */
     static if (hasMember!(SParent, "owns") || unchecked)
@@ -658,7 +658,9 @@ struct ContiguousFreeList(ParentAllocator,
     }
 
     /**
-    Returns $(D true) if no memory is currently allocated with this allocator.
+    Returns `Ternary.yes` if no memory is currently allocated with this
+    allocator, `Ternary.no` otherwise. This method never returns
+    `Ternary.unknown`.
     */
     Ternary empty()
     {

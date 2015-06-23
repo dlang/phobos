@@ -177,7 +177,8 @@ struct ScopedAllocator(ParentAllocator)
     }
 
     /**
-    Returns $(D true) if this allocator is not responsible for any memory.
+    Returns `Ternary.yes` if this allocator is not responsible for any memory,
+    `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
     */
     Ternary empty() const
     {

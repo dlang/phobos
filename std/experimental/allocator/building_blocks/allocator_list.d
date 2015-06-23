@@ -331,9 +331,15 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     /**
-    Defined only if $(D Allocator) defines $(D owns). Tries each allocator in
+    Defined only if `Allocator` defines `owns`. Tries each allocator in
     turn, in most-recently-used order. If the owner is found, it is moved to
-    the front of the list.
+    the front of the list as a side effect under the assumption it will be used
+    soon.
+
+    Returns: `Ternary.yes` if one allocator was found to return `Ternary.yes`,
+    `Ternary.no` if all component allocators returned `Ternary.no`, and
+    `Ternary.unknown` if no allocator returned `Ternary.yes` and at least one
+    returned  `Ternary.unknown`.
     */
     static if (hasMember!(Allocator, "owns"))
     Ternary owns(void[] b)
@@ -490,7 +496,10 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         return true;
     }
 
-    /// Returns $(D true) iff no allocators are currently active.
+    /**
+     Returns `Ternary.yes` if no allocators are currently active,
+    `Ternary.no` otherwise. This methods never returns `Ternary.unknown`.
+    */
     Ternary empty() const
     {
         return Ternary(!allocators.length);

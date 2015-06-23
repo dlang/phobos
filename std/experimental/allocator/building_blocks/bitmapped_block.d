@@ -344,8 +344,9 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /**
-    Returns $(D true) if $(D b) belongs to the $(D BitmappedBlock) object. This
-    method is somewhat tolerant in that accepts an interior slice.
+    Returns `Ternary.yes` if `b` belongs to the `BitmappedBlock` object,
+    `Ternary.no` otherwise. Never returns `Ternary.unkown`. (This
+    method is somewhat tolerant in that accepts an interior slice.)
     */
     Ternary owns(void[] b) const
     {
@@ -664,7 +665,9 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /**
-    Returns $(D true) iff no memory is currently allocated with this allocator.
+    Returns `Ternary.yes` if no memory is currently allocated with this
+    allocator, otherwise `Ternary.no`. This method never returns
+    `Ternary.unknown`.
     */
     Ternary empty()
     {

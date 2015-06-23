@@ -580,7 +580,8 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     /**
-    Returns: `true` if the allocator is empty.
+    Returns: `Ternary.yes` if the allocator is empty, `Ternary.no` otherwise.
+    Never returns `Ternary.unknown`.
     */
     Ternary empty()
     {

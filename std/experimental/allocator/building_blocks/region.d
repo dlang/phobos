@@ -306,7 +306,10 @@ struct Region(ParentAllocator = NullAllocator,
         return Ternary(b.ptr >= _begin && b.ptr + b.length <= _end);
     }
 
-    /// Returns $(D true) if no memory has been allocated in this region.
+    /**
+    Returns `Ternary.yes` if no memory has been allocated in this region,
+    `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
+    */
     Ternary empty() const
     {
         return Ternary(_current == _begin);
@@ -471,18 +474,17 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     */
     bool deallocate(void[] b)
     {
-        if (!_impl._current) lazyInit;
+        if (!_impl._current) return b is null;
         return _impl.deallocate(b);
     }
 
     /**
-    Returns $(D true) if and only if $(D b) is the result of a successful
-    allocation. For efficiency reasons, if $(D b is null) the function returns
-    $(D false).
+    Returns `Ternary.yes` if `b` is the result of a previous allocation,
+    `Ternary.no` otherwise.
     */
     Ternary owns(void[] b)
     {
-        if (!_impl._current) lazyInit;
+        if (!_impl._current) return Ternary.no;
         return _impl.owns(b);
     }
 

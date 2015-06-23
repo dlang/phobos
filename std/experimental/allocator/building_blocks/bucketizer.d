@@ -168,8 +168,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
-    Returns `true` if the bucket to which `b` belongs owns it. Defined only if
-    `Allocator` defines `owns`.
+    Defined only if `Allocator` defines `owns`. Finds the owner of `b` and forwards the call to it.
     */
     static if (hasMember!(Allocator, "owns"))
     Ternary owns(void[] b)

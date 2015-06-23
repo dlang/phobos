@@ -1272,27 +1272,20 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     /**
-    If $(D impl.alignedAllocate) exists, calls it, puts the result in $(D r),
-    and returns $(D Ternary.yes) or $(D Ternary.no) indicating whether
-    allocation succeded.
-
-    If $(D impl.alignedAllocate) is not defined, returns $(D Ternary.unknown).
+    If $(D impl.alignedAllocate) exists, calls it and returns the result.
+    Otherwise, always returns `null`.
     */
     override void[] alignedAllocate(size_t s, uint a)
     {
-        static if (!hasMember!(Allocator, "alignedAllocate"))
-        {
-            return null;
-        }
-        else
-        {
+        static if (hasMember!(Allocator, "alignedAllocate"))
             return impl.alignedAllocate(s, a);
-        }
+        else
+            return null;
     }
 
     /**
-    Overridden only if $(D Allocator) implements $(D owns). In that case,
-    returns $(D impl.owns(b)).
+    If `Allocator` implements `owns`, forwards to it. Otherwise, returns
+    `Ternary.unknown`.
     */
     override Ternary owns(void[] b)
     {
@@ -1328,6 +1321,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         }
     }
 
+    // Undocumented for now
     Ternary resolveInternalPointer(void* p, ref void[] result)
     {
         static if (hasMember!(Allocator, "resolveInternalPointer"))
