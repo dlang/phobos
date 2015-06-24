@@ -25,6 +25,14 @@ Detect whether $(D T) is an RGB color.
 */
 enum isRGB(T) = isInstanceOf!(RGB, T);
 
+///
+unittest
+{
+    static assert(isRGB!(RGB!("bgr", ushort)) == true);
+    static assert(isRGB!LA8 == true);
+    static assert(isRGB!int == false);
+}
+
 
 // DEBATE: which should it be?
 template defaultAlpha(T)
@@ -125,6 +133,16 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
             return tuple(r, g, b);
         }
     }
+    ///
+    unittest
+    {
+        // BGR color
+        auto c = BGR8(255, 128, 10);
+
+        // tristimulus always returns tuple in RGB order
+        assert(c.tristimulus == tuple(10, 128, 255));
+    }
+
     /** Return the RGB tristimulus values + alpha as a tuple.
         These will always be ordered (R, G, B, A). */
     @property auto tristimulusWithAlpha() const
@@ -132,6 +150,15 @@ struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpa
         static if(!hasAlpha)
             enum a = defaultAlpha!ComponentType;
         return tuple(tristimulus.expand, a);
+    }
+    ///
+    unittest
+    {
+        // BGRA color
+        auto c = BGRA8(255, 128, 10, 80);
+
+        // tristimulusWithAlpha always returns tuple in RGBA order
+        assert(c.tristimulusWithAlpha == tuple(10, 128, 255, 80));
     }
 
     // RGB/A initialiser

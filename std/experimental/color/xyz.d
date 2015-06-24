@@ -25,10 +25,25 @@ Detect whether $(D T) is an XYZ color.
 */
 enum isXYZ(T) = isInstanceOf!(XYZ, T);
 
+///
+unittest
+{
+    static assert(isXYZ!(XYZ!float) == true);
+    static assert(isXYZ!(xyY!double) == false);
+}
+
+
 /**
 Detect whether $(D T) is an xyY color.
 */
 enum isxyY(T) = isInstanceOf!(xyY, T);
+
+///
+unittest
+{
+    static assert(isxyY!(xyY!float) == true);
+    static assert(isxyY!(XYZ!double) == false);
+}
 
 
 /** White points of standard illuminants. */
@@ -123,14 +138,20 @@ struct XYZ(F = float) if(isFloatingPoint!F)
     mixin ColorOperators!(TypeTuple!("X","Y","Z"));
 }
 
+///
 unittest
 {
+    // CIE XYZ 1931 color with float components
     alias XYZf = XYZ!float;
-    alias xyYf = xyY!float;
 
-    // TODO: test XYZ operators and functions..
+    XYZf c = XYZf(0.8, 1, 1.2);
+
+    // tristimulus() returns a tuple of the components
+    assert(c.tristimulus == tuple(c.X, c.Y, c.Z));
+
+    // test XYZ operators and functions
+    static assert(XYZf(0, 0.5, 0) + XYZf(0.5, 0.5, 1) == XYZf(0.5, 1, 1));
     static assert(XYZf(0.5, 0.5, 1) * 100.0 == XYZf(50, 50, 100));
-    static assert(cast(XYZf)xyYf(0.5, 0.5, 1) == XYZf(1, 1, 0));
 }
 
 
@@ -173,12 +194,15 @@ private:
     alias ParentColor = XYZ!ComponentType;
 }
 
+///
 unittest
 {
-    alias XYZf = XYZ!float;
-    alias xyYf = xyY!float;
+    // CIE xyY 1931 color with double components
+    alias xyYd = xyY!double;
 
-    // TODO: test xxY operators and functions..
-    static assert(xyYf(0.5, 0.5, 1) * 100.0 == xyYf(50, 50, 100));
-    static assert(cast(xyYf)XYZf(0.5, 1, 0.5) == xyYf(0.25, 0.5, 1));
+    xyYd c = xyYd(0.4, 0.5, 1);
+
+    // test xyY operators and functions
+    static assert(xyYd(0, 0.5, 0) + xyYd(0.5, 0.5, 1) == xyYd(0.5, 1, 1));
+    static assert(xyYd(0.5, 0.5, 1) * 100.0 == xyYd(50, 50, 100));
 }

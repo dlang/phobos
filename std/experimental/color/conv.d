@@ -17,6 +17,8 @@ import std.experimental.color.xyz;
 import std.traits : isNumeric, isIntegral, isFloatingPoint, isSigned, isSomeChar, TemplateOf;
 import std.typetuple : TypeTuple;
 
+@safe pure nothrow @nogc:
+
 
 /**
 Convert between color types.
@@ -192,8 +194,6 @@ To convertColor(To, From)(From color) if(isColor!To && isColor!From)
 
 unittest
 {
-    import std.experimental.color.xyz;
-
     // test format conversions
     alias UnsignedRGB = RGB!("rgb", ubyte);
     alias SignedRGBX = RGB!("rgbx", byte);
@@ -209,18 +209,19 @@ unittest
     alias UnsignedL = RGB!("l", ubyte);
     assert(cast(UnsignedL)UnsignedRGB(0xFF,0x20,0x40)   == UnsignedL(0x83));
 
-    // alias a bunch of types for testing
+
+    // TODO... we can't test this properly since DMD can't CTFE the '^^' operator! >_<
+
+    alias XYZf = XYZ!float;
+
+    // test RGB conversions
     alias sRGBA = RGB!("rgba", ubyte, false, RGBColorSpace.sRGB);
     alias lRGBA = RGB!("rgba", ushort, true, RGBColorSpace.sRGB);
     alias gRGBA = RGB!("rgba", byte, false, RGBColorSpace.sRGB_Gamma2_2);
     alias sRGBAf = RGB!("rgba", float, false, RGBColorSpace.sRGB);
     alias lRGBAf = RGB!("rgba", double, true, RGBColorSpace.sRGB);
     alias gRGBAf = RGB!("rgba", float, false, RGBColorSpace.sRGB_Gamma2_2);
-    alias XYZf = XYZ!float;
 
-    // TODO... we can't test this properly since DMD can't CTFE the '^^' operator! >_<
-
-    // test RGB conversions
     assert(cast(lRGBA)sRGBA(0xFF, 0xFF, 0xFF, 0xFF)           == lRGBA(0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF));
     assert(cast(gRGBA)sRGBA(0xFF, 0x80, 0x01, 0xFF)           == gRGBA(0x7F, 0x3F, 0x03, 0x7F));
     assert(cast(sRGBA)cast(XYZf)sRGBA(0xFF, 0xFF, 0xFF, 0xFF) == sRGBA(0xFF, 0xFF, 0xFF, 0));
@@ -230,6 +231,11 @@ unittest
     //...
 
     // test xyY conversions
+    alias xyYf = xyY!float;
+
+    static assert(cast(xyYf)XYZf(0.5, 1, 0.5) == xyYf(0.25, 0.5, 1));
+    static assert(cast(XYZf)xyYf(0.5, 0.5, 1) == XYZf(1, 1, 0));
+
     //...
 }
 
@@ -294,12 +300,15 @@ Color colorFromString(Color = RGB8, C)(const(C)[] hex) if(isSomeChar!C)
     }
 }
 
+///
 unittest
 {
+    // common hex formats supported:
+
     // 3 digits
     static assert(colorFromString("F80") == RGB8(0xFF,0x88, 0x00));
-    static assert(colorFromString("#F80"w) == RGB8(0xFF,0x88, 0x00));
-    static assert(colorFromString("$F80"d) == RGB8(0xFF,0x88, 0x00));
+    static assert(colorFromString("#F80") == RGB8(0xFF,0x88, 0x00));
+    static assert(colorFromString("$F80") == RGB8(0xFF,0x88, 0x00));
     static assert(colorFromString("0xF80") == RGB8(0xFF,0x88, 0x00));
 
     // 6 digits

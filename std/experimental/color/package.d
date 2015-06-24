@@ -23,6 +23,14 @@ Detect whether $(D T) is a color type defined under std.color.
 */
 enum isColor(T) = isRGB!T || isXYZ!T || isxyY!T;
 
+///
+unittest
+{
+    static assert(isColor!RGB8 == true);
+    static assert(isColor!(XYZ!float) == true);
+    static assert(isColor!float == false);
+}
+
 
 // declare some common color types
 /** 24 bit RGB color type with 8 bits per channel. */
