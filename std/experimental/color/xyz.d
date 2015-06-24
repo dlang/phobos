@@ -11,13 +11,13 @@
 module std.experimental.color.xyz;
 
 import std.experimental.color;
-import std.experimental.color.conv: convertColor;
+import std.experimental.color.conv : convertColor;
 
-import std.traits: isFloatingPoint, isIntegral, isSigned, isSomeChar, Unqual;
-import std.typetuple: TypeTuple;
-import std.typecons: tuple;
+import std.traits : isFloatingPoint, isIntegral, isSigned, isSomeChar, Unqual;
+import std.typetuple : TypeTuple;
+import std.typecons : tuple;
 
-@safe: pure: nothrow: @nogc:
+@safe pure nothrow @nogc:
 
 
 /**
@@ -86,7 +86,7 @@ A CIE 1931 XYZ color, parameterised for component type.
 */
 struct XYZ(F = float) if(isFloatingPoint!F)
 {
-@safe: pure: nothrow: @nogc:
+@safe pure nothrow @nogc:
 
     /** Type of the color components. */
     alias ComponentType = F;
@@ -139,7 +139,7 @@ A CIE 1931 xyY color, parameterised for component type.
 */
 struct xyY(F = float) if(isFloatingPoint!F)
 {
-@safe: pure: nothrow: @nogc:
+@safe pure nothrow @nogc:
 
     /** Type of the color components. */
     alias ComponentType = F;

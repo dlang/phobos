@@ -14,8 +14,8 @@ import std.experimental.color;
 import std.experimental.color.rgb;
 import std.experimental.color.xyz;
 
-import std.traits: isNumeric, isIntegral, isFloatingPoint, isSigned, TemplateOf;
-import std.typetuple: TypeTuple;
+import std.traits : isNumeric, isIntegral, isFloatingPoint, isSigned, isSomeChar, TemplateOf;
+import std.typetuple : TypeTuple;
 
 
 /**
@@ -237,9 +237,9 @@ unittest
 /**
 * Create a color from hex strings in the standard forms: (#/$/0x)rgb/argb/rrggbb/aarrggbb
 */
-Color colorFromString(Color = RGB8)(const(char)[] hex)
+Color colorFromString(Color = RGB8, C)(const(C)[] hex) if(isSomeChar!C)
 {
-    static ubyte val(ubyte c)
+    static ubyte val(C c)
     {
         if(c >= '0' && c <= '9')
             return cast(ubyte)(c - '0');
@@ -298,8 +298,8 @@ unittest
 {
     // 3 digits
     static assert(colorFromString("F80") == RGB8(0xFF,0x88, 0x00));
-    static assert(colorFromString("#F80") == RGB8(0xFF,0x88, 0x00));
-    static assert(colorFromString("$F80") == RGB8(0xFF,0x88, 0x00));
+    static assert(colorFromString("#F80"w) == RGB8(0xFF,0x88, 0x00));
+    static assert(colorFromString("$F80"d) == RGB8(0xFF,0x88, 0x00));
     static assert(colorFromString("0xF80") == RGB8(0xFF,0x88, 0x00));
 
     // 6 digits
@@ -317,10 +317,8 @@ unittest
 package:
 
 // convert between pixel data types
-To convertPixelType(To, From)(From v) if(isValidComponentType!From && isValidComponentType!To)
+To convertPixelType(To, From)(From v) if(isNumeric!From && isNumeric!To)
 {
-    import std.algorithm: max;
-
     static if(isIntegral!From && isIntegral!To)
     {
         // extending normalised integer types is not trivial
@@ -328,6 +326,7 @@ To convertPixelType(To, From)(From v) if(isValidComponentType!From && isValidCom
     }
     else static if(isIntegral!From && isFloatingPoint!To)
     {
+        import std.algorithm: max;
         alias FP = FloatTypeFor!(From, To);
         static if(isSigned!From) // max(c, -1) is the signed conversion followed by D3D, OpenGL, etc.
             return To(max(v*FP(1.0/From.max), FP(-1.0)));
@@ -368,9 +367,11 @@ To convertNormInt(To, From)(From i) if(isIntegral!To && isIntegral!From)
         else
         {
             To r;
+
             enum numReps = Bits!To/Bits!From;
             foreach(j; Iota!(0, numReps))
                 r |= To(i) << (j*Bits!From);
+
             return r;
         }
     }
@@ -386,12 +387,15 @@ To convertNormInt(To, From)(From i) if(isIntegral!To && isIntegral!From)
             else
             {
                 To r;
+
                 enum numReps = Bits!To/Sig;
                 foreach(j; Iota!(1, numReps+1))
                     r |= To(cast(Unsigned!From)(i&From.max)) << (Bits!To - j*Sig);
+
                 enum remain = Bits!To - numReps*Sig;
                 static if(remain)
                     r |= cast(Unsigned!From)(i&From.max) >> (Sig - remain);
+
                 return r;
             }
         }
@@ -403,9 +407,11 @@ To convertNormInt(To, From)(From i) if(isIntegral!To && isIntegral!From)
         else
         {
             Unsigned!To r;
+
             enum numReps = Bits!To/Bits!From;
             foreach(j; Iota!(0, numReps))
                 r |= Unsigned!To(i) << (j*Bits!From);
+
             return To(r >> 1);
         }
     }
@@ -419,12 +425,15 @@ To convertNormInt(To, From)(From i) if(isIntegral!To && isIntegral!From)
             enum Fill = Bits!To - Bits!From;
 
             To r = To(i) << Fill;
+
             enum numReps = Fill/Sig;
             foreach(j; Iota!(1, numReps+1))
                 r |= Unsigned!To(cast(Unsigned!From)(i&From.max)) << (Fill - j*Sig);
+
             enum remain = Fill - numReps*Sig;
             static if(remain)
                 r |= cast(Unsigned!From)(i&From.max) >> (Sig - remain);
+
             return r;
         }
     }
@@ -459,7 +468,8 @@ unittest
 }
 
 
-// try and use the preferred float type, but if the int type exceeds the preferred float precision, we'll upgrade the float
+// try and use the preferred float type
+// if the int type exceeds the preferred float precision, we'll upgrade the float
 template FloatTypeFor(IntType, RequestedFloat = float)
 {
     static if(IntType.sizeof > 2)

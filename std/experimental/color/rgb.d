@@ -13,13 +13,11 @@ module std.experimental.color.rgb;
 import std.experimental.color;
 import std.experimental.color.conv;
 
-import std.traits: isInstanceOf, isNumeric, isIntegral, isFloatingPoint, isSigned, isSomeChar, Unqual;
-import std.typetuple: TypeTuple;
-import std.typecons: tuple;
+import std.traits : isInstanceOf, isNumeric, isIntegral, isFloatingPoint, isSigned, isSomeChar, Unqual;
+import std.typetuple : TypeTuple;
+import std.typecons : tuple;
 
-@safe: pure: nothrow: @nogc:
-
-enum isValidComponentType(T) = isIntegral!T || isFloatingPoint!T;
+@safe pure nothrow @nogc:
 
 
 /**
@@ -68,9 +66,10 @@ Params: components_ = Components that shall be available. Struct is populated wi
         linear_ = Color is stored with linear luminance.
         colorSpace_ = Color will be within the specified color space.
 */
-struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpace colorSpace_ = RGBColorSpace.sRGB) if(isValidComponentType!ComponentType_)
+struct RGB(string components_, ComponentType_, bool linear_ = false, RGBColorSpace colorSpace_ = RGBColorSpace.sRGB)
+    if(isNumeric!ComponentType_)
 {
-@safe: pure: nothrow: @nogc:
+@safe pure nothrow @nogc:
 
     // RGB colors may only contain components 'rgb', or 'l' (luminance)
     // They may also optionally contain an 'a' (alpha) component, and 'x' (unused) components

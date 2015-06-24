@@ -13,9 +13,9 @@
 module std.experimental.color;
 
 public import std.experimental.color.rgb;
-import std.experimental.color.xyz: isXYZ, isxyY;
+import std.experimental.color.xyz : isXYZ, isxyY;
 
-@safe: pure: nothrow: @nogc:
+@safe pure nothrow @nogc:
 
 
 /**
