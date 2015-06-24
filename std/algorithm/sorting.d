@@ -1866,9 +1866,8 @@ unittest
 /**
 Sorts a range using an algorithm akin to the $(WEB
 wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also
-known as the decorate-sort-undecorate pattern in Python and Lisp. (Not
-to be confused with $(WEB youtube.com/watch?v=UHw6KXbvazs, the other
-Schwartz).) This function is helpful when the sort comparison includes
+known as the decorate-sort-undecorate pattern in Python and Lisp.
+This function is helpful when the sort comparison includes
 an expensive computation. The complexity is the same as that of the
 corresponding $(D sort), but $(D schwartzSort) evaluates $(D
 transform) only $(D r.length) times (less than half when compared to
