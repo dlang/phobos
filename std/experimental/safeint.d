@@ -12,6 +12,13 @@ import std.traits : isFloatingPoint, isIntegral, isUnsigned, isNumeric,
     isSigned, Unqual;
 import std.typetuple : TypeTuple;
 
+/*void main() {
+    import std.stdio : writeln;
+    //auto i = prim!(SafeIntSmall!int)();
+    auto i = prim!(SafeIntFast!int)();
+    //writeln(i);
+}*/
+
 @safe:
 
 /** Compares two integer of arbitrary type for equality.
@@ -26,7 +33,8 @@ Params:
 Returns: $(D true) if the value of $(D t) is equal to the value of $(D s),
     false otherwise.
 */
-bool equal(T, S)(in T t, in S s) @nogc nothrow pure if (isIntegral!T && isIntegral!S)
+bool equal(T, S)(in T t, in S s) @nogc nothrow pure
+        if (isIntegral!T && isIntegral!S)
 {
     return impl!("a == b", false, false)(t, s);
 }
@@ -258,7 +266,7 @@ private pure auto getValue(T)(T t)
     static if (isIntegral!T)
         return t;
     else
-        return t.value;
+        return t.store.value;
 }
 
 /* Checks if the value of $(D s) can be stored by a variable of
@@ -312,7 +320,7 @@ template SafeIntType(T)
     static if (isIntegral!T)
         alias SafeIntType = T;
     else
-        alias SafeIntType = typeof(T.value);
+        alias SafeIntType = typeof(T.store.value);
 }
 
 ///
@@ -330,7 +338,8 @@ Returns:
 */
 template isSafeInt(T)
 {
-    static if (is(T : SafeInt!S, S))
+    //pragma(msg, typeof(T));
+    static if (is(T : SafeIntImpl!(S), S...))
         enum isSafeInt = true;
     else
         enum isSafeInt = false;
@@ -339,7 +348,9 @@ template isSafeInt(T)
 ///
 pure unittest
 {
-    static assert(isSafeInt!(SafeInt!int));
+    //static assert( isSafeInt!(SafeIntInline!int));
+    //static assert( isSafeInt!(SafeIntExplicit!int));
+    static assert( isSafeInt!(SafeInt!int));
     static assert(!isSafeInt!int);
 }
 
@@ -350,6 +361,78 @@ pure unittest
     {
         alias ST = SafeInt!T;
         static assert(isSafeInt!ST);
+    }
+}
+
+struct SafeIntInline(T) {
+    T value = nan;
+
+    static if (isUnsigned!T)
+    {
+        /// The minimal value storable by this SafeInt.
+        enum min = 0u;
+        /// The maximal value storable by this SafeInt.
+        enum max = T.max - 1;
+        // The NaN value defined by this SafeInt.
+        enum nan = T.max;
+    }
+    else
+    {
+        /// The minimal value storable by this SafeInt.
+        enum min = T.min + 1;
+        /// The maximal value storable by this SafeInt.
+        enum max = T.max;
+        // The NaN value defined by this SafeInt.
+        enum nan = T.min;
+    }
+
+    bool isNaN() const
+    {
+        return this.value == nan;
+    }
+
+    void setNaN() {
+        this.value = this.nan;
+    }
+
+    void unsetNaN() {
+        this.value = 0;
+    }
+}
+
+struct SafeIntExplicit(T) {
+    T value;
+    bool nan = true;
+
+    alias value this;
+
+    static if (isUnsigned!T)
+    {
+        /// The minimal value storable by this SafeInt.
+        enum min = 0u;
+        /// The maximal value storable by this SafeInt.
+        enum max = T.max;
+    }
+    else
+    {
+        /// The minimal value storable by this SafeInt.
+        enum min = T.min;
+        /// The maximal value storable by this SafeInt.
+        enum max = T.max;
+    }
+
+    bool isNaN() const
+    {
+        return this.nan;
+    }
+
+    void setNaN()
+    {
+        this.nan = true;
+    }
+
+    void unsetNaN() {
+        this.nan = false;
     }
 }
 
@@ -375,18 +458,18 @@ integer to $(D SafeInt!U >= 0 && SafeInt!U < U.max).
 This limits the value ranges of $(D SafeInt!S) where $(D S) is an signed
 integer to $(D SafeInt!S > S.min && SafeInt!S < S.max).
 */
-nothrow @nogc struct SafeInt(T) if (isIntegral!T)
+nothrow @nogc struct SafeIntImpl(T,Store = SafeIntInline!T) if (isIntegral!T)
 {
     import core.checkedint;
 
     alias Signed = isSigned!T;
 
-    T value = nan;
+    Store!T store;
 
     /** Whenever a operation is not defined by the SafeInt struct this alias
     converts the SafeInt to the underlaying integer.
     */
-    alias value this;
+    alias store this;
 
     /** The constructor for SafeInt.
 
@@ -397,29 +480,13 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Params:
         v = the value to construct the SafeInt from.
     */
-    this(V)(in V v) pure if (isNumeric!V || is(V : SafeInt!S, S))
+    this(V)(in V v) pure if (isNumeric!V || isSafeInt!V)
     {
         this.safeAssign(v);
     }
 
-    static if (isUnsigned!T)
-    {
-        /// The minimal value storable by this SafeInt.
-        enum min = 0u;
-        /// The maximal value storable by this SafeInt.
-        enum max = T.max - 1;
-        // The NaN value defined by this SafeInt.
-        enum nan = T.max;
-    }
-    else
-    {
-        /// The minimal value storable by this SafeInt.
-        enum min = T.min + 1;
-        /// The maximal value storable by this SafeInt.
-        enum max = T.max;
-        // The NaN value defined by this SafeInt.
-        enum nan = T.min;
-    }
+    enum min = Store.min;
+    enum max = Store.max;
 
     private void safeAssign(V)(in V v) pure
     {
@@ -427,30 +494,32 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         {
             if (v >= this.min && v <= this.max)
             {
-                this.value = cast(T) v;
+                this.store.unsetNaN();
+                this.store.value = cast(T) v;
             }
             else
             {
-                this.value = this.nan;
+                this.store.setNaN();
             }
         }
         else
         {
             alias VT = SafeIntType!V;
 
-            static if (is(T == VT))
+            static if (is(typeof(this) == V))
             {
                 // If this and v have the exact same value type, no runtime
                 // checks are required at all.
-                this.value = getValue(v);
+                this.store.unsetNaN();
+                this.store.value = getValue(v);
             }
             else
             {
-                   static if (isSafeInt!V)
+                static if (isSafeInt!V)
                 {
                     if (v.isNaN)
                     {
-                        this.value = this.nan;
+                        this.store.setNaN();
                         return;
                     }
                 }
@@ -461,7 +530,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
                 {
                     if (less(vVal, this.min) || greater(vVal, this.max))
                     {
-                        this.value = this.nan;
+                        this.store.setNaN();
                         return;
                     }
                 }
@@ -470,7 +539,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
                 {
                     if(greater(vVal, this.max))
                     {
-                        this.value = this.nan;
+                        this.store.setNaN();
                         return;
                     }
                 }
@@ -479,7 +548,8 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
                 {
                     if(greater(vVal, this.max))
                     {
-                        this.value = this.nan;
+                        //this.value = this.nan;
+                        this.store.setNaN();
                         return;
                     }
                 }
@@ -487,12 +557,14 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
                 {
                     if (less(vVal, this.min) || greater(vVal, this.max))
                     {
-                        this.value = this.nan;
+                        //this.value = this.nan;
+                        this.store.setNaN();
                         return;
                     }
                 }
 
-                this.value = cast(T)vVal;
+                this.store.unsetNaN();
+                this.store.value = cast(T)vVal;
             }
         }
     }
@@ -504,14 +576,14 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     */
     @property bool isNaN() const pure
     {
-        return this.value == nan;
+        return this.store.isNaN();
     }
 
     private static auto getValue(V)(V vIn) pure
     {
-        static if (is(V : SafeInt!S, S))
+        static if (isSafeInt!V)
         {
-            return vIn.value;
+            return vIn.store.value;
         }
         else
         {
@@ -524,7 +596,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Returns:
         a copy of this SafeInt.
     */
-    SafeInt!T opOpAssign(string op, V)(V vIn) pure
+    typeof(this) opOpAssign(string op, V)(V vIn) pure
     {
         enum call = "this = this " ~ op ~ " vIn;";
         mixin(call);
@@ -539,11 +611,11 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Returns:
         a new SafeInt!T with the result of the operation.
     */
-    SafeInt!T opBinary(string op, V)(V vIn) const pure
+    Unqual!(typeof(this)) opBinary(string op, V)(V vIn) const pure
     {
         auto v = getValue(vIn);
 
-        static if (typeof(v).sizeof > 4 || typeof(this.value).sizeof > 4)
+        static if (typeof(v).sizeof > 4 || typeof(this.store.value).sizeof > 4)
         {
             alias SignedType = long;
             alias UnsignedType = ulong;
@@ -555,16 +627,21 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         }
 
         bool overflow = false;
+        bool wasNaN = true;
 
         if (this.isNaN)
         {
-            return SafeInt!T();
+            auto tmp = Unqual!(typeof(this))();
+            tmp.store.setNaN();
+            return tmp;
         }
         static if (isSafeInt!V)
         {
             if(vIn.isNaN)
             {
-                return SafeInt!T();
+                auto tmp = Unqual!(typeof(this))();
+                tmp.store.setNaN();
+                return tmp;
             }
         }
 
@@ -589,8 +666,10 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
         {
             static if (T.sizeof > 4 || typeof(v).sizeof > 4)
             {
-                long function(long, long, ref bool) @safe @nogc pure nothrow sOp = &subs;
-                ulong function(ulong, ulong, ref bool) @safe @nogc pure nothrow uOp = &subu;
+                long function(long, long, ref bool)
+                    @safe @nogc pure nothrow sOp = &subs;
+                ulong function(ulong, ulong, ref bool)
+                    @safe @nogc pure nothrow uOp = &subu;
             }
             else
             {
@@ -622,28 +701,28 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
             auto sOp = function(long v1, long v2, ref bool overflow)
                     @safe pure nothrow @nogc
             {
-                T ret = this.nan;
                 if (notEqual(v2, 0))
                 {
                     return v1 / cast(T) v2;
                 }
                 else
                 {
-                    return SafeInt!T().nan;
+                    overflow = true;
+                    return SafeInt!T().min;
                 }
             };
 
             auto uOp = function(ulong v1, ulong v2, ref bool overflow)
                     @safe pure nothrow @nogc
             {
-                T ret = this.nan;
                 if (notEqual(v2, 0))
                 {
                     return cast(T) v1 / v2;
                 }
                 else
                 {
-                    return SafeInt!T().nan;
+                    overflow = true;
+                    return SafeInt!T().min;
                 }
             };
         }
@@ -652,7 +731,6 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
             auto sOp = function(T v1, T v2, ref bool overflow)
                     @safe pure nothrow @nogc
             {
-                T ret = this.nan;
                 return v1 % v2;
             };
 
@@ -667,53 +745,71 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
 
         static if (Signed && isSigned!(typeof(v)))
         {
-            auto ret = sOp(this.value, v, overflow);
+            auto ret = sOp(this.store.value, v, overflow);
+            wasNaN = false;
         }
         else static if (!Signed && isUnsigned!(typeof(v)))
         {
-            auto ret = uOp(this.value, v, overflow);
+            auto ret = uOp(this.store.value, v, overflow);
+            wasNaN = false;
         }
 
         static if (Signed && isUnsigned!(typeof(v)))
         {
-            T ret = this.nan;
+            T ret;
             if (canConvertTo!SignedType(v))
             {
-                ret = cast(T) sOp(this.value, cast(T) v, overflow);
+                ret = cast(T) sOp(this.store.value, cast(T) v, overflow);
+                wasNaN = false;
             }
-            else if (canConvertTo!UnsignedType(this.value))
+            else if (canConvertTo!UnsignedType(this.store.value))
             {
-                auto tmp = cast(V) uOp(cast(typeof(v)) this.value, v, overflow);
+                auto tmp = uOp(cast(typeof(v)) this.store.value, v, overflow);
                 if (canConvertTo!T(tmp))
                 {
                     ret = cast(T) tmp;
+                    wasNaN = false;
                 }
             }
         }
 
         static if (!Signed && isSigned!(typeof(v)))
         {
-            T ret = this.nan;
+            T ret;
             if (canConvertTo!UnsignedType(v))
             {
-                ret = cast(T) uOp(this.value, cast(T) v, overflow);
+                ret = cast(T) uOp(this.store.value, cast(T) v, overflow);
+                wasNaN = false;
             }
-            else if (canConvertTo!SignedType(this.value))
+            else if (canConvertTo!SignedType(this.store.value))
             {
-                auto tmp = cast(V) sOp(cast(typeof(v)) this.value, v, overflow);
+                auto tmp = sOp(cast(typeof(v))this.store.value, v, overflow);
                 if (canConvertTo!(SafeIntType!T)(tmp))
                 {
                     ret = cast(T) tmp;
+                    wasNaN = false;
                 }
             }
         }
 
+        Unqual!(typeof(this)) retu;
+
+
         if (overflow)
         {
-            ret = this.nan;
+            retu.store.setNaN();
+        }
+        else if(wasNaN)
+        {
+            retu.store.setNaN();
+        }
+        else
+        {
+            //retu.store.value = cast(T)ret;
+            return Unqual!(typeof(this))(ret);
         }
 
-        return typeof(this)(ret);
+        return retu;
     }
 
     /** Implements the assignment operation for the SafeInt type.
@@ -728,7 +824,7 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     Returns:
         a copy of this SafeInt.
     */
-    SafeInt!T opAssign(V)(V vIn) pure if (isNumeric!T || is(V : SafeInt!S, S))
+    typeof(this) opAssign(V)(V vIn) pure if (isNumeric!T || isSafeInt!V)
     {
         this.safeAssign(vIn);
         return this;
@@ -747,13 +843,25 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     {
         static if (isFloatingPoint!V)
         {
-            return this.value == vIn;
+            return this.store.value == vIn;
         }
         else
         {
+            if(this.isNaN) {
+                return false;
+            }
+
+            static if(isSafeInt!V)
+            {
+                if(vIn.isNaN)
+                {
+                    return false;
+                }
+            }
+
             auto v = getValue(vIn);
 
-            return equal(this.value, v);
+            return equal(this.store.value, v);
         }
     }
 
@@ -770,65 +878,81 @@ nothrow @nogc struct SafeInt(T) if (isIntegral!T)
     {
         static if (isFloatingPoint!V)
         {
-            return this.value < vIn ? -1 : this.value > vIn ? 1 : 0;
+            return this.store.value < vIn ? -1 : this.store.value > vIn ?
+                   1 : 0;
         }
         else
         {
             auto v = getValue(vIn);
 
-            return less(this.value, v) ? -1 : equal(this.value, v) ? 0 : 1;
+            return less(this.store.value, v) ? -1 : equal(this.store.value, v) ?
+                   0 : 1;
         }
     }
 
     import std.format : FormatSpec;
 
-    void toString(scope void delegate(const(char)[]) @trusted sink,
-            FormatSpec!char fmt) const @safe
+    void toString(scope void delegate(const(char)[]) @system sink,
+            FormatSpec!char fmt) const @trusted
     {
         import std.format : formatValue;
 
-        if (this.value == this.nan)
+        //if (this.value == this.nan)
+        if (this.store.isNaN())
         {
             sink("nan");
         }
         else
         {
-            formatValue(sink, this.value, fmt);
+            formatValue(sink, this.store.value, fmt);
         }
     }
 }
 
-///
 @safe @nogc pure nothrow unittest
 {
-    SafeInt!uint s0 = -1;
-    assert(s0.isNaN);
+    foreach(S; TypeTuple!(SafeIntSmall!uint, SafeIntFast!uint))
+    {
+        S s0 = -1;
+        assert(s0.isNaN);
 
-    SafeInt!int s0_1 = s0 + 4;
-    assert(s0_1.isNaN);
-    auto s1 = SafeInt!int(1);
-    auto s2 = s1 + 1;
+        S s0_1 = s0 + 4;
+        assert(s0_1.isNaN);
+        auto s1 = S(1);
+        assert(!s1.isNaN);
+        S s2 = s1 + 1;
+        assert(!s2.isNaN);
+        assert(s2 == 2);
 
-    SafeInt!int s2_1 = s0 = s2;
-    assert(!s2.isNaN);
-    assert(s2 == 2);
-    assert(s2 == 2);
-    assert(s2 == SafeInt!byte(2));
-    assert(s2 < SafeInt!byte(3));
-    assert(s2 > SafeInt!byte(1));
-    assert(s2 > 1.0);
+        S s2_1 = s0 = s2;
+        assert(!s2.isNaN);
+        assert(s2 == SafeInt!byte(2));
+        assert(s2 < SafeInt!byte(3));
+        assert(s2 > SafeInt!byte(1));
+        assert(s2 > 1.0);
 
-    s2 += 1;
-    assert(s2 == 3);
+        s2 += 1;
+        assert(s2 == 3);
 
-    auto s3 = SafeInt!int(2);
-    auto s4 = s1 + s3;
-    static assert(is(typeof(s4) == SafeInt!int));
-    assert(!s4.isNaN);
-    assert(s4 == 3);
+        auto s3 = S(2);
+        auto s4 = s1 + s3;
+        assert(!s4.isNaN);
+        assert(s4 == 3);
 
-    assert(SafeInt!int(0) == 0.0);
+        assert(SafeInt!int(0) == 0.0);
+    }
 }
+
+unittest
+{
+    auto s = SafeIntSmall!int(1);
+    SafeIntFast!int f = s;
+    assert(f == 1);
+}
+
+alias SafeIntFast(T) = SafeIntImpl!(T, SafeIntExplicit!T);
+alias SafeIntSmall(T) = SafeIntImpl!(T, SafeIntInline!T);
+alias SafeInt(T) = SafeIntSmall!(T);
 
 @safe:
 
@@ -932,8 +1056,8 @@ unittest
         assert(sx == 1);
         assert(sd == 1);
         assert(smo == 1);
-        assert(sdn == sdn.nan);
-        assert(sdn2 == sdn.nan);
+        assert(sdn.isNaN);
+        assert(sdn2.isNaN);
     }
 }
 
@@ -1020,4 +1144,21 @@ unittest
     SafeInt!int safe;
     int raw = 0;
     safe = raw;
+}
+
+T prim(T)() {
+    enum upTo = 100000;
+    T ret = 2;
+    con: for(T i = 3; i < upTo; i+=2) {
+        for(T j = 3; j < i; j+=2) {
+            auto t = i % j;
+            if(t == 0) {
+                continue con;
+            }
+        }
+
+        ret += i;
+    }
+
+    return ret;
 }
