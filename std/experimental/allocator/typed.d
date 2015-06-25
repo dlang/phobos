@@ -127,7 +127,7 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     import std.meta : AliasSeq;
     import std.algorithm.sorting : isSorted;
 
-    static assert(isSorted([Stride2!Policies]));
+    static assert(Policies.length == 0 || isSorted([Stride2!Policies]));
 
     private template Stride2(T...)
     {
@@ -144,7 +144,8 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     // state {
     static if (stateSize!PrimaryAllocator) private PrimaryAllocator primary;
     else alias primary = PrimaryAllocator.instance;
-    private Tuple!(Stride2!(Policies[1 .. $])) extras;
+    static if (Policies.length > 0)
+        private Tuple!(Stride2!(Policies[1 .. $])) extras;
     // }
 
     //pragma(msg, "Allocators available: ", typeof(extras));
@@ -186,11 +187,11 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     */
     auto ref allocatorFor(uint flags)()
     {
-        static if (!match(Policies[0], flags))
+        static if (Policies.length == 0 || !match(Policies[0], flags))
         {
             return primary;
         }
-        else static if (match(Policies[$ - 2], flags))
+        else static if (Policies.length && match(Policies[$ - 2], flags))
         {
             return extras[$ - 1];
         }
