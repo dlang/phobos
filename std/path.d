@@ -1112,7 +1112,7 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
     if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     import std.conv : to;
-    return defaultExt(path, ext).to!(typeof(return));
+    return withDefaultExtension(path, ext).to!(typeof(return));
 }
 
 
@@ -1144,7 +1144,7 @@ unittest
  * Returns:
  *      range with the result
  */
-auto defaultExt(R, C)(R path, C[] ext)
+auto withDefaultExtension(R, C)(R path, C[] ext)
     if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
          is(StringTypeOf!R)) &&
         isSomeChar!C)
@@ -1173,16 +1173,16 @@ auto defaultExt(R, C)(R path, C[] ext)
 unittest
 {
     import std.array;
-    assert (defaultExt("file", "ext").array == "file.ext");
-    assert (defaultExt("file"w, ".ext").array == "file.ext"w);
-    assert (defaultExt("file.", "ext").array == "file.");
-    assert (defaultExt("file", "").array == "file.");
+    assert (withDefaultExtension("file", "ext").array == "file.ext");
+    assert (withDefaultExtension("file"w, ".ext").array == "file.ext"w);
+    assert (withDefaultExtension("file.", "ext").array == "file.");
+    assert (withDefaultExtension("file", "").array == "file.");
 
     import std.utf : byChar, byWchar;
-    assert (defaultExt("file".byChar, "ext").array == "file.ext");
-    assert (defaultExt("file"w.byWchar, ".ext").array == "file.ext"w);
-    assert (defaultExt("file.".byChar, "ext"d).array == "file.");
-    assert (defaultExt("file".byChar, "").array == "file.");
+    assert (withDefaultExtension("file".byChar, "ext").array == "file.ext");
+    assert (withDefaultExtension("file"w.byWchar, ".ext").array == "file.ext"w);
+    assert (withDefaultExtension("file.".byChar, "ext"d).array == "file.");
+    assert (withDefaultExtension("file".byChar, "").array == "file.");
 }
 
 /** Combines one or more path segments.
