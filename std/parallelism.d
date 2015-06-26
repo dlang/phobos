@@ -3273,24 +3273,13 @@ terminating the main thread.
 */
 @property TaskPool taskPool() @trusted
 {
-    static bool initialized;
-    __gshared static TaskPool pool;
-
-    if(!initialized)
-    {
-        synchronized(typeid(TaskPool))
-        {
-            if(!pool)
-            {
-                pool = new TaskPool(defaultPoolThreads);
-                pool.isDaemon = true;
-            }
-        }
-
-        initialized = true;
-    }
-
-    return pool;
+    import std.concurrency : initOnce;
+    __gshared TaskPool pool;
+    return initOnce!pool({
+        auto p = new TaskPool(defaultPoolThreads);
+        p.isDaemon = true;
+        return p;
+    }());
 }
 
 private shared uint _defaultPoolThreads;

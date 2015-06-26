@@ -27333,31 +27333,15 @@ private:
     }
 
 
-    static immutable LocalTime _localTime = new immutable(LocalTime)();
-    // Use low-lock singleton pattern with _tzsetWasCalled (see http://dconf.org/talks/simcha.html)
-    static bool _lowLock;
-    static shared bool _tzsetWasCalled;
-
-
     // This is done so that we can maintain purity in spite of doing an impure
     // operation the first time that LocalTime() is called.
     static immutable(LocalTime) singleton() @trusted
     {
-        if(!_lowLock)
-        {
-            synchronized
-            {
-                if(!_tzsetWasCalled)
-                {
-                    tzset();
-                    _tzsetWasCalled = true;
-                }
-            }
-
-            _lowLock = true;
-        }
-
-        return _localTime;
+        import std.concurrency : initOnce;
+        static instance = new immutable(LocalTime)();
+        static shared bool guard;
+        initOnce!guard({tzset(); return true;}());
+        return instance;
     }
 }
 
