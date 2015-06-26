@@ -2656,26 +2656,107 @@ Range stripLeft(Range)(Range str)
 /++
     Strips trailing whitespace (as defined by $(XREF uni, isWhite)).
 
-    Returns: $(D str) stripped of trailing whitespace.
+    Params:
+        str = string or random access range of characters
 
-    Postconditions: $(D str) and the returned value
-    will share the same head (see $(XREF array, sameHead)).
+    Returns:
+        slice of $(D str) stripped of trailing whitespace.
   +/
-C[] stripRight(C)(C[] str) @safe pure @nogc
-    if (isSomeChar!C)
+auto stripRight(Range)(Range str)
+    if (isSomeString!Range ||
+        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+        isSomeChar!(ElementEncodingType!Range))
 {
-    import std.utf : codeLength;
-    foreach_reverse (i, dchar c; str)
+    alias C = Unqual!(ElementEncodingType!Range);
+    static if (isSomeString!Range)
     {
-        if (!std.uni.isWhite(c))
-            return str[0 .. i + codeLength!C(c)];
-    }
+        import std.utf : codeLength;
+        foreach_reverse (i, dchar c; str)
+        {
+            if (!std.uni.isWhite(c))
+                return str[0 .. i + codeLength!C(c)];
+        }
 
-    return str[0 .. 0];
+        return str[0 .. 0];
+    }
+    else
+    {
+        size_t i = str.length;
+        while (i--)
+        {
+            static if (C.sizeof == 4)
+            {
+                if (std.uni.isWhite(str[i]))
+                    continue;
+                break;
+            }
+            else static if (C.sizeof == 2)
+            {
+                auto c2 = str[i];
+                if (c2 < 0xD800 || c2 >= 0xE000)
+                {
+                    if (std.uni.isWhite(c2))
+                        continue;
+                }
+                else if (c2 >= 0xDC00)
+                {
+                    if (i)
+                    {
+                        auto c1 = str[i - 1];
+                        if (c1 >= 0xD800 && c1 < 0xDC00)
+                        {
+                            dchar c = ((c1 - 0xD7C0) << 10) + (c2 - 0xDC00);
+                            if (std.uni.isWhite(c))
+                            {
+                                --i;
+                                continue;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            else static if (C.sizeof == 1)
+            {
+                import std.utf : byDchar;
+
+                char cx = str[i];
+                if (cx <= 0x7F)
+                {
+                    if (std.uni.isWhite(cx))
+                        continue;
+                    break;
+                }
+                else
+                {
+                    size_t stride = 0;
+
+                    while (1)
+                    {
+                        ++stride;
+                        if (!i || (cx & 0xC0) == 0xC0 || stride == 4)
+                            break;
+                        cx = str[i - 1];
+                        if (!(cx & 0x80))
+                            break;
+                        --i;
+                    }
+
+                    if (!std.uni.isWhite(str[i .. i + stride].byDchar.front))
+                        return str[0 .. i + stride];
+                }
+            }
+            else
+                static assert(0);
+        }
+
+        return str[0 .. i + 1];
+    }
 }
 
 ///
-@safe pure unittest
+@safe pure
+unittest
 {
     import std.uni : lineSep, paraSep;
     assert(stripRight("     hello world     ") ==
@@ -2690,15 +2771,45 @@ C[] stripRight(C)(C[] str) @safe pure @nogc
            [paraSep] ~ "hello world");
 }
 
+unittest
+{
+    import std.utf;
+    import std.array;
+    import std.uni : lineSep, paraSep;
+    assert(stripRight("     hello world     ".byChar).array == "     hello world");
+    assert(stripRight("\n\t\v\rhello world\n\t\v\r"w.byWchar).array == "\n\t\v\rhello world"w);
+    assert(stripRight("hello world"d.byDchar).array == "hello world"d);
+    assert(stripRight("\u2028hello world\u2020\u2028".byChar).array == "\u2028hello world\u2020");
+    assert(stripRight("hello world\U00010001"w.byWchar).array == "hello world\U00010001"w);
+
+    foreach (C; TypeTuple!(char, wchar, dchar))
+    {
+        foreach (s; invalidUTFstrings!C())
+        {
+            cast(void)stripRight(s.byUTF!C).array;
+        }
+    }
+
+    cast(void)stripRight("a\x80".byUTF!char).array;
+    wstring ws = ['a', cast(wchar)0xDC00];
+    cast(void)stripRight(ws.byUTF!wchar).array;
+}
+
 
 /++
     Strips both leading and trailing whitespace (as defined by
     $(XREF uni, isWhite)).
 
-    Returns: $(D str) stripped of trailing whitespace.
+    Params:
+        str = string or random access range of characters
+
+    Returns:
+        slice of $(D str) stripped of leading and trailing whitespace.
   +/
-C[] strip(C)(C[] str) @safe pure
-    if (isSomeChar!C)
+auto strip(Range)(Range str)
+    if (isSomeString!Range ||
+        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+        isSomeChar!(ElementEncodingType!Range))
 {
     return stripRight(stripLeft(str));
 }
