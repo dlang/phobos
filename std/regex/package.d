@@ -1,5 +1,4 @@
 /++
-  $(SECTION Intro)
   $(LUCKY Regular expressions) are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
@@ -211,7 +210,7 @@
     $(REG_TABLE
         $(REG_TITLE Format specifier, Replaced by )
         $(REG_ROW $&amp;, the whole match. )
-        $(REG_ROW $`, part of input $(I preceding) the match. )
+        $(REG_ROW $(DOLLAR)$(BACKTICK), part of input $(I preceding) the match. )
         $(REG_ROW $', part of input $(I following) the match. )
         $(REG_ROW $$, '$' character. )
         $(REG_ROW \c &#44 where c is any character, the character c itself. )
@@ -238,7 +237,7 @@
     API and utility constructs are modeled after the original $(D std.regex)
   by Walter Bright and Andrei Alexandrescu.
 
-  Source: $(PHOBOSSRC std/_regex.d)
+  Source: $(PHOBOSSRC std/regex/_package.d)
 
 Macros:
     REG_ROW = $(TR $(TD $(I $1 )) $(TD $+) )

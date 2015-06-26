@@ -147,7 +147,7 @@ else version(linux)
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
-else version(Android)
+else version(Solaris)
 {
     import core.sys.posix.unistd;
 
@@ -195,20 +195,23 @@ else
        without wrapping it.  If I didn't wrap it, casts would be required
        basically everywhere.
 */
-private void atomicSetUbyte(ref ubyte stuff, ubyte newVal)
+private void atomicSetUbyte(T)(ref T stuff, T newVal)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     //core.atomic.cas(cast(shared) &stuff, stuff, newVal);
     atomicStore(*(cast(shared) &stuff), newVal);
 }
 
-private ubyte atomicReadUbyte(ref ubyte val)
+private ubyte atomicReadUbyte(T)(ref T val)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     return atomicLoad(*(cast(shared) &val));
 }
 
 // This gets rid of the need for a lot of annoying casts in other parts of the
 // code, when enums are involved.
-private bool atomicCasUbyte(ref ubyte stuff, ubyte testVal, ubyte newVal)
+private bool atomicCasUbyte(T)(ref T stuff, T testVal, T newVal)
+if (__traits(isIntegral, T) && is(T : ubyte))
 {
     return core.atomic.cas(cast(shared) &stuff, testVal, newVal);
 }
@@ -1560,13 +1563,15 @@ public:
         Eager parallel map.  The eagerness of this function means it has less
         overhead than the lazily evaluated $(D TaskPool.map) and should be
         preferred where the memory requirements of eagerness are acceptable.
-        $(D functions) are the functions to be evaluated, passed as template alias
-        parameters in a style similar to $(XREF algorithm, map).  The first
-        argument must be a random access range. For performance reasons, amap
-        will assume the range elements have not yet been initialized. Elements will
-        be overwritten without calling a destructor nor doing an assignment. As such,
-        the range must not contain meaningful data: either un-initialized objects, or
-        objects in their $(D .init) state.
+        $(D functions) are the functions to be evaluated, passed as template
+        alias parameters in a style similar to
+        $(XREF_PACK algorithm,iteration,map).
+        The first argument must be a random access range. For performance
+        reasons, amap will assume the range elements have not yet been
+        initialized. Elements will be overwritten without calling a destructor
+        nor doing an assignment. As such, the range must not contain meaningful
+        data: either un-initialized objects, or objects in their $(D .init)
+        state.
 
         ---
         auto numbers = iota(100_000_000.0);
@@ -2342,15 +2347,16 @@ public:
     template reduce(functions...)
     {
         /**
-        Parallel reduce on a random access range.  Except as otherwise noted, usage
-        is similar to $(XREF algorithm, _reduce).  This function works by splitting
-        the range to be reduced into work units, which are slices to be reduced in
-        parallel.  Once the results from all work units are computed, a final serial
-        reduction is performed on these results to compute the final answer.
-        Therefore, care must be taken to choose the seed value appropriately.
+        Parallel reduce on a random access range.  Except as otherwise noted,
+        usage is similar to $(XREF_PACK algorithm,iteration,_reduce).  This
+        function works by splitting the range to be reduced into work units,
+        which are slices to be reduced in parallel.  Once the results from all
+        work units are computed, a final serial reduction is performed on these
+        results to compute the final answer. Therefore, care must be taken to
+        choose the seed value appropriately.
 
-        Because the reduction is being performed in parallel,
-        $(D functions) must be associative.  For notational simplicity, let # be an
+        Because the reduction is being performed in parallel, $(D functions)
+        must be associative.  For notational simplicity, let # be an
         infix operator representing $(D functions).  Then, (a # b) # c must equal
         a # (b # c).  Floating point addition is not associative
         even though addition in exact arithmetic is.  Summing floating
@@ -2358,20 +2364,21 @@ public:
         serially.  However, for many practical purposes floating point addition
         can be treated as associative.
 
-        Note that, since $(D functions) are assumed to be associative, additional
-        optimizations are made to the serial portion of the reduction algorithm.
-        These take advantage of the instruction level parallelism of modern CPUs,
-        in addition to the thread-level parallelism that the rest of this
-        module exploits.  This can lead to better than linear speedups relative
-        to $(XREF algorithm, _reduce), especially for fine-grained benchmarks
-        like dot products.
+        Note that, since $(D functions) are assumed to be associative,
+        additional optimizations are made to the serial portion of the reduction
+        algorithm. These take advantage of the instruction level parallelism of
+        modern CPUs, in addition to the thread-level parallelism that the rest
+        of this module exploits.  This can lead to better than linear speedups
+        relative to $(XREF_PACK algorithm,iteration,_reduce), especially for
+        fine-grained benchmarks like dot products.
 
         An explicit seed may be provided as the first argument.  If
         provided, it is used as the seed for all work units and for the final
         reduction of results from all work units.  Therefore, if it is not the
-        identity value for the operation being performed, results may differ from
-        those generated by $(XREF algorithm, _reduce) or depending on how many work
-        units are used.  The next argument must be the range to be reduced.
+        identity value for the operation being performed, results may differ
+        from those generated by $(XREF_PACK algorithm,iteration,_reduce) or
+        depending on how many work units are used.  The next argument must be
+        the range to be reduced.
         ---
         // Find the sum of squares of a range in parallel, using
         // an explicit seed.
@@ -4187,7 +4194,7 @@ unittest
         void next(ref char[] buf)
         {
             file.readln(buf);
-            import std.string;
+            import std.string : chomp;
             buf = chomp(buf);
         }
 
@@ -4560,7 +4567,7 @@ version(unittest)
 {
     struct __S_12733
     {
-        invariant() { assert(checksum == 1234567890); }    
+        invariant() { assert(checksum == 1234567890); }
         this(ulong u){n = u;}
         void opAssign(__S_12733 s){this.n = s.n;}
         ulong n;
@@ -4573,6 +4580,6 @@ version(unittest)
 unittest
 {
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
- 
+
     auto result = taskPool.amap!__genPair_12733(data);
 }

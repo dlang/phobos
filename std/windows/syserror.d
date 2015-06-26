@@ -42,7 +42,7 @@ version (StdDdoc)
     {
         private alias DWORD = int;
         final @property DWORD code(); /// $(D GetLastError)'s return value.
-        @disable this(int dummy);
+        this(DWORD code, string str=null, string file = null, size_t line = 0) @trusted;
     }
 
     /++
@@ -57,7 +57,8 @@ version (StdDdoc)
         --------------------
      +/
     T wenforce(T, S)(T value, lazy S msg = null,
-        string file = __FILE__, size_t line = __LINE__) if (isSomeString!S);
+        string file = __FILE__, size_t line = __LINE__) @safe
+        if (isSomeString!S);
 }
 else:
 
@@ -126,14 +127,18 @@ class WindowsException : Exception
 
         auto buf = appender!string();
 
-        if (str)
+        if (str != null)
         {
             buf.put(str);
-            buf.put(": ");
+            if (code)
+                buf.put(": ");
         }
 
-        auto success = putSysError(code, buf);
-        formattedWrite(buf, success ? " (error %d)" : "Error %d", code);
+        if (code)
+        {
+            auto success = putSysError(code, buf);
+            formattedWrite(buf, success ? " (error %d)" : "Error %d", code);
+        }
 
         super(buf.data, file, line);
     }
@@ -153,6 +158,7 @@ unittest
 {
     import std.exception;
     import std.string;
+    import std.algorithm : startsWith, endsWith;
 
     auto e = collectException!WindowsException(
         DeleteFileA("unexisting.txt").wenforce("DeleteFile")
@@ -161,4 +167,11 @@ unittest
     assert(e.msg.startsWith("DeleteFile: "));
     // can't test the entire message, as it depends on Windows locale
     assert(e.msg.endsWith(" (error 2)"));
+
+    // Test code zero
+    e = new WindowsException(0);
+    assert(e.msg == "");
+
+    e = new WindowsException(0, "Test");
+    assert(e.msg == "Test");
 }

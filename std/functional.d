@@ -3,6 +3,51 @@
 /**
 Functions that manipulate other functions.
 
+This module provides functions for compile time function composition. These
+functions are helpful when constructing predicates for the algorithms in
+$(LINK2 std_algorithm.html, std.algorithm) or $(LINK2 std_range.html,
+std.range).
+
+$(BOOKTABLE ,
+$(TR $(TH Function Name) $(TH Description)
+)
+    $(TR $(TD $(D $(LREF adjoin)))
+        $(TD Joins a couple of functions into one that executes the original
+        functions independently and returns a tuple with all the results.
+    ))
+    $(TR $(TD $(D $(LREF compose)), $(D $(LREF pipe)))
+        $(TD Join a couple of functions into one that executes the original
+        functions one after the other, using one function's result for the next
+        function's argument.
+    ))
+    $(TR $(TD $(D $(LREF forward)))
+        $(TD Forwards function arguments while saving ref-ness.
+    ))
+    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+        $(TD Ready-made predicate functions to compare two values.
+    ))
+    $(TR $(TD $(D $(LREF memoize)))
+        $(TD Creates a function that caches its result for fast re-evalation.
+    ))
+    $(TR $(TD $(D $(LREF not)))
+        $(TD Creates a function that negates another.
+    ))
+    $(TR $(TD $(D $(LREF partial)))
+        $(TD Creates a function that binds the first argument of a given function
+        to a given value.
+    ))
+    $(TR $(TD $(D $(LREF reverseArgs)), $(D $(LREF binaryReverseArgs)))
+        $(TD Predicate that reverses the order of its arguments.
+    ))
+    $(TR $(TD $(D $(LREF toDelegate)))
+        $(TD Converts a callable to a delegate.
+    ))
+    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
+        $(TD Create a unary or binary function from a string. Most often
+        used when defining algorithms on ranges.
+    ))
+)
+
 Macros:
 
 WIKI = Phobos/StdFunctional
@@ -21,6 +66,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.functional;
 
 import std.traits, std.typetuple;
+
 
 private template needOpCallAlias(alias fun)
 {
@@ -62,8 +108,11 @@ template unaryFun(alias fun, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
-        import std.traits, std.typecons, std.typetuple;
-        import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+        static if (!fun._ctfeMatchUnary(parmName))
+        {
+            import std.traits, std.typecons, std.typetuple;
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+        }
         auto unaryFun(ElementType)(auto ref ElementType __a)
         {
             mixin("alias " ~ parmName ~ " = __a ;");
@@ -151,8 +200,11 @@ template binaryFun(alias fun, string parm1Name = "a",
 {
     static if (is(typeof(fun) : string))
     {
-        import std.traits, std.typecons, std.typetuple;
-        import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+        static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
+        {
+            import std.traits, std.typecons, std.typetuple;
+            import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+        }
         auto binaryFun(ElementType1, ElementType2)
             (auto ref ElementType1 __a, auto ref ElementType2 __b)
         {
@@ -215,8 +267,170 @@ unittest
     static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
-private template safeOp(string S)
-    if (is(typeof(mixin("0 "~S~" 0")) == bool))
+// skip all ASCII chars except a..z, A..Z, 0..9, '_' and '.'.
+private uint _ctfeSkipOp(ref string op)
+{
+    if (!__ctfe) assert(false);
+    import std.ascii : isASCII, isAlphaNum;
+    immutable oldLength = op.length;
+    while (op.length)
+    {
+        immutable front = op[0];
+        if(front.isASCII() && !(front.isAlphaNum() || front == '_' || front == '.'))
+            op = op[1..$];
+        else
+            break;
+    }
+    return oldLength != op.length;
+}
+
+// skip all digits
+private uint _ctfeSkipInteger(ref string op)
+{
+    if (!__ctfe) assert(false);
+    import std.ascii : isDigit;
+    immutable oldLength = op.length;
+    while (op.length)
+    {
+        immutable front = op[0];
+        if(front.isDigit())
+            op = op[1..$];
+        else
+            break;
+    }
+    return oldLength != op.length;
+}
+
+// skip name
+private uint _ctfeSkipName(ref string op, string name)
+{
+    if (!__ctfe) assert(false);
+    if (op.length >= name.length && op[0..name.length] == name)
+    {
+        op = op[name.length..$];
+        return 1;
+    }
+    return 0;
+}
+
+// returns 1 if $(D fun) is trivial unary function
+private uint _ctfeMatchUnary(string fun, string name)
+{
+    if (!__ctfe) assert(false);
+    import std.stdio;
+    fun._ctfeSkipOp();
+    for (;;)
+    {
+        immutable h = fun._ctfeSkipName(name) + fun._ctfeSkipInteger();
+        if (h == 0)
+        {
+            fun._ctfeSkipOp();
+            break;
+        }
+        else if (h == 1)
+        {
+            if(!fun._ctfeSkipOp())
+                break;
+        }
+        else
+            return 0;
+    }
+    return fun.length == 0;
+}
+
+unittest
+{
+    static assert(!_ctfeMatchUnary("sqrt(ё)", "ё"));
+    static assert(!_ctfeMatchUnary("ё.sqrt", "ё"));
+    static assert(!_ctfeMatchUnary(".ё+ё", "ё"));
+    static assert(!_ctfeMatchUnary("_ё+ё", "ё"));
+    static assert(!_ctfeMatchUnary("ёё", "ё"));
+    static assert(_ctfeMatchUnary("a+a", "a"));
+    static assert(_ctfeMatchUnary("a + 10", "a"));
+    static assert(_ctfeMatchUnary("4 == a", "a"));
+    static assert(_ctfeMatchUnary("2==a", "a"));
+    static assert(_ctfeMatchUnary("1 != a", "a"));
+    static assert(_ctfeMatchUnary("a!=4", "a"));
+    static assert(_ctfeMatchUnary("a< 1", "a"));
+    static assert(_ctfeMatchUnary("434 < a", "a"));
+    static assert(_ctfeMatchUnary("132 > a", "a"));
+    static assert(_ctfeMatchUnary("123 >a", "a"));
+    static assert(_ctfeMatchUnary("a>82", "a"));
+    static assert(_ctfeMatchUnary("ё>82", "ё"));
+    static assert(_ctfeMatchUnary("ё[ё(ё)]", "ё"));
+    static assert(_ctfeMatchUnary("ё[21]", "ё"));
+}
+
+// returns 1 if $(D fun) is trivial binary function
+private uint _ctfeMatchBinary(string fun, string name1, string name2)
+{
+    if (!__ctfe) assert(false);
+    fun._ctfeSkipOp();
+    for (;;)
+    {
+        immutable h = fun._ctfeSkipName(name1) + fun._ctfeSkipName(name2) + fun._ctfeSkipInteger();
+        if (h == 0)
+        {
+            fun._ctfeSkipOp();
+            break;
+        }
+        else if (h == 1)
+        {
+            if(!fun._ctfeSkipOp())
+                break;
+        }
+        else
+            return 0;
+    }
+    return fun.length == 0;
+}
+
+unittest {
+
+    static assert(!_ctfeMatchBinary("sqrt(ё)", "ё", "b"));
+    static assert(!_ctfeMatchBinary("ё.sqrt", "ё", "b"));
+    static assert(!_ctfeMatchBinary(".ё+ё", "ё", "b"));
+    static assert(!_ctfeMatchBinary("_ё+ё", "ё", "b"));
+    static assert(!_ctfeMatchBinary("ёё", "ё", "b"));
+    static assert(_ctfeMatchBinary("a+a", "a", "b"));
+    static assert(_ctfeMatchBinary("a + 10", "a", "b"));
+    static assert(_ctfeMatchBinary("4 == a", "a", "b"));
+    static assert(_ctfeMatchBinary("2==a", "a", "b"));
+    static assert(_ctfeMatchBinary("1 != a", "a", "b"));
+    static assert(_ctfeMatchBinary("a!=4", "a", "b"));
+    static assert(_ctfeMatchBinary("a< 1", "a", "b"));
+    static assert(_ctfeMatchBinary("434 < a", "a", "b"));
+    static assert(_ctfeMatchBinary("132 > a", "a", "b"));
+    static assert(_ctfeMatchBinary("123 >a", "a", "b"));
+    static assert(_ctfeMatchBinary("a>82", "a", "b"));
+    static assert(_ctfeMatchBinary("ё>82", "ё", "q"));
+    static assert(_ctfeMatchBinary("ё[ё(10)]", "ё", "q"));
+    static assert(_ctfeMatchBinary("ё[21]", "ё", "q"));
+
+    static assert(!_ctfeMatchBinary("sqrt(ё)+b", "b", "ё"));
+    static assert(!_ctfeMatchBinary("ё.sqrt-b", "b", "ё"));
+    static assert(!_ctfeMatchBinary(".ё+b", "b", "ё"));
+    static assert(!_ctfeMatchBinary("_b+ё", "b", "ё"));
+    static assert(!_ctfeMatchBinary("ba", "b", "a"));
+    static assert(_ctfeMatchBinary("a+b", "b", "a"));
+    static assert(_ctfeMatchBinary("a + b", "b", "a"));
+    static assert(_ctfeMatchBinary("b == a", "b", "a"));
+    static assert(_ctfeMatchBinary("b==a", "b", "a"));
+    static assert(_ctfeMatchBinary("b != a", "b", "a"));
+    static assert(_ctfeMatchBinary("a!=b", "b", "a"));
+    static assert(_ctfeMatchBinary("a< b", "b", "a"));
+    static assert(_ctfeMatchBinary("b < a", "b", "a"));
+    static assert(_ctfeMatchBinary("b > a", "b", "a"));
+    static assert(_ctfeMatchBinary("b >a", "b", "a"));
+    static assert(_ctfeMatchBinary("a>b", "b", "a"));
+    static assert(_ctfeMatchBinary("ё>b", "b", "ё"));
+    static assert(_ctfeMatchBinary("b[ё(-1)]", "b", "ё"));
+    static assert(_ctfeMatchBinary("ё[-21]", "b", "ё"));
+}
+
+//undocumented
+template safeOp(string S)
+    if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
 {
     private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
         if (isIntegral!ElementType1 && isIntegral!ElementType2)
@@ -225,7 +439,7 @@ private template safeOp(string S)
         return mixin("cast(T)a "~S~" cast(T)b");
     }
 
-    private bool safeOp(T0, T1)(T0 a, T1 b) pure
+    bool safeOp(T0, T1)(auto ref T0 a, auto ref T1 b)
     {
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
@@ -256,16 +470,27 @@ private template safeOp(string S)
     }
 }
 
+unittest //check user defined types
+{
+    import std.algorithm : equal;
+    struct Foo
+    {
+        int a;
+        auto opEquals(Foo foo)
+        {
+            return a == foo.a;
+        }
+    }
+    assert(safeOp!"!="(Foo(1), Foo(2)));
+}
+
 /**
    Predicate that returns $(D_PARAM a < b).
    Correctly compares signed and unsigned integers, ie. -1 < 2U.
 */
-bool lessThan(T0, T1)(T0 a, T1 b)
-{
-  return safeOp!"<"(a, b);
-}
+alias lessThan = safeOp!"<";
 
-unittest
+pure @safe @nogc nothrow unittest
 {
     assert(lessThan(2, 3));
     assert(lessThan(2U, 3U));
@@ -283,10 +508,7 @@ unittest
    Predicate that returns $(D_PARAM a > b).
    Correctly compares signed and unsigned integers, ie. 2U > -1.
 */
-bool greaterThan(T0, T1)(T0 a, T1 b)
-{
-  return safeOp!">"(a, b);
-}
+alias greaterThan = safeOp!">";
 
 unittest
 {
@@ -306,10 +528,7 @@ unittest
    Predicate that returns $(D_PARAM a == b).
    Correctly compares signed and unsigned integers, ie. !(-1 == ~0U).
 */
-bool equalTo(T0, T1)(T0 a, T1 b)
-{
-  return safeOp!"=="(a, b);
-}
+alias equalTo = safeOp!"==";
 
 unittest
 {
@@ -361,7 +580,7 @@ unittest
 template binaryReverseArgs(alias pred)
 {
     auto binaryReverseArgs(ElementType1, ElementType2)
-            (ElementType1 a, ElementType2 b)
+            (auto ref ElementType1 a, auto ref ElementType2 b)
     {
         return pred(b, a);
     }
@@ -384,8 +603,7 @@ Negates predicate $(D pred).
  */
 template not(alias pred)
 {
-    auto not(T...)(T args)
-    if (is(typeof(!pred(args))) || is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
+    auto not(T...)(auto ref T args)
     {
         static if (is(typeof(!pred(args))))
             return !pred(args);
@@ -420,7 +638,7 @@ unittest
 }
 
 /**
-$(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially 
+$(LINK2 http://en.wikipedia.org/wiki/Partial_application, Partially
 applies) $(D_PARAM fun) by tying its first argument to $(D_PARAM arg).
 
 Example:
@@ -574,7 +792,7 @@ $(XREF typecons, Tuple) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
 
-Note: In the special case where where only a single function is provided
+Note: In the special case where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
@@ -598,7 +816,7 @@ template adjoin(F...) if (F.length > 1)
         }
         else
         {
-            import std.string : format;
+            import std.format : format;
             import std.range : iota;
             return mixin (q{tuple(%(F[%s](a)%|, %))}.format(iota(0, F.length)));
         }
@@ -801,76 +1019,131 @@ Technically the memoized function should be pure because $(D memoize) assumes it
 always return the same result for a given tuple of arguments. However, $(D memoize) does not
 enforce that because sometimes it
 is useful to memoize an impure function, too.
-
-To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
-For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
-
-Example:
-----
-ulong fib(ulong n)
-{
-    alias mfib = memoize!fib;
-    return n < 2 ? 1 : mfib(n - 2) + mfib(n - 1);
-}
-...
-assert(fib(10) == 89);
-----
-
-To improve the speed of the factorial function,
-
-Example:
-----
-ulong fact(ulong n)
-{
-    alias mfact = memoize!fact;
-    return n < 2 ? 1 : n * mfact(n - 1);
-}
-...
-assert(fact(10) == 3628800);
-----
-
-This memoizes all values of $(D fact) up to the largest argument. To only cache the final
-result, move $(D memoize) outside the function as shown below.
-
-Example:
-----
-ulong factImpl(ulong n)
-{
-    return n < 2 ? 1 : n * factImpl(n - 1);
-}
-alias fact = memoize!factImpl;
-...
-assert(fact(10) == 3628800);
-----
-
-The $(D maxSize) parameter is a cutoff for the cache size. If upon a miss the length of the hash
-table is found to be $(D maxSize), the table is simply cleared.
-
-Example:
-----
-// Memoize no more than 128 values of transmogrify
-alias fastTransmogrify = memoize!(transmogrify, 128);
-----
 */
-template memoize(alias fun, uint maxSize = uint.max)
+template memoize(alias fun)
 {
-    private alias Args = ParameterTypeTuple!fun;
-    ReturnType!fun memoize(Args args)
+    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
+
+    ReturnType!fun memoize(ParameterTypeTuple!fun args)
     {
-        import std.typecons : Tuple, tuple;
+        alias Args = ParameterTypeTuple!fun;
+        import std.typecons : Tuple;
+
         static ReturnType!fun[Tuple!Args] memo;
         auto t = Tuple!Args(args);
-        auto p = t in memo;
-        if (p) return *p;
-        static if (maxSize != uint.max)
-        {
-            if (memo.length >= maxSize) memo = null;
-        }
-        auto r = fun(args);
-        //writeln("Inserting result ", typeof(r).stringof, "(", r, ") for parameters ", t);
-        memo[t] = r;
-        return r;
+        if (auto p = t in memo)
+            return *p;
+        return memo[t] = fun(args);
     }
+}
+
+/// ditto
+template memoize(alias fun, uint maxSize)
+{
+    // alias Args = ParameterTypeTuple!fun; // Bugzilla 13580
+    ReturnType!fun memoize(ParameterTypeTuple!fun args)
+    {
+        import std.typecons : tuple;
+        static struct Value { ParameterTypeTuple!fun args; ReturnType!fun res; }
+        static Value[] memo;
+        static size_t[] initialized;
+
+        if (!memo.length)
+        {
+            import core.memory;
+
+            enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
+            memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
+            enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
+            initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
+        }
+
+        import core.bitop : bt, bts;
+        import std.conv : emplace;
+
+        size_t hash;
+        foreach (ref arg; args)
+            hash = hashOf(arg, hash);
+        // cuckoo hashing
+        immutable idx1 = hash % maxSize;
+        if (!bt(initialized.ptr, idx1))
+        {
+            emplace(&memo[idx1], args, fun(args));
+            bts(initialized.ptr, idx1); // only set to initialized after setting args and value (bugzilla 14025)
+            return memo[idx1].res;
+        }
+        else if (memo[idx1].args == args)
+            return memo[idx1].res;
+        // FNV prime
+        immutable idx2 = (hash * 16777619) % maxSize;
+        if (!bt(initialized.ptr, idx2))
+        {
+            emplace(&memo[idx2], memo[idx1]);
+            bts(initialized.ptr, idx2); // only set to initialized after setting args and value (bugzilla 14025)
+        }
+        else if (memo[idx2].args == args)
+            return memo[idx2].res;
+        else if (idx1 != idx2)
+            memo[idx2] = memo[idx1];
+
+        memo[idx1] = Value(args, fun(args));
+        return memo[idx1].res;
+    }
+}
+
+/**
+ * To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
+ * For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
+ */
+unittest
+{
+    ulong fib(ulong n)
+    {
+        return n < 2 ? 1 : memoize!fib(n - 2) + memoize!fib(n - 1);
+    }
+    assert(fib(10) == 89);
+}
+
+/**
+ * To improve the speed of the factorial function,
+ */
+unittest
+{
+    ulong fact(ulong n)
+    {
+        return n < 2 ? 1 : n * memoize!fact(n - 1);
+    }
+    assert(fact(10) == 3628800);
+}
+
+/**
+ * This memoizes all values of $(D fact) up to the largest argument. To only cache the final
+ * result, move $(D memoize) outside the function as shown below.
+ */
+unittest
+{
+    ulong factImpl(ulong n)
+    {
+        return n < 2 ? 1 : n * factImpl(n - 1);
+    }
+    alias fact = memoize!factImpl;
+    assert(fact(10) == 3628800);
+}
+
+/**
+ * When the $(D maxSize) parameter is specified, memoize will used
+ * a fixed size hash table to limit the number of cached entries.
+ */
+unittest
+{
+    ulong fact(ulong n)
+    {
+        // Memoize no more than 8 values
+        return n < 2 ? 1 : n * memoize!(fact, 8)(n - 1);
+    }
+    assert(fact(8) == 40320);
+    // using more entries than maxSize will overwrite existing entries
+    assert(fact(10) == 3628800);
 }
 
 unittest
@@ -912,6 +1185,11 @@ unittest
     else
         return 1 + mLen2(s[1 .. $]);
     }
+
+    int _func(int x) { return 1; }
+    alias func = memoize!(_func, 10);
+    assert(func(int.init) == 1);
+    assert(func(int.init) == 1);
 }
 
 private struct DelegateFaker(F)
@@ -1125,5 +1403,103 @@ unittest {
         auto dg_xtrnD = toDelegate(&S.xtrnD);
         static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
     }
+}
+
+/**
+Forwards function arguments with saving ref-ness.
+*/
+template forward(args...)
+{
+    import std.typetuple;
+
+    static if (args.length)
+    {
+        import std.algorithm.mutation : move;
+
+        alias arg = args[0];
+        static if (__traits(isRef, arg))
+            alias fwd = arg;
+        else
+            @property fwd()(){ return move(arg); }
+        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+    }
+    else
+        alias forward = TypeTuple!();
+}
+
+///
+@safe unittest
+{
+    class C
+    {
+        static int foo(int n) { return 1; }
+        static int foo(ref int n) { return 2; }
+    }
+    int bar()(auto ref int x) { return C.foo(forward!x); }
+
+    assert(bar(1) == 1);
+    int i;
+    assert(bar(i) == 2);
+}
+
+///
+@safe unittest
+{
+    void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
+
+    // forwards all arguments which are bound to parameter tuple
+    void bar(Args...)(auto ref Args args) { return foo(forward!args); }
+
+    // forwards all arguments with swapping order
+    void baz(Args...)(auto ref Args args) { return foo(forward!args[$/2..$], forward!args[0..$/2]); }
+
+    string s;
+    bar(1, s);
+    assert(s == "Hello");
+    baz(s, 2);
+    assert(s == "HelloHello");
+}
+
+@safe unittest
+{
+    auto foo(TL...)(auto ref TL args)
+    {
+        string result = "";
+        foreach (i, _; args)
+        {
+            //pragma(msg, "[",i,"] ", __traits(isRef, args[i]) ? "L" : "R");
+            result ~= __traits(isRef, args[i]) ? "L" : "R";
+        }
+        return result;
+    }
+
+    string bar(TL...)(auto ref TL args)
+    {
+        return foo(forward!args);
+    }
+    string baz(TL...)(auto ref TL args)
+    {
+        int x;
+        return foo(forward!args[3], forward!args[2], 1, forward!args[1], forward!args[0], x);
+    }
+
+    struct S {}
+    S makeS(){ return S(); }
+    int n;
+    string s;
+    assert(bar(S(), makeS(), n, s) == "RRLL");
+    assert(baz(S(), makeS(), n, s) == "LLRRRL");
+}
+
+@safe unittest
+{
+    ref int foo(return ref int a) { return a; }
+    ref int bar(Args)(auto ref Args args)
+    {
+        return foo(forward!args);
+    }
+    static assert(!__traits(compiles, { auto x1 = bar(3); })); // case of NG
+    int value = 3;
+    auto x2 = bar(value); // case of OK
 }
 

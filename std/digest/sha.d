@@ -1,7 +1,12 @@
 // Written in the D programming language.
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+ * Computes SHA1 and SHA2 hashes of arbitrary data. SHA hashes are 20 to 64 byte
+ * quantities (depending on the SHA algorithm) that are like a checksum or CRC,
+ * but are more robust.
+ *
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -13,11 +18,8 @@ $(TR $(TDNW OOP API) $(TD $(MYREF SHA1Digest))
 $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
 )
 )
+)
 
- * Computes SHA1 and SHA2 hashes of arbitrary data. SHA hashes are 20 to 64 byte
- * quantities (depending on the SHA algorithm) that are like a checksum or CRC,
- * but are more robust.
- *
  * SHA2 comes in several different versions, all supported by this module:
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *
@@ -48,7 +50,6 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  *
  * Macros:
  *      WIKI = Phobos/StdSha1
- *      MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 /*          Copyright Kai Nacke 2012.
@@ -119,9 +120,7 @@ else version(D_InlineAsm_X86_64)
     private version = USE_SSSE3;
 }
 
-import std.ascii : hexDigits;
-import std.exception : assumeUnique;
-import core.bitop : bswap;
+version(LittleEndian) import core.bitop : bswap;
 version(USE_SSSE3) import core.cpuid : hasSSSE3Support = ssse3;
 version(USE_SSSE3) import std.internal.digest.sha_SSSE3 : transformSSSE3;
 
@@ -160,8 +159,8 @@ private ulong bigEndianToNative(ubyte[8] val) @trusted pure nothrow @nogc
 {
     version(LittleEndian)
     {
-        static import std.bitmanip;
-        return std.bitmanip.bigEndianToNative!ulong(val);
+        import std.bitmanip : bigEndianToNative;
+        return bigEndianToNative!ulong(val);
     }
     else
         return *cast(ulong*) &val;
@@ -193,18 +192,31 @@ private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
     return (x >> n) | (x << (64-n));
 }
 
+version(USE_SSSE3)
+{
+    // moved to outside template to avoid issues with static ctor cycles (Bug 14157)
+    immutable bool _cachedSSSE3Support;
+
+    shared static this()
+    {
+        _cachedSSSE3Support = hasSSSE3Support;
+    }
+}
+
 /**
  * Template API SHA1/SHA2 implementation. Supports: SHA-1, SHA-224, SHA-256,
  * SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *
- * The blockSize and digestSize are in bits. However, it's likely easier to
+ * The hashBlockSize and digestSize are in bits. However, it's likely easier to
  * simply use the convenience aliases: SHA1, SHA224, SHA256, SHA384, SHA512,
  * SHA512_224 and SHA512_256.
  *
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
-struct SHA(int blockSize, int digestSize)
+struct SHA(uint hashBlockSize, uint digestSize)
 {
+    enum blockSize = hashBlockSize;
+
     static assert(blockSize == 512 || blockSize == 1024,
         "Invalid SHA blockSize, must be 512 or 1024");
     static assert(digestSize == 160 || digestSize == 224 || digestSize == 256 || digestSize == 384 || digestSize == 512,
@@ -215,21 +227,7 @@ struct SHA(int blockSize, int digestSize)
         "Invalid SHA digestSize for a blockSize of 1024. The digestSize must be 224, 256, 384 or 512.");
 
     static if(digestSize==160) /* SHA-1 */
-    {
-        version(USE_SSSE3)
-        {
-            private __gshared immutable pure nothrow @nogc void function(uint[5]* state, const(ubyte[64])* block) transform;
-
-            shared static this()
-            {
-                transform = hasSSSE3Support ? &transformSSSE3 : &transformX86;
-            }
-        }
-        else
-        {
-            alias transform = transformX86;
-        }
-    }
+        alias transform = transformX86;
     else static if(blockSize == 512) /* SHA-224, SHA-256 */
         alias transform = transformSHA2!uint;
     else static if(blockSize == 1024) /* SHA-384, SHA-512, SHA-512/224, SHA-512/256 */
@@ -427,6 +425,11 @@ struct SHA(int blockSize, int digestSize)
 
         private static void transformX86(uint[5]* state, const(ubyte[64])* block) pure nothrow @nogc
         {
+            version(USE_SSSE3)
+            {
+                if(_cachedSSSE3Support)
+                    return transformSSSE3(state, block);
+            }
             uint A, B, C, D, E, T;
             uint[16] W = void;
 
@@ -689,8 +692,8 @@ struct SHA(int blockSize, int digestSize)
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         void put(scope const(ubyte)[] input...) @trusted pure nothrow @nogc
         {
@@ -1094,7 +1097,7 @@ unittest
 }
 
 /**
- * These are convenience aliases for $(XREF digest.digest, digest) using the
+ * These are convenience aliases for $(XREF_PACK digest,digest,digest) using the
  * SHA implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -1173,8 +1176,8 @@ unittest
  * OOP API SHA1 and SHA2 implementations.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(XREF digest.digest, WrapperDigest)!SHA1, see
- * $(XREF digest.digest, WrapperDigest) for more information.
+ * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!SHA1), see
+ * there for more information.
  */
 alias SHA1Digest = WrapperDigest!SHA1;
 alias SHA224Digest = WrapperDigest!SHA224; ///ditto

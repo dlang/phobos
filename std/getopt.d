@@ -32,19 +32,17 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.getopt;
 
-private import std.array, std.string, std.conv, std.traits, std.bitmanip,
-    std.algorithm, std.ascii, std.exception, std.typetuple, std.typecons;
-
-version (unittest)
-{
-    import std.stdio; // for testing only
-}
+import std.traits;
 
 /**
- * Thrown on one of the following conditions:
- * - An unrecognized command-line argument is passed
- *   and $(D std.getopt.config.passThrough) was not present.
- */
+Thrown on one of the following conditions:
+$(UL
+  $(LI An unrecognized command-line argument is passed, and
+       $(D std.getopt.config.passThrough) was not present.)
+  $(LI A command-line option was not found, and
+       $(D std.getopt.config.required) was present.)
+)
+*/
 class GetOptException : Exception
 {
     @safe pure nothrow
@@ -300,8 +298,7 @@ void main(string[] args)
     ))
 )
 
-$(B Options with multiple names)
-
+Options_with_multiple_names:
 Sometimes option synonyms are desirable, e.g. "--verbose",
 "--loquacious", and "--garrulous" should have the same effect. Such
 alternate option names can be included in the option specification,
@@ -312,8 +309,7 @@ bool verbose;
 getopt(args, "verbose|loquacious|garrulous", &verbose);
 ---------
 
-$(B Case)
-
+Case:
 By default options are case-insensitive. You can change that behavior
 by passing $(D getopt) the $(D caseSensitive) directive like this:
 
@@ -344,8 +340,7 @@ etc. because the directive $(D
 std.getopt.config.caseInsensitive) turned sensitivity off before
 option "bar" was parsed.
 
-$(B "Short" versus "long" options)
-
+Short_versus_long_options:
 Traditionally, programs accepted single-letter options preceded by
 only one dash (e.g. $(D -t)). $(D getopt) accepts such parameters
 seamlessly. When used with a double-dash (e.g. $(D --t)), a
@@ -365,8 +360,7 @@ and $(D -timeout=5) will be not accepted.
 
 For more details about short options, refer also to the next section.
 
-$(B Bundling)
-
+Bundling:
 Single-letter options can be bundled together, i.e. "-abc" is the same as
 $(D "-a -b -c"). By default, this option is turned off. You can turn it on
 with the $(D std.getopt.config.bundling) directive:
@@ -382,8 +376,7 @@ getopt(args,
 In case you want to only enable bundling for some of the parameters,
 bundling can be turned off with $(D std.getopt.config.noBundling).
 
-$(B Required)
-
+Required:
 An option can be marked as required. If that option is not present in the
 arguments an exceptin will be thrown.
 
@@ -398,8 +391,7 @@ getopt(args,
 Only the option direclty following $(D std.getopt.config.required) is
 required.
 
-$(B Passing unrecognized options through)
-
+Passing_unrecognized_options_through:
 If an application needs to do its own processing of whichever arguments
 $(D getopt) did not understand, it can pass the
 $(D std.getopt.config.passThrough) directive to $(D getopt):
@@ -415,23 +407,26 @@ getopt(args,
 An unrecognized option such as "--baz" will be found untouched in
 $(D args) after $(D getopt) returns.
 
-$(D Help Information Generation)
-
+Help_Information_Generation:
 If an option string is followed by another string, this string serves as an
 description for this option. The function $(D getopt) returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
 as well a bool indicating if information about these options where required by
 the passed arguments.
 
-$(B Options Terminator)
+The function also always adds an option for `--help|-h` to set the flag
+$(D GetoptResult.helpWanted) if seen on the command line.
 
+Options_Terminator:
 A lonesome double-dash terminates $(D getopt) gathering. It is used to
 separate program options from other parameters (e.g. options to be passed
 to another program). Invoking the example above with $(D "--foo -- --bar")
 parses foo but leaves "--bar" in $(D args). The double-dash itself is
 removed from the argument array.
 */
-GetoptResult getopt(T...)(ref string[] args, T opts) {
+GetoptResult getopt(T...)(ref string[] args, T opts)
+{
+    import std.exception : enforce;
     enforce(args.length,
             "Invalid arguments string passed: program name missing");
     configuration cfg;
@@ -449,7 +444,7 @@ unittest
 
     bool foo;
     bool bar;
-    auto rslt = getopt(args, "foo|f" "Some information about foo.", &foo, "bar|b",
+    auto rslt = getopt(args, "foo|f", "Some information about foo.", &foo, "bar|b",
         "Some help message about bar.", &bar);
 
     if (rslt.helpWanted)
@@ -480,15 +475,15 @@ enum config {
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
+    /// Do not erase the endOfOptions separator from args
+    keepEndOfOptions,
     /// Makes the next option a required option
     required
 }
 
 /** The result of the $(D getopt) function.
 
-The $(D GetoptResult) contains two members. The first member is a boolean with
-the name $(D helpWanted). The second member is an array of $(D Option). The
-array is accessable by the name $(D options).
+$(D helpWanted) is set if the option `--help` or `-h` was passed to the option parser.
 */
 struct GetoptResult {
     bool helpWanted; /// Flag indicating if help was requested
@@ -501,12 +496,12 @@ struct Option {
     string optShort; /// The short symbol for this option
     string optLong; /// The long symbol for this option
     string help; /// The description of this option
-    bool required; /// If a option is required, not passing it will result in
-                   /// an error.
+    bool required; /// If a option is required, not passing it will result in an error
 }
 
-pure Option splitAndGet(string opt) @trusted nothrow
+private pure Option splitAndGet(string opt) @trusted nothrow
 {
+    import std.array : split;
     auto sp = split(opt, "|");
     Option ret;
     if (sp.length > 1)
@@ -527,6 +522,8 @@ pure Option splitAndGet(string opt) @trusted nothrow
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         ref GetoptResult rslt, T opts)
 {
+    import std.algorithm : remove;
+    import std.conv : to;
     static if (opts.length)
     {
         static if (is(typeof(opts[0]) : config))
@@ -569,7 +566,7 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             if (cfg.required && !optWasHandled)
             {
                 throw new GetOptException("Required option " ~ option ~
-                    "was not supplied");
+                    " was not supplied");
             }
             cfg.required = false;
 
@@ -584,8 +581,9 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             auto a = args[i];
             if (endOfOptions.length && a == endOfOptions)
             {
-                // Consume the "--"
-                args = args.remove(i);
+                // Consume the "--" if keepEndOfOptions is not specified
+                if (!cfg.keepEndOfOptions)
+                    args = args.remove(i);
                 break;
             }
             if (!a.length || a[0] != optionChar)
@@ -616,12 +614,16 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
     }
 }
 
-bool handleOption(R)(string option, R receiver, ref string[] args,
+private bool handleOption(R)(string option, R receiver, ref string[] args,
         ref configuration cfg, bool incremental)
 {
+    import std.algorithm : map, splitter;
+    import std.ascii : isAlpha;
+    import std.conv : text, to;
     // Scan arguments looking for a match for this option
     bool ret = false;
-    for (size_t i = 1; i < args.length; ) {
+    for (size_t i = 1; i < args.length; )
+    {
         auto a = args[i];
         if (endOfOptions.length && a == endOfOptions) break;
         if (cfg.stopOnFirstNonOption && (!a.length || a[0] != optionChar))
@@ -678,12 +680,14 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
         }
         else
         {
+            import std.exception : enforce;
             // non-boolean option, which might include an argument
             //enum isCallbackWithOneParameter = is(typeof(receiver("")) : void);
             enum isCallbackWithLessThanTwoParameters =
                 (is(typeof(receiver) == delegate) || is(typeof(*receiver) == function)) &&
                 !is(typeof(receiver("", "")));
-            if (!isCallbackWithLessThanTwoParameters && !(val.length) && !incremental) {
+            if (!isCallbackWithLessThanTwoParameters && !(val.length) && !incremental)
+            {
                 // Eat the next argument too.  Check to make sure there's one
                 // to be eaten first, though.
                 enforce(i < args.length,
@@ -751,10 +755,11 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
 
                 import std.range : only;
                 import std.typecons : Tuple, tuple;
+                import std.string : indexOf;
 
                 static Tuple!(K, V) getter(string input)
                 {
-                    auto j = std.string.indexOf(input, assignChar);
+                    auto j = indexOf(input, assignChar);
                     auto key = input[0 .. j];
                     auto value = input[j + 1 .. $];
                     return tuple(to!K(key), to!V(value));
@@ -785,6 +790,8 @@ bool handleOption(R)(string option, R receiver, ref string[] args,
 // 5316 - arrays with arraySep
 unittest
 {
+    import std.conv;
+
     arraySep = ",";
     scope (exit) arraySep = "";
 
@@ -794,17 +801,17 @@ unittest
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "-n" "foo,bar,baz"].dup;
+    args = ["program.name", "-n", "foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "--name=foo,bar,baz"].dup;
+    args = ["program.name", "--name=foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 
     names = names.init;
-    args = ["program.name", "--name", "foo,bar,baz"].dup;
+    args = ["program.name", "--name", "foo,bar,baz"];
     getopt(args, "name|n", &names);
     assert(names == ["foo", "bar", "baz"], to!string(names));
 }
@@ -812,17 +819,19 @@ unittest
 // 5316 - associative arrays with arraySep
 unittest
 {
+    import std.conv;
+
     arraySep = ",";
     scope (exit) arraySep = "";
 
     int[string] values;
     values = values.init;
-    auto args = ["program.name", "-vfoo=0,bar=1,baz=2"].dup;
+    auto args = ["program.name", "-vfoo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
     values = values.init;
-    args = ["program.name", "-v", "foo=0,bar=1,baz=2"].dup;
+    args = ["program.name", "-v", "foo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
@@ -832,7 +841,7 @@ unittest
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 
     values = values.init;
-    args = ["program.name", "--values", "foo=0,bar=1,baz=2"].dup;
+    args = ["program.name", "--values", "foo=0,bar=1,baz=2"];
     getopt(args, "values|v", &values);
     assert(values == ["foo":0, "bar":1, "baz":2], to!string(values));
 }
@@ -871,18 +880,23 @@ enum autoIncrementChar = '+';
 
 private struct configuration
 {
+    import std.bitmanip : bitfields;
     mixin(bitfields!(
                 bool, "caseSensitive",  1,
                 bool, "bundling", 1,
                 bool, "passThrough", 1,
                 bool, "stopOnFirstNonOption", 1,
+                bool, "keepEndOfOptions", 1,
                 bool, "required", 1,
-                ubyte, "", 3));
+                ubyte, "", 2));
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
     configuration cfg)
 {
+    import std.uni : toUpper;
+    import std.string : indexOf;
+    import std.array : split;
     //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
     //scope(success) writeln("optMatch result: ", value);
     if (!arg.length || arg[0] != optionChar) return false;
@@ -892,7 +906,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     //writeln("isLong: ", isLong);
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
-    immutable eqPos = std.string.indexOf(arg, assignChar);
+    immutable eqPos = indexOf(arg, assignChar);
     if (isLong && eqPos >= 0)
     {
         // argument looks like --opt=value
@@ -922,7 +936,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
         if (arg == v || !cfg.caseSensitive && toUpper(arg) == toUpper(v))
             return true;
         if (cfg.bundling && !isLong && v.length == 1
-                && std.string.indexOf(arg, v) >= 0)
+                && indexOf(arg, v) >= 0)
         {
             //writeln("success");
             return true;
@@ -944,35 +958,37 @@ private void setConfig(ref configuration cfg, config option)
     case config.required: cfg.required = true; break;
     case config.stopOnFirstNonOption:
         cfg.stopOnFirstNonOption = true; break;
+    case config.keepEndOfOptions:
+        cfg.keepEndOfOptions = true; break;
     default: assert(false);
     }
 }
 
 unittest
 {
+    import std.conv;
     import std.math;
+
     uint paranoid = 2;
-    string[] args = (["program.name",
-                      "--paranoid", "--paranoid", "--paranoid"]).dup;
+    string[] args = ["program.name", "--paranoid", "--paranoid", "--paranoid"];
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
 
     enum Color { no, yes }
     Color color;
-    args = (["program.name", "--color=yes",]).dup;
+    args = ["program.name", "--color=yes",];
     getopt(args, "color", &color);
     assert(color, to!(string)(color));
 
     color = Color.no;
-    args = (["program.name", "--color", "yes",]).dup;
+    args = ["program.name", "--color", "yes",];
     getopt(args, "color", &color);
     assert(color, to!(string)(color));
 
     string data = "file.dat";
     int length = 24;
     bool verbose = false;
-    args = (["program.name", "--length=5",
-                      "--file", "dat.file", "--verbose"]).dup;
+    args = ["program.name", "--length=5", "--file", "dat.file", "--verbose"];
     getopt(
         args,
         "length",  &length,
@@ -985,15 +1001,14 @@ unittest
 
     //
     string[] outputFiles;
-    args = (["program.name", "--output=myfile.txt",
-             "--output", "yourfile.txt"]).dup;
+    args = ["program.name", "--output=myfile.txt", "--output", "yourfile.txt"];
     getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
            && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
 
     outputFiles = [];
     arraySep = ",";
-    args = (["program.name", "--output", "myfile.txt,yourfile.txt"]).dup;
+    args = ["program.name", "--output", "myfile.txt,yourfile.txt"];
     getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
            && outputFiles[0] == "myfile.txt" && outputFiles[1] == "yourfile.txt");
@@ -1027,10 +1042,10 @@ unittest
             verbosityLevel = 2;
         }
     }
-    args = (["program.name", "--quiet"]).dup;
+    args = ["program.name", "--quiet"];
     getopt(args, "verbose", &myHandler, "quiet", &myHandler);
     assert(verbosityLevel == 0);
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     getopt(args, "verbose", &myHandler, "quiet", &myHandler);
     assert(verbosityLevel == 2);
 
@@ -1040,7 +1055,7 @@ unittest
         assert(option == "verbose");
         verbosityLevel = 2;
     }
-    args = (["program.name", "--verbose", "2"]).dup;
+    args = ["program.name", "--verbose", "2"];
     getopt(args, "verbose", &myHandler2);
     assert(verbosityLevel == 2);
 
@@ -1049,12 +1064,12 @@ unittest
     {
         verbosityLevel = 2;
     }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     getopt(args, "verbose", &myHandler3);
     assert(verbosityLevel == 2);
 
     bool foo, bar;
-    args = (["program.name", "--foo", "--bAr"]).dup;
+    args = ["program.name", "--foo", "--bAr"];
     getopt(args,
         std.getopt.config.caseSensitive,
         std.getopt.config.passThrough,
@@ -1064,7 +1079,7 @@ unittest
 
     // test stopOnFirstNonOption
 
-    args = (["program.name", "--foo", "nonoption", "--bar"]).dup;
+    args = ["program.name", "--foo", "nonoption", "--bar"];
     foo = bar = false;
     getopt(args,
         std.getopt.config.stopOnFirstNonOption,
@@ -1072,7 +1087,7 @@ unittest
         "bar", &bar);
     assert(foo && !bar && args[1] == "nonoption" && args[2] == "--bar");
 
-    args = (["program.name", "--foo", "nonoption", "--zab"]).dup;
+    args = ["program.name", "--foo", "nonoption", "--zab"];
     foo = bar = false;
     getopt(args,
         std.getopt.config.stopOnFirstNonOption,
@@ -1080,11 +1095,28 @@ unittest
         "bar", &bar);
     assert(foo && !bar && args[1] == "nonoption" && args[2] == "--zab");
 
-    args = (["program.name", "--fb1", "--fb2=true", "--tb1=false"]).dup;
+    args = ["program.name", "--fb1", "--fb2=true", "--tb1=false"];
     bool fb1, fb2;
     bool tb1 = true;
     getopt(args, "fb1", &fb1, "fb2", &fb2, "tb1", &tb1);
     assert(fb1 && fb2 && !tb1);
+
+    // test keepEndOfOptions
+
+    args = ["program.name", "--foo", "nonoption", "--bar", "--", "--baz"];
+    getopt(args,
+        std.getopt.config.keepEndOfOptions,
+        "foo", &foo,
+        "bar", &bar);
+    assert(args == ["program.name", "nonoption", "--", "--baz"]);
+
+    // Ensure old behavior without the keepEndOfOptions
+
+    args = ["program.name", "--foo", "nonoption", "--bar", "--", "--baz"];
+    getopt(args,
+        "foo", &foo,
+        "bar", &bar);
+    assert(args == ["program.name", "nonoption", "--baz"]);
 
     // test function callbacks
 
@@ -1099,17 +1131,17 @@ unittest
     }
 
     static void myStaticHandler1() { throw new MyEx(); }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     try { getopt(args, "verbose", &myStaticHandler1); assert(0); }
     catch (MyEx ex) { assert(ex.option is null && ex.value is null); }
 
     static void myStaticHandler2(string option) { throw new MyEx(option); }
-    args = (["program.name", "--verbose"]).dup;
+    args = ["program.name", "--verbose"];
     try { getopt(args, "verbose", &myStaticHandler2); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value is null); }
 
     static void myStaticHandler3(string option, string value) { throw new MyEx(option, value); }
-    args = (["program.name", "--verbose", "2"]).dup;
+    args = ["program.name", "--verbose", "2"];
     try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
 }
@@ -1183,6 +1215,9 @@ unittest
 
 unittest // 5228
 {
+    import std.exception;
+    import std.conv;
+
     auto args = ["prog", "--foo=bar"];
     int abc;
     assertThrown!GetOptException(getopt(args, "abc", &abc));
@@ -1193,6 +1228,8 @@ unittest // 5228
 
 unittest // From bugzilla 7693
 {
+    import std.exception;
+
     enum Foo {
         bar,
         baz
@@ -1211,6 +1248,8 @@ unittest // From bugzilla 7693
 
 unittest // same bug as 7693 only for bool
 {
+    import std.exception;
+
     auto args = ["prog", "--foo=truefoobar"];
     bool foo;
     assertThrown(getopt(args, "foo", &foo));
@@ -1232,7 +1271,7 @@ unittest
     bool foo;
     bool bar;
     auto args = ["prog", "--foo", "-b"];
-    getopt(args, config.caseInsensitive,"foo|f" "Some foo", &foo,
+    getopt(args, config.caseInsensitive,"foo|f", "Some foo", &foo,
         config.caseSensitive, "bar|b", "Some bar", &bar);
     assert(foo);
     assert(bar);
@@ -1243,7 +1282,7 @@ unittest
     bool foo;
     bool bar;
     auto args = ["prog", "-b", "--foo", "-z"];
-    getopt(args, config.caseInsensitive, config.required, "foo|f" "Some foo",
+    getopt(args, config.caseInsensitive, config.required, "foo|f", "Some foo",
         &foo, config.caseSensitive, "bar|b", "Some bar", &bar,
         config.passThrough);
     assert(foo);
@@ -1252,6 +1291,8 @@ unittest
 
 unittest
 {
+    import std.exception;
+
     bool foo;
     bool bar;
     auto args = ["prog", "-b", "-z"];
@@ -1262,6 +1303,8 @@ unittest
 
 unittest
 {
+    import std.exception;
+
     bool foo;
     bool bar;
     auto args = ["prog", "--foo", "-z"];
@@ -1327,7 +1370,8 @@ message is present it will be printed after the long version of the
 $(D Option).
 
 ------------
-foreach(it; opt) {
+foreach(it; opt)
+{
     writefln("%*s %*s %s", lengthOfLongestShortOption, it.optShort,
         lengthOfLongestLongOption, it.optLong, it.help);
 }
@@ -1353,8 +1397,10 @@ Params:
     text = The text to printed at the beginning of the help output.
     opt = The $(D Option) extracted from the $(D getopt) parameter.
 */
-void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt) {
+void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
+{
     import std.format : formattedWrite;
+    import std.algorithm : min, max;
 
     output.formattedWrite("%s\n", text);
 
@@ -1381,6 +1427,10 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt) {
 
 unittest
 {
+    import std.conv;
+
+    import std.array;
+    import std.string;
     bool a;
     auto args = ["prog", "--foo"];
     auto t = getopt(args, "foo|f", "Help", &a);
@@ -1406,6 +1456,9 @@ unittest
 
 unittest
 {
+    import std.conv;
+    import std.string;
+    import std.array ;
     bool a;
     auto args = ["prog", "--foo"];
     auto t = getopt(args, config.required, "foo|f", "Help", &a);
@@ -1426,6 +1479,6 @@ unittest
     assert(helpMsg.indexOf("Help") != -1);
 
     string wanted = "Some Text\n-f  --foo Required: Help\n-h --help "
-        "          This help information.\n";
+        ~ "          This help information.\n";
     assert(wanted == helpMsg, helpMsg ~ wanted);
 }

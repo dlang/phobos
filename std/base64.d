@@ -44,10 +44,8 @@
 module std.base64;
 
 import std.exception;  // enforce
-import std.range;      // isInputRange, isOutputRange, isForwardRange, ElementType, hasLength
+import std.range.primitives;      // isInputRange, isOutputRange, isForwardRange, ElementType, hasLength
 import std.traits;     // isArray
-
-version(unittest) import std.algorithm, std.conv, std.file, std.stdio;
 
 
 /**
@@ -1422,6 +1420,11 @@ class Base64Exception : Exception
 
 unittest
 {
+    import std.algorithm : sort, equal;
+    import std.conv;
+    import std.file;
+    import std.stdio;
+
     alias Base64Re = Base64Impl!('!', '=', Base64.NoPadding);
 
     // Test vectors from RFC 4648
@@ -1527,6 +1530,8 @@ unittest
     }
 
     { // with OutputRange
+        import std.array;
+
         auto a = Appender!(char[])([]);
         auto b = Appender!(ubyte[])([]);
 

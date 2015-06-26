@@ -116,7 +116,7 @@ alias socket_t curl_socket_t;
 
 /// jdrewsen - Would like to get socket error constant from std.socket by it is private atm.
 version(Windows) {
-  private import core.sys.windows.windows, std.c.windows.winsock;
+  private import core.sys.windows.windows, core.sys.windows.winsock2;
   enum CURL_SOCKET_BAD = SOCKET_ERROR;
 }
 version(Posix) enum CURL_SOCKET_BAD = -1;
@@ -280,7 +280,7 @@ enum CurlFnMAtchFunc {
 
 /** callback type for wildcard downloading pattern matching. If the
    string matches the pattern, return CURL_FNMATCHFUNC_MATCH value, etc. */
-alias int  function(void *ptr, char *pattern, char *string)curl_fnmatch_callback;
+alias int  function(void *ptr, in char *pattern, in char *string)curl_fnmatch_callback;
 
 /// seek whence...
 enum CurlSeekPos {
@@ -377,7 +377,7 @@ alias void  function(void *ptr)curl_free_callback;
 /// ditto
 alias void * function(void *ptr, size_t size)curl_realloc_callback;
 /// ditto
-alias char * function(char *str)curl_strdup_callback;
+alias char * function(in char *str)curl_strdup_callback;
 /// ditto
 alias void * function(size_t nmemb, size_t size)curl_calloc_callback;
 
@@ -583,8 +583,8 @@ enum CurlKHType
 ///
 extern (C) struct curl_khkey
 {
-    char *key; /** points to a zero-terminated string encoded with base64
-                  if len is zero, otherwise to the "raw" data */
+    const(char) *key; /** points to a zero-terminated string encoded with base64
+                         if len is zero, otherwise to the "raw" data */
     size_t len; ///
     CurlKHType keytype; ///
 }
@@ -1250,7 +1250,12 @@ enum CurlOption {
   /** Set authentication type for authenticated TLS */
   tlsauth_type,
   /** the last unused */
-  lastentry
+  lastentry,
+
+  writedata = file, /// convenient alias
+  readdata = infile, /// ditto
+  headerdata = writeheader, /// ditto
+  rtspheader = httpheader, /// ditto
 }
 ///
 alias int CURLoption;
@@ -1355,9 +1360,9 @@ alias int curl_TimeCond;
 /** curl_strequal() and curl_strnequal() are subject for removal in a future
    libcurl, see lib/README.curlx for details */
 extern (C) {
-int  curl_strequal(char *s1, char *s2);
+int  curl_strequal(in char *s1, in char *s2);
 /// ditto
-int  curl_strnequal(char *s1, char *s2, size_t n);
+int  curl_strnequal(in char *s1, in char *s2, size_t n);
 }
 enum CurlForm {
     nothing, /********** the first one is unused ************/
@@ -1389,7 +1394,7 @@ alias int CURLformoption;
 extern (C) struct curl_forms
 {
     CURLformoption option;      ///
-    char *value;        ///
+    const(char) *value;        ///
 }
 
 /** use this for multipart formpost building */
@@ -1443,7 +1448,7 @@ CURLFORMcode  curl_formadd(curl_httppost **httppost, curl_httppost **last_post,.
  * Should return the buffer length passed to it as the argument "len" on
  *   success.
  */
-alias size_t  function(void *arg, char *buf, size_t len)curl_formget_callback;
+alias size_t  function(void *arg, in char *buf, size_t len)curl_formget_callback;
 
 /**
  * Name: curl_formget()
@@ -1473,7 +1478,7 @@ void  curl_formfree(curl_httppost *form);
  * Returns a malloc()'ed string that MUST be curl_free()ed after usage is
  * complete. DEPRECATED - see lib/README.curlx
  */
-char * curl_getenv(char *variable);
+char * curl_getenv(in char *variable);
 
 /**
  * Name: curl_version()
@@ -1493,10 +1498,10 @@ char * curl_version();
  * %XX versions). This function returns a new allocated string or NULL if an
  * error occurred.
  */
-char * curl_easy_escape(CURL *handle, char *string, int length);
+char * curl_easy_escape(CURL *handle, in char *string, int length) @trusted;
 
 /** the previous version: */
-char * curl_escape(char *string, int length);
+char * curl_escape(in char *string, int length) @trusted;
 
 
 /**
@@ -1510,10 +1515,10 @@ char * curl_escape(char *string, int length);
  * Conversion Note: On non-ASCII platforms the ASCII %XX codes are
  * converted into the host encoding.
  */
-char * curl_easy_unescape(CURL *handle, char *string, int length, int *outlength);
+char * curl_easy_unescape(CURL *handle, in char *string, int length, int *outlength) @trusted;
 
 /** the previous version */
-char * curl_unescape(char *string, int length);
+char * curl_unescape(in char *string, int length) @trusted;
 
 /**
  * Name: curl_free()
@@ -1580,7 +1585,7 @@ struct curl_slist
  * Appends a string to a linked list. If no list exists, it will be created
  * first. Returns the new list, after appending.
  */
-curl_slist * curl_slist_append(curl_slist *, char *);
+curl_slist * curl_slist_append(curl_slist *, in char *);
 
 /**
  * Name: curl_slist_free_all()
@@ -1807,24 +1812,24 @@ enum CURLVERSION_NOW = CurlVer.fourth;
 extern (C) struct _N28
 {
   CURLversion age;     /** age of the returned struct */
-  char *version_;      /** LIBCURL_VERSION */
+  const(char) *version_;      /** LIBCURL_VERSION */
   uint version_num;    /** LIBCURL_VERSION_NUM */
-  char *host;          /** OS/host/cpu/machine when configured */
+  const(char) *host;          /** OS/host/cpu/machine when configured */
   int features;        /** bitmask, see defines below */
-  char *ssl_version;   /** human readable string */
+  const(char) *ssl_version;   /** human readable string */
   c_long ssl_version_num; /** not used anymore, always 0 */
-  char *libz_version;     /** human readable string */
+  const(char) *libz_version;     /** human readable string */
   /** protocols is terminated by an entry with a NULL protoname */
-  char **protocols;
+  const(char) **protocols;
   /** The fields below this were added in CURLVERSION_SECOND */
-  char *ares;
+  const(char) *ares;
   int ares_num;
   /** This field was added in CURLVERSION_THIRD */
-  char *libidn;
+  const(char) *libidn;
   /** These field were added in CURLVERSION_FOURTH */
   /** Same as '_libiconv_version' if built with HAVE_ICONV */
   int iconv_ver_num;
-  char *libssh_version;  /** human readable string */
+  const(char) *libssh_version;  /** human readable string */
 }
 ///
 alias _N28 curl_version_info_data;
@@ -1869,7 +1874,7 @@ curl_version_info_data * curl_version_info(CURLversion );
  * into the equivalent human readable error string.  This is useful
  * for printing meaningful error messages.
  */
-char * curl_easy_strerror(CURLcode );
+const(char)* curl_easy_strerror(CURLcode );
 
 /**
  * Name: curl_share_strerror()
@@ -1880,7 +1885,7 @@ char * curl_easy_strerror(CURLcode );
  * into the equivalent human readable error string.  This is useful
  * for printing meaningful error messages.
  */
-char * curl_share_strerror(CURLSHcode );
+const(char)* curl_share_strerror(CURLSHcode );
 
 /**
  * Name: curl_easy_pause()
@@ -2197,7 +2202,7 @@ extern (C) CURLMsg * curl_multi_info_read(CURLM *multi_handle, int *msgs_in_queu
  *
  * Returns: A pointer to a zero-terminated error message.
  */
-extern (C) char * curl_multi_strerror(CURLMcode );
+extern (C) const(char)* curl_multi_strerror(CURLMcode );
 
 /**
  * Name:    curl_multi_socket() and

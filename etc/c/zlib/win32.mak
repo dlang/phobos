@@ -3,7 +3,7 @@
 CC=dmc
 LD=link
 LIB=lib
-CFLAGS=-o
+CFLAGS=-o -DNO_snprintf
 LDFLAGS=
 O=.obj
 

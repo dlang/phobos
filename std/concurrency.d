@@ -53,7 +53,7 @@
  *
  * Copyright: Copyright Sean Kelly 2009 - 2014.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   Sean Kelly, Alex Rønne Petersen
+ * Authors:   Sean Kelly, Alex Rønne Petersen, Martin Nowak
  * Source:    $(PHOBOSSRC std/_concurrency.d)
  */
 /*          Copyright Sean Kelly 2009 - 2014.
@@ -70,6 +70,7 @@ public
 }
 private
 {
+    import core.atomic;
     import core.thread;
     import core.sync.mutex;
     import core.sync.condition;
@@ -87,7 +88,7 @@ private
         static if( !T.length )
             enum hasLocalAliasing = false;
         else
-            enum hasLocalAliasing = (std.traits.hasLocalAliasing!(T[0]) && !is(T[0] == Tid)) ||
+            enum hasLocalAliasing = (std.traits.hasUnsharedAliasing!(T[0]) && !is(T[0] == Tid)) ||
                                      std.concurrency.hasLocalAliasing!(T[1 .. $]);
     }
 
@@ -316,25 +317,47 @@ class TidMissingException : Exception
 struct Tid
 {
 private:
-    this( MessageBox m )
+    this( MessageBox m ) @safe
     {
         mbox = m;
     }
 
 
     MessageBox  mbox;
+
+public:
+
+    /**
+     * Generate a convenient string for identifying this Tid.  This is only
+     * useful to see if Tid's that are currently executing are the same or
+     * different, e.g. for logging and debugging.  It is potentially possible
+     * that a Tid executed in the future will have the same toString() output
+     * as another Tid that has already terminated.
+     */
+    void toString(scope void delegate(const(char)[]) sink)
+    {
+        import std.format;
+        formattedWrite(sink, "Tid(%x)", &mbox);
+    }
+
 }
 
 
 /**
  * Returns the caller's Tid.
  */
-@property Tid thisTid()
+@property Tid thisTid() @safe
 {
-    if( thisInfo.ident != Tid.init )
+    // TODO: remove when concurrency is safe
+    auto trus = delegate() @trusted
+    {
+        if( thisInfo.ident != Tid.init )
+            return thisInfo.ident;
+        thisInfo.ident = Tid( new MessageBox );
         return thisInfo.ident;
-    thisInfo.ident = Tid( new MessageBox );
-    return thisInfo.ident;
+    };
+
+    return trus();
 }
 
 /**
@@ -647,7 +670,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
@@ -731,7 +754,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
@@ -802,7 +825,7 @@ in
 {
     assert(thisInfo.ident.mbox !is null,
            "Cannot receive a message until a thread was spawned "
-           "or thisTid was passed to a running thread.");
+           ~ "or thisTid was passed to a running thread.");
 }
 body
 {
@@ -1056,7 +1079,7 @@ struct ThreadInfo
      * default instance when info is requested for a thread not created by the
      * Scheduler.
      */
-    static @property ref thisInfo()
+    static @property ref thisInfo() nothrow
     {
         static ThreadInfo val;
         return val;
@@ -1157,7 +1180,7 @@ interface Scheduler
      * as when each logical thread is backed by a dedicated kernel thread,
      * this routine may be a no-op.
      */
-    void yield();
+    void yield() nothrow;
 
     /**
      * Returns an appropriate ThreadInfo instance.
@@ -1166,7 +1189,7 @@ interface Scheduler
      * is calling this routine or, if the calling thread was not create by
      * this scheduler, returns ThreadInfo.thisInfo instead.
      */
-    @property ref ThreadInfo thisInfo();
+    @property ref ThreadInfo thisInfo() nothrow;
 
     /**
      * Creates a Condition varialbe analog for signaling.
@@ -1183,7 +1206,7 @@ interface Scheduler
      *      cases a Scheduler may need to hold this reference and unlock the
      *      mutex before yielding execution to another logical thread.
      */
-    Condition newCondition( Mutex m );
+    Condition newCondition( Mutex m ) nothrow;
 }
 
 
@@ -1221,7 +1244,7 @@ class ThreadScheduler :
     /**
      * This scheduler does no explicit multiplexing, so this is a no-op.
      */
-    void yield()
+    void yield() nothrow
     {
         // no explicit yield needed
     }
@@ -1231,7 +1254,7 @@ class ThreadScheduler :
      * Returns ThreadInfo.thisInfo, since it is a thread-local instance of
      * ThreadInfo, which is the correct behavior for this scheduler.
      */
-    @property ref ThreadInfo thisInfo()
+    @property ref ThreadInfo thisInfo() nothrow
     {
         return ThreadInfo.thisInfo;
     }
@@ -1240,7 +1263,7 @@ class ThreadScheduler :
     /**
      * Creates a new Condition variable.  No custom behavior is needed here.
      */
-    Condition newCondition( Mutex m )
+    Condition newCondition( Mutex m ) nothrow
     {
         return new Condition( m );
     }
@@ -1271,7 +1294,7 @@ class FiberScheduler :
      * This created a new Fiber for the supplied op and adds it to the
      * dispatch list.
      */
-    void spawn( void delegate() op )
+    void spawn( void delegate() op ) nothrow
     {
         create( op );
         yield();
@@ -1282,7 +1305,7 @@ class FiberScheduler :
      * If the caller is a scheduled Fiber, this yields execution to another
      * scheduled Fiber.
      */
-    void yield()
+    void yield() nothrow
     {
         // NOTE: It's possible that we should test whether the calling Fiber
         //       is an InfoFiber before yielding, but I think it's reasonable
@@ -1299,7 +1322,7 @@ class FiberScheduler :
      * Fiber was created by this dispatcher, otherwise it returns
      * ThreadInfo.thisInfo.
      */
-    @property ref ThreadInfo thisInfo()
+    @property ref ThreadInfo thisInfo() nothrow
     {
         auto f = cast(InfoFiber) Fiber.getThis();
 
@@ -1312,7 +1335,7 @@ class FiberScheduler :
     /**
      * Returns a Condition analog that yields when wait or notify is called.
      */
-    Condition newCondition( Mutex m )
+    Condition newCondition( Mutex m ) nothrow
     {
         return new FiberCondition( m );
     }
@@ -1324,7 +1347,7 @@ private:
     {
         ThreadInfo info;
 
-        this( void delegate() op )
+        this( void delegate() op ) nothrow
         {
             super( op );
         }
@@ -1334,47 +1357,50 @@ private:
     class FiberCondition :
         Condition
     {
-        this( Mutex m )
+        this( Mutex m ) nothrow
         {
             super(m);
             notified = false;
         }
 
-        override void wait()
-        {
-            switchContext();
-        }
-
-        override bool wait( Duration period )
+        override void wait() nothrow
         {
             scope(exit) notified = false;
 
-            for( auto limit = Clock.currSystemTick() + period;
+            while( !notified )
+                switchContext();
+        }
+
+        override bool wait( Duration period ) nothrow
+        {
+            scope(exit) notified = false;
+
+            for( auto limit = Clock.currSystemTick + period;
                  !notified && !period.isNegative;
-                 period = limit - Clock.currSystemTick() )
+                 period = limit - Clock.currSystemTick )
             {
                 yield();
             }
             return notified;
         }
 
-        override void notify()
+        override void notify() nothrow
         {
             notified = true;
             switchContext();
         }
 
-        override void notifyAll()
+        override void notifyAll() nothrow
         {
             notified = true;
             switchContext();
         }
 
     private:
-        final void switchContext()
+        final void switchContext() nothrow
         {
-            mutex.unlock();
-            scope(exit) mutex.lock();
+            mutex_nothrow.unlock_nothrow();
+            scope(exit) mutex_nothrow.lock_nothrow();
             yield();
         }
 
@@ -1389,10 +1415,10 @@ private:
 
         while( m_fibers.length > 0 )
         {
-            auto t = m_fibers[m_pos].call( false );
+            auto t = m_fibers[m_pos].call( Fiber.Rethrow.no );
             if (t !is null && !(cast(OwnerTerminated) t))
                 throw t;
-            if( m_fibers[m_pos].state() == Fiber.State.TERM )
+            if( m_fibers[m_pos].state == Fiber.State.TERM )
             {
                 if( m_pos >= (m_fibers = remove( m_fibers, m_pos )).length )
                     m_pos = 0;
@@ -1405,7 +1431,7 @@ private:
     }
 
 
-    final void create( void delegate() op )
+    final void create( void delegate() op ) nothrow
     {
         void wrap()
         {
@@ -1422,6 +1448,50 @@ private:
 private:
     Fiber[] m_fibers;
     size_t  m_pos;
+}
+
+
+unittest
+{
+    static void receive(Condition cond, ref size_t received)
+    {
+        while (true)
+        {
+            synchronized (cond.mutex)
+            {
+                cond.wait();
+                ++received;
+            }
+        }
+    }
+
+    static void send(Condition cond, ref size_t sent)
+    {
+        while (true)
+        {
+            synchronized (cond.mutex)
+            {
+                ++sent;
+                cond.notify();
+            }
+        }
+    }
+
+    auto fs = new FiberScheduler;
+    auto mtx = new Mutex;
+    auto cond = fs.newCondition(mtx);
+
+    size_t received, sent;
+    auto waiter = new Fiber({receive(cond, received);}), notifier = new Fiber({send(cond, sent);});
+    waiter.call();
+    assert(received == 0);
+    notifier.call();
+    assert(sent == 1);
+    assert(received == 0);
+    waiter.call();
+    assert(received == 1);
+    waiter.call();
+    assert(received == 1);
 }
 
 
@@ -1444,7 +1514,7 @@ __gshared Scheduler scheduler;
  * If the caller is a Fiber and is not a Generator, this function will call
  * scheduler.yield() or Fiber.yield(), as appropriate.
  */
-void yield()
+void yield() nothrow
 {
     auto fiber = Fiber.getThis();
     if (!(cast(IsGenerator) fiber))
@@ -1578,7 +1648,7 @@ class Generator(T) :
      */
     final bool empty() @property
     {
-        return m_value is null || state() == State.TERM;
+        return m_value is null || state == State.TERM;
     }
 
 
@@ -1615,7 +1685,7 @@ private:
 void yield(T)(ref T value)
 {
     Generator!T cur = cast(Generator!T) Fiber.getThis();
-    if (cur !is null && cur.state() == Fiber.State.EXEC)
+    if (cur !is null && cur.state == Fiber.State.EXEC)
     {
         cur.m_value = &value;
         return Fiber.yield();
@@ -1634,6 +1704,8 @@ void yield(T)(T value)
 
 version (Win64) {
     // fibers are broken on Win64
+} else version (Win32) {
+    // fibers are broken in Win32 under server 2012: bug 13821
 } else unittest {
     import core.exception;
     import std.exception;
@@ -1703,7 +1775,7 @@ private
      */
     class MessageBox
     {
-        this()
+        this() @trusted /* TODO: make @safe after relevant druntime PR gets merged */
         {
             m_lock      = new Mutex;
             m_closed    = false;
@@ -1720,10 +1792,8 @@ private
             }
         }
 
-
-        /*
-         *
-         */
+        ///
+        deprecated("isClosed can't be used with a const MessageBox")
         final @property bool isClosed() const
         {
             synchronized( m_lock )
@@ -1732,6 +1802,14 @@ private
             }
         }
 
+        ///
+        final @property bool isClosed()
+        {
+            synchronized( m_lock )
+            {
+                return m_closed;
+            }
+        }
 
         /*
          * Sets a limit on the maximum number of user messages allowed in the
@@ -1866,11 +1944,12 @@ private
                 assert( msg.convertsTo!(Tid) );
                 auto tid = msg.get!(Tid);
 
-                if( bool* depends = (tid in thisInfo.links) )
+                if( bool* pDepends = (tid in thisInfo.links) )
                 {
+                    auto depends = *pDepends;
                     thisInfo.links.remove( tid );
                     // Give the owner relationship precedence.
-                    if( *depends && tid != thisInfo.owner )
+                    if( depends && tid != thisInfo.owner )
                     {
                         auto e = new LinkTerminated( tid );
                         auto m = Message( MsgType.standard, e );
@@ -1968,7 +2047,7 @@ private
 
             static if( timedWait )
             {
-                auto limit = Clock.currSystemTick() + period;
+                auto limit = Clock.currSystemTick + period;
             }
 
             while( true )
@@ -2016,7 +2095,7 @@ private
                     {
                         static if( timedWait )
                         {
-                            period = limit - Clock.currSystemTick();
+                            period = limit - Clock.currSystemTick;
                         }
                         continue;
                     }
@@ -2146,6 +2225,7 @@ private
         size_t      m_localMsgs;
         size_t      m_maxMsgs;
         bool        m_closed;
+
     }
 
 
@@ -2199,7 +2279,7 @@ private
          */
         void put( T val )
         {
-            put( new Node( val ) );
+            put( newNode( val ) );
         }
 
 
@@ -2245,9 +2325,9 @@ private
                 m_last = null;
             else if( m_last is n.next )
                 m_last = n;
-            Node* todelete = n.next;
+            Node* to_free = n.next;
             n.next = n.next.next;
-            //delete todelete;
+            freeNode( to_free );
             m_count--;
         }
 
@@ -2290,6 +2370,48 @@ private
             {
                 val = v;
             }
+        }
+
+        static shared struct SpinLock
+        {
+            void lock() { while (!cas(&locked, false, true)) { Thread.yield(); } }
+            void unlock() { atomicStore!(MemoryOrder.rel)(locked, false); }
+            bool locked;
+        }
+        static shared SpinLock sm_lock;
+        static shared Node* sm_head;
+
+        Node* newNode(T v)
+        {
+            Node *n;
+            {
+                sm_lock.lock();
+                scope (exit) sm_lock.unlock();
+
+                if (sm_head)
+                {
+                    n = cast(Node*)sm_head;
+                    sm_head = sm_head.next;
+                }
+            }
+            if (n)
+                *n = Node(v);
+            else
+                n = new Node(v);
+            return n;
+        }
+
+        void freeNode(Node* n)
+        {
+            // destroy val to free any owned GC memory
+            destroy(n.val);
+
+            sm_lock.lock();
+            scope (exit) sm_lock.unlock();
+
+            auto sn = cast(shared(Node)*)n;
+            sn.next = sm_head;
+            sm_head = sn;
         }
 
 
@@ -2381,4 +2503,143 @@ version( unittest )
         simpleTest();
         scheduler = null;
     }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// initOnce
+//////////////////////////////////////////////////////////////////////////////
+
+private @property Mutex initOnceLock()
+{
+    __gshared Mutex lock;
+    if (auto mtx = atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
+        return mtx;
+    auto mtx = new Mutex;
+    if (cas(cast(shared)&lock, cast(shared)null, cast(shared)mtx))
+        return mtx;
+    return atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
+}
+
+/**
+ * Initializes $(D_PARAM var) with the lazy $(D_PARAM init) value in a
+ * thread-safe manner.
+ *
+ * The implementation guarantees that all threads simultaneously calling
+ * initOnce with the same $(D_PARAM var) argument block until $(D_PARAM var) is
+ * fully initialized. All side-effects of $(D_PARAM init) are globally visible
+ * afterwards.
+ *
+ * Params:
+ *   var = The variable to initialize
+ *   init = The lazy initializer value
+ *
+ * Returns:
+ *   A reference to the initialized variable
+ */
+auto ref initOnce(alias var)(lazy typeof(var) init)
+{
+    return initOnce!var(init, initOnceLock);
+}
+
+/// A typical use-case is to perform lazy but thread-safe initialization.
+unittest
+{
+    static class MySingleton
+    {
+        static MySingleton instance()
+        {
+            static __gshared MySingleton inst;
+            return initOnce!inst(new MySingleton);
+        }
+    }
+    assert(MySingleton.instance !is null);
+}
+
+unittest
+{
+    static class MySingleton
+    {
+        static MySingleton instance()
+        {
+            static __gshared MySingleton inst;
+            return initOnce!inst(new MySingleton);
+        }
+    private:
+        this() { val = ++cnt; }
+        size_t val;
+        static __gshared size_t cnt;
+    }
+
+    foreach (_; 0 .. 10)
+        spawn({ownerTid.send(MySingleton.instance.val);});
+    foreach (_; 0 .. 10)
+        assert(receiveOnly!size_t == MySingleton.instance.val);
+    assert(MySingleton.cnt == 1);
+}
+
+/**
+ * Same as above, but takes a separate mutex instead of sharing one among
+ * all initOnce instances.
+ *
+ * This should be used to avoid dead-locks when the $(D_PARAM init)
+ * expression waits for the result of another thread that might also
+ * call initOnce. Use with care.
+ *
+ * Params:
+ *   var = The variable to initialize
+ *   init = The lazy initializer value
+ *   mutex = A mutex to prevent race conditions
+ *
+ * Returns:
+ *   A reference to the initialized variable
+ */
+auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
+{
+    // check that var is global, can't take address of a TLS variable
+    static assert(is(typeof({__gshared p = &var;})), "var must be 'static shared' or '__gshared'.");
+    import core.atomic;
+
+    static shared bool flag;
+    if (!atomicLoad!(MemoryOrder.acq)(flag))
+    {
+        synchronized (mutex)
+        {
+            if (!atomicLoad!(MemoryOrder.acq)(flag))
+            {
+                var = init;
+                atomicStore!(MemoryOrder.rel)(flag, true);
+            }
+        }
+    }
+    return var;
+}
+
+/// Use a separate mutex when init blocks on another thread that might also call initOnce.
+unittest
+{
+    static shared bool varA, varB;
+    __gshared Mutex m;
+    m = new Mutex;
+
+    spawn({
+        // use a different mutex for varB to avoid a dead-lock
+        initOnce!varB(true, m);
+        ownerTid.send(true);
+    });
+    // init depends on the result of the spawned thread
+    initOnce!varA(receiveOnly!bool);
+    assert(varA == true);
+    assert(varB == true);
+}
+
+unittest
+{
+     static shared bool a;
+     __gshared bool b;
+    static bool c;
+    bool d;
+    initOnce!a(true);
+    initOnce!b(true);
+    static assert(!__traits(compiles, initOnce!c(true))); // TLS
+    static assert(!__traits(compiles, initOnce!d(true))); // local variable
 }

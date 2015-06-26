@@ -27,7 +27,7 @@ template BacktrackingMatcher(bool CTregex)
         static assert(State.sizeof % size_t.sizeof == 0);
         enum stateSize = State.sizeof / size_t.sizeof;
         enum initialStack = 1<<11; // items in a block of segmented stack
-        alias const(Char)[] String;
+        alias String = const(Char)[];
         alias RegEx = Regex!Char;
         alias MatchFn = bool function (ref BacktrackingMatcher!(Char, Stream));
         RegEx re;      //regex program

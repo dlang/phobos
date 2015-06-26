@@ -1,6 +1,10 @@
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+ * Computes RIPEMD-160 hashes of arbitrary data. RIPEMD-160 hashes are 20 byte quantities
+ * that are like a checksum or CRC, but are more robust.
+ *
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -12,10 +16,8 @@ $(TR $(TDNW OOP API) $(TD $(MYREF RIPEMD160Digest))
 $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
 )
 )
+)
 
- * Computes RIPEMD-160 hashes of arbitrary data. RIPEMD-160 hashes are 20 byte quantities
- * that are like a checksum or CRC, but are more robust.
- *
  * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
  * differences between the template and the OOP API, see $(D std.digest.digest).
  *
@@ -42,12 +44,9 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
  *
  * Macros:
  * WIKI = Phobos/StdRipemd
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 module std.digest.ripemd;
-
-import std.bitmanip, std.exception, std.string;
 
 public import std.digest.digest;
 
@@ -441,10 +440,12 @@ struct RIPEMD160
         }
 
     public:
+        enum blockSize = 512;
+
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Examples:
          * ----
@@ -528,6 +529,8 @@ struct RIPEMD160
          */
         ubyte[20] finish() @trusted pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
+
             ubyte[20] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
@@ -658,7 +661,7 @@ unittest
 }
 
 /**
- * This is a convenience alias for $(XREF digest.digest, digest) using the
+ * This is a convenience alias for $(XREF_PACK digest,digest,digest) using the
  * RIPEMD160 implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -678,8 +681,8 @@ unittest
  * OOP API RIPEMD160 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(XREF digest.digest, WrapperDigest)!RIPEMD160, see
- * $(XREF digest.digest, WrapperDigest) for more information.
+ * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!RIPEMD160),
+ * see there for more information.
  */
 alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
 
@@ -725,7 +728,10 @@ unittest
     assert(result[0 .. 20] == result2 && result2 == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     debug
+    {
+        import std.exception;
         assertThrown!Error(md.finish(result[0 .. 19]));
+    }
 
     assert(md.length == 20);
 

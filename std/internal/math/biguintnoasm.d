@@ -35,7 +35,7 @@ enum : int { KARATSUBASQUARELIMIT=12 }; // Minimum value for which square Karats
  * Set op == '+' for addition, '-' for subtraction.
  */
 uint multibyteAddSub(char op)(uint[] dest, const(uint) [] src1,
-    const (uint) [] src2, uint carry) pure @nogc
+    const (uint) [] src2, uint carry) pure @nogc @safe
 {
     ulong c = carry;
     for (size_t i = 0; i < src2.length; ++i)
@@ -99,7 +99,8 @@ unittest
  *  op must be '+' or '-'
  *  Returns final carry or borrow (0 or 1)
  */
-uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure @nogc
+uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
+    pure @nogc @safe
 {
     static if (op=='+')
     {
@@ -137,7 +138,8 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry) pure @nogc
 /** dest[] = src[] << numbits
  *  numbits must be in the range 1..31
  */
-uint multibyteShl(uint [] dest, const(uint) [] src, uint numbits) pure @nogc
+uint multibyteShl(uint [] dest, const(uint) [] src, uint numbits)
+    pure @nogc @safe
 {
     ulong c = 0;
     for (size_t i = 0; i < dest.length; ++i)
@@ -153,7 +155,8 @@ uint multibyteShl(uint [] dest, const(uint) [] src, uint numbits) pure @nogc
 /** dest[] = src[] >> numbits
  *  numbits must be in the range 1..31
  */
-void multibyteShr(uint [] dest, const(uint) [] src, uint numbits) pure @nogc
+void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
+    pure @nogc @safe
 {
     ulong c = 0;
     for(ptrdiff_t i = dest.length; i!=0; --i)
@@ -188,7 +191,7 @@ unittest
  * Returns carry.
  */
 uint multibyteMul(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
-    pure @nogc
+    pure @nogc @safe
 {
     assert(dest.length == src.length);
     ulong c = carry;
@@ -215,7 +218,7 @@ unittest
  * Returns carry out of MSB (0..FFFF_FFFF).
  */
 uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src,
-    uint multiplier, uint carry) pure @nogc
+    uint multiplier, uint carry) pure @nogc @safe
 {
     assert(dest.length == src.length);
     ulong c = carry;
@@ -266,7 +269,7 @@ unittest
     ----
  */
 void multibyteMultiplyAccumulate(uint [] dest, const(uint)[] left, const(uint)
-        [] right) pure @nogc
+        [] right) pure @nogc @safe
 {
     for (size_t i = 0; i < right.length; ++i)
     {
@@ -278,7 +281,8 @@ void multibyteMultiplyAccumulate(uint [] dest, const(uint)[] left, const(uint)
 /**  dest[] /= divisor.
  * overflow is the initial remainder, and must be in the range 0..divisor-1.
  */
-uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow) pure @nogc
+uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
+    pure @nogc @safe
 {
     ulong c = cast(ulong)overflow;
     for(ptrdiff_t i = dest.length-1; i>= 0; --i)
@@ -306,7 +310,8 @@ unittest
 
 }
 // Set dest[2*i..2*i+1]+=src[i]*src[i]
-void multibyteAddDiagonalSquares(uint[] dest, const(uint)[] src) pure @nogc
+void multibyteAddDiagonalSquares(uint[] dest, const(uint)[] src)
+    pure @nogc @safe
 {
     ulong c = 0;
     for(size_t i = 0; i < src.length; ++i)
@@ -321,7 +326,8 @@ void multibyteAddDiagonalSquares(uint[] dest, const(uint)[] src) pure @nogc
 }
 
 // Does half a square multiply. (square = diagonal + 2*triangle)
-void multibyteTriangleAccumulate(uint[] dest, const(uint)[] x) pure @nogc
+void multibyteTriangleAccumulate(uint[] dest, const(uint)[] x)
+    pure @nogc @safe
 {
     // x[0]*x[1...$] + x[1]*x[2..$] + ... + x[$-2]x[$-1..$]
     dest[x.length] = multibyteMul(dest[1 .. x.length], x[1..$], x[0], 0);
@@ -354,7 +360,7 @@ void multibyteTriangleAccumulate(uint[] dest, const(uint)[] x) pure @nogc
     dest[2*x.length-2] = cast(uint)c;
 }
 
-void multibyteSquare(BigDigit[] result, const(BigDigit) [] x) pure @nogc
+void multibyteSquare(BigDigit[] result, const(BigDigit) [] x) pure @nogc @safe
 {
     multibyteTriangleAccumulate(result, x);
     result[$-1] = multibyteShl(result[1..$-1], result[1..$-1], 1); // mul by 2

@@ -9,7 +9,7 @@
  *      WIKI=Phobos/StdCTime
  */
 
-deprecated("Please import core.stdc.time instead. This module will be removed in December 2015.")
+/// Please import core.stdc.time instead. This module will be deprecated in DMD 2.068.
 module std.c.time;
 
 public import core.stdc.time;

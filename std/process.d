@@ -101,13 +101,12 @@ version (Windows)
     import std.utf;
     import std.windows.syserror;
 }
-import std.algorithm;
-import std.array;
+
+import std.range.primitives;
 import std.conv;
 import std.exception;
 import std.path;
 import std.stdio;
-import std.string;
 import std.internal.processinit;
 import std.internal.cstring;
 
@@ -358,6 +357,9 @@ private Pid spawnProcessImpl(in char[][] args,
     @trusted // TODO: Should be @safe
 {
     import core.exception: RangeError;
+    import std.path : isDirSeparator;
+    import std.algorithm : any;
+    import std.string : toStringz;
 
     if (args.empty) throw new RangeError();
     const(char)[] name = args[0];
@@ -513,8 +515,6 @@ private Pid spawnProcessImpl(in char[] commandLine,
     // Startup info for CreateProcessW().
     STARTUPINFO_W startinfo;
     startinfo.cb = startinfo.sizeof;
-    startinfo.dwFlags = STARTF_USESTDHANDLES;
-
     static int getFD(ref File f) { return f.isOpen ? f.fileno : -1; }
 
     // Extract file descriptors and HANDLEs from the streams and make the
@@ -523,8 +523,12 @@ private Pid spawnProcessImpl(in char[] commandLine,
                               out int fileDescriptor, out HANDLE handle)
     {
         fileDescriptor = getFD(file);
-        if (fileDescriptor < 0)   handle = GetStdHandle(stdHandle);
-        else                      handle = file.windowsHandle;
+        handle = null;
+        if (fileDescriptor >= 0)
+            handle = file.windowsHandle;
+        // Windows GUI applications have a fd but not a valid Windows HANDLE.
+        if (handle is null || handle == INVALID_HANDLE_VALUE)
+            handle = GetStdHandle(stdHandle);
 
         DWORD dwFlags;
         if (GetHandleInformation(handle, &dwFlags))
@@ -548,13 +552,19 @@ private Pid spawnProcessImpl(in char[] commandLine,
     prepareStream(stdout, STD_OUTPUT_HANDLE, "stdout", stdoutFD, startinfo.hStdOutput);
     prepareStream(stderr, STD_ERROR_HANDLE,  "stderr", stderrFD, startinfo.hStdError );
 
+    if ((startinfo.hStdInput  != null && startinfo.hStdInput  != INVALID_HANDLE_VALUE)
+     || (startinfo.hStdOutput != null && startinfo.hStdOutput != INVALID_HANDLE_VALUE)
+     || (startinfo.hStdError  != null && startinfo.hStdError  != INVALID_HANDLE_VALUE))
+        startinfo.dwFlags = STARTF_USESTDHANDLES;
+
     // Create process.
     PROCESS_INFORMATION pi;
     DWORD dwCreationFlags =
         CREATE_UNICODE_ENVIRONMENT |
         ((config & Config.suppressConsole) ? CREATE_NO_WINDOW : 0);
+    auto pworkDir = workDir.tempCStringW();     // workaround until Bugzilla 14696 is fixed
     if (!CreateProcessW(null, commandLine.tempCStringW().buffPtr, null, null, true, dwCreationFlags,
-                        envz, workDir.length ? workDir.tempCStringW() : null, &startinfo, &pi))
+                        envz, workDir.length ? pworkDir : null, &startinfo, &pi))
         throw ProcessException.newFromLastError("Failed to spawn new process");
 
     // figure out if we should close any of the streams
@@ -645,7 +655,8 @@ private LPVOID createEnv(const string[string] childEnv,
                          bool mergeWithParentEnv)
 {
     if (mergeWithParentEnv && childEnv.length == 0) return null;
-
+    import std.array : appender;
+    import std.uni : toUpper;
     auto envz = appender!(wchar[])();
     void put(string var, string val)
     {
@@ -688,6 +699,8 @@ version (Posix)
 private string searchPathFor(in char[] executable)
     @trusted //TODO: @safe nothrow
 {
+    import std.algorithm : splitter;
+
     auto pathz = core.stdc.stdlib.getenv("PATH");
     if (pathz == null)  return null;
 
@@ -710,6 +723,7 @@ private bool isExecutable(in char[] path) @trusted nothrow @nogc //TODO: @safe
 
 version (Posix) unittest
 {
+    import std.algorithm;
     auto unamePath = searchPathFor("uname");
     assert (!unamePath.empty);
     assert (unamePath[0] == '/');
@@ -797,6 +811,7 @@ unittest // Environment variables in spawnProcess().
 
 unittest // Stream redirection in spawnProcess().
 {
+    import std.string;
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
@@ -872,12 +887,13 @@ unittest // Specifying empty working directory.
     TestScript prog = "";
 
     string directory = "";
-    assert(directory && !directory.length);
+    assert(directory.ptr && !directory.length);
     spawnProcess([prog.path], null, Config.none, directory).wait();
 }
 
 unittest // Reopening the standard streams (issue 13258)
 {
+    import std.string;
     void fun()
     {
         spawnShell("echo foo").wait();
@@ -898,6 +914,19 @@ unittest // Reopening the standard streams (issue 13258)
 
     auto lines = readText(tmpFile).splitLines();
     assert(lines == ["foo", "bar"]);
+}
+
+version (Windows)
+unittest // MSVCRT workaround (issue 14422)
+{
+    auto fn = uniqueTempPath();
+    std.file.write(fn, "AAAAAAAAAA");
+
+    auto f = File(fn, "a");
+    spawnProcess(["cmd", "/c", "echo BBBBB"], std.stdio.stdin, f).wait();
+
+    auto data = readText(fn);
+    assert(data == "AAAAAAAAAABBBBB\r\n", data);
 }
 
 /**
@@ -982,7 +1011,7 @@ unittest
     auto env = ["foo" : "bar"];
     assert (wait(spawnShell(cmd~redir, env)) == 0);
     auto f = File(tmpFile, "a");
-    version(Win64) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
+    version(CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
     assert (wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
     f.close();
     auto output = std.file.readText(tmpFile);
@@ -992,6 +1021,7 @@ unittest
 version (Windows)
 unittest
 {
+    import std.string;
     TestScript prog = "echo %0 %*";
     auto outputFn = uniqueTempPath();
     scope(exit) if (exists(outputFn)) remove(outputFn);
@@ -1085,7 +1115,7 @@ final class Pid
     This is a number that uniquely identifies the process on the operating
     system, for at least as long as the process is running.  Once $(LREF wait)
     has been called on the $(LREF Pid), this method will return an
-    invalid process ID.
+    invalid (negative) process ID.
     */
     @property int processID() const @safe pure nothrow
     {
@@ -1583,6 +1613,7 @@ private:
 
 unittest
 {
+    import std.string;
     auto p = pipe();
     p.writeEnd.writeln("Hello World");
     p.writeEnd.flush();
@@ -1642,6 +1673,7 @@ $(XREF stdio,StdioException) on failure to redirect any of the streams.$(BR)
 
 Example:
 ---
+// my_application writes to stdout and might write to stderr
 auto pipes = pipeProcess("my_application", Redirect.stdout | Redirect.stderr);
 scope(exit) wait(pipes.pid);
 
@@ -1652,6 +1684,28 @@ foreach (line; pipes.stdout.byLine) output ~= line.idup;
 // Store lines of errors.
 string[] errors;
 foreach (line; pipes.stderr.byLine) errors ~= line.idup;
+
+
+// sendmail expects to read from stdin
+pipes = pipeProcess(["/usr/bin/sendmail", "-t"], Redirect.stdin);
+pipes.stdin.writeln("To: you");
+pipes.stdin.writeln("From: me");
+pipes.stdin.writeln("Subject: dlang");
+pipes.stdin.writeln("");
+pipes.stdin.writeln(message);
+
+// a single period tells sendmail we are finished
+pipes.stdin.writeln(".");
+
+// but at this point sendmail might not see it, we need to flush
+pipes.stdin.flush();
+
+// sendmail happens to exit on ".", but some you have to close the file:
+pipes.stdin.close();
+
+// otherwise this wait will wait forever
+wait(pipes.pid);
+
 ---
 */
 ProcessPipes pipeProcess(in char[][] args,
@@ -1797,6 +1851,7 @@ enum Redirect
 
 unittest
 {
+    import std.string;
     version (Windows) TestScript prog =
        "call :sub %~1 %~2 0
         call :sub %~1 %~2 1
@@ -2032,7 +2087,10 @@ private auto executeImpl(alias pipeFunc, Cmd)(
     size_t maxOutput = size_t.max,
     in char[] workDir = null)
 {
+    import std.string;
     import std.typecons : Tuple;
+    import std.array : appender;
+    import std.algorithm : min;
 
     auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
                       env, config, workDir);
@@ -2061,6 +2119,7 @@ private auto executeImpl(alias pipeFunc, Cmd)(
 
 unittest
 {
+    import std.string;
     // To avoid printing the newline characters, we use the echo|set trick on
     // Windows, and printf on POSIX (neither echo -n nor echo \c are portable).
     version (Windows) TestScript prog =
@@ -2081,6 +2140,7 @@ unittest
 
 unittest
 {
+    import std.string;
     auto r1 = executeShell("echo foo");
     assert (r1.status == 0);
     assert (r1.output.chomp() == "foo");
@@ -2122,7 +2182,7 @@ class ProcessException : Exception
     {
         import core.stdc.errno;
         import core.stdc.string;
-        version (linux)
+        version (CRuntime_Glibc)
         {
             char[1024] buf;
             auto errnoMsg = to!string(
@@ -2164,8 +2224,8 @@ $(D "/bin/sh").
 @property string userShell() @safe
 {
     version (Windows)      return environment.get("COMSPEC", "cmd.exe");
-    else version (Android) return environment.get("SHELL", "/system/bin/sh");
-    else version (Posix)   return environment.get("SHELL", "/bin/sh");
+    else version (Android) return "/system/bin/sh";
+    else version (Posix)   return "/bin/sh";
 }
 
 
@@ -2363,6 +2423,7 @@ private string escapeShellCommandString(string command) @safe pure
 
 private string escapeWindowsShellCommand(in char[] command) @safe pure
 {
+    import std.array : appender;
     auto result = appender!string();
     result.reserve(command.length);
 
@@ -2528,12 +2589,15 @@ version(Windows) version(unittest)
 {
     import core.sys.windows.windows;
     import core.stdc.stddef;
+    import std.array;
 
     extern (Windows) wchar_t**  CommandLineToArgvW(wchar_t*, int*);
     extern (C) size_t wcslen(in wchar *);
 
     string[] parseCommandLine(string line)
     {
+        import std.algorithm : map;
+        import std.array : array;
         LPWSTR lpCommandLine = (to!(wchar[])(line) ~ "\0"w).ptr;
         int numArgs;
         LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
@@ -2904,6 +2968,7 @@ static:
         }
         else version (Windows)
         {
+            import std.uni : toUpper;
             auto envBlock = GetEnvironmentStringsW();
             enforce(envBlock, "Failed to retrieve environment variables.");
             scope(exit) FreeEnvironmentStringsW(envBlock);
@@ -3120,6 +3185,7 @@ int system(string command)
 
 private void toAStringz(in string[] a, const(char)**az)
 {
+    import std.string : toStringz;
     foreach(string s; a)
     {
         *az++ = toStringz(s);
@@ -3134,7 +3200,8 @@ private void toAStringz(in string[] a, const(char)**az)
 //{
 //    int spawnvp(int mode, string pathname, string[] argv)
 //    {
-//      char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+//      char** argv_ = cast(char**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+//      scope(exit) core.stdc.stdlib.free(argv_);
 //
 //      toAStringz(argv, argv_);
 //
@@ -3152,7 +3219,8 @@ alias P_NOWAIT = _P_NOWAIT;
 deprecated("Please use spawnProcess instead")
 int spawnvp(int mode, string pathname, string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3356,7 +3424,8 @@ extern(C)
 
 private int execv_(in string pathname, in string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3365,8 +3434,10 @@ private int execv_(in string pathname, in string[] argv)
 
 private int execve_(in string pathname, in string[] argv, in string[] envp)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
-    auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
+    auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
+    scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
@@ -3376,7 +3447,8 @@ private int execve_(in string pathname, in string[] argv, in string[] envp)
 
 private int execvp_(in string pathname, in string[] argv)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
 
     toAStringz(argv, argv_);
 
@@ -3387,6 +3459,7 @@ private int execvpe_(in string pathname, in string[] argv, in string[] envp)
 {
 version(Posix)
 {
+    import std.array : split;
     // Is pathname rooted?
     if(pathname[0] == '/')
     {
@@ -3396,7 +3469,7 @@ version(Posix)
     else
     {
         // No, so must traverse PATHs, looking for first match
-        string[]    envPaths    =   std.array.split(
+        string[]    envPaths    =   split(
             to!string(core.stdc.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
@@ -3420,8 +3493,10 @@ version(Posix)
 }
 else version(Windows)
 {
-    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
-    auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+    scope(exit) core.stdc.stdlib.free(argv_);
+    auto envp_ = cast(const(char)**)core.stdc.stdlib.malloc((char*).sizeof * (1 + envp.length));
+    scope(exit) core.stdc.stdlib.free(envp_);
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
@@ -3475,6 +3550,7 @@ string shell(string cmd)
 {
     version(Windows)
     {
+        import std.array : appender;
         // Generate a random filename
         auto a = appender!string();
         foreach (ref e; 0 .. 8)
@@ -3618,17 +3694,18 @@ else version (OSX)
     {
         const(char)*[5] args;
 
+        auto curl = url.tempCString();
         const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
         if (browser)
         {   browser = strdup(browser);
             args[0] = browser;
-            args[1] = url.tempCString();
+            args[1] = curl;
             args[2] = null;
         }
         else
         {
             args[0] = "open".ptr;
-            args[1] = url.tempCString();
+            args[1] = curl;
             args[2] = null;
         }
 

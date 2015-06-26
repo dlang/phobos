@@ -1,6 +1,10 @@
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+ * Computes MD5 hashes of arbitrary data. MD5 hashes are 16 byte quantities that are like a
+ * checksum or CRC, but are more robust.
+ *
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -12,10 +16,8 @@ $(TR $(TDNW OOP API) $(TD $(MYREF MD5Digest))
 $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
 )
 )
+)
 
- * Computes MD5 hashes of arbitrary data. MD5 hashes are 16 byte quantities that are like a
- * checksum or CRC, but are more robust.
- *
  * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
  * differences between the template and the OOP API, see $(D std.digest.digest).
  *
@@ -38,15 +40,12 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  *
  * Macros:
  * WIKI = Phobos/StdMd5
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
  */
 
 /* md5.d - RSA Data Security, Inc., MD5 message-digest algorithm
  * Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm.
  */
 module std.digest.md;
-
-import std.bitmanip, std.exception, std.string;
 
 public import std.digest.digest;
 
@@ -285,10 +284,12 @@ struct MD5
         }
 
     public:
+        enum blockSize = 512;
+
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Examples:
          * ----
@@ -362,6 +363,8 @@ struct MD5
           */
         ubyte[16] finish() @trusted pure nothrow @nogc
         {
+            import std.bitmanip : nativeToLittleEndian;
+
             ubyte[16] data = void;
             ubyte[8] bits = void;
             uint index, padLen;
@@ -489,7 +492,7 @@ unittest
 }
 
 /**
- * This is a convenience alias for $(XREF digest.digest, digest) using the
+ * This is a convenience alias for $(XREF_PACK digest,digest,digest) using the
  * MD5 implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -509,8 +512,8 @@ unittest
  * OOP API MD5 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(XREF digest.digest, WrapperDigest)!MD5, see
- * $(XREF digest.digest, WrapperDigest) for more information.
+ * This is an alias for $(D $(XREF_PACK digest,digest,WrapperDigest)!MD5), see
+ * there for more information.
  */
 alias MD5Digest = WrapperDigest!MD5;
 
@@ -556,7 +559,10 @@ unittest
     assert(result[0 .. 16] == result2 && result2 == cast(ubyte[])x"c3fcd3d76192e4007dfb496cca67e13b");
 
     debug
+    {
+        import std.exception;
         assertThrown!Error(md5.finish(result[0 .. 15]));
+    }
 
     assert(md5.length == 16);
 

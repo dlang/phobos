@@ -1,8 +1,13 @@
 // Written in the D programming language.
 
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
+libcurl). The libcurl library must be installed on the system in order to use
+this module.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
@@ -15,10 +20,11 @@ $(TR $(TDNW Low level) $(TD $(MYREF HTTP) $(MYREF FTP) $(MYREF
 SMTP) )
 )
 )
+)
 
-Networking client functionality as provided by $(WEB _curl.haxx.se/libcurl,
-libcurl). The libcurl library must be installed on the system in order to use
-this module.
+Note:
+You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"])
+to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
 A DMD compatible libcurl static library can be downloaded from the dlang.org
@@ -133,9 +139,6 @@ the onReceive callback. See $(LREF onReceiveHeader)/$(LREF onReceive) for more
 information. Finally the HTTP request is effected by calling perform(), which is
 synchronous.
 
-Macros:
-MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
-
 Source: $(PHOBOSSRC std/net/_curl.d)
 
 Copyright: Copyright Jonas Drewsen 2011-2012
@@ -164,7 +167,6 @@ import std.encoding;
 import std.exception;
 import std.regex;
 import std.socket : InternetAddress;
-import std.stream;
 import std.string;
 import std.traits;
 import std.typecons;
@@ -190,7 +192,8 @@ version(unittest)
 
     enum testUrl1 = "http://"~testService~"/testUrl1";
     enum testUrl2 = "http://"~testService~"/testUrl2";
-    enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
+    // No anonymous DigitalMars FTP access as of 2015
+    //enum testUrl3 = "ftp://ftp.digitalmars.com/sieve.ds";
     enum testUrl4 = testService~"/testUrl1";
     enum testUrl5 = "http://"~testService~"/testUrl3";
 }
@@ -278,7 +281,6 @@ private template isCurlConn(Conn)
  * Example:
  * ----
  * import std.net.curl;
- * download("ftp.digitalmars.com/sieve.ds", "/tmp/downloaded-ftp-file");
  * download("d-lang.appspot.com/testUrl2", "/tmp/downloaded-http-file");
  * ----
  */
@@ -287,10 +289,10 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 {
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
+        import std.stdio : File;
         conn.url = url;
-        auto f = new std.stream.BufferedFile(saveToPath, FileMode.OutNew);
-        scope (exit) f.close();
-        conn.onReceive = (ubyte[] data) { return f.write(data); };
+        auto f = File(saveToPath, "wb");
+        conn.onReceive = (ubyte[] data) { f.rawWrite(data); return data.length; };
         conn.perform();
     }
     else
@@ -305,8 +307,13 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 unittest
 {
     if (!netAllowed()) return;
-    download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
-    download("d-lang.appspot.com/testUrl1", buildPath(tempDir(), "downloaded-http-file"));
+    // No anonymous DigitalMars FTP access as of 2015
+    //download("ftp.digitalmars.com/sieve.ds", buildPath(tempDir(), "downloaded-ftp-file"));
+    auto fn = buildPath(tempDir(), "downloaded-http-file");
+    download("d-lang.appspot.com/testUrl1", fn);
+    assert(std.file.readText(fn) == "Hello world\n");
+    download!(HTTP)("d-lang.appspot.com/testUrl1", fn);
+    assert(std.file.readText(fn) == "Hello world\n");
 }
 
 /** Upload file from local files system using the HTTP or FTP protocol.
@@ -347,13 +354,15 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
-        auto f = new std.stream.BufferedFile(loadFromPath, FileMode.In);
-        scope (exit) f.close();
+        static import std.file;
+        void[] f;
+
         conn.onSend = (void[] data)
         {
-            return f.read(cast(ubyte[])data);
+            f = std.file.read(loadFromPath);
+            return f.length;
         };
-        conn.contentLength = cast(size_t)f.size;
+        conn.contentLength = f.length;
         conn.perform();
     }
 }
@@ -386,6 +395,10 @@ unittest
  *
  * Returns:
  * A T[] range containing the content of the resource pointed to by the URL.
+ *
+ * Throws:
+ *
+ * $(D CurlException) on error.
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -420,9 +433,10 @@ unittest
     res = get(testUrl4);
     assert(res == "Hello world\n",
            "get!HTTP() returns unexpected content: " ~ res);
-    res = get(testUrl3);
-    assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
-           "get!FTP() returns unexpected content");
+    // No anonymous DigitalMars FTP access as of 2015
+    //res = get(testUrl3);
+    //assert(res.startsWith("\r\n/* Eratosthenes Sieve prime number calculation. */"),
+    //       "get!FTP() returns unexpected content");
 }
 
 
@@ -808,8 +822,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
     enforce!CurlException(statusLine.code / 100 == 2,
-                            format("HTTP request returned status code %s",
-                                   statusLine.code));
+                            format("HTTP request returned status code %d (%s)",
+                                   statusLine.code, statusLine.reason));
 
     // Default charset defined in HTTP RFC
     auto charset = "ISO-8859-1";
@@ -823,6 +837,13 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     }
 
     return _decodeContent!T(content, charset);
+}
+
+unittest
+{
+    if (!netAllowed()) return;
+    auto e = collectException!CurlException(get(testUrl1 ~ "nonexisting"));
+    assert(e.msg == "HTTP request returned status code 404 (Not Found)");
 }
 
 /*
@@ -899,8 +920,8 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
     }
 }
 
-alias KeepTerminator = std.string.KeepTerminator;
-/++
+alias KeepTerminator = Flag!"keepTerminator";
+/+
 struct ByLineBuffer(Char)
 {
     bool linePresent;
@@ -1624,7 +1645,7 @@ private mixin template Protocol()
     /**
        The curl handle used by this connection.
     */
-    @property ref Curl handle()
+    @property ref Curl handle() return
     {
         return p.curl;
     }
@@ -2232,13 +2253,11 @@ struct HTTP
        After the HTTP client has been setup and possibly assigned callbacks the
        $(D perform()) method will start performing the request towards the
        specified server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(bool throwOnError = true)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         p.status.reset();
 
@@ -2683,19 +2702,19 @@ struct HTTP
      * Specify data to post when not using the onSend callback, with
      * user-specified Content-Type.
      * Params:
-     *	data = Data to post.
-     *	contentType = MIME type of the data, for example, "text/plain" or
-     *	    "application/octet-stream". See also:
+     *  data = Data to post.
+     *  contentType = MIME type of the data, for example, "text/plain" or
+     *      "application/octet-stream". See also:
      *      $(LINK2 http://en.wikipedia.org/wiki/Internet_media_type,
      *      Internet media type) on Wikipedia.
-     *-----
+     * -----
      * import std.net.curl;
      * auto http = HTTP("http://onlineform.example.com");
      * auto data = "app=login&username=bob&password=s00perS3kret";
      * http.setPostData(data, "application/x-www-form-urlencoded");
      * http.onReceive = (ubyte[] data) { return data.length; };
      * http.perform();
-     *-----
+     * -----
      */
     void setPostData(const(void)[] data, string contentType)
     {
@@ -2939,13 +2958,11 @@ struct FTP
        After a FTP client has been setup and possibly assigned callbacks the $(D
        perform()) method will start performing the actual communication with the
        server.
-    */
-    void perform()
-    {
-        _perform();
-    }
 
-    private CurlCode _perform(bool throwOnError = true)
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
+    */
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3273,10 +3290,12 @@ struct SMTP
 
     /**
         Performs the request as configured.
+        Params:
+        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    void perform()
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
-        p.curl.perform();
+        return p.curl.perform(throwOnError);
     }
 
     /// The URL to specify the location of the resource.
@@ -3556,6 +3575,10 @@ class CurlTimeoutException : CurlException
 /// Equal to $(ECXREF curl, CURLcode)
 alias CurlCode = CURLcode;
 
+import std.typecons : Flag;
+/// Flag to specify whether or not an exception is thrown on error.
+alias ThrowOnError = Flag!"throwOnError";
+
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
   It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
@@ -3788,14 +3811,24 @@ struct Curl
     /**
        perform the curl request by doing the HTTP,FTP etc. as it has
        been setup beforehand.
+
+       Params:
+       throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(bool throwOnError = true)
+    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
     {
         throwOnStopped();
         CurlCode code = curl_easy_perform(this.handle);
         if (throwOnError)
             _check(code);
         return code;
+    }
+
+    // Explicitly undocumented. It will be removed in November 2015.
+    deprecated("Pass ThrowOnError.yes or .no instead of a boolean.")
+    CurlCode perform(bool throwOnError)
+    {
+        return perform(cast(ThrowOnError)throwOnError);
     }
 
     /**
@@ -4120,7 +4153,7 @@ private struct Pool(Data)
     {
         Data data;
         Entry* next;
-    };
+    }
     private Entry*  root;
     private Entry* freeList;
 
@@ -4154,7 +4187,7 @@ private struct Pool(Data)
         root = n;
         return d;
     }
-};
+}
 
 // Shared function for reading incoming chunks of data and
 // sending the to a parent thread
@@ -4396,7 +4429,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     CurlCode code;
     try
     {
-        code = client._perform(false);
+        code = client.perform(ThrowOnError.no);
     }
     catch (Exception ex)
     {

@@ -24,17 +24,9 @@
  */
 module std.net.isemail;
 
-import std.algorithm : cmp, equal, uniq, filter, contains = canFind;
-import std.range : ElementType;
-import std.array;
-import std.ascii;
-import std.conv;
-import std.exception : enforce;
-import std.regex;
-import std.string;
+// FIXME
+import std.range.primitives; // : ElementType;
 import std.traits;
-import std.utf;
-import std.uni;
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
@@ -67,6 +59,14 @@ import std.uni;
 EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no,
     EmailStatusCode errorLevel = EmailStatusCode.none) if (isSomeChar!(Char))
 {
+    import std.algorithm : uniq, canFind;
+    import std.exception : enforce;
+    import std.array : array, split;
+    import std.conv : to;
+    import std.regex : match, regex;
+    import std.string : indexOf, lastIndexOf;
+    import std.uni : isNumber;
+
     alias tstring = const(Char)[];
 
     enum defaultThreshold = 16;
@@ -239,7 +239,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                             contextPrior = context;
                             auto c = token.front;
 
-                            if (c < '!' || c > '~' || c == '\n' || Token.specials.contains(token))
+                            if (c < '!' || c > '~' || c == '\n' || Token.specials.canFind(token))
                                 returnStatus ~= EmailStatusCode.errorExpectingText;
 
                             parseData[EmailPart.componentLocalPart] ~= token;
@@ -354,7 +354,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         auto c = token.front;
                         hyphenFlag = false;
 
-                        if (c < '!' || c > '~' || Token.specials.contains(token))
+                        if (c < '!' || c > '~' || Token.specials.canFind(token))
                             returnStatus ~= EmailStatusCode.errorExpectingText;
 
                         else if (token == Token.hyphen)
@@ -731,7 +731,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
         if (elementCount == 0)
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomain;
 
-        if (isNumeric(atomList[EmailPart.componentDomain][elementCount].front))
+        if (isNumber(atomList[EmailPart.componentDomain][elementCount].front))
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomainNumeric;
     }
 
@@ -1269,38 +1269,39 @@ struct EmailStatus
     }
 
     /// Indicates if the email address is valid or not.
-    @property bool valid ()
+    @property bool valid () const
     {
         return valid_;
     }
 
     /// The local part of the email address, that is, the part before the @ sign.
-    @property string localPart ()
+    @property string localPart () const
     {
         return localPart_;
     }
 
     /// The domain part of the email address, that is, the part after the @ sign.
-    @property string domainPart ()
+    @property string domainPart () const
     {
         return domainPart_;
     }
 
     /// The email status code
-    @property EmailStatusCode statusCode ()
+    @property EmailStatusCode statusCode () const
     {
         return statusCode_;
     }
 
     /// Returns a describing string of the status code
-    @property string status ()
+    @property string status () const
     {
         return statusCodeDescription(statusCode_);
     }
 
     /// Returns a textual representation of the email status
-    string toString ()
+    string toString () const
     {
+        import std.format : format;
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid,
             localPart, domainPart, statusCode);
     }
@@ -1882,6 +1883,8 @@ unittest
 int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false)
     if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
 {
+    import std.uni : icmp;
+    import std.algorithm : cmp;
     auto s1End = length <= s1.length ? length : s1.length;
     auto s2End = length <= s2.length ? length : s2.length;
 
@@ -1919,6 +1922,8 @@ unittest
  */
 auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 {
+    import std.regex : match;
+    import std.algorithm : filter;
     auto dg = invert ? (ElementType!(Range) e) { return e.match(pattern).empty; } :
                        (ElementType!(Range) e) { return !e.match(pattern).empty; };
 
@@ -1927,6 +1932,8 @@ auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
 
 unittest
 {
+    import std.algorithm : equal;
+    import std.regex;
     assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
     assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
 }
@@ -1983,6 +1990,7 @@ unittest
  */
 const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
 {
+    import std.utf : codeLength;
     return str[index .. index + codeLength!(T)(c)];
 }
 
@@ -1990,84 +1998,4 @@ unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
-}
-
-// issue 4673
-bool isNumeric (dchar c)
-{
-    switch (c)
-    {
-        case 'i':
-        case '.':
-        case '-':
-        case '+':
-        case 'u':
-        case 'l':
-        case 'L':
-        case 'U':
-        case 'I':
-            return false;
-
-        default:
-    }
-
-    return std.uni.isNumber(c);
-}
-
-// Issue 5744
-import core.stdc.string : memcmp;
-
-ptrdiff_t lastIndexOf(Char1, Char2)(in Char1[] s, const(Char2)[] sub,
-        CaseSensitive cs = CaseSensitive.yes) if (isSomeChar!Char1 && isSomeChar!Char2)
-{
-    if (cs == CaseSensitive.yes)
-    {
-        Char2 c;
-
-        if (sub.length == 0)
-            return s.length;
-        c = sub[0];
-        if (sub.length == 1)
-            return std.string.lastIndexOf(s, c);
-        for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-        {
-            if (s[i] == c)
-            {
-                if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-                    return i;
-            }
-        }
-        return -1;
-    }
-    else
-    {
-        dchar c;
-
-        if (sub.length == 0)
-            return s.length;
-        c = sub[0];
-        if (sub.length == 1)
-            return std.string.lastIndexOf(s, c, cs);
-        if (c <= 0x7F)
-        {
-            c = std.ascii.toLower(c);
-            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-            {
-                if (std.ascii.toLower(s[i]) == c)
-                {
-                    if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
-                        return i;
-                }
-            }
-        }
-        else
-        {
-            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
-            {
-                if (icmp(s[i .. i + sub.length], sub) == 0)
-                    return i;
-            }
-        }
-        return -1;
-    }
 }

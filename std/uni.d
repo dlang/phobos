@@ -1,8 +1,6 @@
 // Written in the D programming language.
 
 /++
-    $(SECTION Overview)
-
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
@@ -650,13 +648,10 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 +/
 module std.uni;
 
-static import std.ascii;
-import std.traits, std.range, std.algorithm, std.conv,
-    std.typetuple, std.exception, core.stdc.stdlib;
-import std.array; //@@BUG UFCS doesn't work with 'local' imports
-import core.bitop;
+import core.stdc.stdlib;
+import std.traits, std.typetuple;
+import std.range.primitives;
 
-import std.typecons;
 
 // debug = std_uni;
 
@@ -694,10 +689,12 @@ else
 
 public enum dchar lineSep = '\u2028'; /// Constant $(CODEPOINT) (0x2028) - line separator.
 public enum dchar paraSep = '\u2029'; /// Constant $(CODEPOINT) (0x2029) - paragraph separator.
+public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next line.
 
 // test the intro example
-unittest
+@safe unittest
 {
+    import std.algorithm : find;
     // initialize code point sets using script/block or property name
     // set contains code points from both scripts.
     auto set = unicode("Cyrillic") | unicode("Armenian");
@@ -795,6 +792,8 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 
 @safe pure nothrow @nogc unittest // for replicate
 {
+    import std.algorithm : sum, map;
+    import std.range : iota;
     size_t m = 0b111;
     size_t m2 = 0b01;
     foreach(i; TypeTuple!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
@@ -831,13 +830,13 @@ struct MultiArray(Types...)
         storage = data;
     }
 
-    @property auto slice(size_t n)()inout pure nothrow
+    @property auto slice(size_t n)()inout pure nothrow @nogc
     {
         auto ptr = raw_ptr!n;
         return packedArrayView!(Types[n])(ptr, sz[n]);
     }
 
-    @property auto ptr(size_t n)()inout pure nothrow
+    @property auto ptr(size_t n)()inout pure nothrow @nogc
     {
         auto ptr = raw_ptr!n;
         return inout(PackedPtr!(Types[n]))(ptr);
@@ -845,7 +844,7 @@ struct MultiArray(Types...)
 
     template length(size_t n)
     {
-        @property size_t length()const{ return sz[n]; }
+        @property size_t length()const @safe pure nothrow @nogc{ return sz[n]; }
 
         @property void length(size_t new_size)
         {
@@ -931,6 +930,7 @@ private:
 
 unittest
 {
+    import std.conv;
     enum dg = (){
         // sizes are:
         // lvl0: 3, lvl1 : 2, lvl2: 1
@@ -1003,6 +1003,8 @@ unittest
 
 unittest
 {// more bitpacking tests
+    import std.conv;
+
     alias Bitty =
       MultiArray!(BitPacked!(size_t, 3)
                 , BitPacked!(size_t, 4)
@@ -1108,7 +1110,7 @@ template PackedPtr(T)
 pure nothrow:
     static assert(isPowerOf2(bits));
 
-    this(inout(size_t)* ptr)inout
+    this(inout(size_t)* ptr)inout @safe @nogc
     {
         origin = ptr;
     }
@@ -1500,12 +1502,15 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 // Partially unrolled binary search using Shar's method
 //============================================================================
 
-private import std.math : pow;
-
 string genUnrolledSwitchSearch(size_t size)
 {
+    import std.conv : to;
+    import core.bitop : bsr;
+    import std.array : replace;
     assert(isPowerOf2(size));
-    string code = `auto power = bsr(m)+1;
+    string code = `
+    import core.bitop : bsr;
+    auto power = bsr(m)+1;
     switch(power){`;
     size_t i = bsr(size);
     foreach_reverse(val; 0..bsr(size))
@@ -1532,7 +1537,7 @@ string genUnrolledSwitchSearch(size_t size)
     return code;
 }
 
-bool isPowerOf2(size_t sz) @safe pure nothrow
+bool isPowerOf2(size_t sz) @safe pure nothrow @nogc
 {
     return (sz & (sz-1)) == 0;
 }
@@ -1572,12 +1577,14 @@ size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
 //
 size_t floorPowerOf2(size_t arg) @safe pure nothrow @nogc
 {
+    import core.bitop : bsr;
     assert(arg > 1); // else bsr is undefined
     return 1<<bsr(arg-1);
 }
 
 size_t ceilPowerOf2(size_t arg) @safe pure nothrow @nogc
 {
+    import core.bitop : bsr;
     assert(arg > 1); // else bsr is undefined
     return 1<<bsr(arg-1)+1;
 }
@@ -1609,6 +1616,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
 unittest
 {
+    import std.range;
     auto stdLowerBound(T)(T[] range, T needle)
     {
         return assumeSorted(range).lowerBound(needle).length;
@@ -1618,24 +1626,26 @@ unittest
     assert(arr.length == MAX/5-1);
     foreach(i; 0..MAX+5)
     {
-        auto std = stdLowerBound(arr, i);
-        assert(std == sharLowerBound(arr, i));
-        assert(std == sharSwitchLowerBound(arr, i));
+        auto st = stdLowerBound(arr, i);
+        assert(st == sharLowerBound(arr, i));
+        assert(st == sharSwitchLowerBound(arr, i));
     }
     arr = [];
-    auto std = stdLowerBound(arr, 33);
-    assert(std == sharLowerBound(arr, 33));
-    assert(std == sharSwitchLowerBound(arr, 33));
+    auto st = stdLowerBound(arr, 33);
+    assert(st == sharLowerBound(arr, 33));
+    assert(st == sharSwitchLowerBound(arr, 33));
 }
 //============================================================================
 
-@safe:
+@safe
+{
 // hope to see simillar stuff in public interface... once Allocators are out
 //@@@BUG moveFront and friends? dunno, for now it's POD-only
 
 @trusted size_t genericReplace(Policy=void, T, Range)
     (ref T dest, size_t from, size_t to, Range stuff)
 {
+    import std.algorithm : copy;
     size_t delta = to - from;
     size_t stuff_end = from+stuff.length;
     if(stuff.length > delta)
@@ -1733,12 +1743,14 @@ unittest
 
     static T[] alloc(T)(size_t size)
     {
+        import std.exception : enforce;
         auto ptr = cast(T*)enforce(malloc(T.sizeof*size), "out of memory on C heap");
         return ptr[0..size];
     }
 
     static T[] realloc(T)(T[] arr, size_t size)
     {
+        import std.exception : enforce;
         if(!size)
         {
             destroy(arr);
@@ -1858,6 +1870,9 @@ public struct CodepointInterval
 pure:
     uint[2] _tuple;
     alias _tuple this;
+
+@safe pure nothrow @nogc:
+
     this(uint low, uint high)
     {
         _tuple[0] = low;
@@ -1947,6 +1962,8 @@ pure:
 */
 @trusted public struct InversionList(SP=GcPolicy)
 {
+    import std.range : assumeSorted;
+
 public:
 
     /**
@@ -1983,6 +2000,8 @@ public:
     //helper function that avoids sanity check to be CTFE-friendly
     private static fromIntervals(Range)(Range intervals) pure
     {
+        import std.algorithm : map;
+        import std.range : roundRobin;
         auto flattened = roundRobin(intervals.save.map!"a[0]"(),
             intervals.save.map!"a[1]"());
         InversionList set;
@@ -1993,6 +2012,7 @@ public:
     private static fromIntervals()(uint[] intervals...) pure
     in
     {
+        import std.conv : text;
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
         for (uint i = 0; i < intervals.length; i += 2)
         {
@@ -2027,6 +2047,7 @@ public:
     this()(uint[] intervals...)
     in
     {
+        import std.conv : text;
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
         for (uint i = 0; i < intervals.length; i += 2)
         {
@@ -2220,7 +2241,11 @@ public:
 
 
 
-    /// Obtains a set that is the inversion of this set. See also $(LREF inverted).
+    /**
+     * Obtains a set that is the inversion of this set.
+     *
+     * See_Also: $(LREF inverted)
+     */
     auto opUnary(string op: "!")()
     {
         return this.inverted;
@@ -2329,7 +2354,7 @@ public:
     unittest
     {
         import std.conv : to;
-        import std.string : format;
+        import std.format : format;
         import std.uni : unicode;
 
         assert(unicode.Cyrillic.to!string ==
@@ -2347,7 +2372,8 @@ public:
 
     unittest
     {
-        import std.string : format;
+        import std.exception : assertThrown;
+        import std.format : format;
         assertThrown!FormatException(format("%a", unicode.ASCII));
     }
 
@@ -2374,6 +2400,7 @@ public:
 
 private:
 
+  package(std)  // used from: std.regex.internal.parser
     ref intersect(U)(U rhs)
         if(isCodepointSet!U)
     {
@@ -2408,6 +2435,7 @@ private:
     }
 
     // same as the above except that skip & drop parts are swapped
+  package(std)  // used from: std.regex.internal.parser
     ref sub(U)(U rhs)
         if(isCodepointSet!U)
     {
@@ -2421,6 +2449,7 @@ private:
         return this;
     }
 
+  package(std)  // used from: std.regex.internal.parse
     ref add(U)(U rhs)
         if(isCodepointSet!U)
     {
@@ -2515,7 +2544,9 @@ public:
     */
     string toSourceCode(string funcName="")
     {
-        import std.string;
+        import std.array : array;
+        import std.format : format;
+        import std.algorithm : countUntil;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
         {
@@ -2713,6 +2744,7 @@ private:
     // to make sure invariants hold
     void sanitize()
     {
+        import std.algorithm : sort, SwapStrategy, max;
         if (data.length == 0)
             return;
         alias Ival = CodepointInterval;
@@ -2775,6 +2807,7 @@ private:
     }
     body
     {
+        import std.range : assumeSorted, SearchPolicy;
         auto range = assumeSorted(data[]);
         size_t pos;
         size_t a_idx = hint + range[hint..$].lowerBound!(SearchPolicy.gallop)(a).length;
@@ -2949,12 +2982,13 @@ private:
     }
 
     CowArray!SP data;
-};
+}
 
 @system unittest
 {
     // test examples
     import std.algorithm, std.typecons;
+    import std.range : iota;
     auto set = CodepointSet('A', 'D'+1, 'a', 'd'+1);
     set.byInterval.equalS([tuple('A', 'E'), tuple('a', 'e')]);
     set = unicode.ASCII;
@@ -3014,7 +3048,7 @@ private:
 }
 
 // pedantic version for ctfe, and aligned-access only architectures
-@trusted uint safeRead24(const ubyte* ptr, size_t idx) pure nothrow
+@trusted uint safeRead24(const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
     version(LittleEndian)
@@ -3026,7 +3060,7 @@ private:
 }
 
 // ditto
-@trusted void safeWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow
+@trusted void safeWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
     version(LittleEndian)
@@ -3044,7 +3078,7 @@ private:
 }
 
 // unaligned x86-like read/write functions
-@trusted uint unalignedRead24(const ubyte* ptr, size_t idx) pure nothrow
+@trusted uint unalignedRead24(const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     uint* src = cast(uint*)(ptr+3*idx);
     version(LittleEndian)
@@ -3054,7 +3088,7 @@ private:
 }
 
 // ditto
-@trusted void unalignedWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow
+@trusted void unalignedWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     uint* dest = cast(uint*)(cast(ubyte*)ptr + 3*idx);
     version(LittleEndian)
@@ -3063,7 +3097,7 @@ private:
         *dest = (val<<8) | (*dest & 0xFF);
 }
 
-uint read24(const ubyte* ptr, size_t idx) pure nothrow
+uint read24(const ubyte* ptr, size_t idx) @safe pure nothrow @nogc
 {
     static if(hasUnalignedReads)
         return __ctfe ? safeRead24(ptr, idx) : unalignedRead24(ptr, idx);
@@ -3071,7 +3105,7 @@ uint read24(const ubyte* ptr, size_t idx) pure nothrow
         return safeRead24(ptr, idx);
 }
 
-void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
+void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
 {
     static if(hasUnalignedReads)
         return __ctfe ? safeWrite24(ptr, val, idx) : unalignedWrite24(ptr, val, idx);
@@ -3093,6 +3127,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     this(Range)(Range range)
         if(isInputRange!Range && hasLength!Range)
     {
+        import std.algorithm : copy;
         length = range.length;
         copy(range, data[0..$-1]);
     }
@@ -3100,6 +3135,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     this(Range)(Range range)
         if(isForwardRange!Range && !hasLength!Range)
     {
+        import std.algorithm : copy;
         auto len = walkLength(range.save);
         length = len;
         copy(range, data[0..$-1]);
@@ -3137,6 +3173,7 @@ void write24(ubyte* ptr, uint val, size_t idx) pure nothrow
     //+ an extra slot for ref-count
     @property void length(size_t len)
     {
+        import std.algorithm : min, copy;
         if(len == 0)
         {
             if(!empty)
@@ -3269,6 +3306,7 @@ private:
     }
     body
     {
+        import std.algorithm : copy;
         // dec shared ref-count
         refCount = count - 1;
         // copy to the new chunk of RAM
@@ -3282,8 +3320,11 @@ private:
     uint[] data;
 }
 
-@trusted unittest// Uint24 tests //@@@BUG@@ iota is system ?!
+@safe unittest// Uint24 tests
 {
+    import std.algorithm;
+    import std.conv;
+    import std.range;
     void funcRef(T)(ref T u24)
     {
         u24.length = 2;
@@ -3369,8 +3410,9 @@ version(unittest)
     private alias AllSets = TypeTuple!(InversionList!GcPolicy, InversionList!ReallocPolicy);
 }
 
-@trusted unittest// core set primitives test
+@safe unittest// core set primitives test
 {
+    import std.conv;
     foreach(CodeList; AllSets)
     {
         CodeList a;
@@ -3445,9 +3487,10 @@ version(unittest)
 
 
 //test constructor to work with any order of intervals
-@system unittest //@@@BUG@@@ iota is @system
+@safe unittest
 {
     import std.conv, std.range, std.algorithm;
+    import std.typecons;
     //ensure constructor handles bad ordering and overlap
     auto c1 = CodepointSet('а', 'я'+1, 'А','Я'+1);
     foreach(ch; chain(iota('а', 'я'+1), iota('А','Я'+1)))
@@ -3486,8 +3529,9 @@ version(unittest)
 }
 
 
-@trusted unittest
+@safe unittest
 {   // full set operations
+    import std.conv;
     foreach(CodeList; AllSets)
     {
         CodeList a, b, c, d;
@@ -3588,17 +3632,19 @@ version(unittest)
     }
 }
 
+}
 
-@system:
-unittest// vs single dchar
+@safe unittest// vs single dchar
 {
+    import std.conv;
     CodepointSet a = CodepointSet(10, 100, 120, 200);
     assert(a - 'A' == CodepointSet(10, 65, 66, 100, 120, 200), text(a - 'A'));
     assert((a & 'B') == CodepointSet(66, 67));
 }
 
-unittest// iteration & opIndex
+@safe unittest// iteration & opIndex
 {
+    import std.conv;
     import std.typecons;
     foreach(CodeList; TypeTuple!(InversionList!(ReallocPolicy)))
     {
@@ -3640,6 +3686,7 @@ unittest// iteration & opIndex
 // debug helper to get a shortened array dump
 auto arrayRepr(T)(T x)
 {
+    import std.conv : text;
     if(x.length > 32)
     {
         return text(x[0..16],"~...~", x[x.length-16..x.length]);
@@ -3682,6 +3729,8 @@ template mapTrieIndex(Prefix...)
 @trusted struct TrieBuilder(Value, Key, Args...)
     if(isBitPackableType!Value && isValidArgsForTrie!(Key, Args))
 {
+    import std.exception : enforce;
+
 private:
     // last index is not stored in table, it is used as an offset to values in a block.
     static if(is(Value == bool))// always pack bool
@@ -3937,6 +3986,7 @@ public:
     */
     void putValue(Key key, Value v)
     {
+        import std.conv : text;
         auto idx = getIndex(key);
         enforce(idx >= curIndex, text(errMsg, " ", idx));
         putAt(idx, v);
@@ -4249,8 +4299,9 @@ public template codepointTrie(T, sizes...)
     }
 }
 
-unittest // codepointTrie example
+pure unittest // codepointTrie example
 {
+    import std.algorithm;
     // pick characters from the Greek script
     auto set = unicode.Greek;
 
@@ -4362,7 +4413,7 @@ public template buildTrie(Value, Key, Args...)
         In other words $(LREF mapTrieIndex) should be a
         monotonically increasing function that maps $(D Key) to an integer.
 
-        See also: $(XREF _algorithm, sort),
+        See_Also: $(XREF _algorithm, sort),
         $(XREF _range, SortedRange),
         $(XREF _algorithm, setUnion).
     */
@@ -4402,6 +4453,7 @@ public template buildTrie(Value, Key, Args...)
             && is(typeof(Range.init.front[0]) : Value)
             && is(typeof(Range.init.front[1]) : Key))
     {
+        import std.algorithm : multiSort;
         alias Comps = GetComparators!(Prefix.length);
         if(unsorted)
             multiSort!(Comps)(range);
@@ -4445,6 +4497,7 @@ public template buildTrie(Value, Key, Args...)
     */
     auto buildTrie(Key, Value)(Value[Key] map, Value filler=Value.init)
     {
+        import std.range : zip, array;
         auto range = array(zip(map.values, map.keys));
         return buildTrie(range, filler, true); // sort it
     }
@@ -4599,7 +4652,7 @@ enum Mode {
     alwaysSkip,
     neverSkip,
     skipOnMatch
-};
+}
 
 mixin template ForwardStrings()
 {
@@ -4677,6 +4730,7 @@ template Utf8Matcher()
 
     auto build(Set)(Set set)
     {
+        import std.algorithm : map;
         auto ascii = set & unicode.ASCII;
         auto utf8_2 = set & CodepointSet(0x80, 0x800);
         auto utf8_3 = set & CodepointSet(0x800, 0x1_0000);
@@ -4693,7 +4747,7 @@ template Utf8Matcher()
     // from 3 primitives: tab!(size), lookup and Sizes
     mixin template DefMatcher()
     {
-        import std.string : format;
+        import std.format : format;
         enum hasASCII = staticIndexOf!(1, Sizes) >= 0;
         alias UniSizes = Erase!(1, Sizes);
 
@@ -4928,6 +4982,7 @@ template Utf16Matcher()
 
     auto build(Set)(Set set)
     {
+        import std.algorithm : map;
         auto ascii = set & unicode.ASCII;
         auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
             - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
@@ -5166,7 +5221,7 @@ public auto utfMatcher(Char, Set)(Set set) @trusted
 
 
 //a range of code units, packed with index to speed up forward iteration
-package auto decoder(C)(C[] s, size_t offset=0) @trusted
+package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
     if(is(C : wchar) || is(C : char))
 {
     static struct Decoder
@@ -5195,7 +5250,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @trusted
     Expose UTF string $(D s) as a random-access
     range of $(S_LINK Code unit, code units).
 */
-package auto units(C)(C[] s)
+package auto units(C)(C[] s) @safe pure nothrow @nogc
     if(is(C : wchar) || is(C : char))
 {
     static struct Units
@@ -5277,6 +5332,7 @@ package auto units(C)(C[] s)
 
 @safe unittest
 {
+    import std.range;
     static bool testAll(Matcher, Range)(ref Matcher m, ref Range r)
     {
         bool t = m.test(r);
@@ -5326,7 +5382,9 @@ package auto units(C)(C[] s)
 // cover decode fail cases of Matcher
 unittest
 {
-    import std.string : format;
+    import std.exception : collectException;
+    import std.format : format;
+    import std.algorithm;
     auto utf16 = utfMatcher!wchar(unicode.L);
     auto utf8 = utfMatcher!char(unicode.L);
     //decode failure cases UTF-8
@@ -5513,8 +5571,8 @@ struct sliceBits(size_t from, size_t to)
     }
 }
 
-uint low_8(uint x) { return x&0xFF; }
-@safe pure nothrow uint midlow_8(uint x){ return (x&0xFF00)>>8; }
+@safe pure nothrow @nogc uint low_8(uint x) { return x&0xFF; }
+@safe pure nothrow @nogc uint midlow_8(uint x){ return (x&0xFF00)>>8; }
 alias lo8 = assumeSize!(low_8, 8);
 alias mlo8 = assumeSize!(midlow_8, 8);
 
@@ -5533,6 +5591,9 @@ template Sequence(size_t start, size_t end)
 //---- TRIE TESTS ----
 unittest
 {
+    import std.conv;
+    import std.algorithm;
+    import std.range;
     static trieStats(TRIE)(TRIE t)
     {
         version(std_uni_stats)
@@ -5557,7 +5618,7 @@ unittest
     //@@@BUG link failure, lambdas not found by linker somehow (in case of trie2)
     // alias lo8   = assumeSize!(8, function (uint x) { return x&0xFF; });
     // alias next8 = assumeSize!(7, function (uint x) { return (x&0x7F00)>>8; });
-    alias CodepointSet Set;
+    alias Set = CodepointSet;
     auto set = Set('A','Z','a','z');
     auto trie = buildTrie!(bool, uint, 256, lo8)(set.byInterval);// simple bool array
     for(int a='a'; a<'z';a++)
@@ -5673,18 +5734,22 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 
 //============================================================================
 
-@trusted int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+@safe pure int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) if (is(Char1 : dchar) && is(Char2 : dchar))
 {
-    alias low = std.ascii.toLower;
+    import std.ascii : toLower;
+    import std.algorithm : cmp, map, filter;
+    static bool pred(dchar c) {return !c.isWhite && c != '-' && c != '_';}
     return cmp(
-        a.map!(x => low(x))()
-        .filter!(x => !isWhite(x) && x != '-' && x != '_')(),
-        b.map!(x => low(x))()
-        .filter!(x => !isWhite(x) && x != '-' && x != '_')()
-    );
+        a.map!toLower.filter!pred,
+        b.map!toLower.filter!pred);
 }
 
-bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
+@safe pure unittest
+{
+    assert(!comparePropertyName("foo-bar", "fooBar"));
+}
+
+bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pure if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     return comparePropertyName(a, b) < 0;
 }
@@ -5714,6 +5779,7 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
 
 @safe uint decompressFrom(const(ubyte)[] arr, ref size_t idx) pure
 {
+    import std.exception : enforce;
     uint first = arr[idx++];
     if(!(first & 0x80)) // no top bit -> [0..127]
         return first;
@@ -5746,8 +5812,9 @@ package ubyte[] compressIntervals(Range)(Range intervals)
     return storage;
 }
 
-unittest
+@safe pure unittest
 {
+    import std.typecons;
     auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
     ubyte[] enc = [cast(ubyte)80, 47, 1, (0b1_00<<5) | (1<<2), 0];
     assert(compressIntervals(run) == enc);
@@ -5772,7 +5839,7 @@ unittest
     return DecompressedIntervals(data);
 }
 
-@trusted struct DecompressedIntervals
+@safe struct DecompressedIntervals
 {
 pure:
     const(ubyte)[] _stream;
@@ -5828,6 +5895,8 @@ else
 // helper for looking up code point sets
 @trusted ptrdiff_t findUnicodeSet(alias table, C)(in C[] name) pure
 {
+    import std.range : assumeSorted;
+    import std.algorithm : map;
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
         (table.map!"a.name"());
     size_t idx = range.lowerBound(name).length;
@@ -5948,6 +6017,7 @@ else
 // CTFE-only helper for checking property names at compile-time
 @safe bool isPrettyPropertyName(C)(in C[] name)
 {
+    import std.algorithm : find;
     auto names = [
         "L", "Letter",
         "LC", "Cased Letter",
@@ -5976,6 +6046,7 @@ template SetSearcher(alias table, string kind)
     static auto opCall(C)(in C[] name)
         if(is(C : dchar))
     {
+        import std.conv : to;
         CodepointSet set;
         if(loadUnicodeSet!table(name, set))
             return set;
@@ -6019,7 +6090,7 @@ template SetSearcher(alias table, string kind)
         $(D unicode.InBlockName), to search a script
         use $(D unicode.ScriptName).
 
-        See also $(LREF block), $(LREF script)
+        See_Also: $(LREF block), $(LREF script)
         and (not included in this search) $(LREF hangulSyllableType).
 
         Example:
@@ -6070,8 +6141,6 @@ template SetSearcher(alias table, string kind)
     /**
         Narrows down the search for sets of $(CODEPOINTS) to all Unicode blocks.
 
-        See also $(S_LINK Unicode properties, table of properties).
-
         Note:
         Here block names are unambiguous as no scripts are searched
         and thus to search use simply $(D unicode.block.BlockName) notation.
@@ -6083,6 +6152,8 @@ template SetSearcher(alias table, string kind)
         // use .block for explicitness
         assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
         ---
+
+        See_Also: $(S_LINK Unicode properties, table of properties).
     */
     struct block
     {
@@ -6151,6 +6222,7 @@ private:
 
     static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
     {
+        import std.conv : to;
         Set set;
         bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
             || (name.length > 2 && ucmp(name[0..2],"In") == 0
@@ -6167,6 +6239,7 @@ private:
 
 unittest
 {
+    import std.exception : collectException;
     auto ascii = unicode.ASCII;
     assert(ascii['A']);
     assert(ascii['~']);
@@ -6349,13 +6422,20 @@ template genericDecodeGrapheme(bool getValue)
 
 }
 
-@trusted:
 public: // Public API continues
 
 /++
-    Returns the length of grapheme cluster starting at $(D index).
+    Computes the length of grapheme cluster starting at $(D index).
     Both the resulting length and the $(D index) are measured
     in $(S_LINK Code unit, code units).
+
+    Params:
+        C = type that is implicitly convertible to $(D dchars)
+        input = array of grapheme clusters
+        index = starting index into $(D input[])
+
+    Returns:
+        length of grapheme cluster
 
     Example:
     ---
@@ -6379,7 +6459,7 @@ size_t graphemeStride(C)(in C[] input, size_t index)
 }
 
 // for now tested separately see test_grapheme.d
-unittest
+@safe unittest
 {
     assert(graphemeStride("  ", 1) == 1);
     // A + combing ring above
@@ -6471,6 +6551,9 @@ auto byGrapheme(Range)(Range range)
 ///
 unittest
 {
+    import std.conv;
+    import std.range;
+    import std.algorithm;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -6494,6 +6577,9 @@ private static struct InputRangeString
 
 unittest
 {
+    import std.conv;
+    import std.range;
+    import std.algorithm;
     assert("".byGrapheme.walkLength == 0);
 
     auto reverse = "le\u0308on";
@@ -6529,7 +6615,7 @@ unittest
 auto byCodePoint(Range)(Range range)
     if(isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 {
-	// TODO: Propagate bidirectional access
+    // TODO: Propagate bidirectional access
     static struct Result
     {
         private Range _range;
@@ -6579,6 +6665,7 @@ Range byCodePoint(Range)(Range range)
 unittest
 {
     import std.conv : text;
+    import std.range;
 
     string s = "noe\u0308l"; // noël
 
@@ -6594,6 +6681,8 @@ unittest
 
 unittest
 {
+    import std.conv;
+    import std.algorithm;
     assert("".byGrapheme.byCodePoint.equal(""));
 
     string text = "noe\u0308l";
@@ -6607,6 +6696,8 @@ unittest
 
     assert(cpText.walkLength == text.walkLength);
 }
+
+@trusted:
 
 /++
     $(P A structure designed to effectively pack $(CHARACTERS)
@@ -6636,10 +6727,13 @@ unittest
     // the usual range manipulation is possible
     assert(wideOne[].filter!isMark.equal("\u0308"));
     ---
-    $(P See also $(LREF decodeGrapheme), $(LREF graphemeStride). )
+
+    See_Also: $(LREF decodeGrapheme), $(LREF graphemeStride)
 +/
 @trusted struct Grapheme
 {
+    import std.exception : enforce;
+
 public:
     this(C)(in C[] chars...)
         if(is(C : dchar))
@@ -6655,7 +6749,7 @@ public:
     }
 
     /// Gets a $(CODEPOINT) at the given index in this cluster.
-    dchar opIndex(size_t index) const  pure nothrow
+    dchar opIndex(size_t index) const pure nothrow @nogc
     {
         assert(index < length);
         return read24(isBig ? ptr_ : small_.ptr, index);
@@ -6678,7 +6772,7 @@ public:
         assert(!g.valid);
         ---
     +/
-    void opIndexAssign(dchar ch, size_t index)  pure nothrow
+    void opIndexAssign(dchar ch, size_t index) pure nothrow @nogc
     {
         assert(index < length);
         write24(isBig ? ptr_ : small_.ptr, ch, index);
@@ -6690,19 +6784,19 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    @system auto opSlice(size_t a, size_t b) pure nothrow
+    @system auto opSlice(size_t a, size_t b) pure nothrow @nogc
     {
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    @system auto opSlice() pure nothrow
+    @system auto opSlice() pure nothrow @nogc
     {
         return sliceOverIndexed(0, length, &this);
     }
 
     /// Grapheme cluster length in $(CODEPOINTS).
-    @property size_t length() const  pure nothrow
+    @property size_t length() const pure nothrow @nogc
     {
         return isBig ? len_ : slen_ & 0x7F;
     }
@@ -6726,7 +6820,7 @@ public:
         // still could be useful though
         assert(g[].equal("A\u0301B"));
         ---
-        See also $(LREF Grapheme.valid) below.
+        See_Also: $(LREF Grapheme.valid)
     +/
     ref opOpAssign(string op)(dchar ch)
     {
@@ -6845,13 +6939,13 @@ private:
         setBig();
     }
 
-    void setBig(){ slen_ |= small_flag; }
+    void setBig() pure nothrow @nogc { slen_ |= small_flag; }
 
-    @property size_t smallLength() pure nothrow
+    @property size_t smallLength() const pure nothrow @nogc
     {
         return slen_ & small_mask;
     }
-    @property ubyte isBig() const  pure nothrow
+    @property ubyte isBig() const pure nothrow @nogc
     {
         return slen_ & small_flag;
     }
@@ -6905,6 +6999,10 @@ unittest
 
 unittest
 {
+    import std.conv;
+    import std.algorithm;
+    import std.range;
+
     // not valid clusters (but it just a test)
     auto g  = Grapheme('a', 'b', 'c', 'd', 'e');
     assert(g[0] == 'a');
@@ -6950,7 +7048,16 @@ unittest
 /++
     $(P Does basic case-insensitive comparison of strings $(D str1) and $(D str2).
     This function uses simpler comparison rule thus achieving better performance
-    then $(LREF icmp). However keep in mind the warning below.)
+    than $(LREF icmp). However keep in mind the warning below.)
+
+    Params:
+        str1 = a string or a $(D ForwardRange) of $(D dchar)s
+        str2 = a string or a $(D ForwardRange) of $(D dchar)s
+
+    Returns:
+        An $(D int) that is 0 if the strings match,
+        &lt;0 if $(D str1) is lexicographically "less" than $(D str2),
+        &gt;0 if $(D str1) is lexicographically "greater" than $(D str2)
 
     Warning:
     This function only handles 1:1 $(CODEPOINT) mapping
@@ -6970,6 +7077,10 @@ unittest
     assert(icmp("ΐ", "\u03B9\u0308\u0301") == 0);
     assert(icmp("ΌΎ", "όύ") == 0);
     ---
+
+    See_Also:
+        $(LREF icmp)
+        $(XREF_PACK algorithm,comparison,cmp)
 +/
 int sicmp(S1, S2)(S1 str1, S2 str2)
     if(isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
@@ -7028,6 +7139,7 @@ int sicmp(S1, S2)(S1 str1, S2 str2)
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     @trusted pure /*TODO nothrow*/
 {
+    import std.algorithm : skipOver;
     alias fTable = fullCaseTable;
     size_t idx = fullCaseTrie[lhs];
     // fullCaseTrie is packed index table
@@ -7120,13 +7232,16 @@ int icmp(S1, S2)(S1 str1, S2 str2)
 
 unittest
 {
+    import std.conv;
+    import std.exception : assertCTFEable;
+    import std.algorithm;
     assertCTFEable!(
     {
     foreach(cfunc; TypeTuple!(icmp, sicmp))
     {
         foreach(S1; TypeTuple!(string, wstring, dstring))
         foreach(S2; TypeTuple!(string, wstring, dstring))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(cfunc("".to!S1(), "".to!S2()) == 0);
             assert(cfunc("A".to!S1(), "".to!S2()) > 0);
             assert(cfunc("".to!S1(), "0".to!S2()) < 0);
@@ -7138,7 +7253,7 @@ unittest
             // Check example:
             assert(cfunc("Август".to!S1(), "авгусТ".to!S2()) == 0);
             assert(cfunc("ΌΎ".to!S1(), "όύ".to!S2()) == 0);
-        }
+        }();
         // check that the order is properly agnostic to the case
         auto strs = [ "Apple", "ORANGE",  "orAcle", "amp", "banana"];
         sort!((a,b) => cfunc(a,b) < 0)(strs);
@@ -7237,6 +7352,9 @@ package auto simpleCaseFoldings(dchar ch)
 
 unittest
 {
+    import std.exception : assertCTFEable;
+    import std.algorithm : canFind;
+    import std.array;
     assertCTFEable!((){
         auto r = simpleCaseFoldings('Э').array;
         assert(r.length == 2);
@@ -7266,12 +7384,12 @@ unittest
     // placed after a "ring below" in a sequence
     ---
 +/
-ubyte combiningClass(dchar ch)
+ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 {
     return combiningClassTrie[ch];
 }
 
-unittest
+@safe pure nothrow @nogc unittest
 {
     foreach(ch; 0..0x80)
         assert(combiningClass(ch) == 0);
@@ -7291,7 +7409,7 @@ enum UnicodeDecomposition {
          typically suitable only for fuzzy matching and internal processing.
     */
     Compatibility
-};
+}
 
 /**
     Shorthand aliases for character decomposition type, passed as a
@@ -7322,9 +7440,11 @@ enum {
     assert(compose('\u0308', 'A') == dchar.init);
     ---
 +/
-public dchar compose(dchar first, dchar second)
+public dchar compose(dchar first, dchar second) pure nothrow
 {
     import std.internal.unicode_comp;
+    import std.algorithm : map;
+    import std.range : assumeSorted;
     size_t packed = compositionJumpTrie[first];
     if(packed == ushort.max)
         return dchar.init;
@@ -7351,7 +7471,8 @@ public dchar compose(dchar first, dchar second)
     Note:
     This function also decomposes hangul syllables
     as prescribed by the standard.
-    See also $(LREF decomposeHangul) for a restricted version
+
+    See_Also: $(LREF decomposeHangul) for a restricted version
     that takes into account only hangul syllables  but
     no other decompositions.
 
@@ -7367,6 +7488,7 @@ public dchar compose(dchar first, dchar second)
 public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 {
     import std.internal.unicode_decomp;
+    import std.algorithm : until;
     static if(decompType == Canonical)
     {
         alias table = decompCanonTable;
@@ -7412,14 +7534,14 @@ enum jamoNCount = jamoVCount * jamoTCount;
 enum jamoSCount = jamoLCount * jamoNCount;
 
 // Tests if $(D ch) is a Hangul leading consonant jamo.
-bool isJamoL(dchar ch)
+bool isJamoL(dchar ch) pure nothrow @nogc
 {
     // first cmp rejects ~ 1M code points above leading jamo range
     return ch < jamoLBase+jamoLCount && ch >= jamoLBase;
 }
 
 // Tests if $(D ch) is a Hangul vowel jamo.
-bool isJamoT(dchar ch)
+bool isJamoT(dchar ch) pure nothrow @nogc
 {
     // first cmp rejects ~ 1M code points above trailing jamo range
     // Note: ch == jamoTBase doesn't indicate trailing jamo (TIndex must be > 0)
@@ -7427,20 +7549,20 @@ bool isJamoT(dchar ch)
 }
 
 // Tests if $(D ch) is a Hangul trailnig consonant jamo.
-bool isJamoV(dchar ch)
+bool isJamoV(dchar ch) pure nothrow @nogc
 {
     // first cmp rejects ~ 1M code points above vowel range
     return  ch < jamoVBase+jamoVCount && ch >= jamoVBase;
 }
 
-int hangulSyllableIndex(dchar ch)
+int hangulSyllableIndex(dchar ch) pure nothrow @nogc
 {
     int idxS = cast(int)ch - jamoSBase;
     return idxS >= 0 && idxS < jamoSCount ? idxS : -1;
 }
 
 // internal helper: compose hangul syllables leaving dchar.init in holes
-void hangulRecompose(dchar[] seq)
+void hangulRecompose(dchar[] seq) pure nothrow @nogc
 {
     for(size_t idx = 0; idx + 1 < seq.length; )
     {
@@ -7474,12 +7596,6 @@ public:
 /**
     Decomposes a Hangul syllable. If $(D ch) is not a composed syllable
     then this function returns $(LREF Grapheme) containing only $(D ch) as is.
-
-    Example:
-    ---
-    import std.algorithm;
-    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
-    ---
 */
 Grapheme decomposeHangul(dchar ch)
 {
@@ -7497,6 +7613,13 @@ Grapheme decomposeHangul(dchar ch)
         return Grapheme(partL, partV);
 }
 
+///
+unittest
+{
+    import std.algorithm;
+    assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
+}
+
 /++
     Try to compose hangul syllable out of a leading consonant ($(D lead)),
     a $(D vowel) and optional $(D trailing) consonant jamos.
@@ -7505,19 +7628,8 @@ Grapheme decomposeHangul(dchar ch)
 
     If any of $(D lead) and $(D vowel) are not a valid hangul jamo
     of the respective $(CHARACTER) class returns dchar.init.
-
-    Example:
-    ---
-    assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
-    // leaving out T-vowel, or passing any codepoint
-    // that is not trailing consonant composes an LV-syllable
-    assert(composeJamo('\u1111', '\u1171') == '\uD4CC');
-    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
-    assert(composeJamo('\u1111', 'A') == dchar.init);
-    assert(composeJamo('A', '\u1171') == dchar.init);
-    ---
 +/
-dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init)
+dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc
 {
     if(!isJamoL(lead))
         return dchar.init;
@@ -7530,8 +7642,22 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init)
     return isJamoT(trailing) ? syllable + (trailing - jamoTBase) : syllable;
 }
 
+///
 unittest
 {
+    assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
+    // leaving out T-vowel, or passing any codepoint
+    // that is not trailing consonant composes an LV-syllable
+    assert(composeJamo('\u1111', '\u1171') == '\uD4CC');
+    assert(composeJamo('\u1111', '\u1171', ' ') == '\uD4CC');
+    assert(composeJamo('\u1111', 'A') == dchar.init);
+    assert(composeJamo('A', '\u1171') == dchar.init);
+}
+
+unittest
+{
+    import std.conv;
+
     static void testDecomp(UnicodeDecomposition T)(dchar ch, string r)
     {
         Grapheme g = decompose!T(ch);
@@ -7586,23 +7712,13 @@ enum {
     Note:
     In cases where the string in question is already normalized,
     it is returned unmodified and no memory allocation happens.
-
-    Example:
-    ---
-    // any encoding works
-    wstring greet = "Hello world";
-    assert(normalize(greet) is greet); // the same exact slice
-
-    // An example of a character with all 4 forms being different:
-    // Greek upsilon with acute and hook symbol (code point 0x03D3)
-    assert(normalize!NFC("ϓ") == "\u03D3");
-    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
-    assert(normalize!NFKC("ϓ") == "\u038E");
-    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
-    ---
 +/
 inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 {
+    import std.algorithm : sort, SwapStrategy;
+    import std.range : zip;
+    import std.array : appender;
+
     auto anchors = splitNormalized!norm(input);
     if(anchors[0] == input.length && anchors[1] == input.length)
         return input;
@@ -7651,6 +7767,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             (zip(ccc[firstNonStable..$], decomposed[firstNonStable..$]));
         static if(norm == NFC || norm == NFKC)
         {
+            import std.algorithm : countUntil;
             size_t idx = 0;
             auto first = countUntil(ccc, 0);
             if(first >= 0) // no starters?? no recomposition
@@ -7670,6 +7787,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             app.put(decomposed);
         else
         {
+            import std.algorithm : remove;
             auto clean = remove!("a == dchar.init", SwapStrategy.stable)(decomposed);
             app.put(decomposed[0 .. clean.length]);
         }
@@ -7686,8 +7804,25 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
     return cast(inout(C)[])app.data;
 }
 
+///
 unittest
 {
+    // any encoding works
+    wstring greet = "Hello world";
+    assert(normalize(greet) is greet); // the same exact slice
+
+    // An example of a character with all 4 forms being different:
+    // Greek upsilon with acute and hook symbol (code point 0x03D3)
+    assert(normalize!NFC("ϓ") == "\u03D3");
+    assert(normalize!NFD("ϓ") == "\u03D2\u0301");
+    assert(normalize!NFKC("ϓ") == "\u038E");
+    assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
+}
+
+unittest
+{
+    import std.conv;
+
     assert(normalize!NFD("abc\uF904def") == "abc\u6ED1def", text(normalize!NFD("abc\uF904def")));
     assert(normalize!NFKD("2¹⁰") == "210", normalize!NFKD("2¹⁰"));
     assert(normalize!NFD("Äffin") == "A\u0308ffin");
@@ -7707,7 +7842,7 @@ unittest
 }
 
 // canonically recompose given slice of code points, works in-place and mutates data
-private size_t recompose(size_t start, dchar[] input, ubyte[] ccc)
+private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 {
     assert(input.length == ccc.length);
     int accumCC = -1;// so that it's out of 0..255 range
@@ -7764,6 +7899,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc)
 // the rest of input starting with stable code point
 private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 {
+    import std.typecons : tuple;
     auto result = input;
     ubyte lastCC = 0;
 
@@ -7793,6 +7929,7 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 {
     import std.utf : codeLength;
+    import std.typecons : tuple;
 
     auto br = input[0..idx];
     size_t region_start = 0;// default
@@ -7825,18 +7962,21 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
 /**
     Tests if dchar $(D ch) is always allowed (Quick_Check=YES) in normalization
     form $(D norm).
-    ---
+*/
+public bool allowedIn(NormalizationForm norm)(dchar ch)
+{
+    return !notAllowedIn!norm(ch);
+}
+
+///
+unittest
+{
     // e.g. Cyrillic is always allowed, so is ASCII
     assert(allowedIn!NFC('я'));
     assert(allowedIn!NFD('я'));
     assert(allowedIn!NFKC('я'));
     assert(allowedIn!NFKD('я'));
     assert(allowedIn!NFC('Z'));
-    ---
-*/
-public bool allowedIn(NormalizationForm norm)(dchar ch)
-{
-    return !notAllowedIn!norm(ch);
 }
 
 // not user friendly name but more direct
@@ -7872,7 +8012,8 @@ version(std_uni_bootstrap)
     // up to date optimal versions of all of isXXX functions
     @safe pure nothrow @nogc public bool isWhite(dchar c)
     {
-        return std.ascii.isWhite(c) ||
+        import std.ascii : isWhite;
+        return isWhite(c) ||
                c == lineSep || c == paraSep ||
                c == '\u0085' || c == '\u00A0' || c == '\u1680' || c == '\u180E' ||
                (c >= '\u2000' && c <= '\u200A') ||
@@ -7883,7 +8024,7 @@ else
 {
 
 // trusted -> avoid bounds check
-@trusted pure nothrow
+@trusted pure nothrow @nogc
 {
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
@@ -7915,49 +8056,53 @@ public bool isWhite(dchar c)
 /++
     Return whether $(D c) is a Unicode lowercase $(CHARACTER).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isLower(dchar c)
 {
-    if(std.ascii.isASCII(c))
-        return std.ascii.isLower(c);
+    import std.ascii : isLower, isASCII;
+    if(isASCII(c))
+        return isLower(c);
     return lowerCaseTrie[c];
 }
 
 @safe unittest
 {
+    import std.ascii : isLower;
     foreach(v; 0..0x80)
-        assert(std.ascii.isLower(v) == isLower(v));
-    assert(isLower('я'));
-    assert(isLower('й'));
-    assert(!isLower('Ж'));
+        assert(isLower(v) == .isLower(v));
+    assert(.isLower('я'));
+    assert(.isLower('й'));
+    assert(!.isLower('Ж'));
     // Greek HETA
-    assert(!isLower('\u0370'));
-    assert(isLower('\u0371'));
-    assert(!isLower('\u039C')); // capital MU
-    assert(isLower('\u03B2')); // beta
+    assert(!.isLower('\u0370'));
+    assert(.isLower('\u0371'));
+    assert(!.isLower('\u039C')); // capital MU
+    assert(.isLower('\u03B2')); // beta
     // from extended Greek
-    assert(!isLower('\u1F18'));
-    assert(isLower('\u1F00'));
+    assert(!.isLower('\u1F18'));
+    assert(.isLower('\u1F00'));
     foreach(v; unicode.lowerCase.byCodepoint)
-        assert(isLower(v) && !isUpper(v));
+        assert(.isLower(v) && !isUpper(v));
 }
 
 
 /++
     Return whether $(D c) is a Unicode uppercase $(CHARACTER).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isUpper(dchar c)
 {
-    if(std.ascii.isASCII(c))
-        return std.ascii.isUpper(c);
+    import std.ascii : isUpper, isASCII;
+    if(isASCII(c))
+        return isUpper(c);
     return upperCaseTrie[c];
 }
 
 @safe unittest
 {
+    import std.ascii : isLower;
     foreach(v; 0..0x80)
-        assert(std.ascii.isLower(v) == isLower(v));
+        assert(isLower(v) == .isLower(v));
     assert(!isUpper('й'));
     assert(isUpper('Ж'));
     // Greek HETA
@@ -7969,7 +8114,7 @@ bool isUpper(dchar c)
     assert(!isUpper('\u1F00'));
     assert(isUpper('\u1F18'));
     foreach(v; unicode.upperCase.byCodepoint)
-        assert(isUpper(v) && !isLower(v));
+        assert(isUpper(v) && !.isLower(v));
 }
 
 
@@ -7980,7 +8125,7 @@ bool isUpper(dchar c)
     Warning: certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toLower which takes full string instead.
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 dchar toLower(dchar c)
 {
      // optimize ASCII case
@@ -8002,7 +8147,7 @@ dchar toLower(dchar c)
 
 //TODO: Hidden for now, needs better API.
 //Other transforms could use better API as well, but this one is a new primitive.
-@safe pure nothrow
+@safe pure nothrow @nogc
 private dchar toTitlecase(dchar c)
 {
     // optimize ASCII case
@@ -8029,6 +8174,8 @@ private alias LowerTriple = TypeTuple!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTa
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pure
     if(isSomeString!S)
 {
+    import std.array : appender;
+
     foreach(i, dchar cOuter; s)
     {
         ushort idx = indexFn(cOuter);
@@ -8063,6 +8210,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pur
 
 unittest //12428
 {
+    import std.array;
     auto s = "abcdefghij".replicate(300);
     s = s[0..10];
 
@@ -8071,8 +8219,371 @@ unittest //12428
     assert(s == "abcdefghij");
 }
 
+
+// generic toUpper/toLower on whole range, returns range
+private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, Range)(Range str)
+    // Accept range of dchar's
+    if (isInputRange!Range &&
+        isSomeChar!(ElementEncodingType!Range) &&
+        ElementEncodingType!Range.sizeof == dchar.sizeof)
+{
+    static struct ToCaserImpl
+    {
+        @property bool empty()
+        {
+            return !nLeft && r.empty;
+        }
+
+        @property auto front()
+        {
+            if (!nLeft)
+            {
+                dchar c = r.front;
+                const idx = indexFn(c);
+                if (idx == ushort.max)
+                {
+                    buf[0] = c;
+                    nLeft = 1;
+                }
+                else if (idx < maxIdx)
+                {
+                    buf[0] = tableFn(idx);
+                    nLeft = 1;
+                }
+                else
+                {
+                    auto val = tableFn(idx);
+                    // unpack length + codepoint
+                    nLeft = val >> 24;
+                    if (nLeft == 0)
+                        nLeft = 1;
+                    assert(nLeft <= buf.length);
+                    buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
+                    foreach (j; 1 .. nLeft)
+                        buf[nLeft - j - 1] = tableFn(idx + j);
+                }
+            }
+            return buf[nLeft - 1];
+        }
+
+        void popFront()
+        {
+            if (!nLeft)
+                front();
+            assert(nLeft);
+            --nLeft;
+            if (!nLeft)
+                r.popFront();
+        }
+
+        static if (isForwardRange!Range)
+        {
+            @property auto save()
+            {
+                auto ret = this;
+                ret.r = r.save;
+                return ret;
+            }
+        }
+
+      private:
+        Range r;
+        uint nLeft;
+        dchar[3] buf = void;
+    }
+
+    return ToCaserImpl(str);
+}
+
+/*********************
+ * Convert input range or string to upper or lower case.
+ *
+ * Does not allocate memory.
+ * Characters in UTF-8 or UTF-16 format that cannot be decoded
+ * are treated as $(XREF utf, replacementDchar).
+ *
+ * Params:
+ *      str = string or range of characters
+ *
+ * Returns:
+ *      an InputRange of dchars
+ *
+ * See_Also:
+ *      $(LREF toUpper), $(LREF toLower)
+ */
+
+auto toLowerCase(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
+    {
+        import std.utf : byDchar;
+
+        // Decode first
+        return toCaser!LowerTriple(str.byDchar);
+    }
+    else
+    {
+        return toCaser!LowerTriple(str);
+    }
+}
+
+/// ditto
+auto toUpperCase(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
+    {
+        import std.utf : byDchar;
+
+        // Decode first
+        return toCaser!UpperTriple(str.byDchar);
+    }
+    else
+    {
+        return toCaser!UpperTriple(str);
+    }
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm: equal;
+
+    assert("hEllo".toUpperCase.equal("HELLO"));
+}
+
+unittest
+{
+    import std.array;
+
+    auto a = "HELLo".toLowerCase;
+    auto savea = a.save;
+    auto s = a.array;
+    assert(s == "hello");
+    s = savea.array;
+    assert(s == "hello");
+
+    string[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
+    string[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
+
+    foreach (i, slwr; lower)
+    {
+        import std.utf : byChar;
+
+        auto sx = slwr.toUpperCase.byChar.array;
+        assert(sx == toUpper(slwr));
+        auto sy = upper[i].toLowerCase.byChar.array;
+        assert(sy == toLower(upper[i]));
+    }
+
+    // Not necessary to call r.front
+    for (auto r = lower[3].toUpperCase; !r.empty; r.popFront())
+    {
+    }
+
+    import std.algorithm : equal;
+
+    "HELLo"w.toLowerCase.equal("hello"d);
+    "HELLo"w.toUpperCase.equal("HELLO"d);
+    "HELLo"d.toLowerCase.equal("hello"d);
+    "HELLo"d.toUpperCase.equal("HELLO"d);
+
+    import std.utf : byChar;
+    assert(toLower("\u1Fe2") == toLowerCase("\u1Fe2").byChar.array);
+}
+
+import std.stdio;
+// generic capitalizer on whole range, returns range
+private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUpper,
+                           Range)(Range str)
+    // Accept range of dchar's
+    if (isInputRange!Range &&
+        isSomeChar!(ElementEncodingType!Range) &&
+        ElementEncodingType!Range.sizeof == dchar.sizeof)
+{
+    static struct ToCapitalizerImpl
+    {
+        @property bool empty()
+        {
+            return lower ? lwr.empty : !nLeft && r.empty;
+        }
+
+        @property auto front()
+        {
+            if (lower)
+                return lwr.front;
+
+            if (!nLeft)
+            {
+                dchar c = r.front;
+                const idx = indexFnUpper(c);
+                if (idx == ushort.max)
+                {
+                    buf[0] = c;
+                    nLeft = 1;
+                }
+                else if (idx < maxIdxUpper)
+                {
+                    buf[0] = tableFnUpper(idx);
+                    nLeft = 1;
+                }
+                else
+                {
+                    auto val = tableFnUpper(idx);
+                    // unpack length + codepoint
+                    nLeft = val >> 24;
+                    if (nLeft == 0)
+                        nLeft = 1;
+                    assert(nLeft <= buf.length);
+                    buf[nLeft - 1] = cast(dchar)(val & 0xFF_FFFF);
+                    foreach (j; 1 .. nLeft)
+                        buf[nLeft - j - 1] = tableFnUpper(idx + j);
+                }
+            }
+            return buf[nLeft - 1];
+        }
+
+        void popFront()
+        {
+            if (lower)
+                lwr.popFront();
+            else
+            {
+                if (!nLeft)
+                    front();
+                assert(nLeft);
+                --nLeft;
+                if (!nLeft)
+                {
+                    r.popFront();
+                    lwr = r.toLowerCase();
+                    lower = true;
+                }
+            }
+        }
+
+        static if (isForwardRange!Range)
+        {
+            @property auto save()
+            {
+                auto ret = this;
+                ret.r = r.save;
+                ret.lwr = lwr.save;
+                return ret;
+            }
+        }
+
+      private:
+        Range r;
+        typeof(r.toLowerCase) lwr; // range representing the lower case rest of string
+        bool lower = false;     // false for first character, true for rest of string
+        dchar[3] buf = void;
+        uint nLeft = 0;
+    }
+
+    return ToCapitalizerImpl(str);
+}
+
+/*********************
+ * Capitalize input range or string, meaning convert the first
+ * character to upper case and subsequent characters to lower case.
+ *
+ * Does not allocate memory.
+ * Characters in UTF-8 or UTF-16 format that cannot be decoded
+ * are treated as $(XREF utf, replacementDchar).
+ *
+ * Params:
+ *      str = string or range of characters
+ *
+ * Returns:
+ *      an InputRange of dchars
+ *
+ * See_Also:
+ *      $(LREF toUpper), $(LREF toLower)
+ *      $(LREF toUpperCase), $(LREF toLowerCase)
+ */
+
+auto toCapitalized(Range)(Range str)
+    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range))
+{
+    static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
+    {
+        import std.utf : byDchar;
+
+        // Decode first
+        return toCapitalizer!UpperTriple(str.byDchar);
+    }
+    else
+    {
+        return toCapitalizer!UpperTriple(str);
+    }
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm: equal;
+
+    assert("hEllo".toCapitalized.equal("Hello"));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    auto r = "hEllo".toCapitalized();
+    assert(r.front == 'H');
+}
+
+unittest
+{
+    import std.array;
+
+    auto a = "hELLo".toCapitalized;
+    auto savea = a.save;
+    auto s = a.array;
+    assert(s == "Hello");
+    s = savea.array;
+    assert(s == "Hello");
+
+    string[2][] cases =
+    [
+        ["", ""],
+        ["h", "H"],
+        ["H", "H"],
+        ["3", "3"],
+        ["123", "123"],
+        ["h123A", "H123a"],
+        ["феж", "Феж"],
+        ["\u1Fe2", "\u03a5\u0308\u0300"],
+    ];
+
+    foreach (i; 0 .. cases.length)
+    {
+        import std.utf : byChar;
+
+        auto r = cases[i][0].toCapitalized.byChar.array;
+        auto result = cases[i][1];
+        assert(r == result);
+    }
+
+    // Don't call r.front
+    for (auto r = "\u1Fe2".toCapitalized; !r.empty; r.popFront())
+    {
+    }
+
+    import std.algorithm : equal;
+
+    "HELLo"w.toCapitalized.equal("Hello"d);
+    "hElLO"w.toCapitalized.equal("Hello"d);
+    "hello"d.toCapitalized.equal("Hello"d);
+    "HELLO"d.toCapitalized.equal("Hello"d);
+
+    import std.utf : byChar;
+    assert(toCapitalized("\u0130").byChar.array == toUpperCase("\u0130").byChar.array);
+}
+
 // TODO: helper, I wish std.utf was more flexible (and stright)
-private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure
+private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
 {
     if (c <= 0x7F)
     {
@@ -8138,7 +8649,7 @@ private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
     return idx;
 }
 
-private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure
+private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
 {
     buf[idx] = c;
     idx++;
@@ -8385,7 +8896,7 @@ S toLower(S)(S s) @trusted pure
 
 @trusted unittest //@@@BUG std.format is not @safe
 {
-    import std.string : format;
+    import std.format : format;
     foreach(ch; 0..0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
@@ -8413,6 +8924,7 @@ unittest
 
 unittest
 {
+    import std.algorithm : cmp;
     string s1 = "FoL";
     string s2 = toLower(s1);
     assert(cmp(s2, "fol") == 0, s2);
@@ -8468,8 +8980,14 @@ unittest
     Warning:
     Certain alphabets like German and Greek have no 1:1
     upper-lower mapping. Use overload of toUpper which takes full string instead.
+
+    toUpper can be used as an argument to $(XREF_PACK algorithm,iteration,map)
+    to produce an algorithm that can convert a range of characters to upper case
+    without allocating memory.
+    A string can then be produced by using $(XREF_PACK algorithm,mutation,copy)
+    to send it to an $(XREF array, appender).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 dchar toUpper(dchar c)
 {
     // optimize ASCII case
@@ -8489,9 +9007,21 @@ dchar toUpper(dchar c)
     return c;
 }
 
+///
+unittest
+{
+    import std.algorithm;
+    import std.uni;
+    import std.array;
+
+    auto abuf = appender!(char[])();
+    "hello".map!toUpper.copy(&abuf);
+    assert(abuf.data == "HELLO");
+}
+
 @trusted unittest
 {
-    import std.string : format;
+    import std.format : format;
     foreach(ch; 0..0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');
@@ -8528,6 +9058,8 @@ S toUpper(S)(S s) @trusted pure
 
 unittest
 {
+    import std.algorithm : cmp;
+
     string s1 = "FoL";
     string s2;
     char[] s3;
@@ -8557,7 +9089,7 @@ unittest
 {
     static void doTest(C)(const(C)[] s, const(C)[] trueUp, const(C)[] trueLow)
     {
-        import std.string : format;
+        import std.format : format;
         string diff = "src: %( %x %)\nres: %( %x %)\ntru: %( %x %)";
         auto low = s.toLower() , up = s.toUpper();
         auto lowInp = s.dup, upInp = s.dup;
@@ -8615,7 +9147,7 @@ unittest
     Returns whether $(D c) is a Unicode alphabetic $(CHARACTER)
     (general Unicode category: Alphabetic).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isAlpha(dchar c)
 {
     // optimization
@@ -8650,7 +9182,7 @@ bool isAlpha(dchar c)
     Returns whether $(D c) is a Unicode mark
     (general Unicode category: Mn, Me, Mc).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isMark(dchar c)
 {
     return markTrie[c];
@@ -8669,7 +9201,7 @@ bool isMark(dchar c)
     Returns whether $(D c) is a Unicode numerical $(CHARACTER)
     (general Unicode category: Nd, Nl, No).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isNumber(dchar c)
 {
     return numberTrie[c];
@@ -8689,7 +9221,7 @@ bool isNumber(dchar c)
     Returns whether $(D c) is a Unicode punctuation $(CHARACTER)
     (general Unicode category: Pd, Ps, Pe, Pc, Po, Pi, Pf).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isPunctuation(dchar c)
 {
     return punctuationTrie[c];
@@ -8712,7 +9244,7 @@ unittest
     Returns whether $(D c) is a Unicode symbol $(CHARACTER)
     (general Unicode category: Sm, Sc, Sk, So).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSymbol(dchar c)
 {
    return symbolTrie[c];
@@ -8720,7 +9252,7 @@ bool isSymbol(dchar c)
 
 unittest
 {
-    import std.string;
+    import std.format : format;
     assert(isSymbol('\u0024'));
     assert(isSymbol('\u002B'));
     assert(isSymbol('\u005E'));
@@ -8735,7 +9267,7 @@ unittest
     Note: This doesn't include '\n', '\r', \t' and other non-space $(CHARACTER).
     For commonly used less strict semantics see $(LREF isWhite).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSpace(dchar c)
 {
     return isSpaceGen(c);
@@ -8757,7 +9289,7 @@ unittest
     (general Unicode category: L, M, N, P, S, Zs).
 
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isGraphical(dchar c)
 {
     return graphicalTrie[c];
@@ -8767,7 +9299,7 @@ bool isGraphical(dchar c)
 unittest
 {
     auto set = unicode("Graphical");
-    import std.string;
+    import std.format : format;
     foreach(ch; set.byCodepoint)
         assert(isGraphical(ch), format("%4x", ch));
     foreach(ch; 0..0x4000)
@@ -8779,7 +9311,7 @@ unittest
     Returns whether $(D c) is a Unicode control $(CHARACTER)
     (general Unicode category: Cc).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isControl(dchar c)
 {
     return isControlGen(c);
@@ -8802,7 +9334,7 @@ unittest
     Returns whether $(D c) is a Unicode formatting $(CHARACTER)
     (general Unicode category: Cf).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isFormat(dchar c)
 {
     return isFormatGen(c);
@@ -8823,7 +9355,7 @@ unittest
     Returns whether $(D c) is a Unicode Private Use $(CODEPOINT)
     (general Unicode category: Co).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isPrivateUse(dchar c)
 {
     return (0x00_E000 <= c && c <= 0x00_F8FF)
@@ -8835,7 +9367,7 @@ bool isPrivateUse(dchar c)
     Returns whether $(D c) is a Unicode surrogate $(CODEPOINT)
     (general Unicode category: Cs).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSurrogate(dchar c)
 {
     return (0xD800 <= c && c <= 0xDFFF);
@@ -8844,7 +9376,7 @@ bool isSurrogate(dchar c)
 /++
     Returns whether $(D c) is a Unicode high surrogate (lead surrogate).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSurrogateHi(dchar c)
 {
     return (0xD800 <= c && c <= 0xDBFF);
@@ -8853,7 +9385,7 @@ bool isSurrogateHi(dchar c)
 /++
     Returns whether $(D c) is a Unicode low surrogate (trail surrogate).
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isSurrogateLo(dchar c)
 {
     return (0xDC00 <= c && c <= 0xDFFF);
@@ -8864,7 +9396,7 @@ bool isSurrogateLo(dchar c)
     a $(CODEPOINT) with no assigned abstract character.
     (general Unicode category: Cn)
 +/
-@safe pure nothrow
+@safe pure nothrow @nogc
 bool isNonCharacter(dchar c)
 {
     return nonCharacterTrie[c];
@@ -8891,7 +9423,7 @@ private:
     return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
 }
 
-@safe pure nothrow @property
+@safe pure nothrow @nogc @property
 {
     // It's important to use auto return here, so that the compiler
     // only runs semantic on the return type if the function gets

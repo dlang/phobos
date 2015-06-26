@@ -1,7 +1,28 @@
+/**
+This module provides a $(D BinaryHeap) adaptor that makes a binary heap out of
+any user-provided random-access range.
+
+This module is a submodule of $(LINK2 std_container.html, std.container).
+
+Source: $(PHOBOSSRC std/container/_binaryheap.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+*/
 module std.container.binaryheap;
 
-import std.exception, std.algorithm, std.conv, std.range,
-  std.traits, std.typecons;
+import std.range.primitives;
+import std.traits;
+
 public import std.container.util;
 
 // BinaryHeap
@@ -37,6 +58,9 @@ struct BinaryHeap(Store, alias less = "a < b")
 if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
     import std.functional : binaryFun;
+    import std.exception : enforce;
+    import std.algorithm : move, min;
+    import std.typecons : RefCounted, RefCountedAutoInitialize;
 
 // Really weird @@BUG@@: if you comment out the "private:" label below,
 // std.algorithm can't unittest anymore
@@ -68,12 +92,13 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     {
         debug
         {
+            import std.conv : to;
             if (!_payload.refCountedStore.isInitialized) return;
             if (_length < 2) return;
             for (size_t n = _length - 1; n >= 1; --n)
             {
                 auto parentIdx = (n - 1) / 2;
-                assert(!comp(_store[parentIdx], _store[n]), text(n));
+                assert(!comp(_store[parentIdx], _store[n]), to!string(n));
             }
         }
     }
@@ -376,6 +401,7 @@ must be collected.
 /// Example from "Introduction to Algorithms" Cormen et al, p 146
 unittest
 {
+    import std.algorithm : equal;
     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
     auto h = heapify(a);
     // largest element
@@ -388,6 +414,8 @@ unittest
 /// lazy iteration of the underlying range in descending order.
 unittest
 {
+    import std.algorithm : equal;
+    import std.range : take;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
     auto top5 = heapify(a).take(5);
     assert(top5.equal([16, 14, 10, 9, 8]));
@@ -405,6 +433,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
 
 unittest
 {
+    import std.conv : to;
     {
         // example from "Introduction to Algorithms" Cormen et al., p 146
         int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
@@ -428,13 +457,14 @@ unittest
         {
             h.insert(e);
         }
-        assert(b == [ 16, 14, 10, 8, 7, 3, 9, 1, 4, 2 ], text(b));
+        assert(b == [ 16, 14, 10, 8, 7, 3, 9, 1, 4, 2 ], to!string(b));
     }
 }
 
 unittest
 {
     // Test range interface.
+    import std.algorithm : equal;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
     auto h = heapify(a);
     static assert(isInputRange!(typeof(h)));

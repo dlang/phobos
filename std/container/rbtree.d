@@ -1,18 +1,31 @@
+/**
+This module implements a red-black tree container.
+
+This module is a submodule of $(LINK2 std_container.html, std.container).
+
+Source: $(PHOBOSSRC std/container/_rbtree.d)
+Macros:
+WIKI = Phobos/StdContainer
+TEXTWITHCOMMAS = $0
+
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+
+License: Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at $(WEB
+boost.org/LICENSE_1_0.txt)).
+
+Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+*/
 module std.container.rbtree;
 
-import std.exception, std.algorithm, std.range, std.traits;
 import std.functional : binaryFun;
-import std.typetuple : allSatisfy;
+
 public import std.container.util;
 
-version(unittest) version = RBDoChecks;
+version(unittest) debug = RBDoChecks;
 
-//version = RBDoChecks;
-
-version(RBDoChecks)
-{
-    import std.stdio;
-}
+//debug = RBDoChecks;
 
 /*
  * Implementation for a Red Black node for use in a Red Black Tree (see below)
@@ -60,7 +73,7 @@ struct RBNode(V)
     /**
      * Get the left child
      */
-    @property Node left()
+    @property inout(RBNode)* left() inout
     {
         return _left;
     }
@@ -68,7 +81,7 @@ struct RBNode(V)
     /**
      * Get the right child
      */
-    @property Node right()
+    @property inout(RBNode)* right() inout
     {
         return _right;
     }
@@ -76,7 +89,7 @@ struct RBNode(V)
     /**
      * Get the parent
      */
-    @property Node parent()
+    @property inout(RBNode)* parent() inout
     {
         return _parent;
     }
@@ -500,9 +513,9 @@ struct RBNode(V)
     /**
      * Return the leftmost descendant of this node.
      */
-    @property Node leftmost()
+    @property inout(RBNode)* leftmost() inout
     {
-        Node result = &this;
+        inout(RBNode)* result = &this;
         while(result._left !is null)
             result = result._left;
         return result;
@@ -511,9 +524,9 @@ struct RBNode(V)
     /**
      * Return the rightmost descendant of this node
      */
-    @property Node rightmost()
+    @property inout(RBNode)* rightmost() inout
     {
-        Node result = &this;
+        inout(RBNode)* result = &this;
         while(result._right !is null)
             result = result._right;
         return result;
@@ -525,9 +538,9 @@ struct RBNode(V)
      * You should never call this on the marker node, as it is assumed that
      * there is a valid next node.
      */
-    @property Node next()
+    @property inout(RBNode)* next() inout
     {
-        Node n = &this;
+        inout(RBNode)* n = &this;
         if(n.right is null)
         {
             while(!n.isLeftNode)
@@ -544,9 +557,9 @@ struct RBNode(V)
      * You should never call this on the leftmost node of the tree as it is
      * assumed that there is a valid previous node.
      */
-    @property Node prev()
+    @property inout(RBNode)* prev() inout
     {
-        Node n = &this;
+        inout(RBNode)* n = &this;
         if(n.left is null)
         {
             while(n.isLeftNode)
@@ -587,6 +600,16 @@ struct RBNode(V)
     }
 }
 
+//constness checks
+unittest
+{
+    const RBNode!int n;
+    static assert(is(typeof(n.leftmost)));
+    static assert(is(typeof(n.rightmost)));
+    static assert(is(typeof(n.next)));
+    static assert(is(typeof(n.prev)));
+}
+
 /**
  * Implementation of a $(LUCKY red-black tree) container.
  *
@@ -610,94 +633,21 @@ struct RBNode(V)
 final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     if(is(typeof(binaryFun!less(T.init, T.init))))
 {
+    import std.range.primitives;
+    import std.range : Take;
+    import std.typetuple : allSatisfy;
+    import std.traits;
+
     alias _less = binaryFun!less;
-
-    // BUG: this must come first in the struct due to issue 2810
-
-    // add an element to the tree, returns the node added, or the existing node
-    // if it has already been added and allowDuplicates is false
-
-    private auto _add(Elem n)
-    {
-        Node result;
-        static if(!allowDuplicates)
-            bool added = true;
-
-        if(!_end.left)
-        {
-            _end.left = _begin = result = allocate(n);
-        }
-        else
-        {
-            Node newParent = _end.left;
-            Node nxt = void;
-            while(true)
-            {
-                if(_less(n, newParent.value))
-                {
-                    nxt = newParent.left;
-                    if(nxt is null)
-                    {
-                        //
-                        // add to right of new parent
-                        //
-                        newParent.left = result = allocate(n);
-                        break;
-                    }
-                }
-                else
-                {
-                    static if(!allowDuplicates)
-                    {
-                        if(!_less(newParent.value, n))
-                        {
-                            result = newParent;
-                            added = false;
-                            break;
-                        }
-                    }
-                    nxt = newParent.right;
-                    if(nxt is null)
-                    {
-                        //
-                        // add to right of new parent
-                        //
-                        newParent.right = result = allocate(n);
-                        break;
-                    }
-                }
-                newParent = nxt;
-            }
-            if(_begin.left)
-                _begin = _begin.left;
-        }
-
-        static if(allowDuplicates)
-        {
-            result.setColor(_end);
-            version(RBDoChecks)
-                check();
-            ++_length;
-            return result;
-        }
-        else
-        {
-            import std.typecons : Tuple;
-
-            if(added)
-            {
-                ++_length;
-                result.setColor(_end);
-            }
-            version(RBDoChecks)
-                check();
-            return Tuple!(bool, "added", Node, "n")(added, result);
-        }
-    }
 
     version(unittest)
     {
-        private enum doUnittest = isIntegral!T;
+        static if(is(typeof(less) == string))
+        {
+            private enum doUnittest = isIntegral!T && (less == "a < b" || less == "a > b");
+        }
+        else
+            enum doUnittest = false;
 
         // note, this must be final so it does not affect the vtable layout
         final bool arrayEqual(T[] arr)
@@ -725,7 +675,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     alias Elem = T;
 
     // used for convenience
-    private alias Node = RBNode!Elem.Node;
+    private alias RBNode = .RBNode!Elem;
+    private alias Node = RBNode.Node;
 
     private Node   _end;
     private Node   _begin;
@@ -739,7 +690,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static private Node allocate()
     {
-        return new RBNode!Elem;
+        return new RBNode;
     }
 
     static private Node allocate(Elem v)
@@ -818,6 +769,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
+        import std.range.primitives;
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
         auto r = ts[];
@@ -826,8 +779,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             auto vals = [1, 2, 3, 4, 5];
         else
             auto vals = [5, 4, 3, 2, 1];
+        assert(equal(r, vals));
 
-        assert(std.algorithm.equal(r, vals));
         assert(r.front == vals.front);
         assert(r.back != r.front);
         auto oldfront = r.front;
@@ -841,12 +794,12 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     }
 
     // find a node based on an element value
-    private Node _find(Elem e)
+    private inout(RBNode)* _find(Elem e) inout
     {
         static if(allowDuplicates)
         {
-            Node cur = _end.left;
-            Node result = null;
+            inout(RBNode)* cur = _end.left;
+            inout(RBNode)* result = null;
             while(cur)
             {
                 if(_less(cur.value, e))
@@ -864,7 +817,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
         else
         {
-            Node cur = _end.left;
+            inout(RBNode)* cur = _end.left;
             while(cur)
             {
                 if(_less(cur.value, e))
@@ -877,6 +830,87 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             return null;
         }
     }
+
+    // add an element to the tree, returns the node added, or the existing node
+    // if it has already been added and allowDuplicates is false
+    private auto _add(Elem n)
+    {
+        Node result;
+        static if(!allowDuplicates)
+            bool added = true;
+
+        if(!_end.left)
+        {
+            _end.left = _begin = result = allocate(n);
+        }
+        else
+        {
+            Node newParent = _end.left;
+            Node nxt = void;
+            while(true)
+            {
+                if(_less(n, newParent.value))
+                {
+                    nxt = newParent.left;
+                    if(nxt is null)
+                    {
+                        //
+                        // add to right of new parent
+                        //
+                        newParent.left = result = allocate(n);
+                        break;
+                    }
+                }
+                else
+                {
+                    static if(!allowDuplicates)
+                    {
+                        if(!_less(newParent.value, n))
+                        {
+                            result = newParent;
+                            added = false;
+                            break;
+                        }
+                    }
+                    nxt = newParent.right;
+                    if(nxt is null)
+                    {
+                        //
+                        // add to right of new parent
+                        //
+                        newParent.right = result = allocate(n);
+                        break;
+                    }
+                }
+                newParent = nxt;
+            }
+            if(_begin.left)
+                _begin = _begin.left;
+        }
+
+        static if(allowDuplicates)
+        {
+            result.setColor(_end);
+            debug(RBDoChecks)
+                check();
+            ++_length;
+            return result;
+        }
+        else
+        {
+            import std.typecons : Tuple;
+
+            if(added)
+            {
+                ++_length;
+                result.setColor(_end);
+            }
+            debug(RBDoChecks)
+                check();
+            return Tuple!(bool, "added", Node, "n")(added, result);
+        }
+    }
+
 
     /**
      * Check if any elements exist in the container.  Returns $(D false) if at least
@@ -892,7 +926,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
         Complexity: $(BIGOH 1).
     +/
-    @property size_t length()
+    @property size_t length() const
     {
         return _length;
     }
@@ -910,13 +944,14 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
         auto ts2 = ts.dup;
         assert(ts2.length == 5);
-        assert(std.algorithm.equal(ts[], ts2[]));
+        assert(equal(ts[], ts2[]));
         ts2.insert(cast(Elem)6);
-        assert(!std.algorithm.equal(ts[], ts2[]));
+        assert(!equal(ts[], ts2[]));
         assert(ts.length == 5 && ts2.length == 6);
     }
 
@@ -956,7 +991,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
        Complexity: $(BIGOH log(n))
      +/
-    bool opBinaryRight(string op)(Elem e) if (op == "in")
+    bool opBinaryRight(string op)(Elem e) const if (op == "in")
     {
         return _find(e) !is null;
     }
@@ -971,17 +1006,18 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
      * Compares two trees for equality.
      *
-     * Complexity: $(BIGOH n*log(n))
+     * Complexity: $(BIGOH n)
      */
     override bool opEquals(Object rhs)
     {
+        import std.algorithm : equal;
+
         RedBlackTree that = cast(RedBlackTree)rhs;
         if (that is null) return false;
 
         // If there aren't the same number of nodes, we can't be equal.
         if (this._length != that._length) return false;
 
-        // FIXME: use a more efficient algo (if one exists?)
         auto thisRange = this[];
         auto thatRange = that[];
         return equal!(function(Elem a, Elem b) => !_less(a,b) && !_less(b,a))
@@ -996,10 +1032,11 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         auto t4 = new RedBlackTree(1,2,3,4,5);
         auto o = new Object();
 
-        assert(t1==t2);
-        assert(t1!=t3);
-        assert(t1!=t4);
-        assert(t1!=o);  // pathological case, must not crash
+        assert(t1 == t1);
+        assert(t1 == t2);
+        assert(t1 != t3);
+        assert(t1 != t4);
+        assert(t1 != o);  // pathological case, must not crash
     }
 
     /**
@@ -1026,6 +1063,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      * Insert a single element in the container.  Note that this does not
      * invalidate any ranges currently iterating the container.
      *
+     * Returns: The number of elements inserted.
+     *
      * Complexity: $(BIGOH log(n))
      */
     size_t stableInsert(Stuff)(Stuff stuff) if (isImplicitlyConvertible!(Stuff, Elem))
@@ -1044,6 +1083,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /**
      * Insert a range of elements in the container.  Note that this does not
      * invalidate any ranges currently iterating the container.
+     *
+     * Returns: The number of elements inserted.
      *
      * Complexity: $(BIGOH m * log(n))
      */
@@ -1115,7 +1156,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         auto n = _begin;
         auto result = n.value;
         _begin = n.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
         return result;
     }
@@ -1142,7 +1183,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         scope(success)
             --_length;
         _begin = _begin.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
     }
 
@@ -1160,7 +1201,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             _begin = _begin.remove(_end);
         else
             lastnode.remove(_end);
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
     }
 
@@ -1200,13 +1241,14 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             b = b.remove(_end);
             --_length;
         }
-        version(RBDoChecks)
+        debug(RBDoChecks)
             check();
         return Range(e, _end);
     }
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
         auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
         auto r = ts[];
@@ -1218,9 +1260,9 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         assert(ts.arrayEqual([1,5]));
 
         static if(less == "a < b")
-            assert(std.algorithm.equal(r2, [5]));
+            assert(equal(r2, [5]));
         else
-            assert(std.algorithm.equal(r2, [1]));
+            assert(equal(r2, [1]));
     }
 
     /++
@@ -1252,6 +1294,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
+        import std.range : take;
         auto ts = new RedBlackTree(1,2,3,4,5);
         auto r = ts[];
         r.popFront();
@@ -1260,17 +1304,17 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 
         static if(less == "a < b")
         {
-            assert(std.algorithm.equal(r2, [2,3,4,5]));
+            assert(equal(r2, [2,3,4,5]));
             auto r3 = ts.remove(take(r, 2));
             assert(ts.arrayEqual([1,4,5]) && ts.length == 3);
-            assert(std.algorithm.equal(r3, [4,5]));
+            assert(equal(r3, [4,5]));
         }
         else
         {
-            assert(std.algorithm.equal(r2, [4,3,2,1]));
+            assert(equal(r2, [4,3,2,1]));
             auto r3 = ts.remove(take(r, 2));
             assert(ts.arrayEqual([5,2,1]) && ts.length == 3);
-            assert(std.algorithm.equal(r3, [2,1]));
+            assert(equal(r3, [2,1]));
         }
     }
 
@@ -1288,9 +1332,9 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 --------------------
 auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
 rbt.removeKey(1, 4, 7);
-assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
+assert(equal(rbt[], [0, 1, 1, 5]));
 rbt.removeKey(1, 1, 0);
-assert(std.algorithm.equal(rbt[], [5]));
+assert(equal(rbt[], [5]));
 --------------------
       +/
     size_t removeKey(U...)(U elems)
@@ -1332,6 +1376,7 @@ assert(std.algorithm.equal(rbt[], [5]));
            isImplicitlyConvertible!(ElementType!Stuff, Elem) &&
            !isDynamicArray!Stuff)
     {
+        import std.array : array;
         //We use array in case stuff is a Range from this RedBlackTree - either
         //directly or indirectly.
         return removeKey(array(stuff));
@@ -1345,6 +1390,8 @@ assert(std.algorithm.equal(rbt[], [5]));
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
+        import std.range : take;
         auto rbt = new RedBlackTree(5, 4, 3, 7, 2, 1, 7, 6, 2, 19, 45);
 
         //The cast(Elem) is because these tests are instantiated with a variety
@@ -1363,9 +1410,9 @@ assert(std.algorithm.equal(rbt[], [5]));
             assert(rbt.removeKey(take(rbt[], 3)) == 3 && rbt.length == 4);
 
             static if(less == "a < b")
-                assert(std.algorithm.equal(rbt[], [7,7,19,45]));
+                assert(equal(rbt[], [7,7,19,45]));
             else
-                assert(std.algorithm.equal(rbt[], [7,5,3,2]));
+                assert(equal(rbt[], [7,5,3,2]));
         }
         else
         {
@@ -1380,9 +1427,9 @@ assert(std.algorithm.equal(rbt[], [5]));
             assert(rbt.removeKey(take(rbt[], 3)) == 3 && rbt.length == 2);
 
             static if(less == "a < b")
-                assert(std.algorithm.equal(rbt[], [19,45]));
+                assert(equal(rbt[], [19,45]));
             else
-                assert(std.algorithm.equal(rbt[], [5,3]));
+                assert(equal(rbt[], [5,3]));
         }
     }
 
@@ -1473,6 +1520,7 @@ assert(std.algorithm.equal(rbt[], [5]));
 
     static if(doUnittest) unittest
     {
+        import std.algorithm : equal;
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         auto rl = ts.lowerBound(3);
         auto ru = ts.upperBound(3);
@@ -1480,19 +1528,19 @@ assert(std.algorithm.equal(rbt[], [5]));
 
         static if(less == "a < b")
         {
-            assert(std.algorithm.equal(rl, [1,2]));
-            assert(std.algorithm.equal(ru, [4,5]));
+            assert(equal(rl, [1,2]));
+            assert(equal(ru, [4,5]));
         }
         else
         {
-            assert(std.algorithm.equal(rl, [5,4]));
-            assert(std.algorithm.equal(ru, [2,1]));
+            assert(equal(rl, [5,4]));
+            assert(equal(ru, [2,1]));
         }
 
-        assert(std.algorithm.equal(re, [3]));
+        assert(equal(re, [3]));
     }
 
-    version(RBDoChecks)
+    debug(RBDoChecks)
     {
         /*
          * Print the tree.  This prints a sideways view of the tree in ASCII form,
@@ -1501,6 +1549,7 @@ assert(std.algorithm.equal(rbt[], [5]));
          */
         void printTree(Node n, int indent = 0)
         {
+            import std.stdio;
             if(n !is null)
             {
                 printTree(n.right, indent + 2);
@@ -1530,6 +1579,7 @@ assert(std.algorithm.equal(rbt[], [5]));
             //
             int recurse(Node n, string path)
             {
+                import std.stdio;
                 if(n is null)
                     return 1;
                 if(n.parent.left !is n && n.parent.right !is n)
@@ -1611,16 +1661,18 @@ assert(std.algorithm.equal(rbt[], [5]));
 //Verify Example for removeKey.
 pure unittest
 {
+    import std.algorithm : equal;
     auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
     rbt.removeKey(1, 4, 7);
-    assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
+    assert(equal(rbt[], [0, 1, 1, 5]));
     rbt.removeKey(1, 1, 0);
-    assert(std.algorithm.equal(rbt[], [5]));
+    assert(equal(rbt[], [5]));
 }
 
 //Tests for removeKey
 pure unittest
 {
+    import std.algorithm : equal;
     {
         auto rbt = redBlackTree(["hello", "world", "foo", "bar"]);
         assert(equal(rbt[], ["bar", "foo", "hello", "world"]));
@@ -1720,12 +1772,15 @@ pure unittest
 //Range construction.
 pure unittest
 {
+    import std.algorithm : equal;
+    import std.range : iota;
     auto rbt = new RedBlackTree!(int, "a > b")(iota(5));
     assert(equal(rbt[], [4, 3, 2, 1, 0]));
 }
 
 pure unittest
 {
+    import std.array : array;
     auto rt1 = redBlackTree(5, 4, 3, 2, 1);
     assert(rt1.length == 5);
     assert(array(rt1[]) == [1, 2, 3, 4, 5]);
@@ -1741,4 +1796,12 @@ pure unittest
     auto rt4 = redBlackTree!string("hello", "hello");
     assert(rt4.length == 1);
     assert(array(rt4[]) == ["hello"]);
+}
+
+//constness checks
+unittest
+{
+    const rt1 = redBlackTree(5,4,3,2,1);
+    static assert(is(typeof(rt1.length)));
+    static assert(is(typeof(5 in rt1)));
 }

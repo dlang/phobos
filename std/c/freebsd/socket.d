@@ -4,9 +4,10 @@
  * This module is just for making std.socket work under FreeBSD, and these
  * definitions should actually be in druntime. (core.sys.posix.netdb or sth)
  */
-deprecated("Please import the core.sys.posix.* modules you need instead. This module will be removed in April 2015.")
+/// Please import the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
 module std.c.freebsd.socket;
 
+version (FreeBSD):
 public import core.sys.posix.netdb;
 public import core.sys.posix.sys.socket : AF_APPLETALK, AF_IPX, SOCK_RDM, MSG_NOSIGNAL;
 public import core.sys.posix.netinet.in_ : IPPROTO_IGMP, IPPROTO_GGP,

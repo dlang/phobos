@@ -1,10 +1,16 @@
 /**
-<script type="text/javascript">inhibitQuickIndex = 1</script>
+ * This module describes the _digest APIs used in Phobos. All digests follow
+ * these APIs. Additionally, this module contains useful helper methods which
+ * can be used with every _digest type.
+ *
+$(SCRIPT inhibitQuickIndex = 1;)
 
+$(DIVC quickindex,
 $(BOOKTABLE ,
 $(TR $(TH Category) $(TH Functions)
 )
 $(TR $(TDNW Template API) $(TD $(MYREF isDigest) $(MYREF DigestType) $(MYREF hasPeek)
+  $(MYREF hasBlockSize)
   $(MYREF ExampleDigest) $(MYREF _digest) $(MYREF hexDigest) $(MYREF makeDigest)
 )
 )
@@ -16,10 +22,8 @@ $(TR $(TDNW Helper functions) $(TD $(MYREF toHexString))
 $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDigest))
 )
 )
+)
 
- * This module describes the digest APIs used in Phobos. All digests follow these APIs.
- * Additionally, this module contains useful helper methods which can be used with every _digest type.
- *
  * APIs:
  * There are two APIs for digests: The template API and the OOP API. The template API uses structs
  * and template helpers like $(LREF isDigest). The OOP API implements digests as classes inheriting
@@ -45,11 +49,6 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  *
  * Source:    $(PHOBOSSRC std/_digest/_digest.d)
  *
- * Macros:
- * MYREF = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$1">$1</a>&nbsp;</font>
- * MYREF2 = <font face='Consolas, "Bitstream Vera Sans Mono", "Andale Mono", Monaco, "DejaVu Sans Mono", "Lucida Console", monospace'><a href="#$2">$1</a>&nbsp;</font>
- * MYREF3 = <a href="#$2">$(D $1)</a>
- *
  * CTFE:
  * Digests do not work in CTFE
  *
@@ -64,9 +63,10 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  */
 module std.digest.digest;
 
-import std.range, std.traits;
+import std.traits;
 import std.typetuple : allSatisfy;
 public import std.ascii : LetterCase;
+
 
 ///
 unittest
@@ -204,9 +204,10 @@ version(ExampleDigest)
         public:
             /**
              * Use this to feed the digest with data.
-             * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-             * $(D const(ubyte)[]).
-             * The following usages of $(D put) must work for any type which passes $(LREF isDigest):
+             * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+             * interface for $(D ubyte) and $(D const(ubyte)[]).
+             * The following usages of $(D put) must work for any type which
+             * passes $(LREF isDigest):
              * Examples:
              * ----
              * ExampleDigest dig;
@@ -280,6 +281,7 @@ unittest
  */
 template isDigest(T)
 {
+    import std.range : isOutputRange;
     enum bool isDigest = isOutputRange!(T, const(ubyte)[]) && isOutputRange!(T, ubyte) &&
         is(T == struct) &&
         is(typeof(
@@ -384,9 +386,29 @@ unittest
     myFunction!CRC32();
 }
 
-private template isDigestibleRange(Range)
+/**
+ * Checks whether the digest has a $(D blockSize) member, which contains the
+ * digest's internal block size in bits. It is primarily used by $(XREF digest.hmac, HMAC).
+ */
+
+template hasBlockSize(T)
+if (isDigest!T)
+{
+    enum bool hasBlockSize = __traits(compiles, { size_t blockSize = T.blockSize; });
+}
+
+///
+unittest
+{
+    import std.digest.md, std.digest.hmac;
+    static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
+    static assert(hasBlockSize!(HMAC!MD5) && HMAC!MD5.blockSize == 512);
+}
+
+package template isDigestibleRange(Range)
 {
     import std.digest.md;
+    import std.range : isInputRange, ElementType;
     enum bool isDigestibleRange = isInputRange!Range && is(typeof(
           {
           MD5 ha; //Could use any conformant hash
@@ -416,6 +438,7 @@ DigestType!Hash digest(Hash, Range)(auto ref Range range) if(!isArray!Range
 unittest
 {
     import std.digest.md;
+    import std.range : repeat;
     auto testRange = repeat!ubyte(cast(ubyte)'a', 100);
     auto md5 = digest!MD5(testRange);
 }
@@ -472,6 +495,7 @@ char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Rang
 unittest
 {
     import std.digest.md;
+    import std.range : repeat;
     auto testRange = repeat!ubyte(cast(ubyte)'a', 100);
     assert(hexDigest!MD5(testRange) == "36A92CC94A9E0FA21F625F8BFB007ADF");
 }
@@ -538,8 +562,8 @@ interface Digest
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Examples:
          * ----
@@ -627,6 +651,7 @@ unittest
 
 unittest
 {
+    import std.range : isOutputRange;
     assert(!isDigest!(Digest));
     assert(isOutputRange!(Digest, ubyte));
 }
@@ -736,6 +761,7 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
     }
     else
     {
+        import std.range : retro;
         foreach(u; retro(digest))
         {
             result[i++] = hexDigits[u >> 4];
@@ -833,8 +859,8 @@ class WrapperDigest(T) if(isDigest!T) : Digest
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF range, OutputRange) interface for $(D ubyte) and
-         * $(D const(ubyte)[]).
+         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)
         {

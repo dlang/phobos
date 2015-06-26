@@ -66,7 +66,7 @@ unittest
         string flags;
     }
 
-    enum TestVectors[] tv = [
+    static immutable TestVectors[] tv = [
         TestVectors(  "a\\b",       "a",  "y",    "$&",    "a" ),
         TestVectors(  "(a)b\\1",   "abaab","y",    "$&",    "aba" ),
         TestVectors(  "()b\\1",     "aaab", "y",    "$&",    "b" ),
@@ -344,7 +344,7 @@ unittest
     {
         int i;
         foreach(Char; TypeTuple!( char, wchar, dchar))
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
             {
@@ -384,7 +384,7 @@ unittest
                     }
                 }
             }
-        }
+        }();
         debug(std_regex_test) writeln("!!! FReD bulk test done "~matchFn.stringof~" !!!");
     }
 
@@ -415,7 +415,7 @@ unittest
         else
             alias Tests = TypeTuple!(Sequence!(0, 30), Sequence!(235, tv.length-5));
         foreach(a, v; Tests)
-        {
+        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum tvd = tv[v];
             static if(tvd.result == "c")
             {
@@ -444,7 +444,7 @@ unittest
                                 tvd.replace, " vs ", result);
                 }
             }
-        }
+        }();
         debug(std_regex_test) writeln("!!! FReD C-T test done !!!");
     }
 
@@ -459,19 +459,34 @@ unittest
     assert(bmatch("abc",cr).hit == "abc");
     auto cr2 = ctRegex!("ab*c");
     assert(bmatch("abbbbc",cr2).hit == "abbbbc");
+}
+unittest
+{
     auto cr3 = ctRegex!("^abc$");
     assert(bmatch("abc",cr3).hit == "abc");
     auto cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
     assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
+}
+
+unittest
+{
     auto cr5 = ctRegex!("(?:a{2,4}b{1,3}){1,2}");
     assert(bmatch("aaabaaaabbb", cr5).hit == "aaabaaaabbb");
     auto cr6 = ctRegex!("(?:a{2,4}b{1,3}){1,2}?"w);
     assert(bmatch("aaabaaaabbb"w,  cr6).hit == "aaab"w);
+}
+
+unittest
+{
     auto cr7 = ctRegex!(`\r.*?$`,"sm");
     assert(bmatch("abc\r\nxy",  cr7).hit == "\r\nxy");
     auto greed =  ctRegex!("<packet.*?/packet>");
     assert(bmatch("<packet>text</packet><packet>text</packet>", greed).hit
             == "<packet>text</packet>");
+}
+
+unittest
+{
     auto cr8 = ctRegex!("^(a)(b)?(c*)");
     auto m8 = bmatch("abcc",cr8);
     assert(m8);
@@ -482,7 +497,10 @@ unittest
     auto m9 = match("xxqababqyy",cr9);
     assert(m9);
     assert(equal(bmatch("xxqababqyy",cr9).captures, ["qababq", "b"]));
+}
 
+unittest
+{
     auto rtr = regex("a|b|c");
     enum ctr = regex("a|b|c");
     assert(equal(rtr.ir,ctr.ir));
@@ -646,14 +664,14 @@ unittest
 {
     void test(alias matchFn)()
     {
-        import std.string : toUpper;
+        import std.uni : toUpper;
 
         foreach(i, v; TypeTuple!(string, wstring, dstring))
         {
             auto baz(Cap)(Cap m)
             if (is(Cap == Captures!(Cap.String)))
             {
-                return std.string.toUpper(m.hit);
+                return toUpper(m.hit);
             }
             alias String = v;
             assert(std.regex.replace!(matchFn)(to!String("ark rapacity"), regex(to!String("r")), to!String("c"))
@@ -732,12 +750,12 @@ unittest
 unittest
 {// bugzilla 7679
     foreach(S; TypeTuple!(string, wstring, dstring))
-    {
+    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         enum re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");
         assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
         assert(split(str, re) == [to!S("a"), to!S("b")]);
-    }
+    }();
 }
 unittest
 {//bugzilla 8203

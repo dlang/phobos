@@ -8,7 +8,7 @@
  * Macros:
  *      WIKI=Phobos/StdCLocale
  */
-deprecated("Please import core.stdc.locale instead. This module will be removed in December 2015.")
+/// Please import core.stdc.locale instead. This module will be deprecated in DMD 2.068.
 module std.c.locale;
 
 public import core.stdc.locale;

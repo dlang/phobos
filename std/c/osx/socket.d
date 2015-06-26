@@ -4,9 +4,10 @@
 */
 
 
-deprecated("Please import the core.sys.posix.* modules you need instead. This module will be removed in April 2015.")
+/// Please import the core.sys.posix.* modules you need instead. This module will be deprecated in DMD 2.068.
 module std.c.osx.socket;
 
+version (OSX):
 private import core.stdc.stdint;
 public import core.sys.posix.arpa.inet;
 public import core.sys.posix.netdb;
