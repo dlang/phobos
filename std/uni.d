@@ -8393,7 +8393,6 @@ unittest
     assert(toLower("\u1Fe2") == toLowerCase("\u1Fe2").byChar.array);
 }
 
-import std.stdio;
 // generic capitalizer on whole range, returns range
 private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUpper,
                            Range)(Range str)
